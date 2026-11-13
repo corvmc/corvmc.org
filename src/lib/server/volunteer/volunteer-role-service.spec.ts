@@ -303,3 +303,32 @@ describe('skill matches (#1445)', () => {
 		expect(updateSets.at(-1)).not.toHaveProperty('skillMatches');
 	});
 });
+
+describe('briefing article (#2728)', () => {
+	beforeEach(() => {
+		updateSets = [];
+		updateResult = [ROLE];
+		selectResult = [];
+		selectResultQueue = [];
+	});
+
+	it('links an article that exists', async () => {
+		selectResult = [{ id: 'art-1' }];
+		await updateVolunteerRole(ROLE.id, { briefingArticleId: 'art-1' });
+
+		expect(updateSets.at(-1)).toMatchObject({ briefingArticleId: 'art-1' });
+	});
+
+	it('refuses an article that does not exist, before writing', async () => {
+		await expect(updateVolunteerRole(ROLE.id, { briefingArticleId: 'gone' })).rejects.toThrow(
+			VolunteerRoleValidationError
+		);
+		expect(updateSets).toEqual([]);
+	});
+
+	it('clears the link on a blank choice', async () => {
+		await updateVolunteerRole(ROLE.id, { briefingArticleId: '' });
+
+		expect(updateSets.at(-1)).toMatchObject({ briefingArticleId: null });
+	});
+});

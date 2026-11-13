@@ -90,6 +90,17 @@
 		{/if}
 	</InfoCard>
 
+	{#if data.briefing && !calledOff}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_briefing_title()}>
+			<a class="link font-medium" href={resolve(`member/help/${data.briefing.slug}`)}>
+				{data.briefing.title}
+			</a>
+			{#if data.briefing.summary}
+				<p class="mt-1 text-muted">{data.briefing.summary}</p>
+			{/if}
+		</InfoCard>
+	{/if}
+
 	{#if data.checkIn && !calledOff}
 		<InfoCard title={m.member_volunteer_shifts_signup_id_door_title()}>
 			<p class="text-muted">

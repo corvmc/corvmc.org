@@ -93,6 +93,8 @@ export const tableOrder = [
 	'market_day',
 	'market_vendor',
 	'help_categories',
+	// References help_categories and user; `volunteer_role.briefing_article_id` points at it.
+	'help_articles',
 	'roles',
 	'volunteer_role',
 	'volunteer_certification',
@@ -195,7 +197,6 @@ export const tableOrder = [
 	// The contact-sheet link: child of directory_entry and user.
 	'directory_entry_link',
 	'credit_transaction',
-	'help_articles',
 	'inbox_message',
 	// An announcement: child of group, user and the message it was posted as.
 	'group_announcement',

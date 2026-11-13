@@ -1,5 +1,7 @@
 import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
-import { batchInsert } from './db';
+import { volunteerRole } from '../../src/lib/server/db/schema/volunteer';
+import { eq } from 'drizzle-orm';
+import { batchInsert, db } from './db';
 
 export async function seedHelp() {
 	const cats = await batchInsert(helpCategory, [
@@ -173,8 +175,39 @@ export async function seedHelp() {
 			minRole: 'staff',
 			published: true,
 			sortOrder: 0
+		},
+		{
+			// The Door role's briefing (#2728); `seedRoleBriefings` links it.
+			categoryId: cats.find((c) => c.slug === 'volunteering')!.id,
+			title: 'Door shift policy',
+			slug: DOOR_BRIEFING_SLUG,
+			summary: 'Checking tickets, handling cash, and what to do if something goes wrong.',
+			content:
+				'## Door shift policy\n\n- Check every ticket or wristband before letting someone in.\n- Keep the cash box behind the table and count it with a second volunteer.\n- Nobody under 21 at the bar side; ask for ID when unsure.\n\n## If something goes wrong\n\nFind the show lead first. File an incident from your shift page once everyone is safe.',
+			source: 'static',
+			minRole: 'member',
+			published: true,
+			sortOrder: 2
 		}
 	]);
 
 	return { categories: cats.length, articles: articles.length };
+}
+
+const DOOR_BRIEFING_SLUG = 'door-shift-policy';
+
+/** Gives the Door role its briefing, so the shift page and door screen show one. */
+export async function seedRoleBriefings() {
+	const [article] = await db
+		.select({ id: helpArticle.id })
+		.from(helpArticle)
+		.where(eq(helpArticle.slug, DOOR_BRIEFING_SLUG))
+		.limit(1);
+	if (!article) return { linked: 0 };
+	const rows = await db
+		.update(volunteerRole)
+		.set({ briefingArticleId: article.id })
+		.where(eq(volunteerRole.name, 'Door'))
+		.returning({ id: volunteerRole.id });
+	return { linked: rows.length };
 }

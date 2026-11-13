@@ -70,7 +70,7 @@ import { seedNotifications, seedNotificationPreferences } from './seed/notificat
 import { seedCreditTransactions } from './seed/credits';
 import { seedMarketing } from './seed/marketing';
 import { seedEquipment, seedItemArticles } from './seed/equipment';
-import { seedHelp } from './seed/help';
+import { seedHelp, seedRoleBriefings } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
 import { seedBandEnquiries } from './seed/band-enquiries';
@@ -257,6 +257,7 @@ async function main() {
 	const groupChats = await seedGroupChats([...bands, ...groups], [...allUsers, ...groupLeaders]);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
+	const roleBriefings = await seedRoleBriefings();
 	// Profiles first, and everything downstream is seeded against the members who
 	// actually finished onboarding. Hours or a shift signup belonging to somebody
 	// with no profile would be invisible to them — /member/volunteer would bounce
@@ -406,7 +407,7 @@ async function main() {
 			`  ${eq.acquisitions} acquisitions, ${eq.orders} purchase orders, ${eq.movements} stock movements, ${eq.loans} loans`
 	);
 	console.log(
-		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`
+		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear, ${roleBriefings.linked} role briefings`
 	);
 	console.log(
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`

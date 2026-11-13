@@ -231,6 +231,25 @@
 			</section>
 		{/if}
 
+		{#if door.briefings.length > 0}
+			<section class="space-y-2">
+				<h2 class="font-semibold">{m.member_volunteer_door_briefings_title()}</h2>
+				<ul class="space-y-2">
+					{#each door.briefings as briefing (briefing.id)}
+						<li>
+							<a class="link font-medium" href={resolve(`member/help/${briefing.slug}`)}
+								>{briefing.title}</a
+							>
+							<span class="text-subtle">· {briefing.roleName}</span>
+							{#if briefing.summary}
+								<p class="text-muted">{briefing.summary}</p>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
 		<!-- Always here, not only after a failure: a card that cannot tap, and a
 		     staffer whose screen reader blocks PIN entry, never see an error. -->
 		<section class="space-y-2">

@@ -31,8 +31,13 @@ vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: async () => false
 }));
 
-const { resolveHelpReader, getArticleBySlug, listNonEmptyCategories, listArticlesByCategory } =
-	await import('./help-service');
+const {
+	resolveHelpReader,
+	getArticleBySlug,
+	listNonEmptyCategories,
+	listArticlesByCategory,
+	listReadableArticles
+} = await import('./help-service');
 const searchArticles = (await import('./help-service')).searchArticles;
 
 let sqlite: DatabaseSync;
@@ -65,7 +70,8 @@ beforeAll(() => {
 			('a-sponsors', 'c-staff', 'Track Sponsors and Grants', 'staff-sponsors-grants', 'sponsor body', 'staff', 1, '["sponsor.read","grant.read"]'),
 			('a-incidents', 'c-staff', 'Read Incidents', 'staff-incidents', 'incident body', 'staff', 1, '["incident.read"]'),
 			('a-bookings', 'c-staff', 'Manage Bookings', 'staff-bookings', 'sponsor mention', 'staff', 1, NULL),
-			('a-welcome', 'c-member', 'Welcome', 'welcome', 'hello', 'member', 1, NULL);
+			('a-welcome', 'c-member', 'Welcome', 'welcome', 'hello', 'member', 1, NULL),
+			('a-draft', 'c-member', 'Door Policy', 'door-policy', 'draft', 'member', 0, NULL);
 	`);
 }, 30_000);
 
@@ -115,6 +121,25 @@ describe('readers the capability clause must not change', () => {
 			'staff-incidents',
 			'staff-sponsors-grants'
 		]);
+	});
+});
+
+describe('listReadableArticles, for an article another record links to (#2728)', () => {
+	const linked = ['a-welcome', 'a-draft', 'a-bookings', 'a-sponsors', 'a-missing'];
+
+	it('leaves out drafts, missing ids and articles above the reader', async () => {
+		const reader = await resolveHelpReader('u-member');
+		expect((await listReadableArticles(linked, reader)).map((a) => a.id)).toEqual(['a-welcome']);
+	});
+
+	it('admits by capability the way the article page does', async () => {
+		const reader = await resolveHelpReader('u-committee');
+		const ids = (await listReadableArticles(linked, reader)).map((a) => a.id).sort();
+		expect(ids).toEqual(['a-sponsors', 'a-welcome']);
+	});
+
+	it('returns nothing for no ids', async () => {
+		expect(await listReadableArticles([], await resolveHelpReader('u-staff'))).toEqual([]);
 	});
 });
 

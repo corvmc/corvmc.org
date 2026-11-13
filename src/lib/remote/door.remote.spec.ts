@@ -56,6 +56,21 @@ vi.mock('#lib/server/finance/gateway/fake-gateway.js', () => ({
 	completeFakeTerminalPayment: (id: string) => completeFakeTerminalPayment(id)
 }));
 
+const listBriefingsForEvents = vi.fn(
+	async (_u: string, _e: string[]) =>
+		[] as { eventId: string; roleName: string; articleId: string }[]
+);
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
+	listBriefingsForEvents: (u: string, e: string[]) => listBriefingsForEvents(u, e)
+}));
+const listReadableArticles = vi.fn(async (ids: readonly string[]) =>
+	ids.filter((id) => id !== 'art-draft').map((id) => ({ id, title: id, slug: id, summary: null }))
+);
+vi.mock('#lib/server/help/help-service.js', () => ({
+	resolveHelpReader: async () => ({ audience: 'member', capabilities: [] }),
+	listReadableArticles: (ids: readonly string[]) => listReadableArticles(ids)
+}));
+
 const remote = (await import('./door.remote')) as unknown as Record<
 	string,
 	(data?: unknown) => Promise<unknown>
@@ -73,6 +88,7 @@ beforeEach(() => {
 	door.listDoorEvents.mockResolvedValue([]);
 	door.doorSaleEventId.mockResolvedValue('evt-1');
 	gift.doorDonationEventId.mockResolvedValue(null);
+	listBriefingsForEvents.mockResolvedValue([]);
 });
 
 describe('the door remotes', () => {
@@ -197,8 +213,23 @@ describe('the door remotes', () => {
 	});
 
 	it('tells the screen whether it may simulate', async () => {
-		await expect(remote.getDoorEvents()).resolves.toEqual({ events: [], canSimulate: true });
+		await expect(remote.getDoorEvents()).resolves.toMatchObject({ canSimulate: true });
 		driver = 'stripe';
-		await expect(remote.getDoorEvents()).resolves.toEqual({ events: [], canSimulate: false });
+		await expect(remote.getDoorEvents()).resolves.toMatchObject({ canSimulate: false });
+	});
+
+	it("shows the caller's role briefings for the listed shows, once each and only readable ones", async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }, { id: 'evt-2' }]);
+		listBriefingsForEvents.mockResolvedValue([
+			{ eventId: 'evt-2', roleName: 'Door', articleId: 'art-door' },
+			{ eventId: 'evt-2', roleName: 'Door lead', articleId: 'art-door' },
+			{ eventId: 'evt-2', roleName: 'Bar', articleId: 'art-draft' }
+		]);
+		const { briefings } = (await remote.getDoorEvents()) as { briefings: { id: string }[] };
+
+		expect(listBriefingsForEvents).toHaveBeenCalledWith('staff-1', ['evt-2']);
+		expect(briefings.map((b) => b.id)).toEqual(['art-door']);
 	});
 });

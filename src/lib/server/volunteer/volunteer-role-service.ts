@@ -1,6 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { volunteerRole, volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
+import { helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
 import {
@@ -64,6 +65,8 @@ interface RoleInput {
 	marketRateCents?: number | null;
 	/** Member skill tags that suit the role, for ranking the shortlist. */
 	skillMatches?: string[];
+	/** The help article read before a shift. `null` or blank clears it. */
+	briefingArticleId?: string | null;
 }
 
 const MAX_SKILL_MATCHES = 20;
@@ -169,6 +172,10 @@ function normalize(data: RoleInput) {
 
 	if (data.group !== undefined) normalized.group = data.group;
 
+	if (data.briefingArticleId !== undefined) {
+		normalized.briefingArticleId = data.briefingArticleId?.trim() || null;
+	}
+
 	if (data.isActive !== undefined) normalized.isActive = data.isActive;
 
 	return normalized;
@@ -179,7 +186,7 @@ function normalize(data: RoleInput) {
 // ---------------------------------------------------------------------------
 
 export async function createVolunteerRole(
-	data: RoleInput & { name: string }
+	data: Omit<RoleInput, 'briefingArticleId'> & { name: string }
 ): Promise<VolunteerRole> {
 	const values = normalize(data);
 
@@ -207,8 +214,20 @@ export async function createVolunteerRole(
 	}
 }
 
+/** A named briefing must exist: the FK would otherwise surface as a 500. */
+async function assertBriefingExists(articleId: string | null | undefined) {
+	if (!articleId) return;
+	const [row] = await db
+		.select({ id: helpArticle.id })
+		.from(helpArticle)
+		.where(eq(helpArticle.id, articleId))
+		.limit(1);
+	if (!row) throw new VolunteerRoleValidationError('That help article no longer exists');
+}
+
 export async function updateVolunteerRole(id: string, data: RoleInput): Promise<VolunteerRole> {
 	const values = normalize(data);
+	await assertBriefingExists(values.briefingArticleId);
 
 	try {
 		const [row] = await db
