@@ -754,7 +754,7 @@
 	"groups_session_attendance_label": "Mark attendance",
 	"groups_session_attendance_load_failed_body": "Could not load attendance. {errorMessage}",
 	"groups_session_attendance_modal_title": "Mark attendance",
-	"groups_session_attendance_rsvped_text": "RSVPed",
+	"groups_session_attendance_rsvped_body": "RSVPed",
 	"groups_session_attendance_success_toast": "Attendance saved",
 	"groups_staff_group_detail_chair_added_toast": "Chair added",
 	"groups_staff_group_detail_chair_removed_toast": "Chair removed",

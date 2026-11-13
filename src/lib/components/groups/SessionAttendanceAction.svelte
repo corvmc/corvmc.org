@@ -50,7 +50,7 @@
 					options={people.map((p) => ({
 						value: p.userId,
 						label: p.name,
-						description: p.rsvped ? m.groups_session_attendance_rsvped_text() : null
+						description: p.rsvped ? m.groups_session_attendance_rsvped_body() : null
 					}))}
 					selected={people.filter((p) => p.attended).map((p) => p.userId)}
 				/>
