@@ -51,10 +51,12 @@ describe('Form components and children', () => {
 	for (const [name, cases] of Object.entries(renders)) {
 		for (const { props, inForm } of cases) {
 			it(`${name} renders its children (${JSON.stringify(Object.keys(props))})`, async () => {
-				const component = FormExports[name as keyof typeof FormExports] as Component<never>;
+				const component = FormExports[name as keyof typeof FormExports] as unknown as Component<
+					Record<string, unknown>
+				>;
 				const { container } = inForm
 					? await render(InForm, { component, with: props })
-					: await render(component, props as never);
+					: await render(component, props);
 				await expect.poll(() => container.textContent).toContain(CHILD);
 			});
 		}
