@@ -130,12 +130,12 @@ describe('block checks read both directions', () => {
 	it('blockExistsBetween matches either ordering and nothing else', async () => {
 		block('bob', 'alice');
 		block('alice', 'carol');
-		const hit = (a: string, b: string) =>
-			(testDb.get(sql`select ${blockExistsBetween(a, b)} as hit`) as { hit: number }).hit;
+		const hit = async (a: string, b: string) =>
+			(await testDb.get<{ hit: number }>(sql`select ${blockExistsBetween(a, b)} as hit`)).hit;
 
-		expect(hit('alice', 'bob')).toBe(1);
-		expect(hit('bob', 'alice')).toBe(1);
-		expect(hit('bob', 'carol')).toBe(0);
+		expect(await hit('alice', 'bob')).toBe(1);
+		expect(await hit('bob', 'alice')).toBe(1);
+		expect(await hit('bob', 'carol')).toBe(0);
 	});
 });
 

@@ -22,7 +22,7 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { type AcquisitionKind } from '#lib/config.js';
 import type { EquipmentCondition } from '#lib/config.js';
-import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
+import { chunk, chunkInsert } from '#lib/server/utils/chunk.js';
 
 /**
  * How stock arrives — purchase, donation or grant.
@@ -267,14 +267,6 @@ export class UnknownItemError extends DomainError {
 	}
 }
 
-/**
- * Column counts for `chunkSize` — see `#lib/server/utils/chunk.js`. Three numbers
- * rather than one because the row budget falls as the row gets wider.
- */
-const LINE_COLUMNS = 5;
-const ASSET_COLUMNS = 8;
-const MOVEMENT_COLUMNS = 9;
-
 export interface BulkAcquisitionResult {
 	acquisitionId: string;
 	lineCount: number;
@@ -463,27 +455,21 @@ export async function recordAcquisitionBulk(
 			suggestionId: data.suggestionId ?? null,
 			notes: data.notes ?? null
 		}),
-		...chunk(lineRows, chunkSize(LINE_COLUMNS)).map((g) => db.insert(acquisitionLine).values(g))
+		...chunkInsert(lineRows, (g) => db.insert(acquisitionLine).values(g))
 	] as unknown as Parameters<typeof db.batch>[0]);
 
 	// Assets before movements: a movement carries `asset_id`, so the row it
 	// names has to exist first.
 	if (assetRows.length > 0) {
-		for (const batch of chunk(chunk(assetRows, chunkSize(ASSET_COLUMNS)), 10)) {
-			await db.batch(
-				batch.map((g) => db.insert(inventoryAsset).values(g)) as unknown as Parameters<
-					typeof db.batch
-				>[0]
-			);
+		const inserts = chunkInsert(assetRows, (g) => db.insert(inventoryAsset).values(g));
+		for (const batch of chunk(inserts, 10)) {
+			await db.batch(batch as unknown as Parameters<typeof db.batch>[0]);
 		}
 	}
 
-	for (const batch of chunk(chunk(movementRows, chunkSize(MOVEMENT_COLUMNS)), 10)) {
-		await db.batch(
-			batch.map((g) => db.insert(stockMovement).values(g)) as unknown as Parameters<
-				typeof db.batch
-			>[0]
-		);
+	const movements = chunkInsert(movementRows, (g) => db.insert(stockMovement).values(g));
+	for (const batch of chunk(movements, 10)) {
+		await db.batch(batch as unknown as Parameters<typeof db.batch>[0]);
 	}
 
 	return {

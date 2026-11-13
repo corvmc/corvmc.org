@@ -52,7 +52,8 @@ test that asserts nothing fails.
 - **A spec whose answer depends on SQL runs against a real database.** A mocked `db` agrees with a
   `WHERE` whether or not it is there, so predicates, aggregates, joins, migrations and backfills
   use `migratedSqlite()` from `$lib/server/testing/migrated-sqlite` — an in-memory SQLite with
-  every committed migration replayed — and point `vi.mock('$lib/server/db')` at its `testDb` (see
+  every committed migration replayed, behind drizzle's D1 driver so errors and `batch` behave as
+  in production — and point `vi.mock('$lib/server/db')` at its `testDb` (see
   `src/lib/server/reservation/program-hold.spec.ts`). It works in CI: `better-sqlite3` ships
   prebuilt binaries, so nothing needs compiling.
 - **A component spec asserts what a user sees or decides** — conditional copy, a choice offered

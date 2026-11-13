@@ -7,9 +7,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const handle = migratedSqlite({ foreignKeys: true });
-	return { sqlite: handle.sqlite, testDb: withBatch(handle) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));

@@ -4,9 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // booking that both read nothing leave one live orientation between them.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const handle = migratedSqlite({ foreignKeys: true });
-	return { sqlite: handle.sqlite, testDb: withBatch(handle) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));

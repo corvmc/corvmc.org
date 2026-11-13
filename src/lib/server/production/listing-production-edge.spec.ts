@@ -16,16 +16,9 @@ const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
 	};
 });
 
-vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	// better-sqlite3 reports `changes` where D1 reports `meta.changes`.
-	getRowCount: (r: { changes?: number }) => r?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
 const { attachToProject, detachFromProject } =

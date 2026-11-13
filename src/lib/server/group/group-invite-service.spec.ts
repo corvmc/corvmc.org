@@ -298,8 +298,11 @@ describe('resolvePendingInvites', () => {
 		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(1);
 
 		expect(consoleSpy).toHaveBeenCalledWith(
-			// By shape: the driver's error may come from another realm.
-			expect.objectContaining({ message: 'disk on fire' })
+			// By shape: the driver's error may come from another realm. On D1 drizzle
+			// wraps it, so the driver's text is on `cause`.
+			expect.objectContaining({
+				cause: expect.objectContaining({ message: expect.stringContaining('disk on fire') })
+			})
 		);
 		expect(invites().map((i) => [i.id, i.status])).toEqual([
 			['inv-fail', 'pending'],

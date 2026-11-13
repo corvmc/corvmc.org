@@ -9,16 +9,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-vi.mock('#lib/server/db/index.js', () => ({
-	db: new Proxy(testDb, {
-		get: (target, prop, receiver) =>
-			prop === 'batch'
-				? async (queries: PromiseLike<unknown>[]) => {
-						for (const q of queries) await q;
-					}
-				: Reflect.get(target, prop, receiver)
-	})
-}));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { moveLinkedSubscriberEmail } = await import('./subscriber-service');
 const { subscriber, audience, audienceMember } = await import('#lib/server/db/schema/marketing.js');

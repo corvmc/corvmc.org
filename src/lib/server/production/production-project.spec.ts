@@ -19,15 +19,8 @@ const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
 /** The database the helpers below act on: the current schema, or the backfill's. */
 let db = sqlite;
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	})
+	db: testDb
 }));
 
 const { createShowProject, deleteShowProject, showCommittees } =

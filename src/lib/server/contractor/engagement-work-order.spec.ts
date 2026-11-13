@@ -12,22 +12,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-// D1 runs a batch as one transaction; better-sqlite3's drizzle has no `batch`, so this is it.
 vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			sqlite.exec('begin');
-			try {
-				const out = [];
-				for (const s of stmts) out.push(await s);
-				sqlite.exec('commit');
-				return out;
-			} catch (e) {
-				sqlite.exec('rollback');
-				throw e;
-			}
-		}
-	})
+	db: testDb
 }));
 
 const { completeJob, recordInvoice } = await import('./contractor-job-service');

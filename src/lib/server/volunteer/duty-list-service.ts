@@ -45,7 +45,7 @@ import {
 import { clubInstant } from '#lib/utils/format.js';
 import type { DutyListAnchor, ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import type { DutyList, DutyListItem } from '#lib/server/db/schema/volunteer.js';
-import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
+import { chunkInsert } from '#lib/server/utils/chunk.js';
 import {
 	ensureSections,
 	nextTaskOrders,
@@ -606,13 +606,6 @@ export async function removeDutyListItem(id: string): Promise<void> {
 // Applying a list
 // ---------------------------------------------------------------------------
 
-/**
- * Column count for `chunkSize` — see `#lib/server/utils/chunk.js`. A six-item list
- * with eight tasks each clears D1's parameter ceiling on the task insert alone,
- * so the chunking is not optional.
- */
-const TASK_COLUMNS = 4;
-
 export interface ApplyDutyListResult {
 	workOrderIds: string[];
 	taskCount: number;
@@ -929,9 +922,10 @@ export async function applyDutyList(
 
 	if (taskRows.length > 0) {
 		await db.batch(
-			chunk(taskRows, chunkSize(TASK_COLUMNS)).map((g) =>
-				db.insert(workTask).values(g)
-			) as unknown as Parameters<typeof db.batch>[0]
+			// A six-item list with eight tasks each passes D1's parameter cap alone.
+			chunkInsert(taskRows, (g) => db.insert(workTask).values(g)) as unknown as Parameters<
+				typeof db.batch
+			>[0]
 		);
 	}
 

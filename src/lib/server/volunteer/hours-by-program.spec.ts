@@ -18,9 +18,9 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-vi.mock('#lib/server/db/index.js', () => ({
+vi.mock('#lib/server/db/index.js', async () => ({
 	db: testDb,
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
 vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({

@@ -1,24 +1,35 @@
-/**
- * Splitting rows for D1's bound-parameter ceiling.
- *
- * D1 caps one statement at 100 bound parameters, so a multi-row insert has to
- * be split by *column count* rather than by a round number: the same 100-value
- * budget buys 25 four-column rows or 11 nine-column ones. Every caller that got
- * this wrong found out at the size where a list stops being a test fixture.
- *
- * Both functions lived twice, once in `duty-list-service` and once in
- * `acquisition-service`, which is one copy more than a rule this sharp should
- * have.
- */
-
-/** How many rows of `columns` columns fit in one D1 statement. */
-export function chunkSize(columns: number): number {
-	return Math.floor(100 / columns);
-}
+/** D1 caps one statement at 100 bound parameters. */
+export const D1_MAX_PARAMS = 100;
 
 /** Split `rows` into groups of at most `size`. */
 export function chunk<T>(rows: T[], size: number): T[][] {
 	const out: T[][] = [];
 	for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+	return out;
+}
+
+/**
+ * One multi-row insert per group of rows, each under D1's parameter cap.
+ * Measured from the built statement, not counted by hand: a default such as a
+ * generated id or `done: false` binds a parameter that no listed column shows.
+ */
+export function chunkInsert<T, Q extends { toSQL(): { params: unknown[] } }>(
+	rows: T[],
+	build: (group: T[]) => Q
+): Q[] {
+	const out: Q[] = [];
+	let group: T[] = [];
+	let used = 0;
+	for (const row of rows) {
+		const params = build([row]).toSQL().params.length;
+		if (group.length > 0 && used + params > D1_MAX_PARAMS) {
+			out.push(build(group));
+			group = [];
+			used = 0;
+		}
+		group.push(row);
+		used += params;
+	}
+	if (group.length > 0) out.push(build(group));
 	return out;
 }

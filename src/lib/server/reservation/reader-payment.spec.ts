@@ -4,8 +4,8 @@ import type Stripe from 'stripe';
 /** Paying for a booking at the smart reader, against a real SQLite and the fake gateway. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedD1 } = await import('#lib/server/testing/migrated-d1.js');
-	return migratedD1();
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite();
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));

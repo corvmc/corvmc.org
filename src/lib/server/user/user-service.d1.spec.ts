@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /** Purging a member something still points at, against a real SQLite behind the D1 driver. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedD1 } = await import('#lib/server/testing/migrated-d1.js');
-	return migratedD1({ foreignKeys: true });
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
