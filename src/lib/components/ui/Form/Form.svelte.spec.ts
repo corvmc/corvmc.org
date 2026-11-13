@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 /**
  * Every field is disabled while a form is pending, and disabling the focused
@@ -24,7 +25,7 @@ const FormGuardDefault = (await import('./FormGuardDefault.test.svelte')).defaul
 
 const submitFromFirstField = async (action: () => Promise<void>) => {
 	await render(FormFocus, { action });
-	const first = page.getByRole('textbox', { name: 'First' });
+	const first = page.getByCss('input[name="first"]');
 	await first.click();
 	await userEvent.keyboard('{Enter}');
 	return first;
@@ -34,7 +35,7 @@ describe('Form focus after submit', () => {
 	it('moves focus to the invalid field when the submit fails', async () => {
 		await submitFromFirstField(() => Promise.reject(new Error('no')));
 
-		await expect.element(page.getByRole('textbox', { name: 'Second' })).toHaveFocus();
+		await expect.element(page.getByCss('input[name="second"]')).toHaveFocus();
 	});
 
 	it('returns focus to where it was when the submit succeeds', async () => {
@@ -45,7 +46,7 @@ describe('Form focus after submit', () => {
 
 	it('moves focus to the message that replaced the form', async () => {
 		await render(FormReplaced);
-		await page.getByRole('textbox', { name: 'First' }).click();
+		await page.getByCss('input[name="first"]').click();
 		await userEvent.keyboard('{Enter}');
 
 		await expect.element(page.getByRole('alert')).toHaveFocus();
@@ -61,7 +62,7 @@ describe('Form unsaved-changes guard', () => {
 	it('stops a navigation away from typed input without being asked to', async () => {
 		guards.length = 0;
 		await render(FormGuardDefault);
-		await page.getByRole('textbox', { name: 'Title' }).fill('Half a title');
+		await page.getByCss('input[name="title"]').fill('Half a title');
 
 		const cancel = vi.fn();
 		for (const guard of guards)
