@@ -176,10 +176,14 @@
 		>
 			{#if previewUrl || src}
 				<img src={previewUrl ?? src} alt="" class="max-h-72 w-full rounded object-contain" />
-				<span class="text-sm font-semibold">{replaceLabel}</span>
+				<span class="text-sm font-semibold"
+					>{#if children}{@render children()}{:else}{replaceLabel}{/if}</span
+				>
 			{:else}
 				<IconPhoto class="size-9 text-primary" stroke={1.6} />
-				<span class="font-semibold">{emptyLabel}</span>
+				<span class="font-semibold"
+					>{#if children}{@render children()}{:else}{emptyLabel}{/if}</span
+				>
 				{#if hint}<span class="text-muted text-sm">{hint}</span>{/if}
 			{/if}
 			{#if uploadStatus === 'uploading'}

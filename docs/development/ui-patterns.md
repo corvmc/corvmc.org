@@ -429,6 +429,11 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
 it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
 
+Children replace `label` as the idle and pending text: `<SubmitButton>Send</SubmitButton>`. Every
+`Form` component either renders the children it is given or refuses them in its props type;
+`Form/children.svelte.spec.ts` checks each export. A submit that deletes or withdraws something
+goes through an `Action` with `confirm` instead, so it asks first.
+
 For standalone async actions outside a form — and for anything needing a confirmation step or a
 form modal — use `Action`.
 
