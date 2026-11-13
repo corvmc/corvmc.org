@@ -727,7 +727,7 @@ export async function seedVolunteering(): Promise<void> {
 		});
 
 		// `claimed`, not `confirmed`: the release test needs a live claim, and this is
-		// also the row the dashboard's "Pending Assignments" card is built to surface.
+		// also the row the dashboard's "Pending assignments" card is built to surface.
 		await db.insert(volunteerSignup).values({
 			id: SEED_VOL_SIGNUP_RELEASE_ID,
 			shiftId: shiftIdOf(SEED_VOL_SHIFT_RELEASE_ID),
