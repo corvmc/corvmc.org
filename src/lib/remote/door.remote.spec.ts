@@ -39,6 +39,15 @@ const door = {
 };
 vi.mock('#lib/server/ticket/door-sale.js', () => door);
 
+const gift = {
+	doorDonationEventId: vi.fn(async () => null as string | null),
+	startDoorDonation: vi.fn(),
+	getDoorDonation: vi.fn(),
+	cancelDoorDonation: vi.fn(),
+	fulfillDoorDonation: vi.fn()
+};
+vi.mock('#lib/server/finance/door-donation.js', () => gift);
+
 let driver = 'fake';
 vi.mock('#lib/server/stripe.js', () => ({ paymentDriver: () => driver }));
 
@@ -63,18 +72,21 @@ beforeEach(() => {
 	requireCapability.mockResolvedValue({ id: 'staff-1' });
 	door.listDoorEvents.mockResolvedValue([]);
 	door.doorSaleEventId.mockResolvedValue('evt-1');
+	gift.doorDonationEventId.mockResolvedValue(null);
 });
 
 describe('the door remotes', () => {
 	it.each([
 		['getTerminalConnection', 'evt-1'],
-		['startDoorSale', { eventId: 'evt-1', quantity: 1, unitPriceCents: 1000 }]
+		['startDoorSale', { eventId: 'evt-1', quantity: 1, unitPriceCents: 1000 }],
+		['startDoorDonation', { eventId: 'evt-1', amountCents: 2500 }]
 	])('%s asks for finance.collect on the show, before touching anything', async (name, arg) => {
 		forbidden();
 		await expect(remote[name](arg)).rejects.toMatchObject({ status: 403 });
 		expect(requireCapability).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-1' });
 		expect(mintConnectionToken).not.toHaveBeenCalled();
-		for (const fn of Object.values(door)) expect(fn).not.toHaveBeenCalled();
+		for (const fn of [...Object.values(door), ...Object.values(gift)])
+			expect(fn).not.toHaveBeenCalled();
 	});
 
 	it.each([['getDoorSale'], ['cancelDoorSale'], ['simulateDoorTap']])(
@@ -88,6 +100,45 @@ describe('the door remotes', () => {
 				expect(fn).not.toHaveBeenCalled();
 		}
 	);
+
+	it.each([['getDoorSale'], ['cancelDoorSale'], ['simulateDoorTap']])(
+		"%s asks for finance.collect on a donation's own show, and does nothing else when refused",
+		async (name) => {
+			door.doorSaleEventId.mockResolvedValue(null);
+			gift.doorDonationEventId.mockResolvedValue('evt-2');
+			forbidden();
+			await expect(remote[name]('pi_g')).rejects.toMatchObject({ status: 403 });
+			expect(requireCapability).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-2' });
+			for (const fn of [gift.getDoorDonation, gift.cancelDoorDonation, gift.fulfillDoorDonation])
+				expect(fn).not.toHaveBeenCalled();
+		}
+	);
+
+	it('routes a donation to the donation service, never the ticket one', async () => {
+		door.doorSaleEventId.mockResolvedValue(null);
+		gift.doorDonationEventId.mockResolvedValue('evt-1');
+		gift.getDoorDonation.mockResolvedValue({ status: 'paid', amountCents: 2500 });
+		await expect(remote.getDoorSale('pi_g')).resolves.toEqual({
+			status: 'paid',
+			quantity: 0,
+			donationCents: 2500
+		});
+		await remote.cancelDoorSale('pi_g');
+		await remote.simulateDoorTap('pi_g');
+		expect(gift.cancelDoorDonation).toHaveBeenCalledWith('pi_g');
+		expect(gift.fulfillDoorDonation).toHaveBeenCalledWith({ id: 'pi_g', status: 'succeeded' });
+		for (const fn of [door.getDoorSale, door.cancelDoorSale, door.fulfillDoorSale])
+			expect(fn).not.toHaveBeenCalled();
+	});
+
+	it('takes a donation as the staffer who is signed in', async () => {
+		await remote.startDoorDonation({ eventId: 'evt-1', amountCents: 2500, staffUserId: 'x' });
+		expect(gift.startDoorDonation).toHaveBeenCalledWith({
+			eventId: 'evt-1',
+			amountCents: 2500,
+			staffUserId: 'staff-1'
+		});
+	});
 
 	it('refuses a payment id that is no door sale, without asking the matrix', async () => {
 		door.doorSaleEventId.mockResolvedValue(null);

@@ -40,6 +40,7 @@ export * from './audio';
 export * from './rider';
 export * from './packing';
 export * from './financial';
+export * from './donation';
 export * from './artifact-request';
 export * from './reminder';
 export * from './audit';

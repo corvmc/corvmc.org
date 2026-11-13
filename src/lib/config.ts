@@ -551,6 +551,7 @@ export const financialSubjects = [
 	'membership',
 	'band_premium',
 	'market_vendor',
+	'donation',
 	'other'
 ] as const;
 export type FinancialSubject = (typeof financialSubjects)[number];

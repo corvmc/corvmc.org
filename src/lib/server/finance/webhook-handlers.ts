@@ -11,6 +11,7 @@ import { syncCardFromSubscription } from './billing-service';
 import { syncFromWebhook } from '#lib/server/band/band-subscription-service.js';
 import { recordBandPremiumInvoice } from './band-premium-entries';
 import { fulfillDoorSale } from '#lib/server/ticket/door-sale.js';
+import { fulfillDoorDonation } from './door-donation';
 import { settleReservationAtReader } from '#lib/server/reservation/reader-payment.js';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
@@ -71,6 +72,8 @@ export async function handlePaymentIntentSucceeded(intent: Stripe.PaymentIntent)
 	switch (intent.metadata?.type) {
 		case 'door_ticket':
 			return fulfillDoorSale(intent);
+		case 'door_donation':
+			return fulfillDoorDonation(intent);
 		case 'reader_reservation':
 			return settleReservationAtReader(intent);
 	}

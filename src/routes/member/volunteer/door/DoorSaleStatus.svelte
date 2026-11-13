@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { getDoorSale } from '#lib/remote/door.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	/**
 	 * After the tap: the webhook is what checks the order in, so poll for it,
@@ -25,7 +26,13 @@
 	});
 </script>
 
-{#if sale.status === 'paid'}
+{#if sale.status === 'paid' && sale.donationCents !== undefined}
+	<Alert type="success">
+		{m.member_volunteer_door_door_sale_status_donation_recorded_body({
+			amount: formatCents(sale.donationCents)
+		})}
+	</Alert>
+{:else if sale.status === 'paid'}
 	<Alert type="success">
 		{m.member_volunteer_door_door_sale_status_paid_tickets_checked_body({
 			quantity: sale.quantity
@@ -37,7 +44,9 @@
 	>
 {:else if attempts >= RETRY_LIMIT}
 	<Alert type="warning">
-		{m.member_volunteer_door_door_sale_status_card_was_accepted_but_body()}
+		{sale.donationCents !== undefined
+			? m.member_volunteer_door_door_sale_status_donation_unconfirmed_body()
+			: m.member_volunteer_door_door_sale_status_card_was_accepted_but_body()}
 	</Alert>
 {:else}
 	<Alert>{m.member_volunteer_door_door_sale_status_card_accepted_recordi_body()}</Alert>

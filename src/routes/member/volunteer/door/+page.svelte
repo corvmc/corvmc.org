@@ -20,6 +20,7 @@
 		getDoorEvents,
 		getTerminalConnection,
 		simulateDoorTap,
+		startDoorDonation,
 		startDoorSale
 	} from '#lib/remote/door.remote.js';
 	import {
@@ -38,6 +39,7 @@
 	 * the reader; in a browser there is no reader, and the other path is shown.
 	 */
 	const fields = startDoorSale.fields;
+	const giftFields = startDoorDonation.fields;
 	// The server has no bridge. Everything that reads it sits under `sale`,
 	// which is null at hydration, so the two renders cannot disagree.
 	const bridge: TapToPayBridge | null = $derived(browser ? tapToPayBridge() : null);
@@ -64,6 +66,7 @@
 		freeLetIn = null;
 	}
 
+	// A donation (#2548) opens the same card sale a ticket does, and shares its tap.
 	async function onsuccess(
 		result?: { kind: 'free'; purchaseId: string; quantity: number } | ({ kind: 'card' } & CardSale)
 	) {
@@ -209,6 +212,24 @@
 			/>
 			<SubmitButton label={m.member_volunteer_door_take_payment_label()} class="min-h-11" />
 		</Form>
+
+		{#if chosen}
+			<section class="space-y-4">
+				<h2 class="font-semibold">{m.member_volunteer_door_donation_title()}</h2>
+				<Form remote={startDoorDonation} {onsuccess} class="space-y-4">
+					<input {...giftFields.eventId.as('hidden', chosen.id)} />
+					<MoneyField
+						field={giftFields.amountCents}
+						label={m.member_volunteer_door_donation_amount_label()}
+						required
+						description={m.member_volunteer_door_donation_minimum_body({
+							formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+						})}
+					/>
+					<SubmitButton label={m.member_volunteer_door_take_donation_label()} class="min-h-11" />
+				</Form>
+			</section>
+		{/if}
 
 		<!-- Always here, not only after a failure: a card that cannot tap, and a
 		     staffer whose screen reader blocks PIN entry, never see an error. -->
