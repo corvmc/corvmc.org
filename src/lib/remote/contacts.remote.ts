@@ -247,9 +247,9 @@ export const removeOrganizationRole = form(
 			vendor: records.markets.length,
 			performer: records.bands.length
 		} as Partial<Record<PartyRole, number>>;
-		const deleted = await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
-		if (!deleted) await getOrganizationPage(data.id).refresh();
-		return { success: true, deleted };
+		await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
+		await getOrganizationPage(data.id).refresh();
+		return { success: true };
 	}
 );
 

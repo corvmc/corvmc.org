@@ -6,6 +6,7 @@ import {
 	getOrganizationInRole,
 	listOrganizations,
 	removeRole,
+	deleteUnusedOrganization,
 	setOrganizationArchived,
 	updateOrganization,
 	type OrganizationInput
@@ -50,7 +51,10 @@ export async function restoreFunder(id: string): Promise<void> {
 	await setOrganizationArchived(id, false);
 }
 
-/** Only for a row that should never have been a funder. Refused once an application names it. */
+/**
+ * Only for a row that should never have been a funder. Refused once an application
+ * names it. The organization goes only when nothing else names it.
+ */
 export async function deleteFunder(id: string): Promise<void> {
 	await getOrganizationInRole(id, 'funder');
 	const [used] = await db
@@ -58,4 +62,5 @@ export async function deleteFunder(id: string): Promise<void> {
 		.from(grantApplication)
 		.where(eq(grantApplication.organizationId, id));
 	await removeRole(id, 'funder', Number(used?.n ?? 0));
+	await deleteUnusedOrganization(id);
 }

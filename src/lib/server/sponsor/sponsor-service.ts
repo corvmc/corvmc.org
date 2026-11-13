@@ -11,6 +11,7 @@ import {
 	getOrganizationInRole,
 	OrganizationNotFoundError,
 	removeRole,
+	deleteUnusedOrganization,
 	requireRole,
 	setOrganizationArchived,
 	updateOrganization,
@@ -133,7 +134,10 @@ export async function restoreSponsor(id: string): Promise<void> {
 	await setOrganizationArchived(id, false);
 }
 
-/** Only for a row that should never have been a sponsor. Refused once a sponsorship names it. */
+/**
+ * Only for a row that should never have been a sponsor. Refused once a sponsorship
+ * names it. The organization goes only when nothing else names it.
+ */
 export async function deleteSponsor(id: string): Promise<void> {
 	await getSponsorOrg(id);
 	const [used] = await db
@@ -141,6 +145,7 @@ export async function deleteSponsor(id: string): Promise<void> {
 		.from(sponsorship)
 		.where(eq(sponsorship.organizationId, id));
 	await removeRole(id, 'sponsor', Number(used?.n ?? 0));
+	await deleteUnusedOrganization(id);
 }
 
 export type SponsorshipInput = Omit<NewSponsorship, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;

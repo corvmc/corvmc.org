@@ -3462,6 +3462,7 @@
 	"staff_contacts_restore_title": "Restore organization",
 	"staff_contacts_add_role_title": "Add role",
 	"staff_contacts_remove_role_title": "Remove role",
+	"staff_contacts_remove_role_body": "The organization, its people and its records stay.",
 	"staff_contacts_add_person_title": "Add person",
 	"staff_contacts_remove_person_title": "Remove person",
 	"staff_contacts_merge_title": "Merge {other} into {name}",

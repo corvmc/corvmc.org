@@ -38,7 +38,6 @@
 	} from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import PartyTimeline from '../PartyTimeline.svelte';
@@ -146,12 +145,9 @@
 							variant="ghost"
 							size="xs"
 							modalTitle={m.staff_contacts_remove_role_title()}
+							confirm={m.staff_contacts_remove_role_body()}
 							submitVariant="error"
 							successToast={m.staff_removed_toast()}
-							onsuccess={(r) => {
-								if ((r as { deleted?: boolean } | undefined)?.deleted)
-									goto(resolve('staff/contacts'));
-							}}
 						>
 							{#snippet form()}
 								<input {...dropForm.fields.id.as('hidden', org.id)} />
