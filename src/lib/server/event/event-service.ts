@@ -246,6 +246,8 @@ async function readBack(row: typeof eventListing.$inferSelect): Promise<EventRow
 export interface EventRow {
 	id: string;
 	title: string;
+	/** The `/e/<code>` short link; null only on a row the backfill has not reached. */
+	shortCode?: string | null;
 	description: string | null;
 	/** Markdown: the written recap of a past event (#1401). */
 	recapText: string | null;
