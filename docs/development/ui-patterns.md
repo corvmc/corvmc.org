@@ -597,6 +597,9 @@ Three things follow:
 - **A record's shifts are `RelatedShifts`** (`$lib/components/volunteer/`), the same subject and
   relations joined to `volunteer_shift`. Its rows are Volunteering's `ShiftRow` in compact form;
   View all opens `/staff/volunteering?about=`. A page adds its own controls through `actions`.
+- **On a member page, both cards take `member`** and read `member-related.remote.ts`: the
+  viewer's own tasks, and the board's open shifts with Sign up. Each card is left off when empty.
+  Only the group and event pages use it (decision 0070).
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had

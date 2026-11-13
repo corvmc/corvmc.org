@@ -1440,6 +1440,9 @@ So:
   booked places against capacity, and Add shift, which opens a shift on one of the record's tasks
   or on a new task with the record's links. `?about=<type>:<id>` narrows Volunteering to the same
   shifts. It replaces the production page's shift card and the role page's shift list.
+- **Members see them too.** The member group page (Projects tab, or Overview without one) and the
+  member event page show the record's open shifts with Sign up, and the tasks that are the
+  member's: assigned to them, or owned by a club or committee they sit on.
 - **Three homes.** Volunteering (`/staff/volunteering`) holds the shifts; Tasks
   (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
   review queue) holds the people, the under-18 queue (`?status=blocked`) and clearances. Roles
