@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { requireUser } from '#lib/server/authorization.js';
+import { currentListingViewer } from '#lib/server/event/listing-viewer.js';
 import { requireProgramRole } from '#lib/server/group/group-context.js';
 import {
 	isPublicListing,
@@ -21,7 +22,7 @@ type MemberSubject = z.infer<typeof memberSubject>;
 async function requireMemberSubject(s: MemberSubject) {
 	if (s.type === 'group') return (await requireProgramRole({ id: s.id }, 'member')).user;
 	const user = requireUser();
-	if (!(await isPublicListing(s.id))) error(404, 'Event not found');
+	if (!(await isPublicListing(s.id, await currentListingViewer()))) error(404, 'Event not found');
 	return user;
 }
 

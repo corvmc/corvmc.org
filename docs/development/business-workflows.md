@@ -1063,6 +1063,19 @@ generate twelve shows. A club's or committee's session (`source = 'group'`) is a
 `meeting`; `createGroupEvent` writes it, and `scripts/group-listing-kind.spec.ts` fails any
 other `source = 'group'` insert that leaves `kind` to the column default.
 
+`event.visibility` says who may see a published listing: `public` (everyone), `members` (any
+signed-in member) or `group` (the owning group's members). A new listing starts at
+`defaultVisibility`: a meeting owned by a committee or band is `group`, any other meeting is
+`members`, and everything else is `public`. Staff, band admins, the member who posted a listing
+and a session's group admins change it on the edit form. Every public read — the guide, the
+calendar feed, RSS, the sitemap, the homepage posters, profiles' upcoming and past shows, the
+recaps and the month poster — applies `visibleTo` from `src/lib/server/event/visibility.ts`.
+The member events page's guide passes the signed-in member, so it adds members listings and
+their own groups'. The event page, its ticket and RSVP actions, and `/e/<code>` 404 for a viewer
+who may not see the listing. The month poster also prints a club's meeting at `members`, which
+keeps club sessions on it (decision 0061). `scripts/event-visibility.spec.ts` fails a read of
+published listings that skips the predicate.
+
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
 staff work; band events are gated to band admins; community listings publish **directly**,
 with no queue, until a report against that member is upheld — after which their later

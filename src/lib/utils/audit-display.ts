@@ -57,6 +57,7 @@ const EVENT_FIELDS: Record<EventEditField, string> = {
 	title: 'title',
 	description: 'description',
 	kind: 'kind',
+	visibility: 'visibility',
 	tags: 'tags',
 	location: 'venue name',
 	address: 'address',

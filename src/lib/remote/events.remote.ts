@@ -14,6 +14,7 @@ import { getBillInputList } from '#lib/server/band/bill-input-list-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireListingReader, requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import { projectOfEvent } from '#lib/server/production/production-scope.js';
 import { getProjectBurn, listCommittees } from '#lib/server/project/project-service.js';
 import { listShowDeliverables } from '#lib/server/volunteer/deliverables-service.js';
@@ -133,6 +134,7 @@ import {
 	eventListing,
 	createEventSchema,
 	eventKinds,
+	eventVisibilities,
 	lineupSchema
 } from '#lib/server/db/schema/event.js';
 import { group } from '#lib/server/db/schema/group.js';
@@ -143,7 +145,7 @@ import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
 import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
-import { getPublicGigGuide } from './calendar.remote';
+import { getMemberGigGuide, getPublicGigGuide } from './calendar.remote';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -230,6 +232,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 	if (!evt || !(publicEventStatuses as readonly string[]).includes(evt.status)) {
 		throw error(404, 'Event not found');
 	}
+	await requireListingVisible(id);
 	const [remaining, lineup, isSustainingMember, seller] = await Promise.all([
 		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
 		getEventLineup(id),
@@ -335,6 +338,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
 		throw error(404, 'Event not found');
 	}
+	await requireListingVisible(id);
 
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.groupId) {
@@ -472,6 +476,7 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
+	await requireListingVisible(id);
 	// The collective sells its own shows; a premium band sells its own gig into
 	// its own account (#1203). Anything else, including a band whose payouts
 	// have lapsed, has no seller and so no ticket page.
@@ -894,6 +899,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			posterKey: evt.posterKey,
 			source: evt.source,
 			kind: evt.kind,
+			visibility: evt.visibility ?? 'public',
 			bandId: evt.groupId,
 			location: evt.location,
 			address: evt.address,
@@ -1431,6 +1437,7 @@ export const updateEvent = form(
 		description: z.string().optional(),
 		tags: z.string().optional(),
 		kind: z.enum(eventKinds).optional(),
+		visibility: z.enum(eventVisibilities).optional(),
 		eventDate: z.string().optional(),
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
@@ -1464,6 +1471,7 @@ export const updateEvent = form(
 		if (data.description !== undefined) updateParams.description = data.description || null;
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
 		if (data.kind !== undefined) updateParams.kind = data.kind;
+		if (data.visibility !== undefined) updateParams.visibility = data.visibility;
 		if (data.location !== undefined) updateParams.location = data.location || null;
 		if (data.address !== undefined) updateParams.address = data.address.trim() || null;
 		// An empty string detaches, an absent field leaves it alone — the same
@@ -1808,6 +1816,7 @@ export const claimFreeTicket = form(
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		await requireListingVisible(evt.id);
 		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
 		// Mints a real ticket row with a code and capacity, so it falls under the
@@ -1857,6 +1866,7 @@ export const rsvpToEvent = form(
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
+		await requireListingVisible(evt.id);
 		const closed = rsvpClosedReason(evt);
 		if (closed === 'ticketed') throw error(400, 'This event uses tickets, not RSVPs');
 		if (closed === 'past') throw error(400, 'This event has already happened');
@@ -1913,6 +1923,7 @@ export const purchaseTickets = form(
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		await requireListingVisible(evt.id);
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
 		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
 		// money, so it repeats the check rather than trusting the page guard.
@@ -2151,7 +2162,7 @@ export const getMemberEventsPage = query(z.void(), async () => {
 	const [events, tickets, guide, rsvpEventIds] = await Promise.all([
 		getMemberEvents(),
 		getMemberTickets(),
-		getPublicGigGuide({ offset: 0 }),
+		getMemberGigGuide({ offset: 0 }),
 		viewerRsvpEventIds()
 	]);
 	return { events, tickets, guide, rsvpEventIds };

@@ -531,6 +531,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			tags: e.tags,
 			externalTicketUrl: e.externalTicketUrl,
 			ticketPrice: e.ticketPrice,
+			visibility: e.visibility ?? 'public',
 			// Whether this one holds the room, which is the fact that distinguishes
 			// a program's session from a listing it merely advertises. A cancelled
 			// session keeps the pointer — the reservation is cancelled beside it,

@@ -9,6 +9,7 @@ const unauthenticated = () => Object.assign(new Error('401'), { status: 401 });
 
 vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
+	userHasCapability: vi.fn(async () => false),
 	requireCapability: vi.fn(async () => {
 		throw Object.assign(new Error('403'), { status: 403 });
 	}),
@@ -48,6 +49,13 @@ vi.mock('#lib/server/event/rsvp-service.js', async (orig) => ({
 	countRsvps: vi.fn(async () => 0),
 	getUserRsvp: vi.fn(async () => null)
 }));
+// The predicate is `visibility.spec.ts`'s; this answers as it would for the listing.
+let visible = true;
+const canSeeListing = vi.fn(async () => visible);
+vi.mock('#lib/server/event/visibility.js', async (orig) => ({
+	...(await orig<object>()),
+	canSeeListing: (...a: unknown[]) => canSeeListing(...(a as []))
+}));
 vi.mock('#lib/server/ticket/ticket-seller.js', () => ({ sellerFor: vi.fn(async () => null) }));
 vi.mock('#lib/server/finance/subscription-service.js', async (orig) => ({
 	...(await orig<object>()),
@@ -68,12 +76,14 @@ vi.mock('$app/server', () => ({
 	query: (...args: unknown[]) => mark(typeof args[0] === 'function' ? args[0] : args[1], 'query')
 }));
 
-const { getMemberEventDetail } = (await import('#lib/remote/events.remote.js')) as any;
+const { getMemberEventDetail, getPublicEventDetail } =
+	(await import('#lib/remote/events.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	signedIn = true;
 	status = 'published';
+	visible = true;
 });
 
 describe('getMemberEventDetail', () => {
@@ -92,5 +102,20 @@ describe('getMemberEventDetail', () => {
 		status = s;
 		const out = await getMemberEventDetail('evt-1');
 		expect(out.event).toMatchObject({ id: 'evt-1', status: s });
+	});
+});
+
+describe('a listing the viewer may not see (#2662)', () => {
+	it('404s on the member page, asking as the signed-in member', async () => {
+		visible = false;
+		await expect(getMemberEventDetail('evt-1')).rejects.toMatchObject({ status: 404 });
+		expect(canSeeListing).toHaveBeenCalledWith('evt-1', { userId: 'member-1', seesAll: false });
+	});
+
+	it('404s on the public page, asking as the public when signed out', async () => {
+		signedIn = false;
+		visible = false;
+		await expect(getPublicEventDetail('evt-1')).rejects.toMatchObject({ status: 404 });
+		expect(canSeeListing).toHaveBeenCalledWith('evt-1', null);
 	});
 });

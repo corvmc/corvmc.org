@@ -13,6 +13,7 @@ import {
 import { resolveImageUrl, uploadFile, validateUpload } from '#lib/server/storage.js';
 import { mediaKey } from '#lib/server/storage-keys.js';
 import { markdownExcerpt } from '#lib/utils/markdown.js';
+import { visibleTo } from './visibility';
 
 /**
  * Recap photos: an event's `gallery` slot on `media_attachment`.
@@ -231,7 +232,7 @@ export async function listRecentRecaps(limit = 6, now: Date = new Date()): Promi
 			)
 		)
 		.innerJoin(media, eq(media.id, mediaAttachment.mediaId))
-		.where(and(eq(eventListing.status, 'published'), lte(eventListing.startsAt, now)))
+		.where(and(eq(eventListing.status, 'published'), visibleTo(), lte(eventListing.startsAt, now)))
 		.groupBy(eventListing.id)
 		.orderBy(desc(eventListing.startsAt))
 		.limit(limit);

@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
 	import { updateGroupSession } from '#lib/remote/group-events.remote.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
@@ -30,6 +31,7 @@
 			tags: string | null;
 			externalTicketUrl: string | null;
 			ticketPrice: number | null;
+			visibility: string;
 		};
 		onchanged: () => void;
 	} = $props();
@@ -141,6 +143,8 @@
 				placeholder={m.groups_jazz_jam_all_ages_placeholder()}
 				description={m.groups_optional_comma_separated_how_gig_body()}
 			/>
+
+			<VisibilityField field={fields.visibility} value={session.visibility} hasGroup />
 
 			<FormField
 				field={fields.posterFile}

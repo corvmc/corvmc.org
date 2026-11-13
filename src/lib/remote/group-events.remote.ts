@@ -7,6 +7,7 @@ import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js'
 import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
 import { createEventSeries, getByEvent } from '#lib/server/reservation/recurring-series-service.js';
 import { RECURRING_FREQUENCIES } from '#lib/server/db/schema/recurring.js';
+import { eventVisibilities } from '#lib/server/db/schema/event.js';
 import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
 import { validateUpload } from '#lib/server/storage.js';
 import { dollarsToCents } from '#lib/utils/event-ticketing.js';
@@ -221,6 +222,7 @@ export const updateGroupSession = form(
 		 * unticked box and means release — not "leave it alone".
 		 */
 		reserveRoom: z.boolean().optional().default(false),
+		visibility: z.enum(eventVisibilities).optional(),
 		...listingFields
 	}),
 	async (data, issue) => {
@@ -256,6 +258,7 @@ export const updateGroupSession = form(
 				tags: tags ?? null,
 				externalTicketUrl: externalTicketUrl ?? null,
 				ticketPrice: ticketPrice ?? null,
+				visibility: data.visibility,
 				posterFile: await toPosterParam(poster)
 			});
 			return { success: true };

@@ -23,6 +23,7 @@ vi.mock('#lib/server/authorization.js', async () => {
 		},
 		// A staff viewer passes every capability; the guards must not ask.
 		can: async () => true,
+		userHasCapability: async () => true,
 		isElevated: async () => true
 	};
 });

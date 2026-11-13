@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getById } from '#lib/server/event/event-service.js';
 import { publicEventStatuses } from '#lib/server/db/schema/event.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import { getTicketsRemaining } from '#lib/server/ticket/ticket-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
 import { getSubscription } from '#lib/server/finance/subscription-service.js';
@@ -14,6 +15,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
 		throw error(404, 'Event not found');
 	}
+	await requireListingVisible(evt.id);
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
 

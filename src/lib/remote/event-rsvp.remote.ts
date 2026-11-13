@@ -13,6 +13,7 @@ import {
 } from '#lib/server/event/rsvp-service.js';
 import { rsvpClosedReason, type RsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import { getPublicEventDetail } from '#lib/remote/events.remote.js';
 
 /**
@@ -34,6 +35,7 @@ export const getRsvpStatus = query(z.string().min(1), async (id): Promise<RsvpSt
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 
 	const reason = rsvpClosedReason(evt);
 	const user = locals.user ?? null;
@@ -59,6 +61,7 @@ export const confirmRsvp = form(z.object({ eventId: z.string().min(1) }), async 
 	const user = requireUser();
 	const evt = await getById(data.eventId);
 	if (!evt) error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 	const reason = rsvpClosedReason(evt);
 	if (reason) error(409, closedMessages[reason]);
 

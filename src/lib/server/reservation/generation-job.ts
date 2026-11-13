@@ -609,6 +609,8 @@ async function processEventSeries(
 			// hero slot on the homepage every month.
 			source: prototype.source,
 			kind: prototype.kind,
+			// A members-only meeting repeats members-only.
+			visibility: prototype.visibility,
 			// No `projectId`, so never a production: staff attach one by hand (#2009).
 			groupId: prototype.groupId,
 			location: prototype.location,

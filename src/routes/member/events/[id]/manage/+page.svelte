@@ -13,6 +13,7 @@
 	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -385,6 +386,8 @@
 				value={listing.tags ?? ''}
 				maxlength="500"
 			/>
+
+			<VisibilityField field={fields.visibility} value={listing.visibility} hasGroup={false} />
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<FormField

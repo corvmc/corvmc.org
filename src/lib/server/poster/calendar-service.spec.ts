@@ -20,12 +20,19 @@ function listing(
 	id: string,
 	source: string,
 	startsAt: number,
-	opts: { status?: string; groupId?: string; by?: string; imported?: boolean; kind?: string } = {}
+	opts: {
+		status?: string;
+		groupId?: string;
+		by?: string;
+		imported?: boolean;
+		kind?: string;
+		visibility?: string;
+	} = {}
 ) {
 	sqlite.exec(
-		`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, group_id, created_by_user_id, import_source_id)
+		`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, visibility, group_id, created_by_user_id, import_source_id)
 		 values ('${id}', '${id}', ${startsAt}, ${startsAt + 7200}, '${opts.status ?? 'published'}',
-		 '${source}', '${opts.kind ?? 'show'}',
+		 '${source}', '${opts.kind ?? 'show'}', '${opts.visibility ?? 'public'}',
 		 ${opts.groupId ? `'${opts.groupId}'` : 'null'}, '${opts.by ?? 'u-plain'}',
 		 ${opts.imported ? "'feed-1'" : 'null'})`
 	);
@@ -96,6 +103,21 @@ describe('monthCalendar', () => {
 
 		const cal = await monthCalendar('2026-11');
 		expect(cal.events.map((e) => e.id)).toEqual(['show', 'work-party', 'class', 'market']);
+	});
+
+	it('prints only public listings, and a club meeting at its members default', async () => {
+		listing('public', 'cmc', NOV(2));
+		listing('members', 'cmc', NOV(3), { visibility: 'members' });
+		listing('band-group', 'band', NOV(4), { groupId: 'g-plain', visibility: 'group' });
+		listing('club', 'group', NOV(5), { groupId: 'g-club', kind: 'meeting', visibility: 'members' });
+		listing('club-group', 'group', NOV(6), {
+			groupId: 'g-club',
+			kind: 'meeting',
+			visibility: 'group'
+		});
+
+		const cal = await monthCalendar('2026-11');
+		expect(cal.events.map((e) => e.id)).toEqual(['public', 'club']);
 	});
 
 	it('leaves out unpublished, cancelled, imported and other-month listings', async () => {

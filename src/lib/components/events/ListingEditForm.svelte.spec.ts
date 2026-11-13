@@ -37,6 +37,8 @@ function listing(source: string, ticketingEnabled: boolean) {
 		description: null,
 		tags: null,
 		kind: 'show',
+		visibility: 'public',
+		bandId: null,
 		source,
 		location: null,
 		address: null,
