@@ -16,6 +16,7 @@
 		recordActPayout,
 		undoActPayout,
 		recordDoorTake,
+		recordDoorRecount,
 		addProductionExpense,
 		removeProductionExpense
 	} from '#lib/remote/productions.remote.js';
@@ -38,6 +39,7 @@
 	/** What each act was designated versus what its deal produces. */
 	const acts = $derived(settlement?.acts ?? []);
 	const expenses = $derived(settlement?.expenses ?? []);
+	const counts = $derived(settlement?.doorCounts ?? null);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
 	/** Closed or cancelled: the worksheet is the record now. The server refuses edits too. */
 	const locked = $derived(
@@ -152,6 +154,58 @@
 					>
 				{/if}
 			</p>
+
+			<!-- A second count by somebody else (#2722). A difference warns here
+			     and at close; the server refuses only the first counter. -->
+			{#if counts?.check === 'mismatch' && counts.second}
+				<Alert type="warning" class="mt-3">
+					{m.staff_events_id_production_settlement_panel_counts_differ_body({
+						amount: formatCents(Math.abs(counts.second.cashCents - settlement.door.cashCents))
+					})}
+				</Alert>
+			{:else if counts?.check === 'single'}
+				<p class="mt-3 text-muted">
+					{m.staff_events_id_production_settlement_panel_counted_once_body()}
+				</p>
+			{/if}
+			{#if counts && (counts.first.byName || counts.second?.byName)}
+				<ul class="mt-2 text-xs text-fg-2">
+					{#if counts.first.byName}
+						<li>
+							{m.staff_events_id_production_settlement_panel_first_counter_text({
+								name: counts.first.byName
+							})}
+						</li>
+					{/if}
+					{#if counts.second?.byName}
+						<li>
+							{m.staff_events_id_production_settlement_panel_second_counter_text({
+								name: counts.second.byName
+							})}
+						</li>
+					{/if}
+				</ul>
+			{/if}
+			<Form
+				remote={recordDoorRecount}
+				successToast={m.staff_events_id_production_settlement_panel_second_count_toast()}
+			>
+				<input {...recordDoorRecount.fields.id.as('hidden', settlement.productionId)} />
+				<input {...recordDoorRecount.fields.eventId.as('hidden', eventId)} />
+				<div class="mt-3 grid gap-3 sm:grid-cols-4">
+					<MoneyField
+						field={recordDoorRecount.fields.recountCents}
+						label={m.staff_events_id_production_settlement_panel_second_count_label()}
+						description={m.staff_events_id_production_settlement_panel_second_count_body()}
+						value={counts?.second?.cashCents ?? null}
+					/>
+					{#if !locked}
+						<div class="flex items-end">
+							<SubmitButton label={m.staff_record_label()} size="sm" />
+						</div>
+					{/if}
+				</div>
+			</Form>
 		{:else}
 			<!-- Absent, not zero. A night nobody counted is not a night that took
 			     nothing, and a settlement cannot be honest about the difference

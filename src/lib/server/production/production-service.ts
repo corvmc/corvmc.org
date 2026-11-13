@@ -18,6 +18,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { workOrder, workTask } from '#lib/server/db/schema/volunteer.js';
+import { doorCheck } from '#lib/production/door-check.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import type { Production, ProductionStatus } from '#lib/server/db/schema/production.js';
 import { recomputeSetTimes } from './run-of-show-service';
@@ -124,10 +125,8 @@ export interface ProductionDetailsInput {
 	billingNotes?: string | null;
 	hospitalityNotes?: string | null;
 	internalNotes?: string | null;
-	/** The drawer count at the end of the night, and how it splits (#929). */
-	doorCashCents?: number | null;
-	doorCount?: number | null;
-	doorSplitActsPercent?: number | null;
+	// The door take is not here: `door-count-service.ts` writes it, so the
+	// counter is stamped with the figure (#2722).
 }
 
 // ---------------------------------------------------------------------------
@@ -402,7 +401,8 @@ export async function transitionProduction(
 	const from = current.status;
 
 	const outstandingCloseOut = to === 'closed' ? await outstandingCloseOutTasks(id) : [];
-	const warnings = transitionWarnings(from, to, { outstandingCloseOut });
+	const door = doorCheck(current.doorCashCents ?? null, current.doorRecountCents ?? null);
+	const warnings = transitionWarnings(from, to, { outstandingCloseOut, door });
 	const reason = opts.reason?.trim() ?? '';
 	if (warnings.length > 0) {
 		if (!opts.acknowledged) return { moved: false, warnings };
@@ -488,7 +488,9 @@ async function readForMove(id: string) {
 		.select({
 			status: production.status,
 			eventId: eventListing.id,
-			title: eventListing.title
+			title: eventListing.title,
+			doorCashCents: production.doorCashCents,
+			doorRecountCents: production.doorCashRecountCents
 		})
 		.from(production)
 		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))

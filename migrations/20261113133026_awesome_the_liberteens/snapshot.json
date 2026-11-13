@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e6e5adb1-a25e-4b23-b67b-1b6e5a741b9e",
+  "id": "7c9cfcdf-ad83-4710-b33c-966d356421a1",
   "prevIds": [
-    "6de3f78d-3ff4-4a68-88ac-3634fb727386"
+    "e6e5adb1-a25e-4b23-b67b-1b6e5a741b9e"
   ],
   "ddl": [
     {
@@ -2803,6 +2803,56 @@
       "default": null,
       "generated": null,
       "name": "door_count",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_counted_by_user_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_counted_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_recount_cents",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_recounted_by_user_id",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "door_cash_recounted_at",
       "entityType": "columns",
       "table": "production"
     },
@@ -16283,6 +16333,36 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_production_producer_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "door_cash_counted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_door_cash_counted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production"
+    },
+    {
+      "columns": [
+        "door_cash_recounted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_door_cash_recounted_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "production"
     },

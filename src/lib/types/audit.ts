@@ -36,6 +36,7 @@ export const auditActions = [
 	'production.reopened',
 	'production.payout_recorded',
 	'production.payout_undone',
+	'production.door_recounted',
 	'event.published_over_warnings',
 	'event.edited_while_cancelled',
 	'work_order.created',
@@ -175,6 +176,8 @@ export interface AuditDetailsByAction {
 	'production.reopened': ProductionMove & { reason: string };
 	'production.payout_recorded': ProductionPayout;
 	'production.payout_undone': ProductionPayout;
+	/** A second person counted the drawer (#2722). The two differ when the count is off. */
+	'production.door_recounted': { firstCents: number; secondCents: number };
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
 	/** The subject is the volunteer. A returned log approved anyway (#2233). `workedOn` is YYYY-MM-DD. */

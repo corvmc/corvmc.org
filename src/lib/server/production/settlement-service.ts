@@ -4,7 +4,10 @@ import { financialEntry } from '#lib/server/db/schema/financial.js';
 import { production, productionSlot } from '#lib/server/db/schema/production.js';
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
 import { and, asc, eq, isNotNull, isNull, sum } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { DOOR_SPLIT_ACTS_PERCENT } from '#lib/config.js';
+import { doorCheck, type DoorCheck } from '#lib/production/door-check.js';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
 import { recordActPayout, reverseActPayout } from '#lib/server/finance/payout-entries.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
@@ -50,6 +53,13 @@ export interface DoorTake {
 	overridden: boolean;
 }
 
+/** Who counted the drawer, and whether a second person agreed (#2722). */
+export interface DoorCounts {
+	check: DoorCheck;
+	first: { byName: string | null; at: Date | null };
+	second: { cashCents: number; byName: string | null; at: Date | null } | null;
+}
+
 export interface Settlement {
 	productionId: string;
 	eventId: string;
@@ -69,6 +79,8 @@ export interface Settlement {
 	 * drawer — a show with no door take is not a show with a zero (#929).
 	 */
 	door: DoorTake | null;
+	/** Null exactly when `door` is. */
+	doorCounts: DoorCounts | null;
 	expensesCents: number;
 	deductibleExpensesCents: number;
 	/** The cost sheet behind those two totals, so the worksheet can show it. */
@@ -132,6 +144,9 @@ export function splitDoorTake(input: {
 	};
 }
 
+const firstCounter = alias(user, 'door_first_counter');
+const secondCounter = alias(user, 'door_second_counter');
+
 export async function getSettlement(eventId: string): Promise<Settlement | null> {
 	const [prod] = await db
 		.select({
@@ -139,14 +154,29 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			status: production.status,
 			doorCashCents: production.doorCashCents,
 			doorCount: production.doorCount,
-			doorSplitActsPercent: production.doorSplitActsPercent
+			doorSplitActsPercent: production.doorSplitActsPercent,
+			countedAt: production.doorCashCountedAt,
+			countedBy: firstCounter.name,
+			recountCents: production.doorCashRecountCents,
+			recountedAt: production.doorCashRecountedAt,
+			recountedBy: secondCounter.name
 		})
 		.from(production)
+		.leftJoin(firstCounter, eq(firstCounter.id, production.doorCashCountedByUserId))
+		.leftJoin(secondCounter, eq(secondCounter.id, production.doorCashRecountedByUserId))
 		.where(announcedBy(eventId))
 		.limit(1);
 	if (!prod) return null;
 
 	const door = splitDoorTake(prod);
+	const doorCounts: DoorCounts | null = door && {
+		check: doorCheck(prod.doorCashCents, prod.recountCents),
+		first: { byName: prod.countedBy, at: prod.countedAt },
+		second:
+			prod.recountCents === null
+				? null
+				: { cashCents: prod.recountCents, byName: prod.recountedBy, at: prod.recountedAt }
+	};
 
 	// Revenue and pool come from the financial record rather than `payment_cache`,
 	// which holds no card revenue for anything written before #837.
@@ -252,6 +282,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		collectiveRevenueCents,
 		actsPoolCents,
 		door,
+		doorCounts,
 		expensesCents,
 		deductibleExpensesCents,
 		expenses,
