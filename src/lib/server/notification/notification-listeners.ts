@@ -4,6 +4,7 @@ import {
 	type MemberInviteCreatedEvent
 } from '#lib/server/event-bus/event-bus.js';
 import {
+	CLASSIFIED_LIFETIME_DAYS,
 	INVITE_EXPIRY_DAYS,
 	PERFORMANCE_INQUIRY_SUBJECT,
 	hourLogExceptionLabels
@@ -768,6 +769,31 @@ export function registerAllNotificationListeners(): void {
 					{ label: 'Due', value: event.dueDate }
 				],
 				cta: { label: 'View my loans' }
+			}
+		});
+	});
+
+	// --- A classified post leaves the board soon (#2549) ---
+	domainEvents.on('classified.expiring', async ({ data: event }) => {
+		const title = `"${event.title}" expires ${event.expiresOn}`;
+		await dispatch({
+			type: 'classified_expiring',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title,
+			body: 'Renew it to keep it on the board',
+			href: `/member/classifieds/${event.postId}`,
+			email: {
+				recipientName: event.userName,
+				subject: title,
+				preview_text: 'Renew it to keep it on the board',
+				heading: 'Post expiring',
+				paragraphs: [
+					{
+						text: `"${event.title}" leaves the classifieds board on ${event.expiresOn}. Renew it to keep it up for another ${CLASSIFIED_LIFETIME_DAYS} days, or close it if you are done.`
+					}
+				],
+				cta: { label: 'View post' }
 			}
 		});
 	});

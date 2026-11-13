@@ -27,7 +27,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 const svc = await import('./classified-service');
 const { classifiedPost, classifiedPostTag } = await import('#lib/server/db/schema/classified.js');
 const { memberStanding } = await import('#lib/server/db/schema/standing.js');
-const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS } = await import('#lib/config.js');
+const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS, CLASSIFIED_EXPIRY_REMINDER_DAYS } =
+	await import('#lib/config.js');
+const { forEachClockEdge } = await import('#lib/test/clock-edges.js');
 const { eq } = await import('drizzle-orm');
 
 const AUTHOR = 'usr-author';
@@ -273,4 +275,34 @@ describe('canView', () => {
 		expect(svc.canView({ ...live, visibility: 'hidden' }, AUTHOR, false, NOW)).toBe(true);
 		expect(svc.canView({ ...live, status: 'closed' }, OTHER, true, NOW)).toBe(true);
 	});
+});
+
+describe('listPostsExpiringBetween', () => {
+	/** A post that expires at `at`, made a lifetime earlier. */
+	function expiringAt(at: Date, overrides: Partial<typeof base> & { groupId?: string } = {}) {
+		return post(overrides, new Date(at.getTime() - CLASSIFIED_LIFETIME_DAYS * DAY));
+	}
+
+	// The window is (now, now + reminder days]: a post expiring at `now` has
+	// already left the board, and one at the far edge is still owed its reminder.
+	forEachClockEdge(
+		'asks only about posts on the board that leave it in the window',
+		async ({ at }) => {
+			const end = new Date(at.getTime() + CLASSIFIED_EXPIRY_REMINDER_DAYS * DAY);
+			const soon = await expiringAt(new Date(at.getTime() + DAY), { groupId: BAND });
+			const atEnd = await expiringAt(end, { authorUserId: OTHER });
+			await expiringAt(at, { authorUserId: OTHER });
+			await expiringAt(new Date(end.getTime() + 1000), { authorUserId: OTHER });
+			const hidden = await expiringAt(new Date(at.getTime() + DAY));
+			await svc.setVisibility(hidden.id, { visibility: 'hidden', note: null, staffId: STAFF });
+			const closed = await expiringAt(new Date(at.getTime() + DAY));
+			await svc.closePost(closed.id, AUTHOR, at);
+
+			const rows = await svc.listPostsExpiringBetween(at, end);
+
+			expect(rows.map((r) => r.id).sort()).toEqual([soon.id, atEnd.id].sort());
+			// A band's post reaches the member who made it.
+			expect(rows.find((r) => r.id === soon.id)?.userId).toBe(AUTHOR);
+		}
+	);
 });

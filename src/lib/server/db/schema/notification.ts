@@ -639,6 +639,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'classified_expiring',
+		category: 'people',
+		label: 'Classified post expiring',
+		description: 'Reminder three days before a classified post you made leaves the board',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'moderation_appeal_filed',
 		category: 'people',
 		label: 'Moderation appeal filed',

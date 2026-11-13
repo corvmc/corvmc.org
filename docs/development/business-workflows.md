@@ -2675,6 +2675,10 @@ decide.
   in every state; anyone else gets a 404.
 - **Edit, renew, close:** author only. An edit to a hidden post, or by a restricted author, returns
   it to `pending_review`. A renewal resets `expires_at` and refuses a closed or hidden post.
+- **Expiry reminder:** the `classified_expiring` entry in `src/lib/server/reminders/registry.ts`
+  emails the author `CLASSIFIED_EXPIRY_REMINDER_DAYS` (3) before a post on the board expires, via
+  `listPostsExpiringBetween`. The subject carries `expires_at`, so a renewed post is reminded again.
+  The entry returns nothing while the surface is off.
 - **Report:** `reportClassified` files a `content_flag` (`classified_post`), and `createFlag` moves
   the post to `under_review`. Resolving the flag in `flag-service.ts` hides an upheld post with the
   staff note and restores a dismissed one; an upheld report also restricts the author's

@@ -90,6 +90,15 @@ const SEEDS: Seed[] = [
 	},
 	{
 		kind: 'wanted',
+		category: 'service',
+		title: 'Someone to shoot a live video',
+		body: 'Two songs at our next show. Phones are fine if you know what you are doing.',
+		tags: [{ kind: 'skill', value: 'video' }],
+		// Expires in two days, so the expiry reminder has a post to find.
+		ageDays: 28
+	},
+	{
+		kind: 'wanted',
 		category: 'musician',
 		title: 'Singer wanted for a folk duo',
 		body: 'Posted a while ago and never renewed, so it has expired.',
