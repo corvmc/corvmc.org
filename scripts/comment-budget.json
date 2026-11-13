@@ -484,7 +484,6 @@
 	"src/lib/server/user/user-overview-service.spec.ts",
 	"src/lib/server/user/user-overview-service.ts",
 	"src/lib/server/user/user-service.ts",
-	"src/lib/server/utils/chunk.ts",
 	"src/lib/server/utils/slug.ts",
 	"src/lib/server/venue/venue-service.ts",
 	"src/lib/stale-deploy-recovery.ts",

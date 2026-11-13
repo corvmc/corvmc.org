@@ -580,9 +580,10 @@ Pick the level by what the test proves:
 2. **Lint rule**: a pattern that is always wrong. See [Custom ESLint rules](#custom-eslint-rules).
 3. **Invariant spec**: walk a list the code already has and assert "every X has Y".
    `scripts/remote-domain-error.spec.ts` is the model.
-4. **Real SQLite**, through `migratedSqlite()`: anything whose answer depends on SQL.
-   A spec of how a failed write is caught uses `migratedD1()`, the same database behind drizzle's
-   D1 driver: only that driver wraps a statement's error so the driver text is on `cause` (#2704).
+4. **Real SQLite**, through `migratedSqlite()`: anything whose answer depends on SQL. It runs
+   behind drizzle's D1 driver, so a failed statement throws production's `DrizzleQueryError` with
+   the driver text on `cause`, `db.batch` is one transaction, and a statement over 100 bound
+   parameters is refused (#2704, #2715).
 5. **Remote spec**: behaviour, guards, what gets written, who is refused.
 6. **Component spec**: what a user sees or decides. Form wiring belongs to the types and the remote.
 7. **E2E**: journeys across systems, such as money, auth, and one per main workflow. It never

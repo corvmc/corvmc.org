@@ -1,14 +1,16 @@
 import { readFileSync, globSync } from 'node:fs';
 import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/d1';
+import * as schema from '#lib/server/db/schema.js';
+import { relations } from '#lib/server/db/schema/relations.js';
+import { D1_MAX_PARAMS } from '#lib/server/utils/chunk.js';
 
 /**
- * An in-memory SQLite built by replaying every committed migration.
- *
- * A spec that aggregates in SQL needs the real schema: a mocked `db` agrees
- * with a `WHERE` whether or not it is there. Replaying is what
- * `db:migrate:local` does, so it survives the renames, rebuilds and indexes
- * that lifting one table's `CREATE` does not. #847 has the three failures.
+ * An in-memory SQLite built by replaying every committed migration, behind
+ * drizzle's D1 driver as production runs it. A spec that aggregates in SQL
+ * needs the real schema: a mocked `db` agrees with a `WHERE` whether or not it
+ * is there. Replaying is what `db:migrate:local` does, so it survives the
+ * renames, rebuilds and indexes that lifting one table's `CREATE` does not (#847).
  */
 export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string } = {}) {
 	const sqlite = new Database(':memory:');
@@ -33,44 +35,87 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
 	// as its last statement, so setting it first is silently undone.
 	sqlite.pragma(`foreign_keys = ${opts.foreignKeys ? 'ON' : 'OFF'}`);
 
-	// `drizzle({ client })`, not `drizzle(client)`. drizzle 1.0 dropped the
-	// positional overload: a raw Database passed positionally is read as a
-	// *config* object, finds no client in it, and quietly opens a second, empty
-	// database — so every query answers "no such table" against tables that
-	// demonstrably exist on `sqlite`.
-	return { sqlite, testDb: drizzle({ client: sqlite }) };
+	// The D1 driver, not better-sqlite3's: a single statement then throws
+	// drizzle's `DrizzleQueryError` with the D1 error on `cause`, and `db.batch`
+	// throws the D1 error bare. better-sqlite3's driver wraps neither, so a check
+	// reading only `err.message` passed there and missed on D1 (#2704, #2715).
+	const testDb = drizzle(d1Over(sqlite) as unknown as D1Database, { schema, relations });
+	return { sqlite, testDb };
 }
 
-/**
- * `testDb` with D1's `batch`: the statements in order, as one transaction.
- * better-sqlite3's drizzle has none, and a service that batches needs one.
- * Like D1's, it takes only query builders: a `db.run` result is refused.
- * Overlapping batches run one after the other, as D1 runs them.
- */
-export function withBatch({ sqlite, testDb }: ReturnType<typeof migratedSqlite>) {
-	let queue: Promise<unknown> = Promise.resolve();
-	const run = async (stmts: readonly PromiseLike<unknown>[]) => {
-		sqlite.exec('begin');
+type Row = Record<string, unknown>;
+type Result = { results: Row[]; success: true; meta: { changes: number; last_row_id: number } };
+
+/** The message shape workerd gives, with SQLite's own text on `cause`. */
+function d1Error(err: unknown): Error {
+	const e = err as { message?: string; code?: string };
+	const extended = e.code ?? 'SQLITE_ERROR';
+	const base = extended.split('_').slice(0, 2).join('_');
+	const inner = `${e.message}: ${base} (extended: ${extended})`;
+	return new Error(`D1_ERROR: ${inner}`, { cause: new Error(inner) });
+}
+
+// D1 binds booleans; better-sqlite3 refuses them.
+const bindable = (params: unknown[]) => params.map((p) => (typeof p === 'boolean' ? Number(p) : p));
+
+/** A D1 binding over better-sqlite3. `batch` runs its statements in order as one transaction. */
+function d1Over(sqlite: Database.Database) {
+	const execute = (sql: string, params: unknown[], raw: boolean): Result | unknown[][] => {
 		try {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			sqlite.exec('commit');
-			return out;
-		} catch (e) {
-			sqlite.exec('rollback');
-			throw e;
+			// D1 caps a statement at 100 bound parameters; SQLite itself allows far more.
+			if (params.length > D1_MAX_PARAMS) throw new Error('too many SQL variables');
+			const stmt = sqlite.prepare(sql);
+			const args = bindable(params);
+			if (stmt.reader) {
+				if (raw) return stmt.raw(true).all(...args) as unknown[][];
+				return { results: stmt.all(...args) as Row[], success: true, meta: meta(0, 0) };
+			}
+			const r = stmt.run(...args);
+			if (raw) return [];
+			return { results: [], success: true, meta: meta(r.changes, Number(r.lastInsertRowid)) };
+		} catch (err) {
+			throw d1Error(err);
 		}
 	};
-	return Object.assign(testDb, {
-		batch: async (stmts: readonly PromiseLike<unknown>[]) => {
-			for (const s of stmts) {
-				if (typeof (s as { getSQL?: unknown }).getSQL !== 'function') {
-					throw new TypeError('D1 batches only query builders, not a raw db.run/db.all result');
-				}
-			}
-			const result = queue.then(() => run(stmts));
-			queue = result.catch(() => undefined);
-			return result;
+
+	class Statement {
+		constructor(
+			readonly sql: string,
+			readonly params: unknown[] = []
+		) {}
+		bind(...params: unknown[]) {
+			return new Statement(this.sql, params);
 		}
-	});
+		async run() {
+			return execute(this.sql, this.params, false) as Result;
+		}
+		async all() {
+			return execute(this.sql, this.params, false) as Result;
+		}
+		async raw() {
+			return execute(this.sql, this.params, true) as unknown[][];
+		}
+		async first(column?: string) {
+			const [row] = (execute(this.sql, this.params, false) as Result).results;
+			if (!row) return null;
+			return column ? row[column] : row;
+		}
+	}
+
+	return {
+		prepare: (sql: string) => new Statement(sql),
+		async batch(statements: Statement[]) {
+			sqlite.exec('begin');
+			try {
+				const out = statements.map((s) => execute(s.sql, s.params, false));
+				sqlite.exec('commit');
+				return out;
+			} catch (err) {
+				sqlite.exec('rollback');
+				throw err;
+			}
+		}
+	};
 }
+
+const meta = (changes: number, last_row_id: number) => ({ changes, last_row_id });

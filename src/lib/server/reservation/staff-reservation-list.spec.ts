@@ -156,8 +156,9 @@ describe('confirmedUnpaidSql and owesMoney agree', () => {
 									cashDueCents
 								})
 							);
-		for (let i = 0; i < rows.length; i += 50) {
-			await testDb.insert(reservation).values(rows.slice(i, i + 50));
+		// Twelve bound parameters a row, under D1's 100 a statement.
+		for (let i = 0; i < rows.length; i += 8) {
+			await testDb.insert(reservation).values(rows.slice(i, i + 8));
 		}
 		const viaSql = await testDb
 			.select({ id: reservation.id })

@@ -9,9 +9,8 @@ import { sql } from 'drizzle-orm';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const db = migratedSqlite();
-	return { sqlite: db.sqlite, testDb: withBatch(db) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite();
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));

@@ -9,17 +9,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-// better-sqlite3 has no `batch`; sequential is enough to exercise the writes.
-vi.mock('#lib/server/db/index.js', () => ({
-	db: new Proxy(testDb, {
-		get: (target, prop, receiver) =>
-			prop === 'batch'
-				? async (queries: PromiseLike<unknown>[]) => {
-						for (const q of queries) await q;
-					}
-				: Reflect.get(target, prop, receiver)
-	})
-}));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 vi.mock('$app/env/private', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ BETTER_AUTH_SECRET: 'test-secret' })

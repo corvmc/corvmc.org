@@ -9,9 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const handle = migratedSqlite({ foreignKeys: true });
-	return { sqlite: handle.sqlite, testDb: withBatch(handle) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
@@ -220,7 +219,7 @@ describe('remove', () => {
 		const second = await draft('Second');
 		await svc.publish(second.id, 'g1');
 		const [{ id: threadId }] = announcementThreads();
-		const realBatch = testDb.batch;
+		const realBatch = testDb.batch.bind(testDb);
 		const spy = vi.spyOn(testDb, 'batch').mockImplementationOnce(async (stmts) => {
 			sqlite
 				.prepare(

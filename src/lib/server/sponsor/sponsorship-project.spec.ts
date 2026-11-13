@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /** A sponsorship is a project (#2622), against a real SQLite with foreign keys on. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const handle = migratedSqlite({ foreignKeys: true });
-	return { sqlite: handle.sqlite, testDb: withBatch(handle) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));

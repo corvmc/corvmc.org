@@ -9,14 +9,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const db = migratedSqlite();
-	return { sqlite: db.sqlite, testDb: withBatch(db) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite();
 });
 
-vi.mock('#lib/server/db/index.js', () => ({
+vi.mock('#lib/server/db/index.js', async () => ({
 	db: testDb,
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
 const emit = vi.fn(async (..._args: unknown[]) => undefined);

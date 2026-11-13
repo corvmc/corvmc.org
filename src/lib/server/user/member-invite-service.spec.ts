@@ -6,15 +6,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order.
 vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	})
+	db: testDb
 }));
 
 const emit = vi.fn(async (..._a: unknown[]) => undefined);

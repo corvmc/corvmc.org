@@ -14,12 +14,9 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-// `getRowCount` reads D1's `meta.changes`; better-sqlite3 reports `changes` at
-// the top level. Left real, every update here would look like it matched no
-// rows — which is a false *pass* on any test expecting a throw.
-vi.mock('#lib/server/db/index.js', () => ({
+vi.mock('#lib/server/db/index.js', async () => ({
 	db: testDb,
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
 const invite = vi.fn(async () => undefined);

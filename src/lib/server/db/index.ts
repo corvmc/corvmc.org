@@ -10,10 +10,7 @@ export function initDb(d1: D1Database) {
 	_db = drizzle(d1, { schema, relations });
 }
 
-export function getRowCount(result: unknown): number {
-	const r = result as { meta?: { changes?: number } };
-	return r?.meta?.changes ?? 0;
-}
+export { getRowCount } from './row-count';
 
 export const db = new Proxy({} as Database, {
 	get(_target, prop, receiver) {

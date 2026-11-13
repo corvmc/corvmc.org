@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { migratedD1 } from './migrated-d1';
+import { migratedSqlite } from './migrated-sqlite';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 
 /**
- * Pinned against a real `getPlatformProxy()` D1 under drizzle 1.0.0-rc.3:
+ * Every real-SQLite spec runs on this fixture, so it throws what production
+ * throws (#2715). Pinned against a real `getPlatformProxy()` D1 under drizzle 1.0.0-rc.3:
  * a single write throws DrizzleQueryError("Failed query: …") with
  * "D1_ERROR: UNIQUE constraint failed: t.email: SQLITE_CONSTRAINT (extended:
  * SQLITE_CONSTRAINT_UNIQUE)" on `cause`; `db.batch` throws that error bare.
  */
-const { sqlite, testDb } = migratedD1();
+const { sqlite, testDb } = migratedSqlite();
 
 const caught = (p: PromiseLike<unknown>) =>
 	Promise.resolve(p).then(
@@ -23,7 +24,7 @@ beforeEach(() => {
 	sqlite.exec(`insert into user (id, name, email) values ('u1', 'A', 'a@example.com')`);
 });
 
-describe('migratedD1', () => {
+describe('migratedSqlite', () => {
 	it('wraps a single write, with the D1 text on cause', async () => {
 		const err = await caught(
 			testDb.insert(user).values({ id: 'u2', name: 'B', email: 'a@example.com' })
@@ -55,5 +56,18 @@ describe('migratedD1', () => {
 		expect(inserted).toEqual({ id: 'u3', emailVerified: true });
 		const found = await testDb.query.user.findFirst({ where: { id: 'u3' } });
 		expect(found?.emailVerified).toBe(true);
+	});
+
+	it('refuses a statement over D1’s 100 bound parameters', async () => {
+		const insert = (n: number) =>
+			testDb
+				.insert(user)
+				.values(
+					Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: 'P', email: `p${i}@x.org` }))
+				);
+		const perRow = insert(1).toSQL().params.length;
+		const fits = Math.floor(100 / perRow);
+		expect((await caught(insert(fits + 1)))?.name).toBe('DrizzleQueryError');
+		expect(await caught(insert(fits))).toBeNull();
 	});
 });

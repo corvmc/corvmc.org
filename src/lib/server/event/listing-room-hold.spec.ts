@@ -10,18 +10,9 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (r: unknown) => {
-		const x = r as { meta?: { changes?: number }; changes?: number };
-		return Number(x?.meta?.changes ?? x?.changes ?? 0);
-	}
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn(), on: vi.fn() }

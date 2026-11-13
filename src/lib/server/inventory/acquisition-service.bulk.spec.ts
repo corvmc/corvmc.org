@@ -54,10 +54,14 @@ vi.mock('#lib/server/db/index.js', () => {
 		db: {
 			select: vi.fn(() => selectChain()),
 			insert: vi.fn((table: unknown) => ({
-				values: (rows: unknown) => ({
-					__table: tableNameOf(table),
-					__rows: Array.isArray(rows) ? rows : [rows]
-				})
+				values: (rows: unknown) => {
+					const list = (Array.isArray(rows) ? rows : [rows]) as object[];
+					return {
+						__table: tableNameOf(table),
+						__rows: list,
+						toSQL: () => ({ params: list.flatMap((r) => Object.values(r)) })
+					};
+				}
 			})),
 			batch: vi.fn(async (statements: { __table: string; __rows: unknown[] }[]) => {
 				batchCalls += 1;

@@ -7,12 +7,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
-	const db = migratedSqlite({ foreignKeys: true });
-	return { sqlite: db.sqlite, testDb: withBatch(db) };
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+
+// D1's `batch` is typed for a non-empty tuple; the helpers return arrays.
+const batch = (stmts: readonly unknown[]) =>
+	testDb.batch(stmts as unknown as Parameters<typeof testDb.batch>[0]);
 
 const { linkInserts, linkInsertIfTaskExists, linkedAssetIds, linkedIdSql, linkedTo, replaceLink } =
 	await import('./work-order-link');
@@ -53,7 +56,7 @@ describe('the table', () => {
 	});
 
 	it('goes with its task and with its target', async () => {
-		await testDb.batch([
+		await batch([
 			...linkInserts('retube', { assetId: 'amp' }),
 			...linkInserts('sweep', { assetId: 'cab' })
 		]);
@@ -65,8 +68,8 @@ describe('the table', () => {
 	});
 
 	it('links a task to a record once', async () => {
-		await testDb.batch(linkInserts('retube', { assetId: 'amp' }));
-		await expect(testDb.batch(linkInserts('retube', { assetId: 'amp' }))).rejects.toThrow(/UNIQUE/);
+		await batch(linkInserts('retube', { assetId: 'amp' }));
+		await expect(batch(linkInserts('retube', { assetId: 'amp' }))).rejects.toThrow(/UNIQUE/);
 	});
 });
 
@@ -76,17 +79,17 @@ describe('helpers', () => {
 		sqlite.exec(`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
 			values ('res', 'user', 'u', 'u', 'confirmed', 1, 2)`);
 		sqlite.pragma('foreign_keys = ON');
-		await testDb.batch(linkInserts('retube', { assetId: 'amp', reservationId: 'res' }));
+		await batch(linkInserts('retube', { assetId: 'amp', reservationId: 'res' }));
 
-		await testDb.batch(replaceLink('retube', 'assetId', 'cab'));
+		await batch(replaceLink('retube', 'assetId', 'cab'));
 		expect(await linkedAssetIds(['retube'])).toEqual(new Map([['retube', 'cab']]));
 
-		await testDb.batch(replaceLink('retube', 'assetId', null));
+		await batch(replaceLink('retube', 'assetId', null));
 		expect(links()).toEqual([{ work_order_id: 'retube', asset_id: null, reservation_id: 'res' }]);
 	});
 
 	it('skips a conditional link when its task was never written', async () => {
-		await testDb.batch([
+		await batch([
 			linkInsertIfTaskExists('missing', 'assetId', 'amp'),
 			linkInsertIfTaskExists('retube', 'assetId', 'amp')
 		]);
@@ -94,7 +97,7 @@ describe('helpers', () => {
 	});
 
 	it("reads a task's first unit as a column, and finds tasks by unit", async () => {
-		await testDb.batch(linkInserts('retube', { assetId: 'amp' }));
+		await batch(linkInserts('retube', { assetId: 'amp' }));
 		const rows = await testDb
 			.select({ id: workOrder.id, assetId: linkedIdSql('assetId') })
 			.from(workOrder)

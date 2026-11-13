@@ -11,13 +11,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 vi.mock('#lib/server/db/index.js', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
+	db: testDb,
 	getRowCount: () => 0
 }));
 
