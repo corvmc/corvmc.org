@@ -1,4 +1,4 @@
-import { seedOrganizations, type SeedOrganization } from './parties';
+import { seedOrganizations, seedPeople, type SeedOrganization, type SeedPerson } from './parties';
 
 /**
  * Contacts beyond funders, sponsors and contractors: a partner, the press, and
@@ -12,7 +12,7 @@ export async function seedContacts() {
 		{
 			id: 'seed-org-arts-center',
 			name: 'Corvallis Arts Center',
-			roles: ['partner'],
+			roles: ['partner', 'donor'],
 			website: 'https://example.org/arts-center',
 			notes: 'Co-hosts the winter showcase.',
 			person: { name: 'Lena Ortiz', role: 'Programs director', email: 'lena@example.org' }
@@ -32,5 +32,23 @@ export async function seedContacts() {
 		}
 	];
 	await seedOrganizations(orgs);
-	return { organizations: orgs.length };
+	// People with no organization, so the list's person rows and Type filter have something to show.
+	const people: SeedPerson[] = [
+		{
+			id: 'seed-person-margaret-hale',
+			name: 'Margaret Hale',
+			email: 'margaret.hale@example.org',
+			notes: 'Gives each December.',
+			roles: ['donor']
+		},
+		{
+			id: 'seed-person-dev-patel',
+			name: 'Dev Patel',
+			email: 'dev.patel@example.org',
+			roles: ['donor', 'partner']
+		},
+		{ id: 'seed-person-ruth-ng', name: 'Ruth Ng', phone: '541-555-0142', roles: [] }
+	];
+	await seedPeople(people);
+	return { organizations: orgs.length, people: people.length };
 }

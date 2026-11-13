@@ -1,7 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { activity } from '#lib/server/db/schema/activity.js';
-import { desc, eq, isNotNull, sql, type SQL } from 'drizzle-orm';
+import { desc, eq, sql, type SQL } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
+import { partyKey } from './party-key';
 import { ACTIVITY_BODY_MAX, type ActivityKind } from '#lib/config.js';
 
 /**
@@ -107,17 +108,18 @@ export async function listActivity(party: PartyRef, limit: number) {
 		.limit(limit);
 }
 
-/** Each organization's latest note day, for the Contacts list. */
-export async function lastActivityByOrganization(ids: string[]): Promise<Map<string, string>> {
-	if (ids.length === 0) return new Map();
-	// Grouped over every organization rather than bound per id: D1 caps parameters at 100.
+/** Each party's latest note day, keyed by `partyKey`, for the Contacts list. */
+export async function lastActivityByParty(): Promise<Map<string, string>> {
+	// Grouped over every party rather than bound per id: D1 caps parameters at 100.
 	const rows = await db
-		.select({ id: activity.organizationId, last: sql<string>`max(${activity.occurredOn})` })
+		.select({
+			organizationId: activity.organizationId,
+			contactId: activity.contactId,
+			last: sql<string>`max(${activity.occurredOn})`
+		})
 		.from(activity)
-		.where(isNotNull(activity.organizationId))
-		.groupBy(activity.organizationId);
-	const wanted = new Set(ids);
-	return new Map(rows.filter((r) => r.id && wanted.has(r.id)).map((r) => [r.id!, r.last]));
+		.groupBy(activity.organizationId, activity.contactId);
+	return new Map(rows.map((r) => [partyKey(ownerOf(r)), r.last]));
 }
 
 /** Move one party's notes onto another, for a merge. Returned for the merge's batch. */

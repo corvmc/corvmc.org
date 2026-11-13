@@ -49,13 +49,22 @@ const people = {
 	mergeContacts: vi.fn(async () => 'Priya')
 };
 vi.mock('#lib/server/directory/contact-service.js', () => people);
-const facts = {
-	organizationListFacts: vi.fn(async () => ({
-		lastActivity: new Map([['o1', '2026-11-01']]),
-		nextTask: new Map([['o1', { id: 'wo-1', title: 'Call them', dueAt: null }]])
+const list = {
+	listContacts: vi.fn(async (input: { people: boolean }) => ({
+		rows: [
+			{
+				type: 'organization',
+				...org,
+				roles: ['funder'],
+				mainPerson: input.people ? 'Priya' : null,
+				lastActivity: '2026-11-01',
+				nextTask: { id: 'wo-1', title: 'Call them', dueAt: null }
+			}
+		],
+		pagination: { page: 1, pageSize: 50, total: 1, totalPages: 1 }
 	}))
 };
-vi.mock('#lib/server/party/list-facts.js', () => facts);
+vi.mock('#lib/server/party/contact-list.js', () => list);
 const notes = {
 	addActivity: vi.fn(async () => ({ id: 'n1' })),
 	updateActivity: vi.fn(async () => ({ type: 'organization', id: 'o1' })),
@@ -204,40 +213,50 @@ describe('recording an in-kind gift', () => {
 });
 
 describe('contacts.remote views', () => {
-	it('opens a role view to that role’s own capability, without the people', async () => {
-		held = new Set(['grant.read']);
-		const { rows, view } = (await remote.getContactsPage({ view: 'funder' })) as {
-			rows: { mainPerson: unknown }[];
-			view: string;
-		};
-		expect(view).toBe('funder');
-		expect(rows[0].mainPerson).toBeNull();
-		expect(people.primaryContacts).not.toHaveBeenCalled();
+	type Page = {
+		roles: string[];
+		people: boolean;
+		sort: string;
+		rows: { mainPerson: unknown; lastActivity: unknown; nextTask: unknown }[];
+	};
+	const listed = () => list.listContacts.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+
+	it('lists a role-only viewer their own roles, without the people', async () => {
+		held = new Set(['grant.read', 'sponsor.read']);
+		const page = (await remote.getContactsPage({})) as Page;
+		expect(page.roles).toEqual(['funder', 'sponsor']);
+		expect(page.people).toBe(false);
+		expect(listed()).toMatchObject({ visibleRoles: ['funder', 'sponsor'], people: false });
+		expect(page.rows[0].mainPerson).toBeNull();
 	});
 
-	it('gives a role-only viewer their own role in place of any other view', async () => {
+	it('drops role filters outside the viewer’s roles', async () => {
 		held = new Set(['grant.read']);
-		for (const asked of ['all', 'press'] as const) {
-			const page = (await remote.getContactsPage({ view: asked })) as { view: string };
-			expect(page.view).toBe('funder');
-		}
-		expect(orgs.listOrganizations).toHaveBeenCalledWith(
-			expect.objectContaining({ role: 'funder' })
-		);
+		await remote.getContactsPage({ roles: ['press', 'funder'] });
+		expect(listed()).toMatchObject({ roles: ['funder'] });
 	});
 
-	it('refuses the page to a viewer with no view at all', async () => {
+	it('refuses the page to a viewer with no role at all', async () => {
 		held = new Set(['event.read']);
 		await expect(remote.getContactsPage({})).rejects.toMatchObject({ status: 403 });
-		expect(orgs.listOrganizations).not.toHaveBeenCalled();
+		expect(list.listContacts).not.toHaveBeenCalled();
 	});
 
-	it('names the main person to contact.read', async () => {
+	it('gives contact.read every role, the people and the main person', async () => {
 		held = new Set(['contact.read']);
-		const { rows } = (await remote.getContactsPage({ view: 'all' })) as {
-			rows: { mainPerson: unknown }[];
-		};
-		expect(rows[0].mainPerson).toBe('Priya');
+		const page = (await remote.getContactsPage({ roles: ['press'] })) as Page;
+		expect(listed()).toMatchObject({ visibleRoles: 'all', people: true, roles: ['press'] });
+		expect(page.rows[0].mainPerson).toBe('Priya');
+	});
+
+	it('sorts only on a column the viewer may see', async () => {
+		held = new Set(['grant.read']);
+		expect(((await remote.getContactsPage({ sort: '-activity' })) as Page).sort).toBe('name');
+		expect(((await remote.getContactsPage({ sort: 'task' })) as Page).sort).toBe('name');
+		held = new Set(['contact.read', 'project.read']);
+		expect(((await remote.getContactsPage({ sort: '-activity' })) as Page).sort).toBe('-activity');
+		expect(((await remote.getContactsPage({ sort: 'task' })) as Page).sort).toBe('task');
+		expect(listed()).toMatchObject({ sort: 'task' });
 	});
 
 	it('shows an organization page to its role’s capability, with the people withheld', async () => {
@@ -248,12 +267,11 @@ describe('contacts.remote views', () => {
 	});
 
 	it('lists last activity to contact.read and the next task to project.read', async () => {
-		type Page = { rows: { lastActivity: unknown; nextTask: unknown }[] };
 		held = new Set(['contact.read']);
-		const staff = (await remote.getContactsPage({ view: 'all' })) as Page;
+		const staff = (await remote.getContactsPage({})) as Page;
 		expect(staff.rows[0]).toMatchObject({ lastActivity: '2026-11-01', nextTask: null });
 		held = new Set(['grant.read', 'project.read']);
-		const funders = (await remote.getContactsPage({ view: 'funder' })) as Page;
+		const funders = (await remote.getContactsPage({})) as Page;
 		expect(funders.rows[0]).toMatchObject({ lastActivity: null, nextTask: { id: 'wo-1' } });
 	});
 

@@ -66,3 +66,30 @@ export async function seedOrganizations(orgs: SeedOrganization[]) {
 		);
 	}
 }
+
+/** A person with no organization, such as a donor giving alone, and their roles. */
+export type SeedPerson = {
+	id: string;
+	name: string;
+	email?: string;
+	phone?: string;
+	notes?: string;
+	roles: PartyRole[];
+};
+
+export async function seedPeople(people: SeedPerson[]) {
+	await batchInsert(
+		contact,
+		people.map((p) => ({
+			id: p.id,
+			organizationId: null,
+			name: p.name,
+			email: p.email?.toLowerCase() ?? null,
+			phone: p.phone ?? null,
+			notes: p.notes ?? null,
+			source: 'staff_entered' as const
+		}))
+	);
+	const roles = people.flatMap((p) => p.roles.map((role) => ({ contactId: p.id, role })));
+	if (roles.length > 0) await batchInsert(partyRole, roles);
+}

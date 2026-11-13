@@ -2564,9 +2564,13 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   `contact.read` and changing them `contact.manage`, which staff and the Development committee
   hold. A new person whose normalized email is already on file attaches to that contact rather
   than making a second one (`createContact`, `setPrimaryContact`).
-- **Contacts (`/staff/contacts`):** `contacts.remote.ts` lists organizations per role. A view and
-  an organization's page open to `contact.read`, or to the role's own capability (`grant.read`,
-  `sponsor.read`, `contractor.read`) without the people. Every write needs `contact.manage`. A
+- **Contacts (`/staff/contacts`):** one table of every organization and every person with no
+  organization (#2760), filtered by role (several at once), type, search (name, main person,
+  website) and archived, and sorted by name, last activity or next task due. Filters and sort live
+  in the URL; `listContacts` (`party/contact-list.ts`) filters, sorts and pages on the server. An
+  organization's row and page open to `contact.read`, or to one of its roles' own capability
+  (`grant.read`, `sponsor.read`, `contractor.read`), which sees only those roles' rows and role
+  options, without the people. Person rows need `contact.read`. Every write needs `contact.manage`. A
   contractor is added from `/staff/contractors`, which asks for the trade. Possible duplicates
   (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
   the same website domain; merging moves roles, records, people, notes and task links to the one

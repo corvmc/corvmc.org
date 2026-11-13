@@ -836,6 +836,21 @@ export const partyRoles = [
 ] as const;
 export type PartyRole = (typeof partyRoles)[number];
 
+/** The Contacts list's rows (#2760): an organization, or a person with none. */
+export const contactListTypes = ['organization', 'person'] as const;
+export type ContactListType = (typeof contactListTypes)[number];
+
+/** The Contacts list's sorts; a leading `-` is descending. */
+export const contactListSorts = [
+	'name',
+	'-name',
+	'activity',
+	'-activity',
+	'task',
+	'-task'
+] as const;
+export type ContactListSort = (typeof contactListSorts)[number];
+
 /** What staff log on a party's timeline (#2622): a call, a meeting, an email or a note. */
 export const activityKinds = ['call', 'meeting', 'email', 'note'] as const;
 export type ActivityKind = (typeof activityKinds)[number];
@@ -866,7 +881,7 @@ export const partyRoleLabels: Record<PartyRole, string> = {
 	donor: 'Donor'
 };
 
-/** The Contacts page's view per role. */
+/** The Contacts page's role filter options, one per role. */
 export const partyRoleViewLabels: Record<PartyRole, string> = {
 	funder: 'Funders',
 	sponsor: 'Sponsors',

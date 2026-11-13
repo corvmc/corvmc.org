@@ -12,12 +12,14 @@ import { canSeeRole, requireOrganizationReader } from '#lib/server/party/organiz
 import * as notes from '#lib/server/party/activity-service.js';
 import type { PartyRef } from '#lib/server/party/activity-service.js';
 import { partyTimeline } from '#lib/server/party/timeline.js';
-import { organizationListFacts } from '#lib/server/party/list-facts.js';
+import { listContacts } from '#lib/server/party/contact-list.js';
 import { recordInKindGift } from '#lib/server/finance/in-kind-gift.js';
 import { listFundableProjects } from '#lib/server/development/funding-project.js';
 import {
 	ACTIVITY_BODY_MAX,
 	activityKinds,
+	contactListSorts,
+	contactListTypes,
 	LONG_TEXT_MAX,
 	MARKET_MAX_TABLES_REQUESTED,
 	partyRoles,
@@ -27,56 +29,75 @@ import {
 
 /**
  * The Contacts screens (#2622): every outside organization, its roles and its
- * people. A role's own capability opens that role's view and its
- * organizations' pages, so the treasurer still reaches contractors and
- * sponsors. The people on them need `contact.read`.
+ * people. A role's own capability opens that role's organizations in the list
+ * and their pages, so the treasurer still reaches contractors and sponsors.
+ * The people on them need `contact.read`.
  */
 
-const view = z.enum(['all', ...partyRoles]);
-export type ContactsView = z.infer<typeof view>;
-
-/** The views this viewer may open, for the tab bar. */
-async function viewsFor() {
-	const all = await can('contact.read');
+/** The roles whose organizations this viewer may read; `all` to contact.read, role-less ones included. */
+async function visibleRoles(): Promise<PartyRole[] | 'all'> {
+	if (await can('contact.read')) return 'all';
 	const roles: PartyRole[] = [];
-	for (const role of partyRoles) if (all || (await canSeeRole(role))) roles.push(role);
-	return { all, roles };
+	for (const role of partyRoles) if (await canSeeRole(role)) roles.push(role);
+	return roles;
 }
 
 /**
- * The list, with the views the viewer may open. A view they may not open falls
- * back to the first one they may; with none, the page is refused.
+ * One table of every organization the viewer may read and, to contact.read,
+ * every person with no organization (#2760). Role filters outside the viewer's
+ * roles drop away; with no role at all, the page is refused. A sort on a
+ * column the viewer may not see falls back to name.
  */
 export const getContactsPage = query(
-	z.object({ view: view.optional(), includeArchived: z.boolean().optional() }),
-	async ({ view: requested, includeArchived }) => {
+	z.object({
+		roles: z.array(z.enum(partyRoles)).max(partyRoles.length).optional(),
+		type: z.enum(contactListTypes).optional(),
+		search: z.string().max(SHORT_TEXT_MAX).optional(),
+		includeArchived: z.boolean().optional(),
+		sort: z.enum(contactListSorts).optional(),
+		page: z.number().int().positive().optional()
+	}),
+	async (filters) => {
 		await requireUser();
-		const views = await viewsFor();
-		const allowed: ContactsView[] = [...(views.all ? ['all' as const] : []), ...views.roles];
-		const view = requested && allowed.includes(requested) ? requested : allowed[0];
-		if (!view) error(403, 'Forbidden');
-		const list = await orgs.listOrganizations({
-			role: view === 'all' ? undefined : view,
-			includeArchived: includeArchived ?? false
-		});
-		const ids = list.map((r) => r.id);
+		const visible = await visibleRoles();
+		if (visible !== 'all' && visible.length === 0) error(403, 'Forbidden');
 		const [staff, tasks] = await Promise.all([can('contact.read'), can('project.read')]);
-		const [main, facts] = await Promise.all([
-			staff ? people.primaryContacts(ids) : new Map<string, people.PrimaryContact>(),
-			organizationListFacts(ids)
-		]);
-		const rows = list.map((r) => ({
-			id: r.id,
-			name: r.name,
-			website: r.website,
-			roles: r.roles,
-			archivedAt: r.archivedAt,
-			mainPerson: main.get(r.id)?.name ?? main.get(r.id)?.email ?? null,
-			// The notes need `contact.read`; the task, the Tasks table's own `project.read`.
-			lastActivity: staff ? (facts.lastActivity.get(r.id) ?? null) : null,
-			nextTask: tasks ? (facts.nextTask.get(r.id) ?? null) : null
-		}));
-		return { views, view, rows };
+		// The notes need `contact.read`; the task, the Tasks table's own `project.read`.
+		const sortable = { name: true, activity: staff, task: tasks };
+		const requested = filters.sort ?? 'name';
+		const sort = sortable[requested.replace(/^-/, '') as keyof typeof sortable]
+			? requested
+			: 'name';
+		const roles =
+			visible === 'all' ? filters.roles : filters.roles?.filter((r) => visible.includes(r));
+		const list = await listContacts({
+			visibleRoles: visible,
+			people: staff,
+			roles,
+			type: filters.type,
+			search: filters.search,
+			includeArchived: filters.includeArchived,
+			sort,
+			page: filters.page
+		});
+		return {
+			roles: visible === 'all' ? [...partyRoles] : visible,
+			people: staff,
+			sort,
+			sortable,
+			rows: list.rows.map((r) => ({
+				type: r.type,
+				id: r.id,
+				name: r.name,
+				website: r.website,
+				roles: r.roles,
+				archivedAt: r.archivedAt,
+				mainPerson: r.mainPerson,
+				lastActivity: staff ? r.lastActivity : null,
+				nextTask: tasks ? r.nextTask : null
+			})),
+			pagination: list.pagination
+		};
 	}
 );
 
