@@ -14,6 +14,7 @@
  */
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 
 /**
@@ -25,11 +26,6 @@ import { user } from '#lib/server/db/schema/authentication.js';
  * worth a second query and nothing more.
  */
 const MAX_ATTEMPTS = 2;
-
-function isUniqueViolation(err: unknown): boolean {
-	const message = err instanceof Error ? err.message : String(err ?? '');
-	return /UNIQUE constraint failed/i.test(message);
-}
 
 /** The next free number: one past the highest ever issued, starting at 1. */
 async function nextMemberNumber(): Promise<number> {
@@ -72,7 +68,7 @@ export async function assignMemberNumber(userId: string): Promise<number | null>
 		} catch (err) {
 			// The last attempt rethrows, so a real failure stays visible: the signup
 			// hook reports it to Sentry and the backfill prints it.
-			if (attempt === MAX_ATTEMPTS - 1 || !isUniqueViolation(err)) throw err;
+			if (attempt === MAX_ATTEMPTS - 1 || !isUniqueConstraintError(err)) throw err;
 		}
 	}
 	return null;

@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { stripe, paymentDriver } from '#lib/server/stripe.js';
@@ -246,7 +247,7 @@ async function cacheReaderPayment(intent: Stripe.PaymentIntent, userId: string, 
 			paidAt
 		});
 	} catch (err) {
-		if (/UNIQUE constraint failed/i.test((err as Error).message ?? '')) return;
+		if (isUniqueConstraintError(err)) return;
 		captureException(err, { event: 'reader.cache', paymentIntentId: intent.id });
 	}
 }
