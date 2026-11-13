@@ -19,7 +19,7 @@
 	<InfoCard title={m.member_classified_matches_title()}>
 		{#snippet action()}
 			<a href={resolve('/member/classifieds')} class="link text-sm link-primary"
-				>{m.member_classified_matches_view_all_label()}</a
+				>{m.member_classified_matches_view_all_text()}</a
 			>
 		{/snippet}
 		<ul class="space-y-2">

@@ -141,7 +141,7 @@
 	{/if}
 
 	{#if claimants.length === 0}
-		<p class="text-subtle text-sm">{m.volunteer_work_order_view_nobody_yet_title()}</p>
+		<p class="text-subtle text-sm">{m.volunteer_work_order_view_nobody_yet_text()}</p>
 	{:else}
 		<ul class="flex flex-col gap-4" data-testid="shift-roster">
 			{#each claimants as claimant (claimant.signupId)}

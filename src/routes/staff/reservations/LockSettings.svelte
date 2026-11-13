@@ -96,7 +96,7 @@
 <div class="flex flex-wrap items-center gap-2">
 	<span class="text-sm font-medium">{m.staff_reservations_utec_account_text()}</span>
 	<Badge variant={connected ? 'success' : 'ghost'}>
-		{connected ? m.staff_settings_connected_2_text() : m.staff_settings_not_connected_text()}
+		{connected ? m.staff_settings_connected_2_label() : m.staff_settings_not_connected_label()}
 	</Badge>
 </div>
 

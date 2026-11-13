@@ -52,7 +52,7 @@
 		<!-- Its gigs, payments and people as an outside act stay on that record (#2622). -->
 		<p class="text-sm">
 			<a class="link" href={resolve(`staff/contacts/${band.fromOrganizationId}`)}
-				>{msg.staff_groups_id_band_record_outside_act_label()}</a
+				>{msg.staff_groups_id_band_record_outside_act_text()}</a
 			>
 		</p>
 	{/if}

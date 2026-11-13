@@ -107,7 +107,7 @@
 
 		{#if pricingFailed}
 			<p class="py-2 text-sm text-error" data-testid="payment-pricing-error">
-				{m.reservations_booking_payment_step_pricing_failed_body()}
+				{m.reservations_booking_payment_step_pricing_failed_text()}
 			</p>
 		{:else if !pricing}
 			<div class="space-y-2 py-2">

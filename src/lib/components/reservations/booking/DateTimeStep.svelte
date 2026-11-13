@@ -213,7 +213,7 @@
 	{:else}
 		{#if newMemberNotice !== null}
 			<p class="text-muted text-sm">
-				{m.reservations_booking_date_time_step_first_booking_notice_body({
+				{m.reservations_booking_date_time_step_first_booking_notice_text({
 					days: Math.ceil(newMemberNotice / 1440)
 				})}
 			</p>
@@ -269,7 +269,7 @@
 
 		{#if arrivalTime}
 			<p class="text-muted text-sm">
-				{m.reservations_booking_date_time_step_tour_arrival_body({
+				{m.reservations_booking_date_time_step_tour_arrival_text({
 					time: arrivalTime,
 					minutes: tourMinutes
 				})}

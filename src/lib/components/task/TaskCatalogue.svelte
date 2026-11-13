@@ -107,7 +107,7 @@
 	};
 	const dayLabel = (t: Row) => {
 		const when = whenOf(t);
-		return when ? `${relativeDay(when)} · ${formatDateShort(when)}` : m.staff_tasks_no_date_text();
+		return when ? `${relativeDay(when)} · ${formatDateShort(when)}` : m.staff_tasks_no_date_label();
 	};
 
 	// One project's list neither groups nor filters by project; only it has sections.

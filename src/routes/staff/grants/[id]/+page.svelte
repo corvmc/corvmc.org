@@ -34,11 +34,11 @@
 	/** Offered, never applied unasked: the button stamps the stage's template. */
 	const stageOffer: Partial<Record<GrantStage, { text: string; label: string }>> = {
 		award: {
-			text: m.staff_grants_id_award_offer_body(),
+			text: m.staff_grants_id_award_offer_text(),
 			label: m.staff_grants_id_add_award_tasks_label()
 		},
 		close_out: {
-			text: m.staff_grants_id_close_out_offer_body(),
+			text: m.staff_grants_id_close_out_offer_text(),
 			label: m.staff_grants_id_add_close_out_tasks_label()
 		}
 	};
@@ -120,7 +120,7 @@
 						{fundedProject.name}
 					</a>
 				{:else}
-					{m.grant_grant_fields_general_support_label()}
+					{m.grant_grant_fields_general_support_text()}
 				{/if}
 			</Fact>
 			{#if grant.nextTask}
@@ -138,7 +138,7 @@
 						href={resolve('/staff/tasks/projects/[id]', { id: grant.projectId })}
 						data-testid="grant-project"
 					>
-						{m.staff_grants_id_view_tasks_label()}
+						{m.staff_grants_id_view_tasks_text()}
 					</a>
 				</Fact>
 			{/if}

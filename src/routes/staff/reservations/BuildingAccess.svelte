@@ -49,7 +49,7 @@
 	{m.staff_reservations_building_access_label()}
 	{#if offline}
 		<span class="status status-error" data-testid="lock-offline-dot">
-			<span class="sr-only">{m.staff_reservations_lock_offline_text()}</span>
+			<span class="sr-only">{m.staff_reservations_lock_offline_2_label()}</span>
 		</span>
 	{/if}
 </Button>

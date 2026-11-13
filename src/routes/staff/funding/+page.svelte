@@ -74,7 +74,7 @@
 	{/if}
 	{#if data.shows.sponsors}
 		<Button href={withQuery(resolve('staff/contacts'), 'view=sponsor')} variant="ghost" size="sm">
-			{m.staff_sponsors_sponsors_title()}
+			{m.staff_sponsors_sponsors_label()}
 		</Button>
 	{/if}
 	{#if data.canCreate.sponsors && data.sponsors.length > 0}

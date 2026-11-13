@@ -156,7 +156,7 @@
 			>
 				{#snippet form()}
 					<input {...drop.fields.id.as('hidden', note.id)} />
-					<p>{m.staff_contacts_delete_activity_body()}</p>
+					<p>{m.staff_contacts_delete_activity_text()}</p>
 				{/snippet}
 			</Action>
 		{/if}

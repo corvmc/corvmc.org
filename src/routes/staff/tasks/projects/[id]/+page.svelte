@@ -330,7 +330,7 @@
 			<!-- Loaded only when opened: most visits are for the table above. -->
 			<details class="collapse-arrow collapse border border-base-300" bind:open={graphOpen}>
 				<summary class="collapse-title font-medium"
-					>{m.staff_projects_id_task_graph_title()}</summary
+					>{m.staff_projects_id_task_graph_2_label()}</summary
 				>
 				<div class="collapse-content">
 					{#if graphOpen}<TaskGraph projectId={project.id} />{/if}

@@ -183,7 +183,7 @@
 														.for(task.workOrderId)
 														.fields.workOrderId.as('hidden', task.workOrderId)}
 												/>
-												<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_body()}</p>
+												<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_text()}</p>
 											{/snippet}
 										</Action>
 									{/if}
