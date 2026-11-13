@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { user } from './authentication';
 import { flagStatuses } from './flag';
 import { project } from './project';
+import { organization } from './party';
 import {
 	acquisitionKinds,
 	assetStatuses,
@@ -460,9 +461,8 @@ export const acquisitionLine = sqliteTable(
  * means *something was promised*. Keeping them apart is what lets every money
  * report stay exactly as it is.
  *
- * `supplierName` is free text, matching `acquisition.sourceName`. A `supplier`
- * table was argued out and declined in the spec; the multi-line receipt is what
- * actually fixes the `GROUP BY sourceName` fragmentation.
+ * The supplier is an organization holding the `supplier` role (#2622), so an
+ * order lands on that organization's page beside its other records.
  */
 export const purchaseOrder = sqliteTable(
 	'purchase_order',
@@ -471,7 +471,10 @@ export const purchaseOrder = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 		status: text('status', { enum: orderStatuses }).notNull().default('draft'),
-		supplierName: text('supplier_name'),
+		/** Holds the `supplier` role; `order-service.ts` checks it on write. */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
 		reference: text('reference'),
 		/** When it was sent to the supplier. Null while it is still a draft. */
 		placedAt: integer('placed_at', { mode: 'timestamp' }),
@@ -493,7 +496,8 @@ export const purchaseOrder = sqliteTable(
 	(t) => [
 		index('idx_purchase_order_status').on(t.status),
 		index('idx_purchase_order_expected').on(t.expectedAt),
-		index('idx_purchase_order_project').on(t.projectId)
+		index('idx_purchase_order_project').on(t.projectId),
+		index('idx_purchase_order_organization').on(t.organizationId)
 	]
 );
 

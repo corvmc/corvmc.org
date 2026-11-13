@@ -14,6 +14,7 @@ import {
 	workRequest
 } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 /**
@@ -25,7 +26,7 @@ export async function openOrderLinesForItem(itemId: string) {
 		.select({
 			lineId: purchaseOrderLine.id,
 			orderId: purchaseOrder.id,
-			supplierName: purchaseOrder.supplierName,
+			supplierName: organization.name,
 			reference: purchaseOrder.reference,
 			placedAt: purchaseOrder.placedAt,
 			expectedAt: purchaseOrder.expectedAt,
@@ -34,6 +35,7 @@ export async function openOrderLinesForItem(itemId: string) {
 		})
 		.from(purchaseOrderLine)
 		.innerJoin(purchaseOrder, eq(purchaseOrderLine.orderId, purchaseOrder.id))
+		.leftJoin(organization, eq(organization.id, purchaseOrder.organizationId))
 		.where(
 			and(
 				eq(purchaseOrderLine.itemId, itemId),

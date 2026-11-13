@@ -7,7 +7,9 @@ import {
 	purchaseOrderLine
 } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { organization } from '#lib/server/db/schema/party.js';
+import { listOrganizations, requireRole } from '#lib/server/party/organization-service.js';
+import { and, asc, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { OrderStatus } from '#lib/config.js';
@@ -46,8 +48,13 @@ export interface OrderLineInput {
 	unitCostCents?: number;
 }
 
+/** An order's columns plus its supplier's name, for every read that shows one. */
+const orderColumns = { ...getTableColumns(purchaseOrder), supplierName: organization.name };
+const supplierJoin = eq(organization.id, purchaseOrder.organizationId);
+
 export interface CreateOrderData {
-	supplierName?: string;
+	/** An organization holding the `supplier` role. */
+	organizationId?: string;
 	reference?: string;
 	expectedAt?: Date;
 	notes?: string;
@@ -62,6 +69,7 @@ export async function createOrder(data: CreateOrderData) {
 		throw new OrderStateError('An order needs at least one line');
 	}
 
+	if (data.organizationId) await requireRole(data.organizationId, 'supplier');
 	const orderId = crypto.randomUUID();
 
 	// `db.batch`, never `db.transaction()` — broken on D1. The header has to be
@@ -71,7 +79,7 @@ export async function createOrder(data: CreateOrderData) {
 			id: orderId,
 			status: data.placedAt ? 'placed' : 'draft',
 			placedAt: data.placedAt ?? null,
-			supplierName: data.supplierName ?? null,
+			organizationId: data.organizationId ?? null,
 			reference: data.reference ?? null,
 			expectedAt: data.expectedAt ?? null,
 			notes: data.notes ?? null,
@@ -157,9 +165,20 @@ export async function reopenOrder(id: string, reason: string) {
 }
 
 async function requireOrder(id: string) {
-	const [row] = await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, id)).limit(1);
+	const [row] = await db
+		.select(orderColumns)
+		.from(purchaseOrder)
+		.leftJoin(organization, supplierJoin)
+		.where(eq(purchaseOrder.id, id))
+		.limit(1);
 	if (!row) throw new OrderNotFoundError();
 	return row;
+}
+
+/** Live suppliers' names, for the order forms' suggestions. */
+export async function listSupplierNames(): Promise<string[]> {
+	const rows = await listOrganizations({ role: 'supplier' });
+	return [...new Set(rows.map((r) => r.name))];
 }
 
 export async function listOrders(opts: { status?: OrderStatus } = {}) {
@@ -167,9 +186,10 @@ export async function listOrders(opts: { status?: OrderStatus } = {}) {
 	if (opts.status) conditions.push(eq(purchaseOrder.status, opts.status));
 
 	const orders = await db
-		.select({ order: purchaseOrder, createdBy: user })
+		.select({ order: orderColumns, createdBy: user })
 		.from(purchaseOrder)
 		.leftJoin(user, eq(purchaseOrder.createdByUserId, user.id))
+		.leftJoin(organization, supplierJoin)
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		// Open ones first, then most recent — the list is a worklist, not an archive.
 		.orderBy(
@@ -221,9 +241,10 @@ export async function listOrders(opts: { status?: OrderStatus } = {}) {
 
 export async function getOrderById(id: string) {
 	const [row] = await db
-		.select({ order: purchaseOrder, createdBy: user })
+		.select({ order: orderColumns, createdBy: user })
 		.from(purchaseOrder)
 		.leftJoin(user, eq(purchaseOrder.createdByUserId, user.id))
+		.leftJoin(organization, supplierJoin)
 		.where(eq(purchaseOrder.id, id))
 		.limit(1);
 

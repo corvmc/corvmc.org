@@ -3419,6 +3419,7 @@
 	"staff_contacts_remove_person_body": "Deletes this person and everything recorded about them.",
 	"staff_contacts_grant_applications_title": "Grant applications",
 	"staff_contacts_sponsorships_title": "Sponsorships",
+	"staff_contacts_purchase_orders_title": "Purchase orders",
 	"staff_contacts_contractor_jobs_title": "Contractor jobs",
 	"staff_contacts_open_contractor_label": "Contractor page",
 	"staff_contacts_open_sponsor_label": "Sponsor page",
