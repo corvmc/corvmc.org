@@ -95,7 +95,11 @@ export async function inKindGiftsFor(
 				eq(financialEntry.kind, 'in_kind')
 			)
 		)
-		.orderBy(desc(financialEntry.occurredAt), desc(financialEntry.createdAt))
+		.orderBy(
+			desc(financialEntry.occurredAt),
+			desc(financialEntry.createdAt),
+			desc(financialEntry.id)
+		)
 		.limit(limit + 1);
 	return {
 		items: rows.slice(0, limit).map((r) => ({
