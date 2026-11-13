@@ -163,6 +163,9 @@ export default defineConfig(
 			// route with a query string appended, which has no route id to resolve as
 			// a whole. See docs/development/template-audit.md.
 			'svelte/no-navigation-without-resolve': ['error', { ignoreGoto: true }],
+			// A typeless <button> submits the nearest form, which may be a parent
+			// component's (#2651). `Button.svelte` defaults to `button`; raw ones say.
+			'svelte/button-has-type': 'error',
 			// A template literal over `resolve()` makes TypeScript expand the whole
 			// typed-route union, which sits at its complexity limit (#1610).
 			'no-restricted-syntax': [

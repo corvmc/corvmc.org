@@ -624,7 +624,6 @@
 	"src/routes/staff/settings/inbox-channel-meta.spec.ts",
 	"src/routes/staff/settings/inbox-channel-meta.ts",
 	"src/routes/staff/suggestions/[id]/MergeCandidateOptions.svelte",
-	"src/routes/staff/members/[id]/StaffUserForm.svelte",
 	"src/routes/staff/members/[id]/panels/GrantCertificationAction.svelte",
 	"src/routes/staff/members/[id]/panels/ModerationPanel.svelte",
 	"src/routes/staff/members/[id]/panels/OrientationCard.svelte",
