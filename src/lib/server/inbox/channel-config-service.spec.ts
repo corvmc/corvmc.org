@@ -75,4 +75,11 @@ describe('configurable channels', () => {
 
 		expect(rows()).toEqual([{ channel: 'email', enabled: 0 }]);
 	});
+
+	// Both reads find no row before either insert runs (#2681).
+	it('write one row when two first writes overlap', async () => {
+		await Promise.all([updateChannelConfig('email', true), updateChannelConfig('email', true)]);
+
+		expect(rows()).toEqual([{ channel: 'email', enabled: 1 }]);
+	});
 });

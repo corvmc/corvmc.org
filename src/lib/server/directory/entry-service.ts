@@ -7,7 +7,7 @@ import {
 } from '#lib/server/db/schema/directory.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, count, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -63,12 +63,8 @@ export function groupEntryInsert(values: {
  * this code deploying is the one real way to reach it.
  */
 export async function getOrCreateGroupEntryId(groupId: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.groupId, groupId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.groupId, groupId));
+	if (existing) return existing;
 
 	const [row] = await db
 		.select({ name: group.name, bio: group.bio, avatarKey: group.avatarKey })
@@ -77,11 +73,23 @@ export async function getOrCreateGroupEntryId(groupId: string): Promise<string> 
 		.limit(1);
 	if (!row) throw new Error(`No group ${groupId} to create a directory entry for`);
 
-	const [created] = await db
+	// `idx_directory_entry_group`: two callers that both found none insert once.
+	await db
 		.insert(directoryEntry)
 		.values({ groupId, name: row.name, bio: row.bio, avatarKey: row.avatarKey })
-		.returning({ id: directoryEntry.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findEntryId(eq(directoryEntry.groupId, groupId));
+	if (!id) throw new Error(`No directory entry for group ${groupId}`);
+	return id;
+}
+
+async function findEntryId(where: SQL): Promise<string | undefined> {
+	const [row] = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(where)
+		.limit(1);
+	return row?.id;
 }
 
 /**
@@ -96,32 +104,26 @@ export async function getOrCreateGroupEntryId(groupId: string): Promise<string> 
  * by `updateProfile` and the staff `updateUser` form.
  */
 export async function ensureUserEntry(userId: string, name: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.userId, userId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.userId, userId));
+	if (existing) return existing;
 
-	const [created] = await db
+	// 'members' rather than the column default of 'public': a new account has
+	// not chosen anything yet, and the old `user.directoryVisibility` default
+	// this replaces was 'members'. `idx_directory_entry_user` makes the hook
+	// and a profile save racing it insert once between them.
+	await db
 		.insert(directoryEntry)
-		// 'members' rather than the column default of 'public': a new account has
-		// not chosen anything yet, and the old `user.directoryVisibility` default
-		// this replaces was 'members'. Defaulting a brand-new member to the public
-		// web would be a change of policy smuggled in as a migration.
 		.values({ userId, name, visibility: 'members' })
-		.returning({ id: directoryEntry.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findEntryId(eq(directoryEntry.userId, userId));
+	if (!id) throw new Error(`No directory entry for user ${userId}`);
+	return id;
 }
 
 /** The entry id for a user, creating one from `user.name` if they somehow have none. */
 export async function getOrCreateUserEntryId(userId: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.userId, userId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.userId, userId));
+	if (existing) return existing;
 
 	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
 	if (!row) throw new Error(`No user ${userId} to create a directory entry for`);

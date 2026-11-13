@@ -50,8 +50,10 @@ vi.mock('#lib/server/db/index.js', () => ({
 			values: (v: Record<string, unknown> | Record<string, unknown>[]) => {
 				const rows = Array.isArray(v) ? v : [v];
 				inserts.push({ table: tableName(table), rows });
+				const returning = () => Promise.resolve(rows.map((r) => ({ id: 'sub-new', ...r })));
 				return {
-					returning: () => Promise.resolve(rows.map((r) => ({ id: 'sub-new', ...r }))),
+					returning,
+					onConflictDoUpdate: () => ({ returning }),
 					then: (resolve: (v: unknown) => void) => resolve(undefined)
 				};
 			}
@@ -163,7 +165,7 @@ describe('the guard travels with the data', () => {
 
 describe('the consent ledger', () => {
 	it('registers the address as a subscriber', async () => {
-		selectQueue = [[], []]; // no existing contact, no existing subscriber
+		selectQueue = [[]]; // no existing contact
 
 		await writeActContactUnguarded('org-1', { email: 'Manager@Example.COM' });
 
@@ -178,26 +180,15 @@ describe('the consent ledger', () => {
 	 * how a sending domain collects spam complaints.
 	 */
 	it('never enrols that address in an audience', async () => {
-		selectQueue = [[], []];
+		selectQueue = [[]];
 
 		await writeActContactUnguarded('org-1', { email: 'manager@example.com' });
 
 		expect(rowsFor('audience_member')).toHaveLength(0);
 	});
 
-	/**
-	 * Reused, not duplicated — `subscriber.email` is unique, and reusing the row
-	 * is what carries an existing suppression forward rather than minting a
-	 * fresh deliverable one.
-	 */
-	it('reuses an address already in the ledger, suppression and all', async () => {
-		selectQueue = [[], [{ id: 'sub-existing' }]];
-
-		await writeActContactUnguarded('org-1', { email: 'manager@example.com' });
-
-		expect(rowsFor('subscriber')).toHaveLength(0);
-		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: 'sub-existing' });
-	});
+	// Reuse of an address already in the ledger runs against real SQLite, in
+	// get-or-create.spec.ts: it is the upsert on `subscriber.email` that does it.
 
 	it('registers nothing when no email was given', async () => {
 		selectQueue = [[]];

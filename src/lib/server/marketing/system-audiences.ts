@@ -44,17 +44,22 @@ export async function ensureSystemAudiences(): Promise<void> {
 	);
 	if (missing.length === 0) return;
 
-	await db.insert(audience).values(
-		missing.map((key) => ({
-			name: SYSTEM_AUDIENCES[key].name,
-			slug: key,
-			description: SYSTEM_AUDIENCES[key].description,
-			// A system audience is defined by member attributes, so there is
-			// nothing for a public visitor to opt into.
-			allowOptIn: false,
-			systemKey: key
-		}))
-	);
+	// Two staff page loads at once both see the same rows missing; the unique
+	// `system_key` makes the second insert a no-op.
+	await db
+		.insert(audience)
+		.values(
+			missing.map((key) => ({
+				name: SYSTEM_AUDIENCES[key].name,
+				slug: key,
+				description: SYSTEM_AUDIENCES[key].description,
+				// A system audience is defined by member attributes, so there is
+				// nothing for a public visitor to opt into.
+				allowOptIn: false,
+				systemKey: key
+			}))
+		)
+		.onConflictDoNothing({ target: audience.systemKey });
 }
 
 /**

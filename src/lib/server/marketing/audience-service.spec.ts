@@ -169,6 +169,15 @@ describe('addSubscriber', () => {
 
 		expect(members('aud-1')).toHaveLength(1);
 	});
+
+	// Both reads find nothing before either insert runs (#2681).
+	it('adds once when two first adds overlap', async () => {
+		sub('sub-1', 'a@example.com');
+
+		await Promise.all([addSubscriber('aud-1', 'sub-1'), addSubscriber('aud-1', 'sub-1')]);
+
+		expect(members('aud-1')).toEqual([{ subscriber_id: 'sub-1', unsubscribed_at: null }]);
+	});
 });
 
 describe('removeSubscriber', () => {
