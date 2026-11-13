@@ -57,19 +57,13 @@
 		>
 			<input {...cancelFields.slug.as('hidden', slug)} />
 			<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
-			<SubmitButton
-				label={m.reservations_band_reservation_card_label()}
-				variant="error"
-				size="xs"
-				outline
-			/>
+			<SubmitButton label={m.reservations_band_reservation_card_label()} variant="error" outline />
 		</Form>
 	{/if}
 	{#if reservation.canPay}
 		<Button
 			href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 			variant="primary"
-			size="xs"
 			outline
 		>
 			{m.reservations_band_reservation_card_pay_online_label()}

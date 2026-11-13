@@ -3,6 +3,9 @@
 	import { resolve } from '$app/paths';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -74,38 +77,37 @@
 	<div class="space-y-2">
 		{#each filteredTickets as ticket (ticket.id)}
 			<Card>
-				<CardBody row padding="sm">
-					<div>
+				<CardBody padding="sm" class="gap-2">
+					<div class="flex items-center gap-2">
+						{#if ticket.status === 'checked_in' || ticket.status === 'cancelled'}
+							<StatusBadge status={ticket.status} />
+						{/if}
 						<p class="font-medium">{ticket.attendeeName}</p>
-						<p class="text-muted">{ticket.attendeeEmail}</p>
-						<p class="mt-1 font-mono text-subtle">{ticket.code}</p>
 					</div>
+					<DefinitionList layout="strip">
+						<Fact label={m.staff_email_label()} value={ticket.attendeeEmail} />
+						<Fact label={m.staff_events_id_check_in_code_label()} value={ticket.code} mono />
+					</DefinitionList>
 
-					<div class="flex items-center gap-3">
-						{#if ticket.status === 'checked_in'}
-							<StatusBadge status="checked_in" />
-						{:else if ticket.status === 'cancelled'}
-							<StatusBadge status="cancelled" />
-						{:else}
-							<!-- 44px on purpose: tapped a hundred times in a row at a
-							     door, one-handed. daisyUI's default `btn` is 40 (#971). -->
+					{#if ticket.status !== 'checked_in' && ticket.status !== 'cancelled'}
+						<!-- Tapped a hundred times in a row at a door, one-handed (#971). -->
+						<CardActions>
 							<Form
 								remote={checkInTicket.for(ticket.id)}
 								successToast={m.staff_events_id_check_in_success_toast()}
 								onsuccess={() => refreshAll()}
-								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<input {...fields.eventId.as('hidden', params.id)} />
-								<SubmitButton
-									label={m.staff_events_id_check_in_label()}
-									variant="primary"
-									class="min-h-11"
-								/>
+								<SubmitButton label={m.staff_events_id_check_in_label()} variant="primary" />
 							</Form>
-							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />
-						{/if}
-					</div>
+							<CancelTicketAction
+								ticketId={ticket.id}
+								attendeeName={ticket.attendeeName}
+								size="md"
+							/>
+						</CardActions>
+					{/if}
 				</CardBody>
 			</Card>
 		{/each}

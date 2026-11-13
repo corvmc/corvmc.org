@@ -72,4 +72,15 @@ describe('ReservationCardShell', () => {
 
 		expect(card()?.querySelector('.reservation-card-actions')).toBeNull();
 	});
+
+	it('puts its actions in the card action row', async () => {
+		await render(ReservationCardShell, {
+			startsAt: new Date(),
+			status: 'confirmed',
+			children: body,
+			actions: createRawSnippet(() => ({ render: () => '<button class="btn">x</button>' }))
+		});
+
+		expect(card()?.querySelector('.card-action-row .btn')).not.toBeNull();
+	});
 });

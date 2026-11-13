@@ -684,9 +684,8 @@ for the avatar convention, the subtype glyph and the status rule to drift apart 
 already drifted before they were merged.
 
 `EntityCard` composes it rather than redrawing it, and owns only what is genuinely card-shaped: the
-full-bleed portrait poster, its ring, and the facts/actions structure. Card actions ride the bottom
-edge (`mt-5 h-0`, outside `CardBody`), matching `member/reservations/ReservationCard.svelte`; pass
-`size="xs"`.
+full-bleed portrait poster, its ring, and the facts/actions structure. Its actions are slot 3 of
+"Card grammar", drawn by `CardActions`.
 
 **Scope: the panels only.** The public site and the directory profiles keep their own art-directed
 set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
@@ -829,8 +828,8 @@ flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`
 - **`EntityIdentity` at `sm` renders two sibling roots with no wrapper.** `cell-primary` is
   `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
   Wrapping it silently un-truncates every list in the app; `EntityIdentity.svelte.spec.ts` pins it.
-- **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
-  `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
+- **A card's actions go in `CardActions`** (`$lib/components/ui/Card/`). It draws every button in it
+  full width at 44px whatever `size` the caller passed, so an `xs` button there is still 44px.
 
 ## BookerTypeIcon
 
@@ -1433,6 +1432,10 @@ the budget is six facts wide and **three** folded.
 
 The facts strip is `DefinitionList layout="strip"` with `Fact`s: each label above its value, one
 fact per column.
+
+The actions are `CardActions`: equal columns, two to a row until the card is too narrow for two,
+each button full width at 44px. `EntityCard` and `ReservationCardShell` render their `actions`
+inside it. `src/card-actions.spec.ts` checks that no card's actions shrink back to `xs` or `sm`.
 
 **A card's height does not track its content.** A browse grid of records with no artwork draws a
 generated plate in the fixed tile: `PosterCard` (`$lib/components/events/`) sets the title and
