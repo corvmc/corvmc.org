@@ -12,6 +12,7 @@ import { isValidationError } from '@sveltejs/kit';
 // `confirmUnsubscribe` form performs the write.
 
 const unsubscribe = vi.fn(async () => undefined);
+const countEventAudience = vi.fn(async (_eventId: string) => 4);
 const getAudience = vi.fn(async (id: string) => ({ id, name: 'Newsletter' }));
 
 vi.mock('#lib/server/marketing/audience-service.js', () => ({
@@ -26,7 +27,8 @@ vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	removeSubscriber: vi.fn(),
 	unsubscribe: (...args: unknown[]) => unsubscribe(...(args as [])),
 	bulkAddMembers: vi.fn(),
-	listSubscribers: vi.fn()
+	listSubscribers: vi.fn(),
+	countEventAudience: (...args: unknown[]) => countEventAudience(...(args as [string]))
 }));
 
 const verifyUnsubscribeToken = vi.fn((token: string) =>
@@ -178,5 +180,32 @@ describe('subscribeToAudience Turnstile failure', () => {
 		const issues = (thrown as { issues: Array<{ path: string[] }> }).issues;
 		expect(issues.some((i) => i.path?.includes('turnstileToken'))).toBe(true);
 		expect(findOrCreateByEmail).not.toHaveBeenCalled();
+	});
+});
+
+describe('getCampaignAudienceOptions (#2772)', () => {
+	it("counts the event audience as the chosen show's people", async () => {
+		const { listAudiences } = await import('#lib/server/marketing/audience-service.js');
+		vi.mocked(listAudiences).mockResolvedValue([
+			{
+				id: 'ev',
+				name: 'Event audience',
+				systemKey: 'event-interest',
+				allowOptIn: false,
+				subscriberCount: 0
+			},
+			{ id: 'nl', name: 'Newsletter', systemKey: null, allowOptIn: true, subscriberCount: 30 }
+		] as never);
+
+		const options = (await marketing.getCampaignAudienceOptions({ eventId: 'evt-1' })) as {
+			id: string;
+			subscriberCount: number;
+		}[];
+
+		expect(countEventAudience).toHaveBeenCalledWith('evt-1');
+		expect(options.map((o) => [o.id, o.subscriberCount])).toEqual([
+			['ev', 4],
+			['nl', 30]
+		]);
 	});
 });

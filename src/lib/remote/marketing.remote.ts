@@ -48,6 +48,7 @@ import {
 import { verifyUnsubscribeToken } from '#lib/server/marketing/unsubscribe.js';
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import { audience } from '#lib/server/db/schema/marketing.js';
+import { audienceCount } from '#lib/utils/audience-reach.js';
 
 // ---------------------------------------------------------------------------
 // Public queries
@@ -177,11 +178,10 @@ async function listAudienceRows() {
 export const getAudiences = query(z.void(), async () => {
 	await requireCapability('marketing.read');
 	const rows = await listAudiences();
-	return rows.map(({ id, name, systemKey, allowOptIn, subscriberCount }) => ({
+	return rows.map(({ id, name, systemKey, subscriberCount }) => ({
 		id,
 		name,
 		systemKey,
-		allowOptIn,
 		subscriberCount
 	}));
 });
@@ -239,16 +239,27 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 });
 
 /**
- * How many people the show's own audience currently resolves to (#857).
- *
- * Its own query rather than a number on `getAudiences`: that one is
- * unparameterised and cached across every audience surface, and this figure
- * is a fact about one campaign's chosen show rather than about the audience.
+ * The campaign editor's audiences, with "Event audience" counted as the chosen
+ * show's ticket holders and RSVPs (#857, #2772). Keyed by the show, so the
+ * unparameterised `getAudiences` stays one cached list for every other surface.
  */
-export const getEventAudienceCount = query(z.string(), async (eventId) => {
-	await requireCapability('marketing.read');
-	return countEventAudience(eventId);
-});
+export const getCampaignAudienceOptions = query(
+	z.object({ eventId: z.string().nullable() }),
+	async ({ eventId }) => {
+		await requireCapability('marketing.read');
+		const [rows, eventCount] = await Promise.all([
+			listAudiences(),
+			eventId ? countEventAudience(eventId) : 0
+		]);
+		return rows.map(({ id, name, systemKey, allowOptIn, subscriberCount }) => ({
+			id,
+			name,
+			systemKey,
+			allowOptIn,
+			subscriberCount: audienceCount({ systemKey, subscriberCount }, eventCount)
+		}));
+	}
+);
 
 /**
  * A show's campaigns for its event page (#2776). Null for a staffer who may not

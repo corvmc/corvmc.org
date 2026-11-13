@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { getAudienceOptions, getEventAudienceCount } from '#lib/remote/marketing.remote.js';
-	import {
-		audienceCount,
-		audiencesBeyondVisibility,
-		type ReachVisibility
-	} from '#lib/utils/audience-reach.js';
+	import { getCampaignAudienceOptions } from '#lib/remote/marketing.remote.js';
+	import { audiencesBeyondVisibility, type ReachVisibility } from '#lib/utils/audience-reach.js';
 
 	/**
 	 * The audience checkboxes and their recipient total, owning the query behind them.
@@ -28,7 +24,8 @@
 		tickEventAudience?: boolean;
 	} = $props();
 
-	const audiences = $derived(await getAudienceOptions());
+	// "Event audience" stores no members; the server counts it as the chosen show's (#2772).
+	const audiences = $derived(await getCampaignAudienceOptions({ eventId: event?.id ?? null }));
 
 	// svelte-ignore state_referenced_locally
 	if (tickEventAudience) {
@@ -36,12 +33,8 @@
 		if (id && !selected.includes(id)) selected = [...selected, id];
 	}
 
-	// "Event audience" stores no members; its count is the chosen show's (#2772).
-	const eventCount = $derived(event ? await getEventAudienceCount(event.id) : 0);
-	const countOf = (a: (typeof audiences)[number]) => audienceCount(a, eventCount);
-
 	const ticked = $derived(audiences.filter((a) => selected.includes(a.id)));
-	const computed = $derived(ticked.reduce((sum, a) => sum + countOf(a), 0));
+	const computed = $derived(ticked.reduce((sum, a) => sum + a.subscriberCount, 0));
 
 	// Warn, record, allow (#2773): the send goes ahead and the event's history records it.
 	const beyond = $derived(event ? audiencesBeyondVisibility(event.visibility, ticked) : []);
@@ -72,7 +65,7 @@
 			{#if a.systemKey}
 				<span class="badge badge-xs badge-info">{m.staff_built_label()}</span>
 			{/if}
-			<span class="text-subtle">({countOf(a)})</span>
+			<span class="text-subtle">({a.subscriberCount})</span>
 		</label>
 	{/each}
 </div>
