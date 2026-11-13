@@ -4,6 +4,7 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { markItemOrdered } from '#lib/remote/inventory.remote.js';
 	import { Field, MoneyField } from '../ui/Form';
+	import SupplierField from '../inventory/SupplierField.svelte';
 
 	const { fields } = markItemOrdered;
 
@@ -41,7 +42,7 @@
 				required
 			/>
 		</div>
-		<Field field={fields.supplierName} type="text" label={m.actions_supplier_label()} />
+		<SupplierField field={fields.supplierName} label={m.actions_supplier_label()} />
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.reference}

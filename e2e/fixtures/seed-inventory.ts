@@ -29,6 +29,7 @@ import {
 } from '../../src/lib/server/db/schema/inventory';
 import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
 import { account, user } from '../../src/lib/server/db/schema/authentication';
+import { organization } from '../../src/lib/server/db/schema/party';
 import { withPlatformDb } from './platform-db';
 import { SEED_STAFF_ID } from './seed-staff-user';
 import { scryptHash } from './seed-pay-reservation';
@@ -239,7 +240,21 @@ export async function seedInventory(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Clean slate, children first — FKs may be enforced on local D1.
 		await db.delete(purchaseOrderLine).where(inArray(purchaseOrderLine.itemId, ITEM_IDS));
-		await db.delete(purchaseOrder).where(eq(purchaseOrder.supplierName, SEED_ORDER_SUPPLIER));
+		// The order spec types this supplier, which creates it as an organization.
+		const suppliers = await db
+			.select({ id: organization.id })
+			.from(organization)
+			.where(eq(organization.name, SEED_ORDER_SUPPLIER));
+		const supplierIds = suppliers.map((o) => o.id);
+		if (supplierIds.length > 0) {
+			const orders = db
+				.select({ id: purchaseOrder.id })
+				.from(purchaseOrder)
+				.where(inArray(purchaseOrder.organizationId, supplierIds));
+			await db.delete(purchaseOrderLine).where(inArray(purchaseOrderLine.orderId, orders));
+			await db.delete(purchaseOrder).where(inArray(purchaseOrder.organizationId, supplierIds));
+			await db.delete(organization).where(inArray(organization.id, supplierIds));
+		}
 		await db.delete(stockMovement).where(inArray(stockMovement.itemId, ITEM_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.id, LOAN_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.itemId, ITEM_IDS));

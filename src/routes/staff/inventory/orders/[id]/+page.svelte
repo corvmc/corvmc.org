@@ -106,6 +106,15 @@
 		<div class="space-y-6">
 			<InfoCard title={m.staff_order_2_title()} class="bg-base-200 shadow-none">
 				<DefinitionList>
+					<Fact label={m.staff_supplier_label()}>
+						{#if order.organizationId}
+							<a class="link" href={resolve(`staff/contacts/${order.organizationId}`)}
+								>{order.supplierName}</a
+							>
+						{:else}
+							—
+						{/if}
+					</Fact>
 					<Fact label={m.staff_reference_label()}>{order.reference ?? '—'}</Fact>
 					<Fact label={m.staff_inventory_orders_id_placed_label()}>
 						{order.placedAt ? formatDateShort(order.placedAt) : m.staff_not_yet_text()}

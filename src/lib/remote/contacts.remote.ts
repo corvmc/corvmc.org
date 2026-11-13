@@ -177,7 +177,8 @@ export const removeOrganizationRole = form(
 		const inUse = {
 			funder: records.grants.length,
 			sponsor: records.sponsorships.length,
-			contractor: records.jobs.length
+			contractor: records.jobs.length,
+			supplier: records.orders.length
 		} as Partial<Record<PartyRole, number>>;
 		const deleted = await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
 		if (!deleted) await getOrganizationPage(data.id).refresh();

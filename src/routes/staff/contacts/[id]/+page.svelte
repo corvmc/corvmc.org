@@ -30,7 +30,8 @@
 		partyRoleLabels,
 		partyRoles,
 		sponsorshipStatusLabels,
-		contractorJobStatusLabels
+		contractorJobStatusLabels,
+		orderStatusLabels
 	} from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
@@ -307,6 +308,26 @@
 						<li>
 							<a class="link" href={resolve(`staff/contractors/jobs/${j.id}`)}>{j.title}</a>
 							<span class="text-muted">· {contractorJobStatusLabels[j.status]}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</InfoCard>
+	{/if}
+
+	{#if org.roles.includes('supplier') || org.records.orders.length > 0}
+		<InfoCard title={m.staff_contacts_purchase_orders_title()}>
+			{#if org.records.orders.length === 0}
+				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
+			{:else}
+				<ul class="space-y-1">
+					{#each org.records.orders as o (o.id)}
+						<li>
+							<a class="link" href={resolve(`staff/inventory/orders/${o.id}`)}
+								>{o.reference ??
+									(o.placedAt ? formatDateShort(o.placedAt) : m.staff_order_2_label())}</a
+							>
+							<span class="text-muted">· {orderStatusLabels[o.status]}</span>
 						</li>
 					{/each}
 				</ul>
