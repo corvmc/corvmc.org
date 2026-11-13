@@ -86,7 +86,8 @@ describe('listTaskCatalogue', () => {
 		expect(row.shiftAt?.getTime()).toBe(at(24) * 1000);
 	});
 
-	it('filters by role', async () => {
+	it('filters by role, and by project for a project page', async () => {
 		expect([...(await byId({ volunteerRoleId: 'door' })).keys()]).toEqual(['shifted']);
+		expect([...(await byId({ projectId: 'p1' })).keys()]).toEqual(['in-project']);
 	});
 });

@@ -10,7 +10,7 @@
 	import type { ProjectView } from '#lib/config.js';
 	import ProjectsTable from './ProjectsTable.svelte';
 	import StaffViews from '../../StaffViews.svelte';
-	import NewProjectAction from '../NewProjectAction.svelte';
+	import NewProjectAction from '#lib/components/actions/NewProjectAction.svelte';
 	import { taskViews } from '../views';
 
 	/**

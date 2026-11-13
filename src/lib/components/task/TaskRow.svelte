@@ -11,18 +11,21 @@
 	/**
 	 * One task as the Tasks table draws it (#2625). `compact` is the form a
 	 * record's `RelatedTasks` card uses: no project column and no actions.
+	 * `project={false}` drops the project column on one project's own list.
 	 */
 	let {
 		task: t,
 		marks,
 		now,
 		compact = false,
+		project = true,
 		actions
 	}: {
 		task: TaskRow;
 		marks: ContractorMark[];
 		now: Date;
 		compact?: boolean;
+		project?: boolean;
 		actions?: Snippet<[{ label: string; href: string }]>;
 	} = $props();
 
@@ -42,7 +45,7 @@
 			</div>
 		{/if}
 	</td>
-	{#if !compact}
+	{#if !compact && project}
 		<td class="col-support">
 			{#if t.projectId}
 				<a class="link" href={resolve('/staff/tasks/projects/[id]', { id: t.projectId })}

@@ -1,16 +1,8 @@
-import { matchesProject, parseProjectFilter } from '../volunteer/schedule/project-filter';
-import {
-	CHIPS,
-	whenOf,
-	type Chip,
-	type ContractorMark,
-	type TaskFacts
-} from '#lib/utils/task-facts.js';
+import { CHIPS, whenOf, type Chip, type ContractorMark, type TaskFacts } from './task-facts';
+import { relatedSubjectTypes, type RelatedSubjectType } from './related-tasks';
 
-import { relatedSubjectTypes, type RelatedSubjectType } from '#lib/utils/related-tasks.js';
-
-export { CHIPS, byWhen, matchesChip, whenOf } from '#lib/utils/task-facts.js';
-export type { Chip, ContractorMark, TaskFacts } from '#lib/utils/task-facts.js';
+export { CHIPS, byWhen, matchesChip, whenOf } from './task-facts';
+export type { Chip, ContractorMark, TaskFacts } from './task-facts';
 
 /**
  * The Tasks table's filters, chips and groups (#2625), all read from the URL so
@@ -63,7 +55,8 @@ export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery 
 	return {
 		group: params.get('group') === 'project' ? 'project' : 'due',
 		days: (WINDOWS as readonly number[]).includes(days) ? (days as Window) : 'all',
-		project: project === 'none' || parseProjectFilter(project) === '' ? project : '',
+		// `project` was the Schedule's "in a project" value; Tasks groups by project instead.
+		project: project === 'project' ? '' : project,
 		role: params.get('role') ?? '',
 		kind: pick(KINDS, params.get('kind')),
 		chip: pick(CHIPS, params.get('chip')),
@@ -108,7 +101,8 @@ export function matchesWindow(days: Window, t: TaskFacts, now: Date) {
 }
 
 export function matchesTaskProject(filter: string, t: TaskFacts) {
-	if (filter === '' || filter === 'none') return matchesProject(t, filter);
+	if (filter === '') return true;
+	if (filter === 'none') return t.projectId === null;
 	return t.projectId === filter;
 }
 

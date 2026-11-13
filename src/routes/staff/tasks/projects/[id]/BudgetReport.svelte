@@ -8,11 +8,15 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
-	import { attachToProjectForm, detachFromProjectForm } from '#lib/remote/projects.remote.js';
+	import {
+		attachToProjectForm,
+		detachFromProjectForm,
+		type getProjectDetail
+	} from '#lib/remote/projects.remote.js';
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import type { ProjectDetail } from './task-view';
+	type ProjectDetail = NonNullable<Awaited<ReturnType<typeof getProjectDetail>>>;
 
 	/**
 	 * What the project has cost. Cash and contributed value are two tables

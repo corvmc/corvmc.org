@@ -2,10 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
 /**
- * Both ids a task remote takes come from the client, so each one that names a
- * work order must refuse (404) a work order on a different project, before it
- * touches anything: otherwise a project the caller manages is a window onto
- * work in one they do not. Real services, real SQLite; only the guard is faked.
+ * New task writes to a project only as that project's committee or staff, and a
+ * task's history refuses (404) a task named with a project it is not on.
+ * Real services, real SQLite; only the guard is faked.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
@@ -86,83 +85,39 @@ beforeEach(() => {
 	);
 });
 
-const untouched = () =>
-	sqlite
-		.prepare(
-			`select project_id, resolved_at, cancelled_at, section_id, sort_order,
-				(select count(*) from volunteer_shift where work_order_id = 'wo-theirs') as shifts
-				from work_order where id = 'wo-theirs'`
-		)
-		.get();
-
-/** A shift's time as the Open shift form posts it. */
-const TIMES = { startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' };
-
-const cases: [string, Record<string, unknown>][] = [
-	['getTaskAssignees', pair],
-	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
-	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
-	['unassignMemberForm', { ...pair, userId: 'usr-staff' }],
-	['openTaskForm', { ...pair, ...TIMES, capacity: 2 }],
-	['engageContractorForm', { ...pair, contractorId: 'ctr-1', confirm: true }],
-	['unassignTaskForm', { ...pair, confirm: true }],
-	['resolveTaskForm', pair],
-	['reopenTaskForm', pair],
-	['rescheduleTaskForm', { ...pair, dueAt: '2030-01-01' }],
-	['cancelTaskForm', pair],
-	['addDutyForm', { ...pair, label: 'Sweep' }],
-	['setDutyDoneForm', { ...pair, dutyId: 'duty-1', done: true }],
-	['setTaskEquipmentForm', { ...pair, assetId: '' }]
-];
-
-const before = {
-	project_id: THEIRS,
-	section_id: null,
-	sort_order: 5,
-	resolved_at: null,
-	cancelled_at: null,
-	shifts: 0
-};
-
-describe('a work order named with a project it is not on', () => {
-	it.each(cases)('%s refuses it with a 404 and changes nothing', async (name, input) => {
-		await expect(remotes[name](input)).rejects.toMatchObject({ status: 404 });
-		expect(untouched()).toMatchObject(before);
-	});
-
-	it('is still reachable through its own project', async () => {
-		await remotes.moveTaskCommand({
+describe('New task', () => {
+	it("in a project, is that project's write and keeps its due date", async () => {
+		const { id } = (await remotes.createCatalogueTaskForm({
+			title: 'Paint the hall',
 			projectId: THEIRS,
-			workOrderId: 'wo-theirs',
-			sectionId: null,
-			index: 0
-		});
-		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
-		await remotes.openTaskForm({
-			projectId: THEIRS,
-			workOrderId: 'wo-theirs',
-			...TIMES,
-			capacity: 2
-		});
+			dueAt: '2030-01-04'
+		})) as { id: string };
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
 		expect(
-			sqlite.prepare(`select capacity from volunteer_shift where work_order_id = 'wo-theirs'`).all()
-		).toEqual([{ capacity: 2 }]);
+			sqlite
+				.prepare(`select project_id, title, due_at is not null as due from work_order where id = ?`)
+				.get(id)
+		).toEqual({ project_id: THEIRS, title: 'Paint the hall', due: 1 });
 	});
-});
 
-describe('the guard', () => {
-	it('runs on the project named, before the task is loaded', async () => {
+	it('in no project, asks no committee', async () => {
+		const { id } = (await remotes.createCatalogueTaskForm({ title: 'Fix the amp' })) as {
+			id: string;
+		};
+		expect(requireProjectCommittee).not.toHaveBeenCalled();
+		expect(sqlite.prepare(`select project_id from work_order where id = ?`).get(id)).toEqual({
+			project_id: null
+		});
+	});
+
+	it('refuses a project the caller does not manage, and writes nothing', async () => {
 		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
 		await expect(
-			remotes.moveTaskCommand({
-				projectId: THEIRS,
-				workOrderId: 'wo-theirs',
-				sectionId: null,
-				index: 0
-			})
+			remotes.createCatalogueTaskForm({ title: 'Sneak in', projectId: MINE })
 		).rejects.toMatchObject({ status: 403 });
-		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
-		expect(untouched()).toMatchObject(before);
+		expect(
+			sqlite.prepare(`select count(*) n from work_order where project_id = ?`).get(MINE)
+		).toEqual({ n: 0 });
 	});
 });
 

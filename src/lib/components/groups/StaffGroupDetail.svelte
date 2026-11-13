@@ -30,7 +30,7 @@
 	import RosterTable from '#lib/components/roster/RosterTable.svelte';
 	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
 	import RosterImportSummary from './RosterImportSummary.svelte';
-	import RelatedTasks from '#lib/components/tasks/RelatedTasks.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;

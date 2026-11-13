@@ -42,7 +42,7 @@
 		openHostShift
 	} from '#lib/remote/productions.remote.js';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
-	import RelatedTasks from '#lib/components/tasks/RelatedTasks.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';

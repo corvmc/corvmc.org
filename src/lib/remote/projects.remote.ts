@@ -225,8 +225,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 
 /**
  * The Activity tab, or with `workOrderId` one task's history. Lazy, beside the
- * page's load-bearing query. Access is the project's, as `getProjectTasks`
- * reads it; a task is refused (404) unless it is on that project.
+ * page's load-bearing query. Access is the project's: `project.read`, or the
+ * committee that owns it. A task is refused (404) unless it is on that project.
  */
 export const getProjectActivity = query(
 	z.object({

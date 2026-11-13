@@ -46,7 +46,7 @@
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from './RecapText.svelte';
 	import EventRsvps from './EventRsvps.svelte';
-	import RelatedTasks from '#lib/components/tasks/RelatedTasks.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { formatTime, fullDate } from '#lib/utils/format.js';
 	import { routeParams } from '#lib/route-params.svelte.js';

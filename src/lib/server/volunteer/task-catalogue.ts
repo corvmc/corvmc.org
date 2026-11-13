@@ -11,6 +11,8 @@ import { assigneeCountSql, capacitySql, claimedSql } from './work-order-service'
 export type { TaskRow };
 
 export interface TaskCatalogueFilters {
+	/** One project's tasks, as its page lists them. */
+	projectId?: string;
 	volunteerRoleId?: string;
 	/** Done tasks are left out unless asked for. Cancelled ones always are. */
 	includeDone?: boolean;
@@ -107,6 +109,7 @@ export async function listTaskCatalogue(
 				filters.volunteerRoleId
 					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
 					: undefined,
+				filters.projectId ? eq(workOrder.projectId, filters.projectId) : undefined,
 				filters.where,
 				open && also ? or(open, also) : open
 			)
