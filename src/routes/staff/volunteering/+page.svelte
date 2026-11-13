@@ -8,7 +8,7 @@
 	 * Cancelled shifts are a notify list under the divider, not rows to staff.
 	 */
 	import { page } from '$app/state';
-	import { NO_ROLE_LABEL, shiftLabel } from '#lib/utils/shift-label.js';
+	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
@@ -19,19 +19,19 @@
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Select from '#lib/components/ui/Form/Select.svelte';
-	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
-	import CandidateColumn from '#lib/components/volunteer/CandidateColumn.svelte';
 	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import { hasClaimsToConfirm, isShortStaffed } from '#lib/utils/shift-staffing.js';
+	import ShiftRow from '#lib/components/volunteer/ShiftRow.svelte';
+	import { aboutParam, parseAbout } from '#lib/utils/task-filters.js';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
 	import EndedShiftsTable from './EndedShiftsTable.svelte';
 	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
 	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
-	import { getVolunteeringPage, confirmShiftClaims } from '#lib/remote/volunteer.remote.js';
+	import { getVolunteeringPage } from '#lib/remote/volunteer.remote.js';
 
 	/** `'all'` drops both bounds rather than passing a wide one, so it is really everything. */
 	const WINDOWS = [7, 14, 30, 'all'] as const;
@@ -53,6 +53,8 @@
 	let needs = $state<Needs>(
 		initial.get('short') === '1' ? 'short' : parseNeeds(initial.get('needs'))
 	);
+	// A record's shifts (#2630): what its RelatedShifts card's View all opens.
+	let about = $state(parseAbout(initial.get('about')));
 	// The short-staffed shift whose candidates are open beneath it.
 	let matching = $state<string | null>(null);
 
@@ -63,6 +65,7 @@
 		if (range !== DEFAULT_WINDOW) pairs.push(['days', String(range)]);
 		if (roleFilter) pairs.push(['role', roleFilter]);
 		if (needs) pairs.push(['needs', needs]);
+		if (about) pairs.push(['about', aboutParam(about)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 		const href = withQuery(resolve('staff/volunteering'), search);
@@ -79,7 +82,8 @@
 		from: range === 'all' ? undefined : anchor.toISOString(),
 		to: range === 'all' ? undefined : new Date(anchor.getTime() + range * DAY_MS).toISOString(),
 		volunteerRoleId: roleFilter || undefined,
-		includeCancelled: true
+		includeCancelled: true,
+		...(about ? { about } : {})
 	});
 	// Not `{#await}`: a refresh would re-pend it and unmount an open row Action.
 	const shifts = new Latest(() => getVolunteeringPage(args));
@@ -89,16 +93,10 @@
 
 	type Row = Awaited<ReturnType<typeof getVolunteeringPage>>['shifts'][number];
 
-	const timeFmt = new Intl.DateTimeFormat('en-US', {
-		hour: 'numeric',
-		minute: '2-digit',
-		timeZone: DEFAULT_TIMEZONE
-	});
 	const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE });
 
 	const groupLabel = (w: Row) => `${relativeDay(w.startsAt)} · ${formatDateShort(w.startsAt)}`;
 	const groupKey = (w: Row) => dayFmt.format(w.startsAt);
-	const when = (w: Row) => `${timeFmt.format(w.startsAt)}–${timeFmt.format(w.endsAt)}`;
 
 	const refresh = () => void getVolunteeringPage(args).refresh();
 </script>
@@ -107,11 +105,15 @@
 
 <PageContent>
 	<FilterBar
-		activeCount={(roleFilter ? 1 : 0) + (range !== DEFAULT_WINDOW ? 1 : 0) + (needs ? 1 : 0)}
+		activeCount={(roleFilter ? 1 : 0) +
+			(range !== DEFAULT_WINDOW ? 1 : 0) +
+			(needs ? 1 : 0) +
+			(about ? 1 : 0)}
 		onclear={() => {
 			roleFilter = '';
 			range = DEFAULT_WINDOW;
 			needs = '';
+			about = null;
 		}}
 	>
 		<Select
@@ -208,114 +210,17 @@
 				{/snippet}
 
 				{#each shown as w, idx (w.shiftId ?? w.id)}
-					{@const href = resolve('/staff/tasks/[id]', { id: w.id })}
-					{@const unconfirmed = w.claimed - w.confirmed}
-					{@const full = !isShortStaffed(w)}
-					{@const empty = w.claimed === 0}
-					{@const open = matching === w.shiftId}
 					{#if idx === 0 || groupKey(shown[idx - 1]) !== groupKey(w)}
 						<tr>
 							<td colspan="4" class="cell-group">{groupLabel(w)}</td>
 						</tr>
 					{/if}
-					<!-- Nobody on it at all is the state worth seeing from across the room. -->
-					<tr
-						class="hover {empty ? 'border-l-4 border-l-warning bg-warning/5' : ''}"
-						data-shift={w.shiftId}
-					>
-						<td class="whitespace-nowrap">
-							<a {href} class="link font-medium">{when(w)}</a>
-						</td>
-
-						<td class="cell-primary">
-							<a {href} class="link truncate font-medium">{shiftLabel(w)}</a>
-							<!-- One subline: the role under a name, else the show, else the briefing. -->
-							{#if w.title}
-								<div class="truncate text-subtle text-xs">
-									{w.roleName ?? NO_ROLE_LABEL}{#if w.eventTitle}
-										· {w.eventTitle}{/if}
-								</div>
-							{:else if w.eventTitle}
-								<div class="truncate text-xs">
-									<a href={resolve(`staff/events/${w.eventId}`)} class="link text-info">
-										{w.eventTitle}
-									</a>
-								</div>
-							{:else if w.notes}
-								<div class="truncate text-subtle text-xs" title={w.notes}>{w.notes}</div>
-							{/if}
-						</td>
-
-						<td class="cell-num whitespace-nowrap">
-							<span
-								class:text-success={full}
-								class:text-error={!full && w.confirmed === 0}
-								class:text-warning={!full && w.confirmed > 0 && unconfirmed > 0}
-							>
-								{m.staff_volunteer_schedule_text({
-									confirmed: w.confirmed,
-									capacity: w.capacity
-								})}
-							</span>
-							{#if unconfirmed > 0}
-								<span class="text-xs text-warning"
-									>{m.staff_volunteer_schedule_unconfirmed_text({ unconfirmed })}</span
-								>
-							{/if}
-						</td>
-
-						<td class="w-px">
-							<div class="flex w-max justify-end gap-1">
-								{#if unconfirmed > 0 && w.shiftId}
-									<Action
-										label={m.staff_volunteer_schedule_label({ unconfirmed })}
-										variant="ghost"
-										size="xs"
-										class="text-success"
-										action={confirmShiftClaims.for(w.id)}
-										modalTitle={m.staff_confirm_all_volunteers_title()}
-										submitLabel={m.staff_confirm_all_label()}
-										successToast={m.staff_volunteer_schedule_success_toast()}
-										onsuccess={refresh}
-									>
-										{#snippet form()}
-											<input
-												{...confirmShiftClaims
-													.for(w.id)
-													.fields.shiftId.as('hidden', w.shiftId ?? '')}
-											/>
-											<p class="text-sm">
-												{m.staff_volunteer_schedule_people_have_put_hand_up_text({
-													unconfirmed,
-													shiftLabel: shiftLabel(w),
-													formatDateShort: formatDateShort(w.startsAt)
-												})}
-											</p>
-										{/snippet}
-									</Action>
-								{/if}
-								{#if !full && w.shiftId}
-									<!-- Roster matching: the people interested in its role, to invite. -->
-									<Button
-										variant={empty ? 'primary' : 'ghost'}
-										size="xs"
-										aria-expanded={open}
-										data-testid="find-volunteers"
-										onclick={() => (matching = open ? null : w.shiftId)}
-									>
-										{m.staff_volunteering_find_volunteers_label()}
-									</Button>
-								{/if}
-							</div>
-						</td>
-					</tr>
-					{#if open && w.shiftId}
-						<tr data-testid="roster-match">
-							<td colspan="4">
-								<CandidateColumn workOrderId={w.id} shiftId={w.shiftId} startsAt={w.startsAt} />
-							</td>
-						</tr>
-					{/if}
+					<ShiftRow
+						shift={w}
+						open={matching === w.shiftId}
+						ontoggle={() => (matching = matching === w.shiftId ? null : w.shiftId)}
+						onsuccess={refresh}
+					/>
 				{/each}
 			</Table>
 		{/if}

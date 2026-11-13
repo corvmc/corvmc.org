@@ -156,7 +156,7 @@ test.describe('productions', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_EVENT_ID}/production?tab=advance`);
 
-		await expect(page.getByTestId('volunteer-shifts')).toBeVisible({ timeout: 15000 });
+		await expect(page.getByTestId('related-shifts')).toBeVisible({ timeout: 15000 });
 
 		await page.locator('#tab-overview').click();
 		await expect(page).toHaveURL(new RegExp(`/production$`));

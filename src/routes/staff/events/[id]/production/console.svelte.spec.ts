@@ -63,7 +63,7 @@ vi.mock('#lib/remote/layout.remote.js', () =>
 vi.mock('#lib/remote/volunteer.remote.js', () =>
 	stubs(
 		'acceptShiftInvitation approveVolunteerHours assignShiftToMember cancelMySignup ' +
-			'cancelShift claimShift confirmSignup confirmSignups createShift declineShiftInvitation ' +
+			'cancelShift claimShift confirmShiftClaims confirmSignup confirmSignups declineShiftInvitation ' +
 			'duplicateShift editVolunteerHours getActiveCertifications getShiftCandidates ' +
 			'getVolunteerRoles inviteMemberToShift logHoursForMember markSignupNoShow ' +
 			'markSignupNotified notifyCancelledShift releaseSignup submitVolunteerHours updateShift'
@@ -75,7 +75,10 @@ vi.mock('#lib/remote/external-acts.remote.js', () =>
 );
 vi.mock('#lib/remote/deliverables.remote.js', () => stubs('reassignDeliverableForm'));
 vi.mock('#lib/remote/tasks.remote.js', () =>
-	stubs('createCatalogueTaskForm getRelatedTasks', { getRelatedTasks: remote(() => null) })
+	stubs('addRelatedShift createCatalogueTaskForm getRelatedShifts getRelatedTasks', {
+		getRelatedTasks: remote(() => null),
+		getRelatedShifts: remote(() => null)
+	})
 );
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
@@ -115,8 +118,6 @@ function loaded(production: unknown) {
 			ticketMoney: null,
 			tickets: []
 		},
-		shifts: [],
-		volunteerRoles: [],
 		dutyLists: [],
 		riders: [],
 		production,

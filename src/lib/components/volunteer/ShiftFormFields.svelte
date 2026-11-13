@@ -28,7 +28,7 @@
 		taskOnly = false
 	}: {
 		/**
-		 * The remote form this field set posts into — `createShift`, or
+		 * The remote form this field set posts into — `createWorkOrder`, or
 		 * `updateShift.for(id)`. Taken as a prop only so the event picker can build
 		 * its hidden input from `form.fields`; see the comment on it below.
 		 */
@@ -39,8 +39,8 @@
 		 * generic instantiation. Expressing "some remote form, I don't care
 		 * which" needs an existential type, which TypeScript does not have.
 		 *
-		 * Generics were tried and reverted; three call sites pass `createShift` (no `id`)
-		 * and a fourth passes `updateShift.for(id)` (has one), proves the point.
+		 * Generics were tried and reverted; `createWorkOrder` (no `id`)
+		 * and `updateShift.for(id)` (has one) prove the point.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		form: RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
