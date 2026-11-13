@@ -1041,5 +1041,7 @@
 	"member_what_should_we_do_label": "Title",
 	"member_when_label": "Date",
 	"member_when_title": "Shift time",
-	"member_withdraw_label": "Withdraw"
+	"member_withdraw_label": "Withdraw",
+	"member_volunteer_shifts_signup_id_trainees_title": "Trainees",
+	"member_volunteer_shifts_signup_id_trainee_checkbox": "Training under me"
 }

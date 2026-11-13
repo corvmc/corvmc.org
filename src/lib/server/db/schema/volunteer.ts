@@ -6,7 +6,8 @@ import {
 	uniqueIndex,
 	check,
 	unique,
-	primaryKey
+	primaryKey,
+	type AnySQLiteColumn
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -635,6 +636,13 @@ export const volunteerSignup = sqliteTable(
 		// ring the ones who need ringing and mark those by hand.
 		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
 
+		// The signup this person trained under (#2720). The service holds it to
+		// another member on the same shift; a foreign key cannot say that.
+		supervisingSignupId: text('supervising_signup_id').references(
+			(): AnySQLiteColumn => volunteerSignup.id,
+			{ onDelete: 'set null' }
+		),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -984,6 +992,11 @@ export const memberCertification = sqliteTable(
 		/** External card or licence number. */
 		reference: text('reference'),
 		notes: text('notes'),
+
+		/** The supervised shift offered as evidence at grant time (#2720). */
+		trainingSignupId: text('training_signup_id').references(() => volunteerSignup.id, {
+			onDelete: 'set null'
+		}),
 
 		// Pulled early. The window it covered is still history, which is why this
 		// is a timestamp rather than a delete.

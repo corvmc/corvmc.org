@@ -27,7 +27,12 @@
 	import { resolve } from '$app/paths';
 	import { formatDateLong, formatDateTime, formatTimeRange } from '#lib/utils/format.js';
 	import { incidentCategoryLabels } from '#lib/config.js';
-	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '#lib/remote/volunteer.remote.js';
+	import {
+		getMyShift,
+		setMyWorkTaskDone,
+		setMyTrainee,
+		cancelMySignup
+	} from '#lib/remote/volunteer.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 
@@ -38,6 +43,8 @@
 
 	const doneCount = $derived(data.tasks.filter((t) => t.done).length);
 	const calledOff = $derived(!!data.shift.shiftCancelledAt || !!data.shift.cancelledAt);
+	// Someone already under another supervisor is staff's to move (#2720).
+	const trainees = $derived(data.crewMates.filter((c) => !c.trainedUnderOther));
 </script>
 
 <PageHeader
@@ -161,6 +168,32 @@
 			</ul>
 		{/if}
 	</InfoCard>
+
+	{#if trainees.length > 0}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_trainees_title()}>
+			<ul class="flex flex-col gap-2" data-testid="shift-trainees">
+				{#each trainees as mate (mate.signupId)}
+					{@const mark = setMyTrainee.for(mate.signupId)}
+					<li class="flex flex-wrap items-center justify-between gap-2">
+						<EntityIdentity ref={mate.member} size="sm" />
+						<Form
+							remote={mark}
+							onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
+						>
+							<input {...mark.fields.mySignupId.as('hidden', signupId)} />
+							<input {...mark.fields.signupId.as('hidden', mate.signupId)} />
+							<FormField
+								field={mark.fields.trainee}
+								type="checkbox"
+								checkboxLabel={m.member_volunteer_shifts_signup_id_trainee_checkbox()}
+								value={mate.trainedUnderMe}
+							/>
+						</Form>
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
 
 	{#if data.incidentEventId}
 		<InfoCard

@@ -17,6 +17,7 @@ import type { RosterPerson } from '#lib/types/roster.js';
 import { toRosterPerson } from '#lib/server/roster/roster.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { getRequirementsForRoles } from './volunteer-certification-service';
+import { listTrainingShifts } from './training-service';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { MemberCertification } from '#lib/server/db/schema/volunteer.js';
 import { utcCalendarDate } from '#lib/utils/format.js';
@@ -163,6 +164,8 @@ export async function grantCertification(data: {
 	grantedOn: string;
 	reference?: string | null;
 	notes?: string | null;
+	/** A supervised shift of this member's that counts towards this clearance. */
+	trainingSignupId?: string | null;
 	grantedByUserId: string;
 }): Promise<MemberCertification> {
 	const [cert] = await db
@@ -197,6 +200,16 @@ export async function grantCertification(data: {
 		expiresAt = atNoon(utcCalendarDate(target));
 	}
 
+	if (data.trainingSignupId) {
+		const shifts = await listTrainingShifts(data.userId);
+		const evidence = shifts.find((s) => s.signupId === data.trainingSignupId);
+		if (!evidence?.certificationIds.includes(data.certificationId)) {
+			throw new MemberCertificationValidationError(
+				'That shift is not a supervised shift towards this clearance.'
+			);
+		}
+	}
+
 	const [row] = await db
 		.insert(memberCertification)
 		.values({
@@ -206,7 +219,8 @@ export async function grantCertification(data: {
 			expiresAt,
 			grantedByUserId: data.grantedByUserId,
 			reference: data.reference?.trim() || null,
-			notes: data.notes?.trim() || null
+			notes: data.notes?.trim() || null,
+			trainingSignupId: data.trainingSignupId || null
 		})
 		.returning();
 

@@ -184,6 +184,11 @@ import {
 	listLapsingBeforeRosteredShift
 } from '#lib/server/volunteer/member-certification-service.js';
 import {
+	listCrewMates,
+	listTrainingShifts,
+	setSupervisingSignup
+} from '#lib/server/volunteer/training-service.js';
+import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
 	volunteerRoleGroups,
@@ -1294,6 +1299,12 @@ export const getActiveCertifications = query(async () => {
 	return listCertifications();
 });
 
+/** A member's completed supervised shifts, offered as evidence when granting. */
+export const getTrainingShifts = query(z.string().min(1), async (userId) => {
+	await requireCapability('volunteer.manageCertifications');
+	return listTrainingShifts(userId);
+});
+
 export const getMemberCertifications = query(z.string(), async (userId) => {
 	await requireCapability('volunteer.read');
 	return listCertificationsForUser(userId);
@@ -1460,7 +1471,8 @@ export const grantCertification = form(
 		certificationId: z.string().min(1, 'Pick a certification'),
 		grantedOn: z.string().min(1, 'Pick the date it was granted'),
 		reference: z.string().max(CERT_REFERENCE_MAX).optional(),
-		notes: z.string().max(CERT_NOTES_MAX).optional()
+		notes: z.string().max(CERT_NOTES_MAX).optional(),
+		trainingSignupId: z.string().optional()
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageCertifications');
@@ -1472,6 +1484,7 @@ export const grantCertification = form(
 				grantedOn: data.grantedOn,
 				reference: data.reference,
 				notes: data.notes,
+				trainingSignupId: data.trainingSignupId || null,
 				grantedByUserId: staff.id
 			});
 		} catch (err) {
@@ -2189,6 +2202,32 @@ export const markSignupNoShow = form(
 	}
 );
 
+/** Staff: who on the shift this person trained under (#2720). Empty clears it. */
+export const setTrainedUnder = form(
+	z.object({
+		signupId: z.string().min(1),
+		shiftId: z.string().min(1),
+		supervisingSignupId: z.string().optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageRoster');
+
+		try {
+			await setSupervisingSignup({
+				signupId: data.signupId,
+				supervisingSignupId: data.supervisingSignupId || null,
+				actorUserId: staff.id,
+				actorIsStaff: true
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
 // ---------------------------------------------------------------------------
 // Post-shift feedback
 // ---------------------------------------------------------------------------
@@ -2670,7 +2709,7 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, filedIncidents, briefing] = await Promise.all([
+	const [tasks, event, crew, filedIncidents, briefing, crewMates] = await Promise.all([
 		listWorkTasks(shift.workOrderId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
 		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
@@ -2679,7 +2718,10 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 			? resolveHelpReader(currentUser.id).then((reader) =>
 					listReadableArticles([shift.briefingArticleId!], reader)
 				)
-			: Promise.resolve([])
+			: Promise.resolve([]),
+		shift.cancelledAt || shift.shiftCancelledAt
+			? Promise.resolve([])
+			: listCrewMates(signupId, shift.shiftId)
 	]);
 
 	return {
@@ -2703,9 +2745,43 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 		incidentEventId: crew ? shift.eventId : null,
 		filedIncidents,
 		// The role's briefing (#2728), unless it is a draft or above this reader.
-		briefing: briefing[0] ?? null
+		briefing: briefing[0] ?? null,
+		// The others on this shift, so a supervisor can mark who trained (#2720).
+		crewMates
 	};
 });
+
+/**
+ * The supervisor marks a crewmate as training under them, or stops. Only their
+ * own signup can be named; the service refuses anything else.
+ */
+export const setMyTrainee = form(
+	z.object({
+		/** The supervisor's own signup: the page's scope. */
+		mySignupId: z.string().min(1),
+		signupId: z.string().min(1),
+		trainee: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		const currentUser = requireUser();
+		const mine = await getSignupForUser(data.mySignupId, currentUser.id);
+		if (!mine) throw error(404, 'Shift not found');
+
+		try {
+			await setSupervisingSignup({
+				signupId: data.signupId,
+				supervisingSignupId: data.trainee ? data.mySignupId : null,
+				actorUserId: currentUser.id,
+				actorIsStaff: false
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await getMyShift(data.mySignupId).refresh();
+		return { success: true };
+	}
+);
 
 export const setMyWorkTaskDone = form(
 	z.object({

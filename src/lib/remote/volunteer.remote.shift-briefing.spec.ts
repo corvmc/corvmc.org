@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { sql } from 'drizzle-orm';
 
 /**
  * The role's briefing on the volunteer's shift page (#2728), through the
@@ -14,7 +15,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('#lib/server/finance/subscription-service.js', () => ({
-	isSustainingMember: async () => false
+	isSustainingMember: async () => false,
+	isSustainingMemberSql: () => sql`0`
 }));
 
 vi.mock('$app/server', () => {
@@ -39,6 +41,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 	can: async () => false,
 	getUserRoles: async () => [],
 	committeeCapabilitiesFor: async () => [],
+	// The crew list on the page selects member refs, which carry a position.
+	topPositionFor: () => sql`null`,
 	requireCapability: async () => {
 		throw new Error('not reached');
 	}

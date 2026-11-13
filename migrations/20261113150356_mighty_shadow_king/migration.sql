@@ -1,0 +1,2 @@
+ALTER TABLE `member_certification` ADD `training_signup_id` text REFERENCES volunteer_signup(id) ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE `volunteer_signup` ADD `supervising_signup_id` text REFERENCES volunteer_signup(id) ON DELETE SET NULL;

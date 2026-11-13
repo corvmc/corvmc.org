@@ -1505,6 +1505,14 @@ asymmetry — a clearance pulled on the day was not in force, but a card is vali
 expiry date. Held certifications append and are never overwritten, which is the only way to
 answer "was their First Aid current on the night of the incident?"
 
+**Training happens on a shift** (#2720). A signup's `supervising_signup_id` names the signup it
+trained under. Staff set it from the shift roster, and the supervisor marks trainees on their own
+shift page; a member cannot name someone else as supervisor or undo another supervisor's mark.
+The supervisor must be on the same shift and be a different member — `training-service.ts`
+refuses anything else, since this is integrity, not a workflow gate. When staff grant a
+clearance, the member's completed supervised shifts whose role requires it are offered as
+evidence, and the one chosen is stored on the grant (`member_certification.training_signup_id`).
+
 ### The coordinator's half
 
 Everything above is the member's path. The staff side was inferred from it, and a hands-on

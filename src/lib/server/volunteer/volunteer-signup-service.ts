@@ -543,6 +543,8 @@ export interface ShiftClaimant {
 	claimedAt: Date;
 	/** Only meaningful on a cancelled shift, where the roster is the notify list. */
 	notifiedAt: Date | null;
+	/** The signup on this shift they trained under (#2720). */
+	supervisingSignupId: string | null;
 }
 
 export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
@@ -553,7 +555,8 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 			member: memberRefColumns(),
 			status: volunteerSignup.status,
 			claimedAt: volunteerSignup.claimedAt,
-			notifiedAt: volunteerSignup.notifiedAt
+			notifiedAt: volunteerSignup.notifiedAt,
+			supervisingSignupId: volunteerSignup.supervisingSignupId
 		})
 		.from(volunteerSignup)
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
