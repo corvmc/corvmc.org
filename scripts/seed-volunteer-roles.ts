@@ -41,8 +41,9 @@ const ROLES: RoleSeed[] = [
 		name: 'Door',
 		group: 'at-shows',
 		description: 'Handle the entry fee, welcome audience members, and keep an eye on the space.',
-		// A confirmed door volunteer takes card payments for that show, during the shift (#1630).
-		capabilityGrants: ['finance.collect']
+		// A confirmed door volunteer takes card payments and checks people in for that
+		// show, during the shift (#1630, #2794).
+		capabilityGrants: ['finance.collect', 'event.checkIn']
 	},
 	{
 		name: 'Merch',

@@ -2709,10 +2709,11 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, filedIncidents, briefing, crewMates] = await Promise.all([
+	const [tasks, event, crew, door, filedIncidents, briefing, crewMates] = await Promise.all([
 		listWorkTasks(shift.workOrderId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
 		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
+		shift.eventId ? can('event.checkIn', { eventId: shift.eventId }) : Promise.resolve(false),
 		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
 		shift.briefingArticleId
 			? resolveHelpReader(currentUser.id).then((reader) =>
@@ -2735,10 +2736,10 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 		// The night itself. The page had its *name* in a subtitle and no way to
 		// reach it, though this query already holds the whole row.
 		event: event ? toEventRef(event) : null,
-		// Offered only where there is something to check people into. A work party
-		// has no door, and a show with ticketing off has no list.
+		// Offered only where there is a list and the role grants it, which takes a
+		// confirmed signup inside the shift window (#2794).
 		checkIn:
-			event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
+			door && event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
 				? { eventId: event.id, eventTitle: event.title }
 				: null,
 		// Crew of a show can file an incident for it, and see only what they filed.
@@ -2816,6 +2817,7 @@ export const getMyShiftCheckIn = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift?.eventId) throw error(404, 'Shift not found');
 	if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+	await requireCapability('event.checkIn', { eventId: shift.eventId });
 
 	const event = await getById(shift.eventId);
 	if (!event) throw error(404, 'Event not found');
@@ -2849,6 +2851,7 @@ export const checkInAsVolunteer = form(
 		const shift = await getSignupForUser(data.signupId, currentUser.id);
 		if (!shift?.eventId) throw error(404, 'Shift not found');
 		if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+		await requireCapability('event.checkIn', { eventId: shift.eventId });
 
 		const ticket = await getTicketById(data.ticketId);
 		if (!ticket) throw error(404, 'Ticket not found');

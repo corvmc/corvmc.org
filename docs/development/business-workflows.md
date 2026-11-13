@@ -606,6 +606,9 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
   shift. Only collective-sold shows are offered (#1629).
+- **Door list:** the shift page's Check people in list and `checkInAsVolunteer` take
+  `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
+  on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
 - **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
   $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. Anything
   else opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
