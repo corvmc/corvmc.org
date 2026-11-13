@@ -10,6 +10,7 @@ import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 import {
 	formatCents,
+	formatElapsed,
 	formatDate,
 	formatDateLong,
 	formatDateShort,
@@ -395,5 +396,15 @@ describe('utcCalendarDate', () => {
 	it('keeps the stored day of a UTC-midnight date-only value', () => {
 		// toLocalDate would read this as Mar 13 in club time, a day early.
 		expect(utcCalendarDate(new Date('2026-03-14T00:00:00Z'))).toBe('2026-03-14');
+	});
+});
+
+describe('formatElapsed', () => {
+	it('picks minutes, hours or days by size', () => {
+		expect(formatElapsed(20)).toBe('1 min');
+		expect(formatElapsed(40 * 60)).toBe('40 min');
+		expect(formatElapsed(2.5 * 3_600)).toBe('2.5 hr');
+		expect(formatElapsed(30 * 3_600)).toBe('30 hr');
+		expect(formatElapsed(3 * 86_400)).toBe('3 days');
 	});
 });
