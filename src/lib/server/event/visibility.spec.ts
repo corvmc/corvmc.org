@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
+import type { ListingViewer } from './visibility';
 
 /**
  * Every public read of listings, on real SQLite, against one listing per
@@ -20,7 +21,7 @@ vi.mock('#lib/server/storage.js', () => ({
 }));
 
 const events = await import('./event-service');
-const { canSeeListing, visibleTo } = await import('./visibility');
+const { canSeeListing } = await import('./visibility');
 const { checkForDuplicate } = await import('./community-event-service');
 const { listRecentRecaps } = await import('./event-photo-service');
 const { monthCalendar } = await import('#lib/server/poster/calendar-service.js');
@@ -172,7 +173,7 @@ describe('public reads', () => {
 });
 
 describe('visibleTo', () => {
-	const seen = async (viewer: Parameters<typeof visibleTo>[0]) => {
+	const seen = async (viewer: ListingViewer) => {
 		const out: string[] = [];
 		for (const v of visibilities) if (await canSeeListing(`next-${v}`, viewer)) out.push(v);
 		return out;

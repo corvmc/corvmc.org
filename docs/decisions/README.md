@@ -106,3 +106,4 @@ A page or less. Link the issue and the PRs.
 | 0072 | [A schedule change replaces the series](0072-a-schedule-change-replaces-the-series.md)                                         | 2026-11-13 | Accepted           |
 | 0073 | [A market vendor is an organization](0073-a-market-vendor-is-an-organization.md)                                               | 2026-11-13 | Accepted           |
 | 0074 | [An act is a performer organization](0074-an-act-is-a-performer-organization.md)                                               | 2026-11-13 | Accepted           |
+| 0075 | [A listing says who may see it](0075-a-listing-says-who-may-see-it.md)                                                         | 2026-11-13 | Accepted           |

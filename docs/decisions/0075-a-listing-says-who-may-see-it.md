@@ -1,4 +1,4 @@
-# 0074 A listing says who may see it
+# 0075 A listing says who may see it
 
 - **Date:** 2026-11-13
 - **Status:** Accepted
