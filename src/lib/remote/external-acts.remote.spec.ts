@@ -38,7 +38,12 @@ vi.mock('./_remote', () => ({
 	form: (_schema: unknown, handler: (v: unknown) => unknown) => remote('form', handler)
 }));
 
-const { searchAskableListings, listActInDirectory } = await import('./external-acts.remote');
+const { searchAskableListings, listActInDirectory: listActForm } =
+	await import('./external-acts.remote');
+// The mocked `form` hands back the handler; kit's type says it is not callable.
+const listActInDirectory = listActForm as unknown as (data: {
+	eventBandId: string;
+}) => Promise<unknown>;
 
 beforeEach(() => {
 	vi.clearAllMocks();
