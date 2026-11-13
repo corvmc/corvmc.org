@@ -6,6 +6,7 @@
 	import Table from '#lib/components/ui/Table.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getSpendReport } from '#lib/remote/inventory.remote.js';
@@ -64,7 +65,7 @@
 		<Button variant="default" size="sm" onclick={apply}>{m.staff_apply_label()}</Button>
 	</div>
 
-	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+	<StatGrid cols={3} class="mb-6">
 		<StatCard title={m.staff_stock_title()} value={formatCents(data.totalCents)} />
 		<StatCard
 			title={m.staff_inventory_spend_services_title()}
@@ -76,7 +77,7 @@
 			size="sm"
 			valueClass="whitespace-normal"
 		/>
-	</div>
+	</StatGrid>
 
 	{#if data.rows.length === 0}
 		<EmptyState

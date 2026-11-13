@@ -26,6 +26,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
@@ -385,7 +386,7 @@
 			/>
 
 			{#if syncResult}
-				<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+				<StatGrid cols={7}>
 					<StatCard title={m.staff_settings_scanned_title()} value={syncResult.totalScanned} />
 					<StatCard
 						title={m.staff_settings_users_updated_title()}
@@ -408,7 +409,7 @@
 						value={syncResult.bandsCleared}
 					/>
 					<StatCard title={m.staff_settings_skipped_title()} value={syncResult.skipped} />
-				</div>
+				</StatGrid>
 
 				{#if syncResult.errors.length > 0}
 					<Alert type="warning">
@@ -443,7 +444,7 @@
 			/>
 
 			{#if statsResult}
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+				<StatGrid cols={3}>
 					<StatCard
 						title={m.staff_settings_sustaining_members_title()}
 						value={statsResult.sustainingMemberCount}
@@ -456,7 +457,7 @@
 						title={m.staff_settings_participation_title()}
 						value={`${statsResult.participationPercent}%`}
 					/>
-				</div>
+				</StatGrid>
 			{/if}
 		{:else if shown === 'access'}
 			<AccessTab />

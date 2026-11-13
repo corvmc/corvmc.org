@@ -3,6 +3,7 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -31,7 +32,7 @@
 <DateRangeFilter bind:from={fromDate} bind:to={toDate} defaultFrom={yearStart} />
 
 {#await report then r}
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+	<StatGrid cols={4}>
 		<StatCard
 			title={m.member_groups_slug_committee_numbers_earned_title()}
 			value={formatCents(r.money.totalsByKind.earned)}
@@ -48,7 +49,7 @@
 			title={m.member_groups_slug_committee_numbers_approved_hours_title()}
 			value={formatVolunteerHours(r.volunteering.totalMinutes)}
 		/>
-	</div>
+	</StatGrid>
 
 	<InfoCard title={m.member_groups_slug_committee_numbers_ledger_lines_title()}>
 		<p class="mb-3 text-subtle text-sm">

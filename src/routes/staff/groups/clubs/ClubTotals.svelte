@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import { getStaffClubTotals } from '#lib/remote/groups.remote.js';
 
 	const totals = await getStaffClubTotals();
@@ -14,8 +15,8 @@
 	]);
 </script>
 
-<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+<StatGrid cols={3} class="mb-4">
 	{#each stats as stat (stat.title)}
 		<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
 	{/each}
-</div>
+</StatGrid>

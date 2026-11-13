@@ -6,6 +6,7 @@
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
@@ -107,7 +108,7 @@
 		</Alert>
 	{/if}
 
-	<div class="mb-6 grid grid-cols-3 gap-3">
+	<StatGrid cols={3} class="mb-6">
 		<!--
 			Unassigned first, deliberately. An unassigned row is what actually loses
 			gear and it is actionable days out; a packed count only means something
@@ -120,7 +121,7 @@
 		/>
 		<StatCard title={msg.band_van_title()} value="{list.packedCount}/{list.itemCount}" size="sm" />
 		<StatCard title={msg.band_slug_packing_things_title()} value={list.itemCount} size="sm" />
-	</div>
+	</StatGrid>
 
 	{#if list.itemCount > 0}
 		<Card class="mb-6">
