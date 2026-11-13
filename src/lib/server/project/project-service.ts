@@ -745,7 +745,8 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	// orders are counted when placed: committed when written, not at settlement.
 	const [ledger] = await db
 		.select({
-			ticketRevenueCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'earned' then ${financialEntry.amountCents} else 0 end), 0)`,
+			// Net of the card fee, which is a `spent` row on the same ticket.
+			ticketRevenueCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} in ('earned', 'spent') then ${financialEntry.amountCents} else 0 end), 0)`,
 			actsPoolInCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'pass_through' then ${financialEntry.amountCents} else 0 end), 0)`,
 			actPayoutsCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' then -${financialEntry.amountCents} else 0 end), 0)`,
 			guaranteeTopUpCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' and ${financialEntry.kind} = 'spent' then -${financialEntry.amountCents} else 0 end), 0)`

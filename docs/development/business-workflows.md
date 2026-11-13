@@ -581,7 +581,9 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   else opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
   id. Capacity only warns, and the door can still sell past it.
 - **Fulfilment:** the `payment_intent.succeeded` webhook → `fulfillDoorSale` flips the purchase's
-  `pending` rows to `checked_in` and writes the ledger rows. A redelivered event matches no
+  `pending` rows to `checked_in` and writes the ledger rows: `ticket_sales` earns the charge less
+  the acts' share, `act_payout` holds the acts' share, and `card_fees` spends the fee once, so a
+  sale nets to the charge less the fee (#2731). A redelivered event matches no
   `pending` row and writes nothing. The door screen polls `getDoorSale` and never reports a
   payment itself.
 - **Refunds:** on the staff site, under `finance.refund`, never on the phone. `refund()` in

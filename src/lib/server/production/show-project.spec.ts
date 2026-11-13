@@ -219,7 +219,8 @@ describe("a show's money in its project's burn", () => {
 		) =>
 			exec(`insert into financial_entry (id, amount_cents, kind, category, occurred_at, settlement, subject_type, subject_id, project_id, description)
 				values ('${id}', ${amount}, '${kind}', '${category}', ${T0}, 'stripe', '${subject}', 's', ${project ? `'${project}'` : 'null'}, 'x')`);
-		row('t-cut', 3000, 'earned', 'ticket_sales', 'ticket');
+		row('t-cut', 3059, 'earned', 'ticket_sales', 'ticket');
+		row('t-fee', -59, 'spent', 'card_fees', 'ticket');
 		row('t-pool', 7000, 'pass_through', 'act_payout', 'ticket');
 		row('p-pool', -7000, 'pass_through', 'act_payout', 'production');
 		row('p-top', -2000, 'spent', 'act_guarantee', 'production');
