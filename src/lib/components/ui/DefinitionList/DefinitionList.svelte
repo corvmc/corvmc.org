@@ -19,17 +19,32 @@
 	 * ```
 	 */
 	let {
+		layout = 'grid',
 		class: extraClass = '',
 		children
 	}: {
+		/**
+		 * `strip` puts each label above its value, one fact per column: a folded
+		 * card's facts, which have no table header to name them.
+		 */
+		layout?: 'grid' | 'strip';
 		class?: string;
 		children: Snippet;
 	} = $props();
 </script>
 
-<dl
-	class="grid gap-x-4 gap-y-2 text-sm {extraClass}"
-	style="grid-template-columns: auto minmax(0, 1fr);"
->
-	{@render children()}
-</dl>
+{#if layout === 'strip'}
+	<!-- Column flow over two rows: each dt lands above its own dd with no wrapper. -->
+	<dl
+		class="grid auto-cols-[minmax(0,1fr)] grid-flow-col grid-rows-[auto_auto] gap-x-4 gap-y-0.5 text-sm {extraClass}"
+	>
+		{@render children()}
+	</dl>
+{:else}
+	<dl
+		class="grid gap-x-4 gap-y-2 text-sm {extraClass}"
+		style="grid-template-columns: auto minmax(0, 1fr);"
+	>
+		{@render children()}
+	</dl>
+{/if}

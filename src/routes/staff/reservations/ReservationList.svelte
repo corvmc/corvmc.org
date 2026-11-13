@@ -32,18 +32,13 @@
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
 	import BuildingAccess from './BuildingAccess.svelte';
+	import ReservationCard from './ReservationCard.svelte';
+	import { paymentStatus } from './payment-status';
 	import { page as appPage, navigating } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
 	import {
-		IconCheck,
 		IconCircleCheck,
-		IconClock,
-		IconGift,
-		IconCoin,
-		IconArrowBackUp,
-		IconUserX,
-		IconCircleX,
 		IconRepeat,
 		IconUserPlus,
 		IconNote,
@@ -165,35 +160,6 @@
 			filters.range = 'any';
 			filters.from = '';
 			filters.to = '';
-		}
-	}
-
-	function paymentStatus(state: ReturnType<typeof reservationPaymentState>): {
-		label: string;
-		color: string;
-		icon: typeof IconCheck;
-	} {
-		switch (state) {
-			case 'no_show':
-				return { label: m.staff_no_show_label(), color: 'text-error', icon: IconUserX };
-			case 'refunded':
-				return { label: m.staff_refunded_label(), color: 'text-error', icon: IconArrowBackUp };
-			case 'cancelled':
-				return { label: m.staff_cancelled_label(), color: 'text-base-content', icon: IconCircleX };
-			case 'paid':
-				return { label: m.staff_paid_label(), color: 'text-success', icon: IconCheck };
-			case 'cash_due':
-				return {
-					label: m.staff_reservations_cash_due_label(),
-					color: 'text-warning',
-					icon: IconClock
-				};
-			case 'unpaid':
-				return { label: m.staff_unpaid_label(), color: 'text-warning', icon: IconClock };
-			case 'credits':
-				return { label: m.staff_paid_with_credits_label(), color: 'text-info', icon: IconCoin };
-			case 'comped':
-				return { label: m.staff_comped_label(), color: 'text-info', icon: IconGift };
 		}
 	}
 
@@ -451,8 +417,8 @@
 
 				<!--
 				Phone widths: the desk checks the room standing at the door, which is
-				ui-patterns' card test 4. So no hover-only tooltips here — each flag
-				and the payment state say their word — and the actions are full-size.
+				ui-patterns' card test 4. The rows fold into the card grammar there:
+				no hover-only tooltips, labelled facts, actions full width at 44px.
 			-->
 				<ul class="narrow-only">
 					{#each reservations as r, idx (`${r.kind}:${r.id}`)}
@@ -461,104 +427,21 @@
 							<li class="rounded-sm cell-group">{label}</li>
 						{/if}
 						{#if r.kind === 'closure'}
-							<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
-								<div class="min-w-0 space-y-1">
-									<p class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</p>
-									<p>{r.reason}</p>
-								</div>
-								<div class="flex shrink-0 flex-col items-end gap-2">
+							<li class="space-y-2 border-b border-base-300 py-3">
+								<div class="flex min-h-11 flex-wrap items-center gap-2">
 									<Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge>
-									{@render closureActions(r, false)}
+									<span class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</span>
 								</div>
+								<p>{r.reason}</p>
+								{@render closureActions(r, false)}
 							</li>
 						{:else}
-							{@const actions = visibleActions(
-								r.status,
-								r.startsAt,
-								r.endsAt,
-								r.stripePaymentRecordId
-							)}
-							{@const current = r.id === openId}
-							<li
-								class="-mx-2 flex items-start justify-between gap-3 rounded-box border-b border-base-300 px-2 py-3 {current
-									? 'bg-base-200'
-									: ''}"
-								aria-current={current ? 'page' : undefined}
-							>
-								<div class="min-w-0 space-y-2">
-									<a
-										href={withQuery(resolve(`staff/reservations/${r.id}`), filters.urlQuery)}
-										class="text-lg font-medium hover:underline"
-									>
-										{formatTimeRange(r.startsAt, r.endsAt)}
-									</a>
-									<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-										<EntityChip ref={r.booker} />
-										{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
-											<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
-												{#if r.recurringSeriesId}
-													<li class="flex items-center gap-1">
-														<IconRepeat size={14} />{m.staff_recurring_text()}
-													</li>
-												{/if}
-												{#if r.bookerType === 'instructor'}
-													<li class="flex items-center gap-1">
-														<BookerTypeIcon
-															type={r.bookerType}
-															size={14}
-														/>{m.staff_reservations_teaching_text()}
-													</li>
-												{/if}
-												{#if r.isFirstReservation}
-													<li class="flex items-center gap-1">
-														<IconUserPlus
-															size={14}
-															class="text-success"
-														/>{m.staff_first_reservation_text()}
-													</li>
-												{/if}
-												{#if r.notes}
-													<li class="flex items-center gap-1">
-														<IconNote
-															size={14}
-															class="text-info"
-														/>{m.staff_reservations_member_left_note_text()}
-													</li>
-												{/if}
-											</ul>
-										{/if}
-									</div>
-								</div>
-								<div class="flex shrink-0 flex-col items-end gap-2">
-									<StatusBadge status={r.status} label />
-									{#if !isEventHold(r.bookerType)}
-										{#await hourlyRates then rates}
-											{@const state = reservationPaymentState(r)}
-											{@const ps = paymentStatus(state)}
-											{@const owed = state === 'cash_due' || state === 'unpaid'}
-											<p class="flex flex-wrap items-center gap-1 text-sm">
-												<ps.icon size={16} class={ps.color} />
-												<span class="font-medium">{owed ? m.staff_due_text() : ps.label}</span>
-												<span class="text-muted" class:line-through={state === 'comped'}>
-													{formatPaymentBreakdown(
-														r.startsAt,
-														r.endsAt,
-														rates[r.bookerType],
-														r.creditsUsed
-													)}
-												</span>
-											</p>
-										{:catch}
-											<!-- DataList takes this rejection to the boundary. -->
-										{/await}
-									{/if}
-									{#if owedAfterSession(r)}
-										<div class="flex gap-2">{@render settleActions(r)}</div>
-									{:else if actions.has('complete')}
-										<CompleteReservationAction reservation={r} size="sm" />
-									{/if}
-								</div>
-							</li>
+							<ReservationCard
+								reservation={r}
+								query={filters.urlQuery}
+								current={r.id === openId}
+								rates={hourlyRates}
+							/>
 						{/if}
 					{/each}
 				</ul>
@@ -570,19 +453,21 @@
 <!-- Only a closure that has not started can change; the server refuses the rest. -->
 {#snippet closureActions(c: Closure, compact: boolean)}
 	{#if canManageClosures && c.startsAt > new Date()}
-		<div class="flex w-max items-center justify-end gap-1">
-			{#if compact}
+		{#if compact}
+			<div class="flex w-max items-center justify-end gap-1">
 				<UpdateClosureAction closure={c} iconOnly shape="square" data-testid="edit-closure">
 					{#snippet icon()}<IconPencil size={16} />{/snippet}
 				</UpdateClosureAction>
 				<DeleteClosureAction closureId={c.id} iconOnly shape="square">
 					{#snippet icon()}<IconTrash size={16} />{/snippet}
 				</DeleteClosureAction>
-			{:else}
-				<UpdateClosureAction closure={c} />
-				<DeleteClosureAction closureId={c.id} />
-			{/if}
-		</div>
+			</div>
+		{:else}
+			<div class="grid grid-cols-2 gap-2">
+				<UpdateClosureAction closure={c} size="md" shape="block" class="min-h-11" />
+				<DeleteClosureAction closureId={c.id} size="md" shape="block" class="min-h-11 text-error" />
+			</div>
+		{/if}
 	{/if}
 {/snippet}
 

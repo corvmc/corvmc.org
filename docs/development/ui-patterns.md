@@ -1113,6 +1113,9 @@ from '#lib/components/ui/DefinitionList/Fact.svelte';
 - `wrap` — `whitespace-pre-wrap`, for free-text notes.
 - `class` — extra classes on the `<dd>`.
 
+`DefinitionList` takes `layout="strip"` for a folded card's facts: label above value, one fact per
+column, still bare `<dt>`/`<dd>` children.
+
 **`Fact` renders a bare `<dt>` + `<dd>` with no wrapper, and it must stay that
 way.** The two columns are a CSS grid declared on the `<dl>`, which only aligns
 when the `<dt>`s and `<dd>`s are direct children of it. Wrapping them in a
@@ -1415,7 +1418,8 @@ fact belongs on the detail page.
 
 **A card is the table's four slots, folded.** The fold is a container query (`narrow-only` /
 `wide-only`), so a list folds when the sidebar or a detail pane narrows it, not only when the window
-does. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app.
+does. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app, and
+`ReservationCard.svelte` beside it is its card.
 
 | Slot        | In a card                                                                                                                                       |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1426,6 +1430,9 @@ does. `src/routes/staff/reservations/ReservationList.svelte` is the folded list 
 
 Three table rules carry over: merge before you hide; another record gets its own slot as a chip;
 the budget is six facts wide and **three** folded.
+
+The facts strip is `DefinitionList layout="strip"` with `Fact`s: each label above its value, one
+fact per column.
 
 **A card's height does not track its content.** A browse grid of records with no artwork draws a
 generated plate in the fixed tile: `PosterCard` (`$lib/components/events/`) sets the title and
