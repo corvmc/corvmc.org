@@ -89,7 +89,6 @@ describe('door ticket sales', () => {
 		eventId: 'evt-1',
 		chargeCents: 3000,
 		actsCents: 2000,
-		collectiveCents: 914,
 		feeCents: 86,
 		occurredAt: new Date('2026-09-24')
 	};
@@ -98,7 +97,7 @@ describe('door ticket sales', () => {
 		await recordDoorTicketSale(sale);
 		const [[entries]] = recordEntries.mock.calls as unknown as [[Record<string, unknown>[]]];
 		expect(entries.map((e) => [e.category, e.amountCents])).toEqual([
-			['ticket_sales', 914],
+			['ticket_sales', 1000],
 			['act_payout', 2000],
 			['card_fees', -86]
 		]);
@@ -112,11 +111,11 @@ describe('door ticket sales', () => {
 		}
 	});
 
-	it('reconciles: what the rows add to is what the card was charged', async () => {
+	it('reconciles: the rows add to the charge less the fee, taken once (#2731)', async () => {
 		await recordDoorTicketSale(sale);
 		const [[entries]] = recordEntries.mock.calls as unknown as [[{ amountCents: number }[]]];
-		const earned = entries.reduce((sum, e) => sum + Math.abs(e.amountCents), 0);
-		expect(earned).toBe(sale.chargeCents);
+		const net = entries.reduce((sum, e) => sum + e.amountCents, 0);
+		expect(net).toBe(sale.chargeCents - sale.feeCents);
 	});
 
 	it('pools the acts on the show, the way the online sale does', async () => {
@@ -129,7 +128,7 @@ describe('door ticket sales', () => {
 	});
 
 	it('writes no zero rows', async () => {
-		await recordDoorTicketSale({ ...sale, actsCents: 0, collectiveCents: 2914 });
+		await recordDoorTicketSale({ ...sale, actsCents: 0 });
 		const [[entries]] = recordEntries.mock.calls as unknown as [[{ category: string }[]]];
 		expect(entries.map((e) => e.category)).toEqual(['ticket_sales', 'card_fees']);
 	});

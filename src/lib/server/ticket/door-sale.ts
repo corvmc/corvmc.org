@@ -205,7 +205,6 @@ export async function fulfillDoorSale(intent: Stripe.PaymentIntent): Promise<voi
 		eventId: meta.event_id ?? '',
 		chargeCents: intent.amount,
 		actsCents: Number(meta.acts_cents) || 0,
-		collectiveCents: Number(meta.collective_cents) || 0,
 		feeCents: Number(meta.fee_cents) || 0,
 		occurredAt: checkedInAt
 	});

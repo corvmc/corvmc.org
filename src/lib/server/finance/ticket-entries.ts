@@ -5,6 +5,7 @@ import {
 	type RecordEntryInput
 } from './financial-entry-service';
 import { showProjectIdForEvent } from './show-project';
+import type { TicketSplit } from '#lib/finance/ticket-split.js';
 
 /**
  * A free ticket, recorded as the $0 sale it is.
@@ -48,6 +49,37 @@ export async function recordBandTicketRefund(purchaseId: string): Promise<void> 
 }
 
 /**
+ * The split, as an online ticket's checkout session carries it. The receipt
+ * reads the ticket line and the gift; `handleCheckoutEntries` reads the acts'
+ * share and the covered fee, and the collective earns the rest of the charge.
+ */
+export function ticketSplitMetadata(split: TicketSplit): Record<string, string> {
+	return {
+		ticket_unit_price_cents: String(split.ticketLineUnitCents),
+		ticket_contribution_cents: String(split.contributionCents),
+		ticket_acts_cents: String(split.actsCents),
+		ticket_collective_cents: String(split.collectiveCents),
+		ticket_fee_covered_cents: String(split.feeCoveredCents)
+	};
+}
+
+/**
+ * What the collective earned on a ticket: everything the acts are not owed,
+ * before the card fee. The split's own `collectiveCents` is after the fee, and
+ * the fee is its own `spent` row, so earning that figure counts the fee twice
+ * (#2731). The covered part is `fee_coverage`; neither row goes negative.
+ */
+export function collectiveGross(input: {
+	chargeCents: number;
+	actsCents: number;
+	feeCoveredCents: number;
+}): { ticketSalesCents: number; feeCoveredCents: number } {
+	const keptCents = Math.max(0, input.chargeCents - input.actsCents);
+	const feeCoveredCents = Math.min(keptCents, Math.max(0, input.feeCoveredCents));
+	return { ticketSalesCents: keptCents - feeCoveredCents, feeCoveredCents };
+}
+
+/**
  * A card-present sale at the door (#612): the rows an online collective ticket
  * writes, keyed on the PaymentIntent that is also the `purchaseId`. There is
  * no buyer account, and no fee coverage at the door.
@@ -57,10 +89,10 @@ export async function recordDoorTicketSale(params: {
 	eventId: string;
 	chargeCents: number;
 	actsCents: number;
-	collectiveCents: number;
 	feeCents: number;
 	occurredAt: Date;
 }): Promise<void> {
+	const { ticketSalesCents } = collectiveGross({ ...params, feeCoveredCents: 0 });
 	const base = {
 		occurredAt: params.occurredAt,
 		settlement: 'stripe' as const,
@@ -71,10 +103,10 @@ export async function recordDoorTicketSale(params: {
 		projectId: await showProjectIdForEvent(params.eventId)
 	};
 	const entries: RecordEntryInput[] = [];
-	if (params.collectiveCents > 0) {
+	if (ticketSalesCents > 0) {
 		entries.push({
 			...base,
-			amountCents: params.collectiveCents,
+			amountCents: ticketSalesCents,
 			kind: 'earned',
 			category: 'ticket_sales',
 			description: 'Ticket sale, door, card present'

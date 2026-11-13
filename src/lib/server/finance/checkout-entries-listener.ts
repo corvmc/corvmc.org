@@ -1,6 +1,7 @@
 import { calculateProcessingFee } from '#lib/finance/fees.js';
 import { recordEntriesBestEffort, type RecordEntryInput } from './financial-entry-service';
 import { showProjectIdForEvent } from './show-project';
+import { collectiveGross } from './ticket-entries';
 import type Stripe from 'stripe';
 
 /**
@@ -71,13 +72,16 @@ export async function handleCheckoutEntries(session: Stripe.Checkout.Session): P
 		// Every leg of a show's sale counts toward its project's burn.
 		const projectId = await showProjectIdForEvent(eventId);
 		const actsCents = cents('ticket_acts_cents');
-		const collectiveCents = cents('ticket_collective_cents');
-		const feeCoveredCents = cents('ticket_fee_covered_cents');
+		const { ticketSalesCents, feeCoveredCents } = collectiveGross({
+			chargeCents,
+			actsCents,
+			feeCoveredCents: cents('ticket_fee_covered_cents')
+		});
 
-		if (collectiveCents > 0) {
+		if (ticketSalesCents > 0) {
 			entries.push({
 				...base,
-				amountCents: collectiveCents,
+				amountCents: ticketSalesCents,
 				kind: 'earned',
 				category: 'ticket_sales',
 				subjectType: 'ticket',

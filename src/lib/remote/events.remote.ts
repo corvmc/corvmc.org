@@ -1,5 +1,5 @@
 import { captureException } from '#lib/server/sentry.js';
-import { recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
+import { recordFreeTicketSale, ticketSplitMetadata } from '#lib/server/finance/ticket-entries.js';
 import { sellerFor } from '#lib/server/ticket/ticket-seller.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
@@ -2040,15 +2040,7 @@ export const purchaseTickets = form(
 				purchase_id: purchaseId,
 				event_id: evt.id,
 				ticket_quantity: String(data.quantity),
-				// The webhook needs these to break the charge into tickets, gift, and
-				// covered fees on the receipt — the session alone can't tell them apart.
-				ticket_unit_price_cents: String(split.ticketLineUnitCents),
-				ticket_contribution_cents: String(split.contributionCents),
-				// Not read by the webhook, which takes the allocation off the ticket
-				// rows. These are for settlement, which reconciles against Stripe by
-				// event_id and should be able to see where the buyer sent the money.
-				ticket_acts_cents: String(split.actsCents),
-				ticket_collective_cents: String(split.collectiveCents)
+				...ticketSplitMetadata(split)
 			},
 			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
 			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
