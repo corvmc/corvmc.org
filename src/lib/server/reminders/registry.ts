@@ -27,6 +27,7 @@ import {
 	listUnclaimedOrientationsBetween
 } from '#lib/server/volunteer/orientation-reminders.js';
 import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
+import { membersOwingFees } from '#lib/server/reservation/outstanding-fees.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
@@ -316,7 +317,9 @@ export const reminders: ReminderDefinition[] = [
 
 	// Owed once `reconcileSyncState` stamps lockSyncedAt: a code U-tec only
 	// queued may not open the door yet. The one-day floor keeps the first drain
-	// from mailing every code already on the lock, and still retries a failure.
+	// from mailing every code already on the lock; a booking starting within a
+	// day stays owed past it. Withheld while the member owes a fee (#2859): no
+	// sent-mark, so the first drain after payment sends it.
 	defineReminder({
 		key: 'door_code_ready',
 		subjectType: 'reservation',
@@ -339,22 +342,31 @@ export const reminders: ReminderDefinition[] = [
 						eq(reservation.status, 'confirmed'),
 						isNotNull(reservation.lockCode),
 						isNotNull(reservation.lockSyncedAt),
-						gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
+						or(
+							gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
+							lt(reservation.startsAt, new Date(now.getTime() + DAY))
+						),
 						gt(reservation.endsAt, now)
 					)
 				)
 				.limit(500);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					reservationId: row.id,
-					code: row.lockCode!,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
+			const owing = await membersOwingFees(
+				rows.map((r) => r.userId),
+				now
+			);
+			return rows
+				.filter((row) => !owing.has(row.userId))
+				.map((row) => ({
+					subjectId: row.id,
+					payload: {
+						reservationId: row.id,
+						code: row.lockCode!,
+						userId: row.userId,
+						userName: row.userName,
+						userEmail: row.userEmail,
+						...when(row)
+					}
+				}));
 		}
 	}),
 

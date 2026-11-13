@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lt } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -8,14 +8,15 @@ import { confirmedUnpaidSql } from './staff-reservation-list';
 import { buildDateInTz } from './timezone';
 
 /**
- * Outstanding fees and the booking gate they drive (#2748). An outstanding fee
+ * Outstanding fees and the gate they drive (#2748, #2859). An outstanding fee
  * is a practice space session that has ended still payment due, by the same
  * `confirmedUnpaidSql` the staff list uses, and that started on or after the
- * cutoff. Rows before the cutoff keep their status and count as zero.
+ * cutoff. Rows before the cutoff keep their status and count as zero. One fee
+ * refuses the member's own booking and withholds their door code messages.
  */
 
-/** Past this many fees a member's own booking is refused. */
-export const FEE_GATE_REFUSE_AT = 2;
+/** At this many fees a member's own booking is refused. */
+export const FEE_GATE_REFUSE_AT = 1;
 
 export interface OutstandingFee {
 	id: string;
@@ -26,8 +27,9 @@ export interface OutstandingFee {
 }
 
 /**
- * `off`: no cutoff set, so no gate. `clear`: nothing owed. `warn`: book, and
- * say what is owed. `refuse`: the member's own booking is refused.
+ * `off`: no cutoff set, so no gate. `clear`: nothing owed. `refuse`: the
+ * member's own booking is refused. `warn`: staff booking on their behalf, who
+ * see what is owed and are never refused.
  */
 export type FeeGateState = 'off' | 'clear' | 'warn' | 'refuse';
 
@@ -36,7 +38,7 @@ export interface FeeGate {
 	fees: OutstandingFee[];
 }
 
-/** A member booking for themselves (or for a band) with two or more fees owed. */
+/** A member booking for themselves (or for a band) with a fee owed. */
 export class OutstandingFeesError extends DomainError {
 	readonly httpStatus = 403;
 	constructor(readonly fees: OutstandingFee[]) {
@@ -78,7 +80,7 @@ export async function listOutstandingFees(
 	return rows;
 }
 
-/** Staff booking on a member's behalf see the count, but are never refused. */
+/** Staff booking on a member's behalf see the fees, but are never refused. */
 export function feeGateState(
 	feeCount: number,
 	opts: { cutoff: Date | null; onBehalf?: boolean }
@@ -108,4 +110,29 @@ export async function assertFeeGateAllows(userId: string): Promise<FeeGate> {
 	const gate = await getFeeGate(userId);
 	if (gate.state === 'refuse') throw new OutstandingFeesError(gate.fees);
 	return gate;
+}
+
+/**
+ * Which of `userIds` owe a fee now. The door code reminder drops their rows, so
+ * nothing is marked sent and the next drain after payment sends it.
+ */
+export async function membersOwingFees(
+	userIds: string[],
+	now: Date,
+	cutoff?: Date | null
+): Promise<Set<string>> {
+	const from = cutoff !== undefined ? cutoff : await getFeeGateCutoff();
+	if (!from || userIds.length === 0) return new Set();
+	const rows = await db
+		.selectDistinct({ userId: reservation.createdByUserId })
+		.from(reservation)
+		.where(
+			and(
+				inArray(reservation.createdByUserId, [...new Set(userIds)]),
+				gte(reservation.startsAt, from),
+				lt(reservation.endsAt, now),
+				confirmedUnpaidSql()
+			)
+		);
+	return new Set(rows.map((r) => r.userId).filter((id): id is string => id !== null));
 }

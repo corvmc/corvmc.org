@@ -1061,10 +1061,11 @@ Between the first state and a terminal one, anything else that blocks is a bug a
 
 **Named owner exceptions.** Refusals outside the four, each an owner decision recorded on its issue:
 
-- **Outstanding fees refuse a member's own booking** (#2748). Two or more practice space sessions
-  that ended still payment due, counted from the cutoff in Practice space settings, refuse a new
-  booking at the reservation remote. One fee warns; staff booking on a member's behalf are warned,
-  never refused. `src/lib/server/reservation/outstanding-fees.ts`.
+- **An outstanding fee refuses a member's own booking and withholds their door code messages**
+  (#2748, #2859). One practice space session that ended still payment due, counted from the cutoff
+  in Practice space settings, refuses a new booking at the reservation remote and drops the
+  member's `door_code_ready` reminder until it is paid. Staff booking on a member's behalf see the
+  fees and are never refused; the code is still minted. `src/lib/server/reservation/outstanding-fees.ts`.
 
 **The override is an escape hatch, not a feature.** The UI is designed for the usual path. Overrides
 live behind an overflow menu or a confirm step, never as a peer of the normal action, and nothing
