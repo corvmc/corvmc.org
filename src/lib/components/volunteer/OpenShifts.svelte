@@ -23,6 +23,7 @@
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 	import ShiftSignUpAction from './ShiftSignUpAction.svelte';
 
 	type Shift = {
@@ -162,13 +163,13 @@
 								})}
 					</div>
 
-					<div class="mt-2">
-						{#if blocked}
-							<span class="text-subtle text-sm">{blocked}</span>
-						{:else}
+					{#if blocked}
+						<p class="mt-2 text-subtle text-sm">{blocked}</p>
+					{:else}
+						<CardActions class="mt-2">
 							<ShiftSignUpAction shiftId={shift.id} {shift} />
-						{/if}
-					</div>
+						</CardActions>
+					{/if}
 				</li>
 			{/each}
 		</ul>

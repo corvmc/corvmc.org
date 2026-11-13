@@ -3,6 +3,7 @@
 	import type { EntityRef } from '#lib/types/entity.js';
 	import Card from '../Card/Card.svelte';
 	import CardBody from '../Card/CardBody.svelte';
+	import CardActions from '../Card/CardActions.svelte';
 	import EntityIdentity from './EntityIdentity.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '#lib/utils/images.js';
@@ -42,10 +43,7 @@
 		class?: string;
 		/** A `DefinitionList` of the facts worth showing at this size. */
 		facts?: Snippet;
-		/**
-		 * Buttons for this record, riding the card's bottom edge. Pass
-		 * `size="xs"` — these sit on a boundary and a full-size button swamps it.
-		 */
+		/** Labelled buttons for this record, drawn full width at 44px by `CardActions`. */
 		actions?: Snippet;
 		children?: Snippet;
 	} = $props();
@@ -136,20 +134,8 @@
 
 		{#if facts}{@render facts()}{/if}
 		{#if children}{@render children()}{/if}
+		{#if actions}
+			<CardActions class="mt-2">{@render actions()}</CardActions>
+		{/if}
 	</CardBody>
-	{#if actions}
-		<!--
-			Riding the bottom edge, half in and half out, the way the reservation
-			cards do it: `h-0` takes the row out of the flow and `items-center`
-			straddles the buttons across the boundary. Every `.btn` in this app
-			already carries the retro hard shadow, so sitting them on the edge is
-			what makes them read as raised off the card rather than printed on it.
-
-			Outside `CardBody` on purpose — its 24px padding would inset the buttons
-			from the corner, and the point is that they meet it.
-		-->
-		<div class="mt-5 flex h-0 items-center justify-end gap-2 px-3">
-			{@render actions()}
-		</div>
-	{/if}
 </Card>

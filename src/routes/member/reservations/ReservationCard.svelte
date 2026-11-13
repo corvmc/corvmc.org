@@ -66,11 +66,11 @@
 				{reservation}
 				onsuccess={onchange}
 				variant="error"
-				size="xs"
+				size="md"
 				outline
 			/>
 			{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
-				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
+				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="md" />
 			{/if}
 		{/if}
 		{#if withCredits}
@@ -81,7 +81,6 @@
 				submitLabel={m.member_reservations_reservation_card_label()}
 				successToast={m.member_reservations_reservation_card_success_toast()}
 				variant="primary"
-				size="xs"
 				onsuccess={onchange}
 			>
 				{#snippet form()}
@@ -96,7 +95,6 @@
 			<Button
 				href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 				variant="primary"
-				size="xs"
 				outline
 			>
 				{m.member_pay_online_label()}

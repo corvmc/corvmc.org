@@ -22,6 +22,7 @@
 	import MyShiftCard from '#lib/components/volunteer/MyShiftCard.svelte';
 	import LogHoursAction from '#lib/components/volunteer/LogHoursAction.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '#lib/utils/format.js';
@@ -141,10 +142,7 @@
 				>
 					<ul class="divide-y divide-base-300">
 						{#each pageData.assignedTasks as task (task.workOrderId)}
-							<li
-								class="flex flex-wrap items-center justify-between gap-2 py-3"
-								data-work-order-id={task.workOrderId}
-							>
+							<li class="space-y-2 py-3" data-work-order-id={task.workOrderId}>
 								<div class="min-w-0">
 									<div class="font-medium">{shiftLabel(task)}</div>
 									<div class="text-subtle text-sm">
@@ -162,11 +160,10 @@
 										{/if}
 									</div>
 								</div>
-								<div class="flex flex-wrap gap-2">
+								<CardActions>
 									<Button
 										href={resolve(`member/volunteer/tasks/${task.workOrderId}`)}
 										variant="ghost"
-										size="xs"
 									>
 										{m.member_volunteer_assigned_tasks_open_label()}
 									</Button>
@@ -176,7 +173,6 @@
 											action={markMyTaskDone.for(task.workOrderId)}
 											label={m.member_volunteer_assigned_tasks_mark_done_label()}
 											variant="ghost"
-											size="xs"
 											modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
 											submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
 											successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
@@ -191,7 +187,7 @@
 											{/snippet}
 										</Action>
 									{/if}
-								</div>
+								</CardActions>
 							</li>
 						{/each}
 					</ul>

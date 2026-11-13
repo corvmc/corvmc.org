@@ -331,6 +331,7 @@
 	"staff_events_id_check_label": "Check-in",
 	"staff_events_id_check_in_check_title": "Check-in: {title}",
 	"staff_events_id_check_in_checked_title": "Checked in",
+	"staff_events_id_check_in_code_label": "Code",
 	"staff_events_id_check_in_door_scanner_find_them_by_name_belo_text": "Or find them by name below.",
 	"staff_events_id_check_in_door_scanner_label": "Scan tickets",
 	"staff_events_id_check_in_door_scanner_sync_now_label": "Sync now",

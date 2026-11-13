@@ -11,6 +11,7 @@
 	} from '#lib/utils/format.js';
 	import { isTerminalStatus } from '#lib/utils/reservation-actions.js';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 
 	/**
 	 * A booking as a card: a date block tinted by status, the status, and a body
@@ -29,7 +30,7 @@
 		startsAt: Date;
 		status: string;
 		children: Snippet;
-		/** A right-aligned footer, pinned to the bottom of the card. Omit for a card with no controls. */
+		/** Labelled buttons, full width at the card's foot. Omit for a card with no controls. */
 		actions?: Snippet;
 	} = $props();
 
@@ -68,11 +69,9 @@
 		{#if actions}
 			<!-- `mt-auto` pins it to the card's foot, so footers share a baseline
 			     across a grid row however tall each body is (#2109). -->
-			<div
-				class="reservation-card-actions mt-auto flex flex-wrap items-center justify-end gap-2 p-2 px-3"
-			>
+			<CardActions class="reservation-card-actions mt-auto p-2 px-3">
 				{@render actions()}
-			</div>
+			</CardActions>
 		{/if}
 	</div>
 </div>
