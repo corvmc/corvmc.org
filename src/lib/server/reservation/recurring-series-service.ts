@@ -213,14 +213,14 @@ export interface SeriesCancelOutcome {
 }
 
 const SERIES_CANCEL_REASON = 'Recurring series cancelled';
-const LIVE_STATUSES: ('confirmed' | 'waitlisted')[] = ['confirmed', 'waitlisted'];
+export const LIVE_STATUSES: ('confirmed' | 'waitlisted')[] = ['confirmed', 'waitlisted'];
 
 /**
  * A booking that may be hard-deleted: nothing paid or committed against it, no
  * door code issued for it, and no row pointing at it. Anything else is
  * cancelled instead, so its refund and its listeners still run.
  */
-const deletable = () =>
+export const deletable = () =>
 	and(
 		isNull(reservation.stripePaymentRecordId),
 		isNull(reservation.paidAt),
@@ -235,7 +235,7 @@ const deletable = () =>
 		sql`NOT EXISTS (SELECT 1 FROM ${paymentCache} WHERE ${paymentCache.reservationId} = ${reservation.id})`
 	);
 
-function cancelArgs(by: SeriesCanceller): [string, Parameters<typeof cancelReservation>[3]] {
+export function cancelArgs(by: SeriesCanceller): [string, Parameters<typeof cancelReservation>[3]] {
 	if (by.kind === 'staff') return [by.userId, { staffOverride: true }];
 	// The caller has already established that this user owns the series.
 	if (by.kind === 'owner') return [by.userId, { authorizedActor: true }];

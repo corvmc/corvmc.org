@@ -2,7 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { CancelSeriesAction } from '#lib/components/actions/index.js';
+	import { CancelSeriesAction, EditScheduleAction } from '#lib/components/actions/index.js';
+	import { refreshAll } from '$app/navigation';
 	import { getLocalUser } from '#lib/remote/users.remote.js';
 	import { getRecurringReservations } from '#lib/remote/reservations.remote.js';
 	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '#lib/utils/format.js';
@@ -54,11 +55,18 @@
 					</p>
 				{/if}
 			</div>
-			<CancelSeriesAction
-				seriesId={series.id}
-				size="xs"
-				onsuccess={() => getRecurringReservations().refresh()}
-			/>
+			<div class="flex shrink-0 gap-1">
+				<EditScheduleAction
+					series={{ ...series, until: series.seriesEndsAt }}
+					size="xs"
+					onsuccess={() => refreshAll()}
+				/>
+				<CancelSeriesAction
+					seriesId={series.id}
+					size="xs"
+					onsuccess={() => getRecurringReservations().refresh()}
+				/>
+			</div>
 		</div>
 	{:else}
 		<!-- The control is a Frequency selector on step one of the Reserve Space
