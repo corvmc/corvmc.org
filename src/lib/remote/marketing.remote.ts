@@ -515,6 +515,8 @@ export const sendCampaignNow = command(z.object({}), async () => {
 	} catch (err) {
 		mapDomainError(err);
 	}
+	// The editor holds this query and navigates to the page that reads it.
+	void getCampaignDetail(params.id!).refresh();
 	return { success: true };
 });
 
@@ -530,6 +532,7 @@ export const scheduleCampaign = command(
 		} catch (err) {
 			mapDomainError(err);
 		}
+		void getCampaignDetail(params.id!).refresh();
 		return { success: true };
 	}
 );

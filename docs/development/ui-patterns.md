@@ -201,7 +201,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 
 > **Rule:** All forms in route files (`+page.svelte`) must use `Form`, `FormField`, and `SubmitButton`. Never use raw `<form>`, `<input>`, `<select>`, or manual submit handlers directly in page files — even for small inline forms.
 
-`Form` wraps a remote form with dirty tracking, status management, and toast notifications. It replaces `use:enhance`. Unsaved-changes protection is opt-in via the `guard` prop — add it to edit/settings forms where losing changes would be frustrating, but leave it off for login, modal, and quick-action forms.
+`Form` wraps a remote form with dirty tracking, status management, and toast notifications. It replaces `use:enhance`. Unsaved-changes protection is on by default: leaving a dirty form asks first. Pass `guard={false}` only where leaving mid-entry loses nothing worth asking about (sign-in, password reset). An editor not built on `Form` renders `<FormGuard dirty={() => …} />` itself.
 
 ```svelte
 <Form
@@ -221,7 +221,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 Props:
 
 - `remote` — a remote form from `data.remote.ts`
-- `guard` — enables unsaved-changes protection (blocks navigation when form is dirty)
+- `guard` — unsaved-changes protection, default `true` (blocks navigation when the form is dirty)
 - `successToast` — toast message shown after a successful submit
 - `onsuccess` / `onfailure` — callbacks
 - `flashDuration` — how long the success/error flash sticks before the button
@@ -240,7 +240,9 @@ login page is silently dropped.
 
 ### How dirty tracking works
 
-Dirty tracking is bottom-up. Each `FormField` listens for `input` and `change` events (via event delegation on its wrapper) and notifies the `FormContext`. The Form's status moves from `idle` → `dirty` when any field fires a change. `SubmitButton` is disabled until the form is dirty, and `FormGuard` blocks navigation while there are unsaved changes.
+Dirty tracking is bottom-up. Each `FormField` listens for `input` and `change` events (via event delegation on its wrapper) and notifies the `FormContext`; the `<form>` element listens too, so a raw input or custom editor counts. A control that changes without an input event (a chip added by a button) calls `getFormContext()?.changed()`. The Form's status moves from `idle` → `dirty` when any field fires a change. `SubmitButton` is disabled until the form is dirty, and `FormGuard` blocks navigation while there are unsaved changes.
+
+Fields are disabled while a submit is pending, which drops focus. After the submit, `Form` moves focus to the first `aria-invalid` field on failure, back to where it was on success, or to the `role="alert"`/`role="status"` message when a success replaced the form with one.
 
 This means any input nested inside a `FormField` — whether it's a built-in type or custom markup via the `children` snippet — participates in change tracking automatically. No extra wiring needed.
 

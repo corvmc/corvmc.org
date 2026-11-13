@@ -12,6 +12,7 @@
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
+	import FormGuard from '#lib/components/ui/Form/FormGuard.svelte';
 	import { createDraft, createAndSend, createAndSchedule } from '#lib/remote/marketing.remote.js';
 
 	let subject = $state('');
@@ -25,6 +26,18 @@
 	let totalSubscribers = $state(0);
 
 	let confirmingSend = $state(false);
+
+	// Set once the campaign exists: what was typed is saved.
+	let leaving = false;
+	const isDirty = () =>
+		!leaving &&
+		!!(
+			subject.trim() ||
+			markdownBody.trim() ||
+			selectedAudienceIds.length ||
+			eventId ||
+			scheduledFor
+		);
 
 	/**
 	 * The `try` covers the call and nothing else. Wrapping the toast and the
@@ -50,6 +63,7 @@
 			return;
 		}
 		toast.success(done);
+		leaving = true;
 		if (result?.campaignId) goto(to(result.campaignId));
 	}
 
@@ -120,6 +134,8 @@
 		return !!scheduledFor && new Date(scheduledFor).getTime() > Date.now();
 	}
 </script>
+
+<FormGuard dirty={isDirty} />
 
 <PageHeader title={m.staff_new_campaign_title()} subtitle={m.staff_marketing_body()} />
 <PageContent>

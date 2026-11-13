@@ -47,6 +47,7 @@
 
 						<Form
 							remote={requestPasswordReset}
+							guard={false}
 							onsuccess={() => (submitted = true)}
 							class="flex flex-col gap-3"
 						>

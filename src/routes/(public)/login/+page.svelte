@@ -200,7 +200,7 @@
 						</Alert>
 					{/if}
 
-					<Form action={handleSubmit} class="flex flex-col gap-3">
+					<Form action={handleSubmit} guard={false} class="flex flex-col gap-3">
 						{#if mode === 'register'}
 							<Field name="name" type="text" label={m.public_name_label()} />
 						{/if}
