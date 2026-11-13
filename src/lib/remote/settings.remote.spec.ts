@@ -167,6 +167,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
 	{ name: 'getPracticeSpaceSettingsPage', cap: 'settings.read' },
+	{ name: 'getTeachingTerms', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },
 	{ name: 'getUtecDevices', cap: 'settings.read' },
 	// Not reads: each has a real-world effect. runLockSelfTest issues a working
@@ -198,6 +199,18 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 				maxAdvanceDaysOneoff: 14,
 				maxAdvanceDaysRecurring: 17.5,
 				hourlyRateCents: 1500
+			}
+		]
+	},
+	{
+		name: 'updateTeachingTerms',
+		cap: 'settings.update',
+		args: [
+			{
+				teachingRate: 500,
+				teachingMinDurationHours: 0.5,
+				teachingMaxAdvanceDaysOneoff: 60,
+				teachingMaxAdvanceDaysRecurring: 90
 			}
 		]
 	},
@@ -266,7 +279,7 @@ describe('updateReservationSettings from the practice space page', () => {
 		expect(schema.safeParse(PAGE).success).toBe(true);
 	});
 
-	it('keeps the stored teaching terms when the form omits them', async () => {
+	it('writes no teaching term', async () => {
 		stored(90);
 		await settings.updateReservationSettings(schema.parse(PAGE), {});
 		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
@@ -282,14 +295,37 @@ describe('updateReservationSettings from the practice space page', () => {
 		).rejects.toBeTruthy();
 		expect(updateSiteConfigs).not.toHaveBeenCalled();
 	});
+});
 
-	it('still writes teaching terms a form sends', async () => {
-		const data = schema.parse({ ...PAGE, teachingMaxAdvanceDaysRecurring: '90' });
-		await settings.updateReservationSettings(data, {});
-		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
-			key: 'reservation.teachingMaxAdvanceDaysRecurring',
-			value: 90
-		});
+describe('updateTeachingTerms from the Teachers view', () => {
+	const schema = (settings.updateTeachingTerms as unknown as { schema: z.ZodType }).schema;
+	const FORM = {
+		teachingRate: '5',
+		teachingMinDurationHours: '0.5',
+		teachingMaxAdvanceDaysOneoff: '60',
+		teachingMaxAdvanceDaysRecurring: '90'
+	};
+	const storedOneoff = (maxAdvanceDaysOneoff: number) =>
+		getConfigsByPrefix.mockImplementationOnce(async () => ({ maxAdvanceDaysOneoff }));
+
+	beforeEach(() => requireCapability.mockResolvedValue(undefined));
+
+	it('writes all four terms', async () => {
+		storedOneoff(14);
+		await settings.updateTeachingTerms(schema.parse(FORM), {});
+		expect(updateSiteConfigs.mock.calls[0][0]).toEqual([
+			{ key: 'reservation.teachingRateCents', value: 500 },
+			{ key: 'reservation.teachingMinDurationHours', value: 0.5 },
+			{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: 60 },
+			{ key: 'reservation.teachingMaxAdvanceDaysRecurring', value: 90 }
+		]);
+	});
+
+	it('refuses a recurring window that does not exceed the member one-off window', async () => {
+		storedOneoff(90);
+		const issue = new Proxy({}, { get: (_t, k) => (m: string) => ({ path: [k], message: m }) });
+		await expect(settings.updateTeachingTerms(schema.parse(FORM), issue)).rejects.toBeTruthy();
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
 	});
 });
 
