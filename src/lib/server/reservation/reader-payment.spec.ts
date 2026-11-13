@@ -4,8 +4,8 @@ import type Stripe from 'stripe';
 /** Paying for a booking at the smart reader, against a real SQLite and the fake gateway. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
-	return migratedSqlite();
+	const { migratedD1 } = await import('#lib/server/testing/migrated-d1.js');
+	return migratedD1();
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
@@ -252,6 +252,20 @@ describe('settling at the reader', () => {
 		await settleReservationAtReader(intent);
 		expect(recordReservationCardPresent).toHaveBeenCalledTimes(1);
 		expect(cacheRows()).toHaveLength(1);
+	});
+
+	it('does not report a payment that is already cached', async () => {
+		booking();
+		const intent = await tap();
+		sqlite
+			.prepare(
+				`insert into payment_cache (id, user_id, amount_cents, currency, payment_method, status, paid_at)
+				 values (?, 'user-1', 1500, 'usd', 'Card', 'completed', unixepoch())`
+			)
+			.run(intent.id);
+		await settleReservationAtReader(intent);
+		expect(row().paid_at).not.toBeNull();
+		expect(captureException).not.toHaveBeenCalled();
 	});
 
 	it('ignores a door sale', async () => {

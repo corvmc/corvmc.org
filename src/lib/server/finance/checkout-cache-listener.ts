@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { captureException } from '#lib/server/sentry.js';
 import type Stripe from 'stripe';
@@ -44,7 +45,7 @@ export async function handleCheckoutCache(session: Stripe.Checkout.Session): Pro
 	} catch (err) {
 		// A UNIQUE collision is a Stripe retry of a webhook already handled, which
 		// is the correct outcome rather than an error worth reporting.
-		if (/UNIQUE constraint failed/i.test((err as Error).message ?? '')) return;
+		if (isUniqueConstraintError(err)) return;
 		captureException(err, { event: 'checkout.cache', paymentRecordId });
 	}
 }

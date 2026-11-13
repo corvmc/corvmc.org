@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	volunteerCertification,
 	memberCertification,
@@ -108,10 +109,6 @@ function normalize(data: CertificationInput) {
 	return normalized;
 }
 
-function isUniqueViolation(err: unknown): boolean {
-	return err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
-}
-
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -140,7 +137,7 @@ export async function createCertification(data: {
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new CertificationNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new CertificationNameTakenError(values.name!);
 		throw err;
 	}
 }
@@ -166,7 +163,7 @@ export async function updateCertification(
 		if (!row) throw new CertificationNotFoundError();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new CertificationNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new CertificationNameTakenError(values.name!);
 		throw err;
 	}
 }

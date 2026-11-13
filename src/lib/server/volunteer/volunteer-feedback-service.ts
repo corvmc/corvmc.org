@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	volunteerShiftFeedback,
 	volunteerSignup,
@@ -98,7 +99,7 @@ export async function submitFeedback(data: {
 		return row;
 	} catch (err) {
 		// The unique signupId column fired — they already answered.
-		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+		if (isUniqueConstraintError(err)) {
 			throw new FeedbackAlreadySubmittedError();
 		}
 		throw err;

@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
 import { contentFlag, type FlagEntityType, type FlagOrigin } from '#lib/server/db/schema/flag.js';
 import { memberStanding } from '#lib/server/db/schema/standing.js';
@@ -335,10 +336,6 @@ async function consequencesOf(flag: {
 // Writes
 // ---------------------------------------------------------------------------
 
-function isUniqueViolation(err: unknown): boolean {
-	return err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
-}
-
 export async function fileAppeal(params: {
 	userId: string;
 	userName: string;
@@ -366,7 +363,7 @@ export async function fileAppeal(params: {
 			})
 			.returning();
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new AppealAlreadyFiledError();
+		if (isUniqueConstraintError(err)) throw new AppealAlreadyFiledError();
 		throw err;
 	}
 

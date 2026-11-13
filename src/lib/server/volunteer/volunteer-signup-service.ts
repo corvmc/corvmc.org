@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	workOrder,
 	volunteerShift,
@@ -265,7 +266,7 @@ export async function claimShift(
 	} catch (err) {
 		if (err instanceof ShiftFullError) throw err;
 		// The unique index fired — two clicks, or two tabs, from the same member.
-		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+		if (isUniqueConstraintError(err)) {
 			const [row] = await db
 				.select()
 				.from(volunteerSignup)

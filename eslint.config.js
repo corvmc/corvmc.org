@@ -6,6 +6,7 @@ import pageHeaderWidthMatchesContent from './eslint-rules/page-header-width-matc
 import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
+import noDriverMessageMatch from './eslint-rules/no-driver-message-match.js';
 import stableCreatedAtOrder from './eslint-rules/stable-created-at-order.js';
 import noCheckThenInsert from './eslint-rules/no-check-then-insert.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
@@ -57,6 +58,7 @@ const customPlugin = {
 		'stable-created-at-order': stableCreatedAtOrder,
 		'no-check-then-insert': noCheckThenInsert,
 		'no-db-transaction': noDbTransaction,
+		'no-driver-message-match': noDriverMessageMatch,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
 		'no-domain-imports-in-ui': noDomainImportsInUi,
@@ -309,6 +311,12 @@ export default defineConfig(
 		files: ['src/lib/remote/**/*.ts'],
 		ignores: ['src/lib/remote/_remote.ts'],
 		rules: { 'custom/no-unwrapped-remote-mutation': 'error' }
+	},
+	{
+		// Driver text is matched only in the helper; specs build errors with it.
+		files: ['src/**/*.ts'],
+		ignores: ['**/*.spec.ts', 'src/lib/server/db/constraint-errors.ts'],
+		rules: { 'custom/no-driver-message-match': 'error' }
 	},
 	{
 		files: ['src/lib/server/**/*.ts'],

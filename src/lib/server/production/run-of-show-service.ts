@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { announcedBy } from './production-service';
 import { production, productionSlot } from '#lib/server/db/schema/production.js';
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
@@ -419,8 +420,7 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 		await recomputeSetTimes(productionId);
 		return row.id;
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		if (/UNIQUE constraint failed/i.test(message)) throw new SlotExistsError();
+		if (isUniqueConstraintError(err)) throw new SlotExistsError();
 		throw err;
 	}
 }

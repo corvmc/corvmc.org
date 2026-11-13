@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { volunteerRole, volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
@@ -173,13 +174,6 @@ function normalize(data: RoleInput) {
 	return normalized;
 }
 
-// SQLite reports a unique-constraint breach as a driver error rather than
-// something typed, so match on the message the same way the rest of the app
-// would have to.
-function isUniqueViolation(err: unknown): boolean {
-	return err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
-}
-
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -208,7 +202,7 @@ export async function createVolunteerRole(
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new VolunteerRoleNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new VolunteerRoleNameTakenError(values.name!);
 		throw err;
 	}
 }
@@ -226,7 +220,7 @@ export async function updateVolunteerRole(id: string, data: RoleInput): Promise<
 		if (!row) throw new VolunteerRoleNotFoundError();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new VolunteerRoleNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new VolunteerRoleNameTakenError(values.name!);
 		throw err;
 	}
 }

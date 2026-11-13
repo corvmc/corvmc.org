@@ -13,6 +13,7 @@
  */
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { groupSlugHistory } from '#lib/server/db/schema/group.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { bandSite } from '#lib/server/db/schema/band-site.js';
@@ -93,12 +94,6 @@ export async function resolveBandSlug(slug: string): Promise<SlugResolution> {
 
 	if (moved) return { kind: 'moved', slug: moved.slug };
 	return null;
-}
-
-/** D1 surfaces SQLite's constraint text, so this is the only way to tell a lost race apart. */
-function isUniqueConstraintError(err: unknown): boolean {
-	const message = err instanceof Error ? err.message : String(err ?? '');
-	return /UNIQUE constraint failed/i.test(message);
 }
 
 /**

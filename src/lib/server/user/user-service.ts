@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isForeignKeyConstraintError } from '#lib/server/db/constraint-errors.js';
 import { DomainError } from '../domain-error';
 import { user, session } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
@@ -400,7 +401,7 @@ export async function purgeUser(userId: string) {
 		await db.delete(user).where(eq(user.id, userId));
 	} catch (err) {
 		// Foreign-key constraint from another restrict/no-action reference.
-		if (err instanceof Error && /FOREIGN KEY|constraint/i.test(err.message)) {
+		if (isForeignKeyConstraintError(err)) {
 			throw new UserHasLinkedRecordsError();
 		}
 		throw err;

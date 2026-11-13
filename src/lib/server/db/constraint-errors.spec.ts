@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runInNewContext } from 'node:vm';
-import { isUniqueConstraintError } from './constraint-errors';
+import { isForeignKeyConstraintError, isUniqueConstraintError } from './constraint-errors';
 
 describe('isUniqueConstraintError', () => {
 	it('matches the driver text on the error or its wrapped cause', () => {
@@ -21,5 +21,13 @@ describe('isUniqueConstraintError', () => {
 		const foreign = runInNewContext('new Error("UNIQUE constraint failed: t.c")');
 		expect(foreign instanceof Error).toBe(false);
 		expect(isUniqueConstraintError(foreign)).toBe(true);
+	});
+});
+
+describe('isForeignKeyConstraintError', () => {
+	it('matches the driver text on the wrapped cause, and nothing else', () => {
+		const driver = new Error('D1_ERROR: FOREIGN KEY constraint failed: SQLITE_CONSTRAINT');
+		expect(isForeignKeyConstraintError(new Error('delete from …', { cause: driver }))).toBe(true);
+		expect(isForeignKeyConstraintError(new Error('UNIQUE constraint failed: t.c'))).toBe(false);
 	});
 });
