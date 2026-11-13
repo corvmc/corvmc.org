@@ -48,7 +48,7 @@
 	const data = $derived(await getProjectDetail(params.id));
 	const project = $derived(data.project);
 	const origin = $derived(data.origin);
-	const progress = $derived(data.taskList.progress);
+	const progress = $derived(data.progress);
 
 	const editFields = updateProjectForm.fields;
 	const statusFields = setProjectStatusForm.fields;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-/** A work order's title is resolved in SQL, so it is checked against a real SQLite. */
+/** An attached event's ref is built from SQL columns, so it runs against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
@@ -25,64 +25,6 @@ beforeEach(() => {
 		`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, project_id)
 			values ('ev-1', 'Spring Showcase', 1000, 2000, 'user-1', 'proj-1')`
 	);
-});
-
-const titles = async () =>
-	(await listProjectAttachments('proj-1')).workOrders.map((wo) => [wo.id, wo.title]);
-
-describe('attached work-order titles', () => {
-	it("uses the work order's own title first", async () => {
-		sqlite.exec(
-			`insert into work_order (id, volunteer_role_id, project_id, event_id, title, notes)
-				values ('wo-1', 'role-door', 'proj-1', 'ev-1', 'Hang posters', 'bring tape')`
-		);
-		expect(await titles()).toEqual([['wo-1', 'Hang posters']]);
-	});
-
-	it("falls back to the event's title, then the role's name, before any placeholder", async () => {
-		sqlite.exec(
-			`insert into work_order (id, volunteer_role_id, project_id, event_id)
-				values ('wo-ev', 'role-door', 'proj-1', 'ev-1')`
-		);
-		sqlite.exec(
-			`insert into work_order (id, volunteer_role_id, project_id)
-				values ('wo-role', 'role-door', 'proj-1')`
-		);
-		expect(Object.fromEntries(await titles())).toEqual({
-			'wo-ev': 'Spring Showcase',
-			'wo-role': 'Door'
-		});
-	});
-
-	it('lists a work order with no role, which a contractor or nobody yet answers', async () => {
-		sqlite.exec(
-			`insert into work_order (id, project_id, title) values ('wo-task', 'proj-1', 'Buy paint')`
-		);
-		sqlite.exec(`insert into work_order (id, project_id) values ('wo-bare', 'proj-1')`);
-		expect(Object.fromEntries(await titles())).toEqual({
-			'wo-task': 'Buy paint',
-			'wo-bare': 'Untitled task'
-		});
-	});
-
-	it('counts the places taken, not cancelled claims', async () => {
-		sqlite.exec(
-			`insert into work_order (id, volunteer_role_id, project_id)
-				values ('wo-1', 'role-door', 'proj-1')`
-		);
-		sqlite.exec(
-			`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, capacity)
-				values ('sh-1', 'wo-1', 1000, 2000, 3)`
-		);
-		sqlite.exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values
-				('s1', 'sh-1', 'u1', 'claimed'),
-				('s2', 'sh-1', 'u2', 'confirmed'),
-				('s3', 'sh-1', 'u3', 'cancelled')`
-		);
-		const [wo] = (await listProjectAttachments('proj-1')).workOrders;
-		expect(wo.claimed).toBe(2);
-	});
 });
 
 describe('attached events', () => {

@@ -611,14 +611,6 @@ describe('progress', () => {
 		task('open');
 		task('called-off', { cancelled_at: 1 });
 		expect(await tasks.getProjectProgress(PROJECT)).toEqual({ done: 2, total: 3 });
-
-		const list = await tasks.listProjectTasks(PROJECT);
-		expect(list.progress).toEqual({ done: 2, total: 3 });
-		expect(list.tasks.find((t) => t.id === 'derived')).toMatchObject({
-			state: 'done',
-			mode: 'unassigned',
-			duties: { done: 1, total: 1 }
-		});
 	});
 
 	it('counts many projects in one call, an empty project included', async () => {
@@ -629,73 +621,6 @@ describe('progress', () => {
 		expect(byProject.get(PROJECT)).toEqual({ done: 1, total: 2 });
 		expect(byProject.get(OTHER)).toEqual({ done: 1, total: 1 });
 		expect(byProject.get('proj-empty')).toEqual({ done: 0, total: 0 });
-	});
-});
-
-describe('the rows the list draws', () => {
-	it('carries the people, the engagement, the duties and the inherited committee', async () => {
-		task('crew', { volunteer_role_id: ROLE });
-		shift('s', 'crew', { capacity: 3 });
-		signup('su-a', 's', ADA, 'confirmed');
-		signup('su-b', 's', BO, 'cancelled');
-		insert('work_order_assignee', { work_order_id: 'crew', user_id: CAM, assigned_at: 1 });
-
-		task('wired');
-		sqlite.exec(clearOrganizationsSql);
-		sqlite.exec(contractorSql('ctr', 'Benton Electric'));
-		const base = { work_order_id: 'wired', organization_id: 'ctr' };
-		insert('contractor_job', { ...base, id: 'cj-old', status: 'declined', created_at: 1 });
-		insert('contractor_job', {
-			...base,
-			id: 'cj-live',
-			status: 'booked',
-			quoted_cents: 22000,
-			created_at: 2
-		});
-		insert('contractor_job', { ...base, id: 'cj-new', status: 'cancelled', created_at: 3 });
-
-		task('checklist', { done_when: 'tasks_ticked', group_id: COMMITTEE });
-		for (const [id, done, sort] of [
-			['b', 0, 1],
-			['a', 1, 0]
-		] as const) {
-			insert('work_task', {
-				id,
-				work_order_id: 'checklist',
-				label: id,
-				done,
-				done_at: done ? 1 : null,
-				sort_order: sort
-			});
-		}
-
-		const list = await tasks.listProjectTasks(PROJECT);
-		const row = (id: string) => list.tasks.find((t) => t.id === id)!;
-
-		expect(list.committee).toEqual({ id: COMMITTEE, name: 'Facilities' });
-		// Assignees first, then sign-ups on its live shifts; places are the shifts'.
-		expect(row('crew').people.map((p) => p.userId)).toEqual([CAM, ADA]);
-		expect(row('crew')).toMatchObject({
-			capacity: 3,
-			claimed: 1,
-			mode: 'open',
-			startsAt: new Date(FUTURE * 1000)
-		});
-		expect(row('crew').engagement).toBeNull();
-		expect(row('wired')).toMatchObject({
-			mode: 'contractor',
-			engagement: { id: 'cj-live', contractorName: 'Benton Electric', quotedCents: 22000 }
-		});
-		expect(row('checklist')).toMatchObject({
-			groupName: 'Facilities',
-			dutyItems: [
-				{ id: 'a', done: true },
-				{ id: 'b', done: false }
-			],
-			duties: { done: 1, total: 2 },
-			outstanding: { kind: 'duties' }
-		});
-		expect(row('crew').outstanding).toBeNull();
 	});
 });
 

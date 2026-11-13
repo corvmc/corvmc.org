@@ -35,9 +35,8 @@ import {
 	updateProject
 } from '#lib/server/project/project-service.js';
 import {
+	getProjectProgress,
 	listProjectProgress,
-	listProjectTasks,
-	scopeContractorMoney,
 	requireTaskInProject
 } from '#lib/server/project/project-task-service.js';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
@@ -166,9 +165,9 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 });
 
 /**
- * One project: its burn, its task list, everything attached to it, and the
+ * One project: its burn, its progress, everything attached to it, and the
  * pickers to change any of it. The page's one load-bearing query, so task
- * writes in `tasks.remote.ts` refresh this.
+ * writes in `tasks.remote.ts` refresh this. Task rows are `TaskCatalogue`'s.
  */
 export const getProjectDetail = query(z.string(), async (id) => {
 	const viewer = await requireCapability('project.read');
@@ -183,8 +182,7 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			origin,
 			ballotManager,
 			taking,
-			tasks,
-			contractorMoney,
+			progress,
 			showId
 		] = await Promise.all([
 			getProjectById(id),
@@ -196,16 +194,14 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			getProjectOrigin(id),
 			can('ballot.manage'),
 			listProjectCommittees([id]),
-			listProjectTasks(id),
-			can('contractor.read'),
+			getProjectProgress(id),
 			getProjectShowId(id)
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
 			project,
 			burn,
-			// Engagement rows carry quote, cost and invoice: `contractor.read`'s (#2071).
-			attachments: contractorMoney ? attachments : { ...attachments, jobs: [] },
+			attachments,
 			committees,
 			suggestions,
 			dutyLists,
@@ -213,7 +209,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			canCreateBallot: surfaces.ballots && ballotManager,
 			/** Every committee taking part, owner first. */
 			projectCommittees: taking,
-			taskList: scopeContractorMoney(tasks, contractorMoney),
+			/** Done over live tasks, for the progress bar. */
+			progress,
 			viewerId: viewer.id,
 			/** A production's listing: the page links to its console. */
 			showId
