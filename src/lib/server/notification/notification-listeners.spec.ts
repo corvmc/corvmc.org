@@ -401,9 +401,9 @@ describe('door code ready', () => {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		const params = mockDispatch.mock.calls[0][0];
@@ -474,9 +474,9 @@ describe('collapsed listeners use the generic template', () => {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		const params = mockDispatch.mock.calls[0][0];
@@ -484,7 +484,7 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.email).toBeDefined();
 		expect(params.email.subject).toContain('May 21');
 		expect(params.email.details.map((d: { value: string }) => d.value)).toEqual([
-			'May 21',
+			'Thursday, May 21',
 			'10:00 AM – 11:00 AM'
 		]);
 		// The button carries a label only; it follows the notification's own href,
@@ -985,9 +985,9 @@ describe('reservation.confirmed handler', () => {
 			userId: 'user-1',
 			userName: 'Bob',
 			userEmail: 'user@test.com',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		expect(mockDispatch).toHaveBeenCalledTimes(1);
@@ -996,7 +996,7 @@ describe('reservation.confirmed handler', () => {
 		expect(params.userEmail).toBe('user@test.com');
 		expect(params.email.subject).toContain('May 21');
 		expect(params.email.details).toEqual([
-			{ label: 'Date', value: 'May 21' },
+			{ label: 'Date', value: 'Thursday, May 21' },
 			{ label: 'Time', value: '10:00 AM – 11:00 AM' }
 		]);
 	});
@@ -1010,9 +1010,9 @@ describe('reservation.cancelled handler', () => {
 		userId: 'user-1',
 		userName: 'Bob',
 		userEmail: 'user@test.com',
-		date: 'May 21',
-		startTime: '10:00 AM',
-		endTime: '11:00 AM'
+		date: '2026-05-21',
+		startTime: '10:00',
+		endTime: '11:00'
 	};
 
 	it('emails the member when cancelled by staff', async () => {
@@ -1153,7 +1153,7 @@ describe('every notification-alias model', () => {
 
 	/** Fire one representative event per listener and collect the email models. */
 	async function collectModels(): Promise<Record<string, unknown>[]> {
-		const when = { date: 'May 21', startTime: '10:00 AM', endTime: '11:00 AM' };
+		const when = { date: '2026-05-21', startTime: '10:00', endTime: '11:00' };
 		const member = { userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' };
 
 		await emit('reservation.reminder_due', { ...member, ...when });
@@ -1170,7 +1170,7 @@ describe('every notification-alias model', () => {
 		});
 		await emit('reservation.recurring_skipped', {
 			...member,
-			skippedDate: 'May 21',
+			skippedDate: '2026-05-21',
 			startTime: when.startTime,
 			endTime: when.endTime,
 			reason: 'Space closed'
@@ -1701,9 +1701,9 @@ describe('first visit (#2569)', () => {
 		userId: 'user-1',
 		userEmail: 'nia@test.com',
 		userName: 'Nia',
-		date: 'Tuesday, July 14',
-		startTime: '6:00 PM',
-		endTime: '7:00 PM',
+		date: '2026-07-14',
+		startTime: '18:00',
+		endTime: '19:00',
 		tourTime: '5:50 PM',
 		address: '6775 SW Philomath Blvd, Corvallis',
 		notes: 'Park in the back lot.\nNo food in the room.'
@@ -1717,7 +1717,7 @@ describe('first visit (#2569)', () => {
 		const params = sent();
 		expect(params.userId).toBe('user-1');
 		expect(params.href).toBe('/member/reservations');
-		expect(params.email.subject).toContain(visit.date);
+		expect(params.email.subject).toContain('Tuesday, July 14');
 		expect(copy(params.email)).toContain('5:50 PM');
 		expect(copy(params.email)).toContain(visit.address);
 		expect(params.email.body_plain).toBe(visit.notes);
@@ -1876,5 +1876,64 @@ describe('notification dates are the club day in any runtime zone (#2509)', () =
 			scheduledPickupDate: clubInstant('2026-06-01', '12:00').toISOString()
 		});
 		expect(sentOf('equipment_loan_scheduled').body).toContain('June 1');
+	});
+});
+
+// Payloads carry the club wall clock as machine forms (`ClubDate`, `ClubTime`);
+// every listener reading them formats before a member sees it (#2816).
+describe('wall-clock payloads reach members formatted', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const wallClock = {
+		date: '2026-11-14',
+		skippedDate: '2026-11-14',
+		startTime: '15:00',
+		endTime: '16:30'
+	};
+	const payload = {
+		...wallClock,
+		reservationId: 'r1',
+		seriesId: 's1',
+		eventId: 'e1',
+		eventTitle: 'Open mic',
+		userId: 'user-1',
+		userName: 'Bob',
+		userEmail: 'user@test.com',
+		cancelledBy: 'staff',
+		reason: 'Room taken',
+		code: '1234',
+		tourTime: null,
+		address: '1 Main St',
+		notes: ''
+	};
+	const events = [
+		'reservation.confirmed',
+		'reservation.cancelled',
+		'reservation.reminder_due',
+		'reservation.first_visit_due',
+		'reservation.door_code_ready',
+		'reservation.recurring_skipped',
+		'reservation.recurring_waitlisted',
+		'reservation.recurring_rescheduled',
+		'reservation.waitlist_slot_available',
+		'reservation.waitlist_expired',
+		'event.recurring_reservation_skipped'
+	];
+
+	it.each(events)('%s', async (event) => {
+		await emit(event, payload);
+
+		const sent = [
+			mockDispatch,
+			mockDispatchEmailOnly,
+			mockDispatchBatch,
+			mockDispatchEmailOnlyBatch
+		]
+			.flatMap((m) => m.mock.calls)
+			.map((call) => JSON.stringify(call));
+		expect(sent.length).toBeGreaterThan(0);
+		for (const raw of Object.values(wallClock)) {
+			expect(sent.join('\n')).not.toContain(raw);
+		}
 	});
 });

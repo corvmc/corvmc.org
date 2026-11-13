@@ -117,23 +117,31 @@ export function buildTimeRangeInTz(
 }
 
 /**
+ * A club wall-clock day and time as event payloads carry them: "2026-11-14",
+ * "15:00". Machine forms, so a reader formats them; a preformatted string such
+ * as "3:00 PM" does not fit the type.
+ */
+export type ClubDate = `${number}-${number}-${number}`;
+export type ClubTime = `${number}:${number}`;
+
+/**
  * Format a Date as "HH:mm" in the given timezone.
  */
-export function formatTimeInTz(date: Date, tz: string): string {
+export function formatTimeInTz(date: Date, tz: string): ClubTime {
 	return date.toLocaleString('en-GB', {
 		timeZone: tz,
 		hour: '2-digit',
 		minute: '2-digit',
 		hour12: false
-	});
+	}) as ClubTime;
 }
 
 /**
  * Format a Date as "YYYY-MM-DD" in the given timezone.
  */
-export function formatDateInTz(date: Date, tz: string): string {
+export function formatDateInTz(date: Date, tz: string): ClubDate {
 	const p = getPartsInTz(date, tz);
-	return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+	return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}` as ClubDate;
 }
 
 /**

@@ -9,7 +9,7 @@ import {
 	PERFORMANCE_INQUIRY_SUBJECT,
 	hourLogExceptionLabels
 } from '#lib/config.js';
-import { formatCents, formatDateLong, formatTime } from '#lib/utils/format.js';
+import { formatCents, formatDateLong, formatSlotTime, formatTime } from '#lib/utils/format.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement } from '#lib/server/group/announcement-fanout.js';
 import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
@@ -27,6 +27,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, inArray } from 'drizzle-orm';
 import { shiftLabel } from '#lib/utils/shift-label.js';
 import { formatIsoDay } from '#lib/utils/deadline.js';
+import type { ClubDate, ClubTime } from '#lib/server/reservation/timezone.js';
 import type {
 	NotificationEmailCtaSpec,
 	NotificationEmailDetail,
@@ -132,11 +133,26 @@ function formatShiftWhen(startsAt: string | null, endsAt: string | null): string
 	return `${formatClubDay(startsAt)}, ${formatTime(new Date(startsAt))}–${formatTime(new Date(endsAt))}`;
 }
 
+/**
+ * A payload's club wall-clock day, `YYYY-MM-DD`, as "Saturday, November 14".
+ * Noon UTC is the same calendar day in club time.
+ */
+function clubDay(iso: ClubDate): string {
+	return formatDateLong(new Date(`${iso}T12:00:00Z`));
+}
+
+/** A payload's club wall-clock time, `HH:MM`, as "3:00 PM". */
+const clubTime = (time: ClubTime): string => formatSlotTime(time);
+
 /** Date + time range as rows for the details card. En-dash per the brand voice. */
-function whenDetails(date: string, startTime: string, endTime: string): NotificationEmailDetail[] {
+function whenDetails(
+	date: ClubDate,
+	startTime: ClubTime,
+	endTime: ClubTime
+): NotificationEmailDetail[] {
 	return [
-		{ label: 'Date', value: date },
-		{ label: 'Time', value: `${startTime} – ${endTime}` }
+		{ label: 'Date', value: clubDay(date) },
+		{ label: 'Time', value: `${clubTime(startTime)} – ${clubTime(endTime)}` }
 	];
 }
 
@@ -373,12 +389,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Upcoming reservation reminder',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation reminder: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				subject: `Reservation reminder: ${clubDay(event.date)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 				heading: 'Upcoming reservation',
 				paragraphs: [{ text: 'You have a reservation coming up at the space.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -392,23 +408,23 @@ export function registerAllNotificationListeners(): void {
 	// opens at the reservation's start, so before then the volunteer lets them in.
 	domainEvents.on('reservation.first_visit_due', async ({ data: event }) => {
 		const arrive = event.tourTime
-			? `Arrive by ${event.tourTime}. Someone will meet you at the door and show you around before your reservation starts at ${event.startTime}.`
-			: `Arrive a few minutes before ${event.startTime}.`;
+			? `Arrive by ${event.tourTime}. Someone will meet you at the door and show you around before your reservation starts at ${clubTime(event.startTime)}.`
+			: `Arrive a few minutes before ${clubTime(event.startTime)}.`;
 		await dispatch({
 			type: 'first_visit',
 			userId: event.userId,
 			userEmail: event.userEmail,
-			title: `First visit: ${event.date}`,
+			title: `First visit: ${clubDay(event.date)}`,
 			body: event.tourTime
 				? `Arrive by ${event.tourTime}`
-				: `${event.startTime} – ${event.endTime}`,
+				: `${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `First visit: ${event.date}`,
+				subject: `First visit: ${clubDay(event.date)}`,
 				preview_text: event.tourTime
-					? `Arrive by ${event.tourTime} on ${event.date}.`
-					: `${event.date}, ${event.startTime} – ${event.endTime}`,
+					? `Arrive by ${event.tourTime} on ${clubDay(event.date)}.`
+					: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 				heading: 'First visit',
 				paragraphs: [
 					{ text: arrive },
@@ -436,12 +452,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Your door code is ready',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Your door code for ${event.date}`,
-				preview_text: `The lock has your code for ${event.date}.`,
+				subject: `Your door code for ${clubDay(event.date)}`,
+				preview_text: `The lock has your code for ${clubDay(event.date)}.`,
 				heading: 'Your door code is ready',
 				paragraphs: [
 					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' }
@@ -590,11 +606,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring reservation skipped',
-			body: `${event.skippedDate} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			body: `${clubDay(event.skippedDate)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring reservation skipped: ${event.skippedDate}`,
+				subject: `Recurring reservation skipped: ${clubDay(event.skippedDate)}`,
 				heading: 'Recurring reservation skipped',
 				paragraphs: [
 					{ text: 'One date in your recurring reservation was skipped.' },
@@ -616,11 +632,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring event could not reserve space',
-			body: `${event.eventTitle} on ${event.date} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			body: `${event.eventTitle} on ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: `/staff/events/${event.eventId}`,
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring event needs space: ${event.eventTitle} on ${event.date}`,
+				subject: `Recurring event needs space: ${event.eventTitle} on ${clubDay(event.date)}`,
 				heading: 'Recurring event could not reserve space',
 				paragraphs: [
 					{
@@ -1063,12 +1079,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Reservation confirmed',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation confirmed: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				subject: `Reservation confirmed: ${clubDay(event.date)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 				heading: 'Reservation confirmed',
 				paragraphs: [{ text: 'The practice room is yours for this slot.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1105,11 +1121,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Reservation cancelled',
-			body: `${event.date} ${event.startTime}–${event.endTime}`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation cancelled: ${event.date}`,
+				subject: `Reservation cancelled: ${clubDay(event.date)}`,
 				heading: 'Reservation cancelled',
 				paragraphs: [{ text: 'Your reservation has been cancelled.' }, { text: reasonLine }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1125,11 +1141,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring reservation waitlisted',
-			body: `${event.date} ${event.startTime}–${event.endTime}: waiting for slot`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: waiting for slot`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring reservation waitlisted: ${event.date}`,
+				subject: `Recurring reservation waitlisted: ${clubDay(event.date)}`,
 				heading: 'Recurring reservation waitlisted',
 				paragraphs: [
 					{
@@ -1158,11 +1174,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring reservation changed',
-			body: `New schedule from ${event.date} ${event.startTime}–${event.endTime}`,
+			body: `New schedule from ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring reservation changed: from ${event.date}`,
+				subject: `Recurring reservation changed: from ${clubDay(event.date)}`,
 				heading: 'Recurring reservation changed',
 				paragraphs: [
 					{ text: 'Staff changed the schedule of your recurring reservation.' },
@@ -1181,12 +1197,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'A slot has opened up!',
-			body: `${event.date} ${event.startTime}–${event.endTime} is available — confirm within 24 hours`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)} is available — confirm within 24 hours`,
 			href: `/member/reservations?confirm=${event.reservationId}`,
 			email: {
 				recipientName: event.userName,
-				subject: `Slot available: ${event.date} ${event.startTime}`,
-				preview_text: `${event.date}, ${event.startTime} – confirm within 24 hours or it goes to the next member.`,
+				subject: `Slot available: ${clubDay(event.date)}, ${clubTime(event.startTime)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – confirm within 24 hours or it goes to the next member.`,
 				heading: 'A slot has opened up',
 				paragraphs: [{ text: 'The time slot you were waiting on is now available.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1203,11 +1219,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Waitlisted reservation expired',
-			body: `${event.date} ${event.startTime}–${event.endTime} was not confirmed in time`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)} was not confirmed in time`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Waitlisted reservation expired: ${event.date}`,
+				subject: `Waitlisted reservation expired: ${clubDay(event.date)}`,
 				heading: 'Waitlisted reservation expired',
 				paragraphs: [
 					{
