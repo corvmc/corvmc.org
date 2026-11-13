@@ -1299,6 +1299,8 @@ table with `wide-only` and a card list with `narrow-only`. Both switch at a
 `44rem` container width, where the reservations table stops being usable, which
 is wider than any `col-*` tier. The card list carries what the
 hidden columns held, payment state included, and no hover-only tooltips (#1837).
+Beside an open record the list is at a desk, so it keeps the table and sheds columns by
+`col-*` tier instead (#2852); only the phone with nothing open gets the cards.
 
 Two rules hold whichever you pick:
 
@@ -1421,8 +1423,8 @@ fact belongs on the detail page.
 ### Card grammar
 
 **A card is the table's four slots, folded.** The fold is a container query (`narrow-only` /
-`wide-only`), so a list folds when the sidebar or a detail pane narrows it, not only when the window
-does. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app, and
+`wide-only`), so a list folds when the sidebar narrows it, not only when the window does. A list
+beside an open record does not fold: it keeps the table with its `col-*` tiers hidden. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app, and
 `ReservationCard.svelte` beside it is its card.
 
 | Slot        | In a card                                                                                                                                       |
@@ -1527,7 +1529,8 @@ work unchanged. `open` is whether the route is the record's.
   fills the right pane. The inboxes use it.
 - **`mode="pages"`**: each pane is a whole page — `PageHeader` plus `PageContent` — scrolling
   itself. With nothing open the list is the full width and there is no detail pane; open, the list
-  narrows to a column (its container queries switch a table to its cards) beside the record.
+  narrows to a column beside the record, where a table keeps only its untiered columns (`col-*`
+  hides the rest) rather than switching to cards.
   `/staff/reservations` uses it.
 
 What the list owes, in `pages` mode (`src/routes/staff/reservations/` is the example):
