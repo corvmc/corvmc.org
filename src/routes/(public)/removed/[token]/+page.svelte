@@ -25,29 +25,29 @@
 <div class="mx-auto max-w-md space-y-4 p-6">
 	{#if notice.state === 'invalid'}
 		<h1 class="text-2xl font-bold">{m.public_removed_token_invalid_link_title()}</h1>
-		<p class="opacity-70">{m.public_removed_token_invalid_link_body({ email: STAFF_EMAIL })}</p>
+		<p class="opacity-70">{m.public_removed_token_invalid_link_text({ email: STAFF_EMAIL })}</p>
 	{:else if notice.state === 'expired'}
 		<h1 class="text-2xl font-bold">{m.public_removed_token_link_expired_title()}</h1>
-		<p class="opacity-70">{m.public_removed_token_link_expired_body({ email: STAFF_EMAIL })}</p>
+		<p class="opacity-70">{m.public_removed_token_link_expired_text({ email: STAFF_EMAIL })}</p>
 	{:else if notice.lifted}
 		<h1 class="text-2xl font-bold">{m.public_removed_token_account_restored_title()}</h1>
-		<p class="opacity-70">{m.public_removed_token_account_restored_body()}</p>
+		<p class="opacity-70">{m.public_removed_token_account_restored_text()}</p>
 	{:else}
 		<h1 class="text-2xl font-bold">{m.public_removed_token_account_suspended_title()}</h1>
 		<p class="opacity-70">
 			{#if notice.kind === 'suspension' && notice.endsAt}
-				{m.public_removed_token_suspended_until_body({ date: formatDateYear(notice.endsAt) })}
+				{m.public_removed_token_suspended_until_text({ date: formatDateYear(notice.endsAt) })}
 			{:else}
-				{m.public_removed_token_suspended_body()}
+				{m.public_removed_token_suspended_text()}
 			{/if}
 		</p>
 
 		{#if notice.appeal === 'pending'}
 			<h2 class="text-lg font-semibold">{m.public_removed_token_appeal_received_title()}</h2>
-			<p class="opacity-70">{m.public_removed_token_appeal_received_body()}</p>
+			<p class="opacity-70">{m.public_removed_token_appeal_received_text()}</p>
 		{:else if notice.appeal === 'decided'}
 			<h2 class="text-lg font-semibold">{m.public_removed_token_appeal_decided_title()}</h2>
-			<p class="opacity-70">{m.public_removed_token_appeal_decided_body()}</p>
+			<p class="opacity-70">{m.public_removed_token_appeal_decided_text()}</p>
 		{:else}
 			<h2 class="text-lg font-semibold">{m.public_removed_token_appeal_title()}</h2>
 			<Form remote={fileRemovalAppeal}>

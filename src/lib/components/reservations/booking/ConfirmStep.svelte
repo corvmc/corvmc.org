@@ -191,7 +191,7 @@
 
 		{#if pricingFailed}
 			<p class="py-2 text-sm text-error" data-testid="confirm-pricing-error">
-				{m.reservations_booking_confirm_step_pricing_failed_body()}
+				{m.reservations_booking_confirm_step_pricing_failed_text()}
 			</p>
 		{:else if !pricing}
 			<div class="flex justify-between py-2">

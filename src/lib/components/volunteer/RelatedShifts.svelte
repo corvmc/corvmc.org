@@ -74,8 +74,8 @@
 
 	// Volunteering's chips, under its names.
 	const CHIP_LABELS: Record<Chip, () => string> = {
-		claims: m.staff_volunteer_needs_confirming_card_title_text,
-		short: m.staff_volunteer_short_staffed_card_title_text
+		claims: m.staff_volunteer_needs_confirming_card_title_label,
+		short: m.staff_volunteer_short_staffed_card_title_label
 	};
 	const CHIP_TESTS: Record<
 		Chip,
@@ -230,7 +230,7 @@
 							data-chip="ended"
 							href={volunteering({ needs: 'ended' })}
 						>
-							{m.staff_volunteer_ended_shifts_title()}
+							{m.staff_volunteer_ended_shifts_label()}
 							<Badge size="sm">{data.ended}</Badge>
 						</Button>
 					{/if}

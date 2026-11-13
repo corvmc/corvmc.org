@@ -70,7 +70,7 @@
 	const peopleAt = (organizationId: string | null) =>
 		(actContacts ?? []).filter((p) => p.organizationId === organizationId);
 	const personLabel = (p: RunOfShowContact) =>
-		[p.name, p.email ?? p.phone].filter(Boolean).join(' · ') || m.staff_contacts_unnamed_text();
+		[p.name, p.email ?? p.phone].filter(Boolean).join(' · ') || m.staff_contacts_unnamed_label();
 
 	const actOptions = $derived([
 		{ value: '', label: m.staff_events_id_production_run_of_show_panel_not_bill_dj_hos_label() },

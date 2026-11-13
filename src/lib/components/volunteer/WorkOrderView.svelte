@@ -152,17 +152,17 @@
 	{#if task.cancelledAt}
 		<Alert type="warning">
 			{task.cancelledByName
-				? m.volunteer_work_order_view_task_called_off_by_text({
+				? m.volunteer_work_order_view_task_called_off_by_body({
 						date: formatDateShort(task.cancelledAt),
 						name: task.cancelledByName
 					})
-				: m.volunteer_work_order_view_task_called_off_text({
+				: m.volunteer_work_order_view_task_called_off_body({
 						date: formatDateShort(task.cancelledAt)
 					})}
 		</Alert>
 	{:else if task.resolvedAt}
 		<Alert type="success">
-			{m.volunteer_work_order_view_task_done_text({ date: formatDateShort(task.resolvedAt) })}
+			{m.volunteer_work_order_view_task_done_body({ date: formatDateShort(task.resolvedAt) })}
 		</Alert>
 	{/if}
 
@@ -305,7 +305,7 @@
 						>
 							{#snippet form()}
 								<input {...cancelTask.for(task.id).fields.id.as('hidden', task.id)} />
-								<p class="text-sm">{m.volunteer_work_order_view_cancel_task_body()}</p>
+								<p class="text-sm">{m.volunteer_work_order_view_cancel_task_text()}</p>
 							{/snippet}
 						</Action>
 					</div>

@@ -289,7 +289,7 @@
 						</td>
 						<td class="col-extra">
 							<a class="link" href={resolve(`staff/flags/${r.flagId}`)}
-								>{m.staff_members_id_panels_account_panel_removal_report_label()}</a
+								>{m.staff_members_id_panels_account_panel_removal_report_text()}</a
 							>
 						</td>
 					</tr>

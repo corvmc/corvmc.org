@@ -53,16 +53,16 @@
 					booked: m.actions_edit_schedule_room_taken_label(),
 					closed: m.actions_edit_schedule_room_taken_label(),
 					keptTitle: m.actions_edit_schedule_kept_sessions_title(),
-					keptBody: m.actions_edit_schedule_kept_sessions_body(),
-					removed: m.actions_edit_schedule_removed_sessions_body(),
+					keptBody: m.actions_edit_schedule_kept_sessions_text(),
+					removed: m.actions_edit_schedule_removed_sessions_text(),
 					waitlisted: m.actions_edit_schedule_hold_waitlisted_toast()
 				}
 			: {
 					booked: m.actions_edit_schedule_booked_label(),
 					closed: m.actions_edit_schedule_closed_label(),
 					keptTitle: m.actions_edit_schedule_kept_title(),
-					keptBody: m.actions_edit_schedule_kept_body(),
-					removed: m.actions_edit_schedule_removed_body(),
+					keptBody: m.actions_edit_schedule_kept_text(),
+					removed: m.actions_edit_schedule_removed_text(),
 					waitlisted: m.actions_edit_schedule_waitlisted_toast()
 				}
 	);

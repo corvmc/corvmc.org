@@ -45,7 +45,7 @@
 						.for(task.workOrderId)
 						.fields.workOrderId.as('hidden', task.workOrderId)}
 				/>
-				<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_body()}</p>
+				<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_text()}</p>
 			{/snippet}
 		</Action>
 	{/if}
@@ -72,7 +72,7 @@
 				{title}
 				{#if task.items.length > 0}
 					<span class="text-muted font-normal"
-						>{m.member_volunteer_tasks_checklist_count_text({
+						>{m.member_volunteer_tasks_checklist_count_title({
 							done: doneCount,
 							total: task.items.length
 						})}</span

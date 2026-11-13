@@ -165,7 +165,7 @@
 				</Alert>
 			{:else if counts?.check === 'single'}
 				<p class="mt-3 text-muted">
-					{m.staff_events_id_production_settlement_panel_counted_once_body()}
+					{m.staff_events_id_production_settlement_panel_counted_once_text()}
 				</p>
 			{/if}
 			{#if counts && (counts.first.byName || counts.second?.byName)}

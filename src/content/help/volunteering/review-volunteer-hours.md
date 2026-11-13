@@ -12,10 +12,10 @@ sortOrder: 2
 **Planning → Schedule** opens with a row of counts above the table. Each is something
 waiting on a person, and a count you cannot see has nothing in it. Four narrow the table:
 
-- **Pending Assignments** — shifts with claims nobody has confirmed. This is the one to clear
+- **Pending assignments** — shifts with claims nobody has confirmed. This is the one to clear
   first: confirming is what turns a claim into a booking, and until you do it they get no
   reminder. Confirm a whole shift from its row, or one person at a time on the shift page.
-- **Understaffed Shifts** — shifts with fewer people confirmed than they need. **Add** on the
+- **Understaffed shifts** — shifts with fewer people confirmed than they need. **Add** on the
   row opens the shift, which shows who said they would help with that role, when they said
   they were free, and whether their clearances cover _that shift's date_ — plus a search box
   for anybody else.

@@ -176,7 +176,7 @@
 					{#each shifts as s (s.id)}
 						<option value={s.id}>{formatDateTimeShort(s.startsAt)}</option>
 					{/each}
-					<option value="">{msg.volunteer_candidate_column_assign_task_text()}</option>
+					<option value="">{msg.volunteer_candidate_column_assign_task_label()}</option>
 				</Select>
 			{/if}
 			<SearchInput bind:value={search} placeholder={msg.volunteer_candidate_column_placeholder()} />

@@ -108,7 +108,7 @@
 		{:else if blocked}
 			<Badge size="sm">{m.staff_tasks_blocked_label()}</Badge>
 		{:else}
-			<span class="text-subtle">{m.staff_open_label()}</span>
+			<span class="text-subtle">{m.staff_open_text()}</span>
 		{/if}
 	</td>
 	{#if !compact}

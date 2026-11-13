@@ -15,6 +15,7 @@ import {
 	ROLES,
 	attributeRole,
 	climb,
+	keyRole,
 	propContextRole,
 	propRole
 } from '../eslint-rules/message-key-role.js';
@@ -94,14 +95,18 @@ class FileRoles {
 	isMessage = (node: Node) =>
 		node?.type === 'MemberExpression' && !node.computed && this.messageIds.has(node.object);
 
-	/** Every role the value at `start` reaches, following variables and functions. */
-	roleOf(start: Node, depth = 0): Role[] {
+	/**
+	 * Every role the value at `start` reaches, following variables and functions.
+	 * `path` holds the property names, innermost last, that a read must go through
+	 * to reach this value: `copy.booked` reaches `{ booked: m.x() }`, `copy.title` does not.
+	 */
+	roleOf(start: Node, depth = 0, path: string[] = []): Role[] {
 		if (depth > 8) return [];
 		const { value, parent } = climb(start);
 		if (!parent) return [];
 		const direct = propContextRole(value, parent, this.isMessage) as Role | null;
 		if (direct) return [direct];
-		const up = (n: Node) => this.roleOf(n, depth + 1);
+		const up = (n: Node, p = path) => this.roleOf(n, depth + 1, p);
 		switch (parent.type) {
 			case 'SvelteMustacheTag': {
 				const attribute = parent.parent;
@@ -113,13 +118,21 @@ class FileRoles {
 				const role = attributeRole(parent.key?.name ?? '', parent.parent?.parent);
 				return role ? [role as Role] : [];
 			}
-			case 'Property':
-				return parent.value === value ? up(parent.parent) : [];
+			case 'Property': {
+				if (parent.value !== value) return [];
+				const key = parent.key?.name ?? parent.key?.value;
+				return up(parent.parent, key == null ? path : [...path, String(key)]);
+			}
 			case 'ArrayExpression':
 			case 'SpreadElement':
 				return up(parent);
-			case 'MemberExpression':
-				return parent.object === value ? up(parent) : [];
+			case 'MemberExpression': {
+				if (parent.object !== value) return [];
+				if (!path.length) return up(parent);
+				const want = path[path.length - 1];
+				if (!parent.computed && parent.property?.name !== want) return [];
+				return up(parent, path.slice(0, -1));
+			}
 			case 'CallExpression':
 			case 'NewExpression': {
 				const callee = parent.callee;
@@ -131,7 +144,7 @@ class FileRoles {
 			case 'ThrowStatement':
 				return ['error'];
 			case 'VariableDeclarator':
-				return parent.init === value ? this.variable(parent, parent.id?.name, depth) : [];
+				return parent.init === value ? this.variable(parent, parent.id?.name, depth, path) : [];
 			case 'AssignmentExpression': {
 				if (parent.right !== value) return [];
 				const left = parent.left;
@@ -140,12 +153,12 @@ class FileRoles {
 					return role ? [role as Role] : [];
 				}
 				const variable = this.resolve(left);
-				return variable ? this.reads(variable, left.name, depth) : [];
+				return variable ? this.reads(variable, left.name, depth, path) : [];
 			}
 			case 'ReturnStatement':
-				return this.fn(enclosingFunction(parent), depth);
+				return this.fn(enclosingFunction(parent), depth, path);
 			case 'ArrowFunctionExpression':
-				return parent.body === value ? this.fn(parent, depth) : [];
+				return parent.body === value ? this.fn(parent, depth, path) : [];
 			default:
 				return [];
 		}
@@ -157,36 +170,34 @@ class FileRoles {
 		return null;
 	}
 
-	private variable(declarator: Node, name: string | undefined, depth: number): Role[] {
+	private variable(declarator: Node, name: string | undefined, depth: number, path: string[]) {
 		const [variable] = this.scopeManager.getDeclaredVariables(declarator);
 		if (!variable) return [];
-		return this.reads(variable, name ?? '', depth);
+		return this.reads(variable, name ?? '', depth, path);
 	}
 
-	private reads(variable: Node, name: string, depth: number): Role[] {
+	private reads(variable: Node, name: string, depth: number, path: string[]): Role[] {
 		const roles = variable.references
 			.filter((ref: Node) => ref.isRead())
 			.flatMap((ref: Node) => {
 				const id = ref.identifier;
 				const call = id.parent?.type === 'CallExpression' && id.parent.callee === id;
-				return this.roleOf(call ? id.parent : id, depth + 1);
+				return this.roleOf(call ? id.parent : id, depth + 1, path);
 			});
 		const known = roles.filter((r: Role) => r !== 'text');
-		const named = nameRole(name);
+		const named = path.length ? null : nameRole(name);
 		if (known.length) return roles;
 		return named ? [named] : roles;
 	}
 
-	private fn(fn: Node, depth: number): Role[] {
+	private fn(fn: Node, depth: number, path: string[]): Role[] {
 		if (!fn) return [];
 		const parent = fn.parent;
-		if (fn.type === 'FunctionDeclaration') return this.variable(fn, fn.id?.name, depth);
-		if (parent?.type === 'VariableDeclarator') return this.variable(parent, parent.id?.name, depth);
-		if (parent?.type === 'Property') {
-			const role = propRole(parent.key?.name ?? '');
-			return role ? [role as Role] : [];
-		}
-		if (parent?.type === 'CallExpression') return this.roleOf(parent, depth + 1);
+		if (fn.type === 'FunctionDeclaration') return this.variable(fn, fn.id?.name, depth, path);
+		if (parent?.type === 'VariableDeclarator')
+			return this.variable(parent, parent.id?.name, depth, path);
+		if (parent?.type === 'Property') return this.roleOf(fn, depth + 1, path);
+		if (parent?.type === 'CallExpression') return this.roleOf(parent, depth + 1, path);
 		return [];
 	}
 }
@@ -214,6 +225,8 @@ export interface Reference {
 	role: Role;
 	/** Roles the reference reached by following a variable, when more than one. */
 	ambiguous?: Role[];
+	/** Its use could not be followed, as with an export read in another file. */
+	unknown?: true;
 }
 
 export function pick(roles: Role[]): Role {
@@ -265,6 +278,7 @@ export function referencesIn(file: string, code: string): Reference[] {
 			end: member.property.range[1],
 			role: pick(reached)
 		};
+		if (!reached.length) ref.unknown = true;
 		if (reached.filter((r) => r !== 'text').length > 1) ref.ambiguous = reached;
 		out.push(ref);
 	}
@@ -272,13 +286,29 @@ export function referencesIn(file: string, code: string): Reference[] {
 }
 
 /**
+ * The roles each key plays. A reference whose use could not be followed says
+ * nothing: it takes the role the key's other references give, else the key's own.
+ */
+export function usageOf(refs: Reference[]): Map<string, Set<Role>> {
+	const usage = new Map<string, Set<Role>>();
+	for (const r of refs.filter((r) => !r.unknown))
+		usage.set(r.key, (usage.get(r.key) ?? new Set()).add(r.role));
+	for (const r of refs.filter((r) => r.unknown)) {
+		const known = usage.get(r.key);
+		r.role = known ? pick([...known]) : (keyRole(r.key) ?? 'text');
+		if (!known) usage.set(r.key, new Set([r.role]));
+	}
+	return usage;
+}
+
+/**
  * The new name for `key` in each role it plays. A trailing role word the key
- * already carries is dropped first, so `x_title` used as a title stays `x_title`
- * and a key split into title and label becomes `x_title` and `x_label`.
+ * already carries is dropped first, so `x_title` used as a title stays `x_title`,
+ * used as a label becomes `x_label`, and split becomes `x_title` and `x_label`.
  */
 export function namesFor(key: string, roles: Role[]): Map<Role, string> {
-	const last = key.match(/_([a-z]+)$/)?.[1] as Role | undefined;
-	const base = last && roles.includes(last) ? key.slice(0, -(last.length + 1)) : key;
+	const last = keyRole(key);
+	const base = last ? key.slice(0, -(last.length + 1)) : key;
 	return new Map(roles.map((role) => [role, `${base}_${role}`]));
 }
 
@@ -321,7 +351,8 @@ function catalogFiles(): string[] {
 	);
 }
 
-function main() {
+/** The plan for the checkout as it stands: every reference under `src/` against the catalog. */
+export function planRepo() {
 	const sources = execFileSync('git', ['grep', '-lE', 'paraglide/messages', '--', 'src'], {
 		cwd: ROOT,
 		encoding: 'utf8'
@@ -330,9 +361,7 @@ function main() {
 		.split('\n')
 		.filter((f) => !f.startsWith('src/lib/paraglide/'));
 	const refs = sources.flatMap((f) => referencesIn(f, readFileSync(join(ROOT, f), 'utf8')));
-	const usage = new Map<string, Set<Role>>();
-	for (const r of refs) usage.set(r.key, (usage.get(r.key) ?? new Set()).add(r.role));
-
+	const usage = usageOf(refs);
 	const catalogs = catalogFiles().map((path) => ({
 		path,
 		json: JSON.parse(readFileSync(path, 'utf8'))
@@ -341,7 +370,17 @@ function main() {
 		catalogs.flatMap((c) => Object.keys(c.json)),
 		usage
 	);
+	return { refs, usage, catalogs, renames, deleted };
+}
 
+/** Each key the script would rename or split, as `old -> new [new]`. */
+export const renamesIn = (renames: Plan['renames']) =>
+	[...renames]
+		.filter(([key, names]) => names.size > 1 || !hasName(names, key))
+		.map(([key, names]) => `${key} -> ${[...names.values()].join(' ')}`);
+
+function main() {
+	const { refs, usage, catalogs, renames, deleted } = planRepo();
 	const dry = process.argv.includes('--dry');
 	const owner = new Map<string, string>();
 	for (const { path, json } of catalogs)

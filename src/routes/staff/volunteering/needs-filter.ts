@@ -6,9 +6,9 @@ import { m } from '#lib/paraglide/messages.js';
  * could show. Unassigned tasks are Tasks' chip now.
  */
 export const NEEDS = {
-	claims: m.staff_volunteer_needs_confirming_card_title_text,
-	short: m.staff_volunteer_short_staffed_card_title_text,
-	ended: m.staff_volunteer_ended_shifts_title
+	claims: m.staff_volunteer_needs_confirming_card_title_label,
+	short: m.staff_volunteer_short_staffed_card_title_label,
+	ended: m.staff_volunteer_ended_shifts_label
 } as const;
 export type Needs = keyof typeof NEEDS | '';
 

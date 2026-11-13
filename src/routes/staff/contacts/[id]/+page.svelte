@@ -164,12 +164,12 @@
 		</div>
 		{#if org.roles.includes('contractor')}
 			<a class="link text-sm" href={resolve(`staff/contractors/${org.id}`)}>
-				{m.staff_contacts_open_contractor_label()}
+				{m.staff_contacts_open_contractor_text()}
 			</a>
 		{/if}
 		{#if org.roles.includes('sponsor')}
 			<a class="link text-sm" href={resolve(`staff/sponsors/${org.id}`)}>
-				{m.staff_contacts_open_sponsor_label()}
+				{m.staff_contacts_open_sponsor_text()}
 			</a>
 		{/if}
 	</InfoCard>
@@ -193,7 +193,7 @@
 			{/if}
 		{/snippet}
 		{#if org.people === null}
-			<p class="text-muted">{m.staff_contacts_people_hidden_body()}</p>
+			<p class="text-muted">{m.staff_contacts_people_hidden_text()}</p>
 		{:else if org.people.length === 0}
 			<EmptyState title={m.staff_contacts_no_people_title()} />
 		{:else}
@@ -251,7 +251,7 @@
 									{#snippet form()}
 										<input {...dropPerson.fields.id.as('hidden', person.id)} />
 										<input {...dropPerson.fields.organizationId.as('hidden', org.id)} />
-										<p>{m.staff_contacts_remove_person_body()}</p>
+										<p>{m.staff_contacts_remove_person_text()}</p>
 									{/snippet}
 								</Action>
 							</td>
@@ -300,7 +300,7 @@
 		<InfoCard title={m.staff_contacts_contractor_jobs_title()}>
 			{#if org.contractor?.insuranceExpiresAt}
 				<p class="text-muted text-sm">
-					{m.staff_insurance_label()}: {formatDateShort(org.contractor.insuranceExpiresAt)}
+					{m.staff_insurance_text()}: {formatDateShort(org.contractor.insuranceExpiresAt)}
 				</p>
 			{/if}
 			{#if org.records.jobs.length === 0}
@@ -395,9 +395,9 @@
 					<Fact label={m.staff_contacts_tables_needed_label()}>{org.vendor.tablesNeeded}</Fact>
 					<Fact label={m.staff_contacts_setup_label()}>
 						{[
-							org.vendor.needsPower && m.staff_contacts_needs_power_checkbox(),
-							org.vendor.bringsOwnTable && m.staff_contacts_own_table_checkbox(),
-							org.vendor.bringsTent && m.staff_contacts_tent_checkbox()
+							org.vendor.needsPower && m.staff_contacts_needs_power_text(),
+							org.vendor.bringsOwnTable && m.staff_contacts_own_table_text(),
+							org.vendor.bringsTent && m.staff_contacts_tent_text()
 						]
 							.filter(Boolean)
 							.join(', ') || '—'}
@@ -434,7 +434,7 @@
 						<li>
 							<a class="link" href={resolve(`staff/inventory/orders/${o.id}`)}
 								>{o.reference ??
-									(o.placedAt ? formatDateShort(o.placedAt) : m.staff_order_2_label())}</a
+									(o.placedAt ? formatDateShort(o.placedAt) : m.staff_order_2_text())}</a
 							>
 							<span class="text-muted">· {orderStatusLabels[o.status]}</span>
 						</li>
