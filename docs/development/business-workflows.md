@@ -216,8 +216,11 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
 - **Status:** `requested` and `rejected` are the application, `active`, `paused` and `retired`
   the grant (`instructorStatuses` in `src/lib/config.ts`). A member applies from
   `/member/profile` with the draft listing; staff approve, send back with `reviewNotes`, grant
-  directly, pause or retire from `/staff/instructors` (`instructor-service.ts`). Pause and
-  retire need a `statusNote` and leave future teaching bookings in place.
+  directly, pause, resume, retire or reinstate from the Teachers view or the member's record
+  panel (`instructor-service.ts`). `STAFF_TRANSITIONS` in `instructor-transitions.ts` scopes
+  each write, and `staff-actions.ts` gives each status its controls. Pause and retire need a
+  `statusNote` and leave future teaching bookings in place; resume and reinstate are `grant()`.
+  The approve modal and the record panel show the listing as it would publish.
 - **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
   `requireInstructor()`, which matches `status = 'active'` only, and books with
   `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
@@ -229,7 +232,9 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
   `bookerType: 'user'` series when a subscription ends.
 - **Listing:** `/directory/instructors` (public) and `/member/directory/instructors` list active
   instructors who are accepting students and have not hidden their directory listing, through
-  `instructor-directory-service.ts`. The
+  `instructor-directory-service.ts`. Approval creates no directory entry, so a teacher who never
+  saved a profile is not listed. `directoryReach()` reads the same predicate and tells the
+  teacher on their card, and staff in the approve modal, when the directory will not list them. The
   contact shown is `teachingContact`, falling back to the member's directory contact, and both
   pass `contactForView('public', …)`.
 

@@ -11,6 +11,8 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { SEARCH_LIMIT, type InstructorStatus } from '#lib/config.js';
+import { directoryReach, type DirectoryReach } from './instructor-directory-service';
+import { STAFF_TRANSITIONS } from './instructor-transitions';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on
@@ -299,7 +301,7 @@ export async function approve(id: string, staffUserId: string): Promise<void> {
 			reviewNotes: null,
 			updatedAt: now
 		})
-		.where(and(eq(instructor.id, id), inArray(instructor.status, APPLICATION_STATES)));
+		.where(and(eq(instructor.id, id), inArray(instructor.status, STAFF_TRANSITIONS.approve)));
 
 	if (getRowCount(result) === 0) throw new InstructorNotFoundError();
 
@@ -340,7 +342,7 @@ export async function sendBack(
 			statusChangedAt: now,
 			updatedAt: now
 		})
-		.where(and(eq(instructor.id, id), eq(instructor.status, 'requested')));
+		.where(and(eq(instructor.id, id), inArray(instructor.status, STAFF_TRANSITIONS.sendBack)));
 
 	if (getRowCount(result) === 0) throw new InstructorNotFoundError();
 
@@ -440,11 +442,11 @@ async function setBlockedStatus(
 }
 
 export function pause(id: string, staffUserId: string, statusNote: string): Promise<void> {
-	return setBlockedStatus(id, staffUserId, 'paused', statusNote, ['active']);
+	return setBlockedStatus(id, staffUserId, 'paused', statusNote, STAFF_TRANSITIONS.pause);
 }
 
 export function retire(id: string, staffUserId: string, statusNote: string): Promise<void> {
-	return setBlockedStatus(id, staffUserId, 'retired', statusNote, ['active', 'paused']);
+	return setBlockedStatus(id, staffUserId, 'retired', statusNote, STAFF_TRANSITIONS.retire);
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +457,12 @@ export interface StaffInstructorRow extends RosterPerson {
 	id: string;
 	userId: string;
 	status: InstructorStatus;
+	/** The listing as the directory would publish it, so staff approve what they have read. */
 	headline: string | null;
+	blurb: string | null;
+	ratesNote: string | null;
+	bookingUrl: string | null;
+	directoryReach: DirectoryReach;
 	acceptingStudents: boolean;
 	/** Staff-only, and this is the one query allowed to carry it. */
 	applicationNote: string | null;
@@ -491,6 +498,9 @@ export async function listInstructorRoster(
 			userId: instructor.userId,
 			status: instructor.status,
 			headline: instructor.headline,
+			blurb: instructor.blurb,
+			ratesNote: instructor.ratesNote,
+			bookingUrl: instructor.bookingUrl,
 			acceptingStudents: instructor.acceptingStudents,
 			applicationNote: instructor.applicationNote,
 			reviewNotes: instructor.reviewNotes,
@@ -518,10 +528,12 @@ export async function listInstructorRoster(
 		paginate(dataQ, countQ, { page: pagination.page ?? 1, pageSize: pagination.pageSize ?? 20 }),
 		pendingQ
 	]);
+	const reach = await directoryReach(rows.map((r) => r.userId));
 	return {
 		rows: rows.map(({ member, ...r }) => ({
 			...toRosterPerson({ ...member, id: r.userId }),
-			...r
+			...r,
+			directoryReach: reach.get(r.userId) ?? 'missing'
 		})),
 		pagination: page,
 		pending: pending?.count ?? 0

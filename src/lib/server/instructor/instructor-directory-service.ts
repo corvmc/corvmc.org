@@ -54,6 +54,48 @@ export interface InstructorFilters {
 }
 
 /**
+ * Gate 2, less the inner join each caller makes. `directoryReach` reads the
+ * same predicate, so what a teacher is told about their listing cannot drift
+ * from what the directory shows.
+ */
+function entryListedTo(visibility: 'members' | 'public') {
+	return and(
+		isNull(directoryEntry.deletedAt),
+		isNull(user.deletedAt),
+		visibility === 'public'
+			? eq(directoryEntry.visibility, 'public')
+			: inArray(directoryEntry.visibility, ['members', 'public'])
+	);
+}
+
+/**
+ * Who would find this member in the teacher directory, on gate 2 alone:
+ * `public`, `members` only, or neither because their profile is `hidden` or
+ * `missing`. Gate 1 (status) and the full-book switch are shown separately.
+ */
+export type DirectoryReach = 'public' | 'members' | 'hidden' | 'missing';
+
+export async function directoryReach(userIds: string[]): Promise<Map<string, DirectoryReach>> {
+	const reach = new Map<string, DirectoryReach>(userIds.map((id) => [id, 'missing']));
+	if (userIds.length === 0) return reach;
+
+	const rows = await db
+		.select({
+			userId: user.id,
+			isPublic: sql<number>`${entryListedTo('public')}`,
+			isMembers: sql<number>`${entryListedTo('members')}`
+		})
+		.from(directoryEntry)
+		.innerJoin(user, eq(user.id, directoryEntry.userId))
+		.where(and(inArray(directoryEntry.userId, userIds), isNull(directoryEntry.deletedAt)));
+
+	for (const r of rows) {
+		reach.set(r.userId, r.isPublic ? 'public' : r.isMembers ? 'members' : 'hidden');
+	}
+	return reach;
+}
+
+/**
  * Every instrument any listed teacher teaches, for the filter's options.
  *
  * Unfiltered by the instrument itself, so picking one does not shrink the list
@@ -73,11 +115,7 @@ export async function listInstructorInstruments(
 				eq(directoryTag.kind, 'instrument'),
 				eq(instructor.status, 'active'),
 				eq(instructor.acceptingStudents, true),
-				isNull(directoryEntry.deletedAt),
-				isNull(user.deletedAt),
-				visibility === 'public'
-					? eq(directoryEntry.visibility, 'public')
-					: inArray(directoryEntry.visibility, ['members', 'public'])
+				entryListedTo(visibility)
 			)
 		)
 		.orderBy(asc(directoryTag.value));
@@ -95,13 +133,9 @@ export async function listInstructors(
 		// An instructor with a full book is not listed, but keeps booking. Their
 		// own switch, distinct from staff pausing them.
 		eq(instructor.acceptingStudents, true),
-		// Gate 2, in three parts: the entry must exist, not be soft-deleted, and
-		// be visible to this viewer.
-		isNull(directoryEntry.deletedAt),
-		isNull(user.deletedAt),
-		visibility === 'public'
-			? eq(directoryEntry.visibility, 'public')
-			: inArray(directoryEntry.visibility, ['members', 'public'])
+		// Gate 2, in three parts: the entry must exist (the inner join below), not
+		// be soft-deleted, and be visible to this viewer.
+		entryListedTo(visibility)
 	];
 
 	if (filters?.search) {

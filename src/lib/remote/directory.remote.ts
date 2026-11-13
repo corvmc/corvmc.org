@@ -60,7 +60,10 @@ import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { directorySorts } from '#lib/utils/directory-browse.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
-import { publicContactStatus } from '#lib/server/instructor/instructor-directory-service.js';
+import {
+	directoryReach,
+	publicContactStatus
+} from '#lib/server/instructor/instructor-directory-service.js';
 
 // ---------------------------------------------------------------------------
 // JSON-encoded form/filter fields
@@ -700,14 +703,16 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 		genreSuggestions,
 		skillSuggestions,
 		instructor,
-		contactStatus
+		contactStatus,
+		reach
 	] = await Promise.all([
 		getMemberProfile(),
 		getInstrumentSuggestions(),
 		getGenreSuggestions(),
 		getSkillSuggestions(),
 		getInstructorByUserId(currentUser.id),
-		publicContactStatus(currentUser.id)
+		publicContactStatus(currentUser.id),
+		directoryReach([currentUser.id])
 	]);
 
 	return {
@@ -718,7 +723,8 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 		teaching: {
 			instructor,
 			hasPublicContact: contactStatus.hasPublicContact,
-			hasAnyContact: contactStatus.hasAnyContact
+			hasAnyContact: contactStatus.hasAnyContact,
+			directoryReach: reach.get(currentUser.id) ?? 'missing'
 		}
 	};
 });

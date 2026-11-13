@@ -390,4 +390,23 @@ describe('the Members instructors view', () => {
 		expect(found.rows.map((r) => r.personId)).toEqual([USER]);
 		expect(found.pagination.total).toBe(1);
 	});
+
+	it('carries the listing as it would publish, and where it would show', async () => {
+		await svc.apply(USER, {
+			headline: 'Guitar',
+			blurb: BLURB,
+			ratesNote: '$40 an hour',
+			bookingUrl: 'https://example.com/book'
+		});
+
+		const [r] = (await svc.listInstructorRoster({ status: 'requested' })).rows;
+		expect(r).toMatchObject({
+			headline: 'Guitar',
+			blurb: BLURB,
+			ratesNote: '$40 an hour',
+			bookingUrl: 'https://example.com/book',
+			// No profile saved, so no directory entry: approving would list nobody.
+			directoryReach: 'missing'
+		});
+	});
 });

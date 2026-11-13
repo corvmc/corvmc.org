@@ -16,6 +16,7 @@
 		setAcceptingStudents
 	} from '#lib/remote/instructors.remote.js';
 	import type { Instructor } from '#lib/server/db/schema/instructor.js';
+	import type { DirectoryReach } from '#lib/server/instructor/instructor-directory-service.js';
 
 	/**
 	 * Teaching, on the member's own profile — one card with five states. Only the
@@ -32,11 +33,13 @@
 	let {
 		instructor,
 		hasPublicContact,
-		hasAnyContact
+		hasAnyContact,
+		directoryReach
 	}: {
 		instructor: Instructor | null;
 		hasPublicContact: boolean;
 		hasAnyContact: boolean;
+		directoryReach: DirectoryReach;
 	} = $props();
 
 	const applyFields = applyToTeach.fields;
@@ -45,6 +48,17 @@
 
 	const isApplication = $derived(
 		instructor?.status === 'requested' || instructor?.status === 'rejected'
+	);
+
+	// The directory lists a teacher through their profile, so a hidden or unsaved
+	// one leaves an approved teacher unlisted (#2806).
+	const reachWarning = $derived(
+		{
+			public: null,
+			members: m.member_profile_teaching_card_reach_members_body(),
+			hidden: m.member_profile_teaching_card_reach_hidden_body(),
+			missing: m.member_profile_teaching_card_reach_missing_body()
+		}[directoryReach]
 	);
 </script>
 
@@ -79,6 +93,10 @@
 					{m.member_profile_teaching_card_edit_below_send_back_nothing_text()}
 				</p>
 			</Alert>
+		{/if}
+
+		{#if (instructor.status === 'active' || isApplication) && reachWarning}
+			<Alert type="warning" class="mb-4">{reachWarning}</Alert>
 		{/if}
 
 		{#if instructor.status === 'active' && !hasPublicContact}
