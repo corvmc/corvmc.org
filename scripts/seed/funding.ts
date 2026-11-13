@@ -74,6 +74,24 @@ async function stamp(projectId: string, stage: GrantStage, anchorDay: string, do
 	return items.length;
 }
 
+/**
+ * Point the seeded award and the running season sponsorship at the projects
+ * they pay for, so a project's budget shows what it was given. After
+ * `seedProjects`, which names those projects; ids there are random, so by name.
+ */
+export async function seedFundedProjects() {
+	const byName = (name: string) =>
+		sql`(select ${project.id} from ${project} where ${project.name} = ${name} limit 1)`;
+	await db
+		.update(grantApplication)
+		.set({ fundsProjectId: byName('Soundproofing for room B') })
+		.where(eq(grantApplication.id, 'seed-grant-soundproofing'));
+	await db
+		.update(sponsorship)
+		.set({ fundsProjectId: byName('Winter showcase') })
+		.where(eq(sponsorship.id, 'seed-sponsorship-troubadour-season'));
+}
+
 const day = (offset: number) => ptDate(offset, 12).toISOString().slice(0, 10);
 
 /**

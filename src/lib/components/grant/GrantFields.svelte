@@ -15,19 +15,27 @@
 		startsOn: string | null;
 		endsOn: string | null;
 		notes: string | null;
+		fundsProjectId: string | null;
 	}
 
 	let {
 		fields,
 		funders,
+		projects,
 		value
 	}: {
 		fields: (typeof createGrant)['fields'];
 		funders: { id: string; name: string }[];
+		/** What the award can pay for; blank is general operating support. */
+		projects: { id: string; name: string }[];
 		value?: Value;
 	} = $props();
 
 	const funderOptions = $derived(funders.map((f) => ({ value: f.id, label: f.name })));
+	const projectOptions = $derived([
+		{ value: '', label: m.grant_grant_fields_general_support_label() },
+		...projects.map((p) => ({ value: p.id, label: p.name }))
+	]);
 	const statusOptions = grantStatuses.map((s) => ({ value: s, label: grantStatusLabels[s] }));
 </script>
 
@@ -80,6 +88,14 @@
 	type="date"
 	label={m.grant_grant_fields_award_ends_label()}
 	value={value?.endsOn ?? ''}
+/>
+<Field
+	field={fields.fundsProjectId}
+	type="select"
+	label={m.grant_grant_fields_funded_project_label()}
+	description={m.grant_grant_fields_funded_project_body()}
+	options={projectOptions}
+	value={value?.fundsProjectId ?? ''}
 />
 <Field
 	field={fields.notes}

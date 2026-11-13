@@ -1311,9 +1311,10 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- A committee's show work, due in three days or late (#1709) ---
+	// --- A committee's work, due soon or late (#1709) ---
 	// One event is one person's digest for a reminder pass (#2507). Not caught:
-	// a throw here is how the drain knows to leave the items owed.
+	// a throw here is how the drain knows to leave the items owed. A grant's or
+	// sponsorship's item has no show, so it is named for its project (#2622).
 	domainEvents.on('volunteer.deliverable_due', async ({ data: { recipient, items: owed } }) => {
 		if (owed.length === 0) return;
 		const items = [...owed].sort(
@@ -1323,7 +1324,10 @@ export function registerAllNotificationListeners(): void {
 		);
 		const late = items.filter((i) => i.stage === 'overdue').length;
 		const oneCommittee = new Set(items.map((i) => i.groupSlug)).size === 1;
-		const on = (i: (typeof items)[number]) => (i.eventTitle ? ` for ${i.eventTitle}` : '');
+		const forWhat = (i: (typeof items)[number]) => i.eventTitle ?? i.projectName;
+		const on = (i: (typeof items)[number]) => (forWhat(i) ? ` for ${forWhat(i)}` : '');
+		const shows = items.every((i) => i.eventTitle);
+		const noun = shows ? 'show items' : 'items';
 		const due = (i: (typeof items)[number]) => formatClubDay(i.dueAt);
 
 		const [first] = items;
@@ -1332,12 +1336,12 @@ export function registerAllNotificationListeners(): void {
 			? first.stage === 'overdue'
 				? `Overdue: ${first.title}${on(first)}`
 				: `Due ${due(first)}: ${first.title}${on(first)}`
-			: `${items.length} show items need you`;
+			: `${items.length} ${noun} need you`;
 		const line = single
 			? first.stage === 'overdue'
 				? `"${first.title}"${on(first)} was due ${due(first)} and is not done yet.`
 				: `"${first.title}"${on(first)} is due ${due(first)}.`
-			: `${items.length} show items are not done yet: ${late} late, ${items.length - late} due within three days.`;
+			: `${items.length} ${noun} are not done yet: ${late} late, ${items.length - late} due soon.`;
 
 		await dispatch({
 			type: 'deliverable_due',
@@ -1350,23 +1354,34 @@ export function registerAllNotificationListeners(): void {
 			email: {
 				recipientName: recipient.userName,
 				subject: title,
-				heading: late > 0 ? 'Show work overdue' : 'Show work due soon',
+				heading: shows
+					? late > 0
+						? 'Show work overdue'
+						: 'Show work due soon'
+					: late > 0
+						? 'Committee work overdue'
+						: 'Committee work due soon',
 				paragraphs: [
 					{ text: line },
 					{
-						text: 'An item is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
+						text: shows
+							? 'An item is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
+							: 'Mark an item done once it is finished.'
 					}
 				],
 				details: single
 					? [
 							{ label: 'Item', value: first.title },
 							...(first.eventTitle ? [{ label: 'Show', value: first.eventTitle }] : []),
+							...(!first.eventTitle && first.projectName
+								? [{ label: 'Project', value: first.projectName }]
+								: []),
 							{ label: 'Due', value: due(first) },
 							{ label: 'Committee', value: first.groupName }
 						]
 					: items.map((i) => ({
 							label: i.stage === 'overdue' ? `Overdue, ${due(i)}` : `Due ${due(i)}`,
-							value: [i.title, i.eventTitle, i.groupName].filter(Boolean).join(' · ')
+							value: [i.title, forWhat(i), i.groupName].filter(Boolean).join(' · ')
 						})),
 				cta: { label: oneCommittee ? 'Open the committee' : 'Open your committees' }
 			}

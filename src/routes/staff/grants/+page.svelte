@@ -20,7 +20,7 @@
 	import { goto } from '$app/navigation';
 
 	const includeClosed = $derived(page.url.searchParams.get('closed') === '1');
-	const { grants, funders } = $derived(await getGrants({ includeClosed }));
+	const { grants, funders, projects } = $derived(await getGrants({ includeClosed }));
 
 	function setClosed(on: boolean) {
 		const url = new URL(page.url.href);
@@ -44,7 +44,7 @@
 			data-testid="new-grant"
 		>
 			{#snippet form()}
-				<GrantFields fields={createGrant.fields} {funders} />
+				<GrantFields fields={createGrant.fields} {funders} {projects} />
 			{/snippet}
 		</Action>
 	{/if}

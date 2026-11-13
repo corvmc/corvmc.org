@@ -196,6 +196,36 @@
 			>
 		</p>
 	</InfoCard>
+
+	{#if burn.funding.sources.length > 0}
+		<InfoCard title={m.staff_projects_id_budget_report_funding_title()}>
+			<Table>
+				{#snippet head()}
+					<th>{m.staff_source_label()}</th>
+					<th class="cell-num">{m.staff_amount_label()}</th>
+				{/snippet}
+				{#each burn.funding.sources as source (source.kind + source.id)}
+					<tr>
+						<td>
+							<a
+								class="link"
+								href={source.kind === 'grant'
+									? resolve('/staff/grants/[id]', { id: source.id })
+									: resolve('/staff/sponsors/[id]', { id: source.organizationId })}
+								>{source.organizationName}</a
+							>
+							<span class="block text-subtle text-xs">{source.title}</span>
+						</td>
+						<td class="cell-num">{formatCents(source.cents)}</td>
+					</tr>
+				{/each}
+				<tr class="font-medium">
+					<td>{m.staff_projects_id_budget_report_given_text()}</td>
+					<td class="cell-num">{formatCents(burn.funding.totalCents)}</td>
+				</tr>
+			</Table>
+		</InfoCard>
+	{/if}
 </div>
 
 <InfoCard title={m.staff_projects_id_budget_report_orders_acquisitions_title()}>

@@ -1521,5 +1521,8 @@
 				"countPlural=*": "{count} tasks it waits on are open. Marking it done now is recorded."
 			}
 		}
-	]
+	],
+	"grant_grant_fields_funded_project_label": "Funded project",
+	"grant_grant_fields_funded_project_body": "What the award pays for. Leave it as general support for operating money.",
+	"grant_grant_fields_general_support_label": "General support"
 }
