@@ -340,7 +340,8 @@ export async function listCategories() {
 			id: localResourceCategory.id,
 			name: localResourceCategory.name,
 			displayOrder: localResourceCategory.displayOrder,
-			listings: sql<number>`(select count(*) from ${localResource} where ${localResource.categoryId} = ${localResourceCategory.id})`
+			// Nested so drizzle qualifies the columns; this query has no join to make it.
+			listings: sql<number>`${sql`(select count(*) from ${localResource} where ${localResource.categoryId} = ${localResourceCategory.id})`}`
 		})
 		.from(localResourceCategory)
 		.orderBy(asc(localResourceCategory.displayOrder), asc(localResourceCategory.name));
