@@ -26,3 +26,24 @@ export async function recoverFromStaleDeploy(error: unknown): Promise<boolean> {
 	location.reload();
 	return true;
 }
+
+const RELOADED_AT = 'stale-build-reloaded-at';
+
+/**
+ * Reload a tab whose build is older than the running deploy after any client
+ * error. Remote URLs survive a deploy, so an old tab gets a well-formed response
+ * in a shape its code no longer reads (JAVASCRIPT-SVELTEKIT-4D, #2678).
+ * `updated.current` is set by every remote response's version header. The
+ * timestamp stops a loop when the reload is served the same stale page.
+ */
+export function reloadIfStaleBuild(): boolean {
+	if (!updated.current) return false;
+	try {
+		if (Date.now() - Number(sessionStorage.getItem(RELOADED_AT) ?? 0) < 10_000) return false;
+		sessionStorage.setItem(RELOADED_AT, String(Date.now()));
+	} catch {
+		return false;
+	}
+	location.reload();
+	return true;
+}

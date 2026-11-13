@@ -5,6 +5,8 @@ import * as env from '$app/env/public';
 import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 import { isStaleRemoteResponse } from '#lib/stale-remote-response.js';
+import { reloadIfStaleBuild } from '#lib/stale-deploy-recovery.js';
+import { updated } from '$app/state';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
@@ -100,6 +102,8 @@ Sentry.init({
 		if (isStaleRemoteResponse(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
 		if (isFrameworkControlFlow(hint?.originalException)) return null;
+		// Code the running deploy no longer serves; handleError reloads the tab.
+		if (updated.current) return null;
 		return event;
 	},
 
@@ -149,5 +153,6 @@ if (typeof window !== 'undefined') {
 	});
 }
 
-// If you have a custom error handler, pass it to `handleErrorWithSentry`
-export const handleError = handleErrorWithSentry();
+export const handleError = handleErrorWithSentry(() => {
+	reloadIfStaleBuild();
+});

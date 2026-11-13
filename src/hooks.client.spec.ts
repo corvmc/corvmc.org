@@ -9,6 +9,16 @@ vi.mock('@sentry/sveltekit', () => ({
 	handleErrorWithSentry: <T>(handler: T) => handler
 }));
 vi.mock('$app/env', () => ({ dev: false }));
+let isOutdated = false;
+vi.mock('$app/state', () => ({
+	updated: {
+		get current() {
+			return isOutdated;
+		},
+		check: async () => isOutdated
+	}
+}));
+vi.mock('svelte-sonner', () => ({ toast: { info: vi.fn() } }));
 vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 import {
@@ -179,5 +189,64 @@ describe('framework control-flow rejections', () => {
 
 	it('does not drop a bare status-bearing object with neither shape', () => {
 		expect(isFrameworkControlFlow({ status: 404 })).toBe(false);
+	});
+});
+
+describe('tab older than the deploy', () => {
+	// Remote URLs survive a deploy, so an old tab reads a new response shape and
+	// throws wherever its code assumed the old one (JAVASCRIPT-SVELTEKIT-4D).
+	async function loadHooks() {
+		vi.resetModules();
+		try {
+			const sentry = await import('@sentry/sveltekit');
+			const hooks = await import('./hooks.client');
+			const init = sentry.init as unknown as ReturnType<typeof vi.fn>;
+			const beforeSend = init.mock.calls.at(-1)![0].beforeSend as (
+				event: ErrorEvent,
+				hint: { originalException: unknown }
+			) => ErrorEvent | null;
+			return { handleError: hooks.handleError as unknown as () => unknown, beforeSend };
+		} finally {
+			vi.resetModules();
+		}
+	}
+
+	function stubBrowser() {
+		const reload = vi.fn();
+		const store = new Map<string, string>();
+		vi.stubGlobal('location', { href: 'https://corvmc.org/member/reservations', reload });
+		vi.stubGlobal('sessionStorage', {
+			getItem: (k: string) => store.get(k) ?? null,
+			setItem: (k: string, v: string) => store.set(k, v)
+		});
+		return reload;
+	}
+
+	const notIterable = new TypeError('object is not iterable');
+
+	it('reloads onto the new build and drops the event', async () => {
+		const reload = stubBrowser();
+		isOutdated = true;
+		try {
+			const { handleError, beforeSend } = await loadHooks();
+			handleError();
+			expect(reload).toHaveBeenCalledOnce();
+			expect(beforeSend(emptyEvent, { originalException: notIterable })).toBeNull();
+		} finally {
+			isOutdated = false;
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it('reports and stays put on the current build', async () => {
+		const reload = stubBrowser();
+		try {
+			const { handleError, beforeSend } = await loadHooks();
+			handleError();
+			expect(reload).not.toHaveBeenCalled();
+			expect(beforeSend(emptyEvent, { originalException: notIterable })).toBe(emptyEvent);
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 });
