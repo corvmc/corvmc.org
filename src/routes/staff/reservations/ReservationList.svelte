@@ -244,14 +244,17 @@
 		>
 			{#snippet children(reservations)}
 				<!-- No zebra: the bg-base-200 day-group rows are the striping here.
-			     `wide-only` hides it below 32rem, where the cards below take over. -->
-				<Table zebra={false} class="wide-only">
+				     Beside an open reservation the table stays and sheds its `col-support`
+				     columns; with nothing open, the cards take over below 44rem. -->
+				<Table zebra={false} class={openId ? '' : 'wide-only'}>
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
 						<th>{m.staff_booker_label()}</th>
 						<th>{m.staff_time_label()}</th>
 						<th class="col-support cell-num">{m.staff_payment_label()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
+						<th class="col-support w-px">
+							<span class="sr-only">{m.staff_actions_label()}</span>
+						</th>
 					{/snippet}
 
 					{#each reservations as r, idx (`${r.kind}:${r.id}`)}
@@ -273,7 +276,7 @@
 								<td class="min-w-0 font-medium">{r.reason}</td>
 								<td class="cell-primary whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
 								<td class="col-support cell-num"><span class="opacity-40">—</span></td>
-								<td class="w-px">
+								<td class="col-support w-px">
 									{@render closureActions(r, true)}
 								</td>
 							</tr>
@@ -393,7 +396,7 @@
 									{/await}
 								</td>
 
-								<td class="w-px">
+								<td class="col-support w-px">
 									<div class="flex w-max items-center justify-end gap-1">
 										{#if owedAfterSession(r)}
 											{@render settleActions(r)}
@@ -419,32 +422,35 @@
 				Phone widths: the desk checks the room standing at the door, which is
 				ui-patterns' card test 4. The rows fold into the card grammar there:
 				no hover-only tooltips, labelled facts, actions full width at 44px.
+				Never beside an open reservation: that pane keeps the table.
 			-->
-				<ul class="narrow-only">
-					{#each reservations as r, idx (`${r.kind}:${r.id}`)}
-						{@const label = dayLabel(r)}
-						{#if label !== (idx > 0 ? dayLabel(reservations[idx - 1]) : null)}
-							<li class="rounded-sm cell-group">{label}</li>
-						{/if}
-						{#if r.kind === 'closure'}
-							<li class="space-y-2 border-b border-base-300 py-3">
-								<div class="flex min-h-11 flex-wrap items-center gap-2">
-									<Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge>
-									<span class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</span>
-								</div>
-								<p>{r.reason}</p>
-								{@render closureActions(r, false)}
-							</li>
-						{:else}
-							<ReservationCard
-								reservation={r}
-								query={filters.urlQuery}
-								current={r.id === openId}
-								rates={hourlyRates}
-							/>
-						{/if}
-					{/each}
-				</ul>
+				{#if !openId}
+					<ul class="narrow-only">
+						{#each reservations as r, idx (`${r.kind}:${r.id}`)}
+							{@const label = dayLabel(r)}
+							{#if label !== (idx > 0 ? dayLabel(reservations[idx - 1]) : null)}
+								<li class="rounded-sm cell-group">{label}</li>
+							{/if}
+							{#if r.kind === 'closure'}
+								<li class="space-y-2 border-b border-base-300 py-3">
+									<div class="flex min-h-11 flex-wrap items-center gap-2">
+										<Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge>
+										<span class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</span>
+									</div>
+									<p>{r.reason}</p>
+									{@render closureActions(r, false)}
+								</li>
+							{:else}
+								<ReservationCard
+									reservation={r}
+									query={filters.urlQuery}
+									current={r.id === openId}
+									rates={hourlyRates}
+								/>
+							{/if}
+						{/each}
+					</ul>
+				{/if}
 			{/snippet}
 		</DataList>
 	</div>
