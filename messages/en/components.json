@@ -1395,6 +1395,8 @@
 	"volunteer_shift_progress_claimed_text": "Signed up",
 	"volunteer_shift_progress_reminder_lands_day_before_text": "Reminder lands the day before.",
 	"volunteer_shift_progress_worked_log_hours_when_get_text": "Worked. Log your hours when you get a moment.",
+	"volunteer_shift_row_full_text": "Full",
+	"volunteer_shift_row_needs_text": "Needs {names}",
 	"volunteer_work_order_hours_approve_label": "Approve",
 	"volunteer_work_order_hours_by_text": "{formatVolunteerHours} of {roleName} by {title} on {formatDateShort}.",
 	"volunteer_work_order_hours_description_body": "Shared with the member.",

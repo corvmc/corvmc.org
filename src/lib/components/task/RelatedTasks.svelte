@@ -12,6 +12,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import { createCatalogueTaskForm, getRelatedTasks } from '#lib/remote/tasks.remote.js';
+	import { getMemberRelatedTasks } from '#lib/remote/member-related.remote.js';
 	import { CHIPS, byWhen, matchesChip, type Chip } from '#lib/utils/task-facts.js';
 	import type { RelatedSubjectType } from '#lib/utils/related-tasks.js';
 	import { RELATION_LABELS } from '#lib/components/task/relation-labels.js';
@@ -20,9 +21,18 @@
 	/**
 	 * The tasks related to one record (#2630), grouped by how they relate,
 	 * closest first. The server's registry decides the relations; this card
-	 * draws the Tasks table's rows and chips over them.
+	 * draws the Tasks table's rows and chips over them. `member` reads the
+	 * member remote instead: the viewer's own tasks, linked only where assigned
+	 * to them, with no staff links or New task.
 	 */
-	let { subject }: { subject: { type: RelatedSubjectType; id: string } } = $props();
+	let {
+		subject,
+		member = false
+	}: {
+		subject: { type: RelatedSubjectType; id: string };
+		/** A member page; only a group or an event resolves there. */
+		member?: boolean;
+	} = $props();
 
 	let showDone = $state(false);
 	let chip = $state<Chip | ''>('');
@@ -30,7 +40,21 @@
 	const now = new Date();
 
 	const args = $derived({ type: subject.type, id: subject.id, includeDone: showDone });
-	const related = new Latest(() => getRelatedTasks(args));
+	type Staff = NonNullable<Awaited<ReturnType<typeof getRelatedTasks>>>;
+	type View = Pick<Staff, 'groups' | 'contractors' | 'prefill'> & { mine: string[] | null };
+	// `.then` inside the getter, not `await`: the query is read in Latest's effect.
+	const related = new Latest<View | null>(() =>
+		member
+			? getMemberRelatedTasks({ ...args, type: args.type as 'group' | 'event' }).then((own) => ({
+					...own,
+					contractors: {},
+					prefill: null
+				}))
+			: getRelatedTasks(args).then((staff) => staff && { ...staff, mine: null })
+	);
+	// Staff open every task; a member only one assigned to them.
+	const linkOf = (id: string, mine: string[] | null): 'staff' | 'member' | 'none' =>
+		mine === null ? 'staff' : mine.includes(id) ? 'member' : 'none';
 	$effect(() => {
 		if (related.error) throw related.error.e;
 	});
@@ -58,8 +82,9 @@
 	const { fields } = createCatalogueTaskForm;
 </script>
 
-<!-- Null is a viewer who may read the record but not its tasks. -->
-{#if related.current}
+<!-- Null is a viewer who may read the record but not its tasks. A member's
+     card with nothing on it is left off: it has no New task to offer. -->
+{#if related.current && (!member || related.current.groups.length > 0 || showDone)}
 	{@const data = related.current}
 	<InfoCard title={m.staff_related_tasks_title()} testid="related-tasks">
 		{#snippet header(title)}
@@ -76,9 +101,11 @@
 						>
 							{m.staff_related_tasks_show_done_label()}
 						</Button>
-						<Button variant="ghost" size="sm" href={viewAll}>
-							{m.staff_related_tasks_view_all_label()}
-						</Button>
+						{#if !member}
+							<Button variant="ghost" size="sm" href={viewAll}>
+								{m.staff_related_tasks_view_all_label()}
+							</Button>
+						{/if}
 					{/if}
 					{#if data.prefill}
 						{@const prefill = data.prefill}
@@ -153,7 +180,7 @@
 						</tr>
 					{/if}
 					{#each rows as t (t.id)}
-						<TaskRow task={t} marks={marksOf(t.id)} {now} compact />
+						<TaskRow task={t} marks={marksOf(t.id)} {now} compact link={linkOf(t.id, data.mine)} />
 					{/each}
 				{/each}
 			</Table>

@@ -1,4 +1,4 @@
-# 0071 A schedule change replaces the series
+# 0072 A schedule change replaces the series
 
 - **Date:** 2026-11-13
 - **Status:** Accepted

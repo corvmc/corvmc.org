@@ -80,6 +80,9 @@ vi.mock('#lib/remote/tasks.remote.js', () =>
 		getRelatedShifts: remote(() => null)
 	})
 );
+vi.mock('#lib/remote/member-related.remote.js', () =>
+	stubs('getMemberRelatedShifts getMemberRelatedTasks')
+);
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
 	page: {
