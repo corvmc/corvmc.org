@@ -8,3 +8,4 @@ export { default as Select } from './Select.svelte';
 export { default as SearchInput } from './SearchInput.svelte';
 export { default as CheckboxGroup } from './CheckboxGroup.svelte';
 export { default as FileUpload } from './FileUpload.svelte';
+export { default as DateTimeField } from './DateTimeField.svelte';

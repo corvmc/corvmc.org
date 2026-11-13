@@ -5,7 +5,9 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import DateTimeField from '#lib/components/ui/Form/DateTimeField.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
@@ -22,7 +24,12 @@
 		withdrawListing,
 		deleteListing
 	} from '#lib/remote/community-events.remote.js';
-	import { formatDateShort, formatDollars } from '#lib/utils/format.js';
+	import {
+		formatDateShort,
+		formatDollars,
+		venueDateInput,
+		venueTimeInput
+	} from '#lib/utils/format.js';
 	import { imageSrc } from '#lib/utils/images.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -35,6 +42,9 @@
 	const unpublishFields = unpublishListing.fields;
 	const withdrawFields = withdrawListing.fields;
 	const deleteFields = deleteListing.fields;
+
+	// Save takes Publish's place while there is anything to save.
+	let dirty = $state(false);
 
 	const eventId = $derived(params.id);
 	// One query. The duplicate check is advisory copy next to Publish and only means anything for
@@ -65,11 +75,7 @@
 	});
 
 	function toTimeValue(d: Date | null): string {
-		if (!d) return '';
-		return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-	}
-	function toDateValue(d: Date): string {
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		return d ? venueTimeInput(d) : '';
 	}
 	function toDollars(cents: number | null): string {
 		return cents == null ? '' : formatDollars(cents);
@@ -90,11 +96,107 @@
 		</Alert>
 	</PageContent>
 {:else}
-	<PageHeader title={listing.title}>
-		<StatusBadge status={listing.status} label />
+	<PageHeader title={listing.title} width="3xl">
+		{#snippet badge()}
+			<StatusBadge status={listing.status} label />
+		{/snippet}
+		{#if dirty}
+			<span class="text-muted text-sm" data-testid="unsaved-changes"
+				>{m.member_events_id_manage_unsaved_changes_text()}</span
+			>
+		{/if}
+		{#if listing.status === 'draft' || listing.status === 'rejected'}
+			<Action
+				action={deleteListing}
+				label={m.member_events_id_manage_delete_label()}
+				successToast={m.member_events_id_manage_listing_deleted_toast()}
+				variant="default"
+				onsuccess={() => goto(resolve('member/events'))}
+			>
+				{#snippet form()}
+					<input {...deleteFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						{m.member_events_id_manage_delete_listing_was_never_public_text()}
+					</p>
+				{/snippet}
+			</Action>
+		{:else if listing.status === 'published'}
+			<Action
+				action={unpublishListing}
+				label={m.member_events_id_manage_take_down_label()}
+				successToast={m.member_events_id_manage_back_drafts_toast()}
+				variant="ghost"
+				onsuccess={() => refreshAll()}
+			>
+				{#snippet form()}
+					<input {...unpublishFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						{m.member_events_id_manage_move_back_drafts_comes_off_text()}
+					</p>
+				{/snippet}
+			</Action>
+
+			<Action
+				action={withdrawListing}
+				label={m.member_events_id_manage_cancel_show_label()}
+				successToast={m.member_events_id_manage_marked_as_cancelled_toast()}
+				variant="warning"
+				onsuccess={() => refreshAll()}
+			>
+				{#snippet form()}
+					<input {...withdrawFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						<ParaglideMessage
+							message={m.member_events_id_manage_show_not_happening_stays_calendar_text}
+							inputs={{}}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+		{#snippet primary()}
+			<!-- One place for the primary action: unsaved edits are saved before
+			     anything is published, so Publish only shows on a clean form. -->
+			{#if dirty}
+				<Button
+					type="submit"
+					form="listing-form"
+					variant="primary"
+					disabled={updateListing.pending > 0}
+					data-testid="save-listing"
+				>
+					{#if updateListing.pending > 0}
+						<span class="loading loading-sm loading-spinner"></span>
+					{/if}
+					{m.member_events_id_manage_save_changes_label()}
+				</Button>
+			{:else if listing.status === 'draft' || listing.status === 'rejected'}
+				<Action
+					action={publishListing}
+					label={publishLabel}
+					data-testid="publish-listing"
+					successToast={requiresReview ? m.member_sent_staff_toast() : m.member_published_toast()}
+					variant="primary"
+					onsuccess={() => refreshAll()}
+				>
+					{#snippet form()}
+						<input {...publishFields.eventId.as('hidden', eventId)} />
+						{#if requiresReview}
+							<p class="py-2">
+								{m.member_events_id_manage_staff_will_look_at_before_text()}
+							</p>
+						{:else}
+							<p class="py-2">{m.member_events_id_manage_put_show_public_calendar_text()}</p>
+						{/if}
+					{/snippet}
+				</Action>
+			{/if}
+		{/snippet}
 	</PageHeader>
 
-	<PageContent width="2xl">
+	<PageContent width="3xl">
 		{#if listing.status === 'rejected'}
 			<!-- The reason is the entire point of a rejection: a member who can't see
 			     what was wrong can't fix it, and `rejected` exists so they can. -->
@@ -136,84 +238,6 @@
 			</Alert>
 		{/if}
 
-		<div class="flex flex-wrap items-center gap-2">
-			{#if listing.status === 'draft' || listing.status === 'rejected'}
-				<Action
-					action={publishListing}
-					label={publishLabel}
-					data-testid="publish-listing"
-					successToast={requiresReview ? m.member_sent_staff_toast() : m.member_published_toast()}
-					variant="primary"
-					size="sm"
-					onsuccess={() => refreshAll()}
-				>
-					{#snippet form()}
-						<input {...publishFields.eventId.as('hidden', eventId)} />
-						{#if requiresReview}
-							<p class="py-2">
-								{m.member_events_id_manage_staff_will_look_at_before_text()}
-							</p>
-						{:else}
-							<p class="py-2">{m.member_events_id_manage_put_show_public_calendar_text()}</p>
-						{/if}
-					{/snippet}
-				</Action>
-
-				<Action
-					action={deleteListing}
-					label={m.member_events_id_manage_delete_label()}
-					successToast={m.member_events_id_manage_listing_deleted_toast()}
-					variant="ghost"
-					size="sm"
-					onsuccess={() => goto(resolve('member/events'))}
-				>
-					{#snippet form()}
-						<input {...deleteFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							{m.member_events_id_manage_delete_listing_was_never_public_text()}
-						</p>
-					{/snippet}
-				</Action>
-			{:else if listing.status === 'published'}
-				<Action
-					action={unpublishListing}
-					label={m.member_events_id_manage_take_down_label()}
-					successToast={m.member_events_id_manage_back_drafts_toast()}
-					variant="ghost"
-					size="sm"
-					onsuccess={() => refreshAll()}
-				>
-					{#snippet form()}
-						<input {...unpublishFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							{m.member_events_id_manage_move_back_drafts_comes_off_text()}
-						</p>
-					{/snippet}
-				</Action>
-
-				<Action
-					action={withdrawListing}
-					label={m.member_events_id_manage_cancel_show_label()}
-					successToast={m.member_events_id_manage_marked_as_cancelled_toast()}
-					variant="warning"
-					size="sm"
-					onsuccess={() => refreshAll()}
-				>
-					{#snippet form()}
-						<input {...withdrawFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							<ParaglideMessage
-								message={m.member_events_id_manage_show_not_happening_stays_calendar_text}
-								inputs={{}}
-								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-									>{/snippet}</ParaglideMessage
-							>
-						</p>
-					{/snippet}
-				</Action>
-			{/if}
-		</div>
-
 		{#if duplicate}
 			<Alert type="warning">
 				<strong>{m.member_events_id_manage_might_already_listed_body()}</strong>
@@ -233,86 +257,126 @@
 		{/if}
 
 		<Form
+			id="listing-form"
 			remote={updateListing}
+			guard
 			successToast={m.member_events_id_manage_listing_saved_toast()}
 			onsuccess={() => refreshAll()}
-			class="space-y-4"
+			ondirtychange={(d) => (dirty = d)}
+			class="flex flex-col gap-4"
 		>
 			<input {...fields.eventId.as('hidden', eventId)} />
 
-			<FormField
-				field={fields.title}
-				type="text"
-				label={m.member_title_label()}
-				value={listing.title}
-				maxlength="200"
-				required
-			/>
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-6">
+				<!-- Caller markup, so the caption is a legend and the drop zone's
+				     own text names the picker. -->
+				<FormField
+					field={fields.posterFile}
+					label={m.member_events_id_manage_poster_label()}
+					class="grid-rows-[auto_1fr]"
+				>
+					<FileUpload
+						inputProps={fields.posterFile.as('file')}
+						orientation="zone"
+						accept="image/jpeg,image/png,image/webp"
+						src={listing.posterUrl ? imageSrc(listing.posterUrl, 'thumb').src : undefined}
+						emptyLabel={m.member_events_id_manage_empty_label_title()}
+						replaceLabel={m.member_events_id_manage_replace_label()}
+						hint={m.member_events_id_manage_jpeg_png_webp_up_10_body()}
+					/>
+				</FormField>
 
-			<!-- The `input` snippet, not children: only it is handed the id the
-			     caption points at, so children would leave the field unnamed. -->
-			<FormField
-				field={updateListing.fields.description}
-				label={m.member_events_id_manage_description_label()}
-			>
-				{#snippet input(id)}
-					<textarea
-						{...fields.description.as('text', listing.description ?? '')}
-						{id}
-						class="textarea w-full"
-						rows="4"
-						maxlength="5000"></textarea>
-				{/snippet}
-			</FormField>
+				<div class="flex min-w-0 flex-col gap-4">
+					<FormField
+						field={fields.title}
+						type="text"
+						label={m.member_title_label()}
+						value={listing.title}
+						maxlength="200"
+						required
+					/>
 
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<FormField
-					field={fields.eventDate}
-					type="date"
-					label={m.member_date_label()}
-					value={toDateValue(listing.startsAt)}
-					required
-				/>
-				<FormField
-					field={fields.eventStartTime}
-					type="time"
-					label={m.member_start_time_label()}
-					value={toTimeValue(listing.startsAt)}
-					required
-				/>
-				<FormField
-					field={fields.eventEndTime}
-					type="time"
-					label={m.member_events_id_manage_end_time_label()}
-					value={toTimeValue(listing.endsAt)}
-					description={m.member_events_id_manage_optional_leave_blank_if_don_body()}
-				/>
+					<!-- The `input` snippet, not children: only it is handed the id the
+					     caption points at, so children would leave the field unnamed. -->
+					<FormField
+						field={updateListing.fields.description}
+						label={m.member_events_id_manage_description_label()}
+						class="grow grid-rows-[auto_1fr]"
+					>
+						{#snippet input(id)}
+							<textarea
+								{...fields.description.as('text', listing.description ?? '')}
+								{id}
+								class="textarea h-full w-full"
+								rows="5"
+								maxlength="5000"></textarea>
+						{/snippet}
+					</FormField>
+
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<FormField
+							field={fields.eventDate}
+							label={m.member_events_id_manage_date_start_time_label()}
+							required
+						>
+							{#snippet input(id)}
+								<DateTimeField
+									{id}
+									date={fields.eventDate}
+									time={fields.eventStartTime}
+									dateValue={venueDateInput(listing.startsAt)}
+									timeValue={toTimeValue(listing.startsAt)}
+									timeLabel={m.member_start_time_label()}
+								/>
+							{/snippet}
+						</FormField>
+						<FormField
+							field={fields.location}
+							type="text"
+							label={m.member_venue_label()}
+							value={listing.location ?? ''}
+							maxlength="500"
+							required
+						/>
+					</div>
+				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormField
+						field={fields.doorsTime}
+						type="time"
+						label={m.member_events_id_manage_doors_open_label()}
+						value={toTimeValue(listing.doorsAt)}
+					/>
+					<FormField
+						field={fields.eventEndTime}
+						type="time"
+						label={m.member_events_id_manage_end_time_label()}
+						value={toTimeValue(listing.endsAt)}
+					/>
+				</div>
 				<FormField
-					field={fields.doorsTime}
-					type="time"
-					label={m.member_events_id_manage_doors_open_label()}
-					value={toTimeValue(listing.doorsAt)}
-				/>
-				<FormField
-					field={fields.location}
+					field={fields.address}
 					type="text"
-					label={m.member_venue_label()}
-					value={listing.location ?? ''}
+					label={m.member_address_label()}
+					value={listing.address ?? ''}
 					maxlength="500"
-					required
 				/>
 			</div>
 
 			<FormField
-				field={fields.address}
-				type="text"
-				label={m.member_address_label()}
-				value={listing.address ?? ''}
-				maxlength="500"
-			/>
+				field={updateListing.fields.lineup}
+				label={m.member_events_id_manage_who_s_playing_label()}
+			>
+				<LineupEditor
+					field={updateListing.fields.lineup}
+					bind:value={lineup}
+					search={searchBandsForListing}
+					hint={false}
+				/>
+			</FormField>
 
 			<FormField
 				field={fields.tags}
@@ -322,49 +386,23 @@
 				maxlength="500"
 			/>
 
-			<FormField
-				field={updateListing.fields.lineup}
-				label={m.member_events_id_manage_who_s_playing_label()}
-				description={m.member_events_id_manage_naming_band_s_site_asks_body()}
-			>
-				<LineupEditor
-					field={updateListing.fields.lineup}
-					bind:value={lineup}
-					search={searchBandsForListing}
-				/>
-			</FormField>
-
-			<FormField
-				field={fields.posterFile}
-				type="file"
-				label={m.member_events_id_manage_poster_label()}
-				description={m.member_events_id_manage_jpeg_png_webp_up_10_body()}
-				accept="image/jpeg,image/png,image/webp"
-				src={listing.posterUrl ? imageSrc(listing.posterUrl, 'thumb').src : undefined}
-				previewClass="h-32 w-24"
-				emptyLabel={m.member_events_id_manage_empty_label_title()}
-				replaceLabel={m.member_events_id_manage_replace_label()}
-			/>
-
-			<div class="grid gap-4 md:grid-cols-2">
-				<FormField
-					field={fields.externalTicketUrl}
-					type="text"
-					label={m.member_events_id_manage_ticket_link_label()}
-					value={listing.externalTicketUrl ?? ''}
-				/>
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
 					label={m.member_events_id_manage_ticket_price_label()}
 					value={toDollars(listing.ticketPrice)}
 					inputmode="decimal"
-					description={m.member_events_id_manage_what_people_pay_at_door_body()}
+					placeholder={m.member_events_id_manage_free_placeholder()}
 				/>
-			</div>
-
-			<div class="flex justify-end pt-4">
-				<SubmitButton label={m.member_events_id_manage_save_changes_label()} variant="primary" />
+				<FormField
+					field={fields.externalTicketUrl}
+					type="text"
+					label={m.member_events_id_manage_ticket_link_label()}
+					value={listing.externalTicketUrl ?? ''}
+					placeholder="https://"
+					class="sm:col-span-2"
+				/>
 			</div>
 		</Form>
 	</PageContent>
