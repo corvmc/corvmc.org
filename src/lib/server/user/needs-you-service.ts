@@ -8,6 +8,7 @@ import {
 import { listUserLoans } from '#lib/server/inventory/loan-service.js';
 import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
 import { getMemberSubscription } from '#lib/server/finance/subscription-service.js';
+import { listShowsLedBy } from '#lib/server/production/show-lead-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 
 /**
@@ -36,17 +37,31 @@ export interface NeedsYouInput {
 export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]> {
 	const now = input.now ?? new Date();
 
-	const [unlogged, signups, loans, messageRequests, subscription] = await Promise.all([
+	const [unlogged, signups, loans, messageRequests, subscription, led] = await Promise.all([
 		listUnloggedCompletions(input.userId).catch(() => []),
 		listSignupsForUser(input.userId, { limit: 20 }).catch(() => []),
 		listUserLoans(input.userId, ['checked_out']).catch(() => ({ rows: [] })),
 		countPendingRequests(input.userId).catch(() => 0),
-		getMemberSubscription(input.userId).catch(() => null)
+		getMemberSubscription(input.userId).catch(() => null),
+		listShowsLedBy(input.userId, now).catch(() => [])
 	]);
 
 	const items: NeedsYouItem[] = [];
 
 	items.push(...reservationNeedsYouItems(input.reservations, now));
+
+	// The show this member is event lead for, until it has been on a while (#2726).
+	for (const show of led) {
+		items.push({
+			id: `show-lead:${show.productionId}`,
+			kind: 'show-lead',
+			title: `You are the event lead for ${show.title}`,
+			href: resolve(`staff/events/${show.eventId}/production`),
+			label: 'Open console',
+			dueAt: show.startsAt,
+			rank: 0
+		});
+	}
 
 	for (const s of signups) {
 		// `startsAt` is nullable: a work order can exist before it is scheduled.

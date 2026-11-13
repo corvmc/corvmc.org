@@ -1960,8 +1960,8 @@ restore crew shifts or retract a cancellation notice.
 3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
 4. **Overview** tab → `updateProduction` (times and notes) and
-   `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
-   client never names a user id).
+   `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
+   then holds `production.run` on that show and opens the staff panel while it is open).
 5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless

@@ -26,9 +26,11 @@
 	import {
 		createProduction,
 		updateProduction,
-		setProductionProducer,
+		setShowLead,
+		searchShowLeadCandidates,
 		openHostShift
 	} from '#lib/remote/productions.remote.js';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
@@ -127,7 +129,14 @@
 
 	// ── Production form state ─────────────────────────────────────────────
 	const productionFields = updateProduction.fields;
-	const producerFields = setProductionProducer.fields;
+	const leadFields = setShowLead.fields;
+	// The picker's pick, seeded with the saved lead whenever the record reloads.
+	let leadId = $state('');
+	let leadName = $state('');
+	$effect(() => {
+		leadId = productionRecord?.producerUserId ?? '';
+		leadName = productionRecord?.producerName ?? '';
+	});
 
 	// One date for all five times: the listing already refuses to span two dates,
 	// so five date fields would be five chances to disagree with each other.
@@ -171,6 +180,12 @@
 		<span
 			>{evt.venueName ?? evt.location ?? m.staff_events_id_production_practice_space_text()}</span
 		>
+		{#if productionRecord?.producer}
+			<span class="flex items-center gap-1" data-testid="event-lead">
+				{m.staff_events_id_production_lead_text()}
+				<EntityChip ref={productionRecord.producer} />
+			</span>
+		{/if}
 	</p>
 
 	<div bind:this={tabBarEl}>
@@ -207,12 +222,6 @@
 						</div>
 					{/snippet}
 
-					<!--
-					Who is running the night, as a claim rather than a picker, and its own
-					form rather than a field on the one below: taking a job is a single
-					act that should not wait on a Save, and there is no list of candidates
-					a picker could offer — the capability matrix names no production lead.
-				-->
 					{#if productionRecord.closedAt}
 						<!-- `updatedAt` is not this date: it moves on any later write. -->
 						<p class="text-muted text-sm">
@@ -236,35 +245,39 @@
 					<!-- A terminal show is the past. Disabled here for clarity; the server refuses
 					     the writes either way. -->
 					<fieldset disabled={productionLocked} class="contents">
-						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">{m.staff_events_id_production_producer_text()}</span>
-							<!-- The person running the night, reachable. It was their name as
-						     a bare string. -->
-							{#if productionRecord.producer}
+						<!-- One named person, appointed by booking, who then runs the show
+						     through `production.run` (#2726). Its own form: naming a lead
+						     should not wait on the Save below. -->
+						<div class="flex flex-col gap-2">
+							<span class="text-muted">{m.staff_events_id_production_lead_text()}</span>
+							{#if loaded.canSetLead}
+								<Form
+									remote={setShowLead}
+									successToast={m.staff_events_id_production_lead_saved_toast()}
+									class="flex flex-col gap-2"
+								>
+									<input {...leadFields.id.as('hidden', productionRecord.id)} />
+									<input {...leadFields.eventId.as('hidden', evt.id)} />
+									<MemberPicker
+										field={leadFields.leadUserId}
+										label={m.staff_events_id_production_lead_label()}
+										placeholder={m.staff_events_id_production_lead_search_placeholder()}
+										search={(q) => searchShowLeadCandidates({ eventId: evt.id, q })}
+										bind:value={leadId}
+										bind:name={leadName}
+									/>
+									{#if leadId !== (productionRecord.producerUserId ?? '')}
+										<SubmitButton
+											label={m.staff_events_id_production_lead_save_label()}
+											size="sm"
+										/>
+									{/if}
+								</Form>
+							{:else if productionRecord.producer}
 								<EntityChip ref={productionRecord.producer} />
 							{:else}
-								<span class="font-medium">{m.staff_events_id_production_nobody_yet_text()}</span>
+								<span class="font-medium">{m.staff_events_id_production_no_lead_text()}</span>
 							{/if}
-							<Form
-								remote={setProductionProducer}
-								successToast={m.staff_events_id_production_producer_updated_toast()}
-							>
-								<input {...producerFields.id.as('hidden', productionRecord.id)} />
-								<input {...producerFields.eventId.as('hidden', evt.id)} />
-								<input
-									{...producerFields.producer.as(
-										'hidden',
-										productionRecord.producerUserId ? 'none' : 'me'
-									)}
-								/>
-								<SubmitButton
-									label={productionRecord.producerUserId
-										? m.staff_events_id_production_hand_back_label()
-										: m.staff_events_id_production_i_am_producing_label()}
-									variant="ghost"
-									size="xs"
-								/>
-							</Form>
 						</div>
 
 						<!-- Who runs the night, which is not always who booked it. A shift
@@ -286,9 +299,7 @@
 									{m.staff_events_id_production_find_somebody_text()}
 								</a>
 							{:else}
-								<!-- "No host yet", not "Nobody yet": the Producer line above
-							     already says that, and `productions.e2e.ts` reads it by
-							     text — two matches make its locator ambiguous. -->
+								<!-- Names the host, so it never reads as the event lead's line. -->
 								<span class="font-medium">{m.staff_events_id_production_no_host_yet_text()}</span>
 								<Form
 									remote={openHostShift}

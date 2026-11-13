@@ -17,10 +17,12 @@ import {
 import {
 	committeeAllows,
 	committeeGrantsFor,
+	leadsProject,
 	listCommitteeHolders,
 	orgWideCapabilities,
 	projectCommitteeGrantsFor,
 	roleGrantAllows,
+	SHOW_LEAD_CAPABILITY,
 	type CapabilityScope,
 	type CommitteeGrant
 } from '#lib/server/capability/capability-grants.js';
@@ -142,9 +144,10 @@ function currentCommitteeGrants(userId: string): Promise<CommitteeGrant[]> {
 }
 
 /**
- * Grants beyond the position matrix: an event-scoped volunteer-role grant when
- * `scope.eventId` is given, then committee seats. A capability off the allowlist
- * returns before any read, so only allowlisted checks pay for one.
+ * Grants beyond the position matrix: a show's event lead on its project, an
+ * event-scoped volunteer-role grant when `scope.eventId` is given, then
+ * committee seats. A capability off the allowlist returns before any read, so
+ * only allowlisted checks pay for one.
  */
 async function grantedBeyondPositions(
 	userId: string,
@@ -152,6 +155,9 @@ async function grantedBeyondPositions(
 	scope: CapabilityScope | undefined,
 	seats: () => Promise<CommitteeGrant[]>
 ): Promise<boolean> {
+	if (cap === SHOW_LEAD_CAPABILITY && scope?.projectId) {
+		if (await leadsProject(userId, scope.projectId)) return true;
+	}
 	const rule = grantRuleFor(cap);
 	if (!rule) return false;
 	if (rule.role && scope?.eventId && (await roleGrantAllows(userId, cap, scope.eventId))) {

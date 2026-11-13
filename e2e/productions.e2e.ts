@@ -65,13 +65,12 @@ test.describe('productions', () => {
 		await open.click();
 
 		// The button is the whole form, so its own disappearance is the receipt;
-		// the record that replaces it offers to take the producer's job.
+		// the record that replaces it offers staff the event lead picker.
 		await expect(open).toHaveCount(0, { timeout: 15000 });
 		const record = page.getByTestId('production-record');
-		await expect(record.locator('input:is([name="producer"], [name^="producer/"])')).toHaveValue(
-			'me',
-			{ timeout: 15000 }
-		);
+		await expect(record.locator('form[action$="setShowLead"]')).toHaveCount(1, {
+			timeout: 15000
+		});
 		await expect
 			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
 			.toBe('draft');
@@ -160,6 +159,6 @@ test.describe('productions', () => {
 
 		await page.locator('#tab-overview').click();
 		await expect(page).toHaveURL(new RegExp(`/production$`));
-		await expect(page.locator('form[action$="setProductionProducer"]')).toBeVisible();
+		await expect(page.locator('form[action$="setShowLead"]')).toBeVisible();
 	});
 });

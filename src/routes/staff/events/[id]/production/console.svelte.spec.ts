@@ -52,8 +52,8 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 		'addProductionExpense addRunOfShowSlot advanceProduction askForArtifact ' +
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markSlotTiming ' +
 			'moveRunOfShowSlot openHostShift recordActPayout recordDoorTake removeProductionExpense ' +
-			'removeRunOfShowSlot reopenProduction setProductionProducer setRunOfShowTerms ' +
-			'undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
+			'removeRunOfShowSlot reopenProduction searchShowLeadCandidates setRunOfShowTerms ' +
+			'setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
 );
@@ -100,7 +100,7 @@ const Console = (await import('./+page.svelte')).default;
 
 const startsAt = new Date('2031-05-10T03:00:00Z');
 
-function loaded(production: unknown) {
+function loaded(production: unknown, canSetLead = false) {
 	return {
 		detail: {
 			event: {
@@ -131,7 +131,8 @@ function loaded(production: unknown) {
 		hostShift: null,
 		deliverables: [],
 		deliverableCommittees: [],
-		budget: null
+		budget: null,
+		canSetLead
 	};
 }
 
@@ -168,6 +169,28 @@ describe('production console', () => {
 		// The console's tabs and nothing else: no listing tab such as Tickets.
 		expect(page.getByRole('tab').elements()).toHaveLength(TAB_KEYS.length);
 		await expect.element(page.getByRole('tab', { name: TAB_LABELS.settlement })).toBeVisible();
+	});
+
+	it('names the event lead beside the date, and offers the picker only to booking', async () => {
+		const lead = { type: 'member', id: 'u-9', name: 'Sam Lead' };
+		fixture.loaded = loaded({ ...record, producer: lead, producerUserId: 'u-9' });
+		await render(Console);
+
+		await expect.element(page.getByTestId('event-lead')).toBeVisible();
+		// Without production.book the lead is shown, not changeable.
+		const card = page.getByTestId('production-record');
+		await expect.element(card).toBeVisible();
+		expect(card.element().querySelector('input[name="leadUserId"]')).toBeNull();
+	});
+
+	it('lets booking name the event lead', async () => {
+		fixture.loaded = loaded(record, true);
+		await render(Console);
+
+		expect(page.getByTestId('event-lead').elements()).toHaveLength(0);
+		const card = page.getByTestId('production-record');
+		await expect.element(card).toBeVisible();
+		expect(card.element().querySelector('input[name="leadUserId"]')).not.toBeNull();
 	});
 
 	it('opens a production from its empty state', async () => {

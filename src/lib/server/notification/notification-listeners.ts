@@ -1368,6 +1368,45 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
+	// --- Named the event lead on a show (#2726) ---
+	domainEvents.on('production.lead_assigned', async ({ data: event }) => {
+		const day = formatClubDay(event.startsAt);
+		const by = event.assignedByName;
+		const line = by
+			? `${by} named you the event lead for "${event.eventTitle}" on ${day}.`
+			: `You are the event lead for "${event.eventTitle}" on ${day}.`;
+		try {
+			await dispatch({
+				type: 'show_lead_assigned',
+				userId: event.leadUserId,
+				userEmail: event.leadEmail,
+				title: `Event lead: ${event.eventTitle}`,
+				body: line,
+				href: `/staff/events/${event.eventId}/production`,
+				email: {
+					recipientName: event.leadName,
+					subject: `Event lead: ${event.eventTitle}`,
+					heading: 'Event lead',
+					paragraphs: [
+						{ text: line },
+						{ text: 'The production console has the lineup, terms, crew and room for the show.' }
+					],
+					details: [
+						{ label: 'Event', value: event.eventTitle },
+						{ label: 'Date', value: day },
+						...(by ? [{ label: 'Named by', value: by }] : [])
+					],
+					cta: { label: 'Open the console' }
+				}
+			});
+		} catch (err) {
+			captureException(err, {
+				event: 'notification.show_lead_assigned',
+				to: event.leadEmail
+			});
+		}
+	});
+
 	// --- A committee's work, due soon or late (#1709) ---
 	// One event is one person's digest for a reminder pass (#2507). Not caught:
 	// a throw here is how the drain knows to leave the items owed. A grant's or

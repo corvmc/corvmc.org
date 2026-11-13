@@ -109,3 +109,4 @@ A page or less. Link the issue and the PRs.
 | 0075 | [A listing says who may see it](0075-a-listing-says-who-may-see-it.md)                                                         | 2026-11-13 | Accepted           |
 | 0076 | [Classifieds follow-ups derive from what is stored](0076-classifieds-follow-ups-derive-from-what-is-stored.md)                 | 2026-11-13 | Accepted           |
 | 0077 | [A removal is a record of an upheld report](0077-a-removal-is-a-record-of-an-upheld-report.md)                                 | 2026-11-13 | Accepted           |
+| 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                             | 2026-11-13 | Accepted           |
