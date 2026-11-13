@@ -19,7 +19,7 @@ binding = "ASSETS"
 # an hour twice a year.
 [triggers]
 crons = [
-  "*/5 * * * *",  # send-campaigns
+  "*/5 * * * *",  # send-campaigns, send-outbox
   "*/15 * * * *", # auto-complete, complete-shifts, expire-waitlisted, wake-snoozed, lift-lapsed-removals,
                   #   lock-sync, reminders, schedule-radio, sweep-door-sales
   "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
@@ -81,6 +81,9 @@ PUBLIC_SITE_URL = "https://corvmc.org"
 # treats every other value (and an unset one) as the in-memory fake, so the
 # opt-in lives here rather than the opt-out living in every dev checkout.
 PAYMENTS_DRIVER = "stripe"
+# The same opt-in for mail: anything but "postmark" logs each message instead of
+# sending it (`mailDriver()` in postmark-client.ts), so a dev checkout never mails.
+MAIL_DRIVER = "postmark"
 # The practice room's Stripe smart reader (`tmr_…`, #1659). Not a secret. Empty
 # until the S700 is registered to the Terminal Location; while empty, "Pay at
 # the reader" does not appear. Owner setup: #1722.

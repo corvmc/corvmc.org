@@ -8,6 +8,11 @@ import { sanitizeBio } from '#lib/utils/markdown.js';
 import { writeActContactUnguarded, type ContactData } from './contact-service';
 import { performerFor } from '#lib/server/party/organization-service.js';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import * as publicEnv from '$app/env/public';
+import { outboxMessage } from '#lib/server/db/schema/outbox.js';
+import { emailRow } from '#lib/server/outbox/outbox-row.js';
+import { standaloneEmail } from '#lib/server/notification/dispatcher.js';
+import type { StandaloneEmailContent } from '#lib/types/notification-email.js';
 
 /**
  * The contact-sheet link, and the only surface an external act can reach.
@@ -38,36 +43,88 @@ function expiresAt(): Date {
 	return d;
 }
 
+/** Where an act fills its contact sheet in. Staff copy it when the act asks again. */
+export function contactSheetUrl(token: string): string {
+	return `${publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org'}/act/${token}`;
+}
+
+/** The outbox subject a link's email is filed under: the link row, so each send has its own. */
+export const contactSheetSubject = (linkId: string) => ({
+	type: 'directory_entry_link',
+	id: linkId
+});
+
 /**
- * Issue a link for one act, to one address.
+ * Issue a link for one act, to one address, and email it (#2781).
  *
  * Any live link for that entry is revoked first. Two live links would mean an
  * address staff had deliberately cut off could still be used by whoever holds
- * the older one, which is the opposite of what revoking is for.
+ * the older one, which is the opposite of what revoking is for. The revoke, the
+ * new link and its email commit in one batch; the outbox sends the email.
  */
 export async function issueContactSheetLink(
 	entryId: string,
 	email: string,
 	actorId: string
-): Promise<{ token: string }> {
+): Promise<{ token: string; url: string; outboxId: string }> {
 	await requireCapability('directory.shareContactSheet');
 
-	await db
-		.update(directoryEntryLink)
-		.set({ revokedAt: new Date() })
-		.where(and(eq(directoryEntryLink.entryId, entryId), isNull(directoryEntryLink.revokedAt)));
+	const [entry] = await db
+		.select({ name: directoryEntry.name })
+		.from(directoryEntry)
+		.where(eq(directoryEntry.id, entryId))
+		.limit(1);
 
-	const [row] = await db
-		.insert(directoryEntryLink)
-		.values({
-			entryId,
-			email: email.toLowerCase().trim(),
-			expiresAt: expiresAt(),
-			createdById: actorId
-		})
-		.returning({ token: directoryEntryLink.token });
+	const to = email.toLowerCase().trim();
+	const link = {
+		id: crypto.randomUUID(),
+		token: crypto.randomUUID(),
+		entryId,
+		email: to,
+		expiresAt: expiresAt(),
+		createdById: actorId
+	};
+	const url = contactSheetUrl(link.token);
+	const mail = emailRow(
+		standaloneEmail(
+			'contact_sheet.link',
+			to,
+			contactSheetEmail(entry?.name ?? null, url, link.expiresAt)
+		),
+		contactSheetSubject(link.id)
+	);
 
-	return { token: row.token };
+	await db.batch([
+		db
+			.update(directoryEntryLink)
+			.set({ revokedAt: new Date() })
+			.where(and(eq(directoryEntryLink.entryId, entryId), isNull(directoryEntryLink.revokedAt))),
+		db.insert(directoryEntryLink).values(link),
+		db.insert(outboxMessage).values(mail)
+	]);
+
+	return { token: link.token, url, outboxId: mail.id };
+}
+
+function contactSheetEmail(
+	actName: string | null,
+	url: string,
+	until: Date
+): StandaloneEmailContent {
+	const expires = until.toLocaleDateString('en-US', {
+		month: 'long',
+		day: 'numeric',
+		timeZone: 'America/Los_Angeles'
+	});
+	return {
+		subject: 'Your contact sheet for Corvallis Music Collective',
+		heading: actName ? `Contact sheet for ${actName}` : 'Your contact sheet',
+		paragraphs: [
+			{ text: 'Add your bio, links and booking contact so we can reach you about the show.' },
+			{ text: `The link works until ${expires}. No account is needed.` }
+		],
+		cta: { label: 'Open contact sheet', url }
+	};
 }
 
 export async function revokeContactSheetLink(entryId: string): Promise<void> {

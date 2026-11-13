@@ -2,6 +2,7 @@ import { ServerClient } from 'postmark';
 import * as env from '$app/env/private';
 import { captureException } from '#lib/server/sentry.js';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
+import { createLogMailClient } from './log-mail-client';
 
 // ---------------------------------------------------------------------------
 // Postmark email client
@@ -13,12 +14,27 @@ import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 // Postmark message streams, read from the environment. These are custom streams
 // rather than Postmark's defaults (`outbound` / `broadcast`), so both must exist
 // with the configured ids on the server POSTMARK_SERVER_TOKEN belongs to —
-// otherwise Postmark rejects every send. Required: there is no fallback.
+// otherwise Postmark rejects every send. Required under the postmark driver.
 
-let client: ServerClient | null = null;
+type MailClient = Pick<
+	ServerClient,
+	'sendEmailWithTemplate' | 'sendEmailBatch' | 'sendEmailBatchWithTemplates'
+>;
 
-function getClient(): ServerClient {
+let client: MailClient | null = null;
+
+/**
+ * `postmark` only when the environment asks for it, as `PAYMENTS_DRIVER` does
+ * for Stripe. A dev checkout carries a real token, so the safe default is the
+ * log driver; production opts in through `wrangler.toml`.
+ */
+export function mailDriver(): 'postmark' | 'log' {
+	return env.MAIL_DRIVER === 'postmark' ? 'postmark' : 'log';
+}
+
+function getClient(): MailClient {
 	if (client) return client;
+	if (mailDriver() === 'log') return (client = createLogMailClient());
 
 	const token = env.POSTMARK_SERVER_TOKEN;
 	if (!token) {
@@ -29,14 +45,21 @@ function getClient(): ServerClient {
 	return client;
 }
 
+/** Drop the cached client, so a spec can switch drivers between cases. */
+export function resetMailClient(): void {
+	client = null;
+}
+
 function getBroadcastStream(): string {
 	const stream = env.POSTMARK_BROADCAST_STREAM;
+	if (!stream && mailDriver() === 'log') return 'log';
 	if (!stream) throw new Error('POSTMARK_BROADCAST_STREAM is not configured');
 	return stream;
 }
 
 function getTransactionalStream(): string {
 	const stream = env.POSTMARK_TRANSACTIONAL_STREAM;
+	if (!stream && mailDriver() === 'log') return 'log';
 	if (!stream) throw new Error('POSTMARK_TRANSACTIONAL_STREAM is not configured');
 	return stream;
 }
@@ -285,4 +308,64 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 		});
 		throw err;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Per-message results (for the outbox)
+// ---------------------------------------------------------------------------
+
+export interface TemplatedEmail {
+	to: string;
+	templateAlias: string;
+	model: Record<string, unknown>;
+	replyTo?: string | null;
+	tag?: string;
+}
+
+/** Postmark's MessageID for a message it took, or its reason for refusing one. */
+export type SendResult = { ok: true; messageId: string } | { ok: false; error: string };
+
+/**
+ * Templated emails of any alias, 500 to a call, answered per message: Postmark
+ * accepts a batch and refuses single messages inside it (an inactive recipient
+ * is ErrorCode 406), so a whole-batch throw cannot say which ones went. A call
+ * that throws fails every message in its chunk.
+ */
+export async function sendTemplatedEmails(messages: TemplatedEmail[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const contact_email = await contactEmail();
+
+	const out: SendResult[] = [];
+	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+		const chunk = messages.slice(i, i + BATCH_SIZE);
+		try {
+			const messageStream = getTransactionalStream();
+			const responses = await getClient().sendEmailBatchWithTemplates(
+				chunk.map((msg) => ({
+					From: `${fromName} <${fromAddress}>`,
+					To: msg.to,
+					ReplyTo: msg.replyTo ?? undefined,
+					TemplateAlias: msg.templateAlias,
+					TemplateModel: { ...msg.model, contact_email },
+					Tag: msg.tag,
+					MessageStream: messageStream
+				}))
+			);
+			chunk.forEach((_, j) => {
+				const r = responses[j];
+				out.push(
+					r && r.ErrorCode === 0
+						? { ok: true, messageId: r.MessageID }
+						: { ok: false, error: r ? `${r.ErrorCode}: ${r.Message}` : 'No response' }
+				);
+			});
+		} catch (err) {
+			captureException(err, { event: 'email.send', kind: 'outbox_batch', size: chunk.length });
+			const error = err instanceof Error ? err.message : String(err);
+			for (let j = 0; j < chunk.length; j++) out.push({ ok: false, error });
+		}
+	}
+	return out;
 }

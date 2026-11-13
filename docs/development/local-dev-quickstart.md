@@ -213,7 +213,22 @@ Only needed when working on payment flows:
 Without this, booking still works — the checkout redirect will just fail at the Stripe
 step, and confirm-without-payment flows are fully testable.
 
-## 7. Troubleshooting
+## 7. Email locally
+
+Local runs send no email. `MAIL_DRIVER` defaults to `log`: every message goes through the
+outbox as in production, and the dev server's console prints its template, model and
+recipient instead of calling Postmark. Leave `POSTMARK_SERVER_TOKEN` blank; no token is
+needed, and a real one in `.env` is never used.
+
+To check a template's rendering against Postmark, set `MAIL_DRIVER=postmark` with a token
+for a Postmark sandbox server. Never use the production server's token locally: it
+delivers to whatever addresses the local database holds.
+
+Every send is a row in `outbox_message` (pending, sent or failed, with the last error). The
+`/api/cron/send-outbox` job retries failed rows; see
+[the outbox](../architecture/outbox.md).
+
+## 8. Troubleshooting
 
 | Symptom                                                    | Fix                                                                                                                                               |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |

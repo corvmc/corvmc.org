@@ -5,6 +5,8 @@ import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { messagePreview } from './thread-service';
 import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
 import { dispatchReply } from './channel-dispatcher';
+import { outboxMessage } from '#lib/server/db/schema/outbox.js';
+import { outboxRow, type OutboxSubject } from '#lib/server/outbox/outbox-row.js';
 
 export interface AddInboundMessageParams {
 	threadId: string;
@@ -225,36 +227,159 @@ export async function recordOutboundMessage(params: RecordOutboundMessageParams)
 
 	await db
 		.update(inboxThread)
-		.set({
-			preview: messagePreview(params.body, thread.channel),
-			messageCount: sql`${inboxThread.messageCount} + 1`,
-			lastMessageAt: new Date(),
-			// Only ever set here. A thread with this null has never been answered,
-			// which is how the queue tells "unanswered" from "they replied".
-			lastOutboundAt: new Date(),
-			// We have said our piece, so the thread is now waiting on them. Read off
-			// the row already selected above rather than a second query. A reply sent
-			// after resolving leaves no marker — the badge only means something on a
-			// thread that is still open.
-			awaitingReplySince: thread.status === 'resolved' ? null : new Date(),
-			updatedAt: new Date()
-		})
+		.set(threadAfterOutbound(thread, params.body))
 		.where(eq(inboxThread.id, params.threadId));
 
-	// Only for a reply a staff member actually typed here. The lone listener
-	// notifies on `portal` alone — where the message row is the delivery — and an
-	// echo is never portal, so an event carrying a null sender would be a payload
-	// nothing reads and every future listener has to remember to guard.
-	if (params.authorUserId) {
-		domainEvents.emit('inbox.message_sent', {
-			threadId: params.threadId,
-			messageId: message.id,
-			channel: thread.channel,
-			sentByUserId: params.authorUserId
-		});
-	}
-
+	announceOutbound(thread, message.id, params.authorUserId);
 	return message;
+}
+
+type Thread = typeof inboxThread.$inferSelect;
+
+/** What an outbound message does to its thread, sent now or queued. */
+function threadAfterOutbound(thread: Thread, body: string) {
+	return {
+		preview: messagePreview(body, thread.channel),
+		messageCount: sql`${inboxThread.messageCount} + 1`,
+		lastMessageAt: new Date(),
+		// Only ever set here. A thread with this null has never been answered,
+		// which is how the queue tells "unanswered" from "they replied".
+		lastOutboundAt: new Date(),
+		// We have said our piece, so the thread is now waiting on them. A reply
+		// sent after resolving leaves no marker — the badge only means something
+		// on a thread that is still open.
+		awaitingReplySince: thread.status === 'resolved' ? null : new Date(),
+		updatedAt: new Date()
+	};
+}
+
+/**
+ * Only for a reply a staff member typed here. The lone listener notifies on
+ * `portal`, where the message row is the delivery; an echo has no sender.
+ */
+function announceOutbound(thread: Thread, messageId: string, authorUserId: string | null) {
+	if (!authorUserId) return;
+	domainEvents.emit('inbox.message_sent', {
+		threadId: thread.id,
+		messageId,
+		channel: thread.channel,
+		sentByUserId: authorUserId
+	});
+}
+
+/** Everything the channel needs to send `body` as a reply on `thread`. */
+async function replyParams(thread: Thread, body: string, staffName: string) {
+	// The last inbound message does two jobs: its id threads the email reply, and
+	// its timestamp is what tells the Meta channels whether the 24-hour messaging
+	// window is still open.
+	const [lastInbound] = await db
+		.select({ channelMessageId: inboxMessage.channelMessageId, createdAt: inboxMessage.createdAt })
+		.from(inboxMessage)
+		.where(and(eq(inboxMessage.threadId, thread.id), eq(inboxMessage.direction, 'inbound')))
+		.orderBy(desc(inboxMessage.createdAt), desc(inboxMessage.id))
+		.limit(1);
+
+	// Build References chain from all inbound message IDs
+	const inboundIds = await db
+		.select({ channelMessageId: inboxMessage.channelMessageId })
+		.from(inboxMessage)
+		.where(and(eq(inboxMessage.threadId, thread.id), eq(inboxMessage.direction, 'inbound')))
+		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
+
+	const references =
+		inboundIds
+			.map((m) => normalizeMessageId(m.channelMessageId))
+			.filter(Boolean)
+			.join(' ') || null;
+
+	return {
+		channel: thread.channel,
+		threadId: thread.id,
+		groupId: thread.groupId,
+		body,
+		staffName,
+		contactName: thread.contactName,
+		contactEmail: thread.contactEmail,
+		contactPhone: thread.contactPhone,
+		contactExternalId: thread.contactExternalId,
+		subject: thread.subject,
+		lastInboundMessageId: normalizeMessageId(lastInbound?.channelMessageId),
+		lastInboundAt: lastInbound?.createdAt ?? null,
+		references
+	};
+}
+
+/**
+ * A reply filed now and sent by the outbox: the statements to put in the
+ * caller's `db.batch` beside the change that owes the reply, so the two commit
+ * together. Call `announceQueuedReply` once the batch has committed.
+ */
+export async function queuedReplyStatements(
+	params: AddOutboundMessageParams & { subject?: OutboxSubject }
+) {
+	const [thread] = await db
+		.select()
+		.from(inboxThread)
+		.where(eq(inboxThread.id, params.threadId))
+		.limit(1);
+	if (!thread) throw new Error(`Thread ${params.threadId} not found`);
+
+	const messageId = crypto.randomUUID();
+	const outbox = outboxRow(
+		{ kind: 'inbox_reply', payload: { messageId } },
+		params.subject ?? { type: 'inbox_message', id: messageId }
+	);
+	return {
+		thread,
+		messageId,
+		outboxId: outbox.id,
+		statements: [
+			db.insert(inboxMessage).values({
+				id: messageId,
+				threadId: thread.id,
+				direction: 'outbound',
+				body: params.body,
+				authorName: params.authorName,
+				authorUserId: params.authorUserId,
+				channelMessageId: null
+			}),
+			db
+				.update(inboxThread)
+				.set(threadAfterOutbound(thread, params.body))
+				.where(eq(inboxThread.id, thread.id)),
+			db.insert(outboxMessage).values(outbox)
+		] as const
+	};
+}
+
+export function announceQueuedReply(
+	queued: { thread: Thread; messageId: string },
+	authorUserId: string
+) {
+	announceOutbound(queued.thread, queued.messageId, authorUserId);
+}
+
+/**
+ * The outbox's sender for a queued reply: dispatch on the thread's channel and
+ * stamp the channel's id on the message. Throws when the channel refuses.
+ */
+export async function deliverQueuedReply(messageId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ message: inboxMessage, thread: inboxThread })
+		.from(inboxMessage)
+		.innerJoin(inboxThread, eq(inboxThread.id, inboxMessage.threadId))
+		.where(eq(inboxMessage.id, messageId))
+		.limit(1);
+	if (!row) throw new Error(`Message ${messageId} not found`);
+
+	const channelMessageId =
+		(await dispatchReply(
+			await replyParams(row.thread, row.message.body, row.message.authorName ?? '')
+		)) ?? null;
+	if (channelMessageId) {
+		await db.update(inboxMessage).set({ channelMessageId }).where(eq(inboxMessage.id, messageId));
+	}
+	return channelMessageId;
 }
 
 export async function addOutboundMessage(params: AddOutboundMessageParams) {
@@ -266,48 +391,11 @@ export async function addOutboundMessage(params: AddOutboundMessageParams) {
 
 	if (!thread) throw new Error(`Thread ${params.threadId} not found`);
 
-	// The last inbound message does two jobs: its id threads the email reply, and
-	// its timestamp is what tells the Meta channels whether the 24-hour messaging
-	// window is still open.
-	const [lastInbound] = await db
-		.select({ channelMessageId: inboxMessage.channelMessageId, createdAt: inboxMessage.createdAt })
-		.from(inboxMessage)
-		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(desc(inboxMessage.createdAt), desc(inboxMessage.id))
-		.limit(1);
-
-	// Build References chain from all inbound message IDs
-	const inboundIds = await db
-		.select({ channelMessageId: inboxMessage.channelMessageId })
-		.from(inboxMessage)
-		.where(and(eq(inboxMessage.threadId, params.threadId), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
-
-	const references =
-		inboundIds
-			.map((m) => normalizeMessageId(m.channelMessageId))
-			.filter(Boolean)
-			.join(' ') || null;
-
 	let channelMessageId: string | null;
 
 	try {
 		channelMessageId =
-			(await dispatchReply({
-				channel: thread.channel,
-				threadId: thread.id,
-				groupId: thread.groupId,
-				body: params.body,
-				staffName: params.authorName,
-				contactName: thread.contactName,
-				contactEmail: thread.contactEmail,
-				contactPhone: thread.contactPhone,
-				contactExternalId: thread.contactExternalId,
-				subject: thread.subject,
-				lastInboundMessageId: normalizeMessageId(lastInbound?.channelMessageId),
-				lastInboundAt: lastInbound?.createdAt ?? null,
-				references
-			})) ?? null;
+			(await dispatchReply(await replyParams(thread, params.body, params.authorName))) ?? null;
 	} catch (err) {
 		console.error('[inbox] Failed to dispatch reply:', err);
 		throw err;

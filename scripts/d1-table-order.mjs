@@ -57,6 +57,8 @@ export const tableOrder = [
 	// A root: no foreign key at all. `subject_id` is polymorphic, so it names
 	// reservations and signups without referencing either.
 	'reminder_sent',
+	// A root: no foreign key. `subject_id` is polymorphic, like reminder_sent's.
+	'outbox_message',
 	// The ops half of a show, and no longer downstream of the listing: nothing on
 	// it points at one since #1202. It comes first because `event_listing` now
 	// references *it*.

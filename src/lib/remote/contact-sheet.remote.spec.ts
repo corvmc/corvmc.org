@@ -17,11 +17,19 @@ const getContactSheetDisclosure = vi.fn(async (token: string) => {
 	if (!sheet) throw new ContactSheetLinkInvalidError();
 	return sheet;
 });
+const issueContactSheetLink = vi.fn(async (..._a: unknown[]) => ({
+	token: 'tok-new',
+	url: 'https://corvmc.org/act/tok-new',
+	outboxId: 'ob-1'
+}));
 vi.mock('#lib/server/directory/contact-sheet-service.js', () => ({
 	getContactSheetDisclosure,
-	issueContactSheetLink: vi.fn(),
+	issueContactSheetLink,
 	saveContactSheet: vi.fn()
 }));
+
+const deliverNow = vi.fn(async (id: string) => ({ id, status: 'sent', error: null }));
+vi.mock('#lib/server/outbox/outbox-service.js', () => ({ deliverNow }));
 
 const listActSlotTerms = vi.fn(async (_entryId: string) => [
 	{ eventId: 'e1', contactId: 'c-a', terms: {} },
@@ -39,7 +47,9 @@ vi.mock('#lib/server/production/artifact-request-service.js', () => ({ livePoste
 const listFor = vi.fn(async () => []);
 vi.mock('#lib/server/media/media-service.js', () => ({ listFor }));
 vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: () => null }));
-vi.mock('#lib/server/authorization.js', () => ({ requireCapability: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({
+	requireCapability: vi.fn(async () => ({ id: 'staff-1' }))
+}));
 vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
@@ -58,9 +68,11 @@ vi.mock('$app/server', () => ({
 }));
 vi.mock('./_remote', () => ({ form: remoteFn('form') }));
 
-const { getContactSheet } = (await import('./contact-sheet.remote')) as unknown as {
-	getContactSheet: (token: string) => Promise<{ bookings: { eventId: string }[] }>;
-};
+const { getContactSheet, sendContactSheetLink } =
+	(await import('./contact-sheet.remote')) as unknown as {
+		getContactSheet: (token: string) => Promise<{ bookings: { eventId: string }[] }>;
+		sendContactSheetLink: (d: { entryId: string; email: string }) => Promise<unknown>;
+	};
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -82,5 +94,20 @@ describe('getContactSheet bookings', () => {
 		expect(listActSlotTerms).not.toHaveBeenCalled();
 		expect(actContactNamesUnguarded).not.toHaveBeenCalled();
 		expect(livePosterRequests).not.toHaveBeenCalled();
+	});
+});
+
+// #2781: "Link sent" answered with nothing sent. The answer is now the outbox
+// row's, and the URL comes back so staff can pass it on themselves.
+describe('sending a contact sheet link', () => {
+	it.each([
+		['sent', true],
+		['pending', false]
+	] as const)('reports the email as sent only when its row is %s', async (status, sent) => {
+		deliverNow.mockResolvedValueOnce({ id: 'ob-1', status, error: null });
+		const result = await sendContactSheetLink({ entryId: 'act-a', email: 'a@b.test' });
+
+		expect(deliverNow).toHaveBeenCalledWith('ob-1');
+		expect(result).toEqual({ success: true, url: 'https://corvmc.org/act/tok-new', sent });
 	});
 });

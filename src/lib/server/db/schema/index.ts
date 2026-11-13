@@ -51,3 +51,4 @@ export * from './sponsor';
 export * from './grant';
 export * from './ballot';
 export * from './group-application';
+export * from './outbox';

@@ -122,6 +122,11 @@ const fees = vi.hoisted(() => ({
 }));
 vi.mock('#lib/server/market/vendor-fee-service.js', () => fees);
 
+const outbox = vi.hoisted(() => ({
+	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null as string | null }))
+}));
+vi.mock('#lib/server/outbox/outbox-service.js', () => outbox);
+
 const remote = await import('./market.remote');
 
 /** The mocked `form()` above returns a plain function; the real type has no call signature. */
@@ -211,6 +216,20 @@ describe('deciding an application (#1503)', () => {
 			);
 		}
 	);
+
+	// #2819: a refused send turned a saved decision into a 500. The decision
+	// stands; the answer says whether its message went.
+	it.each([
+		['sent', true],
+		['pending', false],
+		['failed', false]
+	] as const)('answers success when the message is %s, saying so', async (status, told) => {
+		signedIn = true;
+		svc.decideApplication.mockResolvedValueOnce({ eventId: 'evt-1', outboxId: 'ob-1' } as never);
+		outbox.deliverNow.mockResolvedValueOnce({ id: 'ob-1', status, error: null });
+		expect(await decide()).toEqual({ success: true, messageSent: told });
+		expect(outbox.deliverNow).toHaveBeenCalledWith('ob-1');
+	});
 
 	it('lets staff decide as cover', async () => {
 		signedIn = true;

@@ -15,6 +15,7 @@ import { positionOrder, type Capability, type Position } from '#lib/config.js';
 let updates: { table: string; values: Record<string, unknown> }[] = [];
 let inserts: { table: string; rows: Record<string, unknown>[] }[] = [];
 let selectQueue: unknown[][] = [];
+let batches: number[] = [];
 
 function tableName(table: unknown): string {
 	if (!table || typeof table !== 'object') return 'unknown';
@@ -52,7 +53,12 @@ vi.mock('#lib/server/db/index.js', () => ({
 				updates.push({ table: tableName(table), values });
 				return { where: () => ({ then: (r: (v: unknown) => void) => r(undefined) }) };
 			}
-		})
+		}),
+		// The statements were recorded as they were built; the batch only runs them.
+		batch: async (statements: unknown[]) => {
+			batches.push(statements.length);
+			return [];
+		}
 	}
 }));
 
@@ -109,6 +115,7 @@ beforeEach(() => {
 	updates = [];
 	inserts = [];
 	selectQueue = [];
+	batches = [];
 	heldPositions = ['staff'];
 });
 
@@ -241,6 +248,21 @@ describe('issuing and revoking', () => {
 	it('normalizes the address it is valid for', async () => {
 		await issueContactSheetLink('de-1', '  Manager@Example.COM ', 'staff-1');
 		expect(inserts[0].rows[0]).toMatchObject({ email: 'manager@example.com' });
+	});
+
+	// #2781: "Link sent" answered with nothing sent. The email is now an outbox
+	// row committed with the link, so a link cannot exist without its send.
+	it('emails the link it issues, in the same batch as the link', async () => {
+		selectQueue = [[{ name: 'Touring Act' }]];
+		const { token, url, outboxId } = await issueContactSheetLink('de-1', 'A@B.test', 'staff-1');
+
+		expect(batches).toEqual([3]);
+		expect(inserts.map((i) => i.table)).toEqual(['directory_entry_link', 'outbox_message']);
+		const mail = inserts[1].rows[0] as { id: string; payload: { to: string; model: object } };
+		expect(mail.id).toBe(outboxId);
+		expect(mail.payload.to).toBe('a@b.test');
+		expect(url).toMatch(new RegExp(`/act/${token}$`));
+		expect(JSON.stringify(mail.payload.model)).toContain(url);
 	});
 
 	it('gives the link a finite life', async () => {

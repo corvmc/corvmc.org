@@ -16,6 +16,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/lock-access',
 	'/api/cron/lock-sync',
 	'/api/cron/send-campaigns',
+	'/api/cron/send-outbox',
 	'/api/cron/complete-shifts',
 	'/api/cron/sweep-media',
 	'/api/cron/schedule-radio',
@@ -410,7 +411,8 @@ describe('runScheduledJobs', () => {
 
 		await runScheduledJobs('*/5 * * * *', env, fetcher, checkIn);
 
-		expect(checkIn).toHaveBeenCalledTimes(2);
+		// An opening and a closing check-in per job on this trigger.
+		expect(checkIn).toHaveBeenCalledTimes(2 * CRON_SCHEDULE['*/5 * * * *'].length);
 		expect(checkIn.mock.calls[1][0]).toEqual({
 			slug: 'send-campaigns',
 			status: 'ok',

@@ -40,6 +40,7 @@ import {
 beforeEach(() => {
 	vi.clearAllMocks();
 	for (const key of Object.keys(mockEnv)) delete mockEnv[key];
+	mockEnv.MAIL_DRIVER = 'postmark';
 	mockEnv.POSTMARK_SERVER_TOKEN = 'test-token';
 	mockEnv.POSTMARK_TRANSACTIONAL_STREAM = 'test-transactional';
 	mockEnv.POSTMARK_BROADCAST_STREAM = 'test-broadcast';

@@ -32,6 +32,7 @@
 		withdrawVendorForm
 	} from '#lib/remote/market.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import { toastDelivery } from '#lib/utils/delivery-toast.js';
 
 	const params = routeParams('id');
 
@@ -305,7 +306,11 @@
 										modalTitle={m.staff_events_id_vendors_accept_2_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_accepted_vendor_told_toast()}
+										onsuccess={(r) =>
+											toastDelivery(r, {
+												sent: m.staff_events_id_vendors_accepted_vendor_told_toast(),
+												notSent: m.staff_events_id_vendors_accepted_message_not_sent_toast()
+											})}
 										variant="ghost"
 										size="sm"
 									>
@@ -361,7 +366,11 @@
 										modalTitle={m.staff_events_id_vendors_decline_2_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_declined_vendor_told_toast()}
+										onsuccess={(r) =>
+											toastDelivery(r, {
+												sent: m.staff_events_id_vendors_declined_vendor_told_toast(),
+												notSent: m.staff_events_id_vendors_declined_message_not_sent_toast()
+											})}
 										variant="ghost"
 										size="sm"
 									>

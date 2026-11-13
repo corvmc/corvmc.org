@@ -35,6 +35,7 @@ import {
 	submitApplication,
 	withdrawApplication
 } from '#lib/server/market/market-service.js';
+import { deliverNow } from '#lib/server/outbox/outbox-service.js';
 import {
 	getVendorFee,
 	startVendorFeeCheckout,
@@ -236,14 +237,16 @@ export const decideVendorForm = form(
 	}),
 	async (data) => {
 		const { user } = await requireMarketDecider(await getVendorEventId(data.vendorId));
-		const { eventId: id } = await decideApplication(
+		const { eventId: id, outboxId } = await decideApplication(
 			data.vendorId,
 			{ decision: data.decision, tableLabel: data.tableLabel, message: data.message },
 			{ id: user.id, name: user.name }
 		);
 		void getStaffMarketVendors(id).refresh();
 		void getCommitteeMarketVendors(id).refresh();
-		return { success: true };
+		// The decision stands either way; the page says whether the vendor was told (#2819).
+		const delivery = outboxId ? await deliverNow(outboxId) : null;
+		return { success: true, messageSent: delivery?.status === 'sent' };
 	}
 );
 

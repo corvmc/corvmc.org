@@ -440,6 +440,8 @@
 	"member_groups_slug_markets_event_id_applications_arrive_from_body": "Applications arrive from the public event page.",
 	"member_groups_slug_markets_event_id_decline_title": "Decline {businessName}",
 	"member_groups_slug_markets_event_id_declined_vendor_told_toast": "Declined — vendor told",
+	"member_groups_slug_markets_event_id_accepted_message_not_sent_toast": "Accepted — message not sent",
+	"member_groups_slug_markets_event_id_declined_message_not_sent_toast": "Declined — message not sent",
 	"member_groups_slug_markets_event_id_market_day_label": "Market day",
 	"member_groups_slug_markets_event_id_message_vendor_label": "Message to the vendor",
 	"member_groups_slug_markets_event_id_needs_label": "Needs",

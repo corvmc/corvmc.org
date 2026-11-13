@@ -13,7 +13,8 @@ import type { CronCheckIn } from './sentry-check-in';
  * here: they are a registry drained every 15 minutes (#1186).
  */
 export const CRON_SCHEDULE: Record<string, string[]> = {
-	'*/5 * * * *': ['/api/cron/send-campaigns'],
+	// The outbox retries on a 1-minute-and-up backoff, so a 5-minute tick is its floor.
+	'*/5 * * * *': ['/api/cron/send-campaigns', '/api/cron/send-outbox'],
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
 		'/api/cron/complete-shifts',
@@ -79,6 +80,7 @@ export type RetiredMonitor = { retired: string; ref: string };
  */
 export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'send-campaigns': 'live',
+	'send-outbox': 'live',
 	'auto-complete': 'live',
 	'complete-shifts': 'live',
 	'expire-waitlisted': 'live',
