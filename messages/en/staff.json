@@ -3332,6 +3332,7 @@
 	"staff_tasks_task_added_toast": "Task added",
 	"staff_tasks_section_label": "Section",
 	"staff_tasks_no_section_text": "No section",
+	"staff_tasks_no_section_placeholder": "No section",
 	"staff_tasks_new_task_in_section_label": "New task in {name}",
 	"staff_tasks_add_section_label": "Add section",
 	"staff_tasks_add_section_title": "Add section",

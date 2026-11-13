@@ -34,7 +34,7 @@
 			field={move.fields.sectionId}
 			type="select"
 			label={m.staff_tasks_section_label()}
-			placeholder={m.staff_tasks_no_section_text()}
+			placeholder={m.staff_tasks_no_section_placeholder()}
 			{options}
 			value={sectionId ?? ''}
 		/>

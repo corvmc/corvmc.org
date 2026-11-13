@@ -299,8 +299,8 @@
 				{#each sectioned as group (group.section?.id ?? 'none')}
 					<tr data-testid="task-group-row" data-section={group.section?.id ?? 'none'}>
 						<td colspan={columns} class="cell-group">
-							<div class="flex items-center gap-2">
-								<span class="min-w-0 flex-1">
+							<div class="flex w-max items-center gap-2">
+								<span>
 									{group.section?.name ?? m.staff_tasks_no_section_text()}
 									<span class="text-subtle font-normal">
 										· {m.staff_tasks_open_count_text({
