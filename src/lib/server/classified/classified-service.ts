@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { classifiedPost, classifiedPostTag } from '#lib/server/db/schema/classified.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
-import { and, count, desc, eq, gt, inArray, or, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, lte, or, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
@@ -339,6 +339,27 @@ export async function getPostForModeration(id: string) {
 		.where(eq(classifiedPost.id, id))
 		.limit(1);
 	return row ?? null;
+}
+
+/**
+ * Posts on the board at `from` that leave it by `to`, with their authors: the
+ * expiry reminder's query. A post made as a band still reaches its author, the
+ * only person who can renew it.
+ */
+export async function listPostsExpiringBetween(from: Date, to: Date) {
+	return db
+		.select({
+			id: classifiedPost.id,
+			title: classifiedPost.title,
+			expiresAt: classifiedPost.expiresAt,
+			userId: user.id,
+			userName: user.name,
+			userEmail: user.email
+		})
+		.from(classifiedPost)
+		.innerJoin(user, eq(user.id, classifiedPost.authorUserId))
+		.where(and(onBoard(from), lte(classifiedPost.expiresAt, to)))
+		.limit(500);
 }
 
 const rowSelection = {

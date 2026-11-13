@@ -414,6 +414,26 @@ describe('door code ready', () => {
 	});
 });
 
+describe('classified post expiring', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	it('writes to the author and links to the post they can renew', async () => {
+		await emit('classified.expiring', {
+			postId: 'post-1',
+			title: 'Drummer wanted',
+			expiresOn: 'Wednesday, June 17, 2026',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'user@test.com'
+		});
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('classified_expiring');
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/classifieds/post-1');
+	});
+});
+
 describe('collapsed listeners use the generic template', () => {
 	beforeEach(() => registerAllNotificationListeners());
 

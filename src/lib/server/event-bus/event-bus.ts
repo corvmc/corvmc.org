@@ -322,6 +322,17 @@ export interface EquipmentLoanDueEvent {
 	dueDate: string;
 }
 
+/** An author's post leaves the board soon unless renewed (#2549). */
+export interface ClassifiedExpiringEvent {
+	postId: string;
+	title: string;
+	/** Formatted in club time. */
+	expiresOn: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+}
+
 /** A grant or sponsorship deadline coming up (#1477), for whoever manages that module. */
 export interface DevelopmentDeadlineDueEvent {
 	stage: '14d' | '3d';
@@ -949,6 +960,7 @@ export type DomainEvents = {
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.loan_due': EquipmentLoanDueEvent;
+	'classified.expiring': ClassifiedExpiringEvent;
 	'development.deadline_due': DevelopmentDeadlineDueEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;

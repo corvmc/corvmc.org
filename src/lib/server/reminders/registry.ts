@@ -4,7 +4,14 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
 import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
-import { DEFAULT_TIMEZONE, clubToday, fundingProjectKinds, type ProjectKind } from '#lib/config.js';
+import {
+	CLASSIFIED_EXPIRY_REMINDER_DAYS,
+	DEFAULT_TIMEZONE,
+	clubToday,
+	fundingProjectKinds,
+	surfaces,
+	type ProjectKind
+} from '#lib/config.js';
 import type { DeliverableDueItem } from '#lib/server/event-bus/event-bus.js';
 import { addIsoDays } from '#lib/utils/deadline.js';
 import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
@@ -21,6 +28,7 @@ import {
 } from '#lib/server/volunteer/orientation-reminders.js';
 import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import { defineReminder, type ReminderDefinition } from './types';
 
@@ -448,5 +456,32 @@ export const reminders: ReminderDefinition[] = [
 	// A grant report needs more warning than a show item (#2622).
 	deliverablesDue('due_14d', 4, 14, fundingProjectKinds),
 	deliverablesDue('due_3d', 0, 3),
-	deliverablesDue('overdue', -14, -1)
+	deliverablesDue('overdue', -14, -1),
+
+	// A classified post about to leave the board (#2549). The subject carries the
+	// expiry, so a renewed post is owed the reminder again next time round.
+	// Nothing goes out while the surface is off: the link would 404.
+	defineReminder({
+		key: 'classified_expiring',
+		subjectType: 'classified_post',
+		event: 'classified.expiring',
+		async due(now) {
+			if (!surfaces.classifieds) return [];
+			const rows = await listPostsExpiringBetween(
+				now,
+				new Date(now.getTime() + CLASSIFIED_EXPIRY_REMINDER_DAYS * DAY)
+			);
+			return rows.map((r) => ({
+				subjectId: `${r.id}:${r.expiresAt.toISOString()}`,
+				payload: {
+					postId: r.id,
+					title: r.title,
+					expiresOn: formatDateFull(r.expiresAt, TZ),
+					userId: r.userId,
+					userName: r.userName,
+					userEmail: r.userEmail
+				}
+			}));
+		}
+	})
 ];

@@ -1840,6 +1840,8 @@ export const CLASSIFIED_NOTE_MAX = 500;
 export const CLASSIFIED_TAGS_MAX = 10;
 export const CLASSIFIED_TAG_MAX = 50;
 export const CLASSIFIED_LIFETIME_DAYS = 30;
+/** How far ahead of expiry the author is reminded to renew. */
+export const CLASSIFIED_EXPIRY_REMINDER_DAYS = 3;
 /** Open, unexpired posts one member may hold at once. */
 export const MAX_OPEN_CLASSIFIEDS = 5;
 
