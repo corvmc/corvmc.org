@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "82a3c14e-4e6a-4569-931f-66be63851fcf",
+  "id": "50dea80b-399a-4b21-8756-b565337a5a2f",
   "prevIds": [
-    "3ec5b855-99a4-4a54-bbf5-852ea7d54c70"
+    "82a3c14e-4e6a-4569-931f-66be63851fcf"
   ],
   "ddl": [
     {
@@ -324,6 +324,10 @@
     },
     {
       "name": "duty_list_item",
+      "entityType": "tables"
+    },
+    {
+      "name": "duty_list_item_dependency",
       "entityType": "tables"
     },
     {
@@ -9270,6 +9274,26 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "item_id",
+      "entityType": "columns",
+      "table": "duty_list_item_dependency"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "depends_on_item_id",
+      "entityType": "columns",
+      "table": "duty_list_item_dependency"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -17430,6 +17454,36 @@
     },
     {
       "columns": [
+        "item_id"
+      ],
+      "tableTo": "duty_list_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_duty_list_item_dependency_item_id_duty_list_item_id_fk",
+      "entityType": "fks",
+      "table": "duty_list_item_dependency"
+    },
+    {
+      "columns": [
+        "depends_on_item_id"
+      ],
+      "tableTo": "duty_list_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_duty_list_item_dependency_depends_on_item_id_duty_list_item_id_fk",
+      "entityType": "fks",
+      "table": "duty_list_item_dependency"
+    },
+    {
+      "columns": [
         "volunteer_role_id"
       ],
       "tableTo": "volunteer_role",
@@ -19567,6 +19621,16 @@
       "name": "member_standing_pk",
       "entityType": "pks",
       "table": "member_standing"
+    },
+    {
+      "columns": [
+        "item_id",
+        "depends_on_item_id"
+      ],
+      "nameExplicit": false,
+      "name": "duty_list_item_dependency_pk",
+      "entityType": "pks",
+      "table": "duty_list_item_dependency"
     },
     {
       "columns": [
@@ -23610,6 +23674,20 @@
     {
       "columns": [
         {
+          "value": "depends_on_item_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "duty_list_item_dependency_depends_on_idx",
+      "entityType": "indexes",
+      "table": "duty_list_item_dependency"
+    },
+    {
+      "columns": [
+        {
           "value": "user_id",
           "isExpression": false
         },
@@ -25703,6 +25781,12 @@
       "name": "duty_list_item_capacity_positive",
       "entityType": "checks",
       "table": "duty_list_item"
+    },
+    {
+      "value": "item_id <> depends_on_item_id",
+      "name": "duty_list_item_dependency_not_self",
+      "entityType": "checks",
+      "table": "duty_list_item_dependency"
     },
     {
       "value": "interval_days > 0",

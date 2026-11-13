@@ -1263,6 +1263,28 @@ export const dutyListItem = sqliteTable(
 );
 
 /**
+ * A template item waiting on another in the same template (#2625). Applying the
+ * template copies each edge onto the tasks it stamps, as `work_order_dependency`.
+ * Never a cycle, which the service refuses on write.
+ */
+export const dutyListItemDependency = sqliteTable(
+	'duty_list_item_dependency',
+	{
+		itemId: text('item_id')
+			.notNull()
+			.references(() => dutyListItem.id, { onDelete: 'cascade' }),
+		dependsOnItemId: text('depends_on_item_id')
+			.notNull()
+			.references(() => dutyListItem.id, { onDelete: 'cascade' })
+	},
+	(t) => [
+		primaryKey({ columns: [t.itemId, t.dependsOnItemId] }),
+		index('duty_list_item_dependency_depends_on_idx').on(t.dependsOnItemId),
+		check('duty_list_item_dependency_not_self', sql`item_id <> depends_on_item_id`)
+	]
+);
+
+/**
  * Recurring facility work — a monthly deep clean, a quarterly PA check.
  *
  * **Generate-on-close**, not a window materializer: the next work order is

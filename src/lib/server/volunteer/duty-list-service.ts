@@ -19,11 +19,13 @@ import { DomainError } from '#lib/server/domain-error.js';
 import {
 	dutyList,
 	dutyListItem,
+	dutyListItemDependency,
 	volunteerRole,
 	volunteerShift,
 	volunteerSignup,
 	workOrder,
 	workOrderAssignee,
+	workOrderDependency,
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
@@ -318,6 +320,8 @@ export async function getStartableTemplate(id: string): Promise<DutyList> {
 
 export interface DutyListItemRow extends DutyListItem {
 	roleName: string;
+	/** The items in this template it waits on, by id (#2625). */
+	waitsOn: string[];
 	/** The owning committee's name, or null for staff's. */
 	groupName: string | null;
 	/** The role as a record, so the item can link to it. */
@@ -350,10 +354,13 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 		.where(eq(dutyListItem.dutyListId, id))
 		.orderBy(asc(dutyListItem.sortOrder));
 
+	const waits = await itemEdgesOf(id);
+
 	return {
 		list,
 		items: rows.map((r) => ({
 			...r.item,
+			waitsOn: waits.get(r.item.id) ?? [],
 			roleName: r.roleName,
 			groupName: r.groupName,
 			// A duty list item *is* a role at an offset, and the role was a bare
@@ -847,9 +854,12 @@ export async function applyDutyList(
 	const workRows: (typeof workOrder.$inferInsert)[] = [];
 	const shiftRows: (typeof volunteerShift.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
+	// Each item's stamped task, so the template's edges can be copied onto them.
+	const stamped = new Map<string, string>();
 
 	for (const item of items) {
 		const workOrderId = crypto.randomUUID();
+		stamped.set(item.id, workOrderId);
 		const windowed = item.offsetMinutes !== null && item.durationMinutes !== null;
 
 		// A window is a task and a shift; a deadline is a task alone (#2518).
@@ -893,11 +903,22 @@ export async function applyDutyList(
 		});
 	}
 
+	// The template's order between its items, as task dependencies (#2625).
+	const dependencyRows = items.flatMap((item) =>
+		item.waitsOn.flatMap((on) => {
+			const dependsOnId = stamped.get(on);
+			return dependsOnId
+				? [{ workOrderId: stamped.get(item.id)!, dependsOnId, createdByUserId }]
+				: [];
+		})
+	);
+
 	// Tasks first: a shift and a checklist item each carry `work_order_id`, so the
 	// row it names has to exist. `db.batch`, never `db.transaction` (broken on D1).
 	await db.batch([
 		...workRows.map((row) => db.insert(workOrder).values(row)),
-		...shiftRows.map((row) => db.insert(volunteerShift).values(row))
+		...shiftRows.map((row) => db.insert(volunteerShift).values(row)),
+		...dependencyRows.map((row) => db.insert(workOrderDependency).values(row))
 	] as unknown as Parameters<typeof db.batch>[0]);
 
 	if (taskRows.length > 0) {
@@ -1046,4 +1067,81 @@ export async function countTasks(workOrderIds: string[]) {
 		.groupBy(workTask.workOrderId);
 
 	return new Map(rows.map((r) => [r.workOrderId, { total: r.total, done: Number(r.done) }]));
+}
+
+// ---------------------------------------------------------------------------
+// Item dependencies (#2625)
+// ---------------------------------------------------------------------------
+
+/** Per item in the template, the items it waits on. Read by the template's id. */
+async function itemEdgesOf(dutyListId: string): Promise<Map<string, string[]>> {
+	const rows = await db
+		.select({
+			itemId: dutyListItemDependency.itemId,
+			dependsOnItemId: dutyListItemDependency.dependsOnItemId
+		})
+		.from(dutyListItemDependency)
+		.innerJoin(dutyListItem, eq(dutyListItem.id, dutyListItemDependency.itemId))
+		.where(eq(dutyListItem.dutyListId, dutyListId));
+	const out = new Map<string, string[]>();
+	for (const r of rows) out.set(r.itemId, [...(out.get(r.itemId) ?? []), r.dependsOnItemId]);
+	return out;
+}
+
+/** Whether item `from` already waits on `to`, directly or through other items. */
+async function itemReaches(from: string, to: string): Promise<boolean> {
+	const rows = await db.all<{ hit: number }>(sql`
+		with recursive reach(id) as (
+			select depends_on_item_id from duty_list_item_dependency where item_id = ${from}
+			union
+			select d.depends_on_item_id from duty_list_item_dependency d join reach r on d.item_id = r.id
+		)
+		select 1 as hit from reach where id = ${to} limit 1
+	`);
+	return rows.length > 0;
+}
+
+/** The template both items are on; refused when they are on different ones. */
+async function sameTemplate(itemId: string, dependsOnItemId: string): Promise<string> {
+	if (itemId === dependsOnItemId) {
+		throw new DutyListValidationError('An item cannot wait on itself.');
+	}
+	const rows = await db
+		.select({ id: dutyListItem.id, dutyListId: dutyListItem.dutyListId })
+		.from(dutyListItem)
+		.where(or(eq(dutyListItem.id, itemId), eq(dutyListItem.id, dependsOnItemId)));
+	if (rows.length !== 2) throw new DutyListValidationError('That item does not exist.');
+	if (rows[0].dutyListId !== rows[1].dutyListId) {
+		throw new DutyListValidationError('Pick an item on the same template.');
+	}
+	return rows[0].dutyListId;
+}
+
+/**
+ * Make one template item wait on another. A loop is refused, as it is between
+ * tasks; an edge that exists is a no-op. Returns the template's id.
+ */
+export async function addItemDependency(itemId: string, dependsOnItemId: string): Promise<string> {
+	const dutyListId = await sameTemplate(itemId, dependsOnItemId);
+	if (await itemReaches(dependsOnItemId, itemId)) {
+		throw new DutyListValidationError('That item already waits on this one.');
+	}
+	await db.insert(dutyListItemDependency).values({ itemId, dependsOnItemId }).onConflictDoNothing();
+	return dutyListId;
+}
+
+export async function removeItemDependency(
+	itemId: string,
+	dependsOnItemId: string
+): Promise<string> {
+	const dutyListId = await sameTemplate(itemId, dependsOnItemId);
+	await db
+		.delete(dutyListItemDependency)
+		.where(
+			and(
+				eq(dutyListItemDependency.itemId, itemId),
+				eq(dutyListItemDependency.dependsOnItemId, dependsOnItemId)
+			)
+		);
+	return dutyListId;
 }

@@ -29,6 +29,10 @@
 	import { describeDuration, describeOffset, splitOffset } from '../offsets';
 	import { Latest } from '#lib/latest.svelte.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import ItemWaitsOn from './ItemWaitsOn.svelte';
+
+	/** An item by its own name, else its role's, as the stamped task will read. */
+	const itemLabel = (i: { title: string | null; roleName: string }) => i.title ?? i.roleName;
 
 	const params = routeParams('id');
 
@@ -183,6 +187,16 @@
 								{#if item.notes}
 									<div class="line-clamp-1 text-sm text-base-content/60">{item.notes}</div>
 								{/if}
+								<ItemWaitsOn
+									item={{ id: item.id, label: itemLabel(item) }}
+									waitsOn={item.waitsOn.flatMap((id) => {
+										const on = d.items.find((i) => i.id === id);
+										return on ? [{ id, label: itemLabel(on) }] : [];
+									})}
+									others={d.items
+										.filter((i) => i.id !== item.id)
+										.map((i) => ({ id: i.id, label: itemLabel(i) }))}
+								/>
 							</td>
 							<td class="col-support">
 								{item.groupName ?? m.staff_staff_text()}
