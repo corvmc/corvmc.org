@@ -142,7 +142,7 @@
 			<Table>
 				{#snippet head()}
 					<th>{m.staff_project_label()}</th>
-					<th class="cell-num">{m.staff_spent_text()}</th>
+					<th class="cell-num">{m.staff_spent_label()}</th>
 				{/snippet}
 				{#each burn.parts as part (part.projectId)}
 					<tr>
