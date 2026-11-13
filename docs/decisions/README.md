@@ -102,3 +102,4 @@ A page or less. Link the issue and the PRs.
 | 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                       | 2026-11-13 | Accepted           |
 | 0069 | [Tasks link to what they are about, and a party has one timeline](0069-a-party-has-one-timeline.md)                            | 2026-11-13 | Accepted           |
 | 0070 | [A supplier is an organization](0070-a-supplier-is-an-organization.md)                                                         | 2026-11-13 | Accepted           |
+| 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted           |

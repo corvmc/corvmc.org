@@ -23,6 +23,8 @@
 	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
 	import { placeLine } from '#lib/utils/place.js';
 	import ShareButton from '#lib/components/ui/ShareButton.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
@@ -450,6 +452,10 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Each is left off when it has nothing for this member. -->
+	<RelatedShifts subject={{ type: 'event', id: evt.id }} member />
+	<RelatedTasks subject={{ type: 'event', id: evt.id }} member />
 
 	{#if data.upcoming.length > 0}
 		<section class="edet__more">

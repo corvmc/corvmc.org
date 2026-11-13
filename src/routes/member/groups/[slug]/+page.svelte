@@ -46,6 +46,8 @@
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 	import CommitteeOpenItems from './CommitteeOpenItems.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('slug');
@@ -127,6 +129,7 @@
 	 * member can move a project's status; budget and burn are on the Numbers tab.
 	 */
 	const projects = $derived(data.projects);
+	const hasProjectsTab = $derived(projects.length > 0 || may('production.create'));
 
 	// The actions column exists for a chair, and for a plain member who has a
 	// row of their own to edit. A staff non-member matches neither.
@@ -139,6 +142,14 @@
 	// of those would repaint nothing. See `custom/refresh-the-composed-query`.
 	const refreshRoster = () => void getMemberGroup(slug).refresh();
 </script>
+
+{#snippet relatedCards()}
+	<!-- Roster only: the member remotes refuse a staff reader. -->
+	{#if isMember}
+		<RelatedShifts subject={{ type: 'group', id: group.id }} member />
+		<RelatedTasks subject={{ type: 'group', id: group.id }} member />
+	{/if}
+{/snippet}
 
 <PageHeader width="3xl" title={group.name} subtitle={kindLabel}>
 	<!-- Your role, for anyone who has one. It was gated behind `canManage`, so
@@ -202,7 +213,7 @@
 			// Committee-only, and hidden while empty: a club can never own a project,
 			// so the tab would be a permanent dead end on most of these pages.
 			// A committee that opens shows keeps the tab while empty: its button is here.
-			...(projects.length > 0 || may('production.create')
+			...(hasProjectsTab
 				? [
 						{
 							key: 'projects',
@@ -346,6 +357,7 @@
 			roles={data.workOrderRoles}
 			canEdit={may('volunteer.manageRecurring')}
 		/>
+		{@render relatedCards()}
 	{:else if tab === 'items' && group.kind === 'committee'}
 		<CommitteeOpenItems {slug} />
 	{:else if tab === 'numbers' && may('finance.read')}
@@ -505,6 +517,10 @@
 			<InfoCard title={msg.member_how_works_title()}>
 				<p class="text-sm">{group.joinInstructions}</p>
 			</InfoCard>
+		{/if}
+		<!-- A group without the Projects tab shows its tasks and shifts here. -->
+		{#if !hasProjectsTab}
+			{@render relatedCards()}
 		{/if}
 	{:else}
 		<!-- Above the roster: applications are the rows waiting on somebody. -->

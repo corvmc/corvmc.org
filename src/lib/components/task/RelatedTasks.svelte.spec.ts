@@ -14,6 +14,9 @@ type Related = {
 };
 let response: Related | null;
 const getRelatedTasks = vi.hoisted(() => vi.fn());
+const getMemberRelatedTasks = vi.hoisted(() => vi.fn());
+let memberResponse: { groups: Related['groups']; mine: string[] };
+vi.mock('#lib/remote/member-related.remote.js', () => ({ getMemberRelatedTasks }));
 
 vi.mock('#lib/remote/tasks.remote.js', () => {
 	const field = (name: string) => ({
@@ -80,6 +83,7 @@ const chips = () =>
 beforeEach(() => {
 	document.body.innerHTML = '';
 	getRelatedTasks.mockReset().mockImplementation(async () => response);
+	getMemberRelatedTasks.mockReset().mockImplementation(async () => memberResponse);
 });
 
 describe('RelatedTasks', () => {
@@ -170,6 +174,27 @@ describe('RelatedTasks', () => {
 		response = null;
 		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(getRelatedTasks).toHaveBeenCalled());
+		await Promise.resolve();
+		expect(cardOrNull()).toBeNull();
+	});
+
+	it("on a member's card, links only their own tasks and offers no staff controls", async () => {
+		memberResponse = {
+			groups: [{ key: 'group', tasks: [task('mine'), task('theirs')], more: false }],
+			mine: ['mine']
+		};
+		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' }, member: true });
+		await vi.waitFor(() => expect(rows()).toHaveLength(2));
+		expect(getRelatedTasks).not.toHaveBeenCalled();
+		const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+		expect(hrefs).toEqual(['/member/volunteer/tasks/mine']);
+		expect(card().querySelector('[data-testid="related-new-task"]')).toBeNull();
+	});
+
+	it("leaves a member's card off when nothing is theirs", async () => {
+		memberResponse = { groups: [], mine: [] };
+		await render(RelatedTasks, { subject: { type: 'event', id: 'e1' }, member: true });
+		await vi.waitFor(() => expect(getMemberRelatedTasks).toHaveBeenCalled());
 		await Promise.resolve();
 		expect(cardOrNull()).toBeNull();
 	});
