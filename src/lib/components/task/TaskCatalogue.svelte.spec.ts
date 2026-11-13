@@ -96,6 +96,9 @@ vi.mock('#lib/remote/volunteer.remote.js', () => ({
 	openShift: query.remote(() => undefined)
 }));
 
+/** The chosen option of a `<select>`, read off the DOM rather than through its type. */
+const selected = (el: Element) => (el as unknown as { value: string }).value;
+
 const TaskCatalogue = (await import('./TaskCatalogue.test.svelte')).default;
 
 beforeEach(() => {
@@ -137,10 +140,11 @@ describe('TaskCatalogue', () => {
 		await vi.waitFor(() => expect(container.querySelector('[data-task="paint"]')).not.toBeNull());
 
 		expect(getTasksPage.fn).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'p1' }));
-		const groupBy = container.querySelector<HTMLSelectElement>('[data-testid="task-group"]')!;
-		expect([...groupBy.options].map((o) => o.value)).toEqual(['due', 'section']);
+		const groupBy = container.querySelector('[data-testid="task-group"]')!;
+		const offered = [...groupBy.querySelectorAll('option')].map((o) => o.getAttribute('value'));
+		expect(offered).toEqual(['due', 'section']);
 		// No sections: grouped by date, as before.
-		expect(groupBy.value).toBe('due');
+		expect(selected(groupBy)).toBe('due');
 		expect(container.querySelector('[data-section]')).toBeNull();
 		expect(container.querySelector('a[href="/staff/tasks/projects/p1"]')).toBeNull();
 		expect(
@@ -157,9 +161,7 @@ describe('TaskCatalogue', () => {
 		const { container } = await render(TaskCatalogue, { projectId: 'p1' });
 		await vi.waitFor(() => expect(container.querySelector('[data-task="paint"]')).not.toBeNull());
 
-		expect(container.querySelector<HTMLSelectElement>('[data-testid="task-group"]')?.value).toBe(
-			'section'
-		);
+		expect(selected(container.querySelector('[data-testid="task-group"]')!)).toBe('section');
 		// Each heading, then the tasks under it, top to bottom.
 		const order = [...container.querySelectorAll('tr[data-section], tr[data-task]')].map(
 			(r) => r.getAttribute('data-section') ?? r.getAttribute('data-task')
