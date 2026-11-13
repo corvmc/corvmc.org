@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { readFileSync, globSync } from 'node:fs';
+import { readFileSync, globSync, existsSync } from 'node:fs';
 import { posix } from 'node:path';
 
 /**
@@ -46,13 +46,42 @@ const CONTEXT = /^(id|.*Id|.*Ids|slug|token|intent|turnstileToken)$/;
 
 const GRANDFATHERED: string[] = JSON.parse(readFileSync('src/form-coverage.json', 'utf8'));
 
+function resolveSpec(file: string, spec: string): string {
+	return /^[$#]lib\//.test(spec)
+		? posix.join('src/lib', spec.slice(5))
+		: posix.join(posix.dirname(file), spec);
+}
+
+/**
+ * The components a barrel import names: `import { A } from './index.js'` maps
+ * to the `./A.svelte` the barrel re-exports as `A`, and nothing else in it.
+ */
+function barrelImports(file: string, source: string): string[] {
+	return [...source.matchAll(/import\s*{([^}]+)}\s*from\s+['"]([^'"]+\/index\.js)['"]/g)].flatMap(
+		([, names, spec]) => {
+			const barrel = resolveSpec(file, spec).replace(/\.js$/, '.ts');
+			if (!existsSync(barrel)) return [];
+			const text = readFileSync(barrel, 'utf8');
+			return names
+				.split(',')
+				.map((n) => n.trim().split(/\s+as\s+/)[0])
+				.flatMap((name) => {
+					const re = new RegExp(`default as ${name}\\s*}\\s*from\\s+['"]([^'"]+\\.svelte)['"]`);
+					const hit = text.match(re);
+					return hit ? [resolveSpec(barrel, hit[1])] : [];
+				});
+		}
+	);
+}
+
 /** The `.svelte` files a component imports, as repo-relative paths. */
 function svelteImports(file: string, source: string): string[] {
-	return [...source.matchAll(/from\s+['"]([^'"]+\.svelte)['"]/g)].map(([, spec]) =>
-		/^[$#]lib\//.test(spec)
-			? posix.join('src/lib', spec.slice(5))
-			: posix.join(posix.dirname(file), spec)
-	);
+	return [
+		...[...source.matchAll(/from\s+['"]([^'"]+\.svelte)['"]/g)].map(([, spec]) =>
+			resolveSpec(file, spec)
+		),
+		...barrelImports(file, source)
+	];
 }
 
 /** The text of a form's hosts and of every component they import. */
@@ -70,6 +99,11 @@ function declaresFieldSet(key: string, hosts: string[], files: Map<string, strin
 	return new RegExp(`^\\s*${key}\\s*:\\s*RemoteFormField`, 'm').test(renderScope(hosts, files));
 }
 
+type FieldSchema = { safeParse?: (v: unknown) => { success: boolean } };
+
+/** `form.field` for every field whose schema refuses a missing value. */
+const REQUIRED = new Set<string>();
+
 /** Every exported `form()`, by name, with its schema's keys. */
 async function remoteForms() {
 	const byName = new Map<string, string[]>();
@@ -82,8 +116,12 @@ async function remoteForms() {
 			if (v?.__?.type !== 'form' || typeof i !== 'number') continue;
 			// `null` is what `query`/`command` push, so it marks a non-form.
 			if (CAP[i] === null) continue;
-			const schema = CAP[i] as { shape?: Record<string, unknown> };
-			byName.set(name, Object.keys(schema?.shape ?? {}));
+			const schema = CAP[i] as { shape?: Record<string, FieldSchema> };
+			const shape = schema?.shape ?? {};
+			byName.set(name, Object.keys(shape));
+			for (const [k, field] of Object.entries(shape)) {
+				if (field?.safeParse && !field.safeParse(undefined).success) REQUIRED.add(`${name}.${k}`);
+			}
 		}
 	}
 	return byName;
@@ -157,6 +195,21 @@ describe('form field coverage', () => {
 				`nobody can set them. Add the control, drop the field, or — if the control ` +
 				`exists and this could not see it — add the entry to src/form-coverage.json ` +
 				`with a note on the PR:\n${offenders.map((f) => `  ${f}`).join('\n')}\n`
+		).toEqual([]);
+	});
+
+	// A listed field may be one the scan cannot see, or a capability not built
+	// yet. Neither excuses a required one: if nothing renders it, every submit
+	// of the form fails validation, as the booking rules did (#2753).
+	it('lists no field its schema requires', { timeout: 30_000 }, async () => {
+		const uncovered = new Set(await uncoveredFields());
+		const blocking = [...uncovered].filter((f) => REQUIRED.has(f));
+
+		expect(
+			blocking,
+			`No control renders these and their schema requires them, so every submit ` +
+				`fails. Render a control, or make the field optional and keep the stored ` +
+				`value when it is omitted:\n${blocking.map((f) => `  ${f}`).join('\n')}\n`
 		).toEqual([]);
 	});
 
