@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
+import { localResourceStatuses } from '#lib/config.js';
 
 /**
  * The local resources directory. What is worth pinning: the public read filters
@@ -142,6 +143,26 @@ describe('telling the submitter the outcome (#1498)', () => {
 		await svc.publishResource('lr-1', 'staff-1');
 
 		expect(emit).not.toHaveBeenCalled();
+	});
+
+	it('stays quiet when a published listing is taken down (#2789)', async () => {
+		selectResults = [
+			[{ id: 'lr-1', status: 'published', name: 'X', submitterEmail: 't@x.example' }]
+		];
+
+		await svc.rejectResource('lr-1', 'Closed for good', 'staff-1');
+
+		expect(emit).not.toHaveBeenCalled();
+	});
+});
+
+describe('tellsSubmitter', () => {
+	const told = localResourceStatuses.flatMap((from) =>
+		localResourceStatuses.filter((to) => svc.tellsSubmitter(from, to)).map((to) => `${from}>${to}`)
+	);
+
+	it('answers a pending tip, and a listing after a return, and nothing else', () => {
+		expect(told.sort()).toEqual(['pending>published', 'pending>rejected', 'rejected>published']);
 	});
 });
 

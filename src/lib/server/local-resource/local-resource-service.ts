@@ -238,12 +238,27 @@ export async function submitTip(
 	return row;
 }
 
+/**
+ * Whether the person who sent a tip hears about this move. They hear the
+ * decision on it, and a later listing after a return. Taking a listed tip down
+ * is staff upkeep, not an answer to the tip (#2789).
+ */
+export function tellsSubmitter(from: LocalResourceStatus, to: LocalResourceStatus): boolean {
+	return from !== to && (from === 'pending' || to === 'published');
+}
+
 function announceReview(
-	before: { id: string; name: string; submitterEmail: string | null },
+	before: {
+		id: string;
+		name: string;
+		status: LocalResourceStatus;
+		submitterEmail: string | null;
+	},
 	published: boolean,
 	staffNote: string | null
 ) {
 	if (!before.submitterEmail) return;
+	if (!tellsSubmitter(before.status, published ? 'published' : 'rejected')) return;
 	announce('local_resource.reviewed', {
 		resourceId: before.id,
 		name: before.name,
@@ -294,7 +309,7 @@ export async function publishResource(id: string, staffUserId: string) {
 		})
 		.where(eq(localResource.id, id))
 		.returning();
-	if (before.status !== 'published') announceReview(before, true, null);
+	announceReview(before, true, null);
 	return row;
 }
 
