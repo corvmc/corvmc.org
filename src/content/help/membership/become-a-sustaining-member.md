@@ -10,7 +10,7 @@ sortOrder: 1
 ## Becoming a sustaining member
 
 1. Open **Membership** from the sidebar.
-2. Choose **Become a Sustaining Member**.
+2. Choose **Become a sustaining member**.
 3. Pick a contribution amount on the sliding scale.
 4. Complete the secure card checkout.
 

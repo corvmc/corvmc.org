@@ -36,7 +36,7 @@ export async function dispatchReply(params: DispatchReplyParams): Promise<string
 	const enabled = await isChannelEnabled(params.channel);
 	if (!enabled) {
 		throw new Error(
-			`Channel "${params.channel}" is not enabled. Enable it in Settings → Inbox Channels.`
+			`Channel "${params.channel}" is not enabled. Enable it in Settings → Inbox channels.`
 		);
 	}
 

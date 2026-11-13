@@ -9,7 +9,7 @@ import { ROLES, keyRole } from '../../eslint-rules/message-key-role.js';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 
-export type Check = 'T4' | 'T5' | 'T6' | 'L1' | 'L3';
+export type Check = 'T4' | 'T5' | 'T6' | 'L1' | 'L3' | 'SC';
 
 export interface Catalog {
 	file: string;
@@ -42,6 +42,40 @@ export function wordCount(text: string): number {
 
 const FILLER = /\b(yet|just|now|here|please)\b|!/i;
 
+/** Names that keep their capitals mid-sentence; longest first so a phrase wins over its words. */
+export const PROPER_NOUNS = [
+	'Corvallis Music Collective',
+	'Real Book Club',
+	'CMC Radio',
+	'Corvallis',
+	'CorvMC',
+	'Stripe',
+	'Postmark',
+	'Markdown',
+	'Form 8282',
+	'Form 8283',
+	...['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+	...['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August'],
+	...['September', 'October', 'November', 'December']
+];
+
+const NOUN_PATTERN = new RegExp(
+	`\\b(?:${[...PROPER_NOUNS].sort((a, b) => b.length - a.length).join('|')})\\b`,
+	'g'
+);
+
+/**
+ * Sentence case: no capitalised word after a sentence starts. Acronyms, proper
+ * nouns and placeholders pass; a colon, separator or end mark starts a new one.
+ */
+export function titleCased(text: string): boolean {
+	const plain = text.replace(/\{[^}]*\}/g, ' ').replace(NOUN_PATTERN, ' ');
+	return plain.split(/[:.?!|·—–]\s/).some((sentence) => {
+		const words = sentence.split(/[\s-]+/).filter((w) => /[A-Za-z]/.test(w));
+		return words.slice(1).some((w) => /^\W*[A-Z][a-z]/.test(w));
+	});
+}
+
 /** The checks one wording fails for the role its key ends in. */
 export function failures(role: (typeof ROLES)[number] | null, text: string): Check[] {
 	const out: Check[] = [];
@@ -53,6 +87,8 @@ export function failures(role: (typeof ROLES)[number] | null, text: string): Che
 	}
 	if (role === 'label' && /\?$/.test(trimmed)) out.push('L1');
 	if (role === 'checkbox' && wordCount(trimmed) > 8) out.push('L3');
+	if ((role === 'title' || role === 'label' || role === 'checkbox') && titleCased(trimmed))
+		out.push('SC');
 	return out;
 }
 

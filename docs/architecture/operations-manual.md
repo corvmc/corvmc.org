@@ -329,7 +329,7 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
     mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
     MX records.
-- The `email` **channel toggle** (Staff → Settings → Inbox Channels) gates only _new-sender_
+- The `email` **channel toggle** (Staff → Settings → Inbox channels) gates only _new-sender_
   mail. A reply to a thread we started always lands, because we invited it.
 
 ### Twilio (SMS)
@@ -430,7 +430,7 @@ Two things worth knowing before touching it:
   through `graph.facebook.com/…/me/messages` with the account linked to the Page under
   Facebook Login for Business. The Instagram Login flavour needs `graph.instagram.com` and a
   token of its own, and connecting it that way fails silently.
-- **The token has no refresh path.** Staff → Settings → Inbox Channels carries a Test
+- **The token has no refresh path.** Staff → Settings → Inbox channels carries a Test
   connection button for each Meta channel, which is the only thing that makes an expired
   token visible before replies start failing.
 

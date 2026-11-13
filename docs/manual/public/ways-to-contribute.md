@@ -28,7 +28,7 @@ The page lists the roles you can sign up for, grouped three ways:
   and withdraw an application that is still open, on `/member/groups`. Clubs
   that take applications have their own **Apply** button there.
 
-**Create a Free Account to Volunteer** goes to registration, and the first time
+**Create a free account to volunteer** goes to registration, and the first time
 you open your volunteering page it asks for a few details: your name, a phone
 number so a coordinator can reach you about a shift, and whether you're 18 or
 older. That's a one-time thing.
@@ -46,7 +46,7 @@ out first — including a guardian's sign-off — so we'll get in touch to set i
 rather than have you sign up for shifts straight away.
 
 Ideas that aren't a role — a program, a club, a class, showing art, performing —
-aren't part of that list. Use **Host a Workshop** further down the page, or the
+aren't part of that list. Use **Host a workshop** further down the page, or the
 [contact form](contact-and-perform.md) directly.
 
 ## Become a sustaining member
@@ -59,7 +59,7 @@ guided to sign in or create an account.
 
 ## Other ways to help
 
-- **One-Time Donation** — opens our donation form on Zeffy in a new tab. Zeffy is
+- **One-time donation** — opens our donation form on Zeffy in a new tab. Zeffy is
   zero-fee for nonprofits, so the full amount reaches CMC.
 - **Donate gear** — instruments or equipment for the lending library.
 - **Host a workshop** — songwriting, recording, gear repair, theory.

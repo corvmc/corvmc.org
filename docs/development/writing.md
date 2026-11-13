@@ -48,8 +48,10 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
 - **A message key's suffix decides which checks apply**: `_title` gets the title table, `_label`
   and `_checkbox` the label table, `_body` the body table (see
   [conventions.md#interface-copy](conventions.md#interface-copy)).
-- **Mechanical checks** — T4, T5, T6, L1's trailing "?" and L3's word cap — run over the message
-  catalog in `scripts/message-copy.spec.ts`; the bare-pronoun half of T7 is not yet checked. L1's
+- **Mechanical checks** — T4, T5, T6, L1's trailing "?", L3's word cap and sentence case on
+  titles, labels and checkboxes — run over the message catalog in `scripts/message-copy.spec.ts`;
+  the bare-pronoun half of T7 is not yet checked. A proper noun that keeps its capitals goes in
+  `PROPER_NOUNS` in `scripts/lib/message-copy.ts`. L1's
   "someone/something" half is lint: `custom/definite-action-labels`.
 - **Judgement checks** — T1, T2, T3, T8, T9 — are for review. When writing or reviewing a page,
   score each new or changed title and label against the table and fix every failure before

@@ -64,4 +64,20 @@ describe('rubric checks', () => {
 		).toEqual(['L3']);
 		expect(failures('body', 'Be the first to say what the collective should do next.')).toEqual([]);
 	});
+
+	it('holds titles, labels and checkboxes to sentence case', () => {
+		expect(failures('title', 'Upcoming Shifts')).toEqual(['SC']);
+		expect(failures('label', 'One-Time Donation')).toEqual(['SC']);
+		expect(failures('checkbox', 'Email Me Replies')).toEqual(['SC']);
+		expect(failures('body', 'Sign Out')).toEqual([]);
+	});
+
+	it('lets proper nouns, acronyms, placeholders and new sentences keep capitals', () => {
+		expect(failures('title', 'Play on CMC Radio')).toEqual([]);
+		expect(failures('title', 'Events | Corvallis Music Collective')).toEqual([]);
+		expect(failures('label', 'Download PDF')).toEqual([]);
+		expect(failures('label', 'Message {Name}')).toEqual([]);
+		expect(failures('title', 'Step 2: Pick a room')).toEqual([]);
+		expect(failures('title', 'Record Form 8282')).toEqual([]);
+	});
 });

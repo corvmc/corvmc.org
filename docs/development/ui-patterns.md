@@ -259,7 +259,7 @@ an ask rather than a rake.
 	onchange={(c) => (override = c)}
 	fixedCents={split.stripeFeeCents}
 	fixedLabel="Card processing"
-	valueLabel="The Collective"
+	valueLabel="The collective"
 	otherLabel={actsLabel}
 />
 ```
@@ -499,7 +499,7 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 <Alert type="warning">
 	Member not found.
 	{#snippet action()}
-		<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+		<a href="/member/directory" class="btn btn-sm">Back to directory</a>
 	{/snippet}
 </Alert>
 
