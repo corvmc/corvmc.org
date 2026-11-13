@@ -110,3 +110,4 @@ A page or less. Link the issue and the PRs.
 | 0076 | [Classifieds follow-ups derive from what is stored](0076-classifieds-follow-ups-derive-from-what-is-stored.md)                 | 2026-11-13 | Accepted           |
 | 0077 | [A removal is a record of an upheld report](0077-a-removal-is-a-record-of-an-upheld-report.md)                                 | 2026-11-13 | Accepted           |
 | 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                             | 2026-11-13 | Accepted           |
+| 0079 | [A festival is a parent project](0079-a-festival-is-a-parent-project.md)                                                       | 2026-11-13 | Accepted           |

@@ -88,6 +88,11 @@ A listing announces a production by sitting on that production's project
 A production project takes one listing, held by the services rather than the database. A
 production with no listing is a show being built before it is announced. See #1202.
 
+A festival or a run of nights is a parent project over its show projects:
+`project.parent_project_id`, one level deep, checked in `project-service.ts`. Each night
+stays its own production. The parent's burn is its own plus its children's
+([0079](../decisions/0079-a-festival-is-a-parent-project.md)).
+
 Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
 and `recurring_series.prototype_type`.
@@ -270,7 +275,8 @@ project's work orders, purchase orders when placed, acquisitions, a show's expen
 top-ups) and contributed value apart. Volunteer time carries two valuations that are never
 added: impact value over every approved minute at `volunteer.hourValueCents`, and recognizable
 contributed services over specialized-skill minutes at each role's market rate. A specialized
-role with no rate counts as zero and is reported as unpriced.
+role with no rate counts as zero and is reported as unpriced. A parent project's burn adds
+its children's to its own, and `parts` lists each one's cash spend.
 
 `financial_entry` is the collective's accounting ledger: what was earned, spent, given and
 held for others. Stripe stays the record of settlement. Each row has a signed `amountCents`, a
@@ -440,6 +446,8 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 
 - [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md)
   — the `project` decision
+- [A festival is a parent project](../decisions/0079-a-festival-is-a-parent-project.md) — the
+  one-level parent over several shows
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
 - [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and

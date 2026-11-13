@@ -137,6 +137,31 @@
 		</Table>
 	</InfoCard>
 
+	{#if burn.parts.length > 0}
+		<InfoCard title={m.staff_projects_id_budget_report_spend_by_project_title()}>
+			<Table>
+				{#snippet head()}
+					<th>{m.staff_project_label()}</th>
+					<th class="cell-num">{m.staff_spent_text()}</th>
+				{/snippet}
+				{#each burn.parts as part (part.projectId)}
+					<tr>
+						<td>
+							{#if part.projectId === project.id}
+								{part.name}
+							{:else}
+								<a class="link" href={resolve(`staff/tasks/projects/${part.projectId}`)}
+									>{part.name}</a
+								>
+							{/if}
+						</td>
+						<td class="cell-num">{formatCents(part.cashCents)}</td>
+					</tr>
+				{/each}
+			</Table>
+		</InfoCard>
+	{/if}
+
 	<InfoCard title={m.staff_projects_id_budget_report_contributed_title()}>
 		<Table>
 			{#snippet head()}

@@ -50,6 +50,7 @@ const PROJECT_FIELDS: Record<ProjectField, string> = {
 	committee: 'owning committee',
 	suggestion: 'linked suggestion',
 	budget: 'budget',
+	parent: 'parent project',
 	dates: 'dates'
 };
 

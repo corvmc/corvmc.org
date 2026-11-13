@@ -5,7 +5,8 @@ import {
 	index,
 	uniqueIndex,
 	check,
-	primaryKey
+	primaryKey,
+	type AnySQLiteColumn
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
@@ -21,8 +22,9 @@ import { projectCommitteeRoles, projectKinds, projectStatuses } from '../../../c
  *
  * Not an event and not a subtype of one. Events, work orders, contractor jobs,
  * purchase orders and acquisitions each carry a nullable `projectId` pointing
- * here, which is what lets one shape serve a facility improvement (no events),
- * a produced show (one) and a festival (many). Nothing points the other way.
+ * here, which is what lets one shape serve a facility improvement (no events)
+ * and a produced show (one). A festival is a parent over several show projects
+ * through `parentProjectId` (#2543), one level deep.
  *
  * **Burn is never stored beside the budget.** What a project has cost is a
  * `sum()` over the ledgers that already hold the atoms — `contractor_job`,
@@ -57,6 +59,14 @@ export const project = sqliteTable(
 		/** The ballot certified as passed that authorised this. One project per ballot. */
 		ballotId: text('ballot_id').references(() => ballot.id, { onDelete: 'set null' }),
 
+		/**
+		 * The festival or run this is one part of. One level: a parent has no parent,
+		 * enforced by the service, and its burn sums over its children.
+		 */
+		parentProjectId: text('parent_project_id').references((): AnySQLiteColumn => project.id, {
+			onDelete: 'set null'
+		}),
+
 		/** The ceiling. Null is "no budget set", not zero. */
 		budgetCents: integer('budget_cents'),
 
@@ -78,6 +88,7 @@ export const project = sqliteTable(
 	(t) => [
 		index('idx_project_status').on(t.status),
 		index('idx_project_kind').on(t.kind),
+		index('idx_project_parent').on(t.parentProjectId),
 		// Partial, and in the table config rather than `.unique()` on the column:
 		// a nullable `.unique()` emits no constraint at all on this drizzle, and
 		// the partial form is what lets many projects have no suggestion while one

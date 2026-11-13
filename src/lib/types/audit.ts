@@ -302,7 +302,8 @@ export type EventEditField =
 	| 'venue'
 	| 'times'
 	| 'poster';
-export type ProjectField = 'name' | 'description' | 'committee' | 'suggestion' | 'budget' | 'dates';
+export type ProjectField =
+	'name' | 'description' | 'committee' | 'suggestion' | 'budget' | 'parent' | 'dates';
 
 /** How a work order is answered, derived from its rows (work-order-service `workOrderModes`). */
 export type WorkOrderAssignmentMode = 'contractor' | 'open' | 'members' | 'unassigned';

@@ -24,6 +24,7 @@ import {
 	getEventProject,
 	getProjectBurn,
 	getProjectById,
+	getProjectFamily,
 	getProjectShowId,
 	listProjectAttachments,
 	listCommittees,
@@ -79,6 +80,7 @@ const projectFields = {
 	groupId: optionalId,
 	suggestionId: optionalId,
 	budgetCents: optionalMoney,
+	parentProjectId: optionalId,
 	startsAt: optionalDate,
 	endsAt: optionalDate
 };
@@ -93,6 +95,7 @@ function toServiceInput(data: ProjectFields) {
 		groupId: data.groupId || null,
 		suggestionId: data.suggestionId || null,
 		budgetCents: data.budgetCents ?? null,
+		parentProjectId: data.parentProjectId || null,
 		startsAt: calendarDate(data.startsAt) ?? null,
 		endsAt: calendarDate(data.endsAt) ?? null
 	};
@@ -183,7 +186,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			ballotManager,
 			taking,
 			progress,
-			showId
+			showId,
+			family
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -195,7 +199,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			can('ballot.manage'),
 			listProjectCommittees([id]),
 			getProjectProgress(id),
-			getProjectShowId(id)
+			getProjectShowId(id),
+			getProjectFamily(id)
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
@@ -213,7 +218,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			progress,
 			viewerId: viewer.id,
 			/** A production's listing: the page links to its console. */
-			showId
+			showId,
+			/** The festival or run this is part of, its parts, and what it could join. */
+			family
 		};
 	} catch (err) {
 		mapDomainError(err);

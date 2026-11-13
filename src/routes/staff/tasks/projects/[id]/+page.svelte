@@ -58,6 +58,8 @@
 	const suggestionOptions = $derived(
 		data.suggestions.map((s) => ({ value: s.id, label: s.title }))
 	);
+	const family = $derived(data.family);
+	const parentOptions = $derived(family.parentOptions.map((p) => ({ value: p.id, label: p.name })));
 	const owner = $derived(data.projectCommittees.find((c) => c.role === 'owner') ?? null);
 	const committeeNames = $derived(data.projectCommittees.map((c) => c.name).join(', '));
 </script>
@@ -146,6 +148,17 @@
 					label={m.staff_budget_label()}
 					value={project.budgetCents}
 				/>
+				{#if family.children.length === 0}
+					<Field
+						field={editFields.parentProjectId}
+						type="select"
+						label={m.staff_projects_id_parent_project_label()}
+						placeholder={m.ui_none_placeholder()}
+						options={parentOptions}
+						value={project.parentProjectId ?? ''}
+						description={m.staff_projects_id_parent_project_body()}
+					/>
+				{/if}
 				<Field
 					field={editFields.startsAt}
 					type="date"
@@ -280,6 +293,22 @@
 					<Fact label={m.staff_projects_id_origin_label()}
 						>{m.staff_projects_id_staff_started_directly_text()}</Fact
 					>
+				{/if}
+				{#if family.parent}
+					<Fact label={m.staff_projects_id_parent_project_label()}>
+						<a class="link" href={resolve(`staff/tasks/projects/${family.parent.id}`)}>
+							{family.parent.name}
+						</a>
+					</Fact>
+				{/if}
+				{#if family.children.length > 0}
+					<Fact label={m.staff_projects_id_child_projects_label()}>
+						<span class="flex flex-wrap gap-x-3 gap-y-1">
+							{#each family.children as child (child.id)}
+								<a class="link" href={resolve(`staff/tasks/projects/${child.id}`)}>{child.name}</a>
+							{/each}
+						</span>
+					</Fact>
 				{/if}
 				{#if data.attachments.events.length > 0}
 					<Fact label={m.staff_projects_id_events_label()}>
