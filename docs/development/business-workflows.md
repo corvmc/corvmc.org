@@ -2689,6 +2689,10 @@ decide.
   `visible` (approve or restore) or `hidden` (take down, with the note), and the
   `classified_moderated` notification tells the author. A report's `under_review` and an author's
   own `pending_review` send nothing, and neither does a staffer moderating their own post.
+- **Matching posts:** `getMemberDashboard` adds up to six posts on the board that share a tag with
+  the member's directory profile (`listPostsMatching`), shown by `ClassifiedMatchesCard` on
+  `/member`. Genre and skill match the same kind; a post's instrument matches one the member plays
+  or, on an offered post, one their project is seeking. Empty while the surface is off.
 
 ### Data touched
 

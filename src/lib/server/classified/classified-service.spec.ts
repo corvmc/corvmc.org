@@ -66,6 +66,8 @@ beforeEach(async () => {
 		'classified_post_tag',
 		'classified_post',
 		'member_standing',
+		'directory_tag',
+		'directory_entry',
 		'group_member',
 		'"group"',
 		'user'
@@ -354,4 +356,92 @@ describe('listPostsExpiringBetween', () => {
 			expect(rows.find((r) => r.id === soon.id)?.userId).toBe(AUTHOR);
 		}
 	);
+});
+
+describe('listPostsMatching', () => {
+	type ProfileTag = {
+		kind: 'genre' | 'instrument' | 'seeking_instrument' | 'skill';
+		value: string;
+	};
+
+	/** OTHER's directory profile, with these tags. */
+	async function profile(tags: ProfileTag[]) {
+		const { directoryEntry, directoryTag } = await import('#lib/server/db/schema/directory.js');
+		const [entry] = await testDb
+			.insert(directoryEntry)
+			.values({ userId: OTHER, name: 'Bo' } as never)
+			.returning();
+		await testDb.insert(directoryTag).values(tags.map((t) => ({ entryId: entry.id, ...t })));
+	}
+
+	async function matched() {
+		return (await svc.listPostsMatching(OTHER, 6, NOW)).map((p) => p.id);
+	}
+
+	it('matches genre and skill tags of the same kind, on any post', async () => {
+		await profile([
+			{ kind: 'genre', value: 'surf' },
+			{ kind: 'skill', value: 'mixing' }
+		]);
+		const surf = await post({ tags: [{ kind: 'genre', value: 'Surf ' }] });
+		const mix = await post({ kind: 'offered', tags: [{ kind: 'skill', value: 'mixing' }] });
+		await post({ tags: [{ kind: 'instrument', value: 'surf' }] });
+
+		expect((await matched()).sort()).toEqual([surf.id, mix.id].sort());
+	});
+
+	// A wanted drummer post is for a drummer; an offered drummer is for a band
+	// that needs one.
+	it('matches an instrument played to any post, and one sought to offered posts', async () => {
+		await profile([
+			{ kind: 'instrument', value: 'drums' },
+			{ kind: 'seeking_instrument', value: 'bass' }
+		]);
+		const wantDrums = await post({ tags: [{ kind: 'instrument', value: 'drums' }] });
+		const offerBass = await post({
+			kind: 'offered',
+			tags: [{ kind: 'instrument', value: 'bass' }]
+		});
+		await post({ tags: [{ kind: 'instrument', value: 'bass' }] });
+
+		expect((await matched()).sort()).toEqual([wantDrums.id, offerBass.id].sort());
+	});
+
+	it('lists each shared tag once, even when it is both played and sought', async () => {
+		await profile([
+			{ kind: 'instrument', value: 'bass' },
+			{ kind: 'seeking_instrument', value: 'bass' },
+			{ kind: 'genre', value: 'funk' }
+		]);
+		await post({
+			kind: 'offered',
+			tags: [
+				{ kind: 'instrument', value: 'bass' },
+				{ kind: 'genre', value: 'funk' }
+			]
+		});
+
+		const [only] = await svc.listPostsMatching(OTHER, 6, NOW);
+		expect(only.sharedTags).toHaveLength(2);
+	});
+
+	it('leaves out posts off the board and the viewer’s own', async () => {
+		await profile([{ kind: 'genre', value: 'surf' }]);
+		const surf = [{ kind: 'genre' as const, value: 'surf' }];
+		const live = await post({ tags: surf });
+		await post({ authorUserId: OTHER, tags: surf });
+		const hidden = await post({ tags: surf });
+		await svc.setVisibility(hidden.id, { visibility: 'hidden', note: null, staffId: STAFF });
+		const closed = await post({ tags: surf });
+		await svc.closePost(closed.id, AUTHOR, NOW);
+		await post({ tags: surf }, new Date(NOW.getTime() - CLASSIFIED_LIFETIME_DAYS * DAY));
+
+		expect(await matched()).toEqual([live.id]);
+	});
+
+	it('matches nothing for a member with no profile tags', async () => {
+		await post({ tags: [{ kind: 'genre', value: 'surf' }] });
+
+		expect(await matched()).toEqual([]);
+	});
 });
