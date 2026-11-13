@@ -85,7 +85,9 @@
 								? m.market_vendor_check_in_table_2_text()
 								: m.market_vendor_check_in_tables_text()}{vendor.needsPower
 								? m.market_vendor_check_in_needs_power_text()
-								: ''}
+								: ''}{vendor.bringsOwnTable
+								? m.market_vendor_check_in_own_table_text()
+								: ''}{vendor.bringsTent ? m.market_vendor_check_in_tent_text() : ''}
 						</p>
 						{#if vendor.inviteBack !== null}
 							<p class="text-sm">

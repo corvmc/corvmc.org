@@ -5,6 +5,9 @@ import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.j
 import { inboxThread } from '#lib/server/db/schema/inbox.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { marketDay, marketVendor, type MarketVendor } from '#lib/server/db/schema/market.js';
+import { organization, vendorDetail } from '#lib/server/db/schema/party.js';
+import { recordApplicantUnguarded } from '#lib/server/directory/contact-service.js';
+import { fileThread } from '#lib/server/party/thread-filing.js';
 import { findOrCreateThread } from '#lib/server/inbox/thread-service.js';
 import { addInboundMessage, addOutboundMessage } from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -14,9 +17,10 @@ import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
 /**
  * Vendor applications for a market day CMC hosts. docs/development/business-workflows.md §19.
  *
- * Unguarded: the remote layer guards. The vendor's contact details live on the
- * inbox thread each application opens, never on `market_vendor`, so the public
- * list below cannot leak one however it is later reshaped.
+ * Unguarded: the remote layer guards. A vendor is an organization holding
+ * `vendor`; its people are `contact` rows, never columns on `market_vendor`, so
+ * the public list below cannot leak one however it is later reshaped. The
+ * inbox thread each application opens is the conversation.
  */
 
 export class MarketClosedError extends DomainError {
@@ -171,6 +175,8 @@ export interface VendorApplicationInput {
 	website?: string | null;
 	tablesRequested: number;
 	needsPower: boolean;
+	bringsOwnTable?: boolean;
+	bringsTent?: boolean;
 	notes?: string | null;
 }
 
@@ -181,6 +187,8 @@ function applicationBody(input: VendorApplicationInput, title: string): string {
 		`Sells: ${input.offering}`,
 		input.website ? `Website: ${input.website}` : null,
 		`Tables: ${input.tablesRequested}${input.needsPower ? ', needs power' : ''}`,
+		input.bringsOwnTable ? 'Brings own table' : null,
+		input.bringsTent ? 'Brings a tent' : null,
 		input.contactPhone ? `Phone: ${input.contactPhone}` : null
 	].filter(Boolean);
 	return input.notes ? `${lines.join('\n')}\n\n---\n\n${input.notes}` : lines.join('\n');
@@ -213,20 +221,69 @@ export async function submitApplication(
 		authorName: input.contactName
 	});
 
+	// The business: found through a contact already holding the email, else new.
+	const { organizationId } = await recordApplicantUnguarded({
+		organizationName: input.businessName,
+		role: 'vendor',
+		name: input.contactName,
+		email: input.contactEmail,
+		phone: input.contactPhone
+	});
+	await fileThread(thread.id, { type: 'organization', id: organizationId });
+	const standing = await standingNeeds(organizationId, input);
+
 	const [row] = await db
 		.insert(marketVendor)
 		.values({
 			eventId,
 			threadId: thread.id,
+			organizationId,
 			businessName: input.businessName,
 			offering: input.offering,
-			website: input.website || null,
+			website: input.website || standing.website,
 			tablesRequested: input.tablesRequested,
 			needsPower: input.needsPower,
-			notes: input.notes || null
+			bringsOwnTable: input.bringsOwnTable ?? false,
+			bringsTent: input.bringsTent ?? false,
+			notes: input.notes || standing.setupNotes
 		})
 		.returning({ id: marketVendor.id });
 	return row;
+}
+
+/**
+ * A returning vendor's standing needs fill what the form left blank, and a
+ * first application writes them. Later ones never overwrite them: staff keep
+ * `vendor_detail` on the organization page. The public form shows none of it,
+ * since anyone can type a vendor's email.
+ */
+async function standingNeeds(organizationId: string, input: VendorApplicationInput) {
+	const [[detail], [org]] = await Promise.all([
+		db.select().from(vendorDetail).where(eq(vendorDetail.organizationId, organizationId)).limit(1),
+		db
+			.select({ website: organization.website })
+			.from(organization)
+			.where(eq(organization.id, organizationId))
+			.limit(1)
+	]);
+	if (!detail) {
+		await db.insert(vendorDetail).values({
+			organizationId,
+			offering: input.offering,
+			tablesNeeded: input.tablesRequested,
+			needsPower: input.needsPower,
+			bringsOwnTable: input.bringsOwnTable ?? false,
+			bringsTent: input.bringsTent ?? false,
+			setupNotes: input.notes || null
+		});
+	}
+	if (!org?.website && input.website) {
+		await db
+			.update(organization)
+			.set({ website: input.website, updatedAt: new Date() })
+			.where(eq(organization.id, organizationId));
+	}
+	return { website: org?.website ?? null, setupNotes: detail?.setupNotes ?? null };
 }
 
 /** Every application for a market, with the contact joined from its thread. Staff only. */
@@ -238,8 +295,11 @@ export async function listApplications(eventId: string) {
 			businessName: marketVendor.businessName,
 			offering: marketVendor.offering,
 			website: marketVendor.website,
+			organizationId: marketVendor.organizationId,
 			tablesRequested: marketVendor.tablesRequested,
 			needsPower: marketVendor.needsPower,
+			bringsOwnTable: marketVendor.bringsOwnTable,
+			bringsTent: marketVendor.bringsTent,
 			notes: marketVendor.notes,
 			status: marketVendor.status,
 			tableLabel: marketVendor.tableLabel,
@@ -260,11 +320,11 @@ export async function listApplications(eventId: string) {
 		.orderBy(asc(marketVendor.createdAt), asc(marketVendor.businessName));
 	const previous = await previousRecords(
 		eventId,
-		rows.map((r) => r.contactEmail)
+		rows.map((r) => r.organizationId)
 	);
 	return rows.map((r) => ({
 		...r,
-		previous: (r.contactEmail && previous.get(r.contactEmail.toLowerCase())) || null
+		previous: (r.organizationId && previous.get(r.organizationId)) || null
 	}));
 }
 
@@ -277,14 +337,15 @@ export interface PreviousMarketRecord {
 }
 
 /**
- * The newest invite-back record from an earlier market, per contact email
- * (#1505). Email is the only identity a vendor has: there is no vendor table.
+ * The newest invite-back record from an earlier market, per vendor
+ * organization (#1505, #2622). A vendor who applies from a new address still
+ * matches once staff merge the two organizations.
  */
 async function previousRecords(
 	eventId: string,
-	emails: (string | null)[]
+	organizationIds: (string | null)[]
 ): Promise<Map<string, PreviousMarketRecord>> {
-	const wanted = [...new Set(emails.filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
+	const wanted = [...new Set(organizationIds.filter((o): o is string => !!o))];
 	const found = new Map<string, PreviousMarketRecord>();
 	if (wanted.length === 0) return found;
 
@@ -295,10 +356,9 @@ async function previousRecords(
 		.limit(1);
 	if (!current) return found;
 
-	const email = sql<string>`lower(${inboxThread.contactEmail})`;
 	const rows = await db
 		.select({
-			email,
+			organizationId: marketVendor.organizationId,
 			eventTitle: eventListing.title,
 			startsAt: eventListing.startsAt,
 			status: marketVendor.status,
@@ -306,19 +366,18 @@ async function previousRecords(
 			note: marketVendor.inviteBackNote
 		})
 		.from(marketVendor)
-		.innerJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
 		.where(
 			and(
 				ne(marketVendor.eventId, eventId),
 				isNotNull(marketVendor.inviteBack),
 				lt(eventListing.startsAt, current.startsAt),
-				inArray(email, wanted)
+				inArray(marketVendor.organizationId, wanted)
 			)
 		)
-		.orderBy(desc(eventListing.startsAt));
-	for (const { email: key, inviteBack, ...rest } of rows) {
-		if (!found.has(key)) found.set(key, { ...rest, inviteBack: inviteBack === true });
+		.orderBy(desc(eventListing.startsAt), desc(marketVendor.id));
+	for (const { organizationId: key, inviteBack, ...rest } of rows) {
+		if (key && !found.has(key)) found.set(key, { ...rest, inviteBack: inviteBack === true });
 	}
 	return found;
 }
@@ -335,6 +394,8 @@ export async function listMarketDayVendors(eventId: string) {
 			offering: marketVendor.offering,
 			tablesRequested: marketVendor.tablesRequested,
 			needsPower: marketVendor.needsPower,
+			bringsOwnTable: marketVendor.bringsOwnTable,
+			bringsTent: marketVendor.bringsTent,
 			status: marketVendor.status,
 			tableLabel: marketVendor.tableLabel,
 			checkedInAt: marketVendor.checkedInAt,

@@ -70,6 +70,11 @@ function insertEvent(status = 'published', startsAt = STARTS) {
 beforeEach(() => {
 	for (const t of [
 		'market_vendor',
+		'vendor_detail',
+		'party_role',
+		'contact',
+		'subscriber',
+		'organization',
 		'market_day',
 		'inbox_message',
 		'inbox_thread',
@@ -174,6 +179,70 @@ describe('applying', () => {
 			.prepare(`select body from inbox_message where thread_id = ?`)
 			.get(row.threadId) as { body: string };
 		expect(msg.body).toContain('Handmade mugs and planters');
+	});
+
+	it('files the vendor as an organization, with its person and standing setup', async () => {
+		await submitApplication(EVENT, { ...application, bringsTent: true }, NOW);
+
+		const [row] = await listApplications(EVENT);
+		const org = sqlite
+			.prepare(
+				`select o.name, o.website, r.role from organization o join party_role r on r.organization_id = o.id where o.id = ?`
+			)
+			.get(row.organizationId);
+		expect(org).toEqual({
+			name: 'Rosa Ceramics',
+			website: 'https://rosa.example.com',
+			role: 'vendor'
+		});
+		expect(
+			sqlite
+				.prepare(`select name, email, phone, source from contact where organization_id = ?`)
+				.all(row.organizationId)
+		).toEqual([
+			{
+				name: 'Rosa Diaz',
+				email: 'rosa@example.com',
+				phone: '541-555-0100',
+				source: 'self_entered'
+			}
+		]);
+		expect(
+			sqlite
+				.prepare(
+					`select tables_needed as t, needs_power as p, brings_tent as tent, setup_notes as notes from vendor_detail where organization_id = ?`
+				)
+				.get(row.organizationId)
+		).toEqual({ t: 2, p: 1, tent: 1, notes: 'Near an outlet please' });
+		expect(
+			sqlite.prepare(`select organization_id as o from inbox_thread where id = ?`).get(row.threadId)
+		).toEqual({ o: row.organizationId });
+	});
+
+	it('reuses the organization of a person already holding the email, and keeps its setup', async () => {
+		await submitApplication(EVENT, application, NOW);
+		await submitApplication(
+			EVENT,
+			{
+				...application,
+				contactEmail: ' ROSA@example.com ',
+				tablesRequested: 1,
+				notes: null,
+				website: null
+			},
+			NOW
+		);
+
+		const rows = await listApplications(EVENT);
+		expect(new Set(rows.map((r) => r.organizationId)).size).toBe(1);
+		expect(sqlite.prepare(`select count(*) as n from contact`).get()).toEqual({ n: 1 });
+		// The second application's blanks come from the standing setup; its own ask is kept.
+		expect(rows[1]).toMatchObject({
+			tablesRequested: 1,
+			notes: 'Near an outlet please',
+			website: 'https://rosa.example.com'
+		});
+		expect(sqlite.prepare(`select tables_needed as t from vendor_detail`).get()).toEqual({ t: 2 });
 	});
 
 	it('keeps contact details off the vendor row', () => {
@@ -446,6 +515,19 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 			note: 'Never came, never called.'
 		});
 		expect(later.find((a) => a.businessName === 'New Co')?.previous).toBeNull();
+
+		// A second person at the same business, from their own address, matches too.
+		const rosa = later.find((a) => a.businessName === 'Rosa Ceramics')!;
+		sqlite.exec(
+			`insert into contact (id, organization_id, email, source) values ('c2', '${rosa.organizationId}', 'shop@rosa.example.com', 'staff_entered')`
+		);
+		await submitApplication(
+			LATER,
+			{ ...application, contactEmail: 'shop@rosa.example.com' },
+			applyAt
+		);
+		const again = (await listApplications(LATER)).filter((a) => a.businessName === 'Rosa Ceramics');
+		expect(again.map((a) => a.previous?.status)).toEqual(['no_show', 'no_show']);
 		// The earlier market does not look forward.
 		expect((await listApplications(EVENT))[0].previous).toBeNull();
 	});

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { eventListing } from './event';
 import { inboxThread } from './inbox';
+import { organization } from './party';
 import { marketVendorStatuses } from '../../../config';
 
 /**
@@ -37,9 +38,10 @@ export type MarketDay = typeof marketDay.$inferSelect;
 /**
  * One vendor's application to one market day.
  *
- * **No contact column, on purpose.** The vendor's name, email and phone live on
- * the `inbox_thread` the application opened, which only the staff inbox reads.
- * Accepted rows are published on the event page, so nothing here may be private.
+ * **No contact column, on purpose.** The vendor is an organization holding
+ * `vendor`, and its people are `contact` rows (#2622). The `inbox_thread` the
+ * application opened is the conversation. Accepted rows are published on the
+ * event page, so nothing here may be private.
  */
 export const marketVendor = sqliteTable(
 	'market_vendor',
@@ -51,12 +53,18 @@ export const marketVendor = sqliteTable(
 			.notNull()
 			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		threadId: text('thread_id').references(() => inboxThread.id, { onDelete: 'set null' }),
+		/** The vendor. Invite-back history matches on it. */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
 		businessName: text('business_name').notNull(),
 		/** What they sell, in their words. Published when accepted. */
 		offering: text('offering').notNull(),
 		website: text('website'),
 		tablesRequested: integer('tables_requested').notNull().default(1),
 		needsPower: integer('needs_power', { mode: 'boolean' }).notNull().default(false),
+		bringsOwnTable: integer('brings_own_table', { mode: 'boolean' }).notNull().default(false),
+		bringsTent: integer('brings_tent', { mode: 'boolean' }).notNull().default(false),
 		notes: text('notes'),
 		status: text('status', { enum: marketVendorStatuses }).notNull().default('applied'),
 		/** Free text — "B3", "by the door". There is no table map. */
@@ -89,7 +97,10 @@ export const marketVendor = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('idx_market_vendor_event_status').on(t.eventId, t.status)]
+	(t) => [
+		index('idx_market_vendor_event_status').on(t.eventId, t.status),
+		index('idx_market_vendor_organization').on(t.organizationId)
+	]
 );
 
 export type MarketVendor = typeof marketVendor.$inferSelect;

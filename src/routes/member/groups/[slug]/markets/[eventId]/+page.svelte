@@ -106,7 +106,9 @@
 							? m.member_groups_slug_markets_event_id_table_2_text()
 							: m.member_groups_slug_markets_event_id_tables_text()}{row.needsPower
 							? m.member_groups_slug_markets_event_id_power_text()
-							: ''}
+							: ''}{row.bringsOwnTable
+							? m.member_groups_slug_markets_event_id_own_table_text()
+							: ''}{row.bringsTent ? m.member_groups_slug_markets_event_id_tent_text() : ''}
 					</td>
 					<td>{row.tableLabel ?? '—'}</td>
 					<td>

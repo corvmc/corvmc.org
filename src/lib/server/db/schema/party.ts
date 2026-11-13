@@ -64,6 +64,28 @@ export const contractorDetail = sqliteTable(
 	(t) => [index('idx_contractor_detail_trade').on(t.trade)]
 );
 
+/**
+ * A vendor's standing tabling needs. 1:1 with an organization holding
+ * `vendor`. Each market application keeps its own copy of what it asked for,
+ * so editing this never changes a past market.
+ */
+export const vendorDetail = sqliteTable('vendor_detail', {
+	organizationId: text('organization_id')
+		.primaryKey()
+		.references(() => organization.id, { onDelete: 'cascade' }),
+	/** What they sell, in their words. */
+	offering: text('offering'),
+	tablesNeeded: integer('tables_needed').notNull().default(1),
+	needsPower: integer('needs_power', { mode: 'boolean' }).notNull().default(false),
+	bringsOwnTable: integer('brings_own_table', { mode: 'boolean' }).notNull().default(false),
+	bringsTent: integer('brings_tent', { mode: 'boolean' }).notNull().default(false),
+	setupNotes: text('setup_notes'),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`(unixepoch())`)
+});
+
 export type Organization = typeof organization.$inferSelect;
 export type NewOrganization = typeof organization.$inferInsert;
 export type ContractorDetail = typeof contractorDetail.$inferSelect;
+export type VendorDetail = typeof vendorDetail.$inferSelect;

@@ -95,6 +95,8 @@ export const submitVendorApplicationForm = form(
 		website,
 		tablesRequested: z.number().int().min(1).max(MARKET_MAX_TABLES_REQUESTED),
 		needsPower: z.boolean().optional(),
+		bringsOwnTable: z.boolean().optional(),
+		bringsTent: z.boolean().optional(),
 		notes: z.string().trim().max(LONG_TEXT_MAX).optional(),
 		turnstileToken: z.string().min(1)
 	}),
@@ -112,6 +114,8 @@ export const submitVendorApplicationForm = form(
 			website: data.website || null,
 			tablesRequested: data.tablesRequested,
 			needsPower: data.needsPower ?? false,
+			bringsOwnTable: data.bringsOwnTable ?? false,
+			bringsTent: data.bringsTent ?? false,
 			notes: data.notes || null
 		});
 		return { success: true };

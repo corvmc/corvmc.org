@@ -21,6 +21,7 @@
 		getOrganizationPage,
 		removeOrganizationRole,
 		removePerson,
+		saveVendorDetail,
 		updateOrganization,
 		updatePerson
 	} from '#lib/remote/contacts.remote.js';
@@ -31,7 +32,9 @@
 		partyRoles,
 		sponsorshipStatusLabels,
 		contractorJobStatusLabels,
-		orderStatusLabels
+		orderStatusLabels,
+		marketVendorStatusLabels,
+		MARKET_MAX_TABLES_REQUESTED
 	} from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
@@ -308,6 +311,102 @@
 						<li>
 							<a class="link" href={resolve(`staff/contractors/jobs/${j.id}`)}>{j.title}</a>
 							<span class="text-muted">· {contractorJobStatusLabels[j.status]}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</InfoCard>
+	{/if}
+
+	{#if org.roles.includes('vendor') || org.records.markets.length > 0}
+		<InfoCard title={m.staff_contacts_market_applications_title()}>
+			{#snippet action()}
+				{#if org.canManage && org.roles.includes('vendor')}
+					<Action
+						action={saveVendorDetail}
+						label={m.staff_contacts_edit_setup_label()}
+						variant="ghost"
+						size="sm"
+						modalTitle={m.staff_contacts_edit_setup_title()}
+						submitLabel={m.staff_save_label()}
+						successToast={m.staff_saved_toast()}
+					>
+						{#snippet form()}
+							{@const f = saveVendorDetail.fields}
+							<input {...f.id.as('hidden', org.id)} />
+							<Field
+								field={f.offering}
+								type="text"
+								label={m.staff_contacts_products_label()}
+								value={org.vendor?.offering ?? ''}
+							/>
+							<Field
+								field={f.tablesNeeded}
+								type="number"
+								label={m.staff_contacts_tables_needed_label()}
+								value={org.vendor?.tablesNeeded ?? 1}
+								min="1"
+								max={MARKET_MAX_TABLES_REQUESTED}
+							/>
+							<Field
+								field={f.needsPower}
+								type="checkbox"
+								label={m.staff_contacts_power_label()}
+								checkboxLabel={m.staff_contacts_needs_power_checkbox()}
+								value={org.vendor?.needsPower ?? false}
+							/>
+							<Field
+								field={f.bringsOwnTable}
+								type="checkbox"
+								label={m.staff_contacts_own_table_label()}
+								checkboxLabel={m.staff_contacts_own_table_checkbox()}
+								value={org.vendor?.bringsOwnTable ?? false}
+							/>
+							<Field
+								field={f.bringsTent}
+								type="checkbox"
+								label={m.staff_contacts_tent_label()}
+								checkboxLabel={m.staff_contacts_tent_checkbox()}
+								value={org.vendor?.bringsTent ?? false}
+							/>
+							<Field
+								field={f.setupNotes}
+								type="text"
+								label={m.staff_contacts_setup_notes_label()}
+								value={org.vendor?.setupNotes ?? ''}
+							/>
+						{/snippet}
+					</Action>
+				{/if}
+			{/snippet}
+			{#if org.vendor}
+				<DefinitionList>
+					<Fact label={m.staff_contacts_products_label()}>{org.vendor.offering ?? '—'}</Fact>
+					<Fact label={m.staff_contacts_tables_needed_label()}>{org.vendor.tablesNeeded}</Fact>
+					<Fact label={m.staff_contacts_setup_label()}>
+						{[
+							org.vendor.needsPower && m.staff_contacts_needs_power_checkbox(),
+							org.vendor.bringsOwnTable && m.staff_contacts_own_table_checkbox(),
+							org.vendor.bringsTent && m.staff_contacts_tent_checkbox()
+						]
+							.filter(Boolean)
+							.join(', ') || '—'}
+					</Fact>
+					<Fact label={m.staff_contacts_setup_notes_label()}>{org.vendor.setupNotes ?? '—'}</Fact>
+				</DefinitionList>
+			{:else if org.roles.includes('vendor')}
+				<p class="text-muted">{m.staff_contacts_no_setup_text()}</p>
+			{/if}
+			{#if org.records.markets.length === 0}
+				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
+			{:else}
+				<ul class="mt-3 space-y-1">
+					{#each org.records.markets as a (a.id)}
+						<li>
+							<a class="link" href={resolve(`staff/events/${a.eventId}/vendors`)}>{a.title}</a>
+							<span class="text-muted"
+								>· {formatDateShort(a.startsAt)} · {marketVendorStatusLabels[a.status]}</span
+							>
 						</li>
 					{/each}
 				</ul>

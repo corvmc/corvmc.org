@@ -1,7 +1,7 @@
 # 0009 Market vendor contact lives on the inbox thread
 
 - **Date:** 2026-09-23
-- **Status:** Accepted
+- **Status:** Superseded by [0073](0073-a-market-vendor-is-an-organization.md)
 - **Issue:** [#609](https://github.com/corvmc/corvmc.org/issues/609)
 
 ## Context

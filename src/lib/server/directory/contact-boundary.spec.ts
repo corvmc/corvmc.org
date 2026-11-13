@@ -87,10 +87,11 @@ describe('the contact table has one access path', () => {
 		});
 
 		// The deliberate exceptions, each named so that using one looks like what
-		// it is: the token path and the retention cron have no session to check,
-		// and the archive runs inside an already-guarded claim.
+		// it is: the token path, public applications and the retention cron have
+		// no session to check, and the archive runs inside an already-guarded claim.
 		expect(unguarded.sort()).toEqual([
 			'archiveContactForClaim',
+			'recordApplicantUnguarded',
 			'sweepExpiredContacts',
 			'writeContactUnguarded'
 		]);

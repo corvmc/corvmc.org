@@ -377,10 +377,10 @@ a nav section follows the work, this document follows the data.
 ## Outside parties
 
 Every organization CMC deals with but does not contain is one `organization` row: a funder, a
-sponsor, a contractor, a supplier, and later a performer, vendor or partner. What it is to CMC is
+sponsor, a contractor, a supplier, a market vendor, and later a performer or partner. What it is to CMC is
 a `party_role` row, so one business can sponsor a season and service the PA in the same year. A
 record that names an organization in a role (`grant_application`, `sponsorship`,
-`contractor_job`, `purchase_order`) is checked for the role by its service, since SQLite cannot,
+`contractor_job`, `purchase_order`, `market_vendor`) is checked for the role by its service, since SQLite cannot,
 and `ORGANIZATION_RECORDS` in `organization-service.ts` lists them for merging. The people are
 `contact` rows, read only through `contact-service.ts`. See #2622.
 

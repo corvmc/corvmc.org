@@ -20,7 +20,13 @@ const org = { id: 'o1', name: 'Arts Council', website: null, notes: null, archiv
 const orgs = {
 	listOrganizations: vi.fn(async () => [{ ...org, roles: ['funder'] }]),
 	getOrganization: vi.fn(async () => ({ ...org, directoryEntryId: null, roles: ['funder'] })),
-	organizationRecords: vi.fn(async () => ({ grants: [], sponsorships: [], jobs: [], orders: [] })),
+	organizationRecords: vi.fn(async () => ({
+		grants: [],
+		sponsorships: [],
+		jobs: [],
+		orders: [],
+		markets: []
+	})),
 	createOrganization: vi.fn(async () => ({ id: 'o2' })),
 	updateOrganization: vi.fn(async () => undefined),
 	setOrganizationArchived: vi.fn(async () => undefined),

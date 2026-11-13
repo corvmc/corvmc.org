@@ -3,7 +3,9 @@ import { eventListing } from '../../src/lib/server/db/schema/event';
 import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { marketDay, marketVendor } from '../../src/lib/server/db/schema/market';
 import type { MarketVendorStatus } from '../../src/lib/config';
+import { vendorDetail } from '../../src/lib/server/db/schema/party';
 import { batchInsert, db } from './db';
+import { seedOrganizations } from './parties';
 import type { SeedUser } from './types';
 
 /**
@@ -117,8 +119,31 @@ export async function seedMarket(adminUser: SeedUser) {
 		slidingScaleFloorCents: FLOOR_CENTS
 	});
 
+	// Each vendor is an organization with its person and standing setup (#2622).
+	const orgIds = vendors.map(() => randomUUID());
+	await seedOrganizations(
+		vendors.map((v, i) => ({
+			id: orgIds[i],
+			name: v.business,
+			roles: ['vendor'],
+			website: v.website,
+			person: { name: v.contact, email: email(v.contact) }
+		}))
+	);
+	await batchInsert(
+		vendorDetail,
+		vendors.map((v, i) => ({
+			organizationId: orgIds[i],
+			offering: v.offering,
+			tablesNeeded: v.tables,
+			needsPower: v.power,
+			bringsTent: i === 1
+		}))
+	);
+
 	const threads = vendors.map((v, i) => ({
 		id: randomUUID(),
+		organizationId: orgIds[i],
 		channel: 'web' as const,
 		status: 'open' as const,
 		subject: `Vendor application: ${v.business} — ${event.title}`,
@@ -159,6 +184,8 @@ export async function seedMarket(adminUser: SeedUser) {
 		vendors.map((v, i) => ({
 			eventId: event.id,
 			threadId: threads[i].id,
+			organizationId: orgIds[i],
+			bringsTent: i === 1,
 			businessName: v.business,
 			offering: v.offering,
 			website: v.website,
@@ -176,7 +203,7 @@ export async function seedMarket(adminUser: SeedUser) {
 		}))
 	);
 
-	const past = await seedPastMarket(adminUser);
+	const past = await seedPastMarket(adminUser, orgIds);
 	return { markets: 2, vendors: vendors.length + past };
 }
 
@@ -185,9 +212,9 @@ const email = (contact: string) => `${contact.split(' ')[0].toLowerCase()}@examp
 /**
  * Last summer's market, done (#1505): two vendors who applied to the fall one
  * have an invite-back record here, one each way, so its applications tab shows
- * both. Matched by email, which is why these reuse the fall contacts.
+ * both. Matched by organization, which is why these reuse the fall vendors'.
  */
-async function seedPastMarket(adminUser: SeedUser): Promise<number> {
+async function seedPastMarket(adminUser: SeedUser, orgIds: string[]): Promise<number> {
 	const startsAt = new Date(Date.now() - 70 * 24 * 3600_000);
 	startsAt.setUTCHours(17, 0, 0, 0);
 	const [event] = await db
@@ -207,6 +234,7 @@ async function seedPastMarket(adminUser: SeedUser): Promise<number> {
 
 	const past = [
 		{
+			org: orgIds[2],
 			v: vendors[2],
 			status: 'accepted',
 			table: 'A2',
@@ -215,6 +243,7 @@ async function seedPastMarket(adminUser: SeedUser): Promise<number> {
 			note: 'Sold out of mugs by two. Give them a corner.'
 		},
 		{
+			org: orgIds[3],
 			v: vendors[3],
 			status: 'no_show',
 			table: 'C1',
@@ -222,11 +251,20 @@ async function seedPastMarket(adminUser: SeedUser): Promise<number> {
 			invite: false,
 			note: 'Never arrived and never called.'
 		},
-		{ v: vendors[0], status: 'accepted', table: 'A1', arrived: true, invite: null, note: null }
+		{
+			org: orgIds[0],
+			v: vendors[0],
+			status: 'accepted',
+			table: 'A1',
+			arrived: true,
+			invite: null,
+			note: null
+		}
 	] as const;
 
-	const threads = past.map(({ v }) => ({
+	const threads = past.map(({ v, org }) => ({
 		id: randomUUID(),
+		organizationId: org,
 		channel: 'web' as const,
 		status: 'resolved' as const,
 		subject: `Vendor application: ${v.business} — ${event.title}`,
@@ -243,6 +281,7 @@ async function seedPastMarket(adminUser: SeedUser): Promise<number> {
 		past.map((p, i) => ({
 			eventId: event.id,
 			threadId: threads[i].id,
+			organizationId: p.org,
 			businessName: p.v.business,
 			offering: p.v.offering,
 			website: p.v.website,
