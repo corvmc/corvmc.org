@@ -11,6 +11,7 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
+	import FormGuard from '#lib/components/ui/Form/FormGuard.svelte';
 	import { errorMessage } from '#lib/error-message.js';
 	import {
 		getCampaignDetail,
@@ -37,12 +38,20 @@
 	let confirmingSend = $state(false);
 	let confirmingDelete = $state(false);
 
+	// What the server holds, to tell an unsaved edit from a saved one.
+	let saved = $state('');
+	const snapshot = () => JSON.stringify([subject, markdownBody, selectedAudienceIds, eventId]);
+	// Set once the campaign is sent, scheduled or deleted: nothing is left to lose.
+	let leaving = false;
+	const isDirty = () => initialized && !leaving && (snapshot() !== saved || !!scheduledFor);
+
 	$effect(() => {
 		if (campaignData && !initialized) {
 			subject = campaignData.subject;
 			markdownBody = campaignData.markdownBody;
 			selectedAudienceIds = campaignData.audiences.map((a) => a.id);
 			eventId = campaignData.eventId ?? '';
+			saved = snapshot();
 			initialized = true;
 		}
 	});
@@ -50,6 +59,7 @@
 	// Redirect if not a draft
 	$effect(() => {
 		if (campaignData && campaignData.status !== 'draft') {
+			leaving = true;
 			goto(resolve(`staff/marketing/campaigns/${id}`));
 		}
 	});
@@ -77,6 +87,7 @@
 				audienceIds: selectedAudienceIds,
 				eventId
 			});
+			saved = snapshot();
 			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved_toast());
 		} catch (err) {
 			toast.error(
@@ -109,6 +120,7 @@
 				audienceIds: selectedAudienceIds,
 				eventId
 			});
+			saved = snapshot();
 			await sendCampaignNow({});
 		} catch (err) {
 			// The try covers the calls and nothing else, and a remote rejection is
@@ -119,6 +131,7 @@
 			return;
 		}
 		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent_toast());
+		leaving = true;
 		goto(resolve(`staff/marketing/campaigns/${id}`));
 	}
 
@@ -134,8 +147,10 @@
 				audienceIds: selectedAudienceIds,
 				eventId
 			});
+			saved = snapshot();
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled_toast());
+			leaving = true;
 			goto(resolve(`staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(
@@ -157,6 +172,7 @@
 		try {
 			await deleteCampaign({});
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted_toast());
+			leaving = true;
 			goto(resolve('staff/marketing/campaigns'));
 		} catch (err) {
 			toast.error(
@@ -167,6 +183,8 @@
 		}
 	}
 </script>
+
+<FormGuard dirty={isDirty} />
 
 <PageHeader
 	title={m.staff_marketing_campaigns_id_edit_edit_campaign_title()}

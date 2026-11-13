@@ -46,7 +46,7 @@
 
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { reportError } from '#lib/report-error.js';
 	import { errorMessage } from '#lib/error-message.js';
@@ -60,7 +60,7 @@
 	let {
 		remote,
 		action,
-		guard = false,
+		guard = true,
 		flashDuration = 1500,
 		successToast,
 		onsuccess,
@@ -73,6 +73,10 @@
 	}: {
 		remote?: RemoteForm<TInput, TOutput> | Omit<RemoteForm<TInput, TOutput>, 'for'>;
 		action?: (data: FormData) => Promise<TOutput | void>;
+		/**
+		 * Asks before a navigation discards typed input. On by default; off only
+		 * where leaving mid-entry loses nothing worth asking about (sign-in).
+		 */
 		guard?: boolean;
 		flashDuration?: number;
 		successToast?: string;
@@ -138,6 +142,8 @@
 		ondirtychange?.(changeCount > 0);
 	});
 
+	// Also called from the form element itself, so a raw input or a custom editor
+	// inside the form counts as an edit without wiring `changed()` by hand.
 	// Mark the form dirty at the mutation site rather than via an $effect that
 	// reads and writes `status` — an effect here re-scheduled on every keystroke
 	// and was one contributor to reactive churn (JAVASCRIPT-SVELTEKIT-W).
@@ -205,6 +211,43 @@
 	};
 	setFormContext(ctx);
 
+	// Fields are disabled while pending, which blurs whichever one had focus. After
+	// the submit, focus goes to the first invalid field, or back where it was; when
+	// a success replaced the form with a message, to that message.
+	let focusBefore: HTMLElement | null = null;
+	let formParent: HTMLElement | null = null;
+
+	function rememberFocus() {
+		const active = document.activeElement;
+		focusBefore = active instanceof HTMLElement && formEl?.contains(active) ? active : null;
+		formParent = formEl?.parentElement ?? null;
+	}
+
+	async function restoreFocus(failed: boolean) {
+		await tick();
+		const active = document.activeElement;
+		if (active && active !== document.body) return;
+		if (!formEl?.isConnected) {
+			const message = formParent?.isConnected
+				? formParent.querySelector<HTMLElement>('[role="alert"], [role="status"]')
+				: null;
+			if (message && !failed) {
+				if (!message.hasAttribute('tabindex')) message.tabIndex = -1;
+				message.focus();
+			}
+			return;
+		}
+		const invalid = failed ? formEl.querySelector<HTMLElement>('[aria-invalid="true"]') : null;
+		const target = invalid ?? (focusBefore?.isConnected ? focusBefore : null);
+		target?.focus();
+	}
+
+	function endFlash() {
+		status = changeCount > 0 ? 'dirty' : 'idle';
+		// The submit button stays disabled through the flash, so it takes focus back only now.
+		void restoreFocus(false);
+	}
+
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
 	// The boundary reports to Sentry and toasts; without one, do both here.
@@ -271,6 +314,7 @@
 			if (submitting) return;
 			submitting = true;
 			const [{ submit }] = args;
+			rememberFocus();
 			status = 'pending';
 			const start = performance.now();
 
@@ -283,6 +327,7 @@
 					if (successToast) toast.success(successToast);
 					status = 'success';
 					changeCount = 0;
+					void restoreFocus(false);
 				} else {
 					// Validation failed — expected. Field-level issues are already
 					// rendered; surface them without reporting a bug to Sentry.
@@ -290,6 +335,7 @@
 					if (onfailure) onfailure(ctx.issues);
 					else toast.error(m.ui_form_fix_fields_toast());
 					status = 'error';
+					void restoreFocus(true);
 				}
 			} catch (err) {
 				await delay(150 - (performance.now() - start));
@@ -311,22 +357,21 @@
 				surfaceFailure(err);
 				onfailure?.(ctx.issues, err);
 				status = 'error';
+				void restoreFocus(true);
 			} finally {
 				submitting = false;
 			}
 
-			setTimeout(() => {
-				// Restore dirty-awareness after the flash: edits made during the
-				// flash (or a failed submit that kept changeCount) must keep the
-				// unsaved-changes guard active.
-				status = changeCount > 0 ? 'dirty' : 'idle';
-			}, flashDuration);
+			// Restore dirty-awareness after the flash: edits made during the flash
+			// (or a failed submit that kept changeCount) keep the guard active.
+			setTimeout(endFlash, flashDuration);
 		})
 	);
 
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!action || !formEl) return;
+		rememberFocus();
 		status = 'pending';
 		actionIssues = null;
 		const start = performance.now();
@@ -339,17 +384,17 @@
 			if (successToast) toast.success(successToast);
 			status = 'success';
 			changeCount = 0;
+			void restoreFocus(false);
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
 			if (await interruptForSignIn(err)) return;
 			surfaceFailure(err);
 			onfailure?.(null, err);
 			status = 'error';
+			void restoreFocus(true);
 		}
 
-		setTimeout(() => {
-			status = changeCount > 0 ? 'dirty' : 'idle';
-		}, flashDuration);
+		setTimeout(endFlash, flashDuration);
 	}
 </script>
 
@@ -359,6 +404,8 @@
 		{...remoteAttrs}
 		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}
+		oninputcapture={markChanged}
+		onchangecapture={markChanged}
 		class={className}
 		{...rest}
 	>
@@ -380,6 +427,8 @@
 		onsubmit={handleActionSubmit}
 		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}
+		oninputcapture={markChanged}
+		onchangecapture={markChanged}
 		class={className}
 		{...rest}
 	>

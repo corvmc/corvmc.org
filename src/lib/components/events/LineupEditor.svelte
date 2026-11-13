@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
 	import Button from '#lib/components/ui/Button.svelte';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
 
 	export type LineupChip = {
 		name: string;
@@ -48,6 +49,10 @@
 
 	let query = $state('');
 
+	// A chip added or moved with a button fires no input event, so the
+	// enclosing form's unsaved-changes guard is told directly.
+	const form = getFormContext();
+
 	// Skipped entirely when read-only: there is no box to type in, and this is a
 	// top-level await that would otherwise fire a query per keystroke.
 	const matches = $derived(!readonly && query.trim().length >= 2 ? await search(query.trim()) : []);
@@ -64,6 +69,7 @@
 		if (dupe) return;
 
 		value = [...value, { ...chip, name: chip.name.trim() }];
+		form?.changed();
 		query = '';
 	}
 
@@ -76,6 +82,7 @@
 
 	function remove(i: number) {
 		value = value.filter((_, j) => j !== i);
+		form?.changed();
 	}
 
 	function move(i: number, delta: number) {
@@ -84,6 +91,7 @@
 		const next = [...value];
 		[next[i], next[j]] = [next[j], next[i]];
 		value = next;
+		form?.changed();
 	}
 
 	function chipLabel(chip: LineupChip): string {
