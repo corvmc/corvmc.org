@@ -7,6 +7,7 @@ import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
 import noDriverMessageMatch from './eslint-rules/no-driver-message-match.js';
+import noUnqualifiedCorrelation from './eslint-rules/no-unqualified-correlation.js';
 import stableCreatedAtOrder from './eslint-rules/stable-created-at-order.js';
 import noCheckThenInsert from './eslint-rules/no-check-then-insert.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
@@ -59,6 +60,7 @@ const customPlugin = {
 		'no-check-then-insert': noCheckThenInsert,
 		'no-db-transaction': noDbTransaction,
 		'no-driver-message-match': noDriverMessageMatch,
+		'no-unqualified-correlation': noUnqualifiedCorrelation,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
 		'no-domain-imports-in-ui': noDomainImportsInUi,
@@ -324,7 +326,8 @@ export default defineConfig(
 		rules: {
 			'custom/no-db-transaction': 'error',
 			'custom/stable-created-at-order': 'error',
-			'custom/no-check-then-insert': 'error'
+			'custom/no-check-then-insert': 'error',
+			'custom/no-unqualified-correlation': 'error'
 		}
 	},
 	{
