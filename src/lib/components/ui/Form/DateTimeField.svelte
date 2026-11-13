@@ -9,8 +9,8 @@
 
 	let {
 		id,
-		date: dateField,
-		time: timeField,
+		date,
+		time,
 		dateValue = $bindable(''),
 		timeValue = $bindable(''),
 		timeLabel,
@@ -60,8 +60,8 @@
 	}
 </script>
 
-<input {...dateField.as('hidden', dateValue)} bind:this={dateInput} />
-<input {...timeField.as('hidden', timeValue)} bind:this={timeInput} />
+<input {...date.as('hidden', dateValue)} bind:this={dateInput} />
+<input {...time.as('hidden', timeValue)} bind:this={timeInput} />
 
 <Popover.Root bind:open>
 	<Popover.Trigger {disabled}>

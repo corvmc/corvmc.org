@@ -400,7 +400,7 @@
 					type="text"
 					label={m.member_events_id_manage_ticket_link_label()}
 					value={listing.externalTicketUrl ?? ''}
-					placeholder="https://"
+					placeholder={m.member_events_id_manage_ticket_link_placeholder()}
 					class="sm:col-span-2"
 				/>
 			</div>

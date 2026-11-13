@@ -283,6 +283,7 @@
 	"member_events_id_manage_submit_review_label": "Submit for review",
 	"member_events_id_manage_take_down_label": "Unpublish",
 	"member_events_id_manage_ticket_link_label": "Ticket link",
+	"member_events_id_manage_ticket_link_placeholder": "https://",
 	"member_events_id_manage_ticket_price_label": "Ticket price ($)",
 	"member_events_id_manage_title": "Event not found",
 	"member_events_id_manage_ve_marked_show_as_cancelled_body": "You've marked this event as cancelled. It stays on the public calendar, marked, until its date passes — so anyone who had the date finds out.",
