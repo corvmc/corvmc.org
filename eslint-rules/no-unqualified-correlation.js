@@ -56,6 +56,7 @@ export default {
 			/** @param {RuleNode} node */
 			TaggedTemplateExpression(node) {
 				if (node.tag.type !== 'Identifier' || node.tag.name !== 'sql') return;
+				/** @type {{ quasis: RuleNode[]; expressions: RuleNode[] }} */
 				const { quasis, expressions } = node.quasi;
 				if (!quasis.some((q) => SUBQUERY.test(q.value.raw))) return;
 				if (!isSelectField(node)) return;
