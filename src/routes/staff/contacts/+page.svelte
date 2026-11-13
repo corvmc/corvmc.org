@@ -158,7 +158,7 @@
 		{#snippet menu()}
 			{#if data.roles.length > 1}
 				<fieldset class="flex flex-col gap-1" data-testid="role-filter">
-					<legend class="mb-1 text-muted text-xs">{m.staff_roles_label()}</legend>
+					<legend class="mb-1 text-muted text-xs">{m.staff_contacts_roles_title()}</legend>
 					{#each data.roles as role (role)}
 						<label class="label cursor-pointer gap-2 text-sm">
 							<input
