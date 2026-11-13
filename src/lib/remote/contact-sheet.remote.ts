@@ -14,6 +14,7 @@ import { resolveImageUrl } from '#lib/server/storage.js';
 import { livePosterRequests } from '#lib/server/production/artifact-request-service.js';
 import { listActSlotTerms } from '#lib/server/production/run-of-show-service.js';
 import { actContactNamesUnguarded } from '#lib/server/directory/contact-service.js';
+import { deliverNow } from '#lib/server/outbox/outbox-service.js';
 
 /**
  * `/act/{token}` — the one surface an external act can reach.
@@ -123,9 +124,10 @@ export const sendContactSheetLink = form(
 	}),
 	async (data) => {
 		const staff = await requireCapability('directory.shareContactSheet');
-		const { token } = await issueContactSheetLink(data.entryId, data.email, staff.id);
-		// Returned rather than emailed here: the send belongs to the notification
-		// layer, and staff need the URL anyway when an act asks for it again.
-		return { success: true, token };
+		const { url, outboxId } = await issueContactSheetLink(data.entryId, data.email, staff.id);
+		// Sent before answering, so "Link sent" is what the outbox row says. The
+		// URL is returned too: staff copy it when the act asks again (#2781).
+		const delivery = await deliverNow(outboxId);
+		return { success: true, url, sent: delivery.status === 'sent' };
 	}
 );

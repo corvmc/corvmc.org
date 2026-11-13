@@ -20,6 +20,7 @@ export const variables = defineEnvVars({
 	INBOX_REPLY_SECRET: optional,
 	LARAVEL_URL: optional,
 	LEDGER_RECONCILE_THRESHOLD_CENTS: optional,
+	MAIL_DRIVER: optional,
 	MARKETING_UNSUBSCRIBE_SECRET: optional,
 	META_APP_SECRET: optional,
 	META_PAGE_ACCESS_TOKEN: optional,

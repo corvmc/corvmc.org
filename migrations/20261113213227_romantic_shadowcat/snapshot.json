@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c8de3a09-49f2-4fa9-b0da-d97d00fae18a",
+  "id": "d73d52b9-ca66-433e-9301-325981ab01e6",
   "prevIds": [
-    "dff5eae0-4fb2-4c1a-afd4-c50634b4c4ae"
+    "c8de3a09-49f2-4fa9-b0da-d97d00fae18a"
   ],
   "ddl": [
     {
@@ -592,6 +592,10 @@
     },
     {
       "name": "group_application_choice",
+      "entityType": "tables"
+    },
+    {
+      "name": "outbox_message",
       "entityType": "tables"
     },
     {
@@ -16115,6 +16119,136 @@
       "table": "group_application_choice"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payload",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_type",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "subject_id",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "attempts",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_error",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "next_attempt_at",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "claimed_until",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "provider_message_id",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sent_at",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "outbox_message"
+    },
+    {
       "columns": [
         "user_id"
       ],
@@ -22310,6 +22444,15 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "outbox_message_pk",
+      "table": "outbox_message",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         {
           "value": "member_number",
           "isExpression": false
@@ -27217,6 +27360,42 @@
       "name": "idx_group_application_choice_group_status",
       "entityType": "indexes",
       "table": "group_application_choice"
+    },
+    {
+      "columns": [
+        {
+          "value": "status",
+          "isExpression": false
+        },
+        {
+          "value": "next_attempt_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_outbox_message_due",
+      "entityType": "indexes",
+      "table": "outbox_message"
+    },
+    {
+      "columns": [
+        {
+          "value": "subject_type",
+          "isExpression": false
+        },
+        {
+          "value": "subject_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_outbox_message_subject",
+      "entityType": "indexes",
+      "table": "outbox_message"
     },
     {
       "columns": [

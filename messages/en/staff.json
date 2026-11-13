@@ -681,6 +681,8 @@
 	"staff_events_id_vendors_decline_label": "Decline",
 	"staff_events_id_vendors_decline_2_title": "Decline {businessName}",
 	"staff_events_id_vendors_declined_vendor_told_toast": "Declined — vendor told",
+	"staff_events_id_vendors_accepted_message_not_sent_toast": "Accepted — message not sent",
+	"staff_events_id_vendors_declined_message_not_sent_toast": "Declined — message not sent",
 	"staff_events_id_vendors_due_text": "{formatCents} due",
 	"staff_events_id_vendors_edit_setup_label": "Edit setup",
 	"staff_events_id_vendors_fee_label": "Fee",

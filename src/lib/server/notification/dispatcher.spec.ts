@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getNotificationType } from '#lib/server/db/schema/notification.js';
 import { NOTIFICATION_CATEGORIES } from '#lib/email/notification-category.js';
 
-vi.mock('./email/postmark-client', () => ({
-	sendEmailWithTemplate: vi.fn(),
-	sendTemplateBatch: vi.fn()
+// The outbox is the seam: what the dispatcher queues is what it sends.
+vi.mock('#lib/server/outbox/outbox-service.js', () => ({
+	queueEmail: vi.fn(),
+	queueEmails: vi.fn()
 }));
 vi.mock('./in-app-service', () => ({ createNotification: vi.fn(), createNotifications: vi.fn() }));
 vi.mock('./preference-service', () => ({ getPreference: vi.fn() }));
@@ -54,8 +55,7 @@ const FAKE_ROW = {
 // timeout rather than a slow build. Same reason as commit 75fd70a. These are the
 // mocked modules, so the bindings are stable — `vi.resetAllMocks()` clears their
 // recorded calls without replacing the function objects.
-const { sendEmailWithTemplate, sendTemplateBatch } =
-	(await import('./email/postmark-client')) as any;
+const { queueEmail, queueEmails } = (await import('#lib/server/outbox/outbox-service.js')) as any;
 const { createNotification, createNotifications } = (await import('./in-app-service')) as any;
 const { getPreference } = (await import('./preference-service')) as any;
 const { pushToUser } = (await import('./sse')) as any;
@@ -98,7 +98,7 @@ describe('dispatch', () => {
 
 		await dispatch(BASE_PARAMS);
 
-		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
+		expect(queueEmail).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
 			templateAlias: 'notification',
 			model: SENT_MODEL,
@@ -111,7 +111,7 @@ describe('dispatch', () => {
 
 		await dispatch({ ...BASE_PARAMS, email: undefined });
 
-		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(queueEmail).not.toHaveBeenCalled();
 	});
 
 	// Nothing in the notification path knew about `user.deletedAt`, and one of
@@ -126,7 +126,7 @@ describe('dispatch', () => {
 
 		expect(createNotification).not.toHaveBeenCalled();
 		expect(pushToUser).not.toHaveBeenCalled();
-		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(queueEmail).not.toHaveBeenCalled();
 		expect(getPreference).not.toHaveBeenCalled();
 	});
 
@@ -138,7 +138,7 @@ describe('dispatch', () => {
 		await dispatch({ ...BASE_PARAMS, userId: '', forceEmail: true });
 
 		expect(isDeliverable).not.toHaveBeenCalled();
-		expect(sendEmailWithTemplate).toHaveBeenCalled();
+		expect(queueEmail).toHaveBeenCalled();
 	});
 
 	it('sends email via forceEmail even when pref.email is false', async () => {
@@ -146,7 +146,7 @@ describe('dispatch', () => {
 
 		await dispatch({ ...BASE_PARAMS, forceEmail: true });
 
-		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
+		expect(queueEmail).toHaveBeenCalledWith({
 			to: BASE_PARAMS.userEmail,
 			templateAlias: 'notification',
 			model: SENT_MODEL,
@@ -174,9 +174,9 @@ describe('dispatch', () => {
 		consoleSpy.mockRestore();
 	});
 
-	it('logs error but does not throw if sendEmailWithTemplate fails', async () => {
+	it('logs error but does not throw if queueEmail fails', async () => {
 		getPreference.mockResolvedValue({ email: true, inApp: false });
-		sendEmailWithTemplate.mockRejectedValue(new Error('Postmark error'));
+		queueEmail.mockRejectedValue(new Error('Postmark error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(dispatch(BASE_PARAMS)).resolves.toBeUndefined();
@@ -193,7 +193,7 @@ describe('dispatchEmailOnly', () => {
 	});
 
 	it('sends a templated email with the provided params', async () => {
-		sendEmailWithTemplate.mockResolvedValue(undefined);
+		queueEmail.mockResolvedValue(undefined);
 
 		await dispatchEmailOnly({
 			type: 'ticket.purchased',
@@ -202,7 +202,7 @@ describe('dispatchEmailOnly', () => {
 			model: { attendeeName: 'Ada' }
 		});
 
-		expect(sendEmailWithTemplate).toHaveBeenCalledWith({
+		expect(queueEmail).toHaveBeenCalledWith({
 			to: 'buyer@example.com',
 			templateAlias: 'ticket-confirmation',
 			model: { attendeeName: 'Ada' },
@@ -211,7 +211,7 @@ describe('dispatchEmailOnly', () => {
 	});
 
 	it('forwards replyTo so the recipient can answer a two-way email', async () => {
-		sendEmailWithTemplate.mockResolvedValue(undefined);
+		queueEmail.mockResolvedValue(undefined);
 
 		await dispatchEmailOnly({
 			type: 'contact_form',
@@ -221,13 +221,11 @@ describe('dispatchEmailOnly', () => {
 			replyTo: 'reply+thread-1.sig@replies.example.com'
 		});
 
-		expect(sendEmailWithTemplate.mock.calls[0][0].replyTo).toBe(
-			'reply+thread-1.sig@replies.example.com'
-		);
+		expect(queueEmail.mock.calls[0][0].replyTo).toBe('reply+thread-1.sig@replies.example.com');
 	});
 
 	it('logs error but does not throw on send failure', async () => {
-		sendEmailWithTemplate.mockRejectedValue(new Error('Network error'));
+		queueEmail.mockRejectedValue(new Error('Network error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(
@@ -264,7 +262,7 @@ describe('notification model normalization', () => {
 
 	async function sentModel(email: Record<string, unknown>) {
 		await dispatchEmailOnly({ type: 'contact_form', toEmail: 'staff@example.com', email });
-		return sendEmailWithTemplate.mock.calls[0][0].model;
+		return queueEmail.mock.calls[0][0].model;
 	}
 
 	it('derives preview_text from the first paragraph when unset', async () => {
@@ -325,7 +323,7 @@ describe('notification model normalization', () => {
 			model: { attendeeName: 'Ada' }
 		});
 
-		expect(sendEmailWithTemplate.mock.calls[0][0].model).toEqual({ attendeeName: 'Ada' });
+		expect(queueEmail.mock.calls[0][0].model).toEqual({ attendeeName: 'Ada' });
 	});
 });
 
@@ -356,7 +354,7 @@ describe('emailOmitsUserContent', () => {
 			}
 		});
 
-		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		const model = queueEmail.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();
 		expect(model.quote_text).toBeUndefined();
 		expect(JSON.stringify(model)).not.toContain('the private words of a member');
@@ -370,7 +368,7 @@ describe('emailOmitsUserContent', () => {
 			title: 'New message request',
 			email: { subject: 'New request', heading: 'New request', quote: 'let me in' }
 		});
-		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		const model = queueEmail.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();
 	});
 
@@ -390,7 +388,7 @@ describe('emailOmitsUserContent', () => {
 				paragraphs: [{ text: 'the private words of a member' }]
 			}
 		});
-		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		const model = queueEmail.mock.calls[0][0].model;
 		// The category is all that is left: it comes from the type, not the
 		// member, and it is already what the subject says. Nothing of the body.
 		const category =
@@ -408,7 +406,7 @@ describe('emailOmitsUserContent', () => {
 			title: 'CorvMC replied',
 			email: { subject: 'Reply', heading: 'Reply', quote: 'here is your answer' }
 		});
-		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		const model = queueEmail.mock.calls[0][0].model;
 		expect(model.quote).toContain('here is your answer');
 	});
 
@@ -420,7 +418,7 @@ describe('emailOmitsUserContent', () => {
 			toEmail: 'user@example.com',
 			email: { subject: 'New message', heading: 'New message', quote: 'private' }
 		});
-		const model = sendEmailWithTemplate.mock.calls[0][0].model;
+		const model = queueEmail.mock.calls[0][0].model;
 		expect(model.quote).toBeUndefined();
 	});
 });
@@ -435,18 +433,20 @@ describe('dispatchEmailOnlyBatch', () => {
 			{ toEmail: 'b@example.com', email }
 		]);
 
-		expect(sendTemplateBatch).toHaveBeenCalledTimes(1);
-		const [alias, messages, opts] = sendTemplateBatch.mock.calls[0];
-		expect(alias).toBe('notification');
+		expect(queueEmails).toHaveBeenCalledTimes(1);
+		const [messages] = queueEmails.mock.calls[0];
+		expect(
+			messages.every((m: { templateAlias: string }) => m.templateAlias === 'notification')
+		).toBe(true);
 		expect(messages.map((m: { to: string }) => m.to)).toEqual(['a@example.com', 'b@example.com']);
 		expect(messages[0].model.subject).toBe('Join us');
-		expect(opts).toEqual({ tag: 'group_invitation' });
-		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(messages[0].tag).toBe('group_invitation');
+		expect(queueEmail).not.toHaveBeenCalled();
 	});
 
 	it('sends nothing for no recipients', async () => {
 		await dispatchEmailOnlyBatch('group_invitation', []);
-		expect(sendTemplateBatch).not.toHaveBeenCalled();
+		expect(queueEmails).not.toHaveBeenCalled();
 	});
 });
 
@@ -488,14 +488,16 @@ describe('dispatchBatch', () => {
 		});
 		expect(pushToUser.mock.calls.map(([id]: [string]) => id)).toEqual(['a', 'b']);
 
-		expect(sendTemplateBatch).toHaveBeenCalledTimes(1);
-		const [alias, messages, opts] = sendTemplateBatch.mock.calls[0];
-		expect(alias).toBe('notification');
+		expect(queueEmails).toHaveBeenCalledTimes(1);
+		const [messages] = queueEmails.mock.calls[0];
+		expect(
+			messages.every((m: { templateAlias: string }) => m.templateAlias === 'notification')
+		).toBe(true);
 		expect(messages.map((m: { to: string }) => m.to)).toEqual(['a@example.com', 'c@example.com']);
 		expect(messages[0].model.greeting).toContain('Name');
 		expect(JSON.stringify(messages[0].model)).toContain('/member/groups/jazz-club');
-		expect(opts).toEqual({ tag: 'group_member_added' });
-		expect(sendEmailWithTemplate).not.toHaveBeenCalled();
+		expect(messages[0].tag).toBe('group_member_added');
+		expect(queueEmail).not.toHaveBeenCalled();
 		expect(createNotification).not.toHaveBeenCalled();
 	});
 
@@ -503,6 +505,6 @@ describe('dispatchBatch', () => {
 		listBatchRecipients.mockResolvedValue([]);
 		await dispatchBatch({ ...params, userIds: [] });
 		expect(createNotifications).not.toHaveBeenCalled();
-		expect(sendTemplateBatch).not.toHaveBeenCalled();
+		expect(queueEmails).not.toHaveBeenCalled();
 	});
 });

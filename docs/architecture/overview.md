@@ -362,6 +362,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | Endpoint                                    | Purpose                                                                                | Cron (UTC)     |
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
 | `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                  | `*/5 * * * *`  |
+| `/api/cron/send-outbox`                     | Send outbox messages that are due, retrying failed sends with backoff                  | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
 | `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                   | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |

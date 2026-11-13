@@ -9,7 +9,11 @@ import { organization, vendorDetail } from '#lib/server/db/schema/party.js';
 import { recordApplicantUnguarded } from '#lib/server/directory/contact-service.js';
 import { fileThread } from '#lib/server/party/thread-filing.js';
 import { findOrCreateThread } from '#lib/server/inbox/thread-service.js';
-import { addInboundMessage, addOutboundMessage } from '#lib/server/inbox/message-service.js';
+import {
+	addInboundMessage,
+	announceQueuedReply,
+	queuedReplyStatements
+} from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { marketVendorStatuses, type MarketVendorStatus } from '#lib/config.js';
 import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
@@ -511,16 +515,24 @@ async function feeOnAcceptance(vendor: MarketVendor) {
 	};
 }
 
+/** The outbox subject a vendor's decision message is filed under. */
+export const vendorDecisionSubject = (vendorId: string) => ({
+	type: 'market_vendor',
+	id: vendorId
+});
+
 /**
- * Accept or decline, and tell the vendor. Returns the event id, for refreshes.
- * Accepting fixes the fee and adds the pay link to the message; declining a
- * vendor who paid refunds them first, since CMC is the one cancelling (#1502).
+ * Accept or decline, and tell the vendor. Accepting fixes the fee and adds the
+ * pay link to the message; declining a vendor who paid refunds them first,
+ * since CMC is the one cancelling (#1502). The decision and its message commit
+ * together; the message is sent by the outbox, so a refused send leaves the
+ * decision standing (#2819). `outboxId` is null when there was nothing to send.
  */
 export async function decideApplication(
 	vendorId: string,
 	decision: VendorDecision,
 	actor: { id: string; name: string }
-): Promise<{ eventId: string }> {
+): Promise<{ eventId: string; outboxId: string | null }> {
 	const vendor = await loadVendor(vendorId);
 	assertTransition(vendor.status, decision.decision);
 
@@ -528,7 +540,7 @@ export async function decideApplication(
 	const fee = accepted ? await feeOnAcceptance(vendor) : null;
 	if (!accepted) await refundVendorFee(vendorId);
 
-	await db
+	const update = db
 		.update(marketVendor)
 		.set({
 			status: decision.decision,
@@ -544,15 +556,21 @@ export async function decideApplication(
 		fee && fee.feeCents > 0
 			? `\n\nPay your table fee here: ${env.PUBLIC_SITE_URL ?? 'https://corvmc.org'}${vendorPayPath(vendorId)}`
 			: '';
-	if (vendor.threadId && decision.message.trim()) {
-		await addOutboundMessage({
-			threadId: vendor.threadId,
-			body: decision.message.trim() + payLine,
-			authorUserId: actor.id,
-			authorName: actor.name
-		});
+	if (!vendor.threadId || !decision.message.trim()) {
+		await update;
+		return { eventId: vendor.eventId, outboxId: null };
 	}
-	return { eventId: vendor.eventId };
+
+	const queued = await queuedReplyStatements({
+		threadId: vendor.threadId,
+		body: decision.message.trim() + payLine,
+		authorUserId: actor.id,
+		authorName: actor.name,
+		subject: vendorDecisionSubject(vendorId)
+	});
+	await db.batch([update, ...queued.statements]);
+	announceQueuedReply(queued, actor.id);
+	return { eventId: vendor.eventId, outboxId: queued.outboxId };
 }
 
 /** A vendor's market, read off the row: what a guard on a vendor id checks against. */

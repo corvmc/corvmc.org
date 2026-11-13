@@ -14,11 +14,26 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
 
-const sent = vi.fn(async (_params: { threadId: string; body: string }) => ({ id: 'msg' }));
-vi.mock('#lib/server/inbox/message-service.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('#lib/server/inbox/message-service.js')>()),
-	addOutboundMessage: (params: { threadId: string; body: string }) => sent(params)
-}));
+/**
+ * What the vendor was told: each outbound message on a thread, with the outbox
+ * row that sends it. The message and the row are written with the decision (#2819).
+ */
+function sent() {
+	return sqlite
+		.prepare(
+			`select m.thread_id as threadId, m.body, o.subject_type as subjectType, o.subject_id as subjectId, o.status
+			 from inbox_message m
+			 join outbox_message o on o.kind = 'inbox_reply' and json_extract(o.payload, '$.messageId') = m.id
+			 where m.direction = 'outbound' order by m.created_at, m.rowid`
+		)
+		.all() as {
+		threadId: string;
+		body: string;
+		subjectType: string;
+		subjectId: string;
+		status: string;
+	}[];
+}
 
 const checkout = vi.fn(async (_o: unknown) => ({
 	paid: false,
@@ -95,12 +110,12 @@ beforeEach(() => {
 	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
+	sqlite.exec('delete from outbox_message');
 	const s = Math.floor(STARTS.getTime() / 1000);
 	sqlite.exec(
 		`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, created_by_user_id)
 		 values ('${EVENT}', 'Autumn Market', ${s}, ${s + 4 * 3600}, 'published', 'cmc', 'show', 'staff-1')`
 	);
-	sent.mockClear();
 	checkout.mockClear();
 	refund.mockClear();
 });
@@ -120,7 +135,7 @@ describe('the market fee', () => {
 		await accept(id);
 
 		expect(await vendorRow(id)).toMatchObject({ feeCents: 5000, feeFloorCents: 5000 });
-		expect(sent.mock.calls[0][0].body).toContain(`/market/pay/${id}`);
+		expect(sent()[0].body).toContain(`/market/pay/${id}`);
 	});
 
 	it('takes the sliding-scale floor per table too', async () => {
@@ -133,7 +148,7 @@ describe('the market fee', () => {
 		const id = await marketWith({ tableFeeCents: 0 });
 		await accept(id);
 		expect(await vendorRow(id)).toMatchObject({ feeCents: 0 });
-		expect(sent.mock.calls[0][0].body).toBe('You are in.');
+		expect(sent()[0].body).toBe('You are in.');
 	});
 });
 

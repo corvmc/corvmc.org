@@ -20,6 +20,7 @@
 	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
 	import { decideVendorForm, getCommitteeMarketVendors } from '#lib/remote/market.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import { toastDelivery } from '#lib/utils/delivery-toast.js';
 
 	const params = routeParams('slug', 'eventId');
 
@@ -121,7 +122,12 @@
 									modalTitle={m.member_groups_slug_markets_event_id_accept_title({
 										businessName: row.businessName
 									})}
-									successToast={m.member_groups_slug_markets_event_id_accepted_vendor_told_toast()}
+									onsuccess={(r) =>
+										toastDelivery(r, {
+											sent: m.member_groups_slug_markets_event_id_accepted_vendor_told_toast(),
+											notSent:
+												m.member_groups_slug_markets_event_id_accepted_message_not_sent_toast()
+										})}
 									variant="ghost"
 									size="sm"
 								>
@@ -152,7 +158,12 @@
 									modalTitle={m.member_groups_slug_markets_event_id_decline_title({
 										businessName: row.businessName
 									})}
-									successToast={m.member_groups_slug_markets_event_id_declined_vendor_told_toast()}
+									onsuccess={(r) =>
+										toastDelivery(r, {
+											sent: m.member_groups_slug_markets_event_id_declined_vendor_told_toast(),
+											notSent:
+												m.member_groups_slug_markets_event_id_declined_message_not_sent_toast()
+										})}
 									variant="ghost"
 									size="sm"
 								>

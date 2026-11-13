@@ -13,13 +13,32 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+// The channel is the outside service: Postmark, Twilio or Meta behind one call.
+const dispatchReply = vi.hoisted(() =>
+	vi.fn(async (..._a: unknown[]): Promise<string | null> => null)
+);
+vi.mock('#lib/server/inbox/channel-dispatcher.js', () => ({ dispatchReply }));
 
-// Delivery is the inbox's job; what matters here is that the vendor is told.
-const sent = vi.fn(async (_params: { threadId: string; body: string }) => ({ id: 'msg' }));
-vi.mock('#lib/server/inbox/message-service.js', async (importOriginal) => ({
-	...(await importOriginal<typeof import('#lib/server/inbox/message-service.js')>()),
-	addOutboundMessage: (params: { threadId: string; body: string }) => sent(params)
-}));
+/**
+ * What the vendor was told: each outbound message on a thread, with the outbox
+ * row that sends it. The message and the row are written with the decision (#2819).
+ */
+function sent() {
+	return sqlite
+		.prepare(
+			`select m.thread_id as threadId, m.body, o.subject_type as subjectType, o.subject_id as subjectId, o.status
+			 from inbox_message m
+			 join outbox_message o on o.kind = 'inbox_reply' and json_extract(o.payload, '$.messageId') = m.id
+			 where m.direction = 'outbound' order by m.created_at, m.rowid`
+		)
+		.all() as {
+		threadId: string;
+		body: string;
+		subjectType: string;
+		subjectId: string;
+		status: string;
+	}[];
+}
 
 const {
 	openMarketDay,
@@ -41,6 +60,7 @@ const {
 	MarketClosedError,
 	VendorTransitionError
 } = await import('./market-service');
+const { deliverOutbox, backoffMs } = await import('#lib/server/outbox/outbox-service.js');
 
 const EVENT = 'evt-market';
 const NOW = new Date('2026-10-01T12:00:00Z');
@@ -84,7 +104,7 @@ beforeEach(() => {
 	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
-	sent.mockClear();
+	sqlite.exec('delete from outbox_message');
 });
 
 describe('opening a market day', () => {
@@ -283,9 +303,42 @@ describe('deciding', () => {
 		);
 		const [row] = await listApplications(EVENT);
 		expect(row).toMatchObject({ status: 'accepted', tableLabel: 'B3', decidedByUserId: 'staff-1' });
-		expect(sent).toHaveBeenCalledWith(
-			expect.objectContaining({ threadId: row.threadId, body: 'You are in — table B3.' })
+		expect(sent()).toEqual([
+			{
+				threadId: row.threadId,
+				body: 'You are in — table B3.',
+				subjectType: 'market_vendor',
+				subjectId: vendorId,
+				status: 'pending'
+			}
+		]);
+	});
+
+	// #2819: the send ran after the write and its throw became a 500 over a
+	// saved decision. The send is the outbox's now, and its failure is a row.
+	it('keeps the decision when the send is refused, records why, and sends on retry', async () => {
+		const { outboxId } = await decideApplication(
+			vendorId,
+			{ decision: 'accepted', message: 'You are in.' },
+			ACTOR
 		);
+		dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+		const now = new Date(Date.now() + 1000);
+		expect(await deliverOutbox({ ids: [outboxId!], now })).toEqual([
+			{ id: outboxId, status: 'pending', error: '406 Inactive recipient' }
+		]);
+		expect((await listApplications(EVENT))[0].status).toBe('accepted');
+
+		dispatchReply.mockResolvedValueOnce('<pm-1@corvmc.org>');
+		const later = new Date(now.getTime() + backoffMs(1));
+		expect(await deliverOutbox({ ids: [outboxId!], now: later })).toEqual([
+			{ id: outboxId, status: 'sent', error: null }
+		]);
+		const [message] = sqlite
+			.prepare(`select channel_message_id from inbox_message where direction = 'outbound'`)
+			.all() as { channel_message_id: string }[];
+		expect(message.channel_message_id).toBe('<pm-1@corvmc.org>');
+		expect(sent()[0].status).toBe('sent');
 	});
 
 	it('declines and clears any table', async () => {
@@ -311,7 +364,7 @@ describe('deciding', () => {
 		await expect(
 			decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR)
 		).rejects.toBeInstanceOf(VendorTransitionError);
-		expect(sent).not.toHaveBeenCalled();
+		expect(sent()).toEqual([]);
 	});
 
 	it('moves a table only for an accepted vendor', async () => {
@@ -457,7 +510,7 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		await expect(
 			decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR)
 		).rejects.toBeInstanceOf(VendorTransitionError);
-		expect(sent).toHaveBeenCalledTimes(1);
+		expect(sent()).toHaveLength(1);
 	});
 
 	it('lists only accepted vendors and no-shows for the day, without contact detail', async () => {

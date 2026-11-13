@@ -203,6 +203,8 @@ export default defineConfig({
 			// pinning below is what stops a real credential reaching the server at
 			// all, and this is what stops the server transacting even if one did.
 			PAYMENTS_DRIVER: 'fake',
+			// Pinned for the same reason: the outbox logs mail instead of sending it.
+			MAIL_DRIVER: 'log',
 			// Pinned empty for the same reason as STRIPE_ENV: `.env` carries a real
 			// LARAVEL_URL and MIGRATION_SECRET, and the bcrypt fallback would POST a
 			// test's password attempt to the production box. Absent, `verify` never

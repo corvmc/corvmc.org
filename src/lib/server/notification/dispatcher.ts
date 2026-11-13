@@ -1,4 +1,5 @@
-import { sendEmailWithTemplate, sendTemplateBatch } from './email/postmark-client';
+import { queueEmail, queueEmails } from '#lib/server/outbox/outbox-service.js';
+import type { TemplatedEmail } from './email/postmark-client';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
@@ -8,7 +9,6 @@ import { getPreference } from './preference-service';
 import { isDeliverable, listBatchRecipients } from './recipient';
 import { pushToUser } from './sse';
 import { captureException } from '#lib/server/sentry.js';
-import { afterResponse } from '#lib/server/after-response.js';
 import type {
 	NotificationEmailContent,
 	NotificationEmailPayload,
@@ -98,8 +98,8 @@ export interface DispatchParams {
  * and pushes SSE event. Fire-and-forget — errors are logged, not thrown.
  *
  * The in-app row is written on the request path because the recipient may be
- * looking at the bell when it lands; the email is handed to `afterResponse`,
- * because nobody is waiting on it and Postmark is not fast.
+ * looking at the bell when it lands; the email goes to the outbox, which
+ * sends it after the response and retries it if Postmark refuses.
  */
 export async function dispatch(params: DispatchParams): Promise<void> {
 	// A removed account is not a recipient, on any channel. Guarded at the seam
@@ -140,21 +140,36 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 		}
 	}
 
-	// Email — off the request path. Nothing here is awaited by a caller that
-	// could act on the result, and a Postmark round trip is the slowest thing in
-	// most notification-sending requests.
 	const content = params.email;
 	if ((pref.email || params.forceEmail) && content) {
-		await afterResponse(
+		await enqueue(
 			() =>
-				sendEmailWithTemplate({
+				queueEmail({
 					to: params.userEmail,
 					templateAlias: GENERIC_ALIAS,
 					model: genericModel(content, params.type, params.href),
 					tag: params.type
 				}),
-			{ channel: 'email', type: params.type, to: params.userEmail }
+			{ channel: 'email', type: params.type }
 		);
+	}
+}
+
+/** Declared content as an outbox email, for a caller that inserts the row in its own batch. */
+export function standaloneEmail(
+	type: string,
+	to: string,
+	email: StandaloneEmailContent
+): TemplatedEmail {
+	return { to, templateAlias: GENERIC_ALIAS, model: genericModel(email, type), tag: type };
+}
+
+/** Into the outbox. A notification never fails its caller, so a refused insert is reported, not thrown. */
+async function enqueue(queue: () => Promise<unknown>, tags: Record<string, unknown>) {
+	try {
+		await queue();
+	} catch (err) {
+		captureException(err, tags);
 	}
 }
 
@@ -185,16 +200,16 @@ export async function dispatchEmailOnly(
 		? genericModel(params.email, params.type)
 		: templateModel(params.templateAlias, params.model, params.type);
 
-	await afterResponse(
+	await enqueue(
 		() =>
-			sendEmailWithTemplate({
+			queueEmail({
 				to: params.toEmail,
 				templateAlias: alias,
 				model,
 				replyTo: params.replyTo,
 				tag: params.type
 			}),
-		{ channel: 'email-only', type: params.type, to: params.toEmail }
+		{ channel: 'email-only', type: params.type }
 	);
 }
 
@@ -208,12 +223,13 @@ export async function dispatchEmailOnlyBatch(
 	messages: { toEmail: string; email: StandaloneEmailContent }[]
 ): Promise<void> {
 	if (messages.length === 0) return;
-	const batch = messages.map((m) => ({ to: m.toEmail, model: genericModel(m.email, type) }));
-	await afterResponse(() => sendTemplateBatch(GENERIC_ALIAS, batch, { tag: type }), {
-		channel: 'email-only-batch',
-		type,
-		recipients: batch.length
-	});
+	const batch = messages.map((m) => ({
+		to: m.toEmail,
+		templateAlias: GENERIC_ALIAS,
+		model: genericModel(m.email, type),
+		tag: type
+	}));
+	await enqueue(() => queueEmails(batch), { channel: 'email-only-batch', type });
 }
 
 /**
@@ -270,12 +286,10 @@ export async function dispatchBatch(params: {
 	if (content && byEmail.length > 0) {
 		const batch = byEmail.map((r) => ({
 			to: r.email,
-			model: genericModel({ ...content, recipientName: r.name }, params.type, params.href)
+			templateAlias: GENERIC_ALIAS,
+			model: genericModel({ ...content, recipientName: r.name }, params.type, params.href),
+			tag: params.type
 		}));
-		await afterResponse(() => sendTemplateBatch(GENERIC_ALIAS, batch, { tag: params.type }), {
-			channel: 'email-batch',
-			type: params.type,
-			recipients: batch.length
-		});
+		await enqueue(() => queueEmails(batch), { channel: 'email-batch', type: params.type });
 	}
 }
