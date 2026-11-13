@@ -72,7 +72,11 @@ jobs:
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
       # `eslint-rules/` and the root configs, none of which the
       # generated one has ever covered. `pnpm check` chains both.
+      # The `src` pass needs more than Node's ~4 GB default heap (#2848); the
+      # runner has 16 GB.
       - run: pnpm check
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
 
   # `unit` and `e2e` were one `Test` job that ran them back to back. They share
   # nothing, so running them side by side halves the critical path. Deliberately no
