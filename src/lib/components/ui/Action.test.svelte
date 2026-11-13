@@ -10,6 +10,7 @@
 	import ErrorToastBoundary from './ErrorToastBoundary.svelte';
 	import SignedInProvider from './SignedInProvider.svelte';
 	import FormField from './Form/FormField.svelte';
+	import Form from './Form/Form.svelte';
 	import type { ComponentProps } from 'svelte';
 
 	let {
@@ -24,6 +25,7 @@
 		 */
 		boundary = false,
 		signedIn,
+		withinForm,
 		...rest
 	}: {
 		action: ComponentProps<typeof Action>['action'];
@@ -38,11 +40,13 @@
 		boundary?: boolean;
 		/** Provides the viewer's sign-in state, as the public layout does. */
 		signedIn?: boolean;
+		/** Renders the action inside a page's own form, as a detail page's sidebar does. */
+		withinForm?: ComponentProps<typeof Form>['remote'];
 		[key: string]: unknown;
 	} = $props();
 </script>
 
-{#snippet content()}
+{#snippet theAction()}
 	{#if formFieldName}
 		<Action {action} {...rest}>
 			{#snippet form()}
@@ -65,6 +69,14 @@
 		</Action>
 	{:else}
 		<Action {action} {...rest} />
+	{/if}
+{/snippet}
+
+{#snippet content()}
+	{#if withinForm}
+		<Form remote={withinForm} data-testid="page-form">{@render theAction()}</Form>
+	{:else}
+		{@render theAction()}
 	{/if}
 {/snippet}
 

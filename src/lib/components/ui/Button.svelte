@@ -152,8 +152,15 @@
 			: null
 	);
 	// The interrupt is a plain link, so the action it stands in for must not ride along.
+	// A `<button>` with no type submits the nearest `<form>`, and that form can
+	// belong to a parent component the caller never sees: every Action trigger
+	// on the item page submitted the item edit form (#2651). Submitting is opt-in.
 	const passthrough = $derived.by(() => {
-		if (!interrupt) return rest as Record<string, unknown>;
+		if (!interrupt)
+			return { ...rest, type: rest.type ?? (href ? undefined : 'button') } as Record<
+				string,
+				unknown
+			>;
 		const { onclick: _c, type: _t, form: _f, ...link } = rest as Record<string, unknown>;
 		return link;
 	});

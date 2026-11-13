@@ -281,6 +281,9 @@ Props:
 - `outline` — boolean; stacks on top of `variant`, so `variant="error" outline` is an outlined
   destructive button. It is not a variant of its own.
 - `href` — renders an `<a>` instead of a `<button>`
+- `type` — `button` by default, so a `Button` never submits a form it happens to sit in (an `Action`
+  inside a page's edit form posted that form on every click, #2651). Pass `type="submit"` to
+  submit; `svelte/button-has-type` holds raw `<button>` elements to the same rule.
 - `title` — tooltip text, merged onto the button itself rather than a wrapper (nesting a button
   inside the tooltip trigger drops the control out of the accessibility tree — pinned by
   `Button.svelte.spec.ts`)

@@ -58,6 +58,15 @@ describe('Button variants', () => {
 	 * turn every save button in the app into a no-op. bits-ui's Button.Root
 	 * supplies its own default, and `mergeProps` has to let the caller's win.
 	 */
+	// A typeless button submits whatever form encloses it, even one owned by a
+	// parent component (#2651).
+	it('does not submit a form unless asked to', async () => {
+		const control = await mount({ label: 'Open' });
+
+		await expect.element(control).toBeInTheDocument();
+		expect((control.element() as HTMLButtonElement).type).toBe('button');
+	});
+
 	it('forwards type through to the underlying button', async () => {
 		const control = await mount({ label: 'Save', type: 'submit' });
 
