@@ -137,24 +137,27 @@ export async function openHostShift(eventId: string): Promise<string> {
 		.limit(1);
 
 	// The task, and its shift when the show's times are known. Without them it
-	// is a task the producer can assign or open a shift on later.
-	const id = crypto.randomUUID();
-	const task = db
+	// is a task the producer can assign or open a shift on later. A second
+	// producer's insert meets `work_order_event_host_idx` and returns nothing.
+	const [created] = await db
 		.insert(workOrder)
-		.values({ id, volunteerRoleId: roleId, eventId, title: HOST_VOLUNTEER_ROLE });
+		.values({ volunteerRoleId: roleId, eventId, title: HOST_VOLUNTEER_ROLE, isHost: true })
+		.onConflictDoNothing()
+		.returning({ id: workOrder.id });
+	if (!created) {
+		const opened = await getHostShift(eventId);
+		if (!opened) throw new Error(`No host shift for event ${eventId}`);
+		return opened.workOrderId;
+	}
+
 	const timed = prod?.loadInAt && prod.loadOutBy && prod.loadOutBy > prod.loadInAt;
 	if (timed) {
-		await db.batch([
-			task,
-			db.insert(volunteerShift).values({
-				workOrderId: id,
-				startsAt: prod.loadInAt!,
-				endsAt: prod.loadOutBy!,
-				capacity: 1
-			})
-		]);
-	} else {
-		await task;
+		await db.insert(volunteerShift).values({
+			workOrderId: created.id,
+			startsAt: prod.loadInAt!,
+			endsAt: prod.loadOutBy!,
+			capacity: 1
+		});
 	}
-	return id;
+	return created.id;
 }
