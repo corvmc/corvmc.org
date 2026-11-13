@@ -404,6 +404,50 @@ describe('Action, form mode', () => {
 });
 
 /**
+ * A detail page renders its actions inside its own edit form. Opening one must
+ * not submit that form, and the dialog's submit must reach only the action's
+ * form: the item page's "Use" posted the item edit form on every click (#2651).
+ */
+describe('Action, inside a page form', () => {
+	const pageFormSubmits = () => {
+		const submits = vi.fn((e: Event) => e.preventDefault());
+		document.querySelector('[data-testid="page-form"]')!.addEventListener('submit', submits);
+		return submits;
+	};
+
+	it('opens without submitting the page form', async () => {
+		const { trigger } = await mount({
+			action: fakeRemoteForm(),
+			withinForm: fakeRemoteForm(),
+			fieldName: 'quantity'
+		});
+		const submits = pageFormSubmits();
+
+		await trigger.click();
+
+		await expect.element(modal()).toBeVisible();
+		expect(submits).not.toHaveBeenCalled();
+	});
+
+	it('submits only its own form', async () => {
+		const onsuccess = vi.fn();
+		const { trigger } = await mount({
+			action: fakeRemoteForm(),
+			withinForm: fakeRemoteForm(),
+			fieldName: 'quantity',
+			onsuccess
+		});
+		const submits = pageFormSubmits();
+
+		await trigger.click();
+		await submitButton().click();
+
+		await vi.waitFor(() => expect(onsuccess).toHaveBeenCalled());
+		expect(submits).not.toHaveBeenCalled();
+	});
+});
+
+/**
  * `canSubmit` gates the modal's submit, not the trigger: a form you cannot open
  * is a form you can never fill in to the point where it becomes submittable.
  * It arrived as an undeclared prop at thirteen call sites, which meant it fell

@@ -37,10 +37,6 @@
 	The Save button lives in this card's header rather than the page header: the
 	page header is now shared by every tab, and a Save that is visible while
 	looking at someone's volunteer shifts would be saving a form off-screen.
-
-	Nothing but Fields and the SubmitButton may go inside this <Form>. `Action`
-	renders a bare <Button>, which has no `type` and therefore submits — every
-	action on this page deliberately sits in a sibling panel.
 -->
 <Form remote={updateUser} guard successToast={m.staff_members_id_staff_user_form_success_toast()}>
 	<InfoCard title={m.staff_members_id_staff_user_form_title()}>
