@@ -36,6 +36,17 @@ describe('calendar sources', () => {
 		);
 	});
 
+	// Both url checks find nothing before either insert runs (#2695).
+	it('refuses the second of two overlapping adds of a feed as a duplicate', async () => {
+		const url = 'https://whiteside.example/cal.ics';
+		const results = await Promise.allSettled([add(url), add(url)]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(CalendarSourceExistsError);
+		expect(await listSourcesForVenue('v-1')).toHaveLength(1);
+	});
+
 	it('pauses and resumes', async () => {
 		const { id } = await add('https://whiteside.example/cal.ics');
 		await setSourcePaused(id, true);

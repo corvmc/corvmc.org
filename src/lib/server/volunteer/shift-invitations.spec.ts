@@ -225,6 +225,18 @@ describe('expiry, which is derived rather than stored', () => {
 });
 
 describe('inviting somebody already answered', () => {
+	// Both reads find no signup before either insert runs (#2695).
+	it('refuses the second of two overlapping invitations', async () => {
+		const results = await Promise.allSettled([
+			svc.inviteToShift(SHIFT, ADA, COORDINATOR),
+			svc.inviteToShift(SHIFT, ADA, COORDINATOR)
+		]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(svc.AlreadyOnShiftError);
+	});
+
 	it('refuses when they already hold a place', async () => {
 		await svc.claimShift(SHIFT, ADA);
 		await expect(svc.inviteToShift(SHIFT, ADA, COORDINATOR)).rejects.toBeInstanceOf(

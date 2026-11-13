@@ -181,6 +181,15 @@ describe("an act's people (#2622)", () => {
 		expect(rows()).toEqual([expect.objectContaining({ name: 'Fenwick', phone: '541-555-0109' })]);
 	});
 
+	// Both reads find no entry before either insert runs (#2695).
+	it('adds one person when two saves without an email overlap', async () => {
+		await Promise.all([
+			people.writeActContactUnguarded('org-a', { name: 'Fenwick' }),
+			people.writeActContactUnguarded('org-a', { name: 'Fenwick', phone: '541-555-0109' })
+		]);
+		expect(rows()).toEqual([expect.objectContaining({ name: 'Fenwick', phone: '541-555-0109' })]);
+	});
+
 	it('shows the people to a booker on the show, and asks anyone else for readContact', async () => {
 		await people.writeActContactUnguarded('org-a', { email: 'tm@band.example' });
 		auth.can.mockImplementation(async (cap) => cap === 'production.book');

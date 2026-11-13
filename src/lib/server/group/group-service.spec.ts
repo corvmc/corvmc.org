@@ -56,7 +56,11 @@ vi.mock('#lib/server/db/index.js', () => ({
 				writes.push({ table: tableName(table), op: 'insert', values });
 				return {
 					returning: () => Promise.resolve([]),
-					onConflictDoNothing: () => Promise.resolve()
+					// The row went in: `returning` names it.
+					onConflictDoNothing: () =>
+						Object.assign(Promise.resolve(), {
+							returning: () => Promise.resolve([{ id: 'new-row' }])
+						})
 				};
 			}
 		}),

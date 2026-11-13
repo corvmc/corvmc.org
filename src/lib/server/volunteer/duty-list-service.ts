@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';
 import {
 	and,
@@ -387,21 +388,26 @@ export async function createDutyList(data: {
 		.limit(1);
 	if (existing) throw new DutyListNameTakenError(name);
 
-	const insert = db
-		.insert(dutyList)
-		.values({
-			name,
-			description: data.description?.trim() || null,
-			anchor: data.anchor,
-			subject: 'project',
-			projectKind: data.projectKind ?? 'general',
-			createdByUserId: data.createdByUserId
-		})
-		.returning();
-
-	if (data.projectKind !== 'production') return (await insert)[0];
-	const [, [row]] = await db.batch([releaseProductionTemplate(), insert]);
-	return row;
+	// The name's unique constraint refuses a concurrent create the read missed.
+	try {
+		const insert = db
+			.insert(dutyList)
+			.values({
+				name,
+				description: data.description?.trim() || null,
+				anchor: data.anchor,
+				subject: 'project',
+				projectKind: data.projectKind ?? 'general',
+				createdByUserId: data.createdByUserId
+			})
+			.returning();
+		if (data.projectKind !== 'production') return (await insert)[0];
+		const [, [row]] = await db.batch([releaseProductionTemplate(), insert]);
+		return row;
+	} catch (err) {
+		if (isUniqueConstraintError(err)) throw new DutyListNameTakenError(name);
+		throw err;
+	}
 }
 
 /**

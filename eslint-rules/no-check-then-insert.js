@@ -6,8 +6,10 @@
  *
  * Seen within one function: a `.from(t)…limit()` read bound to a variable, an
  * `if` on that variable that returns (or the insert inside such an `if`), then
- * `.insert(t)` with no `onConflictDo*`. Not seen: a read in a helper, a
- * renamed table binding, an unlimited read, or a read that throws on a hit.
+ * `.insert(t)` with no `onConflictDo*`. A check-then-throw (`if (taken) throw`,
+ * then the insert) races the same way: the second caller gets a raw UNIQUE
+ * error, so its insert must sit in a `try` or say what a conflict does. Not
+ * seen: a read in a helper, a renamed table binding, or an unlimited read.
  */
 
 const CONFLICT = new Set(['onConflictDoNothing', 'onConflictDoUpdate']);
@@ -120,6 +122,21 @@ function contains(node, type) {
 	return false;
 }
 
+/**
+ * Whether `node` sits in the block of a `try` that has a `catch`, within its
+ * own function.
+ * @param {RuleNode} node
+ */
+function insideTry(node) {
+	let current = node;
+	while (current.parent && !FUNCTION.has(current.parent.type)) {
+		const parent = current.parent;
+		if (parent.type === 'TryStatement' && parent.block === current && parent.handler) return true;
+		current = parent;
+	}
+	return false;
+}
+
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
 	meta: {
@@ -129,6 +146,11 @@ export default {
 				'A get-or-create by select-then-insert races; insert with onConflictDo* against a unique index.'
 		},
 		messages: {
+			taken:
+				'`{{table}}` is checked for a clash that throws, then inserted into without conflict ' +
+				'handling, so two concurrent callers both pass the check and the second gets a raw ' +
+				'UNIQUE error. Back the key with a unique index and use `.onConflictDoNothing()` ' +
+				'(throwing when nothing returns), or catch `isUniqueConstraintError` in a `try`.',
 			race:
 				'`{{table}}` is read, and inserted into when the read finds nothing, without conflict ' +
 				'handling, so two concurrent callers both insert. Back the key with a unique index and ' +
@@ -165,6 +187,25 @@ export default {
 							!contains(s.consequent, 'ThrowStatement')))
 			);
 
+		/**
+		 * `if (taken) throw …` before the insert, in a block that holds the insert.
+		 * A negated test is a not-found check (`if (!row) throw`), not a clash.
+		 * @param {RuleNode} insert
+		 * @param {{ end: number, names: Set<string> }} read
+		 * @param {RuleNode[]} ifs
+		 */
+		const refusal = (insert, read, ifs) =>
+			!insideTry(insert) &&
+			ifs.some(
+				(s) =>
+					s.range[0] > read.end &&
+					s.range[1] < insert.range[0] &&
+					insert.range[1] <= s.parent.range[1] &&
+					mentions(s.test, read.names) &&
+					!(s.test.type === 'UnaryExpression' && s.test.operator === '!') &&
+					contains(s.consequent, 'ThrowStatement')
+			);
+
 		return {
 			IfStatement(/** @type {RuleNode} */ node) {
 				const fn = enclosingFunction(node);
@@ -188,11 +229,12 @@ export default {
 				for (const { reads, inserts, ifs } of byFunction.values()) {
 					for (const insert of inserts) {
 						const table = insert.arguments[0].name;
-						const raced = reads.some(
-							(read) =>
-								read.table === table && read.end < insert.range[0] && gate(insert, read, ifs)
-						);
-						if (raced) context.report({ node: insert, messageId: 'race', data: { table } });
+						const before = reads.filter((r) => r.table === table && r.end < insert.range[0]);
+						if (before.some((read) => gate(insert, read, ifs))) {
+							context.report({ node: insert, messageId: 'race', data: { table } });
+						} else if (before.some((read) => refusal(insert, read, ifs))) {
+							context.report({ node: insert, messageId: 'taken', data: { table } });
+						}
 					}
 				}
 			}

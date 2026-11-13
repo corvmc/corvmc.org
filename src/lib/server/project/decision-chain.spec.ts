@@ -314,6 +314,18 @@ describe('starting a project from a ballot', () => {
 			chain.startProjectFromBallot(id, { name: 'Again' }, { now: AFTER_CLOSE })
 		).rejects.toBeInstanceOf(chain.DecisionChainError);
 	});
+
+	// Both checks find no project before either batch runs (#2695).
+	it('happens once when two starts overlap, refusing the second', async () => {
+		const id = await certified(3);
+		const start = (name: string) =>
+			chain.startProjectFromBallot(id, { name }, { now: AFTER_CLOSE });
+		const results = await Promise.allSettled([start('Back room PA'), start('Again')]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(chain.DecisionChainError);
+	});
 });
 
 describe('the chain, read back', () => {

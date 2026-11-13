@@ -10,8 +10,13 @@ tester.run('no-check-then-insert', rule as never, {
 		// The fix: the insert names what a conflict does, then re-reads.
 		`async function f() { ${read} if (existing) return existing.id; await db.insert(t).values(v).onConflictDoNothing(); }`,
 		`async function f() { ${read} if (!existing) await db.insert(t).values(v).onConflictDoUpdate({ target: t.key, set: v }); }`,
-		// A read that refuses on a hit is a validation, outside this rule.
-		`async function f() { ${read} if (existing) throw new TakenError(); await db.insert(t).values(v); }`,
+		// A clash check whose insert says what a conflict does, or sits in a try.
+		`async function f() { ${read} if (existing) throw new TakenError(); const [row] = await db.insert(t).values(v).onConflictDoNothing().returning(); if (!row) throw new TakenError(); }`,
+		`async function f() { ${read} if (existing) throw new TakenError(); try { await db.insert(t).values(v); } catch (err) { throw new TakenError(); } }`,
+		// A not-found check is not a clash.
+		`async function f() { ${read} if (!existing) throw new NotFoundError(); await db.insert(t).values(v); }`,
+		// The refusal in a branch the insert is not in.
+		`async function f() { if (a) { ${read} if (existing.done) throw new DoneError(); return; } await db.insert(t).values(v); }`,
 		// A different table.
 		`async function f() { ${read} if (existing) return existing.id; await db.insert(other).values(v); }`,
 		// A read nothing branches on.
@@ -23,6 +28,16 @@ tester.run('no-check-then-insert', rule as never, {
 		 async function f() { const e = await find(); if (e) return e; await db.insert(t).values(v); }`
 	],
 	invalid: [
+		{
+			// Throw on a clash, insert unguarded: the second caller gets a raw UNIQUE.
+			code: `async function f() { ${read} if (existing) throw new TakenError(); await db.insert(t).values(v); }`,
+			errors: [{ messageId: 'taken' }]
+		},
+		{
+			// The clash in a compound test, the insert built for a batch.
+			code: `async function f() { const clash = await db.select().from(t).limit(1); if (clash.length > 0 || reserved) throw new TakenError(); const insert = db.insert(t).values(v); await db.batch([insert]); }`,
+			errors: [{ messageId: 'taken' }]
+		},
 		{
 			// Return on a hit, insert on a miss.
 			code: `async function f() { ${read} if (existing) return existing.id; const [row] = await db.insert(t).values(v).returning(); return row.id; }`,

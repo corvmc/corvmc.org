@@ -567,8 +567,8 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
  * group cannot also tell the service how to let them in.
  *
  * A self-join always produces `role: 'member'` — owners and admins cannot
- * self-assign — and the `unique(groupId, userId)` index makes a double-click
- * idempotent rather than a second row.
+ * self-assign. Two overlapping joins both pass the roster check; the
+ * `unique(groupId, userId)` index turns the second into `AlreadyOnRosterError`.
  */
 export async function joinGroup(groupId: string, userId: string) {
 	const [row] = await db
@@ -593,14 +593,19 @@ export async function joinGroup(groupId: string, userId: string) {
 	if (existing) throw new AlreadyOnRosterError();
 
 	const status = 'active' as const;
-	await db.insert(groupMember).values({
-		groupId,
-		userId,
-		role: 'member',
-		status,
-		// Nobody invited them.
-		invitedById: null
-	});
+	const [joined] = await db
+		.insert(groupMember)
+		.values({
+			groupId,
+			userId,
+			role: 'member',
+			status,
+			// Nobody invited them.
+			invitedById: null
+		})
+		.onConflictDoNothing()
+		.returning({ id: groupMember.id });
+	if (!joined) throw new AlreadyOnRosterError();
 
 	return { status };
 }
