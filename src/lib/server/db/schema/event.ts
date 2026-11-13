@@ -10,6 +10,7 @@ import { project } from './project';
 import { eventSources } from '../../../config';
 import { venue } from './venue';
 import { calendarSource } from './calendar-source';
+import { newShortCode } from '../../../event-short-code';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -64,6 +65,10 @@ export const eventListing = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 		title: text('title').notNull(),
+		// The `/e/<code>` printed on posters; set on insert and never changed.
+		// Nullable only because SQLite cannot add a NOT NULL column without a
+		// constant default; the migration backfills every existing row.
+		shortCode: text('short_code').$defaultFn(newShortCode),
 		description: text('description'),
 		// Markdown: staff's paragraph about the night, shown above the recap photos.
 		recapText: text('recap_text'),
@@ -158,6 +163,7 @@ export const eventListing = sqliteTable(
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
 		index('idx_event_project').on(t.projectId),
 		index('idx_event_venue').on(t.venueId),
+		uniqueIndex('uq_event_short_code').on(t.shortCode),
 		uniqueIndex('uq_event_import_uid')
 			.on(t.importSourceId, t.importUid)
 			.where(sql`import_source_id IS NOT NULL AND import_uid IS NOT NULL`),

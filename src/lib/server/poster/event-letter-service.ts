@@ -5,7 +5,7 @@ import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { bytesDataUrl } from './brand';
 import { flyerLines } from './flyer';
 import { FLYER_ALT_PREFIX, flyerSource } from './flyer-service';
-import { eventUrl, renderEventLetter, type EventLetter } from './event-letter';
+import { eventUrl, printedUrl, renderEventLetter, type EventLetter } from './event-letter';
 import { withPosterPage } from './browser';
 import { sponsorLogos } from './sponsor-logos';
 
@@ -33,7 +33,8 @@ export async function eventLetter(eventId: string): Promise<EventLetter> {
 	return {
 		lines: flyerLines(source),
 		address: source.address,
-		url: eventUrl(eventId),
+		url: eventUrl(eventId, source.shortCode),
+		printed: printedUrl(source.shortCode),
 		art: bytesDataUrl(object.bytes, object.contentType ?? poster.contentType),
 		sponsors: await sponsorLogos(await creditsForEvent(eventId, 'eventPage'))
 	};

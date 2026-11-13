@@ -23,7 +23,6 @@ vi.mock('./browser', () => ({ withPosterPage: vi.fn() }));
 
 const { eventLetter, EventPosterArtMissingError } = await import('./event-letter-service');
 const { FLYER_ALT_PREFIX, FlyerEventNotFoundError } = await import('./flyer-service');
-const { eventUrl } = await import('./event-letter');
 
 const EVENT = 'evt-1';
 
@@ -74,19 +73,20 @@ beforeEach(() => {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec(
-		`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id)
-		 values ('${EVENT}', 'Harvest Show', 1790000000, 1790010000, 'u-1')`
+		`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, short_code)
+		 values ('${EVENT}', 'Harvest Show', 1790000000, 1790010000, 'u-1', 'k7m2qx')`
 	);
 	objects.clear();
 });
 
 describe('eventLetter', () => {
-	it('carries the uploaded image, the public page and nothing the event lacks', async () => {
+	it('carries the uploaded image, the short link and nothing the event lacks', async () => {
 		poster('events/posters/art.png');
 		const out = await eventLetter(EVENT);
 		expect(out).toMatchObject({
 			art: expect.stringMatching(/^data:image\/png;base64,/),
-			url: eventUrl(EVENT),
+			url: expect.stringMatching(/^https:\/\/[^/]+\/e\/k7m2qx$/),
+			printed: expect.stringMatching(/^[^/:]+\/e\/k7m2qx$/),
 			address: null,
 			sponsors: [],
 			lines: { title: 'Harvest Show', doors: null, venue: null, bill: [], price: 'Free' }

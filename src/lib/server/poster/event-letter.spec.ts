@@ -23,7 +23,8 @@ const full: EventLetter = {
 		price: '$10 suggested | NOTAFLOF'
 	},
 	address: '361 SW Madison Ave, Corvallis, OR',
-	url: 'https://corvmc.org/events/evt-1',
+	url: 'https://corvmc.org/e/k7m2qx',
+	printed: 'corvmc.org/e/k7m2qx',
 	art: 'data:image/png;base64,AAAA',
 	sponsors: [
 		{ name: 'Acme Audio', src: 'data:image/png;base64,BBBB' },
@@ -75,12 +76,11 @@ describe('eventLetterHtml', () => {
 		expect(html).toContain('<span>Bean Cafe</span>');
 	});
 
-	it("codes the event's page in the QR and prints the events page under it", () => {
+	it('codes the short link in the QR and prints it under the code', () => {
 		const html = eventLetterHtml(full);
 		const qr = posterQr(full.url);
 		expect(html).toContain(qr);
-		expect(html).toContain(`<div>${printedUrl()}</div>`);
-		expect(html.replace(qr, '')).not.toContain('evt-1');
+		expect(html).toContain(`<div>${full.printed}</div>`);
 	});
 
 	it('escapes event text', () => {
@@ -95,14 +95,22 @@ describe('eventLetterHtml', () => {
 });
 
 describe('eventUrl', () => {
-	it("is the event's public page", () => {
-		expect(eventUrl('evt-9')).toMatch(/^https:\/\/[^/]+\/events\/evt-9$/);
+	it("is the event's short link", () => {
+		expect(eventUrl('evt-9', 'k7m2qx')).toMatch(/^https:\/\/[^/]+\/e\/k7m2qx$/);
+	});
+
+	it("falls back to the event's page when it has no code", () => {
+		expect(eventUrl('evt-9', null)).toMatch(/^https:\/\/[^/]+\/events\/evt-9$/);
 	});
 });
 
 describe('printedUrl', () => {
-	it('is the events page, without the scheme', () => {
-		expect(printedUrl()).toMatch(/^[^/:]+\/events$/);
+	it('is the short link without the scheme', () => {
+		expect(printedUrl('k7m2qx')).toMatch(/^[^/:]+\/e\/k7m2qx$/);
+	});
+
+	it('names the events page when there is no code, since a UUID cannot be typed', () => {
+		expect(printedUrl(null)).toMatch(/^[^/:]+\/events$/);
 	});
 });
 

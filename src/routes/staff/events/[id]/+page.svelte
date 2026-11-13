@@ -431,7 +431,12 @@
 	/>
 
 	{#if evt.status !== 'cancelled'}
-		<ListingQrCard eventId={evt.id} title={evt.title} published={evt.status === 'published'} />
+		<ListingQrCard
+			eventId={evt.id}
+			shortCode={evt.shortCode}
+			title={evt.title}
+			published={evt.status === 'published'}
+		/>
 	{/if}
 
 	<ListingTicketing

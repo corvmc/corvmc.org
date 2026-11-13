@@ -26,22 +26,29 @@ export interface EventLetter {
 	lines: FlyerLines;
 	address: string | null;
 	url: string;
+	/** The address printed under the QR code. */
+	printed: string;
 	/** The image as a data URL. */
 	art: string;
 	sponsors: SponsorLogo[];
 }
 
-/** Where the QR code points: the event's public page. */
-export function eventUrl(eventId: string): string {
-	return `${siteUrl()}/events/${eventId}`;
+/**
+ * Where the QR code points: the event's `/e/<code>` short link, which needs
+ * fewer modules than the full page URL. An event with no code falls back to
+ * its page.
+ */
+export function eventUrl(eventId: string, shortCode: string | null): string {
+	return shortCode ? `${siteUrl()}/e/${shortCode}` : `${siteUrl()}/events/${eventId}`;
 }
 
 /**
- * The address printed under the QR code. Events have no slug or short link,
- * and a UUID path cannot be typed off paper, so it names the events page.
+ * The address printed under the QR code: the short link without its scheme.
+ * A UUID path cannot be typed off paper, so the fallback names the events page.
  */
-export function printedUrl(): string {
-	return `${siteUrl().replace(/^https?:\/\//, '')}/events`;
+export function printedUrl(shortCode: string | null): string {
+	const host = siteUrl().replace(/^https?:\/\//, '');
+	return shortCode ? `${host}/e/${shortCode}` : `${host}/events`;
 }
 
 /** The lineup, unless it only repeats the title. */
@@ -126,9 +133,7 @@ export function eventLetterHtml(poster: EventLetter): string {
 	return `<!doctype html><html><head><meta charset="utf-8"><style>${STYLE}</style></head><body><div class="poster">
 <img class="art" src="${esc(poster.art)}" alt="">
 <footer>${stripe}<div class="body"><div class="details" style="font-size:${SIZES[0]}px">${details}</div>
-<div class="side"><div class="qr">${qr}<div>${esc(
-		printedUrl()
-	)}</div></div></div></div></footer></div></body></html>`;
+<div class="side"><div class="qr">${qr}<div>${esc(poster.printed)}</div></div></div></div></footer></div></body></html>`;
 }
 
 // Runs in the page, as a string so no bundler helper leaks into it. Sizes the

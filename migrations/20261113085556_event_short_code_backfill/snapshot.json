@@ -1,10 +1,10 @@
 {
+  "id": "c7109f92-a085-4acb-b4e7-a2fc6510b6e7",
+  "prevIds": [
+    "01ed20b7-94cc-4ddf-a897-731854299446"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "cdb49f9d-d466-4b8a-b522-98dec9af9321",
-  "prevIds": [
-    "c4340b8d-f757-4d22-9537-a97c72a3ccc2"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -2407,6 +2407,16 @@
       "default": null,
       "generated": null,
       "name": "title",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "short_code",
       "entityType": "columns",
       "table": "event_listing"
     },
@@ -5177,16 +5187,6 @@
       "default": null,
       "generated": null,
       "name": "organization_id",
-      "entityType": "columns",
-      "table": "purchase_order"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "supplier_name",
       "entityType": "columns",
       "table": "purchase_order"
     },
@@ -21715,6 +21715,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_venue",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "short_code",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_event_short_code",
       "entityType": "indexes",
       "table": "event_listing"
     },

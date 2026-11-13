@@ -34,10 +34,11 @@ export const FLYER_ALT_PREFIX = 'Flyer for ';
 /** The flyer's facts, and the street address the print poster adds. */
 export async function flyerSource(
 	eventId: string
-): Promise<FlyerSource & { address: string | null }> {
+): Promise<FlyerSource & { address: string | null; shortCode: string | null }> {
 	const [row] = await db
 		.select({
 			title: eventListing.title,
+			shortCode: eventListing.shortCode,
 			startsAt: eventListing.startsAt,
 			doorsAt: eventListing.doorsAt,
 			venueName: venue.name,
