@@ -2,7 +2,7 @@ import { db, getRowCount } from '#lib/server/db/index.js';
 import { recurringSeries } from '#lib/server/db/schema/recurring.js';
 import { closure, reservation } from '#lib/server/db/schema/reservation.js';
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
-import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { eventAttendance, eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
 import { ticket } from '#lib/server/db/schema/ticket.js';
 import { sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
 import { marketDay, marketVendor } from '#lib/server/db/schema/market.js';
@@ -49,6 +49,7 @@ const RESCHEDULE_REASON = 'Recurring schedule changed';
  */
 export const LISTING_RECORDS: { table: SQLiteTable; column: SQLiteColumn }[] = [
 	{ table: eventRsvp, column: eventRsvp.eventId },
+	{ table: eventAttendance, column: eventAttendance.eventId },
 	{ table: ticket, column: ticket.eventId },
 	{ table: eventBand, column: eventBand.eventId },
 	{ table: sponsorPlacement, column: sponsorPlacement.eventId },

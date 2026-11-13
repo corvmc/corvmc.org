@@ -269,7 +269,7 @@ one is offered the slot with a 24-hour window to confirm.
   booking rules above with listings for bookings. The new first session copies the prototype
   and holds the room for the same setup and teardown, waitlisted behind a booking and refused
   on a closure or another show. From the change day an occurrence no record touches is deleted
-  and its hold cancelled; one with an RSVP, ticket, production or other record
+  and its hold cancelled; one with an RSVP, attendance, ticket, production or other record
   (`LISTING_RECORDS`) is kept with its hold. Nobody is notified.
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
   `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
