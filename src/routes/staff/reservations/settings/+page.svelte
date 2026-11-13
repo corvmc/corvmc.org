@@ -14,7 +14,8 @@
 		updateProduct,
 		updateReservationSettings,
 		updateOrientationSettings,
-		updateVenueSettings
+		updateVenueSettings,
+		updateFeeGateSettings
 	} from '#lib/remote/settings.remote.js';
 
 	// The space's own settings, moved out of global Settings (#2586). One query.
@@ -311,6 +312,37 @@
 						variant="primary"
 					/>
 				</div>
+			</Form>
+		</section>
+		<section id="fees" class="space-y-4" data-testid="fee-gate-settings">
+			<Form
+				remote={updateFeeGateSettings}
+				guard
+				successToast={m.staff_settings_outstanding_fees_updated_toast()}
+			>
+				<Card>
+					<CardBody>
+						<div class="flex items-center justify-between">
+							<CardTitle size="base">{m.staff_settings_outstanding_fees_title()}</CardTitle>
+							<SubmitButton
+								label={m.staff_settings_save_label()}
+								successLabel={m.staff_settings_saved_label()}
+								errorLabel={m.staff_settings_error_label()}
+								variant="primary"
+								size="sm"
+							/>
+						</div>
+						<p class="text-subtle">{m.staff_settings_outstanding_fees_body()}</p>
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								field={updateFeeGateSettings.fields.feeGateFrom}
+								label={m.staff_settings_outstanding_fees_from_label()}
+								type="date"
+								value={String(reservationSettings.feeGateFrom ?? '')}
+							/>
+						</div>
+					</CardBody>
+				</Card>
 			</Form>
 		</section>
 		<section id="space" class="space-y-4" data-testid="space-settings">

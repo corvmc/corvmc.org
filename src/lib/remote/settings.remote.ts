@@ -410,6 +410,22 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 	return { success: true };
 });
 
+// The day outstanding fees start counting toward the booking limit (#2748).
+// Empty turns the limit off; older payment-due rows are never counted.
+const feeGateSettingsSchema = z.object({
+	feeGateFrom: z
+		.string()
+		.trim()
+		.regex(/^(\d{4}-\d{2}-\d{2})?$/, 'A date, or empty')
+});
+
+export const updateFeeGateSettings = form(feeGateSettingsSchema, async (data) => {
+	await requireCapability('settings.update');
+	await updateSiteConfigs([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
+	void getPracticeSpaceSettingsPage().refresh();
+	return { success: true };
+});
+
 // ---------------------------------------------------------------------------
 // Forms — Integration settings
 // ---------------------------------------------------------------------------

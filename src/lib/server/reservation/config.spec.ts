@@ -36,7 +36,8 @@ const cfg: ReservationConfig = {
 	teachingRateCents: DEFAULT_TEACHING_RATE_CENTS,
 	teachingMinDurationHours: DEFAULT_TEACHING_MIN_DURATION_HOURS,
 	teachingMaxAdvanceDaysOneoff: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_ONEOFF,
-	teachingMaxAdvanceDaysRecurring: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
+	teachingMaxAdvanceDaysRecurring: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING,
+	feeGateFrom: ''
 };
 
 describe('termsFor', () => {

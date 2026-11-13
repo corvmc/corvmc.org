@@ -6,6 +6,8 @@
 	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
 	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
 	import { bookInstructorReservation } from '#lib/remote/reservations.remote.js';
+	import FeeNotice from '#lib/components/reservations/booking/FeeNotice.svelte';
+	import type { ComponentProps } from 'svelte';
 
 	/**
 	 * Booking the room to teach.
@@ -28,7 +30,16 @@
 	 * subscription on top of a staff grant would mean staff granting something the
 	 * member cannot use.
 	 */
-	let { needsPhone = false, onbooked }: { needsPhone?: boolean; onbooked?: () => void } = $props();
+	let {
+		needsPhone = false,
+		feeGate,
+		onbooked
+	}: {
+		needsPhone?: boolean;
+		/** Outstanding fees (#2748): one warns above the steps, two replace them. */
+		feeGate?: ComponentProps<typeof FeeNotice>['gate'];
+		onbooked?: () => void;
+	} = $props();
 </script>
 
 <Action
@@ -51,12 +62,15 @@
 >
 	{#snippet icon()}<IconSchool size={18} />{/snippet}
 	{#snippet form()}
-		<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
-		<!--
+		{#if feeGate}<FeeNotice gate={feeGate} />{/if}
+		{#if feeGate?.state !== 'refuse'}
+			<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
+			<!--
 			`payAhead={false}` because `bookInstructorReservation` takes no payment:
 			Pay Ahead advances to a payment step this modal does not have. Teaching
 			time settles at the door, the way a band session does.
 		-->
-		<ConfirmStep bookerType="instructor" payAhead={false} />
+			<ConfirmStep bookerType="instructor" payAhead={false} />
+		{/if}
 	{/snippet}
 </Action>

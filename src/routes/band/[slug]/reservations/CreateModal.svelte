@@ -8,6 +8,8 @@
 	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
 	import { bookBandReservation } from '#lib/remote/reservations.remote.js';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import FeeNotice from '#lib/components/reservations/booking/FeeNotice.svelte';
+	import type { ComponentProps } from 'svelte';
 
 	/**
 	 * Booking the practice space for a band.
@@ -29,7 +31,8 @@
 	let {
 		slug,
 		hasSustainingMember = false,
-		needsPhone = false
+		needsPhone = false,
+		feeGate
 	}: {
 		/** The band this books for — the ref the guard resolves. */
 		slug: string;
@@ -37,6 +40,8 @@
 		hasSustainingMember?: boolean;
 		/** The person booking has no usable number on file; staff need one to call. */
 		needsPhone?: boolean;
+		/** The booking member's own outstanding fees (#2748), not the band's. */
+		feeGate?: ComponentProps<typeof FeeNotice>['gate'];
 	} = $props();
 </script>
 
@@ -63,11 +68,14 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
 		<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
-		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} bookerType="group" />
-		<ConfirmStep band />
-		<PaymentStep
-			fields={{ coverFees: bookBandReservation.fields.coverFees }}
-			submit={bookBandReservation.fields.payNow.as('submit', 'on')}
-		/>
+		{#if feeGate}<FeeNotice gate={feeGate} />{/if}
+		{#if feeGate?.state !== 'refuse'}
+			<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} bookerType="group" />
+			<ConfirmStep band />
+			<PaymentStep
+				fields={{ coverFees: bookBandReservation.fields.coverFees }}
+				submit={bookBandReservation.fields.payNow.as('submit', 'on')}
+			/>
+		{/if}
 	{/snippet}
 </Action>

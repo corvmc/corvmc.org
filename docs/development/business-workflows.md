@@ -191,6 +191,15 @@ Two things differ from the member path:
   ones auto-complete after their end time via the `auto-complete` cron, so they never reach
   it, which is why the queue is short enough to be worth working.
 
+- **Outstanding fees limit booking** (#2748). A session that ended still payment due and
+  started on or after the **Count from** date in Practice space settings is an outstanding fee
+  for the member who booked it. One warns in the member's booking form with a Pay link; two or
+  more refuse the member's own booking at the remote (`refuseOnOutstandingFees`), band and
+  teaching bookings included, counted on the booking member's own fees. Staff booking on a
+  member's behalf see the same list as a warning and are never refused. With no date set the
+  check is off; rows before it keep their status and are never counted
+  (`src/lib/server/reservation/outstanding-fees.ts`).
+
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
 shared action component under `$lib/components/actions/`, so the member and staff
 surfaces cannot drift in what they do — only in who may do it.

@@ -52,6 +52,7 @@
 		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}
 		needsPhone={contact.needsPhone}
+		feeGate={page_.feeGate}
 	/>
 </PageHeader>
 <PageContent width="2xl">

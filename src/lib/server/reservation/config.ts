@@ -49,6 +49,8 @@ export interface ReservationConfig {
 	teachingMinDurationHours: number;
 	teachingMaxAdvanceDaysOneoff: number;
 	teachingMaxAdvanceDaysRecurring: number;
+	/** `YYYY-MM-DD`: sessions from this day count toward the fee gate. Empty turns it off. */
+	feeGateFrom: string;
 }
 
 export async function getReservationConfig(): Promise<ReservationConfig> {
@@ -78,7 +80,8 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		),
 		teachingMaxAdvanceDaysRecurring: Number(
 			raw.teachingMaxAdvanceDaysRecurring ?? DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
-		)
+		),
+		feeGateFrom: String(raw.feeGateFrom ?? '')
 	};
 }
 

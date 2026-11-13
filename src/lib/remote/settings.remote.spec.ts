@@ -227,6 +227,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
 	},
 	{ name: 'updateVenueSettings', cap: 'settings.update', args: [{ consoleChannels: 16 }] },
+	{ name: 'updateFeeGateSettings', cap: 'settings.update', args: [{ feeGateFrom: '2026-12-01' }] },
 	{
 		name: 'updateIntegrationSettings',
 		cap: 'settings.update',

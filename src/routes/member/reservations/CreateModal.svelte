@@ -9,6 +9,8 @@
 	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
 	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
 	import BookingConflict from '#lib/components/reservations/booking/BookingConflict.svelte';
+	import FeeNotice from '#lib/components/reservations/booking/FeeNotice.svelte';
+	import type { ComponentProps } from 'svelte';
 
 	const { fields } = bookAndPayReservation;
 
@@ -19,11 +21,14 @@
 	let {
 		isSustaining = false,
 		needsPhone = false,
+		feeGate,
 		onbooked
 	}: {
 		isSustaining?: boolean;
 		/** Member has no usable contact number on file — collect one before booking. */
 		needsPhone?: boolean;
+		/** Outstanding fees (#2748): one warns above the steps, two replace them. */
+		feeGate?: ComponentProps<typeof FeeNotice>['gate'];
 		onbooked?: () => void;
 	} = $props();
 </script>
@@ -56,9 +61,12 @@
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
-		<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
-		<ConfirmStep submitLabel={m.member_reservations_create_modal_submit_label()} />
-		<PaymentStep fields={{ coverFees: fields.coverFees }} />
-		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
+		{#if feeGate}<FeeNotice gate={feeGate} />{/if}
+		{#if feeGate?.state !== 'refuse'}
+			<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
+			<ConfirmStep submitLabel={m.member_reservations_create_modal_submit_label()} />
+			<PaymentStep fields={{ coverFees: fields.coverFees }} />
+			<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
+		{/if}
 	{/snippet}
 </Action>
