@@ -135,7 +135,7 @@
 	let leadName = $state('');
 	$effect(() => {
 		leadId = productionRecord?.producerUserId ?? '';
-		leadName = productionRecord?.producer?.name ?? '';
+		leadName = productionRecord?.producerName ?? '';
 	});
 
 	// One date for all five times: the listing already refuses to span two dates,
