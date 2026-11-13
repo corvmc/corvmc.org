@@ -26,8 +26,14 @@
 	// One query, not three. `custom/no-concurrent-remote-queries` refuses a page
 	// that fans several out at once, so the teaching card's data is assembled
 	// server-side in `getMemberProfileEditor` and arrives with everything else.
-	const { profile, instrumentSuggestions, genreSuggestions, skillSuggestions, teaching } =
-		await getMemberProfileEditor();
+	const editor = getMemberProfileEditor();
+
+	// The teaching card's forms change the record, and Kit refreshes this query
+	// after each one; a destructured constant would keep the first answer until
+	// a reload (#2846). Declared above the await so it is not a blocked value.
+	const teaching = $derived(editor.current?.teaching);
+
+	const { profile, instrumentSuggestions, genreSuggestions, skillSuggestions } = await editor;
 
 	// Plain const rather than `$derived`: everything after the await above is
 	// already async-gated, and nothing here changes without a refetch.
@@ -64,11 +70,13 @@
 		<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} {skillSuggestions} />
 	</div>
 
-	<div class="mt-8">
-		<TeachingCard
-			instructor={teaching.instructor}
-			hasPublicContact={teaching.hasPublicContact}
-			hasAnyContact={teaching.hasAnyContact}
-		/>
-	</div>
+	{#if teaching}
+		<div class="mt-8">
+			<TeachingCard
+				instructor={teaching.instructor}
+				hasPublicContact={teaching.hasPublicContact}
+				hasAnyContact={teaching.hasAnyContact}
+			/>
+		</div>
+	{/if}
 </PageContent>
