@@ -47,11 +47,11 @@ test.describe('staff settings tabs', () => {
 		await page.locator('#tab-inbox').click();
 
 		for (const channel of ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'])
-			await expect(panel(page, 'inbox').locator(`[data-channel="${channel}"]`)).toBeVisible();
+			await expect(panel(page, 'inbox').getByTestId(`channel-${channel}`)).toBeVisible();
 
 		// `direct` is member↔member: staff never reply on it and there is nothing
 		// behind it to enable, so it is not one of this tab's rows.
-		await expect(panel(page, 'inbox').locator('[data-channel="direct"]')).toHaveCount(0);
+		await expect(panel(page, 'inbox').getByTestId('channel-direct')).toHaveCount(0);
 	});
 
 	test('the old Pricing and Reservations tabs land on Practice space settings', async ({

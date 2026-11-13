@@ -11,35 +11,36 @@
 	 * directly only when the section has no title, or when the body needs the
 	 * `row` / `center` layouts.
 	 */
-	let {
-		title,
-		state,
-		class: extraClass = '',
-		testid,
-		children,
-		action,
-		header
-	}: {
+	type Props = {
 		title: string;
-		/**
-		 * What this section's contents amount to — "1 of 4 unfilled", "6 · 24.5
-		 * hrs", "Empty". A console section states its own state in its heading so
-		 * the page can be scanned without being read; passing it here keeps the
-		 * separator and weight in one place instead of in 26 copies.
-		 */
-		state?: string | number;
 		class?: string;
 		/** A test handle, for a section no structure tells apart (#2189). */
 		testid?: string;
 		children: Snippet;
 		/** A control beside the title — usually a link into the full queue. */
 		action?: Snippet;
-		/**
-		 * Replaces the whole heading. For a genuinely bespoke one, like a title
-		 * with an `Action` and its modal form; `state` and `action` cover the rest.
-		 */
-		header?: Snippet<[title: string]>;
-	} = $props();
+	} & (
+		| {
+				/**
+				 * What this section's contents amount to — "1 of 4 unfilled", "6 · 24.5
+				 * hrs", "Empty". A console section states its own state in its heading so
+				 * the page can be scanned without being read; passing it here keeps the
+				 * separator and weight in one place instead of in 26 copies.
+				 */
+				state?: string | number;
+				header?: never;
+		  }
+		| {
+				/**
+				 * Replaces the whole heading, `state` included — so the two are exclusive,
+				 * and a bespoke heading shows its own state.
+				 */
+				header: Snippet<[title: string]>;
+				state?: never;
+		  }
+	);
+
+	let { title, state, class: extraClass = '', testid, children, action, header }: Props = $props();
 </script>
 
 <Card class={extraClass} {testid}>

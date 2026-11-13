@@ -131,9 +131,9 @@ edit mode.
    form. The production console states the date, doors, show time and room in a read-only line
    above its tabs, and leaves changing them to the listing.
 2. **A section states its own state** — done, empty or blocked — in its heading, so the page can
-   be scanned. Pass it to `InfoCard`'s `state` prop; the production console's Tech riders heading
-   and `ShowBudgetCard` do. A console split into tabs puts the same state on each tab with
-   `TabBar`'s `badge`, since a closed tab's headings are not on screen.
+   be scanned. Pass it to `InfoCard`'s `state` prop. A console split into tabs puts the same
+   state on each tab with `TabBar`'s `badge`, since a closed tab's headings are not on screen;
+   each console derives both from one `section-state.ts`, so a tab says what its headings say.
 3. **Order by the work, not the schema.** An empty section that is not due yet sits below one that
    is.
 4. **The rows inside obey the list rule.** A lineup, a shift board or a ticket table is a list.
@@ -1077,8 +1077,9 @@ Pass extra classes on the outer card via `class`:
 
 `state` puts what the section amounts to after the title — a count, "1 of 4 unfilled", "Not
 written" — so a page of sections can be scanned without reading them. A console section always
-passes it (see "Consoles"). `action` puts a control beside the title; `header` replaces the
-heading for a bespoke one.
+passes it (see "Consoles"), and `scripts/console-section-state.spec.ts` holds both consoles to
+that. `action` puts a control beside the title; `header` replaces the whole heading, so it takes
+no `state` and shows its own.
 
 ```svelte
 <InfoCard title="Recap" state={text ? 'Published' : 'Not written'}>…</InfoCard>

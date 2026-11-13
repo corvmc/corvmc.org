@@ -5,7 +5,6 @@
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -80,34 +79,31 @@
 			title={m.staff_access_person_access_positions_title()}
 			state={access.positions.length}
 		>
-			{#snippet header(title)}
-				<div class="flex items-center justify-between gap-2">
-					<CardTitle>{title}</CardTitle>
-					{#if unheld.length > 0}
-						<Action
-							action={setPosition.for(`add-${userId}`)}
-							label={m.staff_access_person_access_assign_position_label()}
-							size="sm"
-							modalTitle={m.staff_access_person_access_assign_position_2_title({
-								value: person?.name ?? ''
-							})}
-							submitLabel={m.staff_access_person_access_assign_label()}
-							successToast={m.staff_access_person_access_position_assigned_toast()}
-							onsuccess={refresh}
-						>
-							{#snippet form()}
-								<input {...setPosition.for(`add-${userId}`).fields.userId.as('hidden', userId)} />
-								<input {...setPosition.for(`add-${userId}`).fields.change.as('hidden', 'add')} />
-								<FormField
-									field={setPosition.for(`add-${userId}`).fields.position}
-									label={m.staff_position_label()}
-									type="select"
-									options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
-								/>
-							{/snippet}
-						</Action>
-					{/if}
-				</div>
+			{#snippet action()}
+				{#if unheld.length > 0}
+					<Action
+						action={setPosition.for(`add-${userId}`)}
+						label={m.staff_access_person_access_assign_position_label()}
+						size="sm"
+						modalTitle={m.staff_access_person_access_assign_position_2_title({
+							value: person?.name ?? ''
+						})}
+						submitLabel={m.staff_access_person_access_assign_label()}
+						successToast={m.staff_access_person_access_position_assigned_toast()}
+						onsuccess={refresh}
+					>
+						{#snippet form()}
+							<input {...setPosition.for(`add-${userId}`).fields.userId.as('hidden', userId)} />
+							<input {...setPosition.for(`add-${userId}`).fields.change.as('hidden', 'add')} />
+							<FormField
+								field={setPosition.for(`add-${userId}`).fields.position}
+								label={m.staff_position_label()}
+								type="select"
+								options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
+							/>
+						{/snippet}
+					</Action>
+				{/if}
 			{/snippet}
 			{#if access.positions.length === 0}
 				<p class="text-muted">
@@ -255,11 +251,8 @@
 			title={m.staff_access_person_access_clearances_title()}
 			state={access.clearances.length}
 		>
-			{#snippet header(title)}
-				<div class="flex items-center justify-between gap-2">
-					<CardTitle>{title}</CardTitle>
-					<GrantCertificationAction {userId} onsuccess={refresh} />
-				</div>
+			{#snippet action()}
+				<GrantCertificationAction {userId} onsuccess={refresh} />
 			{/snippet}
 			{#if access.clearances.length === 0}
 				<p class="text-muted">{m.staff_access_person_access_no_clearance_record_text()}</p>

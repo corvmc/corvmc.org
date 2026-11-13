@@ -24,6 +24,7 @@
 		markSlotTiming
 	} from '#lib/remote/productions.remote.js';
 	import { describeTerms } from '#lib/production/terms.js';
+	import { runningOrderState } from './section-state';
 	import type { RunOfShow, RunOfShowContact } from '#lib/types/run-of-show.js';
 
 	/**
@@ -89,7 +90,10 @@
 		description={m.staff_events_id_production_run_of_show_panel_open_one_overvi_body()}
 	/>
 {:else}
-	<InfoCard title={m.staff_events_id_production_run_of_show_panel_running_order_title()}>
+	<InfoCard
+		title={m.staff_events_id_production_run_of_show_panel_running_order_title()}
+		state={runningOrderState(runOfShow)}
+	>
 		<div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
 			<span>
 				<ParaglideMessage

@@ -8,7 +8,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -24,6 +23,7 @@
 	} from '#lib/remote/productions.remote.js';
 	import { searchAskableListings } from '#lib/remote/external-acts.remote.js';
 	import type { OutstandingRequest } from '#lib/types/artifact-request.js';
+	import { requestsState } from './section-state';
 
 	// The picker writes a plain hidden input; the Action's form is not a `<Form>`.
 	const artistField = {
@@ -43,75 +43,21 @@
 		acts: { entryId: string; name: string }[];
 		onchange: () => void;
 	} = $props();
-
-	const outstanding = $derived(requests.filter((r) => !r.fulfilled));
-	const overdue = $derived(outstanding.filter((r) => r.overdue).length);
 </script>
 
-<InfoCard title={m.staff_events_id_production_artifact_requests_panel_asked_title()}>
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>{title}</CardTitle>
-			<div class="flex items-center gap-1">
-				{#if overdue > 0}
-					<Badge variant="error"
-						>{m.staff_events_id_production_artifact_requests_panel_overdue_label({
-							overdue
-						})}</Badge
-					>
-				{:else if outstanding.length > 0}
-					<Badge variant="warning"
-						>{m.staff_events_id_production_artifact_requests_panel_outstandi_label({
-							length: outstanding.length
-						})}</Badge
-					>
-				{/if}
-				{#if acts.length > 0}
-					<Action
-						action={askForArtifact}
-						label={m.staff_events_id_production_artifact_requests_panel_ask_band_label()}
-						variant="ghost"
-						size="sm"
-						modalTitle={m.staff_events_id_production_artifact_requests_panel_ask_band_2_title({
-							eventTitle
-						})}
-						submitLabel={m.staff_events_id_production_artifact_requests_panel_ask_label()}
-						successToast={m.staff_events_id_production_artifact_requests_panel_asked_2_toast()}
-						onsuccess={onchange}
-					>
-						{#snippet form()}
-							<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
-							<FormField
-								field={askForArtifact.fields.entryId}
-								label={m.staff_band_label()}
-								type="select"
-								options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
-							/>
-							<FormField
-								field={askForArtifact.fields.artifact}
-								label={m.staff_what_label()}
-								type="select"
-								options={requestableArtifacts.map((a) => ({
-									value: a,
-									label: requestableArtifactLabels[a]
-								}))}
-							/>
-							<FormField
-								field={askForArtifact.fields.dueDate}
-								label={m.staff_due_label()}
-								type="date"
-								description={m.staff_events_id_production_artifact_requests_panel_optional_body()}
-							/>
-						{/snippet}
-					</Action>
-				{/if}
-				<!-- An artist is never on the bill, so this searches every listing. -->
+<InfoCard
+	title={m.staff_events_id_production_artifact_requests_panel_asked_title()}
+	state={requestsState(requests)}
+>
+	{#snippet action()}
+		<div class="flex items-center gap-1">
+			{#if acts.length > 0}
 				<Action
 					action={askForArtifact}
-					label={m.staff_events_id_production_artifact_requests_panel_commissio_label()}
+					label={m.staff_events_id_production_artifact_requests_panel_ask_band_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle={m.staff_events_id_production_artifact_requests_panel_commissio_2_title({
+					modalTitle={m.staff_events_id_production_artifact_requests_panel_ask_band_2_title({
 						eventTitle
 					})}
 					submitLabel={m.staff_events_id_production_artifact_requests_panel_ask_label()}
@@ -120,25 +66,63 @@
 				>
 					{#snippet form()}
 						<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
-						<input {...askForArtifact.fields.artifact.as('hidden', 'poster_art')} />
-						<MemberPicker
-							field={artistField}
-							label={m.staff_events_id_production_artifact_requests_panel_artist_label()}
-							placeholder={m.staff_events_id_production_artifact_requests_panel_placehold_placeholder()}
-							search={(q) => searchAskableListings(q)}
+						<FormField
+							field={askForArtifact.fields.entryId}
+							label={m.staff_band_label()}
+							type="select"
+							options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
+						/>
+						<FormField
+							field={askForArtifact.fields.artifact}
+							label={m.staff_what_label()}
+							type="select"
+							options={requestableArtifacts.map((a) => ({
+								value: a,
+								label: requestableArtifactLabels[a]
+							}))}
 						/>
 						<FormField
 							field={askForArtifact.fields.dueDate}
 							label={m.staff_due_label()}
 							type="date"
-							description={m.staff_events_id_production_artifact_requests_panel_when_art_body()}
+							description={m.staff_events_id_production_artifact_requests_panel_optional_body()}
 						/>
-						<p class="text-subtle text-sm">
-							{m.staff_events_id_production_artifact_requests_panel_artist_up_text()}
-						</p>
 					{/snippet}
 				</Action>
-			</div>
+			{/if}
+			<!-- An artist is never on the bill, so this searches every listing. -->
+			<Action
+				action={askForArtifact}
+				label={m.staff_events_id_production_artifact_requests_panel_commissio_label()}
+				variant="ghost"
+				size="sm"
+				modalTitle={m.staff_events_id_production_artifact_requests_panel_commissio_2_title({
+					eventTitle
+				})}
+				submitLabel={m.staff_events_id_production_artifact_requests_panel_ask_label()}
+				successToast={m.staff_events_id_production_artifact_requests_panel_asked_2_toast()}
+				onsuccess={onchange}
+			>
+				{#snippet form()}
+					<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
+					<input {...askForArtifact.fields.artifact.as('hidden', 'poster_art')} />
+					<MemberPicker
+						field={artistField}
+						label={m.staff_events_id_production_artifact_requests_panel_artist_label()}
+						placeholder={m.staff_events_id_production_artifact_requests_panel_placehold_placeholder()}
+						search={(q) => searchAskableListings(q)}
+					/>
+					<FormField
+						field={askForArtifact.fields.dueDate}
+						label={m.staff_due_label()}
+						type="date"
+						description={m.staff_events_id_production_artifact_requests_panel_when_art_body()}
+					/>
+					<p class="text-subtle text-sm">
+						{m.staff_events_id_production_artifact_requests_panel_artist_up_text()}
+					</p>
+				{/snippet}
+			</Action>
 		</div>
 	{/snippet}
 

@@ -8,6 +8,7 @@
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { reassignDeliverableForm } from '#lib/remote/deliverables.remote.js';
 	import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
+	import { deliverablesState } from './section-state';
 
 	type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
 
@@ -42,7 +43,10 @@
 </script>
 
 {#if items.length > 0}
-	<InfoCard title={m.staff_events_id_production_deliverables_card_title()}>
+	<InfoCard
+		title={m.staff_events_id_production_deliverables_card_title()}
+		state={deliverablesState(items)}
+	>
 		<Table>
 			{#snippet head()}
 				<th>{m.staff_item_label()}</th>
