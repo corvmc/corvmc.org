@@ -335,7 +335,7 @@ test.describe('volunteering — roles', () => {
 		).toHaveValue('');
 
 		// And the New Shift form falls back rather than carrying a stale number.
-		await page.getByTestId('new-role-shift').click();
+		await page.getByTestId('related-add-shift').click();
 		await expect(
 			page.getByRole('dialog').locator('input:is([name="capacity"], [name^="capacity/"])')
 		).toHaveValue('1');
@@ -357,7 +357,7 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
-		await page.getByTestId('new-role-shift').click();
+		await page.getByTestId('related-add-shift').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog.locator('input:is([name="capacity"], [name^="capacity/"])')).toHaveValue(
 			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
@@ -795,9 +795,9 @@ test.describe('volunteering — shifts', () => {
 // Staffing is production work, so the card is on the console at
 // `[id]/production` rather than the general event view every staffer lands on.
 test.describe('volunteering — shifts and events', () => {
-	/** The production console's shifts card: the one that can schedule a shift for this show. */
+	/** The production console's related shifts card (#2630). */
 	function shiftsCard(page: Page) {
-		return page.locator('.card').filter({ has: page.getByTestId('schedule-event-shift') });
+		return page.getByTestId('related-shifts');
 	}
 
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
@@ -820,12 +820,11 @@ test.describe('volunteering — shifts and events', () => {
 
 		const card = shiftsCard(page);
 		await expect(card).toBeVisible({ timeout: 15000 });
-		await card.getByTestId('schedule-event-shift').click();
+		await card.getByTestId('related-add-shift').click();
 
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
-		// The event is already known here, so it is locked rather than offered —
-		// there is no picker to fill in.
+		// A new task is the first choice; the event is the card's, so there is no picker for it.
 		await expect(dialog.getByPlaceholder('Search events by title...')).toHaveCount(0);
 		await dialog
 			.locator('select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])')
@@ -835,9 +834,7 @@ test.describe('volunteering — shifts and events', () => {
 		await modalSubmit(page).click();
 
 		// Two rows now: the fixture's and the one just made.
-		await expect(card.getByRole('link', { name: SEED_VOL_ROLE_NAME })).toHaveCount(2, {
-			timeout: 15000
-		});
+		await expect(card.locator('tr[data-shift]')).toHaveCount(2, { timeout: 15000 });
 	});
 
 	test('a shift can be attached to an event after the fact, and detached again', async ({

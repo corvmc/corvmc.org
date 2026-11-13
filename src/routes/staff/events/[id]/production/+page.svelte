@@ -12,16 +12,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { getStaffEventProduction } from '#lib/remote/events.remote.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import Table from '#lib/components/ui/Table.svelte';
-	import {
-		formatDateShort,
-		formatDateTime,
-		formatTime,
-		formatTimeRange,
-		fullDate,
-		toLocalDate,
-		toLocalDateTime
-	} from '#lib/utils/format.js';
+	import { formatDateTime, formatTime, fullDate, toLocalDate } from '#lib/utils/format.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
@@ -29,9 +20,6 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import { goto } from '$app/navigation';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
-	import { createShift } from '#lib/remote/volunteer.remote.js';
 	import { listActInDirectory } from '#lib/remote/external-acts.remote.js';
 	import { applyDutyList } from '#lib/remote/duty-lists.remote.js';
 	import { toastWarnings } from '#lib/utils/toast-warnings.js';
@@ -43,6 +31,7 @@
 	} from '#lib/remote/productions.remote.js';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
@@ -72,15 +61,9 @@
 	 * is dead time on every visit — and it is what
 	 * `e2e/staff-event-reserve-space.e2e.ts` was intermittently timing out
 	 * against on CI once #235 grew it from three queries to four.
-	 *
-	 * Shifts leave out the cancelled ones: this card answers "is this show
-	 * staffed", and a called-off shift is not staffing. The shift list is where
-	 * you go to see what was called off.
 	 */
 	const loaded = $derived(await getStaffEventProduction(id));
 
-	const shifts = $derived(loaded.shifts);
-	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
@@ -96,8 +79,6 @@
 
 	const evt = $derived(loaded.detail.event);
 
-	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
-
 	/**
 	 * Only a show CMC produces has a production.
 	 *
@@ -107,33 +88,6 @@
 	 */
 	$effect(() => {
 		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replace: true });
-	});
-
-	/**
-	 * Volunteers arrive when the doors do, not at downbeat, so a shift scheduled
-	 * from this page starts at `doorsAt` when the event has one. The end falls
-	 * back to the picked role's own default length for an event with no end time
-	 * — only community listings are allowed one, but they are allowed one.
-	 */
-	let shiftRoleId = $state('');
-	const shiftStart = $derived(toLocalDateTime(evt.doorsAt ?? evt.startsAt));
-	const shiftEnd = $derived.by(() => {
-		if (evt.endsAt) return toLocalDateTime(evt.endsAt);
-		const role = volunteerRoles.find((r) => r.id === shiftRoleId);
-		const minutes = role?.defaultDurationMinutes ?? 4 * 60;
-		return toLocalDateTime(new Date((evt.doorsAt ?? evt.startsAt).getTime() + minutes * 60_000));
-	});
-	const shiftCapacity = $derived(
-		String(volunteerRoles.find((r) => r.id === shiftRoleId)?.defaultCapacity ?? 1)
-	);
-
-	// The select has no placeholder option, so a bound value matching nothing
-	// leaves nothing selected — which posts an empty role instead of the one on
-	// screen. Guarded so it seeds once and never clobbers an actual choice.
-	$effect(() => {
-		if (shiftRoleId) return;
-		const first = volunteerRoles.find((r) => r.isActive);
-		if (first) shiftRoleId = first.id;
 	});
 
 	// ── Tabs ──────────────────────────────────────────────────────────────
@@ -613,125 +567,43 @@
 		-->
 			<RelatedTasks subject={{ type: 'event', id: evt.id }} />
 
-			<InfoCard
-				title={m.staff_events_id_production_volunteer_shifts_title()}
-				testid="volunteer-shifts"
-			>
-				{#snippet header(title)}
-					<div class="flex items-center justify-between gap-2">
-						<CardTitle>{title}</CardTitle>
-						<div class="flex items-center gap-1">
-							{#if dutyLists.length > 0}
-								<Action
-									action={applyDutyList}
-									label={m.staff_apply_template_label()}
-									variant="ghost"
-									size="sm"
-									modalTitle={m.staff_events_id_production_apply_template_title({
-										title: evt.title
-									})}
-									submitLabel={m.staff_apply_label()}
-									successToast={m.staff_events_id_production_work_orders_created_toast()}
-									onsuccess={(r) => {
-										toastWarnings(r);
-										void getStaffEventProduction(id).refresh();
-									}}
-								>
-									{#snippet form()}
-										<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
-										<FormField
-											field={applyDutyList.fields.dutyListId}
-											label={m.staff_template_label()}
-											type="select"
-											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
-										/>
-										<FormField
-											field={applyDutyList.fields.reason}
-											label={m.staff_reason_if_applying_again_label()}
-											type="text"
-										/>
-									{/snippet}
-								</Action>
-							{/if}
-							{#if liveVolunteerRoles.length > 0}
-								<Action
-									action={createShift}
-									label={m.staff_events_id_production_schedule_shift_label()}
-									data-testid="schedule-event-shift"
-									variant="ghost"
-									size="sm"
-									modalTitle={m.staff_events_id_production_schedule_shift_2_title({
-										title: evt.title
-									})}
-									submitLabel={m.staff_create_label()}
-									successToast={m.staff_shift_scheduled_toast()}
-									onsuccess={() => getStaffEventProduction(id).refresh()}
-								>
-									{#snippet form()}
-										<!--
-									The event is the one thing this form already knows, so it is
-									locked rather than offered as a picker.
-								-->
-										<ShiftFormFields
-											form={createShift}
-											roles={liveVolunteerRoles}
-											bind:roleId={shiftRoleId}
-											lockedEvent={{ id: evt.id, title: evt.title }}
-											startsAt={shiftStart}
-											endsAt={shiftEnd}
-											capacity={shiftCapacity}
-										/>
-									{/snippet}
-								</Action>
-							{/if}
-						</div>
-					</div>
+			<RelatedShifts subject={{ type: 'event', id: evt.id }}>
+				{#snippet actions(refresh)}
+					{#if dutyLists.length > 0}
+						<Action
+							action={applyDutyList}
+							label={m.staff_apply_template_label()}
+							variant="ghost"
+							size="sm"
+							modalTitle={m.staff_events_id_production_apply_template_title({
+								title: evt.title
+							})}
+							submitLabel={m.staff_apply_label()}
+							successToast={m.staff_events_id_production_work_orders_created_toast()}
+							onsuccess={(r) => {
+								toastWarnings(r);
+								refresh();
+								void getStaffEventProduction(id).refresh();
+							}}
+						>
+							{#snippet form()}
+								<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
+								<FormField
+									field={applyDutyList.fields.dutyListId}
+									label={m.staff_template_label()}
+									type="select"
+									options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
+								/>
+								<FormField
+									field={applyDutyList.fields.reason}
+									label={m.staff_reason_if_applying_again_label()}
+									type="text"
+								/>
+							{/snippet}
+						</Action>
+					{/if}
 				{/snippet}
-
-				{#if shifts.length === 0}
-					<EmptyState
-						title={m.staff_events_id_production_no_volunteer_shifts_title()}
-						description={m.staff_events_id_production_nobody_scheduled_work_show_yet_body()}
-					/>
-				{:else}
-					<Table>
-						{#snippet head()}
-							<th>{m.staff_role_label()}</th>
-							<th class="whitespace-nowrap">{m.staff_when_label()}</th>
-							<th class="cell-num">{m.staff_confirmed_label()}</th>
-						{/snippet}
-
-						{#each shifts as shift (shift.id)}
-							<tr class="hover">
-								<td class="cell-primary">
-									<a href={resolve(`staff/tasks/${shift.id}`)} class="link font-medium"
-										>{shift.roleName}</a
-									>
-								</td>
-								<td class="whitespace-nowrap">
-									{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
-								</td>
-								<!--
-								Confirmed, not "filled". Only a confirmed signup gets the day-before
-								reminder and completes afterwards, so a show whose shifts are all
-								claimed and none confirmed is not staffed
-								(docs/reports/volunteer-workflow-findings.md#a3).
-							-->
-								<td class="cell-num whitespace-nowrap">
-									<span class:text-warning={shift.confirmed < shift.capacity}>
-										{shift.confirmed}/{shift.capacity}
-									</span>
-									{#if shift.claimed > shift.confirmed}
-										<Badge variant="warning" size="xs" class="ml-1">
-											+{shift.claimed - shift.confirmed}
-										</Badge>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</Table>
-				{/if}
-			</InfoCard>
+			</RelatedShifts>
 		</div>
 	{/if}
 

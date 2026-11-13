@@ -30,6 +30,7 @@
 	import { IconCheck } from '@tabler/icons-svelte';
 	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import TaskCatalogue from '#lib/components/task/TaskCatalogue.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import { asDateValue } from './date-value';
 	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
@@ -293,6 +294,7 @@
 	<div class="flex flex-col items-stretch lg:flex-row lg:items-start">
 		<div class="@container min-w-0 flex-1 space-y-4">
 			<TaskCatalogue projectId={project.id} />
+			<RelatedShifts subject={{ type: 'project', id: project.id }} />
 		</div>
 		<aside class="activity-panel">
 			<ActivityCard

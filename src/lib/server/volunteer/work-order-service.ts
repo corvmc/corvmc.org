@@ -8,7 +8,7 @@ import {
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
@@ -1078,12 +1078,21 @@ export async function listShifts(
 		eventId?: string;
 		from?: Date;
 		to?: Date;
+		/** Shifts still running or to come at this instant. */
+		endsAfter?: Date;
 		includeCancelled?: boolean;
+		/** A further condition on the task, such as a record's relations (#2630). */
+		where?: SQL;
+		limit?: number;
 	} = {}
 ): Promise<ScheduledShiftWithCounts[]> {
-	const rows = await shiftRowsQuery()
+	const query = shiftRowsQuery()
 		.where(
 			and(
+				filters.where,
+				filters.endsAfter
+					? sql`${volunteerShift.endsAt} > ${Math.floor(filters.endsAfter.getTime() / 1000)}`
+					: undefined,
 				filters.includeCancelled ? undefined : and(liveShift(), isNull(workOrder.cancelledAt)),
 				filters.volunteerRoleId
 					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
@@ -1093,7 +1102,8 @@ export async function listShifts(
 				filters.to ? lte(volunteerShift.startsAt, filters.to) : undefined
 			)
 		)
-		.orderBy(asc(volunteerShift.startsAt));
+		.orderBy(asc(volunteerShift.startsAt), asc(volunteerShift.id));
+	const rows = await (filters.limit ? query.limit(filters.limit) : query);
 
 	return withCounts(rows).filter(isScheduled);
 }

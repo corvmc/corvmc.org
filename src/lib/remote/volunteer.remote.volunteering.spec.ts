@@ -47,8 +47,11 @@ const waiting = vi.hoisted(() => ({
 	ended: [] as { id: string }[],
 	lapsing: [] as { userId: string }[]
 }));
-vi.mock('#lib/server/volunteer/ended-shifts.js', () => ({
-	listTasksWithEndedShifts: async () => waiting.ended
+const listTasksWithEndedShifts = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/volunteer/ended-shifts.js', () => ({ listTasksWithEndedShifts }));
+// `?about=` (#2630): the record's relations as one condition, passed through untouched.
+vi.mock('#lib/server/task/related-tasks.js', () => ({
+	aboutWhere: (subject: object) => ({ about: subject })
 }));
 vi.mock('#lib/server/volunteer/member-certification-service.js', async (orig) => ({
 	...(await orig<object>()),
@@ -69,6 +72,7 @@ beforeEach(() => {
 	svc.listWorkOrders.mockReset();
 	waiting.ended = [];
 	waiting.lapsing = [];
+	listTasksWithEndedShifts.mockReset().mockImplementation(async () => waiting.ended);
 });
 
 describe('getVolunteeringPage', () => {
@@ -96,5 +100,16 @@ describe('getVolunteeringPage', () => {
 		const page = await getVolunteeringPage({});
 		expect(page.ended).toEqual([{ id: 'wo-ended' }]);
 		expect(page.lapsingPeople).toBe(2);
+	});
+
+	it("narrows the shifts and the ended tasks to a record's relations", async () => {
+		held.add('volunteer.read');
+		const about = { type: 'event', id: 'e1' };
+		await getVolunteeringPage({ about });
+		expect(svc.listShifts).toHaveBeenCalledWith(expect.objectContaining({ where: { about } }));
+		expect(listTasksWithEndedShifts).toHaveBeenCalledWith(expect.any(Date), { about });
+
+		await getVolunteeringPage({});
+		expect(svc.listShifts).toHaveBeenLastCalledWith(expect.objectContaining({ where: undefined }));
 	});
 });

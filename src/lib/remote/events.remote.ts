@@ -142,7 +142,6 @@ import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
 import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
-import { getShifts, getVolunteerRoles } from './volunteer.remote';
 import { getPublicGigGuide } from './calendar.remote';
 
 // ---------------------------------------------------------------------------
@@ -1231,8 +1230,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
 	const [
 		detail,
-		shifts,
-		volunteerRoles,
 		dutyLists,
 		riders,
 		production,
@@ -1245,8 +1242,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		committees
 	] = await Promise.all([
 		getStaffEventDetail(id),
-		getShifts({ eventId: id }),
-		getVolunteerRoles(),
 		listApplicableDutyLists(),
 		// What each act on the bill says it needs. The advance checklist has always
 		// carried a task reading "Collect tech riders and stage plots"; this is the
@@ -1284,8 +1279,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	return {
 		budget,
 		detail,
-		shifts,
-		volunteerRoles,
 		dutyLists,
 		riders,
 		production,

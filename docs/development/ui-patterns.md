@@ -565,6 +565,9 @@ Three things follow:
 - **A record's tasks are `RelatedTasks`** (`$lib/components/task/`), given `subject={{ type, id }}`.
   How each type finds its tasks is `src/lib/server/task/related-tasks.ts`, one resolver per type;
   a page does not write its own task list (#2630). The card's View all opens `/staff/tasks?about=`.
+- **A record's shifts are `RelatedShifts`** (`$lib/components/volunteer/`), the same subject and
+  relations joined to `volunteer_shift`. Its rows are Volunteering's `ShiftRow` in compact form;
+  View all opens `/staff/volunteering?about=`. A page adds its own controls through `actions`.
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had

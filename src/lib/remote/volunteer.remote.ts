@@ -12,6 +12,8 @@ import {
 } from '#lib/server/capability/capability-grant-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { getStaffLayout } from './layout.remote';
+import { aboutWhere } from '#lib/server/task/related-tasks.js';
+import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { getProjectById } from '#lib/server/project/project-service.js';
 import {
@@ -1552,49 +1554,38 @@ const shiftFilters = z.object({
 });
 
 /**
- * Every staff list of shifts, Schedule included.
- *
- * Both bounds are optional, which is what lets Schedule's "Everything" window
- * absorb the old `/staff/volunteer/shifts` catalog — that page's only real
- * difference was the absence of a date range, and two queries for one question
- * is how the two pages drifted apart in the first place.
- */
-export const getShifts = query(shiftFilters, async (f) => {
-	await requireCapability('volunteer.read');
-	return listShifts({
-		volunteerRoleId: f.volunteerRoleId || undefined,
-		eventId: f.eventId || undefined,
-		from: f.from ? new Date(f.from) : undefined,
-		to: f.to ? new Date(f.to) : undefined,
-		includeCancelled: f.includeCancelled
-	});
-});
-
-/**
  * Volunteering's one load-bearing query (#2625): the shifts in the window, by
  * date, called-off ones included as a notify list. `ended` is tasks whose
  * shifts are over, past any window; `lapsingPeople` is the clearances queue the
  * page links out to. Tasks with no shift, and contractor work, are Tasks'.
  */
-export const getVolunteeringPage = query(shiftFilters, async (f) => {
-	await requireCapability('volunteer.read');
-	const now = new Date();
-	const [shifts, ended, lapsing] = await Promise.all([
-		listShifts({
-			volunteerRoleId: f.volunteerRoleId || undefined,
-			from: f.from ? new Date(f.from) : undefined,
-			to: f.to ? new Date(f.to) : undefined,
-			includeCancelled: f.includeCancelled
-		}),
-		listTasksWithEndedShifts(now),
-		listLapsingBeforeRosteredShift(now)
-	]);
-	return {
-		shifts,
-		ended,
-		lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
-	};
-});
+export const getVolunteeringPage = query(
+	shiftFilters.extend({
+		about: z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) }).optional()
+	}),
+	async (f) => {
+		await requireCapability('volunteer.read');
+		const now = new Date();
+		// `?about=` (#2630): a record's shifts, through the same relations as its card.
+		const where = f.about ? aboutWhere(f.about) : undefined;
+		const [shifts, ended, lapsing] = await Promise.all([
+			listShifts({
+				volunteerRoleId: f.volunteerRoleId || undefined,
+				from: f.from ? new Date(f.from) : undefined,
+				to: f.to ? new Date(f.to) : undefined,
+				includeCancelled: f.includeCancelled,
+				where
+			}),
+			listTasksWithEndedShifts(now, where),
+			listLapsingBeforeRosteredShift(now)
+		]);
+		return {
+			shifts,
+			ended,
+			lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
+		};
+	}
+);
 
 /**
  * Open shifts for the member, with the reason they can't take one attached
@@ -1645,28 +1636,6 @@ const shiftFormSchema = z.object({
 		.string()
 		.max(VOLUNTEER_SHIFT_NOTES_MAX, `Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`)
 		.optional()
-});
-
-export const createShift = form(shiftFormSchema, async (data) => {
-	const staff = await requireCapability('volunteer.manageShifts');
-
-	try {
-		await createShiftService({
-			volunteerRoleId: data.volunteerRoleId,
-			eventId: data.eventId,
-			assetId: data.assetId,
-			title: data.title,
-			startsAt: data.startsAt,
-			endsAt: data.endsAt,
-			capacity: parseInt(data.capacity, 10),
-			notes: data.notes,
-			createdByUserId: staff.id
-		});
-	} catch (err) {
-		mapDomainError(err);
-	}
-
-	return { success: true };
 });
 
 const notesSchema = z

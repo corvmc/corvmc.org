@@ -17,8 +17,8 @@
 	/**
 	 * The members who said they would help with this role, owning the query behind them.
 	 *
-	 * Paginated, so it is keyed by a page number the page's role-id-keyed query cannot carry — see
-	 * RoleShiftsCard for the same reasoning.
+	 * Paginated, so it is keyed by a page number the page's role-id-keyed query cannot carry: the
+	 * role mutations refresh that query by the role id alone.
 	 */
 	let { role }: { role: { id: string; name: string } } = $props();
 

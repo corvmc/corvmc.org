@@ -3421,6 +3421,25 @@
 	"staff_volunteering_find_volunteers_label": "Find volunteers",
 	"staff_tasks_blocked_label": "Blocked",
 	"staff_tasks_waits_on_text": "Waits on {names}",
+	"staff_related_shifts_title": "Related shifts",
+	"staff_related_shifts_summary_text": [
+		{
+			"declarations": [
+				"input filled",
+				"input capacity",
+				"input shifts",
+				"local shiftsPlural = shifts: plural"
+			],
+			"selectors": ["shiftsPlural"],
+			"match": {
+				"shiftsPlural=one": "{filled} of {capacity} places filled across {shifts} shift",
+				"shiftsPlural=*": "{filled} of {capacity} places filled across {shifts} shifts"
+			}
+		}
+	],
+	"staff_related_shifts_add_label": "Add shift",
+	"staff_related_shifts_add_title": "Add shift",
+	"staff_related_shifts_pick_role_placeholder": "Pick a role",
 	"staff_grants_id_funded_project_label": "Funded project",
 	"staff_grants_id_next_task_label": "Next task",
 	"staff_grants_id_award_offer_body": "Awarded. Add the award tasks: the agreement, a task per report, and the funded project.",
