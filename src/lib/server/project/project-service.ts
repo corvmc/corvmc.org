@@ -50,7 +50,6 @@ import {
 	type ProjectStatus
 } from '#lib/config.js';
 import { getHourValueCents } from '#lib/server/volunteer/hour-value.js';
-import { claimedSql } from '#lib/server/volunteer/work-order-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { ProjectField } from '#lib/types/audit.js';
@@ -801,32 +800,12 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	};
 }
 
-/** Everything hanging off the project, for its detail page. */
+/**
+ * The orders, acquisitions and events on a project, for its detail page. Its
+ * tasks are `TaskCatalogue`'s, which reads them itself.
+ */
 export async function listProjectAttachments(projectId: string) {
-	const [workOrders, jobs, orders, acquisitions, events] = await Promise.all([
-		// `title` is the column's own rule: the work order's, else its event's, else
-		// its role's. The role join is a left join: contractor and unassigned work
-		// has none, and is still the project's.
-		db
-			.select({
-				...getTableColumns(workOrder),
-				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
-				claimed: claimedSql().mapWith(Number)
-			})
-			.from(workOrder)
-			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-			.where(eq(workOrder.projectId, projectId))
-			.orderBy(asc(workOrder.dueAt), asc(workOrder.createdAt), asc(workOrder.id)),
-		db
-			.select({
-				...getTableColumns(contractorJob),
-				title: sql<string>`coalesce(${workOrder.title}, 'Work order')`
-			})
-			.from(contractorJob)
-			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
-			.where(eq(workOrder.projectId, projectId))
-			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
+	const [orders, acquisitions, events] = await Promise.all([
 		db
 			.select({ ...getTableColumns(purchaseOrder), supplierName: organization.name })
 			.from(purchaseOrder)
@@ -846,8 +825,6 @@ export async function listProjectAttachments(projectId: string) {
 	]);
 
 	return {
-		workOrders,
-		jobs,
 		orders,
 		acquisitions,
 		events: events.map((ev) => ({ ...ev, ref: toEventRef({ ...ev, image: ev.posterKey }) }))

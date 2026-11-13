@@ -1,9 +1,4 @@
-import {
-	linkedAssetId,
-	linkedIdSql,
-	replaceLink,
-	type LinkTo
-} from '#lib/server/task/work-order-link.js';
+import { linkedAssetId, replaceLink, type LinkTo } from '#lib/server/task/work-order-link.js';
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
@@ -15,27 +10,18 @@ import {
 } from '#lib/config.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
-import { group, groupMember } from '#lib/server/db/schema/group.js';
-import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { inventoryAsset } from '#lib/server/db/schema/inventory.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { organization } from '#lib/server/db/schema/party.js';
 import { project, projectCommittee } from '#lib/server/db/schema/project.js';
-import {
-	volunteerRole,
-	dutyList,
-	workOrder,
-	workTask,
-	type Task
-} from '#lib/server/db/schema/volunteer.js';
-import { eventListing } from '#lib/server/db/schema/event.js';
+import { workOrder, workTask, type Task } from '#lib/server/db/schema/volunteer.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { evaluateDone, type DeliverableState } from '#lib/server/volunteer/done-conditions.js';
 import {
 	auditWorkOrderChange,
 	cancelShift,
-	capacitySql,
-	claimedSql,
 	createWorkOrder,
 	openShift,
 	requireActiveRole,
@@ -49,18 +35,7 @@ import { assignToTask, unassignFromTask } from '#lib/server/volunteer/assignee-s
 import { assigneesOf, liveSignupsOn, takeEveryoneOff } from '#lib/server/volunteer/task-people.js';
 import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { cancelJob, createJob } from '#lib/server/contractor/contractor-job-service.js';
-import {
-	listSections,
-	nextTaskOrders,
-	requireSection
-} from '#lib/server/project/project-section-service.js';
-import {
-	dutiesOn,
-	engagementsOn,
-	outstandingFor,
-	peopleOn,
-	shiftsOn
-} from '#lib/server/project/project-task-details.js';
+import { nextTaskOrders, requireSection } from '#lib/server/project/project-section-service.js';
 
 // ---------------------------------------------------------------------------
 // A project's task list: the work orders on it, as a checklist. Every function
@@ -792,123 +767,3 @@ export async function listProjectProgress(projectIds: string[]): Promise<Map<str
 	}
 	return out;
 }
-
-/** The project's owning committee, which a task with none of its own answers to. */
-async function owningCommittee(projectId: string) {
-	const [row] = await db
-		.select({ id: group.id, name: group.name })
-		.from(projectCommittee)
-		.innerJoin(group, eq(group.id, projectCommittee.groupId))
-		.where(and(eq(projectCommittee.projectId, projectId), eq(projectCommittee.role, 'owner')))
-		.limit(1);
-	return row ?? null;
-}
-
-/** Everything the task list draws: sections, each task with its mode and state, and progress. */
-/** One time of the task's latest live shift, or null with none. */
-function liveShiftTime(column: 'starts_at' | 'ends_at') {
-	return sql<Date | null>`(
-		select s.${sql.raw(`"${column}"`)} from "volunteer_shift" s
-		where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
-		order by s."starts_at" desc limit 1
-	)`.mapWith((v: number | null) => (v === null ? null : new Date(Number(v) * 1000)));
-}
-
-export async function listProjectTasks(projectId: string) {
-	const [sections, rows, committee] = await Promise.all([
-		listSections(projectId),
-		db
-			.select({
-				...doneInputColumns,
-				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
-				sectionId: workOrder.sectionId,
-				sortOrder: workOrder.sortOrder,
-				volunteerRoleId: workOrder.volunteerRoleId,
-				roleName: volunteerRole.name,
-				// Across the task's live shifts; with none, the places it asked for.
-				capacity:
-					sql<number>`coalesce(nullif(${capacitySql()}, 0), ${workOrder.pendingCapacity}, 1)`.mapWith(
-						Number
-					),
-				claimed: claimedSql().mapWith(Number),
-				// The latest live shift's time, which is what a one-shift row shows.
-				startsAt: liveShiftTime('starts_at'),
-				endsAt: liveShiftTime('ends_at'),
-				groupId: workOrder.groupId,
-				groupName: group.name,
-				notes: workOrder.notes,
-				resolutionNotes: workOrder.resolutionNotes,
-				eventTitle: eventListing.title,
-				assetId: linkedIdSql('assetId'),
-				assetName: inventoryItem.name,
-				assetTag: inventoryAsset.assetTag,
-				assetStatus: inventoryAsset.status,
-				dutyListId: workOrder.dutyListId,
-				dutyListName: dutyList.name
-			})
-			.from(workOrder)
-			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-			.leftJoin(group, eq(group.id, workOrder.groupId))
-			.leftJoin(inventoryAsset, eq(inventoryAsset.id, linkedIdSql('assetId')))
-			.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-			.leftJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
-			.where(eq(workOrder.projectId, projectId))
-			.orderBy(asc(workOrder.sortOrder), asc(workOrder.createdAt), asc(workOrder.id)),
-		owningCommittee(projectId)
-	]);
-	const ids = rows.map((r) => r.id);
-	const [modes, states, people, engagements, duties, shifts] = await Promise.all([
-		workOrderModes(ids),
-		evaluateDone(rows),
-		peopleOn(ids),
-		engagementsOn(ids),
-		dutiesOn(ids),
-		shiftsOn(ids)
-	]);
-	const tasks = rows.map((r) => {
-		const items = duties.get(r.id) ?? [];
-		return {
-			...r,
-			mode: modes.get(r.id) ?? 'unassigned',
-			state: states.get(r.id) ?? 'open',
-			people: people.get(r.id) ?? [],
-			engagement: engagements.get(r.id) ?? null,
-			shifts: shifts.get(r.id) ?? [],
-			dutyItems: items,
-			duties: { done: items.filter((d) => d.done).length, total: items.length }
-		};
-	});
-	const outstanding = await outstandingFor(tasks);
-	return {
-		sections,
-		committee,
-		tasks: tasks.map((t) => ({ ...t, outstanding: outstanding.get(t.id) ?? null })),
-		progress: progressOf(states)
-	};
-}
-
-/**
- * The task list as a caller sees it: who is engaged stays (a committee
- * delegates its own tasks), what they quoted, cost and invoiced only with
- * `contractor.read`, which the remote decides and passes in.
- */
-export function scopeContractorMoney(list: ProjectTaskList, contractorMoney: boolean) {
-	if (contractorMoney) return { ...list, contractorMoney };
-	const tasks = list.tasks.map((t) => ({
-		...t,
-		engagement: t.engagement && {
-			...t.engagement,
-			quotedCents: null,
-			costCents: null,
-			isDonated: false,
-			fairValueCents: null,
-			invoiceRef: null,
-			paidAt: null
-		}
-	}));
-	return { ...list, tasks, contractorMoney };
-}
-
-export type ProjectTaskList = Awaited<ReturnType<typeof listProjectTasks>>;
-export type ProjectTask = ProjectTaskList['tasks'][number];

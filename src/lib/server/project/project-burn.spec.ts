@@ -14,7 +14,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/volunteer/hour-value.js', () => ({ getHourValueCents: vi.fn(async () => 0) }));
 
-const { getProjectBurn, listProjectAttachments } = await import('./project-service');
+const { getProjectBurn } = await import('./project-service');
 
 function engagement(id: string, workOrderId: string, status: string, money: string) {
 	sqlite.exec(
@@ -73,19 +73,6 @@ describe('contractor burn', () => {
 
 		expect(burn.cash.contractorCents).toBe(0);
 		expect(burn.contributed.donatedServicesCents).toBe(0);
-	});
-});
-
-describe('attached contractor jobs', () => {
-	it('are the engagements on the project’s work orders, titled by them', async () => {
-		engagement('job-1', 'wo-1', 'booked', 'quoted_cents=50000');
-		engagement('job-2', 'wo-2', 'booked', 'quoted_cents=50000');
-
-		const { jobs } = await listProjectAttachments('proj-1');
-
-		expect(jobs.map((j) => [j.id, j.title, j.workOrderId])).toEqual([
-			['job-1', 'Add a dedicated circuit', 'wo-1']
-		]);
 	});
 });
 
