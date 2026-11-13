@@ -198,11 +198,44 @@ describe('remove', () => {
 
 		const [thread] = announcementThreads();
 		expect(messagesIn(thread.id).map((m) => m.body)).toEqual(['First\n\nTunes for **week one**']);
-		expect(thread).toMatchObject({ message_count: 1, preview: 'First\n\nTunes for **week one**' });
+		expect(thread).toMatchObject({ message_count: 1, preview: 'First Tunes for week one' });
 		expect(
 			all(`select deleted_at is not null as gone from group_announcement where id = ?`, second.id)
 		).toEqual([{ gone: 1 }]);
 		expect(await svc.listPublished('g1')).toHaveLength(1);
+	});
+
+	it('clears the preview when the last post goes', async () => {
+		const only = await draft();
+		await svc.publish(only.id, 'g1');
+
+		await svc.remove(only.id, 'g1');
+
+		expect(announcementThreads()).toMatchObject([{ message_count: 0, preview: null }]);
+	});
+
+	it('keeps the preview of a post that lands between the read and the batch', async () => {
+		const first = await draft('First');
+		await svc.publish(first.id, 'g1');
+		const second = await draft('Second');
+		await svc.publish(second.id, 'g1');
+		const [{ id: threadId }] = announcementThreads();
+		const realBatch = testDb.batch;
+		const spy = vi.spyOn(testDb, 'batch').mockImplementationOnce(async (stmts) => {
+			sqlite
+				.prepare(
+					`insert into inbox_message (id, thread_id, direction, body, created_at)
+					 values ('late', ?, 'peer', 'Late', 4102444800)`
+				)
+				.run(threadId);
+			sqlite.prepare(`update inbox_thread set preview = 'Late' where id = ?`).run(threadId);
+			return realBatch(stmts);
+		});
+
+		await svc.remove(second.id, 'g1');
+		spy.mockRestore();
+
+		expect(announcementThreads()).toMatchObject([{ message_count: 2, preview: 'Late' }]);
 	});
 
 	it('404s an id from another group', async () => {
