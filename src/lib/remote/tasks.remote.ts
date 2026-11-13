@@ -17,6 +17,15 @@ import { createTask, rescheduleTask } from '#lib/server/project/project-task-ser
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
 import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { requireListingReader } from '#lib/server/event/listing-guard.js';
+import {
+	newTaskPrefill,
+	relatedTaskWhere,
+	relatedTasks,
+	type RelatedSubject
+} from '#lib/server/task/related-tasks.js';
+import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
+import { sql } from 'drizzle-orm';
 
 /**
  * The Tasks table (#2625) and the task it creates. A task's own writes are on
@@ -24,6 +33,8 @@ import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
  */
 
 const projectId = z.uuid();
+/** A cleared `select` posts `''`. */
+const optionalId = z.union([z.literal(''), z.string().min(1)]).optional();
 
 /** A project's write is its committee's (`project.manage` carries) or staff holding it. */
 async function guardProject(id: string) {
@@ -51,6 +62,11 @@ function contractorMarks(jobs: TaskJob[]) {
 	return marks;
 }
 
+const subject = z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) });
+
+/** Nothing matches: `?about=` naming a type that resolves to no tasks. */
+const NONE = sql`0 = 1`;
+
 /**
  * The Tasks table (#2625): every task, in a project or none. Engagements are
  * read by view rather than by task id, which would bind one parameter per row.
@@ -61,7 +77,8 @@ export const getTasksPage = query(
 	z.object({
 		projectId: projectId.optional(),
 		volunteerRoleId: z.string().optional(),
-		includeDone: z.boolean().optional()
+		includeDone: z.boolean().optional(),
+		about: subject.optional()
 	}),
 	async (f) => {
 		await requireCapability('project.read');
@@ -76,7 +93,8 @@ export const getTasksPage = query(
 				projectId: f.projectId,
 				volunteerRoleId: f.volunteerRoleId || undefined,
 				includeDone: f.includeDone,
-				withAwaitingInvoice: contractorAccess
+				withAwaitingInvoice: contractorAccess,
+				...(f.about ? { where: relatedTaskWhere(f.about) ?? NONE } : {})
 			}),
 			listProjects({ archived: false }),
 			listCommittees(),
@@ -96,6 +114,52 @@ export const getTasksPage = query(
 	}
 );
 
+/** The record's own read guard; a type with no relations still needs a session. */
+async function requireSubjectReader(s: RelatedSubject) {
+	switch (s.type) {
+		case 'event':
+			return requireListingReader(s.id);
+		case 'project':
+			return requireCapability('project.read');
+		case 'group':
+			return requireCapability('group.read');
+		case 'role':
+		case 'recurring_work':
+			return requireCapability('volunteer.read');
+		default:
+			return requireUser();
+	}
+}
+
+/**
+ * `RelatedTasks` (#2630): the record's read guard first, then the Tasks
+ * table's own (`project.read`), which sees every task. A reader of the record
+ * without it gets null, so the card is left off rather than failing the page.
+ */
+export const getRelatedTasks = query(
+	subject.extend({ includeDone: z.boolean().optional() }),
+	async ({ includeDone, ...s }) => {
+		await requireSubjectReader(s);
+		if (!(await can('project.read'))) return null;
+		const [groups, prefill, contractorAccess] = await Promise.all([
+			relatedTasks(s, { includeDone }),
+			newTaskPrefill(s),
+			can('contractor.read')
+		]);
+		const workOrderIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
+		const jobs =
+			contractorAccess && workOrderIds.length > 0
+				? (
+						await Promise.all([
+							listJobs({ workOrderIds, view: 'open' }),
+							listJobs({ workOrderIds, view: 'awaiting-invoice' })
+						])
+					).flat()
+				: [];
+		return { groups, contractors: contractorMarks(jobs), prefill };
+	}
+);
+
 /** The project page reads through its one query; a committee member cannot run it. */
 async function refresh(id: string) {
 	if (!(await can('project.read'))) return;
@@ -111,23 +175,38 @@ export const createCatalogueTaskForm = form(
 	z.object({
 		title: z.string().trim().min(1, 'Give it a title').max(VOLUNTEER_SHIFT_TITLE_MAX),
 		projectId: z.union([z.literal(''), projectId]).optional(),
-		dueAt: z.string().optional()
+		dueAt: z.string().optional(),
+		// What `RelatedTasks` fills in from the record it sits on (#2630).
+		eventId: optionalId,
+		groupId: optionalId,
+		volunteerRoleId: optionalId
 	}),
 	async (data) => {
 		const dueAt = data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null;
+		const anchors = {
+			eventId: data.eventId || null,
+			groupId: data.groupId || null,
+			volunteerRoleId: data.volunteerRoleId || null
+		};
 		if (data.projectId) {
 			const { user } = await guardProject(data.projectId);
 			const row = await createTask({
 				projectId: data.projectId,
 				title: data.title,
-				createdByUserId: user.id
+				createdByUserId: user.id,
+				...anchors
 			});
 			if (dueAt) await rescheduleTask(data.projectId, row.id, { dueAt });
 			await refresh(data.projectId);
 			return { id: row.id };
 		}
 		const staff = await requireCapability('volunteer.manageShifts');
-		const row = await createWorkOrder({ title: data.title, dueAt, createdByUserId: staff.id });
+		const row = await createWorkOrder({
+			title: data.title,
+			dueAt,
+			createdByUserId: staff.id,
+			...anchors
+		});
 		return { id: row.id };
 	}
 );

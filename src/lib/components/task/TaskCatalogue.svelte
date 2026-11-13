@@ -12,7 +12,6 @@
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { Latest } from '#lib/latest.svelte.js';
-	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE, projectKindLabels, projectStatusLabels } from '#lib/config.js';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -24,7 +23,8 @@
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
 	import NewTaskAction from '#lib/components/actions/NewTaskAction.svelte';
 	import NewProjectAction from '#lib/components/actions/NewProjectAction.svelte';
-	import { isOverdue } from '#lib/utils/work-order-due.js';
+	import TaskRow from './TaskRow.svelte';
+	import { isUnstaffed, type ContractorMark } from '#lib/utils/task-facts.js';
 	import { getTasksPage } from '#lib/remote/tasks.remote.js';
 	import TaskRowActions from './TaskRowActions.svelte';
 	import {
@@ -62,7 +62,12 @@
 	// Pinned once, so "overdue" does not move while the page is open.
 	const now = new Date();
 
-	const args = $derived({ projectId, volunteerRoleId: q.role || undefined, includeDone: q.done });
+	const args = $derived({
+		projectId,
+		volunteerRoleId: q.role || undefined,
+		includeDone: q.done,
+		...(q.about ? { about: q.about } : {})
+	});
 	// Not `{#await}`: a refresh would re-pend it and unmount an open row Action.
 	const tasks = new Latest(() => getTasksPage(args));
 	$effect(() => {
@@ -104,7 +109,8 @@
 			(q.role ? 1 : 0) +
 			(q.kind ? 1 : 0) +
 			(q.chip ? 1 : 0) +
-			(q.done ? 1 : 0)
+			(q.done ? 1 : 0) +
+			(q.about ? 1 : 0)
 	);
 	const select = (e: Event) => (e.currentTarget as HTMLSelectElement).value;
 </script>
@@ -291,69 +297,18 @@
 	{/if}
 {/if}
 
-{#snippet row(t: Row, marks: { name: string; late: boolean; awaitingInvoice: boolean }[])}
-	{@const href = resolve('/staff/tasks/[id]', { id: t.id })}
-	{@const label = shiftLabel(t)}
-	{@const when = whenOf(t)}
-	{@const overdue = !t.resolvedAt && isOverdue(t, now)}
-	<tr class="hover" data-task={t.id}>
-		<td class="cell-primary">
-			<a {href} class="link truncate font-medium">{label}</a>
-			{#if t.roleName && t.roleName !== label}
-				<div class="truncate text-subtle text-xs">
-					{t.roleName}{#if t.eventTitle && t.eventTitle !== label}
-						· {t.eventTitle}{/if}
-				</div>
-			{/if}
-		</td>
-		{#if !projectId}
-			<td class="col-support">
-				{#if t.projectId}
-					<a class="link" href={resolve('/staff/tasks/projects/[id]', { id: t.projectId })}
-						>{t.projectName}</a
-					>
-				{/if}
-			</td>
-		{/if}
-		<td class="whitespace-nowrap">{when ? formatDateShort(when) : ''}</td>
-		<td class="col-support">
-			{#if marks.length > 0}
-				{#each marks as c, i (i)}
-					<div class="truncate text-xs">
-						{c.name}
-						{#if c.late}<Badge variant="error" size="sm">{m.staff_late_label()}</Badge>{/if}
-						{#if c.awaitingInvoice}<Badge variant="warning" size="sm"
-								>{m.staff_volunteer_schedule_awaiting_invoice_label()}</Badge
-							>{/if}
-					</div>
-				{/each}
-			{:else if t.shifts > 0}
-				{m.staff_tasks_signed_up_text({ claimed: t.claimed, capacity: t.capacity })}
-			{:else if t.assignees > 0}
-				{m.staff_tasks_assigned_text({ count: t.assignees })}
-			{:else}
-				<span class="text-subtle">{m.staff_tasks_unassigned_text()}</span>
-			{/if}
-		</td>
-		<td>
-			{#if t.resolvedAt}
-				<Badge variant="success" size="sm">{m.staff_done_label()}</Badge>
-			{:else if overdue}
-				<Badge variant="warning" size="sm">{m.staff_overdue_label()}</Badge>
-			{:else}
-				<span class="text-subtle">{m.staff_open_label()}</span>
-			{/if}
-		</td>
-		<td class="w-px">
+{#snippet row(t: Row, marks: ContractorMark[])}
+	<TaskRow task={t} {marks} {now} project={!projectId}>
+		{#snippet actions({ label, href })}
 			{#if !t.resolvedAt}
 				<TaskRowActions
 					task={t}
 					{label}
 					{href}
-					unassigned={marks.length === 0 && t.shifts === 0 && t.assignees === 0}
+					unassigned={isUnstaffed(t, marks)}
 					onsuccess={refresh}
 				/>
 			{/if}
-		</td>
-	</tr>
+		{/snippet}
+	</TaskRow>
 {/snippet}

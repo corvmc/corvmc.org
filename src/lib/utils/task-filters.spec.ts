@@ -37,7 +37,7 @@ describe('the URL', () => {
 	it('round-trips every filter, and drops what it does not know', () => {
 		const q = parseTaskQuery(
 			new URLSearchParams(
-				'group=project&days=30&project=p1&role=r&kind=contractor&chip=overdue&done=1'
+				'group=project&days=30&project=p1&role=r&kind=contractor&chip=overdue&done=1&about=event:e:1'
 			)
 		);
 		expect(q).toEqual({
@@ -47,10 +47,21 @@ describe('the URL', () => {
 			role: 'r',
 			kind: 'contractor',
 			chip: 'overdue',
-			done: true
+			done: true,
+			about: { type: 'event', id: 'e:1' }
 		});
 		expect(parseTaskQuery(new URLSearchParams(taskQuerySearch(q)))).toEqual(q);
 		expect(taskQuerySearch(parseTaskQuery(new URLSearchParams('days=5&kind=x&chip=y')))).toBe('');
+	});
+
+	it('takes an about filter only with a known type and an id', () => {
+		for (const raw of ['nonsense:1', 'event:', ':1', 'event']) {
+			expect(parseTaskQuery(new URLSearchParams({ about: raw })).about).toBeNull();
+		}
+		expect(parseTaskQuery(new URLSearchParams({ about: 'group:g1' })).about).toEqual({
+			type: 'group',
+			id: 'g1'
+		});
 	});
 });
 

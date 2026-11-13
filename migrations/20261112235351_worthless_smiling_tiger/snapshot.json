@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3b64c724-07f6-449a-9efa-c15f242b4766",
+  "id": "3ec5b855-99a4-4a54-bbf5-852ea7d54c70",
   "prevIds": [
-    "1e76309e-3dbd-4b8d-ac68-c634d52a3f0a"
+    "9a1a4c38-5dd5-481e-9cf0-aa0c75ae5d44"
   ],
   "ddl": [
     {
@@ -23847,6 +23847,34 @@
       "where": null,
       "origin": "manual",
       "name": "work_order_reservation_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_group_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "maintenance_schedule_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_schedule_idx",
       "entityType": "indexes",
       "table": "work_order"
     },

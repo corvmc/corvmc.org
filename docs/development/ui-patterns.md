@@ -562,6 +562,9 @@ Three things follow:
 - **A detail page is a superset of its row.** Every fact, badge and action the row carried is on
   the page, the detail query reuses the list query's ref and label helpers, and a status that is a
   tinted rail on the row is not a plain sentence here (#1064).
+- **A record's tasks are `RelatedTasks`** (`$lib/components/task/`), given `subject={{ type, id }}`.
+  How each type finds its tasks is `src/lib/server/task/related-tasks.ts`, one resolver per type;
+  a page does not write its own task list (#2630). The card's View all opens `/staff/tasks?about=`.
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
