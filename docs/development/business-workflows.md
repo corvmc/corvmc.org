@@ -1993,7 +1993,9 @@ restore crew shifts or retract a cancellation notice.
 10. **Settlement** reads through `getSettlement` in `production/settlement-service.ts`, with
     no settlement table. The acts' pool is the `pass_through` ledger rows in the show's
     settlement group plus the acts' share of the door cash; the collective's revenue is the
-    `earned` `ticket_sales` rows plus its share of the door. `recordDoorTake`
+    show's tickets' `ticket_sales`, `fee_coverage` and `card_fees` rows, found through
+    `ticket.purchaseId` because no ticket row carries the group (#2733), plus its share of the
+    door. `recordDoorTake`
     (`production.run`) records the drawer and count, split at `doorSplitActsPercent` or the
     house `DOOR_SPLIT_ACTS_PERCENT`, and stamps whoever changed the figure as the counter.
     `recordDoorRecount` records a second count by somebody else; the first counter is
@@ -2028,7 +2030,8 @@ restore crew shifts or retract a cancellation notice.
   committees.
 - `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
   cost sheet.
-- `financial_entry` — ticket, payout and expense rows, read by settlement group. Door cash stays
+- `financial_entry` — ticket rows read through the show's tickets, payout and expense rows by
+  settlement group. Door cash stays
   on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`, and the counter and
   second count beside them).
 - `event_listing.venueId` — where the show is, and therefore whether it holds the

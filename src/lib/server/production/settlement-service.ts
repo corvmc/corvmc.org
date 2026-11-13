@@ -3,7 +3,8 @@ import { announcedBy } from './production-service';
 import { financialEntry } from '#lib/server/db/schema/financial.js';
 import { production, productionSlot } from '#lib/server/db/schema/production.js';
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
-import { and, asc, eq, isNotNull, isNull, sum } from 'drizzle-orm';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { and, asc, eq, inArray, isNotNull, isNull, sum } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { DOOR_SPLIT_ACTS_PERCENT } from '#lib/config.js';
@@ -65,8 +66,8 @@ export interface Settlement {
 	eventId: string;
 	status: string;
 	/**
-	 * Earned by the collective — its share of tickets, already net of the acts',
-	 * plus its share of the door (#929).
+	 * Earned by the collective — its share of tickets, net of the acts' and of
+	 * the card fee, plus its share of the door (#929).
 	 */
 	collectiveRevenueCents: number;
 	/**
@@ -179,15 +180,20 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 	};
 
 	// Revenue and pool come from the financial record rather than `payment_cache`,
-	// which holds no card revenue for anything written before #837.
+	// which holds no card revenue for anything written before #837. A ticket's
+	// rows are keyed on its purchase, so the show's are found through `ticket`;
+	// the card fee and any covered part net in, as Stripe deposited them (#2733).
 	const [earned] = await db
 		.select({ total: sum(financialEntry.amountCents) })
 		.from(financialEntry)
 		.where(
 			and(
-				eq(financialEntry.kind, 'earned'),
-				eq(financialEntry.settlementGroup, eventId),
-				eq(financialEntry.category, 'ticket_sales')
+				eq(financialEntry.subjectType, 'ticket'),
+				inArray(financialEntry.category, ['ticket_sales', 'fee_coverage', 'card_fees']),
+				inArray(
+					financialEntry.subjectId,
+					db.select({ id: ticket.purchaseId }).from(ticket).where(eq(ticket.eventId, eventId))
+				)
 			)
 		);
 
@@ -198,8 +204,6 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			and(eq(financialEntry.kind, 'pass_through'), eq(financialEntry.settlementGroup, eventId))
 		);
 
-	// Tickets record the collective's share against the ticket, not the show, so
-	// the earned figure is read by category over the same group.
 	// Door cash joins both sides rather than sitting beside them: the acts are
 	// owed from the whole pool, and a deal against net is measured against it.
 	// The `door` breakdown is what lets the worksheet show where it came from.
