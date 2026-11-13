@@ -32,6 +32,13 @@
 		if (item.source === 'note') {
 			return { ...row, context: { label: activityKindLabels[item.note.kind as ActivityKind] } };
 		}
+		if (item.source === 'thread') {
+			return {
+				...row,
+				href: resolve('/staff/inbox/[id]', { id: item.threadId }),
+				context: { label: m.staff_contacts_conversation_label() }
+			};
+		}
 		if (item.source === 'task') {
 			return {
 				...row,

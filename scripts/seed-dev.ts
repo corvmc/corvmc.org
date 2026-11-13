@@ -354,7 +354,9 @@ async function main() {
 	console.log(
 		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates)`
 	);
-	console.log(`  ${partyActivity.notes} contact notes, ${partyActivity.tasks} follow-up tasks`);
+	console.log(
+		`  ${partyActivity.notes} contact notes, ${partyActivity.tasks} follow-up tasks, ${partyActivity.threads} emails`
+	);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(

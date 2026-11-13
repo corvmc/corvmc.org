@@ -18,6 +18,7 @@
 	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
 	import ThreadTags from './ThreadTags.svelte';
+	import ThreadFiling from './ThreadFiling.svelte';
 	import { channelLabel } from '#lib/components/inbox/channels.js';
 	import { formatDate, formatDateTime } from '#lib/utils/format.js';
 	import { errorMessage } from '#lib/error-message.js';
@@ -170,6 +171,8 @@
 					     splitting the columns apart is what makes each one readable. -->
 					<ThreadTags threadId={thread.id} />
 				</div>
+
+				<ThreadFiling threadId={thread.id} />
 			</div>
 
 			<AssignControl

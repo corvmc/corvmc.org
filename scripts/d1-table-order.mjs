@@ -74,15 +74,21 @@ export const tableOrder = [
 	'media_attachment',
 	'campaign',
 	'audience',
+	'subscriber',
+	// A person at a party: child of directory_entry, organization, user and
+	// subscriber, so it wipes before each.
+	'contact',
+	// What an organization or a contact is to CMC: child of both.
+	'party_role',
 	// Since band chat it also references `group` (nullable owner, null = CorvMC),
-	// which is already well above this line.
+	// which is already well above this line; and since filing (#2622) the
+	// organization and contact it was filed to.
 	'inbox_thread',
 	// Both reference event_listing; market_vendor also references inbox_thread
 	// and user, so they sit after all three.
 	'market_day',
 	'market_vendor',
 	'help_categories',
-	'subscriber',
 	'roles',
 	'volunteer_role',
 	'volunteer_certification',
@@ -178,11 +184,6 @@ export const tableOrder = [
 	// `packing_item` of packing_list and user.
 	'packing_list',
 	'packing_item',
-	// A person at a party: child of directory_entry, organization, user and
-	// subscriber, so it wipes before each.
-	'contact',
-	// What an organization or a contact is to CMC: child of both.
-	'party_role',
 	// What a task is about: child of work_order and of each record it can name.
 	'work_order_link',
 	// A note on a party's timeline: child of organization, contact and user.

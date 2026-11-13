@@ -6,10 +6,12 @@ import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
 import { and, eq, isNotNull, isNull, sql, type AnyColumn } from 'drizzle-orm';
 import { lastActivityByOrganization } from './activity-service';
+import { lastThreadByOrganization } from './thread-filing';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * The Contacts list's two facts per organization (#2622): the day of its latest
- * note, and its next open task. An organization's tasks are the ones the
+ * note or filed Inbox message, and its next open task. An organization's tasks are the ones the
  * related-tasks registry finds for it: linked to it, its contractor jobs, and
  * the tasks on its grants' and sponsorships' projects.
  */
@@ -76,9 +78,18 @@ export async function nextTaskByOrganization(ids: string[]): Promise<Map<string,
 }
 
 export async function organizationListFacts(ids: string[]) {
-	const [last, next] = await Promise.all([
+	const [notes, threads, next] = await Promise.all([
 		lastActivityByOrganization(ids),
+		lastThreadByOrganization(),
 		nextTaskByOrganization(ids)
 	]);
+	// The later of its latest note day and its latest filed message, as a club date.
+	const last = new Map(notes);
+	const wanted = new Set(ids);
+	for (const [id, at] of threads) {
+		if (!wanted.has(id)) continue;
+		const day = toLocalDate(at);
+		if (!last.has(id) || day > last.get(id)!) last.set(id, day);
+	}
 	return { lastActivity: last, nextTask: next };
 }

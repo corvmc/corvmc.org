@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "de3492b7-2f0b-4403-8471-ffbc29950cc4",
+  "id": "c4340b8d-f757-4d22-9537-a97c72a3ccc2",
   "prevIds": [
-    "091fb0d2-9b69-4e02-9e27-da7efcb47f4d"
+    "de3492b7-2f0b-4403-8471-ffbc29950cc4"
   ],
   "ddl": [
     {
@@ -7887,6 +7887,26 @@
       "default": null,
       "generated": null,
       "name": "contact_external_id",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "inbox_thread"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_id",
       "entityType": "columns",
       "table": "inbox_thread"
     },
@@ -17167,6 +17187,36 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        "contact_id"
+      ],
+      "tableTo": "contact",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inbox_thread_contact_id_contact_id_fk",
+      "entityType": "fks",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
         "assigned_to_user_id"
       ],
       "tableTo": "user",
@@ -23374,6 +23424,34 @@
       "where": null,
       "origin": "manual",
       "name": "idx_inbox_thread_contact_email",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "organization_id is not null",
+      "origin": "manual",
+      "name": "idx_inbox_thread_organization",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "contact_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "contact_id is not null",
+      "origin": "manual",
+      "name": "idx_inbox_thread_contact",
       "entityType": "indexes",
       "table": "inbox_thread"
     },

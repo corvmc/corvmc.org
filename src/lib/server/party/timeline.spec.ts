@@ -23,12 +23,14 @@ const { partyTimeline } = await import('./timeline');
 const { organizationListFacts } = await import('./list-facts');
 const orgs = await import('./organization-service');
 const people = await import('#lib/server/directory/contact-service.js');
+const filing = await import('./thread-filing');
 
 const ARTS = { type: 'organization', id: 'org-arts' } as const;
 const sec = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 
 beforeEach(() => {
 	sqlite.exec(`
+		delete from inbox_thread; delete from "group";
 		delete from activity; delete from work_order_link; delete from audit_log;
 		delete from contractor_job; delete from grant_application; delete from work_order;
 		delete from project; delete from party_role; delete from contact; delete from organization;
@@ -138,6 +140,54 @@ describe('the Contacts list facts', () => {
 		expect(facts.nextTask.get('org-arts')).toMatchObject({ id: 'wo-soon', title: 'Sooner' });
 		expect(facts.nextTask.get('org-amps')).toMatchObject({ id: 'wo-job' });
 		expect(facts.nextTask.has('org-old')).toBe(false);
+	});
+});
+
+describe('Inbox filing', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into "group" (id, name, slug, kind) values ('band', 'The Band', 'the-band', 'band');
+			insert into inbox_thread (id, channel, subject, contact_email, last_message_at) values
+				('t-1', 'email', 'Spring cycle', 'priya@example.org', ${sec('2026-11-06T18:00:00Z')});
+			insert into inbox_thread (id, channel, group_id, subject) values
+				('t-band', 'email', 'band', 'Gig');
+		`);
+	});
+
+	it("files a staff conversation onto the party's timeline and the list's last activity", async () => {
+		await filing.fileThread('t-1', ARTS);
+		const page = await partyTimeline(ARTS);
+		expect(page.items).toEqual([
+			expect.objectContaining({ source: 'thread', threadId: 't-1', summary: 'Spring cycle' })
+		]);
+		const facts = await organizationListFacts(['org-arts']);
+		expect(facts.lastActivity.get('org-arts')).toBe('2026-11-06');
+
+		await filing.fileThread('t-1', null);
+		expect((await partyTimeline(ARTS)).items).toEqual([]);
+	});
+
+	it("refuses to file a band's conversation", async () => {
+		await expect(filing.fileThread('t-band', ARTS)).rejects.toBeInstanceOf(
+			filing.ThreadFilingError
+		);
+	});
+
+	it('suggests the person whose address sent it', async () => {
+		sqlite.exec(`update contact set email = 'priya@example.org' where id = 'p-1'`);
+		expect(await people.findPersonByEmail(' Priya@Example.org ')).toMatchObject({
+			id: 'p-1',
+			organizationName: 'Arts Council'
+		});
+		expect(await people.findPersonByEmail('nobody@example.org')).toBeNull();
+	});
+
+	it('moves filed conversations to the survivor of a merge', async () => {
+		await filing.fileThread('t-1', { type: 'organization', id: 'org-old' });
+		await orgs.mergeOrganizations('org-arts', 'org-old');
+		expect(
+			sqlite.prepare(`select organization_id from inbox_thread where id = 't-1'`).get()
+		).toEqual({ organization_id: 'org-arts' });
 	});
 });
 
