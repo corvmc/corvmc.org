@@ -7,6 +7,7 @@
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
@@ -161,7 +162,7 @@
 		</Alert>
 	{/if}
 
-	<div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+	<StatGrid cols={4} class="mb-6">
 		<StatCard title={msg.band_channels_title()} value={rider.channelCount} size="sm" />
 		<StatCard title={msg.band_need_48v_title()} value={rider.phantomCount} size="sm" />
 		<StatCard title={msg.band_monitor_mixes_title()} value={rider.monitorMixCount} size="sm" />
@@ -170,7 +171,7 @@
 			value={rider.venueProvidedCount}
 			size="sm"
 		/>
-	</div>
+	</StatGrid>
 
 	<div class="space-y-6">
 		{#key stamp}

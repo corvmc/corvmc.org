@@ -9,6 +9,7 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -119,7 +120,7 @@
 		</Alert>
 	{/if}
 
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+	<StatGrid cols={4}>
 		<StatCard
 			title={m.staff_reports_earned_title()}
 			value={formatCents(r.money.totalsByKind.earned)}
@@ -133,7 +134,7 @@
 			title={m.staff_reports_given_kind_title()}
 			value={formatCents(r.money.totalsByKind.in_kind)}
 		/>
-	</div>
+	</StatGrid>
 
 	{#each ['earned', 'spent', 'in_kind', 'pass_through'] as const as kind (kind)}
 		<InfoCard title={kindTitles[kind]}>
@@ -166,7 +167,7 @@
 	{/each}
 
 	<InfoCard title={m.staff_reports_donated_time_title()}>
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+		<StatGrid cols={3}>
 			<StatCard
 				title={m.staff_approved_hours_title()}
 				value={formatVolunteerHours(r.volunteering.totals.totalMinutes)}
@@ -176,7 +177,7 @@
 				title={m.staff_impact_value_title()}
 				value={formatCents(r.volunteering.contributed.impactValueCents)}
 			/>
-		</div>
+		</StatGrid>
 		<!--
 			Two valuations that must never be added: a donated engineer's hour is
 			in both. The contributed-services figure is the narrower one a
@@ -197,7 +198,7 @@
 	</InfoCard>
 
 	<InfoCard title={m.staff_events_2_title()}>
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<StatGrid cols={4}>
 			<StatCard title={m.staff_reports_cmc_events_title()} value={r.events.cmcTotal} />
 			<StatCard title={m.staff_reports_band_listings_title()} value={r.events.bandListings} />
 			<StatCard
@@ -205,7 +206,7 @@
 				value={r.events.communityListings}
 			/>
 			<StatCard title={m.staff_cancelled_title()} value={r.events.cancelled} />
-		</div>
+		</StatGrid>
 		<Table class="mt-4">
 			{#snippet head()}
 				<th>{m.staff_reports_cmc_events_by_kind_label()}</th>
@@ -224,19 +225,19 @@
 	</InfoCard>
 
 	<InfoCard title={m.staff_reports_practice_room_title()}>
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<StatGrid cols={4}>
 			<StatCard title={m.staff_reports_hours_booked_title()} value={r.room.hours} />
 			<StatCard title={m.staff_reports_sessions_title()} value={r.room.sessions} />
 			<StatCard title={m.staff_reports_distinct_bookers_title()} value={r.room.distinctBookers} />
 			<StatCard title={m.staff_reports_no_shows_title()} value={r.room.noShows} />
-		</div>
+		</StatGrid>
 		<p class="mt-3 text-subtle text-sm">
 			{m.staff_reports_hours_room_was_held_including_text()}
 		</p>
 	</InfoCard>
 
 	<InfoCard title={m.staff_reports_membership_title()}>
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+		<StatGrid cols={3}>
 			<StatCard
 				title={m.staff_reports_sustaining_members_title()}
 				value={r.membership.sustainingMemberCount}
@@ -249,7 +250,7 @@
 				title={m.staff_reports_participation_title()}
 				value={`${r.membership.participationPercent}%`}
 			/>
-		</div>
+		</StatGrid>
 		<p class="mt-3 text-subtle text-sm">
 			{m.staff_reports_as_today_not_over_range_text()}
 		</p>

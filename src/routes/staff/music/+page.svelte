@@ -7,6 +7,7 @@
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -73,7 +74,7 @@
 		<CardBody>
 			<CardTitle><IconRadio size={18} /> {m.staff_music_cmc_radio_title()}</CardTitle>
 
-			<div class="grid gap-3 sm:grid-cols-3">
+			<StatGrid cols={3}>
 				<StatCard
 					title={m.staff_music_eligible_tracks_title()}
 					value={String(pool.eligibleTracks)}
@@ -83,7 +84,7 @@
 					title={m.staff_music_opted_releases_title()}
 					value={String(pool.optedInReleases)}
 				/>
-			</div>
+			</StatGrid>
 
 			<p class="mt-2 text-muted">{readiness}</p>
 
@@ -140,7 +141,7 @@
 	<Card>
 		<CardBody>
 			<CardTitle>{m.staff_music_sales_title()}</CardTitle>
-			<div class="grid gap-3 sm:grid-cols-5">
+			<StatGrid cols={5}>
 				<StatCard title={m.staff_music_sales_title()} value={String(sales.sales)} />
 				<StatCard title={m.staff_music_gross_title()} value={formatCents(sales.grossCents)} />
 				<StatCard title={m.staff_music_bands_title()} value={formatCents(sales.toBandsCents)} />
@@ -152,7 +153,7 @@
 					title={m.staff_music_cmc_kept_title()}
 					value={formatCents(sales.toCollectiveCents)}
 				/>
-			</div>
+			</StatGrid>
 			<!-- The number the refusable-cut decision has to be judged on. It will
 			     not be the suggested 10%, and which way it lands is the open
 			     question — so it is reported rather than assumed. -->

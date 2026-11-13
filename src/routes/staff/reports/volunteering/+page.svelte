@@ -9,6 +9,7 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import DataList from '#lib/components/ui/DataList.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import DateRangeFilter from '#lib/components/ui/DateRangeFilter.svelte';
@@ -127,7 +128,7 @@
 	{#await report then r}
 		<!-- Approved hours only. That is the whole point of the review step: this
 		     is the number that has to hold up to a funder. -->
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<StatGrid cols={4}>
 			<StatCard
 				title={msg.staff_approved_hours_title()}
 				value={formatVolunteerHours(r.totals.totalMinutes)}
@@ -145,7 +146,7 @@
 			{:catch}
 				<!-- The `report` block around this says the page's query failed. -->
 			{/await}
-		</div>
+		</StatGrid>
 
 		<!--
 			Two valuations, side by side, never added. They overlap: a donated
@@ -154,7 +155,7 @@
 			rather than trusting the layout to.
 		-->
 		<InfoCard title={msg.staff_reports_volunteering_what_time_was_worth_title()}>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<StatGrid cols={2}>
 				<div>
 					<StatCard
 						bare
@@ -177,7 +178,7 @@
 						{msg.staff_reports_volunteering_specialized_hours_only_each_at_text()}
 					</p>
 				</div>
-			</div>
+			</StatGrid>
 			<p class="mt-3 text-subtle text-sm">
 				{msg.staff_reports_volunteering_these_two_answers_two_different_text({
 					rateSource: r.contributed.rateSource

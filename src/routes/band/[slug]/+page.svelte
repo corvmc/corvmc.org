@@ -10,6 +10,7 @@
 	import { resolve } from '$app/paths';
 	import * as env from '$app/env/public';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import AddressCard from '#lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import PressKitCard from './PressKitCard.svelte';
@@ -56,7 +57,7 @@
 	{/if}
 
 	<!-- Band overview -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+	<StatGrid cols={2}>
 		<StatCard title={m.band_members_title()} value={band.memberCount} size="sm" />
 		<StatCard
 			title={m.band_slug_role_title()}
@@ -64,7 +65,7 @@
 			size="sm"
 			valueClass="capitalize"
 		/>
-	</div>
+	</StatGrid>
 
 	<!-- Upcoming reservations. The only thing on this page that waits: everything
 	     above comes from `bandLayout`, which is already resolved, and awaiting

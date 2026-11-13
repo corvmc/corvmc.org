@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import PersonAccess from './PersonAccess.svelte';
 	import PermissionHolders from './PermissionHolders.svelte';
@@ -28,11 +29,11 @@
 	onchange={(key) => (view = key as typeof view)}
 />
 
-<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+<StatGrid cols={4}>
 	{#each stats as stat (stat.title)}
 		<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
 	{/each}
-</div>
+</StatGrid>
 
 {#if view === 'person'}
 	<PersonAccess bind:person />

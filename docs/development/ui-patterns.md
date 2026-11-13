@@ -151,7 +151,7 @@ work is done in.
 - **A console** sorts unset sections above set ones.
 - **A card list** barely changes. That is the sign the card was earned.
 - **A dashboard**, and a public record's fact band, go two-up, not one-up, so figures stay
-  comparable: `grid-cols-2`, as `staff/members/UserTotals.svelte` does.
+  comparable: every `StatCard` group sits in `StatGrid`, which is two-up at phone width.
 - **A form** drops its running summary, keeps its progress bar, and moves submit to the bottom.
 - **A marketing page's** order becomes a recommendation when stacked, so set the stacked order on
   purpose rather than inheriting the grid's reading order.
@@ -1550,6 +1550,19 @@ keeps daisyUI's default), `class` (outer card), `valueClass` (value line).
 Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
 value size overflows a narrow panel column once three sit in a row, and that is
 exactly why two pages rebuilt the card by hand before the prop existed.
+
+**A group of them sits in `StatGrid`**, never a hand-written grid:
+
+```svelte
+<StatGrid cols={4} class="mb-6">
+	<StatCard title="Channels" value={rider.channelCount} size="sm" />
+	…
+</StatGrid>
+```
+
+It is two-up at phone width; `cols` (2, 3, 4, 5 or 7) is the count from `lg` up, and 5 or 7
+step through three at `sm`. `scripts/stat-grid.spec.ts` fails on a `StatCard` whose nearest grid
+is not `StatGrid`. A `flex` row of two check-in counts is not a grid and is left alone.
 
 **One layer of card.** A page commits to card sections or to stat cards, never one
 inside the other. A figure inside an `InfoCard` or `Card` is `<StatCard bare …/>`,
