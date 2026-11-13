@@ -199,7 +199,10 @@ Two things differ from the member path:
   naming the reservation date, with **Message staff** prefilled with that date. Staff booking on a
   member's behalf see the fees and are never refused. While a fee is owed, the `door_code_ready`
   reminder skips the member's upcoming reservations; the code is still minted and shown to staff,
-  and the first reminder drain after the fee is paid sends it (`membersOwingFees`). With no date
+  and the first reminder drain after the fee is paid sends it (`membersOwingFees`). Member-facing
+  reads hold the code too (#2874): the member's detail and list, and the band detail for every
+  bandmate, return no door code and no break-glass code (`doorCodeHeldSince`), and the page shows
+  the payment-due notice with **Message staff** where the code would be. Staff pages keep it. With no date
   set the check is off; rows before it keep their status and are never counted
   (`src/lib/server/reservation/outstanding-fees.ts`).
 

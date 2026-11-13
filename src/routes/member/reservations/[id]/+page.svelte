@@ -17,6 +17,7 @@
 		ConfirmWaitlistedAction
 	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
+	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
 	import { memberPayAction } from '#lib/utils/reservation-actions.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -69,7 +70,9 @@
 		<!-- A card only when there is a code to frame. Four of the five branches
 		     were a single paragraph inside an `InfoCard` titled "Door Code",
 		     which is a box around one sentence (#1061). -->
-		{#if res.lockCode && res.lockSyncedAt}
+		{#if res.codeWithheld}
+			<DoorCodeHeld dueOn={data.paymentDueOn} />
+		{:else if res.lockCode && res.lockSyncedAt}
 			<InfoCard title={m.member_reservations_id_door_code_title()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">

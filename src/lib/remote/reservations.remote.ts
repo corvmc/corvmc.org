@@ -86,7 +86,12 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { isAwaitingPayment, isOverdue, isTerminalStatus } from '#lib/utils/reservation-actions.js';
 import { bookerTypes, type BookerType } from '#lib/config.js';
 import { getReservationConfig, getBookingTerms, termsFor } from '#lib/server/reservation/config.js';
-import { assertFeeGateAllows, getFeeGate } from '#lib/server/reservation/outstanding-fees.js';
+import {
+	assertFeeGateAllows,
+	doorCodeHeldSince,
+	getFeeGate,
+	withholdDoorCode
+} from '#lib/server/reservation/outstanding-fees.js';
 import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
 import {
@@ -241,10 +246,14 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
 	// lock's own confirmation. Until it is set, the member gets the break-glass
 	// code instead — but only inside their window, and the reveal is recorded.
-	const fallbackCode = await revealFallbackCodeFor(row);
+	// Neither while they owe a fee (#2874), and a held code is not a reveal.
+	const paymentDueOn = await doorCodeHeldSince(row.createdByUserId);
+	const fallbackCode = paymentDueOn ? null : await revealFallbackCodeFor(row);
 
 	return {
-		reservation: row,
+		reservation: withholdDoorCode(row, paymentDueOn !== null),
+		/** The oldest fee's start while the door code is held for one. */
+		paymentDueOn,
 		/** The booking as a record, for the detail page's identity (#1061). */
 		ref: toReservationRef(
 			row,
@@ -443,8 +452,11 @@ export const getBandReservationDetail = query(
 
 		// Not a gesture: the break-glass code arrives with the page, the same as on
 		// the member's own booking. Nobody on the act has to ask for what the rest
-		// of them can already read (#780).
-		const fallbackCode = await revealFallbackCodeFor(res);
+		// of them can already read (#780). Held from the whole act while the booker
+		// owes a fee (#2874); staff keep it to let them in.
+		const heldSince = role === 'staff' ? null : await doorCodeHeldSince(res.createdByUserId);
+		const door = withholdDoorCode(res, heldSince !== null);
+		const fallbackCode = heldSince ? null : await revealFallbackCodeFor(res);
 
 		return {
 			id: res.id,
@@ -470,7 +482,10 @@ export const getBandReservationDetail = query(
 			// Every member of the act, not just whoever booked (#756): a band loads
 			// in together and whoever arrives first opens the door. The guard above
 			// is what bounds this — membership in the band the row belongs to.
-			lockCode: res.lockCode,
+			lockCode: door.lockCode,
+			codeWithheld: door.codeWithheld,
+			// The fee's date is the booker's own business.
+			paymentDueOn: isBooker ? heldSince : null,
 			// A code we issued is not a code that works: U-tec queues writes in its
 			// cloud and pushes them down only when the lock is reachable, so the
 			// page shows the digits only once the lock has confirmed them (#780).
@@ -2170,6 +2185,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 });
 
 type ReservationWithPrice = Reservation & {
+	codeWithheld: boolean;
 	price: number;
 	creditsAvailable: boolean;
 	/** Free hours cover all of it and `payForReservation` would settle it now. */
@@ -2219,6 +2235,11 @@ export const getReservations = query(
 			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
 			.orderBy(newestFirst ? desc(reservation.startsAt) : reservation.startsAt);
 
+		// Staff reading a member's list keep the codes; the member owing a fee does not (#2874).
+		const forSelf = !forUser || forUser === locals.user.id;
+		const now = new Date();
+		const held = forSelf && (await doorCodeHeldSince(locals.user.id, now)) !== null;
+
 		// `price` is the full room rate. We deliberately do NOT project a credit
 		// discount onto uncommitted bookings here: free hours are only applied at
 		// confirm/pay time, against the live balance. Projecting a discounted
@@ -2252,7 +2273,12 @@ export const getReservations = query(
 					freeHoursBalance
 				}).remainingCents <= 0;
 
-			return { ...value, price: netCents / 100, creditsAvailable, payableWithCredits };
+			return {
+				...withholdDoorCode(value, held, now),
+				price: netCents / 100,
+				creditsAvailable,
+				payableWithCredits
+			};
 		});
 	}
 );

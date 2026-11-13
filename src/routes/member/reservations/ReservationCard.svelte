@@ -17,8 +17,10 @@
 	let {
 		reservation,
 		onchange
-	}: { reservation: Reservation & { payableWithCredits?: boolean }; onchange?: () => void } =
-		$props();
+	}: {
+		reservation: Reservation & { payableWithCredits?: boolean; codeWithheld?: boolean };
+		onchange?: () => void;
+	} = $props();
 
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
 	let payAction = $derived(memberPayAction(reservation));
@@ -39,7 +41,13 @@
 			     searching their history for "Recording session" found nothing (#904). -->
 			<p class="line-clamp-2 px-3 pb-1 text-subtle">{reservation.notes}</p>
 		{/if}
-		{#if reservation.status === 'confirmed' && reservation.lockCode}
+		{#if reservation.status === 'confirmed' && reservation.codeWithheld}
+			<!-- The remote held the code for a fee owed (#2874); the detail page
+			     this links to says which and offers Message staff. -->
+			<p class="px-3 pb-1 text-sm text-warning" data-testid="door-code-held">
+				{m.member_reservations_reservation_card_door_code_held_text()}
+			</p>
+		{:else if reservation.status === 'confirmed' && reservation.lockCode}
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
 					<ParaglideMessage

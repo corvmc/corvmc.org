@@ -792,6 +792,7 @@
 	"member_reservations_overdue_table_amount_due_label": "Amount due",
 	"member_reservations_reservation_card_door_code_text": "Door code: {#span}{lockCode}{/span}",
 	"member_reservations_reservation_card_door_code_pending_text": "Door code pending",
+	"member_reservations_reservation_card_door_code_held_text": "Door code held for a payment due",
 	"member_reservations_reservation_card_label": "Pay with credits",
 	"member_reservations_reservation_card_title": "Pay with credits",
 	"member_reservations_reservation_card_success_toast": "Paid with credits",
