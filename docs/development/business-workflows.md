@@ -2685,6 +2685,10 @@ decide.
   `classified` standing.
 - **Staff:** `/staff/classifieds` under `listing.review`; `moderateClassified` hides (a note is
   required) or restores.
+- **Author notice:** `setVisibility` emits `classified.moderated` when staff move a post to
+  `visible` (approve or restore) or `hidden` (take down, with the note), and the
+  `classified_moderated` notification tells the author. A report's `under_review` and an author's
+  own `pending_review` send nothing, and neither does a staffer moderating their own post.
 
 ### Data touched
 

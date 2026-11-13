@@ -434,6 +434,38 @@ describe('classified post expiring', () => {
 	});
 });
 
+describe('classified post moderated', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const decision = {
+		postId: 'post-1',
+		title: 'Drummer wanted',
+		note: 'Say what the band plays',
+		authorUserId: 'user-1',
+		authorName: 'Bob',
+		authorEmail: 'user@test.com'
+	};
+
+	it('passes a takedown note to the author, linked to the post they can edit', async () => {
+		await emit('classified.moderated', { ...decision, visibility: 'hidden' });
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('classified_moderated');
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/classifieds/post-1');
+		expect(params.email.quote).toBe(decision.note);
+	});
+
+	it('words an approval differently from a takedown', async () => {
+		await emit('classified.moderated', { ...decision, visibility: 'hidden' });
+		await emit('classified.moderated', { ...decision, visibility: 'visible', note: null });
+
+		const [down, up] = mockDispatch.mock.calls.map(([p]) => p);
+		expect(up.title).not.toBe(down.title);
+		expect(up.email.quote).toBeUndefined();
+	});
+});
+
 describe('collapsed listeners use the generic template', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
