@@ -1,7 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { audience, audienceMember, subscriber } from '#lib/server/db/schema/marketing.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, and, sql, isNull, asc } from 'drizzle-orm';
+import { eq, and, sql, isNull, isNotNull, asc } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 import {
 	countSystemAudience,
@@ -219,27 +219,15 @@ export async function getAudienceBySlug(slug: string) {
 export async function addSubscriber(audienceId: string, subscriberId: string) {
 	await assertNotSystem(audienceId, 'add a subscriber to');
 
-	const [existing] = await db
-		.select({ id: audienceMember.id, unsubscribedAt: audienceMember.unsubscribedAt })
-		.from(audienceMember)
-		.where(
-			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
-		)
-		.limit(1);
-
-	if (existing) {
-		if (existing.unsubscribedAt) {
-			// Re-subscribe
-			await db
-				.update(audienceMember)
-				.set({ unsubscribedAt: null })
-				.where(eq(audienceMember.id, existing.id));
-		}
-		// Already active — no-op
-		return;
-	}
-
-	await db.insert(audienceMember).values({ audienceId, subscriberId });
+	// One upsert on `uq_audience_member`, so a concurrent add cannot throw.
+	await db
+		.insert(audienceMember)
+		.values({ audienceId, subscriberId })
+		.onConflictDoUpdate({
+			target: [audienceMember.subscriberId, audienceMember.audienceId],
+			set: { unsubscribedAt: null },
+			setWhere: isNotNull(audienceMember.unsubscribedAt)
+		});
 }
 
 /**

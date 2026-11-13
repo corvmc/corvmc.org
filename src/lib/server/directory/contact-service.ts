@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { contact, partyRole, type ContactSource } from '#lib/server/db/schema/contact.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { CONTACT_CLAIM_RETENTION_DAYS, type PartyRole } from '#lib/config.js';
 import { can, requireCapability } from '#lib/server/authorization.js';
 import { organization } from '#lib/server/db/schema/party.js';
@@ -60,16 +60,12 @@ async function linkSubscriber(email: string | null | undefined): Promise<string 
 	const normalized = normalizeEmail(email);
 	if (!normalized) return null;
 
-	const [existing] = await db
-		.select({ id: subscriber.id })
-		.from(subscriber)
-		.where(eq(subscriber.email, normalized))
-		.limit(1);
-	if (existing) return existing.id;
-
+	// A no-op update on the unique email, so the insert and the reuse are one
+	// statement and a concurrent caller gets the same row back.
 	const [row] = await db
 		.insert(subscriber)
 		.values({ email: normalized })
+		.onConflictDoUpdate({ target: subscriber.email, set: { email: sql`${subscriber.email}` } })
 		.returning({ id: subscriber.id });
 	return row.id;
 }

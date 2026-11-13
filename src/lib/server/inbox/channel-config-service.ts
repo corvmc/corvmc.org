@@ -71,18 +71,11 @@ export async function updateChannelConfig(
 	// store a disabled flag that every read ignores, which reads as a bug later.
 	if (isAlwaysEnabledChannel(channel)) return;
 
-	const [existing] = await db
-		.select()
-		.from(inboxChannelConfig)
-		.where(eq(inboxChannelConfig.channel, channel))
-		.limit(1);
-
-	if (existing) {
-		await db
-			.update(inboxChannelConfig)
-			.set({ enabled, updatedAt: new Date() })
-			.where(eq(inboxChannelConfig.channel, channel));
-	} else {
-		await db.insert(inboxChannelConfig).values({ channel, enabled });
-	}
+	await db
+		.insert(inboxChannelConfig)
+		.values({ channel, enabled })
+		.onConflictDoUpdate({
+			target: inboxChannelConfig.channel,
+			set: { enabled, updatedAt: new Date() }
+		});
 }

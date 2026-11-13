@@ -29,12 +29,8 @@ export function bandSiteInsert(groupId: string) {
  * backfill running and this code deploying is the one real way to reach it.
  */
 export async function getOrCreateBandSiteId(groupId: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: bandSite.id })
-		.from(bandSite)
-		.where(eq(bandSite.groupId, groupId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findBandSiteId(groupId);
+	if (existing) return existing;
 
 	const [band] = await db
 		.select({ id: group.id })
@@ -43,6 +39,18 @@ export async function getOrCreateBandSiteId(groupId: string): Promise<string> {
 		.limit(1);
 	if (!band) throw new Error(`No group ${groupId} to create a band site for`);
 
-	const [created] = await db.insert(bandSite).values({ groupId }).returning({ id: bandSite.id });
-	return created.id;
+	// `idx_band_site_group`: two callers that both found none insert once.
+	await db.insert(bandSite).values({ groupId }).onConflictDoNothing();
+	const id = await findBandSiteId(groupId);
+	if (!id) throw new Error(`No band site for group ${groupId}`);
+	return id;
+}
+
+async function findBandSiteId(groupId: string): Promise<string | undefined> {
+	const [row] = await db
+		.select({ id: bandSite.id })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, groupId))
+		.limit(1);
+	return row?.id;
 }
