@@ -37,6 +37,8 @@
 		size?: 'sm' | 'md';
 		/** Called with the debounced text. Reset the page number here too. */
 		onsearch?: (query: string) => void;
+		/** An input has no content; refused here so the index signature cannot take it. */
+		children?: never;
 		[key: string]: unknown;
 	} = $props();
 

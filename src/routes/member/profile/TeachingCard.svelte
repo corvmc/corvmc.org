@@ -7,6 +7,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { resolve } from '$app/paths';
 	import {
 		applyToTeach,
@@ -150,11 +151,18 @@
 		{/if}
 
 		{#if isApplication}
-			<Form remote={withdrawApplication} class="mt-4">
-				<SubmitButton variant="ghost"
-					>{m.member_profile_teaching_card_withdraw_application_label()}</SubmitButton
-				>
-			</Form>
+			<!-- Withdrawing deletes the application, so it asks first. -->
+			<div class="mt-4">
+				<Action
+					action={withdrawApplication}
+					label={m.member_profile_teaching_card_withdraw_application_label()}
+					modalTitle={m.member_profile_teaching_card_withdraw_application_title()}
+					confirm={m.member_profile_teaching_card_withdraw_application_body()}
+					successToast={m.member_profile_teaching_card_withdrawn_toast()}
+					variant="ghost"
+					submitVariant="error"
+				/>
+			</div>
 		{/if}
 
 		{#if instructor.status === 'paused' || instructor.status === 'retired'}

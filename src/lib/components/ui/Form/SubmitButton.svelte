@@ -11,6 +11,7 @@
 	let {
 		shortcut,
 		icon,
+		children,
 		label = m.ui_form_submit_button_label(),
 		continueLabel = m.ui_form_submit_button_continue_label(),
 		successLabel = m.ui_form_submit_button_success_label(),
@@ -23,6 +24,8 @@
 	}: {
 		shortcut?: string;
 		icon?: Snippet;
+		/** The idle and pending text, in place of `label`. */
+		children?: Snippet;
 		label?: string;
 		continueLabel?: string;
 		successLabel?: string;
@@ -81,6 +84,10 @@
 	);
 </script>
 
+{#snippet text()}
+	{#if children && isLastStep}{@render children()}{:else}{activeLabel}{/if}
+{/snippet}
+
 <div class="flex items-center gap-2">
 	{#if ctx.currentStep > 0}
 		<Button type="button" variant="ghost" onclick={() => ctx.back()}>{m.ui_back_label()}</Button>
@@ -98,7 +105,7 @@
 	>
 		{#if ctx.status === 'pending'}
 			<span class="loading loading-sm loading-spinner"></span>
-			{activeLabel}
+			{@render text()}
 		{:else if ctx.status === 'success'}
 			<IconCheck size={20} />
 			{successLabel}
@@ -111,7 +118,7 @@
 			{:else if icon}
 				{@render icon()}
 			{/if}
-			{activeLabel}
+			{@render text()}
 		{/if}
 	</Button>
 </div>
