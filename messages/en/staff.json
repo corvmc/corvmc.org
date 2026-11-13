@@ -3497,5 +3497,8 @@
 	"staff_project_templates_id_wait_on_label": "Wait on an item",
 	"staff_project_templates_id_wait_on_title": "{label} waits on",
 	"staff_project_templates_id_wait_on_submit_label": "Add",
-	"staff_project_templates_id_item_label": "Item"
+	"staff_project_templates_id_item_label": "Item",
+	"staff_projects_id_task_graph_title": "Task graph",
+	"staff_projects_id_task_graph_label": "Tasks and what each waits on",
+	"staff_projects_id_task_graph_empty_title": "No dependencies"
 }

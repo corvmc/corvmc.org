@@ -288,3 +288,37 @@ export async function listDependencyOptions(id: string): Promise<{ id: string; l
 		.orderBy(asc(workOrder.createdAt), asc(workOrder.id));
 	return rows.map((r) => ({ id: r.id, label: labelOf(r) }));
 }
+
+/**
+ * A project's tasks and the edges between them, for its graph (#2625). Called-off
+ * tasks are left out, since they block nothing; done ones stay, greyed.
+ */
+export async function listProjectGraph(projectId: string): Promise<{
+	nodes: { id: string; label: string; done: boolean }[];
+	edges: { taskId: string; dependsOnId: string }[];
+}> {
+	const [tasks, edges] = await Promise.all([
+		db
+			.select({
+				id: workOrder.id,
+				title: workOrder.title,
+				roleName: volunteerRole.name,
+				resolvedAt: workOrder.resolvedAt
+			})
+			.from(workOrder)
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.where(and(eq(workOrder.projectId, projectId), isNull(workOrder.cancelledAt))),
+		db
+			.select({
+				taskId: workOrderDependency.workOrderId,
+				dependsOnId: workOrderDependency.dependsOnId
+			})
+			.from(workOrderDependency)
+			.innerJoin(workOrder, eq(workOrder.id, workOrderDependency.workOrderId))
+			.where(eq(workOrder.projectId, projectId))
+	]);
+	return {
+		nodes: tasks.map((t) => ({ id: t.id, label: labelOf(t), done: t.resolvedAt !== null })),
+		edges
+	};
+}

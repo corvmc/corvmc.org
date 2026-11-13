@@ -85,4 +85,24 @@ describe('the grant stage templates migration', () => {
 			db.prepare(`SELECT count(*) AS n FROM volunteer_role WHERE name = 'Grant Writer'`).get()
 		).toEqual({ n: 1 });
 	});
+
+	// #2625: a wipe takes the items' edges with them, so the replay restores the order.
+	it('restores the application order after a wipe', () => {
+		const db = migrated('');
+		run(db);
+		run(db);
+		const edges = db
+			.prepare(
+				`SELECT a.title AS item, b.title AS waits_on FROM duty_list_item_dependency e
+				 JOIN duty_list_item a ON a.id = e.item_id
+				 JOIN duty_list_item b ON b.id = e.depends_on_item_id
+				 ORDER BY a.title, b.title`
+			)
+			.all();
+		expect(edges).toEqual([
+			{ item: 'Build the budget', waits_on: 'Draft the narrative' },
+			{ item: 'Submit the application', waits_on: 'Build the budget' },
+			{ item: 'Submit the application', waits_on: 'Collect letters of support' }
+		]);
+	});
 });

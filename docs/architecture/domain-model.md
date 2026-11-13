@@ -8,11 +8,11 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                                                                           |
-| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`                                                      |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_shift`, `work_order_assignee`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                                                              |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`                                                                               |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_shift`, `work_order_assignee`, `work_order_dependency`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                                                                                       |
 
 **Horizontals** — services every vertical emits into:
 
@@ -42,6 +42,9 @@ resources, which is why they are one vertical rather than "space" and "gear."
 (`volunteer_shift`, #2518): `volunteer_signup` is who signed up for a shift, and
 `work_order_assignee` is who staff put on the task. `work_order` holds no time and no places;
 `pending_capacity` is the count for a shift not yet opened.
+A task can wait on others (`work_order_dependency`, a graph with no cycles, #2625); Blocked is
+derived from the open tasks it waits on, and a template's `duty_list_item_dependency` edges are
+copied onto the tasks it stamps.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 

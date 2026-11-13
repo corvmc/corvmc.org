@@ -31,11 +31,14 @@
 	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import TaskCatalogue from '#lib/components/task/TaskCatalogue.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import TaskGraph from './TaskGraph.svelte';
 	import { asDateValue } from './date-value';
 	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
+	// Above the await: the graph's section binds it.
+	let graphOpen = $state(false);
 
 	/**
 	 * What only a project has: description, budget and burn, committees and
@@ -295,6 +298,15 @@
 		<div class="@container min-w-0 flex-1 space-y-4">
 			<TaskCatalogue projectId={project.id} />
 			<RelatedShifts subject={{ type: 'project', id: project.id }} />
+			<!-- Loaded only when opened: most visits are for the table above. -->
+			<details class="collapse-arrow collapse border border-base-300" bind:open={graphOpen}>
+				<summary class="collapse-title font-medium"
+					>{m.staff_projects_id_task_graph_title()}</summary
+				>
+				<div class="collapse-content">
+					{#if graphOpen}<TaskGraph projectId={project.id} />{/if}
+				</div>
+			</details>
 		</div>
 		<aside class="activity-panel">
 			<ActivityCard
