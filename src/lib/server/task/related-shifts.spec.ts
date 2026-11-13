@@ -14,7 +14,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { relatedShifts, relatedEndedShifts, relatedShiftTasks, isRelatedTask } =
+const { relatedShifts, relatedEndedShifts, relatedShiftTasks, relatedShiftStart, isRelatedTask } =
 	await import('./related-shifts');
 
 const NOW = new Date('2026-06-15T12:00:00Z');
@@ -131,5 +131,19 @@ describe('Add shift choices', () => {
 		expect(await isRelatedTask({ type: 'event', id: 'sat' }, 'fri-door')).toBe(true);
 		expect(await isRelatedTask({ type: 'event', id: 'sat' }, 'elsewhere')).toBe(false);
 		expect(await isRelatedTask({ type: 'member', id: 'u1' }, 'fri-door')).toBe(false);
+	});
+});
+
+describe('relatedShiftStart', () => {
+	it("starts at an event's doors, or at its start when it has no doors time", async () => {
+		sqlite.exec(`update event_listing set doors_at = ${at(47)} where id = 'sat'`);
+		expect(await relatedShiftStart({ type: 'event', id: 'sat' })).toEqual(new Date(at(47) * 1000));
+		expect(await relatedShiftStart({ type: 'event', id: 'fri' })).toEqual(new Date(at(24) * 1000));
+	});
+
+	it('leaves other records, and an unknown event, to the form', async () => {
+		expect(await relatedShiftStart({ type: 'project', id: 'show' })).toBeNull();
+		expect(await relatedShiftStart({ type: 'role', id: 'door' })).toBeNull();
+		expect(await relatedShiftStart({ type: 'event', id: 'gone' })).toBeNull();
 	});
 });

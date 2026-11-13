@@ -84,6 +84,21 @@ export async function relatedShiftTasks(subject: RelatedSubject) {
 		.limit(100);
 }
 
+/**
+ * When Add shift starts on the record: an event's doors, or its start when no
+ * doors time is set, since volunteers arrive before downbeat. Null for other
+ * records, which start from the form's own default.
+ */
+export async function relatedShiftStart(subject: RelatedSubject): Promise<Date | null> {
+	if (subject.type !== 'event') return null;
+	const [row] = await db
+		.select({ doorsAt: eventListing.doorsAt, startsAt: eventListing.startsAt })
+		.from(eventListing)
+		.where(eq(eventListing.id, subject.id))
+		.limit(1);
+	return row ? (row.doorsAt ?? row.startsAt) : null;
+}
+
 /** Whether a task is one of the record's: Add shift may only open a shift on those. */
 export async function isRelatedTask(subject: RelatedSubject, taskId: string): Promise<boolean> {
 	const where = relatedTaskWhere(subject);
