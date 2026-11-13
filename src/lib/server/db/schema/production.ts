@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import { eventBand } from './event';
 import { user } from './authentication';
 import { project } from './project';
+import { contact } from './contact';
 import { productionExpenseCategories } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -272,10 +273,11 @@ export const productionSlot = sqliteTable(
 		backlineNeeds: text('backline_needs'),
 		hospitalityNotes: text('hospitality_notes'),
 
-		/** Per-show override of the act's stored contact — a tour manager, a fill-in. */
-		contactName: text('contact_name'),
-		contactEmail: text('contact_email'),
-		contactPhone: text('contact_phone'),
+		/**
+		 * Who to call for this show: one of the act's contacts, such as a tour
+		 * manager or a fill-in. Read only through `contact-service.ts`.
+		 */
+		contactId: text('contact_id').references(() => contact.id, { onDelete: 'set null' }),
 
 		/**
 		 * The deal, per act. `{ guaranteeCents, percentageBps, versus, againstNet }`

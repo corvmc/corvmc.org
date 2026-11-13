@@ -4,8 +4,9 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import { CONTACT_CLAIM_RETENTION_DAYS, type PartyRole } from '#lib/config.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import { organization } from '#lib/server/db/schema/party.js';
+import { productionSlot } from '#lib/server/db/schema/production.js';
 import { copyLinks } from '#lib/server/task/work-order-link.js';
 import { moveActivity } from '#lib/server/party/activity-service.js';
 import { moveThreads } from '#lib/server/party/thread-filing.js';
@@ -19,7 +20,7 @@ import { moveThreads } from '#lib/server/party/thread-filing.js';
  * public query touches is one refactor away from being serialized. Reaching this
  * data has to be an explicit act, and this is the only place it can happen.
  *
- * Every export here guards **itself** (an act's contact on `directory.*`, an
+ * Every export here guards **itself** (an act's people on `directory.*`, an
  * organization's people on `contact.*`),
  * rather than trusting the caller to have done it. A guard the caller owns is a
  * guard a new caller can forget; a guard the data owns cannot be.
@@ -73,104 +74,106 @@ async function linkSubscriber(email: string | null | undefined): Promise<string 
 	return row.id;
 }
 
-/** The contact for one party. Needs `directory.readContact`, and the whole row. */
-export async function getContact(entryId: string) {
-	await requireCapability('directory.readContact');
+/**
+ * What an act typed on `/act/{token}`, written as one of its people.
+ *
+ * Unguarded: the act has no session, and the token was resolved by the caller.
+ * Named so that reaching for it looks like what it is. A normalized email
+ * already on file updates that contact, which keeps its organization (a shared
+ * address is staff's to sort out). Without an email, the act's own earlier
+ * entry with no address is updated, so saving the sheet twice adds nobody.
+ */
+export async function writeActContactUnguarded(
+	organizationId: string,
+	data: ContactData
+): Promise<void> {
+	const email = normalizeEmail(data.email);
+	const name = data.name?.trim() || null;
+	const phone = data.phone?.trim() || null;
+	if (!email && !name && !phone) return;
 
-	const [row] = await db.select().from(contact).where(eq(contact.entryId, entryId)).limit(1);
+	const same = email ? await contactByEmail(email) : await unaddressedSelfEntry(organizationId);
+	if (same) {
+		await db
+			.update(contact)
+			.set({
+				organizationId: same.organizationId ?? organizationId,
+				...(name && { name }),
+				...(phone && { phone }),
+				retainUntil: null,
+				updatedAt: new Date()
+			})
+			.where(eq(contact.id, same.id));
+		return;
+	}
+	await db.insert(contact).values({
+		organizationId,
+		name,
+		email,
+		phone,
+		subscriberId: await linkSubscriber(email),
+		source: 'self_entered'
+	});
+}
 
+async function unaddressedSelfEntry(organizationId: string) {
+	const [row] = await db
+		.select({ id: contact.id, organizationId: contact.organizationId })
+		.from(contact)
+		.where(
+			and(
+				eq(contact.organizationId, organizationId),
+				eq(contact.source, 'self_entered'),
+				isNull(contact.email)
+			)
+		)
+		.orderBy(asc(contact.createdAt), asc(contact.id))
+		.limit(1);
 	return row ?? null;
 }
 
 /**
- * Write the booking details for a party.
- *
- * `source` is not a parameter a caller chooses freely — it records whether the
- * act typed this itself or staff typed it on their behalf, which is a fact about
- * the acquisition path rather than a setting. `/act/{token}` passes
- * `'self_entered'`; every staff path passes `'staff_entered'`.
- */
-export async function upsertContact(
-	entryId: string,
-	data: ContactData,
-	source: ContactSource
-): Promise<void> {
-	// The same people who send the act its own sheet, the other route in (#1404).
-	await requireCapability('directory.shareContactSheet');
-	await writeContact(entryId, data, source);
-}
-
-/**
- * The same write, without the staff guard.
- *
- * Exists for `/act/{token}`, which is authorized by a token rather than a
- * session — the act filling in its own contact sheet has no account, and
- * a session guard would refuse the one caller the spec calls the privacy-best
- * acquisition path. Not exported beyond this module's own callers by accident:
- * it is exported deliberately and named so that reaching for it looks like what
- * it is.
- */
-export async function writeContactUnguarded(
-	entryId: string,
-	data: ContactData,
-	source: ContactSource
-): Promise<void> {
-	await writeContact(entryId, data, source);
-}
-
-async function writeContact(
-	entryId: string,
-	data: ContactData,
-	source: ContactSource
-): Promise<void> {
-	const subscriberId = await linkSubscriber(data.email);
-
-	const [existing] = await db
-		.select({ id: contact.id })
-		.from(contact)
-		.where(eq(contact.entryId, entryId))
-		.limit(1);
-
-	const values = {
-		name: data.name ?? null,
-		email: normalizeEmail(data.email),
-		phone: data.phone ?? null,
-		notes: data.notes ?? null,
-		paymentRef: data.paymentRef ?? null,
-		retainUntil: data.retainUntil ?? null,
-		subscriberId,
-		source
-	};
-
-	if (existing) {
-		await db
-			.update(contact)
-			.set({ ...values, updatedAt: new Date() })
-			.where(eq(contact.id, existing.id));
-		return;
-	}
-
-	await db.insert(contact).values({ entryId, ...values });
-}
-
-/**
- * Retire a contact when its act becomes a CMC band.
+ * Retire an act's people when it becomes a CMC band.
  *
  * **Archived, not inherited.** The booking contact is frequently a manager
- * rather than one of the members who just joined, so carrying it forward would
- * leave a member band holding a stale private phone number that nobody owns.
- * Contact then goes through the account.
- *
- * Archiving sets a `retainUntil` rather than deleting: the record is why the
- * act was paid what it was paid, and a settlement question can outlive the
- * relationship. `sweepExpiredContacts` removes it once that date passes.
+ * rather than one of the members who just joined. A `retainUntil` a year out
+ * rather than a delete: the record is why the act was paid what it was paid,
+ * and `sweepExpiredContacts` removes it once that date passes. Unguarded: it
+ * runs inside the already-guarded claim.
  */
-export async function archiveContactForClaim(entryId: string, now = new Date()): Promise<void> {
+export async function archiveActContactsForClaim(
+	organizationId: string,
+	now = new Date()
+): Promise<void> {
 	const horizon = new Date(now.getTime() + CONTACT_CLAIM_RETENTION_DAYS * 86_400_000);
 	await db
 		.update(contact)
 		.set({ retainUntil: horizon, updatedAt: now })
-		.where(eq(contact.entryId, entryId));
+		.where(and(eq(contact.organizationId, organizationId), isNull(contact.retainUntil)));
+}
+
+export type ActContact = {
+	id: string;
+	organizationId: string;
+	name: string | null;
+	email: string | null;
+	phone: string | null;
+};
+
+/**
+ * The kept people at each act, for picking a show's contact. Open to whoever
+ * books or runs that show's project, and otherwise to `directory.readContact`.
+ */
+export async function listActContacts(
+	organizationIds: string[],
+	projectId: string | null
+): Promise<ActContact[]> {
+	const booker =
+		!!projectId &&
+		((await can('production.book', { projectId })) || (await can('production.run', { projectId })));
+	if (!booker) await requireCapability('directory.readContact');
+	const rows = await peopleAt(organizationIds);
+	return rows.map((r) => ({ ...r, organizationId: r.organizationId! }));
 }
 
 /** Contacts past their retention horizon, which the next sweep deletes. */
@@ -180,7 +183,7 @@ export async function listExpiredContacts(now: Date = new Date()) {
 	return db
 		.select({
 			id: contact.id,
-			entryId: contact.entryId,
+			organizationId: contact.organizationId,
 			name: contact.name,
 			retainUntil: contact.retainUntil
 		})
@@ -199,19 +202,6 @@ export async function sweepExpiredContacts(now = new Date()): Promise<{ deleted:
 		.where(lte(contact.retainUntil, now))
 		.returning({ id: contact.id });
 	return { deleted: deleted.length };
-}
-
-/** Whether a party has any contact on file, for a staff list. No details. */
-export async function hasContact(entryId: string): Promise<boolean> {
-	await requireCapability('directory.readContact');
-
-	const [row] = await db
-		.select({ id: contact.id })
-		.from(contact)
-		.where(and(eq(contact.entryId, entryId), isNull(contact.retainUntil)))
-		.limit(1);
-
-	return !!row;
 }
 
 // ---------------------------------------------------------------------------
@@ -641,6 +631,11 @@ export async function mergeContacts(survivorId: string, otherId: string): Promis
 		copyLinks('contactId', otherId, survivorId),
 		moveActivity({ type: 'contact', id: otherId }, { type: 'contact', id: survivorId }),
 		moveThreads({ type: 'contact', id: otherId }, { type: 'contact', id: survivorId }),
+		// A show that named them as its contact names the survivor.
+		db
+			.update(productionSlot)
+			.set({ contactId: survivorId })
+			.where(eq(productionSlot.contactId, otherId)),
 		db.delete(contact).where(eq(contact.id, otherId))
 	]);
 	return survivor.name ?? other.name;

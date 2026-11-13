@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { form } from './_remote';
 import { getRequestEvent, query } from '$app/server';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
+import { listActContacts } from '#lib/server/directory/contact-service.js';
 import { requireCapability } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
@@ -30,7 +31,8 @@ import {
 	moveSlot,
 	removeSlot,
 	setSlotTerms,
-	buildSlotsFromLineup
+	buildSlotsFromLineup,
+	slotActOrganizationId
 } from '#lib/server/production/run-of-show-service.js';
 import { openHostShift as openHost } from '#lib/server/production/host-service.js';
 import {
@@ -472,12 +474,21 @@ export const updateRunOfShowSlot = form(
 		techNotes: z.string().max(2000).optional(),
 		backlineNeeds: z.string().max(2000).optional(),
 		hospitalityNotes: z.string().max(2000).optional(),
-		contactName: z.string().max(200).optional(),
-		contactEmail: z.string().max(200).optional(),
-		contactPhone: z.string().max(50).optional()
+		/** One of the act's contacts; empty clears it. */
+		contactId: z.string().max(100).optional()
 	}),
-	async (data) => {
-		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
+	async (data, issue) => {
+		const projectId = await projectOfSlot(data.slotId);
+		await requireProjectCommittee(projectId, 'production.run');
+		// Left out by a viewer who cannot see the act's people: keep what is set.
+		const contactId = data.contactId === undefined ? undefined : data.contactId || null;
+		if (contactId) {
+			const org = await slotActOrganizationId(data.slotId);
+			const people = org ? await listActContacts([org], projectId) : [];
+			if (!people.some((p) => p.id === contactId)) {
+				invalid(issue.contactId("Pick one of this act's contacts."));
+			}
+		}
 		try {
 			await updateSlot(data.slotId, {
 				setLengthMinutes: data.setLengthMinutes,
@@ -486,9 +497,7 @@ export const updateRunOfShowSlot = form(
 				techNotes: optionalText(data.techNotes),
 				backlineNeeds: optionalText(data.backlineNeeds),
 				hospitalityNotes: optionalText(data.hospitalityNotes),
-				contactName: optionalText(data.contactName),
-				contactEmail: optionalText(data.contactEmail),
-				contactPhone: optionalText(data.contactPhone)
+				contactId
 			});
 		} catch (err) {
 			mapDomainError(err);

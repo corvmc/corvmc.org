@@ -1,10 +1,10 @@
 {
-  "id": "4ba0b093-5a67-45c2-92a6-2bfe1dd015dd",
-  "prevIds": [
-    "fd6c2826-813a-49c8-88fd-e842b9174dcb"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "0b0516d4-151a-4669-bc61-b7c6b4a86291",
+  "prevIds": [
+    "d678501c-4af8-43f4-b41e-0d3a114b52b2"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -3140,27 +3140,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "contact_name",
-      "entityType": "columns",
-      "table": "production_slot"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_email",
-      "entityType": "columns",
-      "table": "production_slot"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_phone",
+      "name": "contact_id",
       "entityType": "columns",
       "table": "production_slot"
     },
@@ -5811,6 +5791,16 @@
       "default": null,
       "generated": null,
       "name": "join_instructions",
+      "entityType": "columns",
+      "table": "group"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "from_organization_id",
       "entityType": "columns",
       "table": "group"
     },
@@ -16066,6 +16056,21 @@
     },
     {
       "columns": [
+        "contact_id"
+      ],
+      "tableTo": "contact",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_slot_contact_id_contact_id_fk",
+      "entityType": "fks",
+      "table": "production_slot"
+    },
+    {
+      "columns": [
         "paid_by_user_id"
       ],
       "tableTo": "user",
@@ -22876,6 +22881,20 @@
     {
       "columns": [
         {
+          "value": "from_organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_from_organization",
+      "entityType": "indexes",
+      "table": "group"
+    },
+    {
+      "columns": [
+        {
           "value": "user_id",
           "isExpression": false
         }
@@ -23762,6 +23781,20 @@
       "where": "\"inbox_thread\".\"channel\" = 'group' AND \"inbox_thread\".\"post_policy\" = 'leadership'",
       "origin": "manual",
       "name": "idx_inbox_thread_group_announcements",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"inbox_thread\".\"channel\" = 'group' AND \"inbox_thread\".\"subject\" IS NULL",
+      "origin": "manual",
+      "name": "idx_inbox_thread_group_general",
       "entityType": "indexes",
       "table": "inbox_thread"
     },

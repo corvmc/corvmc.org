@@ -13,9 +13,11 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
-vi.mock('#lib/server/authorization.js', () => ({
-	requireCapability: vi.fn(async () => ({ id: 'staff-1' }))
+const auth = vi.hoisted(() => ({
+	requireCapability: vi.fn(async (_cap: string) => ({ id: 'staff-1' })),
+	can: vi.fn(async (_cap: string, _scope?: unknown) => false)
 }));
+vi.mock('#lib/server/authorization.js', () => auth);
 
 const people = await import('./contact-service');
 
@@ -136,5 +138,109 @@ describe('duplicates', () => {
 			notes: string;
 		};
 		expect(notes).toContain('Sam O.');
+	});
+});
+
+describe("an act's people (#2622)", () => {
+	const slotPeople = () =>
+		sqlite.prepare(`select name, email, phone, source from contact order by created_at, id`).all();
+
+	it('adds the person the act typed at its organization, as self-entered', async () => {
+		await people.writeActContactUnguarded('org-a', {
+			name: 'Tour Manager',
+			email: 'TM@Band.example',
+			phone: '541-555-0101'
+		});
+		expect(rows()).toEqual([
+			expect.objectContaining({ organization_id: 'org-a', email: 'tm@band.example' })
+		]);
+		expect(slotPeople()).toEqual([
+			{
+				name: 'Tour Manager',
+				email: 'tm@band.example',
+				phone: '541-555-0101',
+				source: 'self_entered'
+			}
+		]);
+	});
+
+	it('updates the person already holding the address, wherever they are', async () => {
+		const known = await people.createContact({ organizationId: 'org-b', email: 'tm@band.example' });
+		await people.writeActContactUnguarded('org-a', {
+			name: 'Tour Manager',
+			email: 'tm@band.example'
+		});
+		expect(rows()).toEqual([
+			expect.objectContaining({ id: known.id, organization_id: 'org-b', name: 'Tour Manager' })
+		]);
+	});
+
+	it('adds nobody new when the act saves its sheet twice without an email', async () => {
+		await people.writeActContactUnguarded('org-a', { name: 'Fenwick', phone: '541-555-0102' });
+		await people.writeActContactUnguarded('org-a', { name: 'Fenwick', phone: '541-555-0109' });
+		expect(rows()).toEqual([expect.objectContaining({ name: 'Fenwick', phone: '541-555-0109' })]);
+	});
+
+	it('shows the people to a booker on the show, and asks anyone else for readContact', async () => {
+		await people.writeActContactUnguarded('org-a', { email: 'tm@band.example' });
+		auth.can.mockImplementation(async (cap) => cap === 'production.book');
+		expect(await people.listActContacts(['org-a'], 'proj-1')).toHaveLength(1);
+		expect(auth.requireCapability).not.toHaveBeenCalledWith('directory.readContact');
+
+		auth.can.mockImplementation(async () => false);
+		await people.listActContacts(['org-a'], 'proj-1');
+		expect(auth.requireCapability).toHaveBeenCalledWith('directory.readContact');
+	});
+
+	it('gives a claimed act’s people a horizon a year out', async () => {
+		await people.writeActContactUnguarded('org-a', { email: 'tm@band.example' });
+		const now = new Date('2026-11-13T12:00:00Z');
+		await people.archiveActContactsForClaim('org-a', now);
+		expect(sqlite.prepare(`select retain_until as r from contact`).get()).toEqual({
+			r: sec(new Date('2027-11-13T12:00:00Z'))
+		});
+	});
+});
+
+describe('merging people', () => {
+	it("moves a show's contact to the survivor", async () => {
+		const keep = await people.createContact({ organizationId: 'org-a', name: 'Sam' });
+		const dupe = await people.createContact({ organizationId: 'org-a', name: 'Sam O.' });
+		sqlite.exec(`
+			insert into project (id, name, kind) values ('pr', 'Show', 'production');
+			insert into production (id, project_id) values ('pn', 'pr');
+			insert into production_slot (id, production_id, sort_order, set_length_minutes, contact_id)
+				values ('slot', 'pn', 1, 30, '${dupe.id}');
+		`);
+		await people.mergeContacts(keep.id, dupe.id);
+		expect(sqlite.prepare(`select contact_id as c from production_slot`).get()).toEqual({
+			c: keep.id
+		});
+		sqlite.exec(`delete from production_slot; delete from production; delete from project`);
+	});
+
+	/**
+	 * The class: a table that references `contact` and that merging does not
+	 * move. Its rows would cascade away or be nulled with the merged person.
+	 */
+	it('moves every table that references a person', () => {
+		const moved = new Set([
+			'party_role', // copied, then cascade
+			'work_order_link', // copyLinks
+			'activity', // moveActivity
+			'inbox_thread', // moveThreads
+			'production_slot' // the show's contact
+		]);
+		const tables = (
+			sqlite
+				.prepare(`select name from sqlite_master where type = 'table' and name not like 'sqlite_%'`)
+				.all() as { name: string }[]
+		).map((t) => t.name);
+		const referencing = tables.filter((t) =>
+			(sqlite.prepare(`pragma foreign_key_list("${t}")`).all() as { table: string }[]).some(
+				(fk) => fk.table === 'contact'
+			)
+		);
+		expect(referencing.filter((t) => !moved.has(t))).toEqual([]);
 	});
 });

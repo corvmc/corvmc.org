@@ -5,7 +5,8 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { requireCapability } from '#lib/server/authorization.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
-import { writeContactUnguarded, type ContactData } from './contact-service';
+import { writeActContactUnguarded, type ContactData } from './contact-service';
+import { performerFor } from '#lib/server/party/organization-service.js';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
@@ -125,10 +126,11 @@ export interface ContactSheetData {
  * the parameter type is what makes that structural rather than a check somebody
  * has to remember.
  *
- * The contact rows written here are `self_entered`, which is the whole point of
- * this path — CMC then holds what the act chose to give rather than what staff
- * transcribed. `writeContactUnguarded` is the deliberate exception to the
- * contact service's staff guard, because the act has no session to check.
+ * The person is written as a `self_entered` contact at the act's performer
+ * organization, which is the whole point of this path: CMC then holds what the
+ * act chose to give rather than what staff transcribed. `writeActContactUnguarded`
+ * is the deliberate exception to the contact service's staff guard, because the
+ * act has no session to check.
  */
 export async function saveContactSheet(token: string, data: ContactSheetData): Promise<void> {
 	const link = await resolveContactSheetToken(token);
@@ -146,7 +148,7 @@ export async function saveContactSheet(token: string, data: ContactSheetData): P
 		})
 		.where(eq(directoryEntry.id, link.entryId));
 
-	await writeContactUnguarded(link.entryId, data.contact, 'self_entered');
+	await writeActContactUnguarded(await performerFor(link.entryId), data.contact);
 
 	// Recorded after the write, so a link that failed mid-save does not look used.
 	await db

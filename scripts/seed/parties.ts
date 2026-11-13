@@ -14,6 +14,8 @@ export type SeedOrganization = {
 	website?: string | null;
 	notes?: string | null;
 	archivedAt?: Date | null;
+	/** An act's public listing; performers only. */
+	directoryEntryId?: string | null;
 	person?: { name?: string; role?: string; email?: string; phone?: string };
 	contractor?: {
 		trade: ContractorTrade;
@@ -34,7 +36,8 @@ export async function seedOrganizations(orgs: SeedOrganization[]) {
 			name: o.name,
 			website: o.website ?? null,
 			notes: o.notes ?? null,
-			archivedAt: o.archivedAt ?? null
+			archivedAt: o.archivedAt ?? null,
+			directoryEntryId: o.directoryEntryId ?? null
 		}))
 	);
 	await batchInsert(

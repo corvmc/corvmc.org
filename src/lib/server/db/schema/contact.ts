@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { partyRoles } from '../../../config';
-import { directoryEntry } from './directory';
 import { subscriber } from './marketing';
 import { user } from './authentication';
 import { organization } from './party';
@@ -13,8 +12,7 @@ export type ContactSource = (typeof contactSources)[number];
 /**
  * A person outside CMC's membership, or a member in an outside capacity: the
  * program officer at a funder, a sponsor's store manager, an act's booker.
- * See `docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md`
- * and #2622.
+ * An act's people sit on its performer organization. See #2622.
  *
  * `directory_entry` is a **public** listing; an external act's booking details
  * are the opposite of public, and the two must not share a row.
@@ -44,12 +42,6 @@ export const contact = sqliteTable(
 		id: text('id')
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		/**
-		 * The party this describes. Nullable so a contact can outlive the listing
-		 * it was attached to — but `cascade`, so deleting the entry does take it,
-		 * which is the behaviour that matters for a deletion request.
-		 */
-		entryId: text('entry_id').references(() => directoryEntry.id, { onDelete: 'cascade' }),
 		/** Where this person works. Null for a freelancer or a donor giving alone. */
 		organizationId: text('organization_id').references(() => organization.id, {
 			onDelete: 'set null'
@@ -101,7 +93,6 @@ export const contact = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		index('idx_contact_entry').on(t.entryId),
 		index('idx_contact_subscriber').on(t.subscriberId),
 		index('idx_contact_organization').on(t.organizationId),
 		index('idx_contact_user').on(t.userId),

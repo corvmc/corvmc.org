@@ -53,7 +53,7 @@ A page or less. Link the issue and the PRs.
 | 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                             | 2026-09-23 | Amended by 0067    |
 | 0020 | [Staff comp credits up to a ceiling](0020-staff-comp-credits-up-to-a-ceiling.md)                                               | 2026-09-23 | Accepted           |
 | 0021 | [A club gets a page, not a panel](0021-a-club-gets-a-page-not-a-panel.md)                                                      | 2026-08-08 | Accepted           |
-| 0022 | [External acts are staff records with private contacts](0022-external-acts-are-staff-records-with-private-contacts.md)         | 2026-08-08 | Accepted           |
+| 0022 | [External acts are staff records with private contacts](0022-external-acts-are-staff-records-with-private-contacts.md)         | 2026-08-08 | Superseded by 0074 |
 | 0023 | [Group announcements are transactional and batched](0023-group-announcements-are-transactional-and-batched.md)                 | 2026-08-08 | Accepted           |
 | 0024 | [Groups split the band table by purpose](0024-groups-split-the-band-table-by-purpose.md)                                       | 2026-08-08 | Accepted           |
 | 0025 | [Every band gets a subdomain; premium gets its own domain](0025-every-band-gets-a-subdomain-premium-gets-a-domain.md)          | 2026-08-10 | Accepted           |
@@ -105,3 +105,4 @@ A page or less. Link the issue and the PRs.
 | 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted           |
 | 0072 | [A schedule change replaces the series](0072-a-schedule-change-replaces-the-series.md)                                         | 2026-11-13 | Accepted           |
 | 0073 | [A market vendor is an organization](0073-a-market-vendor-is-an-organization.md)                                               | 2026-11-13 | Accepted           |
+| 0074 | [An act is a performer organization](0074-an-act-is-a-performer-organization.md)                                               | 2026-11-13 | Accepted           |

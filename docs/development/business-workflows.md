@@ -373,7 +373,7 @@ Records: [groups split the band table](../decisions/0024-groups-split-the-band-t
 [band addresses](../decisions/0025-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
 [a club gets a page](../decisions/0021-a-club-gets-a-page-not-a-panel.md) ·
 [announcements](../decisions/0023-group-announcements-are-transactional-and-batched.md) ·
-[external acts](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md)
+[an act is a performer organization](../decisions/0074-an-act-is-a-performer-organization.md)
 
 ### The story
 
@@ -468,11 +468,19 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
 
 An act CMC books that has no account is a `directory_entry` with no user and no group, forced
 hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
-`external-acts.remote.ts` under `event.manage`). Its private booking details are a `contact` row,
-read and written only through `contact-service.ts`. Staff can send a contact-sheet link
-(`issueContactSheetLink()` in `contact-sheet-service.ts`, `directory.shareContactSheet`): the act
-edits its own details at `/act/[token]` for 30 days, with no session, and cannot change its name.
-`claimExternalAct()` turns the entry into a band and archives the contact.
+`external-acts.remote.ts` under `event.manage`). Its private side is an `organization` with the
+`performer` role and `directory_entry_id` set (`performerFor()` in `organization-service.ts`,
+made with the entry). Its people are `contact` rows on that organization, read and written only
+through `contact-service.ts`. Staff can send a contact-sheet link (`issueContactSheetLink()` in
+`contact-sheet-service.ts`, `directory.shareContactSheet`): the act edits its own details at
+`/act/[token]` for 30 days, with no session, and cannot change its name. The person it types is
+written by `writeActContactUnguarded()`: an email already on file updates that contact, and
+without an email the act's own earlier entry is updated. A show's contact is
+`production_slot.contact_id`, picked on the Run of show tab from that act's people
+(`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
+`claimExternalAct()` turns the entry into a band, sets `group.from_organization_id`, archives the
+organization and gives its people a retention horizon a year out. The band's staff page links to
+that organization, which keeps the act's gigs, payments and people.
 
 ---
 
