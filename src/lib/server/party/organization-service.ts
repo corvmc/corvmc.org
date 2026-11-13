@@ -20,6 +20,10 @@ import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { purchaseOrder } from '#lib/server/db/schema/inventory.js';
+import { countOrganizationPeopleUnguarded } from '#lib/server/directory/contact-service.js';
+import { inboxThread } from '#lib/server/db/schema/inbox.js';
+import { activity } from '#lib/server/db/schema/activity.js';
+import { workOrderLink } from '#lib/server/db/schema/work-order-link.js';
 import { and, asc, count, desc, eq, getTableName, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { partyRoleLabels, type PartyRole } from '#lib/config.js';
@@ -279,20 +283,42 @@ export async function performerFor(entryId: string): Promise<string> {
 
 /**
  * Take a role away, for a row entered in the wrong place. Refused while
- * `inUse` records name it in that role. An organization left with no role
- * and no records is deleted outright, and this returns true.
+ * `inUse` records name it in that role. Only the role row goes: the
+ * organization stays, with its people, threads and records, even with no role.
  */
-export async function removeRole(id: string, role: PartyRole, inUse: number): Promise<boolean> {
+export async function removeRole(id: string, role: PartyRole, inUse: number): Promise<void> {
 	if (inUse > 0) throw new OrganizationInUseError(inUse);
-	const org = await getOrganization(id);
+	await getOrganization(id);
 	await db.delete(partyRole).where(and(eq(partyRole.organizationId, id), eq(partyRole.role, role)));
-	const rest = org.roles.filter((r) => r !== role);
-	if (rest.length === 0 && (await countRecords(id)) === 0) {
-		await db.delete(organization).where(eq(organization.id, id));
-		return true;
-	}
-	return false;
 }
+
+/** What else names an organization: threads, notes and tasks. People are counted by their service. */
+export const ORGANIZATION_LINKS = [inboxThread, activity, workOrderLink];
+export const organizationLinkTables: string[] = [
+	'contact',
+	...ORGANIZATION_LINKS.map((t) => getTableName(t))
+];
+
+/**
+ * The explicit Delete on a sponsor or funder, for a row that should never
+ * have existed. Deletes only an organization with no role, person, record,
+ * link or act listing, and returns whether it did; otherwise it stays.
+ */
+export async function deleteUnusedOrganization(id: string): Promise<boolean> {
+	const org = await getOrganization(id);
+	if (org.roles.length > 0 || org.directoryEntryId) return false;
+	const [first, ...rest] = ORGANIZATION_LINKS.map((t) =>
+		db.select({ n: count() }).from(t).where(eq(t.organizationId, id))
+	);
+	const links = await db.batch([first, ...rest]);
+	const linked =
+		links.reduce((n, [row]) => n + Number(row?.n ?? 0), 0) +
+		(await countOrganizationPeopleUnguarded(id));
+	if (linked > 0 || (await countRecords(id)) > 0) return false;
+	await db.delete(organization).where(eq(organization.id, id));
+	return true;
+}
+
 // ---------------------------------------------------------------------------
 // The Contacts screens: records, duplicates and merging
 // ---------------------------------------------------------------------------

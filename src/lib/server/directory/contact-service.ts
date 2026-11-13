@@ -557,6 +557,15 @@ export async function findPersonByEmail(email: string | null | undefined) {
 	return row ?? null;
 }
 
+/** Every person row at an organization, kept or not. Callers guard. */
+export async function countOrganizationPeopleUnguarded(organizationId: string): Promise<number> {
+	const rows = await db
+		.select({ id: contact.id })
+		.from(contact)
+		.where(eq(contact.organizationId, organizationId));
+	return rows.length;
+}
+
 /** Everyone kept at an organization, the main person first. */
 export async function listPeople(organizationId: string) {
 	await requireCapability('contact.read');

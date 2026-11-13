@@ -403,6 +403,11 @@ already reaches `group` through `directory_entry`. The people are `contact` rows
 through `contact-service.ts`; a show's per-set contact is one of them
 (`production_slot.contact_id`). See #2622.
 
+Removing a role removes that `party_role` row only. An organization with no role stays, with its
+people, threads and records, and is archived rather than deleted. The one delete is the explicit
+Delete on a sponsor or funder, and it removes the organization only when it has no people, no act listing, and nothing in
+`ORGANIZATION_RECORDS` or `ORGANIZATION_LINKS` names it (#2784).
+
 Pursuing money is project work. A `grant_application` or a `sponsorship` is a 1:1 side table on a
 project of kind `grant` or `sponsorship`, as `production` is on a show's: the side table holds the
 money and the dates, and the project holds the tasks.
