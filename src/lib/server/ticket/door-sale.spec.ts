@@ -38,6 +38,8 @@ const {
 	DoorSaleError
 } = await import('./door-sale');
 
+const { doorPaymentOf, doorPayments } = await import('#lib/door/takings.js');
+
 const NOW = new Date('2026-09-24T19:00:00Z');
 const at = (hoursFromNow: number) => Math.floor(NOW.getTime() / 1000) + hoursFromNow * 3600;
 
@@ -159,6 +161,42 @@ describe('starting a door sale', () => {
 		expect(recordFreeTicketSale).toHaveBeenCalledWith(
 			expect.objectContaining({ purchaseId: result.purchaseId, quantity: 1 })
 		);
+	});
+
+	// Cash (#2800): checked in on the spot, split as a card is, with no intent.
+	it('takes cash, checked in on the spot under a cash purchase and with no intent', async () => {
+		const result = await start({ payment: 'cash', quantity: 2, unitPriceCents: 1000 });
+		if (result.kind !== 'cash') throw new Error('expected a cash sale');
+		expect(result).toMatchObject({ quantity: 2, chargeCents: 2000 });
+		expect(result.purchaseId).toMatch(/^cash-/);
+		const minted = rows(result.purchaseId);
+		expect(minted).toHaveLength(2);
+		expect(
+			minted.every((r) => r.status === 'checked_in' && r.stripe_payment_record_id === null)
+		).toBe(true);
+		expect((await stripe.paymentIntents.list({})).data).toHaveLength(0);
+		expect(recordDoorTicketSale).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: result.purchaseId,
+				chargeCents: 2000,
+				feeCents: 0,
+				payment: 'cash'
+			})
+		);
+		expect(await doorSaleEventId(result.purchaseId)).toBeNull();
+	});
+
+	it('takes cash under the card minimum, and lets zero in free', async () => {
+		expect((await start({ payment: 'cash', quantity: 1, unitPriceCents: 100 })).kind).toBe('cash');
+		expect((await start({ payment: 'cash', quantity: 1, unitPriceCents: 0 })).kind).toBe('free');
+	});
+
+	it('holds cash to the floor too', async () => {
+		listing('floored', 'cmc', at(1));
+		sale('floored', { price: 1000, floor: 500 });
+		await expect(
+			start({ eventId: 'floored', payment: 'cash', unitPriceCents: 400 })
+		).rejects.toBeInstanceOf(DoorSaleError);
 	});
 
 	it("refuses a band's own gig", async () => {
@@ -362,7 +400,8 @@ describe('what the door took', () => {
 	it('is nothing for a show the door never sold', async () => {
 		expect(await getEventDoorTakings('tonight')).toEqual({
 			card: { tickets: 0, grossCents: 0 },
-			free: { tickets: 0 },
+			cash: { tickets: 0, grossCents: 0 },
+			free: { tickets: 0, grossCents: 0 },
 			donations: { count: 0, grossCents: 0 },
 			checkedIn: 0
 		});
@@ -384,6 +423,41 @@ describe('what the door took', () => {
 			card: { tickets: 2, grossCents: 3000 },
 			free: { tickets: 3 }
 		});
+	});
+
+	it('counts cash sales on their own line, checked in with the rest', async () => {
+		const sellCash = (quantity: number, unitPriceCents: number) =>
+			startDoorSale({
+				eventId: 'tonight',
+				quantity,
+				unitPriceCents,
+				payment: 'cash',
+				staffUserId: 'staff-1',
+				now: NOW
+			});
+		await sellCash(2, 1000);
+		await sellCash(1, 2500);
+		const takings = await getEventDoorTakings('tonight');
+		expect(takings.cash).toEqual({ tickets: 3, grossCents: 4500 });
+		expect(takings.card).toEqual({ tickets: 0, grossCents: 0 });
+		expect(takings.checkedIn).toBe(3);
+	});
+
+	// The class (#2800): every door purchase id is read back as the method it was sold under.
+	it.each(doorPayments)('reads a %s purchase back as its method', async (payment) => {
+		const result = await startDoorSale({
+			eventId: 'tonight',
+			quantity: 1,
+			unitPriceCents: payment === 'free' ? 0 : 1500,
+			payment: payment === 'free' ? undefined : payment,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		if (result.kind === 'card')
+			await fulfillDoorSale(completeFakeTerminalPayment(result.paymentIntentId));
+		const id = result.kind === 'card' ? result.paymentIntentId : result.purchaseId;
+		expect(doorPaymentOf(id)).toBe(payment);
+		expect((await getEventDoorTakings('tonight'))[payment].tickets).toBe(1);
 	});
 
 	it('leaves out a cancelled door sale', async () => {

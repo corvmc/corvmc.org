@@ -80,9 +80,10 @@ export function collectiveGross(input: {
 }
 
 /**
- * A card-present sale at the door (#612): the rows an online collective ticket
- * writes, keyed on the PaymentIntent that is also the `purchaseId`. There is
- * no buyer account, and no fee coverage at the door.
+ * A sale at the door (#612): the rows an online collective ticket writes, keyed
+ * on the `purchaseId` — the PaymentIntent for a card, `cash-…` for cash
+ * (#2800), which settles in the drawer and has no fee. There is no buyer
+ * account, and no fee coverage at the door.
  */
 export async function recordDoorTicketSale(params: {
 	purchaseId: string;
@@ -91,12 +92,14 @@ export async function recordDoorTicketSale(params: {
 	actsCents: number;
 	feeCents: number;
 	occurredAt: Date;
+	payment?: 'card' | 'cash';
 }): Promise<void> {
+	const cash = params.payment === 'cash';
 	const { ticketSalesCents } = collectiveGross({ ...params, feeCoveredCents: 0 });
 	const base = {
 		occurredAt: params.occurredAt,
-		settlement: 'stripe' as const,
-		stripePaymentRecordId: params.purchaseId,
+		settlement: cash ? ('cash' as const) : ('stripe' as const),
+		stripePaymentRecordId: cash ? null : params.purchaseId,
 		userId: null,
 		subjectType: 'ticket' as const,
 		subjectId: params.purchaseId,
@@ -109,7 +112,7 @@ export async function recordDoorTicketSale(params: {
 			amountCents: ticketSalesCents,
 			kind: 'earned',
 			category: 'ticket_sales',
-			description: 'Ticket sale, door, card present'
+			description: cash ? 'Ticket sale, door, cash' : 'Ticket sale, door, card present'
 		});
 	}
 	if (params.actsCents > 0) {

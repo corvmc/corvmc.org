@@ -23,7 +23,7 @@ const { initStripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, completeFakeTerminalPayment } =
 	await import('#lib/server/finance/gateway/fake-gateway.js');
 const { calculateCardPresentFee, calculateProcessingFee } = await import('#lib/finance/fees.js');
-const { actsAnchoredCollectiveCents, validateTicketSplit } =
+const { actsAnchoredCollectiveCents, doorTicketSplit, validateTicketSplit } =
 	await import('#lib/finance/ticket-split.js');
 const { handlePaymentIntentSucceeded } = await import('#lib/server/finance/webhook-handlers.js');
 const { handleCheckoutEntries } = await import('#lib/server/finance/checkout-entries-listener.js');
@@ -95,6 +95,19 @@ async function doorTicket(eventId: string, unitPriceCents: number, quantity: num
 	return { chargeCents: start.chargeCents, feeCents: calculateCardPresentFee(start.chargeCents) };
 }
 
+async function cashTicket(eventId: string, unitPriceCents: number, quantity: number) {
+	const start = await startDoorSale({
+		eventId,
+		quantity,
+		unitPriceCents,
+		payment: 'cash',
+		staffUserId: 'staff-1',
+		now: NOW
+	});
+	if (start.kind !== 'cash') throw new Error('expected a cash sale');
+	return { chargeCents: start.chargeCents };
+}
+
 /** What the show's settlement says the tickets brought in, both sides. */
 async function ticketTake(eventId: string) {
 	const s = await getSettlement(eventId);
@@ -162,6 +175,66 @@ describe('a show settles every ticket sold for it, net of its card fee', () => {
 		expect(await ticketTake('tonight')).toBe(
 			online.chargeCents - online.feeCents + door.chargeCents - door.feeCents
 		);
+	});
+});
+
+// Cash at the door goes through the show's default split, as a card does (#2800).
+describe('door cash sales in the settlement', () => {
+	it('a cash ticket reaches the pool and revenue whole, with no fee', async () => {
+		const cash = await cashTicket('tonight', 1000, 2);
+		const s = await getSettlement('tonight');
+		const split = doorTicketSplit({
+			unitPriceCents: 1000,
+			quantity: 2,
+			suggestedUnitCents: SUGGESTED,
+			payment: 'cash'
+		});
+		expect(s?.actsPoolCents).toBe(split.actsCents);
+		expect(s?.collectiveRevenueCents).toBe(cash.chargeCents - split.actsCents);
+		expect(await ticketTake('tonight')).toBe(cash.chargeCents);
+	});
+
+	it('cash and card together add up, each net of its own fee', async () => {
+		const card = await doorTicket('tonight', 1500, 2);
+		const cash = await cashTicket('tonight', 1200, 1);
+		expect(await ticketTake('tonight')).toBe(card.chargeCents - card.feeCents + cash.chargeCents);
+		const takings = (await getSettlement('tonight'))?.doorTakings;
+		expect(takings?.card).toEqual({ tickets: 2, grossCents: 3000 });
+		expect(takings?.cash).toEqual({ tickets: 1, grossCents: 1200 });
+		expect(takings?.checkedIn).toBe(3);
+	});
+
+	it('leaves a card sale settling as it did before cash existed', async () => {
+		const card = await doorTicket('tonight', 1500, 2);
+		const s = await getSettlement('tonight');
+		const split = doorTicketSplit({
+			unitPriceCents: 1500,
+			quantity: 2,
+			suggestedUnitCents: SUGGESTED
+		});
+		expect(s?.actsPoolCents).toBe(split.actsCents);
+		expect(await ticketTake('tonight')).toBe(card.chargeCents - card.feeCents);
+	});
+
+	it('splits only the counted cash beyond the recorded sales, so nothing is paid twice', async () => {
+		await cashTicket('tonight', 1000, 3);
+		const recorded = await getSettlement('tonight');
+		sqlite.exec(`update production set door_cash_cents = 4000 where id = 'prod-tonight'`);
+		const counted = await getSettlement('tonight');
+
+		expect(counted?.door).toMatchObject({ recordedCents: 3000, gapCents: 1000, actsCents: 700 });
+		expect(counted!.actsPoolCents - recorded!.actsPoolCents).toBe(700);
+		expect(counted!.collectiveRevenueCents - recorded!.collectiveRevenueCents).toBe(300);
+	});
+
+	it('carries a short drawer as a gap, and keeps the recorded sales', async () => {
+		await cashTicket('tonight', 1000, 3);
+		const recorded = await getSettlement('tonight');
+		sqlite.exec(`update production set door_cash_cents = 2500 where id = 'prod-tonight'`);
+		const counted = await getSettlement('tonight');
+
+		expect(counted?.door).toMatchObject({ gapCents: -500, actsCents: 0, collectiveCents: 0 });
+		expect(counted?.actsPoolCents).toBe(recorded?.actsPoolCents);
 	});
 });
 

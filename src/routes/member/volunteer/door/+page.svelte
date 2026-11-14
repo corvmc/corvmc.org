@@ -55,6 +55,12 @@
 	let busy = $state(false);
 	let tapError = $state<string | null>(null);
 	let freeLetIn = $state<number | null>(null);
+	let cashSale = $state<{ quantity: number; chargeCents: number } | null>(null);
+	let payment = $state<'card' | 'cash'>('card');
+	const paymentOptions = [
+		{ value: 'card', label: m.member_volunteer_door_payment_card_label() },
+		{ value: 'cash', label: m.member_volunteer_door_payment_cash_label() }
+	];
 	// A show's staff page opens the till on that show (#1809).
 	let chosenEventId = $state<string | undefined>(page.url.searchParams.get('event') ?? undefined);
 	let quantity = $state<number | undefined>(1);
@@ -64,16 +70,25 @@
 		tapped = false;
 		tapError = null;
 		freeLetIn = null;
+		cashSale = null;
 	}
 
 	// A donation (#2548) opens the same card sale a ticket does, and shares its tap.
 	async function onsuccess(
-		result?: { kind: 'free'; purchaseId: string; quantity: number } | ({ kind: 'card' } & CardSale)
+		result?:
+			| { kind: 'free'; purchaseId: string; quantity: number }
+			| { kind: 'cash'; purchaseId: string; quantity: number; chargeCents: number }
+			| ({ kind: 'card' } & CardSale)
 	) {
 		reset();
 		if (!result) return;
 		if (result.kind === 'free') {
 			freeLetIn = result.quantity;
+			return;
+		}
+		// Cash is in the drawer already: checked in, nothing to tap (#2800).
+		if (result.kind === 'cash') {
+			cashSale = result;
 			return;
 		}
 		sale = result;
@@ -199,6 +214,14 @@
 				{m.member_volunteer_door_free_tickets_checked_let_them_body({ freeLetIn })}
 			</Alert>
 		{/if}
+		{#if cashSale}
+			<Alert type="success">
+				{m.member_volunteer_door_cash_sale_body({
+					count: cashSale.quantity,
+					amount: formatCents(cashSale.chargeCents)
+				})}
+			</Alert>
+		{/if}
 
 		<Form remote={startDoorSale} {onsuccess} class="space-y-4">
 			<FormField
@@ -226,6 +249,13 @@
 				description={m.member_volunteer_door_whatever_they_can_pay_at_body({
 					formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
 				})}
+			/>
+			<FormField
+				field={fields.payment}
+				label={m.member_volunteer_door_payment_label()}
+				type="select"
+				options={paymentOptions}
+				bind:value={payment}
 			/>
 			<SubmitButton label={m.member_volunteer_door_take_payment_label()} class="min-h-11" />
 		</Form>

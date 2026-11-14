@@ -4,16 +4,17 @@ import { randomUUID } from 'crypto';
 import { volunteerRole, volunteerSignup } from '../../src/lib/server/db/schema/volunteer';
 import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { donation } from '../../src/lib/server/db/schema/donation';
+import { financialEntry } from '../../src/lib/server/db/schema/financial';
 import { batchInsert, db } from './db';
 import { insertTasksWithShifts } from './shifts';
 
 /**
  * Tonight's collective show at the door (#612).
  *
- * `/member/volunteer/door` lists only a collective show starting within a day, which the
- * dated event seed cannot promise, so this writes one relative to now. Two
- * sales and a donation are already in: one tapped, one let in free below the minimum. The
- * door shift is on now, confirmed for `doorVolunteerId`, so that login can sell.
+ * `/member/volunteer/door` lists only a collective show starting within a day,
+ * so this writes one relative to now, with a tapped sale, a free let-in, a cash
+ * sale with its ledger rows (#2800) and a donation. The door shift is on now,
+ * confirmed for `doorVolunteerId`, so that login can sell.
  */
 export async function seedDoorSales(
 	adminUserId: string,
@@ -67,6 +68,50 @@ export async function seedDoorSales(
 			unitPriceCents: 0,
 			checkedInAt,
 			checkedInByUserId: adminUserId
+		},
+		// Cash, 2 × $10: the split sits on the order's first ticket, as `createTickets` writes it.
+		{
+			...door,
+			purchaseId: 'cash-seed-1',
+			code: 'DOORSEED3',
+			status: 'checked_in',
+			unitPriceCents: 1000,
+			actsCents: 1400,
+			collectiveCents: 600,
+			checkedInAt,
+			checkedInByUserId: adminUserId
+		},
+		{
+			...door,
+			purchaseId: 'cash-seed-1',
+			code: 'DOORSEED4',
+			status: 'checked_in',
+			unitPriceCents: 1000,
+			checkedInAt,
+			checkedInByUserId: adminUserId
+		}
+	]);
+	const cashLedger = {
+		occurredAt: checkedInAt,
+		settlement: 'cash' as const,
+		subjectType: 'ticket' as const,
+		subjectId: 'cash-seed-1'
+	};
+	await batchInsert(financialEntry, [
+		{
+			...cashLedger,
+			amountCents: 600,
+			kind: 'earned',
+			category: 'ticket_sales',
+			description: 'Ticket sale, door, cash'
+		},
+		{
+			...cashLedger,
+			amountCents: 1400,
+			kind: 'pass_through',
+			category: 'act_payout',
+			settlementGroup: show.id,
+			description: 'Door, designated to the acts'
 		}
 	]);
 

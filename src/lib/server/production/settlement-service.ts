@@ -46,6 +46,16 @@ export interface ActSettlement {
 /** The drawer count, and the split applied to it. */
 export interface DoorTake {
 	cashCents: number;
+	/**
+	 * Cash the door recorded as ticket sales (#2800). Those are in the ledger's
+	 * pool and revenue already, split as card sales are, so the drawer's split
+	 * covers only what was counted beyond them.
+	 */
+	recordedCents: number;
+	/** Counted less recorded. Negative is a short drawer; either way it warns, never refuses. */
+	gapCents: number;
+	/** What the door rule splits: counted cash no ticket accounts for. */
+	unrecordedCents: number;
 	count: number | null;
 	/** The percentage actually used — this show's override, or the house rule. */
 	actsPercent: number;
@@ -128,26 +138,32 @@ export function payoutForDeal(input: {
 /**
  * How one night's door cash divides.
  *
- * Null when nobody has counted — which is not the same as a zero, and the
- * worksheet says so. Rounding favours the acts: the collective keeps the
- * remainder, because a cent lost to rounding is the house's to absorb.
+ * Null when nobody has counted, which is not a zero. Recorded cash sales are
+ * left out: the ledger has split them, and splitting them again pays the acts
+ * twice (#2800). A short drawer splits nothing. Rounding favours the acts.
  */
 export function splitDoorTake(input: {
 	doorCashCents: number | null;
 	doorCount: number | null;
 	doorSplitActsPercent: number | null;
+	recordedCashCents?: number;
 }): DoorTake | null {
 	if (input.doorCashCents === null) return null;
 
+	const recordedCents = input.recordedCashCents ?? 0;
+	const unrecordedCents = Math.max(0, input.doorCashCents - recordedCents);
 	const actsPercent = input.doorSplitActsPercent ?? DOOR_SPLIT_ACTS_PERCENT;
-	const actsCents = Math.round((input.doorCashCents * actsPercent) / 100);
+	const actsCents = Math.round((unrecordedCents * actsPercent) / 100);
 
 	return {
 		cashCents: input.doorCashCents,
+		recordedCents,
+		gapCents: input.doorCashCents - recordedCents,
+		unrecordedCents,
 		count: input.doorCount,
 		actsPercent,
 		actsCents,
-		collectiveCents: input.doorCashCents - actsCents,
+		collectiveCents: unrecordedCents - actsCents,
 		overridden: input.doorSplitActsPercent !== null
 	};
 }
@@ -176,7 +192,8 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		.limit(1);
 	if (!prod) return null;
 
-	const door = splitDoorTake(prod);
+	const doorTakings = await getEventDoorTakings(eventId);
+	const door = splitDoorTake({ ...prod, recordedCashCents: doorTakings.cash.grossCents });
 	const doorCounts: DoorCounts | null = door && {
 		check: doorCheck(prod.doorCashCents, prod.recountCents),
 		first: { byName: prod.countedBy, at: prod.countedAt },
@@ -221,10 +238,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 	// the guarantee top-ups that `netCents` subtracts below as the gap between
 	// suggested payouts and the pool, so reading them here charged a soft night
 	// twice. The spec names `production_expense` as the expense total.
-	const [expenses, doorTakings] = await Promise.all([
-		expenseLines(prod.id),
-		getEventDoorTakings(eventId)
-	]);
+	const expenses = await expenseLines(prod.id);
 	const expensesCents = expenses.reduce((t, e) => t + e.amountCents, 0);
 	const deductibleExpensesCents = expenses.reduce(
 		(t, e) => (e.deductible ? t + e.amountCents : t),

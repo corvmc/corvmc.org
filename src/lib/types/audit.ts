@@ -85,6 +85,7 @@ export const auditActions = [
 	'organization.merged',
 	'contact.merged',
 	'event.tickets_comped',
+	'event.door_cash_sale',
 	'music_purchase.refunded',
 	'production.expense_removed',
 	'classified.visibility_changed',
@@ -372,6 +373,8 @@ export interface AuditDetailsByAction {
 	'project.section_deleted': { sectionId: string; name: string; tasks: number };
 	/** Free tickets issued from the staff door list; `purchaseId` is the `comp-…` id they share. */
 	'event.tickets_comped': { purchaseId: string; quantity: number; attendeeName: string };
+	/** Cash taken at the door (#2800); `purchaseId` is the `cash-…` id the tickets share. */
+	'event.door_cash_sale': { purchaseId: string; quantity: number; amountCents: number };
 	/** The subject is the band. Stripe reversed the band's share and CMC's fee. */
 	'music_purchase.refunded': { purchaseId: string; releaseTitle: string; amountCents: number };
 	/** A cost-sheet line, as it was. A settled one is reversed in the ledger. */
