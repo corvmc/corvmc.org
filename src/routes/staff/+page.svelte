@@ -30,7 +30,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '#lib/utils/with-query.js';
+	import { withHash, withQuery } from '#lib/utils/with-query.js';
 	import { hasCapability } from '#lib/config.js';
 	import {
 		formatDateShort,
@@ -293,7 +293,7 @@
 					class="hover cursor-pointer"
 					use:rowLink={d.module === 'grant'
 						? resolve(`staff/grants/${d.parentId}`)
-						: resolve(`staff/sponsors/${d.parentId}`)}
+						: withHash(resolve(`staff/contacts/${d.parentId}`), 'sponsorships')}
 				>
 					<td class="whitespace-nowrap" class:text-error={d.overdue}>{formatIsoDay(d.on)}</td>
 					<td class="cell-primary">

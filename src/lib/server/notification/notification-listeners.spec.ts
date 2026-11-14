@@ -1479,7 +1479,7 @@ describe('development deadline due (#1477)', () => {
 
 		expect(mockStaffUsers).toHaveBeenCalledWith('sponsor.manage');
 		const call = mockDispatch.mock.calls.find(([p]) => p.type === 'development_deadline')?.[0];
-		expect(call.href).toBe('/staff/sponsors/s1');
+		expect(call.href).toBe('/staff/contacts/s1#sponsorships');
 	});
 });
 

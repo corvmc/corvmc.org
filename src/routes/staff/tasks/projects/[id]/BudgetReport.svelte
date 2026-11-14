@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withHash } from '#lib/utils/with-query.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -236,8 +237,10 @@
 								class="link"
 								href={source.kind === 'grant'
 									? resolve('/staff/grants/[id]', { id: source.id })
-									: resolve('/staff/sponsors/[id]', { id: source.organizationId })}
-								>{source.organizationName}</a
+									: withHash(
+											resolve('/staff/contacts/[id]', { id: source.organizationId }),
+											'sponsorships'
+										)}>{source.organizationName}</a
 							>
 							<span class="block text-subtle text-xs">{source.title}</span>
 						</td>

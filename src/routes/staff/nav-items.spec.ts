@@ -75,8 +75,9 @@ describe('activeNavKey', () => {
 		['/staff/contacts', 'contacts'],
 		['/staff/contacts/abc', 'contacts'],
 		['/staff/funding', 'funding'],
-		['/staff/sponsors', 'funding'],
-		['/staff/sponsors/abc', 'funding'],
+		// A sponsor's page is its Contacts page now (#2764); old links redirect.
+		['/staff/sponsors', 'contacts'],
+		['/staff/sponsors/abc', 'contacts'],
 		['/staff/grants', 'funding'],
 		['/staff/grants/abc', 'funding'],
 		['/staff/grants/funders', 'funding'],
@@ -288,7 +289,6 @@ describe('route coverage', () => {
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/local-resources/tips', // a Local Resources tab, and the review feed's tip rows (#2623)
-		'/staff/grants/funders', // reached from Funding's header (#2622)
 		'/staff/keys', // reached from Practice space's header (#2574)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
 		// Reached from the Bands view's header: the same staff job as a band.
@@ -317,9 +317,7 @@ describe('route coverage', () => {
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.
 		'/staff/inbox/daily',
-		// The records behind Contacts' Contractor and duplicate views (#2622),
-		// reached from the Contacts header and each organization's page.
-		'/staff/contractors',
+		// Contacts' duplicate view (#2622), reached from the Contacts header.
 		'/staff/contacts/duplicates'
 	]);
 

@@ -234,25 +234,25 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'partners',
 		title: 'Partners',
 		items: [
-			// Every outside organization (#2622). The Sponsors and Contractors pages
-			// are its records; a role's own capability opens that role's view.
+			// Every outside organization (#2622). Contractors, funders and sponsors
+			// are its role views and sections (#2764); a role's capability opens them.
 			{
 				key: 'contacts',
 				capability: 'contact.read',
 				alsoFor: ['sponsor.read', 'grant.read', 'contractor.read'],
 				label: 'Contacts',
 				href: resolve('staff/contacts'),
-				also: [resolve('staff/contractors')]
+				also: [resolve('staff/contractors'), resolve('staff/sponsors')]
 			},
 			// Grant applications and sponsorships on one list (#2622). A grant's page
-			// and a sponsor's page are its records.
+			// is its record; a sponsorship opens on its sponsor's Contacts page.
 			{
 				key: 'funding',
 				capability: 'grant.read',
 				alsoFor: ['sponsor.read'],
 				label: 'Funding',
 				href: resolve('staff/funding'),
-				also: [resolve('staff/grants'), resolve('staff/sponsors')]
+				also: [resolve('staff/grants')]
 			},
 			// Guarded as an event because that is what a venue is a fact about.
 			{

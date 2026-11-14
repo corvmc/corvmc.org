@@ -28,7 +28,7 @@
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '#lib/utils/with-query.js';
+	import { withHash, withQuery } from '#lib/utils/with-query.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 
@@ -58,7 +58,7 @@
 	const hrefOf = (r: Row) =>
 		r.kind === 'grant'
 			? resolve('/staff/grants/[id]', { id: r.id })
-			: resolve('/staff/sponsors/[id]', { id: r.organizationId });
+			: withHash(resolve('/staff/contacts/[id]', { id: r.organizationId }), 'sponsorships');
 	const badgeOf = (r: Row) =>
 		r.kind === 'grant'
 			? { variant: grantStatusBadge[r.status], label: grantStatusLabels[r.status] }
@@ -68,7 +68,7 @@
 
 <PageHeader title={m.staff_funding_title()}>
 	{#if data.shows.grants}
-		<Button href={resolve('staff/grants/funders')} variant="ghost" size="sm">
+		<Button href={withQuery(resolve('staff/contacts'), 'role=funder')} variant="ghost" size="sm">
 			{m.staff_funders_label()}
 		</Button>
 	{/if}

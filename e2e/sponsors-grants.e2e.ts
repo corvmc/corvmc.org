@@ -21,7 +21,7 @@ async function loginAsStaff(page: Page) {
 test.describe('sponsors', () => {
 	test('a lapsed term is called out on the sponsor', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/sponsors/${SEED_SPONSOR_ID}`);
+		await page.goto(`/staff/contacts/${SEED_SPONSOR_ID}`);
 		await expect(page.getByRole('heading', { name: SEED_SPONSOR_NAME })).toBeVisible({
 			timeout: 15000
 		});

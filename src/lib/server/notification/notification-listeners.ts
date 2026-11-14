@@ -830,7 +830,9 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title,
 					body: `${event.counterparty} · ${date}`,
-					href: grant ? `/staff/grants/${event.parentId}` : `/staff/sponsors/${event.parentId}`,
+					href: grant
+						? `/staff/grants/${event.parentId}`
+						: `/staff/contacts/${event.parentId}#sponsorships`,
 					email: {
 						recipientName: member.name,
 						subject: `${event.counterparty}: ${event.title}, ${date}`,

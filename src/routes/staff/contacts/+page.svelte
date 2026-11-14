@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/** Every outside organization and every person with none, in one table (#2760). */
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -16,6 +17,10 @@
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import OrganizationFields from './OrganizationFields.svelte';
 	import { createOrganization, getContactsPage } from '#lib/remote/contacts.remote.js';
+	import { createContractorForm } from '#lib/remote/contractors.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { contractorTradeLabels, contractorTrades } from '#lib/config.js';
 	import {
 		contactListSorts,
 		contactListTypes,
@@ -60,7 +65,10 @@
 		f.page = 1;
 	}
 
-	// Contractors carry a trade, so they are added from their own page.
+	const contractorFields = createContractorForm.fields;
+	const tradeOptions = contractorTrades.map((t) => ({ value: t, label: contractorTradeLabels[t] }));
+
+	// Contractors carry a trade, so they are added from the contractor view's own action.
 	const roleOptions = partyRoles
 		.filter((r) => r !== 'contractor')
 		.map((r) => ({ value: r, label: partyRoleLabels[r] }));
@@ -85,9 +93,46 @@
 
 <PageHeader title={m.staff_contacts_title()} subtitle={m.staff_contacts_body()}>
 	{#if only === 'contractor'}
-		<Button variant="ghost" href={resolve('staff/contractors')}>
-			{m.staff_contacts_contractors_page_label()}
-		</Button>
+		<Button variant="ghost" href={withQuery(resolve('staff/tasks'), 'kind=contractor')}
+			>{m.staff_jobs_label()}</Button
+		>
+		{#if data.canAddContractor}
+			<Action
+				action={createContractorForm}
+				label={m.staff_contractors_new_contractor_label()}
+				modalTitle={m.staff_contractors_new_contractor_title()}
+				successToast={m.staff_contractors_success_toast()}
+				onsuccess={(r) => {
+					const id = (r as { id?: string } | undefined)?.id;
+					if (id) goto(resolve(`staff/contacts/${id}`));
+				}}
+			>
+				{#snippet form()}
+					<Field field={contractorFields.name} type="text" label={m.staff_name_label()} />
+					<Field
+						field={contractorFields.trade}
+						type="select"
+						label={m.staff_trade_label()}
+						options={tradeOptions}
+					/>
+					<Field field={contractorFields.contactName} type="text" label={m.staff_contact_label()} />
+					<Field field={contractorFields.phone} type="tel" label={m.staff_phone_label()} />
+					<Field field={contractorFields.email} type="email" label={m.staff_email_label()} />
+					<Field
+						field={contractorFields.licenseNumber}
+						type="text"
+						label={m.staff_licence_number_label()}
+					/>
+					<Field
+						field={contractorFields.insuranceExpiresAt}
+						type="date"
+						label={m.staff_insurance_expires_label()}
+						description={m.staff_contractors_leave_blank_if_we_hold_body()}
+					/>
+					<Field field={contractorFields.notes} type="textarea" label={m.staff_notes_label()} />
+				{/snippet}
+			</Action>
+		{/if}
 	{:else if only === 'sponsor'}
 		<Button variant="ghost" href={resolve('staff/funding')}>
 			{m.staff_contacts_sponsorships_page_label()}
@@ -128,6 +173,43 @@
 </PageHeader>
 
 <PageContent>
+	{#if data.contractorWarnings}
+		{@const w = data.contractorWarnings}
+		{#if w.overdue > 0}
+			<Alert type="warning">
+				<ParaglideMessage
+					message={m.staff_contractors_jobs_past_date_they_were_body}
+					inputs={{
+						staff_contractors_overdue: m.staff_contractors_overdue_body(),
+						length: w.overdue,
+						staff_contractors_open_queue: m.staff_contractors_open_queue_body()
+					}}
+					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+						>{/snippet}{#snippet a({ children })}<a
+							class="link"
+							href={withQuery(resolve('staff/tasks'), 'kind=contractor')}>{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
+			</Alert>
+		{/if}
+		{#if w.lapsing.length > 0}
+			<Alert type="error">
+				<span class="font-medium">{m.staff_insurance_body()}</span>
+				{#each w.lapsing as c (c.id)}
+					<div>
+						<a class="link font-medium" href={resolve(`staff/contacts/${c.id}`)}>{c.name}</a>
+						{#if c.insuranceExpiresAt}
+							— {c.insuranceExpiresAt < new Date()
+								? m.staff_contractors_expired_2_text()
+								: m.staff_contractors_expires_text()}
+							{formatDateShort(c.insuranceExpiresAt)}
+						{/if}
+					</div>
+				{/each}
+			</Alert>
+		{/if}
+	{/if}
+
 	<FilterBar {activeCount} {menuCount} onclear={clear}>
 		{#snippet search()}
 			<SearchInput
