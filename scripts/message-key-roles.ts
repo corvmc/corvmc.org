@@ -34,16 +34,7 @@ const PRIORITY: Role[] = [
 	'body',
 	'text'
 ];
-const TITLE_ELEMENTS = new Set([
-	'h1',
-	'h2',
-	'h3',
-	'h4',
-	'legend',
-	'title',
-	'CardTitle',
-	'SectionHeading'
-]);
+const TITLE_ELEMENTS = new Set(['h1', 'h2', 'h3', 'h4', 'legend', 'title', 'CardTitle']);
 const LABEL_ELEMENTS = new Set([
 	'th',
 	'button',
@@ -55,7 +46,8 @@ const LABEL_ELEMENTS = new Set([
 	'Badge',
 	'summary'
 ]);
-const BODY_ELEMENTS = new Set(['Alert']);
+// `SectionHeading` takes its title as a prop; its children are the paragraph under it.
+const BODY_ELEMENTS = new Set(['Alert', 'SectionHeading']);
 const INLINE_ELEMENTS = new Set(['span', 'strong', 'em', 'b', 'i', 'small', 'abbr']);
 const BLOCKS = /^Svelte(If|Else|Each|Await\w*|Key)Block$/;
 const ERROR_CALLS = new Set(['error', 'fail', 'invalid', 'Error']);
