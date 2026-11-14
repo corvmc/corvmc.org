@@ -184,7 +184,7 @@
 						: undefined}
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
-				<Alert type="warning" href={resolve('staff/settings')}>
+				<Alert type="warning" href={resolve('staff/inbox/channels')}>
 					{m.staff_inbox_id_channel_disabled_enable_settings_inbox_body({
 						channelLabel: channelLabel(t.channel)
 					})}

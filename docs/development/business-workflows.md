@@ -1892,7 +1892,7 @@ from April's.
 >   no Practice space clearance. It says when to arrive (the orientation shift's start), the
 >   address (`org.addressStreet`, `org.addressCity`), that the door code arrives separately and
 >   opens at the reservation's start, and staff's plain-text notes
->   (`volunteer.firstVisitNotes`, Settings → Orientation; empty leaves them out). It replaces
+>   (`volunteer.firstVisitNotes`, Volunteering → Settings → Orientation; empty leaves them out). It replaces
 >   `reservation_reminder` for that booking: the reservation reminder skips uncleared members'
 >   own bookings and any booking already sent `first_visit`.
 
@@ -2345,7 +2345,7 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   deactivation writes one row per member sharing `details.batchId`.
 - **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
   `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
-- **Global log:** `/staff/audit` → `getAuditLog` (`audit.read`, which `user.read` does not
+- **Global log:** `/staff/system/audit` → `getAuditLog` (`audit.read`, which `user.read` does not
   grant) in `src/lib/remote/audit.remote.ts` → `listAuditEntries`, 50 rows a page, filtered by
   action, actor (matched against the stored name and email, so a purged staffer is still
   findable) and a from–to range in whole days.

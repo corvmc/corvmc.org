@@ -3,7 +3,7 @@ import { getAnnualReportPage } from '#lib/remote/reports.remote.js';
 import { getVolunteerReportPage } from '#lib/remote/volunteer.remote.js';
 import { getSpendReport } from '#lib/remote/inventory.remote.js';
 import { getMusicSalesReport } from '#lib/remote/staff-music.remote.js';
-import { filterNavSections, staffNavSections } from '../nav-items';
+import { filterNavItems, staffNavBottom } from '../nav-items';
 import { visibleViews } from '../views';
 import { reportViews } from './views';
 import { load as bare } from './+page.server';
@@ -45,7 +45,7 @@ describe('tabs', () => {
 		[MUSIC, 'music']
 	])('holding only %s shows only %s, and still offers the row', (cap, key) => {
 		expect(visibleViews(reportViews, [cap]).map((v) => v.key)).toEqual([key]);
-		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
+		const rows = filterNavItems(staffNavBottom, [cap]);
 		expect(rows.map((r) => r.key)).toContain('reports');
 	});
 

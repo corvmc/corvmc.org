@@ -67,7 +67,7 @@ export const USAGE_PERSONAS = [
 		name: 'Beatriz Okonkwo',
 		memberNumber: 64,
 		/** "I reconcile what came in." */
-		job: 'treasurer — /staff/payments, but not /staff/settings',
+		job: 'treasurer — /staff/money, but not /staff/system',
 		roles: ['member', 'treasurer'] as const
 	},
 	{

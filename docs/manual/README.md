@@ -172,7 +172,7 @@ auto-creates any missing).
 - [x] `[H]` Author help articles (`/staff/help`, static-vs-dynamic, sync caveat)
 - [x] `[H]` Work the moderation queues (`/staff/moderation/flags`, `/staff/suggestions`) — upholding vs
       dismissing, scoping a restriction, running the idea board
-- [x] `[P]` System settings reference (`/staff/settings` — products, reservations, org, inbox channels)
+- [x] `[P]` System settings reference (`/staff/system` — organization, features, access, audit log)
 
 ---
 

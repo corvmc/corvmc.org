@@ -12,14 +12,13 @@ import { saveSettings } from '#lib/server/site-config/save-settings.js';
 import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
 import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
-import { can, requireCapability } from '#lib/server/authorization.js';
+import { requireCapability } from '#lib/server/authorization.js';
 import {
 	getOrientationSetting,
 	parseOrientationTasks
 } from '#lib/server/volunteer/orientation-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/feature-flags.js';
-import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
 import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
 import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
@@ -131,10 +130,8 @@ export const getIntegrationSettings = query(async () => {
 
 	// Presence, never the value, for the two that mint an access token. Both are
 	// stored now (#745 reversed), and everything this query returns is
-	// serialised to the browser, since
-	// `getStaffSettingsPage` folds it into the payload the staff route SSRs into
-	// its HTML. `clientId` and `deviceId` are not credentials and stay verbatim:
-	// see `CREDENTIALS` in `ultraloc-client.ts`.
+	// serialised to the browser. `clientId` and `deviceId` are not credentials
+	// and stay verbatim: see `CREDENTIALS` in `ultraloc-client.ts`.
 	const [clientSecret, refreshToken] = await Promise.all([
 		credentialStatus('clientSecret'),
 		credentialStatus('refreshToken')
@@ -371,7 +368,7 @@ export const updateOrgSettings = form(
 			{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 		]);
 
-		void getStaffSettingsPage().refresh();
+		void getOrgSettings().refresh();
 		// All three: each public reader has its own query, and refreshing one repaints nothing
 		// for the others.
 		void getContactDetails().refresh();
@@ -406,7 +403,7 @@ export const updateVolunteerValueSettings = form(
 			{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
 		]);
 
-		void getStaffSettingsPage().refresh();
+		void getVolunteeringSettingsPage().refresh();
 
 		return { success: true };
 	})
@@ -446,7 +443,7 @@ export const updateOrientationSettings = form(
 			{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
 		]);
 
-		void getPracticeSpaceSettingsPage().refresh();
+		void getVolunteeringSettingsPage().refresh();
 		return { success: true };
 	})
 );
@@ -528,7 +525,7 @@ export const updateFeatureFlag = form(
 			throw error(400, 'Invalid feature flag');
 		}
 		await saveSettings([{ key: `feature.${data.flag}`, value: data.enabled }]);
-		void getStaffSettingsPage().refresh();
+		void getFeatureFlags().refresh();
 		return { success: true };
 	})
 );
@@ -574,32 +571,27 @@ export const updateIntegrationSettings = form(
 );
 
 /**
- * The staff settings page's one load-bearing query. Every constituent is unparameterized, so each
- * mutation that used to refresh them one at a time can name this wrapper with no argument.
+ * Volunteering's settings page's one load-bearing query (#2763): what an hour is
+ * worth, and the orientation shift a first booking raises.
  */
-export const getStaffSettingsPage = query(z.void(), async () => {
+export const getVolunteeringSettingsPage = query(z.void(), async () => {
 	await requireCapability('settings.read');
-	const [org, volunteerValue, channelConfigs, featureFlags, canManageAccess] = await Promise.all([
-		getOrgSettings(),
+	const [volunteerValue, orientation] = await Promise.all([
 		getVolunteerValueSettings(),
-		getInboxChannelConfigs(),
-		getFeatureFlags(),
-		// Offers the Access tab; `getAccessPage` and the access remotes stay the guard.
-		can('user.setRole')
+		getOrientationSettings()
 	]);
-	return { org, volunteerValue, channelConfigs, featureFlags, canManageAccess };
+	return { volunteerValue, orientation };
 });
 
 /** The Practice space settings page's one load-bearing query, built the same way (#2586). */
 export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
 	await requireCapability('settings.read');
-	const [products, reservation, orientation, venue] = await Promise.all([
+	const [products, reservation, venue] = await Promise.all([
 		getProducts(),
 		getReservationSettings(),
-		getOrientationSettings(),
 		getVenueSettings()
 	]);
-	return { products, reservation, orientation, venue };
+	return { products, reservation, venue };
 });
 
 // ---------------------------------------------------------------------------

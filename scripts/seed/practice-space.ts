@@ -21,7 +21,7 @@ export async function seedPracticeSpaceClearance(volunteerRoles: { id: string; n
 	const statements = readFileSync(MIGRATION, 'utf8').split('--> statement-breakpoint');
 	for (const statement of statements) await db.run(sql.raw(statement));
 
-	// Production sets this on /staff/settings; locally the seed does it, so a
+	// Production sets this on /staff/volunteering/settings; locally the seed does it, so a
 	// first booking raises an orientation shift without a trip to that page.
 	const role = volunteerRoles.find((r) => r.name === 'Rehearsal Orientation');
 	if (role) {

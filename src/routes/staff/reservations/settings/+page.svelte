@@ -13,7 +13,6 @@
 		getPracticeSpaceSettingsPage,
 		updateProduct,
 		updateReservationSettings,
-		updateOrientationSettings,
 		updateVenueSettings,
 		updateFeeGateSettings
 	} from '#lib/remote/settings.remote.js';
@@ -22,7 +21,6 @@
 	const settings = $derived(await getPracticeSpaceSettingsPage());
 	const products = $derived(settings.products);
 	const reservationSettings = $derived(settings.reservation);
-	const orientation = $derived(settings.orientation);
 	const venue = $derived(settings.venue);
 
 	const { fields: reservationFields } = updateReservationSettings;
@@ -346,71 +344,6 @@
 			</Form>
 		</section>
 		<section id="space" class="space-y-4" data-testid="space-settings">
-			<Form
-				remote={updateOrientationSettings}
-				guard
-				successToast={m.staff_settings_orientation_updated_toast()}
-			>
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_orientation_title()}</CardTitle>
-							<SubmitButton
-								label={m.staff_settings_save_label()}
-								successLabel={m.staff_settings_saved_label()}
-								errorLabel={m.staff_settings_error_label()}
-								variant="primary"
-								size="sm"
-							/>
-						</div>
-						<p class="text-subtle">
-							{m.staff_settings_member_s_first_rehearsal_booking_text()}
-						</p>
-
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateOrientationSettings.fields.roleId}
-								label={m.staff_settings_role_label()}
-								type="select"
-								value={orientation.roleId}
-								options={[
-									{ value: '', label: m.staff_settings_none_label() },
-									...orientation.roles.map((r) => ({ value: r.id, label: r.name }))
-								]}
-							/>
-							<FormField
-								field={updateOrientationSettings.fields.minutes}
-								submitAs="text"
-								label={m.staff_settings_length_minutes_label()}
-								type="number"
-								value={String(orientation.minutes)}
-							/>
-							<FormField
-								field={updateOrientationSettings.fields.leadMinutes}
-								submitAs="text"
-								label={m.staff_settings_starts_before_booking_minutes_label()}
-								type="number"
-								value={String(orientation.leadMinutes)}
-							/>
-						</div>
-						<FormField
-							field={updateOrientationSettings.fields.tasks}
-							label={m.staff_settings_checklist_label()}
-							type="textarea"
-							description={m.staff_settings_one_task_per_line_body()}
-							value={orientation.tasks.join('\n')}
-						/>
-						<FormField
-							field={updateOrientationSettings.fields.firstVisitNotes}
-							label={m.staff_settings_first_visit_notes_label()}
-							type="textarea"
-							description={m.staff_settings_first_visit_notes_body()}
-							value={orientation.firstVisitNotes}
-						/>
-					</CardBody>
-				</Card>
-			</Form>
-
 			<Form
 				remote={updateVenueSettings}
 				guard
