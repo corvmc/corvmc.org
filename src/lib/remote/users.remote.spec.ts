@@ -508,7 +508,7 @@ describe('users.remote lockout guards', () => {
 	});
 
 	it('refuses to let a staff member drop their own staff access', async () => {
-		getUserRoles.mockResolvedValue(['staff']);
+		getUserRoles.mockResolvedValue(['admin']);
 		await expectHttpError(
 			// role 3 = member only
 			users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['3'] }),
@@ -516,6 +516,12 @@ describe('users.remote lockout guards', () => {
 			'cannot remove your own staff access'
 		);
 		expect(dbBatch).not.toHaveBeenCalled();
+	});
+
+	it('leaves a job alone: it is an Operations seat, not a picker row (#2992)', async () => {
+		getUserRoles.mockResolvedValue(['staff']);
+		await users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['3'] });
+		expect(dbBatch).toHaveBeenCalled();
 	});
 
 	it('lets a staff member keep their access while changing other roles', async () => {
@@ -877,7 +883,7 @@ describe('updateUser role-set split', () => {
 
 	it('still writes the roles when a holder of user.setRole changes them', async () => {
 		held = new Set(['user.update', 'user.setRole']);
-		await users.updateUser({ ...PROFILE_ONLY, roles: ['2'] });
+		await users.updateUser({ ...PROFILE_ONLY, roles: ['1'] });
 		expect(dbDelete).toHaveBeenCalled();
 		expect(dbInsert).toHaveBeenCalled();
 	});
@@ -904,13 +910,22 @@ describe('staff edits leave an audit entry', () => {
 
 	it('records roles added and removed by name', async () => {
 		getUserRoles.mockResolvedValue(['member']);
-		await users.updateUser({ ...PROFILE, roles: ['2'] });
+		await users.updateUser({ ...PROFILE, roles: ['1'] });
 
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'user.roles_changed',
 			subject: { type: 'user', id: 'victim-user', label: 'Renamed' },
-			details: { added: ['staff'], removed: ['member'] }
+			details: { added: ['admin'], removed: ['member'] }
 		});
+	});
+
+	it('ignores a job submitted through the picker: jobs are Operations seats (#2992)', async () => {
+		getUserRoles.mockResolvedValue(['member']);
+		await users.updateUser({ ...PROFILE, roles: ['2', '3'] });
+
+		expect(recordAuditEntry).not.toHaveBeenCalledWith(
+			expect.objectContaining({ action: 'user.roles_changed' })
+		);
 	});
 
 	it('records the names of changed profile fields, never their values', async () => {

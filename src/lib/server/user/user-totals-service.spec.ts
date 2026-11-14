@@ -12,13 +12,14 @@ const { user } = await import('#lib/server/db/schema/authentication.js');
 const { group, groupMember } = await import('#lib/server/db/schema/group.js');
 const { role, modelHasRole } = await import('#lib/server/db/schema/authorization.js');
 const { instructor } = await import('#lib/server/db/schema/instructor.js');
+const { seatSql } = await import('#lib/server/testing/operations-seat.js');
 
 const SUB = { status: 'active' } as never;
 const GONE = new Date('2026-09-01T00:00:00Z');
 
 beforeEach(() => {
 	sqlite.exec(
-		'DELETE FROM group_member; DELETE FROM "group"; DELETE FROM instructor; DELETE FROM model_has_roles; DELETE FROM roles; DELETE FROM user'
+		'DELETE FROM group_position_holder; DELETE FROM group_member; DELETE FROM "group" WHERE id <> \'operations\'; DELETE FROM instructor; DELETE FROM model_has_roles; DELETE FROM roles; DELETE FROM user'
 	);
 });
 
@@ -82,6 +83,7 @@ describe('userListWhere', () => {
 				u('pending-bandmate'),
 				u('clubber'),
 				u('staffer'),
+				u('admin-user'),
 				u('teacher'),
 				u('paused-teacher'),
 				u('gone', { deletedAt: GONE })
@@ -95,8 +97,10 @@ describe('userListWhere', () => {
 			{ groupId: 'b', userId: 'pending-bandmate', role: 'member', status: 'pending' },
 			{ groupId: 'c', userId: 'clubber', role: 'member', status: 'active' }
 		]);
-		const [r] = await testDb.insert(role).values({ name: 'staff' }).returning();
-		await testDb.insert(modelHasRole).values({ roleId: r.id, userId: 'staffer' });
+		// A job is an Operations seat (#2992); `admin` stays a role row.
+		sqlite.exec(seatSql('staffer', 'staff'));
+		const [r] = await testDb.insert(role).values({ name: 'admin' }).returning();
+		await testDb.insert(modelHasRole).values({ roleId: r.id, userId: 'admin-user' });
 		await testDb.insert(instructor).values([
 			{ userId: 'teacher', status: 'active' },
 			{ userId: 'paused-teacher', status: 'paused' }
@@ -122,7 +126,7 @@ describe('userListWhere', () => {
 	});
 
 	it('filters staff positions and teaching instructors', async () => {
-		expect(await ids({ staff: true })).toEqual(['staffer']);
+		expect((await ids({ staff: true })).sort()).toEqual(['admin-user', 'staffer']);
 		expect(await ids({ instructor: true })).toEqual(['teacher']);
 	});
 

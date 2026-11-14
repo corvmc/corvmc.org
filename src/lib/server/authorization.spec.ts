@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
+import { groupPositionHolder } from '#lib/server/db/schema/group.js';
+import { isJob } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mock the db module with a chainable query builder
@@ -9,12 +11,28 @@ let queryResults: unknown[] = [];
 /** Predicates passed to `.where()`, so they can be rendered to real SQL below. */
 const whereClauses: unknown[] = [];
 
+/**
+ * A row naming a job is held the way production holds it: the Operations
+ * seat read (from `group_position_holder`) answers it, and the role row read
+ * ignores it (#2992). So `[{ name: 'treasurer' }]` still means "a treasurer".
+ */
+const asSeats = (rows: unknown[]) =>
+	(rows as { name?: string }[]).flatMap((r) => (r.name && isJob(r.name) ? [{ job: r.name }] : []));
+
 function chainable() {
+	let from: unknown;
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
 				// Make the chain awaitable — resolve with current queryResults
-				return (resolve: (v: unknown[]) => void) => resolve(queryResults);
+				return (resolve: (v: unknown[]) => void) =>
+					resolve(from === groupPositionHolder ? asSeats(queryResults) : queryResults);
+			}
+			if (prop === 'from') {
+				return (table: unknown) => {
+					from = table;
+					return proxy;
+				};
 			}
 			if (prop === 'where') {
 				return (clause: unknown) => {
@@ -85,11 +103,11 @@ const renderWhere = (index: number) => dialect.sqlToQuery(whereClauses[index] as
 // Tests
 // ---------------------------------------------------------------------------
 describe('getUserRoles', () => {
-	it('returns role names for the user', async () => {
-		queryResults = [{ name: 'admin' }, { name: 'staff' }];
+	it('returns role rows and Operations jobs for the user', async () => {
+		queryResults = [{ name: 'admin' }, { name: 'member' }, { name: 'staff' }];
 
 		const roles = await getUserRoles('user-123');
-		expect(roles).toEqual(['admin', 'staff']);
+		expect(roles).toEqual(['admin', 'member', 'staff']);
 	});
 
 	it('returns empty array when user has no roles', async () => {
@@ -107,11 +125,12 @@ describe('findStaffUserByEmail', () => {
 	});
 
 	it('returns the staff user behind an address', async () => {
-		queryResults = [{ id: 'staff-1', name: 'Ada', email: 'ada@corvmc.org' }];
+		// One row serves both reads: the user, and (named `staff`) their seat.
+		queryResults = [{ id: 'staff-1', name: 'staff', email: 'ada@corvmc.org' }];
 
 		await expect(findStaffUserByEmail('ada@corvmc.org')).resolves.toEqual({
 			id: 'staff-1',
-			name: 'Ada',
+			name: 'staff',
 			email: 'ada@corvmc.org'
 		});
 	});
@@ -130,15 +149,11 @@ describe('findStaffUserByEmail', () => {
 		expect(renderWhere(0)).toContain('lower(');
 	});
 
-	it('only ever matches a role that names a position', async () => {
-		// Derived from positionOrder rather than a hardcoded pair, so a new
-		// position is recognised as staff mail without touching this query — and
-		// a legacy `member` row never is.
-		const { positionOrder } = await import('#lib/config.js');
-		await findStaffUserByEmail('ada@corvmc.org');
+	it('passes over a user holding only legacy rows', async () => {
+		// A `member` row is not a position, so their mail is filed as a contact's.
+		queryResults = [{ id: 'm-1', name: 'member', email: 'ada@corvmc.org' }];
 
-		const placeholders = positionOrder.map(() => '?').join(', ');
-		expect(renderWhere(0)).toContain(`"roles"."name" in (${placeholders})`);
+		await expect(findStaffUserByEmail('ada@corvmc.org')).resolves.toBeNull();
 	});
 
 	it('skips the query entirely for a blank address', async () => {
@@ -327,6 +342,9 @@ describe('grants beyond positions', () => {
 	});
 });
 
+/** One resolution reads the role rows and the Operations seats. */
+const READS_PER_RESOLUTION = 2;
+
 describe('the per-request memo', () => {
 	it('reads positions once across sequential checks', async () => {
 		asUser();
@@ -334,7 +352,7 @@ describe('the per-request memo', () => {
 		await can('user.list');
 		await can('user.read');
 		await can('settings.read');
-		expect(selectCalls.n).toBe(1);
+		expect(selectCalls.n).toBe(READS_PER_RESOLUTION);
 	});
 
 	it('reads positions once across CONCURRENT checks', async () => {
@@ -346,7 +364,7 @@ describe('the per-request memo', () => {
 		asUser();
 		queryResults = [{ name: 'staff' }];
 		await Promise.all([can('user.list'), can('user.read'), can('settings.read')]);
-		expect(selectCalls.n).toBe(1);
+		expect(selectCalls.n).toBe(READS_PER_RESOLUTION);
 	});
 
 	it('does not leak across requests', async () => {

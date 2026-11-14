@@ -28,6 +28,7 @@ import { db, dispose } from './seed/db';
 import { deleteAll } from './seed/teardown';
 import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
+import { seedOperations } from './seed/operations';
 import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
 import { findRoomConflicts, resetRoom } from './seed/room';
@@ -134,6 +135,8 @@ async function main() {
 	await deleteAll();
 
 	const roles = await seedRoles();
+	// Before anyone is given a job: a job is a seat in it (#2992).
+	await seedOperations();
 	const adminUser = await seedAdminUser();
 	const users = await seedUsers(20);
 	await seedUserRoles(users, adminUser, roles);

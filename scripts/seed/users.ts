@@ -5,6 +5,8 @@ import {
 } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole, role } from '../../src/lib/server/db/schema/authorization';
 import { batchInsert, db } from './db';
+import { seatInOperations } from './operations';
+import type { Job } from '../../src/lib/config';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingTags } from './pending';
 import {
@@ -26,26 +28,9 @@ import { eq } from 'drizzle-orm';
 
 export async function seedRoles(): Promise<SeedRole[]> {
 	console.log('Seeding roles...');
-	// The named positions are seeded alongside the legacy rows so local dev has
-	// somebody to sign in as for each one. Without them the matrix is only ever
-	// exercised by `staff`, which holds nearly everything, and a narrowed
-	// position is something you can only read about. See positionLabels in
-	// src/lib/config.ts.
-	const roles = [
-		'admin',
-		'staff',
-		'technology_coordinator',
-		'volunteer_coordinator',
-		'site_moderator',
-		'treasurer',
-		'outreach_coordinator',
-		'content_editor',
-		'teacher_reviewer',
-		'auditor',
-		'member',
-		'volunteer',
-		'sustaining'
-	];
+	// `admin` and the legacy rows. Every other position is a seat in
+	// Operations (#2992), given by `seatInOperations`.
+	const roles = ['admin', 'member', 'volunteer', 'sustaining'];
 	const inserted: SeedRole[] = [];
 	for (const name of roles) {
 		const [r] = await db.insert(role).values({ name, guardName: 'web' }).returning();
@@ -168,26 +153,23 @@ export async function seedAdminUser(): Promise<SeedUser> {
 export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, roles: SeedRole[]) {
 	console.log('Assigning roles...');
 	const adminRole = roles.find((r) => r.name === 'admin')!;
-	const staffRole = roles.find((r) => r.name === 'staff')!;
 	const memberRole = roles.find((r) => r.name === 'member')!;
 	const volunteerRole = roles.find((r) => r.name === 'volunteer')!;
 	const sustainingRole = roles.find((r) => r.name === 'sustaining')!;
 
 	await batchInsert(modelHasRole, [
 		{ roleId: adminRole.id, userId: adminUser.id },
-		{ roleId: staffRole.id, userId: adminUser.id },
 		{ roleId: memberRole.id, userId: adminUser.id }
 	]);
+	await seatInOperations(adminUser.id, 'staff');
 
 	for (let i = 0; i < 2; i++) {
-		await batchInsert(modelHasRole, [
-			{ roleId: adminRole.id, userId: users[i].id },
-			{ roleId: staffRole.id, userId: users[i].id }
-		]);
+		await batchInsert(modelHasRole, [{ roleId: adminRole.id, userId: users[i].id }]);
+		await seatInOperations(users[i].id, 'staff');
 	}
 
 	for (let i = 2; i < 5; i++) {
-		await db.insert(modelHasRole).values({ roleId: staffRole.id, userId: users[i].id });
+		await seatInOperations(users[i].id, 'staff');
 	}
 
 	// One holder per named position, so the staff user list shows the matrix.
@@ -195,19 +177,15 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 	// as — reviewing the narrowing against a real screen is what the loginable
 	// position personas in `usage-personas.ts` are for. Both exist: this fills the
 	// org chart, those exercise it.
-	const positionSeeds: Array<[string, number]> = [
+	const positionSeeds: Array<[Job, number]> = [
 		['technology_coordinator', 5],
 		['volunteer_coordinator', 6],
 		['site_moderator', 7],
 		['treasurer', 8]
 	];
 	for (const [name, index] of positionSeeds) {
-		const positionRole = roles.find((r) => r.name === name);
-		if (!positionRole || !users[index]) continue;
-		await db
-			.insert(modelHasRole)
-			.values({ roleId: positionRole.id, userId: users[index].id })
-			.onConflictDoNothing();
+		if (!users[index]) continue;
+		await seatInOperations(users[index].id, name);
 		console.log(`  ${name}: ${users[index].email}`);
 	}
 

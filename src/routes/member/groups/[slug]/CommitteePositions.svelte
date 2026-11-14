@@ -31,6 +31,8 @@
 			id: string;
 			name: string;
 			isChair: boolean;
+			/** A staff position in Operations, set on the Access page (#2992). */
+			job: string | null;
 			holders: { memberId: string; member: MemberRef }[];
 		}[];
 		/** Active roster rows, the only people a position can go to. */
@@ -102,57 +104,59 @@
 					</td>
 					{#if canManage}
 						<td class="w-px">
-							<div class="flex w-max justify-end gap-2">
-								<Action
-									action={edit}
-									label={msg.member_edit_label()}
-									aria-label={msg.member_groups_slug_edit_position_label({ name: p.name })}
-									modalTitle={msg.member_groups_slug_edit_position_title({ name: p.name })}
-									successToast={msg.member_groups_slug_position_saved_toast()}
-									variant="ghost"
-									size="xs"
-									onsuccess={onchanged}
-								>
-									{#snippet form()}
-										<div class="space-y-4">
-											<input {...edit.fields.slug.as('hidden', slug)} />
-											<input {...edit.fields.positionId.as('hidden', p.id)} />
-											<FormField
-												field={edit.fields.name}
-												type="text"
-												label={msg.member_name_label()}
-												value={p.name}
-												maxlength="60"
-												required
-											/>
-											<CheckboxGroup
-												field={edit.fields.memberIds}
-												legend={msg.member_groups_slug_holders_title()}
-												description={msg.member_groups_slug_holders_body()}
-												selected={p.holders.map((h) => h.memberId)}
-												options={memberOptions}
-											/>
-										</div>
-									{/snippet}
-								</Action>
-								{#if !p.isChair}
+							{#if !p.job}
+								<div class="flex w-max justify-end gap-2">
 									<Action
-										action={remove}
-										label={msg.member_groups_slug_remove_label()}
-										aria-label={msg.member_groups_slug_remove_2_label({ title: p.name })}
-										confirm={msg.member_groups_slug_remove_position_body({ name: p.name })}
-										successToast={msg.member_groups_slug_position_removed_toast()}
+										action={edit}
+										label={msg.member_edit_label()}
+										aria-label={msg.member_groups_slug_edit_position_label({ name: p.name })}
+										modalTitle={msg.member_groups_slug_edit_position_title({ name: p.name })}
+										successToast={msg.member_groups_slug_position_saved_toast()}
 										variant="ghost"
 										size="xs"
 										onsuccess={onchanged}
 									>
 										{#snippet form()}
-											<input {...remove.fields.slug.as('hidden', slug)} />
-											<input {...remove.fields.positionId.as('hidden', p.id)} />
+											<div class="space-y-4">
+												<input {...edit.fields.slug.as('hidden', slug)} />
+												<input {...edit.fields.positionId.as('hidden', p.id)} />
+												<FormField
+													field={edit.fields.name}
+													type="text"
+													label={msg.member_name_label()}
+													value={p.name}
+													maxlength="60"
+													required
+												/>
+												<CheckboxGroup
+													field={edit.fields.memberIds}
+													legend={msg.member_groups_slug_holders_title()}
+													description={msg.member_groups_slug_holders_body()}
+													selected={p.holders.map((h) => h.memberId)}
+													options={memberOptions}
+												/>
+											</div>
 										{/snippet}
 									</Action>
-								{/if}
-							</div>
+									{#if !p.isChair}
+										<Action
+											action={remove}
+											label={msg.member_groups_slug_remove_label()}
+											aria-label={msg.member_groups_slug_remove_2_label({ title: p.name })}
+											confirm={msg.member_groups_slug_remove_position_body({ name: p.name })}
+											successToast={msg.member_groups_slug_position_removed_toast()}
+											variant="ghost"
+											size="xs"
+											onsuccess={onchanged}
+										>
+											{#snippet form()}
+												<input {...remove.fields.slug.as('hidden', slug)} />
+												<input {...remove.fields.positionId.as('hidden', p.id)} />
+											{/snippet}
+										</Action>
+									{/if}
+								</div>
+							{/if}
 						</td>
 					{/if}
 				</tr>

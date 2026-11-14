@@ -166,8 +166,9 @@ A standing shared credential is a permanent risk to defend; a documented procedu
 occasional one. This needs infrastructure access, which is already a smaller circle than
 staff, and it leaves a trail in the Cloudflare audit log.
 
-**Grant somebody a position.** Positions live in `roles`, assignment in `model_has_roles`.
-Both are plain rows; nothing is cached beyond the request.
+**Grant somebody admin.** `admin` lives in `roles`, assignment in `model_has_roles`.
+Both are plain rows; nothing is cached beyond the request. Every other position is a seat in
+the Operations committee (#2992), given on the Access page once an admin can sign in.
 
 ```bash
 # 1. Confirm the position exists and note its id.

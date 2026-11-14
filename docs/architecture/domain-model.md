@@ -206,6 +206,15 @@ vacates it. A position may have several holders or none. A band's or club's seat
 stays the free-text `group_member.position`, which for a band is the instrument line on
 its site and press kit.
 
+Operations is the staff department (#2992): a committee with the fixed id `operations` and
+one position per job in the matrix, its `job` column naming it. Holding one is what grants
+that job's capabilities; `positionsFor` reads the seats, and `admin` alone stays a
+`model_has_roles` row. Its chair position carries `operations_chair`, which holds
+`committee.manage`. A job seat is filled on the Access page under `user.setRole`, never
+from the committee's own position editor, and nothing outside Operations sets `job`.
+`scripts/position-assignment-reads.spec.ts` keeps the role tables to the files that also
+read the seats.
+
 One position per committee has `is_chair` set, enforced by a partial unique index, and
 holding it makes someone chair (#3009). Every committee has one from creation, and it
 cannot be removed. A committee row's stored `group_member.role` is always `member`.

@@ -1,17 +1,21 @@
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { group, groupMember } from '#lib/server/db/schema/group.js';
+import {
+	group,
+	groupMember,
+	groupPosition,
+	groupPositionHolder
+} from '#lib/server/db/schema/group.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { instructor } from '#lib/server/db/schema/instructor.js';
 import { containsLiteral } from '#lib/server/db/like.js';
-import { positionOrder } from '#lib/config.js';
+import { OPERATIONS_GROUP_ID } from '#lib/config.js';
 import {
 	and,
 	count,
 	eq,
 	exists,
 	gte,
-	inArray,
 	isNotNull,
 	isNull,
 	not,
@@ -46,15 +50,32 @@ export const inBandUser = (): SQL =>
 			)
 	);
 
-/** Holds any staff position (admin, staff, coordinators, treasurer, moderator). */
+/** Holds any staff position: an `admin` role row or a job seat in Operations (#2992). */
 export const positionHolder = (): SQL =>
-	exists(
-		db
-			.select({ one: sql`1` })
-			.from(modelHasRole)
-			.innerJoin(role, eq(role.id, modelHasRole.roleId))
-			.where(and(eq(modelHasRole.userId, user.id), inArray(role.name, positionOrder)))
-	);
+	or(
+		exists(
+			db
+				.select({ one: sql`1` })
+				.from(modelHasRole)
+				.innerJoin(role, eq(role.id, modelHasRole.roleId))
+				.where(and(eq(modelHasRole.userId, user.id), eq(role.name, 'admin')))
+		),
+		exists(
+			db
+				.select({ one: sql`1` })
+				.from(groupPositionHolder)
+				.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+				.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+				.where(
+					and(
+						eq(groupMember.userId, user.id),
+						eq(groupMember.status, 'active'),
+						eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+						isNotNull(groupPosition.job)
+					)
+				)
+		)
+	)!;
 
 /** Teaching here now: an approved listing that is not paused or retired. */
 export const teachingInstructor = (): SQL =>

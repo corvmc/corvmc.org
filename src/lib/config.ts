@@ -2332,8 +2332,9 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 //
 // A **capability** is what a guard names. A **position** is what a person
 // holds. The matrix below is the association between them; assignment — who
-// holds which position — stays in `model_has_roles`, because that is the part
-// that genuinely changes at runtime. See docs/decisions/0032-guards-name-capabilities.md.
+// holds which position — is data: a seat in the Operations committee
+// (`group_position.job`), or a `model_has_roles` row for `admin`.
+// See docs/decisions/0032-guards-name-capabilities.md.
 //
 // Guards name capabilities rather than roles so that re-answering "who may do
 // this" is an edit to one file instead of a hunt through several hundred call
@@ -2469,6 +2470,8 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
  * A position is one job, grantable alone (#2838): a real person holds that
  * title, or a volunteer does that job. `staff` is the union of them until it
  * retires. `config.spec.ts` fails on a capability no job position holds.
+ * Every position but `admin` is held as a seat in the Operations committee
+ * (`jobs`, #2992); `admin` alone stays a `model_has_roles` row.
  *
  * A committee is NOT a position. Committee membership is plural, rotating and
  * domain-scoped, and it already has a table and a lifecycle: a committee is a
@@ -2479,6 +2482,7 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
 export const positionLabels = {
 	admin: 'Administrator',
 	staff: 'Staff',
+	operations_chair: 'Operations Chair',
 	technology_coordinator: 'Technology Coordinator',
 	volunteer_coordinator: 'Volunteer Coordinator',
 	site_moderator: 'Site Moderator',
@@ -2491,6 +2495,20 @@ export const positionLabels = {
 
 export type Position = keyof typeof positionLabels;
 export const positionOrder = Object.keys(positionLabels) as Position[];
+
+/** A position held as a seat in Operations: every one but `admin` (#2992). */
+export type Job = Exclude<Position, 'admin'>;
+export const jobs = positionOrder.filter((p): p is Job => p !== 'admin') as [Job, ...Job[]];
+
+export function isJob(name: string): name is Job {
+	return (jobs as readonly string[]).includes(name);
+}
+
+/**
+ * The Operations committee: the staff department. Its id is fixed so the
+ * migration, the seed and the resolver name the same row.
+ */
+export const OPERATIONS_GROUP_ID = 'operations';
 
 /** Every action of every resource — what `admin` holds. */
 export const allCapabilities = Object.fromEntries(
@@ -2573,6 +2591,12 @@ export const positions: Record<Position, Grants> = {
 	// or move credit. Everything else they could do, they still can.
 	staff: staffCapabilities,
 
+	// The chair seat of Operations: oversight of the other committees (#3009).
+	// `group.read` reaches the committee pages that oversight is done from.
+	operations_chair: {
+		committee: ['manage'],
+		group: ['read']
+	},
 	technology_coordinator: {
 		settings: ['read', 'update'],
 		// They ran the lock self-test under `settings.update` before it was split

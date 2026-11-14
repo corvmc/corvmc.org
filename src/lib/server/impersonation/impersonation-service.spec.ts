@@ -10,6 +10,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+const { seatSql } = await import('#lib/server/testing/operations-seat.js');
+const { isJob } = await import('#lib/config.js');
 
 const requestEvent = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock('$app/server', () => ({
@@ -29,6 +31,7 @@ const { impersonatorId } = await import('./impersonation-guard');
 const ADMIN = { id: 'u-admin', name: 'Ada Admin', email: 'ada@example.com' };
 
 function grant(userId: string, position: string) {
+	if (isJob(position)) return sqlite.exec(seatSql(userId, position));
 	sqlite.exec(`insert or ignore into roles (name, guard_name) values ('${position}', 'web')`);
 	sqlite.exec(
 		`insert into model_has_roles (role_id, user_id) select id, '${userId}' from roles where name = '${position}'`
@@ -65,7 +68,9 @@ function viewing(method: string, pathname = '/_app/remote/abc/updateProfile') {
 
 beforeEach(() => {
 	requestEvent.current = null;
-	sqlite.exec('delete from audit_log; delete from model_has_roles; delete from user;');
+	sqlite.exec(
+		'delete from audit_log; delete from model_has_roles; delete from group_position_holder; delete from group_member; delete from user;'
+	);
 	sqlite.exec(
 		`insert into user (id, name, email, email_verified) values
 			('u-admin', 'Ada Admin', 'ada@example.com', 1),

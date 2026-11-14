@@ -45,7 +45,7 @@ function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
 		get(_, prop) {
 			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve([{ name: 'staff' }]);
+				return (resolve: (v: unknown[]) => void) => resolve([{ name: 'staff', job: 'staff' }]);
 			}
 			return () => proxy;
 		}

@@ -1,5 +1,6 @@
 import { and, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	group,
 	groupMember,
@@ -81,6 +82,14 @@ export function leadersFirst(): SQL {
 // Writes
 // ---------------------------------------------------------------------------
 
+/** A chair seat that is a staff position (#2992). Not `PositionError`: this file stays a leaf. */
+export class StaffSeatError extends DomainError {
+	readonly httpStatus = 400;
+	constructor() {
+		super('Staff positions are set on the Access page.');
+	}
+}
+
 async function findChairPosition(groupId: string) {
 	const [row] = await db
 		.select({ id: groupPosition.id })
@@ -112,7 +121,10 @@ export async function ensureChairPosition(groupId: string): Promise<string> {
 	return named;
 }
 
-/** Fill or vacate the chair for one roster row of a committee. */
+/**
+ * Fill or vacate the chair for one roster row of a committee. Operations'
+ * chair is a staff position (#2992), set only on the Access page.
+ */
 export async function setChairHolder(
 	groupId: string,
 	memberId: string,
@@ -120,6 +132,11 @@ export async function setChairHolder(
 	assignedById: string | null
 ): Promise<void> {
 	const positionId = await ensureChairPosition(groupId);
+	const [seat] = await db
+		.select({ job: groupPosition.job })
+		.from(groupPosition)
+		.where(eq(groupPosition.id, positionId));
+	if (seat?.job) throw new StaffSeatError();
 	if (chair) {
 		await db
 			.insert(groupPositionHolder)

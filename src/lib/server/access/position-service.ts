@@ -5,7 +5,8 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { getUserRoles, isPosition } from '#lib/server/authorization.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
-import type { Position } from '#lib/config.js';
+import { isJob, type Position } from '#lib/config.js';
+import { seatJob, unseatJob } from './operations-service';
 
 /** A position change that would lock people out of the panel. */
 export class PositionChangeRefusedError extends DomainError {
@@ -51,8 +52,8 @@ export async function positionChangeRefusal(input: {
 
 /**
  * Give or take one position, recorded as `user.roles_changed` exactly as the
- * profile form records it. A position with no `roles` row yet gets one: the
- * matrix, not the table, says which positions exist.
+ * profile form records it. A job is a seat in Operations (#2992); `admin` is
+ * a role row, made if the table has none.
  */
 export async function setPosition(input: {
 	actorId: string;
@@ -68,16 +69,21 @@ export async function setPosition(input: {
 	const refusal = await positionChangeRefusal({ actorId, targetId, current, next });
 	if (refusal) throw refusal;
 
-	if (held) {
-		await db.insert(role).values({ name: position }).onConflictDoNothing();
-	}
-	const [found] = await db.select({ id: role.id }).from(role).where(eq(role.name, position));
-	if (held) {
-		await db.insert(modelHasRole).values({ roleId: found.id, userId: targetId });
+	if (isJob(position)) {
+		if (held) await seatJob(targetId, position, actorId);
+		else await unseatJob(targetId, position);
 	} else {
-		await db
-			.delete(modelHasRole)
-			.where(and(eq(modelHasRole.roleId, found.id), eq(modelHasRole.userId, targetId)));
+		if (held) {
+			await db.insert(role).values({ name: position }).onConflictDoNothing();
+		}
+		const [found] = await db.select({ id: role.id }).from(role).where(eq(role.name, position));
+		if (held) {
+			await db.insert(modelHasRole).values({ roleId: found.id, userId: targetId });
+		} else {
+			await db
+				.delete(modelHasRole)
+				.where(and(eq(modelHasRole.roleId, found.id), eq(modelHasRole.userId, targetId)));
+		}
 	}
 
 	const change = held ? { added: [position], removed: [] } : { added: [], removed: [position] };
