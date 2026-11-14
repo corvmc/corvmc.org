@@ -3162,5 +3162,7 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 		keys: /^staff_(return|local_resources|members_instructors|members_id_panels_instructor)/
 	},
 	{ word: /\bwork orders?\b/i, use: 'task' },
-	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' }
+	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' },
+	// A certification implies a regulating body (#2511, owner 2026-11-10).
+	{ word: /\bcertifications?\b/i, use: 'clearance' }
 ];
