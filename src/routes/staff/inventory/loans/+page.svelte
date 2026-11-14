@@ -33,8 +33,8 @@
 	const kind = $derived(pageState.url.searchParams.get('kind') === 'kits' ? 'kits' : '');
 	function setKind(next: string) {
 		goto(withQuery(resolve('staff/inventory/loans'), next ? `?kind=${next}` : ''), {
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 

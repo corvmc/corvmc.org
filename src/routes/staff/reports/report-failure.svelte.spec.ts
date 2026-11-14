@@ -5,7 +5,7 @@ import OuterBoundary from '#lib/components/ui/OuterBoundary.test.svelte';
 import Annual from './annual/+page.svelte';
 import Volunteering from './volunteering/+page.svelte';
 import InventorySpend from './inventory-spend/+page.svelte';
-import Acquisitions from './acquisitions/+page.svelte';
+import Acquisitions from '../inventory/acquisitions/+page.svelte';
 
 // A query that refuses, shaped like a remote: thenable, with `refresh`.
 const refused = vi.hoisted(() => () => {
@@ -18,14 +18,15 @@ vi.mock('#lib/remote/reports.remote.js', () => ({ getAnnualReportPage: refused }
 vi.mock('#lib/remote/volunteer.remote.js', () => ({ getVolunteerReportPage: refused }));
 vi.mock('#lib/remote/inventory.remote.js', () => ({
 	getSpendReport: refused,
-	getAcquisitions: refused
+	getAcquisitions: refused,
+	getForm8282Obligations: refused
 }));
 vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: () => Promise.resolve({ capabilities: [] })
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
-// Each tab has to reach the panel layout's boundary: that is what tells a viewer
+// Each tab, and Equipment's Acquisitions list (#2767), has to reach the panel layout's boundary: that is what tells a viewer
 // the report did not load, and a rejection nothing handles renders as nothing.
 describe('a report tab whose query fails', () => {
 	it.each([

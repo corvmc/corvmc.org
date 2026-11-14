@@ -5,7 +5,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { RecordForm8282Action } from '#lib/components/actions/index.js';
+	import RecordForm8282Action from '#lib/components/actions/RecordForm8282Action.svelte';
 	import { resolve } from '$app/paths';
 	import { getForm8282Obligations } from '#lib/remote/inventory.remote.js';
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
