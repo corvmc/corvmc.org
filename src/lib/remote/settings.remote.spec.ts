@@ -53,6 +53,10 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
 }));
+// The audit row is `save-settings.spec.ts`'s; here only the write is asserted.
+vi.mock('#lib/server/site-config/save-settings.js', () => ({
+	saveSettings: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]]))
+}));
 
 vi.mock('#lib/server/volunteer/orientation-service.js', () => ({
 	getOrientationSetting: async () => ({ roleId: '', minutes: 30, leadMinutes: 10, tasks: [] }),

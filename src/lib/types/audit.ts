@@ -8,6 +8,15 @@
  */
 export const auditActions = [
 	'reservation.cancelled_by_staff',
+	'reservation.comped',
+	'reservation.refunded',
+	'clearance.granted',
+	'clearance.revoked',
+	'orientation.waived',
+	'settings.changed',
+	'event.visibility_changed',
+	'contact.deleted',
+	'organization.deleted',
 	'band.deactivated',
 	'band.reactivated',
 	'user.roles_changed',
@@ -88,7 +97,8 @@ export const auditSubjectTypes = [
 	'inventory_asset',
 	'organization',
 	'contact',
-	'email_blocklist'
+	'email_blocklist',
+	'setting'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -104,6 +114,25 @@ export interface AuditDetailsByAction {
 		startTime: string;
 		endTime: string;
 	};
+	/** The subject is the member who booked. `waivedCents` is the cash due set aside. */
+	'reservation.comped': ReservationWhen & { waivedCents: number };
+	/** The subject is the member who booked. `cancelled` when the refund also cancelled it. */
+	'reservation.refunded': ReservationWhen & { cancelled: boolean; reason: string | null };
+	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */
+	'clearance.granted': ClearanceRef & { grantedOn: string; expiresOn: string | null };
+	'clearance.revoked': ClearanceRef & { reason: string };
+	/** The subject is the member. */
+	'orientation.waived': { reason: string };
+	/** One save. A secret's key is listed with no values (`redacted`). */
+	'settings.changed': {
+		changes: { key: string; from?: string | number | boolean; to?: string | number | boolean }[];
+		redacted?: string[];
+	};
+	'event.visibility_changed': { from: string; to: string };
+	/** The subject label is the deleted person's name. */
+	'contact.deleted': { organizationId: string | null };
+	/** The subject label is the deleted organization's name. */
+	'organization.deleted': Record<string, never>;
 	'band.deactivated': { bandId: string; bandName: string };
 	'band.reactivated': { bandId: string; bandName: string };
 	'user.roles_changed': { added: string[]; removed: string[] };
@@ -141,7 +170,7 @@ export interface AuditDetailsByAction {
 	/** The subject survived; `mergedName` is the record folded into it and deleted. */
 	'organization.merged': { mergedId: string; mergedName: string };
 	/** Names only, never an address or a number. */
-	'contact.merged': { mergedId: string };
+	'contact.merged': { mergedId: string; mergedName?: string | null };
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
 	/** The resolution set aside, null when there was none. Kept as long as the incident is. */
 	'incident.reopened': { previousResolution: string | null };
@@ -322,6 +351,21 @@ interface WorkOrderTiming {
 	startsAt: string | null;
 	endsAt: string | null;
 	dueAt: string | null;
+}
+
+/** A booking's slot, pre-formatted in the space's zone, as `reservation.cancelled_by_staff` keeps it. */
+interface ReservationWhen {
+	reservationId: string;
+	date: string;
+	startTime: string;
+	endTime: string;
+}
+
+/** One held clearance: the member's row and the catalog entry it grants. */
+interface ClearanceRef {
+	memberCertificationId: string;
+	certificationId: string;
+	certificationName: string;
 }
 
 /** A show's status move. `eventId` is what the log links to; the production has no page. */

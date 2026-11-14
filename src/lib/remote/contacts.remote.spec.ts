@@ -14,7 +14,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: async () => ({ id: 'acting-staff' }),
 	can: async (cap: string) => held.has(cap)
 }));
-vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
+const recordAuditEntry = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 
 const org = { id: 'o1', name: 'Arts Council', website: null, notes: null, archivedAt: null };
 const orgs = {
@@ -47,7 +48,8 @@ const people = {
 	deleteContact: vi.fn(async () => undefined),
 	moveOrganizationPeople: vi.fn(async () => undefined),
 	listContactMergeSuggestions: vi.fn(async () => []),
-	mergeContacts: vi.fn(async () => 'Priya')
+	mergeContacts: vi.fn(async () => 'Priya'),
+	getPerson: vi.fn(async (id: string) => ({ id, name: id === 'c2' ? 'Sam Okafor' : 'Priya' }))
 };
 vi.mock('#lib/server/directory/contact-service.js', () => people);
 const list = {
@@ -176,6 +178,29 @@ describe('contacts.remote writes', () => {
 			expect(spy).toHaveBeenCalled();
 		});
 	}
+
+	// A deleted person's name is the only trace of them the log can keep (#2823).
+	it('names the person a removal deleted', async () => {
+		held = new Set(['contact.read', 'contact.manage']);
+		await remote.removePerson({ id: 'c2', organizationId: 'o1' });
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: 'contact.deleted',
+				subject: { type: 'contact', id: 'c2', label: 'Sam Okafor' }
+			})
+		);
+	});
+
+	it('names the person a merge folded away', async () => {
+		held = new Set(['contact.read', 'contact.manage']);
+		await remote.mergePeople({ survivorId: 'c1', otherId: 'c2' });
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: 'contact.merged',
+				details: { mergedId: 'c2', mergedName: 'Sam Okafor' }
+			})
+		);
+	});
 
 	it('sends a contractor to the Contractors page, which asks for the trade', async () => {
 		held = new Set(['contact.manage']);

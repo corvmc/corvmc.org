@@ -86,6 +86,14 @@ export async function recordAuditEntry(input: AuditEntryInput): Promise<void> {
 	}
 }
 
+/** A member as an entry's subject, labelled with their name so the row outlives a purge. */
+export async function memberSubject(
+	userId: string
+): Promise<{ type: 'user'; id: string; label: string | null }> {
+	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+	return { type: 'user', id: userId, label: row?.name ?? null };
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------

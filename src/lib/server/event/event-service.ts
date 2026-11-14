@@ -899,6 +899,15 @@ export async function update(
 				) as (typeof eventListing.$inferSelect)[])
 			: await write;
 
+	// The column defaults to public, so a row read without it was public.
+	const visibilityBefore = existing.visibility ?? 'public';
+	if (params.visibility !== undefined && params.visibility !== visibilityBefore) {
+		await recordAuditEntry({
+			action: 'event.visibility_changed',
+			subject: { type: 'event', id: eventId, label: updated.title },
+			details: { from: visibilityBefore, to: params.visibility }
+		});
+	}
 	if (isCancelled) {
 		await recordAuditEntry({
 			action: 'event.edited_while_cancelled',

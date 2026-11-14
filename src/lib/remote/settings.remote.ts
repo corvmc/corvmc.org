@@ -7,11 +7,8 @@ import {
 	updateProductConfig,
 	type ProductKey
 } from '#lib/server/finance/product-config-service.js';
-import {
-	getConfigsByPrefix,
-	updateSiteConfigs,
-	updateSiteConfig
-} from '#lib/server/site-config/site-config-service.js';
+import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
+import { saveSettings } from '#lib/server/site-config/save-settings.js';
 import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
 import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
@@ -258,7 +255,7 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		);
 	}
 
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'reservation.operatingHoursStart', value: data.operatingHoursStart },
 		{ key: 'reservation.operatingHoursEnd', value: data.operatingHoursEnd },
 		{ key: 'reservation.timeSlotMinutes', value: data.timeSlotMinutes },
@@ -321,7 +318,7 @@ export const updateTeachingTerms = form(teachingTermsSchema, async (raw, issue) 
 		);
 	}
 
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'reservation.teachingRateCents', value: data.teachingRate },
 		{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
 		{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: data.teachingMaxAdvanceDaysOneoff },
@@ -352,7 +349,7 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof orgSettingsSchema>;
 
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
 		{ key: 'org.addressCity', value: data.addressCity ?? '' },
 		{ key: 'org.addressState', value: data.addressState ?? '' },
@@ -389,7 +386,7 @@ export const updateVolunteerValueSettings = form(volunteerValueSchema, async (ra
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof volunteerValueSchema>;
 
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
 		{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
 	]);
@@ -423,7 +420,7 @@ export const updateOrientationSettings = form(orientationSchema, async (raw) => 
 	const tasks = parseOrientationTasks(data.tasks ?? '');
 	if (tasks.length > 20) error(422, 'At most 20 tasks.');
 
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
 		{ key: 'volunteer.orientationMinutes', value: minutes },
 		{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
@@ -447,7 +444,7 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 	await requireCapability('settings.update');
 	const data = raw as z.infer<typeof venueSettingsSchema>;
 
-	await updateSiteConfigs([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
+	await saveSettings([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
 
 	void getPracticeSpaceSettingsPage().refresh();
 
@@ -465,7 +462,7 @@ const feeGateSettingsSchema = z.object({
 
 export const updateFeeGateSettings = form(feeGateSettingsSchema, async (data) => {
 	await requireCapability('settings.update');
-	await updateSiteConfigs([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
+	await saveSettings([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
 	void getPracticeSpaceSettingsPage().refresh();
 	return { success: true };
 });
@@ -505,7 +502,7 @@ export const updateFeatureFlag = form(
 		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
 			throw error(400, 'Invalid feature flag');
 		}
-		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
+		await saveSettings([{ key: `feature.${data.flag}`, value: data.enabled }]);
 		void getStaffSettingsPage().refresh();
 		return { success: true };
 	}
@@ -531,7 +528,7 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 
 	// A blank secret means "unchanged", not "clear it": the field is never
 	// rendered with its value, so an untouched one submits empty.
-	await updateSiteConfigs([
+	await saveSettings([
 		{ key: 'integration.utec.clientId', value: data.clientId },
 		{ key: 'integration.utec.deviceId', value: data.deviceId },
 		...(data.clientSecret

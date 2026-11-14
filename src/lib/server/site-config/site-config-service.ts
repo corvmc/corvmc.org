@@ -257,7 +257,7 @@ export async function updateSiteConfig(
  * acceptable for a settings form and would not be for a ledger.
  */
 export async function updateSiteConfigs(
-	entries: Array<{ key: string; value: string | number }>
+	entries: Array<{ key: string; value: string | number | boolean }>
 ): Promise<void> {
 	await Promise.all(entries.map((entry) => updateSiteConfig(entry.key, entry.value)));
 }
