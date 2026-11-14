@@ -375,9 +375,10 @@ export async function getEventDoorTakings(eventId: string): Promise<DoorTakings>
 			.from(donation)
 			.where(and(eq(donation.eventId, eventId), eq(donation.status, 'paid')))
 	]);
+	const sums: Record<string, number> = row ?? {};
 	const line = (p: (typeof doorPayments)[number]) => ({
-		tickets: Number(row?.[`${p}Tickets`] ?? 0),
-		grossCents: Number(row?.[`${p}Gross`] ?? 0)
+		tickets: Number(sums[`${p}Tickets`] ?? 0),
+		grossCents: Number(sums[`${p}Gross`] ?? 0)
 	});
 	return {
 		card: line('card'),
