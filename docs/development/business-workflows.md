@@ -184,7 +184,7 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 ### The status track
 
 A reservation is shown with one status, its track (#2861,
-[decision 0081](../decisions/0081-a-reservation-shows-one-status-track.md)). It is derived from
+[decision 0082](../decisions/0082-a-reservation-shows-one-status-track.md)). It is derived from
 `status` and the payment columns and never stored. Staff and members read the same words.
 
 | Track       | Rule, first match wins                                                          |

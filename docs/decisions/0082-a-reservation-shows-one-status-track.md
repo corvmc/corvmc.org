@@ -1,4 +1,4 @@
-# 0081 A reservation shows one status track
+# 0082 A reservation shows one status track
 
 - **Date:** 2026-11-13
 - **Status:** Accepted
