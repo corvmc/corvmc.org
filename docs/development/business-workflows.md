@@ -1206,7 +1206,6 @@ on a bill and have it appear on that band's own profile without their say-so.
   `getEventLineup()` / `getEventLineups()` read them (the plural batches, for lists),
   `listBandLineupInvites()` is the band panel's invite inbox, and
   `confirmLineupSlot()` / `declineLineupSlot()` are the band's only two answers.
-  `linkLineupSlot()` attaches a previously text-only credit to a real band.
 - **Moderation:** `flags.remote.ts`: `submitEventReport()` files against `entityType:
 'event'`; upholding in `/staff/flags/[id]` can `unpublishWithNotice()` in the same step,
   which notifies every band on the bill rather than only the owner.
@@ -1527,8 +1526,7 @@ it, and withdrawing deletes it. Staff return a log with a required reason, which
 
 **Roles and clearances keep their history.** A role with logs is archived, not deleted
 (`VolunteerRoleInUseError`), and archiving hides it only from the log form. A clearance that was
-ever true is revoked with a reason; `deleteCertificationRecord` is only for a grant the same
-staffer made the same day.
+ever true is revoked with a reason.
 
 **The under-18 block is enforced in the service.** `completeVolunteerOnboarding` maps an under-18
 answer to a `blocked` profile, `updateVolunteerProfile` accepts neither `isAdult` nor `status`,

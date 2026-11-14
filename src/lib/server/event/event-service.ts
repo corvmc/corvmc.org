@@ -1075,43 +1075,6 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 }
 
 /**
- * Take an event live.
- *
- * Accepts `pending_review` as well as `draft`: staff approving a community
- * listing is the same transition as an owner publishing their own draft, and
- * splitting it into two functions would mean two places to get the
- * publishedAt/status pair right.
- */
-/**
- * CMC shows that are close and still not public.
- *
- * No query answered this, so an unannounced show was noticed by someone
- * remembering it. Ordered soonest first, because that is the order they stop
- * being fixable in.
- */
-export async function unannouncedShows(withinDays = 21, now = new Date()) {
-	const horizon = new Date(now.getTime() + withinDays * 86_400_000);
-	return db
-		.select({
-			id: eventListing.id,
-			title: eventListing.title,
-			startsAt: eventListing.startsAt,
-			announceAt: eventListing.announceAt,
-			status: eventListing.status
-		})
-		.from(eventListing)
-		.where(
-			and(
-				eq(eventListing.source, 'cmc'),
-				inArray(eventListing.status, ['draft', 'pending_review']),
-				gt(eventListing.startsAt, now),
-				lte(eventListing.startsAt, horizon)
-			)
-		)
-		.orderBy(asc(eventListing.startsAt));
-}
-
-/**
  * What a CMC listing is still missing before the public sees it. Warnings, not
  * refusals (docs/development/conventions.md#workflow-gates): `publish` goes
  * ahead over them once acknowledged with a reason.
@@ -2329,24 +2292,6 @@ export async function isCreditedOn(eventId: string, bandId: string): Promise<boo
 		.where(and(eq(eventBand.eventId, eventId), creditBelongsToGroup(bandId)))
 		.limit(1);
 	return !!row;
-}
-
-/**
- * Staff: attach a party to a name that was typed in free-text.
- *
- * Still takes the *group* a staffer picked, and resolves it to that band's
- * entry — the picker names bands, the credit names entries. A group with no
- * entry leaves the slot unlinked rather than half-linking it, since `unlinked`
- * ⇔ `directoryEntryId IS NULL` is the invariant the whole render path reads.
- */
-export async function linkLineupSlot(eventBandId: string, bandId: string): Promise<void> {
-	const directoryEntryId = await entryIdForGroup(bandId);
-	if (!directoryEntryId) return;
-
-	await db
-		.update(eventBand)
-		.set({ directoryEntryId, status: 'pending' })
-		.where(and(eq(eventBand.id, eventBandId), eq(eventBand.status, 'unlinked')));
 }
 
 export interface LineupInvite {

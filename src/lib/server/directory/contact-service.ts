@@ -209,21 +209,6 @@ export async function actContactNamesUnguarded(
 	return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-/** Contacts past their retention horizon, which the next sweep deletes. */
-export async function listExpiredContacts(now: Date = new Date()) {
-	await requireCapability('directory.readContact');
-
-	return db
-		.select({
-			id: contact.id,
-			organizationId: contact.organizationId,
-			name: contact.name,
-			retainUntil: contact.retainUntil
-		})
-		.from(contact)
-		.where(and(eq(contact.source, 'staff_entered'), lte(contact.retainUntil, now)));
-}
-
 /**
  * Delete every contact whose `retainUntil` has passed, with its roles (FK
  * cascade). Unguarded: the daily cron runs it with no session. Writes no

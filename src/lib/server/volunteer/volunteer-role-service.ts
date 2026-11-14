@@ -320,11 +320,6 @@ export async function listVolunteerRoles(
 	return rows.map((row) => ({ ...row.role, logCount: Number(row.logCount) }));
 }
 
-export async function getVolunteerRoleById(id: string): Promise<VolunteerRole | null> {
-	const [row] = await db.select().from(volunteerRole).where(eq(volunteerRole.id, id)).limit(1);
-	return row ?? null;
-}
-
 /** Used by the submit path, which may only file against a live role. */
 export async function getActiveVolunteerRoleById(id: string): Promise<VolunteerRole | null> {
 	const [row] = await db

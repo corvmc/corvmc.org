@@ -85,12 +85,8 @@ vi.mock('#lib/server/authorization.js', async () => {
 	};
 });
 
-const {
-	writeActContactUnguarded,
-	archiveActContactsForClaim,
-	listExpiredContacts,
-	listActContacts
-} = await import('./contact-service');
+const { writeActContactUnguarded, archiveActContactsForClaim, listActContacts } =
+	await import('./contact-service');
 
 function rowsFor(table: string) {
 	return inserts.filter((i) => i.table === table).flatMap((i) => i.rows);
@@ -112,10 +108,7 @@ describe('the guard travels with the data', () => {
 	 * guard a new caller can forget, and this is the table where forgetting it
 	 * means publishing somebody's phone number.
 	 */
-	const READS = [
-		['listExpiredContacts', () => listExpiredContacts()],
-		['listActContacts', () => listActContacts(['org-1'], null)]
-	] as const;
+	const READS = [['listActContacts', () => listActContacts(['org-1'], null)]] as const;
 
 	it.each(READS)('%s requires directory.readContact itself', async (_name, run) => {
 		await run();

@@ -347,13 +347,3 @@ export async function isKeyReferenced(key: string): Promise<boolean> {
 	const row = await findByKey(key);
 	return !!row && (await countAttachments(row.id)) > 0;
 }
-
-/** Total bytes referenced by live attachments. Uses the guard above. */
-export async function totalLiveBytes(): Promise<number> {
-	const [row] = await db
-		.select({ bytes: sql<number>`coalesce(sum(${media.byteSize}), 0)`.as('bytes') })
-		.from(mediaAttachment)
-		.innerJoin(media, eq(media.id, mediaAttachment.mediaId))
-		.where(liveAttachmentCondition());
-	return Number(row?.bytes ?? 0);
-}

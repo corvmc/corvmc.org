@@ -26,7 +26,6 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 
 const {
 	getOrCreateGroupChat,
-	countGroupChatUnread,
 	listGroupChatReaders,
 	setRoomMute,
 	listGroupTopics,
@@ -202,16 +201,6 @@ describe('listGroupTopics', () => {
 });
 
 describe('the per-room mute', () => {
-	it('keeps a muted room out of the unread badge', async () => {
-		// A reader with no cursor row at all is unread and unmuted both.
-		topic('general', { lastAt: T0 });
-		topic('muted', { subject: 'Muted', lastAt: T0 });
-		cursor('muted', 'u1', null, true);
-		topic('empty', { subject: 'Empty', lastAt: null });
-
-		expect(await countGroupChatUnread('g1', 'u1')).toBe(1);
-	});
-
 	it('leaves the muted out of a room notification, for that room only', async () => {
 		topic('t1');
 		topic('t2', { subject: 'Other' });

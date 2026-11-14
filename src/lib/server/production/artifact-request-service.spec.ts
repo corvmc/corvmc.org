@@ -32,7 +32,6 @@ const {
 	deliverPosterArt,
 	listRequests,
 	livePosterRequests,
-	outstandingCount,
 	promotePosterArt,
 	requestArtifact,
 	requestableActs,
@@ -59,6 +58,9 @@ beforeEach(() => {
 	);
 	riderSummaries.mockResolvedValue([]);
 });
+
+/** What is still owed across the whole bill. */
+const outstanding = async () => (await listRequests(EVENT)).filter((r) => !r.fulfilled).length;
 
 describe('asking', () => {
 	it('records the ask and its deadline', async () => {
@@ -100,13 +102,13 @@ describe('deriving whether it came', () => {
 
 		const [req] = await listRequests(EVENT);
 		expect(req.fulfilled).toBe(true);
-		expect(await outstandingCount(EVENT)).toBe(0);
+		expect(await outstanding()).toBe(0);
 	});
 
 	it('leaves an empty rider outstanding', async () => {
 		riderSummaries.mockResolvedValue([{ name: 'The Wrens', empty: true }]);
 		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
-		expect(await outstandingCount(EVENT)).toBe(1);
+		expect(await outstanding()).toBe(1);
 	});
 
 	it('counts a rider file, which is the only kind an act with no account can send', async () => {
@@ -121,7 +123,7 @@ describe('deriving whether it came', () => {
 		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
 
 		expect((await listRequests(EVENT))[0].fulfilled).toBe(true);
-		expect(await outstandingCount(EVENT)).toBe(0);
+		expect(await outstanding()).toBe(0);
 	});
 
 	it('does not read a file in another slot as a rider', async () => {
@@ -132,7 +134,7 @@ describe('deriving whether it came', () => {
 		);
 		await requestArtifact({ eventId: EVENT, entryId: ENTRY, artifact: 'tech_rider' });
 
-		expect(await outstandingCount(EVENT)).toBe(1);
+		expect(await outstanding()).toBe(1);
 	});
 
 	it('reads a press kit off the listing having a bio', async () => {

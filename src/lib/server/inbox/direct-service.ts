@@ -417,68 +417,6 @@ export interface DirectThreadSummary {
 }
 
 /**
- * The caller's conversations, **including requests they have not accepted**.
- *
- * A request appears in the same list as everything else, tagged `pending`, so
- * it is there when the member goes to Messages rather than pulling them there.
- * The counterpart is what keeps it out of the unread count — see
- * `countDirectUnread`, which filters to accepted threads only.
- */
-export async function listDirectThreads(userId: string, pagination: PaginationInput) {
-	const other = alias(inboxParticipant, 'other_participant');
-	const otherUser = alias(user, 'other_user');
-
-	const where = and(
-		eq(inboxThread.channel, 'direct'),
-		eq(inboxParticipant.userId, userId),
-		// A member who has switched messaging off disappears from the other
-		// person's list. They keep their own history; nobody gets to keep writing
-		// at someone who cannot answer.
-		sql`NOT ${messagingDisabledFor(other.userId)}`
-	);
-
-	const dataQuery = db
-		.select({
-			id: inboxThread.id,
-			status: inboxThread.status,
-			preview: inboxThread.preview,
-			messageCount: inboxThread.messageCount,
-			lastMessageAt: inboxThread.lastMessageAt,
-			createdAt: inboxThread.createdAt,
-			// SQLite has no boolean, so these come back as 0/1 and are mapped
-			// after paginate — same shape as listPortalThreads.
-			unread: sql<number>`CASE WHEN ${isUnread} THEN 1 ELSE 0 END`,
-			pending: sql<number>`CASE WHEN ${inboxParticipant.acceptedAt} IS NULL THEN 1 ELSE 0 END`,
-			counterpartId: other.userId,
-			counterpartName: otherUser.name
-		})
-		.from(inboxThread)
-		.innerJoin(inboxParticipant, participantOf(userId))
-		.leftJoin(other, and(eq(other.threadId, inboxThread.id), ne(other.userId, userId)))
-		.leftJoin(otherUser, eq(otherUser.id, other.userId))
-		.where(where)
-		.orderBy(desc(inboxThread.lastMessageAt))
-		.$dynamic();
-
-	const countQuery = db
-		.select({ count: count() })
-		.from(inboxThread)
-		.innerJoin(inboxParticipant, participantOf(userId))
-		.leftJoin(other, and(eq(other.threadId, inboxThread.id), ne(other.userId, userId)))
-		.where(where);
-
-	const result = await paginate(dataQuery, countQuery, pagination);
-	return {
-		...result,
-		rows: result.rows.map((row) => ({
-			...row,
-			unread: row.unread === 1,
-			pending: row.pending === 1
-		}))
-	};
-}
-
-/**
  * Every conversation a member is party to — staff threads and member threads in
  * one list, newest first.
  *

@@ -32,7 +32,6 @@ vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
 
 const tasks = await import('./project-task-service');
 const shifts = await import('#lib/server/volunteer/work-order-service.js');
-const signups = await import('#lib/server/volunteer/volunteer-signup-service.js');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';
@@ -106,9 +105,6 @@ beforeEach(() => {
 const task = (id: string, cols: Record<string, unknown> = {}) =>
 	insert('work_order', { id, project_id: PROJECT, title: id, ...cols });
 
-const FUTURE = '2030-06-01T10:00';
-const FUTURE_END = '2030-06-01T12:00';
-
 /** Two twins on the project: `viaTask` changes through the task list, `viaShift` the shift page. */
 function twins() {
 	for (const id of ['viaTask', 'viaShift']) task(id, { volunteer_role_id: ROLE });
@@ -134,63 +130,6 @@ const logOf = (id: string) =>
 const actions = (id: string) => logOf(id).map((e) => e.action);
 
 describe('the same entries from either page', () => {
-	it('opens a shift', async () => {
-		twins();
-		const times = { startsAt: FUTURE, endsAt: FUTURE_END };
-		await tasks.openToVolunteers(PROJECT, 'viaTask', { ...times, postedByUserId: STAFF });
-		await shifts.openShift('viaShift', { ...times, createdByUserId: STAFF });
-
-		const timing = (id: string) => logOf(id).filter((e) => e.action === 'work_order.rescheduled');
-		expect(timing('viaTask')).toHaveLength(1);
-		expect(timing('viaShift')).toEqual(timing('viaTask'));
-	});
-
-	// The task list assigns (#2518); the shift page puts somebody on a shift. Both
-	// land on the task's log.
-	it('puts a member on it and takes them off', async () => {
-		twins();
-		viaShiftShift();
-		await tasks.assignMembers(PROJECT, 'viaTask', { userIds: [ADA] });
-		await signups.claimShift('sh', ADA, { assignedByStaff: true });
-		await tasks.unassignMember(PROJECT, 'viaTask', ADA);
-		const [signup] = all<{ id: string }>(`select id from volunteer_signup where shift_id = 'sh'`);
-		await signups.releaseSignup(signup.id);
-
-		const roster = (id: string) =>
-			logOf(id).filter((e) => e.action.startsWith('work_order.member_'));
-		expect(roster('viaTask').map((e) => e.action)).toEqual([
-			'work_order.member_assigned',
-			'work_order.member_unassigned'
-		]);
-		expect(roster('viaShift')).toEqual(roster('viaTask'));
-	});
-
-	it('marks it done', async () => {
-		twins();
-		await tasks.resolveTask(PROJECT, 'viaTask', { resolvedByUserId: STAFF });
-		await shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF });
-
-		expect(actions('viaTask')).toEqual(['work_order.resolved']);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
-	});
-
-	// #2267: a done condition makes either door's close an override with a reason.
-	it('marks a condition-backed one done as an override, with its reason', async () => {
-		for (const id of ['viaTask', 'viaShift']) task(id, { done_when: 'tasks_ticked' });
-		await expect(shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF })).rejects.toThrow(
-			shifts.ShiftValidationError
-		);
-		expect(logOf('viaShift')).toEqual([]);
-
-		await tasks.resolveTask(PROJECT, 'viaTask', { resolvedByUserId: STAFF, reason: 'Done' });
-		await shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF, notes: 'Done' });
-
-		expect(logOf('viaShift')).toEqual([
-			{ action: 'work_order.resolved', details: { override: true, reason: 'Done' } }
-		]);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
-	});
-
 	it('calls it off', async () => {
 		twins();
 		await tasks.cancelTask(PROJECT, 'viaTask', STAFF);

@@ -74,8 +74,7 @@ const {
 	listFor,
 	countAttachments,
 	isKeyReferenced,
-	liveAttachmentCondition,
-	totalLiveBytes
+	liveAttachmentCondition
 } = await import('./media-service');
 const { deleteObject } = await import('#lib/server/storage.js');
 const { db } = await import('#lib/server/db/index.js');
@@ -319,18 +318,5 @@ describe('liveAttachmentCondition', () => {
 		// and match every row — the correlated-subquery bug pinned in
 		// correlated-sql.spec.ts, in a new place.
 		expect(rendered).toContain('"media_attachment"."attachable_id"');
-	});
-});
-
-describe('totalLiveBytes', () => {
-	it('applies the live guard rather than summing the raw table', async () => {
-		selectResult = [{ bytes: 2048 }];
-		expect(await totalLiveBytes()).toBe(2048);
-		expect(lastSelect.where).toBeDefined();
-	});
-
-	it('returns zero on an empty table', async () => {
-		selectResult = [];
-		expect(await totalLiveBytes()).toBe(0);
 	});
 });

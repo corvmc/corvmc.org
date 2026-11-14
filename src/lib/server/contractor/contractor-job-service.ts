@@ -626,21 +626,6 @@ export async function listJobs(
 	return rows.map(toJobRow);
 }
 
-/** How many engagements each filter holds, in one pass. */
-export async function countJobsByView(now: Date = new Date()) {
-	const count = (view: ContractorJobView) =>
-		sql<number>`coalesce(sum(case when ${engagementViewWhere(view, now) ?? sql`1`} then 1 else 0 end), 0)`;
-	const [row] = await db
-		.select({
-			open: count('open'),
-			late: count('late'),
-			'awaiting-invoice': count('awaiting-invoice'),
-			all: sql<number>`count(*)`
-		})
-		.from(contractorJob);
-	return row ?? { open: 0, late: 0, 'awaiting-invoice': 0, all: 0 };
-}
-
 /** Booked and past the date they promised. */
 export async function listOverdueJobs(now: Date = new Date()) {
 	return listJobs({ view: 'late', now });

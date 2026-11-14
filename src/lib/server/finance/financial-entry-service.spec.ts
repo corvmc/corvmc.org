@@ -25,11 +25,13 @@ const {
 	reverseEntriesForPaymentRecord,
 	ledgerStartsAt,
 	stripeSettledCents,
-	totalEarnedCents,
 	totalsByCategory,
 	totalsByKindAndCategory
 } = await import('./financial-entry-service');
 type RecordEntryInput = Parameters<typeof recordEntry>[0];
+
+const earned = async (range: Parameters<typeof totalsByCategory>[1]) =>
+	(await totalsByCategory('earned', range)).reduce((n, r) => n + r.totalCents, 0);
 
 const JAN = new Date('2026-01-15T00:00:00Z');
 const FEB = new Date('2026-02-15T00:00:00Z');
@@ -94,8 +96,8 @@ describe('refunds reverse rather than mutate', () => {
 		await sold(JAN);
 		await reverseEntriesForPaymentRecord('pr_1', FEB);
 
-		expect(await totalEarnedCents(JANUARY)).toBe(300);
-		expect(await totalEarnedCents(YEAR)).toBe(0);
+		expect(await earned(JANUARY)).toBe(300);
+		expect(await earned(YEAR)).toBe(0);
 	});
 
 	// A reversal carries the same payment record, so a second pass would negate
@@ -161,17 +163,17 @@ describe('what the collective kept', () => {
 		]);
 
 		// The donated amp and the acts' cut are the two a naive sum gets wrong.
-		expect(await totalEarnedCents(YEAR)).toBe(300);
+		expect(await earned(YEAR)).toBe(300);
 	});
 
 	it('respects the window', async () => {
 		await recordEntries([ticketSale(), ticketSale({ occurredAt: DEC, subjectId: 'tkt-2' })]);
-		expect(await totalEarnedCents(JANUARY)).toBe(300);
-		expect(await totalEarnedCents(YEAR)).toBe(600);
+		expect(await earned(JANUARY)).toBe(300);
+		expect(await earned(YEAR)).toBe(600);
 	});
 
 	it('is zero rather than null when nothing matches', async () => {
-		expect(await totalEarnedCents(YEAR)).toBe(0);
+		expect(await earned(YEAR)).toBe(0);
 	});
 });
 

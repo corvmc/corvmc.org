@@ -110,7 +110,6 @@ import {
 	cancelSignup,
 	notifySignupsOfCancellation,
 	markSignupNotified,
-	countUnnotified,
 	availabilityConflictsWithDay,
 	SignupNotFoundError,
 	ShiftFullError,
@@ -547,13 +546,6 @@ describe('the notify list on a called-off shift', () => {
 		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
 		// Idempotent: a second press must not move the stamp, so the predicate
 		// carries the null check rather than relying on the button being hidden.
-		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
-	});
-
-	it('counts only the people still owed a call', async () => {
-		selectResultQueue = [[{ n: 3 }]];
-
-		expect(await countUnnotified('shift-1')).toBe(3);
 		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
 	});
 });

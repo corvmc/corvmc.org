@@ -339,14 +339,3 @@ export async function setRadioExclusion(releaseId: string, excluded: boolean, re
 	if (!row) throw new StaffReleaseNotFoundError();
 	return row;
 }
-
-/** The same, for one recording rather than a whole record. */
-export async function setTrackRadioExclusion(trackId: string, excluded: boolean) {
-	const [row] = await db
-		.update(audioTrack)
-		.set({ radioExcludedAt: excluded ? new Date() : null, updatedAt: new Date() })
-		.where(eq(audioTrack.id, trackId))
-		.returning();
-	if (!row) throw new StaffReleaseNotFoundError();
-	return row;
-}

@@ -17,7 +17,6 @@ import type { MemberRef } from '#lib/types/entity.js';
 import type { RosterPerson } from '#lib/types/roster.js';
 import { toRosterPerson } from '#lib/server/roster/roster.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
-import { getRequirementsForRoles } from './volunteer-certification-service';
 import { listTrainingShifts } from './training-service';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { MemberCertification } from '#lib/server/db/schema/volunteer.js';
@@ -292,37 +291,6 @@ export async function revokeCertification(
 	return row;
 }
 
-/**
- * Hard delete, for the typo case only — wrong member, wrong certification, never
- * relied on. Restricted to the same staffer on the same day, because after that
- * you cannot tell "was never true" from "is no longer true", and only the first
- * is safe to erase.
- */
-export async function deleteCertificationRecord(
-	id: string,
-	byUserId: string
-): Promise<MemberCertification> {
-	const [row] = await db
-		.select()
-		.from(memberCertification)
-		.where(eq(memberCertification.id, id))
-		.limit(1);
-
-	if (!row) throw new MemberCertificationNotFoundError();
-
-	const createdOn = clubDateOf(row.createdAt);
-	if (row.grantedByUserId !== byUserId || createdOn !== clubToday()) {
-		throw new MemberCertificationNotDeletableError();
-	}
-
-	const [deleted] = await db
-		.delete(memberCertification)
-		.where(eq(memberCertification.id, id))
-		.returning();
-
-	return deleted;
-}
-
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -483,34 +451,6 @@ export async function missingRequirements(
 
 	const held = await heldCertificationIds(userId, at);
 	return required.filter((r) => !held.has(r.id));
-}
-
-/**
- * Whether each member actually held their role's clearances **on the day they
- * worked** — the audit, as opposed to the gate `claimShift` applies when a
- * shift is claimed. A card can lapse in between, and `member_certification` is
- * append-only precisely so this stays answerable. Two queries whatever the row
- * count, keyed by row id; a row whose role requires nothing has no entry.
- */
-export async function auditClearances(
-	rows: { id: string; userId: string; volunteerRoleId: string; workedOn: Date }[]
-): Promise<Map<string, { id: string; name: string }[]>> {
-	const gaps = new Map<string, { id: string; name: string }[]>();
-	if (rows.length === 0) return gaps;
-
-	const [requirements, held] = await Promise.all([
-		getRequirementsForRoles([...new Set(rows.map((r) => r.volunteerRoleId))]),
-		listHeldForGateMany([...new Set(rows.map((r) => r.userId))])
-	]);
-
-	for (const row of rows) {
-		const required = requirements.get(row.volunteerRoleId) ?? [];
-		if (required.length === 0) continue;
-		const missing = missingFrom(required, held.get(row.userId) ?? [], row.workedOn);
-		if (missing.length > 0) gaps.set(row.id, missing);
-	}
-
-	return gaps;
 }
 
 export interface ClearanceRow extends RosterPerson {

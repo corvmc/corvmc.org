@@ -155,11 +155,6 @@ export async function listNonEmptyCategories(reader: HelpReader) {
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
 }
 
-export async function getCategoryBySlug(slug: string) {
-	const [cat] = await db.select().from(helpCategory).where(eq(helpCategory.slug, slug)).limit(1);
-	return cat ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Article Queries
 // ---------------------------------------------------------------------------

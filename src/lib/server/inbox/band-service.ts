@@ -292,16 +292,6 @@ export async function markBandThreadRead(
 		});
 }
 
-/** Drives the "Messages" badge in the band nav. */
-export async function countBandUnread(groupId: string, userId: string): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(inboxThread)
-		.leftJoin(inboxGroupRead, readCursorOf(userId))
-		.where(and(ownedBy(groupId), eq(inboxThread.status, 'open'), isUnread));
-	return row?.count ?? 0;
-}
-
 /**
  * The band a thread belongs to, for the notification fan-out.
  *

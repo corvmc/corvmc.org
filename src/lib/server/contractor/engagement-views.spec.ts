@@ -14,7 +14,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { listJobs, countJobsByView } = await import('./contractor-job-service');
+const { listJobs } = await import('./contractor-job-service');
 
 const NOW = new Date('2026-10-13T12:00:00Z');
 const sec = (d: string) => Math.floor(new Date(d).getTime() / 1000);
@@ -85,14 +85,5 @@ describe('jobs list filters', () => {
 		);
 		expect(await ids({ workOrderIds: ['wo-2'] })).toEqual(['elsewhere']);
 		expect(await ids({ workOrderIds: [] })).toEqual([]);
-	});
-
-	it('counts each filter with the same predicates', async () => {
-		expect(await countJobsByView(NOW)).toEqual({
-			open: 4,
-			late: 1,
-			'awaiting-invoice': 1,
-			all: 10
-		});
 	});
 });

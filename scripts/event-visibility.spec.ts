@@ -20,7 +20,6 @@ const notPublic: Record<string, string> = {
 	'src/lib/server/event/calendar-totals-service.ts onCalendar': 'staff calendar',
 	'src/lib/server/event/community-event-service.ts countPublishedListingsBy': 'a count, for purges',
 	'src/lib/server/event/partner-import-service.ts daysAlreadyListed': 'import dedupe',
-	'src/lib/server/event/event-service.ts unannouncedShows': 'staff reminder',
 	'src/lib/server/event/event-service.ts publish': 'a write',
 	'src/lib/server/event/event-service.ts unpublish': 'a write',
 	'src/lib/server/event/event-service.ts listEventsNear': 'staff duplicate check',
