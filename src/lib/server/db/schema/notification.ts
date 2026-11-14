@@ -352,6 +352,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'instructor_status_ended',
+		category: 'volunteering',
+		label: 'Your teaching status',
+		description: 'When staff pause or end your teaching',
+		// Email on: a teacher with students booked would otherwise find out by looking.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'direct_message_request',
 		category: 'people',
 		label: 'New message request',

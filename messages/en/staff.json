@@ -1895,6 +1895,16 @@
 	"staff_members_instructors_end_grant_actions_someone_who_has_text": "For someone who has stopped teaching here rather than paused. Bookings they already hold stand — cancel those separately if they need cancelling.",
 	"staff_members_instructors_end_grant_actions_they_stop_being_text": "They stop being listed and cannot book teaching time. Bookings they already hold stand.",
 	"staff_members_instructors_end_grant_actions_why_label": "Reason",
+	"staff_members_instructors_end_grant_actions_bookings_text": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} future teaching booking",
+				"countPlural=*": "{count} future teaching bookings"
+			}
+		}
+	],
 	"staff_members_instructors_full_label": "Full",
 	"staff_members_instructors_grant_instructor_add_instructor_label": "Add teacher",
 	"staff_members_instructors_teaching_terms_edit_label": "Edit teaching terms",

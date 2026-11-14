@@ -1,7 +1,8 @@
-import { and, asc, count, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import { db, getRowCount } from '#lib/server/db/index.js';
 import { instructor, type Instructor } from '#lib/server/db/schema/instructor.js';
 import { user } from '#lib/server/db/schema/authentication.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import { memberRefColumns } from '#lib/server/entity/refs.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
@@ -94,6 +95,16 @@ export class InstructorStateError extends DomainError {
 export async function getByUserId(userId: string): Promise<Instructor | null> {
 	const [row] = await db.select().from(instructor).where(eq(instructor.userId, userId)).limit(1);
 	return row ?? null;
+}
+
+/** The teacher's address, for finding their bookings in the staff reservations list. */
+export async function emailOf(userId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ email: user.email })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	return row?.email ?? null;
 }
 
 export async function getById(id: string): Promise<Instructor | null> {
@@ -387,6 +398,7 @@ export async function grant(userId: string, staffUserId: string): Promise<void> 
 				updatedAt: now
 			})
 			.where(eq(instructor.id, existing.id));
+		await announceReview(existing.id, true, null);
 		return;
 	}
 
@@ -405,6 +417,9 @@ export async function grant(userId: string, staffUserId: string): Promise<void> 
 		if (isUniqueConstraintError(err)) throw new AlreadyAnInstructorError();
 		throw err;
 	}
+
+	const granted = await getByUserId(userId);
+	if (granted) await announceReview(granted.id, true, null);
 }
 
 /**
@@ -439,6 +454,16 @@ async function setBlockedStatus(
 		.where(and(eq(instructor.id, id), inArray(instructor.status, from)));
 
 	if (getRowCount(result) === 0) throw new InstructorNotFoundError();
+
+	const [row] = await db
+		.select({ userId: instructor.userId, name: user.name, email: user.email })
+		.from(instructor)
+		.innerJoin(user, eq(user.id, instructor.userId))
+		.where(eq(instructor.id, id))
+		.limit(1);
+	if (!row) return;
+
+	void domainEvents.emit('instructor.status_ended', { instructorId: id, ...row, status });
 }
 
 export function pause(id: string, staffUserId: string, statusNote: string): Promise<void> {
@@ -452,6 +477,26 @@ export function retire(id: string, staffUserId: string, statusNote: string): Pro
 // ---------------------------------------------------------------------------
 // The staff read
 // ---------------------------------------------------------------------------
+
+/** Future, uncancelled teaching bookings per instructor row. A teaching booking's `bookerId` is the row id. */
+export async function futureTeachingBookings(
+	instructorIds: string[]
+): Promise<Map<string, number>> {
+	if (instructorIds.length === 0) return new Map();
+	const rows = await db
+		.select({ id: reservation.bookerId, n: count() })
+		.from(reservation)
+		.where(
+			and(
+				eq(reservation.bookerType, 'instructor'),
+				inArray(reservation.bookerId, instructorIds),
+				gt(reservation.startsAt, new Date()),
+				ne(reservation.status, 'cancelled')
+			)
+		)
+		.groupBy(reservation.bookerId);
+	return new Map(rows.map((r) => [r.id, r.n]));
+}
 
 export interface StaffInstructorRow extends RosterPerson {
 	id: string;
@@ -470,6 +515,8 @@ export interface StaffInstructorRow extends RosterPerson {
 	statusNote: string | null;
 	grantedAt: Date | null;
 	createdAt: Date;
+	/** Teaching bookings still to come, which pausing or retiring leaves standing. */
+	futureBookings: number;
 }
 
 export interface InstructorRosterFilters {
@@ -528,12 +575,16 @@ export async function listInstructorRoster(
 		paginate(dataQ, countQ, { page: pagination.page ?? 1, pageSize: pagination.pageSize ?? 20 }),
 		pendingQ
 	]);
-	const reach = await directoryReach(rows.map((r) => r.userId));
+	const [reach, bookings] = await Promise.all([
+		directoryReach(rows.map((r) => r.userId)),
+		futureTeachingBookings(rows.map((r) => r.id))
+	]);
 	return {
 		rows: rows.map(({ member, ...r }) => ({
 			...toRosterPerson({ ...member, id: r.userId }),
 			...r,
-			directoryReach: reach.get(r.userId) ?? 'missing'
+			directoryReach: reach.get(r.userId) ?? 'missing',
+			futureBookings: bookings.get(r.id) ?? 0
 		})),
 		pagination: page,
 		pending: pending?.count ?? 0

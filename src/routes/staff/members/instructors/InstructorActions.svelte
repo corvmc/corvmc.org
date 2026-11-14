@@ -11,7 +11,13 @@
 		record,
 		name
 	}: {
-		record: InstructorListingView & { id: string; userId: string; status: InstructorStatus };
+		record: InstructorListingView & {
+			id: string;
+			userId: string;
+			status: InstructorStatus;
+			email: string | null;
+			futureBookings: number;
+		};
 		name: string;
 	} = $props();
 
@@ -29,6 +35,12 @@
 		<RestoreGrantAction userId={record.userId} {name} kind="reinstate" />
 	{/if}
 	{#if actions.includes('retire')}
-		<EndGrantActions id={record.id} {name} pause={actions.includes('pause')} />
+		<EndGrantActions
+			id={record.id}
+			{name}
+			pause={actions.includes('pause')}
+			bookings={record.futureBookings}
+			email={record.email}
+		/>
 	{/if}
 </div>
