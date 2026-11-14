@@ -4,7 +4,7 @@ import * as env from '$app/env/private';
 import { sweepSourcedTasks } from '#lib/server/task/source-sweep.js';
 
 /**
- * Open and close the tasks records call for (#2756): repair reports, low stock.
+ * Open and close the tasks records call for (#2756, #2757).
  * Run by the cron handler in src/lib/server/cron/schedule.ts; callable
  * manually with `Authorization: Bearer <CRON_SECRET>`.
  */

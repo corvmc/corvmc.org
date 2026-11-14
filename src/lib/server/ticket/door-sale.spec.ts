@@ -69,7 +69,7 @@ const rows = (purchaseId: string) =>
 		.all(purchaseId) as Record<string, unknown>[];
 
 beforeEach(() => {
-	for (const table of ['donation', 'ticket', 'ticket_sale', 'event_listing'])
+	for (const table of ['work_order', 'donation', 'ticket', 'ticket_sale', 'event_listing'])
 		sqlite.exec(`delete from ${table}`);
 	resetFakeGateway();
 	initStripe(createFakeGateway());
@@ -304,6 +304,34 @@ describe('the sweep for a missed webhook', () => {
 			expect.any(Error),
 			expect.objectContaining({ paymentIntentId: id, eventId: 'tonight' })
 		);
+	});
+
+	it('an unmatched sale opens one task at its show, never reopened once closed (#2757)', async () => {
+		const { id } = await tap();
+		sqlite.prepare(`update ticket set status = 'cancelled' where purchase_id = ?`).run(id);
+		const tasks = () =>
+			sqlite
+				.prepare(
+					`select source_id, event_id, title, resolved_at from work_order where source = 'door_payment'`
+				)
+				.all();
+
+		await sweepDoorSales();
+		await sweepDoorSales();
+		expect(tasks()).toEqual([
+			{
+				source_id: id,
+				event_id: 'tonight',
+				title: 'Attach or refund a door card sale of $30.00',
+				resolved_at: null
+			}
+		]);
+
+		sqlite.exec(`update work_order set resolved_at = unixepoch() where source = 'door_payment'`);
+		await sweepDoorSales();
+		expect(tasks()).toHaveLength(1);
+		expect(rows(id).every((r) => r.status === 'cancelled')).toBe(true);
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
 	});
 
 	it('ignores untapped door intents and intents that are not door sales', async () => {

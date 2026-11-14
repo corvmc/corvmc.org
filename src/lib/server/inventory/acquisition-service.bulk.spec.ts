@@ -81,7 +81,8 @@ vi.mock('./stock-service', () => ({
 vi.mock('./restock-tasks', () => ({ afterStockChange: vi.fn() }));
 vi.mock('./asset-service', () => ({
 	createAsset: vi.fn(),
-	AssetTagTakenError: class AssetTagTakenError extends Error {}
+	AssetTagTakenError: class AssetTagTakenError extends Error {},
+	afterForm8282Change: vi.fn()
 }));
 
 vi.mock('#lib/server/media/media-service.js', () => ({ listFor: vi.fn() }));

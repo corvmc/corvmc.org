@@ -603,7 +603,7 @@ export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Gear — the role on tasks repair reports and low stock open (#2756)
+// Gear — the role on the tasks gear opens (#2756, #2757)
 // ---------------------------------------------------------------------------
 
 /** Gear settings' one query: each kind's role, and the roles to pick from. */
@@ -613,6 +613,8 @@ export const getGearSettings = query(async () => {
 	return {
 		repairRoleId: String(raw.repairRoleId ?? ''),
 		restockRoleId: String(raw.restockRoleId ?? ''),
+		lateOrderRoleId: String(raw.lateOrderRoleId ?? ''),
+		form8282RoleId: String(raw.form8282RoleId ?? ''),
 		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
 	};
 });
@@ -621,13 +623,17 @@ export const updateGearTaskRoles = form(
 	z.object({
 		// Empty leaves new tasks with no role.
 		repairRoleId: z.string().max(100).optional(),
-		restockRoleId: z.string().max(100).optional()
+		restockRoleId: z.string().max(100).optional(),
+		lateOrderRoleId: z.string().max(100).optional(),
+		form8282RoleId: z.string().max(100).optional()
 	}),
 	writesAudit('settings.changed', async (data) => {
 		await requireCapability('settings.update');
 		await saveSettings([
 			{ key: 'inventory.repairRoleId', value: data.repairRoleId?.trim() ?? '' },
-			{ key: 'inventory.restockRoleId', value: data.restockRoleId?.trim() ?? '' }
+			{ key: 'inventory.restockRoleId', value: data.restockRoleId?.trim() ?? '' },
+			{ key: 'inventory.lateOrderRoleId', value: data.lateOrderRoleId?.trim() ?? '' },
+			{ key: 'inventory.form8282RoleId', value: data.form8282RoleId?.trim() ?? '' }
 		]);
 		void getGearSettings().refresh();
 		return { success: true };

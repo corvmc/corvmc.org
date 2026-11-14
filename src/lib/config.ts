@@ -1541,7 +1541,14 @@ export type WorkDoneCondition = (typeof workDoneConditions)[number];
  * What opened a task on its own (#2756): the kind of record whose state calls
  * for the work. With `work_order.source_id`, at most one open task per record.
  */
-export const taskSources = ['repair', 'restock'] as const;
+export const taskSources = [
+	'repair',
+	'restock',
+	'late_order',
+	'form_8282',
+	'insurance',
+	'door_payment'
+] as const;
 export type TaskSource = (typeof taskSources)[number];
 
 export const workDoneConditionLabels: Record<WorkDoneCondition, string> = {

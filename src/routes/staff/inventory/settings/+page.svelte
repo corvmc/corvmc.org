@@ -51,6 +51,20 @@
 						value={settings.restockRoleId}
 						{options}
 					/>
+					<FormField
+						field={updateGearTaskRoles.fields.lateOrderRoleId}
+						label={m.staff_gear_settings_late_order_role_label()}
+						type="select"
+						value={settings.lateOrderRoleId}
+						{options}
+					/>
+					<FormField
+						field={updateGearTaskRoles.fields.form8282RoleId}
+						label={m.staff_gear_settings_form_8282_role_label()}
+						type="select"
+						value={settings.form8282RoleId}
+						{options}
+					/>
 				</div>
 			</CardBody>
 		</Card>

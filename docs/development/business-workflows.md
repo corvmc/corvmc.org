@@ -681,8 +681,10 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   last 48 hours of succeeded `door_ticket` intents and runs `fulfillDoorSale` on any with `pending`
   rows, so it writes what the webhook would have, once.
 - **Where it breaks:** a succeeded intent with no `pending` or `checked_in` rows is reported to
-  Sentry as `door-sale.unmatched`, usually rows `cancelStalePendingTickets` cancelled. A staffer
-  attaches the payment or refunds it in Stripe. A sale
+  Sentry as `door-sale.unmatched`, usually rows `cancelStalePendingTickets` cancelled, and opens
+  one task at its show (#2757, `openUnmatchedPaymentTask`). A staffer attaches the payment or
+  refunds it in Stripe, which the app cannot see, then marks the task done; it is never opened
+  again for that payment. Opening it writes nothing to the money. A sale
   abandoned before the tap is released by `cancelDoorSale`, or later by
   `cancelStalePendingTickets`.
 - **Donations (#2548):** `startDoorDonation` → `finance/door-donation.ts` opens a `card_present`
@@ -690,7 +692,8 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   intent's id. The same webhook flips it to `paid` and writes an `earned`/`donation` row and the
   card fee. `getDoorSale`, `cancelDoorSale` and `simulateDoorTap` serve both kinds; the show comes
   from the ticket rows or the donation row. The sweep covers donations too, and reports a charged
-  gift with no pending row as `door-donation.unmatched`. No acknowledgment is sent from the app.
+  gift with no pending row as `door-donation.unmatched`, with the same task. No acknowledgment is
+  sent from the app.
 
 ### Data touched
 
@@ -847,7 +850,9 @@ An item at or below its point with nothing on a placed order has one open **rest
 (#2756), linked to the item (`work_order_link.item_id`) and titled "Restock {item}".
 `syncRestockTasks()` in `restock-tasks.ts` opens and closes it after every ledger write and
 every order status change: a placed order or stock back above the point closes it, and a
-cancelled order on a still-low item opens a new one. The restock view links each row to its
+cancelled order on a still-low item opens a new one. A placed order past its expected date and not fully received
+opens a **late order task** (#2757, `syncLateOrderTasks`), linked to its supplier, closed when it
+is received, closed short or cancelled. The restock view links each row to its
 task. The dashboard's low-stock list is gone; the task is the reminder.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
@@ -922,12 +927,12 @@ one on the same unit or a new one — and every other untriaged report on that u
 ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
 (#2518). The "close reports on completion" option and its listener are gone.
 
-Both kinds of task take the role set per kind on `/staff/inventory/settings`
-(`inventory.repairRoleId`, `inventory.restockRoleId`); with none, a task waits unassigned on
+Repair, restock, late order and Form 8282 tasks take the role set per kind on
+`/staff/inventory/settings` (`inventory.*RoleId`); with none, a task waits unassigned on
 the Tasks page. `work_order.source` and `source_id` record which record opened a task, and
 `uq_work_order_open_source` keeps one open per record. The daily `/api/cron/open-tasks` sweep
-runs the same rules over every record, which also covered reports and low items that predate
-#2756.
+runs the same rules over every record, which also covered records that predate #2756 and #2757.
+Insurance and unmatched door payment tasks have no role setting and wait unassigned.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
@@ -944,7 +949,9 @@ call is a `contact` at the organization. A contractor is archived, never deleted
 `contractor_job` is one contractor's engagement on a work order, which holds the title, the unit
 and the project. `createJob` refuses an organization that does not hold the role. Staff work them in Contacts with the contractor role (`/staff/contacts?role=contractor`, which
 also shows lapsing insurance and overdue jobs and adds a contractor with its trade) and on each
-contractor's Contacts page (#2764); jobs are the Tasks table's contractor filter.
+contractor's Contacts page (#2764); jobs are the Tasks table's contractor filter. A certificate
+lapsing within 30 days opens one task linked to the contractor and due on the expiry
+(`syncInsuranceTasks`, #2757); saving a later date closes it.
 
 `contractor/contractor-job-service.ts` moves an engagement `asked → booked → completed`, or ends
 it `declined`, `no_show` or `cancelled`. Custody goes through `setAssetStatus`, the one writer of
@@ -998,6 +1005,10 @@ It surfaces on the unit's page when it is retired and on the Acquisitions list's
 Form 8282 filter (`/staff/inventory/acquisitions?show=form-8282`) thereafter. Resolving it writes
 `form8282ResolvedAt` plus a free-text `form8282Note`, which covers both "filed"
 and "no filing was due, because…".
+
+Each obligation also opens one task linked to the unit and due with the form (#2757,
+`syncForm8282Tasks`), after a retirement, a reopen, a signed 8283 and the daily sweep.
+`resolveForm8282` closes it; closing the task by hand records nothing.
 
 **Where it breaks** — nothing appears when expected, in order of likelihood:
 

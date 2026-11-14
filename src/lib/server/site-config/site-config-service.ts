@@ -82,6 +82,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// Empty leaves them with no role, unassigned on the Tasks page.
 	'inventory.repairRoleId': '',
 	'inventory.restockRoleId': '',
+	// Late purchase orders and Form 8282 filings (#2757), the same way.
+	'inventory.lateOrderRoleId': '',
+	'inventory.form8282RoleId': '',
 
 	// How many inputs the desk in the practice room can actually take.
 	//

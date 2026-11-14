@@ -1,5 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { afterOrderChange } from './restock-tasks';
+import { afterSourceChange, reconcileSourcedTasks } from '#lib/server/task/sourced-tasks.js';
 import {
 	acquisition,
 	equipmentCategory,
@@ -98,7 +99,7 @@ export async function createOrder(data: CreateOrderData) {
 		)
 	] as unknown as Parameters<typeof db.batch>[0]);
 
-	if (data.placedAt) await afterOrderChange(orderId);
+	if (data.placedAt) await afterOrderWrite(orderId);
 	return orderId;
 }
 
@@ -113,7 +114,7 @@ export async function placeOrder(id: string, when: Date = new Date()) {
 		.update(purchaseOrder)
 		.set({ status: 'placed', placedAt: when, updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
-	await afterOrderChange(id);
+	await afterOrderWrite(id);
 }
 
 /**
@@ -132,7 +133,7 @@ export async function cancelOrder(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
-	await afterOrderChange(id);
+	await afterOrderWrite(id);
 }
 
 /**
@@ -156,7 +157,7 @@ export async function reopenOrder(id: string, reason: string) {
 		.where(and(eq(purchaseOrder.id, id), eq(purchaseOrder.status, order.status)))
 		.returning();
 	if (!row) throw new OrderStateError('This order changed while you were looking at it');
-	await afterOrderChange(id);
+	await afterOrderWrite(id);
 
 	await recordAuditEntry({
 		action: 'purchase_order.reopened',
@@ -412,7 +413,7 @@ export async function applyReceipt(input: {
 			.set({ status: 'received', updatedAt: new Date() })
 			.where(eq(purchaseOrder.id, input.orderId));
 	}
-	await afterOrderChange(input.orderId);
+	await afterOrderWrite(input.orderId);
 
 	return { complete };
 }
@@ -427,11 +428,35 @@ export async function closeOrderShort(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'received', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
-	await afterOrderChange(id);
+	await afterOrderWrite(id);
 }
 
 /** Items on a placed order that is past its expected date. */
 export async function listLateOrders(now: Date = new Date()) {
 	const rows = await listOrders({ status: 'placed' });
 	return rows.filter((o) => o.expectedAt && o.expectedAt < now && !o.isComplete);
+}
+
+/**
+ * A late order has one open task (#2757), linked to its supplier, until it is
+ * received or cancelled. Run after every status change and daily, since an
+ * order turns late with the clock rather than with a write.
+ */
+export async function syncLateOrderTasks(now: Date = new Date()) {
+	const late = await listLateOrders(now);
+	return reconcileSourcedTasks(
+		'late_order',
+		late.map((o) => ({
+			sourceId: o.id,
+			title: `Chase late order${o.supplierName ? ` from ${o.supplierName}` : ''}${o.reference ? ` (${o.reference})` : ''}`,
+			links: o.organizationId ? { organizationId: o.organizationId } : undefined
+		})),
+		'Closed: the order is no longer late.'
+	);
+}
+
+/** What follows any change to an order's status: its items' restock tasks, then late orders. */
+async function afterOrderWrite(orderId: string) {
+	await afterOrderChange(orderId);
+	await afterSourceChange('late_order', () => syncLateOrderTasks());
 }

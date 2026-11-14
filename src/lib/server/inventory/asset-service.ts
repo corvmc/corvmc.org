@@ -12,6 +12,7 @@ import { and, asc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { form8282Status, needsAttention } from './form-8282';
+import { afterSourceChange, reconcileSourcedTasks } from '#lib/server/task/sourced-tasks.js';
 import { movementStatement, recordMovement } from './stock-service';
 import type { AssetStatus, EquipmentCondition } from '#lib/config.js';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -201,6 +202,17 @@ export async function setAssetStatus(
 	status: AssetStatus,
 	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string } = {}
 ) {
+	const row = await writeAssetStatus(id, status, opts);
+	// A disposal is what can owe a Form 8282 (#2757).
+	if (status === 'retired' || status === 'lost') await afterForm8282Change();
+	return row;
+}
+
+async function writeAssetStatus(
+	id: string,
+	status: AssetStatus,
+	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string }
+) {
 	const change = await assetStatusChange(id, status, opts);
 	if (!change.statements) return change.asset;
 	if (change.statements.length === 1) {
@@ -368,6 +380,7 @@ export async function reopenAsset(id: string, reason: string, actorId: string) {
 			stockAdjusted: delta
 		}
 	});
+	await afterForm8282Change();
 	return row;
 }
 
@@ -454,8 +467,30 @@ export async function resolveForm8282(assetId: string, note: string) {
 		.returning();
 
 	if (!row) throw new AssetNotFoundError();
+	await afterForm8282Change();
 	return row;
 }
+
+/**
+ * Each Form 8282 owed has one open task (#2757), linked to the unit and due
+ * when the form is, until `resolveForm8282` records it. Run after the writes
+ * that change what is owed, and daily.
+ */
+export async function syncForm8282Tasks(now = new Date()) {
+	const { obligations } = await listForm8282Obligations(now);
+	return reconcileSourcedTasks(
+		'form_8282',
+		obligations.map((o) => ({
+			sourceId: o.id,
+			title: `File Form 8282 for ${o.assetTag ? `${o.item.name} (${o.assetTag})` : o.item.name}`,
+			dueAt: o.status.dueBy,
+			links: { assetId: o.id }
+		})),
+		'Closed: the Form 8282 is recorded as dealt with.'
+	);
+}
+
+export const afterForm8282Change = () => afterSourceChange('form_8282', () => syncForm8282Tasks());
 
 // ---------------------------------------------------------------------------
 // Reading
