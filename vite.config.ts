@@ -219,6 +219,7 @@ export default defineConfig({
 					pool: 'vmForks',
 					// The VM context is per file but `process.env` is per process.
 					setupFiles: ['./src/vitest-restore-tz.ts'],
+					globalSetup: ['./src/lib/server/testing/vitest-global-setup.ts'],
 					include: [
 						'src/**/*.spec.{js,ts}',
 						'scripts/**/*.spec.{js,ts}',

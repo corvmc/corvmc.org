@@ -1,9 +1,9 @@
-import { readFileSync, globSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '#lib/server/db/schema.js';
 import { relations } from '#lib/server/db/schema/relations.js';
 import { D1_MAX_PARAMS } from '#lib/server/utils/chunk.js';
+import { migrationImage } from './migration-image';
 
 /**
  * An in-memory SQLite built by replaying every committed migration, behind
@@ -27,33 +27,12 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
 	return { sqlite, testDb };
 }
 
-/**
- * Replaying every migration takes ~2s, and a per-test call times out under a
- * loaded machine (#2749). One replay per `through`, then a 1ms copy per call.
- */
+/** One disk read per `through` per file; each call then opens a private copy. */
 const images = new Map<string | undefined, Buffer>();
 
 function replayed(through?: string): Buffer {
-	const cached = images.get(through);
-	if (cached) return cached;
-	const sqlite = new Database(':memory:');
-
-	// `through` stops after the migration so named, for a backfill whose columns a later one drops.
-	const files = globSync('migrations/*/migration.sql').sort();
-	const last = through ? files.findLastIndex((f) => f.includes(`_${through}/`)) : files.length - 1;
-	if (last < 0) throw new Error(`No migration named *_${through}`);
-
-	for (const file of files.slice(0, last + 1)) {
-		for (const statement of readFileSync(file, 'utf8')
-			.split('--> statement-breakpoint')
-			.map((s) => s.trim())
-			.filter(Boolean)) {
-			sqlite.exec(statement);
-		}
-	}
-	const image = sqlite.serialize();
-	sqlite.close();
-	images.set(through, image);
+	let image = images.get(through);
+	if (!image) images.set(through, (image = migrationImage(through)));
 	return image;
 }
 
