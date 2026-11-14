@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
 	import { refreshAll, goto } from '$app/navigation';
 	import { EditScheduleAction } from '#lib/components/actions/index.js';
@@ -36,7 +35,7 @@
 	subtitle={m.staff_recurring_series_body()}
 	parent={{
 		label: m.staff_recurring_series_label(),
-		href: withQuery(resolve('staff/reservations'), 'recurring')
+		href: resolve('staff/recurring')
 	}}
 >
 	{#if isActive}

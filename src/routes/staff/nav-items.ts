@@ -200,14 +200,13 @@ export const staffNavSections: StaffNavSection[] = [
 		title: 'Space',
 		items: [
 			{
-				// Closures sit in its list and recurring series in a modal off its
-				// header (#1936); a series' own page still lights this row. Key
-				// holders is a header link on its page (#2574), so it lights it too.
+				// Reservations (closures a type filter), Recurring series and Building
+				// access are its views (#2766); a series' own page lights it too.
 				key: 'reservations',
 				capability: 'reservation.read',
 				label: 'Practice space',
 				href: resolve('staff/reservations'),
-				also: [resolve('staff/recurring'), resolve('staff/keys')]
+				also: [resolve('staff/recurring'), resolve('staff/building-access')]
 			},
 			// Gear is what is tracked unit by unit or lent out; Supplies is what is
 			// used up (#2573, predicate in `server/inventory/sections.ts`). Loans,

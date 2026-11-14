@@ -416,6 +416,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/building-access",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/classifieds",
 		"panel": "staff"
 	},
@@ -572,10 +576,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/keys",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/local-resources",
 		"panel": "staff"
 	},
@@ -665,6 +665,10 @@
 	},
 	{
 		"route": "/staff/music",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/recurring",
 		"panel": "staff"
 	},
 	{

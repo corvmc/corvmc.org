@@ -230,8 +230,8 @@ describe('the nav tree', () => {
 		// Recurring work is a Tasks view (#2087, #2625).
 		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
-		// Key holders is a header link on Practice space (#2574), not a row.
-		expect(activeNavKey('/staff/keys')).toBe('reservations');
+		// Building access is a Practice space view (#2766), not a row.
+		expect(activeNavKey('/staff/building-access')).toBe('reservations');
 		expect(keys('partners')).toEqual(['contacts', 'funding', 'venues', 'local-resources']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
@@ -285,7 +285,8 @@ describe('route coverage', () => {
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/local-resources/tips', // a Local Resources tab, and the review feed's tip rows (#2623)
-		'/staff/keys', // reached from Practice space's header (#2574)
+		'/staff/recurring', // a Practice space view (#2766)
+		'/staff/building-access', // a Practice space view (#2766)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',

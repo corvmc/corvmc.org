@@ -26,12 +26,13 @@ import {
 	memberRefColumns,
 	toBookerRef
 } from '#lib/server/entity/refs.js';
-import { DEFAULT_TIMEZONE, eventHoldBookers, type BookerType } from '#lib/config.js';
+import { bookerTypes, DEFAULT_TIMEZONE, eventHoldBookers } from '#lib/config.js';
 import type { Pagination } from '#lib/types/pagination.js';
 import { bandBookerJoin, eventBookerJoin } from './event-hold.js';
 import { isFirstReservationSql } from './reservation-service.js';
 import { buildDateInTz, formatDateInTz } from './timezone.js';
 import {
+	closurePage,
 	closuresInWindow,
 	interleave,
 	type ClosureFilters,
@@ -47,9 +48,13 @@ export type StaffDateRange = (typeof staffDateRanges)[number];
 export const staffStatusViews = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'] as const;
 export type StaffStatusView = (typeof staffStatusViews)[number];
 
+/** The list's type filter: a booker type, or closures alone (#2766). */
+export const staffListTypes = [...bookerTypes, 'closure'] as const;
+export type StaffListType = (typeof staffListTypes)[number];
+
 export interface StaffListFilters {
 	search?: string;
-	bookerType?: BookerType;
+	bookerType?: StaffListType;
 	range?: StaffDateRange;
 	/** `YYYY-MM-DD`, club time; read only when `range` is `custom`. */
 	dateFrom?: string;
@@ -128,7 +133,9 @@ function baseConditions(f: StaffListFilters, bounds: RangeBounds) {
 	if (bounds.endsAfter) conditions.push(gt(reservation.endsAt, bounds.endsAfter));
 	if (bounds.from) conditions.push(gte(reservation.startsAt, bounds.from));
 	if (bounds.before) conditions.push(lt(reservation.startsAt, bounds.before));
-	if (f.bookerType) conditions.push(eq(reservation.bookerType, f.bookerType));
+	if (f.bookerType && f.bookerType !== 'closure') {
+		conditions.push(eq(reservation.bookerType, f.bookerType));
+	}
 	if (f.search) {
 		conditions.push(
 			or(
@@ -225,22 +232,30 @@ export type StaffListRow = StaffReservationRow | ClosureRow;
 
 /**
  * One page of the list. A closure has no booker and no status, so it shows only
- * under All bookers and All statuses.
+ * under All bookers or Closures, and All statuses.
  */
 export async function listStaffReservations(
 	f: StaffListFilters,
 	now: Date
 ): Promise<{ rows: StaffListRow[]; pagination: Pagination }> {
 	const bounds = rangeBounds(f, now);
-	const page = await reservationPage(f, bounds);
-	const p = page.pagination.page;
-	if (f.bookerType || f.status || (p > 1 && page.rows.length === 0)) return page;
 	const closureFilters: ClosureFilters = {
 		endsAfter: bounds.endsAfter,
 		from: bounds.from,
 		before: bounds.before,
 		search: f.search
 	};
+	if (f.bookerType === 'closure') {
+		const empty = {
+			rows: [],
+			pagination: { page: 1, pageSize: STAFF_LIST_PAGE_SIZE, total: 0, totalPages: 0 }
+		};
+		if (f.status) return empty;
+		return closurePage(closureFilters, bounds.order, f.page ?? 1, STAFF_LIST_PAGE_SIZE);
+	}
+	const page = await reservationPage(f, bounds);
+	const p = page.pagination.page;
+	if (f.bookerType || f.status || (p > 1 && page.rows.length === 0)) return page;
 	const closures = await closuresInWindow(closureFilters, bounds.order, {
 		first: p > 1 ? page.rows[0].startsAt : undefined,
 		next: p < page.pagination.totalPages ? await nextPageStart(f, bounds) : undefined
@@ -256,6 +271,8 @@ export async function countStaffStatuses(
 	f: StaffListFilters,
 	now: Date
 ): Promise<Record<StaffStatusView, number>> {
+	if (f.bookerType === 'closure')
+		return { confirmed: 0, payment_due: 0, waitlisted: 0, cancelled: 0 };
 	const base = baseConditions(f, rangeBounds(f, now));
 	const anyDate = baseConditions(f, rangeBounds({ range: 'any' }, now));
 	const plain = staffStatusViews.filter((s) => s !== 'payment_due');

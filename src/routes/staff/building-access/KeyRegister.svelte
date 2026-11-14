@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import PageHeader from '#lib/components/ui/PageHeader.svelte';
-	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
@@ -34,58 +32,65 @@
 	const rows = $derived(await getAccessRegister(view === 'history'));
 </script>
 
-<PageHeader title={m.staff_keys_key_holders_title()} subtitle={m.staff_space_body()}>
-	<TabBar
-		tabs={[
-			{ key: 'held', label: m.staff_keys_held_now_label() },
-			{ key: 'history', label: m.staff_history_label() }
-		]}
-		active={view}
-		onchange={(key) => (view = key as 'held' | 'history')}
-	/>
-	<Action
-		action={issueAccessForm}
-		label={m.staff_keys_record_key_code_label()}
-		modalTitle={m.staff_keys_record_key_code_title()}
-		submitLabel={m.staff_record_label()}
-		successToast={m.staff_keys_recorded_toast()}
-		onsuccess={() => {
-			holderUserId = '';
-			holderPicked = '';
-		}}
-	>
-		{#snippet form()}
-			<Field field={fields.kind} type="select" label={m.staff_what_label()} options={kindOptions} />
-			<Field
-				field={fields.label}
-				type="text"
-				label={m.staff_keys_which_one_label()}
-				description={m.staff_keys_how_tell_apart_front_door_body()}
+<section class="space-y-3" aria-labelledby="key-holders-title" data-testid="key-register">
+	<div class="flex flex-wrap items-center justify-between gap-2">
+		<h2 id="key-holders-title" class="font-semibold">{m.staff_keys_key_holders_title()}</h2>
+		<div class="flex flex-wrap items-center gap-2">
+			<TabBar
+				tabs={[
+					{ key: 'held', label: m.staff_keys_held_now_label() },
+					{ key: 'history', label: m.staff_history_label() }
+				]}
+				active={view}
+				onchange={(key) => (view = key as 'held' | 'history')}
 			/>
-			<MemberPicker
-				field={fields.holderUserId}
-				label={m.staff_keys_held_by_label()}
-				bind:value={holderUserId}
-				bind:name={holderPicked}
-			/>
-			<Field
-				field={fields.holderName}
-				type="text"
-				label={m.staff_keys_name_label()}
-				description={m.staff_keys_somebody_without_account_landlord_contractor_body()}
-			/>
-			<Field
-				field={fields.issuedOn}
-				type="date"
-				label={m.staff_keys_issued_label()}
-				value={clubToday()}
-			/>
-			<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
-		{/snippet}
-	</Action>
-</PageHeader>
-
-<PageContent>
+			<Action
+				action={issueAccessForm}
+				label={m.staff_keys_record_key_code_label()}
+				modalTitle={m.staff_keys_record_key_code_title()}
+				submitLabel={m.staff_record_label()}
+				successToast={m.staff_keys_recorded_toast()}
+				onsuccess={() => {
+					holderUserId = '';
+					holderPicked = '';
+				}}
+			>
+				{#snippet form()}
+					<Field
+						field={fields.kind}
+						type="select"
+						label={m.staff_what_label()}
+						options={kindOptions}
+					/>
+					<Field
+						field={fields.label}
+						type="text"
+						label={m.staff_keys_which_one_label()}
+						description={m.staff_keys_how_tell_apart_front_door_body()}
+					/>
+					<MemberPicker
+						field={fields.holderUserId}
+						label={m.staff_keys_held_by_label()}
+						bind:value={holderUserId}
+						bind:name={holderPicked}
+					/>
+					<Field
+						field={fields.holderName}
+						type="text"
+						label={m.staff_keys_name_label()}
+						description={m.staff_keys_somebody_without_account_landlord_contractor_body()}
+					/>
+					<Field
+						field={fields.issuedOn}
+						type="date"
+						label={m.staff_keys_issued_label()}
+						value={clubToday()}
+					/>
+					<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
+				{/snippet}
+			</Action>
+		</div>
+	</div>
 	{#if rows.length === 0}
 		<EmptyState
 			title={view === 'held'
@@ -159,4 +164,4 @@
 			{/each}
 		</Table>
 	{/if}
-</PageContent>
+</section>

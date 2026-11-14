@@ -1,5 +1,7 @@
-import { and, asc, desc, gt, gte, lt, lte, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, gt, gte, lt, lte, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import type { Pagination } from '#lib/types/pagination.js';
 import { closure } from '#lib/server/db/schema/reservation.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 
@@ -84,6 +86,25 @@ export async function closuresInWindow(
 		.where(and(...where))
 		.orderBy(...orderBy(order));
 	return rows.map(shape);
+}
+
+/** Closures alone, a page at a time: the list's Closures type filter (#2766). */
+export async function closurePage(
+	f: ClosureFilters,
+	order: ListOrder,
+	page: number,
+	pageSize: number
+): Promise<{ rows: ClosureRow[]; pagination: Pagination }> {
+	const where = and(...conditions(f));
+	const dataQ = db
+		.select(columns)
+		.from(closure)
+		.where(where)
+		.orderBy(...orderBy(order))
+		.$dynamic();
+	const countQ = db.select({ count: count() }).from(closure).where(where);
+	const result = await paginate(dataQ, countQ, { page, pageSize });
+	return { rows: result.rows.map(shape), pagination: result.pagination };
 }
 
 /**
