@@ -262,7 +262,7 @@
 										<Badge variant="warning" size="xs">{m.staff_code_unconfirmed_label()}</Badge>
 									{/if}
 								</td>
-								<td class="w-px"><StatusBadge status={r.status} label /></td>
+								<td class="w-px"><StatusBadge status={r.track} label /></td>
 							</tr>
 						{/if}
 					{/each}

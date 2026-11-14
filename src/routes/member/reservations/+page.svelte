@@ -27,6 +27,7 @@
 	import clsx from 'clsx';
 	import { formatMonthDayYear, formatTimeRange } from '#lib/utils/format.js';
 	import { groupReservationsByMonth } from '#lib/utils/reservation-groups.js';
+	import { reservationTrack } from '#lib/utils/reservation-actions.js';
 	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 
 	let activeTab = $state<'active' | 'all'>('active');
@@ -55,7 +56,7 @@
 	const overdueReservations = $derived(pageData.then((d) => d.overdue));
 	// Payment confirmation via ?paid={id}
 	//
-	// A reservation is flipped to `confirmed` with a `paidAt` by
+	// A reservation is flipped to `confirmed` with a `paidAt` (the Paid track) by
 	// `checkout.session.completed`, not by the payment itself. Paying on Stripe's
 	// own page meant the redirect back took long enough that the webhook had all
 	// but always landed first; paying on our page, the member can arrive here in
@@ -118,7 +119,7 @@
 			if (cancelled) return;
 
 			const match = rows.find((r) => r.id === id) ?? null;
-			const settled = match === null || match.paidAt !== null;
+			const settled = match === null || reservationTrack(match) === 'paid';
 			awaitingPayment = !settled && attempt < PAID_RETRY_LIMIT;
 			if (settled || attempt >= PAID_RETRY_LIMIT) return;
 

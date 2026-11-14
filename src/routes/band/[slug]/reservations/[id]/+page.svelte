@@ -36,9 +36,6 @@
 	const durationLabel = $derived(
 		m.band_slug_reservations_id_hours_label({ durationHours: res.durationHours })
 	);
-	// `paidAt` set ⇒ paid; null with `cashDueCents > 0` ⇒ cash owed; null with 0
-	// ⇒ comped or fully credit-settled. See the schema comment on the column.
-	const cashDue = $derived(res.cashDueCents ?? 0);
 </script>
 
 <PageHeader width="md" title={m.band_slug_reservations_id_session_title()} />
@@ -85,19 +82,19 @@
 	     prose is not a section; it was an `InfoCard` titled "Payment" around a
 	     hand-written `<dl>` (#1077). -->
 	<p>
-		{#if res.refundedAt}
+		{#if res.track === 'refunded'}
 			{m.band_slug_reservations_id_refunded_text()}
-		{:else if res.paidAt}
+		{:else if res.track === 'paid'}
 			{m.band_slug_reservations_id_paid_full_text()}
-		{:else if res.cashDueCents === 0}
+		{:else if res.track === 'covered'}
 			{m.band_slug_reservations_id_settled_nothing_owed_at_door_text()}
-		{:else if cashDue > 0}
+		{:else if res.trackDetail === 'cash_due'}
 			<span class="font-medium"
 				>{m.band_slug_reservations_id_due_at_door_text({
-					formatDollars: formatDollars(cashDue)
+					formatDollars: formatDollars(res.cashDueCents ?? 0)
 				})}</span
 			>
-		{:else}
+		{:else if res.trackDetail === 'unpriced'}
 			{m.band_slug_reservations_id_not_yet_paid_text()}
 		{/if}
 	</p>
@@ -109,7 +106,7 @@
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
 			{m.band_slug_reservations_id_pay_session_label()}
 		</Button>
-	{:else if !res.isBooker && !res.paidAt && !res.refundedAt}
+	{:else if !res.isBooker && (res.track === 'booked' || res.track === 'payment_due')}
 		<!-- Whoever booked pays, from their own reservation page; the act sees
 		     what it owes without being handed someone else's checkout. -->
 		<p class="text-subtle">

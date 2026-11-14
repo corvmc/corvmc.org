@@ -10,6 +10,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
+	import { reservationTrack, trackDetail } from '#lib/utils/reservation-actions.js';
 	import { resolve } from '$app/paths';
 	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
 
@@ -61,7 +62,7 @@
 						{/snippet}
 						{#each group.rows as r (r.id)}
 							<tr class="hover" use:rowLink={resolve(`staff/reservations/${r.id}`)}>
-								<td class="w-px"><StatusBadge status={r.status} /></td>
+								<td class="w-px"><StatusBadge status={reservationTrack(r)} /></td>
 								<td class="cell-primary">
 									<a
 										class="font-medium whitespace-nowrap"
@@ -86,7 +87,7 @@
 									</span>
 								</td>
 								<td class="col-extra cell-num">
-									{#if r.cashDueCents && !r.paidAt}
+									{#if r.cashDueCents && trackDetail(r) === 'cash_due'}
 										<Badge variant="warning" size="sm">
 											${(r.cashDueCents / 100).toFixed(2)}
 										</Badge>

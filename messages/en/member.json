@@ -794,7 +794,7 @@
 	"member_reservations_teaching_badge_text": "Teaching",
 	"member_reservations_no_reservations_yet_use_reserve_body": "No reservations.",
 	"member_reservations_no_upcoming_reservations_use_reserve_body": "No upcoming reservations.",
-	"member_reservations_overdue_payments_label": "Overdue payments",
+	"member_reservations_overdue_payments_label": "Payment due",
 	"member_reservations_overdue_table_amount_due_label": "Amount due",
 	"member_reservations_reservation_card_door_code_text": "Door code: {#span}{lockCode}{/span}",
 	"member_reservations_reservation_card_door_code_pending_text": "Door code pending",

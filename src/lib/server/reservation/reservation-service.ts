@@ -795,6 +795,7 @@ export interface MemberReservation {
 	bandName: string | null;
 	cashDueCents: number | null;
 	paidAt: Date | null;
+	refundedAt: Date | null;
 	/** The staff-entered reason, which is the whole point of keeping cancelled
 	 *  rows in this list — a status of "cancelled" on its own answers nothing. */
 	cancellationReason: string | null;
@@ -857,6 +858,7 @@ export async function listForMember(
 		bookerId: reservation.bookerId,
 		cashDueCents: reservation.cashDueCents,
 		paidAt: reservation.paidAt,
+		refundedAt: reservation.refundedAt,
 		cancellationReason: reservation.cancellationReason,
 		createdByUserId: reservation.createdByUserId
 	};
@@ -910,6 +912,7 @@ export async function listForMember(
 		bandName: r.bookerType === 'group' ? (bandNameById.get(r.bookerId) ?? null) : null,
 		cashDueCents: r.cashDueCents,
 		paidAt: r.paidAt,
+		refundedAt: r.refundedAt,
 		cancellationReason: r.cancellationReason,
 		own: r.createdByUserId === userId
 	});

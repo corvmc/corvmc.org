@@ -78,9 +78,22 @@ export function reservationTrack(r: TrackedReservation, now: Date = new Date()):
 	return 'covered';
 }
 
-/** What settled a Covered reservation: the detail page says which (#2861). */
-export function coveredBy(r: { creditsUsed: number | null }): 'credits' | 'comp' {
-	return (r.creditsUsed ?? 0) > 0 ? 'credits' : 'comp';
+export type TrackDetail = 'credits' | 'comp' | 'cash_due' | 'unpriced';
+
+/**
+ * What the track leaves unsaid, for the surfaces with room to say it: which of
+ * credits or a comp covered it, and whether what is owed was ever priced. Null
+ * where the track is the whole story, and for an event hold, which has no price.
+ */
+export function trackDetail(
+	r: TrackedReservation & { creditsUsed?: number | null },
+	now: Date = new Date()
+): TrackDetail | null {
+	if (isEventHold(r.bookerType)) return null;
+	const track = reservationTrack(r, now);
+	if (track === 'covered') return (r.creditsUsed ?? 0) > 0 ? 'credits' : 'comp';
+	if (track !== 'booked' && track !== 'payment_due') return null;
+	return r.cashDueCents == null ? 'unpriced' : 'cash_due';
 }
 
 /** Tracks with no further member action: the session will not happen or is undone. */

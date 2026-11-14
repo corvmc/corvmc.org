@@ -6,7 +6,7 @@ import {
 	overlappingReservations,
 	owedAfterSession,
 	reservationTrack,
-	coveredBy,
+	trackDetail,
 	visibleActions
 } from './reservation-actions';
 
@@ -68,11 +68,33 @@ describe('reservationTrack', () => {
 	});
 });
 
-describe('coveredBy', () => {
-	it('tells credits from a comp', () => {
-		expect(coveredBy({ creditsUsed: 2 })).toBe('credits');
-		expect(coveredBy({ creditsUsed: 0 })).toBe('comp');
-		expect(coveredBy({ creditsUsed: null })).toBe('comp');
+describe('trackDetail', () => {
+	const now = new Date('2026-10-29T12:00:00Z');
+	const base = {
+		status: 'confirmed',
+		bookerType: 'user',
+		endsAt: new Date('2026-10-30T12:00:00Z'),
+		paidAt: null,
+		refundedAt: null,
+		cashDueCents: 0 as number | null,
+		creditsUsed: null as number | null
+	};
+
+	it('tells credits from a comp on a Covered reservation', () => {
+		expect(trackDetail({ ...base, creditsUsed: 2 }, now)).toBe('credits');
+		expect(trackDetail({ ...base, creditsUsed: 0 }, now)).toBe('comp');
+		expect(trackDetail(base, now)).toBe('comp');
+	});
+
+	it('tells a priced balance from one never priced', () => {
+		expect(trackDetail({ ...base, cashDueCents: 1500 }, now)).toBe('cash_due');
+		expect(trackDetail({ ...base, cashDueCents: null }, now)).toBe('unpriced');
+	});
+
+	it('adds nothing to a paid, cancelled or event-hold reservation', () => {
+		expect(trackDetail({ ...base, paidAt: now }, now)).toBeNull();
+		expect(trackDetail({ ...base, status: 'cancelled' }, now)).toBeNull();
+		expect(trackDetail({ ...base, bookerType: 'production' }, now)).toBeNull();
 	});
 });
 

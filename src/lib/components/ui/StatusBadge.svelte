@@ -76,7 +76,9 @@
 		snooze_expired: 'Snooze expired',
 		// A campaign's skipped recipients: the reason is the state.
 		skipped_unsubscribed: 'Unsubscribed',
-		skipped_suppressed: 'Suppressed'
+		skipped_suppressed: 'Suppressed',
+		// The word the staff actions and the audit log use.
+		no_show: 'No-show'
 	};
 
 	export const badgeClass: Record<string, string> = {
@@ -88,6 +90,11 @@
 		cancelled: 'badge-ghost',
 		waitlisted: 'badge-ghost',
 		refunded: 'badge-error',
+		// The reservation track (#2861), which is what a reservation is shown
+		// with. `booked` is shared with contractor engagements below.
+		paid: 'badge-success',
+		payment_due: 'badge-warning',
+		covered: 'badge-success',
 		// Events
 		draft: 'badge-warning',
 		pending_review: 'badge-info',
@@ -213,6 +220,10 @@
 		cancelled: { icon: IconCircleX, color: 'text-base-content' },
 		waitlisted: { icon: IconClockPause, color: 'text-base-content' },
 		refunded: { icon: IconArrowBackUp, color: 'text-error' },
+		// The reservation track. Covered is settled without money changing hands.
+		paid: { icon: IconCircleCheckFilled, color: 'text-success' },
+		payment_due: { icon: IconClock, color: 'text-warning' },
+		covered: { icon: IconCircleCheck, color: 'text-success' },
 
 		// Event statuses
 		draft: { icon: IconPencil, color: 'text-warning' },

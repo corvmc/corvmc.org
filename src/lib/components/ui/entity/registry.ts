@@ -309,6 +309,8 @@ export function toneFor(status: string | null | undefined): StatusTone | null {
 export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	// StatusBadge's success tone, in full.
 	'completed',
+	'paid',
+	'covered',
 	'published',
 	'resolved',
 	'available',
@@ -333,6 +335,8 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	// loan — being borrowed is what a loanable unit is *for*, and marking it
 	// would call out the healthy majority of a working catalogue.
 	'confirmed',
+	// So is a reservation on the Booked track, and a contractor who is booked.
+	'booked',
 	'valid',
 	'on_loan',
 	// The default band role and tier.

@@ -18,7 +18,7 @@
 	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
 	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
-	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import { memberPayAction, trackDetail } from '#lib/utils/reservation-actions.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -134,7 +134,7 @@
 			{/if}
 			<!-- Not behind !isPast: a balance is still owed after the session (#1952). -->
 			{#if owesBalance}
-				{#if (res.cashDueCents ?? 0) > 0}
+				{#if trackDetail(res) === 'cash_due'}
 					<span class="text-sm font-medium">
 						{(isPast
 							? m.member_reservations_id_due_text

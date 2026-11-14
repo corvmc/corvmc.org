@@ -19,6 +19,7 @@
  * accept a `null` image; adding a join per row to fetch an avatar is an N+1
  * dressed as a projection.
  */
+import { reservationTrack } from '#lib/utils/reservation-actions.js';
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
 import type { BookerType } from '#lib/config.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -244,7 +245,11 @@ export function reservationRefColumns(r: ReservationTable = reservation) {
 		startsAt: r.startsAt,
 		endsAt: r.endsAt,
 		bookerType: r.bookerType,
-		ownerUserId: r.createdByUserId
+		ownerUserId: r.createdByUserId,
+		// What the track reads, so a ref shows the status every other surface does.
+		paidAt: r.paidAt,
+		refundedAt: r.refundedAt,
+		cashDueCents: r.cashDueCents
 	};
 }
 
@@ -255,6 +260,22 @@ export interface ReservationRefRow {
 	endsAt: Date;
 	bookerType?: string | null;
 	ownerUserId?: string | null;
+	paidAt?: Date | null;
+	refundedAt?: Date | null;
+	cashDueCents?: number | null;
+}
+
+/** The track (#2861) where the row carries its columns; the stored status otherwise. */
+function refStatus(row: ReservationRefRow): string | null {
+	if (!row.status || !row.bookerType || row.paidAt === undefined) return row.status ?? null;
+	return reservationTrack({
+		status: row.status,
+		bookerType: row.bookerType,
+		endsAt: row.endsAt,
+		paidAt: row.paidAt,
+		refundedAt: row.refundedAt ?? null,
+		cashDueCents: row.cashDueCents ?? null
+	});
 }
 
 /**
@@ -278,7 +299,7 @@ export function toReservationRef(
 		id: row.id,
 		title: `${formatDate(row.startsAt)} · ${formatTimeRange(row.startsAt, row.endsAt)}`,
 		subtitle: formatDuration(row.startsAt, row.endsAt),
-		status: row.status ?? null,
+		status: refStatus(row),
 		// Exception-only: a member booking for themselves is the ordinary case and
 		// is absent from the registry, so it resolves to no marker.
 		subtype: row.bookerType ?? null,

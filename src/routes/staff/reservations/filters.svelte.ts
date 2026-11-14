@@ -1,10 +1,14 @@
 import { createContext } from 'svelte';
 import { datePresets, type DateRange } from '#lib/components/ui/DateFilter.svelte';
+import { reservationTracks, type ReservationTrack } from '#lib/utils/reservation-actions.js';
 
-export type Status = 'confirmed' | 'payment_due' | 'waitlisted' | 'cancelled';
+/** The status filter offers the reservation track (#2861). */
+export type Status = ReservationTrack;
 /** Who booked, or `closure` for closures alone (#2766). */
 export type Booker = 'user' | 'group' | 'production' | 'event_listing' | 'closure';
-export const statuses: Status[] = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'];
+export const statuses: readonly Status[] = reservationTracks;
+/** `status=` values from before the track, so a saved link still opens a view. */
+const legacyStatuses: Record<string, Status> = { confirmed: 'booked', completed: 'paid' };
 export const bookers: Booker[] = ['user', 'group', 'production', 'event_listing', 'closure'];
 const ranges: DateRange[] = [...datePresets, 'custom'];
 
@@ -33,7 +37,8 @@ export class ReservationFilters {
 		this.range = pick(ranges, 'date') ?? 'from_today';
 		this.from = params.get('from') ?? '';
 		this.to = params.get('to') ?? '';
-		this.status = pick(statuses, 'status') ?? '';
+		const status = params.get('status') ?? '';
+		this.status = statuses.find((s) => s === (legacyStatuses[status] ?? status)) ?? '';
 		this.page = Number(params.get('page')) || 1;
 	}
 
