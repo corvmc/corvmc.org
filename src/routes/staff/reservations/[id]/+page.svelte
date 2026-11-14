@@ -104,15 +104,15 @@
 	const paymentDetail = $derived.by((): string | null => {
 		switch (trackDetail(r)) {
 			case 'cash_due':
-				return m.staff_reservations_id_cash_due_text({
+				return m.staff_reservations_id_cash_due_label({
 					formatCents: formatCents(r.cashDueCents ?? 0)
 				});
 			case 'unpriced':
-				return m.staff_unpaid_text();
+				return m.staff_unpaid_label();
 			case 'credits':
-				return m.staff_paid_with_credits_text();
+				return m.staff_paid_with_credits_label();
 			case 'comp':
-				return m.staff_comped_text();
+				return m.staff_comped_label();
 			case null:
 				return null;
 		}
