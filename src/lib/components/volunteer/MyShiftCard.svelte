@@ -80,7 +80,12 @@
 			</p>
 		{:else}
 			<div class="mt-2">
-				<ShiftProgress status={shift.status} notes={shift.notes} />
+				<ShiftProgress
+					status={shift.status}
+					notes={shift.notes}
+					startsAt={shift.startsAt}
+					endsAt={shift.endsAt}
+				/>
 			</div>
 		{/if}
 

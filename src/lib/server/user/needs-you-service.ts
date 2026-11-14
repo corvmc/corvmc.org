@@ -10,6 +10,7 @@ import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
 import { getMemberSubscription } from '#lib/server/finance/subscription-service.js';
 import { listShowsLedBy } from '#lib/server/production/show-lead-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
+import { shiftNeedsYouItems } from './shift-needs-you';
 
 /**
  * What the member has to do something about, and when it stops being possible.
@@ -63,23 +64,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 		});
 	}
 
-	for (const s of signups) {
-		// `startsAt` is nullable: a work order can exist before it is scheduled.
-		// An unscheduled shift has no clock, so it is not a deadline.
-		if (s.shiftCancelledAt || !s.startsAt) continue;
-		if (s.startsAt <= now) continue;
-		if (s.status !== 'claimed' && s.status !== 'confirmed') continue;
-		items.push({
-			id: `volunteer-shift-soon:${s.signupId}`,
-			kind: 'volunteer-shift-soon',
-			title: `You are on ${s.roleName}`,
-			detail: s.eventTitle ?? undefined,
-			href: resolve(`member/volunteer/shifts/${s.signupId}`),
-			label: 'Open',
-			dueAt: s.startsAt,
-			rank: 1
-		});
-	}
+	items.push(...shiftNeedsYouItems(signups, now));
 
 	for (const c of unlogged) {
 		if (!c.endsAt) continue;
