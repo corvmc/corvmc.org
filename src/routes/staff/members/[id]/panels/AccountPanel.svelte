@@ -42,6 +42,8 @@
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Latest } from '#lib/latest.svelte.js';
+	import WhyCanAct from '#lib/components/access/WhyCanAct.svelte';
+	import { getPersonAccessWhy } from '#lib/remote/why-can-act.remote.js';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -78,6 +80,12 @@
 	$effect(() => {
 		if (roleCatalog.error) throw roleCatalog.error.e;
 	});
+
+	// Why this person can act (#2994): positions, committee seats, shift roles.
+	const why = new Latest(() => getPersonAccessWhy(id));
+	$effect(() => {
+		if (why.error) throw why.error.e;
+	});
 </script>
 
 <!--
@@ -99,6 +107,10 @@
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
+{/if}
+
+{#if why.current}
+	<WhyCanAct why={why.current} />
 {/if}
 
 <EmailChangeCard {id} email={member.email} />

@@ -127,7 +127,7 @@ import {
 	takeTask as takeTaskService,
 	unassignFromTask as unassignFromTaskService
 } from '#lib/server/volunteer/assignee-service.js';
-import { requireActOnTask } from '#lib/server/task/can-act.js';
+import { explainTaskAct, requireActOnTask, waitsOnTask } from '#lib/server/task/can-act.js';
 import {
 	setTaskPosition as setTaskPositionService,
 	taskPositionChoices
@@ -1611,11 +1611,13 @@ async function refreshWorkOrderPage(id: string) {
 	const projectId = await workOrderProjectId(id);
 	if (!projectId) {
 		void getWorkOrderActivity({ workOrderId: id }).refresh();
+		void getTaskWhy(id).refresh();
 		return getTaskPage(id).refresh();
 	}
 	// A project task's page is guarded as the project; a caller without it is not looking at it.
 	if (await can('project.read')) {
 		void getProjectActivity({ projectId, workOrderId: id }).refresh();
+		void getTaskWhy(id).refresh();
 		return getTaskPage(id).refresh();
 	}
 }
@@ -2481,12 +2483,16 @@ export const handBackTask = form(z.object({ workOrderId: z.string().min(1) }), a
  * and checklist, and which of take, hand back and mark done apply.
  */
 export const getMyTask = query(z.string().min(1), async (workOrderId) => {
-	const { reason } = await requireActOnTask(workOrderId);
-	const task = await getTaskChecklist(workOrderId);
+	const { user, reason } = await requireActOnTask(workOrderId);
+	const [task, why] = await Promise.all([
+		getTaskChecklist(workOrderId),
+		explainTaskAct(user.id, workOrderId)
+	]);
 	if (!task) error(404, 'Task not found');
 	const open = task.resolvedAt === null;
 	return {
 		...task,
+		why,
 		canMarkDone: open,
 		canTake: open && reason !== 'assignee',
 		canHandBack: open && reason === 'assignee'
@@ -2636,6 +2642,18 @@ export const getTaskPage = query(z.string(), async (id) => {
 		sections,
 		position
 	};
+});
+
+/**
+ * Who a task waits on, and why the caller can or cannot act on it (#2994),
+ * behind the task page's own guard. Read from `waitingOn` and `canActOnTask`.
+ */
+export const getTaskWhy = query(z.string(), async (id) => {
+	await guardTaskPage(id);
+	const { id: userId } = requireUser();
+	const [viewer, waitsOn] = await Promise.all([explainTaskAct(userId, id), waitsOnTask(id)]);
+	if (!viewer) error(404, 'Task not found');
+	return { viewer, waitsOn };
 });
 
 /** A task's write: its project's committee (or staff holding `project.manage`), else the coordinator's. */

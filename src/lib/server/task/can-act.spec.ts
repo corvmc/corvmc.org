@@ -19,7 +19,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'me' })
 }));
 
-const { canActOnTask, waitingOn } = await import('./can-act');
+const { canActOnTask, explainTaskAct, waitingOn, waitsOnTask } = await import('./can-act');
 const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
 
 /** The ids `waitingOn` lists for a user, sorted. */
@@ -162,6 +162,70 @@ describe('position-tagged tasks', () => {
 		for (const userId of ['me', 'other']) {
 			for (const id of await waiting(userId)) {
 				expect(await canActOnTask(userId, id)).not.toBeNull();
+			}
+		}
+	});
+});
+
+/**
+ * The "why" a task page shows (#2994) is read from the rule, not written beside
+ * it: for every user and task in the fixture, the explanation's reason is
+ * `canActOnTask`'s, and the task's waiting list is exactly the users whose
+ * `waitingOn` lists it.
+ */
+describe('the explanation agrees with the rule', () => {
+	const users = ['me', 'other', 'stranger'];
+
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into "user" (id, name, email) values ('stranger', 'Stranger', 's@example.com');
+			insert into group_position (id, group_id, name) values
+				('treasurer', 'booking', 'Treasurer'), ('vacant', 'booking', 'Vacant');
+			insert into group_position_holder (position_id, member_id) values ('treasurer', 'm6');
+			insert into work_order (id, title, group_id, position_id) values
+				('held-task', 'Count the till', 'booking', 'treasurer'),
+				('vacant-task', 'Nobody yet', 'booking', 'vacant'),
+				('taken-task', 'Taken', 'booking', null),
+				('done-part', 'Done part', 'sound', null);
+			insert into work_order_assignee (work_order_id, user_id, completed_at) values
+				('taken-task', 'stranger', null), ('done-part', 'other', unixepoch());
+		`);
+		grant.mockImplementation(async (userId: unknown) => userId === 'stranger');
+	});
+
+	const taskIds = async () =>
+		(await testDb.select({ id: workOrder.id }).from(workOrder)).map((r) => r.id);
+
+	it('gives every viewer the reason canActOnTask gives', async () => {
+		for (const id of await taskIds()) {
+			for (const userId of users) {
+				const why = await explainTaskAct(userId, id);
+				expect(why?.reason).toBe(await canActOnTask(userId, id));
+			}
+		}
+	});
+
+	it('names the committee and position the rule checked', async () => {
+		const why = await explainTaskAct('me', 'held-task');
+		expect(why?.committee?.id).toBe('booking');
+		expect(why?.position?.id).toBe('treasurer');
+		expect((await explainTaskAct('me', 'club-task'))?.committee).toBeNull();
+		expect(await explainTaskAct('me', 'missing')).toBeNull();
+	});
+
+	it('lists as waiting exactly the users waitingOn lists it for', async () => {
+		for (const id of await taskIds()) {
+			const listed = (await waitsOnTask(id)).map((w) => w.userId).sort();
+			const expected: string[] = [];
+			for (const userId of users) if ((await waiting(userId)).includes(id)) expected.push(userId);
+			expect(listed).toEqual(expected.sort());
+		}
+	});
+
+	it('gives each waiting user the reason canActOnTask gives', async () => {
+		for (const id of await taskIds()) {
+			for (const w of await waitsOnTask(id)) {
+				expect(await canActOnTask(w.userId, id)).toBe(w.reason);
 			}
 		}
 	});

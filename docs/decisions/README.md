@@ -80,11 +80,11 @@ A page or less. Link the issue and the PRs.
 | 0046 | [Serialization is not a capitalization threshold](0046-serialization-is-not-a-capitalization-threshold.md)                     | 2026-08-27 | Accepted           |
 | 0047 | [Certifications are an append-only catalog](0047-certifications-are-an-append-only-catalog.md)                                 | 2026-08-08 | Accepted           |
 | 0048 | [Volunteer hours are a record, not a currency](0048-volunteer-hours-are-a-record.md)                                           | 2026-08-08 | Accepted           |
-| 0049 | [A committee is a group, chaired by its admins](0049-a-committee-is-a-group-chaired-by-admins.md)                              | 2026-08-28 | Accepted           |
+| 0049 | [A committee is a group, chaired by its admins](0049-a-committee-is-a-group-chaired-by-admins.md)                              | 2026-08-28 | Amended by 0085    |
 | 0050 | [A project is a budgeted body of work that events point at](0050-a-project-is-a-budgeted-body-of-work.md)                      | 2026-09-02 | Accepted           |
 | 0051 | [Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md)                                               | 2026-09-02 | Amended by 0065    |
 | 0052 | [Secret ballots keep a counter, not a row per vote](0052-secret-ballots-count-without-a-vote-row.md)                           | 2026-09-24 | Accepted           |
-| 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)              | 2026-09-29 | Accepted           |
+| 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)              | 2026-09-29 | Amended by 0085    |
 | 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                      | 2026-10-13 | Accepted           |
 | 0055 | [Space training is a clearance and sets booking notice](0055-space-training-is-a-clearance-and-sets-booking-notice.md)         | 2026-11-11 | Accepted           |
 | 0056 | [A task is the work, and a shift is when volunteers show up](0056-a-task-is-the-work-a-shift-is-when.md)                       | 2026-11-10 | Accepted           |
@@ -115,3 +115,4 @@ A page or less. Link the issue and the PRs.
 | 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Accepted           |
 | 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                           | 2026-11-13 | Accepted           |
 | 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                               | 2026-11-13 | Accepted           |
+| 0085 | [Committees are departments, and a duty grants the duty](0085-committees-are-departments.md)                                   | 2026-11-14 | Accepted           |
