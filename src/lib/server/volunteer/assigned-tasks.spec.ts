@@ -13,6 +13,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
+const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
+const emit = vi.spyOn(domainEvents, 'emit');
 const svc = await import('./work-order-service');
 const { assignToTask, listAssignedTasksForUser, markAssignedTaskDone, NotAssignedToTaskError } =
 	await import('./assignee-service');
@@ -48,6 +50,51 @@ async function assignedTask(userId = 'nia') {
 	await assignToTask(task, userId, 'staff');
 	return task;
 }
+
+describe('assignToTask announces the assignment (#2986)', () => {
+	const announced = () => emit.mock.calls.filter(([event]) => event === 'volunteer.task_assigned');
+
+	beforeEach(() => {
+		emit.mockClear();
+	});
+
+	it('tells the assignee when somebody else assigns them', async () => {
+		const task = await svc.createWorkOrder({
+			volunteerRoleId: 'stage',
+			title: 'Fix the PA',
+			createdByUserId: 'staff'
+		});
+		await assignToTask(task, 'nia', 'staff');
+
+		expect(announced()).toEqual([
+			[
+				'volunteer.task_assigned',
+				expect.objectContaining({
+					workOrderId: task.id,
+					title: 'Fix the PA',
+					recipient: { userId: 'nia', userName: 'Nia', userEmail: 'nia@example.com' },
+					assignedByName: 'Staff'
+				})
+			]
+		]);
+	});
+
+	it('names the role for a task with no title', async () => {
+		await assignedTask();
+		expect(announced()[0][1]).toMatchObject({ title: 'Stage crew' });
+	});
+
+	it('sends nothing to a member who takes a task, or for a repeat assignment', async () => {
+		const task = await svc.createWorkOrder({ volunteerRoleId: 'stage', createdByUserId: 'staff' });
+		await assignToTask(task, 'nia', 'nia');
+		await assignToTask(task, 'sam', 'staff');
+		await assignToTask(task, 'sam', 'staff');
+
+		expect(
+			announced().map(([, e]) => (e as { recipient: { userId: string } }).recipient.userId)
+		).toEqual(['sam']);
+	});
+});
 
 describe('listAssignedTasksForUser', () => {
 	it('lists an open task for its assignee and nobody else', async () => {
@@ -129,5 +176,16 @@ describe('markAssignedTaskDone', () => {
 			svc.ShiftValidationError
 		);
 		expect((await listAssignedTasksForUser('nia'))[0].closesItself).toBe(true);
+	});
+});
+
+describe('assignment writes', () => {
+	// The notice is sent from `assignToTask`, so a second write path would assign silently.
+	it('go through assignToTask alone', async () => {
+		const { globSync, readFileSync } = await import('node:fs');
+		const writers = globSync('src/**/*.ts')
+			.filter((f) => !f.endsWith('.spec.ts'))
+			.filter((f) => /insert\(\s*workOrderAssignee\b/.test(readFileSync(f, 'utf8')));
+		expect(writers).toEqual(['src/lib/server/volunteer/assignee-service.ts']);
 	});
 });

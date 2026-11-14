@@ -463,6 +463,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'task_assigned',
+		category: 'volunteering',
+		label: 'Task assigned',
+		description: 'When somebody assigns you a task',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'task_ready',
 		category: 'volunteering',
 		label: 'Task ready',

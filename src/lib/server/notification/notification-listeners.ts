@@ -1532,6 +1532,42 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Assigned a task by somebody else (#2986) ---
+	domainEvents.on('volunteer.task_assigned', async ({ data: event }) => {
+		const title = `Task assigned: ${event.title}`;
+		const by = event.assignedByName;
+		const line = by ? `${by} assigned you "${event.title}".` : `You are assigned "${event.title}".`;
+		const due = event.dueAt ? formatClubDay(event.dueAt) : null;
+		try {
+			await dispatch({
+				type: 'task_assigned',
+				userId: event.recipient.userId,
+				userEmail: event.recipient.userEmail,
+				title,
+				body: due ? `${line} Due ${due}.` : line,
+				href: `/member/volunteer/tasks/${event.workOrderId}`,
+				data: { workOrderId: event.workOrderId },
+				email: {
+					recipientName: event.recipient.userName,
+					subject: title,
+					heading: 'Task assigned',
+					paragraphs: [{ text: line }],
+					details: [
+						{ label: 'Task', value: event.title },
+						...(due ? [{ label: 'Due', value: due }] : []),
+						...(by ? [{ label: 'Assigned by', value: by }] : [])
+					],
+					cta: { label: 'Open the task' }
+				}
+			});
+		} catch (err) {
+			captureException(err, {
+				event: 'notification.task_assigned',
+				to: event.recipient.userEmail
+			});
+		}
+	});
+
 	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {

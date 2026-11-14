@@ -1593,6 +1593,10 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
 - **Assigning and signing up are two acts.** Staff and committees assign a task to people
   (`work_order_assignee`, `assignee-service.ts`). Volunteers sign up for a shift
   (`volunteer_signup.shift_id` → `volunteer_shift`). A sign-up never stands for an assignment.
+- **Being assigned is announced.** `assignToTask` emits `volunteer.task_assigned` when somebody
+  else assigns the member, and the `task_assigned` notification (email and in-app by default)
+  links their task page. Taking a task yourself sends nothing. `assignToTask` is the only writer
+  of `work_order_assignee`; `assigned-tasks.spec.ts` holds it there.
 - **A shift is open by existing.** There is no posting step. **Open shift**
   (`openShift(taskId, times)`) needs the task to have a role and be open; the shift is then on
   the member board. It is offered on the task page, on Today's ended-shift rows, on the

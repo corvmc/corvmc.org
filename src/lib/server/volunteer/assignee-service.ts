@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
@@ -9,6 +9,8 @@ import {
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import { DomainError } from '#lib/server/errors.js';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
@@ -84,7 +86,46 @@ export async function assignToTask(
 			details: { userId, memberName: name, warnings }
 		});
 	}
+	// Taking a task yourself is not news to you.
+	if (assignedByUserId !== userId) await announceAssignment(task.id, userId, assignedByUserId);
 	return { warnings, added: true };
+}
+
+/** Captured rather than thrown: the assignment is already saved. */
+async function announceAssignment(
+	workOrderId: string,
+	userId: string,
+	assignedByUserId: string | null
+): Promise<void> {
+	try {
+		const people = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(inArray(user.id, assignedByUserId ? [userId, assignedByUserId] : [userId]));
+		const assignee = people.find((p) => p.id === userId);
+		const [task] = await db
+			.select({
+				title: workOrder.title,
+				eventTitle: eventListing.title,
+				roleName: volunteerRole.name,
+				dueAt: workOrder.dueAt
+			})
+			.from(workOrder)
+			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.where(eq(workOrder.id, workOrderId))
+			.limit(1);
+		if (!assignee || !task) return;
+		await domainEvents.emit('volunteer.task_assigned', {
+			workOrderId,
+			title: task.title ?? task.eventTitle ?? task.roleName ?? 'Task',
+			dueAt: task.dueAt?.toISOString() ?? null,
+			recipient: { userId, userName: assignee.name, userEmail: assignee.email },
+			assignedByName: people.find((p) => p.id === assignedByUserId)?.name ?? null
+		});
+	} catch (err) {
+		captureException(err, { event: 'volunteer.task_assigned', workOrderId });
+	}
 }
 
 /** Take somebody off a task. False when they were not on it. */
