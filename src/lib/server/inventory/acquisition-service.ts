@@ -850,34 +850,3 @@ export async function spendBySource(from: Date, to: Date) {
 		.groupBy(key)
 		.orderBy(desc(totalCents), key);
 }
-
-/**
- * Contributed nonfinancial assets, disaggregated by category.
- *
- * The shape FASB ASU 2020-07 asks for: gifts-in-kind as their own line, broken
- * down by the type of asset contributed, with whether each was monetized or
- * utilized. Phase 3 renders it; the fields it reads have been captured since
- * Phase 1 precisely so this is a query and not an archaeology project.
- */
-export async function inKindContributions(from: Date, to: Date) {
-	return db
-		.select({
-			categoryName: equipmentCategory.name,
-			monetized: acquisition.monetized,
-			fairValueCents: sql<number>`COALESCE(SUM(${acquisitionLine.quantity} * COALESCE(${acquisitionLine.unitValueCents}, 0)), 0)`,
-			units: sql<number>`COALESCE(SUM(${acquisitionLine.quantity}), 0)`
-		})
-		.from(acquisitionLine)
-		.innerJoin(acquisition, eq(acquisitionLine.acquisitionId, acquisition.id))
-		.innerJoin(inventoryItem, eq(acquisitionLine.itemId, inventoryItem.id))
-		.innerJoin(equipmentCategory, eq(inventoryItem.categoryId, equipmentCategory.id))
-		.where(
-			and(
-				eq(acquisition.kind, 'donation'),
-				gte(acquisition.occurredAt, from),
-				lte(acquisition.occurredAt, to)
-			)
-		)
-		.groupBy(equipmentCategory.name, acquisition.monetized)
-		.orderBy(equipmentCategory.name);
-}

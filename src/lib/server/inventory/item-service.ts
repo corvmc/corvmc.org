@@ -117,15 +117,6 @@ export async function listCategories() {
 		.orderBy(equipmentCategory.displayOrder, equipmentCategory.name);
 }
 
-export async function getCategoryById(id: string) {
-	const [row] = await db
-		.select()
-		.from(equipmentCategory)
-		.where(eq(equipmentCategory.id, id))
-		.limit(1);
-	return row ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Location CRUD
 // ---------------------------------------------------------------------------

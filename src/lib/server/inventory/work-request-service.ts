@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 import { linkedTo, linkedToAny } from '#lib/server/task/work-order-link.js';
 import { openSourcedTask } from '#lib/server/task/sourced-tasks.js';
 import { containsLiteral } from '#lib/server/db/like.js';
@@ -302,16 +302,6 @@ export async function listPendingFlags() {
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
 		.where(untriagedRequest())
 		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
-}
-
-/** Everything ever raised against one unit, newest first — the unit's own page. */
-export async function listFlagsForAsset(assetId: string) {
-	return db
-		.select({ flag: workRequest, reporterName: user.name })
-		.from(workRequest)
-		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-		.where(eq(workRequest.assetId, assetId))
-		.orderBy(desc(workRequest.createdAt), desc(workRequest.id));
 }
 
 /** Flags answered by one work order, so resolving it can close them together. */

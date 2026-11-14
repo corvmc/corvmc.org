@@ -53,8 +53,7 @@ import {
 	getOnHand,
 	getOnHandMany,
 	recordMovement,
-	signedQuantity,
-	transferStock
+	signedQuantity
 } from './stock-service';
 import { STOCK_REASON_SIGN } from '#lib/server/db/schema/inventory.js';
 import { stockReasons } from '#lib/config.js';
@@ -122,41 +121,6 @@ describe('recordMovement', () => {
 			assetId: 'a1'
 		});
 		expect(insertedValues[0]).toMatchObject({ loanId: 'l1', assetId: 'a1', quantity: -1 });
-	});
-});
-
-describe('transferStock', () => {
-	/**
-	 * Written as a matched pair so a transfer nets to zero in every on-hand sum.
-	 * The single-row alternative would need every future query to remember to
-	 * exclude it, which is a correctness burden that only ever gets forgotten.
-	 */
-	it('writes a matched pair that nets to zero', async () => {
-		await transferStock({
-			itemId: 'i1',
-			quantity: 4,
-			fromLocationId: 'loc-a',
-			toLocationId: 'loc-b'
-		});
-
-		expect(batchCalls).toHaveLength(1);
-		expect(insertedValues).toHaveLength(2);
-		const [out, into] = insertedValues;
-		expect(out).toMatchObject({ quantity: -4, locationId: 'loc-a' });
-		expect(into).toMatchObject({ quantity: 4, locationId: 'loc-b' });
-		expect((out.quantity as number) + (into.quantity as number)).toBe(0);
-	});
-
-	it('refuses a transfer to the same place', async () => {
-		await expect(
-			transferStock({ itemId: 'i1', quantity: 1, fromLocationId: 'x', toLocationId: 'x' })
-		).rejects.toThrow(InvalidMovementError);
-	});
-
-	it('refuses a transfer of nothing', async () => {
-		await expect(
-			transferStock({ itemId: 'i1', quantity: 0, fromLocationId: 'a', toLocationId: 'b' })
-		).rejects.toThrow(InvalidMovementError);
 	});
 });
 

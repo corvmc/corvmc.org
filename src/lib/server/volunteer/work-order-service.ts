@@ -1093,14 +1093,6 @@ export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
 }
 
 /**
- * Unassigned tasks: open, with no live shift and nobody assigned. The Schedule's
- * chip and the staff badge both read this, so they cannot disagree (#1828).
- */
-export function unassignedTaskWhere(filters: WorkOrderQueueFilters = {}) {
-	return and(unscheduledWorkWhere(filters), sql`${assigneeCountSql()} = 0`);
-}
-
-/**
  * The coordinator's queue: work nobody has found a time for. Oldest first, like
  * every queue in this app.
  */
@@ -1149,15 +1141,6 @@ export async function listShifts(
 	const rows = await (filters.limit ? query.limit(filters.limit) : query);
 
 	return withCounts(rows).filter(isScheduled);
-}
-
-/** These tasks as list rows, whatever their state; the caller picked them. */
-export async function listWorkOrdersByIds(ids: string[]): Promise<ShiftWithCounts[]> {
-	if (ids.length === 0) return [];
-	const rows = await taskRowsQuery()
-		.where(inArray(workOrder.id, ids))
-		.orderBy(asc(volunteerShift.startsAt), asc(workOrder.createdAt), asc(workOrder.id));
-	return withCounts(rows);
 }
 
 /**

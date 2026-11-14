@@ -13,7 +13,7 @@ import {
 	STOCK_REASON_SIGN,
 	type StockReason
 } from '#lib/server/db/schema/inventory.js';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 
 /**
@@ -139,72 +139,6 @@ export async function recordMovement(input: RecordMovementInput) {
 	return row;
 }
 
-/**
- * Move stock between locations.
- *
- * Written as a **matched pair** — `-n` at the origin, `+n` at the destination —
- * so a transfer nets to zero in every on-hand sum without any query having to
- * remember to exclude it. The alternative (one row, filtered out everywhere)
- * puts the correctness burden on every future caller.
- */
-export async function transferStock(input: {
-	itemId: string;
-	assetId?: string | null;
-	quantity: number;
-	fromLocationId: string;
-	toLocationId: string;
-	actorId?: string | null;
-	notes?: string | null;
-}) {
-	if (input.quantity <= 0) {
-		throw new InvalidMovementError('A transfer needs a positive quantity');
-	}
-	if (input.fromLocationId === input.toLocationId) {
-		throw new InvalidMovementError('A transfer needs two different locations');
-	}
-
-	const occurredAt = new Date();
-	const base = {
-		itemId: input.itemId,
-		assetId: input.assetId ?? null,
-		reason: 'transfer' as const,
-		actorId: input.actorId ?? null,
-		occurredAt,
-		notes: input.notes ?? null
-	};
-
-	// db.batch, never db.transaction — the latter is broken on D1.
-	const rows = await db.batch([
-		db
-			.insert(stockMovement)
-			.values({
-				...base,
-				quantity: -input.quantity,
-				locationId: input.fromLocationId,
-				toLocationId: input.toLocationId
-			})
-			.returning(),
-		db
-			.insert(stockMovement)
-			.values({
-				...base,
-				quantity: input.quantity,
-				locationId: input.toLocationId,
-				toLocationId: null
-			})
-			.returning()
-	]);
-
-	if (input.assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ locationId: input.toLocationId, updatedAt: new Date() })
-			.where(eq(inventoryAsset.id, input.assetId));
-	}
-
-	return rows.flat();
-}
-
 // ---------------------------------------------------------------------------
 // Reading
 // ---------------------------------------------------------------------------
@@ -318,25 +252,6 @@ export async function getAvailableQuantityMany(itemIds: string[]): Promise<Map<s
 		out.set(item.id, Math.max(0, base - (held.get(item.id) ?? 0)));
 	}
 	return out;
-}
-
-export interface ListMovementsOptions {
-	itemId?: string;
-	assetId?: string;
-	limit?: number;
-}
-
-export async function listMovements(opts: ListMovementsOptions = {}) {
-	const conditions = [];
-	if (opts.itemId) conditions.push(eq(stockMovement.itemId, opts.itemId));
-	if (opts.assetId) conditions.push(eq(stockMovement.assetId, opts.assetId));
-
-	return db
-		.select()
-		.from(stockMovement)
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(stockMovement.occurredAt), desc(stockMovement.createdAt), desc(stockMovement.id))
-		.limit(opts.limit ?? 100);
 }
 
 /**

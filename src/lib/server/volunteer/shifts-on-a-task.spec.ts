@@ -21,8 +21,6 @@ const svc = await import('./work-order-service');
 const { loadWorkOrderView } = await import('./work-order-view');
 const { assignToTask } = await import('./assignee-service');
 const { engageContractorOnTask } = await import('./task-people');
-const { db } = await import('#lib/server/db/index.js');
-const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
 
 const one = <T>(query: string) => sqlite.prepare(query).get() as T;
 const all = <T>(query: string) => sqlite.prepare(query).all() as T[];
@@ -175,15 +173,11 @@ describe('editing the task', () => {
 	});
 });
 
-describe('unassigned tasks', () => {
-	it('counts a task with no shift and nobody assigned, and stops once someone is', async () => {
+describe('the coordinator queue', () => {
+	it('keeps an assigned task with no shift, since it has no time yet', async () => {
 		const task = await svc.createWorkOrder({ volunteerRoleId: 'stage', createdByUserId: 'staff' });
-		const waiting = () => db.$count(workOrder, svc.unassignedTaskWhere());
 
-		expect(await waiting()).toBe(1);
 		await assignToTask(task, 'nia', 'staff');
-		expect(await waiting()).toBe(0);
-		// Still on the coordinator's queue: it has no time yet.
 		expect((await svc.listWorkOrders()).map((w) => [w.id, w.assignees])).toEqual([[task.id, 1]]);
 	});
 });
