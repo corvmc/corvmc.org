@@ -6,14 +6,15 @@ import {
 	overlappingReservations,
 	reservationTrack,
 	trackDetail,
-	visibleActions
+	visibleActions,
+	type TrackedReservation
 } from './reservation-actions';
 
 describe('reservationTrack', () => {
 	const now = new Date('2026-10-29T12:00:00Z');
 	const ahead = new Date('2026-10-30T12:00:00Z');
 	const ended = new Date('2026-10-28T12:00:00Z');
-	const base = {
+	const base: TrackedReservation = {
 		status: 'confirmed',
 		bookerType: 'user',
 		endsAt: ahead,
@@ -21,7 +22,7 @@ describe('reservationTrack', () => {
 		refundedAt: null,
 		cashDueCents: 1500
 	};
-	const track = (extra: Partial<typeof base> & Record<string, unknown> = {}) =>
+	const track = (extra: Partial<TrackedReservation> = {}) =>
 		reservationTrack({ ...base, ...extra }, now);
 
 	it('an upcoming unpaid reservation reads Booked, priced or not', () => {
