@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 import { linkedTo, linkedToAny } from '#lib/server/task/work-order-link.js';
 import { openSourcedTask } from '#lib/server/task/sourced-tasks.js';
 import { containsLiteral } from '#lib/server/db/like.js';

@@ -13,7 +13,7 @@ import {
 	STOCK_REASON_SIGN,
 	type StockReason
 } from '#lib/server/db/schema/inventory.js';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 
 /**
