@@ -175,8 +175,3 @@ export function owesMoney(
 ): boolean {
 	return confirmedUnpaid(r) && !r.refundedAt && !isEventHold(r.bookerType);
 }
-
-/** A session that has ended still owing: its row offers Cash received and No-show. */
-export function owedAfterSession(r: TrackedReservation, now: Date = new Date()): boolean {
-	return reservationTrack(r, now) === 'payment_due';
-}

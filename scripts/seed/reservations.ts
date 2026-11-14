@@ -201,8 +201,66 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 	rows.push(firstEver);
 
 	rows.push(...(await seedCancellationKinds(users)));
+	await seedTrackKinds();
 
 	return rows;
+}
+
+/**
+ * One booking on each reservation track (#2861), two for Covered, so every
+ * status the staff filter offers lists something. Fixed rather than rolled, and
+ * a member of their own, so no other persona's fee gate or history moves. Not
+ * returned: the payment seeders draw per returned row.
+ */
+async function seedTrackKinds() {
+	const [member] = await db
+		.insert(user)
+		.values({
+			id: randomUUID(),
+			name: 'Odile Marsh',
+			email: 'odile.marsh@example.com',
+			emailVerified: true,
+			memberNumber: 998,
+			createdAt: new Date(Date.now() - 60 * 86400000),
+			updatedAt: new Date()
+		})
+		.returning();
+	const cents = 2 * HOURLY_RATE_CENTS;
+	const kinds = [
+		{ day: 9, status: 'confirmed', cashDueCents: cents, notes: 'Booked' },
+		{ day: 10, status: 'waitlisted', notes: 'Waitlisted' },
+		{ day: -16, status: 'confirmed', cashDueCents: cents, notes: 'Payment due' },
+		{ day: -17, status: 'completed', cashDueCents: 0, paid: true, notes: 'Paid' },
+		{ day: -18, status: 'completed', cashDueCents: 0, creditsUsed: 2, notes: 'Covered by credits' },
+		{ day: -19, status: 'completed', cashDueCents: 0, notes: 'Covered by a comp' },
+		{ day: -20, status: 'no_show', notes: 'No-show' },
+		{ day: -21, status: 'cancelled', notes: 'Cancelled' },
+		{
+			day: -22,
+			status: 'confirmed',
+			cashDueCents: 0,
+			paid: true,
+			refunded: true,
+			notes: 'Refunded'
+		}
+	] as const;
+	const values = kinds.flatMap((k) => {
+		const slot = bookRoom(ptDate(k.day, 9), 2, k.status);
+		if (!slot) return [];
+		return {
+			bookerType: 'user' as const,
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: k.status,
+			...slot,
+			notes: k.notes,
+			cashDueCents: 'cashDueCents' in k ? k.cashDueCents : null,
+			creditsUsed: 'creditsUsed' in k ? k.creditsUsed : null,
+			paidAt: 'paid' in k ? slot.startsAt : null,
+			refundedAt: 'refunded' in k ? slot.endsAt : null
+		};
+	});
+	await batchInsert(reservation, values);
 }
 
 /**

@@ -112,3 +112,5 @@ A page or less. Link the issue and the PRs.
 | 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                             | 2026-11-13 | Accepted           |
 | 0079 | [A festival is a parent project](0079-a-festival-is-a-parent-project.md)                                                       | 2026-11-13 | Accepted           |
 | 0080 | [Payment reminders derive from the fee gate](0080-payment-reminders-derive-from-the-fee-gate.md)                               | 2026-11-13 | Accepted           |
+| 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Accepted           |
+| 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                           | 2026-11-13 | Accepted           |

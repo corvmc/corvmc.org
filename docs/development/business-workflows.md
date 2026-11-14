@@ -156,7 +156,7 @@ surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resol
 `compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
 file. The two refund forms are the staff member's intent made explicit: the first delegates to
 `cancel()` above; the second leaves the booking standing (a comp after a session that ran) and
-only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt`.
+only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 
 ### Data touched
 
@@ -181,10 +181,40 @@ only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.
 
+### The status track
+
+A reservation is shown with one status, its track (#2861,
+[decision 0081](../decisions/0081-a-reservation-shows-one-status-track.md)). It is derived from
+`status` and the payment columns and never stored. Staff and members read the same words.
+
+| Track       | Rule, first match wins                                                          |
+| ----------- | ------------------------------------------------------------------------------- |
+| Waitlisted  | `status = waitlisted`                                                           |
+| No-show     | `status = no_show`                                                              |
+| Refunded    | `refundedAt` set                                                                |
+| Cancelled   | `status = cancelled`                                                            |
+| Paid        | `paidAt` set                                                                    |
+| Payment due | confirmed, ended, owes money (`confirmedUnpaidSql`)                             |
+| Booked      | confirmed and owes money but has not ended, or an event hold that has not ended |
+| Covered     | everything else: credits or a comp settled it, or an event hold ended           |
+
+- `reservationTrack` in `src/lib/utils/reservation-actions.ts` and `reservationTrackSql` in
+  `src/lib/server/reservation/payment-due.ts` are the same rule in JS and SQL.
+  `reservation-track.spec.ts` runs every combination of the columns through both.
+- Payment due is `paymentDueSql`: the staff filter, the dot, the member's Payment due list and
+  the fee gate read it. An upcoming booking that owes cash at the session reads Booked.
+- `completed` is stored and not shown. A completed booking reads Paid or Covered.
+- Covered does not say whether credits or a comp settled it. `trackDetail` does, on the staff
+  reservation page; a comp is also a `reservation.comped` audit row.
+- A reservation ref (`toReservationRef`) carries the track as its status.
+- `scripts/reservation-track-only.spec.ts` fails a reservation component that decides on
+  `paidAt`, `refundedAt` or `cashDueCents` itself, or hands a stored status to `StatusBadge`.
+
 ### The staff side
 
 Staff work the same table from `/staff/reservations` (the Practice space list, filtered by
-booker type, date and status, with a create-on-behalf modal) and `/staff/reservations/[id]`
+booker type, date and track, with a create-on-behalf modal; a `status=confirmed` link from
+before the track opens Booked) and `/staff/reservations/[id]`
 (detail plus every action).
 Two things differ from the member path:
 
