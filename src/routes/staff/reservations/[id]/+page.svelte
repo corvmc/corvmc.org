@@ -280,7 +280,7 @@
 				<div class="mb-1 flex items-baseline justify-between">
 					<span class="text-2xl font-medium">{amountFormatted}</span>
 					{#if paymentDetail}
-						<span class="badge badge-ghost" data-testid="payment-detail">{paymentDetail}</span>
+						<Badge variant="ghost">{paymentDetail}</Badge>
 					{/if}
 				</div>
 				<p class="text-muted">
