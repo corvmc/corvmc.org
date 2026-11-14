@@ -17,10 +17,12 @@
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
 	// Above the await, and read from the resolved layout rather than
-	// `page.params`: it is the ref the editor query guards on.
-	const band = layout.band;
+	// `page.params`: it is the ref the editor query guards on. A rename keeps the slug.
+	// svelte-ignore state_referenced_locally
+	const slug = layout.band.slug;
+	const band = $derived(layout.band);
 	const { profile, genreSuggestions, instrumentSuggestions } = $derived(
-		await getBandProfileEditor(band.slug)
+		await getBandProfileEditor(slug)
 	);
 </script>
 

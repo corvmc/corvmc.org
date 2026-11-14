@@ -54,6 +54,7 @@
 
 	// Local state for editable fields — initialized from server data
 	const initialConfig = $derived(pageData.config);
+	// svelte-ignore state_referenced_locally
 	const storedTheme = (initialConfig?.theme ?? 'default') as BandThemeValue;
 
 	/**
@@ -62,6 +63,7 @@
 	 * stylesheet on the way in, preserving the cascade exactly; see
 	 * `theme-fork.ts`. Nothing persists until they save.
 	 */
+	// svelte-ignore state_referenced_locally
 	const foldedStyle = foldLegacy(
 		{ theme: storedTheme, customCss: initialConfig?.customCss ?? '' },
 		themeSheet
@@ -69,6 +71,7 @@
 	let style = $state<ThemeState>(foldedStyle);
 	const wasFolded = foldedStyle.theme !== storedTheme;
 
+	// svelte-ignore state_referenced_locally
 	let blocks = $state<Block[]>(structuredClone(initialConfig?.blocks ?? []));
 
 	/**

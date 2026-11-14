@@ -29,6 +29,7 @@
 	} = $props();
 
 	const fields = sendContactSheetLink.fields;
+	// svelte-ignore state_referenced_locally
 	let email = $state(defaultEmail);
 	// The link just issued, so staff can copy it; the toast says whether the email went.
 	let issued = $state<{ url: string; sent: boolean } | null>(null);

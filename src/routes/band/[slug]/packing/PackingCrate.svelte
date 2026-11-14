@@ -53,6 +53,7 @@
 	 */
 	const adminRemote = $derived(savePackingItemsFor.for(ownerUserId ?? 'shared'));
 
+	// svelte-ignore state_referenced_locally
 	let items = $state<PackingItemRowState[]>(initial);
 
 	const count = $derived(items.filter((it) => it.label?.trim()).length);

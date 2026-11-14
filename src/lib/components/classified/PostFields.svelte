@@ -41,6 +41,7 @@
 	let instruments = $state(tagsOf('instrument'));
 	let genres = $state(tagsOf('genre'));
 	let skills = $state(tagsOf('skill'));
+	// svelte-ignore state_referenced_locally
 	let category = $state(initial?.category ?? 'musician');
 </script>
 
