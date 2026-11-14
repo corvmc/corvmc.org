@@ -71,8 +71,10 @@ describe('queries do not read the page from the request event', () => {
 		expect(pageScopedReads(sf).map((h) => h.split(' ')[0])).toEqual(['url', 'params', 'route']);
 	});
 
+	// Walked at collection, not in the test: a whole-program walk under load outruns a test timeout (#2916).
+	const offenders = queries.flatMap((q) => reachedReads(g, q.key).map((h) => `${q.key} → ${h}`));
+
 	it('reach no event.url, params or route', () => {
-		const offenders = queries.flatMap((q) => reachedReads(g, q.key).map((h) => `${q.key} → ${h}`));
 		expect(offenders).toEqual([]);
 	});
 });
@@ -114,12 +116,14 @@ describe('mutations take their ids from the schema', () => {
 		expect(mutations.length).toBeGreaterThan(300);
 	});
 
+	// Walked at collection, as above (#2916).
+	const offenders = mutations.flatMap((r) =>
+		reachedReads(g, r.key)
+			.filter((h) => h.includes(': params '))
+			.map((h) => `${r.key} → ${h}`)
+	);
+
 	it('reach no route params', () => {
-		const offenders = mutations.flatMap((r) =>
-			reachedReads(g, r.key)
-				.filter((h) => h.includes(': params '))
-				.map((h) => `${r.key} → ${h}`)
-		);
 		expect(offenders).toEqual([]);
 	});
 });
