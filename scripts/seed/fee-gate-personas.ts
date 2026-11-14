@@ -31,14 +31,14 @@ export async function seedFeeGatePersonas(roles: SeedRole[]) {
 			id: 'seed-fees-one',
 			name: 'Juno Pratt',
 			email: 'fees-one@corvallismusic.org',
-			n: 77,
+			memberNumber: 77,
 			owed: [-3]
 		},
 		{
 			id: 'seed-fees-two',
 			name: 'Otis Varga',
 			email: 'fees-two@corvallismusic.org',
-			n: 78,
+			memberNumber: 78,
 			owed: [-4, -9]
 		}
 	];
@@ -48,7 +48,7 @@ export async function seedFeeGatePersonas(roles: SeedRole[]) {
 			name: p.name,
 			email: p.email,
 			emailVerified: true,
-			memberNumber: p.n,
+			memberNumber: p.memberNumber,
 			createdAt: joined,
 			updatedAt: joined
 		});
