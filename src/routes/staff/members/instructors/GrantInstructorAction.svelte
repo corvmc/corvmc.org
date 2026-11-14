@@ -43,7 +43,7 @@
 			<p class="text-subtle">
 				{#await getReservationPolicy('instructor') then teaching}{m.staff_members_instructors_grant_instructor_they_can_book_roo_text(
 						{ rate: formatCents(teaching.hourlyRateCents) }
-					)}{:catch error}{m.ui_load_failed_body({ error: errorMessage(error) })}{/await}
+					)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
 			</p>
 		</div>
 	{/snippet}

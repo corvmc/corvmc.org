@@ -38,7 +38,7 @@
 		{#if reservation.bookerType === 'instructor'}
 			<p class="px-3 pb-1">
 				<span class="badge badge-sm" data-testid="teaching-booking"
-					>{m.member_reservations_teaching_badge_label()}</span
+					>{m.member_reservations_teaching_badge_text()}</span
 				>
 			</p>
 		{/if}

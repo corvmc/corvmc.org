@@ -791,7 +791,7 @@
 	"member_reservations_my_reservations_title": "My reservations",
 	"member_reservations_practice_terms_label": "Practice terms",
 	"member_reservations_teaching_terms_label": "Teaching terms",
-	"member_reservations_teaching_badge_label": "Teaching",
+	"member_reservations_teaching_badge_text": "Teaching",
 	"member_reservations_no_reservations_yet_use_reserve_body": "No reservations.",
 	"member_reservations_no_upcoming_reservations_use_reserve_body": "No upcoming reservations.",
 	"member_reservations_overdue_payments_label": "Overdue payments",
