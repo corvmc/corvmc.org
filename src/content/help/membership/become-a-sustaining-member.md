@@ -1,5 +1,5 @@
 ---
-title: Become a Sustaining Member
+title: Become a sustaining member
 slug: become-a-sustaining-member
 category: membership
 summary: Start a recurring contribution and unlock member benefits.

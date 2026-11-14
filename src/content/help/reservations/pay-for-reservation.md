@@ -1,5 +1,5 @@
 ---
-title: Pay for a Reservation
+title: Pay for a reservation
 slug: pay-for-reservation
 category: reservations
 summary: How to pay for a booked session and what payment options exist.

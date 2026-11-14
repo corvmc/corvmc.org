@@ -1,5 +1,5 @@
 ---
-title: Manage Band Reservations
+title: Manage band reservations
 slug: manage-band-reservations
 category: bands
 summary: View and cancel your band's practice sessions.

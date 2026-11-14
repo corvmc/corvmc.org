@@ -1,5 +1,5 @@
 ---
-title: Create a Band
+title: Create a band
 slug: creating-a-band
 category: bands
 summary: Start a band, set up its profile, and invite members.

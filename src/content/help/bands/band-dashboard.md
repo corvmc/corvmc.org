@@ -1,5 +1,5 @@
 ---
-title: The Band Dashboard
+title: The band dashboard
 slug: band-dashboard
 category: bands
 summary: A tour of a band's home page and what you can do from it.

@@ -1,5 +1,5 @@
 ---
-title: Events for Members
+title: Events for members
 slug: member-events
 category: events-tickets
 summary: Browse shows, find your tickets, and check in at the door.

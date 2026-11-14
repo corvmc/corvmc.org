@@ -1,5 +1,5 @@
 ---
-title: Upgrade to Premium
+title: Upgrade to premium
 slug: upgrade-to-premium
 category: band-pages
 summary: Subscribe your band to Premium and manage the subscription.

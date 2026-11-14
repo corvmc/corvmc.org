@@ -1,5 +1,5 @@
 ---
-title: Manage Your Billing
+title: Manage your billing
 slug: manage-billing
 category: membership
 summary: Update your card, change your contribution, see your receipts, or cancel — all from the Membership page.

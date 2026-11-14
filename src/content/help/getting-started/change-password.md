@@ -1,5 +1,5 @@
 ---
-title: Change Your Password
+title: Change your password
 slug: change-password
 category: getting-started
 summary: Update the password you use to sign in.

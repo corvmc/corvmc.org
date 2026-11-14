@@ -1,5 +1,5 @@
 ---
-title: Control Your Directory Visibility
+title: Control your directory visibility
 slug: directory-visibility
 category: profile-directory
 summary: Choose who can see your profile — everyone, members only, or no one.

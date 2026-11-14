@@ -1,5 +1,5 @@
 ---
-title: Transfer Ownership or Leave a Band
+title: Transfer ownership or leave a band
 slug: transfer-leave-band
 category: bands
 summary: Hand off band ownership, or leave a band you're in.

@@ -1,5 +1,5 @@
 ---
-title: Run an Off-Site or Multi-Day Event
+title: Run an off-site or multi-day event
 slug: staff-offsite-events
 category: staff-guide
 summary: Set up a show CMC produces somewhere other than the practice room, or one that runs across more than one day.

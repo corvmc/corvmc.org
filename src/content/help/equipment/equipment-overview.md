@@ -1,5 +1,5 @@
 ---
-title: Equipment Lending Library
+title: Equipment lending library
 slug: equipment-overview
 category: equipment
 summary: Browse the gear available to borrow and how lending works.

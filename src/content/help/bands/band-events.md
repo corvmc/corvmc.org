@@ -1,5 +1,5 @@
 ---
-title: Create & Manage Band Events
+title: Create & manage band events
 slug: band-events
 category: bands
 summary: Publish your band's shows and keep their details up to date.

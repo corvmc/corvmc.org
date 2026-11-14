@@ -1,5 +1,5 @@
 ---
-title: Manage Band Members & Roles
+title: Manage band members & roles
 slug: manage-band-members
 category: bands
 summary: Change roles, remove members, and revoke invitations.

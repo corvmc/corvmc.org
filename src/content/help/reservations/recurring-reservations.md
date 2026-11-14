@@ -1,5 +1,5 @@
 ---
-title: Set Up a Recurring Booking
+title: Set up a recurring booking
 slug: recurring-reservations
 category: reservations
 summary: Reserve the same practice time on a weekly or monthly schedule.

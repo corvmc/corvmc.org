@@ -1,5 +1,5 @@
 ---
-title: Set Your Status Flags
+title: Set your status flags
 slug: profile-flags
 category: profile-directory
 summary: Signal whether you're looking for a band, for hire, teaching, or open to collab.

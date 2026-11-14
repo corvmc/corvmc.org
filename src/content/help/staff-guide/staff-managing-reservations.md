@@ -1,5 +1,5 @@
 ---
-title: Managing Reservations
+title: Managing reservations
 slug: staff-managing-reservations
 category: staff-guide
 summary: Find, settle and manage practice space reservations.

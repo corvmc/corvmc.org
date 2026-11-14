@@ -1,5 +1,5 @@
 ---
-title: Themes & Custom CSS
+title: Themes & custom CSS
 slug: page-theme-css
 category: band-pages
 summary: Pick a theme, then take its CSS over when you want to change it.

@@ -1,5 +1,5 @@
 ---
-title: Send an Email Campaign
+title: Send an email campaign
 slug: staff-email-campaigns
 category: staff-guide
 summary: Draft, preview, schedule, and send marketing emails.

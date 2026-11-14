@@ -1,5 +1,5 @@
 ---
-title: Benefits, Sliding Scale & Credits
+title: Benefits, sliding scale & credits
 slug: membership-benefits
 category: membership
 summary: What sustaining membership includes and how credits are allocated.

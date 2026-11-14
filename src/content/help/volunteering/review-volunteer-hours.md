@@ -1,5 +1,5 @@
 ---
-title: Reviewing Volunteer Hours
+title: Reviewing volunteer hours
 slug: review-volunteer-hours
 category: volunteering
 summary: Scheduling shifts, working the approval queue, finding volunteers, managing roles and clearances, and pulling the report.

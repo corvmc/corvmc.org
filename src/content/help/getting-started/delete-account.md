@@ -1,5 +1,5 @@
 ---
-title: Delete Your Account
+title: Delete your account
 slug: delete-account
 category: getting-started
 summary: How to permanently close your CorvMC account.
