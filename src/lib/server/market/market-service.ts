@@ -294,7 +294,11 @@ async function standingNeeds(organizationId: string, input: VendorApplicationInp
 	return { website: org?.website ?? null, setupNotes: detail?.setupNotes ?? null };
 }
 
-/** Every application for a market, with the contact joined from its thread. Staff only. */
+/**
+ * Every application for a market, with the contact joined from its thread.
+ * Staff only. A business that applied twice is kept twice (warn, record,
+ * allow), and each row names the other ones in `alsoApplied`.
+ */
 export async function listApplications(eventId: string) {
 	const rows = await db
 		.select({
@@ -332,7 +336,12 @@ export async function listApplications(eventId: string) {
 	);
 	return rows.map((r) => ({
 		...r,
-		previous: (r.organizationId && previous.get(r.organizationId)) || null
+		previous: (r.organizationId && previous.get(r.organizationId)) || null,
+		alsoApplied: r.organizationId
+			? rows
+					.filter((o) => o.id !== r.id && o.organizationId === r.organizationId)
+					.map(({ id, status, tableLabel }) => ({ id, status, tableLabel }))
+			: []
 	}));
 }
 
