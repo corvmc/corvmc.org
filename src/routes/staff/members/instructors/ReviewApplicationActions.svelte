@@ -12,7 +12,7 @@
 	/**
 	 * The two ways an application leaves the queue.
 	 *
-	 * "Reject" sends it back; it is not final and not an appealable decision: the
+	 * "Return" sends it back; it is not final and not an appealable decision: the
 	 * member edits their listing and resubmits, and `reviewNotes` is stored rather
 	 * than only emailed because they cannot fix what they cannot see.
 	 */
@@ -37,10 +37,10 @@
 <div class="flex w-max gap-2">
 	<Action
 		action={sendBackInstructor}
-		label={m.staff_members_instructors_review_application_actions_reject_label()}
-		modalTitle={m.staff_members_instructors_review_application_actions_reject_2_title({ name })}
-		submitLabel={m.staff_members_instructors_review_application_actions_reject_label()}
-		successToast={m.staff_rejected_toast()}
+		label={m.staff_return_label()}
+		modalTitle={m.staff_members_instructors_review_application_actions_return_title({ name })}
+		submitLabel={m.staff_return_label()}
+		successToast={m.staff_returned_toast()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => refreshAll()}

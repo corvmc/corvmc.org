@@ -41,11 +41,17 @@
 		variant="ghost"
 		size="sm"
 		modalTitle={m.staff_edit_2_title({ name: r.name })}
+		submitLabel={m.staff_save_label()}
 		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...editFields.id.as('hidden', r.id)} />
-			<ResourceFields fields={editFields} categories={data.categories} values={r} />
+			<ResourceFields
+				fields={editFields}
+				categories={data.categories}
+				values={r}
+				published={r.status === 'published'}
+			/>
 		{/snippet}
 	</Action>
 	<Action
@@ -83,8 +89,7 @@
 		<InfoCard title={m.staff_review_title()} class="bg-base-200 shadow-none">
 			{#if r.status === 'rejected' && r.staffNote}
 				<DefinitionList>
-					<Fact label={m.staff_local_resources_id_returned_because_label()} wrap>{r.staffNote}</Fact
-					>
+					<Fact label={m.staff_return_reason_label()} wrap>{r.staffNote}</Fact>
 				</DefinitionList>
 			{/if}
 			{#if r.reviewedAt}
@@ -114,11 +119,9 @@
 				{#if r.status !== 'rejected'}
 					<Action
 						action={rejectLocalResourceForm}
-						label={r.status === 'published'
-							? m.staff_local_resources_id_unpublish_label()
-							: m.staff_local_resources_id_reject_label()}
+						label={m.staff_return_label()}
 						modalTitle={m.staff_local_resources_id_return_title({ name: r.name })}
-						submitLabel={m.staff_local_resources_id_return_with_note_label()}
+						submitLabel={m.staff_return_label()}
 						successToast={m.staff_returned_toast()}
 						size="sm"
 					>

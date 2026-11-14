@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { keyRole } from '../eslint-rules/message-key-role.js';
-import { catalogs, failures, violations, wordCount, type Check } from './lib/message-copy.js';
+import { retiredTerms } from '../src/lib/config.js';
+import {
+	catalogs,
+	failures,
+	variants,
+	violations,
+	wordCount,
+	type Check
+} from './lib/message-copy.js';
 
 /**
  * The catalog holds every string to the rubric for the role its key names.
@@ -27,6 +35,21 @@ describe('message catalog', () => {
 
 	it('defines each key in one file', () => {
 		expect(keys.filter((k, i) => keys.indexOf(k) !== i)).toEqual([]);
+	});
+
+	it('uses no retired term (retiredTerms in src/lib/config.ts)', () => {
+		const found = list.flatMap(({ messages }) =>
+			Object.entries(messages).flatMap(([key, value]) =>
+				retiredTerms
+					.filter(({ keys }) => !keys || keys.test(key))
+					.flatMap(({ word, use }) =>
+						variants(value)
+							.filter((text) => word.test(text))
+							.map((text) => `${key}: "${text}" (use ${use})`)
+					)
+			)
+		);
+		expect(found).toEqual([]);
 	});
 
 	it('fails no rubric check outside the allowlist, and the allowlist holds no passing entry', () => {

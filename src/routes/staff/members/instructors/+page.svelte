@@ -23,13 +23,13 @@
 	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 
 	const statusLabels = {
-		active: 'Teaching',
-		requested: 'Pending',
-		paused: 'Paused',
-		retired: 'Retired',
-		rejected: 'Turned down',
-		all: 'All'
-	} as const;
+		active: m.staff_members_instructors_status_teaching_label,
+		requested: m.staff_pending_label,
+		paused: m.staff_members_instructors_status_paused_label,
+		retired: m.staff_retired_label,
+		rejected: m.staff_returned_label,
+		all: m.staff_all_label
+	};
 	type Status = keyof typeof statusLabels;
 	const statuses = Object.keys(statusLabels) as Status[];
 
@@ -73,7 +73,7 @@
 				}}
 			>
 				{#each statuses as s (s)}
-					<option value={s}>{statusLabels[s]}</option>
+					<option value={s}>{statusLabels[s]()}</option>
 				{/each}
 			</Select>
 		{/snippet}
@@ -102,7 +102,7 @@
 
 		{#snippet aside(row)}
 			{#if f.status === 'all'}
-				<StatusBadge status={row.status} text={statusLabels[row.status]} />
+				<StatusBadge status={row.status} text={statusLabels[row.status]()} />
 			{/if}
 		{/snippet}
 

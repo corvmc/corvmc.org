@@ -6,8 +6,11 @@ function words(camel: string): string {
 	return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+/** Resources whose interface term is not their key (docs/development/writing.md). */
+const RESOURCE_LABELS: Partial<Record<Resource, string>> = { instructor: 'Teaching' };
+
 export function resourceLabel(resource: string): string {
-	return words(resource);
+	return RESOURCE_LABELS[resource as Resource] ?? words(resource);
 }
 
 export function actionLabel(cap: Capability | string): string {

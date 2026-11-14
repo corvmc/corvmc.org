@@ -11,7 +11,8 @@
 	let {
 		fields,
 		categories,
-		values = {}
+		values = {},
+		published = false
 	}: {
 		fields: {
 			categoryId: F;
@@ -33,6 +34,8 @@
 			addressLine?: string | null;
 			displayOrder?: number;
 		};
+		/** Staff-created listings publish on save; a pending tip is not public. */
+		published?: boolean;
 	} = $props();
 
 	const options = $derived(categories.map((c) => ({ value: c.id, label: c.name })));
@@ -73,6 +76,8 @@
 	value={values.displayOrder ?? 0}
 	min="0"
 />
-<p class="text-muted text-wrap">
-	{m.staff_local_resources_resource_fields_everything_here_shown_text()}
-</p>
+{#if published}
+	<p class="text-muted text-wrap">
+		{m.staff_local_resources_resource_fields_everything_here_shown_text()}
+	</p>
+{/if}
