@@ -14,7 +14,7 @@ const { testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { confirmedUnpaidSql, paymentDueSql, reservationTrackSql } = await import('./payment-due');
+const { owesMoneySql, paymentDueSql, reservationTrackSql } = await import('./payment-due');
 const { reservation, reservationStatuses } = await import('#lib/server/db/schema/reservation.js');
 const { owesMoney, reservationTrack, reservationTracks } =
 	await import('#lib/utils/reservation-actions.js');
@@ -85,19 +85,39 @@ describe('reservationTrack and reservationTrackSql', () => {
 		const spelled = await testDb
 			.select({ id: reservation.id })
 			.from(reservation)
-			.where(and(lt(reservation.endsAt, now), confirmedUnpaidSql()));
+			.where(and(lt(reservation.endsAt, now), owesMoneySql()));
 		expect(due.length).toBeGreaterThan(0);
 		expect(ids(gate)).toEqual(due);
 		expect(ids(spelled)).toEqual(due);
 	});
 });
 
-describe('confirmedUnpaidSql and owesMoney', () => {
+describe('owing is decided by money, not stored status (#3003)', () => {
+	const completed = (over: Partial<Row>) =>
+		tracked({ ...rows.find((r) => r.status === 'completed')!, bookerType: 'user', ...over });
+	const ended = new Date(now.getTime() - HOUR);
+
+	it('reads a completed booking still owing as Payment due once it has ended', () => {
+		for (const cashDueCents of [null, 1500]) {
+			const r = completed({ endsAt: ended, paidAt: null, refundedAt: null, cashDueCents });
+			expect(owesMoney(r)).toBe(true);
+			expect(reservationTrack(r, now)).toBe('payment_due');
+		}
+	});
+
+	it('keeps a completed booking that was paid or settled out of owing', () => {
+		expect(reservationTrack(completed({ endsAt: ended, paidAt: ended }), now)).toBe('paid');
+		const settled = completed({ endsAt: ended, paidAt: null, cashDueCents: 0 });
+		expect(reservationTrack(settled, now)).toBe('covered');
+	});
+});
+
+describe('owesMoneySql and owesMoney', () => {
 	it('agree on every combination', async () => {
 		const viaSql = await testDb
 			.select({ id: reservation.id })
 			.from(reservation)
-			.where(confirmedUnpaidSql());
+			.where(owesMoneySql());
 		const owing = rows.filter((r) => owesMoney(tracked(r)));
 		expect(viaSql.length).toBeGreaterThan(0);
 		expect(ids(viaSql)).toEqual(ids(owing as { id: string }[]));

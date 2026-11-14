@@ -18,7 +18,7 @@ vi.mock('#lib/server/db/index.js', async (importOriginal) => ({
 }));
 
 const { autoCompleteExpired } = await import('./reservation-service');
-const { confirmedUnpaidSql } = await import('./payment-due');
+const { owesMoneySql } = await import('./payment-due');
 const { reservation, reservationStatuses } = await import('#lib/server/db/schema/reservation.js');
 const { bookerTypes } = await import('#lib/config.js');
 const { and, eq, isNull } = await import('drizzle-orm');
@@ -75,7 +75,7 @@ describe('autoCompleteExpired', () => {
 		const owing = await testDb
 			.select({ id: reservation.id })
 			.from(reservation)
-			.where(confirmedUnpaidSql());
+			.where(and(eq(reservation.status, 'confirmed'), owesMoneySql()));
 		expect(await confirmedIds()).toEqual(ids(owing));
 	});
 
@@ -85,7 +85,13 @@ describe('autoCompleteExpired', () => {
 			await testDb
 				.select({ id: reservation.id })
 				.from(reservation)
-				.where(and(confirmedUnpaidSql(), isNull(reservation.stripePaymentRecordId)))
+				.where(
+					and(
+						eq(reservation.status, 'confirmed'),
+						owesMoneySql(),
+						isNull(reservation.stripePaymentRecordId)
+					)
+				)
 		);
 		await autoCompleteExpired();
 		expect(owedBefore.length).toBeGreaterThan(0);

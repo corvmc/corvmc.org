@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { sourceFiles } from './lib/source-files';
 
 /**
- * "Owes money" is `confirmedUnpaidSql` / `paymentDueSql` in SQL (decision
+ * "Owes money" is `owesMoneySql` / `paymentDueSql` in SQL (decision
  * 0080) and `owesMoney` in TypeScript (#2991). A query that compares
  * `cashDueCents` to zero itself is a second definition, and drifts on refunds,
  * event holds and never-priced bookings. Checking `cashDueCents` for null to
@@ -50,7 +50,7 @@ describe('one rule for owing money', () => {
 		}
 		expect(
 			found,
-			`use confirmedUnpaidSql / paymentDueSql from $lib/server/reservation/payment-due:\n${found.join('\n')}`
+			`use owesMoneySql / paymentDueSql from $lib/server/reservation/payment-due:\n${found.join('\n')}`
 		).toEqual([]);
 	});
 });

@@ -9,6 +9,7 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
 import { terminalReaderId } from '#lib/server/finance/terminal-service.js';
 import { recordReservationCardPresent } from '#lib/server/finance/reservation-entries.js';
+import { payableStatusSql } from './payment-due';
 
 /** `metadata.type` on the intent, which is what the webhook dispatches on. */
 export const READER_PAYMENT_TYPE = 'reader_reservation';
@@ -270,13 +271,7 @@ export async function settleReservationAtReader(intent: Stripe.PaymentIntent): P
 			stripePaymentRecordId: intent.id,
 			updatedAt: paidAt
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				eq(reservation.status, 'confirmed'),
-				isNull(reservation.paidAt)
-			)
-		)
+		.where(and(eq(reservation.id, reservationId), payableStatusSql(), isNull(reservation.paidAt)))
 		.returning({ userId: reservation.createdByUserId });
 
 	if (flipped.length === 0) {

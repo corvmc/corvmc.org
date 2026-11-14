@@ -63,7 +63,7 @@ export interface TrackedReservation {
  * `reservation-track.spec.ts` holds the two together. Order matters: money that
  * went back never reads Paid, and a refund-only booking keeps its `paidAt`.
  * Payment due is `owesMoney` on a session that has ended; before that it reads
- * Booked. `completed` is not a track: a closed booking reads Paid or Covered.
+ * Booked. `completed` is not a track: it reads Paid, Payment due or Covered.
  */
 export function reservationTrack(r: TrackedReservation, now: Date = new Date()): ReservationTrack {
 	if (r.status === 'waitlisted') return 'waitlisted';
@@ -121,11 +121,11 @@ export function visibleActions(
 		actions.add('cancel');
 		if (now >= end) actions.add('complete');
 		if (now >= start) actions.add('noShow');
-		// Cash still owed → staff can record it or waive it.
-		if (cashOwed) {
-			actions.add('cashReceived');
-			actions.add('comp');
-		}
+	}
+	// Cash still owed → staff can record it or waive it, after completing too.
+	if (cashOwed && isPayableStatus(status)) {
+		actions.add('cashReceived');
+		actions.add('comp');
 	}
 
 	// Two actions, because staff intent differs: cancelling the booking, or
@@ -151,14 +151,25 @@ export interface PayableReservation {
 }
 
 /**
- * Owes money: confirmed and unpaid, not refunded, and not an event hold, which
- * is never charged. A null `cashDueCents` was never priced, so it is owed in
- * full. `confirmedUnpaidSql` in `payment-due` is the same reading in SQL. The
- * Payment due track is this on a session that has ended.
+ * The stored statuses a balance can be owed on. A completed booking was used,
+ * so it still owes until paid (#3003); a no-show is staff's call, not a debt.
+ * Every writer that settles a balance accepts exactly these.
+ */
+export const payableStatuses = ['confirmed', 'completed'] as const;
+
+export function isPayableStatus(status: string): boolean {
+	return (payableStatuses as readonly string[]).includes(status);
+}
+
+/**
+ * Owes money: confirmed or completed and unpaid, not refunded, and not an
+ * event hold, which is never charged. Decided by money, not by whether staff
+ * completed it (#3003). A null `cashDueCents` was never priced, so it is owed
+ * in full. `owesMoneySql` in `payment-due` is the same reading in SQL.
  */
 export function owesMoney(r: PayableReservation): boolean {
 	return (
-		r.status === 'confirmed' &&
+		isPayableStatus(r.status) &&
 		!r.paidAt &&
 		!r.refundedAt &&
 		!isEventHold(r.bookerType) &&
