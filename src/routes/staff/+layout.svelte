@@ -111,7 +111,6 @@
 		gear: IconTool,
 		supplies: IconPackage,
 		projects: IconFolders,
-		venues: IconMapPin,
 		calendar: IconCalendarMonth,
 		moderation: IconFlag,
 		suggestions: IconBulb,
