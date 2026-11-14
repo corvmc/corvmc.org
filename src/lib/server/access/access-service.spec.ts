@@ -34,6 +34,8 @@ beforeEach(async () => {
 		'member_certification',
 		'volunteer_certification',
 		'group_capability',
+		'group_position_holder',
+		'group_position',
 		'group_member',
 		'"group"',
 		'model_has_roles',
@@ -73,10 +75,13 @@ beforeEach(async () => {
 		{ groupId: 'g-dev', capability: 'project.manage' }
 	]);
 	await testDb.insert(groupMember).values([
-		{ id: 'gm-1', groupId: 'g-dev', userId: 'u-di', role: 'admin', status: 'active' },
+		{ id: 'gm-1', groupId: 'g-dev', userId: 'u-di', role: 'member', status: 'active' },
 		{ id: 'gm-2', groupId: 'g-dev', userId: 'u-cy', role: 'member', status: 'inactive' },
 		{ id: 'gm-3', groupId: 'g-club', userId: 'u-di', role: 'member', status: 'active' }
 	] as never);
+	// The chair is the chair position's holder (#3009).
+	sqlite.exec(`insert into group_position (id, group_id, name, is_chair) values ('p-chair', 'g-dev', 'Chair', 1);
+		insert into group_position_holder (position_id, member_id) values ('p-chair', 'gm-1')`);
 	await testDb
 		.insert(volunteerCertification)
 		.values({ id: 'vc-food', name: 'Food handler' } as never);

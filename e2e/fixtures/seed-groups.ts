@@ -16,7 +16,12 @@
  */
 import 'dotenv/config';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { group, groupMember } from '../../src/lib/server/db/schema/group';
+import {
+	group,
+	groupMember,
+	groupPosition,
+	groupPositionHolder
+} from '../../src/lib/server/db/schema/group';
 import {
 	groupApplication,
 	groupApplicationChoice
@@ -132,6 +137,7 @@ export async function seedGroups(): Promise<void> {
 				await db.delete(inboxMessage).where(eq(inboxMessage.threadId, `${groupId}${suffix}`));
 			}
 			await db.delete(inboxThread).where(eq(inboxThread.groupId, groupId));
+			await db.delete(groupPosition).where(eq(groupPosition.groupId, groupId));
 			await db.delete(groupMember).where(eq(groupMember.groupId, groupId));
 			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(groupId)));
 			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, groupId));
@@ -238,7 +244,7 @@ export async function seedGroups(): Promise<void> {
 				id: `${SEED_COMMITTEE_ID}-chair`,
 				groupId: SEED_COMMITTEE_ID,
 				userId: SEED_STAFF_ID,
-				role: 'admin',
+				role: 'member',
 				status: 'active'
 			},
 			// The two the member specs write to get a chair as well, so their
@@ -255,7 +261,7 @@ export async function seedGroups(): Promise<void> {
 				id: `${SEED_APPLY_ID}-chair`,
 				groupId: SEED_APPLY_ID,
 				userId: SEED_STAFF_ID,
-				role: 'admin',
+				role: 'member',
 				status: 'active'
 			},
 			{
@@ -288,6 +294,23 @@ export async function seedGroups(): Promise<void> {
 				status: 'active'
 			}
 		]);
+
+		// A committee's chair holds its chair position; its stored role stays `member` (#3009).
+		const chaired = [SEED_COMMITTEE_ID, SEED_APPLY_ID];
+		await db.insert(groupPosition).values(
+			chaired.map((groupId) => ({
+				id: `${groupId}-chair-position`,
+				groupId,
+				name: 'Chair',
+				isChair: true
+			}))
+		);
+		await db.insert(groupPositionHolder).values(
+			chaired.map((groupId) => ({
+				positionId: `${groupId}-chair-position`,
+				memberId: `${groupId}-chair`
+			}))
+		);
 
 		// The application the committee is waiting on: an application, not a
 		// roster row, so it renders on the review card and not in the roster.

@@ -108,6 +108,7 @@ import {
 } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 import { formatCents } from '#lib/utils/format.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -1368,7 +1369,7 @@ export async function unpublishWithNotice(
 		.where(
 			and(
 				inArray(groupMember.groupId, notifyBandIds),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active')
 			)
 		);
@@ -2219,7 +2220,7 @@ async function notifyLineupInvites(
 		.where(
 			and(
 				inArray(groupMember.groupId, invitedBandIds),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active')
 			)
 		);

@@ -1,7 +1,7 @@
 {
-  "id": "c9f30124-7c11-4257-bf83-ed4a87782eb9",
+  "id": "c25e6662-19b7-41c0-9b7e-33432b1e3490",
   "prevIds": [
-    "4a0dd1b0-8e52-4bca-86f7-3412535b99d1"
+    "97a20034-99f8-4e10-b5de-4d3dabd53ddb"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -6407,6 +6407,16 @@
       "default": null,
       "generated": null,
       "name": "name",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_chair",
       "entityType": "columns",
       "table": "group_position"
     },
@@ -24592,6 +24602,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_group_position_name",
+      "entityType": "indexes",
+      "table": "group_position"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"group_position\".\"is_chair\" = 1",
+      "origin": "manual",
+      "name": "idx_group_position_chair",
       "entityType": "indexes",
       "table": "group_position"
     },

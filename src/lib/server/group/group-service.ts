@@ -17,6 +17,7 @@ import { openApplicationCount } from '#lib/server/group/application-service.js';
 import { activeGroup, deactivatedGroup } from '#lib/server/group/group-totals-service.js';
 import type { GroupKind, GroupJoinPolicy } from '#lib/config.js';
 import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { leadsGroup, rosterRole, setChairHolder } from '#lib/server/group/chair.js';
 
 /**
  * Clubs and committees — the staff-run half of the groups module.
@@ -99,7 +100,8 @@ export class NotOnRosterError extends DomainError {
 }
 
 /**
- * Each group's chairs: its active admins, by name. One read for a whole page
+ * Each group's chairs: a club's active admins, a committee's chair position
+ * holders, by name. One read for a whole page
  * of groups. A program with none is legal and maps to an empty list.
  */
 async function chairsByGroup(groupIds: string[]): Promise<Map<string, MemberRef[]>> {
@@ -110,11 +112,7 @@ async function chairsByGroup(groupIds: string[]): Promise<Map<string, MemberRef[
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
-			and(
-				inArray(groupMember.groupId, groupIds),
-				eq(groupMember.role, 'admin'),
-				eq(groupMember.status, 'active')
-			)
+			and(inArray(groupMember.groupId, groupIds), leadsGroup(), eq(groupMember.status, 'active'))
 		)
 		.orderBy(user.name, user.id);
 	for (const r of rows) chairs.get(r.groupId)?.push(toMemberRef(r.chair));
@@ -343,7 +341,7 @@ export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
  */
 export async function getUserGroupStatus(groupId: string, userId: string) {
 	const [row] = await db
-		.select({ status: groupMember.status, role: groupMember.role })
+		.select({ status: groupMember.status, role: rosterRole() })
 		.from(groupMember)
 		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
 		.limit(1);
@@ -524,11 +522,17 @@ export async function updateGroupSettings(groupId: string, settings: UpdateGroup
 }
 
 /**
- * Staff make a program member a chair (`admin`) or take it away (`member`).
- * Adding a chair who is not on the roster inserts them active: appointed, not
- * invited. Demoting someone who is not on it is a 404. Never writes `owner`.
+ * Staff make a program member a chair or take it away. A club's chair is its
+ * `admin` role; a committee's is its chair position, which this fills or
+ * vacates (#3009). Adding a chair who is not on the roster inserts them
+ * active: appointed, not invited. Demoting someone not on it is a 404.
  */
-export async function setChairRole(groupId: string, userId: string, role: 'admin' | 'member') {
+export async function setChairRole(
+	groupId: string,
+	userId: string,
+	role: 'admin' | 'member',
+	actorId: string | null = null
+) {
 	const [target] = await db
 		.select({ id: group.id, kind: group.kind, name: group.name })
 		.from(group)
@@ -540,19 +544,24 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
 	}
 
 	const [existing] = await db
-		.select({ id: groupMember.id, role: groupMember.role, name: user.name })
+		.select({ id: groupMember.id, role: rosterRole(), name: user.name })
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
 		.limit(1);
+	const committee = target.kind === 'committee';
 
 	let memberName = existing?.name ?? null;
 	if (existing) {
 		if (existing.role === role) return;
-		await db
-			.update(groupMember)
-			.set({ role, updatedAt: new Date() })
-			.where(eq(groupMember.id, existing.id));
+		if (committee) {
+			await setChairHolder(groupId, existing.id, role === 'admin', actorId);
+		} else {
+			await db
+				.update(groupMember)
+				.set({ role, updatedAt: new Date() })
+				.where(eq(groupMember.id, existing.id));
+		}
 	} else {
 		if (role !== 'admin') throw new NotOnRosterError();
 		const [person] = await db
@@ -563,10 +572,12 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
 		if (!person) throw new NotOnRosterError();
 		memberName = person.name;
 		// `band_member_band_user_unique`: a concurrent add of the same person is a no-op.
-		await db
+		const [added] = await db
 			.insert(groupMember)
-			.values({ groupId, userId, role, status: 'active' })
-			.onConflictDoNothing();
+			.values({ groupId, userId, role: committee ? 'member' : role, status: 'active' })
+			.onConflictDoNothing()
+			.returning({ id: groupMember.id });
+		if (committee && added) await setChairHolder(groupId, added.id, true, actorId);
 	}
 
 	await recordAuditEntry({

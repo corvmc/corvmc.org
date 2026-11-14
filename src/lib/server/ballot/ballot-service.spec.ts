@@ -98,11 +98,14 @@ async function seed() {
 		{ id: A_BAND, kind: 'band', name: 'A Band', slug: 'a-band' }
 	] as never);
 	await testDb.insert(groupMember).values([
-		{ groupId: COMMITTEE, userId: CHAIR, role: 'owner', status: 'active' },
+		{ id: 'gm-chair', groupId: COMMITTEE, userId: CHAIR, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: VETERAN, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: NEWCOMER, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: PENDING, role: 'member', status: 'pending' }
 	] as never);
+	// A committee's chair holds its chair position (#3009).
+	sqlite.exec(`insert into group_position (id, group_id, name, is_chair) values ('p-chair', '${COMMITTEE}', 'Chair', 1);
+		insert into group_position_holder (position_id, member_id) values ('p-chair', 'gm-chair')`);
 }
 
 beforeEach(async () => {
@@ -117,6 +120,8 @@ beforeEach(async () => {
 		'ballot_option',
 		'ballot',
 		'member_orientation',
+		'group_position_holder',
+		'group_position',
 		'group_member',
 		'"group"',
 		'user'

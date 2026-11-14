@@ -6,6 +6,8 @@ import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	group,
 	groupMember,
+	groupPosition,
+	groupPositionHolder,
 	groupMemberStatuses,
 	groupSlugHistory,
 	type GroupMemberStatus,
@@ -56,6 +58,14 @@ import { captureException } from '#lib/server/sentry.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
 import type { BandTier } from '#lib/server/db/schema/band-site.js';
+import {
+	CHAIR_POSITION_NAME,
+	isCommitteeChair,
+	leadersFirst,
+	leadsGroup,
+	rosterRole,
+	setChairHolder
+} from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -254,6 +264,8 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
 
 	const bandId = crypto.randomUUID();
+	const firstMemberId = crypto.randomUUID();
+	const chairPositionId = crypto.randomUUID();
 
 	await db.batch([
 		// A previous owner may have released this slug. Claiming it retires their
@@ -272,12 +284,31 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 		...(ownerId
 			? [
 					db.insert(groupMember).values({
+						id: firstMemberId,
 						groupId: bandId,
 						userId: ownerId,
-						// A club or committee has chairs (admins) and never an owner.
-						role: kind === 'band' ? 'owner' : 'admin',
+						// A club's chair is `admin`; a committee's holds its chair position.
+						role: kind === 'band' ? 'owner' : kind === 'club' ? 'admin' : 'member',
 						status: 'active'
 					})
+				]
+			: []),
+		// Every committee has a chair position from the start (#3009).
+		...(kind === 'committee'
+			? [
+					db.insert(groupPosition).values({
+						id: chairPositionId,
+						groupId: bandId,
+						name: CHAIR_POSITION_NAME,
+						isChair: true
+					}),
+					...(ownerId
+						? [
+								db
+									.insert(groupPositionHolder)
+									.values({ positionId: chairPositionId, memberId: firstMemberId })
+							]
+						: [])
 				]
 			: []),
 		// The public listing, in the same batch as the band it belongs to. A band
@@ -511,7 +542,7 @@ export async function listForUser(
 		slug: group.slug,
 		kind: group.kind,
 		avatarKey: group.avatarKey,
-		role: groupMember.role,
+		role: rosterRole(),
 		status: groupMember.status,
 		memberCount: activeMemberCount()
 	}
@@ -562,7 +593,7 @@ export async function listBandAdmins(
 		.where(
 			and(
 				eq(groupMember.groupId, bandId),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active'),
 				// This list is fanned out to as a notification recipient set, so a
 				// removed member kept getting band mail without it.
@@ -578,7 +609,7 @@ function selectMembers(bandId: string) {
 		.select({
 			id: groupMember.id,
 			userId: groupMember.userId,
-			role: groupMember.role,
+			role: rosterRole(),
 			position: groupMember.position,
 			alias: groupMember.alias,
 			status: groupMember.status,
@@ -591,10 +622,7 @@ function selectMembers(bandId: string) {
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(and(eq(groupMember.groupId, bandId), isNull(user.deletedAt)))
-		.orderBy(
-			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
-			user.name
-		);
+		.orderBy(leadersFirst(), user.name);
 }
 
 type MemberRow = Awaited<ReturnType<typeof selectMembers>>[number];
@@ -795,7 +823,7 @@ export async function acceptInvitation(
 				.where(
 					and(
 						eq(groupMember.groupId, row.groupId),
-						inArray(groupMember.role, ['owner', 'admin']),
+						leadsGroup(),
 						eq(groupMember.status, 'active'),
 						ne(groupMember.userId, userId)
 					)
@@ -875,8 +903,22 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
 	const updates: Record<string, unknown> = {};
-	if (data.role !== undefined) updates.role = data.role;
+	if (data.role !== undefined) {
+		// A committee's chair is its chair position, not the stored role.
+		const [g] = await db
+			.select({ kind: group.kind, groupId: groupMember.groupId })
+			.from(groupMember)
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.where(scope)
+			.limit(1);
+		if (g?.kind === 'committee') {
+			await setChairHolder(g.groupId, memberId, data.role === 'admin', null);
+		} else {
+			updates.role = data.role;
+		}
+	}
 	if (data.position !== undefined) updates.position = data.position;
+	if (Object.keys(updates).length === 0) return;
 
 	return db.update(groupMember).set(updates).where(scope);
 }
@@ -1224,8 +1266,9 @@ export async function setTier(bandId: string, tier: BandTier) {
 
 export async function getUserRole(bandId: string, userId: string): Promise<GroupRole | null> {
 	const [row] = await db
-		.select({ role: groupMember.role, status: groupMember.status })
+		.select({ role: groupMember.role, kind: group.kind })
 		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
 		.where(
 			and(
 				eq(groupMember.groupId, bandId),
@@ -1235,5 +1278,10 @@ export async function getUserRole(bandId: string, userId: string): Promise<Group
 		)
 		.limit(1);
 
-	return (row?.role as GroupRole) ?? null;
+	if (!row) return null;
+	// A committee's `admin` tier is its chair position (#3009).
+	if (row.kind === 'committee') {
+		return (await isCommitteeChair(userId, bandId)) ? 'admin' : 'member';
+	}
+	return row.role as GroupRole;
 }

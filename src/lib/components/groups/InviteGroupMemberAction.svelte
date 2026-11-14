@@ -24,7 +24,7 @@
 	}: {
 		slug: string;
 		groupName: string;
-		/** False for a committee, whose seats are defined positions filled after joining. */
+		/** False for a committee, whose seats and chair are positions filled after joining. */
 		positions?: boolean;
 		onchanged: () => void;
 	} = $props();
@@ -117,13 +117,18 @@
 				</p>
 			{/if}
 
-			<FormField
-				field={memberFields.role}
-				type="select"
-				label={m.groups_role_label()}
-				value="member"
-				options={roleOptions}
-			/>
+			<!-- A committee's chair is a position, filled after joining. -->
+			{#if positions}
+				<FormField
+					field={memberFields.role}
+					type="select"
+					label={m.groups_role_label()}
+					value="member"
+					options={roleOptions}
+				/>
+			{:else}
+				<input {...memberFields.role.as('hidden', 'member')} />
+			{/if}
 			{#if positions}
 				<FormField
 					field={memberFields.position}
@@ -161,13 +166,18 @@
 				description={m.groups_invite_group_member_they_join_roster_when_they_body()}
 				required
 			/>
-			<FormField
-				field={emailFields.role}
-				type="select"
-				label={m.groups_role_label()}
-				value="member"
-				options={roleOptions}
-			/>
+			<!-- A committee's chair is a position, filled after joining. -->
+			{#if positions}
+				<FormField
+					field={emailFields.role}
+					type="select"
+					label={m.groups_role_label()}
+					value="member"
+					options={roleOptions}
+				/>
+			{:else}
+				<input {...emailFields.role.as('hidden', 'member')} />
+			{/if}
 			{#if positions}
 				<FormField
 					field={emailFields.position}

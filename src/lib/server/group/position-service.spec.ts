@@ -94,6 +94,12 @@ describe('cascades', () => {
 		expect(holders()).toEqual([{ position_id: id, member_id: 'm-ada' }]);
 	});
 
+	it('keeps the chair position, so a committee always has one', async () => {
+		sqlite.exec(`insert into group_position (id, group_id, name, is_chair)
+			values ('p-chair', 'g-book', 'Chair', 1)`);
+		await expect(deletePosition('g-book', 'p-chair')).rejects.toMatchObject({ httpStatus: 400 });
+	});
+
 	it('takes the holders with a removed position', async () => {
 		const { id } = await createPosition('g-book', 'Booker');
 		await setHolders('g-book', id, ['m-ada'], 'u-ada');

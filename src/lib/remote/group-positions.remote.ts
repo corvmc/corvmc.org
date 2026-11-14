@@ -10,11 +10,13 @@ import {
 } from '#lib/server/group/position-service.js';
 
 /**
- * A committee's defined positions (#2988). Its chair names and fills them;
- * Operations (`group.manage`) can too, for a committee without a chair. The
- * committee comes from the slug and every position id is checked against it.
+ * A committee's defined positions (#2988), the chair position among them
+ * (#3009). Its chair names and fills them; `committee.manage` can too, for a
+ * committee without a chair. The committee comes from the slug and every
+ * position id is checked against it.
  */
-const chair = (slug: string) => requireProgramRole({ slug }, 'admin', { staff: 'group.manage' });
+const chair = (slug: string) =>
+	requireProgramRole({ slug }, 'admin', { staff: 'committee.manage' });
 
 const positionName = z
 	.string()

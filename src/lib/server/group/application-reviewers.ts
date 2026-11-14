@@ -1,8 +1,9 @@
 import { db } from '#lib/server/db/index.js';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 export interface ApplicationReviewer {
 	id: string;
@@ -40,13 +41,7 @@ export async function applicationNotice(
 			.select({ id: user.id, name: user.name, email: user.email })
 			.from(groupMember)
 			.innerJoin(user, eq(user.id, groupMember.userId))
-			.where(
-				and(
-					eq(groupMember.groupId, groupId),
-					eq(groupMember.status, 'active'),
-					inArray(groupMember.role, ['owner', 'admin'])
-				)
-			)
+			.where(and(eq(groupMember.groupId, groupId), eq(groupMember.status, 'active'), leadsGroup()))
 	]);
 	if (!g) return null;
 

@@ -149,9 +149,11 @@ describe('predicates', () => {
 		);
 	});
 
-	it('band-leaders matches only owners and admins of live bands', () => {
+	// A committee's chair is its chair position, read through `leadsGroup` (#3009).
+	it('band-leaders matches group leaders of live groups', () => {
 		const sql = predicateSql('band-leaders');
-		expect(sql).toContain('"group_member"."role" in (\'owner\', \'admin\')');
+		expect(sql).toContain('"group_member"."role" in (');
+		expect(sql).toContain('"group_position"."is_chair" = 1');
 		expect(sql).toContain('"group_member"."status" = \'active\'');
 		expect(sql).toContain('"group"."deleted_at" is null');
 	});

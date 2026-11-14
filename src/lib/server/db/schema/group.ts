@@ -243,7 +243,10 @@ export const groupCapability = sqliteTable(
 /**
  * A named standing role inside a committee, such as Treasurer or Booker
  * (#2988). A committee acts as a department and this is a seat in it; a band's
- * or club's `group_member.position` stays free text. Grants nothing yet.
+ * or club's `group_member.position` stays free text.
+ *
+ * `isChair` marks the committee's chair (#3009): holding it is what makes
+ * someone chair, read through `isCommitteeChair`. At most one per committee.
  */
 export const groupPosition = sqliteTable(
 	'group_position',
@@ -255,6 +258,7 @@ export const groupPosition = sqliteTable(
 			.notNull()
 			.references(() => group.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
+		isChair: integer('is_chair', { mode: 'boolean' }).notNull().default(false),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -262,7 +266,12 @@ export const groupPosition = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [uniqueIndex('idx_group_position_name').on(t.groupId, t.name)]
+	(t) => [
+		uniqueIndex('idx_group_position_name').on(t.groupId, t.name),
+		uniqueIndex('idx_group_position_chair')
+			.on(t.groupId)
+			.where(sql`${t.isChair} = 1`)
+	]
 );
 
 /**

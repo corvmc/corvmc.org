@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
 // Who may name and fill a committee's positions (#2988): its chair, or
-// `group.manage`. The committee is the guard's resolved one, never the client's.
+// `committee.manage` (#3009). The committee is the guard's resolved one, never the client's.
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'u-chair' } }, url: new URL('http://x/') }),
@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe('committee position remotes', () => {
-	it('each names the chair role and admits group.manage', async () => {
+	it('each names the chair role and admits committee.manage', async () => {
 		await createCommitteePosition({ slug: 'booking', name: 'Treasurer' });
 		await updateCommitteePosition({
 			slug: 'booking',
@@ -49,7 +49,7 @@ describe('committee position remotes', () => {
 		await deleteCommitteePosition({ slug: 'booking', positionId: 'p-1' });
 
 		expect(guard.requireProgramRole.mock.calls).toEqual(
-			Array(3).fill([{ slug: 'booking' }, 'admin', { staff: 'group.manage' }])
+			Array(3).fill([{ slug: 'booking' }, 'admin', { staff: 'committee.manage' }])
 		);
 	});
 

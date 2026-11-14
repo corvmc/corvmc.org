@@ -529,6 +529,7 @@
 	"groups_add_chair_success_toast": "Chair added",
 	"groups_added_label": "Added",
 	"groups_admin_label": "Admin",
+	"groups_chair_label": "Chair",
 	"groups_announcement_composer_body_label": "Body",
 	"groups_announcement_composer_draft_saved_toast": "Draft saved",
 	"groups_announcement_composer_edit_announcement_title": "Edit announcement",
