@@ -73,7 +73,10 @@
 		pending_review: 'In review',
 		reported: 'Awaiting review',
 		// Same problem, and "Snooze expired" is the phrase the queue uses.
-		snooze_expired: 'Snooze expired'
+		snooze_expired: 'Snooze expired',
+		// A campaign's skipped recipients: the reason is the state.
+		skipped_unsubscribed: 'Unsubscribed',
+		skipped_suppressed: 'Suppressed'
 	};
 
 	export const badgeClass: Record<string, string> = {
@@ -144,6 +147,9 @@
 		failed: 'badge-error',
 		bounced: 'badge-error',
 		complained: 'badge-error',
+		// An audience member the send left out (#2914)
+		skipped_unsubscribed: 'badge-ghost',
+		skipped_suppressed: 'badge-ghost',
 		// Ballots: a certified result is final and published.
 		certified: 'badge-success',
 		// Contractor engagements; `declined`, `completed`, `cancelled` and
@@ -271,6 +277,8 @@
 		failed: { icon: IconMailX, color: 'text-error' },
 		bounced: { icon: IconMailOff, color: 'text-error' },
 		complained: { icon: IconMailExclamation, color: 'text-error' },
+		skipped_unsubscribed: { icon: IconCircleOff, color: 'text-base-content/60' },
+		skipped_suppressed: { icon: IconBan, color: 'text-base-content/60' },
 		certified: { icon: IconCircleCheckFilled, color: 'text-success' },
 
 		// Contractor engagements; the other four are shared and mean the same.

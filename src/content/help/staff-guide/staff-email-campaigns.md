@@ -31,8 +31,9 @@ cannot see it. You can still send; the send is recorded in the event's history.
 
 - Drafts open in the editor so you can keep working on them.
 - Sent campaigns open read-only. **Recipients** counts each send by status: sent, delivered, failed,
-  bounced or complained. Staff who manage audiences also see each address, its audience, and why a
-  send failed.
+  bounced or complained. It also counts the audience members left out: **Unsubscribed** from that
+  audience, or **Suppressed** everywhere. Staff who manage audiences also see each address, its
+  audience, and why a send failed.
 
 ## Tips
 

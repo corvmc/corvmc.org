@@ -357,7 +357,13 @@ describe('resolveSystemAudienceRecipients', () => {
 		const rows = await resolveSystemAudienceRecipients('aud-sys', 'all-members');
 
 		expect(rows).toEqual([
-			{ subscriberId: 'sub-1', email: 'a@example.com', name: 'A', audienceId: 'aud-sys' }
+			{
+				subscriberId: 'sub-1',
+				email: 'a@example.com',
+				name: 'A',
+				audienceId: 'aud-sys',
+				skip: null
+			}
 		]);
 	});
 

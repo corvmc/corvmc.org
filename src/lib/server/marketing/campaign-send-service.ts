@@ -46,7 +46,7 @@ export async function listCampaignSends(campaignId: string) {
 			.leftJoin(audience, eq(audience.id, campaignSend.audienceId))
 			.where(eq(campaignSend.campaignId, campaignId))
 			.orderBy(
-				sql`case ${campaignSend.status} when 'failed' then 0 when 'bounced' then 1 when 'complained' then 2 else 3 end`,
+				sql`case ${campaignSend.status} when 'failed' then 0 when 'bounced' then 1 when 'complained' then 2 when 'skipped_suppressed' then 4 when 'skipped_unsubscribed' then 4 else 3 end`,
 				asc(campaignSend.email),
 				asc(campaignSend.id)
 			),
