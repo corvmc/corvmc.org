@@ -11,6 +11,7 @@ import {
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
+import { memberSubject, recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import type { MemberRef } from '#lib/types/entity.js';
 import type { RosterPerson } from '#lib/types/roster.js';
@@ -58,6 +59,9 @@ export class MemberCertificationNotDeletableError extends DomainError {
 }
 
 export type CertificationState = 'current' | 'expiring' | 'expired' | 'revoked';
+
+/** The club-time calendar date of an instant, `YYYY-MM-DD`. */
+const clubDateOf = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
 
 /** A calendar date at noon club time, matching how hour logs anchor dates. */
 function atNoon(dateStr: string): Date {
@@ -169,7 +173,10 @@ export async function grantCertification(data: {
 	grantedByUserId: string;
 }): Promise<MemberCertification> {
 	const [cert] = await db
-		.select({ validityMonths: volunteerCertification.validityMonths })
+		.select({
+			name: volunteerCertification.name,
+			validityMonths: volunteerCertification.validityMonths
+		})
 		.from(volunteerCertification)
 		.where(eq(volunteerCertification.id, data.certificationId))
 		.limit(1);
@@ -224,7 +231,31 @@ export async function grantCertification(data: {
 		})
 		.returning();
 
+	await recordAuditEntry({
+		action: 'clearance.granted',
+		subject: await memberSubject(data.userId),
+		details: {
+			memberCertificationId: row.id,
+			certificationId: data.certificationId,
+			certificationName: cert.name,
+			grantedOn: data.grantedOn,
+			expiresOn: expiresAt ? clubDateOf(expiresAt) : null
+		}
+	});
 	return row;
+}
+
+async function clearanceRef(row: MemberCertification) {
+	const [cert] = await db
+		.select({ name: volunteerCertification.name })
+		.from(volunteerCertification)
+		.where(eq(volunteerCertification.id, row.certificationId))
+		.limit(1);
+	return {
+		memberCertificationId: row.id,
+		certificationId: row.certificationId,
+		certificationName: cert?.name ?? row.certificationId
+	};
 }
 
 /**
@@ -253,6 +284,11 @@ export async function revokeCertification(
 		.returning();
 
 	if (!row) throw new MemberCertificationNotFoundError();
+	await recordAuditEntry({
+		action: 'clearance.revoked',
+		subject: await memberSubject(row.userId),
+		details: { ...(await clearanceRef(row)), reason: trimmed }
+	});
 	return row;
 }
 
@@ -274,7 +310,7 @@ export async function deleteCertificationRecord(
 
 	if (!row) throw new MemberCertificationNotFoundError();
 
-	const createdOn = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(row.createdAt);
+	const createdOn = clubDateOf(row.createdAt);
 	if (row.grantedByUserId !== byUserId || createdOn !== clubToday()) {
 		throw new MemberCertificationNotDeletableError();
 	}

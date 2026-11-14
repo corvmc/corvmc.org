@@ -69,11 +69,13 @@ const cancel = vi.fn(
 		_options?: { staffOverride?: boolean; authorizedActor?: boolean }
 	) => undefined
 );
+const recordReservationAudit = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn(),
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
 	cancel,
+	recordReservationAudit,
 	confirm: vi.fn(),
 	markComplete: vi.fn(),
 	markNoShow: vi.fn(),
@@ -151,6 +153,17 @@ describe('refundOnlyReservation', () => {
 		expect(cancel).not.toHaveBeenCalled();
 	});
 
+	// Who refunded is on the audit row, not the reservation (#2817).
+	it('records the refund against the booking', async () => {
+		selectResults.push([paidRow]);
+		await refundOnlyReservation({ id: 'res-1' }, undefined);
+		const [id, build] = recordReservationAudit.mock.calls.at(-1)!;
+		expect(id).toBe('res-1');
+		expect(
+			build({ reservationId: 'res-1', date: 'd', startTime: 's', endTime: 'e' })
+		).toMatchObject({ action: 'reservation.refunded', details: { cancelled: false } });
+	});
+
 	it('requires the finance.refund capability', async () => {
 		selectResults.push([paidRow]);
 		await refundOnlyReservation({ id: 'res-1' }, undefined);
@@ -191,6 +204,10 @@ describe('refundAndCancelReservation', () => {
 		// here as well would refund twice.
 		expect(refundPayment).not.toHaveBeenCalled();
 		expect(updateSets).toHaveLength(0);
+		const [, build] = recordReservationAudit.mock.calls.at(-1)!;
+		expect(
+			build({ reservationId: 'res-1', date: 'd', startTime: 's', endTime: 'e' })
+		).toMatchObject({ action: 'reservation.refunded', details: { cancelled: true } });
 	});
 
 	it('requires the finance.refund capability', async () => {

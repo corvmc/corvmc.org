@@ -9,8 +9,7 @@ import {
 } from '#lib/server/finance/product-config-service.js';
 import {
 	getConfigsByPrefix,
-	updateSiteConfigs,
-	updateSiteConfig
+	updateSiteConfigs
 } from '#lib/server/site-config/site-config-service.js';
 import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
 import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
@@ -505,7 +504,7 @@ export const updateFeatureFlag = form(
 		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
 			throw error(400, 'Invalid feature flag');
 		}
-		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
+		await updateSiteConfigs([{ key: `feature.${data.flag}`, value: data.enabled }]);
 		void getStaffSettingsPage().refresh();
 		return { success: true };
 	}

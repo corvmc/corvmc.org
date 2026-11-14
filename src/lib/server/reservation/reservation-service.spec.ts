@@ -761,9 +761,15 @@ describe('ReservationService', () => {
 					return { where: updateWhere };
 				})
 			} as any);
-			const limit = vi.fn().mockResolvedValue(status ? [{ status }] : []);
+			// The status read, then the audit row's read of the booking (`reservation-audit.spec.ts`).
+			const limit = vi
+				.fn()
+				.mockResolvedValueOnce(status ? [{ status }] : [])
+				.mockResolvedValue([]);
 			const where = vi.fn().mockReturnValue({ limit });
-			vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where }) } as any);
+			vi.mocked(db.select).mockReturnValue({
+				from: vi.fn().mockReturnValue({ where, leftJoin: vi.fn().mockReturnValue({ where }) })
+			} as any);
 			return sets;
 		}
 

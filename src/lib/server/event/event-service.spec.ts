@@ -2125,6 +2125,26 @@ describe('EventService', () => {
 		});
 	});
 
+	// A listing that leaves the public calendar says who moved it (#2821).
+	describe('changing visibility', () => {
+		it('records the move from one visibility to another', async () => {
+			selectResult = [{ ...mockEventRow, visibility: 'public' }];
+			await update('evt-1', { visibility: 'members' });
+			expect(mockRecordAudit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					action: 'event.visibility_changed',
+					details: { from: 'public', to: 'members' }
+				})
+			);
+		});
+
+		it('records nothing when the visibility stays', async () => {
+			selectResult = [{ ...mockEventRow, visibility: 'members' }];
+			await update('evt-1', { visibility: 'members' });
+			expect(mockRecordAudit).not.toHaveBeenCalled();
+		});
+	});
+
 	// Staff may correct a cancelled listing's record (#2126); members may not.
 	describe('editing a cancelled event', () => {
 		const cancelled = () => [

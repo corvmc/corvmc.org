@@ -287,7 +287,13 @@ export const removePerson = form(
 	z.object({ id: z.string().min(1), organizationId: z.string().min(1) }),
 	async (data) => {
 		await requireCapability('contact.manage');
+		const person = await people.getPerson(data.id).catch(() => null);
 		await people.deleteContact(data.id);
+		await recordAuditEntry({
+			action: 'contact.deleted',
+			subject: { type: 'contact', id: data.id, label: person?.name ?? null },
+			details: { organizationId: data.organizationId }
+		});
 		await getOrganizationPage(data.organizationId).refresh();
 		return { success: true };
 	}
@@ -417,11 +423,13 @@ const pair = z.object({ survivorId: z.string().min(1), otherId: z.string().min(1
 
 export const mergePeople = form(pair, async (data) => {
 	await requireCapability('contact.manage');
+	// Read first: the merge deletes the other row, and its name is all the log keeps of it.
+	const other = await people.getPerson(data.otherId).catch(() => null);
 	const name = await people.mergeContacts(data.survivorId, data.otherId);
 	await recordAuditEntry({
 		action: 'contact.merged',
 		subject: { type: 'contact', id: data.survivorId, label: name ?? 'Contact' },
-		details: { mergedId: data.otherId }
+		details: { mergedId: data.otherId, mergedName: other?.name ?? null }
 	});
 	await getDuplicates().refresh();
 	return { success: true };

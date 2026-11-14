@@ -87,6 +87,50 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			details: { subscription: 'none' }
 		},
 		{
+			daysAgo: 6,
+			action: 'reservation.comped',
+			subject: subject(b),
+			details: {
+				reservationId: 'seed-comped-reservation',
+				date: 'Nov 3, 2026',
+				startTime: '6:00 PM',
+				endTime: '8:00 PM',
+				waivedCents: 3000
+			}
+		},
+		{
+			daysAgo: 5,
+			action: 'clearance.granted',
+			subject: subject(b),
+			details: {
+				memberCertificationId: 'seed-clearance-grant',
+				certificationId: 'seed-sound-desk',
+				certificationName: 'Sound Desk Cleared',
+				grantedOn: '2026-11-08',
+				expiresOn: '2027-11-08'
+			}
+		},
+		{
+			daysAgo: 5,
+			action: 'orientation.waived',
+			subject: subject(b),
+			details: { reason: 'Played here for years before orientation existed' }
+		},
+		{
+			daysAgo: 4,
+			action: 'settings.changed',
+			subject: { type: 'setting', id: 'reservation', label: null },
+			details: {
+				changes: [{ key: 'reservation.feeGateFrom', from: '', to: '2026-11-01' }]
+			}
+		},
+		{
+			daysAgo: 2,
+			action: 'contact.deleted',
+			subject: { type: 'contact', id: 'seed-deleted-contact', label: 'Robin Former' },
+			details: { organizationId: null }
+		},
+		{
 			daysAgo: 7,
 			action: 'user.purged',
 			subject: { type: 'user', id: 'purged-seed-account', label: 'Casey Former' },

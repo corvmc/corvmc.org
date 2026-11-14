@@ -898,6 +898,13 @@ export async function update(
 				) as (typeof eventListing.$inferSelect)[])
 			: await write;
 
+	if (params.visibility !== undefined && params.visibility !== existing.visibility) {
+		await recordAuditEntry({
+			action: 'event.visibility_changed',
+			subject: { type: 'event', id: eventId, label: updated.title },
+			details: { from: existing.visibility, to: params.visibility }
+		});
+	}
 	if (isCancelled) {
 		await recordAuditEntry({
 			action: 'event.edited_while_cancelled',

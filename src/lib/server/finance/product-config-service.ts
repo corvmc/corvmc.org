@@ -12,6 +12,7 @@ import type Stripe from 'stripe';
 import { getJson, putJson } from '#lib/server/kv.js';
 import { stripe } from '#lib/server/stripe.js';
 import type { CheckoutLineItem } from './payment-service';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 const KV_PREFIX = 'product-config:';
 
@@ -272,6 +273,17 @@ export async function updateProductConfig(
 	};
 
 	await writeRow(updated);
+	const fields = ['name', 'description', 'unitAmountCents'] as const;
+	const changes = fields
+		.filter((f) => updated[f] !== current[f])
+		.map((f) => ({ key: `product.${key}.${f}`, from: current[f] ?? '', to: updated[f] ?? '' }));
+	if (changes.length) {
+		await recordAuditEntry({
+			action: 'settings.changed',
+			subject: { type: 'setting', id: 'product', label: null },
+			details: { changes }
+		});
+	}
 
 	// Sync name/description to Stripe if the product exists
 	if (current.stripeProductId) {

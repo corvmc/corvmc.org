@@ -32,6 +32,7 @@ import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { ReservationStatus } from '#lib/server/db/schema/reservation.js';
 import type { BookerType, ReservationCanceller } from '#lib/config.js';
 import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry, type AuditEntryInput } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
@@ -390,7 +391,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
  */
 export async function comp(reservationId: string): Promise<void> {
 	const [row] = await db
-		.select({ status: reservation.status })
+		.select({ status: reservation.status, cashDueCents: reservation.cashDueCents })
 		.from(reservation)
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
@@ -402,6 +403,53 @@ export async function comp(reservationId: string): Promise<void> {
 		.update(reservation)
 		.set({ cashDueCents: 0, updatedAt: new Date() })
 		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
+	await recordReservationAudit(reservationId, (when) => ({
+		action: 'reservation.comped',
+		details: { ...when, waivedCents: row.cashDueCents ?? 0 }
+	}));
+}
+
+type ReservationAudit = Extract<
+	AuditEntryInput,
+	{ action: 'reservation.comped' | 'reservation.refunded' }
+>;
+
+/**
+ * One audit row about a booking, on the member who booked, with its slot in
+ * the space's zone as `reservation.cancelled_by_staff` carries it.
+ */
+export async function recordReservationAudit(
+	reservationId: string,
+	build: (when: {
+		reservationId: string;
+		date: string;
+		startTime: string;
+		endTime: string;
+	}) => Omit<ReservationAudit, 'subject'>
+): Promise<void> {
+	const [row] = await db
+		.select({
+			userId: reservation.createdByUserId,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			name: user.name
+		})
+		.from(reservation)
+		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	if (!row) return;
+	const TZ = DEFAULT_TIMEZONE;
+	const entry = build({
+		reservationId,
+		date: formatDateInTz(row.startsAt, TZ),
+		startTime: formatTimeInTz(row.startsAt, TZ),
+		endTime: formatTimeInTz(row.endsAt, TZ)
+	});
+	await recordAuditEntry({
+		...entry,
+		subject: { type: 'user', id: row.userId, label: row.name }
+	} as AuditEntryInput);
 }
 
 // ---------------------------------------------------------------------------

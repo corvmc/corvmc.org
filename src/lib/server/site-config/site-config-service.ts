@@ -1,6 +1,7 @@
 import { getJson, putJson } from '#lib/server/kv.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { ORIENTATION_DEFAULT_TASKS } from '#lib/config.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 /** The caller asked for a config key that is not in the registry. */
 export class UnknownSiteConfigKeyError extends DomainError {
@@ -251,13 +252,36 @@ export async function updateSiteConfig(
 	memo.delete(key);
 }
 
+/** Keys whose values never enter the audit log; the row lists the key alone. */
+const SECRET_KEY = /secret|token|password/i;
+
 /**
  * Concurrent rather than sequential. KV has no batch put, so a partial failure
  * was always possible and still is — now in nondeterministic order, which is
  * acceptable for a settings form and would not be for a ledger.
+ *
+ * Every settings form saves through here, so this is where the one
+ * `settings.changed` row per save is written, naming the keys that moved.
  */
 export async function updateSiteConfigs(
-	entries: Array<{ key: string; value: string | number }>
+	entries: Array<{ key: string; value: string | number | boolean }>
 ): Promise<void> {
+	const before = await Promise.all(
+		entries.map(async ({ key }) => (await readStored(key)) ?? DEFAULTS[key])
+	);
 	await Promise.all(entries.map((entry) => updateSiteConfig(entry.key, entry.value)));
+
+	const moved = entries.filter((e, i) => e.value !== before[i]);
+	if (moved.length === 0) return;
+	const redacted = moved.filter((e) => SECRET_KEY.test(e.key)).map((e) => e.key);
+	await recordAuditEntry({
+		action: 'settings.changed',
+		subject: { type: 'setting', id: moved[0].key.split('.')[0], label: null },
+		details: {
+			changes: moved
+				.filter((e) => !SECRET_KEY.test(e.key))
+				.map((e) => ({ key: e.key, from: before[entries.indexOf(e)], to: e.value })),
+			...(redacted.length ? { redacted } : {})
+		}
+	});
 }

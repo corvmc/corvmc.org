@@ -73,6 +73,10 @@ const statusWord = (s: string) =>
 
 const CREDIT_LABELS = { free_hours: 'free hours', equipment_credits: 'equipment credits' };
 
+/** An empty string reads as a word, so a cleared setting is visible. */
+const settingValue = (v: string | number | boolean | undefined) =>
+	v === undefined || v === '' ? 'empty' : String(v);
+
 function plural(n: number, one: string, many = `${one}s`): string {
 	return `${n} ${n === 1 ? one : many}`;
 }
@@ -85,6 +89,40 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const head = `Cancelled the ${d.date} ${d.startTime}–${d.endTime} reservation`;
 			return d.reason ? `${head}: “${d.reason}”` : head;
 		}
+		case 'reservation.comped': {
+			const d = entry.details;
+			return `Comped the ${d.date} ${d.startTime}–${d.endTime} reservation, waiving ${formatCents(d.waivedCents)}`;
+		}
+		case 'reservation.refunded': {
+			const d = entry.details;
+			const head = `Refunded the ${d.date} ${d.startTime}–${d.endTime} reservation`;
+			const line = d.cancelled ? `${head} and cancelled it` : head;
+			return d.reason ? `${line}: “${d.reason}”` : line;
+		}
+		case 'clearance.granted': {
+			const d = entry.details;
+			const until = d.expiresOn ? `, valid to ${d.expiresOn}` : '';
+			return `Granted ${d.certificationName} from ${d.grantedOn}${until}`;
+		}
+		case 'clearance.revoked':
+			return `Revoked ${entry.details.certificationName}: “${entry.details.reason}”`;
+		case 'orientation.waived':
+			return `Waived orientation: “${entry.details.reason}”`;
+		case 'settings.changed': {
+			const d = entry.details;
+			const shown = d.changes.map((c) =>
+				c.from === undefined && c.to === undefined
+					? c.key
+					: `${c.key} from ${settingValue(c.from)} to ${settingValue(c.to)}`
+			);
+			return `Changed ${[...shown, ...(d.redacted ?? [])].join('; ') || 'nothing'}`;
+		}
+		case 'event.visibility_changed':
+			return `Changed visibility from ${entry.details.from} to ${entry.details.to}`;
+		case 'contact.deleted':
+			return 'Deleted the person';
+		case 'organization.deleted':
+			return 'Deleted the organization';
 		case 'band.deactivated':
 			return `Deactivated ${entry.details.bandName}`;
 		case 'band.reactivated':
@@ -149,7 +187,9 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'organization.merged':
 			return `Merged ${entry.details.mergedName} into it`;
 		case 'contact.merged':
-			return 'Merged a duplicate person into them';
+			return entry.details.mergedName
+				? `Merged ${entry.details.mergedName} into them`
+				: 'Merged a duplicate person into them';
 		case 'incident.deleted':
 			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
 		case 'incident.reopened':

@@ -15,6 +15,7 @@ import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
 import type { MemberOrientationState } from '#lib/config.js';
 import { cancelShift, countActiveSignups, liveShift } from './work-order-service';
 import { grantPracticeSpaceClearance } from './practice-space-clearance';
+import { memberSubject, recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 /**
  * Whether a member has been shown around the space, and when.
@@ -167,6 +168,11 @@ export async function waiveOrientation(
 	await grantPracticeSpaceClearance(userId, {
 		grantedByUserId: opts.waivedByUserId,
 		notes: reason
+	});
+	await recordAuditEntry({
+		action: 'orientation.waived',
+		subject: await memberSubject(userId),
+		details: { reason }
 	});
 }
 

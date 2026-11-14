@@ -25,6 +25,7 @@ import { inboxThread } from '#lib/server/db/schema/inbox.js';
 import { activity } from '#lib/server/db/schema/activity.js';
 import { workOrderLink } from '#lib/server/db/schema/work-order-link.js';
 import { and, asc, count, desc, eq, getTableName, inArray, isNull, sql } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { partyRoleLabels, type PartyRole } from '#lib/config.js';
 
@@ -316,6 +317,11 @@ export async function deleteUnusedOrganization(id: string): Promise<boolean> {
 		(await countOrganizationPeopleUnguarded(id));
 	if (linked > 0 || (await countRecords(id)) > 0) return false;
 	await db.delete(organization).where(eq(organization.id, id));
+	await recordAuditEntry({
+		action: 'organization.deleted',
+		subject: { type: 'organization', id, label: org.name },
+		details: {}
+	});
 	return true;
 }
 

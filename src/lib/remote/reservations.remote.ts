@@ -73,6 +73,7 @@ import {
 	createWaitlisted,
 	cancel,
 	comp,
+	recordReservationAudit,
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
@@ -2080,6 +2081,10 @@ export const refundAndCancelReservation = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+		await recordReservationAudit(data.id, (when) => ({
+			action: 'reservation.refunded',
+			details: { ...when, cancelled: true, reason: data.reason?.trim() || null }
+		}));
 		return { success: true };
 	}
 );
@@ -2105,6 +2110,10 @@ export const refundOnlyReservation = form(z.object({ id: z.string() }), async (d
 		.update(reservation)
 		.set({ refundedAt: new Date(), updatedAt: new Date() })
 		.where(eq(reservation.id, data.id));
+	await recordReservationAudit(data.id, (when) => ({
+		action: 'reservation.refunded',
+		details: { ...when, cancelled: false, reason: null }
+	}));
 	return { success: true };
 });
 
