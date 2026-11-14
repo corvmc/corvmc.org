@@ -49,7 +49,7 @@ const open = async (props: Record<string, unknown> = {}) => {
 
 describe('AdjustCreditsAction', () => {
 	it('tells a comp-only staffer their ceiling under the amount (#579)', async () => {
-		const amountHint = 'Up to 2 hrs of free hours. An admin can add more.';
+		const amountHint = 'Up to 2 hrs of credits. An admin can add more.';
 		const dialog = await open({ amountHint });
 		await expect.element(dialog.getByText(amountHint)).toBeVisible();
 	});

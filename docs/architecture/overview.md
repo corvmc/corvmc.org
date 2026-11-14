@@ -483,7 +483,7 @@ All payments run through Stripe; the app never touches card data. The moving par
 - `subscription-service.ts` — the sustaining-membership subscription (checkout, billing
   portal, quantity updates, cancel/resume).
 - `credit-service.ts` — the internal credit ledger (`creditTransaction` table). Sustaining
-  members get monthly "free hours" credits; reservations and equipment loans spend them.
+  members get monthly credits; reservations and equipment loans spend them.
 - `webhook-handlers.ts` — the single Stripe webhook entry point
   (`src/routes/api/stripe/webhook/+server.ts`) dispatches by event type:
   `checkout.session.completed` (emits `checkout.completed` on the event bus),

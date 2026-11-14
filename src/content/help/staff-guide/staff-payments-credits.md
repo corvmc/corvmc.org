@@ -15,7 +15,7 @@ method, status, and Stripe reference.
 
 ## Credits
 
-**Staff → Credits** is the ledger of credit activity — free practice hours and
+**Staff → Credits** is the ledger of credit activity — practice credits and
 equipment credits. Search by member and filter by credit type and source to see
 where credits came from and how they were used.
 

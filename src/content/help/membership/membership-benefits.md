@@ -11,7 +11,7 @@ sortOrder: 3
 
 Sustaining membership supports the collective and unlocks benefits such as:
 
-- **Free practice hours** each month (see [practice credits](/member/help/practice-credits)).
+- **[Practice credits](/member/help/practice-credits)** each month.
 - **Recurring reservations** for a standing practice schedule.
 - **Discounts** on tickets and reduced or free equipment loans.
 - Supporting the space so it stays open and affordable for everyone.
@@ -24,7 +24,7 @@ the space.
 
 ## How credits are allocated
 
-Your monthly **free-hour allocation** refreshes each billing cycle and is tracked
+Your monthly **credit allocation** refreshes each billing cycle and is tracked
 as a running balance. Unused hours and the exact allocation are shown on your
 **Dashboard** and **Membership** pages.
 

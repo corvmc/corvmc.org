@@ -19,12 +19,12 @@ sidebar to see your bookings and make new ones.
 - **Reservation cards** — Each shows the date, time, duration, and status.
 - **Search** — Filter your reservations when the list gets long.
 - **Recurring** — A section for managing standing weekly or monthly bookings.
-- **Booking policy & free hours** — Your current policy and any remaining free
-  hours are shown here.
+- **Booking policy & credits** — Your current policy and any remaining
+  credits are shown here.
 
 ## Good to know
 
-- Sustaining members get a monthly allotment of **free practice hours**; see
+- Sustaining members get a monthly allotment of **practice credits**; see
   [practice credits](/member/help/practice-credits).
 - Some slots are **waitlisted** and need confirming once a spot opens — see
   [confirm a waitlisted reservation](/member/help/confirm-waitlisted).

@@ -328,7 +328,7 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
 		0,
 		'monthly_allocation',
 		subscription.id,
-		'Subscription cancelled — free hours reset'
+		'Subscription cancelled — credits reset'
 	);
 
 	await creditService.setBalance(

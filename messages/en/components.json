@@ -1005,16 +1005,16 @@
 	"member_membership_cancelled_banner_label": "Resume membership",
 	"member_membership_cancelled_banner_title": "Resume membership",
 	"member_membership_cancelled_banner_resume_sustaining_members_text": "Resume your sustaining membership?",
-	"member_membership_cancelled_banner_sustaining_membership_has_text": "Your sustaining membership has been cancelled, but your benefits — including {#strong}{freeHours} free practice hours{/strong} — are still active until {#strong2}{endDate}{/strong2}. You can pick it back up anytime before then.",
+	"member_membership_cancelled_banner_sustaining_membership_has_text": "Your sustaining membership has been cancelled, but your benefits — including {#strong}{freeHours} hrs of practice credits{/strong} — are still active until {#strong2}{endDate}{/strong2}. You can pick it back up anytime before then.",
 	"member_membership_cancelled_banner_toast": "Membership resumed",
 	"member_membership_community_impact_chipping_keep_things_runn_text": "chipping in to keep things running",
-	"member_membership_community_impact_free_hours_text": "Free Hours",
+	"member_membership_community_impact_free_hours_text": "Credits",
 	"member_membership_community_impact_members_text": "of Members",
 	"member_membership_community_impact_practice_time_funded_mont_text": "of practice time funded this month",
 	"member_membership_community_impact_showing_up_collective_eve_text": "showing up for the Collective every month",
 	"member_membership_community_impact_sustaining_members_text": "Sustaining Members",
 	"member_membership_community_impact_what_we_re_building_toget_title": "Community impact",
-	"member_membership_contribution_card_benefits_including_stay_text": "Your benefits — including {#strong}{quantity} free practice hours{/strong} — stay active until {#strong2}{nextBilling}{/strong2}, and you can pick it back up any time before then.",
+	"member_membership_contribution_card_benefits_including_stay_text": "Your benefits — including {#strong}{quantity} hrs of practice credits{/strong} — stay active until {#strong2}{nextBilling}{/strong2}, and you can pick it back up any time before then.",
 	"member_membership_contribution_card_contribution_title": "Contribution",
 	"member_membership_contribution_card_contribution_updated_toast": "Contribution updated",
 	"member_membership_contribution_card_fees_covered_label": "+ ${feeAmount} fees covered",
@@ -1041,14 +1041,14 @@
 			],
 			"selectors": ["hoursRemainingPlural"],
 			"match": {
-				"hoursRemainingPlural=one": "{#span}{hoursRemaining}{/span} {#span2}free hour remaining{/span2}",
-				"hoursRemainingPlural=*": "{#span}{hoursRemaining}{/span} {#span2}free hours remaining{/span2}"
+				"hoursRemainingPlural=one": "{#span}{hoursRemaining}{/span} {#span2}hr of credits left{/span2}",
+				"hoursRemainingPlural=*": "{#span}{hoursRemaining}{/span} {#span2}hrs of credits left{/span2}"
 			}
 		}
 	],
-	"member_membership_free_hours_remaining_get_free_practice_hou_text": "Get free practice hours each month with a sustaining membership.",
+	"member_membership_free_hours_remaining_get_free_practice_hou_text": "Get practice credits each month with a sustaining membership.",
 	"member_membership_free_hours_remaining_learn_more_label": "Learn more",
-	"member_membership_free_hours_remaining_loading_free_hours_text": "Loading free hours...",
+	"member_membership_free_hours_remaining_loading_free_hours_text": "Loading credits...",
 	"member_membership_free_hours_remaining_resets_text": "Resets to {creditsToHours} on {formatDate}",
 	"member_membership_invoice_history_card_amount_label": "Amount",
 	"member_membership_invoice_history_card_billing_history_title": "Billing history",
@@ -1098,8 +1098,8 @@
 			"declarations": ["input freeHours", "local freeHoursPlural = freeHours: plural"],
 			"selectors": ["freeHoursPlural"],
 			"match": {
-				"freeHoursPlural=one": "= {freeHours} free practice hour every month",
-				"freeHoursPlural=*": "= {freeHours} free practice hours every month"
+				"freeHoursPlural=one": "= {freeHours} hr of practice credits every month",
+				"freeHoursPlural=*": "= {freeHours} hrs of practice credits every month"
 			}
 		}
 	],
@@ -1160,10 +1160,10 @@
 	"reservations_booking_booking_conflict_message_toast": "That time slot was just taken. Please choose another.",
 	"reservations_booking_confirm_step_back_label": "Back",
 	"reservations_booking_confirm_step_pricing_failed_text": "The price did not load, so go back and try again.",
-	"reservations_booking_confirm_step_bands_don_t_have_their_text": "Bands don't have their own free hours.",
-	"reservations_booking_confirm_step_before_free_hours_text": "Before free hours:",
+	"reservations_booking_confirm_step_bands_don_t_have_their_text": "Bands don't have their own credits.",
+	"reservations_booking_confirm_step_before_free_hours_text": "Before credits:",
 	"reservations_booking_confirm_step_book_session_label": "Book reservation",
-	"reservations_booking_confirm_step_free_hours_applied_label": "Free hours applied",
+	"reservations_booking_confirm_step_free_hours_applied_label": "Credits applied",
 	"reservations_booking_confirm_step_future_instances_generated_text": "Future instances are generated automatically. You'll confirm each one individually.",
 	"reservations_booking_confirm_step_hr_text": "hr",
 	"reservations_booking_confirm_step_hr_hr_label": "{durationHours} hr × ${formatDollars}/hr",
@@ -1173,8 +1173,8 @@
 			"declarations": ["input freeHours", "local freeHoursPlural = freeHours: plural"],
 			"selectors": ["freeHoursPlural"],
 			"match": {
-				"freeHoursPlural=one": "{freeHours} hr of your own free hours apply.",
-				"freeHoursPlural=*": "{freeHours} hrs of your own free hours apply."
+				"freeHoursPlural=one": "{freeHours} hr of your own credits apply.",
+				"freeHoursPlural=*": "{freeHours} hrs of your own credits apply."
 			}
 		}
 	],
@@ -1182,7 +1182,7 @@
 	"reservations_booking_confirm_step_no_upcoming_instances_next_text": "No upcoming instances in the next 60 days.",
 	"reservations_booking_confirm_step_pay_text": "You pay:",
 	"reservations_booking_confirm_step_pay_ahead_label": "Pay ahead",
-	"reservations_booking_confirm_step_s_booked_name_have_no_text": "It's booked in your name, and you have no free hours left this month.",
+	"reservations_booking_confirm_step_s_booked_name_have_no_text": "It's booked in your name, and you have no credits left this month.",
 	"reservations_booking_confirm_step_submit_label": "Confirm",
 	"reservations_booking_confirm_step_upcoming_instances_text": "Upcoming instances",
 	"reservations_booking_date_time_step_biweekly_label": "Biweekly",
@@ -1211,13 +1211,13 @@
 	"reservations_booking_date_time_step_title": "No open times",
 	"reservations_booking_date_time_step_weekly_label": "Weekly",
 	"reservations_booking_date_time_step_what_working_placeholder": "What are you working on?",
-	"reservations_booking_payment_step_0_00_covered_by_free_text": "$0.00 (covered by free hours)",
+	"reservations_booking_payment_step_0_00_covered_by_free_text": "$0.00 (covered by credits)",
 	"reservations_booking_payment_step_checkbox_label_checkbox": "Cover the ${formatDollars} processing fee",
-	"reservations_booking_payment_step_free_hours_available_text": "Free hours ({creditsToHours} of {creditsToHours2} available)",
+	"reservations_booking_payment_step_free_hours_available_text": "Credits ({creditsToHours} of {creditsToHours2} available)",
 	"reservations_booking_payment_step_loading_label": "Loading...",
 	"reservations_booking_payment_step_pay_label": "Pay ${formatDollars}",
 	"reservations_booking_payment_step_pricing_failed_text": "The price did not load, so go back and try again.",
-	"reservations_booking_payment_step_pay_with_free_hours_label": "Pay with free hours",
+	"reservations_booking_payment_step_pay_with_free_hours_label": "Pay with credits",
 	"reservations_booking_payment_step_processing_fee_coverage_text": "Processing fee coverage",
 	"reservations_booking_payment_step_room_rental_hr_hr_text": "Room rental ({durationHours}hr × ${formatDollars}/hr)",
 	"reservations_booking_payment_step_sustaining_members_get_fre_text": "Sustaining members get free rehearsal hours every month. {#a}Learn more{/a}",

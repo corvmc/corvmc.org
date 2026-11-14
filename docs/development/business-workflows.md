@@ -17,7 +17,7 @@ why it works the way it does.
 ### The story
 
 A member books a practice-room slot, and the booking is `confirmed` the moment it exists —
-however far ahead it is. Booking spends any free-hour credits that cover it and leaves the
+however far ahead it is. Booking spends any credits that cover it and leaves the
 rest as cash due at the door, or the member **pays ahead** online via Stripe. There is no
 later confirmation step and no sweep that releases unconfirmed bookings (#2502).
 
@@ -62,7 +62,7 @@ the room for `volunteer.orientationMinutes` before the start they asked for. `no
 returns the length as `tourMinutes`; `validateBooking()` checks opening hours and notice
 against the earlier arrival time; `create()` and `createWaitlisted()` move `startsAt` earlier and
 store `reservation.tour_minutes`. The stored value keeps a later change to the setting from
-moving or repricing a booking. The tour is not charged: every price and free-hours figure reads
+moving or repricing a booking. The tour is not charged: every price and credits figure reads
 `billableHours(row)` in `reservation-credit-service.ts`, which subtracts it, and
 `billable-hours.spec.ts` fails on a stored window turned into hours without it. The picker offers
 a start only when the tour's slots before it are free too (`isBookableStart()`), and
@@ -78,7 +78,7 @@ the member who owns, pays for and may cancel the booking.
 
 **Book (no online payment).** Submitting with `skipPayment` on calls
 `commitCreditsAndSettleIfCovered()` (a helper inside `reservations.remote.ts`). That commits
-free-hour credits via `commitReservationCredits()` in `reservation-credit-service.ts`; if
+credits via `commitReservationCredits()` in `reservation-credit-service.ts`; if
 credits fully cover the price, the reservation is settled with `cashDueCents: 0`; otherwise
 the cash remainder is recorded in `cashDueCents` for staff to collect at the door. Settling
 changes payment fields only — never the status, and it never announces again.
@@ -359,7 +359,7 @@ when the member signs up.
    - finds the **contribution line** on the invoice (`findContributionLine()` — carefully
      excludes the fee-coverage line and prorations; read its doc comment before touching);
    - allocates credits via `allocateCreditsFromInvoice()` → `credit-service.ts`
-     `allocateMonthlyCredits()` (free hours) and `allocateEquipmentCredits()` — **idempotent
+     `allocateMonthlyCredits()` (practice credits) and `allocateEquipmentCredits()` — **idempotent
      by invoice id**, so webhook re-delivery can't double-grant;
    - snapshots the subscription state onto the `user.subscription` JSON column
      (`hoursPerReset`, `creditsResetAt`, `coveringFees`, `cancelAtPeriodEnd`).
@@ -382,7 +382,7 @@ Note: "is this member sustaining?" is answered by `user.subscription != null` (s
 **Staff credit adjustments.** `adjustCredits` in `src/lib/remote/users.remote.ts` takes two
 authorities. A holder of `credit.adjust` (admin only) adds or deducts any amount, written as
 `admin_adjustment`. A holder of `credit.comp` alone (staff) may only add, up to
-`creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 free-hour credits (2 hours), and no
+`creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 credits (2 hours), and no
 equipment credits. A comp is written as `staff_comp`, so the ledger shows it apart. A refused
 amount comes back as a field issue on `amount`, not a 403. Decision:
 [Staff comp credits up to a ceiling](../decisions/0020-staff-comp-credits-up-to-a-ceiling.md).
@@ -781,7 +781,7 @@ functions; rates come from `#lib/config.js` (`DAILY_RATE_MAJOR`,
 `DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`;
 checking out a serialized item without naming a unit throws
 `AssetRequiredError` — the checkout form asks which unit is being handed over,
-and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as free hours
+and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as practice credits
 (`credit-service.ts`, type `equipment_credits`).
 
 ### Kit loans
@@ -2243,7 +2243,7 @@ Decision record: [the audit log records intent](../decisions/0031-audit-log-reco
 
 ### The story
 
-Several people share staff access, so a member asking "who took my free hours?" or "who
+Several people share staff access, so a member asking "who took my credits?" or "who
 closed my account?" needs an answer that the current value of a row cannot give. Each
 change to a member's authority, money or account existence appends one row naming the
 action, the actor and a small payload. Staff read the latest twenty on the member's
@@ -2910,7 +2910,7 @@ decide.
 
 ### The story
 
-A member calls about a cancelled booking, missing free hours or a band. Staff open
+A member calls about a cancelled booking, missing credits or a band. Staff open
 `/staff/members/[id]`, or the side panel on the Members lists, and read the answer from one
 record: an identity header and scoreboard above nine tabs — Overview, Space, Bands, Volunteer,
 Instructor, Money, Comms, Moderation and Account. A tab's badge counts only things that want a

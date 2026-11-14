@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { titleCase } from '#lib/utils/format.js';
 import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
@@ -409,17 +408,23 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
  * "Insufficient free_hours: requested 300, available 200" — that leaks the raw
  * enum into something a staff member reads.
  */
+/** The word a staffer reads for each credit type. */
+const CREDIT_WORDS: Record<CreditType, string> = {
+	free_hours: 'Credits',
+	equipment_credits: 'Equipment credits'
+};
+
 function overdrawn(type: CreditType, available: number, requested: number): string {
 	const show = (credits: number) =>
 		type === 'free_hours' ? `${creditsToHours(credits)} hrs` : `${credits}`;
-	return `${titleCase(type)} balance is ${show(available)} — cannot deduct ${show(requested)}.`;
+	return `${CREDIT_WORDS[type]} balance is ${show(available)} — cannot deduct ${show(requested)}.`;
 }
 
 /** What a comp-only staffer reads when an adjustment is beyond them. */
 function compRefusal(type: CreditType, ceiling: number): string {
-	if (ceiling === 0) return `An admin adjusts ${titleCase(type).toLowerCase()}.`;
+	if (ceiling === 0) return `An admin adjusts ${CREDIT_WORDS[type].toLowerCase()}.`;
 	const limit = type === 'free_hours' ? `${creditsToHours(ceiling)} hrs` : `${ceiling}`;
-	return `Up to ${limit} of ${titleCase(type).toLowerCase()} can be added here. An admin can do more, or deduct.`;
+	return `Up to ${limit} of ${CREDIT_WORDS[type].toLowerCase()} can be added here. An admin can do more, or deduct.`;
 }
 
 export const adjustCredits = form(

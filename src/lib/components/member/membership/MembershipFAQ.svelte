@@ -2,9 +2,9 @@
 	import { m } from '#lib/paraglide/messages.js';
 	const faqs = [
 		{
-			question: 'How do free practice hours work?',
+			question: 'How do practice credits work?',
 			answer:
-				"For every $5 you contribute, you get one free hour each month. They show up automatically when your billing cycle renews and refresh monthly. Heads up — unused hours don't roll over, so use them while you've got them."
+				"For every $5 you contribute, you get one hour of credits each month. They show up automatically when your billing cycle renews and refresh monthly. Heads up — unused hours don't roll over, so use them while you've got them."
 		},
 		{
 			question: 'Can I change my contribution amount?',

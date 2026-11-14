@@ -33,7 +33,7 @@ four digits, so we can show you which card is on file.
 
 ## Cancelling and resuming
 
-If you cancel, your benefits — including your free practice hours — continue
+If you cancel, your benefits — including your practice credits — continue
 until the end of the current billing period. If you change your mind before
 then, **Resume** on the same page picks it back up without starting over.
 

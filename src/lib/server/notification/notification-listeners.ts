@@ -1005,7 +1005,7 @@ export function registerAllNotificationListeners(): void {
 				details,
 				cta,
 				footnote:
-					'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your free hours will reset.'
+					'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your credits will reset.'
 			}
 		});
 	});

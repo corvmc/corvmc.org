@@ -83,7 +83,7 @@ auto-creates any missing).
 - [x] `[H]` Set up a recurring booking _(expands seed `recurring-reservations`)_
 - [x] `[H]` Confirm a waitlisted reservation
 - [x] `[H]` Pay for a reservation (`/member/reservations/[id]/pay`)
-- [x] `[H]` Understand practice credits & free hours (sustaining benefit)
+- [x] `[H]` Understand practice credits (sustaining benefit)
 - [x] `[H]` Cancel or change a reservation
 
 ### equipment

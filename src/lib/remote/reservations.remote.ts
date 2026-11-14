@@ -1183,7 +1183,7 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 	return { reservationId: res.id };
 });
 
-const NOT_COVERED_MSG = 'Your free hours do not cover this booking. Pay online instead.';
+const NOT_COVERED_MSG = 'Your credits do not cover this booking. Pay online instead.';
 
 /**
  * Whether free hours fully cover the reservation (nothing to charge). Never for

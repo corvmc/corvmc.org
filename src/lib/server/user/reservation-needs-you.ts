@@ -32,13 +32,11 @@ export function reservationNeedsYouItems(rows: ReservationNeedingYou[], now: Dat
 			id: `reservation-unpaid:${r.id}`,
 			kind: 'reservation-unconfirmed',
 			title: 'Pay for your practice room booking',
-			detail: detail(
-				credits ? 'your free hours cover it' : 'confirmed, with a balance still owing'
-			),
+			detail: detail(credits ? 'your credits cover it' : 'confirmed, with a balance still owing'),
 			href: credits
 				? resolve('/member/reservations')
 				: resolve('/member/reservations/[id]/pay', { id: r.id }),
-			label: credits ? 'Use free hours' : 'Pay',
+			label: credits ? 'Use credits' : 'Pay',
 			dueAt: r.startsAt,
 			rank: 1
 		});

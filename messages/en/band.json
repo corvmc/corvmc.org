@@ -526,7 +526,7 @@
 	"band_slug_reservations_id_door_code_appears_here_day_text": "The door code appears here on the day of the reservation.",
 	"band_slug_reservations_id_due_at_door_text": "${formatDollars} due at the door.",
 	"band_slug_reservations_id_enter_code_door_keypad_works_text": "Enter this code on the door keypad. It works for the length of the reservation, for whoever on the band gets there first.",
-	"band_slug_reservations_id_free_hours_applied_label": "Free hours applied",
+	"band_slug_reservations_id_free_hours_applied_label": "Credits applied",
 	"band_slug_reservations_id_hour_text": "${formatDollars}/hour · {durationLabel}",
 	"band_slug_reservations_id_hours_label": [
 		{

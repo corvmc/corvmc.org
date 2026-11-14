@@ -52,7 +52,7 @@ const SHAPES: Fixture[] = [
 				{ label: 'Date', value: 'Thursday, December 5' },
 				{ label: 'Time', value: '7:00 PM – 9:00 PM' },
 				{ label: 'Band', value: 'Indigo Kiss' },
-				{ label: 'Cost', value: 'Free · 2 of 10 free hours used this month' }
+				{ label: 'Cost', value: 'Free · 2 of 10 hrs of credits used this month' }
 			],
 			cta: { url: 'https://corvmc.org/member/reservations', label: 'Manage reservation' },
 			footnote: 'Need to cancel? Do it at least 24 hours ahead so someone else can use the room.'
