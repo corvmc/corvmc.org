@@ -271,6 +271,13 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		onDelete: 'set null'
 	}),
 
+	/**
+	 * How many days before its event this role's grants start (#2993). Zero
+	 * opens them at the shift's start; a vendor host deciding applications
+	 * weeks ahead needs more. Constant default, so the ADD COLUMN needs no backfill.
+	 */
+	grantLeadDays: integer('grant_lead_days').notNull().default(0),
+
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),

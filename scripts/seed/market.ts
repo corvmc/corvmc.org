@@ -226,7 +226,7 @@ export async function seedMarket(adminUser: SeedUser) {
 	);
 
 	const past = await seedPastMarket(adminUser, orgIds);
-	return { markets: 2, vendors: vendors.length + past };
+	return { markets: 2, vendors: vendors.length + past, eventId: event.id, startsAt, endsAt };
 }
 
 const email = (contact: string) => `${contact.split(' ')[0].toLowerCase()}@example.com`;

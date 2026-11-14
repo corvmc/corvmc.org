@@ -37,6 +37,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	skillMatches?: string[];
 	/** Capabilities a confirmed signup carries for its shift's event; see `grantableCapabilities`. */
 	capabilityGrants?: string[];
+	/** Days before the event those grants start (#2993); 0 when left out. */
+	grantLeadDays?: number;
 }> = [
 	{
 		name: 'Sound Engineering',
@@ -192,6 +194,18 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		defaultDurationMinutes: 240,
 		defaultCapacity: 1,
 		capabilityGrants: ['finance.collect', 'event.checkIn']
+	},
+	{
+		// One market's vendor host (#2993): decides, checks in and takes table fees
+		// for that market, from 30 days before it. Named like the canonical role.
+		name: 'Vendor host',
+		group: 'at-shows' as const,
+		description: 'Decide vendor applications for a market, check vendors in, and take table fees.',
+		displayOrder: 48,
+		defaultDurationMinutes: 360,
+		defaultCapacity: 1,
+		grantLeadDays: 30,
+		capabilityGrants: ['market.host']
 	},
 	{
 		// Archived so the restore path and the "archived roles still resolve in

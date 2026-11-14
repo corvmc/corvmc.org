@@ -398,6 +398,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const parts: string[] = [];
 			if (entry.details.added.length) parts.push(`granted ${entry.details.added.join(', ')}`);
 			if (entry.details.removed.length) parts.push(`removed ${entry.details.removed.join(', ')}`);
+			if (entry.details.leadDays) {
+				const { from, to } = entry.details.leadDays;
+				parts.push(`days before the event ${from} → ${to}`);
+			}
 			const line = parts.join('; ') || 'saved grants unchanged';
 			return line.charAt(0).toUpperCase() + line.slice(1);
 		}

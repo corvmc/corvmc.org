@@ -2435,6 +2435,9 @@ export const capabilities = {
 	// Member-wide ballots, and the staff fallback on committee ballots. Also
 	// grantable to a committee, org-wide: see `grantableCapabilities`.
 	ballot: ['manage'],
+	// One market's vendors: decide, seat, check in, take table fees. Held for
+	// that market by its vendor host, through a volunteer-role grant (#2993).
+	market: ['host'],
 	listing: ['review'],
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
 	// action: it moves money, and the treasurer is who does that.
@@ -2707,7 +2710,8 @@ export function isCapability(name: string): name is Capability {
  * How a grantable capability may be carried.
  *
  * `role`: a confirmed signup on a shift in that role grants it for the shift's
- * event only, from the shift's start until `graceDays` after it ends.
+ * event only, from the shift's start (or the role's lead time before the
+ * event) until `graceDays` after it ends.
  * `committee`: `'org'` means active members hold it everywhere; `'owned'` means
  * only on records the committee owns, so a guard must name the committee.
  */
@@ -2729,6 +2733,11 @@ export const grantableCapabilities = {
 	'finance.collect': { label: 'Take card payments at the door', role: { graceDays: 0 } },
 	// The door list: every attendee's name and ticket code, during the shift (#2794).
 	'event.checkIn': { label: 'Check people in at the door', role: { graceDays: 0 } },
+	// The vendor host: give the role a lead time to open it before the market (#2993).
+	'market.host': {
+		label: 'Decide vendors, check them in and take table fees',
+		role: { graceDays: 7 }
+	},
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
@@ -2759,6 +2768,9 @@ export const grantableCapabilities = {
 	// never reach one. Every active member of the holding committee runs them.
 	'ballot.manage': { label: 'Run member-wide ballots', committee: 'org' }
 } as const satisfies { readonly [C in Capability]?: GrantRule };
+
+/** The furthest ahead of its event a volunteer role's grants may start (#2993). */
+export const ROLE_GRANT_LEAD_DAYS_MAX = 90;
 
 export type GrantableCapability = keyof typeof grantableCapabilities;
 export type GrantCarrier = 'role' | 'committee';

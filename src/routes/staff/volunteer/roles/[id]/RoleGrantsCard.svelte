@@ -4,24 +4,34 @@
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
-	import { grantableBy, grantRuleFor } from '#lib/config.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { grantableBy, grantRuleFor, ROLE_GRANT_LEAD_DAYS_MAX } from '#lib/config.js';
 	import { setVolunteerRoleGrants } from '#lib/remote/volunteer.remote.js';
 
-	/** What a confirmed signup in this role may do for its shift's event. */
-	let { role, held }: { role: { id: string; name: string }; held: string[] } = $props();
+	/** What a confirmed signup in this role may do for its shift's event, and from when. */
+	let {
+		role,
+		held
+	}: { role: { id: string; name: string; grantLeadDays: number }; held: string[] } = $props();
 
-	function span(cap: string): string {
+	const plural = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+
+	function span(cap: string, lead: number): string {
 		const days = grantRuleFor(cap)?.role?.graceDays ?? 0;
-		return days === 0
-			? "For the shift's event, while the shift runs."
-			: `For the shift's event, from the shift's start until ${days} ${days === 1 ? 'day' : 'days'} after it ends.`;
+		const from = lead > 0 ? `${plural(lead)} before the event` : "the shift's start";
+		if (days === 0 && lead === 0) return "For the shift's event, while the shift runs.";
+		const until = days === 0 ? 'the shift ends' : `${plural(days)} after the shift ends`;
+		return `For the shift's event, from ${from} until ${until}.`;
 	}
 
-	const options = grantableBy('role').map((cap) => ({
-		value: cap,
-		label: grantRuleFor(cap)?.label ?? cap,
-		description: span(cap)
-	}));
+	// The checkbox descriptions show the stored lead time; a new one shows once saved.
+	const options = $derived(
+		grantableBy('role').map((cap) => ({
+			value: cap,
+			label: grantRuleFor(cap)?.label ?? cap,
+			description: span(cap, role.grantLeadDays)
+		}))
+	);
 </script>
 
 <InfoCard title={m.staff_volunteer_roles_id_role_grants_card_title()}>
@@ -46,6 +56,15 @@
 						selected={held}
 						{options}
 					/>
+					<FormField
+						field={setVolunteerRoleGrants.fields.grantLeadDays}
+						type="number"
+						min={0}
+						max={ROLE_GRANT_LEAD_DAYS_MAX}
+						label={m.staff_volunteer_roles_id_role_grants_card_lead_days_label()}
+						description={m.staff_volunteer_roles_id_role_grants_card_lead_days_body()}
+						value={role.grantLeadDays}
+					/>
 				{/snippet}
 			</Action>
 		</div>
@@ -60,7 +79,7 @@
 			{#each held as cap (cap)}
 				<li>
 					<span class="font-medium">{grantRuleFor(cap)?.label ?? cap}</span>
-					<span class="opacity-60">· {span(cap)}</span>
+					<span class="opacity-60">· {span(cap, role.grantLeadDays)}</span>
 				</li>
 			{/each}
 		</ul>

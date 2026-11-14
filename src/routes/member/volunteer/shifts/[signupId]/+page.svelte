@@ -142,6 +142,20 @@
 		</InfoCard>
 	{/if}
 
+	{#if data.vendorHost && !calledOff}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_market_vendors_title()}>
+			<Button
+				href={resolve('/member/volunteer/markets/[eventId]', {
+					eventId: data.vendorHost.eventId
+				})}
+				variant="primary"
+				size="sm"
+			>
+				{m.member_volunteer_shifts_signup_id_review_vendors_label()}
+			</Button>
+		</InfoCard>
+	{/if}
+
 	<InfoCard title={m.member_volunteer_shifts_signup_id_checklist_title()}>
 		{#snippet header(title)}
 			<CardTitle>

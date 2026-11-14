@@ -1,0 +1,1 @@
+ALTER TABLE `volunteer_role` ADD `grant_lead_days` integer DEFAULT 0 NOT NULL;

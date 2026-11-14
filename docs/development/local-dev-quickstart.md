@@ -62,11 +62,11 @@ with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
 <a id="demo-logins"></a>
 
-**Login:** the seed creates 31 accounts with a password, all of them `password`. It prints
+**Login:** the seed creates 32 accounts with a password, all of them `password`. It prints
 the full list — with the deep links each one owns — when it finishes, and that print is the
 source of truth. `admin@corvallismusic.org` is the superuser: admin + staff + member at once.
 
-The other 30 are personas, and they come in three kinds. Reaching for the wrong kind is the
+The other 31 are personas, and they come in three kinds. Reaching for the wrong kind is the
 usual way a screen ends up looking broken when it is only unpopulated.
 
 **State fixtures** exist because a state is mutually exclusive per account. Volunteering is
@@ -74,15 +74,16 @@ gated on onboarding stage, so `none` / `blocked` / `active` need three accounts 
 be one; `/member/membership` renders differently for an active, a cancelling, a
 fee-covering and a lapsed subscriber. Each carries that one state and little else:
 
-| set                 | logins                                                   |
-| ------------------- | -------------------------------------------------------- |
-| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`         |
-| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@`      |
-| Directory matching  | `seeker@` `bandleader@` `undecided@`                     |
-| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`            |
-| Market committee    | `marketlead@` — decides and seats the Fall Makers Market |
-| Tech riders         | `rideradmin@` `ridermember@`                             |
-| Solo act            | `soloact@`                                               |
+| set                 | logins                                                    |
+| ------------------- | --------------------------------------------------------- |
+| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`          |
+| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@`       |
+| Directory matching  | `seeker@` `bandleader@` `undecided@`                      |
+| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`             |
+| Market committee    | `marketlead@` — decides and seats the Fall Makers Market  |
+| Vendor host         | `vendorhost@` — hosts the Fall Makers Market from a shift |
+| Tech riders         | `rideradmin@` `ridermember@`                              |
+| Solo act            | `soloact@`                                                |
 
 **Usage personas** (`scripts/seed/usage-personas.ts`) are the opposite shape: a goal, and
 whatever a person pursuing it would have accumulated. They exist because ordinary use is

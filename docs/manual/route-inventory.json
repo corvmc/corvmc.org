@@ -352,6 +352,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/markets/[eventId]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/volunteer/markets/[eventId]/check-in",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/profile",
 		"panel": "member"
 	},

@@ -117,6 +117,7 @@ import { seedBandTicketSale } from './seed/band-ticket-sale';
 import { seedDoorSales } from './seed/door-sales';
 import { seedEventRecaps } from './seed/event-recaps';
 import { seedMarket } from './seed/market';
+import { seedVendorHost } from './seed/vendor-host';
 
 async function main() {
 	// The one room's ledger, shared by every seeder that books it. Reset here
@@ -330,6 +331,8 @@ async function main() {
 	// reaches both features, and the promote path has a real rider to aim at.
 	const packing = await seedPacking(riders.structuredBandId);
 	const market = await seedMarket(adminUser);
+	// After the market and the volunteer roles: its host works the market's shift.
+	const vendorHost = await seedVendorHost(roles, volunteerRoles, market);
 	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
 	const bandSale = await seedBandTicketSale();
 	// After the volunteer personas: the active one works tonight's door shift.
@@ -514,6 +517,11 @@ async function main() {
 	);
 	console.log(
 		`  1 show at the door tonight, 2 door sales in — /member/volunteer/door (event ${doorSales.eventId}; volunteer@corvallismusic.org works the door shift)`
+	);
+	console.log(
+		vendorHost
+			? `  1 vendor host on the Fall Makers Market — vendorhost@corvallismusic.org, /member/volunteer/markets/${vendorHost.eventId}`
+			: '  no vendor host — the Vendor host role is missing'
 	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');

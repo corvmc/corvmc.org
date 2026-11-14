@@ -55,18 +55,18 @@ function diff(before: readonly string[], after: readonly string[]) {
 }
 
 /**
- * Replace a volunteer role's grant list. Returns what changed; audited when
- * anything did. An editor may add only what their own position holds, so a
- * grant never widens what its author could already do.
+ * Replace a volunteer role's grant list, and its lead time when given. Returns
+ * what changed; audited when anything did. An editor may add only what their
+ * own position holds, so a grant never widens what its author could already do.
  */
 export async function setRoleCapabilityGrants(
 	roleId: string,
 	caps: readonly string[],
-	opts: { editorId: string }
+	opts: { editorId: string; leadDays?: number }
 ) {
 	const next = validateGrants(caps, 'role');
 	const [row] = await db
-		.select({ name: volunteerRole.name })
+		.select({ name: volunteerRole.name, leadDays: volunteerRole.grantLeadDays })
 		.from(volunteerRole)
 		.where(eq(volunteerRole.id, roleId))
 		.limit(1);
@@ -81,9 +81,10 @@ export async function setRoleCapabilityGrants(
 		}
 	}
 	// Delete then insert, in one batch: D1 has no working transaction.
+	const leadDays = opts.leadDays ?? row.leadDays;
 	const touch = db
 		.update(volunteerRole)
-		.set({ updatedAt: new Date() })
+		.set({ updatedAt: new Date(), grantLeadDays: leadDays })
 		.where(eq(volunteerRole.id, roleId));
 	const clear = db
 		.delete(volunteerRoleCapability)
@@ -91,11 +92,12 @@ export async function setRoleCapabilityGrants(
 	const rows = next.map((capability) => ({ volunteerRoleId: roleId, capability }));
 	if (rows.length) await db.batch([touch, clear, db.insert(volunteerRoleCapability).values(rows)]);
 	else await db.batch([touch, clear]);
-	if (change.added.length || change.removed.length) {
+	const leadChanged = leadDays !== row.leadDays;
+	if (change.added.length || change.removed.length || leadChanged) {
 		await recordAuditEntry({
 			action: 'capability.grants_changed',
 			subject: { type: 'role', id: roleId, label: row.name },
-			details: change
+			details: leadChanged ? { ...change, leadDays: { from: row.leadDays, to: leadDays } } : change
 		});
 	}
 	return change;
