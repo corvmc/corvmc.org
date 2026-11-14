@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
+import type { Capability } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Notification type registry
@@ -31,11 +32,11 @@ export interface NotificationTypeDef {
 	};
 	mandatory?: boolean;
 	/**
-	 * Only a staffer can receive this. Every one of these fans out over a
-	 * capability or the staff mailbox rather than over subscribers, so a member's
-	 * preference row for it was inert as well as confusing (#899).
+	 * Only holders of one of these can receive it: the capability its fan-out
+	 * names, or the one that reads the staff mailbox it goes to. Anyone else's
+	 * preference row for it would be inert as well as confusing (#899, #2985).
 	 */
-	staffOnly?: boolean;
+	forHolders?: readonly Capability[];
 	/**
 	 * This type's email must never carry text a member wrote.
 	 *
@@ -212,7 +213,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description:
 			'Notification when a generated recurring event could not reserve the practice space due to a conflict',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['event.manage']
 	},
 	{
 		key: 'recurring_rescheduled',
@@ -258,7 +259,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Equipment loan requested',
 		description: 'Notification when a member requests equipment',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inventory.manageLoans']
 	},
 	{
 		key: 'equipment_checked_out',
@@ -280,7 +281,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Grant or sponsorship deadline',
 		description: 'Two weeks and three days before a grant or sponsorship deadline you manage',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['grant.manage', 'sponsor.manage']
 	},
 	{
 		key: 'equipment_returned',
@@ -322,7 +323,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description: 'Forwarded contact form messages',
 		defaults: { email: true, inApp: false, sms: false },
 		mandatory: true,
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'inbox_message_received',
@@ -330,7 +331,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'New inbox message',
 		description: 'Notification when a new message arrives in the staff inbox',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'portal_message_reply',
@@ -415,7 +416,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Inbox conversation assigned',
 		description: 'Notification when a staff inbox conversation is assigned to you',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'content_flagged',
@@ -423,7 +424,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Content flagged',
 		description: 'Notification when a member reports a profile for review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['moderation.reviewFlags']
 	},
 	{
 		key: 'band_lineup_invited',
@@ -492,7 +493,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// ignore it.
 		description: 'Notification when logged volunteer hours need a staff review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.reviewHours']
 	},
 	{
 		key: 'volunteer_hours_approved',
@@ -526,7 +527,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// and it belongs next to the shift rather than in their inbox.
 		description: 'Notification when somebody you invited to a shift says no',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts']
 	},
 	{
 		key: 'volunteer_shift_claimed',
@@ -538,7 +539,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// gets a reminder and completes afterwards.
 		description: 'Notification when a member claims a volunteer shift and needs confirming',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts']
 	},
 	{
 		key: 'volunteer_shift_confirmed',
@@ -558,7 +559,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// coordinator's problem and nobody else's.
 		description: 'Notification when somebody comes off a shift and their place reopens',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts']
 	},
 	{
 		key: 'volunteer_shift_cancelled',
@@ -622,7 +623,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Unstaffed orientation',
 		description: 'A day before an orientation shift that has no volunteer signed up',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts']
 	},
 	{
 		key: 'community_event_submitted',
@@ -633,7 +634,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// draft is nobody's business but theirs.
 		description: 'Notification when a member submits a community listing for review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['listing.review']
 	},
 	{
 		key: 'local_resource_submitted',
@@ -641,7 +642,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Local resource tip needs review',
 		description: 'Notification when someone suggests a listing for the Local Resources page',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['localResource.manage']
 	},
 	{
 		key: 'community_event_reviewed',
@@ -691,7 +692,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// In-app only: a queue item, not news. The Content Flags badge counts them.
 		description: 'Notification when a member appeals an upheld report',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['moderation.reviewFlags']
 	},
 	{
 		key: 'moderation_appeal_decided',
@@ -764,9 +765,20 @@ export function getNotificationType(key: string): NotificationTypeDef | undefine
  * preferences table listed nine staff-only types (#899). Audience is a field
  * here rather than a "(staff)" suffix on the label, so the query can act on it.
  */
-export function preferenceTypesFor(audience: 'member' | 'staff'): NotificationTypeDef[] {
-	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && (audience === 'staff' || !t.staffOnly));
+/** The switches to offer someone who holds `held`. */
+export function preferenceTypesFor(held: ReadonlySet<string>): NotificationTypeDef[] {
+	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && receivable(t, held));
 }
+
+/** Can someone holding `held` ever receive this type? */
+export function receivable(t: NotificationTypeDef, held: ReadonlySet<string>): boolean {
+	return !t.forHolders || t.forHolders.some((c) => held.has(c));
+}
+
+/** Every capability some type is gated on, for resolving `held` once. */
+export const NOTIFICATION_CAPABILITIES: readonly Capability[] = [
+	...new Set(NOTIFICATION_TYPES.flatMap((t) => t.forHolders ?? []))
+];
 
 // ---------------------------------------------------------------------------
 // In-app notifications

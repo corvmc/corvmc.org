@@ -326,7 +326,7 @@ export const getBandReservations = query(
 			user: currentUser,
 			group: band,
 			role
-		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		} = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 		const now = new Date();
 		// Whether the viewer may cancel each row. `cancel()` authorizes on
@@ -423,7 +423,7 @@ export const getBandReservations = query(
  *
  * The band panel could show *that* a session existed and nothing behind it, so
  * the notes, the settlement state and a cancellation reason all had to come
- * from staff. The guard is the list's — `member`, `allowStaff` because staff
+ * from staff. The guard is the list's — `member`, `staff` because staff
  * administer band panels — and the row must belong to this band, 404 otherwise.
  *
  * What it deliberately does not return: the booker's phone or email (a
@@ -439,7 +439,7 @@ export const getBandReservationDetail = query(
 			user: currentUser,
 			group: band,
 			role
-		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		} = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 		const [row] = await db
 			.select({
@@ -1088,11 +1088,11 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.string(), async (slug) => {
-	// `allowStaff` to match `getBandReservations`, which it is composed with in
+	// `staff` to match `getBandReservations`, which it is composed with in
 	// `getBandReservationsPage`. Without it the composed query admitted staff on
 	// its first read and 403'd them on its second, taking the whole page down —
 	// exactly what the comment on that first read says must not happen.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 
@@ -1794,7 +1794,7 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
-		// A mutation, so member-only — no `allowStaff`. Staff cancel through their
+		// A mutation, so member-only — no `staff`. Staff cancel through their
 		// own reservation surface, which carries the audit trail.
 		const {
 			user: currentUser,

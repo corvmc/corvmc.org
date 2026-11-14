@@ -51,7 +51,7 @@ const from = { slug: z.string().optional(), eventId: z.string().optional() };
 
 /** The Open items tab: every open or overdue item the committee owns, across shows. */
 export const getCommitteeOpenItems = query(z.string().min(1), async (slug) => {
-	const ctx = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const ctx = await requireGroupRole({ slug }, 'member', { staff: 'group.read' });
 	if (ctx.group.kind !== 'committee') error(404, 'Group not found');
 
 	const [items, committees] = await Promise.all([

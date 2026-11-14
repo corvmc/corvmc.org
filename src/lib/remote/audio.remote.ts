@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { can } from '#lib/server/authorization.js';
 import { requireFeature } from '#lib/server/feature-flags.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import {
@@ -55,7 +56,7 @@ async function requireReleaseAdmin(slug: string, releaseId: string) {
 		group: band,
 		user,
 		role
-	} = await requireGroupRole({ slug }, 'admin', { allowStaff: true });
+	} = await requireGroupRole({ slug }, 'admin', { staff: 'band.manage' });
 	const release = await getReleaseById(releaseId);
 	// 404 rather than 403 on a mismatch: whether a release exists under some
 	// other band is not this caller's business.
@@ -76,12 +77,13 @@ async function requireReleaseAdmin(slug: string, releaseId: string) {
  */
 export const getBandMusicPage = query(z.string(), async (slug) => {
 	await requireFeature('bandAudio');
-	const { group: band, role } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band, role } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	const releases = await listReleasesForBand(band.id);
 
 	return {
 		releases,
-		canManage: role === 'owner' || role === 'admin' || role === 'staff'
+		canManage:
+			role === 'owner' || role === 'admin' || (role === 'staff' && (await can('band.manage')))
 	};
 });
 
@@ -90,7 +92,9 @@ export const getBandRelease = query(
 	z.object({ slug: z.string().min(1), releaseId: z.string().min(1) }),
 	async ({ slug, releaseId }) => {
 		await requireFeature('bandAudio');
-		const { group: band, role } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		const { group: band, role } = await requireGroupRole({ slug }, 'member', {
+			staff: 'band.read'
+		});
 		const release = await getReleaseById(releaseId);
 		if (!release || release.groupId !== band.id) throw error(404, 'Release not found');
 
@@ -132,7 +136,8 @@ export const getBandRelease = query(
 				radioExcludedReason: release.radioExcludedReason
 			},
 			tracks: await listTracks(releaseId),
-			canManage: role === 'owner' || role === 'admin' || role === 'staff',
+			canManage:
+				role === 'owner' || role === 'admin' || (role === 'staff' && (await can('band.manage'))),
 			/**
 			 * Assembled here rather than fetched by the page as a second query —
 			 * `custom/no-concurrent-remote-queries` errors on that, and past kit
@@ -187,7 +192,7 @@ export const createReleaseForm = form(
 	}),
 	async ({ slug, title, kind, releasedAt }) => {
 		await requireFeature('bandAudio');
-		const { group: band } = await requireGroupRole({ slug }, 'admin', { allowStaff: true });
+		const { group: band } = await requireGroupRole({ slug }, 'admin', { staff: 'band.manage' });
 		const release = await createRelease({
 			groupId: band.id,
 			title,
@@ -410,7 +415,7 @@ async function assertTrackInRelease(trackId: string, releaseId: string) {
  */
 export const getBandPayouts = query(z.string(), async (slug) => {
 	await requireFeature('bandAudio');
-	const { group: band } = await requireGroupRole({ slug }, 'admin', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'admin', { staff: 'finance.read' });
 	const status = await getPayoutStatus(band.id);
 
 	return {

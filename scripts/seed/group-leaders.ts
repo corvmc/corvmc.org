@@ -79,8 +79,8 @@ export const GROUP_INVITEE_PERSONA = {
  * `seedUserRoles` indexes into that array and `seedVolunteerProfiles` slices
  * it, so appending would silently reassign both.
  *
- * `member` and nothing else — a leader holding a position would pass
- * `isElevated` and read every group surface as staff.
+ * `member` and nothing else — a leader holding `staff` would hold
+ * `group.read` and read every group surface as staff.
  */
 export async function seedGroupLeaders(roles: SeedRole[]): Promise<SeedUser[]> {
 	console.log('Seeding group leaders...');

@@ -3,6 +3,7 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { mapDomainError } from '#lib/server/errors.js';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { groupRead } from '#lib/server/group/group-read.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
 import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '#lib/config.js';
@@ -34,18 +35,18 @@ import {
  *
  * Every export is flag-gated on `announcements` and guarded by
  * `requireGroupRole` with an explicit `{ id }` ref. Writes require `admin`; the
- * read admits a plain member, and a staff non-member through `allowStaff`.
+ * read admits a plain member, and a staff non-member through `staff`.
  */
 
 const groupIdField = z.string().min(1);
 const announcementIdField = z.string().min(1);
 
 async function requireReader(groupId: string) {
-	return requireGroupRole({ id: groupId }, 'member', { allowStaff: true });
+	return requireGroupRole({ id: groupId }, 'member', { staff: groupRead });
 }
 
 /**
- * `admin`, and **without** `allowStaff`.
+ * `admin`, and **without** `staff`.
  *
  * Reads admit a staff non-member because a staff member looking at a program
  * needs to see it; posting in a group's name is a different act, and one CMC
@@ -214,7 +215,7 @@ export const deleteAnnouncement = form(
  *
  * `requireGroupRole` at `member`, and the id comes from the session rather than
  * the request: a member may only ever change their own row, so there is no
- * `userId` field to forge. `allowStaff` is off — a staff non-member has no
+ * `userId` field to forge. `staff` is off — a staff non-member has no
  * roster row to write.
  *
  * An intent enum rather than a boolean, for the reason `pinAnnouncement` gives.

@@ -163,11 +163,11 @@ export const getBandEmailInvites = query(z.string(), async (bandId) => {
 // ===========================================================================
 
 export const getBandUpcoming = query(z.string(), async (bandId) => {
-	// `allowStaff`, like every band-panel read below it. `getBandLayout` admits a
+	// `staff`, like every band-panel read below it. `getBandLayout` admits a
 	// staff non-member and reports `userRole: 'staff'`, but the member-only guard
 	// these carried 403'd them — so staff rendered the panel frame and every card
 	// inside it failed.
-	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	const now = new Date();
 	const rows = await db
 		.select({
@@ -203,7 +203,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
-	await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = partitionByStatus(await getMembers(bandId));
 	return {
@@ -225,7 +225,7 @@ export const getBandMembersPage = query(z.string(), async (bandId) => {
 	// Roster changes go through staff tools." — could never render, because the
 	// member-only guard 403'd staff before the page did. `role` comes back as
 	// `'staff'` now, so `canManage` is false and that branch is reachable.
-	const { role } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	const { role } = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	const canManage = role === 'owner' || role === 'admin';
 
 	const [members, emailInvites] = await Promise.all([

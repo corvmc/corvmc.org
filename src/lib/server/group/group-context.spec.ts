@@ -5,9 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const requireUser = vi.fn(() => ({ id: 'user-1' }));
-// Both, so a test can tell them apart: `isElevated` is any position-holder and
-// `hasAnyRole(['admin','staff'])` is the two literal role rows. The guard must
-// use the first, matching `requireStaff()`.
+// Mocked so a test can show neither admits anyone: a guard names a capability.
 const isElevated = vi.fn(async () => false);
 const hasAnyRole = vi.fn(async () => false);
 const can = vi.fn(async (_cap?: unknown) => false);
@@ -29,6 +27,7 @@ vi.mock('#lib/server/band/band-service.js', () => ({
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))
 }));
 
+import { groupRead } from './group-read';
 import {
 	requireBandRole,
 	requireCommitteeMember,
@@ -174,69 +173,67 @@ describe('requireGroupRole', () => {
 		});
 	});
 
-	describe('allowStaff', () => {
+	describe('staff', () => {
 		beforeEach(() => {
 			getBySlug.mockResolvedValue(GROUP);
 			getUserRole.mockResolvedValue(null);
 		});
 
-		it('403s staff when it is not passed', async () => {
-			isElevated.mockResolvedValue(true);
+		it('403s a capability holder when no capability is named', async () => {
+			can.mockResolvedValue(true);
 			expect(await statusOf(() => requireGroupRole({ slug: 'our-band' }, 'member'))).toBe(403);
+			expect(can).not.toHaveBeenCalled();
+		});
+
+		it("admits a holder of the named capability as role 'staff'", async () => {
+			can.mockImplementation(async (cap: unknown) => cap === 'band.read');
+			await expect(
+				requireGroupRole({ slug: 'our-band' }, 'member', { staff: 'band.read' })
+			).resolves.toMatchObject({ role: 'staff' });
+			expect(can).toHaveBeenCalledWith('band.read');
+		});
+
+		/** Holding a position is not enough: an auditor holds one and no band capability (#2985). */
+		it('refuses a position holder without the named capability', async () => {
+			isElevated.mockResolvedValue(true);
+			can.mockImplementation(async (cap: unknown) => cap === 'audit.read');
+			expect(
+				await statusOf(() =>
+					requireGroupRole({ slug: 'our-band' }, 'member', { staff: 'band.read' })
+				)
+			).toBe(403);
 			expect(isElevated).not.toHaveBeenCalled();
 		});
 
-		it("admits a staff non-member as role 'staff'", async () => {
-			isElevated.mockResolvedValue(true);
+		it("picks the capability by the group's kind", async () => {
+			can.mockImplementation(async (cap: unknown) => cap === 'group.read');
+			expect(
+				await statusOf(() => requireGroupRole({ slug: 'our-band' }, 'member', { staff: groupRead }))
+			).toBe(403);
+			getBySlug.mockResolvedValue(CLUB);
 			await expect(
-				requireGroupRole({ slug: 'our-band' }, 'member', { allowStaff: true })
+				requireGroupRole({ slug: CLUB.slug }, 'member', { staff: groupRead })
 			).resolves.toMatchObject({ role: 'staff' });
-			expect(isElevated).toHaveBeenCalledWith('user-1');
 		});
 
 		/**
-		 * One predicate for "elevated enough to read a group surface".
-		 *
-		 * A `volunteer_coordinator` holds a position but no `admin`/`staff` role
-		 * row. `requireStaff()` and `getBandLayout` both admit them, so a guard
-		 * asking `hasAnyRole(['admin','staff'])` here handed them a panel on which
-		 * every card 403'd.
-		 */
-		it('admits a narrow position-holder who has no admin or staff role row', async () => {
-			isElevated.mockResolvedValue(true);
-			hasAnyRole.mockResolvedValue(false);
-			await expect(
-				requireGroupRole({ slug: 'our-band' }, 'member', { allowStaff: true })
-			).resolves.toMatchObject({ role: 'staff' });
-			expect(hasAnyRole).not.toHaveBeenCalled();
-		});
-
-		/**
-		 * Passing `allowStaff` IS the decision that staff may do this thing, so it
-		 * bypasses the floor rather than being ranked against it — otherwise the
-		 * option would mean different things at different floors.
+		 * Naming a capability IS the decision that its holders may do this thing, so
+		 * it bypasses the floor rather than being ranked against it.
 		 */
 		it('bypasses the floor rather than ranking against it', async () => {
-			isElevated.mockResolvedValue(true);
+			can.mockResolvedValue(true);
 			await expect(
-				requireGroupRole({ slug: 'our-band' }, 'owner', { allowStaff: true })
+				requireGroupRole({ slug: 'our-band' }, 'owner', { staff: 'band.manage' })
 			).resolves.toMatchObject({ role: 'staff' });
 		});
 
-		it('403s a non-staff non-member even when it is passed', async () => {
-			isElevated.mockResolvedValue(false);
-			expect(
-				await statusOf(() => requireGroupRole({ slug: 'our-band' }, 'member', { allowStaff: true }))
-			).toBe(403);
-		});
-
-		/** A member's own role wins; staff status is never consulted for them. */
-		it('does not consult staff status for an actual member', async () => {
+		/** A member's own role wins; the capability is never consulted for them. */
+		it('does not consult the capability for an actual member', async () => {
 			getUserRole.mockResolvedValue('member');
 			await expect(
-				requireGroupRole({ slug: 'our-band' }, 'member', { allowStaff: true })
+				requireGroupRole({ slug: 'our-band' }, 'member', { staff: 'band.read' })
 			).resolves.toMatchObject({ role: 'member' });
-			expect(isElevated).not.toHaveBeenCalled();
+			expect(can).not.toHaveBeenCalled();
 		});
 	});
 });

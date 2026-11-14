@@ -22,14 +22,17 @@ vi.mock('#lib/server/feature-flags.js', () => ({
 	}
 }));
 
+// Staff here hold every capability the guards name.
+vi.mock('#lib/server/authorization.js', () => ({ can: async () => true }));
+
 vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: async (
 		ref: { slug?: string },
 		minRole: 'owner' | 'admin' | 'member',
-		opts?: { allowStaff?: boolean }
+		opts?: { staff?: unknown }
 	) => {
 		if (!currentRole) throw new Error('401: Not authenticated');
-		if (currentRole === 'staff' && !opts?.allowStaff) throw new Error('403: Not a member');
+		if (currentRole === 'staff' && !opts?.staff) throw new Error('403: Not a member');
 
 		const rank = { owner: 0, admin: 1, member: 2, staff: 1 } as const;
 		if (rank[currentRole] > rank[minRole]) throw new Error('403: Insufficient role');
@@ -346,7 +349,7 @@ describe('audio remote — payouts', () => {
 
 	it('refuses staff on the write paths even though they can read the status', async () => {
 		currentRole = 'staff';
-		// Reading is `allowStaff` so support can see why a band cannot sell...
+		// Reading is open to `finance.read` so support can see why a band cannot sell...
 		await expect(remote.getBandPayouts(BAND.slug)).resolves.toBeDefined();
 		// ...but nobody outside the band starts its onboarding or opens its
 		// dashboard, which is a live session into the band's own Stripe account.

@@ -21,7 +21,7 @@ import { getMyMessageThread } from './direct-messages.remote';
  *
  * `requireGroupRole({ slug }, 'member')` is the whole gate, and it is here
  * because a remote function is its own endpoint. `'member'`, not `'admin'`, is
- * the entire difference from the band's enquiry inbox. No `allowStaff`: a chat
+ * the entire difference from the band's enquiry inbox. No `staff`: a chat
  * is not a support surface (#1252).
  */
 

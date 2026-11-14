@@ -204,7 +204,9 @@ describe('the audit log', () => {
 			expect.objectContaining({ outcome: 'sent', reason: null, outboxId: mail.id })
 		]);
 		expect(await testDb.select().from(notification)).toHaveLength(1);
-		expect(preferenceTypesFor('staff').map((t) => t.key)).not.toContain('reservation_payment_due');
+		expect(preferenceTypesFor(new Set()).map((t) => t.key)).not.toContain(
+			'reservation_payment_due'
+		);
 	});
 
 	it('records a skipped reminder for a removed account', async () => {

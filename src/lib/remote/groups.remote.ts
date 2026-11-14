@@ -18,6 +18,7 @@ import { setCommitteeCapabilityGrants } from '#lib/server/capability/capability-
 import { allowlisted } from '#lib/server/capability/grant-rules.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireGroupRole, requireProgramRole } from '#lib/server/group/group-context.js';
+import { groupRead } from '#lib/server/group/group-read.js';
 import {
 	hasOpenApplication,
 	listForApplicant,
@@ -433,7 +434,7 @@ function editableSeries(series: EventSeriesWithPrototype | undefined) {
  * together. A club is small by construction, so this is one read rather than a
  * tab's worth each.
  *
- * `allowStaff`, matching every other panel read: staff administer programs, and
+ * `staff`, matching every other panel read: staff administer programs, and
  * a page that renders for them with every card failing is the inconsistency
  * phase 4 set out to end.
  */
@@ -445,7 +446,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// collapsing them would send people to a list for a slug that never existed.
 	let ctx;
 	try {
-		ctx = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		ctx = await requireGroupRole({ slug }, 'member', { staff: groupRead });
 	} catch (err) {
 		if ((err as { status?: number }).status === 403) redirect(302, '/member/groups');
 		throw err;
@@ -829,7 +830,7 @@ export const declineGroupInvite = form(z.object({ groupId: z.string().min(1) }),
 // `requireProgramRole`, so a band slug 404s here: a band edits at
 // `/band/{slug}/edit`, which carries a listing this form deliberately omits.
 export const getGroupEditor = query(z.string(), async (slug) => {
-	const { group } = await requireProgramRole({ slug }, 'admin', { allowStaff: true });
+	const { group } = await requireProgramRole({ slug }, 'admin', { staff: 'group.manage' });
 
 	return {
 		id: group.id,
@@ -852,7 +853,7 @@ export const updateGroupProfileForm = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
-		// Admin and no `allowStaff`: a write, and staff have `/staff/clubs`.
+		// Admin and no `staff`: a write, and staff have `/staff/clubs`.
 		const { group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
 			await updateGroupProfile(group.id, {

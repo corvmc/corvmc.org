@@ -31,7 +31,7 @@ import { remove, upload } from '#lib/server/group/file-service.js';
 const groupIdField = z.string().min(1);
 
 /**
- * `admin`, and **without** `allowStaff`.
+ * `admin`, and **without** `staff`.
  *
  * Reads admit a staff non-member because a staff member looking at a program
  * needs to see it. Putting a document into a group's shared folder in its name

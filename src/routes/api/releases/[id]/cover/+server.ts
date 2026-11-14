@@ -19,7 +19,7 @@ async function ownedRelease(releaseId: string, userId: string | undefined) {
 	const release = await getReleaseById(releaseId);
 	if (!release) throw error(404, 'Release not found');
 	// The band is resolved from the *release*, never from a caller-supplied id.
-	await requireGroupRole({ id: release.groupId }, 'admin', { allowStaff: true });
+	await requireGroupRole({ id: release.groupId }, 'admin', { staff: 'band.manage' });
 	return release;
 }
 

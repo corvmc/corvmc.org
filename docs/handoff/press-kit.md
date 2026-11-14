@@ -61,19 +61,19 @@ Signed out reaches the public directory and both public profiles.
 
 ## Route map
 
-| Route                               | File                                           | Guard                                            |
-| ----------------------------------- | ---------------------------------------------- | ------------------------------------------------ |
-| `/directory`                        | `(public)/directory/+page.svelte`              | none                                             |
-| `/directory/bands/[slug]`           | `(public)/directory/bands/[slug]/+page.svelte` | none; 404s unless `visibility = 'public'`        |
-| `/member/directory/bands/[slug]`    | `member/directory/bands/[slug]/+page.svelte`   | `requireUser`                                    |
-| `/band/[slug]`                      | `band/[slug]/+page.svelte`                     | `requireGroupRole('member', { allowStaff })`     |
-| `/band/[slug]/edit`                 | `band/[slug]/edit/+page.svelte`                | `requireGroupRole('admin')`                      |
-| `/band/[slug]/press-kit`            | `band/[slug]/press-kit/+page.svelte`           | `requireGroupRole('admin')` — free for every act |
-| `/band/[slug]/subscription`         | `band/[slug]/subscription/+page.svelte`        | owner                                            |
-| `/band/[slug]/page-editor`          | `band/[slug]/page-editor/+page.svelte`         | admin + `tier = 'premium'`                       |
-| `/band-site/[slug]`                 | `band-site/[slug]/+page.svelte`                | `tier = 'premium'`; served at the subdomain      |
-| `/band-site/[slug]/epk`             | `band-site/[slug]/epk/+page.svelte`            | same                                             |
-| `GET /api/bands/[id]/press-kit.zip` | `api/bands/[id=uuid]/press-kit.zip/+server.ts` | `requireGroupRole('admin')`                      |
+| Route                               | File                                           | Guard                                                |
+| ----------------------------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| `/directory`                        | `(public)/directory/+page.svelte`              | none                                                 |
+| `/directory/bands/[slug]`           | `(public)/directory/bands/[slug]/+page.svelte` | none; 404s unless `visibility = 'public'`            |
+| `/member/directory/bands/[slug]`    | `member/directory/bands/[slug]/+page.svelte`   | `requireUser`                                        |
+| `/band/[slug]`                      | `band/[slug]/+page.svelte`                     | `requireGroupRole('member', { staff: 'band.read' })` |
+| `/band/[slug]/edit`                 | `band/[slug]/edit/+page.svelte`                | `requireGroupRole('admin')`                          |
+| `/band/[slug]/press-kit`            | `band/[slug]/press-kit/+page.svelte`           | `requireGroupRole('admin')` — free for every act     |
+| `/band/[slug]/subscription`         | `band/[slug]/subscription/+page.svelte`        | owner                                                |
+| `/band/[slug]/page-editor`          | `band/[slug]/page-editor/+page.svelte`         | admin + `tier = 'premium'`                           |
+| `/band-site/[slug]`                 | `band-site/[slug]/+page.svelte`                | `tier = 'premium'`; served at the subdomain          |
+| `/band-site/[slug]/epk`             | `band-site/[slug]/epk/+page.svelte`            | same                                                 |
+| `GET /api/bands/[id]/press-kit.zip` | `api/bands/[id=uuid]/press-kit.zip/+server.ts` | `requireGroupRole('admin')`                          |
 
 `/band/[slug]/page-editor/epk` **308s** to `/band/[slug]/press-kit`. It is in the help
 articles and in the history of every band that opened it.
@@ -178,7 +178,7 @@ do not just filter" item is unbuilt.
 ![mobile](press-kit/images/band-dashboard-ladder-mobile.png)
 
 **Route** `/band/wren-halloway` · **File** `src/routes/band/[slug]/+page.svelte`, card in
-`PressKitCard.svelte` · **Guard** `requireGroupRole('member', { allowStaff })`; the card is
+`PressKitCard.svelte` · **Guard** `requireGroupRole('member', { staff: 'band.read' })`; the card is
 owner/admin only · **Data** `getPressKitProgress`, behind its own boundary so the dashboard's
 sessions do not wait on it.
 

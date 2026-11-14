@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { command } from './_remote';
-import { requireCapability, isElevated } from '#lib/server/authorization.js';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import {
 	getForUser,
 	getUnreadCount,
@@ -11,7 +11,12 @@ import {
 } from '#lib/server/notification/in-app-service.js';
 import { getAllPreferences, setPreference } from '#lib/server/notification/preference-service.js';
 import { getMemberAccount } from './account.remote';
-import { getNotificationType, preferenceTypesFor } from '#lib/server/db/schema/notification.js';
+import {
+	getNotificationType,
+	NOTIFICATION_CAPABILITIES,
+	preferenceTypesFor,
+	receivable
+} from '#lib/server/db/schema/notification.js';
 
 function requireUser() {
 	const { locals } = getRequestEvent();
@@ -39,10 +44,18 @@ export const markAllNotificationsRead = command(async () => {
 // Preferences
 // ---------------------------------------------------------------------------
 
+/** Which of the capabilities notification types are gated on the caller holds. */
+async function heldNotificationCaps(): Promise<Set<string>> {
+	const held = await Promise.all(
+		NOTIFICATION_CAPABILITIES.map(async (c) => [c, await can(c)] as const)
+	);
+	return new Set(held.filter(([, ok]) => ok).map(([c]) => c));
+}
+
 export const getNotificationPreferences = query(async () => {
 	const user = requireUser();
-	const [prefs, staff] = await Promise.all([getAllPreferences(user.id), isElevated(user.id)]);
-	return preferenceTypesFor(staff ? 'staff' : 'member').map((t) => ({
+	const [prefs, held] = await Promise.all([getAllPreferences(user.id), heldNotificationCaps()]);
+	return preferenceTypesFor(held).map((t) => ({
 		key: t.key,
 		label: t.label,
 		description: t.description,
@@ -67,7 +80,7 @@ export const setNotificationPreference = command(
 			throw error(400, 'Cannot change preferences for mandatory notifications');
 		// A member must not be able to write a row for a type they can never
 		// receive, whatever the table happened to render.
-		if (typeDef.staffOnly && !(await isElevated(user.id))) throw error(403, 'Not authorized');
+		if (!receivable(typeDef, await heldNotificationCaps())) throw error(403, 'Not authorized');
 
 		await setPreference(user.id, notificationType, { email, inApp, sms });
 		void getMemberAccountPage().refresh();

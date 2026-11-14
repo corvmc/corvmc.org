@@ -23,7 +23,7 @@ export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
 	// whole Stripe subscription record to any signed-in account that knew a slug.
 	// Membership, not ownership: the page renders read-only for a non-owner
 	// member today and this is not the change that takes that away.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 	const [subscription, pricing] = await Promise.all([
 		getBandSubscription(band.id),
