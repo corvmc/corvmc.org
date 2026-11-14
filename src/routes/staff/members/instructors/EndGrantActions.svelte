@@ -5,6 +5,7 @@
 	import { pauseInstructor, retireInstructor } from '#lib/remote/instructors.remote.js';
 	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Pause and retire both block booking and differ only in intent — which is the
@@ -37,7 +38,9 @@
 	{#if bookings > 0}
 		<p class="text-sm" data-testid="held-bookings">
 			{#if email}
-				<a class="link" href={`${resolve('staff/reservations')}?q=${encodeURIComponent(email)}`}
+				<a
+					class="link"
+					href={withQuery(resolve('staff/reservations'), new URLSearchParams({ q: email }))}
 					>{m.staff_members_instructors_end_grant_actions_bookings_text({ count: bookings })}</a
 				>
 			{:else}
