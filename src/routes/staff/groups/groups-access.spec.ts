@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Groups shows each staffer the views their capabilities allow (#2086).
+// Groups shows each staffer the kinds their capabilities allow (#2086, #2765).
 let held: string[] = [];
 vi.mock('#lib/server/authorization.js', () => ({
 	can: async (cap: string) => held.includes(cap)
@@ -10,8 +10,11 @@ vi.mock('#lib/server/group/group-service.js', () => ({
 	getGroupDetail: async (id: string) => (kind ? { id, kind } : null)
 }));
 
-const groups = await import('./bands/+page.server');
-const bare = await import('./+page');
+const groups = await import('./+page.server');
+const groupBands = await import('./bands/+page');
+const groupClubs = await import('./clubs/+page');
+const groupCommittees = await import('./committees/+page');
+const acts = await import('../bands/acts/+page');
 const record = await import('./[id]/+page.server');
 const oldBands = await import('../bands/+page');
 const oldClubs = await import('../clubs/+page');
@@ -31,18 +34,25 @@ beforeEach(() => {
 	kind = null;
 });
 
-describe('/staff/groups/bands', () => {
+describe('/staff/groups', () => {
 	it('shows Bands to a band.read holder', async () => {
 		held = ['band.read', 'group.read'];
 		await expect(run(groups.load)).resolves.toBeUndefined();
 	});
 
 	it.each([
-		[['group.read', 'committee.reviewApplications'], '/staff/groups/clubs'],
-		[['committee.reviewApplications'], '/staff/groups/committees']
+		[['group.read', 'committee.reviewApplications'], '/staff/groups?kind=club'],
+		[['committee.reviewApplications'], '/staff/groups?kind=committee']
 	])('sends a staffer holding %j to %s', async (caps, location) => {
 		held = caps;
 		await expect(run(groups.load)).rejects.toMatchObject({ status: 307, location });
+	});
+
+	it('leaves a kind filter to its own remotes', async () => {
+		held = ['group.read'];
+		await expect(
+			run(groups.load, { url: 'http://x/staff/groups?kind=club' })
+		).resolves.toBeUndefined();
 	});
 });
 
@@ -63,10 +73,13 @@ describe('/staff/groups/[id]', () => {
 
 describe('old addresses', () => {
 	it.each([
-		[bare.load, 'http://x/staff/groups?q=x', '/staff/groups/bands?q=x'],
-		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups/bands?q=x'],
-		[oldClubs.load, 'http://x/staff/clubs', '/staff/groups/clubs'],
-		[oldCommittees.load, 'http://x/staff/committees', '/staff/groups/committees'],
+		[groupBands.load, 'http://x/staff/groups/bands?q=x', '/staff/groups?q=x'],
+		[groupClubs.load, 'http://x/staff/groups/clubs?q=x', '/staff/groups?kind=club&q=x'],
+		[groupCommittees.load, 'http://x/staff/groups/committees', '/staff/groups?kind=committee'],
+		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups?q=x'],
+		[oldClubs.load, 'http://x/staff/clubs', '/staff/groups?kind=club'],
+		[oldCommittees.load, 'http://x/staff/committees', '/staff/groups?kind=committee'],
+		[acts.load, 'http://x/staff/bands/acts', '/staff/contacts?role=performer'],
 		[oldBand.load, 'http://x/staff/bands/g-1', '/staff/groups/g-1'],
 		[oldClub.load, 'http://x/staff/clubs/g-1', '/staff/groups/g-1'],
 		[oldCommittee.load, 'http://x/staff/committees/g-1', '/staff/groups/g-1']

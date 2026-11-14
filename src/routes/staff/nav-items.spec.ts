@@ -52,11 +52,7 @@ describe('activeNavKey', () => {
 		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
 		['/staff/groups', 'groups'],
-		['/staff/groups/bands', 'groups'],
-		['/staff/groups/clubs', 'groups'],
-		['/staff/groups/committees', 'groups'],
 		['/staff/groups/abc', 'groups'],
-		['/staff/bands/acts', 'groups'],
 		// Volunteering owns the rest of the path (#2379, #2625).
 		['/staff/volunteering', 'volunteer-schedule'],
 		['/staff/volunteer', 'volunteer-schedule'],
@@ -291,8 +287,6 @@ describe('route coverage', () => {
 		'/staff/local-resources/tips', // a Local Resources tab, and the review feed's tip rows (#2623)
 		'/staff/keys', // reached from Practice space's header (#2574)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
-		// Reached from the Bands view's header: the same staff job as a band.
-		'/staff/bands/acts',
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
 		'/staff/moderation/incidents',
@@ -309,10 +303,6 @@ describe('route coverage', () => {
 		'/staff/reports/volunteering',
 		'/staff/reports/inventory-spend',
 		'/staff/reports/acquisitions',
-		// Groups views, reached from its tab bar (#2086).
-		'/staff/groups/bands',
-		'/staff/groups/clubs',
-		'/staff/groups/committees',
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.
