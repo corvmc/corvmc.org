@@ -672,6 +672,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/reports/music",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/reports/volunteering",
 		"panel": "staff"
 	},

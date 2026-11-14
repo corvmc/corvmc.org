@@ -147,6 +147,8 @@ describe('staff music — guards', () => {
 describe('staff music — capabilities', () => {
 	const EXPORTS: Array<[string, unknown, Capability]> = [
 		['getStaffMusicPage', undefined, 'music.read'],
+		['getStaffReleaseSales', 'rel-1', 'music.read'],
+		['getMusicSalesReport', undefined, 'music.read'],
 		['withholdReleaseForm', MUTATIONS[0][1], 'music.moderate'],
 		['restoreReleaseForm', MUTATIONS[1][1], 'music.moderate'],
 		['setRadioExclusionForm', MUTATIONS[2][1], 'music.moderate'],
@@ -212,15 +214,11 @@ describe('staff music — capabilities', () => {
 
 	it('tells the page which controls to offer', async () => {
 		heldPositions = ['treasurer'];
-		expect(await remote.getStaffMusicPage()).toMatchObject({
-			canModerate: false,
-			canRefund: true
-		});
+		expect(await remote.getStaffMusicPage()).toMatchObject({ canModerate: false });
+		expect(await remote.getStaffReleaseSales('rel-1')).toMatchObject({ canRefund: true });
 		heldPositions = ['site_moderator'];
-		expect(await remote.getStaffMusicPage()).toMatchObject({
-			canModerate: true,
-			canRefund: false
-		});
+		expect(await remote.getStaffMusicPage()).toMatchObject({ canModerate: true });
+		expect(await remote.getStaffReleaseSales('rel-1')).toMatchObject({ canRefund: false });
 	});
 });
 

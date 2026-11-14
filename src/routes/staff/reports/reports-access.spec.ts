@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getAnnualReportPage } from '#lib/remote/reports.remote.js';
 import { getVolunteerReportPage } from '#lib/remote/volunteer.remote.js';
 import { getAcquisitions, getSpendReport } from '#lib/remote/inventory.remote.js';
+import { getMusicSalesReport } from '#lib/remote/staff-music.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
 import { reportViews } from './views';
@@ -23,7 +24,8 @@ const ANNUAL = 'finance.read';
 const VOLUNTEERING = 'volunteer.report';
 const SPEND = 'inventory.report';
 const ACQUISITIONS = 'inventory.manageAcquisitions';
-const ALL = [ANNUAL, VOLUNTEERING, SPEND, ACQUISITIONS];
+const MUSIC = 'music.read';
+const ALL = [ANNUAL, VOLUNTEERING, SPEND, ACQUISITIONS, MUSIC];
 
 beforeEach(() => {
 	auth.held = [];
@@ -42,19 +44,21 @@ describe('tabs', () => {
 		[ANNUAL, 'annual'],
 		[VOLUNTEERING, 'volunteering'],
 		[SPEND, 'inventory-spend'],
-		[ACQUISITIONS, 'acquisitions']
+		[ACQUISITIONS, 'acquisitions'],
+		[MUSIC, 'music']
 	])('holding only %s shows only %s, and still offers the row', (cap, key) => {
 		expect(visibleViews(reportViews, [cap]).map((v) => v.key)).toEqual([key]);
 		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
 		expect(rows.map((r) => r.key)).toContain('reports');
 	});
 
-	it('shows all four, in order, to someone holding them all', () => {
+	it('shows all five, in order, to someone holding them all', () => {
 		expect(visibleViews(reportViews, ALL).map((v) => v.key)).toEqual([
 			'annual',
 			'volunteering',
 			'inventory-spend',
-			'acquisitions'
+			'acquisitions',
+			'music'
 		]);
 	});
 });
@@ -64,8 +68,9 @@ describe('remotes', () => {
 		[ANNUAL, getAnnualReportPage],
 		[VOLUNTEERING, getVolunteerReportPage],
 		[SPEND, getSpendReport],
-		[ACQUISITIONS, getAcquisitions]
-	])('without %s, its report is refused to a holder of the other three', async (cap, remote) => {
+		[ACQUISITIONS, getAcquisitions],
+		[MUSIC, getMusicSalesReport]
+	])('without %s, its report is refused to a holder of the others', async (cap, remote) => {
 		auth.held = ALL.filter((c) => c !== cap);
 		await expect((remote as never as (f: object) => unknown)({})).rejects.toMatchObject({
 			status: 403
