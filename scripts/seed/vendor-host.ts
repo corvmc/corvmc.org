@@ -11,13 +11,13 @@ import { type SeedRole } from './types';
  * staff position and no committee seat. A confirmed signup on the market's
  * host shift, in a role whose 30-day lead time is already open three weeks out,
  * so the shift page links the market's vendors and check-in list. Out of
- * `allUsers` for the reason `seedGroupLeaders` gives; member number 77 is free.
+ * `allUsers` for the reason `seedGroupLeaders` gives.
  */
 export const VENDOR_HOST_PERSONA = {
 	id: 'seed-vendor-host',
 	email: 'vendorhost@corvallismusic.org',
 	name: 'Jonah Ferreira',
-	memberNumber: 77
+	memberNumber: 88
 };
 
 export async function seedVendorHost(

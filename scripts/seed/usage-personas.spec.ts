@@ -75,4 +75,18 @@ describe('usage personas', () => {
 		// `seedUsers` takes 100 + i for its bulk members, and nothing else may.
 		expect([...seen.keys()].filter((n) => n >= 100 && n < 200)).toEqual([]);
 	});
+
+	it('names every member number memberNumber, so the check above can see it', () => {
+		// A persona keyed `n: 77` and inserted as `memberNumber: p.n` hid a
+		// collision from the literal scan (#3019). Any non-literal value must read
+		// a field that is itself called memberNumber.
+		const hidden = sources.flatMap(([name, source]) =>
+			[...source.matchAll(/memberNumber: ([^,\n]+)/g)]
+				.map((m) => m[1].trim())
+				.filter((value) => !/^(\d+|number;?|100 \+ i|[\w.]+\.memberNumber)$/.test(value))
+				.map((value) => `${name}: memberNumber: ${value}`)
+		);
+
+		expect(hidden).toEqual([]);
+	});
 });
