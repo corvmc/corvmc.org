@@ -1608,6 +1608,39 @@ describe('named the event lead on a show (#2726)', () => {
 	});
 });
 
+describe('assigned a task (#2986)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const assigned = {
+		workOrderId: 'wo-1',
+		title: 'Fix the PA',
+		dueAt: '2026-10-09T03:00:00.000Z',
+		recipient: { userId: 'u-nia', userName: 'Nia', userEmail: 'nia@test.com' },
+		assignedByName: 'Ada Booker'
+	};
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'task_assigned');
+
+	it('tells the assignee the task, who assigned it and when it is due, linking their task page', async () => {
+		await emit('volunteer.task_assigned', assigned);
+
+		const [sent] = calls();
+		expect(sent.userId).toBe('u-nia');
+		expect(sent.href).toBe('/member/volunteer/tasks/wo-1');
+		expect(sent.title).toContain('Fix the PA');
+		expect(sent.body).toContain('Ada Booker');
+		expect(detailLabels(sent.email)).toHaveLength(3);
+	});
+
+	it('names nobody and no date when neither is known', async () => {
+		await emit('volunteer.task_assigned', { ...assigned, assignedByName: null, dueAt: null });
+
+		const [sent] = calls();
+		expect(sent.body).not.toContain('null');
+		expect(detailLabels(sent.email)).toHaveLength(1);
+	});
+});
+
 describe('committee show work due (#1709)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 

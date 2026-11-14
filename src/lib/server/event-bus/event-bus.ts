@@ -739,6 +739,16 @@ export interface TaskReadyEvent {
 	recipient: { userId: string; userName: string; userEmail: string };
 }
 
+export interface TaskAssignedEvent {
+	workOrderId: string;
+	title: string;
+	/** ISO string, or null for a task with no deadline. */
+	dueAt: string | null;
+	recipient: { userId: string; userName: string; userEmail: string };
+	/** Null when the account that did it is gone. */
+	assignedByName: string | null;
+}
+
 export interface EventUnpublishedByStaffEvent {
 	eventId: string;
 	eventTitle: string;
@@ -1040,6 +1050,7 @@ export type DomainEvents = {
 	'production.lead_assigned': ShowLeadAssignedEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
 	'volunteer.task_ready': TaskReadyEvent;
+	'volunteer.task_assigned': TaskAssignedEvent;
 	'volunteer.orientation_unclaimed': OrientationUnclaimedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
