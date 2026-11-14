@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { command, form } from './_remote';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { taskScope } from '#lib/server/capability/record-scope.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { invalid } from '@sveltejs/kit';
@@ -264,7 +265,10 @@ export const addRelatedShift = form(
 		capacity: z.string().optional()
 	}),
 	async (data, issue) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability(
+			'volunteer.manageShifts',
+			data.taskId ? () => taskScope(data.taskId!) : undefined
+		);
 		const s = { type: data.subjectType, id: data.subjectId };
 		await requireSubjectReader(s);
 		validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'));

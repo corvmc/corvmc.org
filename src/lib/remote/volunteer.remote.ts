@@ -20,6 +20,12 @@ import { getStaffLayout } from './layout.remote';
 import { aboutWhere } from '#lib/server/task/related-tasks.js';
 import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import {
+	eventScope,
+	shiftScope,
+	signupScope,
+	taskScope
+} from '#lib/server/capability/record-scope.js';
 import { getProjectById } from '#lib/server/project/project-service.js';
 import { listSections } from '#lib/server/project/project-section-service.js';
 import { moveTask, requireTaskInProject } from '#lib/server/project/project-task-service.js';
@@ -1710,7 +1716,7 @@ export const updateTask = form(
 		notes: notesSchema
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 		try {
 			await editTaskService(data.id, {
@@ -1739,7 +1745,7 @@ export const updateShift = form(
 		notes: notesSchema
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 		try {
 			await editShiftService(data.shiftId, {
@@ -1761,7 +1767,7 @@ export const updateShift = form(
 export const duplicateShift = form(
 	z.object({ shiftId: z.string().min(1), offsetDays: z.number().int() }),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 		try {
 			const copy = await copyShiftForwardService(data.shiftId, data.offsetDays, staff.id);
@@ -1775,7 +1781,7 @@ export const duplicateShift = form(
 
 /** Call off one shift; its task stays open. Calling off the task is `cancelTask`. */
 export const cancelShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('volunteer.manageShifts');
+	const staff = await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 	try {
 		await cancelOneShiftService(data.shiftId, staff.id);
@@ -1789,7 +1795,7 @@ export const cancelShift = form(z.object({ shiftId: z.string().min(1) }), async 
 
 /** Call off a task and every live shift on it. */
 export const cancelTask = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('volunteer.manageShifts');
+	const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 	try {
 		await cancelTaskService(data.id, staff.id);
@@ -1805,7 +1811,7 @@ export const cancelTask = form(z.object({ id: z.string().min(1) }), async (data)
 export const unassignFromTask = form(
 	z.object({ workOrderId: z.string().min(1), userId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => taskScope(data.workOrderId));
 
 		const task = await requireTask(data.workOrderId);
 		await unassignFromTaskService(task, data.userId);
@@ -1865,7 +1871,10 @@ export const createWorkOrder = form(
 			.optional()
 	}),
 	async (data, issue) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability(
+			'volunteer.manageShifts',
+			data.eventId ? () => eventScope(data.eventId!) : undefined
+		);
 		const capacity = data.capacity ? parseInt(data.capacity, 10) : 1;
 
 		if (data.timed) {
@@ -1917,7 +1926,7 @@ export const openShift = form(
 		notes: notesSchema
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 		try {
 			await openShiftService(data.id, {
@@ -1943,7 +1952,7 @@ export const openShift = form(
 export const resolveWorkOrder = form(
 	z.object({ id: z.string().min(1), notes: z.string().max(500).optional() }),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 		try {
 			await resolveWorkOrderService(data.id, {
@@ -1967,7 +1976,7 @@ export const resolveWorkOrder = form(
  * it; the count in the banner is what it clears.
  */
 export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageShifts');
+	await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 	const notified = await notifySignupsOfCancellationService(data.shiftId);
 
@@ -1979,7 +1988,7 @@ export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }
 export const markSignupNotified = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		await markSignupNotifiedService(data.signupId);
 
@@ -2043,7 +2052,7 @@ export const inviteMemberToShift = form(
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
 		try {
 			const result = await inviteToShiftService(data.shiftId, data.userId, staff.id);
@@ -2101,7 +2110,9 @@ export const assignShiftToMember = form(
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster', () =>
+			data.shiftId ? shiftScope(data.shiftId) : taskScope(data.workOrderId)
+		);
 
 		let warnings: string[] = [];
 		try {
@@ -2129,7 +2140,7 @@ export const assignShiftToMember = form(
 export const releaseSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await releaseSignupService(data.signupId);
@@ -2145,7 +2156,7 @@ export const releaseSignup = form(
 export const confirmSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await confirmSignupService(data.signupId);
@@ -2172,10 +2183,12 @@ export const confirmSignup = form(
 export const confirmSignups = form(
 	z.object({ shiftId: z.string().min(1), signupIds: z.array(z.string().min(1)).min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
+		// The scope is the shift's, so a signup on any other shift is skipped.
+		const onShift = new Set((await listClaimants(data.shiftId)).map((c) => c.signupId));
 		let confirmed = 0;
-		for (const signupId of data.signupIds) {
+		for (const signupId of data.signupIds.filter((id) => onShift.has(id))) {
 			try {
 				await confirmSignupService(signupId);
 				confirmed++;
@@ -2199,7 +2212,7 @@ export const confirmSignups = form(
  * Same service loop, one less thing for the list to know.
  */
 export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRoster');
+	await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
 	const claimants = await listClaimants(data.shiftId);
 	const outstanding = claimants.filter((c) => c.status === 'claimed');
@@ -2222,7 +2235,7 @@ export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }),
 export const markSignupNoShow = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await markNoShowService(data.signupId);
@@ -2243,7 +2256,9 @@ export const setTrainedUnder = form(
 		supervisingSignupId: z.string().optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster', () =>
+			signupScope(data.signupId)
+		);
 
 		try {
 			await setSupervisingSignup({
@@ -2588,7 +2603,7 @@ async function guardTaskWrite(id: string) {
 	const user = requireUser();
 	const projectId = await workOrderProjectId(id);
 	if (projectId === undefined) error(404, 'Task not found');
-	if (!projectId) return requireCapability('volunteer.manageShifts');
+	if (!projectId) return requireCapability('volunteer.manageShifts', () => taskScope(id));
 	try {
 		await requireProjectCommittee(projectId, 'project.manage');
 	} catch (err) {

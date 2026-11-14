@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability } from '#lib/server/authorization.js';
+import { eventScope, workTaskScope } from '#lib/server/capability/record-scope.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { dutyListAnchors, workDoneConditions } from '#lib/config.js';
 
@@ -340,7 +341,7 @@ export const applyDutyList = form(
 		reason: z.string().max(500).optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => eventScope(data.eventId));
 		try {
 			const projectId = await projectOfEvent(data.eventId);
 			if (!projectId) error(422, 'This event has no project to apply a template to.');
@@ -371,7 +372,7 @@ export const setWorkTaskDone = form(
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => workTaskScope(data.id));
 		try {
 			await setTaskService(data.id, data.done, staff.id);
 			const projectId = await workOrderProjectId(data.shiftId);
