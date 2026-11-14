@@ -601,3 +601,35 @@ export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
 	]);
 	return { products, reservation, orientation, venue };
 });
+
+// ---------------------------------------------------------------------------
+// Gear — the role on tasks repair reports and low stock open (#2756)
+// ---------------------------------------------------------------------------
+
+/** Gear settings' one query: each kind's role, and the roles to pick from. */
+export const getGearSettings = query(async () => {
+	await requireCapability('settings.read');
+	const [raw, roles] = await Promise.all([getConfigsByPrefix('inventory'), listVolunteerRoles()]);
+	return {
+		repairRoleId: String(raw.repairRoleId ?? ''),
+		restockRoleId: String(raw.restockRoleId ?? ''),
+		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
+	};
+});
+
+export const updateGearTaskRoles = form(
+	z.object({
+		// Empty leaves new tasks with no role.
+		repairRoleId: z.string().max(100).optional(),
+		restockRoleId: z.string().max(100).optional()
+	}),
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([
+			{ key: 'inventory.repairRoleId', value: data.repairRoleId?.trim() ?? '' },
+			{ key: 'inventory.restockRoleId', value: data.restockRoleId?.trim() ?? '' }
+		]);
+		void getGearSettings().refresh();
+		return { success: true };
+	})
+);

@@ -96,7 +96,9 @@ async function aboutOf(ids: string[]): Promise<Map<string, TaskAbout>> {
 					? { type: 'organization', id: r.organizationId }
 					: r.contactId
 						? { type: 'contact', id: r.contactId }
-						: null;
+						: r.itemId
+							? { type: 'equipment', id: r.itemId }
+							: null;
 		if (about) out.set(r.workOrderId, about);
 	}
 	return out;

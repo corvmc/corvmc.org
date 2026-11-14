@@ -18,7 +18,13 @@ import {
  * so the link table has one shape of query.
  */
 
-export const linkTargets = ['organizationId', 'contactId', 'assetId', 'reservationId'] as const;
+export const linkTargets = [
+	'organizationId',
+	'contactId',
+	'assetId',
+	'reservationId',
+	'itemId'
+] as const;
 export type LinkTarget = (typeof linkTargets)[number];
 
 export type LinkTo = Partial<Record<LinkTarget, string | null | undefined>>;

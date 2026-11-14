@@ -4,6 +4,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
 import { linkedTo, linkedToAny } from '#lib/server/task/work-order-link.js';
+import { openSourcedTask } from '#lib/server/task/sourced-tasks.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';
@@ -126,7 +127,7 @@ export async function raiseFlag(input: RaiseFlagInput) {
 		});
 	}
 
-	return flag;
+	return { ...flag, workOrderId: await sendToRepair(flag) };
 }
 
 export class WorkRequestValidationError extends DomainError {
@@ -165,7 +166,101 @@ export async function reportBuildingProblem(input: {
 			updatedAt: now
 		})
 		.returning();
-	return flag;
+	return { ...flag, workOrderId: await sendToRepair(flag) };
+}
+
+/**
+ * Put a new report on the task that will fix it (#2756): the open task already
+ * about the unit, else a new one linked to it. A building problem opens its
+ * own task, as two reports about one room may be two faults. Every untriaged
+ * report on the unit goes with it, as `sendToWorkOrder` takes them.
+ */
+export async function sendToRepair(request: {
+	id: string;
+	assetId: string | null;
+	location: string | null;
+	note: string;
+}): Promise<string> {
+	let workOrderId: string;
+	if (request.assetId) {
+		const [open] = await db
+			.select({ id: workOrder.id })
+			.from(workOrder)
+			.where(and(linkedTo('assetId', request.assetId), openWork()))
+			.orderBy(asc(workOrder.createdAt), asc(workOrder.id))
+			.limit(1);
+		workOrderId =
+			open?.id ??
+			(
+				await openSourcedTask({
+					source: 'repair',
+					sourceId: request.assetId,
+					title: `Repair ${await unitLabel(request.assetId)}`,
+					notes: request.note,
+					links: { assetId: request.assetId }
+				})
+			).id;
+	} else {
+		workOrderId = (
+			await openSourcedTask({
+				source: 'repair',
+				sourceId: request.id,
+				title: `Repair ${request.location ?? 'the building'}`,
+				notes: request.note
+			})
+		).id;
+	}
+
+	await db
+		.update(workRequest)
+		.set({ workOrderId, updatedAt: new Date() })
+		.where(
+			and(
+				eq(workRequest.status, 'pending'),
+				isNull(workRequest.workOrderId),
+				request.assetId ? eq(workRequest.assetId, request.assetId) : eq(workRequest.id, request.id)
+			)
+		);
+	return workOrderId;
+}
+
+const openWork = () => and(isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt));
+
+async function unitLabel(assetId: string): Promise<string> {
+	const [unit] = await db
+		.select({ name: inventoryItem.name, assetTag: inventoryAsset.assetTag })
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.where(eq(inventoryAsset.id, assetId))
+		.limit(1);
+	if (!unit) return 'unit';
+	return unit.assetTag ? `${unit.name} (${unit.assetTag})` : unit.name;
+}
+
+/**
+ * Reports raised before #2756 that still wait in triage: each goes to its
+ * task as a new one would. Idempotent; the daily task sweep runs it.
+ */
+export async function sendUntriagedToRepair(): Promise<number> {
+	const waiting = await db
+		.select({
+			id: workRequest.id,
+			assetId: workRequest.assetId,
+			location: workRequest.location,
+			note: workRequest.note
+		})
+		.from(workRequest)
+		.where(untriagedRequest())
+		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
+	const sent = new Set<string>();
+	for (const r of waiting) {
+		// One call per unit: the first takes the unit's other reports with it.
+		const key = r.assetId ?? r.id;
+		if (sent.has(key)) continue;
+		sent.add(key);
+		await sendToRepair(r);
+	}
+	return sent.size;
 }
 
 /** Whether anything open says this unit must not go out. */

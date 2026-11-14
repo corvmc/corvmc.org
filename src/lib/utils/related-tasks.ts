@@ -10,7 +10,13 @@ export const relatedSubjectTypes = [...entityTypes, 'group', 'recurring_work'] a
 export type RelatedSubjectType = (typeof relatedSubjectTypes)[number];
 
 /** Records a task is about through `work_order_link` (#2622). */
-export const linkSubjectTypes = ['organization', 'contact', 'asset', 'reservation'] as const;
+export const linkSubjectTypes = [
+	'organization',
+	'contact',
+	'asset',
+	'reservation',
+	'equipment'
+] as const;
 export type LinkSubjectType = (typeof linkSubjectTypes)[number];
 
 /** A relation's name, closest first within each subject type. */

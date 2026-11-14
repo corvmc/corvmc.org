@@ -1,5 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { onOrderQuantities } from './order-service';
+import { afterStockChange } from './restock-tasks';
+import { openSourceIds } from '#lib/server/task/sourced-tasks.js';
 import { inSection } from './sections';
 import type { InventorySection } from '#lib/config.js';
 import {
@@ -133,6 +135,7 @@ export function movementStatement(input: RecordMovementInput) {
 /** Write one movement on its own, when nothing else has to land with it. */
 export async function recordMovement(input: RecordMovementInput) {
 	const [row] = await movementStatement(input);
+	await afterStockChange([input.itemId]);
 	return row;
 }
 
@@ -382,7 +385,11 @@ export async function listLowStock(opts: { section?: InventorySection } = {}) {
 	 * nothing could tell *"we are out"* from *"we are out but ten arrive
 	 * Thursday"*. One extra query for the whole page, not one per row.
 	 */
-	const onOrder = await onOrderQuantities(rows.map((r) => r.item.id));
+	const ids = rows.map((r) => r.item.id);
+	const [onOrder, tasks] = await Promise.all([
+		ids.length ? onOrderQuantities(ids) : new Map<string, number>(),
+		openSourceIds('restock', ids)
+	]);
 
 	return rows.map((r) => ({
 		...r.item,
@@ -406,6 +413,8 @@ export async function listLowStock(opts: { section?: InventorySection } = {}) {
 			Math.max(1, r.item.reorderQuantity ?? (r.item.reorderPoint ?? 0) - Number(r.onHand)) -
 				(onOrder.get(r.item.id) ?? 0)
 		),
-		isOut: Number(r.onHand) <= 0
+		isOut: Number(r.onHand) <= 0,
+		/** Its open restock task (#2756), when one is open. */
+		taskId: tasks.get(r.item.id) ?? null
 	}));
 }

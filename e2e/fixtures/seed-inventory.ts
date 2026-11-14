@@ -93,9 +93,8 @@ export const SEED_INTAKE_BULK_NAME = 'E2E Intake Cable';
 /**
  * A second consumable, deliberately below its reorder point.
  *
- * Without one, the restock list and the dashboard's low-stock section only ever
- * render their empty states in e2e — the populated path, which is the entire
- * feature, would go untested.
+ * Without one, the restock list only ever renders its empty state in e2e — the
+ * populated path, which is the entire feature, would go untested.
  */
 export const SEED_LOW_ID = 'e2e0a11e-0000-4000-8000-000000000003';
 export const SEED_LOW_NAME = 'E2E Test Batteries';

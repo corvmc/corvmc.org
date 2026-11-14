@@ -78,6 +78,11 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// first-visit email, as plain text. Empty leaves that part out.
 	'volunteer.firstVisitNotes': '',
 
+	// The volunteer role on the tasks a repair report or low stock opens (#2756).
+	// Empty leaves them with no role, unassigned on the Tasks page.
+	'inventory.repairRoleId': '',
+	'inventory.restockRoleId': '',
+
 	// How many inputs the desk in the practice room can actually take.
 	//
 	// Runtime config rather than a constant because it is a fact about a piece of

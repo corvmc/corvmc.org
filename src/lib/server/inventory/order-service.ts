@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { afterOrderChange } from './restock-tasks';
 import {
 	acquisition,
 	equipmentCategory,
@@ -97,6 +98,7 @@ export async function createOrder(data: CreateOrderData) {
 		)
 	] as unknown as Parameters<typeof db.batch>[0]);
 
+	if (data.placedAt) await afterOrderChange(orderId);
 	return orderId;
 }
 
@@ -111,6 +113,7 @@ export async function placeOrder(id: string, when: Date = new Date()) {
 		.update(purchaseOrder)
 		.set({ status: 'placed', placedAt: when, updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderChange(id);
 }
 
 /**
@@ -129,6 +132,7 @@ export async function cancelOrder(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderChange(id);
 }
 
 /**
@@ -152,6 +156,7 @@ export async function reopenOrder(id: string, reason: string) {
 		.where(and(eq(purchaseOrder.id, id), eq(purchaseOrder.status, order.status)))
 		.returning();
 	if (!row) throw new OrderStateError('This order changed while you were looking at it');
+	await afterOrderChange(id);
 
 	await recordAuditEntry({
 		action: 'purchase_order.reopened',
@@ -407,6 +412,7 @@ export async function applyReceipt(input: {
 			.set({ status: 'received', updatedAt: new Date() })
 			.where(eq(purchaseOrder.id, input.orderId));
 	}
+	await afterOrderChange(input.orderId);
 
 	return { complete };
 }
@@ -421,6 +427,7 @@ export async function closeOrderShort(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'received', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderChange(id);
 }
 
 /** Items on a placed order that is past its expected date. */

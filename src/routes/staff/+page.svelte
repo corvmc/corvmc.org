@@ -363,42 +363,6 @@
 		{/if}
 	{/if}
 
-	{#if data.lowStock?.total}
-		<SectionLabel label={m.staff_low_stock_items_label()} count={data.lowStock.total} />
-		<Table>
-			{#snippet head()}
-				<th>{m.staff_item_label()}</th>
-				<th class="col-support">{m.staff_category_label()}</th>
-				<th class="cell-num">{m.staff_hand_label()}</th>
-				<th class="col-support cell-num">{m.staff_buy_label()}</th>
-			{/snippet}
-			{#each data.lowStock.rows as item (item.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/inventory/${item.id}`)}>
-					<td class="cell-primary">
-						{item.name}
-						{#if item.isOut}
-							<Badge variant="error" size="xs">{m.staff_out_label()}</Badge>
-						{/if}
-					</td>
-					<td class="col-support">{item.category.name}</td>
-					<td class="cell-num" class:text-error={item.isOut}>{item.onHand}</td>
-					<td class="col-support cell-num">{item.suggestedOrder}</td>
-				</tr>
-			{/each}
-		</Table>
-		<div class="mt-2">
-			<Button
-				variant="ghost"
-				size="sm"
-				href={withQuery(resolve('staff/inventory/supplies'), 'show=restock')}
-			>
-				{data.lowStock.total > data.lowStock.rows.length
-					? m.staff_see_all_restock_label({ total: data.lowStock.total })
-					: m.staff_open_restock_list_label()}
-			</Button>
-		</div>
-	{/if}
-
 	{#if data.members}
 		<SectionLabel label={m.staff_recent_members_label()} />
 		<p class="mb-2 text-muted">

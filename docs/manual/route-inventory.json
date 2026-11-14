@@ -576,6 +576,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/settings",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/supplies",
 		"panel": "staff"
 	},

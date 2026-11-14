@@ -167,6 +167,8 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		cap: 'settings.update',
 		args: [{ minutes: '30', leadMinutes: '10' }]
 	},
+	{ name: 'getGearSettings', cap: 'settings.read' },
+	{ name: 'updateGearTaskRoles', cap: 'settings.update', args: [{}] },
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },

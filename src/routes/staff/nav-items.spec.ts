@@ -286,6 +286,7 @@ describe('route coverage', () => {
 		'/staff/recurring', // a Practice space view (#2766)
 		'/staff/building-access', // a Practice space view (#2766)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
+		'/staff/inventory/settings', // reached from Gear's header (#2756)
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
 		'/staff/moderation/incidents',

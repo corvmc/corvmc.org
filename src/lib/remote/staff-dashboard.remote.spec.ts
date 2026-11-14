@@ -31,8 +31,6 @@ vi.mock('#lib/server/review/review-registry.js', () => ({
 	listReviewFeed: (...a: unknown[]) => listReviewFeed(...(a as [])),
 	countReviewFeed: async () => ({ total: 0, byKind: {} })
 }));
-const listLowStock = vi.fn(async () => []);
-vi.mock('#lib/server/inventory/stock-service.js', () => ({ listLowStock: () => listLowStock() }));
 const listShortStaffedShifts = vi.fn(async () => []);
 vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	listShortStaffedShifts: () => listShortStaffedShifts()
@@ -74,7 +72,6 @@ describe('getStaffDashboard', () => {
 		expect(data.room).toEqual([{ date: '2026-10-28', reservations: [] }]);
 		expect(data.shows).toEqual([]);
 		expect(data.deadlines).toBeNull();
-		expect(listLowStock).not.toHaveBeenCalled();
 		expect(listShortStaffedShifts).not.toHaveBeenCalled();
 	});
 

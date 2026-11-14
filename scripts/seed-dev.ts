@@ -80,6 +80,7 @@ import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
+import { seedRestockTasks } from './seed/restock-tasks';
 import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
@@ -216,6 +217,7 @@ async function main() {
 	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
 	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
 	const eq = await seedEquipment(allUsers);
+	const restockTasks = await seedRestockTasks();
 	// After the equipment, which is the last thing it borrows from: the rest of
 	// what a weekly booker accumulates — bookings, a ticket, credits — needs only
 	// the events that already exist.
@@ -418,8 +420,9 @@ async function main() {
 		`  ${localResources.categories} local resource categories, ${localResources.resources} listings (1 pending, 1 returned, 1 removed)`
 	);
 	console.log(
-		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
+		`  ${equipmentReports.reports} equipment reports, ${equipmentReports.workOrders} tasks raised from them`
 	);
+	console.log(`  ${restockTasks.tasks} restock tasks for low stock`);
 	console.log(
 		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened), ${crewIncidents.filings} crew filing awaiting review`
 	);
