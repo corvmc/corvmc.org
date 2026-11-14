@@ -75,6 +75,18 @@ describe('ReviewRowDecisions', () => {
 		expect(offered(container)).toEqual(['approve', 'decline']);
 	});
 
+	it('offers return, not decline, on a kind whose record goes back for edits', async () => {
+		for (const kind of ['resource_tip', 'hour_log'] as const) {
+			const { container, unmount } = await render(ReviewRowDecisions, {
+				item: item(kind),
+				kindLabel: 'Fixture kind',
+				ondecided: vi.fn()
+			});
+			expect(offered(container), kind).toEqual(['approve', 'return']);
+			await unmount();
+		}
+	});
+
 	it('offers nothing on a kind decided with a written message', async () => {
 		for (const kind of ['flag', 'appeal', 'market_vendor', 'group_application'] as const) {
 			const { container, unmount } = await render(ReviewRowDecisions, {

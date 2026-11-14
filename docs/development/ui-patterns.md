@@ -1191,7 +1191,9 @@ registry entry, not a page section or a nav badge.
 - **A row decides in place** when its kind is in `rowDecisions` (`#lib/types/review.js`). Each
   decision binds, in `src/routes/staff/review-decisions.ts`, to the remote form the kind's own page
   submits, so the guard and the service are that page's. The binding's type requires an entry for
-  every declared decision. A form that refuses without a written reason is asked through `Action`
+  every declared decision. A refusal is named `return` where the record goes back to be edited and
+  resubmitted (tips, volunteer hours) and `decline` where it is final; the row uses the same word
+  as the kind's own page. A form that refuses without a written reason is asked through `Action`
   with one reason field; the rest submit in one click. After either, the page refreshes its query
   and `getStaffLayout`, so the row leaves and the badge drops.
 - **A kind stays link-only** when its decision needs a written reply or more than two outcomes:

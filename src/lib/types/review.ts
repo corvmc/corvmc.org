@@ -28,7 +28,11 @@ export function isReviewKind(value: unknown): value is ReviewKind {
 	return reviewKinds.includes(value as ReviewKind);
 }
 
-export type ReviewDecision = 'approve' | 'decline';
+/**
+ * `return` is the kind's own word where the record goes back to be edited and
+ * resubmitted (#2892, `retiredTerms` in config.ts); `decline` is final.
+ */
+export type ReviewDecision = 'approve' | 'decline' | 'return';
 
 /**
  * The kinds decided from the feed row (#2623), and how. Each binds to the remote
@@ -40,8 +44,8 @@ export const rowDecisions = {
 	suggestion_edit: ['approve', 'decline'],
 	listing: ['approve', 'decline'],
 	classified: ['approve', 'decline'],
-	resource_tip: ['approve', 'decline'],
-	hour_log: ['approve', 'decline'],
+	resource_tip: ['approve', 'return'],
+	hour_log: ['approve', 'return'],
 	shift_claim: ['approve', 'decline'],
 	minor_volunteer: ['approve']
 } as const satisfies Partial<Record<ReviewKind, readonly ReviewDecision[]>>;
