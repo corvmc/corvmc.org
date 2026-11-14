@@ -1,4 +1,5 @@
 import type { Capability } from '#lib/config.js';
+import { pastCachedRedirect } from '#lib/utils/permanent-redirects.js';
 
 /**
  * Groups is one list (#2765) whose kind filter chooses which rows, columns and
@@ -27,4 +28,9 @@ export function groupViewQuery(view: GroupView): string {
 export function groupViewPath(view: GroupView, search = ''): string {
 	const query = [groupViewQuery(view), search.replace(/^\?/, '')].filter(Boolean).join('&');
 	return query ? `/staff/groups?${query}` : '/staff/groups';
+}
+
+/** Where an old kind's 308 lands. `/staff/groups` itself once 308'd to `/staff/groups/bands`. */
+export function groupViewRedirect(view: GroupView, search: string): string {
+	return pastCachedRedirect(groupViewPath(view, search), 'groups');
 }

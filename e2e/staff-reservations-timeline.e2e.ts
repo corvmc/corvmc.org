@@ -116,7 +116,7 @@ test.describe('reservations timeline', () => {
 	test('the old recurring link lands on the series list', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/reservations?recurring');
-		await page.waitForURL(/\/staff\/recurring$/, { timeout: 15000 });
+		await page.waitForURL(/\/staff\/recurring(\?|$)/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	});

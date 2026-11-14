@@ -33,7 +33,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		// The old address, which is also the proof that it still lands somewhere.
 		await page.goto('/staff/clubs');
-		await page.waitForURL(/\/staff\/groups\?kind=club$/, { timeout: 15000 });
+		await page.waitForURL(/\/staff\/groups\?kind=club(&|$)/, { timeout: 15000 });
 
 		const table = page.locator('table');
 		// `goto` resolves before an awaited remote query commits, so wait for a row
@@ -51,7 +51,7 @@ test.describe('staff groups', () => {
 	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/committees');
-		await page.waitForURL(/\/staff\/groups\?kind=committee$/, { timeout: 15000 });
+		await page.waitForURL(/\/staff\/groups\?kind=committee(&|$)/, { timeout: 15000 });
 
 		const card = page.getByRole('button', { name: new RegExp(SEED_COMMITTEE_NAME) });
 		await expect(card).toBeVisible();

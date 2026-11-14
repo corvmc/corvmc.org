@@ -73,12 +73,16 @@ describe('/staff/groups/[id]', () => {
 
 describe('old addresses', () => {
 	it.each([
-		[groupBands.load, 'http://x/staff/groups/bands?q=x', '/staff/groups?q=x'],
-		[groupClubs.load, 'http://x/staff/groups/clubs?q=x', '/staff/groups?kind=club&q=x'],
-		[groupCommittees.load, 'http://x/staff/groups/committees', '/staff/groups?kind=committee'],
-		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups?q=x'],
-		[oldClubs.load, 'http://x/staff/clubs', '/staff/groups?kind=club'],
-		[oldCommittees.load, 'http://x/staff/committees', '/staff/groups?kind=committee'],
+		[groupBands.load, 'http://x/staff/groups/bands?q=x', '/staff/groups?q=x&via=groups'],
+		[groupClubs.load, 'http://x/staff/groups/clubs?q=x', '/staff/groups?kind=club&q=x&via=groups'],
+		[
+			groupCommittees.load,
+			'http://x/staff/groups/committees',
+			'/staff/groups?kind=committee&via=groups'
+		],
+		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups?q=x&via=groups'],
+		[oldClubs.load, 'http://x/staff/clubs', '/staff/groups?kind=club&via=groups'],
+		[oldCommittees.load, 'http://x/staff/committees', '/staff/groups?kind=committee&via=groups'],
 		[acts.load, 'http://x/staff/bands/acts', '/staff/contacts?role=performer'],
 		[oldBand.load, 'http://x/staff/bands/g-1', '/staff/groups/g-1'],
 		[oldClub.load, 'http://x/staff/clubs/g-1', '/staff/groups/g-1'],

@@ -21,7 +21,7 @@ describe('old Practice space links', () => {
 		[keys, '/staff/keys', '/staff/building-access'],
 		[reservations, '/staff/reservations?access', '/staff/building-access'],
 		[reservations, '/staff/reservations?utec=connected', '/staff/building-access?utec=connected'],
-		[reservations, '/staff/reservations?recurring', '/staff/recurring']
+		[reservations, '/staff/reservations?recurring', '/staff/recurring?via=reservations']
 	])('308 %#', async (load, path, location) => {
 		expect(await thrown(load as (e: never) => unknown, path)).toMatchObject({
 			status: 308,
