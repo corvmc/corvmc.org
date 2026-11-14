@@ -39,6 +39,6 @@
 
 {#if first && free > 0}
 	<Alert type="info">
-		{m.market_waitlist_first_text({ free, businessName: first.businessName })}
+		{m.market_waitlist_first_body({ free, businessName: first.businessName })}
 	</Alert>
 {/if}

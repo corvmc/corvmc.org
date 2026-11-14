@@ -38,7 +38,7 @@
 			type="textarea"
 			label={m.market_waitlist_message_label()}
 			description={m.market_waitlist_message_body()}
-			value={m.market_waitlist_message_default({ businessName, eventTitle })}
+			value={m.market_waitlist_message_default_text({ businessName, eventTitle })}
 		/>
 	{/snippet}
 </Action>
