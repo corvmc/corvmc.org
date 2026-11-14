@@ -87,7 +87,7 @@
 				<Table size="sm" class="mt-4">
 					{#snippet head()}
 						<th>{m.staff_email_label()}</th>
-						<th class="col-extra">{m.staff_audience_label()}</th>
+						<th>{m.staff_audience_label()}</th>
 						<th class="w-px">{m.staff_status_label()}</th>
 					{/snippet}
 					{#each sends.rows as r (r.id)}
@@ -98,7 +98,7 @@
 									<div class="truncate text-muted">{r.error}</div>
 								{/if}
 							</td>
-							<td class="col-extra">{r.audience ?? '—'}</td>
+							<td>{r.audience ?? '—'}</td>
 							<td class="w-px"><StatusBadge status={r.status} /></td>
 						</tr>
 					{/each}
