@@ -322,6 +322,8 @@
 	"events_create_event_modal_title": "Create event",
 	"events_date_label": "Date",
 	"events_door_sales_card_card_text": "Card",
+	"events_door_sales_card_donations_text": "Donations",
+	"events_door_sales_card_donation_count_text": "{count} taken on the door phone",
 	"events_door_sales_card_let_at_no_charge_text": "let in at no charge",
 	"events_door_sales_card_open_till_text": "Open the till →",
 	"events_door_sales_card_ticket_text": "ticket",

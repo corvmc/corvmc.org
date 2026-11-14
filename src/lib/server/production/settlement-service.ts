@@ -15,6 +15,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { isTerminalProduction } from '#lib/production/status.js';
 import { ProductionTerminalError } from './production-scope';
 import { DomainError } from '#lib/server/domain-error.js';
+import { getEventDoorTakings, type DoorTakings } from '#lib/server/ticket/door-sale.js';
 
 /**
  * What a show took, what it cost, and what each act is owed.
@@ -82,6 +83,12 @@ export interface Settlement {
 	door: DoorTake | null;
 	/** Null exactly when `door` is. */
 	doorCounts: DoorCounts | null;
+	/**
+	 * What the door phone took and the check-in list let in. Its donations sit
+	 * beside the night, outside the pool and the net (#2799); `checkedIn` is
+	 * what the typed headcount is read against (#2801).
+	 */
+	doorTakings: DoorTakings;
 	expensesCents: number;
 	deductibleExpensesCents: number;
 	/** The cost sheet behind those two totals, so the worksheet can show it. */
@@ -214,7 +221,10 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 	// the guarantee top-ups that `netCents` subtracts below as the gap between
 	// suggested payouts and the pool, so reading them here charged a soft night
 	// twice. The spec names `production_expense` as the expense total.
-	const expenses = await expenseLines(prod.id);
+	const [expenses, doorTakings] = await Promise.all([
+		expenseLines(prod.id),
+		getEventDoorTakings(eventId)
+	]);
 	const expensesCents = expenses.reduce((t, e) => t + e.amountCents, 0);
 	const deductibleExpensesCents = expenses.reduce(
 		(t, e) => (e.deductible ? t + e.amountCents : t),
@@ -287,6 +297,7 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		actsPoolCents,
 		door,
 		doorCounts,
+		doorTakings,
 		expensesCents,
 		deductibleExpensesCents,
 		expenses,

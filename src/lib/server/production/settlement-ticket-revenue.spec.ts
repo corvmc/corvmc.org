@@ -116,6 +116,7 @@ function show(id: string) {
 beforeEach(() => {
 	for (const t of [
 		'financial_entry',
+		'donation',
 		'ticket',
 		'ticket_sale',
 		'event_listing',
@@ -161,5 +162,28 @@ describe('a show settles every ticket sold for it, net of its card fee', () => {
 		expect(await ticketTake('tonight')).toBe(
 			online.chargeCents - online.feeCents + door.chargeCents - door.feeCents
 		);
+	});
+});
+
+describe("the door's figures beside the settlement", () => {
+	// A gift is the show's, and stays out of what the bands are owed (#2799).
+	it('lists paid door donations beside the night, outside the pool and the net', async () => {
+		await doorTicket('tonight', 1500, 1);
+		const before = await getSettlement('tonight');
+		sqlite.exec(
+			`insert into donation (id, payment_intent_id, event_id, amount_cents, status)
+			 values ('gift-1', 'pi_gift_1', 'tonight', 2500, 'paid')`
+		);
+		const after = await getSettlement('tonight');
+
+		expect(after?.doorTakings.donations).toEqual({ count: 1, grossCents: 2500 });
+		expect(after?.actsPoolCents).toBe(before?.actsPoolCents);
+		expect(after?.netCents).toBe(before?.netCents);
+	});
+
+	// The typed headcount needs a figure to be read against (#2801).
+	it('carries how many tickets were checked in', async () => {
+		await doorTicket('tonight', 1500, 2);
+		expect((await getSettlement('tonight'))?.doorTakings.checkedIn).toBe(2);
 	});
 });

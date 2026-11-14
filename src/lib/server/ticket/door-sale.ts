@@ -3,6 +3,7 @@ import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { ticket, ticketSale } from '#lib/server/db/schema/ticket.js';
+import { donation } from '#lib/server/db/schema/donation.js';
 import { stripe } from '#lib/server/stripe.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
@@ -297,6 +298,10 @@ export async function getDoorSale(
 export interface DoorTakings {
 	card: { tickets: number; grossCents: number };
 	free: { tickets: number };
+	/** Paid gifts taken on the door phone (#2799). Beside the tickets, never in them. */
+	donations: { count: number; grossCents: number };
+	/** Tickets checked in for the show, however sold: what a door count is read against (#2801). */
+	checkedIn: number;
 }
 
 /**
@@ -307,16 +312,28 @@ export interface DoorTakings {
 export async function getEventDoorTakings(eventId: string): Promise<DoorTakings> {
 	const card = sql`substr(${ticket.purchaseId}, 1, 3) = 'pi_'`;
 	const free = sql`substr(${ticket.purchaseId}, 1, 5) = 'door-'`;
-	const [row] = await db
-		.select({
-			cardTickets: sql<number>`coalesce(sum(case when ${card} then 1 else 0 end), 0)`,
-			cardGrossCents: sql<number>`coalesce(sum(case when ${card} then coalesce(${ticket.unitPriceCents}, 0) + ${ticket.contributionCents} else 0 end), 0)`,
-			freeTickets: sql<number>`coalesce(sum(case when ${free} then 1 else 0 end), 0)`
-		})
-		.from(ticket)
-		.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'checked_in'])));
+	const [[row], [gifts]] = await Promise.all([
+		db
+			.select({
+				cardTickets: sql<number>`coalesce(sum(case when ${card} then 1 else 0 end), 0)`,
+				cardGrossCents: sql<number>`coalesce(sum(case when ${card} then coalesce(${ticket.unitPriceCents}, 0) + ${ticket.contributionCents} else 0 end), 0)`,
+				freeTickets: sql<number>`coalesce(sum(case when ${free} then 1 else 0 end), 0)`,
+				checkedIn: sql<number>`coalesce(sum(case when ${ticket.status} = 'checked_in' then 1 else 0 end), 0)`
+			})
+			.from(ticket)
+			.where(and(eq(ticket.eventId, eventId), inArray(ticket.status, ['valid', 'checked_in']))),
+		db
+			.select({
+				count: sql<number>`count(*)`,
+				grossCents: sql<number>`coalesce(sum(${donation.amountCents}), 0)`
+			})
+			.from(donation)
+			.where(and(eq(donation.eventId, eventId), eq(donation.status, 'paid')))
+	]);
 	return {
 		card: { tickets: row?.cardTickets ?? 0, grossCents: row?.cardGrossCents ?? 0 },
-		free: { tickets: row?.freeTickets ?? 0 }
+		free: { tickets: row?.freeTickets ?? 0 },
+		donations: { count: gifts?.count ?? 0, grossCents: gifts?.grossCents ?? 0 },
+		checkedIn: row?.checkedIn ?? 0
 	};
 }
