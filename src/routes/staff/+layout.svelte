@@ -33,7 +33,6 @@
 		IconReportAnalytics,
 		IconCalendarWeek,
 		IconCalendarMonth,
-		IconMapPin,
 		IconAddressBook,
 		IconContract
 	} from '@tabler/icons-svelte';
