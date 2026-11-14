@@ -277,3 +277,20 @@ describe('refunds when CMC cancels', () => {
 		});
 	});
 });
+
+describe('the fee state every list shows (#2828)', () => {
+	const at = new Date('2026-10-01T12:00:00Z');
+	const row = { feeCents: 2500, paidCents: null, paidAt: null, refundedAt: null };
+
+	it('reads refunded over paid, paid over due, and a free table as none', () => {
+		expect(fees.vendorFeeState(row)).toEqual({ state: 'due', cents: 2500 });
+		expect(fees.vendorFeeState({ ...row, paidCents: 1500, paidAt: at })).toEqual({
+			state: 'paid',
+			cents: 1500
+		});
+		expect(fees.vendorFeeState({ ...row, paidCents: 2500, paidAt: at, refundedAt: at })).toEqual({
+			state: 'refunded'
+		});
+		expect(fees.vendorFeeState({ ...row, feeCents: 0 })).toEqual({ state: 'none' });
+	});
+});

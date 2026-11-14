@@ -16,7 +16,12 @@ import {
 } from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { marketVendorStatuses, type MarketVendorStatus } from '#lib/config.js';
-import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
+import {
+	refundVendorFee,
+	vendorFeeColumns,
+	vendorPayPath,
+	withFeeState
+} from './vendor-fee-service';
 
 /**
  * Vendor applications for a market day CMC hosts. docs/development/business-workflows.md §19.
@@ -317,10 +322,7 @@ export async function listApplications(eventId: string) {
 			tableLabel: marketVendor.tableLabel,
 			decidedByUserId: marketVendor.decidedByUserId,
 			decidedAt: marketVendor.decidedAt,
-			feeCents: marketVendor.feeCents,
-			paidCents: marketVendor.paidCents,
-			paidAt: marketVendor.paidAt,
-			refundedAt: marketVendor.refundedAt,
+			...vendorFeeColumns,
 			createdAt: marketVendor.createdAt,
 			contactName: inboxThread.contactName,
 			contactEmail: inboxThread.contactEmail,
@@ -335,7 +337,7 @@ export async function listApplications(eventId: string) {
 		rows.map((r) => r.organizationId)
 	);
 	return rows.map((r) => ({
-		...r,
+		...withFeeState(r),
 		previous: (r.organizationId && previous.get(r.organizationId)) || null,
 		alsoApplied: r.organizationId
 			? rows
@@ -400,11 +402,12 @@ async function previousRecords(
 }
 
 /**
- * The day-of list: accepted vendors and no-shows, by table then name. No
- * contact detail, so the owning committee can work the door with it.
+ * The day-of list: accepted vendors and no-shows, by table then name, with
+ * what each still owes. No contact detail, so the owning committee can work
+ * the door with it.
  */
 export async function listMarketDayVendors(eventId: string) {
-	return db
+	const rows = await db
 		.select({
 			id: marketVendor.id,
 			businessName: marketVendor.businessName,
@@ -417,13 +420,15 @@ export async function listMarketDayVendors(eventId: string) {
 			tableLabel: marketVendor.tableLabel,
 			checkedInAt: marketVendor.checkedInAt,
 			inviteBack: marketVendor.inviteBack,
-			inviteBackNote: marketVendor.inviteBackNote
+			inviteBackNote: marketVendor.inviteBackNote,
+			...vendorFeeColumns
 		})
 		.from(marketVendor)
 		.where(
 			and(eq(marketVendor.eventId, eventId), inArray(marketVendor.status, ['accepted', 'no_show']))
 		)
 		.orderBy(asc(marketVendor.tableLabel), asc(marketVendor.businessName));
+	return rows.map(withFeeState);
 }
 
 export type MarketDayVendor = Awaited<ReturnType<typeof listMarketDayVendors>>[number];
