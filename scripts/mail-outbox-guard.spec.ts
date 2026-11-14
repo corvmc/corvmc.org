@@ -14,7 +14,8 @@ const SEND_FUNCTIONS = [
 	'sendTemplateBatch',
 	'sendBroadcastBatch',
 	'sendInboxReply',
-	'sendTemplatedEmails'
+	'sendTemplatedEmails',
+	'sendHtmlEmails'
 ];
 
 /** The client, its barrel and the outbox: where sending is the job. */

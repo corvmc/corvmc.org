@@ -37,6 +37,8 @@ const REFRESHES_NOTHING = new Set([
 	'marketing.remote.ts:createAndSchedule',
 	// The editor navigates to the list, which loads fresh.
 	'marketing.remote.ts:deleteCampaign',
+	// Writes only an outbox row, which no page reads.
+	'marketing.remote.ts:sendTestCampaign',
 	// Present when this spec landed and not reviewed one by one.
 	'notifications.remote.ts:markNotificationRead',
 	'notifications.remote.ts:markAllNotificationsRead',

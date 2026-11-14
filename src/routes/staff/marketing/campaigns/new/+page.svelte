@@ -2,10 +2,11 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../AudiencePicker.svelte';
-	import EventScopePicker from '../EventScopePicker.svelte';
+	import EventScopePicker, { type EventOption } from '../EventScopePicker.svelte';
 	import CampaignPreview from '../CampaignPreview.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { errorMessage } from '#lib/error-message.js';
@@ -13,12 +14,23 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import FormGuard from '#lib/components/ui/Form/FormGuard.svelte';
-	import { createDraft, createAndSend, createAndSchedule } from '#lib/remote/marketing.remote.js';
+	import {
+		createDraft,
+		createAndSend,
+		createAndSchedule,
+		sendTestCampaign
+	} from '#lib/remote/marketing.remote.js';
+	import { getEventForCampaign } from '#lib/remote/events.remote.js';
+
+	// `?event=<id>` is a campaign started from the show's page (#2776): the show
+	// chosen and "Event audience" ticked. Read once; the picker owns it after.
+	const eventParam = page.url.searchParams.get('event');
+	const preset = eventParam ? await getEventForCampaign(eventParam) : null;
 
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
-	let eventId = $state('');
+	let event = $state<EventOption | null>(preset);
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 
@@ -34,8 +46,9 @@
 		!!(
 			subject.trim() ||
 			markdownBody.trim() ||
-			selectedAudienceIds.length ||
-			eventId ||
+			// With a show preset, the picker ticks its audience: that alone is no edit.
+			(!preset && selectedAudienceIds.length) ||
+			(event?.id ?? null) !== (preset?.id ?? null) ||
 			scheduledFor
 		);
 
@@ -75,11 +88,46 @@
 					subject: subject.trim(),
 					markdownBody,
 					audienceIds: selectedAudienceIds,
-					eventId
+					eventId: event?.id ?? ''
 				}),
 			'Draft saved',
 			(id) => resolve(`staff/marketing/campaigns/${id}/edit`)
 		);
+	}
+
+	/**
+	 * A test reads the stored campaign, so it saves the draft first and opens it:
+	 * the staffer keeps editing there, and a second test does not make a second draft.
+	 */
+	async function handleSendTest() {
+		if (!isValid()) return;
+		submitting = true;
+		let campaignId: string;
+		try {
+			({ campaignId } = await createDraft({
+				subject: subject.trim(),
+				markdownBody,
+				audienceIds: selectedAudienceIds,
+				eventId: event?.id ?? ''
+			}));
+		} catch (err) {
+			toast.error(errorMessage(err));
+			submitting = false;
+			return;
+		}
+		leaving = true;
+		try {
+			const result = await sendTestCampaign({ campaignId });
+			if (result?.sent)
+				toast.success(m.staff_marketing_campaigns_test_sent_toast({ email: result.to }));
+			else
+				toast.error(
+					m.staff_marketing_campaigns_test_not_sent_toast({ error: result?.error ?? '' })
+				);
+		} catch (err) {
+			toast.error(errorMessage(err));
+		}
+		goto(resolve(`staff/marketing/campaigns/${campaignId}/edit`));
 	}
 
 	/**
@@ -101,7 +149,7 @@
 					subject: subject.trim(),
 					markdownBody,
 					audienceIds: selectedAudienceIds,
-					eventId
+					eventId: event?.id ?? ''
 				}),
 			'Campaign sent',
 			(id) => resolve(`staff/marketing/campaigns/${id}`)
@@ -116,7 +164,7 @@
 					subject: subject.trim(),
 					markdownBody,
 					audienceIds: selectedAudienceIds,
-					eventId,
+					eventId: event?.id ?? '',
 					scheduledFor: new Date(scheduledFor).toISOString()
 				}),
 			'Campaign scheduled',
@@ -157,12 +205,17 @@
 
 			<div>
 				<p class="label text-sm font-medium">{m.staff_audiences_text()}</p>
-				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
+				<AudiencePicker
+					bind:selected={selectedAudienceIds}
+					bind:total={totalSubscribers}
+					{event}
+					tickEventAudience={!!preset}
+				/>
 			</div>
 
 			<div>
 				<p class="label text-sm font-medium">{m.staff_about_show_text()}</p>
-				<EventScopePicker onchange={(id) => (eventId = id)} />
+				<EventScopePicker initial={preset} onchange={(e) => (event = e)} />
 			</div>
 
 			<div>
@@ -208,6 +261,15 @@
 					onclick={handleSaveDraft}
 				>
 					{m.staff_save_draft_label()}
+				</Button>
+				<Button
+					variant="default"
+					size="sm"
+					outline
+					disabled={!isValid() || submitting}
+					onclick={handleSendTest}
+				>
+					{m.staff_marketing_campaigns_send_test_label()}
 				</Button>
 				<Button
 					variant="secondary"

@@ -6,7 +6,7 @@ import {
 	audienceMember,
 	subscriber
 } from '#lib/server/db/schema/marketing.js';
-import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
+import { eq, and, sql, isNull, lte, inArray, desc } from 'drizzle-orm';
 import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
@@ -18,6 +18,11 @@ import * as env from '$app/env/public';
 import { DomainError } from '#lib/server/domain-error.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
+import { audiencesBeyondVisibility } from '#lib/utils/audience-reach.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { outboxMessage } from '#lib/server/db/schema/outbox.js';
+import { htmlEmailRow } from '#lib/server/outbox/outbox-row.js';
+import { deliverNow, type Delivery } from '#lib/server/outbox/outbox-service.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -215,7 +220,12 @@ export async function getCampaign(id: string) {
 	// editor can show what it is scoped to without a second lookup (#857).
 	const [scopedEvent] = row.eventId
 		? await db
-				.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+				.select({
+					id: eventListing.id,
+					title: eventListing.title,
+					startsAt: eventListing.startsAt,
+					visibility: eventListing.visibility
+				})
 				.from(eventListing)
 				.where(eq(eventListing.id, row.eventId))
 				.limit(1)
@@ -229,7 +239,8 @@ export async function getCampaign(id: string) {
 			? {
 					id: scopedEvent.id,
 					title: scopedEvent.title,
-					when: formatDateShortYear(scopedEvent.startsAt)
+					when: formatDateShortYear(scopedEvent.startsAt),
+					visibility: scopedEvent.visibility
 				}
 			: null
 	};
@@ -268,6 +279,25 @@ export async function listCampaigns(statusFilter?: CampaignStatus) {
 	return result;
 }
 
+/** The campaigns about one show, newest first, for its event page (#2776). */
+export async function listCampaignsForEvent(eventId: string) {
+	const rows = await db
+		.select({
+			id: campaign.id,
+			subject: campaign.subject,
+			scheduledFor: campaign.scheduledFor,
+			sentAt: campaign.sentAt,
+			recipientCount: campaign.recipientCount,
+			createdAt: campaign.createdAt
+		})
+		.from(campaign)
+		.where(eq(campaign.eventId, eventId))
+		.orderBy(
+			desc(sql`coalesce(${campaign.sentAt}, ${campaign.scheduledFor}, ${campaign.createdAt})`)
+		);
+	return rows.map((r) => ({ ...r, status: deriveCampaignStatus(r.scheduledFor, r.sentAt) }));
+}
+
 // ---------------------------------------------------------------------------
 // Scheduling
 // ---------------------------------------------------------------------------
@@ -282,6 +312,7 @@ export async function scheduleCampaign(id: string, scheduledFor: Date) {
 		throw new CampaignValidationError('Scheduled time must be in the future');
 
 	await db.update(campaign).set({ scheduledFor, updatedAt: new Date() }).where(eq(campaign.id, id));
+	await recordBeyondVisibility(id, true);
 }
 
 export async function unscheduleCampaign(id: string) {
@@ -313,8 +344,48 @@ export async function sendNow(id: string) {
 		.set({ scheduledFor: new Date(), updatedAt: new Date() })
 		.where(eq(campaign.id, id));
 
+	await recordBeyondVisibility(id, false);
 	// Execute inline rather than waiting for cron
 	await executeSend(id);
+}
+
+/**
+ * Warn, record, allow (#2773): a blast about a members-only or group event may
+ * go to audiences that reach past it, and the event's history says who sent it.
+ */
+async function recordBeyondVisibility(campaignId: string, scheduled: boolean) {
+	const [row] = await db
+		.select({
+			subject: campaign.subject,
+			eventId: eventListing.id,
+			title: eventListing.title,
+			visibility: eventListing.visibility
+		})
+		.from(campaign)
+		.innerJoin(eventListing, eq(eventListing.id, campaign.eventId))
+		.where(eq(campaign.id, campaignId))
+		.limit(1);
+	if (!row || row.visibility === 'public') return;
+
+	const targeted = await db
+		.select({ name: audience.name, systemKey: audience.systemKey, allowOptIn: audience.allowOptIn })
+		.from(campaignAudience)
+		.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
+		.where(eq(campaignAudience.campaignId, campaignId));
+	const beyond = audiencesBeyondVisibility(row.visibility, targeted);
+	if (beyond.length === 0) return;
+
+	await recordAuditEntry({
+		action: 'event.emailed_beyond_visibility',
+		subject: { type: 'event', id: row.eventId, label: row.title },
+		details: {
+			campaignId,
+			subject: row.subject,
+			visibility: row.visibility,
+			audiences: beyond.map((a) => a.name),
+			scheduled
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -460,6 +531,39 @@ export async function executeSend(campaignId: string): Promise<number> {
 	await sendBroadcastBatch(messages);
 
 	return recipients.length;
+}
+
+// ---------------------------------------------------------------------------
+// Test send
+// ---------------------------------------------------------------------------
+
+/**
+ * One copy of the stored campaign to the staffer sending it (#2771), as a
+ * recipient would get it: their name in `{{subscriber_name}}`, sponsor credit
+ * included. The unsubscribe link goes to the invalid-link page, so following
+ * it from the test unsubscribes nobody. Goes through the outbox; a refused
+ * send is answered, and the cron retries it.
+ */
+export async function sendTestCopy(
+	campaignId: string,
+	to: { email: string; name: string | null }
+): Promise<Delivery> {
+	const row = await getCampaignRaw(campaignId);
+	if (!row) throw new CampaignNotFoundError();
+
+	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+	const htmlBody = renderCampaignForSend(
+		await credited(row.markdownBody, row.eventId),
+		to.name,
+		`${baseUrl}/unsubscribe/test`,
+		await contactEmail()
+	);
+	const mail = htmlEmailRow(
+		{ to: to.email, subject: `[Test] ${row.subject}`, htmlBody, tag: 'campaign-test' },
+		{ type: 'campaign', id: campaignId }
+	);
+	await db.insert(outboxMessage).values(mail);
+	return deliverNow(mail.id);
 }
 
 // ---------------------------------------------------------------------------

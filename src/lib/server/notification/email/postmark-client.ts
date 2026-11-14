@@ -325,6 +325,55 @@ export interface TemplatedEmail {
 /** Postmark's MessageID for a message it took, or its reason for refusing one. */
 export type SendResult = { ok: true; messageId: string } | { ok: false; error: string };
 
+/** An email rendered here rather than from a Postmark template: a campaign's test copy. */
+export interface HtmlEmail {
+	to: string;
+	subject: string;
+	htmlBody: string;
+	tag?: string;
+}
+
+/**
+ * Pre-rendered emails on the transactional stream, answered per message. One
+ * person's copy of a broadcast, so it goes where their account mail goes
+ * rather than on the broadcast stream with its unsubscribe rules.
+ */
+export async function sendHtmlEmails(messages: HtmlEmail[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+
+	const out: SendResult[] = [];
+	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+		const chunk = messages.slice(i, i + BATCH_SIZE);
+		try {
+			const messageStream = getTransactionalStream();
+			const responses = await getClient().sendEmailBatch(
+				chunk.map((msg) => ({
+					From: `${fromName} <${fromAddress}>`,
+					To: msg.to,
+					Subject: msg.subject,
+					HtmlBody: msg.htmlBody,
+					Tag: msg.tag,
+					MessageStream: messageStream
+				}))
+			);
+			chunk.forEach((_, j) => out.push(sendResult(responses[j])));
+		} catch (err) {
+			captureException(err, { event: 'email.send', kind: 'outbox_html', size: chunk.length });
+			const error = err instanceof Error ? err.message : String(err);
+			for (let j = 0; j < chunk.length; j++) out.push({ ok: false, error });
+		}
+	}
+	return out;
+}
+
+function sendResult(r: { ErrorCode: number; Message: string; MessageID: string } | undefined) {
+	return r && r.ErrorCode === 0
+		? ({ ok: true, messageId: r.MessageID } as const)
+		: ({ ok: false, error: r ? `${r.ErrorCode}: ${r.Message}` : 'No response' } as const);
+}
+
 /**
  * Templated emails of any alias, 500 to a call, answered per message: Postmark
  * accepts a batch and refuses single messages inside it (an inactive recipient

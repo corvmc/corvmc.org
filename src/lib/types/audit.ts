@@ -38,6 +38,7 @@ export const auditActions = [
 	'production.payout_undone',
 	'production.door_recounted',
 	'event.published_over_warnings',
+	'event.emailed_beyond_visibility',
 	'event.edited_while_cancelled',
 	'work_order.created',
 	'work_order.assigned',
@@ -182,6 +183,14 @@ export interface AuditDetailsByAction {
 	'production.door_recounted': { firstCents: number; secondCents: number };
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
+	/** A campaign about a non-public event, sent or scheduled to audiences that reach past it. */
+	'event.emailed_beyond_visibility': {
+		campaignId: string;
+		subject: string;
+		visibility: 'members' | 'group';
+		audiences: string[];
+		scheduled: boolean;
+	};
 	/** The subject is the volunteer. A returned log approved anyway (#2233). `workedOn` is YYYY-MM-DD. */
 	'volunteer_hours.approved_over_return': {
 		logId: string;

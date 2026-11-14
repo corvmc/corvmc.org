@@ -3,6 +3,7 @@ import {
 	getAudienceDetail,
 	getAudienceList,
 	getAudienceOptions,
+	getCampaignAudienceOptions,
 	getAudienceSubscribers,
 	getCampaigns,
 	getStaffAudienceDetail
@@ -126,6 +127,17 @@ describe('audience records (#2436)', () => {
 		const options = await (getAudienceOptions as never as () => Promise<unknown>)();
 		expect(options).toEqual([
 			{ id: 'aud-1', name: 'Newsletter', systemKey: null, subscriberCount: 3 }
+		]);
+		expect(service.listSubscribers).not.toHaveBeenCalled();
+	});
+
+	it('gives the campaign editor names, counts and opt-in, and no more', async () => {
+		auth.held = [READ];
+		const options = await (
+			getCampaignAudienceOptions as never as (a: { eventId: null }) => Promise<unknown>
+		)({ eventId: null });
+		expect(options).toEqual([
+			{ id: 'aud-1', name: 'Newsletter', systemKey: null, allowOptIn: true, subscriberCount: 3 }
 		]);
 		expect(service.listSubscribers).not.toHaveBeenCalled();
 	});

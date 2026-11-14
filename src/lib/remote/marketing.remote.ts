@@ -6,7 +6,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import {
 	listAudiences,
@@ -34,6 +34,8 @@ import {
 	scheduleCampaign as scheduleCampaignService,
 	unscheduleCampaign as unscheduleCampaignService,
 	renderCampaignPreview,
+	sendTestCopy,
+	listCampaignsForEvent,
 	type CampaignStatus
 } from '#lib/server/marketing/campaign-service.js';
 import {
@@ -46,6 +48,7 @@ import {
 import { verifyUnsubscribeToken } from '#lib/server/marketing/unsubscribe.js';
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import { audience } from '#lib/server/db/schema/marketing.js';
+import { audienceCount } from '#lib/utils/audience-reach.js';
 
 // ---------------------------------------------------------------------------
 // Public queries
@@ -236,15 +239,45 @@ export const getCampaigns = query(z.object({ status: z.string().optional() }), a
 });
 
 /**
- * How many people the show's own audience currently resolves to (#857).
- *
- * Its own query rather than a number on `getAudiences`: that one is
- * unparameterised and cached across every audience surface, and this figure
- * is a fact about one campaign's chosen show rather than about the audience.
+ * The campaign editor's audiences, with "Event audience" counted as the chosen
+ * show's ticket holders and RSVPs (#857, #2772). Keyed by the show, so the
+ * unparameterised `getAudiences` stays one cached list for every other surface.
  */
-export const getEventAudienceCount = query(z.string(), async (eventId) => {
-	await requireCapability('marketing.read');
-	return countEventAudience(eventId);
+export const getCampaignAudienceOptions = query(
+	z.object({ eventId: z.string().nullable() }),
+	async ({ eventId }) => {
+		await requireCapability('marketing.read');
+		const [rows, eventCount] = await Promise.all([
+			listAudiences(),
+			eventId ? countEventAudience(eventId) : 0
+		]);
+		return rows.map(({ id, name, systemKey, allowOptIn, subscriberCount }) => ({
+			id,
+			name,
+			systemKey,
+			allowOptIn,
+			subscriberCount: audienceCount({ systemKey, subscriberCount }, eventCount)
+		}));
+	}
+);
+
+/**
+ * A show's campaigns for its event page (#2776). Null for a staffer who may not
+ * read campaigns, so the page leaves the card off rather than failing.
+ */
+export const getEventCampaigns = query(z.string(), async (eventId) => {
+	if (!(await can('marketing.read'))) return null;
+	const [campaigns, canCreate] = await Promise.all([
+		listCampaignsForEvent(eventId),
+		can('marketing.manageCampaigns')
+	]);
+	return {
+		canCreate,
+		campaigns: campaigns.map((c) => ({
+			...c,
+			ref: toGenericRef('campaign', { id: c.id, title: c.subject })
+		}))
+	};
 });
 
 /** Single campaign detail (staff). */
@@ -484,69 +517,91 @@ export const createAndSchedule = command(
 	}
 );
 
+// The campaign id is a field, never `params.id`: on a remote call the route
+// params come from a client header, and the schema validates neither (#2778).
 export const saveDraft = command(
 	z.object({
+		campaignId: z.string().min(1),
 		subject: z.string().trim().min(1).max(500),
 		markdownBody: z.string().min(1),
 		audienceIds: z.array(z.string()).min(1).max(20),
 		eventId: z.string().optional()
 	}),
-	async (data) => {
+	async ({ campaignId, ...data }) => {
 		await requireCapability('marketing.manageCampaigns');
-		const { params } = getRequestEvent();
-		const id = params.id!;
 		try {
 			// The form always posts the field, so absent means cleared rather than
 			// untouched — which is what makes un-scoping a draft possible.
-			await updateCampaign(id, { ...data, eventId: data.eventId || null });
+			await updateCampaign(campaignId, { ...data, eventId: data.eventId || null });
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getCampaignDetail(id).refresh();
+		void getCampaignDetail(campaignId).refresh();
 		return { success: true };
 	}
 );
 
-export const sendCampaignNow = command(z.object({}), async () => {
-	await requireCapability('marketing.send');
-	const { params } = getRequestEvent();
-	try {
-		await sendNow(params.id!);
-	} catch (err) {
-		mapDomainError(err);
+export const sendCampaignNow = command(
+	z.object({ campaignId: z.string().min(1) }),
+	async ({ campaignId }) => {
+		await requireCapability('marketing.send');
+		try {
+			await sendNow(campaignId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		// The editor holds this query and navigates to the page that reads it.
+		void getCampaignDetail(campaignId).refresh();
+		return { success: true };
 	}
-	// The editor holds this query and navigates to the page that reads it.
-	void getCampaignDetail(params.id!).refresh();
-	return { success: true };
-});
+);
 
 export const scheduleCampaign = command(
 	z.object({
+		campaignId: z.string().min(1),
 		scheduledFor: z.string().transform((s) => new Date(s))
 	}),
 	async (data) => {
 		await requireCapability('marketing.send');
-		const { params } = getRequestEvent();
 		try {
-			await scheduleCampaignService(params.id!, data.scheduledFor);
+			await scheduleCampaignService(data.campaignId, data.scheduledFor);
 		} catch (err) {
 			mapDomainError(err);
 		}
-		void getCampaignDetail(params.id!).refresh();
+		void getCampaignDetail(data.campaignId).refresh();
 		return { success: true };
 	}
 );
 
-export const deleteCampaign = command(z.object({}), async () => {
-	await requireCapability('marketing.manageCampaigns');
-	const { params } = getRequestEvent();
-	try {
-		await deleteCampaignService(params.id!);
-	} catch (err) {
-		mapDomainError(err);
+export const deleteCampaign = command(
+	z.object({ campaignId: z.string().min(1) }),
+	async ({ campaignId }) => {
+		await requireCapability('marketing.manageCampaigns');
+		try {
+			await deleteCampaignService(campaignId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
 	}
-	return { success: true };
-});
+);
+
+/**
+ * Send the stored campaign to the signed-in staffer (#2771). The editor saves
+ * first, so the copy is what a real send would carry.
+ */
+export const sendTestCampaign = command(
+	z.object({ campaignId: z.string().min(1) }),
+	async ({ campaignId }) => {
+		const user = await requireCapability('marketing.manageCampaigns');
+		try {
+			const delivery = await sendTestCopy(campaignId, { email: user.email, name: user.name });
+			return { to: user.email, sent: delivery.status === 'sent', error: delivery.error };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
 
 export const unscheduleCampaign = form(
 	z.object({
