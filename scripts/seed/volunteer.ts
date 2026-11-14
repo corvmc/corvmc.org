@@ -37,6 +37,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	skillMatches?: string[];
 	/** Capabilities a confirmed signup carries for its shift's event; see `grantableCapabilities`. */
 	capabilityGrants?: string[];
+	/** Days before the event those grants start (#2993); 0 when left out. */
+	grantLeadDays?: number;
 }> = [
 	{
 		name: 'Sound Engineering',
