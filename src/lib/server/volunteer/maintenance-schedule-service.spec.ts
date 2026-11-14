@@ -29,13 +29,15 @@ vi.mock('#lib/server/db/index.js', () => ({
 }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import type { SQL } from 'drizzle-orm';
+import { getTableColumns, type SQL } from 'drizzle-orm';
+import { maintenanceSchedule, workOrder } from '#lib/server/db/schema/volunteer.js';
 import {
 	createMaintenanceSchedule,
 	getScheduleGroupId,
 	listMaintenanceSchedules,
 	nextDueAt,
 	nextOccurrenceInserts,
+	occurrenceValues,
 	retireMaintenanceSchedule,
 	updateMaintenanceSchedule,
 	MaintenanceScheduleError,
@@ -54,6 +56,7 @@ const schedule = {
 	volunteerRoleId: 'role-1',
 	projectId: 'proj-1',
 	assetId: null as string | null,
+	groupId: 'committee-1' as string | null,
 	notes: 'Mop under the stage',
 	capacity: 2,
 	intervalDays: 30,
@@ -84,6 +87,7 @@ describe('nextOccurrenceInserts', () => {
 			title: 'Monthly deep clean',
 			volunteerRoleId: 'role-1',
 			projectId: 'proj-1',
+			groupId: 'committee-1',
 			// The places wait on the task for a shift opened on it (#2518).
 			pendingCapacity: 2,
 			dueAt: new Date(closed.getTime() + 30 * DAY)
@@ -100,6 +104,27 @@ describe('nextOccurrenceInserts', () => {
 	it('does nothing when an open occurrence already exists', () => {
 		nextOccurrenceInserts(schedule, new Date());
 		expect(chainCalls.some((c) => c.method === 'onConflictDoNothing')).toBe(true);
+	});
+});
+
+// A column both tables carry means the same thing on each, so an occurrence
+// that drops one silently loses it (#2987). Each exclusion says why.
+const NOT_COPIED: Record<string, string> = {
+	id: 'each row has its own',
+	createdByUserId: 'set by the caller: the first occurrence has a creator, later ones none',
+	createdAt: 'the row default',
+	updatedAt: 'the row default'
+};
+
+describe('occurrenceValues', () => {
+	it('copies every column the schedule and the work order share', () => {
+		const taskColumns = Object.keys(getTableColumns(workOrder));
+		const shared = Object.keys(getTableColumns(maintenanceSchedule)).filter((k) =>
+			taskColumns.includes(k)
+		);
+		const values = occurrenceValues(schedule, new Date()) as Record<string, unknown>;
+		const missing = shared.filter((k) => !(k in NOT_COPIED) && !(k in values));
+		expect(missing).toEqual([]);
 	});
 });
 

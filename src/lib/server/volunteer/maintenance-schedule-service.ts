@@ -40,15 +40,17 @@ export function nextDueAt(closedAt: Date, intervalDays: number): Date {
 
 type OccurrenceSource = Pick<
 	MaintenanceSchedule,
-	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'assetId' | 'notes' | 'capacity'
+	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'assetId' | 'groupId' | 'notes' | 'capacity'
 >;
 
-function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
+/** Exported for the spec that holds every column the two tables share to a copy. */
+export function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 	return {
 		maintenanceScheduleId: s.id,
 		title: s.name,
 		volunteerRoleId: s.volunteerRoleId,
 		projectId: s.projectId,
+		groupId: s.groupId,
 		notes: s.notes,
 		// The places for a shift opened on it once it has a time.
 		pendingCapacity: s.capacity,
