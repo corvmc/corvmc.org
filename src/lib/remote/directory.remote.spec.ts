@@ -119,6 +119,12 @@ class ValidationFailure extends Error {
 	}
 }
 
+// The panel layout reads the signed-in user, which this fixture does not have.
+const refreshBandLayout = vi.fn();
+vi.mock('#lib/remote/layout.remote.js', () => ({
+	getBandLayout: () => ({ refresh: refreshBandLayout })
+}));
+
 /** Errors raised by post-write query refreshes (see the `query` mock below). */
 const refreshFailures: unknown[] = [];
 
@@ -334,6 +340,8 @@ describe('saveBandProfile', () => {
 		expect(result).toEqual({ success: true });
 		expect(storedBandSlug).toBe('the-regressions');
 		expect(refreshFailures).toEqual([]);
+		// The panel header shows the name (#2899).
+		expect(refreshBandLayout).toHaveBeenCalled();
 	});
 
 	it('still refreshes the profile query when the name is unchanged', async () => {
