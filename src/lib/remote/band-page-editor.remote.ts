@@ -26,7 +26,7 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 	// The `band.slug !== slug` cross-check this used to carry is gone with the
 	// two sources of truth that made it necessary: the guard resolves the group
 	// from this argument, so there is no second slug for it to disagree with.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 	// The microsite's content lives on `band_site` since phase 3c; the row always
 	// exists, so there is nothing to create here.

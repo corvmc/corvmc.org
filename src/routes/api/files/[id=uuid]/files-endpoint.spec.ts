@@ -1,3 +1,4 @@
+import { groupRead } from '#lib/server/group/group-read.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error } from '@sveltejs/kit';
 
@@ -88,7 +89,7 @@ describe('GET /api/files/[id]', () => {
 		await get('file-1');
 
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'group-1' }, 'member', {
-			allowStaff: true
+			staff: groupRead
 		});
 	});
 
@@ -99,7 +100,7 @@ describe('GET /api/files/[id]', () => {
 
 		await expect(get('file-1')).rejects.toMatchObject({ status: 403 });
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'group-b' }, 'member', {
-			allowStaff: true
+			staff: groupRead
 		});
 	});
 

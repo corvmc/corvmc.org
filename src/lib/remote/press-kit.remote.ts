@@ -39,7 +39,7 @@ import { photoLimitForTier } from '#lib/server/band/press-kit-limits.js';
  * only that, so neither pays for the other.
  */
 export const getPressKitProgress = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 	const [[entry], [site], tags, [positions], shows, photos] = await Promise.all([
 		db

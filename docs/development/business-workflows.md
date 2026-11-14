@@ -553,7 +553,7 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   [0064](../decisions/0064-a-group-has-one-announcements-thread.md).
 - **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
   `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against
-  the file's own group with `requireGroupRole(…, 'member', { allowStaff: true })` and answers
+  the file's own group with `requireGroupRole(…, 'member', { staff: groupRead })` and answers
   `private, no-store`, `Vary: Cookie`, as an attachment. Removing a document sets `deletedAt`;
   `sweepGroupFiles()` in the media sweep reclaims the object.
 
@@ -2286,7 +2286,7 @@ between the two features: walking through the easy door furnishes the rider on t
 ### Code path
 
 - **Read:** `getBandPackingPage` in `packing.remote.ts` — one load-bearing query, guarded at
-  `member` with `allowStaff` so a staffer advancing a show can read but not tick.
+  `member` with `staff: 'band.read'` so a staffer can read but not tick.
 - **Edit:** `saveOwnItems` (no owner argument) and `saveItemsFor` (admin, names a target) in
   `src/lib/server/band/packing-service.ts`. The save is a **diff, not a replacement**:
   drafts carry ids scoped by `(listId, ownerUserId)`, so `packed`, `assignedUserId` and

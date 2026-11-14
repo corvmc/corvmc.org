@@ -31,7 +31,7 @@ const COLUMNS = [
  * **A `+server.ts` rather than a remote function**, for the reason the volunteer
  * export gives: a download needs `Content-Disposition` and a `query()` returns a
  * value rather than a response. So the guard is not the remote-function boundary
- * here and `requireGroupRole` is the first statement — `allowStaff`, because a
+ * here and `requireGroupRole` is the first statement — `staff`, because a
  * staffer advancing a show needs this more than the band does.
  *
  * The `slug` is a real route param rather than a client-supplied header, which
@@ -44,7 +44,7 @@ const COLUMNS = [
  */
 export const GET: RequestHandler = async ({ params }) => {
 	const { group: band } = await requireGroupRole({ slug: params.slug }, 'member', {
-		allowStaff: true
+		staff: 'band.read'
 	});
 
 	const [rider, members] = await Promise.all([getRider(band.id), getMembers(band.id)]);

@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 // which types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { groupRead } from '#lib/server/group/group-read.js';
 import { getForDownload } from '#lib/server/group/file-service.js';
 import { getPrivateObject } from '#lib/server/private-storage.js';
 import { contentDispositionAttachment } from '#lib/server/storage-keys.js';
@@ -31,9 +32,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	// tell "no such file" from "not your file" by the status code.
 	if (!row) error(404, 'Not found');
 
-	// The whole authorization, against the file's own group. `allowStaff`,
+	// The whole authorization, against the file's own group. `staff`,
 	// matching every other group read.
-	await requireGroupRole({ id: row.groupId }, 'member', { allowStaff: true });
+	await requireGroupRole({ id: row.groupId }, 'member', { staff: groupRead });
 
 	const obj = await getPrivateObject(row.key);
 	// A live row whose object is gone: a put that failed after the insert, or the

@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { requireUser, isElevated, can } from '#lib/server/authorization.js';
+import { requireUser, can } from '#lib/server/authorization.js';
 import type { GroupRole } from '#lib/server/db/schema/group.js';
 import { grantRuleFor, type Capability } from '#lib/config.js';
 import {
@@ -41,24 +41,25 @@ export type GroupContext = {
 const HIERARCHY: Record<GroupRole, number> = { owner: 0, admin: 1, member: 2 };
 
 /**
+ * What admits a non-member: a capability, or one chosen by the group's kind.
+ * A guard always names one; holding a position is not enough (#2985).
+ */
+export type StaffAccess = Capability | ((group: ResolvedGroup) => Capability);
+
+/**
  * Resolve a group from an explicit ref and require the caller holds at least
  * `minRole` in it. Hierarchy: owner > admin > member.
  *
- * `allowStaff` admits a non-member who holds any position, reported as
+ * `staff` admits a non-member who holds that capability, reported as
  * `role: 'staff'`. It bypasses `minRole` rather than being ranked against it:
- * passing it IS the decision that staff may do this thing.
- *
- * `isElevated`, not a role-name match — the same predicate `getBandLayout`
- * uses. A narrower predicate here than the one admitting
- * people to the panel is what gave a `volunteer_coordinator` a group surface
- * on which every card 403'd.
+ * naming it IS the decision that its holders may do this thing.
  *
  * Throws 400 on a blank ref, 404 when no live group matches, 403 otherwise.
  */
 export async function requireGroupRole(
 	ref: GroupRef,
 	minRole: 'owner' | 'admin' | 'member',
-	opts?: { allowStaff?: boolean }
+	opts?: { staff?: StaffAccess }
 ): Promise<GroupContext> {
 	const user = requireUser();
 	const group = await resolveGroup(ref);
@@ -69,9 +70,8 @@ export async function requireGroupRole(
 		return { user, group, role };
 	}
 
-	if (opts?.allowStaff && (await isElevated(user.id))) {
-		return { user, group, role: 'staff' };
-	}
+	const staff = typeof opts?.staff === 'function' ? opts.staff(group) : opts?.staff;
+	if (staff && (await can(staff))) return { user, group, role: 'staff' };
 
 	throw error(403, 'Not a member of this group');
 }
@@ -184,7 +184,7 @@ export function committeeCarries(
 export async function requireBandRole(
 	ref: GroupRef,
 	minRole: 'owner' | 'admin' | 'member',
-	opts?: { allowStaff?: boolean }
+	opts?: { staff?: StaffAccess }
 ): Promise<GroupContext> {
 	const ctx = await requireGroupRole(ref, minRole, opts);
 	if (ctx.group.kind !== 'band') throw error(404, 'Band not found');
@@ -200,7 +200,7 @@ export async function requireBandRole(
 export async function requireProgramRole(
 	ref: GroupRef,
 	minRole: 'owner' | 'admin' | 'member',
-	opts?: { allowStaff?: boolean }
+	opts?: { staff?: StaffAccess }
 ): Promise<GroupContext> {
 	const ctx = await requireGroupRole(ref, minRole, opts);
 	if (ctx.group.kind === 'band') throw error(404, 'Group not found');

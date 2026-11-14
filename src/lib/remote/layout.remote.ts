@@ -5,9 +5,9 @@ import { query, getRequestEvent } from '$app/server';
 import { listForUser, getBySlug, getUserRole } from '#lib/server/band/band-service.js';
 import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
 import {
+	can,
 	capabilitySet,
 	committeeCapabilitiesFor,
-	isElevated,
 	positionsFor
 } from '#lib/server/authorization.js';
 import { leadsOpenShow } from '#lib/server/capability/capability-grants.js';
@@ -295,7 +295,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 	// renders.
 	const [role, isStaff, userBands, features, chrome] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
-		isElevated(locals.user.id),
+		can('band.read'),
 		listForUser(locals.user.id, ['band']).catch(() => []),
 		getAllFeatureFlags(),
 		appChrome(locals.user)

@@ -56,7 +56,7 @@ function parseItems(raw: string) {
  *
  * `custom/no-concurrent-remote-queries` rules out fanning queries out of the
  * component, and past kit 2.64 that stops the page rendering at all.
- * `allowStaff` lets a staffer advancing a show read what a band brings; it
+ * `staff` lets a staffer advancing a show read what a band brings; it
  * returns `role: 'staff'`, so `isOnRoster` is false and they cannot tick a box.
  */
 export const getBandPackingPage = query(bandIdField, async (bandId) => {
@@ -64,7 +64,7 @@ export const getBandPackingPage = query(bandIdField, async (bandId) => {
 		user,
 		group: band,
 		role
-	} = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	} = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 
 	const canManage = role === 'owner' || role === 'admin';
 

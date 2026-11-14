@@ -20,7 +20,7 @@ vi.mock('#lib/server/band/band-address-service.js', () => ({
 }));
 vi.mock('#lib/server/authorization.js', () => ({
 	capabilitySet: (held: string[]) => (held.includes('treasurer') ? ['sponsor.read'] : []),
-	isElevated: vi.fn(async () => false),
+	can: vi.fn(async () => false),
 	positionsFor: (id: string) => positionsFor(id),
 	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
 }));

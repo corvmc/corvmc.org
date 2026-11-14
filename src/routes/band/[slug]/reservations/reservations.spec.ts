@@ -100,9 +100,9 @@ vi.mock('#lib/server/db/schema/recurring.js', () => ({
 vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
 	hasAnyRole: vi.fn(async () => false),
-	// `requireGroupRole`'s `allowStaff` branch asks this one. Absent from the
+	// `requireGroupRole`'s `staff` branch asks this one. Absent from the
 	// factory, it throws "No export is defined" and the 403 test reads as a crash.
-	isElevated: vi.fn(async () => false),
+	can: vi.fn(async () => false),
 	// `memberRefColumns()` selects this as a correlated subquery. The value is
 	// never asserted here — only that building the projection doesn't throw.
 	topPositionFor: vi.fn(() => sql`null`)
@@ -221,9 +221,9 @@ const {
 	getBandReservationDetail
 } = (await import('#lib/remote/reservations.remote.js')) as any;
 
-const { hasAnyRole, isElevated } = (await import('#lib/server/authorization.js')) as unknown as {
+const { hasAnyRole, can } = (await import('#lib/server/authorization.js')) as unknown as {
 	hasAnyRole: ReturnType<typeof vi.fn>;
-	isElevated: ReturnType<typeof vi.fn>;
+	can: ReturnType<typeof vi.fn>;
 };
 
 beforeEach(() => {
@@ -231,7 +231,7 @@ beforeEach(() => {
 	bandServiceMock.getUserRole.mockResolvedValue('member');
 	ensureContactPhone.mockResolvedValue(true);
 	hasAnyRole.mockResolvedValue(false);
-	isElevated.mockResolvedValue(false);
+	can.mockResolvedValue(false);
 	selectResult = [];
 	fallbackCodeServiceMock.revealFallbackCodeFor.mockResolvedValue(null);
 	fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(false);
@@ -410,7 +410,7 @@ describe('getBandReservations', () => {
 
 	it('allows staff who are not band members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(true);
+		can.mockImplementation(async (cap: unknown) => cap === 'band.read');
 
 		await expect(getBandReservations({ slug: 'the-velvet-underground' })).resolves.toBeDefined();
 	});
@@ -587,11 +587,11 @@ describe('getBandReservationDetail', () => {
 		expect(result.lockCode).toBe('4821');
 	});
 
-	// Staff administer band panels, so `allowStaff` lets them onto the page —
+	// Staff administer band panels, so `band.read` lets them onto the page —
 	// and they already read the same code on the staff detail page.
 	it('gives a staff non-member the door code', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(true);
+		can.mockImplementation(async (cap: unknown) => cap === 'band.read');
 		selectResult = detailRow({}, 'user-2');
 
 		const result = await getBandReservationDetail(detailArgs);

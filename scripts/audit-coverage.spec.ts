@@ -15,6 +15,11 @@ const REMOTE_GLOB = ['src/lib/remote/*.remote.ts'];
 const AUDIT: Key = 'src/lib/server/audit/audit-service.ts#recordAuditEntry';
 const CAPABILITY: Key = 'src/lib/server/authorization.ts#requireCapability';
 const CAN: Key = 'src/lib/server/authorization.ts#can';
+/**
+ * A membership guard: it asks `can` only for a non-member, and only for the
+ * capability its caller names, so it does not make a member's write a staff one.
+ */
+const MEMBERSHIP: Key = 'src/lib/server/group/group-context.ts#requireGroupRole';
 const DECLARED = 'src/lib/server/audit/declared.ts';
 
 type AuditClass = {
@@ -142,6 +147,7 @@ function asksCapability(g: CallGraph) {
 	const memo = new Map<Key, boolean>();
 	const asks = (key: Key): boolean => {
 		if (key === CAPABILITY || key === CAN) return true;
+		if (key === MEMBERSHIP) return false;
 		if (memo.has(key)) return memo.get(key)!;
 		memo.set(key, false);
 		const body = g.body(key);

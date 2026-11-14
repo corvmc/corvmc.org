@@ -46,7 +46,7 @@ import { DEFAULT_TIMEZONE } from '#lib/config.js';
  * band's by passing their slug.
  */
 export const getBandEvents = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	const events = await listBandEvents(band.id);
 	const lineups = await getEventLineups(events.map((e) => e.id));
 
@@ -66,7 +66,7 @@ export const getBandEvents = query(z.string(), async (slug) => {
 
 /** Bills this band has been named on and hasn't answered. */
 export const getBandLineupInvites = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	return listBandLineupInvites(band.id);
 });
 
@@ -96,7 +96,7 @@ export const getBandEventsPage = query(z.string(), async (slug) => {
  * credit is answered.
  */
 export const getBandBookings = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	return listBandSlotTerms(band.id);
 });
 
@@ -104,7 +104,7 @@ export const getBandBookings = query(z.string(), async (slug) => {
 export const getBandEventDetail = query(
 	z.object({ slug: z.string(), eventId: z.string() }),
 	async ({ slug, eventId }) => {
-		const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 		const evt = await getById(eventId);
 
 		if (!evt) throw error(404, 'Event not found');
@@ -139,7 +139,7 @@ export const getBandEventDetail = query(
 export const searchBandsForLineup = query(
 	z.object({ slug: z.string().min(1), q: z.string() }),
 	async ({ slug, q }) => {
-		await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 		if (!q || q.trim().length < 2) return [];
 		return searchBandsByName(q.trim());
 	}

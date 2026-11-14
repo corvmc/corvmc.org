@@ -74,7 +74,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	// A real route param, not a remote function's client-supplied one, so `{ id }`
 	// is the honest ref.
 	const bandId = params.id;
-	await requireGroupRole({ id: bandId }, 'admin', { allowStaff: true });
+	await requireGroupRole({ id: bandId }, 'admin', { staff: 'band.manage' });
 
 	const formData = await request.formData();
 	const releaseId = formData.get('releaseId');

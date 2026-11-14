@@ -66,7 +66,7 @@ describe('release cover upload', () => {
 		expect(mockRequireGroupRole).toHaveBeenCalledWith(
 			{ id: 'band-1' },
 			'admin',
-			expect.objectContaining({ allowStaff: true })
+			expect.objectContaining({ staff: 'band.manage' })
 		);
 	});
 

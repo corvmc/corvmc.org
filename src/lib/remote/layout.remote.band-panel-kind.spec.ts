@@ -20,7 +20,7 @@ vi.mock('#lib/server/band/band-address-service.js', () => ({
 }));
 vi.mock('#lib/server/authorization.js', () => ({
 	capabilitySet: vi.fn(() => ({})),
-	isElevated: vi.fn(async () => false),
+	can: vi.fn(async () => false),
 	positionsFor: vi.fn(async () => [])
 }));
 vi.mock('#lib/server/inventory/item-service.js', () => ({

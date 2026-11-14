@@ -60,7 +60,7 @@ function parseElements(raw: string) {
  * queries out of the component, and past kit 2.64 doing so stops the page
  * rendering at all.
  *
- * `allowStaff` because a staffer advancing a show has to be able to read a
+ * `staff` because a staffer advancing a show has to be able to read a
  * rider for a band they are not in. It comes back as `role: 'staff'`, so
  * `canManage` is false and every control renders read-only.
  */
@@ -70,7 +70,7 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 		group: band,
 		role
 	} = await requireGroupRole({ id: bandId }, 'member', {
-		allowStaff: true
+		staff: 'band.read'
 	});
 	const canManage = role === 'owner' || role === 'admin';
 

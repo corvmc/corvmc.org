@@ -138,7 +138,7 @@ describe('getBandEvents', () => {
 	it('reads the band the caller named, and 403s when they hold no role there', async () => {
 		await getBandEvents('our-band');
 		expect(requireGroupRole).toHaveBeenCalledWith({ slug: 'our-band' }, 'member', {
-			allowStaff: true
+			staff: 'band.read'
 		});
 		expect(listBandEvents).toHaveBeenCalledWith(OWN_BAND.id);
 

@@ -244,7 +244,11 @@ export async function requireCapabilityOrOwner(
 	throw error(403, 'Not authorized');
 }
 
-/** Holds at least one position — what "is staff" now means. */
+/**
+ * Holds at least one position. Never an admission: a guard names a capability
+ * (#2985). `scripts/guards-name-capabilities.spec.ts` lists the one refusal
+ * that asks it.
+ */
 export async function isElevated(userId: string): Promise<boolean> {
 	return (await positionsFor(userId)).length > 0;
 }
