@@ -14,6 +14,7 @@ import {
 	DEFAULT_TIMEZONE,
 	LONG_TEXT_MAX,
 	MARKET_MAX_TABLES_REQUESTED,
+	marketVendorDecisions,
 	SHORT_TEXT_MAX
 } from '#lib/config.js';
 import {
@@ -232,7 +233,7 @@ export const getCommitteeMarkets = query(z.string().min(1), async (groupId) => {
 export const decideVendorForm = form(
 	z.object({
 		vendorId: z.string().min(1),
-		decision: z.enum(['accepted', 'declined']),
+		decision: z.enum(marketVendorDecisions),
 		tableLabel: z.string().trim().max(40).optional(),
 		message: z.string().trim().min(1, 'Write the vendor a message').max(LONG_TEXT_MAX)
 	}),

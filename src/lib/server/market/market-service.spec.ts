@@ -314,6 +314,30 @@ describe('deciding', () => {
 		]);
 	});
 
+	it('waitlists an applied vendor, tells them, and accepts them later (#2832)', async () => {
+		await decideApplication(
+			vendorId,
+			{ decision: 'waitlisted', tableLabel: 'B3', message: 'On the waitlist.' },
+			ACTOR
+		);
+		let [row] = await listApplications(EVENT);
+		expect(row).toMatchObject({ status: 'waitlisted', tableLabel: null });
+		expect(sent().map((m) => m.body)).toEqual(['On the waitlist.']);
+		expect((await getMarketDay(EVENT, NOW))?.counts.waitlisted).toBe(1);
+		expect(await listPublicVendors(EVENT)).toEqual([]);
+
+		await decideApplication(vendorId, { decision: 'accepted', message: 'A table opened.' }, ACTOR);
+		[row] = await listApplications(EVENT);
+		expect(row.status).toBe('accepted');
+	});
+
+	it('does not waitlist a vendor already accepted or declined', async () => {
+		await decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR);
+		await expect(
+			decideApplication(vendorId, { decision: 'waitlisted', message: 'Wait.' }, ACTOR)
+		).rejects.toBeInstanceOf(VendorTransitionError);
+	});
+
 	// #2819: the send ran after the write and its throw became a 500 over a
 	// saved decision. The send is the outbox's now, and its failure is a row.
 	it('keeps the decision when the send is refused, records why, and sends on retry', async () => {
@@ -404,6 +428,7 @@ describe('deciding', () => {
 		await submitApplication(EVENT, { ...application, businessName: 'Second' }, NOW);
 		expect((await getMarketDay(EVENT, NOW))?.counts).toEqual({
 			applied: 1,
+			waitlisted: 0,
 			accepted: 1,
 			declined: 0,
 			withdrawn: 0,

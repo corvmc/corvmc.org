@@ -2935,6 +2935,7 @@ export type PosterFormat = (typeof posterFormats)[number];
  */
 export const marketVendorStatuses = [
 	'applied',
+	'waitlisted',
 	'accepted',
 	'declined',
 	'withdrawn',
@@ -2942,12 +2943,15 @@ export const marketVendorStatuses = [
 ] as const;
 export const marketVendorStatusLabels: Record<(typeof marketVendorStatuses)[number], string> = {
 	applied: 'Applied',
+	waitlisted: 'Waitlisted',
 	accepted: 'Accepted',
 	declined: 'Declined',
 	withdrawn: 'Withdrawn',
 	no_show: 'No-show'
 };
 export type MarketVendorStatus = (typeof marketVendorStatuses)[number];
+/** The statuses a decision on an application may set. */
+export const marketVendorDecisions = ['accepted', 'waitlisted', 'declined'] as const;
 
 /** A vendor may ask for up to this many tables on one application. */
 export const MARKET_MAX_TABLES_REQUESTED = 4;

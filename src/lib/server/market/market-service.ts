@@ -15,7 +15,11 @@ import {
 	queuedReplyStatements
 } from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
-import { marketVendorStatuses, type MarketVendorStatus } from '#lib/config.js';
+import {
+	marketVendorDecisions,
+	marketVendorStatuses,
+	type MarketVendorStatus
+} from '#lib/config.js';
 import {
 	refundVendorFee,
 	vendorFeeColumns,
@@ -56,9 +60,11 @@ export class VendorTransitionError extends DomainError {
 /**
  * Where a decision or withdrawal may move each status. `withdrawn` is the
  * vendor's call and is final. `no_show` moves only through `markVendorNoShow`.
+ * `waitlisted` holds a vendor in reserve until a table frees up (#2832).
  */
 const transitions: Record<MarketVendorStatus, readonly MarketVendorStatus[]> = {
-	applied: ['accepted', 'declined', 'withdrawn'],
+	applied: ['accepted', 'waitlisted', 'declined', 'withdrawn'],
+	waitlisted: ['accepted', 'declined', 'withdrawn'],
 	accepted: ['declined', 'withdrawn'],
 	declined: ['accepted', 'withdrawn'],
 	withdrawn: [],
@@ -500,7 +506,7 @@ function assertTransition(from: MarketVendorStatus, to: MarketVendorStatus) {
 }
 
 export interface VendorDecision {
-	decision: 'accepted' | 'declined';
+	decision: (typeof marketVendorDecisions)[number];
 	tableLabel?: string | null;
 	/** What the vendor is told, sent on their thread. */
 	message: string;
@@ -536,7 +542,7 @@ export const vendorDecisionSubject = (vendorId: string) => ({
 });
 
 /**
- * Accept or decline, and tell the vendor. Accepting fixes the fee and adds the
+ * Accept, waitlist or decline, and tell the vendor. Accepting fixes the fee and adds the
  * pay link to the message; declining a vendor who paid refunds them first,
  * since CMC is the one cancelling (#1502). The decision and its message commit
  * together; the message is sent by the outbox, so a refused send leaves the
@@ -552,7 +558,7 @@ export async function decideApplication(
 
 	const accepted = decision.decision === 'accepted';
 	const fee = accepted ? await feeOnAcceptance(vendor) : null;
-	if (!accepted) await refundVendorFee(vendorId);
+	if (decision.decision === 'declined') await refundVendorFee(vendorId);
 
 	const update = db
 		.update(marketVendor)
