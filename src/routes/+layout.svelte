@@ -7,7 +7,8 @@
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
-	import { updated } from '$app/state';
+	import { navigating, updated } from '$app/state';
+	import { ignoreRepeatTap } from '#lib/repeat-tap.js';
 	import RadioPlayer from '#lib/components/radio/RadioPlayer.svelte';
 
 	let { children } = $props();
@@ -22,6 +23,13 @@
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}
+	});
+
+	// Capture phase, so it runs before kit's own click handler on the body.
+	onMount(() => {
+		const onClick = (e: MouseEvent) => ignoreRepeatTap(e, navigating.to?.url);
+		window.addEventListener('click', onClick, true);
+		return () => window.removeEventListener('click', onClick, true);
 	});
 
 	onMount(() => {
