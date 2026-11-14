@@ -1,5 +1,6 @@
 import { copyLinks } from '#lib/server/task/work-order-link.js';
 import { moveActivity } from './activity-service';
+import { organizationNameKey } from './party-key';
 import { moveThreads } from './thread-filing';
 import { db } from '#lib/server/db/index.js';
 import {
@@ -403,7 +404,10 @@ export function websiteDomain(website: string | null): string | null {
 	}
 }
 
-/** Live organizations sharing a website domain: likely one, never merged on their own. */
+/**
+ * Live organizations that may be one: the same website domain, or the same
+ * name (#2824). Never merged on their own.
+ */
 export async function listOrganizationMergeSuggestions() {
 	const rows = await db
 		.select({
@@ -414,15 +418,27 @@ export async function listOrganizationMergeSuggestions() {
 		.from(organization)
 		.where(isNull(organization.archivedAt))
 		.orderBy(asc(organization.createdAt), asc(organization.id));
-	const groups = new Map<string, typeof rows>();
+	type Group = { reason: 'website' | 'name'; key: string; organizations: typeof rows };
+	const groups = new Map<string, Group>();
+	const add = (reason: Group['reason'], key: string | null, r: (typeof rows)[number]) => {
+		if (!key) return;
+		const g = groups.get(`${reason}:${key}`) ?? { reason, key, organizations: [] };
+		g.organizations.push(r);
+		groups.set(`${reason}:${key}`, g);
+	};
 	for (const r of rows) {
-		const domain = websiteDomain(r.website);
-		if (!domain) continue;
-		groups.set(domain, [...(groups.get(domain) ?? []), r]);
+		add('website', websiteDomain(r.website), r);
+		add('name', organizationNameKey(r.name), r);
 	}
-	return [...groups.entries()]
-		.filter(([, list]) => list.length > 1)
-		.map(([domain, organizations]) => ({ domain, organizations }));
+	const seen = new Set<string>();
+	return [...groups.values()].filter((g) => {
+		if (g.organizations.length < 2) return false;
+		// Two organizations sharing a domain and a name are offered once.
+		const ids = g.organizations.map((o) => o.id).join(',');
+		if (seen.has(ids)) return false;
+		seen.add(ids);
+		return true;
+	});
 }
 
 /**

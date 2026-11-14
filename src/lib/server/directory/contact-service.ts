@@ -10,6 +10,7 @@ import { productionSlot } from '#lib/server/db/schema/production.js';
 import { copyLinks } from '#lib/server/task/work-order-link.js';
 import { moveActivity } from '#lib/server/party/activity-service.js';
 import { moveThreads } from '#lib/server/party/thread-filing.js';
+import { nameKey } from '#lib/server/party/party-key.js';
 
 /**
  * The **only** module permitted to touch the `contact` table.
@@ -652,7 +653,7 @@ export async function listContactMergeSuggestions(): Promise<ContactSuggestion[]
 		groups.set(k, g);
 	};
 	for (const r of rows) {
-		const name = r.name?.trim().toLowerCase().replace(/\s+/g, ' ');
+		const name = nameKey(r.name);
 		if (name) add('name', name, r);
 		const phone = r.phone ? digits(r.phone) : '';
 		if (phone.length >= 7) add('phone', phone, r);

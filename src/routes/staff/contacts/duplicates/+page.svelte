@@ -26,10 +26,12 @@
 	{#if dupes.organizations.length > 0}
 		<InfoCard title={m.staff_contacts_duplicate_organizations_title()}>
 			<div class="space-y-4">
-				{#each dupes.organizations as group (group.domain)}
+				{#each dupes.organizations as group (`${group.reason}:${group.key}`)}
 					<div data-testid="duplicate-organizations">
 						<p class="text-muted text-sm">
-							{m.staff_contacts_same_website_text({ domain: group.domain })}
+							{group.reason === 'website'
+								? m.staff_contacts_same_website_text({ domain: group.key })
+								: m.staff_contacts_same_name_text()}
 						</p>
 						<ul class="space-y-1">
 							{#each group.organizations as org (org.id)}
