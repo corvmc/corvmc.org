@@ -1,5 +1,5 @@
 ---
-title: Author Help Articles
+title: Author help articles
 slug: staff-help-authoring
 category: staff-guide
 summary: Write and publish member-facing help articles.

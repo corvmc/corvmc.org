@@ -1,5 +1,5 @@
 ---
-title: Book a Session as a Band
+title: Book a session as a band
 slug: book-band-session
 category: bands
 summary: Reserve practice time on behalf of your band.

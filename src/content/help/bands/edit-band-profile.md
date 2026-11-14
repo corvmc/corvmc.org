@@ -1,5 +1,5 @@
 ---
-title: Edit the Band Profile
+title: Edit the band profile
 slug: edit-band-profile
 category: bands
 summary: Set your band's bio, genres, links, and directory visibility.

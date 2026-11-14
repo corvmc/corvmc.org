@@ -1,5 +1,5 @@
 ---
-title: Your Member Dashboard
+title: Your member dashboard
 slug: member-dashboard
 category: getting-started
 summary: A tour of your home screen and the quick links that get you started.

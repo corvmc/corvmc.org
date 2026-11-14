@@ -1,5 +1,5 @@
 ---
-title: Import a Club or Committee Roster
+title: Import a club or committee roster
 slug: staff-roster-import
 category: staff-guide
 summary: Turn a list of email addresses, such as a Zeffy export, into club or committee membership in one step.

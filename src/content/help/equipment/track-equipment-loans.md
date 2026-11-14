@@ -1,5 +1,5 @@
 ---
-title: Track Your Loans & Returns
+title: Track your loans & returns
 slug: track-equipment-loans
 category: equipment
 summary: See the status of gear you've requested, borrowed, and returned.

@@ -1,5 +1,5 @@
 ---
-title: Arrange Your Page
+title: Arrange your page
 slug: build-your-page
 category: band-pages
 summary: Reorder, hide, and configure the blocks your page already comes with.

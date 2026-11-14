@@ -1,5 +1,5 @@
 ---
-title: Upload Media
+title: Upload media
 slug: page-media
 category: band-pages
 summary: Add hero art, gallery images, stage plots, and tech riders.

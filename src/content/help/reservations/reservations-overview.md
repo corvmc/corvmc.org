@@ -1,5 +1,5 @@
 ---
-title: Practice Space Overview
+title: Practice space overview
 slug: reservations-overview
 category: reservations
 summary: How practice-space booking works and what the policies are.

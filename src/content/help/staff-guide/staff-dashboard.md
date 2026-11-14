@@ -1,5 +1,5 @@
 ---
-title: Staff Dashboard & Navigation
+title: Staff dashboard & navigation
 slug: staff-dashboard
 category: staff-guide
 summary: A tour of the staff area and where each tool lives.

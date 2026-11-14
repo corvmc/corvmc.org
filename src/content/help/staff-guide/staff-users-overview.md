@@ -1,5 +1,5 @@
 ---
-title: Members Overview
+title: Members overview
 slug: staff-users-overview
 category: staff-guide
 summary: Find members, read the tier badges, and open a user's details.

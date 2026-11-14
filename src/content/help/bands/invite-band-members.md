@@ -1,5 +1,5 @@
 ---
-title: Invite Band Members
+title: Invite band members
 slug: invite-band-members
 category: bands
 summary: Add members to your band by search or by email.

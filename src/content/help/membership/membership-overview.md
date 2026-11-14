@@ -1,5 +1,5 @@
 ---
-title: Membership Overview
+title: Membership overview
 slug: membership-overview
 category: membership
 summary: What sustaining membership is and what the membership page shows.

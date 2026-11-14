@@ -1,5 +1,5 @@
 ---
-title: Cancel or Change a Reservation
+title: Cancel or change a reservation
 slug: cancel-reservation
 category: reservations
 summary: How to cancel a session and what the cancellation policy is.

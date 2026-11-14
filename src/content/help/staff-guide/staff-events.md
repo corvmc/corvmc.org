@@ -1,5 +1,5 @@
 ---
-title: Events, Ticketing & Check-In
+title: Events, ticketing & check-in
 slug: staff-events
 category: staff-guide
 summary: Create events, configure ticketing, and check attendees in at the door.

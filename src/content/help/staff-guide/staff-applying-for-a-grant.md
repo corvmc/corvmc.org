@@ -1,5 +1,5 @@
 ---
-title: Applying for a Grant
+title: Applying for a grant
 slug: staff-applying-for-a-grant
 category: staff-guide
 summary: One grant from prospect to close-out: the tasks the app adds at each stage, what each one means, and what a funder expects.

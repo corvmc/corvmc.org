@@ -1,5 +1,5 @@
 ---
-title: Book a Practice Session
+title: Book a practice session
 slug: booking-a-session
 category: reservations
 summary: How to reserve practice time at the studio.

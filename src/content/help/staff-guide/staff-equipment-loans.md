@@ -1,5 +1,5 @@
 ---
-title: Approve Loans & Record Returns
+title: Approve loans & record returns
 slug: staff-equipment-loans
 category: staff-guide
 summary: Work through loan requests, check gear out, and check it back in.

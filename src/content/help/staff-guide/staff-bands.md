@@ -1,5 +1,5 @@
 ---
-title: Manage Bands
+title: Manage bands
 slug: staff-bands
 category: staff-guide
 summary: Moderate bands — review, deactivate/reactivate, and manage members.

@@ -1,5 +1,5 @@
 ---
-title: Track Sponsors and Grants
+title: Track sponsors and grants
 slug: staff-sponsors-grants
 category: staff-guide
 summary: Track grant applications and sponsorships on the Funding page, each with its own tasks, sorted by what comes due next.

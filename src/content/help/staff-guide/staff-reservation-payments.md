@@ -1,5 +1,5 @@
 ---
-title: Reservation Payments, Comps & Refunds
+title: Reservation payments, comps & refunds
 slug: staff-reservation-payments
 category: staff-guide
 summary: Handle payment on a reservation — record cash, comp, or refund.

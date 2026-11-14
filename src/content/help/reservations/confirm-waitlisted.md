@@ -1,5 +1,5 @@
 ---
-title: Confirm a Waitlisted Reservation
+title: Confirm a waitlisted reservation
 slug: confirm-waitlisted
 category: reservations
 summary: Lock in a session when a waitlisted slot opens up.

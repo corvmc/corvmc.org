@@ -1,5 +1,5 @@
 ---
-title: Club and Committee Chairs
+title: Club and committee chairs
 slug: staff-program-chairs
 category: staff-guide
 summary: Who runs a club or committee, and how staff add or remove its chairs.

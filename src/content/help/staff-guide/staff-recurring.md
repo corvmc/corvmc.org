@@ -1,5 +1,5 @@
 ---
-title: Manage Recurring Series
+title: Manage recurring series
 slug: staff-recurring
 category: staff-guide
 summary: Review and cancel members' recurring reservation series.

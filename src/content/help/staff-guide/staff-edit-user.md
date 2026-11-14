@@ -1,5 +1,5 @@
 ---
-title: Edit a User, Roles & Credits
+title: Edit a user, roles & credits
 slug: staff-edit-user
 category: staff-guide
 summary: Update a member's details, assign roles, and adjust their credits.

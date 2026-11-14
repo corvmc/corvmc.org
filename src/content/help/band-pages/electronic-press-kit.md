@@ -1,5 +1,5 @@
 ---
-title: Your Electronic Press Kit
+title: Your electronic press kit
 slug: electronic-press-kit
 category: band-pages
 summary: Manage booking and press contacts, quotes, and stage requirements.

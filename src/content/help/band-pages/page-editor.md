@@ -1,5 +1,5 @@
 ---
-title: The Page Editor
+title: The page editor
 slug: page-editor
 category: band-pages
 summary: An overview of the block-based editor and the blocks a page comes with.

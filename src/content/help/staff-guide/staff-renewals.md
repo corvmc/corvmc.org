@@ -1,5 +1,5 @@
 ---
-title: Keep Permits and Insurance Current
+title: Keep permits and insurance current
 slug: staff-renewals
 category: staff-guide
 summary: Track the collective's own permits, licenses and insurance policies as yearly recurring work.

@@ -1,5 +1,5 @@
 ---
-title: Find Other Musicians & Bands
+title: Find other musicians & bands
 slug: find-members-bands
 category: profile-directory
 summary: Browse and search the directory to connect with the community.

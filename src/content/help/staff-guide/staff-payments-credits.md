@@ -1,5 +1,5 @@
 ---
-title: Reconcile Payments & Credits
+title: Reconcile payments & credits
 slug: staff-payments-credits
 category: staff-guide
 summary: Review payment records and the credit ledger.

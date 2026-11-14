@@ -1,5 +1,5 @@
 ---
-title: System Settings Reference
+title: System settings reference
 slug: staff-settings
 category: staff-guide
 summary: A tour of the configuration tabs in Staff Settings.

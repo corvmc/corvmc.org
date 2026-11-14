@@ -1,5 +1,5 @@
 ---
-title: Build & Manage Audiences
+title: Build & manage audiences
 slug: staff-audiences
 category: staff-guide
 summary: Create subscriber segments for email campaigns.

@@ -1,5 +1,5 @@
 ---
-title: Add Links & Contact Info
+title: Add links & contact info
 slug: profile-links-contact
 category: profile-directory
 summary: Link your music and choose what contact details to show publicly.
