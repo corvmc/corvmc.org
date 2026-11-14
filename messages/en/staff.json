@@ -2182,6 +2182,18 @@
 	"staff_outreach_body": "Outreach",
 	"staff_outreach_title": "Outreach",
 	"staff_overdue_label": "Overdue",
+	"staff_your_tasks_label": "Your tasks",
+	"staff_open_tasks_list_label": "Open tasks list",
+	"staff_more_your_tasks_text": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} more task waits on you.",
+				"countPlural=*": "{count} more tasks wait on you."
+			}
+		}
+	],
 	"staff_owner_label": "Owner",
 	"staff_owning_committee_label": "Owning committee",
 	"staff_paid_label": "Paid",

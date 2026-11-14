@@ -1178,6 +1178,15 @@ them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. 
 - `toRow` maps an item to `{ summary, actor, href, context }`; a `trailing` snippet carries a
   source's own figure at the row's end. A row from an earlier venue year shows its year.
 
+### The dashboard's own tasks
+
+**Your tasks** heads `/staff` (#2768): open tasks assigned to the viewer and not marked done by
+them, plus unassigned tasks of a committee they sit on, from `listMyWork` in
+`src/lib/server/task/my-work.ts`. Overdue first, then by date. A row opens the record its
+`work_order_link` names, else the task. It comes from `getStaffDashboard` like every other
+section, and is hidden when empty. A source that should reach staff as work opens a task, and the
+dashboard alert list for it is retired once it does (low stock #2756, Form 8282 #2757).
+
 ### The dashboard review feed
 
 Everything waiting on a staff decision is one `ActivityFeed` on `/staff`, read oldest first from
