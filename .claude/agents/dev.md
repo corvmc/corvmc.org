@@ -21,7 +21,8 @@ shape elsewhere, then reach for the cheapest rung that catches all of it (a type
 invariant spec) before a point test. The ladder is in
 `docs/development/conventions.md#tests-catch-classes`.
 
-Then commit, push, open the PR with `Fixes #<n>` if it answers an issue, and arm
+Then commit, push, open the PR with `Fixes #<n>` if it answers an issue, run
+`node scripts/claude/pre-arm-check.mjs <n>` and follow its `Next:` line, and arm
 `gh pr merge --auto` **in that same turn** — opening the PR
 is not the finish line, and queueing is not gated on the user reading it first. If the change
 genuinely needs a human before it merges, open it as a draft and say why; do not open a ready PR
