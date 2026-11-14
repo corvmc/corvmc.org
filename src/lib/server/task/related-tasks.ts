@@ -101,7 +101,8 @@ const resolvers: Partial<Record<RelatedSubjectType, Resolver>> = {
 	},
 	contact: (id) => [{ key: 'about', where: linkedTo('contactId', id) }],
 	asset: (id) => [{ key: 'about', where: linkedTo('assetId', id) }],
-	reservation: (id) => [{ key: 'about', where: linkedTo('reservationId', id) }]
+	reservation: (id) => [{ key: 'about', where: linkedTo('reservationId', id) }],
+	equipment: (id) => [{ key: 'about', where: linkedTo('itemId', id) }]
 };
 
 /** The `work_order_link` column each linkable record type writes. */
@@ -109,7 +110,8 @@ export const LINK_TARGET: Record<LinkSubjectType, LinkTarget> = {
 	organization: 'organizationId',
 	contact: 'contactId',
 	asset: 'assetId',
-	reservation: 'reservationId'
+	reservation: 'reservationId',
+	equipment: 'itemId'
 };
 
 const isLinkSubject = (type: RelatedSubjectType): type is LinkSubjectType => type in LINK_TARGET;

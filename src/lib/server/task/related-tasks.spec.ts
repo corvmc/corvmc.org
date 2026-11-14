@@ -192,6 +192,7 @@ describe('the registry', () => {
 			[
 				'asset',
 				'contact',
+				'equipment',
 				'event',
 				'group',
 				'organization',

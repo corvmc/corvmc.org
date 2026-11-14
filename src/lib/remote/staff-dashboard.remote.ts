@@ -8,7 +8,6 @@ import {
 	positionsFor,
 	requireUser
 } from '#lib/server/authorization.js';
-import { listLowStock } from '#lib/server/inventory/stock-service.js';
 import { listShortStaffedShifts } from '#lib/server/volunteer/work-order-service.js';
 import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
@@ -66,7 +65,7 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 	if (capabilities.length === 0) error(403, 'Not permitted');
 	const holds = (c: Capability) => capabilities.includes(c);
 
-	const [myWork, room, shows, review, reviewCounts, lowStock, shortShifts, deadlines, members] =
+	const [myWork, room, shows, review, reviewCounts, shortShifts, deadlines, members] =
 		await Promise.all([
 			// The task pages read under either gate.
 			holds('project.read') || holds('volunteer.read') ? listMyWork(me.id) : null,
@@ -75,7 +74,6 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 			// Each kind is read only for a viewer who may decide it.
 			listReviewFeed(capabilities, { kind, limit: feedLimit(limit) }),
 			countReviewFeed(capabilities),
-			holds('inventory.report') ? listLowStock() : null,
 			holds('volunteer.read') ? listShortStaffedShifts(SHIFT_HORIZON_DAYS) : null,
 			deadlinesFor(holds),
 			holds('user.list') ? listMemberSummary() : null
@@ -87,7 +85,6 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 		room,
 		shows,
 		review: { ...review, counts: reviewCounts },
-		lowStock: capped(lowStock),
 		shortShifts: capped(shortShifts),
 		deadlines: capped(deadlines),
 		members

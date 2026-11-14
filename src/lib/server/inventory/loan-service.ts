@@ -1,4 +1,5 @@
 import { db } from '#lib/server/db/index.js';
+import { afterStockChange } from './restock-tasks';
 import {
 	equipmentCategory,
 	inventoryAsset,
@@ -444,6 +445,7 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const [[updated]] = custodyUpdate
 		? await db.batch([loanUpdate, custodyUpdate, ledgerEntry])
 		: await db.batch([loanUpdate, ledgerEntry]);
+	await afterStockChange([loan.itemId]);
 
 	if (overSchedule) {
 		await recordAuditEntry({

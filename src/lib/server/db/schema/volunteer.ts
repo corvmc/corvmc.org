@@ -49,7 +49,8 @@ import {
 	projectKinds,
 	grantStages,
 	dutyListStoredSubjects,
-	workDoneConditions
+	workDoneConditions,
+	taskSources
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -429,6 +430,12 @@ export const workOrder = sqliteTable(
 		// `done-conditions.ts`. Never stored as true: the state is derived.
 		doneWhen: text('done_when', { enum: workDoneConditions }),
 
+		// The record whose state opened this task, for work the app finds rather
+		// than staff type (#2756): a unit's repair, an item's restock. The source
+		// closes it; `uq_work_order_open_source` keeps one open per record.
+		source: text('source', { enum: taskSources }),
+		sourceId: text('source_id'),
+
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
@@ -453,6 +460,11 @@ export const workOrder = sqliteTable(
 			.on(t.maintenanceScheduleId)
 			.where(
 				sql`maintenance_schedule_id is not null and resolved_at is null and cancelled_at is null`
+			),
+		uniqueIndex('uq_work_order_open_source')
+			.on(t.source, t.sourceId)
+			.where(
+				sql`source is not null and source_id is not null and resolved_at is null and cancelled_at is null`
 			),
 		// A record's related tasks, done ones included (#2630).
 		index('work_order_group_idx').on(t.groupId),

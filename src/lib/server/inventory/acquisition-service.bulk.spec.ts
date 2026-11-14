@@ -78,6 +78,7 @@ vi.mock('./stock-service', () => ({
 		reason === 'receive' ? quantity : -quantity
 }));
 
+vi.mock('./restock-tasks', () => ({ afterStockChange: vi.fn() }));
 vi.mock('./asset-service', () => ({
 	createAsset: vi.fn(),
 	AssetTagTakenError: class AssetTagTakenError extends Error {}

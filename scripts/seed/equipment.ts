@@ -161,6 +161,17 @@ export async function seedEquipment(users: SeedUser[]) {
 			// surface has something to show without anyone arranging it.
 			reorderPoint: 5,
 			reorderQuantity: 20
+		},
+		// Low with nothing on order, so it carries an open restock task (#2756).
+		{
+			id: randomUUID(),
+			name: 'Gaffer Tape',
+			categoryId: catByName['Consumables'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'each' as const,
+			isLoanable: false,
+			reorderPoint: 3,
+			reorderQuantity: 6
 		}
 	]);
 
@@ -459,6 +470,7 @@ export async function seedEquipment(users: SeedUser[]) {
 	});
 	received(openingBalance, 'XLR Cable (25ft)', 8, null);
 	received(openingBalance, 'Boom Mic Stand', 3, null);
+	received(openingBalance, 'Gaffer Tape', 2, null);
 
 	/**
 	 * A receipt's total and the lines it is made of must agree.

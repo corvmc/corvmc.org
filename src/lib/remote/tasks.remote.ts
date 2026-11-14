@@ -167,6 +167,7 @@ async function requireSubjectReader(s: RelatedSubject) {
 		case 'contact':
 			return requireCapability('contact.read');
 		case 'asset':
+		case 'equipment':
 			return requireCapability('inventory.read');
 		case 'reservation':
 			return requireCapability('reservation.read');

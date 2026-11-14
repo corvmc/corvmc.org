@@ -23,7 +23,7 @@
 
 	let searchText = $state('');
 	let searchDebounced = $state('');
-	let stage = $state<Stage | ''>('untriaged');
+	let stage = $state<Stage | ''>('in_work_order');
 	let page = $state(1);
 
 	let result = $derived(
@@ -34,12 +34,14 @@
 		})
 	);
 
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + (stage === 'untriaged' ? 0 : 1));
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (stage === 'in_work_order' ? 0 : 1)
+	);
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
-		stage = 'untriaged';
+		stage = 'in_work_order';
 		page = 1;
 	}
 </script>

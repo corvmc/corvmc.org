@@ -42,6 +42,9 @@ const READERS: Record<string, string> = {
 	'volunteer.orientationTasks': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.firstVisitNotes': 'src/lib/server/reminders/registry.ts',
 
+	'inventory.repairRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.restockRoleId': 'src/lib/server/task/sourced-tasks.ts',
+
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',

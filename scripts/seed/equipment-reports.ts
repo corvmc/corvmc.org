@@ -7,11 +7,11 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
 /**
- * Member reports against units, in every triage stage: two untriaged on one unit
- * (the collapse case), one untriaged and still usable, one sent to an open work
- * order, one resolved and one dismissed — plus two building problems with no
- * unit, one untriaged and one in a finished work order. Without these the Equipment tab of the
- * flags surface only ever renders empty.
+ * Member reports against units: two on one unit sharing the repair task they
+ * opened (#2756), one still usable on its own task, one on a task staff opened,
+ * one resolved and one dismissed; plus two building problems with no unit, one
+ * on its own repair task and one in a finished task. Without these the
+ * problems list only ever renders empty.
  */
 export async function seedEquipmentReports(
 	members: { id: string }[],
@@ -32,6 +32,26 @@ export async function seedEquipmentReports(
 
 	const orderId = randomUUID();
 	const buildingOrderId = randomUUID();
+	// The tasks the reports on a, b and the bathroom opened (#2756).
+	const repairA = randomUUID();
+	const repairB = randomUUID();
+	const repairBathroom = randomUUID();
+	const bathroomReport = randomUUID();
+	await batchInsert(workOrder, [
+		{ id: repairA, title: 'Repair amp', source: 'repair', sourceId: a.id, createdAt: ago(6) },
+		{ id: repairB, title: 'Repair cab', source: 'repair', sourceId: b.id, createdAt: ago(9) },
+		{
+			id: repairBathroom,
+			title: 'Repair Downstairs bathroom',
+			source: 'repair',
+			sourceId: bathroomReport,
+			createdAt: ago(1)
+		}
+	]);
+	await batchInsert(workOrderLink, [
+		{ workOrderId: repairA, assetId: a.id },
+		{ workOrderId: repairB, assetId: b.id }
+	]);
 	await batchInsert(workOrder, [
 		{
 			id: orderId,
@@ -63,6 +83,7 @@ export async function seedEquipmentReports(
 			note: 'Crackles when you turn the volume knob',
 			blocksUse: true,
 			condition: 'poor' as const,
+			workOrderId: repairA,
 			createdAt: ago(6)
 		},
 		{
@@ -70,6 +91,7 @@ export async function seedEquipmentReports(
 			reportedByUserId: m2.id,
 			note: 'Scratchy pot, cuts out above 5',
 			blocksUse: true,
+			workOrderId: repairA,
 			createdAt: ago(2)
 		},
 		{
@@ -78,6 +100,7 @@ export async function seedEquipmentReports(
 			note: 'Tolex torn on the corner, still works fine',
 			blocksUse: false,
 			condition: 'fair' as const,
+			workOrderId: repairB,
 			createdAt: ago(9)
 		},
 		{
@@ -110,10 +133,12 @@ export async function seedEquipmentReports(
 		},
 		// Building problems: a place instead of a unit.
 		{
+			id: bathroomReport,
 			assetId: null,
 			location: 'Downstairs bathroom',
 			reportedByUserId: m3.id,
 			note: 'Toilet keeps running after flushing',
+			workOrderId: repairBathroom,
 			createdAt: ago(1)
 		},
 		{
@@ -126,5 +151,5 @@ export async function seedEquipmentReports(
 		}
 	]);
 
-	return { reports: reports.length, workOrders: 2 };
+	return { reports: reports.length, workOrders: 5 };
 }

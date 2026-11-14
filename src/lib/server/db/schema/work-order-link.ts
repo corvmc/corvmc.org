@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { workOrder } from './volunteer';
 import { organization } from './party';
 import { contact } from './contact';
-import { inventoryAsset } from './inventory';
+import { inventoryAsset, inventoryItem } from './inventory';
 import { reservation } from './reservation';
 
 /**
@@ -31,6 +31,8 @@ export const workOrderLink = sqliteTable(
 		reservationId: text('reservation_id').references(() => reservation.id, {
 			onDelete: 'cascade'
 		}),
+		// A stocked item rather than one unit of it: restock work (#2756).
+		itemId: text('item_id').references(() => inventoryItem.id, { onDelete: 'cascade' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
@@ -50,9 +52,12 @@ export const workOrderLink = sqliteTable(
 		uniqueIndex('idx_work_order_link_reservation')
 			.on(t.reservationId, t.workOrderId)
 			.where(sql`reservation_id is not null`),
+		uniqueIndex('idx_work_order_link_item')
+			.on(t.itemId, t.workOrderId)
+			.where(sql`item_id is not null`),
 		check(
 			'work_order_link_one_target',
-			sql`(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) = 1`
+			sql`(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) = 1`
 		)
 	]
 );

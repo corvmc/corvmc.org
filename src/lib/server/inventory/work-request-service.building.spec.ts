@@ -41,6 +41,11 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
+// Opening the report's task is `repair-tasks.spec.ts`'s subject.
+vi.mock('#lib/server/task/sourced-tasks.js', () => ({
+	openSourcedTask: vi.fn().mockResolvedValue({ id: 'task-1', opened: true })
+}));
+
 vi.mock('./asset-service', () => ({
 	setAssetStatus: vi.fn(),
 	AssetNotFoundError: class extends Error {}

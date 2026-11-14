@@ -109,6 +109,10 @@
 							<Badge variant="info" size="xs"
 								>{m.staff_inventory_restock_list_coming_label({ onOrder: row.onOrder })}</Badge
 							>
+						{:else if row.taskId}
+							<a class="link" href={resolve(`staff/tasks/${row.taskId}`)}
+								>{m.staff_inventory_restock_list_task_label()}</a
+							>
 						{:else}
 							<span class="text-subtle">—</span>
 						{/if}

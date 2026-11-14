@@ -3,6 +3,7 @@ import {
 	syncAcquisitionSpend
 } from '#lib/server/finance/in-kind-acquisition.js';
 import { db } from '#lib/server/db/index.js';
+import { afterStockChange } from './restock-tasks';
 import {
 	acquisition,
 	acquisitionLine,
@@ -471,6 +472,7 @@ export async function recordAcquisitionBulk(
 	for (const batch of chunk(movements, 10)) {
 		await db.batch(batch as unknown as Parameters<typeof db.batch>[0]);
 	}
+	await afterStockChange(movementRows.map((r) => r.itemId));
 
 	return {
 		acquisitionId,

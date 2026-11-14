@@ -827,8 +827,7 @@ A location can go out as one set: the offsite kit case and everything in it (#27
 A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`
 returns everything at or below it, emptiest first, with a `suggestedOrder` (the
 reorder quantity where one is set, otherwise enough to reach the point) and an
-`isOut` flag. It surfaces twice: the top five on the staff dashboard, and the
-whole list as the `?show=restock` view on Supplies (and on Gear, for a returnable
+`isOut` flag. It surfaces as the `?show=restock` view on Supplies (and on Gear, for a returnable
 bulk item with a reorder point), grouped by category with
 a Receive action per row and a bulk **Mark as ordered**, which writes one `placed`
 purchase order with a line per ticked item. Its supplier is an organization holding the
@@ -837,6 +836,13 @@ trimmed and case-insensitively, becomes a new one. The lists' other cross-item v
 (`?show=on-order` and `late` on both; `on-loan`, `overdue` and `problems` on Gear)
 stay as filters; `/staff/inventory/restock` redirects to Supplies. Every purchase order,
 open ones first, is listed on Gear's Orders list (#2767), and each has its own page.
+
+An item at or below its point with nothing on a placed order has one open **restock task**
+(#2756), linked to the item (`work_order_link.item_id`) and titled "Restock {item}".
+`syncRestockTasks()` in `restock-tasks.ts` opens and closes it after every ledger write and
+every order status change: a placed order or stock back above the point closes it, and a
+cancelled order on a still-low item opens a new one. The restock view links each row to its
+task. The dashboard's low-stock list is gone; the task is the reminder.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
 current calendar year), per category via `spendByCategory()` and per supplier via
@@ -898,13 +904,24 @@ whether the unit is still usable, and takes an in-service unit out of service on
 the reporter says it is not. A second report on the same unit is a second row — three
 people noticing one crackle is the signal.
 
-Staff triage them in Gear's Reported problems tab, `/staff/inventory/problems` (#1840), behind
-`inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
-or a new one — and every other untriaged report on that unit goes with it
-(`sendToWorkOrder`). Marking the task done closes every report attached to it
+A new report goes straight to a task (#2756, `sendToRepair`): the open task already linked to
+its unit, else a new **repair task** linked to the unit. A building problem opens its own
+task with no unit. Every untriaged report on the unit goes with it.
+
+Staff see them in Gear's Reported problems tab, `/staff/inventory/problems` (#1840), behind
+`inventory.manageAssets`, open reports first: dismiss, or move to another work order — an open
+one on the same unit or a new one — and every other untriaged report on that unit goes with it
+(`sendToWorkOrder`). Dismissing a report leaves its task to staff. Marking the task done closes every report attached to it
 (`resolveWorkOrder` → `resolveFlagsForWorkOrder`), and nothing else does: a shift on the task
 ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
 (#2518). The "close reports on completion" option and its listener are gone.
+
+Both kinds of task take the role set per kind on `/staff/inventory/settings`
+(`inventory.repairRoleId`, `inventory.restockRoleId`); with none, a task waits unassigned on
+the Tasks page. `work_order.source` and `source_id` record which record opened a task, and
+`uq_work_order_open_source` keeps one open per record. The daily `/api/cron/open-tasks` sweep
+runs the same rules over every record, which also covered reports and low items that predate
+#2756.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
