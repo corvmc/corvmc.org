@@ -4,6 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { requireCapability } from '#lib/server/authorization.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
 import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import {
 	requireCommitteeMember,
@@ -206,7 +207,7 @@ export const openMarketDayForm = form(
 		slidingScaleFloorCents: z.number().int().min(0).max(100_000).optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('event.manage', () => eventScope(data.eventId));
 		await openMarketDay(data.eventId, {
 			applicationsCloseAt: parseLocalDateTime(data.applicationsCloseAt || undefined),
 			tableCount: data.tableCount ?? null,

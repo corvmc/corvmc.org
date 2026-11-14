@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '#lib/server/authorization.js';
+import { scheduleScope } from '#lib/server/capability/record-scope.js';
 import { requireCommitteeMember } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
@@ -67,7 +68,9 @@ export const createRecurringWork = form(
 		assetId: z.string().optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRecurring');
+		const staff = await requireCapability('volunteer.manageRecurring', {
+			projectId: data.projectId || null
+		});
 		try {
 			await createService({
 				name: data.name,
@@ -99,7 +102,7 @@ export const updateRecurringWork = form(
 		projectId: z.union([z.literal(''), z.uuid()]).optional()
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageRecurring');
+		await requireCapability('volunteer.manageRecurring', () => scheduleScope(data.id));
 		try {
 			await updateService(data.id, {
 				name: data.name,
@@ -117,7 +120,7 @@ export const updateRecurringWork = form(
 );
 
 export const retireRecurringWork = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRecurring');
+	await requireCapability('volunteer.manageRecurring', () => scheduleScope(data.id));
 	try {
 		await retireService(data.id);
 	} catch (err) {

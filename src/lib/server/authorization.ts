@@ -171,24 +171,32 @@ async function grantedBeyondPositions(
 }
 
 /**
+ * A scope, or a function that reads it off the row. The function runs only
+ * when no position grants `cap` and `cap` is grantable, so staff pay no read.
+ */
+export type ScopeArg = CapabilityScope | (() => Promise<CapabilityScope>);
+
+/**
  * Does the caller hold this capability? Never throws — for UI gating and branches.
  *
  * Positions first, then grants (see `grantedBeyondPositions`). With no scope only
  * `'org'` committee grants can add to the matrix.
  */
-export async function can(cap: Capability, scope?: CapabilityScope): Promise<boolean> {
+export async function can(cap: Capability, scope?: ScopeArg): Promise<boolean> {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return false;
 	if (authorizerFor(await currentPositions()).authorize(requestFor(cap)).success) return true;
+	if (!grantRuleFor(cap)) return false;
 	const userId = locals.user.id;
-	return grantedBeyondPositions(userId, cap, scope, () => currentCommitteeGrants(userId));
+	const resolved = typeof scope === 'function' ? await scope() : scope;
+	return grantedBeyondPositions(userId, cap, resolved, () => currentCommitteeGrants(userId));
 }
 
 /**
  * Assert the caller holds `cap`. The first statement of a remote function.
  * Returns the authenticated user.
  */
-export async function requireCapability(cap: Capability, scope?: CapabilityScope) {
+export async function requireCapability(cap: Capability, scope?: ScopeArg) {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 	if (!(await can(cap, scope))) throw error(403, 'Not permitted');

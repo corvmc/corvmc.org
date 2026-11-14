@@ -40,7 +40,7 @@ describe('updateProjectForm parent', () => {
 		await expect(
 			submit({ id: CHILD, name: 'Night one', parentProjectId: PARENT })
 		).rejects.toMatchObject({ status: 403 });
-		expect(mocks.requireCapability).toHaveBeenCalledWith('project.manage');
+		expect(mocks.requireCapability).toHaveBeenCalledWith('project.manage', { projectId: CHILD });
 		expect(mocks.updateProject).not.toHaveBeenCalled();
 	});
 

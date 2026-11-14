@@ -284,7 +284,7 @@ export const createProjectForm = form(
 );
 
 export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields }), async (raw) => {
-	await requireCapability('project.manage');
+	await requireCapability('project.manage', { projectId: (raw as { id: string }).id });
 	const { id, ...data } = raw as { id: string } & ProjectFields;
 	try {
 		await updateProject(id, toServiceInput(data));
@@ -306,7 +306,7 @@ export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields 
 export const setProjectStatusForm = form(
 	z.object({ id: z.uuid(), status: z.enum(projectStatuses) }),
 	async (raw) => {
-		await requireCapability('project.manage');
+		await requireCapability('project.manage', { projectId: (raw as { id: string }).id });
 		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
 		try {
 			await setProjectStatus(id, status);

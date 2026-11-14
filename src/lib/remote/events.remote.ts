@@ -15,6 +15,7 @@ import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
 import { getBillInputList } from '#lib/server/band/bill-input-list-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
 import { requireListingReader, requireListingWriter } from '#lib/server/event/listing-guard.js';
 import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import { projectOfEvent } from '#lib/server/production/production-scope.js';
@@ -1633,7 +1634,7 @@ export const updateEvent = form(
 export const publishEvent = form(
 	z.object({ id: z.string().min(1), reason: z.string().trim().max(1000).optional() }),
 	async (data) => {
-		await requireCapability('event.publish');
+		await requireCapability('event.publish', () => eventScope(data.id));
 		try {
 			const outcome = await publish(data.id, {
 				acknowledged: !!data.reason,
@@ -1666,7 +1667,7 @@ export const unpublishEvent = form(
 		notes: z.string().trim().max(1000).optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.publish');
+		const staff = await requireCapability('event.publish', () => eventScope(data.id));
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
 		try {
