@@ -129,8 +129,9 @@ the queue of work, and each item on it links to the page where the work is done.
   kept in the URL. A second page listing the same type folds in, and its URL redirects.
 - **One detail page per record**, whatever roles the record plays.
 - **Rows sit in four systems:** Relationships, Community, Programs and Operations, with Dashboard
-  and Inbox above and Reports and System below. Rows and sections are data in
-  `src/routes/staff/nav-items.ts`; a new module joins one of the four.
+  and Inbox above and Reports and System below. Rows and sections are data, one
+  file per section in `src/routes/staff/nav-items/`; a new module joins one of the four by adding
+  its row and key to that section's file.
 - **A module's settings live on its row**, behind a Settings button in its header, or a view such
   as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
   spans modules: organization, features, access and the audit log.
@@ -986,8 +987,8 @@ click from anywhere and each table is one click from the dashboard.
 `$lib/components/layout/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
 children, held open by the URL), `Nav.Group` (a titled section).
 
-**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
-`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items/`
+(one file per section, assembled by `staff/nav-items.ts`), `member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
 it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
 type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
