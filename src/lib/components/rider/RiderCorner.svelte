@@ -56,6 +56,7 @@
 	 */
 	const adminRemote = $derived(saveMemberRiderElements.for(ownerUserId ?? 'shared'));
 
+	// svelte-ignore state_referenced_locally
 	let elements = $state<RiderElementRowState[]>(initial);
 
 	// Labelled inputs only, matching what the editor posts. It is now the card's

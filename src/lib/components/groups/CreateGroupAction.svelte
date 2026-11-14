@@ -42,6 +42,7 @@
 		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere_label() }
 	];
 
+	// svelte-ignore state_referenced_locally
 	let selectedKind = $state(kind);
 	let joinPolicy = $state('invite_only');
 	// Committees all join by application (#1700), so a committee is not asked.

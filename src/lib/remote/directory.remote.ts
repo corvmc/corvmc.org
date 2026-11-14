@@ -3,6 +3,7 @@ import { LONG_TEXT_MAX } from '#lib/config.js';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
+import { getBandLayout } from '#lib/remote/layout.remote.js';
 import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireFeature, getAllFeatureFlags } from '#lib/server/feature-flags.js';
 import { requireBandRole } from '#lib/server/group/group-context.js';
@@ -785,6 +786,8 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	// band-service `update`). Only the explicit address change moves a slug, and
 	// that one deliberately refreshes nothing.
 	void getBandProfileEditor(data.slug).refresh();
+	// The panel header and every page under it read the band's name from here.
+	void getBandLayout(data.slug).refresh();
 
 	return { success: true };
 });
