@@ -46,11 +46,7 @@ const cases: [string, () => unknown, string][] = [
 		() => oldHours(at('/staff/volunteer/hours')),
 		'/staff/volunteering/hours'
 	],
-	[
-		'clearances',
-		() => clearances(at('/staff/volunteer/clearances')),
-		'/staff/members?role=volunteer'
-	]
+	['clearances', () => clearances(), '/staff/members?role=volunteer']
 ];
 
 describe('old Members URLs', () => {
