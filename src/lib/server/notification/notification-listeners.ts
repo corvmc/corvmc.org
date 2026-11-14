@@ -1577,7 +1577,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} logged ${formatHours(event.hours)} to review`,
 					body: `${event.roleName} — ${event.reasons.map((r) => hourLogExceptionLabels[r]).join(', ')}`,
-					href: '/staff/members/volunteers/hours'
+					href: '/staff/volunteering/hours'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1992,7 +1992,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.applicantName} applied to teach`,
 					body: event.headline ?? 'A teaching application is waiting for review',
-					href: '/staff/members/instructors?status=requested',
+					href: '/staff/members?role=teacher&status=requested',
 					email: {
 						recipientName: member.name,
 						subject: `${event.applicantName} applied to teach`,

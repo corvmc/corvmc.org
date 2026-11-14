@@ -101,7 +101,11 @@
 	const refresh = () => void getVolunteeringPage(args).refresh();
 </script>
 
-<PageHeader title={m.staff_volunteering_title()} subtitle={m.staff_planning_body()} />
+<PageHeader title={m.staff_volunteering_title()} subtitle={m.staff_planning_body()}>
+	<Button href={resolve('staff/volunteering/hours')} variant="ghost" size="sm">
+		{m.staff_volunteering_hour_logs_label()}
+	</Button>
+</PageHeader>
 
 <PageContent>
 	<FilterBar
@@ -184,7 +188,7 @@
 				<Button
 					size="sm"
 					variant="ghost"
-					href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
+					href={withQuery(resolve('staff/members'), 'role=volunteer&lapsing=1')}
 				>
 					{m.staff_volunteer_lapsing_card_title_label()}
 					<Badge size="sm">{data.lapsingPeople}</Badge>

@@ -1257,8 +1257,14 @@ A list of _people_ is a `Roster` (`$lib/components/roster/`, #1994): any query w
 `RosterPerson` (`toRosterPerson()` in `#lib/server/roster/roster.js`). It owns search, paging, Clear,
 CSV export, "Copy emails" and the row-click side panel; the page owns its query, its filters
 (`rosterState()`, URL-backed) and its columns (`lead`, `detail`, `columns` + `cells`, `actions`,
-`panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members/volunteers`
+`panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members?role=volunteer`
 is the first.
+
+**One list, several rosters.** Members is one list (#2765) whose role and status filters
+(`?role=volunteer`, `?role=teacher`, `?status=invited`) choose a roster with its own columns,
+actions and remote. The page renders the roster the URL names (`members/views.ts`) inside a
+`{#key}`, and each roster's `rosterState()` path carries that fixed query, so its own filters are
+appended to it. The role filter is a `Select` offering only the roles the viewer can read.
 
 A short list inside a card — a band's members, a club's or committee's roster, an event's RSVPs —
 is a `RosterTable` with the same rows and snippets but no toolbar, plus a `CopyEmailsButton` in
@@ -1514,7 +1520,7 @@ click that ended a text selection — so cells no longer need their own
 A row that previews its record instead of leaving the list passes a function:
 `use:rowLink={() => openPanel(row)}`, with a `<Modal placement="end">` side panel holding the
 whole entry and a link on to the full record. The primary cell's control is then a `<button>`
-that opens the same panel. The three Members views are the example: each opens
+that opens the same panel. The Members rosters are the example: each opens
 `MemberRecordPanel`, the full member record, on its own default tab.
 
 Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole

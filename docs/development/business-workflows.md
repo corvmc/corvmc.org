@@ -1613,7 +1613,7 @@ So:
 - **Volunteering is the shift worklist (#2379, #2625).** `/staff/volunteering` lists volunteer
   shifts by date, 14 days ahead by default. Claims to confirm, short-staffed shifts and tasks
   whose shifts have ended are count chips that filter it (`?needs=`); clearances lapsing before a
-  booked shift link to Members → Volunteers (`?lapsing=1`). Each is hidden at zero. A
+  booked shift link to the Members volunteer filter (`/staff/members?role=volunteer&lapsing=1`). Each is hidden at zero. A
   short-staffed shift opens the people interested in its role beneath it, to invite. Hours to
   review are in the staff review feed (#2623). `/staff/volunteer`, `/staff/volunteer/shifts`
   and `/staff/volunteer/schedule` 308 here; the Schedule's untimed, contractor and unassigned
@@ -1627,8 +1627,10 @@ So:
   member event page show the record's open shifts with Sign up, and the tasks that are the
   member's: assigned to them, or owned by a club or committee they sit on.
 - **Three homes.** Volunteering (`/staff/volunteering`) holds the shifts; Tasks
-  (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
-  review queue) holds the people, the under-18 queue (`?status=blocked`) and clearances. Roles
+  (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members, filtered to volunteers (`/staff/members?role=volunteer`), holds the
+  people, the under-18 queue (`&status=blocked`) and clearances; Volunteering's **Hour logs**
+  (`/staff/volunteering/hours`) is the review queue. `/staff/members/volunteers` and its `/hours`
+  are 308s (#2765). Roles
   (`/staff/volunteer/roles`) holds roles and certifications, and the report is
   `/staff/reports/volunteering`. The retired routes (`shifts`, `people`, `setup`,
   `clearances`, `certifications`, `interest`, `hours`, `report`) are 308s.

@@ -7,7 +7,6 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const all = await import('./+page.server');
-const people = await import('../volunteer/people/+page');
 
 type Load = (e: unknown) => unknown;
 const run = async (load: unknown, locals: object = { user: { id: 'usr-1' } }, url = 'http://x/') =>
@@ -29,34 +28,30 @@ describe('/staff/members', () => {
 		await expect(run(all.load)).resolves.toBeUndefined();
 	});
 
-	it('sends a volunteer.read-only staffer to Volunteers', async () => {
+	it('sends a volunteer.read-only staffer to the volunteer filter', async () => {
 		held = ['volunteer.read'];
 		await expect(run(all.load)).rejects.toMatchObject({
 			status: 307,
-			location: '/staff/members/volunteers'
+			location: '/staff/members?role=volunteer'
 		});
 	});
 
-	it('sends an instructor.read-only staffer to Instructors', async () => {
+	it('sends an instructor.read-only staffer to the teacher filter', async () => {
 		held = ['instructor.read'];
 		await expect(run(all.load)).rejects.toMatchObject({
 			status: 307,
-			location: '/staff/members/instructors'
+			location: '/staff/members?role=teacher'
 		});
+	});
+
+	it('leaves a filtered view to its own remotes', async () => {
+		held = ['volunteer.read'];
+		await expect(
+			run(all.load, undefined, 'http://x/staff/members?role=volunteer')
+		).resolves.toBeUndefined();
 	});
 
 	it('leaves a signed-out visitor to the page', async () => {
 		await expect(run(all.load, {})).resolves.toBeUndefined();
-	});
-});
-
-describe('/staff/volunteer/people', () => {
-	it('keeps the retired sign-off tab as the blocked filter', async () => {
-		await expect(
-			run(people.load, {}, 'http://x/staff/volunteer/people?tab=signoff&q=a')
-		).rejects.toMatchObject({
-			status: 308,
-			location: '/staff/members/volunteers?q=a&status=blocked'
-		});
 	});
 });
