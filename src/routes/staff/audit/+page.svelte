@@ -19,7 +19,7 @@
 
 	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
 	let searchText = $state('');
-	let search = $state('');
+	let searchQuery = $state('');
 	let action = $state<AuditAction | ''>('');
 	let subjectType = $state<AuditSubjectType | ''>('');
 	let dateFrom = $state('');
@@ -29,7 +29,7 @@
 	let result = $derived(
 		getAuditLog({
 			action: action || undefined,
-			search: search || undefined,
+			search: searchQuery || undefined,
 			subjectType: subjectType || undefined,
 			from: dateFrom || undefined,
 			to: dateTo || undefined,
@@ -38,7 +38,7 @@
 	);
 
 	const activeFilterCount = $derived(
-		(search ? 1 : 0) +
+		(searchQuery ? 1 : 0) +
 			(action ? 1 : 0) +
 			(subjectType ? 1 : 0) +
 			(dateFrom ? 1 : 0) +
@@ -47,7 +47,7 @@
 
 	function clearFilters() {
 		searchText = '';
-		search = '';
+		searchQuery = '';
 		action = '';
 		subjectType = '';
 		dateFrom = '';
@@ -64,7 +64,7 @@
 				bind:value={searchText}
 				placeholder={m.staff_audit_placeholder()}
 				onsearch={(q) => {
-					search = q;
+					searchQuery = q;
 					page = 1;
 				}}
 			/>
