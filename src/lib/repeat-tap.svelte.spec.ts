@@ -7,8 +7,8 @@ function tap(attrs: Record<string, string>, init: MouseEventInit = {}, to: URL |
 	const a = document.createElement('a');
 	for (const [k, v] of Object.entries(attrs)) a.setAttribute(k, v);
 	const inner = document.createElement('span');
-	a.append(inner);
-	document.body.append(a);
+	a.appendChild(inner);
+	document.body.appendChild(a);
 
 	let prevented = false;
 	const listener = (e: MouseEvent) => {
