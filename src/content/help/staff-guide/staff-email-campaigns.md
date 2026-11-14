@@ -4,6 +4,7 @@ slug: staff-email-campaigns
 category: staff-guide
 summary: Draft, preview, schedule, and send marketing emails.
 minRole: staff
+capabilities: marketing.read
 sortOrder: 12
 ---
 

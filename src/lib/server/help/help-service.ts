@@ -3,7 +3,12 @@ import { helpCategory, helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, or, sql, inArray, asc, exists, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '#lib/config.js';
-import { committeeCapabilitiesFor, getUserRoles } from '#lib/server/authorization.js';
+import {
+	capabilitySet,
+	committeeCapabilitiesFor,
+	getUserRoles,
+	positionsFor
+} from '#lib/server/authorization.js';
 import { isSustainingMember } from '#lib/server/finance/subscription-service.js';
 
 /**
@@ -69,36 +74,63 @@ export async function resolveHelpAudience(userId: string): Promise<HelpAudience>
 	return 'member';
 }
 
-/** A reader's tier, plus the capabilities that can admit them past it (see `helpArticle.capabilities`). */
+/** A reader's tier, plus every capability they hold (see `helpArticle.capabilities`). */
 export interface HelpReader {
 	audience: HelpAudience;
 	capabilities: readonly string[];
 }
 
 /**
- * The reader for `userId`. Staff already read every tier, so only a reader below
- * it pays for the committee lookup. Takes a user id, not the request, so the
- * `/api/help` endpoints resolve it the same way the remote functions do.
+ * The reader for `userId`: positions and org-wide committee grants together, so a
+ * staff article naming a capability reaches whoever can open its surface (#3005).
+ * Takes a user id, not the request, so `/api/help` resolves it as the remotes do.
  */
 export async function resolveHelpReader(userId: string): Promise<HelpReader> {
-	const audience = await resolveHelpAudience(userId);
-	if (audience === 'staff') return { audience, capabilities: [] };
-	return { audience, capabilities: await committeeCapabilitiesFor(userId) };
+	const [audience, held, committee] = await Promise.all([
+		resolveHelpAudience(userId),
+		positionsFor(userId),
+		committeeCapabilitiesFor(userId)
+	]);
+	return { audience, capabilities: [...new Set([...capabilitySet(held), ...committee])] };
 }
 
-/** Articles admitted by a capability the reader holds, whatever their tier. */
+/**
+ * Articles naming a capability the reader holds, whatever their tier. The held
+ * set is bound as one JSON parameter: admin holds ~100 capabilities, and D1
+ * refuses a statement binding more than 100 parameters.
+ */
 function admittedByCapability(reader: HelpReader): SQL | undefined {
 	if (reader.capabilities.length === 0) return undefined;
-	const held = sql.join(
-		reader.capabilities.map((c) => sql`${c}`),
-		sql`, `
-	);
-	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (${held}))`;
+	const held = JSON.stringify(reader.capabilities);
+	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (select value from json_each(${held})))`;
 }
 
-/** The article rows this reader may open, published or not. */
-function articleVisibleTo(reader: HelpReader): SQL {
-	const byTier = inArray(helpArticle.minRole, accessibleAudiences(reader.audience));
+/** Stored values that read as the top tier, where an article's capabilities gate it. */
+const STAFF_TIER = accessibleAudiences('staff').filter(
+	(a) => !accessibleAudiences('sustaining').includes(a)
+);
+
+/**
+ * The article rows this reader may open, published or not. The one filter every
+ * read path goes through, search included, so a hidden title never leaks.
+ *
+ * A staff-tier article that names capabilities is for their holders only; one
+ * naming none is for every position holder. Below staff, capabilities only add
+ * readers (a committee granted `sponsor.read`).
+ */
+export function articleVisibleTo(reader: HelpReader): SQL {
+	const tiers = accessibleAudiences(reader.audience);
+	const belowStaff = tiers.filter((a) => !STAFF_TIER.includes(a));
+	const byTier =
+		reader.audience === 'staff'
+			? or(
+					inArray(helpArticle.minRole, belowStaff),
+					and(
+						inArray(helpArticle.minRole, STAFF_TIER),
+						sql`coalesce(json_array_length(${helpArticle.capabilities}), 0) = 0`
+					)
+				)!
+			: inArray(helpArticle.minRole, tiers);
 	const byCapability = admittedByCapability(reader);
 	return byCapability ? or(byTier, byCapability)! : byTier;
 }

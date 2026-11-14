@@ -4,6 +4,7 @@ slug: staff-payments-credits
 category: staff-guide
 summary: Review payment records and the credit ledger.
 minRole: staff
+capabilities: finance.read, credit.read
 sortOrder: 15
 ---
 

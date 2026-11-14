@@ -4,6 +4,7 @@ slug: staff-reservation-payments
 category: staff-guide
 summary: Handle payment on a reservation — record cash, comp, or refund.
 minRole: staff
+capabilities: reservation.read
 sortOrder: 5
 ---
 

@@ -4,6 +4,7 @@ slug: staff-audiences
 category: staff-guide
 summary: Create subscriber segments for email campaigns.
 minRole: staff
+capabilities: marketing.read, marketing.manageAudiences
 sortOrder: 13
 ---
 

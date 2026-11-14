@@ -4,6 +4,7 @@ slug: staff-roster-import
 category: staff-guide
 summary: Turn a list of email addresses, such as a Zeffy export, into club or committee membership in one step.
 minRole: staff
+capabilities: group.manage
 sortOrder: 22
 ---
 

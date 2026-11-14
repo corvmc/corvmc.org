@@ -4,6 +4,7 @@ slug: staff-renewals
 category: staff-guide
 summary: Track the collective's own permits, licenses and insurance policies as yearly recurring work.
 minRole: staff
+capabilities: project.read
 sortOrder: 21
 ---
 

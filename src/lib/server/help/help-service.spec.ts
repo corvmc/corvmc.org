@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { capabilities } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Regression: help access is a visibility ladder, not a ranking of role names.
@@ -22,13 +24,15 @@ const isSustainingMember = vi.fn<(userId: string) => Promise<boolean>>();
 
 vi.mock('#lib/server/authorization.js', () => ({
 	getUserRoles: (id: string) => getUserRoles(id),
-	committeeCapabilitiesFor: async () => []
+	committeeCapabilitiesFor: async () => [],
+	positionsFor: async () => [],
+	capabilitySet: () => []
 }));
 vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: (id: string) => isSustainingMember(id)
 }));
 
-const { resolveHelpAudience, normalizeAudience } = await import('./help-service');
+const { resolveHelpAudience, normalizeAudience, articleVisibleTo } = await import('./help-service');
 
 beforeEach(() => {
 	getUserRoles.mockReset();
@@ -99,5 +103,18 @@ describe('normalizeAudience', () => {
 		expect(normalizeAudience('')).toBe('staff');
 		expect(normalizeAudience(null)).toBe('staff');
 		expect(normalizeAudience(undefined)).toBe('staff');
+	});
+});
+
+describe('articleVisibleTo', () => {
+	it('binds the same few parameters however many capabilities the reader holds', () => {
+		// D1 refuses a statement binding more than 100; admin holds every capability.
+		const all = Object.entries(capabilities).flatMap(([r, as]) => as.map((a) => `${r}.${a}`));
+		const params = (held: string[]) =>
+			new SQLiteSyncDialect().sqlToQuery(
+				articleVisibleTo({ audience: 'staff', capabilities: held })
+			).params.length;
+		expect(params(all)).toBe(params(['user.read']));
+		expect(params(all)).toBeLessThan(10);
 	});
 });

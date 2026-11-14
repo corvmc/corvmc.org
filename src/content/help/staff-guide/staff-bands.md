@@ -4,6 +4,7 @@ slug: staff-bands
 category: staff-guide
 summary: Moderate bands — review, deactivate/reactivate, and manage members.
 minRole: staff
+capabilities: band.read
 sortOrder: 9
 ---
 

@@ -4,6 +4,7 @@ slug: staff-settings
 category: staff-guide
 summary: A tour of the configuration tabs in Staff Settings.
 minRole: staff
+capabilities: settings.read
 sortOrder: 17
 ---
 

@@ -4,6 +4,7 @@ slug: staff-equipment-loans
 category: staff-guide
 summary: Work through loan requests, check gear out, and check it back in.
 minRole: staff
+capabilities: inventory.read
 sortOrder: 11
 ---
 
