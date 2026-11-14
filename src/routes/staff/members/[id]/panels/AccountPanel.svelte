@@ -21,6 +21,7 @@
 	import { getUserDirectoryProfile } from '#lib/remote/directory.remote.js';
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
+	import ViewAsMember from '../ViewAsMember.svelte';
 	import { RelatedList } from '#lib/components/ui/entity/index.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -86,6 +87,8 @@
 	the picker from a caller who may edit the profile but not the roles: without
 	that they would submit a role set they cannot change and land on a 403.
 -->
+<ViewAsMember {id} />
+
 {#if roleCatalog.current}
 	{@const catalog = roleCatalog.current}
 	{@const roleOptions = catalog.roles.map((r) => ({

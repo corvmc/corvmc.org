@@ -12,6 +12,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, isNull } from 'drizzle-orm';
 import { accountRemoval } from '#lib/server/db/schema/moderation.js';
 import { userAdditionalFields } from './auth-fields';
+import { impersonation } from '#lib/server/impersonation/impersonation-plugin.js';
 import { captureException } from '#lib/server/sentry.js';
 import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
 import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
@@ -603,6 +604,7 @@ function createAuth() {
 			before: createAuthMiddleware(async (ctx) => beforeAuth(ctx))
 		},
 		plugins: [
+			impersonation(),
 			sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
 		]
 	});

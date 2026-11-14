@@ -78,6 +78,31 @@
 		"createdByUserId": "internal: set once by createArticle",
 		"source": "internal: 'static' marks rows pnpm help:sync owns; staff articles are 'dynamic'"
 	},
+	"src/lib/server/impersonation/impersonation-plugin.ts#startImpersonating(0)": {
+		"asResponse": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"context": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"method": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"params": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"path": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"query": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"request": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"returnHeaders": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"returnStatus": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"use": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body"
+	},
+	"src/lib/server/impersonation/impersonation-plugin.ts#stopImpersonating(0)": {
+		"asResponse": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"body": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"context": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"method": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"params": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"path": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"query": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"request": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"returnHeaders": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"returnStatus": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body",
+		"use": "internal: better-auth's endpoint context, filled by auth.api; impersonation.remote.ts passes headers and body"
+	},
 	"src/lib/server/incident/incident-service.ts#fileShowIncident(0)": {
 		"involvedUserId": "internal: naming a member stays with staff (#1469); crew describe it in the text"
 	},

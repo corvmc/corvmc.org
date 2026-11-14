@@ -2983,6 +2983,54 @@ open report, an overdue loan or an unpaid booking.
 
 - **A tab key in the URL that does not exist** falls back to Overview (`parseTab`).
 
+## 27. View as member
+
+### The story
+
+An admin supporting a member opens the member's record, chooses **View as member** on the
+Account tab, and lands on `/member` signed in as that member. A banner on every page names the
+member and offers **Stop**, which returns the admin to the record (#2847). While viewing, the
+admin may act for the member, such as fixing a booking. Payments, password changes and email
+changes are refused.
+
+### Code path
+
+- **Who:** `assertMayImpersonate` in `src/lib/server/impersonation/impersonation-service.ts`.
+  The viewer must hold the `admin` role (`positionsFor`), not a capability, so no position
+  matrix or committee grant can give it. An admin is never viewed as, nor oneself, nor a closed
+  account. `canImpersonate` decides whether the button shows.
+- **Start and stop:** `startImpersonation` / `stopImpersonation` in `impersonation.remote.ts`
+  call the `impersonation` better-auth plugin (`impersonation-plugin.ts`, `SERVER_ONLY`). It
+  creates a session for the member with `session.impersonated_by` set and keeps the admin's
+  session token in the signed `admin_session` cookie until Stop. The view-as session lasts an
+  hour. better-auth's admin plugin is not used: its other endpoints gate on a `user.role`
+  column this app does not have.
+- **Request:** `handleBetterAuth` in `hooks.server.ts` sets `locals.impersonator` to the
+  admin, refuses better-auth's own credential endpoints (`refusedWhileImpersonating`), and after
+  the response writes `user.impersonated_write` for every request that could write
+  (`auditImpersonatedRequest`): method, path and status.
+- **Refusals:** `refuseWhileImpersonating` (`impersonation-guard.ts`) in `checkout()`, the
+  password, account-deletion and email-change remotes, and in the `stripe` gateway proxy, which
+  turns every call but `retrieve` and `list` into a 403 while viewing.
+- **Audit:** `user.impersonation_started` and `user.impersonation_stopped`, and any other entry
+  written meanwhile, name the admin as actor (`currentActor` reads `locals.impersonator`) and the
+  member as subject. They show in the member's History card.
+- **Banner:** `ImpersonationBanner.svelte` in the root layout, over `getImpersonation`.
+
+### Data touched
+
+- `session.impersonated_by`: the admin's user id on a view-as session.
+- `audit_log`: the three actions above.
+
+### Where it breaks
+
+- **Stop signs the admin out.** The admin's own session ended while they were viewing; sign in
+  again.
+- **A payment button returns 403 while viewing.** By design; the member pays for themselves.
+- **Specs:** `impersonation-service.spec.ts` (who may, the audit rows) and
+  `impersonation-refusals.spec.ts` (the gateway refuses writes; every remote that changes a
+  password or email calls `refuseWhileImpersonating`).
+
 ## Cross-cutting patterns worth internalizing
 
 - **Everything money-related converges on two Stripe entry points:** `checkout()` in

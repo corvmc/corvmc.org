@@ -53,7 +53,9 @@ const SYSTEM_ACTOR: AuditActor = { id: null, name: 'System', email: '' };
 
 function currentActor(): AuditActor {
 	try {
-		const u = getRequestEvent().locals.user;
+		const { user: u, impersonator } = getRequestEvent().locals;
+		// Viewing as a member, the admin did it (#2847).
+		if (impersonator) return impersonator;
 		if (u) return { id: u.id, name: u.name, email: u.email };
 	} catch {
 		// Outside a request: a cron job or a script.

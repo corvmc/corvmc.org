@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { refuseWhileImpersonating } from '#lib/server/impersonation/impersonation-guard.js';
 import { invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
@@ -32,6 +33,7 @@ export const requestEmailChange = form(
 	z.object({ userId: z.string().min(1), email: z.email().max(254) }),
 	async ({ userId, email }, issue) => {
 		await requireCapability('user.setEmail');
+		refuseWhileImpersonating();
 		try {
 			await requestEmailChangeService(userId, email);
 		} catch (err) {
@@ -67,5 +69,8 @@ export const getEmailChangeRequest = query(z.string().min(1).max(512), async (to
 
 export const confirmEmailChange = form(
 	z.object({ token: z.string().min(1).max(512) }),
-	async ({ token }) => confirmEmailChangeService(token)
+	async ({ token }) => {
+		refuseWhileImpersonating();
+		return confirmEmailChangeService(token);
+	}
 );
