@@ -15,5 +15,5 @@ export function confirmedUnpaidSql() {
 		isNull(reservation.refundedAt),
 		or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),
 		notInArray(reservation.bookerType, [...eventHoldBookers])
-	);
+	)!;
 }
