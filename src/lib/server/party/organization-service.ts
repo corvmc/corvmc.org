@@ -11,7 +11,8 @@ import {
 	type VendorDetail
 } from '#lib/server/db/schema/party.js';
 import { marketVendor } from '#lib/server/db/schema/market.js';
-import { eventListing } from '#lib/server/db/schema/event.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { productionSlot } from '#lib/server/db/schema/production.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
@@ -333,7 +334,7 @@ export class OrganizationMergeError extends DomainError {
 
 /** What names an organization, for its page: one list per role it holds. */
 export async function organizationRecords(id: string) {
-	const [grants, sponsorships, jobs, orders, markets, bands] = await Promise.all([
+	const [grants, sponsorships, jobs, orders, markets, bands, shows] = await Promise.all([
 		db
 			.select({
 				id: grantApplication.id,
@@ -388,9 +389,54 @@ export async function organizationRecords(id: string) {
 			.select({ id: group.id, name: group.name })
 			.from(group)
 			.where(eq(group.fromOrganizationId, id))
-			.orderBy(asc(group.name), asc(group.id))
+			.orderBy(asc(group.name), asc(group.id)),
+		actShows(id)
 	]);
-	return { grants, sponsorships, jobs, orders, markets, bands };
+	return { grants, sponsorships, jobs, orders, markets, bands, shows };
+}
+
+/**
+ * Every bill crediting an act's listing, newest first (#2783), with the deal
+ * and payment from its running-order slot when the show has one.
+ */
+async function actShows(organizationId: string) {
+	const rows = await db
+		.select({
+			creditId: eventBand.id,
+			eventId: eventListing.id,
+			title: eventListing.title,
+			startsAt: eventListing.startsAt,
+			slotId: productionSlot.id,
+			guaranteeCents: productionSlot.guaranteeCents,
+			percentageBps: productionSlot.percentageBps,
+			versus: productionSlot.versus,
+			againstNet: productionSlot.againstNet,
+			contributed: productionSlot.contributed,
+			paidCents: productionSlot.paidCents,
+			paidAt: productionSlot.paidAt
+		})
+		.from(organization)
+		.innerJoin(eventBand, eq(eventBand.directoryEntryId, organization.directoryEntryId))
+		.innerJoin(eventListing, eq(eventListing.id, eventBand.eventId))
+		.leftJoin(productionSlot, eq(productionSlot.eventBandId, eventBand.id))
+		.where(eq(organization.id, organizationId))
+		.orderBy(desc(eventListing.startsAt), desc(eventBand.id));
+	return rows.map(
+		({ slotId, guaranteeCents, percentageBps, versus, againstNet, contributed, ...r }) => ({
+			...r,
+			// A credit can hold more than one slot; each is its own row.
+			key: slotId ?? r.creditId,
+			terms: slotId
+				? {
+						guaranteeCents,
+						percentageBps,
+						versus: versus ?? false,
+						againstNet: againstNet ?? false,
+						contributed: contributed ?? false
+					}
+				: null
+		})
+	);
 }
 
 /** `https://www.example.org/about` → `example.org`; null when there is no host. */

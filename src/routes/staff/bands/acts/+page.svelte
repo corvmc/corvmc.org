@@ -10,8 +10,9 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { getStaffExternalActs } from '#lib/remote/external-acts.remote.js';
 	import CreateExternalActAction from './CreateExternalActAction.svelte';
-	import ClaimExternalActAction from './ClaimExternalActAction.svelte';
+	import ClaimExternalActAction from '#lib/components/actions/ClaimExternalActAction.svelte';
 	import { formatDateShort } from '#lib/utils/format.js';
+	import { resolve } from '$app/paths';
 
 	/**
 	 * External acts — parties CMC has booked that are not members of anything
@@ -72,7 +73,14 @@
 				{/snippet}
 				{#each acts.rows as act (act.id)}
 					<tr>
-						<td class="cell-primary">{act.name}</td>
+						<td class="cell-primary">
+							{#if act.organizationId}
+								<a class="link" href={resolve(`staff/contacts/${act.organizationId}`)}>{act.name}</a
+								>
+							{:else}
+								{act.name}
+							{/if}
+						</td>
 						<td class="col-support">{act.hometown ?? '—'}</td>
 						<td class="col-extra">
 							{#if act.links?.[0]?.url}

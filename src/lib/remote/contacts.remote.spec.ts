@@ -26,7 +26,8 @@ const orgs = {
 		jobs: [],
 		orders: [],
 		markets: [],
-		bands: []
+		bands: [],
+		shows: [{ eventId: 'ev-1', title: 'Recital', terms: { guaranteeCents: 20000 } }]
 	})),
 	createOrganization: vi.fn(async () => ({ id: 'o2' })),
 	updateOrganization: vi.fn(async () => undefined),
@@ -287,6 +288,34 @@ describe('contacts.remote views', () => {
 			{ type: 'organization', id: 'o1' },
 			{ limit: undefined }
 		);
+	});
+
+	// #2783: an act's shows carry its deal and pay, so they follow event.read.
+	it("shows an act's shows and actions only to events staff", async () => {
+		orgs.getOrganization.mockResolvedValue({
+			...org,
+			directoryEntryId: 'de-1',
+			roles: ['performer']
+		} as never);
+		held = new Set(['contact.read']);
+		const page = await remote.getOrganizationPage('o1');
+		expect(page?.records.shows).toEqual([]);
+		expect(page?.act).toEqual({
+			entryId: 'de-1',
+			canClaim: false,
+			canSendContactSheet: false
+		});
+
+		held = new Set(['event.read', 'event.manage', 'directory.shareContactSheet']);
+		const booker = await remote.getOrganizationPage('o1');
+		expect(booker?.records.shows).toHaveLength(1);
+		expect(booker?.act).toMatchObject({ canClaim: true, canSendContactSheet: true });
+		orgs.getOrganization.mockReset();
+		orgs.getOrganization.mockImplementation(async () => ({
+			...org,
+			directoryEntryId: null,
+			roles: ['funder']
+		}));
 	});
 
 	it('refuses an organization page to a viewer with none of its roles', async () => {
