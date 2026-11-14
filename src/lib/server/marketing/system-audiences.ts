@@ -7,6 +7,7 @@ import {
 	isSystemAudienceKey,
 	type SystemAudienceKey
 } from './system-audience-defs';
+import type { RecipientSkip } from '#lib/types/marketing.js';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audiences — queries and provisioning
@@ -111,11 +112,11 @@ export async function ensureSubscribersForUsers(predicate: SQL): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * SQL: this subscriber has not opted out of `audienceId`. For a system
- * audience an `audience_member` row exists only as an opt-out tombstone.
+ * SQL: this subscriber has opted out of `audienceId`. For a system audience an
+ * `audience_member` row exists only as an opt-out tombstone.
  */
-function notOptedOut(audienceId: string): SQL {
-	return sql`not exists (
+function optedOut(audienceId: string): SQL {
+	return sql`exists (
 		select 1 from ${audienceMember}
 		where ${audienceMember.audienceId} = ${audienceId}
 			and ${audienceMember.subscriberId} = ${subscriber.id}
@@ -123,25 +124,53 @@ function notOptedOut(audienceId: string): SQL {
 	)`;
 }
 
+/** Why a resolved row gets no copy, or null when it does. Suppression applies to every audience. */
+export function skipReason(row: {
+	suppressedAt: Date | null;
+	optedOut: boolean | number | null;
+}): RecipientSkip | null {
+	if (row.suppressedAt) return 'suppressed';
+	return row.optedOut ? 'unsubscribed' : null;
+}
+
 /**
- * Resolve the current recipients of a system audience. Backfills subscriber
- * records first so members who have never subscribed are still reachable.
+ * Resolve the current members of a system audience, each with the reason they
+ * are left out of a send (null when they are not). Backfills subscriber records
+ * first so members who have never subscribed are still reachable.
  */
 export async function resolveSystemAudienceRecipients(
 	audienceId: string,
 	key: SystemAudienceKey,
 	eventId?: string | null
-): Promise<{ subscriberId: string; email: string; name: string | null; audienceId: string }[]> {
+): Promise<
+	{
+		subscriberId: string;
+		email: string;
+		name: string | null;
+		audienceId: string;
+		skip: RecipientSkip | null;
+	}[]
+> {
 	const predicate = SYSTEM_AUDIENCES[key].predicate(eventId);
 	await ensureSubscribersForUsers(predicate);
 
 	const rows = await db
-		.select({ subscriberId: subscriber.id, email: subscriber.email, name: subscriber.name })
+		.select({
+			subscriberId: subscriber.id,
+			email: subscriber.email,
+			name: subscriber.name,
+			suppressedAt: subscriber.suppressedAt,
+			optedOut: sql<number>`${optedOut(audienceId)}`
+		})
 		.from(subscriber)
 		.innerJoin(user, eq(user.id, subscriber.userId))
-		.where(and(predicate, isNull(subscriber.suppressedAt), notOptedOut(audienceId)));
+		.where(predicate);
 
-	return rows.map((r) => ({ ...r, audienceId }));
+	return rows.map(({ suppressedAt, optedOut: out, ...r }) => ({
+		...r,
+		audienceId,
+		skip: skipReason({ suppressedAt: suppressedAt ?? null, optedOut: out ?? null })
+	}));
 }
 
 /**

@@ -58,9 +58,9 @@ token and without reaching a real inbox. See
 client directly. The list only shrinks. Each entry is a sender whose failure is still thrown
 or lost rather than recorded:
 
-| Module                                         | Sends                                                                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `src/lib/server/marketing/campaign-service.ts` | Campaign broadcasts. Each recipient's result is recorded in `campaign_send` (#2777); nothing is retried |
-| `src/lib/server/group/announcement-fanout.ts`  | Group announcement fan-out                                                                              |
-| `src/lib/server/ballot/ballot-fanout.ts`       | Ballot fan-out                                                                                          |
-| `src/lib/server/inbox/channel-dispatcher.ts`   | Inbox replies typed in the staff inbox                                                                  |
+| Module                                         | Sends                                                                                                                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/server/marketing/campaign-service.ts` | Campaign broadcasts. Each recipient's result, and each audience member skipped as unsubscribed or suppressed, is recorded in `campaign_send` (#2777, #2914); nothing is retried |
+| `src/lib/server/group/announcement-fanout.ts`  | Group announcement fan-out                                                                                                                                                      |
+| `src/lib/server/ballot/ballot-fanout.ts`       | Ballot fan-out                                                                                                                                                                  |
+| `src/lib/server/inbox/channel-dispatcher.ts`   | Inbox replies typed in the staff inbox                                                                                                                                          |

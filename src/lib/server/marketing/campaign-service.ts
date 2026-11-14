@@ -8,7 +8,12 @@ import {
 	subscriber
 } from '#lib/server/db/schema/marketing.js';
 import { eq, and, sql, isNull, lte, inArray, desc } from 'drizzle-orm';
-import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
+import {
+	isSystemAudienceKey,
+	resolveSystemAudienceRecipients,
+	skipReason
+} from './system-audiences';
+import type { RecipientSkip } from '#lib/types/marketing.js';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
@@ -398,7 +403,22 @@ async function recordBeyondVisibility(campaignId: string, scheduled: boolean) {
 // Recipient resolution
 // ---------------------------------------------------------------------------
 
-export async function getRecipientsForCampaign(campaignId: string) {
+type ResolvedRecipient = {
+	subscriberId: string;
+	email: string;
+	name: string | null;
+	audienceId: string;
+};
+
+/**
+ * Who a campaign goes to, and the audience members it leaves out with the
+ * reason (#2914). A subscriber deliverable through any targeted audience is a
+ * recipient; one who is not is skipped once, under their first audience.
+ */
+export async function getRecipientsForCampaign(campaignId: string): Promise<{
+	recipients: ResolvedRecipient[];
+	skipped: (ResolvedRecipient & { skip: RecipientSkip })[];
+}> {
 	// The show this blast is about, if it is about one. Only `event-interest`
 	// reads it, and without it that audience resolves to nobody (#857).
 	const [scoped] = await db
@@ -415,39 +435,31 @@ export async function getRecipientsForCampaign(campaignId: string) {
 		.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
 		.where(eq(campaignAudience.campaignId, campaignId));
 
-	if (targeted.length === 0) return [];
+	if (targeted.length === 0) return { recipients: [], skipped: [] };
 
 	// Sorted so the audience retained for a deduplicated recipient — which
 	// scopes their unsubscribe token — doesn't depend on row order.
 	const ordered = [...targeted].sort((a, b) => a.id.localeCompare(b.id));
 
 	const staticIds = ordered.filter((a) => !isSystemAudienceKey(a.systemKey)).map((a) => a.id);
-	const rows: {
-		subscriberId: string;
-		email: string;
-		name: string | null;
-		audienceId: string;
-	}[] = [];
+	const rows: (ResolvedRecipient & { skip: RecipientSkip | null })[] = [];
 
 	if (staticIds.length > 0) {
-		rows.push(
-			...(await db
-				.selectDistinct({
-					subscriberId: subscriber.id,
-					email: subscriber.email,
-					name: subscriber.name,
-					audienceId: audienceMember.audienceId
-				})
-				.from(audienceMember)
-				.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
-				.where(
-					and(
-						inArray(audienceMember.audienceId, staticIds),
-						isNull(audienceMember.unsubscribedAt),
-						isNull(subscriber.suppressedAt)
-					)
-				))
-		);
+		const members = await db
+			.selectDistinct({
+				subscriberId: subscriber.id,
+				email: subscriber.email,
+				name: subscriber.name,
+				audienceId: audienceMember.audienceId,
+				suppressedAt: subscriber.suppressedAt,
+				unsubscribedAt: audienceMember.unsubscribedAt
+			})
+			.from(audienceMember)
+			.innerJoin(subscriber, eq(subscriber.id, audienceMember.subscriberId))
+			.where(inArray(audienceMember.audienceId, staticIds));
+		for (const { suppressedAt, unsubscribedAt, ...m } of members) {
+			rows.push({ ...m, skip: skipReason({ suppressedAt, optedOut: unsubscribedAt !== null }) });
+		}
 	}
 
 	for (const a of ordered) {
@@ -457,17 +469,24 @@ export async function getRecipientsForCampaign(campaignId: string) {
 
 	// One message per subscriber, however many of the targeted audiences they
 	// are in. Built-in audiences overlap every static list, so without this a
-	// member on "All Members" and the newsletter gets two copies.
+	// member on "All Members" and the newsletter gets two copies. A deliverable
+	// row beats a skipped one; between equals, the first audience wins.
 	const rank = new Map(ordered.map((a, i) => [a.id, i]));
+	const order = (r: (typeof rows)[number]) =>
+		(r.skip ? ordered.length : 0) + (rank.get(r.audienceId) ?? ordered.length);
 	const bySubscriber = new Map<string, (typeof rows)[number]>();
 	for (const row of rows) {
 		const seen = bySubscriber.get(row.subscriberId);
-		if (!seen || (rank.get(row.audienceId) ?? Infinity) < (rank.get(seen.audienceId) ?? Infinity)) {
-			bySubscriber.set(row.subscriberId, row);
-		}
+		if (!seen || order(row) < order(seen)) bySubscriber.set(row.subscriberId, row);
 	}
 
-	return [...bySubscriber.values()];
+	const recipients: ResolvedRecipient[] = [];
+	const skipped: (ResolvedRecipient & { skip: RecipientSkip })[] = [];
+	for (const { skip, ...r } of bySubscriber.values()) {
+		if (skip) skipped.push({ ...r, skip });
+		else recipients.push(r);
+	}
+	return { recipients, skipped };
 }
 
 // ---------------------------------------------------------------------------
@@ -483,13 +502,14 @@ export async function executeSend(campaignId: string): Promise<number> {
 	if (!row) throw new CampaignNotFoundError();
 	if (row.sentAt) throw new CampaignStateError('Campaign already sent');
 
-	const recipients = await getRecipientsForCampaign(campaignId);
+	const { recipients, skipped } = await getRecipientsForCampaign(campaignId);
 	if (recipients.length === 0) {
 		// Mark as sent with 0 recipients
 		await db
 			.update(campaign)
 			.set({ sentAt: new Date(), recipientCount: 0, updatedAt: new Date() })
 			.where(eq(campaign.id, campaignId));
+		await recordSends(campaignId, [], [], skipped);
 		return 0;
 	}
 
@@ -543,19 +563,23 @@ export async function executeSend(campaignId: string): Promise<number> {
 		const error = err instanceof Error ? err.message : String(err);
 		results = recipients.map(() => ({ ok: false, error }));
 	}
-	await recordSends(campaignId, recipients, results);
+	await recordSends(campaignId, recipients, results, skipped);
 	if (thrown) throw thrown;
 
 	return recipients.length;
 }
 
-/** One row per recipient, so the campaign page can say who it went to and what happened (#2777). */
+/**
+ * One row per recipient, so the campaign page can say who it went to and what
+ * happened (#2777), and one per member left out, with why (#2914).
+ */
 async function recordSends(
 	campaignId: string,
 	recipients: { subscriberId: string; audienceId: string; email: string }[],
-	results: SendResult[]
+	results: SendResult[],
+	skipped: { subscriberId: string; audienceId: string; email: string; skip: RecipientSkip }[]
 ): Promise<void> {
-	const rows = recipients.map((r, i) => {
+	const rows: (typeof campaignSend.$inferInsert)[] = recipients.map((r, i) => {
 		const result = results[i] ?? { ok: false as const, error: 'No response' };
 		return {
 			campaignId,
@@ -567,6 +591,17 @@ async function recordSends(
 			error: result.ok ? null : result.error
 		};
 	});
+	for (const r of skipped) {
+		rows.push({
+			campaignId,
+			subscriberId: r.subscriberId,
+			audienceId: r.audienceId,
+			email: r.email,
+			status: r.skip === 'suppressed' ? 'skipped_suppressed' : 'skipped_unsubscribed',
+			providerMessageId: null,
+			error: null
+		});
+	}
 	const inserts = chunkInsert(rows, (group) => db.insert(campaignSend).values(group));
 	if (inserts.length > 0) await db.batch(inserts as [(typeof inserts)[number], ...typeof inserts]);
 }

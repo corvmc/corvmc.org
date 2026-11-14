@@ -423,6 +423,59 @@ describe('executeSend', () => {
 		expect(sentTo()).toEqual(['ok@example.com']);
 	});
 
+	// #2914: members left out of a send left no record of who or why.
+	it('records each skipped member with the reason, static and built-in alike', async () => {
+		aud('aud-system', 'all-members');
+		camp('camp-1');
+		target('camp-1', 'aud-1', 'aud-system');
+		sub('sub-ok', 'ok@example.com');
+		sub('sub-supp', 'supp@example.com', { suppressedAt: NOW_S - HOUR });
+		sub('sub-unsub', 'unsub@example.com');
+		member('aud-1', 'sub-ok');
+		member('aud-1', 'sub-supp');
+		member('aud-1', 'sub-unsub', NOW_S - HOUR);
+		account('user-out', 'out@example.com');
+		sub('sub-out', 'out@example.com', { userId: 'user-out' });
+		member('aud-system', 'sub-out', NOW_S - HOUR);
+
+		expect(await executeSend('camp-1')).toBe(1);
+
+		const rows = sends('camp-1') as { email: string; status: string; audience_id: string }[];
+		expect(Object.fromEntries(rows.map((r) => [r.email, [r.status, r.audience_id]]))).toEqual({
+			'ok@example.com': ['sent', 'aud-1'],
+			'supp@example.com': ['skipped_suppressed', 'aud-1'],
+			'unsub@example.com': ['skipped_unsubscribed', 'aud-1'],
+			'out@example.com': ['skipped_unsubscribed', 'aud-system']
+		});
+		expect(campRow('camp-1')).toMatchObject({ recipient_count: 1 });
+	});
+
+	it('sends to a member unsubscribed from one targeted audience but not another', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1', 'aud-2');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1', NOW_S - HOUR);
+		member('aud-2', 'sub-1');
+
+		expect(await executeSend('camp-1')).toBe(1);
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({ status: 'sent', audience_id: 'aud-2' })
+		]);
+	});
+
+	it('records the skipped when nobody is left to send to', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com', { suppressedAt: NOW_S - HOUR });
+		member('aud-1', 'sub-1');
+
+		expect(await executeSend('camp-1')).toBe(0);
+		expect(sendBroadcastBatch).not.toHaveBeenCalled();
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({ email: 'member@example.com', status: 'skipped_suppressed' })
+		]);
+	});
+
 	// Regression: a subscriber in two of the campaign's audiences used to get
 	// one copy per audience. Built-ins overlap every static list.
 	it('sends exactly one message to a subscriber who is in two targeted audiences', async () => {
