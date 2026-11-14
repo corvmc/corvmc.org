@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
@@ -38,7 +41,9 @@
 			</FormField>
 
 			<p class="text-subtle">
-				{m.staff_members_instructors_grant_instructor_they_can_book_roo_text()}
+				{#await getReservationPolicy('instructor') then teaching}{m.staff_members_instructors_grant_instructor_they_can_book_roo_text(
+						{ rate: formatCents(teaching.hourlyRateCents) }
+					)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
 			</p>
 		</div>
 	{/snippet}

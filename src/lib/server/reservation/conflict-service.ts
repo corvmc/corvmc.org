@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { reservation, closure } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
-import type { BookerType } from '#lib/config.js';
+import { CLEARANCE_BOOKER, type BookerType } from '#lib/config.js';
 import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
@@ -84,15 +84,15 @@ async function tourMinutes(): Promise<number> {
 }
 
 /**
- * How much notice a booking needs, resolved for who is booking. Only a member's
- * own booking (`'user'`) can need the new-member minimum — the same booker type
- * that raises an orientation shift. Staff paths never call this.
+ * How much notice a booking needs, resolved for who is booking. Only
+ * `CLEARANCE_BOOKER` can need the new-member minimum and tour, so a teaching
+ * booking never does (#2808). Staff paths never call this.
  */
 export async function noticeFor(
 	config: SlotConfig,
 	who: { userId: string | null; bookerType?: BookerType }
 ): Promise<BookingNotice> {
-	const own = (who.bookerType ?? 'user') === 'user' && who.userId !== null;
+	const own = (who.bookerType ?? CLEARANCE_BOOKER) === CLEARANCE_BOOKER && who.userId !== null;
 	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
 		return {
 			minutes: config.newMemberMinAdvanceMinutes,

@@ -28,6 +28,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, inArray } from 'drizzle-orm';
 import { shiftLabel } from '#lib/utils/shift-label.js';
 import { formatIsoDay } from '#lib/utils/deadline.js';
+import { getBookingTerms } from '#lib/server/reservation/config.js';
 import type { ClubDate, ClubTime } from '#lib/server/reservation/timezone.js';
 import type {
 	NotificationEmailCtaSpec,
@@ -2059,6 +2060,7 @@ export function registerAllNotificationListeners(): void {
 	// --- Teaching application approved or sent back (notify the member) ---
 	domainEvents.on('instructor.application_reviewed', async ({ data: event }) => {
 		const approved = event.approved;
+		const rate = approved ? formatCents((await getBookingTerms('instructor')).hourlyRateCents) : '';
 		await dispatch({
 			type: 'instructor_application_reviewed',
 			userId: event.applicantUserId,
@@ -2075,7 +2077,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: approved
 					? [
 							{
-								text: 'Staff have approved you to teach. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted. Your profile page shows whether the teacher directory lists you.'
+								text: `Staff have approved you to teach. You can book the practice room for teaching at ${rate} an hour, with no monthly cap and no practice-space tour. Your profile page shows whether the teacher directory lists you.`
 							}
 						]
 					: [

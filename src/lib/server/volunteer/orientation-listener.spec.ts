@@ -245,6 +245,15 @@ describe('reservation.created', () => {
 		expect(shifts()).toHaveLength(0);
 	});
 
+	it('does nothing for a teaching booking — teaching needs no clearance (#2808)', async () => {
+		seedList();
+		sqlite.exec(`UPDATE reservation SET booker_type = 'instructor' WHERE id = 'res-1'`);
+
+		await fire('reservation.created', createdEvent({ bookerType: 'instructor' }));
+
+		expect(shifts()).toHaveLength(0);
+	});
+
 	it('does nothing on a second booking', async () => {
 		seedList();
 		sqlite.exec(

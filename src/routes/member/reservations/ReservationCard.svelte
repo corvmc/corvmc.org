@@ -35,6 +35,13 @@
 		class="block hover:bg-base-200/40"
 	>
 		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
+		{#if reservation.bookerType === 'instructor'}
+			<p class="px-3 pb-1">
+				<span class="badge badge-sm" data-testid="teaching-booking"
+					>{m.member_reservations_teaching_badge_text()}</span
+				>
+			</p>
+		{/if}
 		{#if reservation.notes}
 			<!-- The one thing that tells an old booking apart from the fortnightly
 			     ones either side of it. It was on the detail page only, so a member

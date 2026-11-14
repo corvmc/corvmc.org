@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -24,7 +27,9 @@
 <PageContent width="3xl">
 	<InfoCard title={m.member_profile_teaching_apply_application_title()}>
 		<p class="mb-4 text-subtle">
-			{m.member_profile_teaching_apply_teachers_book_room_at_member_text()}
+			{#await getReservationPolicy('instructor') then teaching}{m.member_profile_teaching_apply_teachers_book_room_at_member_text(
+					{ rate: formatCents(teaching.hourlyRateCents) }
+				)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
 		</p>
 
 		<Form

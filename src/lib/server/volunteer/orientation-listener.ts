@@ -1,4 +1,5 @@
 import { domainEvents } from '#lib/server/event-bus/index.js';
+import { CLEARANCE_BOOKER } from '#lib/config.js';
 import { priorBookingCount } from '#lib/server/reservation/reservation-service.js';
 import {
 	cancelOrientationFor,
@@ -24,7 +25,7 @@ export function registerOrientationListeners(): void {
 			// A band's rehearsal hold or a staff-created event hold is not somebody's
 			// first visit — the same rule `isFirstReservationSql` states, checked
 			// first because it is the cheapest and rules out most bookings.
-			if (event.bookerType !== 'user') return;
+			if (event.bookerType !== CLEARANCE_BOOKER) return;
 
 			const prior = await priorBookingCount(
 				event.userId,

@@ -1921,7 +1921,7 @@
 	"staff_members_instructors_teaching_terms_saved_toast": "Teaching terms saved",
 	"staff_members_instructors_grant_instructor_add_instructor_title": "Add teacher",
 	"staff_members_instructors_grant_instructor_success_toast": "Teaching status granted",
-	"staff_members_instructors_grant_instructor_they_can_book_roo_text": "They can book the room on teaching terms immediately — there is nothing for them to accept. Teaching time is charged at the member rate with the monthly cap lifted, not at the drop-in rate.",
+	"staff_members_instructors_grant_instructor_they_can_book_roo_text": "They can book the room on teaching terms immediately — there is nothing for them to accept. Teaching time is charged at {rate} an hour with no monthly cap.",
 	"staff_members_instructors_listing_about_label": "About",
 	"staff_members_instructors_listing_booking_label": "Booking link",
 	"staff_members_instructors_listing_directory_label": "Directory",

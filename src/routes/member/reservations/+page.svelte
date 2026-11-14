@@ -183,9 +183,17 @@
 			</Alert>
 		</div>
 	{/if}
+	{#if isInstructor}
+		<SectionLabel label={m.member_reservations_practice_terms_label()} />
+	{/if}
 	<BookingPolicy />
 	{#if firstBooking}
 		<FirstBookingRules {...firstBooking} />
+	{/if}
+	{#if isInstructor}
+		<!-- Teaching needs no Practice space clearance, so no first-booking block (#2808). -->
+		<SectionLabel label={m.member_reservations_teaching_terms_label()} class="mt-4" />
+		<BookingPolicy bookerType="instructor" />
 	{/if}
 	<FreeHoursRemaining />
 	<article class="@container">
