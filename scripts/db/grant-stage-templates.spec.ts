@@ -6,21 +6,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { applyMigrations } from './migrate-local';
+import { migratedTemplate } from './migrated-template';
 import { grantStageTemplateStatements } from './grant-stage-templates';
 
 function run(db: DatabaseSync) {
 	for (const statement of grantStageTemplateStatements()) db.exec(statement);
 }
 
+const fresh = migratedTemplate();
+
 /** Migrated, with the templates' items cleared so the committees below are what it finds. */
 function migrated(committees: string): DatabaseSync {
-	const file = join(mkdtempSync(join(tmpdir(), 'corvmc-grant-stages-')), 'd1.sqlite');
-	applyMigrations(file);
-	const db = new DatabaseSync(file);
+	const db = fresh();
 	db.exec(`DELETE FROM duty_list_item WHERE duty_list_id IN
 		(SELECT id FROM duty_list WHERE grant_stage IS NOT NULL); ${committees}`);
 	return db;
