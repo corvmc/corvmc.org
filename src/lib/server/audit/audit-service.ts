@@ -29,7 +29,6 @@ import {
 	type ReservationRefRow
 } from '#lib/server/entity/refs.js';
 import { organization } from '#lib/server/db/schema/party.js';
-import { contact } from '#lib/server/db/schema/contact.js';
 import { incident } from '#lib/server/db/schema/incident.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
@@ -273,6 +272,12 @@ export async function listAuditEntries(
 	// Raw SQL on the type: a subject type is stored data and need not be in the enum yet.
 	const of = (type: string, id: Parameters<typeof eq>[0]) =>
 		and(sql`${auditLog.subjectType} = ${type}`, eq(id, auditLog.subjectId));
+	// The contact table is its service's alone (custom/no-contact-schema-imports), so a
+	// contact's own deletion row is what says it is gone.
+	const liveContactId = sql<string | null>`case when ${auditLog.subjectType} = 'contact'
+		and not exists (select 1 from audit_log gone where gone.subject_type = 'contact'
+			and gone.subject_id = ${auditLog.subjectId} and gone.action = 'contact.deleted')
+		then ${auditLog.subjectId} end`;
 	const bookingId = sql`json_extract(${auditLog.details}, '$.reservationId')`;
 	const dataQ = db
 		.select({
@@ -280,7 +285,7 @@ export async function listAuditEntries(
 			subjectUser: memberRefColumns(subjectUser),
 			subjectBand: bandRefColumns(group),
 			subjectOrganization: organization.id,
-			subjectContact: contact.id,
+			subjectContact: liveContactId,
 			subjectIncident: incident.id,
 			booking: reservationRefColumns(reservation),
 			actorUser: memberRefColumns(actorUser)
@@ -289,7 +294,6 @@ export async function listAuditEntries(
 		.leftJoin(subjectUser, of('user', subjectUser.id))
 		.leftJoin(group, of('band', group.id))
 		.leftJoin(organization, of('organization', organization.id))
-		.leftJoin(contact, of('contact', contact.id))
 		.leftJoin(incident, of('incident', incident.id))
 		.leftJoin(reservation, eq(reservation.id, bookingId))
 		.leftJoin(actorUser, eq(actorUser.id, auditLog.actorUserId))

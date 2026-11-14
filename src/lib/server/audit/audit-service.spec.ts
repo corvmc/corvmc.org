@@ -337,6 +337,8 @@ describe('listAuditEntries', () => {
 		insert('a-org', 'organization', 'org-1', 'Mid-Valley Media');
 		insert('a-org-gone', 'organization', 'org-gone', 'MVM News');
 		insert('a-person', 'contact', 'person-1', 'Sam Okafor');
+		insert('a-person-gone', 'contact', 'person-gone', 'Robin Former');
+		sqlite.exec(`update audit_log set action = 'contact.deleted' where id = 'a-person-gone'`);
 		insert('a-incident-gone', 'incident', 'inc-gone', 'Load-out noise');
 		const bySubject = Object.fromEntries(
 			(await listAuditEntries({})).rows.map((r) => [r.subjectId, r.subject])
@@ -348,6 +350,11 @@ describe('listAuditEntries', () => {
 			title: 'MVM News'
 		});
 		expect(bySubject['person-1']).toMatchObject({ type: 'contact', id: 'person-1' });
+		expect(bySubject['person-gone']).toMatchObject({
+			type: 'contact',
+			id: null,
+			title: 'Robin Former'
+		});
 		expect(bySubject['inc-gone']).toMatchObject({ type: 'incident', id: null });
 	});
 
