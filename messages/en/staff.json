@@ -890,6 +890,8 @@
 	"staff_help_articles_published_toast": "Articles published",
 	"staff_help_articles_unpublished_toast": "Articles unpublished",
 	"staff_help_auto_placeholder": "auto",
+	"staff_help_capabilities_label": "Capabilities",
+	"staff_help_capabilities_body": "Leave empty to show it to every position holder.",
 	"staff_help_category_created_toast": "Category created",
 	"staff_help_category_name_placeholder": "Category name",
 	"staff_help_category_updated_toast": "Category updated",

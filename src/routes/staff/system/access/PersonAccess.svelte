@@ -26,7 +26,7 @@
 		positions as matrix
 	} from '#lib/config.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
-	import { actionLabel, groupByResource } from './capability-label';
+	import { actionLabel, groupByResource } from '#lib/capability-label.js';
 	import { Latest } from '#lib/latest.svelte.js';
 
 	type Person = { id: string; name: string; email: string };

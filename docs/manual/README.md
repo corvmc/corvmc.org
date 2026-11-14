@@ -19,6 +19,9 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
   `[H]` = **task/how-to** article (a single workflow, step by step).
 - Editing a `static` article in the staff UI is overwritten on the next sync — edit the markdown
   file, not the web copy.
+- An article written at `/staff/help/create` (`source='dynamic'`) names its capabilities in the
+  editor's Capabilities field, shown when the audience is staff. It is the same
+  `help_articles.capabilities` column and the same rule.
 
 ## Categories
 

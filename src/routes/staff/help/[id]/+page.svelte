@@ -11,6 +11,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import MarkdownEditor from '#lib/components/help/MarkdownEditor.svelte';
+	import ArticleCapabilitiesField from '#lib/components/help/ArticleCapabilitiesField.svelte';
 	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -102,6 +103,12 @@
 						min="0"
 					/>
 				</div>
+
+				<ArticleCapabilitiesField
+					field={updateArticle.fields.capabilities}
+					audience={updateArticle.fields.minRole.value() ?? article.minRole}
+					value={article.capabilities}
+				/>
 
 				<FormField
 					field={updateArticle.fields.summary}

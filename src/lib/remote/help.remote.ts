@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { toGenericRef } from '#lib/server/entity/refs.js';
-import { BLURB_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
+import { BLURB_MAX, SHORT_TEXT_MAX, isCapability } from '#lib/config.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -109,6 +110,16 @@ export const getStaffArticle = query(z.string(), async (id) => {
 // Article Forms
 // ---------------------------------------------------------------------------
 
+/**
+ * The capability picker's JSON array, every value in the matrix. Optional, not
+ * `.default([])`: the editor omits the picker below the staff tier, and absent
+ * means "leave them" where `[]` means "name none".
+ */
+const articleCapabilities = jsonArrayField(
+	z.string().refine(isCapability, 'Not a capability'),
+	'Invalid capability selection'
+).optional();
+
 const createArticleSchema = z.object({
 	categoryId: z.string().min(1),
 	title: z.string().trim().min(1).max(SHORT_TEXT_MAX),
@@ -116,6 +127,7 @@ const createArticleSchema = z.object({
 	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string().default('member'),
+	capabilities: articleCapabilities,
 	published: z.boolean().default(false),
 	sortOrder: z.number().int().min(0).max(9999).optional()
 });
@@ -138,6 +150,7 @@ const updateArticleSchema = z.object({
 	summary: z.string().trim().max(BLURB_MAX).optional(),
 	content: z.string().min(1),
 	minRole: z.string(),
+	capabilities: articleCapabilities,
 	published: z.boolean().default(false),
 	sortOrder: z.number().int().min(0).max(9999).optional()
 });

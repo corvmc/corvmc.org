@@ -11,6 +11,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import MarkdownEditor from '#lib/components/help/MarkdownEditor.svelte';
+	import ArticleCapabilitiesField from '#lib/components/help/ArticleCapabilitiesField.svelte';
 	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
 
 	let categories = $derived(await getStaffCategories());
@@ -89,6 +90,11 @@
 					min="0"
 				/>
 			</div>
+
+			<ArticleCapabilitiesField
+				field={createArticle.fields.capabilities}
+				audience={createArticle.fields.minRole.value() ?? 'member'}
+			/>
 
 			<FormField
 				field={createArticle.fields.summary}
