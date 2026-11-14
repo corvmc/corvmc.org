@@ -164,10 +164,12 @@ describe('deleteClosure', () => {
 		endsAt: new Date('2026-09-10T20:00:00Z'),
 		reason: 'Deep clean'
 	};
-	const selecting = (rows: unknown[]) =>
-		db.select.mockReturnValue({
-			from: () => ({ where: () => ({ limit: async () => rows }) })
-		} as never);
+	// Read once before the delete and once after, when the row is gone.
+	const selecting = (rows: unknown[]) => {
+		const reading = (r: unknown[]) =>
+			({ from: () => ({ where: () => ({ limit: async () => r }) }) }) as never;
+		db.select.mockReturnValueOnce(reading(rows)).mockReturnValue(reading([]));
+	};
 
 	it('records the deleted closure in the audit log', async () => {
 		selecting([upcoming]);

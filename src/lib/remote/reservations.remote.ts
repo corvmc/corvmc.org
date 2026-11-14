@@ -141,6 +141,7 @@ import { ensureContactPhone } from '#lib/server/user/user-service.js';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
 import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ===========================================================================
 // Queries
@@ -2030,15 +2031,18 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 });
 
 /** Staff: comp a scheduled or confirmed reservation (waive payment — no credits used). */
-export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('reservation.comp');
-	try {
-		await comp(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	return { success: true };
-});
+export const compReservation = form(
+	z.object({ id: z.string() }),
+	writesAudit('reservation.comped', async (data, _issue) => {
+		await requireCapability('reservation.comp');
+		try {
+			await comp(data.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	})
+);
 
 /**
  * The row a refund action needs before it commits to anything: who owns the
@@ -2070,7 +2074,7 @@ async function readRefundableReservation(id: string) {
  */
 export const refundAndCancelReservation = form(
 	z.object({ id: z.string(), reason: z.string().optional() }),
-	async (data, _issue) => {
+	writesAudit('reservation.refunded', async (data, _issue) => {
 		await requireCapability('finance.refund');
 		const currentUser = requireUser();
 		await readRefundableReservation(data.id);
@@ -2088,7 +2092,7 @@ export const refundAndCancelReservation = form(
 			details: { ...when, cancelled: true, reason: data.reason?.trim() || null }
 		}));
 		return { success: true };
-	}
+	})
 );
 
 /**
@@ -2097,27 +2101,30 @@ export const refundAndCancelReservation = form(
  * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
  * reports as refunded without pretending the session never happened (#669).
  */
-export const refundOnlyReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('finance.refund');
-	const row = await readRefundableReservation(data.id);
+export const refundOnlyReservation = form(
+	z.object({ id: z.string() }),
+	writesAudit('reservation.refunded', async (data, _issue) => {
+		await requireCapability('finance.refund');
+		const row = await readRefundableReservation(data.id);
 
-	await refundPayment({
-		userId: row.createdByUserId,
-		stripePaymentRecordId: row.stripePaymentRecordId
-	});
-	// Reservation free-hour credits live in the ledger (not the payment record's
-	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
-	await reverseReservationCredits(row.createdByUserId, data.id);
-	await db
-		.update(reservation)
-		.set({ refundedAt: new Date(), updatedAt: new Date() })
-		.where(eq(reservation.id, data.id));
-	await recordReservationAudit(data.id, (when) => ({
-		action: 'reservation.refunded',
-		details: { ...when, cancelled: false, reason: null }
-	}));
-	return { success: true };
-});
+		await refundPayment({
+			userId: row.createdByUserId,
+			stripePaymentRecordId: row.stripePaymentRecordId
+		});
+		// Reservation free-hour credits live in the ledger (not the payment record's
+		// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
+		await reverseReservationCredits(row.createdByUserId, data.id);
+		await db
+			.update(reservation)
+			.set({ refundedAt: new Date(), updatedAt: new Date() })
+			.where(eq(reservation.id, data.id));
+		await recordReservationAudit(data.id, (when) => ({
+			action: 'reservation.refunded',
+			details: { ...when, cancelled: false, reason: null }
+		}));
+		return { success: true };
+	})
+);
 
 /** Member: confirm a waitlisted reservation when the slot opens. */
 export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data, _issue) => {

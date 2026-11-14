@@ -133,6 +133,7 @@ import {
 } from '#lib/server/inventory/pledge-service.js';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -1234,12 +1235,15 @@ export const editCategory = form(
 	}
 );
 
-export const removeCategory = form(z.object({ id: z.string() }), async (data) => {
-	await requireCapability('inventory.manageItems');
-	await deleteCategory(data.id as string);
-	void getEquipmentCategories().refresh();
-	return { success: true };
-});
+export const removeCategory = form(
+	z.object({ id: z.string() }),
+	unaudited('A catalogue grouping; the items and their records stay.', async (data) => {
+		await requireCapability('inventory.manageItems');
+		await deleteCategory(data.id as string);
+		void getEquipmentCategories().refresh();
+		return { success: true };
+	})
+);
 
 export const addLocation = form(
 	z.object({

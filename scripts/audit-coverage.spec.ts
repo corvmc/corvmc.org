@@ -1,19 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { sourceFiles } from './lib/source-files';
 import { CallGraph, walkEvents, type Key, type Remote } from './lib/remote-calls';
 
 /**
  * Workflow gates warn, record and allow; the record is the audit log. A staff
- * change to money, a clearance, a setting, a visibility or a deletion has to
- * reach `recordAuditEntry`, following calls into `src/lib`, or be listed in
- * `audit-coverage.exempt.json` with the reason it needs no row (#2841).
+ * change to money, a clearance, a setting, a visibility or a deletion declares
+ * its row by wrapping its handler (`src/lib/server/audit/declared.ts`), and
+ * this checks each declaration against what the handler reaches (#2841).
+ * `custom/audit-declared` is the same rule for a handler that asks its
+ * capability directly; this also follows guards that ask one for it.
  */
 const REMOTE_GLOB = ['src/lib/remote/*.remote.ts'];
 const AUDIT: Key = 'src/lib/server/audit/audit-service.ts#recordAuditEntry';
 const CAPABILITY: Key = 'src/lib/server/authorization.ts#requireCapability';
 const CAN: Key = 'src/lib/server/authorization.ts#can';
+const DECLARED = 'src/lib/server/audit/declared.ts';
 
 type AuditClass = {
 	name: string;
@@ -49,10 +51,36 @@ const CLASSES: AuditClass[] = [
 	{ name: 'deletion', applies: (r) => /^(delete|remove|purge|merge)/.test(r.name) }
 ];
 
-/** `file#name` → why it changes one of the classes above and writes no row. */
-const EXEMPT: Record<string, string> = JSON.parse(
-	readFileSync('scripts/audit-coverage.exempt.json', 'utf8')
-);
+type Declaration =
+	{ kind: 'audited' | 'writesAudit'; actions: string[] } | { kind: 'unaudited'; reason: string };
+
+function literals(n: ts.Node | undefined): string[] {
+	if (!n) return [];
+	if (ts.isStringLiteralLike(n)) return [n.text];
+	const out: string[] = [];
+	ts.forEachChild(n, (c) => void out.push(...literals(c)));
+	return out;
+}
+
+/** The wrapper a remote's handler is declared with, or null when it is a bare function. */
+function declarationOf(g: CallGraph, r: Remote): Declaration | null {
+	const call = r.handler;
+	if (!ts.isCallExpression(call)) return null;
+	const key = g.callee(g.mod(r.file)!, call.expression);
+	if (!key?.startsWith(`${DECLARED}#`)) return null;
+	const kind = key.slice(DECLARED.length + 1);
+	const [first] = call.arguments;
+	if (kind === 'unaudited') return { kind, reason: literals(first).join('') };
+	if (kind === 'writesAudit') return { kind, actions: literals(first) };
+	if (kind === 'audited' && first && ts.isObjectLiteralExpression(first)) {
+		const action = first.properties.find(
+			(p): p is ts.PropertyAssignment =>
+				ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === 'action'
+		);
+		return { kind, actions: literals(action?.initializer) };
+	}
+	return null;
+}
 
 /** The `action` literals a `recordAuditEntry({ action })` call can write; `*` when not literal. */
 function actionsOf(call: ts.Node): string[] {
@@ -151,40 +179,44 @@ describe('staff changes write an audit row', () => {
 		expect(inScope.length).toBeGreaterThan(60);
 	});
 
-	it('reaches recordAuditEntry, or is listed', () => {
-		const missing = inScope
-			.filter(({ remote, classes }) => {
-				const actions = reach(remote.key);
-				return classes.some((c) =>
-					c.answers
-						? ![...actions].some((a) => a === '*' || c.answers!.test(a))
-						: actions.size === 0
-				);
-			})
+	const answered = (c: AuditClass, actions: Iterable<string>) =>
+		[...actions].some((a) => a === '*' || !c.answers || c.answers.test(a));
+
+	it('declares its audit row', () => {
+		const bare = inScope
+			.filter(({ remote }) => !declarationOf(g, remote))
 			.map(({ remote, classes }) => `${remote.key} (${classes.map((c) => c.name).join(', ')})`);
-		const offenders = missing.filter((m) => !(m.slice(0, m.indexOf(' ')) in EXEMPT));
-
 		expect(
-			offenders,
-			`These staff remotes change money, a clearance, a setting, a visibility or ` +
-				`a record's existence and write no audit row. Call recordAuditEntry once the ` +
-				`write commits, or add the remote to scripts/audit-coverage.exempt.json with ` +
-				`the reason it needs none:\n${offenders.map((o) => `  ${o}`).join('\n')}\n`
-		).toEqual([]);
-
-		const unanswered = new Set(missing.map((m) => m.slice(0, m.indexOf(' '))));
-		const stale = Object.keys(EXEMPT).filter((k) => !unanswered.has(k));
-		expect(
-			stale,
-			`These write an audit row now, or no longer exist. Delete them from ` +
-				`scripts/audit-coverage.exempt.json:\n${stale.map((s) => `  ${s}`).join('\n')}\n`
+			bare,
+			`These staff remotes change money, a clearance, a setting, a visibility or a ` +
+				`record's existence and declare no audit row. Wrap the handler in audited(...), ` +
+				`writesAudit('<action>', ...) or unaudited('<why>', ...) from ` +
+				`#lib/server/audit/declared.js:\n${bare.map((o) => `  ${o}`).join('\n')}\n`
 		).toEqual([]);
 	});
 
-	it('gives every listed remote a reason', () => {
-		const bare = Object.entries(EXEMPT)
-			.filter(([, why]) => why.trim().length < 10)
-			.map(([k]) => k);
-		expect(bare).toEqual([]);
+	it('holds each declaration to what the handler reaches', () => {
+		const scoped = new Map(inScope.map((s) => [s.remote.key, s.classes]));
+		const wrong = remotes.flatMap((r) => {
+			const d = declarationOf(g, r);
+			if (!d) return [];
+			const classes = scoped.get(r.key) ?? [];
+			if (d.kind === 'unaudited') {
+				if (d.reason.trim().length < 10) return [`${r.key}: give the reason it needs no row`];
+				if (!classes.length) return [`${r.key}: changes nothing audited; drop unaudited()`];
+				const reached = reach(r.key);
+				return reached.size && classes.every((c) => answered(c, reached))
+					? [`${r.key}: writes a row; declare writesAudit(...) instead`]
+					: [];
+			}
+			if (!d.actions.length) return [`${r.key}: name the action as a string literal`];
+			const misses = classes.filter((c) => !answered(c, d.actions)).map((c) => c.name);
+			if (misses.length) return [`${r.key}: no declared action answers ${misses.join(', ')}`];
+			if (d.kind === 'audited') return [];
+			const reached = reach(r.key);
+			const unreached = reached.has('*') ? [] : d.actions.filter((a) => !reached.has(a));
+			return unreached.length ? [`${r.key}: never writes ${unreached.join(', ')}`] : [];
+		});
+		expect(wrong).toEqual([]);
 	});
 });

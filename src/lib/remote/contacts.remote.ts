@@ -28,6 +28,7 @@ import {
 	SHORT_TEXT_MAX,
 	type PartyRole
 } from '#lib/config.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * The Contacts screens (#2622): every outside organization, its roles and its
@@ -249,12 +250,15 @@ export const archiveOrganization = form(
  * Delete an organization that should never have existed. `deleteUnusedOrganization`
  * keeps one that still holds a role, a person or a record; the answer says which.
  */
-export const deleteOrganization = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('contact.manage');
-	const deleted = await orgs.deleteUnusedOrganization(data.id);
-	if (!deleted) error(409, 'Remove its roles, people and records first');
-	return { success: true };
-});
+export const deleteOrganization = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('organization.deleted', async (data) => {
+		await requireCapability('contact.manage');
+		const deleted = await orgs.deleteUnusedOrganization(data.id);
+		if (!deleted) error(409, 'Remove its roles, people and records first');
+		return { success: true };
+	})
+);
 
 /** A vendor's standing tabling needs, which a new application falls back on. */
 export const saveVendorDetail = form(
@@ -299,21 +303,24 @@ export const addOrganizationRole = form(
 
 export const removeOrganizationRole = form(
 	z.object({ id: z.string().min(1), role: z.enum(partyRoles) }),
-	async (data) => {
-		await requireCapability('contact.manage');
-		const records = await orgs.organizationRecords(data.id);
-		const inUse = {
-			funder: records.grants.length,
-			sponsor: records.sponsorships.length,
-			contractor: records.jobs.length,
-			supplier: records.orders.length,
-			vendor: records.markets.length,
-			performer: records.bands.length
-		} as Partial<Record<PartyRole, number>>;
-		await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
-		await getOrganizationPage(data.id).refresh();
-		return { success: true };
-	}
+	unaudited(
+		'Removes one role row, refused while records use it; the organization stays (#2843).',
+		async (data) => {
+			await requireCapability('contact.manage');
+			const records = await orgs.organizationRecords(data.id);
+			const inUse = {
+				funder: records.grants.length,
+				sponsor: records.sponsorships.length,
+				contractor: records.jobs.length,
+				supplier: records.orders.length,
+				vendor: records.markets.length,
+				performer: records.bands.length
+			} as Partial<Record<PartyRole, number>>;
+			await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
+			await getOrganizationPage(data.id).refresh();
+			return { success: true };
+		}
+	)
 );
 
 // ------------------------------------------------------------------- people
@@ -348,7 +355,7 @@ export const updatePerson = form(
 
 export const removePerson = form(
 	z.object({ id: z.string().min(1), organizationId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('contact.deleted', async (data) => {
 		await requireCapability('contact.manage');
 		const person = await people.getPerson(data.id).catch(() => null);
 		await people.deleteContact(data.id);
@@ -359,7 +366,7 @@ export const removePerson = form(
 		});
 		await getOrganizationPage(data.organizationId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 /** One person's page: their details, organization and roles. */
@@ -420,12 +427,18 @@ export const updateActivityForm = form(
 	}
 );
 
-export const deleteActivityForm = form(z.object({ id: z.string().min(1) }), async ({ id }) => {
-	await requireCapability('contact.manage');
-	const p = await notes.deleteActivity(id);
-	void getPartyTimeline(p).refresh();
-	return { success: true };
-});
+export const deleteActivityForm = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		'A staff note on a timeline: content, not a change to standing, money or access.',
+		async ({ id }) => {
+			await requireCapability('contact.manage');
+			const p = await notes.deleteActivity(id);
+			void getPartyTimeline(p).refresh();
+			return { success: true };
+		}
+	)
+);
 
 // ----------------------------------------------------------- in-kind gifts
 
@@ -445,7 +458,7 @@ export const recordGiftForm = form(
 		occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the day it was given'),
 		projectId: z.string().optional()
 	}),
-	async ({ partyType, partyId, ...input }) => {
+	writesAudit('gift.recorded', async ({ partyType, partyId, ...input }) => {
 		const staff = await requireCapability('finance.refund');
 		const p = { type: partyType, id: partyId };
 		await requirePartyReader(p);
@@ -476,7 +489,7 @@ export const recordGiftForm = form(
 		});
 		void getPartyTimeline(p).refresh();
 		return { success: true };
-	}
+	})
 );
 
 // --------------------------------------------------------------- duplicates
@@ -503,30 +516,36 @@ export const getDuplicates = query(async () => {
 
 const pair = z.object({ survivorId: z.string().min(1), otherId: z.string().min(1) });
 
-export const mergePeople = form(pair, async (data) => {
-	await requireCapability('contact.manage');
-	// Read first: the merge deletes the other row, and its name is all the log keeps of it.
-	const other = await people.getPerson(data.otherId).catch(() => null);
-	const name = await people.mergeContacts(data.survivorId, data.otherId);
-	await recordAuditEntry({
-		action: 'contact.merged',
-		subject: { type: 'contact', id: data.survivorId, label: name ?? 'Contact' },
-		details: { mergedId: data.otherId, mergedName: other?.name ?? null }
-	});
-	await getDuplicates().refresh();
-	return { success: true };
-});
+export const mergePeople = form(
+	pair,
+	writesAudit('contact.merged', async (data) => {
+		await requireCapability('contact.manage');
+		// Read first: the merge deletes the other row, and its name is all the log keeps of it.
+		const other = await people.getPerson(data.otherId).catch(() => null);
+		const name = await people.mergeContacts(data.survivorId, data.otherId);
+		await recordAuditEntry({
+			action: 'contact.merged',
+			subject: { type: 'contact', id: data.survivorId, label: name ?? 'Contact' },
+			details: { mergedId: data.otherId, mergedName: other?.name ?? null }
+		});
+		await getDuplicates().refresh();
+		return { success: true };
+	})
+);
 
-export const mergeOrganizations = form(pair, async (data) => {
-	await requireCapability('contact.manage');
-	await orgs.getOrganization(data.survivorId);
-	await people.moveOrganizationPeople(data.otherId, data.survivorId);
-	const names = await orgs.mergeOrganizations(data.survivorId, data.otherId);
-	await recordAuditEntry({
-		action: 'organization.merged',
-		subject: { type: 'organization', id: data.survivorId, label: names.survivor },
-		details: { mergedId: data.otherId, mergedName: names.other }
-	});
-	await getDuplicates().refresh();
-	return { success: true };
-});
+export const mergeOrganizations = form(
+	pair,
+	writesAudit('organization.merged', async (data) => {
+		await requireCapability('contact.manage');
+		await orgs.getOrganization(data.survivorId);
+		await people.moveOrganizationPeople(data.otherId, data.survivorId);
+		const names = await orgs.mergeOrganizations(data.survivorId, data.otherId);
+		await recordAuditEntry({
+			action: 'organization.merged',
+			subject: { type: 'organization', id: data.survivorId, label: names.survivor },
+			details: { mergedId: data.otherId, mergedName: names.other }
+		});
+		await getDuplicates().refresh();
+		return { success: true };
+	})
+);

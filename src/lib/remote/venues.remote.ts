@@ -22,6 +22,7 @@ import {
 	removeSource,
 	setSourcePaused
 } from '#lib/server/venue/calendar-source-service.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Venues are guarded as events, not on a `venue.*` set of their own.
@@ -192,16 +193,19 @@ export const restoreVenue = form(z.object({ id: z.string().min(1) }), async (dat
 	}
 });
 
-export const deleteVenue = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
-	try {
-		await deleteService(data.id);
-		await Promise.all([getVenues().refresh(), getVenueOptions().refresh()]);
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
+export const deleteVenue = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('venue.deleted', async (data) => {
+		await requireCapability('event.manage');
+		try {
+			await deleteService(data.id);
+			await Promise.all([getVenues().refresh(), getVenueOptions().refresh()]);
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Partner calendar feeds (#1459), on the venue they belong to
@@ -246,16 +250,19 @@ export const setVenueFeedPaused = form(
 	}
 );
 
-export const removeVenueFeed = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
-	try {
-		const { venueId } = await removeSource(data.id);
-		await getVenueFeeds(venueId).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
+export const removeVenueFeed = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited('A calendar feed address; content, not a change to any record.', async (data) => {
+		await requireCapability('event.manage');
+		try {
+			const { venueId } = await removeSource(data.id);
+			await getVenueFeeds(venueId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	})
+);
 
 /** Runs the import for one feed now. A failed fetch is a result, not an error. */
 export const fetchVenueFeed = form(z.object({ id: z.string().min(1) }), async (data) => {

@@ -26,6 +26,7 @@ import {
 import { getTaskPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectActivity } from './projects.remote';
 import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * Project templates (the `duty_list` tables). Staff-only: read under
@@ -161,16 +162,22 @@ export const updateDutyList = form(
 	}
 );
 
-export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('project.manage');
-	try {
-		await deleteService(data.id);
-		await getDutyLists().refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
+export const deleteDutyList = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				await deleteService(data.id);
+				await getDutyLists().refresh();
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
+		}
+	)
+);
 
 // ---------------------------------------------------------------------------
 // Item forms
@@ -272,16 +279,19 @@ export const updateDutyListItem = form(
 
 export const removeDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('project.manage');
-		try {
-			await removeItemService(data.id);
-			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				await removeItemService(data.id);
+				await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
 		}
-	}
+	)
 );
 
 const itemEdge = z.object({
@@ -301,16 +311,22 @@ export const addDutyListItemDependency = form(itemEdge, async (data) => {
 	}
 });
 
-export const removeDutyListItemDependency = form(itemEdge, async (data) => {
-	await requireCapability('project.manage');
-	try {
-		const dutyListId = await removeItemDependencyService(data.itemId, data.dependsOnItemId);
-		await getDutyListPage(dutyListId).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
+export const removeDutyListItemDependency = form(
+	itemEdge,
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				const dutyListId = await removeItemDependencyService(data.itemId, data.dependsOnItemId);
+				await getDutyListPage(dutyListId).refresh();
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
+		}
+	)
+);
 
 // ---------------------------------------------------------------------------
 // Applying, and ticking

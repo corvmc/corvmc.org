@@ -57,6 +57,8 @@ const svc = vi.hoisted(() => ({
 	listAuditFeed: vi.fn()
 }));
 vi.mock('#lib/server/audit/audit-feed.js', () => ({ listAuditFeed: svc.listAuditFeed }));
+// The audit declarations reach the writer, which would load the real db.
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
 vi.mock('#lib/server/group/roster-import-service.js', () => ({
 	importRoster: svc.importRoster,
 	parseRosterImport: () => ({ emails: ['a@example.com'], invalid: [], duplicates: 0 }),

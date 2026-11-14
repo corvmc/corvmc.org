@@ -122,6 +122,13 @@ export const auditSubjectTypes = [
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
+/** One field a write changed, as `audited` records it: `null` where the record did not exist. */
+export type AuditFieldChange = {
+	key: string;
+	from: string | number | boolean | null;
+	to: string | number | boolean | null;
+};
+
 /** Profile field names only — never values, which would copy phone numbers into a second table. */
 export type AuditProfileField = 'name' | 'pronouns' | 'phone' | 'dateOfBirth';
 

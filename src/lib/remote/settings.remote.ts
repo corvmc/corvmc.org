@@ -22,6 +22,7 @@ import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/fea
 import { getInboxChannelConfigs } from './inbox.remote';
 import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
 import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Public queries (no auth)
@@ -198,20 +199,23 @@ const updateProductSchema = z.object({
 	unitAmountCents: z.string().regex(/^\d+$/, 'Amount must be a whole number of cents')
 });
 
-export const updateProduct = form(updateProductSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof updateProductSchema>;
+export const updateProduct = form(
+	updateProductSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof updateProductSchema>;
 
-	await updateProductConfig(data.key as ProductKey, {
-		name: data.name,
-		description: data.description || null,
-		unitAmountCents: parseInt(data.unitAmountCents, 10)
-	});
+		await updateProductConfig(data.key as ProductKey, {
+			name: data.name,
+			description: data.description || null,
+			unitAmountCents: parseInt(data.unitAmountCents, 10)
+		});
 
-	void getPracticeSpaceSettingsPage().refresh();
+		void getPracticeSpaceSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Reservation settings
@@ -238,41 +242,44 @@ const reservationSettingsSchema = z.object({
 });
 
 type ReservationSettings = z.infer<typeof reservationSettingsSchema>;
-export const updateReservationSettings = form(reservationSettingsSchema, async (raw, issue) => {
-	await requireCapability('settings.update');
-	const data = raw as ReservationSettings;
+export const updateReservationSettings = form(
+	reservationSettingsSchema,
+	writesAudit('settings.changed', async (raw, issue) => {
+		await requireCapability('settings.update');
+		const data = raw as ReservationSettings;
 
-	// A teaching series is Tier 2 in the generator, so it can be waitlisted behind
-	// a member's one-off. The teaching recurring window must outrun the member
-	// one-off window, or the series is not materialised before a member books
-	// that week. `updateTeachingTerms` checks the same pair from its side.
-	const { teachingMaxAdvanceDaysRecurring: horizon } = await getReservationConfig();
-	if (!(horizon > data.maxAdvanceDaysOneoff)) {
-		invalid(
-			issue.maxAdvanceDaysOneoff(
-				`Must be under the teaching recurring window (${horizon} days), or teachers lose their standing slots`
-			)
-		);
-	}
+		// A teaching series is Tier 2 in the generator, so it can be waitlisted behind
+		// a member's one-off. The teaching recurring window must outrun the member
+		// one-off window, or the series is not materialised before a member books
+		// that week. `updateTeachingTerms` checks the same pair from its side.
+		const { teachingMaxAdvanceDaysRecurring: horizon } = await getReservationConfig();
+		if (!(horizon > data.maxAdvanceDaysOneoff)) {
+			invalid(
+				issue.maxAdvanceDaysOneoff(
+					`Must be under the teaching recurring window (${horizon} days), or teachers lose their standing slots`
+				)
+			);
+		}
 
-	await saveSettings([
-		{ key: 'reservation.operatingHoursStart', value: data.operatingHoursStart },
-		{ key: 'reservation.operatingHoursEnd', value: data.operatingHoursEnd },
-		{ key: 'reservation.timeSlotMinutes', value: data.timeSlotMinutes },
-		{ key: 'reservation.minDurationHours', value: data.minDurationHours },
-		{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
-		{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
-		{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
-		{ key: 'reservation.newMemberMinAdvanceMinutes', value: data.newMemberMinAdvanceMinutes },
-		{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
-		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
-		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
-	]);
+		await saveSettings([
+			{ key: 'reservation.operatingHoursStart', value: data.operatingHoursStart },
+			{ key: 'reservation.operatingHoursEnd', value: data.operatingHoursEnd },
+			{ key: 'reservation.timeSlotMinutes', value: data.timeSlotMinutes },
+			{ key: 'reservation.minDurationHours', value: data.minDurationHours },
+			{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
+			{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
+			{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
+			{ key: 'reservation.newMemberMinAdvanceMinutes', value: data.newMemberMinAdvanceMinutes },
+			{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
+			{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
+			{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
+		]);
 
-	void getPracticeSpaceSettingsPage().refresh();
+		void getPracticeSpaceSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Teaching terms — what a teacher pays for the room, set from the Teachers view
@@ -304,32 +311,35 @@ const teachingTermsSchema = z.object({
 	teachingMaxAdvanceDaysRecurring: z.string().regex(/^\d+$/).transform(Number)
 });
 
-export const updateTeachingTerms = form(teachingTermsSchema, async (raw, issue) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof teachingTermsSchema>;
+export const updateTeachingTerms = form(
+	teachingTermsSchema,
+	writesAudit('settings.changed', async (raw, issue) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof teachingTermsSchema>;
 
-	// The other side of the check in `updateReservationSettings`.
-	const { maxAdvanceDaysOneoff } = await getReservationConfig();
-	if (!(data.teachingMaxAdvanceDaysRecurring > maxAdvanceDaysOneoff)) {
-		invalid(
-			issue.teachingMaxAdvanceDaysRecurring(
-				`Must exceed the member one-off window (${maxAdvanceDaysOneoff} days), or teachers lose their standing slots`
-			)
-		);
-	}
-
-	await saveSettings([
-		{ key: 'reservation.teachingRateCents', value: data.teachingRate },
-		{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
-		{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: data.teachingMaxAdvanceDaysOneoff },
-		{
-			key: 'reservation.teachingMaxAdvanceDaysRecurring',
-			value: data.teachingMaxAdvanceDaysRecurring
+		// The other side of the check in `updateReservationSettings`.
+		const { maxAdvanceDaysOneoff } = await getReservationConfig();
+		if (!(data.teachingMaxAdvanceDaysRecurring > maxAdvanceDaysOneoff)) {
+			invalid(
+				issue.teachingMaxAdvanceDaysRecurring(
+					`Must exceed the member one-off window (${maxAdvanceDaysOneoff} days), or teachers lose their standing slots`
+				)
+			);
 		}
-	]);
 
-	return { success: true };
-});
+		await saveSettings([
+			{ key: 'reservation.teachingRateCents', value: data.teachingRate },
+			{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
+			{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: data.teachingMaxAdvanceDaysOneoff },
+			{
+				key: 'reservation.teachingMaxAdvanceDaysRecurring',
+				value: data.teachingMaxAdvanceDaysRecurring
+			}
+		]);
+
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Organization settings
@@ -345,29 +355,32 @@ const orgSettingsSchema = z.object({
 	socialInstagram: z.string().trim().max(500).optional().default('')
 });
 
-export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof orgSettingsSchema>;
+export const updateOrgSettings = form(
+	orgSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof orgSettingsSchema>;
 
-	await saveSettings([
-		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
-		{ key: 'org.addressCity', value: data.addressCity ?? '' },
-		{ key: 'org.addressState', value: data.addressState ?? '' },
-		{ key: 'org.addressZip', value: data.addressZip ?? '' },
-		{ key: 'org.contactEmail', value: data.contactEmail },
-		{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
-		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
-	]);
+		await saveSettings([
+			{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
+			{ key: 'org.addressCity', value: data.addressCity ?? '' },
+			{ key: 'org.addressState', value: data.addressState ?? '' },
+			{ key: 'org.addressZip', value: data.addressZip ?? '' },
+			{ key: 'org.contactEmail', value: data.contactEmail },
+			{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
+			{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
+		]);
 
-	void getStaffSettingsPage().refresh();
-	// All three: each public reader has its own query, and refreshing one repaints nothing
-	// for the others.
-	void getContactDetails().refresh();
-	void getContactEmail().refresh();
-	void getFooterInfo().refresh();
+		void getStaffSettingsPage().refresh();
+		// All three: each public reader has its own query, and refreshing one repaints nothing
+		// for the others.
+		void getContactDetails().refresh();
+		void getContactEmail().refresh();
+		void getFooterInfo().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Volunteer hour value
@@ -382,19 +395,22 @@ const volunteerValueSchema = z.object({
 	hourValueSource: z.string().trim().min(1, 'Say where the rate came from').max(200)
 });
 
-export const updateVolunteerValueSettings = form(volunteerValueSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof volunteerValueSchema>;
+export const updateVolunteerValueSettings = form(
+	volunteerValueSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof volunteerValueSchema>;
 
-	await saveSettings([
-		{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
-		{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
-	]);
+		await saveSettings([
+			{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
+			{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
+		]);
 
-	void getStaffSettingsPage().refresh();
+		void getStaffSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Orientation
@@ -409,28 +425,31 @@ const orientationSchema = z.object({
 	firstVisitNotes: z.string().max(2000).optional()
 });
 
-export const updateOrientationSettings = form(orientationSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof orientationSchema>;
-	const minutes = Number(data.minutes);
-	if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
-	const leadMinutes = Number(data.leadMinutes);
-	if (leadMinutes > 120) error(422, 'Lead time is at most 120 minutes.');
-	// Stamped as one insert, so the count stays well under D1's bound-parameter cap.
-	const tasks = parseOrientationTasks(data.tasks ?? '');
-	if (tasks.length > 20) error(422, 'At most 20 tasks.');
+export const updateOrientationSettings = form(
+	orientationSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof orientationSchema>;
+		const minutes = Number(data.minutes);
+		if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
+		const leadMinutes = Number(data.leadMinutes);
+		if (leadMinutes > 120) error(422, 'Lead time is at most 120 minutes.');
+		// Stamped as one insert, so the count stays well under D1's bound-parameter cap.
+		const tasks = parseOrientationTasks(data.tasks ?? '');
+		if (tasks.length > 20) error(422, 'At most 20 tasks.');
 
-	await saveSettings([
-		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
-		{ key: 'volunteer.orientationMinutes', value: minutes },
-		{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
-		{ key: 'volunteer.orientationTasks', value: tasks.join('\n') },
-		{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
-	]);
+		await saveSettings([
+			{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
+			{ key: 'volunteer.orientationMinutes', value: minutes },
+			{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
+			{ key: 'volunteer.orientationTasks', value: tasks.join('\n') },
+			{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
+		]);
 
-	void getPracticeSpaceSettingsPage().refresh();
-	return { success: true };
-});
+		void getPracticeSpaceSettingsPage().refresh();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Venue settings
@@ -440,16 +459,19 @@ const venueSettingsSchema = z.object({
 	consoleChannels: z.string().regex(/^\d+$/, 'Whole channels, digits only').transform(Number)
 });
 
-export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof venueSettingsSchema>;
+export const updateVenueSettings = form(
+	venueSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof venueSettingsSchema>;
 
-	await saveSettings([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
+		await saveSettings([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
 
-	void getPracticeSpaceSettingsPage().refresh();
+		void getPracticeSpaceSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // The day outstanding fees start counting toward the booking limit (#2748).
 // Empty turns the limit off; older payment-due rows are never counted.
@@ -460,12 +482,15 @@ const feeGateSettingsSchema = z.object({
 		.regex(/^(\d{4}-\d{2}-\d{2})?$/, 'A date, or empty')
 });
 
-export const updateFeeGateSettings = form(feeGateSettingsSchema, async (data) => {
-	await requireCapability('settings.update');
-	await saveSettings([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
-	void getPracticeSpaceSettingsPage().refresh();
-	return { success: true };
-});
+export const updateFeeGateSettings = form(
+	feeGateSettingsSchema,
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
+		void getPracticeSpaceSettingsPage().refresh();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Integration settings
@@ -497,7 +522,7 @@ export const updateFeatureFlag = form(
 		flag: z.string(),
 		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 	}),
-	async (data) => {
+	writesAudit('settings.changed', async (data) => {
 		await requireCapability('settings.update');
 		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
 			throw error(400, 'Invalid feature flag');
@@ -505,41 +530,48 @@ export const updateFeatureFlag = form(
 		await saveSettings([{ key: `feature.${data.flag}`, value: data.enabled }]);
 		void getStaffSettingsPage().refresh();
 		return { success: true };
-	}
+	})
 );
 
 // ---------------------------------------------------------------------------
 // Subscription status sync
 // ---------------------------------------------------------------------------
 
-export const syncSubscriptions = command(async () => {
-	await requireCapability('settings.update');
-	return syncAllSubscriptions();
-});
+export const syncSubscriptions = command(
+	unaudited('Re-reads subscription state from Stripe; changes no setting.', async () => {
+		await requireCapability('settings.update');
+		return syncAllSubscriptions();
+	})
+);
 
-export const refreshCommunityStats = command(async () => {
-	await requireCapability('settings.update');
-	return refreshStats();
-});
+export const refreshCommunityStats = command(
+	unaudited('Recomputes cached counts; changes no setting.', async () => {
+		await requireCapability('settings.update');
+		return refreshStats();
+	})
+);
 
-export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof integrationSettingsSchema>;
+export const updateIntegrationSettings = form(
+	integrationSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank secret means "unchanged", not "clear it": the field is never
-	// rendered with its value, so an untouched one submits empty.
-	await saveSettings([
-		{ key: 'integration.utec.clientId', value: data.clientId },
-		{ key: 'integration.utec.deviceId', value: data.deviceId },
-		...(data.clientSecret
-			? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
-			: [])
-	]);
+		// A blank secret means "unchanged", not "clear it": the field is never
+		// rendered with its value, so an untouched one submits empty.
+		await saveSettings([
+			{ key: 'integration.utec.clientId', value: data.clientId },
+			{ key: 'integration.utec.deviceId', value: data.deviceId },
+			...(data.clientSecret
+				? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
+				: [])
+		]);
 
-	void getIntegrationSettings().refresh();
+		void getIntegrationSettings().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 /**
  * The staff settings page's one load-bearing query. Every constituent is unparameterized, so each

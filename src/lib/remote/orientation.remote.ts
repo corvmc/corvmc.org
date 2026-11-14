@@ -8,6 +8,7 @@ import {
 	getOrientation,
 	waiveOrientation as waiveService
 } from '#lib/server/volunteer/orientation-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Whether a member has been shown around the space.
@@ -48,7 +49,7 @@ export const waiveMemberOrientation = form(
 		userId: z.string().min(1),
 		reason: z.string().trim().min(1, 'Say why it is not needed').max(ORIENTATION_WAIVED_REASON_MAX)
 	}),
-	async (data) => {
+	writesAudit('orientation.waived', async (data) => {
 		const staff = await requireCapability('reservation.manage');
 
 		try {
@@ -59,5 +60,5 @@ export const waiveMemberOrientation = form(
 
 		await getMemberOrientation(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );

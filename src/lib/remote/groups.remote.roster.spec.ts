@@ -44,6 +44,8 @@ vi.mock('$app/server', () => ({
 }));
 
 vi.mock('#lib/server/audit/audit-feed.js', () => ({ listAuditFeed: vi.fn() }));
+// The audit declarations reach the writer, which would load the real db.
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
 
 vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'user-1' }),

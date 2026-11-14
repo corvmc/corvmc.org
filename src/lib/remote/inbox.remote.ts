@@ -63,6 +63,7 @@ import { submitContactFormSchema } from '#lib/server/db/schema/inbox.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '#lib/config.js';
 import type { InboxView } from '#lib/config.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Public forms
@@ -407,11 +408,17 @@ export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) =>
 	void getInboxThreadContext(threadId).refresh();
 });
 
-export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireCapability('inbox.reply');
-	await removeThreadTag(threadId, tag);
-	void getInboxThreadContext(threadId).refresh();
-});
+export const removeInboxThreadTag = command(
+	tagSchema,
+	unaudited(
+		'Inbox filing: a tag on a thread, not a change to any record.',
+		async ({ threadId, tag }) => {
+			await requireCapability('inbox.reply');
+			await removeThreadTag(threadId, tag);
+			void getInboxThreadContext(threadId).refresh();
+		}
+	)
+);
 
 const assignSchema = z.object({
 	threadId: z.string().min(1),
@@ -574,11 +581,14 @@ export const saveInboxView = form(savedViewSchema, async (data) => {
 	return { success: true };
 });
 
-export const removeInboxView = command(z.string().min(1), async (id) => {
-	const staff = await requireCapability('inbox.read');
-	await deleteSavedView(staff.id, id);
-	void getInboxSavedViews().refresh();
-});
+export const removeInboxView = command(
+	z.string().min(1),
+	unaudited('A saved inbox filter, not a change to any record.', async (id) => {
+		const staff = await requireCapability('inbox.read');
+		await deleteSavedView(staff.id, id);
+		void getInboxSavedViews().refresh();
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Channel configuration

@@ -83,6 +83,7 @@ import {
 	updateGroupProfile,
 	updateGroupSettings
 } from '#lib/server/group/group-service.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * `/staff/clubs` and `/staff/committees` — the only places a club or committee is made.
@@ -211,23 +212,26 @@ export const createStaffGroup = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
 		visibility: z.enum(directoryVisibilities)
 	}),
-	async (data) => {
-		await requireCapability('group.manage');
-		try {
-			const created = await createGroup({
-				kind: data.kind,
-				name: data.name,
-				bio: data.bio || undefined,
-				chairId: data.chairId || null,
-				joinPolicy: data.joinPolicy,
-				joinInstructions: data.joinInstructions || null,
-				visibility: data.visibility
-			});
-			return { success: true, id: created.id, slug: created.slug, kind: data.kind };
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		'Creation sets the first visibility; there is no earlier value to record.',
+		async (data) => {
+			await requireCapability('group.manage');
+			try {
+				const created = await createGroup({
+					kind: data.kind,
+					name: data.name,
+					bio: data.bio || undefined,
+					chairId: data.chairId || null,
+					joinPolicy: data.joinPolicy,
+					joinInstructions: data.joinInstructions || null,
+					visibility: data.visibility
+				});
+				return { success: true, id: created.id, slug: created.slug, kind: data.kind };
+			} catch (err) {
+				mapDomainError(err);
+			}
 		}
-	}
+	)
 );
 
 export const updateStaffGroup = form(
@@ -237,7 +241,7 @@ export const updateStaffGroup = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
 		visibility: z.enum(directoryVisibilities)
 	}),
-	async (data) => {
+	writesAudit('group.visibility_changed', async (data) => {
 		await requireCapability('group.manage');
 		try {
 			await updateGroupSettings(data.groupId, {
@@ -249,7 +253,7 @@ export const updateStaffGroup = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-	}
+	})
 );
 
 /** What a committee's active members may do. Staff only: `group.manage`. */

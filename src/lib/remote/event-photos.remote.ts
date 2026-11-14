@@ -10,6 +10,7 @@ import {
 } from '#lib/server/event/event-photo-service.js';
 import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicEventDetail, getStaffEventPage } from '#lib/remote/events.remote.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * Recap photo writes (business-workflows.md §9). The event id comes from
@@ -43,12 +44,12 @@ export const uploadEventPhotos = form(
 
 export const removeEventPhoto = form(
 	z.object({ eventId: z.string().min(1), attachmentId: z.string().min(1) }),
-	async (data) => {
+	unaudited('Gallery content: no standing, money or access changes.', async (data) => {
 		await requireCapability('event.manage');
 		await removePhoto(data.eventId, data.attachmentId);
 		void getStaffEventPage(data.eventId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 /** `event.manage`, or the photographer's grant for this event alone (#2544). */

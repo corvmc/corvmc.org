@@ -214,6 +214,7 @@ import {
 } from '#lib/config.js';
 import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 import { clubInstant } from '#lib/utils/format.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 // Hours come off the form as a decimal (0.25 steps) and are stored as integer
 // minutes. One place does the conversion so the two can't drift.
@@ -1221,18 +1222,21 @@ export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 	return { success: true };
 });
 
-export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRoles');
+export const deleteVolunteerRole = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('role.deleted', async (data) => {
+		await requireCapability('volunteer.manageRoles');
 
-	try {
-		await deleteRoleService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
+		try {
+			await deleteRoleService(data.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
-	await refreshRoleViews();
-	return { success: true };
-});
+		await refreshRoleViews();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Refresh helpers
@@ -1346,81 +1350,105 @@ function parseValidityMonths(raw: string | undefined): number | null {
 	return parsed;
 }
 
-export const createCertification = form(certificationFormSchema, async (data) => {
-	await requireCapability('volunteer.manageCertifications');
+export const createCertification = form(
+	certificationFormSchema,
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
 
-	try {
-		await createCertificationService({
-			name: data.name,
-			description: data.description,
-			issuedBy: data.issuedBy,
-			validityMonths: parseValidityMonths(data.validityMonths),
-			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
-			isActive: data.isActive !== 'false'
-		});
-	} catch (err) {
-		mapDomainError(err);
-	}
+			try {
+				await createCertificationService({
+					name: data.name,
+					description: data.description,
+					issuedBy: data.issuedBy,
+					validityMonths: parseValidityMonths(data.validityMonths),
+					displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+					isActive: data.isActive !== 'false'
+				});
+			} catch (err) {
+				mapDomainError(err);
+			}
 
-	await refreshCertificationViews();
-	return { success: true };
-});
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
 
 export const updateCertification = form(
 	certificationFormSchema.extend({ id: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('volunteer.manageCertifications');
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
 
+			try {
+				await updateCertificationService(data.id, {
+					name: data.name,
+					description: data.description ?? '',
+					issuedBy: data.issuedBy ?? '',
+					validityMonths: parseValidityMonths(data.validityMonths),
+					displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
+					isActive: data.isActive !== 'false'
+				});
+			} catch (err) {
+				mapDomainError(err);
+			}
+
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const archiveCertification = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await archiveCertificationService(data.id);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const restoreCertification = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await restoreCertificationService(data.id);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const deleteCertification = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('clearance.deleted', async (data) => {
+		await requireCapability('volunteer.manageCertifications');
 		try {
-			await updateCertificationService(data.id, {
-				name: data.name,
-				description: data.description ?? '',
-				issuedBy: data.issuedBy ?? '',
-				validityMonths: parseValidityMonths(data.validityMonths),
-				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
-				isActive: data.isActive !== 'false'
-			});
+			await deleteCertificationService(data.id);
 		} catch (err) {
 			mapDomainError(err);
 		}
-
 		await refreshCertificationViews();
 		return { success: true };
-	}
+	})
 );
-
-export const archiveCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await archiveCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
-
-export const restoreCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await restoreCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
-
-export const deleteCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await deleteCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
 
 export const setRoleCertifications = form(
 	z.object({
@@ -1428,20 +1456,23 @@ export const setRoleCertifications = form(
 		// Clearing every requirement is legitimate, so this bottoms out empty.
 		certificationIds: z.array(z.string().min(1)).max(20).default([])
 	}),
-	async (data) => {
-		await requireCapability('volunteer.manageCertifications');
-		try {
-			await setRoleRequirements(data.roleId, data.certificationIds);
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		"Which clearances a role requires: catalog configuration, not a member's clearance.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await setRoleRequirements(data.roleId, data.certificationIds);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			void getStaffVolunteerRolePage(data.roleId).refresh();
+			// Setup renders each role's requirements as a "needs X" chip, and reads
+			// them through its own composed query.
+			void getVolunteerRoles().refresh();
+			void getStaffVolunteerSetupPage().refresh();
+			return { success: true };
 		}
-		void getStaffVolunteerRolePage(data.roleId).refresh();
-		// Setup renders each role's requirements as a "needs X" chip, and reads
-		// them through its own composed query.
-		void getVolunteerRoles().refresh();
-		void getStaffVolunteerSetupPage().refresh();
-		return { success: true };
-	}
+	)
 );
 
 /**
@@ -1476,7 +1507,7 @@ export const grantCertification = form(
 		notes: z.string().max(CERT_NOTES_MAX).optional(),
 		trainingSignupId: z.string().optional()
 	}),
-	async (data) => {
+	writesAudit('clearance.granted', async (data) => {
 		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
@@ -1495,7 +1526,7 @@ export const grantCertification = form(
 
 		void getMemberCertifications(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const revokeCertification = form(
@@ -1507,7 +1538,7 @@ export const revokeCertification = form(
 			.min(1, 'Give a reason — the next staffer needs to know why they are off the list')
 			.max(CERT_REVOKED_REASON_MAX)
 	}),
-	async (data) => {
+	writesAudit('clearance.revoked', async (data) => {
 		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
@@ -1518,7 +1549,7 @@ export const revokeCertification = form(
 
 		void getMemberCertifications(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 async function refreshCertificationViews() {
@@ -2599,12 +2630,15 @@ export const addTaskDependency = form(dependencyEdge, async (data) => {
 	return { success: true };
 });
 
-export const removeTaskDependency = form(dependencyEdge, async (data) => {
-	await guardTaskWrite(data.workOrderId);
-	await removeDependencyService(data);
-	await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
-	return { success: true };
-});
+export const removeTaskDependency = form(
+	dependencyEdge,
+	writesAudit('work_order.dependency_removed', async (data) => {
+		await guardTaskWrite(data.workOrderId);
+		await removeDependencyService(data);
+		await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
+		return { success: true };
+	})
+);
 
 /** A task's history, for a task in no project: its audit entries and duty ticks, newest first. */
 export const getWorkOrderActivity = query(

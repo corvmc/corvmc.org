@@ -16,6 +16,7 @@ import { getRadioNow, getRecentlyPlayed } from '#lib/server/audio/radio-service.
 import { refundPurchase } from '#lib/server/audio/purchase-service.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { LONG_TEXT_MAX } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Staff music tools.
@@ -140,7 +141,7 @@ export const setRadioExclusionForm = form(
  */
 export const refundPurchaseForm = form(
 	z.object({ purchaseId: z.string().min(1) }),
-	async ({ purchaseId }) => {
+	writesAudit('music_purchase.refunded', async ({ purchaseId }) => {
 		await requireCapability('finance.refund');
 		try {
 			await refundPurchase(purchaseId);
@@ -149,5 +150,5 @@ export const refundPurchaseForm = form(
 		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
-	}
+	})
 );

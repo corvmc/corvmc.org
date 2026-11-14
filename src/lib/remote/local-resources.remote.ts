@@ -25,6 +25,7 @@ import {
 	LOCAL_RESOURCE_FIELD_MAX,
 	LOCAL_RESOURCE_NAME_MAX
 } from '#lib/server/local-resource/local-resource-service.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * The local resources directory. The public list is unguarded — the service
@@ -145,12 +146,15 @@ export const rejectLocalResourceForm = form(
 	}
 );
 
-export const removeLocalResourceForm = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('localResource.manage');
-	await removeResource(data.id);
-	void getLocalResourceDirectory().refresh();
-	return { success: true };
-});
+export const removeLocalResourceForm = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited('Public resource list content: no standing, money or access changes.', async (data) => {
+		await requireCapability('localResource.manage');
+		await removeResource(data.id);
+		void getLocalResourceDirectory().refresh();
+		return { success: true };
+	})
+);
 
 const categoryFields = {
 	name: z.string().trim().min(1).max(60),
@@ -177,10 +181,10 @@ export const updateLocalResourceCategoryForm = form(
 
 export const deleteLocalResourceCategoryForm = form(
 	z.object({ id: z.string().min(1) }),
-	async (data) => {
+	unaudited('Public resource list content: no standing, money or access changes.', async (data) => {
 		await requireCapability('localResource.manage');
 		await deleteCategory(data.id);
 		void getLocalResourceCategories().refresh();
 		return { success: true };
-	}
+	})
 );

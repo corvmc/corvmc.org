@@ -52,6 +52,7 @@ import {
 	revoke as revokeEmailInviteService
 } from '#lib/server/group/group-invite-service.js';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ===========================================================================
 // Queries — Staff (list)
@@ -392,7 +393,7 @@ export const removeBandMember = form(
 	z.object({
 		memberId: z.string().min(1)
 	}),
-	async (data) => {
+	writesAudit('band.member_removed', async (data) => {
 		await requireCapability('band.manageMembers');
 		// Read first: the row is gone after, and these names are all the log keeps of it.
 		const [row] = await db
@@ -420,7 +421,7 @@ export const removeBandMember = form(
 			});
 		}
 		return { success: true };
-	}
+	})
 );
 
 export const revokeBandInvite = form(
