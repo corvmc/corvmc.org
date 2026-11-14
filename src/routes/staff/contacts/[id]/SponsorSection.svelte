@@ -43,16 +43,6 @@
 	</Alert>
 {/if}
 
-<InfoCard title={m.staff_contact_title()}>
-	<DefinitionList>
-		<Fact label={m.staff_contact_label()} value={contact || '—'} />
-		<Fact label={m.staff_website_label()} value={sponsor.website ?? '—'} />
-		{#if sponsor.notes}
-			<Fact label={m.staff_notes_label()} wrap>{sponsor.notes}</Fact>
-		{/if}
-	</DefinitionList>
-</InfoCard>
-
 <InfoCard title={m.staff_sponsors_id_logo_title()}>
 	{#snippet action()}
 		<Action
