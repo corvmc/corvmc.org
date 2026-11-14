@@ -13,9 +13,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: vi.fn(async () => true) }));
 
-const TIP = { id: 'lr-9', name: 'Fret Shop', submitterEmail: 'fan@example.com' };
 const service = {
-	listTips: vi.fn(async () => [TIP]),
 	countPendingTips: vi.fn(async () => 4),
 	listResourcesForStaff: vi.fn(async () => []),
 	listCategories: vi.fn(async () => []),
@@ -52,20 +50,8 @@ beforeEach(() => {
 	held = new Set();
 });
 
-describe('getLocalResourceTips', () => {
-	it('refuses a caller without localResource.manage before reading anything', async () => {
-		await expect(remote.getLocalResourceTips()).rejects.toThrow('403');
-		expect(service.listTips).not.toHaveBeenCalled();
-	});
-
-	it('returns the pending tips to a holder', async () => {
-		held = new Set(['localResource.manage']);
-		await expect(remote.getLocalResourceTips()).resolves.toEqual({ tips: [TIP] });
-	});
-});
-
 describe('getStaffLocalResources', () => {
-	it('carries the pending tip count for the tab beside the listings', async () => {
+	it('carries the pending tip count for the status filter', async () => {
 		held = new Set(['localResource.manage']);
 		const out = await remote.getStaffLocalResources({});
 		expect(out.tipCount).toBe(4);

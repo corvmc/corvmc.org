@@ -195,18 +195,19 @@ describe('listPublishedByCategory', () => {
 });
 
 describe('the tips queue (#1566)', () => {
-	it('lists pending, undeleted tips with who sent them', async () => {
+	it('is the staff list filtered to pending, with who sent each', async () => {
 		const tip = {
 			id: 'lr-9',
 			name: 'Fret Shop',
-			categoryName: 'Shops',
+			status: 'pending',
 			website: null,
+			categoryName: 'Shops',
 			submitterEmail: 'fan@example.com',
 			createdAt: new Date('2026-09-20T12:00:00Z')
 		};
 		selectResults = [[tip]];
 
-		expect(await svc.listTips()).toEqual([tip]);
+		expect(await svc.listResourcesForStaff({ status: 'pending' })).toEqual([tip]);
 
 		const { sql, params } = renderWhere(0);
 		expect(sql).toContain('"local_resource"."status" = ?');

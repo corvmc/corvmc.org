@@ -15,7 +15,6 @@ import {
 	listCategories,
 	listPublishedByCategory,
 	listResourcesForStaff,
-	listTips,
 	publishResource,
 	rejectResource,
 	removeResource,
@@ -80,12 +79,6 @@ export const getStaffLocalResources = query(
 		return { resources, categories, tipCount };
 	}
 );
-
-/** Public tips waiting on a decision (#1566), oldest first. */
-export const getLocalResourceTips = query(async () => {
-	await requireCapability('localResource.manage');
-	return { tips: await listTips() };
-});
 
 export const getStaffLocalResource = query(z.string(), async (id) => {
 	await requireCapability('localResource.manage');
