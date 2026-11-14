@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { OrganizationInput } from './organization-service';
 
 /**
  * Funders, sponsors and contractors are organizations with a role (#2622).
@@ -20,6 +21,9 @@ const sponsors = await import('#lib/server/sponsor/sponsor-service.js');
 const contractors = await import('#lib/server/contractor/contractor-service.js');
 const orders = await import('#lib/server/inventory/order-service.js');
 
+const createFunder = (input: OrganizationInput) => orgs.createOrganization(input, ['funder']);
+const createSponsor = (input: OrganizationInput) => orgs.createOrganization(input, ['sponsor']);
+
 const count = (table: string) =>
 	(sqlite.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
 
@@ -39,29 +43,29 @@ beforeEach(() => {
 
 describe('roles', () => {
 	it('lists only the organizations holding the role, archived ones on request', async () => {
-		const shop = await funders.createFunder({ name: 'Arts Council' });
-		await sponsors.createSponsor({ name: 'Guitar Shop' });
-		const old = await funders.createFunder({ name: 'Old Trust' });
-		await funders.archiveFunder(old.id);
+		const shop = await createFunder({ name: 'Arts Council' });
+		await createSponsor({ name: 'Guitar Shop' });
+		const old = await createFunder({ name: 'Old Trust' });
+		await orgs.setOrganizationArchived(old.id, true);
 
 		expect((await funders.listFunders()).map((f) => f.id)).toEqual([shop.id]);
 		expect((await funders.listFunders({ includeArchived: true })).map((f) => f.name)).toEqual([
 			'Arts Council',
 			'Old Trust'
 		]);
-		await funders.restoreFunder(old.id);
+		await orgs.setOrganizationArchived(old.id, false);
 		expect(await funders.listFunders()).toHaveLength(2);
 	});
 
 	it('lets one organization hold several roles', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await orgs.addRole(shop.id, 'supplier');
 		await orgs.addRole(shop.id, 'supplier');
 		expect((await orgs.getOrganization(shop.id)).roles.sort()).toEqual(['sponsor', 'supplier']);
 	});
 
 	it('refuses a grant application naming an organization that is not a funder', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await expect(
 			grants.createGrant({ organizationId: shop.id, title: 'Ops', status: 'prospect' })
 		).rejects.toBeInstanceOf(orgs.OrganizationLacksRoleError);
@@ -69,14 +73,14 @@ describe('roles', () => {
 	});
 
 	it('refuses a sponsorship naming an organization that is not a sponsor', async () => {
-		const council = await funders.createFunder({ name: 'Arts Council' });
+		const council = await createFunder({ name: 'Arts Council' });
 		await expect(
 			sponsors.createSponsorship({ organizationId: council.id, title: 'Season', status: 'active' })
 		).rejects.toBeInstanceOf(orgs.OrganizationLacksRoleError);
 	});
 
 	it('treats an organization without the role as not found on that role’s page', async () => {
-		const council = await funders.createFunder({ name: 'Arts Council' });
+		const council = await createFunder({ name: 'Arts Council' });
 		await expect(sponsors.getSponsor(council.id, '2026-11-12')).rejects.toBeInstanceOf(
 			sponsors.SponsorNotFoundError
 		);
@@ -118,7 +122,7 @@ describe('performers', () => {
 
 describe('suppliers', () => {
 	it('reuses an organization named the same, ignoring case and spaces, and gives it the role', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		expect(await orgs.organizationNamed('  guitar SHOP ', 'supplier')).toBe(shop.id);
 		expect((await orgs.getOrganization(shop.id)).roles.sort()).toEqual(['sponsor', 'supplier']);
 		expect(count('organization')).toBe(1);
@@ -131,7 +135,7 @@ describe('suppliers', () => {
 	});
 
 	it('refuses a purchase order naming an organization that is not a supplier', async () => {
-		const council = await funders.createFunder({ name: 'Arts Council' });
+		const council = await createFunder({ name: 'Arts Council' });
 		await expect(
 			orders.createOrder({
 				organizationId: council.id,
@@ -152,24 +156,25 @@ describe('suppliers', () => {
 
 describe('deleting a role', () => {
 	it('refuses while a record names the organization in it', async () => {
-		const council = await funders.createFunder({ name: 'Arts Council' });
-		await grants.createGrant({ organizationId: council.id, title: 'Ops', status: 'prospect' });
-		await expect(funders.deleteFunder(council.id)).rejects.toBeInstanceOf(
+		const council = await createFunder({ name: 'Arts Council' });
+		await expect(orgs.removeRole(council.id, 'funder', 1)).rejects.toBeInstanceOf(
 			orgs.OrganizationInUseError
 		);
-		expect(count('organization')).toBe(1);
+		expect((await orgs.getOrganization(council.id)).roles).toEqual(['funder']);
 	});
 
 	it('deletes an organization left with no role and no records', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Typo Shop' });
-		await sponsors.deleteSponsor(shop.id);
+		const shop = await createSponsor({ name: 'Typo Shop' });
+		await orgs.removeRole(shop.id, 'sponsor', 0);
+		expect(await orgs.deleteUnusedOrganization(shop.id)).toBe(true);
 		expect(count('organization')).toBe(0);
 	});
 
 	it('keeps an organization that still holds another role', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await orgs.addRole(shop.id, 'supplier');
-		await sponsors.deleteSponsor(shop.id);
+		await orgs.removeRole(shop.id, 'sponsor', 0);
+		expect(await orgs.deleteUnusedOrganization(shop.id)).toBe(false);
 		expect((await orgs.getOrganization(shop.id)).roles).toEqual(['supplier']);
 	});
 });
@@ -187,16 +192,16 @@ describe('contractors', () => {
 			licenseNumber: 'L-1'
 		});
 
-		await contractors.archiveContractor(c.id);
+		await orgs.setOrganizationArchived(c.id, true);
 		expect(await contractors.listContractors()).toEqual([]);
 		expect((await contractors.getContractorById(c.id)).archivedAt).toBeInstanceOf(Date);
 
-		await contractors.archiveContractor(c.id, false);
+		await orgs.setOrganizationArchived(c.id, false);
 		expect((await contractors.listContractors()).map((r) => r.id)).toEqual([c.id]);
 	});
 
 	it('turns an existing organization into a contractor rather than entering it twice', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await contractors.createContractor({ name: 'Guitar Shop', trade: 'general' }, shop.id);
 		expect(count('organization')).toBe(1);
 		expect((await orgs.getOrganization(shop.id)).roles.sort()).toEqual(['contractor', 'sponsor']);
@@ -204,7 +209,7 @@ describe('contractors', () => {
 });
 describe('merging organizations', () => {
 	it('moves roles, records and contractor detail to the survivor, then deletes the other', async () => {
-		const keep = await sponsors.createSponsor({
+		const keep = await createSponsor({
 			name: 'Guitar Shop',
 			notes: 'Main store'
 		});
@@ -213,7 +218,7 @@ describe('merging organizations', () => {
 			trade: 'instrument_repair',
 			notes: 'Back room'
 		});
-		await funders.createFunder({ name: 'Unrelated' });
+		await createFunder({ name: 'Unrelated' });
 		sqlite.exec(`insert into work_order (id, title) values ('wo-m', 'Retube')`);
 		sqlite.exec(
 			`insert into contractor_job (id, organization_id, work_order_id, status) values ('job-m', '${dupe.id}', 'wo-m', 'asked')`
@@ -266,7 +271,7 @@ describe('merging organizations', () => {
 	});
 
 	it('refuses vendor setup on an organization that is not a vendor', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await expect(
 			orgs.saveVendorDetail(shop.id, {
 				offering: null,
@@ -313,15 +318,15 @@ describe('merging organizations', () => {
 	});
 
 	it('suggests organizations that share a website domain', async () => {
-		await sponsors.createSponsor({
+		await createSponsor({
 			name: 'Block 15',
 			website: 'https://www.block15.example/'
 		});
-		await funders.createFunder({
+		await createFunder({
 			name: 'Block 15 Brewing',
 			website: 'block15.example'
 		});
-		await funders.createFunder({
+		await createFunder({
 			name: 'Other',
 			website: 'https://other.example'
 		});
@@ -337,11 +342,11 @@ describe('merging organizations', () => {
 	// #2824: a vendor applying from a new address became a second organization
 	// of the same name, and with no website the pair was never offered.
 	it('suggests organizations with the same name, ignoring case, punctuation and a business suffix', async () => {
-		await funders.createFunder({ name: 'Marys River Ceramics' });
-		await sponsors.createSponsor({ name: ' marys river  ceramics ' });
-		await funders.createFunder({ name: 'Willamette Honey' });
-		await sponsors.createSponsor({ name: 'Willamette Honey Co.' });
-		await funders.createFunder({ name: 'Willamette Bakery' });
+		await createFunder({ name: 'Marys River Ceramics' });
+		await createSponsor({ name: ' marys river  ceramics ' });
+		await createFunder({ name: 'Willamette Honey' });
+		await createSponsor({ name: 'Willamette Honey Co.' });
+		await createFunder({ name: 'Willamette Bakery' });
 
 		const groups = await orgs.listOrganizationMergeSuggestions();
 		expect(groups.map((g) => [g.reason, g.organizations.length])).toEqual([
@@ -354,7 +359,7 @@ describe('merging organizations', () => {
 	});
 
 	it('refuses to merge an organization into itself', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor({ name: 'Guitar Shop' });
 		await expect(orgs.mergeOrganizations(shop.id, shop.id)).rejects.toBeInstanceOf(
 			orgs.OrganizationMergeError
 		);

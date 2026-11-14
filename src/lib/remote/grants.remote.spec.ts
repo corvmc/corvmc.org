@@ -23,10 +23,7 @@ const grants = {
 vi.mock('#lib/server/grant/grant-service.js', () => grants);
 
 const funders = {
-	listFunders: vi.fn(async () => []),
-	createFunder: vi.fn(async () => ({ id: 'f1' })),
-	updateFunder: vi.fn(async () => undefined),
-	deleteFunder: vi.fn(async () => undefined)
+	listFunders: vi.fn(async () => [])
 };
 vi.mock('#lib/server/grant/funder-service.js', () => funders);
 

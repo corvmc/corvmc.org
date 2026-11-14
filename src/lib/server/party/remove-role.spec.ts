@@ -16,7 +16,12 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const orgs = await import('./organization-service');
-const sponsors = await import('#lib/server/sponsor/sponsor-service.js');
+const createSponsor = (name: string) => orgs.createOrganization({ name }, ['sponsor']);
+/** What Contacts' remove-role then Delete does for a sponsor no sponsorship names. */
+const deleteSponsor = async (id: string) => {
+	await orgs.removeRole(id, 'sponsor', 0);
+	await orgs.deleteUnusedOrganization(id);
+};
 
 const referencing = (
 	sqlite
@@ -107,18 +112,18 @@ describe('removing a role', () => {
 
 describe('deleting a sponsor', () => {
 	it('keeps an organization that people still belong to', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		const shop = await createSponsor('Guitar Shop');
 		sqlite.exec(
 			`insert into contact (id, organization_id, name, source) values ('c-shop', '${shop.id}', 'Owner', 'staff_entered')`
 		);
-		await sponsors.deleteSponsor(shop.id);
+		await deleteSponsor(shop.id);
 		expect(await orgs.getOrganization(shop.id)).toMatchObject({ roles: [] });
 		expect(links(shop.id).contact).toBe(1);
 	});
 
 	it('deletes an organization nothing else names', async () => {
-		const shop = await sponsors.createSponsor({ name: 'Typo Shop' });
-		await sponsors.deleteSponsor(shop.id);
+		const shop = await createSponsor('Typo Shop');
+		await deleteSponsor(shop.id);
 		await expect(orgs.getOrganization(shop.id)).rejects.toBeInstanceOf(
 			orgs.OrganizationNotFoundError
 		);
