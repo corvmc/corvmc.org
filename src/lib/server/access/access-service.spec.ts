@@ -127,28 +127,31 @@ describe('getAccessSummary', () => {
 });
 
 describe('getPersonAccess', () => {
-	it('names the seat, chair status and committee grants, ignoring clubs and legacy roles', async () => {
+	it('names the seat, its positions and committee grants, ignoring clubs and legacy roles', async () => {
 		const access = await getPersonAccess('u-di');
 		expect(access.positions).toEqual([]);
-		expect(access.capabilities).toEqual([]);
-		expect(access.seats).toEqual([
+		expect(access.departments).toEqual([
 			{
 				groupId: 'g-dev',
 				name: 'Development',
-				chair: true,
-				grants: expect.arrayContaining(['sponsor.manage', 'project.manage'])
+				positions: ['Chair'],
+				grants: expect.arrayContaining([
+					{ capability: 'sponsor.manage', reach: 'org' },
+					{ capability: 'project.manage', reach: 'owned' }
+				])
 			}
 		]);
+		expect(access.shiftRoles).toEqual([]);
 		expect(access.clearances.map((c) => c.id)).toEqual(['mc-1']);
 	});
 
-	it("expands a position into the matrix's capabilities", async () => {
+	it('gives each position what the guards grant it', async () => {
 		const access = await getPersonAccess('u-cy');
-		expect(access.positions).toEqual(['treasurer']);
-		expect(access.capabilities).toContain('finance.refund');
-		expect(access.capabilities).not.toContain('user.setRole');
+		expect(access.positions.map((p) => p.position)).toEqual(['treasurer']);
+		expect(access.positions[0].capabilities).toContain('finance.refund');
+		expect(access.positions[0].capabilities).not.toContain('user.setRole');
 		// An inactive seat grants nothing.
-		expect(access.seats).toEqual([]);
+		expect(access.departments).toEqual([]);
 	});
 });
 

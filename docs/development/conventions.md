@@ -416,6 +416,10 @@ to author migration SQL yourself, and it does not break the "migrations come onl
   lookup key that the guard resolves before checking the caller's role on what it
   resolved.
 - Business logic lives in services; remotes are thin (guard + validate + orchestrate).
+- A page that shows what a person may do reads it from `explainAccess`
+  (`src/lib/server/access/why-can-act.ts`), never from the capability matrix in the browser.
+  `no-restricted-imports` refuses `positions`, `grantsCapability` and `positionsGranting` in a
+  `.svelte` file.
 - Services throw typed domain errors; remotes map them via `mapDomainError()`
   (`src/lib/server/errors.ts`).
 - Prefer DTO-shaped return values over passing raw rows to the UI; never return

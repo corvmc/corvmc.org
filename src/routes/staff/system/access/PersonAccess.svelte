@@ -18,15 +18,9 @@
 		searchAccessPeople,
 		setPosition
 	} from '#lib/remote/access.remote.js';
-	import {
-		grantRuleFor,
-		grantsCapability,
-		positionLabels,
-		positionOrder,
-		positions as matrix
-	} from '#lib/config.js';
+	import { grantRuleFor, positionLabels, positionOrder } from '#lib/config.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
-	import { actionLabel, groupByResource } from '#lib/capability-label.js';
+	import { actionLabel, capabilityLabel, groupByResource } from '#lib/capability-label.js';
 	import { Latest } from '#lib/latest.svelte.js';
 
 	type Person = { id: string; name: string; email: string };
@@ -67,13 +61,18 @@
 	{@const userId = person.id}
 	{#if view.current?.id === userId}
 		{@const access = view.current.access}
-		{@const unheld = positionOrder.filter((p) => !access.positions.includes(p))}
-		{@const orgSeats = access.seats.flatMap((s) =>
-			s.grants
-				.filter((c) => grantRuleFor(c)?.committee === 'org')
-				.map((cap) => ({ cap, from: s.name }))
-		)}
-		{@const held = [...new Set([...access.capabilities, ...orgSeats.map((o) => o.cap)])]}
+		{@const unheld = positionOrder.filter((p) => !access.positions.some((h) => h.position === p))}
+		{@const sources = [
+			...access.positions.map((p) => ({
+				from: positionLabels[p.position],
+				caps: p.capabilities as string[]
+			})),
+			...access.departments.map((d) => ({
+				from: d.name,
+				caps: d.grants.filter((g) => g.reach === 'org').map((g) => g.capability as string)
+			}))
+		]}
+		{@const held = [...new Set(sources.flatMap((s) => s.caps))]}
 
 		<InfoCard
 			title={m.staff_access_person_access_positions_title()}
@@ -117,12 +116,10 @@
 						>
 						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
-					{#each access.positions as p (p)}
+					{#each access.positions as { position: p, capabilities } (p)}
 						<tr>
 							<td class="cell-primary">{positionLabels[p]}</td>
-							<td class="col-support cell-num">
-								{access.capabilities.filter((c) => grantsCapability(matrix[p], c)).length}
-							</td>
+							<td class="col-support cell-num">{capabilities.length}</td>
 							<td class="w-px">
 								<Action
 									action={setPosition.for(`remove-${userId}-${p}`)}
@@ -176,12 +173,9 @@
 						<th class="col-support">{m.staff_through_label()}</th>
 					{/snippet}
 					{#each groupByResource(held) as g (g.resource)}
-						{@const from = [
-							...access.positions
-								.filter((p) => g.caps.some((c) => grantsCapability(matrix[p], c)))
-								.map((p) => positionLabels[p]),
-							...new Set(orgSeats.filter((o) => g.caps.includes(o.cap)).map((o) => o.from))
-						]}
+						{@const from = sources
+							.filter((s) => g.caps.some((c) => s.caps.includes(c)))
+							.map((s) => s.from)}
 						<tr>
 							<td class="font-medium whitespace-nowrap">{g.label}</td>
 							<td class="cell-primary">
@@ -196,9 +190,9 @@
 
 		<InfoCard
 			title={m.staff_access_person_access_committee_seats_title()}
-			state={access.seats.length}
+			state={access.departments.length}
 		>
-			{#if access.seats.length === 0}
+			{#if access.departments.length === 0}
 				<p class="text-muted">{m.staff_access_person_access_no_active_committee_seat_text()}</p>
 			{:else}
 				<Table>
@@ -207,7 +201,7 @@
 						<th>{m.staff_access_person_access_grants_its_members_label()}</th>
 						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
-					{#each access.seats as seat (seat.groupId)}
+					{#each access.departments as seat (seat.groupId)}
 						<tr>
 							<td class="cell-primary">
 								<a
@@ -215,7 +209,7 @@
 									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
 								>
 								<div class="text-muted">
-									{seat.chair ? m.staff_access_person_access_chair_text() : m.staff_member_text()}
+									{seat.positions.length > 0 ? seat.positions.join(', ') : m.staff_member_text()}
 								</div>
 							</td>
 							<td class="cell-text whitespace-normal">
@@ -226,8 +220,8 @@
 								{:else}
 									{seat.grants
 										.map(
-											(c) =>
-												`${grantRuleFor(c)?.label ?? c}${grantRuleFor(c)?.committee === 'owned' ? ' (its records)' : ''}`
+											(g) =>
+												`${grantRuleFor(g.capability)?.label ?? g.capability}${g.reach === 'owned' ? ' (its records)' : ''}`
 										)
 										.join('; ')}
 								{/if}
@@ -236,7 +230,7 @@
 								<CommitteeGrantsAction
 									groupId={seat.groupId}
 									name={seat.name}
-									held={seat.grants}
+									held={seat.grants.map((g) => g.capability)}
 									label={m.staff_edit_grants_label()}
 									onsuccess={refresh}
 								/>
@@ -246,6 +240,28 @@
 				</Table>
 			{/if}
 		</InfoCard>
+
+		{#if access.shiftRoles.length > 0}
+			<InfoCard title={m.access_why_shift_roles_title()} state={access.shiftRoles.length}>
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_role_label()}</th>
+						<th>{m.staff_access_person_access_may_label()}</th>
+					{/snippet}
+					{#each access.shiftRoles as r (`${r.roleName}:${r.eventId}`)}
+						<tr>
+							<td class="cell-primary">
+								<div class="font-medium">{r.roleName}</div>
+								<div class="text-muted">{r.eventTitle}</div>
+							</td>
+							<td class="cell-text whitespace-normal">
+								{r.capabilities.map(capabilityLabel).join('; ')}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
 
 		<InfoCard
 			title={m.staff_access_person_access_clearances_title()}

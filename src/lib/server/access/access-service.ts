@@ -11,7 +11,6 @@ import {
 } from '#lib/server/db/schema/group.js';
 import { volunteerRole, volunteerRoleCapability } from '#lib/server/db/schema/volunteer.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
-import { capabilitySet, positionsFor } from '#lib/server/authorization.js';
 import {
 	listClearances,
 	listForUser,
@@ -31,7 +30,7 @@ import {
 import type { MemberRef } from '#lib/types/entity.js';
 import type { RosterPerson } from '#lib/types/roster.js';
 import { toRosterPerson } from '#lib/server/roster/roster.js';
-import { holdsChair } from '#lib/server/group/chair.js';
+import { explainAccess, type AccessExplanation } from '#lib/server/access/why-can-act.js';
 
 /** How far ahead "lapsing" looks on this page. Not `CERT_EXPIRY_WARNING_DAYS`, which is 60. */
 export const ACCESS_LAPSING_DAYS = 30;
@@ -110,69 +109,18 @@ export async function getAccessSummary(now = new Date()): Promise<AccessSummary>
 	};
 }
 
-export interface CommitteeSeat {
-	groupId: string;
-	name: string;
-	/** Holds the committee's chair position. */
-	chair: boolean;
-	grants: Capability[];
-}
-
-export interface PersonAccess {
-	positions: Position[];
-	/** What the positions confer through the matrix. */
-	capabilities: Capability[];
-	seats: CommitteeSeat[];
+export interface PersonAccess extends AccessExplanation {
 	clearances: HeldCertification[];
 }
 
-/** Everything one person holds, each item carrying its source. */
+/**
+ * Everything one person holds, each item carrying its source. The positions,
+ * committees and shift roles are `explainAccess`'s, so this page shows what
+ * the guards admit rather than its own reading of the matrix (#3023).
+ */
 export async function getPersonAccess(userId: string): Promise<PersonAccess> {
-	const [positions, seatRows, clearances] = await Promise.all([
-		positionsFor(userId),
-		db
-			.select({
-				groupId: group.id,
-				name: group.name,
-				chair: holdsChair(),
-				capability: groupCapability.capability
-			})
-			.from(groupMember)
-			.innerJoin(group, eq(group.id, groupMember.groupId))
-			.leftJoin(groupCapability, eq(groupCapability.groupId, group.id))
-			.where(
-				and(
-					eq(groupMember.userId, userId),
-					eq(groupMember.status, 'active'),
-					eq(group.kind, 'committee'),
-					isNull(group.deletedAt)
-				)
-			)
-			.orderBy(group.name),
-		listForUser(userId)
-	]);
-
-	const seats = new Map<string, CommitteeSeat>();
-	for (const r of seatRows) {
-		// Operations seats are the positions above, not a committee seat.
-		if (r.groupId === OPERATIONS_GROUP_ID) continue;
-		const seat = seats.get(r.groupId) ?? {
-			groupId: r.groupId,
-			name: r.name,
-			chair: !!r.chair,
-			grants: []
-		};
-		if (r.capability && grantRuleFor(r.capability)?.committee) {
-			seat.grants.push(r.capability as Capability);
-		}
-		seats.set(r.groupId, seat);
-	}
-	return {
-		positions,
-		capabilities: capabilitySet(positions),
-		seats: [...seats.values()],
-		clearances
-	};
+	const [why, clearances] = await Promise.all([explainAccess(userId), listForUser(userId)]);
+	return { ...why, clearances };
 }
 
 export interface CapabilityHolder extends RosterPerson {
