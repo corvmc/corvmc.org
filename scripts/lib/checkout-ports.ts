@@ -135,3 +135,33 @@ export function previewPort(root: string, env: NodeJS.ProcessEnv = process.env):
 		fromEnv('PREVIEW_PORT', env) ?? (isWorktree(root) ? offsetFor(root, 1) : MAIN_PREVIEW_PORT)
 	);
 }
+
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
+
+/**
+ * The `ORIGIN` this checkout's dev server must run with.
+ *
+ * A worktree's `.env` is copied from the main checkout, so its localhost
+ * `ORIGIN` names :5173 while the server binds `devPort`. better-auth uses
+ * `ORIGIN` as its base URL and 404s every sign-in on a mismatch. A localhost
+ * origin on another port is moved to this checkout's port; any other value,
+ * and an `ORIGIN` set in the shell, is left alone.
+ */
+export function devOrigin(
+	root: string,
+	configured: string | undefined,
+	env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+	if (!configured || env.ORIGIN) return configured;
+	let url: URL;
+	try {
+		url = new URL(configured);
+	} catch {
+		return configured;
+	}
+	if (!LOCAL_HOSTS.has(url.hostname)) return configured;
+	const port = String(devPort(root, env));
+	if (url.port === port) return configured;
+	url.port = port;
+	return url.origin;
+}

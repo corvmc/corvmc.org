@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
-import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports.ts';
+import { browserPort, devOrigin, devPort, previewPort } from './scripts/lib/checkout-ports.ts';
 import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers.ts';
 const dirname = import.meta.dirname;
 
@@ -54,6 +54,16 @@ const ssrExternalsForBrowserTests = {
 
 export default defineConfig({
 	plugins: [
+		// Before Kit's env plugin reads `.env` at configResolved: vite's loadEnv
+		// lets process.env win, so this is what `$app/env` sees in `vite dev`.
+		{
+			name: 'corvmc:checkout-dev-origin',
+			config(_, { command, isPreview }) {
+				if (command !== 'serve' || isPreview || process.env.VITEST) return;
+				const origin = devOrigin(dirname, loadEnv('development', dirname, '').ORIGIN);
+				if (origin) process.env.ORIGIN = origin;
+			}
+		},
 		// Not in the e2e build. `playwright.config.ts` puts SENTRY_ENVIRONMENT=ci in
 		// the webServer env, which the build inherits, and `hooks.server.ts` already
 		// runs the SDK `enabled: false` under it — so none of this is under test.

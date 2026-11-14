@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { browserPort, devPort, isWorktree, previewPort } from './checkout-ports';
+import { browserPort, devOrigin, devPort, isWorktree, previewPort } from './checkout-ports';
 
 const MAIN = '/Users/someone/Projects/corvmc-svelte';
 const TREE_A = '/Users/someone/Projects/corvmc-svelte/.claude/worktrees/sharp-bohr-8eb1b8';
@@ -154,5 +154,26 @@ describe('widening the slot range', () => {
 			browserPort(TREE_A, NO_ENV)
 		];
 		expect(new Set(ports).size).toBe(3);
+	});
+});
+
+describe('devOrigin', () => {
+	it("moves a localhost ORIGIN copied from the main checkout onto the worktree's port", () => {
+		const port = devPort(TREE_A, NO_ENV);
+		expect(devOrigin(TREE_A, 'http://localhost:5173', NO_ENV)).toBe(`http://localhost:${port}`);
+		expect(devOrigin(TREE_A, 'http://127.0.0.1:5173/', NO_ENV)).toBe(`http://127.0.0.1:${port}`);
+	});
+
+	it('leaves the main checkout, remote origins and a shell ORIGIN alone', () => {
+		expect(devOrigin(MAIN, 'http://localhost:5173', NO_ENV)).toBe('http://localhost:5173');
+		expect(devOrigin(TREE_A, 'https://corvmc.org', NO_ENV)).toBe('https://corvmc.org');
+		const shell = { ORIGIN: 'http://localhost:9999' } as NodeJS.ProcessEnv;
+		expect(devOrigin(TREE_A, 'http://localhost:9999', shell)).toBe('http://localhost:9999');
+		expect(devOrigin(TREE_A, undefined, NO_ENV)).toBeUndefined();
+	});
+
+	it('follows an explicit PORT', () => {
+		const env = { PORT: '6000' } as NodeJS.ProcessEnv;
+		expect(devOrigin(TREE_A, 'http://localhost:5173', env)).toBe('http://localhost:6000');
 	});
 });
