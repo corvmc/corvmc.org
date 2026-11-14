@@ -243,23 +243,31 @@ describe('overlappingReservations', () => {
 
 describe('memberPayAction', () => {
 	const now = new Date('2026-10-27T18:00:00Z');
-	const hoursFromNow = (h: number) => new Date(now.getTime() + h * 3_600_000);
+	const owed = {
+		status: 'confirmed',
+		bookerType: 'user',
+		paidAt: null,
+		refundedAt: null,
+		cashDueCents: 1500
+	};
 
-	it('a confirmed, unpaid reservation that already ended still offers payment (#1952)', () => {
-		const ended = { status: 'confirmed', startsAt: hoursFromNow(-26), paidAt: null };
-		expect(memberPayAction({ ...ended, cashDueCents: null })).toBe('balance');
-		expect(memberPayAction({ ...ended, cashDueCents: 1500 })).toBe('balance');
+	it('a confirmed, unpaid reservation offers payment, unpriced included (#1952)', () => {
+		expect(memberPayAction({ ...owed, cashDueCents: null })).toBe('balance');
+		expect(memberPayAction(owed)).toBe('balance');
 	});
 
 	it('a paid or fully credit-settled confirmed reservation offers nothing', () => {
-		const base = { status: 'confirmed', startsAt: hoursFromNow(-26) };
-		expect(memberPayAction({ ...base, paidAt: now, cashDueCents: 0 })).toBeNull();
-		expect(memberPayAction({ ...base, paidAt: null, cashDueCents: 0 })).toBeNull();
+		expect(memberPayAction({ ...owed, paidAt: now, cashDueCents: 0 })).toBeNull();
+		expect(memberPayAction({ ...owed, cashDueCents: 0 })).toBeNull();
+	});
+
+	it('a refunded booking or an event hold offers nothing (#2991)', () => {
+		expect(memberPayAction({ ...owed, refundedAt: now })).toBeNull();
+		expect(memberPayAction({ ...owed, bookerType: 'production' })).toBeNull();
 	});
 
 	it('only offers a confirmed balance the server gate accepts', () => {
-		const r = { status: 'confirmed', startsAt: hoursFromNow(-2), paidAt: null, cashDueCents: 500 };
-		expect(isAwaitingPayment(r)).toBe(true);
-		expect(memberPayAction(r)).toBe('balance');
+		expect(isAwaitingPayment(owed)).toBe(true);
+		expect(memberPayAction(owed)).toBe('balance');
 	});
 });

@@ -1,5 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
+import { paymentDueSql } from '#lib/server/reservation/payment-due.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
@@ -8,7 +9,7 @@ import { inventoryLoan } from '#lib/server/db/schema/inventory.js';
 import { volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
 import { contentFlag } from '#lib/server/db/schema/flag.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
-import { and, count, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 
 import { getAllBalances } from '#lib/server/finance/credit-service.js';
 import {
@@ -149,14 +150,7 @@ export async function getUserOverview(userId: string): Promise<UserOverview> {
 			db
 				.select({ count: count() })
 				.from(reservation)
-				.where(
-					and(
-						scope,
-						ne(reservation.status, 'cancelled'),
-						gt(reservation.cashDueCents, 0),
-						isNull(reservation.paidAt)
-					)
-				)
+				.where(and(scope, paymentDueSql(now)))
 		),
 		scalar(
 			db

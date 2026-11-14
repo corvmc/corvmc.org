@@ -8,7 +8,7 @@
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
 	import {
 		CompleteReservationAction,
 		NoShowReservationAction,
@@ -190,7 +190,7 @@
 							join: conflicts
 								.map(
 									(c) =>
-										`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : c.status})`
+										`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : statusLabel(reservationTrack(c))})`
 								)
 								.join(', ')
 						})}

@@ -141,20 +141,34 @@ export function visibleActions(
 	return actions;
 }
 
-interface PayableReservation {
+/** The columns `owesMoney` reads. All required, so a query cannot forget one. */
+export interface PayableReservation {
 	status: string;
-	paidAt?: Date | null;
-	cashDueCents?: number | null;
+	bookerType: string;
+	paidAt: Date | null;
+	refundedAt: Date | null;
+	cashDueCents: number | null;
 }
 
-/** Confirmed with a balance still owed; a null `cashDueCents` is owed in full. */
-export function confirmedUnpaid(r: PayableReservation): boolean {
-	return r.status === 'confirmed' && !r.paidAt && (r.cashDueCents == null || r.cashDueCents > 0);
+/**
+ * Owes money: confirmed and unpaid, not refunded, and not an event hold, which
+ * is never charged. A null `cashDueCents` was never priced, so it is owed in
+ * full. `confirmedUnpaidSql` in `payment-due` is the same reading in SQL. The
+ * Payment due track is this on a session that has ended.
+ */
+export function owesMoney(r: PayableReservation): boolean {
+	return (
+		r.status === 'confirmed' &&
+		!r.paidAt &&
+		!r.refundedAt &&
+		!isEventHold(r.bookerType) &&
+		(r.cashDueCents == null || r.cashDueCents > 0)
+	);
 }
 
 /** What `getReservationPayment` accepts: the server's pay-page gate. */
 export function isAwaitingPayment(r: PayableReservation): boolean {
-	return confirmedUnpaid(r);
+	return owesMoney(r);
 }
 
 /**
@@ -162,16 +176,5 @@ export function isAwaitingPayment(r: PayableReservation): boolean {
  * the session ends; the start-time gate belongs to cancel, not to money owed.
  */
 export function memberPayAction(r: PayableReservation): 'balance' | null {
-	return confirmedUnpaid(r) ? 'balance' : null;
-}
-
-/**
- * Owes money: confirmed and unpaid, not refunded, and not an event hold, which
- * is never charged. `confirmedUnpaidSql` in `payment-due` is the same reading
- * in SQL. The Payment due track is this on a session that has ended.
- */
-export function owesMoney(
-	r: PayableReservation & { bookerType: string; refundedAt: Date | null }
-): boolean {
-	return confirmedUnpaid(r) && !r.refundedAt && !isEventHold(r.bookerType);
+	return owesMoney(r) ? 'balance' : null;
 }
