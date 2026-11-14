@@ -141,17 +141,14 @@
 	);
 	const pendingEmailInvites = $derived(data.emailInvites.filter((i) => i.status === 'pending'));
 
-	/** A committee member's defined positions, by roster row (#2988). */
-	const positionsByMember = $derived.by(() => {
-		const byMember = new Map<string, string[]>();
-		for (const p of data.positions) {
-			for (const h of p.holders)
-				byMember.set(h.memberId, [...(byMember.get(h.memberId) ?? []), p.name]);
-		}
-		return byMember;
-	});
+	/** A committee seat is its defined positions (#2988); a club seat is free text. */
 	const seatTitle = (m: { id: string; position: string | null }) =>
-		group.kind === 'committee' ? positionsByMember.get(m.id)?.join(', ') || null : m.position;
+		group.kind === 'committee'
+			? data.positions
+					.filter((p) => p.holders.some((h) => h.memberId === m.id))
+					.map((p) => p.name)
+					.join(', ') || null
+			: m.position;
 
 	// Repointed at the wrapper query: nothing reads the parts, so refreshing one
 	// of those would repaint nothing. See `custom/refresh-the-composed-query`.

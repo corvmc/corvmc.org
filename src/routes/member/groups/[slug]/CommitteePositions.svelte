@@ -47,7 +47,7 @@
 			<Action
 				action={createCommitteePosition}
 				label={msg.member_groups_slug_add_position_label()}
-				modalTitle={msg.member_groups_slug_add_position_label()}
+				modalTitle={msg.member_groups_slug_add_position_title()}
 				submitLabel={msg.member_groups_slug_add_position_label()}
 				successToast={msg.member_groups_slug_position_added_toast()}
 				variant="ghost"
@@ -104,7 +104,7 @@
 								<Action
 									action={edit}
 									label={msg.member_edit_label()}
-									aria-label={msg.member_groups_slug_edit_position_title({ name: p.name })}
+									aria-label={msg.member_groups_slug_edit_position_label({ name: p.name })}
 									modalTitle={msg.member_groups_slug_edit_position_title({ name: p.name })}
 									successToast={msg.member_groups_slug_position_saved_toast()}
 									variant="ghost"
@@ -125,7 +125,7 @@
 											/>
 											<CheckboxGroup
 												field={edit.fields.memberIds}
-												legend={msg.member_groups_slug_holders_label()}
+												legend={msg.member_groups_slug_holders_title()}
 												description={msg.member_groups_slug_holders_body()}
 												selected={p.holders.map((h) => h.memberId)}
 												options={memberOptions}
