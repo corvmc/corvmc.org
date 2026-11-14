@@ -1,7 +1,7 @@
 {
-  "id": "c40dbd68-4f80-4ccd-830e-aecd2bb87a13",
+  "id": "c9f30124-7c11-4257-bf83-ed4a87782eb9",
   "prevIds": [
-    "d1f2078f-b042-4de7-9816-91f47f19bc8c"
+    "4a0dd1b0-8e52-4bca-86f7-3412535b99d1"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -208,6 +208,14 @@
     },
     {
       "name": "group_member",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_position",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_position_holder",
       "entityType": "tables"
     },
     {
@@ -6371,6 +6379,96 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "group_member"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position_id",
+      "entityType": "columns",
+      "table": "group_position_holder"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "member_id",
+      "entityType": "columns",
+      "table": "group_position_holder"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_by_id",
+      "entityType": "columns",
+      "table": "group_position_holder"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_position_holder"
     },
     {
       "type": "text",
@@ -17903,6 +18001,66 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_group_position_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "group_position"
+    },
+    {
+      "columns": [
+        "position_id"
+      ],
+      "tableTo": "group_position",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_position_holder_position_id_group_position_id_fk",
+      "entityType": "fks",
+      "table": "group_position_holder"
+    },
+    {
+      "columns": [
+        "member_id"
+      ],
+      "tableTo": "group_member",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_position_holder_member_id_group_member_id_fk",
+      "entityType": "fks",
+      "table": "group_position_holder"
+    },
+    {
+      "columns": [
+        "assigned_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_position_holder_assigned_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "group_position_holder"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_band_slug_history_band_id_band_id_fk",
       "entityType": "fks",
       "table": "group_slug_history"
@@ -21359,6 +21517,16 @@
     },
     {
       "columns": [
+        "position_id",
+        "member_id"
+      ],
+      "nameExplicit": false,
+      "name": "group_position_holder_pk",
+      "entityType": "pks",
+      "table": "group_position_holder"
+    },
+    {
+      "columns": [
         "user_id",
         "scope"
       ],
@@ -21897,6 +22065,15 @@
       "nameExplicit": false,
       "name": "band_member_pk",
       "table": "group_member",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "group_position_pk",
+      "table": "group_position",
       "entityType": "pks"
     },
     {
@@ -24399,6 +24576,38 @@
       "name": "idx_band_member_single_owner",
       "entityType": "indexes",
       "table": "group_member"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "name",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_position_name",
+      "entityType": "indexes",
+      "table": "group_position"
+    },
+    {
+      "columns": [
+        {
+          "value": "member_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_position_holder_member",
+      "entityType": "indexes",
+      "table": "group_position_holder"
     },
     {
       "columns": [

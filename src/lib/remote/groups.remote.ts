@@ -67,6 +67,7 @@ import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import { listMaintenanceSchedules } from '#lib/server/volunteer/maintenance-schedule-service.js';
 import { list as listFiles, getUsage as getDocumentUsage } from '#lib/server/group/file-service.js';
+import { listPositions } from '#lib/server/group/position-service.js';
 import {
 	STAFF_GROUP_KINDS,
 	createGroup,
@@ -458,6 +459,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	const canReviewApplications =
 		canManage ||
 		(group.kind === 'committee' && role === 'staff' && (await can('committee.reviewApplications')));
+	// `createCommitteePosition`'s guard: the chair, or Operations for a committee without one.
+	const canManagePositions =
+		group.kind === 'committee' && (canManage || (role === 'staff' && (await can('group.manage'))));
 
 	// One round trip, per the custom/no-concurrent-remote-queries rule. Announcements
 	// belong here rather than in a query of the tab's own: a club is small by
@@ -478,7 +482,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		projectEvents,
 		recurringWork,
 		unfinishedItems,
-		attendance
+		attendance,
+		positions
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -516,7 +521,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		// Only whether the Open items tab shows; the tab reads its own rows.
 		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0),
 		// Sessions each member was marked at, for the roster's count.
-		countAttendanceByMember(group.id)
+		countAttendanceByMember(group.id),
+		// A committee's defined positions (#2988); a club's seat title is free text.
+		group.kind === 'committee' ? listPositions(group.id) : Promise.resolve([])
 	]);
 
 	return {
@@ -532,6 +539,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
+		canManagePositions,
 		// What this committee's members may do on its records; the page hides the
 		// rest, and `requireCommitteeMember` refuses it anyway.
 		grants:
@@ -600,7 +608,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			active: roster.active,
 			pending: roster.pending
 		},
-		attendance: Object.fromEntries(attendance) as Record<string, number>
+		attendance: Object.fromEntries(attendance) as Record<string, number>,
+		positions
 	};
 });
 
@@ -667,7 +676,9 @@ export const inviteGroupMember = form(
 	async (data) => {
 		const { user, group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
-			const member = await invite(group.id, data.userId, data.role, data.position || null, user.id);
+			// A committee's seats are defined positions, filled after joining.
+			const position = group.kind === 'committee' ? null : data.position || null;
+			const member = await invite(group.id, data.userId, data.role, position, user.id);
 			return { success: true, memberId: member.id };
 		} catch (err) {
 			mapDomainError(err);
@@ -688,7 +699,7 @@ export const inviteGroupByEmail = form(
 				data.email,
 				group.id,
 				data.role,
-				data.position || null,
+				group.kind === 'committee' ? null : data.position || null,
 				user.id
 			);
 			return { success: true, ...result };
@@ -756,7 +767,11 @@ export const updateGroupMember = form(
 				data.memberId,
 				{
 					role: data.role,
-					position: data.position !== undefined ? data.position || null : undefined
+					// A committee seat is a defined position (`updateCommitteePosition`).
+					position:
+						group.kind !== 'committee' && data.position !== undefined
+							? data.position || null
+							: undefined
 				},
 				group.id
 			);

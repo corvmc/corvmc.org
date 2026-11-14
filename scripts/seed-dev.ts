@@ -40,6 +40,7 @@ import { seedPartyActivity } from './seed/party-activity';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import { seedCommitteePositions } from './seed/committee-positions';
 import { seedBallots } from './seed/ballots';
 import {
 	GROUP_INVITEE_PERSONA,
@@ -169,6 +170,8 @@ async function main() {
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
 	const groups = await seedGroups(allUsers, groupLeaders);
+	// After the groups: it reads each committee's roster back.
+	const committeePositions = await seedCommitteePositions();
 	// After the bands and before the entries, which is the only window that works:
 	// it reads `pendingTags` to point each persona at data the bulk seed actually
 	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
@@ -365,6 +368,9 @@ async function main() {
 	);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(
+		`  ${committeePositions.positions} committee positions, ${committeePositions.holders} holders (one shared, two vacant)`
+	);
 	console.log(
 		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);

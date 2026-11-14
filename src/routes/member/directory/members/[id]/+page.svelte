@@ -21,6 +21,7 @@
 		type CrossRef
 	} from '#lib/components/directory/profile/CrossRefList.svelte';
 	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import ProfileSection from '#lib/components/directory/profile/ProfileSection.svelte';
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
 	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
@@ -38,6 +39,7 @@
 
 	const member = $derived(data.profile);
 	const shows = $derived(data.shows);
+	const positions = $derived(data.positions);
 	const canReport = $derived(data.viewer.canReport);
 	const canMessage = $derived(data.viewer.canMessage);
 
@@ -157,6 +159,18 @@
 					items={bandRefs}
 					note={m.member_directory_members_id_note_body({ length: bandRefs.length })}
 				/>
+				{#if positions.length > 0}
+					<ProfileSection title={m.member_directory_members_id_positions_title()}>
+						<ul class="flex flex-col gap-1">
+							{#each positions as p (p.id)}
+								<li>
+									<span class="font-medium">{p.name}</span>
+									<span class="text-muted">· {p.committee}</span>
+								</li>
+							{/each}
+						</ul>
+					</ProfileSection>
+				{/if}
 				<TagCloud label={m.member_directory_members_id_plays_genres_label()} {tags} />
 				<TagCloud label={m.member_skills_label()} tags={member.skills ?? []} />
 				<LinksBox {links} />
