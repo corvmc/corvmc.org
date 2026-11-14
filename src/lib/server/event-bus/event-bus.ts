@@ -709,12 +709,15 @@ export interface DeliverableDueItem {
 	workOrderId: string;
 	title: string;
 	eventTitle: string | null;
+	eventId?: string | null;
 	/** The item's project: the show's, or the grant or sponsorship it is for. */
 	projectName: string | null;
 	/** ISO string — payload dates cross the bus serialized. */
 	dueAt: string;
 	groupName: string;
 	groupSlug: string;
+	/** Sent to the show's event lead rather than the committee (#2990). */
+	forLead?: boolean;
 }
 
 /**

@@ -89,7 +89,7 @@ beforeEach(() => {
 		`delete from reminder_sent; delete from volunteer_signup; delete from volunteer_shift;
 		 delete from work_order_link;
 		 delete from work_order; delete from reservation; delete from member_certification;
-		 delete from volunteer_role; delete from user;`
+		 delete from volunteer_role; delete from group_member; delete from "group"; delete from user;`
 	);
 	sqlite.exec(
 		`insert into user (id, name, email) values
@@ -131,6 +131,23 @@ describe('unclaimed orientation alert', () => {
 		signUp('wo-1', 'cancelled');
 
 		expect(await byKey('orientation_unclaimed').due(NOW)).toHaveLength(1);
+	});
+
+	// #2990: a committee's orientation is its seats' news before every coordinator's.
+	it("goes to the owning committee's seats, not every coordinator", async () => {
+		sqlite.exec(`
+			insert into "group" (id, kind, name, slug, join_policy) values
+				('welcome', 'committee', 'Welcome', 'welcome', 'invite_only');
+			insert into group_member (id, group_id, user_id, role, status) values
+				('m-vol', 'welcome', 'u-vol', 'member', 'active');
+		`);
+		booking('r-1', 'u-new', inHours(20));
+		orientation('wo-1', 'r-1', inHours(19.8));
+		sqlite.exec(`update work_order set group_id = 'welcome' where id = 'wo-1'`);
+
+		const [due] = await byKey('orientation_unclaimed').due(NOW);
+		expect(due).toMatchObject({ recipients: [{ userId: 'u-vol' }] });
+		expect((due as { recipients: unknown[] }).recipients).toHaveLength(1);
 	});
 });
 

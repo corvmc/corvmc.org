@@ -17,7 +17,7 @@ import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project, projectSection } from './project';
 import { reservation } from './reservation';
-import { group } from './group';
+import { group, groupPosition } from './group';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -433,6 +433,10 @@ export const workOrder = sqliteTable(
 		// nothing and narrows nothing.
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 
+		// The department position this waits on (#2990), within `groupId`'s
+		// committee. Set-null: a deleted position hands the task to its department.
+		positionId: text('position_id').references(() => groupPosition.id, { onDelete: 'set null' }),
+
 		// Which fact about the show says it is done, evaluated in code by
 		// `done-conditions.ts`. Never stored as true: the state is derived.
 		doneWhen: text('done_when', { enum: workDoneConditions }),
@@ -475,6 +479,7 @@ export const workOrder = sqliteTable(
 			),
 		// A record's related tasks, done ones included (#2630).
 		index('work_order_group_idx').on(t.groupId),
+		index('work_order_position_idx').on(t.positionId),
 		index('work_order_schedule_idx').on(t.maintenanceScheduleId),
 		// A committee's Open items queue.
 		index('work_order_group_open_idx')

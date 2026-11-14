@@ -424,7 +424,8 @@ export interface AuditDetailsByAction {
 /** Mirrors `contractorJobStatuses` in `$lib/config`, which the schema cannot import by alias. */
 type ContractorJobStatus = 'asked' | 'declined' | 'booked' | 'completed' | 'cancelled' | 'no_show';
 
-export type WorkOrderField = 'role' | 'title' | 'capacity' | 'notes' | 'event' | 'equipment';
+export type WorkOrderField =
+	'role' | 'title' | 'capacity' | 'notes' | 'event' | 'equipment' | 'position';
 export type EventEditField =
 	| 'title'
 	| 'description'

@@ -59,10 +59,11 @@ const { getProjectActivity } = (await import('./projects.remote')) as unknown as
 	(raw: unknown) => Promise<unknown>
 >;
 
-const { setTaskSection } = (await import('./volunteer.remote')) as unknown as Record<
-	string,
-	(raw: unknown) => Promise<unknown>
->;
+const { setTaskSection, setTaskPosition } =
+	(await import('./volunteer.remote')) as unknown as Record<
+		string,
+		(raw: unknown) => Promise<unknown>
+	>;
 
 const MINE = '00000000-0000-4000-8000-000000000001';
 const THEIRS = '00000000-0000-4000-8000-000000000002';
@@ -236,5 +237,32 @@ describe('sections (#2653)', () => {
 
 		await setTaskSection({ id: 'wo-theirs', sectionId: '' });
 		expect(sectionOf()).toEqual({ section_id: null });
+	});
+
+	// #2990: the same guard as any task edit, and only the task's own committee's positions.
+	it("tags a task for its committee's position as the project's committee", async () => {
+		sqlite.exec(`
+			delete from group_position; delete from "group";
+			insert into "group" (id, kind, name, slug, join_policy) values
+				('g-art', 'committee', 'Art', 'art', 'invite_only'),
+				('g-sound', 'committee', 'Sound', 'sound', 'invite_only');
+			insert into group_position (id, group_id, name) values
+				('p-designer', 'g-art', 'Designer'), ('p-engineer', 'g-sound', 'Engineer');
+			update work_order set group_id = 'g-art' where id = 'wo-theirs';
+		`);
+		const tag = () =>
+			sqlite.prepare(`select position_id as p from work_order where id = 'wo-theirs'`).get();
+
+		await setTaskPosition({ id: 'wo-theirs', positionId: 'p-designer' });
+		expect(tag()).toEqual({ p: 'p-designer' });
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
+
+		await expect(
+			setTaskPosition({ id: 'wo-theirs', positionId: 'p-engineer' })
+		).rejects.toMatchObject({ status: 400 });
+		expect(tag()).toEqual({ p: 'p-designer' });
+
+		await setTaskPosition({ id: 'wo-theirs', positionId: '' });
+		expect(tag()).toEqual({ p: null });
 	});
 });

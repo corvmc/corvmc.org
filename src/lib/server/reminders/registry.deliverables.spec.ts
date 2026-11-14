@@ -35,7 +35,9 @@ const item = {
 	projectName: 'Friday Night Fuzz',
 	groupName: 'Art and Merchandise Committee',
 	groupSlug: 'art-and-merchandise-committee',
-	recipients: [{ userId: 'u1', userName: 'Ada', userEmail: 'ada@example.com' }]
+	eventId: 'evt',
+	recipients: [{ userId: 'u1', userName: 'Ada', userEmail: 'ada@example.com' }],
+	lead: null as { userId: string; userName: string; userEmail: string } | null
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -77,6 +79,7 @@ describe('deliverable reminders', () => {
 					workOrderId: 'wo-1',
 					title: 'Poster art made',
 					eventTitle: 'Friday Night Fuzz',
+					eventId: 'evt',
 					projectName: 'Friday Night Fuzz',
 					dueAt: item.dueAt.toISOString(),
 					groupName: 'Art and Merchandise Committee',
@@ -89,5 +92,24 @@ describe('deliverable reminders', () => {
 	it('owes nothing for an item with nobody to tell', async () => {
 		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, recipients: [] }]);
 		expect(await byKey('deliverable_overdue').due(NOW)).toEqual([]);
+	});
+
+	// #2983 case 6: the show's lead hears too, as a subject of their own.
+	it("owes the show's event lead the item under its own subject", async () => {
+		const lead = { userId: 'u-lead', userName: 'Lee', userEmail: 'lee@example.com' };
+		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, recipients: [], lead }]);
+		const due = await byKey('deliverable_due_3d').due(NOW);
+		expect(due).toMatchObject([
+			{
+				subjectId: `wo-1:${item.dueAt.toISOString()}:lead`,
+				recipients: [lead],
+				item: { workOrderId: 'wo-1', forLead: true }
+			}
+		]);
+	});
+
+	it('sends a lead who is already a recipient one copy', async () => {
+		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, lead: item.recipients[0] }]);
+		expect(await byKey('deliverable_due_3d').due(NOW)).toHaveLength(1);
 	});
 });

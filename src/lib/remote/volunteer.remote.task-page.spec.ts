@@ -62,6 +62,10 @@ vi.mock('#lib/server/volunteer/task-dependencies.js', () => ({
 	addDependency: edges.add,
 	removeDependency: edges.remove
 }));
+vi.mock('#lib/server/task/task-position.js', () => ({
+	taskPositionChoices: async () => ({ positionId: null, options: [] }),
+	setTaskPosition: vi.fn()
+}));
 vi.mock('#lib/server/project/project-section-service.js', () => ({
 	listSections: async () => [
 		{ id: 'sec-1', name: 'Wiring', sortOrder: 0, projectId: 'proj-1', createdAt: new Date(0) }
@@ -119,7 +123,8 @@ describe('getTaskPage, for a task in no project', () => {
 			contractors: [{ id: 'c-1', name: 'Benton Electric' }],
 			dependencies: { waitsOn: [], neededFor: [] },
 			dependencyOptions: [],
-			sections: []
+			sections: [],
+			position: { positionId: null, options: [] }
 		});
 	});
 

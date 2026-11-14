@@ -1,10 +1,11 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import {
 	group,
 	groupMember,
 	groupPosition,
 	groupPositionHolder
 } from '../../src/lib/server/db/schema/group';
+import { workOrder } from '../../src/lib/server/db/schema/volunteer';
 import { db } from './db';
 
 /** `chair` holds the committee's chair position; a number is the nth other member. */
@@ -80,4 +81,41 @@ export async function seedCommitteePositions() {
 		}
 	}
 	return { positions, holders };
+}
+
+/**
+ * Open committee tasks tagged for a position (#2990): one on a held position,
+ * so it waits on its holder alone, and one on a vacant position, so it still
+ * waits on the whole committee. Runs after every seeder that writes tasks.
+ */
+const TAGGED: Record<string, string[]> = { 'booking-committee': ['Secretary', 'Treasurer'] };
+
+export async function seedPositionTaggedTasks() {
+	let tagged = 0;
+	for (const [slug, names] of Object.entries(TAGGED)) {
+		const [g] = await db.select({ id: group.id }).from(group).where(eq(group.slug, slug));
+		if (!g) continue;
+		const open = await db
+			.select({ id: workOrder.id })
+			.from(workOrder)
+			.where(
+				and(
+					eq(workOrder.groupId, g.id),
+					isNull(workOrder.resolvedAt),
+					isNull(workOrder.cancelledAt)
+				)
+			)
+			.orderBy(asc(workOrder.id))
+			.limit(names.length);
+		for (const [i, task] of open.entries()) {
+			const [p] = await db
+				.select({ id: groupPosition.id })
+				.from(groupPosition)
+				.where(and(eq(groupPosition.groupId, g.id), eq(groupPosition.name, names[i])));
+			if (!p) continue;
+			await db.update(workOrder).set({ positionId: p.id }).where(eq(workOrder.id, task.id));
+			tagged++;
+		}
+	}
+	return tagged;
 }

@@ -7,6 +7,7 @@
 	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import EngageContractorAction from './EngageContractorAction.svelte';
 	import TaskSectionAction from './TaskSectionAction.svelte';
+	import TaskPositionAction from './TaskPositionAction.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -32,6 +33,13 @@
 				workOrderId={view.task.id}
 				sectionId={view.task.sectionId}
 				sections={view.sections}
+			/>
+		{/if}
+		{#if view.position.options.length > 0 && !view.task.cancelledAt && !view.task.resolvedAt}
+			<TaskPositionAction
+				workOrderId={view.task.id}
+				positionId={view.position.positionId}
+				positions={view.position.options}
 			/>
 		{/if}
 		{#if view.contractors.length > 0 && !view.task.cancelledAt && !view.task.resolvedAt}

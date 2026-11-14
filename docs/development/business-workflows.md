@@ -1669,17 +1669,30 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
   shift is its own row with **Sign up**, so a task with two shifts shows both, and signing up for
   one leaves the other there. **My shifts** lists the member's sign-ups, one row per shift,
   named by the task. **Your tasks** lists the open tasks waiting on them
-  (`listAssignedTasksForUser`, filtered by `waitingOn`): assigned to them, or unassigned in a
-  committee they sit on. **Mark done** (`markMyTaskDone`) closes any of them; a task with a done
+  (`listAssignedTasksForUser`, filtered by `waitingOn`): assigned to them, or unassigned and
+  either tagged for a position they hold or in a committee they sit on whose tagged position, if
+  any, is vacant. **Mark done** (`markMyTaskDone`) closes any of them; a task with a done
   condition asks for a reason first. A task marked done moves to **Unlogged work** beside
   the shifts that owe hours, until an hour log names the task (`workOrderId`).
 - **Open task** goes to `/member/volunteer/tasks/[workOrderId]` (#2582): the task's due date,
   notes and checklist, with **Assign to me** (`takeTask`) and **Hand back** (`handBackTask`).
   Items are ticked there (`setMyTaskItemDone`), writing through `setWorkTaskDone` as staff's and
   a committee's ticks do.
-- **Who may act on a task** is one rule, `canActOnTask` (#2989): its assignee, an active seat on
-  the committee that owns it, or a holder of `volunteer.manageShifts` scoped to the task's
-  committee and project. It guards take, tick, mark done and hand back on every surface (the task
+- **Who may act on a task** is one rule, `canActOnTask` (#2989): its assignee, a holder of the
+  position it is tagged for, an active seat on the committee that owns it, or a holder of
+  `volunteer.manageShifts` scoped to the task's committee and project. The reason is returned in
+  that order.
+- **A task may be tagged for a position** of its own committee (`work_order.position_id`, #2990),
+  set from **Set position** on the staff task page (`setTaskPosition`, the same guard as any task
+  edit). The tagged task waits on that position's holders; a vacant position leaves it waiting
+  on the whole committee. A position of another committee admits nobody, and handing the item to
+  another committee drops the tag (`reassignDeliverable`).
+- **A task's notices go to the task first** (`task/task-audience.ts`): the holders of its
+  position, else its committee's active seats, else every holder of the capability. A decline, a
+  dropped place and an unstaffed orientation route this way; a committee seat is offered those
+  switches on its preferences (`forSeats`). A claim still goes to every holder of
+  `volunteer.manageShifts`, because confirming it needs `volunteer.manageRoster`, which no
+  committee carries. It guards take, tick, mark done and hand back on every surface (the task
   page, a committee's Open items, the staff task page); `scripts/task-duty-guard.spec.ts` fails on
   a duty write that skips it. A sign-up for one of the task's shifts is not enough, and an item
   must belong to the named, live task. Editing, assigning others and calling off still need the
@@ -1903,7 +1916,8 @@ from April's.
 > read from `volunteer/orientation-reminders.ts`:
 >
 > - `orientation_unclaimed` — a live orientation shift starting within 24 hours with no claimed,
->   confirmed or completed sign-up. A digest to every holder of `volunteer.manageShifts`, in-app
+>   confirmed or completed sign-up. A digest to the task's position holders, else its committee,
+>   else every holder of `volunteer.manageShifts` (#2990), in-app
 >   and email, linking to the shift (or to the short-staffed schedule for several). Keyed by
 >   shift and start, so a moved shift is owed the alert again.
 > - `first_visit` — a member's own confirmed booking starting within 24 hours while they hold
@@ -2000,7 +2014,9 @@ publish and close-out gates (`event/show-readiness.ts`), and a deliverable never
   open, committee-owned items with a due date. Items finished early or overdue by more than 14
   days are not chased. Items on a grant or sponsorship project also get `deliverable_due_14d`,
   4 to 14 days out, because a report needs more lead time (#2622). An item with no show is
-  named by its project in the mail.
+  named by its project in the mail. An unassigned item goes to its position's holders before its whole
+  committee (#2990). The show's event lead gets each item on the show as well, under a subject of
+  their own, linking to the show's production page.
 - The coordinator's unscheduled-work queue leaves out committee-owned items.
 
 ### Data touched
