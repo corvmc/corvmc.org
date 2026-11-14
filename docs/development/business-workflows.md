@@ -220,9 +220,9 @@ Two things differ from the member path:
   than five weeks get none. Each stage sends once per reservation; a session paid, comped or
   refunded drops out before its next stage. With no **Count from** set none are sent. The email
   names the date and amount, links to the reservation's pay page, and says new reservations and
-  door codes are held. It follows the member's **Payment due** notification preference and does
+  door codes are held. It is mandatory: no notification preference turns it off (#2981). It does
   not copy staff. Every attempt writes a `reservation.payment_reminder` audit row on the member,
-  with its outcome: `sent` (with the outbox row), `skipped` (email turned off or account removed)
+  with its outcome: `sent` (with the outbox row), `skipped` (account removed)
   or `failed` (the outbox refused it; the stage stays owed for the next pass). The staff
   reservation's Payment card lists the stages sent.
 

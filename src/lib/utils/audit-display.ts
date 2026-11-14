@@ -277,9 +277,7 @@ function plural(n: number, one: string, many = `${one}s`): string {
 
 /** Why a payment reminder sent no email, as the log reads it. */
 const PAYMENT_REMINDER_REASONS: Record<string, string> = {
-	preference: 'email turned off',
-	undeliverable: 'account removed',
-	no_content: 'no email'
+	undeliverable: 'account removed'
 };
 
 /** The one line a staffer reads for an audit entry. The actor and time render beside it. */

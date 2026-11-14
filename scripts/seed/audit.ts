@@ -110,8 +110,8 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 				endTime: '20:00',
 				daysAfter: 1,
 				amountCents: 3000,
-				outcome: 'skipped',
-				reason: 'preference',
+				outcome: 'failed',
+				reason: null,
 				outboxId: null
 			}
 		},

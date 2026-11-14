@@ -76,8 +76,9 @@ function content(event: ReservationPaymentDueEvent, payUrl: string): Notificatio
 
 /**
  * One payment reminder (#2876): the member's notification, then an audit row
- * for the attempt, whatever became of it. A refused send throws afterwards, so
- * the drain marks nothing and the next pass tries the stage again.
+ * for the attempt, whatever became of it. No preference turns it off (#2981).
+ * A refused send throws afterwards, so the drain marks nothing and the next
+ * pass tries the stage again.
  */
 export async function sendPaymentReminder(event: ReservationPaymentDueEvent): Promise<void> {
 	let outcome: DispatchOutcome;
@@ -94,6 +95,10 @@ export async function sendPaymentReminder(event: ReservationPaymentDueEvent): Pr
 	} catch {
 		outcome = { email: 'failed' };
 	}
+	// The type is mandatory, so a removed account is the only reason to send
+	// none. Any other skip is a reminder that is still owed.
+	const removed = outcome.email === 'skipped' && outcome.reason === 'undeliverable';
+	if (outcome.email === 'skipped' && !removed) outcome = { email: 'failed' };
 
 	await recordAuditEntry({
 		action: 'reservation.payment_reminder',
@@ -106,7 +111,7 @@ export async function sendPaymentReminder(event: ReservationPaymentDueEvent): Pr
 			daysAfter: event.daysAfter,
 			amountCents: event.amountCents,
 			outcome: outcome.email === 'queued' ? 'sent' : outcome.email,
-			reason: outcome.email === 'skipped' ? outcome.reason : null,
+			reason: removed ? 'undeliverable' : null,
 			outboxId: outcome.email === 'queued' ? outcome.outboxId : null
 		}
 	});
