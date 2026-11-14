@@ -3150,7 +3150,8 @@ export type VenueAccessField = (typeof venueAccessFields)[number];
  * One word per concept: each entry is a word the interface no longer uses and
  * the term that replaced it. `keys` limits a ban to message keys where the word
  * names that concept, for words that are right elsewhere ("Rejected" events).
- * scripts/message-copy.spec.ts holds the message catalog to this list.
+ * scripts/message-copy.spec.ts holds the message catalog to this list, and
+ * audit-display.spec.ts the audit log's wording, under the key `audit`.
  */
 export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 	{ word: /\binstructors?\b/i, use: 'teacher' },
@@ -3159,5 +3160,8 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 		word: /\b(reject(s|ed|ing)?|turned down|unpublish(es|ed|ing)?)\b/i,
 		use: 'return / returned',
 		keys: /^staff_(return|local_resources|members_instructors|members_id_panels_instructor)/
-	}
+	},
+	{ word: /\bwork orders?\b/i, use: 'task' },
+	// The catalog still says free hours in many places (#2842); only the audit log is held to it.
+	{ word: /\bfree hours?\b/i, use: 'credits', keys: /^audit$/ }
 ];
