@@ -395,17 +395,16 @@ export async function createArticle(data: CreateArticleData) {
 }
 
 export async function updateArticle(id: string, data: Partial<CreateArticleData>) {
+	const { capabilities, ...rest } = data;
 	const [article] = await db
 		.update(helpArticle)
 		.set({
-			...data,
+			...rest,
 			// Normalised on the way in so a legacy or hand-posted value can never
 			// land outside the ladder and make the row invisible to everyone.
 			...(data.minRole === undefined ? {} : { minRole: normalizeAudience(data.minRole) }),
 			// Absent leaves them; the editor omits the picker below the staff tier.
-			...(data.capabilities === undefined
-				? {}
-				: { capabilities: storedCapabilities(data.capabilities) }),
+			...(capabilities === undefined ? {} : { capabilities: storedCapabilities(capabilities) }),
 			updatedAt: new Date()
 		})
 		.where(eq(helpArticle.id, id))
