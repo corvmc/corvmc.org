@@ -60,8 +60,12 @@ const listBriefingsForEvents = vi.fn(
 	async (_u: string, _e: string[]) =>
 		[] as { eventId: string; roleName: string; articleId: string }[]
 );
+const listConfirmedSignupsForEvents = vi.fn(
+	async (_u: string, _e: string[]) => [] as { eventId: string; signupId: string }[]
+);
 vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
-	listBriefingsForEvents: (u: string, e: string[]) => listBriefingsForEvents(u, e)
+	listBriefingsForEvents: (u: string, e: string[]) => listBriefingsForEvents(u, e),
+	listConfirmedSignupsForEvents: (u: string, e: string[]) => listConfirmedSignupsForEvents(u, e)
 }));
 const listReadableArticles = vi.fn(async (ids: readonly string[]) =>
 	ids.filter((id) => id !== 'art-draft').map((id) => ({ id, title: id, slug: id, summary: null }))
@@ -89,6 +93,7 @@ beforeEach(() => {
 	door.doorSaleEventId.mockResolvedValue('evt-1');
 	gift.doorDonationEventId.mockResolvedValue(null);
 	listBriefingsForEvents.mockResolvedValue([]);
+	listConfirmedSignupsForEvents.mockResolvedValue([]);
 });
 
 describe('the door remotes', () => {
@@ -231,5 +236,31 @@ describe('the door remotes', () => {
 
 		expect(listBriefingsForEvents).toHaveBeenCalledWith('staff-1', ['evt-2']);
 		expect(briefings.map((b) => b.id)).toEqual(['art-door']);
+	});
+
+	// The door screen links back to the list it admits people from (#2798).
+	type DoorLists = { doorLists: { eventId: string; signupId: string | null }[] };
+
+	it("points a door volunteer at their own shift's list", async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }, { id: 'evt-2' }]);
+		listConfirmedSignupsForEvents.mockResolvedValue([{ eventId: 'evt-2', signupId: 's-2' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([{ eventId: 'evt-2', signupId: 's-2' }]);
+	});
+
+	it('offers no list to a volunteer without a signup on the show', async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-2' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([]);
+	});
+
+	it('points staff at the staff list for every show', async () => {
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([{ eventId: 'evt-1', signupId: null }]);
 	});
 });

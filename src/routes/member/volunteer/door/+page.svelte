@@ -126,13 +126,30 @@
 	// Capacity only warns (#1631): past zero the person at the door decides.
 	const chosen = $derived(door.events.find((e) => e.id === chosenEventId) ?? door.events[0]);
 	const capacity = $derived(chosen ? capacityNote(chosen.remaining, quantity || 1) : null);
+	// The chosen show's door list, staff's or the caller's own shift's (#2798).
+	const doorList = $derived(door.doorLists.find((d) => d.eventId === chosen?.id) ?? null);
 </script>
 
 <svelte:head>
 	<title>{pageTitle('Door sales')}</title>
 </svelte:head>
 
-<PageHeader width="2xl" title={m.member_volunteer_door_door_sales_title()} />
+<PageHeader width="2xl" title={m.member_volunteer_door_door_sales_title()}>
+	{#snippet primary()}
+		{#if doorList}
+			<Button
+				href={doorList.signupId
+					? resolve('/member/volunteer/shifts/[signupId]/check-in', {
+							signupId: doorList.signupId
+						})
+					: resolve('/staff/events/[id]/check-in', { id: doorList.eventId })}
+				size="sm"
+			>
+				{m.member_volunteer_shifts_signup_id_check_people_label()}
+			</Button>
+		{/if}
+	{/snippet}
+</PageHeader>
 <PageContent width="2xl">
 	{#if door.events.length === 0}
 		<EmptyState

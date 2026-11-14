@@ -22,7 +22,10 @@ import {
 	startDoorDonation as startDoorDonationService
 } from '#lib/server/finance/door-donation.js';
 import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
-import { listBriefingsForEvents } from '#lib/server/volunteer/volunteer-signup-service.js';
+import {
+	listBriefingsForEvents,
+	listConfirmedSignupsForEvents
+} from '#lib/server/volunteer/volunteer-signup-service.js';
 import { listReadableArticles, resolveHelpReader } from '#lib/server/help/help-service.js';
 
 /**
@@ -87,15 +90,40 @@ export const getDoorEvents = query(async () => {
 				)
 			).filter((e) => e !== null);
 	if (events.length === 0 && !(await can('finance.collect'))) error(403, 'Not permitted');
+	const ids = events.map((e) => e.id);
+	const [briefings, signups, staffList] = await Promise.all([
+		doorBriefings(userId, ids),
+		listConfirmedSignupsForEvents(userId, ids),
+		can('event.manageTickets')
+	]);
 	return {
 		events,
 		canSimulate: paymentDriver() === 'fake',
-		briefings: await doorBriefings(
-			userId,
-			events.map((e) => e.id)
-		)
+		briefings,
+		doorLists: await doorLists(ids, signups, staffList)
 	};
 });
+
+/**
+ * Where each show's door list is for this caller (#2798): staff get the staff
+ * list; a volunteer gets their own shift's list while its role grants check-in.
+ * `signupId: null` means the staff list.
+ */
+async function doorLists(
+	eventIds: string[],
+	signups: { eventId: string; signupId: string }[],
+	staffList: boolean
+) {
+	const rows = await Promise.all(
+		eventIds.map(async (eventId) => {
+			if (staffList) return { eventId, signupId: null };
+			const own = signups.find((s) => s.eventId === eventId);
+			if (!own || !(await can('event.checkIn', { eventId }))) return null;
+			return { eventId, signupId: own.signupId };
+		})
+	);
+	return rows.filter((r) => r !== null);
+}
 
 /** The seller is the signed-in member; nothing the client sends can name another. */
 export const startDoorSale = form(

@@ -35,8 +35,12 @@
 	} from '#lib/remote/volunteer.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	const params = routeParams('signupId');
+
+	const doorSalesHref = (eventId: string) =>
+		withQuery(resolve('/member/volunteer/door'), new URLSearchParams({ event: eventId }));
 
 	const signupId = $derived(params.signupId);
 	const data = $derived(await getMyShift(signupId));
@@ -127,6 +131,14 @@
 					{m.member_volunteer_shifts_signup_id_check_people_label()}
 				</Button>
 			</div>
+		</InfoCard>
+	{/if}
+
+	{#if data.doorSales && !calledOff}
+		<InfoCard title={m.member_volunteer_door_door_sales_title()}>
+			<Button href={doorSalesHref(data.doorSales.eventId)} variant="primary" size="sm">
+				{m.member_volunteer_shifts_signup_id_take_door_payments_label()}
+			</Button>
 		</InfoCard>
 	{/if}
 
