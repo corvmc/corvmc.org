@@ -17,7 +17,7 @@
 {#if wishlist.gear.length > 0 || wishlist.supplies.length > 0}
 	<Section tint="info">
 		<SectionHeading title={m.public_contribute_wishlist_section_title()}>
-			{m.public_contribute_wishlist_section_gear_supplies_space_short_title()}
+			{m.public_contribute_wishlist_section_gear_supplies_space_short_body()}
 		</SectionHeading>
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 			{#if wishlist.gear.length > 0}
