@@ -8,7 +8,7 @@ import { db } from '#lib/server/db/index.js';
 import { audioRelease } from '#lib/server/db/schema/audio.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, eq, gt, gte, inArray, isNull, lt, type SQL } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, lt, type SQL } from 'drizzle-orm';
 import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
 import { leadsGroup } from '#lib/server/group/chair.js';
 

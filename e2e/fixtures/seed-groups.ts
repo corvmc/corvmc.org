@@ -297,16 +297,14 @@ export async function seedGroups(): Promise<void> {
 
 		// A committee's chair holds its chair position; its stored role stays `member` (#3009).
 		const chaired = [SEED_COMMITTEE_ID, SEED_APPLY_ID];
-		await db
-			.insert(groupPosition)
-			.values(
-				chaired.map((groupId) => ({
-					id: `${groupId}-chair-position`,
-					groupId,
-					name: 'Chair',
-					isChair: true
-				}))
-			);
+		await db.insert(groupPosition).values(
+			chaired.map((groupId) => ({
+				id: `${groupId}-chair-position`,
+				groupId,
+				name: 'Chair',
+				isChair: true
+			}))
+		);
 		await db.insert(groupPositionHolder).values(
 			chaired.map((groupId) => ({
 				positionId: `${groupId}-chair-position`,

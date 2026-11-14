@@ -296,14 +296,12 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 		// Every committee has a chair position from the start (#3009).
 		...(kind === 'committee'
 			? [
-					db
-						.insert(groupPosition)
-						.values({
-							id: chairPositionId,
-							groupId: bandId,
-							name: CHAIR_POSITION_NAME,
-							isChair: true
-						}),
+					db.insert(groupPosition).values({
+						id: chairPositionId,
+						groupId: bandId,
+						name: CHAIR_POSITION_NAME,
+						isChair: true
+					}),
 					...(ownerId
 						? [
 								db
