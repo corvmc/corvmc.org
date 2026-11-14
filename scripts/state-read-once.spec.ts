@@ -31,5 +31,6 @@ describe('component scripts', () => {
 		);
 
 		expect(offenders).toEqual([]);
-	});
+		// Compiles every component: 1.6s on a laptop, 7s on a loaded CI runner.
+	}, 60_000);
 });
