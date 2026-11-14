@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	/**
-	 * A task staff or a committee assigned this member (#2582): its notes, due
-	 * date and checklist. Authorisation is the `work_order_assignee` row, checked
-	 * in `getMyTask` and again in every tick.
+	 * A task this member may act on (#2582, #2989): its notes, due date and
+	 * checklist. Authorisation is `canActOnTask`, checked in `getMyTask` and
+	 * again in every write.
 	 */
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -14,7 +14,13 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { formatDateLong, formatDateShort } from '#lib/utils/format.js';
-	import { getMyTask, markMyTaskDone, setMyTaskItemDone } from '#lib/remote/volunteer.remote.js';
+	import {
+		getMyTask,
+		handBackTask,
+		markMyTaskDone,
+		setMyTaskItemDone,
+		takeTask
+	} from '#lib/remote/volunteer.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 
@@ -31,6 +37,37 @@
 	title={shiftLabel(task)}
 	subtitle={shiftRoleSuffix(task) ?? task.eventTitle ?? m.member_volunteer_tasks_subtitle_body()}
 >
+	{#if task.canTake}
+		<Action
+			action={takeTask.for(task.workOrderId)}
+			label={m.member_volunteer_tasks_assign_to_me_label()}
+			variant="ghost"
+			successToast={m.member_volunteer_tasks_assigned_toast()}
+		>
+			{#snippet form()}
+				<input
+					{...takeTask.for(task.workOrderId).fields.workOrderId.as('hidden', task.workOrderId)}
+				/>
+			{/snippet}
+		</Action>
+	{/if}
+	{#if task.canHandBack}
+		<Action
+			action={handBackTask.for(task.workOrderId)}
+			label={m.member_volunteer_tasks_hand_back_label()}
+			variant="ghost"
+			modalTitle={m.member_volunteer_tasks_hand_back_title()}
+			submitLabel={m.member_volunteer_tasks_hand_back_label()}
+			successToast={m.member_volunteer_tasks_handed_back_toast()}
+		>
+			{#snippet form()}
+				<input
+					{...handBackTask.for(task.workOrderId).fields.workOrderId.as('hidden', task.workOrderId)}
+				/>
+				<p class="text-sm">{m.member_volunteer_tasks_hand_back_text()}</p>
+			{/snippet}
+		</Action>
+	{/if}
 	{#if task.canMarkDone}
 		<Action
 			action={markMyTaskDone.for(task.workOrderId)}
@@ -46,6 +83,14 @@
 						.fields.workOrderId.as('hidden', task.workOrderId)}
 				/>
 				<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_text()}</p>
+				{#if task.closesItself}
+					<FormField
+						field={markMyTaskDone.for(task.workOrderId).fields.reason}
+						label={m.member_volunteer_tasks_reason_label()}
+						type="textarea"
+						required
+					/>
+				{/if}
 			{/snippet}
 		</Action>
 	{/if}

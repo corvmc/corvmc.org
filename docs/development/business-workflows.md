@@ -1666,15 +1666,22 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
 - **The member's page** (`/member/volunteer`) lists shifts, never tasks, on the board: each
   shift is its own row with **Sign up**, so a task with two shifts shows both, and signing up for
   one leaves the other there. **My shifts** lists the member's sign-ups, one row per shift,
-  named by the task. **Assigned tasks** lists the open tasks they are assigned
-  (`listAssignedTasksForUser`), with **Mark done** (`markAssignedTaskDone`) unless the task has a
-  done condition, which closes it by itself. A task marked done moves to **Unlogged work** beside
+  named by the task. **Your tasks** lists the open tasks waiting on them
+  (`listAssignedTasksForUser`, filtered by `waitingOn`): assigned to them, or unassigned in a
+  committee they sit on. **Mark done** (`markMyTaskDone`) closes any of them; a task with a done
+  condition asks for a reason first. A task marked done moves to **Unlogged work** beside
   the shifts that owe hours, until an hour log names the task (`workOrderId`).
 - **Open task** goes to `/member/volunteer/tasks/[workOrderId]` (#2582): the task's due date,
-  notes and checklist. The assignee ticks and unticks items there (`setMyTaskItemDone`), writing
-  through `setWorkTaskDone` as staff's and a committee's ticks do. The remote guards on the
-  caller's `work_order_assignee` row, or `volunteer.manageShifts`; a sign-up for one of the
-  task's shifts is not enough, and an item must belong to the named, live task.
+  notes and checklist, with **Assign to me** (`takeTask`) and **Hand back** (`handBackTask`).
+  Items are ticked there (`setMyTaskItemDone`), writing through `setWorkTaskDone` as staff's and
+  a committee's ticks do.
+- **Who may act on a task** is one rule, `canActOnTask` (#2989): its assignee, an active seat on
+  the committee that owns it, or a holder of `volunteer.manageShifts` scoped to the task's
+  committee and project. It guards take, tick, mark done and hand back on every surface (the task
+  page, a committee's Open items, the staff task page); `scripts/task-duty-guard.spec.ts` fails on
+  a duty write that skips it. A sign-up for one of the task's shifts is not enough, and an item
+  must belong to the named, live task. Editing, assigning others and calling off still need the
+  grant.
 
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate

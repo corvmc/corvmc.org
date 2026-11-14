@@ -18,18 +18,19 @@ import {
 	reassignDeliverable,
 	DeliverableNotFoundError
 } from '#lib/server/volunteer/deliverables-service.js';
-import { assignToTask } from '#lib/server/volunteer/assignee-service.js';
-import { getWorkOrderById, resolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { markTaskDone, takeTask } from '#lib/server/volunteer/assignee-service.js';
+import { getWorkOrderById } from '#lib/server/volunteer/work-order-service.js';
+import { requireActOnTask } from '#lib/server/task/can-act.js';
 import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { getStaffEventProduction } from './events.remote';
 
 /**
  * A committee's deliverables (docs/decisions/0053-committees-own-deliverables-not-permissions.md).
  *
- * Every write reads the owning committee off the work order, never off the
- * request, and passes it to `requireCommitteeMember` with
- * `volunteer.manageShifts`: an active member of the owner whose grants carry it,
- * or a holder of it outright (staff). Owning an item grants nothing else.
+ * Take, tick and done are duties: `requireActOnTask` reads the item's committee
+ * off the row, never the request (#2989). Handing an item to another committee
+ * is beyond the duty and needs `volunteer.manageShifts`. Owning an item grants
+ * nothing on the show.
  */
 
 const MANAGE = 'volunteer.manageShifts' as const;
@@ -58,10 +59,14 @@ export const getCommitteeOpenItems = query(z.string().min(1), async (slug) => {
 		listCommitteeOpenItems(ctx.group.id),
 		listCommittees()
 	]);
-	const canKeep = ctx.role === 'staff' ? await can(MANAGE) : committeeCarries(ctx.group, MANAGE);
+	// A seat acts on its committee's items (#2989); handing one to another committee takes the grant.
+	const canAct = ctx.role !== 'staff' || (await can(MANAGE, { groupId: ctx.group.id }));
+	const canReassign =
+		ctx.role === 'staff' ? await can(MANAGE) : committeeCarries(ctx.group, MANAGE);
 	return {
 		items,
-		canKeep,
+		canAct,
+		canReassign,
 		viewerId: ctx.user.id,
 		committees: committees.filter((c) => c.id !== ctx.group.id)
 	};
@@ -69,13 +74,13 @@ export const getCommitteeOpenItems = query(z.string().min(1), async (slug) => {
 
 /** Take it: the caller assigns themselves the item (#2518); their committee is the coordinator. */
 export const takeDeliverable = form(z.object({ id: z.string().min(1), ...from }), async (data) => {
-	const { groupId } = await ownerOf(data.id);
-	const { user } = await requireCommitteeMember(groupId, MANAGE);
+	await ownerOf(data.id);
+	const { user } = await requireActOnTask(data.id);
 	let warnings: string[] = [];
 	try {
 		const task = await getWorkOrderById(data.id);
 		if (!task) error(404, 'That item is not open any more');
-		({ warnings } = await assignToTask(task, user.id, user.id));
+		({ warnings } = await takeTask(task, user.id));
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -87,10 +92,10 @@ export const takeDeliverable = form(z.object({ id: z.string().min(1), ...from })
 export const resolveDeliverable = form(
 	z.object({ id: z.string().min(1), reason: z.string().max(500).optional(), ...from }),
 	async (data) => {
-		const { groupId } = await ownerOf(data.id);
-		const { user } = await requireCommitteeMember(groupId, MANAGE);
+		await ownerOf(data.id);
+		const { user } = await requireActOnTask(data.id);
 		try {
-			await resolveWorkOrder(data.id, { resolvedByUserId: user.id, notes: data.reason });
+			await markTaskDone(data.id, user.id, data.reason);
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -109,8 +114,8 @@ export const tickDeliverableTask = form(
 	async (data) => {
 		const workOrderId = await getTaskWorkOrderId(data.taskId);
 		if (!workOrderId) error(404, 'Task not found');
-		const { groupId } = await ownerOf(workOrderId);
-		const { user } = await requireCommitteeMember(groupId, MANAGE);
+		await ownerOf(workOrderId);
+		const { user } = await requireActOnTask(workOrderId);
 		try {
 			await setWorkTaskDone(data.taskId, data.done, user.id);
 		} catch (err) {

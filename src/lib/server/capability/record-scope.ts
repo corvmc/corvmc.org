@@ -5,8 +5,7 @@ import {
 	maintenanceSchedule,
 	volunteerShift,
 	volunteerSignup,
-	workOrder,
-	workTask
+	workOrder
 } from '#lib/server/db/schema/volunteer.js';
 import type { CapabilityScope } from '#lib/server/capability/grant-rules.js';
 
@@ -38,16 +37,6 @@ export async function signupScope(signupId: string): Promise<CapabilityScope> {
 		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
 		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(eq(volunteerSignup.id, signupId));
-	return row ?? {};
-}
-
-/** A checklist item on a task. */
-export async function workTaskScope(workTaskId: string): Promise<CapabilityScope> {
-	const [row] = await db
-		.select(fromTask)
-		.from(workTask)
-		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
-		.where(eq(workTask.id, workTaskId));
 	return row ?? {};
 }
 

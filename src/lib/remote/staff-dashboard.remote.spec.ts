@@ -93,16 +93,12 @@ describe('getStaffDashboard', () => {
 		});
 	});
 
-	it('reads the viewer’s own tasks under either task gate, capped with the total', async () => {
-		caps = ['volunteer.read'];
+	it('reads the viewer’s own tasks with no task gate, capped with the total (#2989)', async () => {
+		caps = ['user.list'];
 		const data = await getStaffDashboard({});
 		expect(listMyWork).toHaveBeenCalledWith('u1');
 		expect(data.myWork?.rows).toHaveLength(5);
 		expect(data.myWork?.total).toBe(7);
-
-		caps = ['user.list'];
-		expect((await getStaffDashboard({})).myWork).toBeNull();
-		expect(listMyWork).toHaveBeenCalledTimes(1);
 	});
 
 	it('refuses a caller with neither a position nor a seat', async () => {

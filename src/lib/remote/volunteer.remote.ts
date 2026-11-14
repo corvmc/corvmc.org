@@ -120,12 +120,14 @@ import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js'
 import {
 	assignToTask as assignToTaskService,
 	getTaskChecklist,
-	isTaskAssignee,
+	handBackTask as handBackTaskService,
 	listAssignedTasksForUser,
-	markAssignedTaskDone,
+	markTaskDone,
 	setTaskChecklistItemDone,
+	takeTask as takeTaskService,
 	unassignFromTask as unassignFromTaskService
 } from '#lib/server/volunteer/assignee-service.js';
+import { requireActOnTask } from '#lib/server/task/can-act.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
@@ -1952,7 +1954,7 @@ export const openShift = form(
 export const resolveWorkOrder = form(
 	z.object({ id: z.string().min(1), notes: z.string().max(500).optional() }),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
+		const { user: staff } = await requireActOnTask(data.id);
 
 		try {
 			await resolveWorkOrderService(data.id, {
@@ -2422,45 +2424,65 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 });
 
 /**
- * Mark a task done as its assignee. Resolves its equipment reports and stamps
- * every assignee, which puts the task in their unlogged work.
+ * Mark a task done, as anyone `canActOnTask` admits. Resolves its equipment
+ * reports and stamps every assignee, which puts the task in their unlogged work.
  */
-export const markMyTaskDone = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
-	const currentUser = requireUser();
+export const markMyTaskDone = form(
+	// A task with a done condition takes a reason; `resolveWorkOrder` asks for it.
+	z.object({ workOrderId: z.string().min(1), reason: z.string().max(500).optional() }),
+	async (data) => {
+		const { user } = await requireActOnTask(data.workOrderId);
 
+		try {
+			await markTaskDone(data.workOrderId, user.id, data.reason || undefined);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await Promise.all([refreshMemberViews(), getMyTask(data.workOrderId).refresh()]);
+		return { success: true };
+	}
+);
+
+/** Take a task yourself: an unassigned one in your committee, or any a grant covers. */
+export const takeTask = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
+	const { user } = await requireActOnTask(data.workOrderId);
+	let warnings: string[] = [];
 	try {
-		await markAssignedTaskDone(data.workOrderId, currentUser.id);
+		({ warnings } = await takeTaskService(await requireTask(data.workOrderId), user.id));
 	} catch (err) {
 		mapDomainError(err);
 	}
+	await Promise.all([refreshTaskViews(data.workOrderId), getMyTask(data.workOrderId).refresh()]);
+	return { success: true, warnings };
+});
 
-	await Promise.all([refreshMemberViews(), getMyTask(data.workOrderId).refresh()]);
+/** Hand a task back: the caller comes off it, and it waits on the committee again. */
+export const handBackTask = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
+	const { user } = await requireActOnTask(data.workOrderId);
+	await handBackTaskService(await requireTask(data.workOrderId), user.id);
+	await refreshTaskViews(data.workOrderId);
 	return { success: true };
 });
 
 /**
- * The task's assignee, or a holder of `volunteer.manageShifts`, else 403. The
- * same 403 for a missing task and somebody else's, so an id is not an oracle.
+ * A task's page for whoever may act on it (#2582, #2989): its notes, due date
+ * and checklist, and which of take, hand back and mark done apply.
  */
-async function requireTaskAssignee(workOrderId: string) {
-	const currentUser = requireUser();
-	if (await isTaskAssignee(workOrderId, currentUser.id)) {
-		return { user: currentUser, assignee: true };
-	}
-	if (await can('volunteer.manageShifts')) return { user: currentUser, assignee: false };
-	error(403, 'That task is not assigned to you');
-}
-
-/** An assigned task's page (#2582): its notes, due date and checklist. */
 export const getMyTask = query(z.string().min(1), async (workOrderId) => {
-	const { assignee } = await requireTaskAssignee(workOrderId);
+	const { reason } = await requireActOnTask(workOrderId);
 	const task = await getTaskChecklist(workOrderId);
 	if (!task) error(404, 'Task not found');
-	// Marking it done is an assignee's act; `markAssignedTaskDone` refuses anyone else.
-	return { ...task, canMarkDone: assignee && !task.closesItself && task.resolvedAt === null };
+	const open = task.resolvedAt === null;
+	return {
+		...task,
+		canMarkDone: open,
+		canTake: open && reason !== 'assignee',
+		canHandBack: open && reason === 'assignee'
+	};
 });
 
-/** Tick or untick a checklist item on a task assigned to the caller. */
+/** Tick or untick a checklist item on a task the caller may act on. */
 export const setMyTaskItemDone = form(
 	z.object({
 		workOrderId: z.string().min(1),
@@ -2469,13 +2491,9 @@ export const setMyTaskItemDone = form(
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const { user, assignee } = await requireTaskAssignee(data.workOrderId);
+		const { user } = await requireActOnTask(data.workOrderId);
 		await setTaskChecklistItemDone(data.workOrderId, data.itemId, data.done, user.id);
-		// The dashboard's checklist count is the assignee's; staff have no dashboard row.
-		await Promise.all([
-			getMyTask(data.workOrderId).refresh(),
-			assignee ? refreshMemberViews() : undefined
-		]);
+		await Promise.all([getMyTask(data.workOrderId).refresh(), refreshMemberViews()]);
 		return { success: true };
 	}
 );

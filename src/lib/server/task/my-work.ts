@@ -1,8 +1,7 @@
 import { db } from '#lib/server/db/index.js';
-import { workOrder, workOrderAssignee } from '#lib/server/db/schema/volunteer.js';
 import { workOrderLink } from '#lib/server/db/schema/work-order-link.js';
-import { group, groupMember } from '#lib/server/db/schema/group.js';
-import { and, eq, exists, inArray, isNull, notExists, or, sql } from 'drizzle-orm';
+import { waitingOn } from './can-act';
+import { inArray } from 'drizzle-orm';
 import { taskRowQuery, toTaskRow } from '#lib/server/volunteer/task-catalogue.js';
 import { whenOf, type TaskRow } from '#lib/utils/task-facts.js';
 import { isOverdue } from '#lib/utils/work-order-due.js';
@@ -18,53 +17,9 @@ export interface MyTask extends TaskRow {
 	about: TaskAbout | null;
 }
 
-/** A live committee the user sits on. */
-function seatsOf(userId: string) {
-	return db
-		.select({ id: groupMember.groupId })
-		.from(groupMember)
-		.innerJoin(group, eq(group.id, groupMember.groupId))
-		.where(
-			and(
-				eq(groupMember.userId, userId),
-				eq(groupMember.status, 'active'),
-				eq(group.kind, 'committee'),
-				isNull(group.deletedAt)
-			)
-		);
-}
-
-const anyAssignee = () =>
-	db
-		.select({ one: sql`1` })
-		.from(workOrderAssignee)
-		.where(eq(workOrderAssignee.workOrderId, workOrder.id));
-
-/**
- * Open tasks waiting on this user: assigned to them and not yet marked done by
- * them, or answerable by a committee they sit on with nobody assigned. Overdue
- * first, then by date, undated last.
- */
+/** The tasks `waitingOn` this user (#2989). Overdue first, then by date, undated last. */
 export async function listMyWork(userId: string, now = new Date()): Promise<MyTask[]> {
-	const mine = db
-		.select({ one: sql`1` })
-		.from(workOrderAssignee)
-		.where(
-			and(
-				eq(workOrderAssignee.workOrderId, workOrder.id),
-				eq(workOrderAssignee.userId, userId),
-				isNull(workOrderAssignee.completedAt)
-			)
-		);
-	const rows = (
-		await taskRowQuery(now).where(
-			and(
-				isNull(workOrder.resolvedAt),
-				isNull(workOrder.cancelledAt),
-				or(exists(mine), and(inArray(workOrder.groupId, seatsOf(userId)), notExists(anyAssignee())))
-			)
-		)
-	).map(toTaskRow);
+	const rows = (await taskRowQuery(now).where(waitingOn(userId))).map(toTaskRow);
 
 	const links = await aboutOf(rows.map((r) => r.id));
 	return rows

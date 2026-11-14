@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
 /**
- * The assignee's task page (#2582), through the remotes, against a real SQLite.
- * Only the task's `work_order_assignee`, or a holder of
- * `volunteer.manageShifts`, reads it or ticks its checklist; a shift sign-up
- * or another task's assignment is not enough. Each is a join a mocked `db`
- * would agree with either way.
+ * A task's page (#2582, #2989), through the remotes, against a real SQLite.
+ * Whoever `canActOnTask` admits reads it, ticks it, marks it done, takes it
+ * and hands it back: the assignee, a seat on its committee, or a holder of
+ * `volunteer.manageShifts`. A shift sign-up or another task's assignment is
+ * not enough. Each is a join a mocked `db` would agree with either way.
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
@@ -45,6 +45,8 @@ vi.mock('#lib/server/authorization.js', async () => {
 	return {
 		requireUser: () => ({ id: caller }),
 		can: async (cap: string) => manager && cap === 'volunteer.manageShifts',
+		userHasCapability: async (_u: string, cap: string) =>
+			manager && cap === 'volunteer.manageShifts',
 		requireCapability: async () => {
 			throw error(403, 'Not permitted');
 		}
@@ -53,6 +55,9 @@ vi.mock('#lib/server/authorization.js', async () => {
 
 const remote = (await import('./volunteer.remote')) as unknown as {
 	getMyTask: (id: string) => PromiseLike<{ items: { id: string; done: boolean }[] }>;
+	markMyTaskDone: (raw: { workOrderId: string; reason?: string }) => Promise<unknown>;
+	takeTask: (raw: { workOrderId: string }) => Promise<unknown>;
+	handBackTask: (raw: { workOrderId: string }) => Promise<unknown>;
 	setMyTaskItemDone: (raw: {
 		workOrderId: string;
 		itemId: string;
@@ -70,6 +75,8 @@ beforeEach(() => {
 	caller = 'nia';
 	manager = false;
 	for (const table of [
+		'group_member',
+		'"group"',
 		'volunteer_signup',
 		'volunteer_shift',
 		'work_task',
@@ -84,9 +91,14 @@ beforeEach(() => {
 			('nia', 'Nia', 'nia@example.com'),
 			('sam', 'Sam', 'sam@example.com'),
 			('staff', 'Staff', 'staff@example.com');
-		insert into work_order (id, title, notes) values
-			('wo-nia', 'Hang posters', 'Downtown first'),
-			('wo-sam', 'Book the van', null);
+		insert into "group" (id, kind, name, slug, join_policy) values
+			('booking', 'committee', 'Booking', 'booking', 'invite_only');
+		insert into group_member (id, group_id, user_id, role, status) values
+			('m-sam', 'booking', 'sam', 'member', 'active');
+		insert into work_order (id, title, notes, group_id) values
+			('wo-nia', 'Hang posters', 'Downtown first', null),
+			('wo-sam', 'Book the van', null, null),
+			('wo-booking', 'Confirm the headliner', null, 'booking');
 		insert into work_order_assignee (work_order_id, user_id, assigned_at) values
 			('wo-nia', 'nia', unixepoch()), ('wo-sam', 'sam', unixepoch());
 		insert into work_task (id, work_order_id, label, sort_order) values
@@ -114,10 +126,22 @@ describe('getMyTask', () => {
 		await expect(remote.getMyTask('wo-none')).rejects.toMatchObject({ status: 403 });
 	});
 
-	it('serves a capability holder, who cannot mark it done', async () => {
+	it('serves a capability holder, who may mark it done or take it', async () => {
 		caller = 'staff';
 		manager = true;
-		await expect(remote.getMyTask('wo-nia')).resolves.toMatchObject({ canMarkDone: false });
+		await expect(remote.getMyTask('wo-nia')).resolves.toMatchObject({
+			canMarkDone: true,
+			canTake: true,
+			canHandBack: false
+		});
+	});
+
+	it('serves a seat on the owning committee, with no grant (#2983 case 1)', async () => {
+		caller = 'sam';
+		await expect(remote.getMyTask('wo-booking')).resolves.toMatchObject({
+			canMarkDone: true,
+			canTake: true
+		});
 	});
 });
 
@@ -170,5 +194,64 @@ describe('setMyTaskItemDone', () => {
 		manager = true;
 		await remote.setMyTaskItemDone({ workOrderId: 'wo-nia', itemId: 'nia-2', done: true });
 		expect(doneBy('nia-2')).toEqual({ done: 1, done_by_user_id: 'staff' });
+	});
+});
+
+const resolvedBy = (id: string) =>
+	(
+		sqlite.prepare(`select resolved_by_user_id as by from work_order where id = ?`).get(id) as {
+			by: string | null;
+		}
+	).by;
+
+describe('markMyTaskDone', () => {
+	it('lets a committee seat close its committee’s task (#2983 case 1)', async () => {
+		caller = 'sam';
+		await remote.markMyTaskDone({ workOrderId: 'wo-booking' });
+		expect(resolvedBy('wo-booking')).toBe('sam');
+	});
+
+	it('lets the assignee close a task with a done condition (#2983 case 4)', async () => {
+		sqlite.exec(`update work_order set done_when = 'poster_set' where id = 'wo-nia'`);
+		await remote.markMyTaskDone({ workOrderId: 'wo-nia', reason: 'Put up by hand' });
+		expect(resolvedBy('wo-nia')).toBe('nia');
+	});
+
+	it('refuses a member with no seat, assignment or grant', async () => {
+		await expect(remote.markMyTaskDone({ workOrderId: 'wo-booking' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(resolvedBy('wo-booking')).toBeNull();
+	});
+});
+
+describe('takeTask and handBackTask', () => {
+	const holders = (id: string) =>
+		(
+			sqlite
+				.prepare(`select user_id from work_order_assignee where work_order_id = ? order by user_id`)
+				.all(id) as { user_id: string }[]
+		).map((r) => r.user_id);
+
+	it('lets a committee seat take its committee’s task and hand it back (#2983 cases 1, 4)', async () => {
+		caller = 'sam';
+		await remote.takeTask({ workOrderId: 'wo-booking' });
+		expect(holders('wo-booking')).toEqual(['sam']);
+		await expect(remote.getMyTask('wo-booking')).resolves.toMatchObject({ canHandBack: true });
+
+		await remote.handBackTask({ workOrderId: 'wo-booking' });
+		expect(holders('wo-booking')).toEqual([]);
+	});
+
+	it('lets an assignee hand back a task outside any committee', async () => {
+		await remote.handBackTask({ workOrderId: 'wo-nia' });
+		expect(holders('wo-nia')).toEqual([]);
+	});
+
+	it('refuses a member taking a task that is not theirs to act on', async () => {
+		await expect(remote.takeTask({ workOrderId: 'wo-sam' })).rejects.toMatchObject({
+			status: 403
+		});
+		expect(holders('wo-sam')).toEqual(['sam']);
 	});
 });

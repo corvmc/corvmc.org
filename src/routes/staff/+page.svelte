@@ -111,10 +111,18 @@
 		data.room?.[0].reservations.filter((r) => r.doorCodeUnconfirmed).length ?? 0
 	);
 	const now = new Date();
-	// A task about a record opens that record, where its work is done.
-	function taskHref(t: { id: string; about: { type: EntityType; id: string } | null }) {
+	// A task about a record opens that record when the viewer can, else a task page they can open.
+	function taskHref(t: {
+		id: string;
+		projectName: string | null;
+		about: { type: EntityType; id: string } | null;
+	}) {
 		const about = t.about && entityHref({ ...t.about, title: '' } as EntityRef, viewer);
-		return about ?? resolve(`staff/tasks/${t.id}`);
+		if (about) return about;
+		const holds = (c: 'project.read' | 'volunteer.read') => hasCapability(data.capabilities, c);
+		// The staff task page's guard: `project.read` for a project's task, either read for a loose one.
+		const reads = holds('project.read') || (!t.projectName && holds('volunteer.read'));
+		return reads ? resolve(`staff/tasks/${t.id}`) : resolve(`member/volunteer/tasks/${t.id}`);
 	}
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
