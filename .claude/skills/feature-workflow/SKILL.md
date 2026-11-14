@@ -22,7 +22,7 @@ The checklist below is the canonical version. A few notes on what the phases mea
 - **Verify** means the gates in `CLAUDE.md`, matched to what you changed — `pnpm check` for
   anything typed, `pnpm test:unit -- --run` for service logic, `pnpm docs:check` if routes moved.
 - **Document** is not optional. Each build PR updates the living docs for the behaviour it
-  changes; the last PR adds the feature catalog row (`docs/reports/feature-catalog.md`) and a
+  changes; the last PR adds the feature's file under `docs/reports/features/<panel>/` and a
   decision record in `docs/decisions/`.
 
 The canonical checklist follows, imported from `docs/development/conventions.md`:

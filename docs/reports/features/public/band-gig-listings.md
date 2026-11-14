@@ -1,0 +1,5 @@
+# Band gig listings
+
+Status: ✅ /band/[slug]/events + directory + microsite
+
+Bands enter their own past and upcoming gigs. Multi-band bills via `event_band`: a lineup row is a _name_, optionally linked to a platform band, because most acts on a bill have no CMC account. A credit naming a real band lands `pending` and never reaches that band's profile until they confirm — the event always shows the full bill, but only confirmed acts link out. Declining keeps the row so the owner's listing stays accurate and a re-invite is blocked. Also: poster upload through the band forms (the service always accepted `posterFile`; no form passed one), editable date/time so history can be corrected, and a paste-a-block importer capped at 100 gigs whose support credits are always unlinked. `event.endsAt` is nullable — nobody remembers when a 2019 gig ended — with CMC events still required to have one via the `event_cmc_needs_end` check. Staff can credit bands on CMC-produced shows, which falls out of the same table. See `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`

@@ -1,0 +1,5 @@
+# Event posters
+
+Status: ✅ Built
+
+A show's poster is an artifact request. **Commission poster art** on the Advance tab asks any directory listing, since an artist need not be on the bill. The artist uploads on `/act/{token}`, and **Use as poster** or **Use with a details footer** makes the art the poster. When nothing arrives, **Use the template flyer** on the Poster card renders one from the event itself, and it passes the publish gate like any other poster. **Download print poster** on the same card prints the uploaded image above a footer of the event's details, sponsors and a QR code to the event's short link, `corvmc.org/e/<code>`, printed under the code, as a Letter PDF. Every event gets a six-character code on insert (`event_listing.short_code`, `src/lib/event-short-code.ts`), never changed; `/e/[code]` redirects to the event page, and the staff event page's QR card shows the link to copy (#2615) through Browser Rendering. Rendering is `@cf-wasm/og` on workerd. See `docs/decisions/0010-poster-art-is-an-artifact-request.md` and `docs/decisions/0062-a-print-poster-is-the-social-image-above-a-details-footer.md`.

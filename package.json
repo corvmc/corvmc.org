@@ -41,6 +41,7 @@
 		"volunteer:seed-roles": "tsx scripts/seed-volunteer-roles.ts",
 		"auth:hash-census": "tsx scripts/password-hash-census.ts",
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
+		"docs:catalog": "node scripts/docs/feature-catalog.mjs",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
 		"field-name-census": "node scripts/field-name-census.mjs",

@@ -147,7 +147,7 @@ BASE_REF=origin/feature/<slug> pnpm lint:changed
 
 Only when the feature is complete and its member-facing surfaces work.
 
-Work the nine-phase checklist's finishing steps first — seed data, the feature catalog row,
+Work the nine-phase checklist's finishing steps first — seed data, the feature's file in `docs/reports/features/`,
 `pnpm docs:routes && pnpm docs:check` if a route moved, and the feature's decision record in
 `docs/decisions/`. Then:
 

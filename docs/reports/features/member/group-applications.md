@@ -1,0 +1,5 @@
+# Group applications
+
+Status: ✅ /member/groups
+
+One way to apply to any `by_application` group (#1700): `group_application` holds the answers and `group_application_choice` each group's own decision, with the reason shown to the applicant. Every committee is `by_application`; a club applies from an **Apply** dialog under its `joinInstructions` with one optional `note`, and a committee's Apply opens a dialog on `/member/groups` with it ticked, where one application can name several committees and answers the board's two questions. Questions belong to the kind (#1728). Reviewers are the group's owner or admin for any kind, plus `committee.reviewApplications` holders for committees only, from `/staff/committees` (#1730) — `group.manage` alone decides nothing. Accepting **invites** (#1729). The applicant withdraws an open application, and may apply again once nothing is open, from `/member/groups`, which also lists each decision. `group.application_submitted` notifies the chair, or the coordinator for a headless committee (#1726). The custom migration moved every `committee_application` and `requested` roster row across; the old tables drop in the contract phase.

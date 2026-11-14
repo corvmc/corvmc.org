@@ -83,7 +83,7 @@ Say in the PR that the full suite was deferred to CI.
 
 Anything that adds schema or spans several files follows the nine phases in
 `docs/development/conventions.md#the-feature-checklist`; its easily skipped finish is seed data
-(`scripts/seed-dev.ts`), the feature catalog row, and `pnpm docs:routes && pnpm docs:check` if a
+(`scripts/seed-dev.ts`), the feature's file in `docs/reports/features/`, and `pnpm docs:routes && pnpm docs:check` if a
 route moved.
 
 **Proposals live on the issue, never in the repo.** Each build PR updates the living docs for the

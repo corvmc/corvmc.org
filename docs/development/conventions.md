@@ -62,9 +62,8 @@ When building a new feature, work through these phases in order:
    the queue ref, and `scripts/claude/block-whole-tree-gate.sh` blocks them here. `pnpm check` is
    still worth running when you have a specific type question; it is a required CI check either
    way, so it is not a step to perform out of habit.
-8. **Document** — add the feature row to the feature catalog
-   (`docs/reports/feature-catalog.md`) — one row per feature, written in the final phase, because
-   that table is a recurring merge conflict when every phase edits it; update/add help
+8. **Document** — add the feature's file under `docs/reports/features/<panel>/` (format in its
+   [README](../reports/features/README.md)), written in the final phase; update/add help
    articles and run the docs checks (see
    [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). The last PR
    adds the feature's decision record — see
@@ -277,7 +276,6 @@ it across worktrees) and it replays the resolutions.
 | `scripts/seed-dev.ts`               | The orchestrator: `main()` and nothing else. It is now the only hot spot, and a feature touches one line of it. Seeders live one-per-file in `scripts/seed/`, so two features no longer conflict at all.    |
 | `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                     |
 | `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                             |
-| `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                |
 | `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
 | `migrations/`                       | The migrations never conflict; the pruned `snapshot.json` does. Delete this branch's own migration first, then merge, then take `--theirs`. See above.                                                      |
 
@@ -920,8 +918,7 @@ Before opening a PR that adds/removes/moves a route or touches help articles:
    `docs/manual/README.md`.
 2. `pnpm docs:routes` — regenerate and commit `docs/manual/route-inventory.json`.
 3. `pnpm docs:check` — must pass; CI fails the PR on integrity errors.
-4. New feature shipped? Add its row to the feature catalog `docs/reports/feature-catalog.md`
-   (checklist phase 8)
+4. New feature shipped? Add its file under `docs/reports/features/<panel>/` (checklist phase 8)
    and index any new doc in `docs/README.md`.
 
 Keeping the docs honest is a manual step in every PR that changes behaviour — nothing

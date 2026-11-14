@@ -644,8 +644,8 @@ integrity, not staleness.
 Also keep current as you change things:
 
 - `docs/README.md` — the index; every doc gets a row and a status emoji.
-- `docs/reports/feature-catalog.md` — every shipped feature; add a row per shipped feature
-  (see [conventions](../development/conventions.md)).
+- `docs/reports/features/` — one file per shipped feature; `pnpm docs:catalog` renders the
+  tables (see [conventions](../development/conventions.md)).
 
 ## 8. Monitoring and incident triage
 
