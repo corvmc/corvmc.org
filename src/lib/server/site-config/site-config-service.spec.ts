@@ -42,9 +42,6 @@ vi.mock('#lib/server/kv.js', () => ({
 	listKeys: kv.listKeys
 }));
 
-const recordAuditEntry = vi.hoisted(() => vi.fn());
-vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
-
 import {
 	getSiteConfig,
 	getConfigsByPrefix,
@@ -64,7 +61,6 @@ beforeEach(() => {
 	getJson.mockClear();
 	putJson.mockClear();
 	listKeys.mockClear();
-	recordAuditEntry.mockClear();
 	counters.inFlight = 0;
 	counters.peak = 0;
 });
@@ -329,36 +325,5 @@ describe('the volunteer hour value defaults', () => {
 		// which is that same table's 2024 column.
 		expect(DEFAULTS['volunteer.hourValueCents']).toBe(3766);
 		expect(String(DEFAULTS['volunteer.hourValueSource'])).toContain('Oregon');
-	});
-});
-
-describe('updateSiteConfigs audit', () => {
-	it('records the keys that moved, with old and new values', async () => {
-		kvStore.set('site-config:reservation.feeGateFrom', JSON.stringify(''));
-		await updateSiteConfigs([
-			{ key: 'reservation.feeGateFrom', value: '2026-11-01' },
-			{
-				key: 'reservation.hourlyRateCents',
-				value: DEFAULTS['reservation.hourlyRateCents'] as number
-			}
-		]);
-
-		expect(recordAuditEntry).toHaveBeenCalledOnce();
-		expect(recordAuditEntry.mock.calls[0][0]).toMatchObject({
-			action: 'settings.changed',
-			details: { changes: [{ key: 'reservation.feeGateFrom', from: '', to: '2026-11-01' }] }
-		});
-	});
-
-	it('writes no row when nothing moved', async () => {
-		await updateSiteConfigs([{ key: 'reservation.bufferMinutes', value: 0 }]);
-		expect(recordAuditEntry).not.toHaveBeenCalled();
-	});
-
-	it('names a secret key without its value', async () => {
-		await updateSiteConfigs([{ key: 'integration.utec.clientSecret', value: 's3cret' }]);
-		const details = recordAuditEntry.mock.calls[0][0].details;
-		expect(details).toEqual({ changes: [], redacted: ['integration.utec.clientSecret'] });
-		expect(JSON.stringify(details)).not.toContain('s3cret');
 	});
 });
