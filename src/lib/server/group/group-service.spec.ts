@@ -369,6 +369,23 @@ describe('updateGroupSettings', () => {
 		await updateGroupSettings('group-1', {});
 		expect(writes).toEqual([]);
 	});
+
+	// #2891: taking a program off the directory says who did it.
+	it('records a visibility move in the audit log', async () => {
+		selectResult = [{ name: 'Real Book Club', visibility: 'public' }];
+		await updateGroupSettings('group-1', { visibility: 'members' });
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'group.visibility_changed',
+			subject: { type: 'group', id: 'group-1', label: 'Real Book Club' },
+			details: { from: 'public', to: 'members' }
+		});
+	});
+
+	it('records nothing when the visibility stays', async () => {
+		selectResult = [{ name: 'Real Book Club', visibility: 'public' }];
+		await updateGroupSettings('group-1', { joinPolicy: 'open', visibility: 'public' });
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
 });
 
 describe('joinGroup', () => {

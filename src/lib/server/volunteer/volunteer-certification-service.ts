@@ -6,6 +6,7 @@ import {
 	volunteerRoleCertification
 } from '#lib/server/db/schema/volunteer.js';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/errors.js';
 import { CERT_DESCRIPTION_MAX, CERT_NAME_MAX } from '#lib/config.js';
 import type { VolunteerCertification } from '#lib/server/db/schema/volunteer.js';
@@ -207,6 +208,11 @@ export async function deleteCertification(id: string): Promise<VolunteerCertific
 		.returning();
 
 	if (!row) throw new CertificationNotFoundError();
+	await recordAuditEntry({
+		action: 'clearance.deleted',
+		subject: { type: 'clearance', id, label: row.name },
+		details: {}
+	});
 	return row;
 }
 

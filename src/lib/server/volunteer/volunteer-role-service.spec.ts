@@ -57,6 +57,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 import {
 	createVolunteerRole,
 	updateVolunteerRole,
@@ -223,6 +226,21 @@ describe('VolunteerRoleService', () => {
 			selectResult = [{ count: 0 }];
 			const role = await deleteVolunteerRole(ROLE.id);
 			expect(role).toEqual(ROLE);
+		});
+
+		// #2891: the audit log keeps the name of the role that was deleted.
+		it('records the deletion in the audit log, and only a real one', async () => {
+			recordAuditEntry.mockClear();
+			selectResult = [{ count: 0 }];
+			await deleteVolunteerRole(ROLE.id);
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'role.deleted',
+				subject: { type: 'role', id: ROLE.id, label: ROLE.name },
+				details: {}
+			});
+			deleteResult = [];
+			await expect(deleteVolunteerRole('missing')).rejects.toThrow();
+			expect(recordAuditEntry).toHaveBeenCalledOnce();
 		});
 
 		it('throws when the role is gone', async () => {

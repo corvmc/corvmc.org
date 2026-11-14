@@ -10,10 +10,13 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 
 const {
 	generateCodeString,
 	createTickets,
+	recordTicketComp,
 	fulfillPurchase,
 	cancelPurchase,
 	cancelStalePendingTickets,
@@ -120,6 +123,27 @@ describe('generateCodeString', () => {
 		for (let i = 0; i < 100; i++) {
 			expect(generateCodeString()).toMatch(/^[A-HJKMNP-Z2-9]{8}$/);
 		}
+	});
+});
+
+// #2891: free tickets are money given away, so the audit log says who did it.
+describe('recordTicketComp', () => {
+	it('records one audit row against the event, by its title', async () => {
+		recordAuditEntry.mockClear();
+		event('event-comp', NOW_S + HOUR, 'Fall showcase');
+		await recordTicketComp({
+			eventId: 'event-comp',
+			purchaseId: 'comp-1',
+			quantity: 2,
+			attendeeName: 'Alice'
+		});
+
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'event.tickets_comped',
+			subject: { type: 'event', id: 'event-comp', label: 'Fall showcase' },
+			details: { purchaseId: 'comp-1', quantity: 2, attendeeName: 'Alice' }
+		});
 	});
 });
 

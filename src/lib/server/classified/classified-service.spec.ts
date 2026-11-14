@@ -20,6 +20,9 @@ vi.mock('#lib/server/db/index.js', async () => ({
 const emit = vi.fn(async (_name: string, _payload: unknown) => {});
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
 
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 const svc = await import('./classified-service');
 const { classifiedPost, classifiedPostTag } = await import('#lib/server/db/schema/classified.js');
 const { memberStanding } = await import('#lib/server/db/schema/standing.js');
@@ -250,6 +253,20 @@ describe('moderation', () => {
 		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
 		await svc.withholdForReview(row.id);
 		expect((await svc.getPostForModeration(row.id))?.visibility).toBe('hidden');
+	});
+
+	// #2891: the staff audit log says who took a post down, or put it back.
+	it('records each visibility move in the audit log, and no repeat', async () => {
+		const row = await post({ title: 'Drummer wanted' });
+		recordAuditEntry.mockClear();
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'classified.visibility_changed',
+			subject: { type: 'classified', id: row.id, label: 'Drummer wanted' },
+			details: { from: 'visible', to: 'hidden' }
+		});
 	});
 
 	it('hiding keeps the row: enforcement never deletes', async () => {

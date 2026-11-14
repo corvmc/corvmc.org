@@ -2,6 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { venue } from '#lib/server/db/schema/venue.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { asc, count, eq, isNull } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import type { Venue } from '#lib/server/db/schema/venue.js';
@@ -155,6 +156,11 @@ export async function deleteVenue(id: string): Promise<void> {
 	if (n > 0) throw new VenueInUseError(n);
 
 	await db.delete(venue).where(eq(venue.id, id));
+	await recordAuditEntry({
+		action: 'venue.deleted',
+		subject: { type: 'venue', id, label: target.name },
+		details: {}
+	});
 }
 
 export async function getVenue(id: string): Promise<Venue> {

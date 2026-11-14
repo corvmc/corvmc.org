@@ -23,6 +23,7 @@ import { recordAudioRefund } from '#lib/server/finance/audio-entries.js';
 import { validateSplit } from '#lib/finance/audio-split.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { stripe } from '#lib/server/stripe.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 export class ReleaseNotForSaleError extends DomainError {
 	readonly httpStatus = 404;
@@ -334,9 +335,14 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 			id: releasePurchase.id,
 			status: releasePurchase.status,
 			amountPaidCents: releasePurchase.amountPaidCents,
-			paymentIntentId: releasePurchase.stripePaymentIntentId
+			paymentIntentId: releasePurchase.stripePaymentIntentId,
+			releaseTitle: audioRelease.title,
+			bandId: group.id,
+			bandName: group.name
 		})
 		.from(releasePurchase)
+		.leftJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
+		.leftJoin(group, eq(group.id, audioRelease.groupId))
 		.where(eq(releasePurchase.purchaseId, purchaseId))
 		.limit(1);
 
@@ -372,6 +378,11 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 	// After the status flip, so the `status === 'refunded'` return above keeps a
 	// second call from writing a second reversal. The writer is idempotent too.
 	await recordAudioRefund(purchaseId);
+	await recordAuditEntry({
+		action: 'music_purchase.refunded',
+		subject: { type: 'band', id: row.bandId ?? purchaseId, label: row.bandName },
+		details: { purchaseId, releaseTitle: row.releaseTitle ?? '', amountCents: row.amountPaidCents }
+	});
 }
 
 // ---------------------------------------------------------------------------

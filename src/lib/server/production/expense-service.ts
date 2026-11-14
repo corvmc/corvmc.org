@@ -1,5 +1,7 @@
 import { db } from '#lib/server/db/index.js';
-import { productionExpense } from '#lib/server/db/schema/production.js';
+import { production, productionExpense } from '#lib/server/db/schema/production.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import type { ProductionExpenseCategory } from '#lib/config.js';
 import { reverseProductionExpense } from '#lib/server/finance/production-expense-entries.js';
@@ -51,8 +53,33 @@ export async function addExpense(input: AddExpenseInput): Promise<string> {
  */
 export async function removeExpense(expenseId: string): Promise<void> {
 	await assertNotTerminal({ expenseId });
+	const [line] = await db
+		.select({
+			productionId: productionExpense.productionId,
+			label: productionExpense.label,
+			category: productionExpense.category,
+			amountCents: productionExpense.amountCents,
+			eventId: eventListing.id,
+			eventTitle: eventListing.title
+		})
+		.from(productionExpense)
+		.leftJoin(production, eq(production.id, productionExpense.productionId))
+		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))
+		.where(eq(productionExpense.id, expenseId))
+		.limit(1);
 	await reverseProductionExpense(expenseId);
 	await db.delete(productionExpense).where(eq(productionExpense.id, expenseId));
+	if (!line) return;
+	await recordAuditEntry({
+		action: 'production.expense_removed',
+		subject: { type: 'production', id: line.productionId, label: line.eventTitle },
+		details: {
+			eventId: line.eventId,
+			label: line.label,
+			category: line.category,
+			amountCents: line.amountCents
+		}
+	});
 }
 
 /** Every line for a show, in the order they were added. */

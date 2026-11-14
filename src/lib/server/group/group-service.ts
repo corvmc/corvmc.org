@@ -481,6 +481,15 @@ export interface UpdateGroupSettings {
  */
 export async function updateGroupSettings(groupId: string, settings: UpdateGroupSettings) {
 	const writes = [];
+	const [before] =
+		settings.visibility === undefined
+			? []
+			: await db
+					.select({ name: group.name, visibility: directoryEntry.visibility })
+					.from(group)
+					.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
+					.where(eq(group.id, groupId))
+					.limit(1);
 
 	const groupUpdates: Record<string, unknown> = {};
 	if (settings.joinPolicy !== undefined) groupUpdates.joinPolicy = settings.joinPolicy;
@@ -504,6 +513,14 @@ export async function updateGroupSettings(groupId: string, settings: UpdateGroup
 	if (writes.length === 0) return;
 	// `db.batch`, never `db.transaction` — the latter is broken on D1.
 	await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
+
+	if (before?.visibility && settings.visibility && before.visibility !== settings.visibility) {
+		await recordAuditEntry({
+			action: 'group.visibility_changed',
+			subject: { type: 'group', id: groupId, label: before.name },
+			details: { from: before.visibility, to: settings.visibility }
+		});
+	}
 }
 
 /**

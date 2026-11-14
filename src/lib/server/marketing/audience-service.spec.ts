@@ -8,6 +8,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 
 const {
 	createAudience,
@@ -193,6 +195,23 @@ describe('removeSubscriber', () => {
 
 		expect(members('aud-1').map((m) => m.subscriber_id)).toEqual(['sub-2']);
 		expect(members('aud-2')).toHaveLength(1);
+	});
+
+	// #2891: the audit log says who took a member off a mailing list.
+	it('records the removal against the member, and nothing when there was no row', async () => {
+		account('user-1', 'a@example.com');
+		sub('sub-1', 'a@example.com', { userId: 'user-1' });
+		member('am-1', 'aud-1', 'sub-1');
+
+		await removeSubscriber('aud-1', 'sub-1');
+		await removeSubscriber('aud-1', 'sub-1');
+
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'audience.subscriber_removed',
+			subject: { type: 'user', id: 'user-1', label: 'a@example.com' },
+			details: { audienceId: 'aud-1', audienceName: expect.any(String) }
+		});
 	});
 });
 

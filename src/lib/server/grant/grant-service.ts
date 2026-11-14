@@ -7,6 +7,7 @@ import {
 	type NewGrantApplication
 } from '#lib/server/db/schema/grant.js';
 import { eq, inArray, sql } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { grantDeadlineLabels, type GrantDeadlineKind, type GrantStage } from '#lib/config.js';
 import { addIsoDays, due, earliest, type Deadline } from '#lib/utils/deadline.js';
@@ -199,8 +200,14 @@ export async function updateGrant(id: string, input: GrantInput): Promise<void> 
 /** Its project and that project's tasks go with it. */
 export async function deleteGrant(id: string): Promise<void> {
 	const [row] = await db
-		.select({ projectId: grantApplication.projectId })
+		.select({
+			projectId: grantApplication.projectId,
+			title: grantApplication.title,
+			funderId: grantApplication.organizationId,
+			funderName: organization.name
+		})
 		.from(grantApplication)
+		.leftJoin(organization, eq(organization.id, grantApplication.organizationId))
 		.where(eq(grantApplication.id, id))
 		.limit(1);
 	if (!row) throw new GrantNotFoundError();
@@ -208,6 +215,11 @@ export async function deleteGrant(id: string): Promise<void> {
 		db.delete(grantApplication).where(eq(grantApplication.id, id)),
 		...(row.projectId ? deleteFundingProjectWrites(row.projectId) : [])
 	]);
+	await recordAuditEntry({
+		action: 'grant.deleted',
+		subject: { type: 'organization', id: row.funderId, label: row.funderName },
+		details: { grantId: id, title: row.title }
+	});
 }
 
 /** Stamp a stage's template into the grant's project, on staff's say-so. */

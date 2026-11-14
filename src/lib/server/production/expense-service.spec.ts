@@ -16,6 +16,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 
 const {
 	addExpense,
@@ -54,6 +56,25 @@ describe('recording what a show cost', () => {
 		const id = await addExpense(forShow());
 		await removeExpense(id);
 		expect(await listExpenses('prod-1')).toHaveLength(0);
+	});
+
+	// #2891: the staff audit log keeps the line that was taken off the sheet.
+	it('records the removed line in the audit log', async () => {
+		recordAuditEntry.mockClear();
+		const id = await addExpense(forShow());
+		await removeExpense(id);
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				action: 'production.expense_removed',
+				subject: expect.objectContaining({ type: 'production', id: 'prod-1' }),
+				details: expect.objectContaining({
+					label: 'Sound engineer',
+					category: 'sound',
+					amountCents: 15_000
+				})
+			})
+		);
 	});
 });
 

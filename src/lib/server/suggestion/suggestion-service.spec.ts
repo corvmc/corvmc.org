@@ -89,6 +89,9 @@ vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 const { fileStaffActionMock } = vi.hoisted(() => ({ fileStaffActionMock: vi.fn() }));
 vi.mock('#lib/server/flag/flag-service.js', () => ({
 	fileStaffAction: (...a: unknown[]) => fileStaffActionMock(...(a as []))
@@ -262,6 +265,23 @@ describe('setVisibility as a direct staff action', () => {
 		expect(fileStaffActionMock).not.toHaveBeenCalled();
 	});
 
+	// #2891: the audit log says who took a suggestion off the board, or put it back.
+	it('records the visibility move in the audit log', async () => {
+		selectResultQueue = [[memberRow]];
+		await setVisibility('s1', { visibility: 'hidden', note: 'x', staffId: 'staff-1' });
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'suggestion.visibility_changed',
+			subject: { type: 'suggestion', id: 's1', label: 'T' },
+			details: { from: 'visible', to: 'hidden' }
+		});
+	});
+
+	it('records nothing when the visibility stays', async () => {
+		selectResultQueue = [[memberRow]];
+		await setVisibility('s1', { visibility: 'visible', staffId: 'staff-1' });
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
 	it('files nothing for a suggestion with no author left to appeal', async () => {
 		selectResultQueue = [[{ ...memberRow, authorUserId: null }]];
 		await setVisibility('s1', {
@@ -364,6 +384,13 @@ describe('mergeSuggestions', () => {
 			[{ userId: 'u1' }, { userId: 'u2' }]
 		];
 		await mergeSuggestions({ sourceId: 's1', targetId: 's2', staffId });
+
+		// #2891: the surviving suggestion's audit log keeps the merged one's title.
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'suggestion.merged',
+			subject: { type: 'suggestion', id: 's2', label: 'B' },
+			details: { mergedId: 's1', mergedTitle: 'A', votesMoved: 2 }
+		});
 
 		// A crash between the two steps must leave both on the board with no vote
 		// lost — which is only true in this order.

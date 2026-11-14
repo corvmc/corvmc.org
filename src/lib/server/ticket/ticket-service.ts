@@ -6,6 +6,7 @@ import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { emitTicketPurchased } from './purchased-event';
 import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -141,6 +142,29 @@ export async function createTickets(options: CreateTicketsOptions) {
 
 	const created = await db.insert(ticket).values(rows).returning();
 	return created;
+}
+
+/** Comps are money given away, so the audit log says who issued them (#2891). */
+export async function recordTicketComp(comp: {
+	eventId: string;
+	purchaseId: string;
+	quantity: number;
+	attendeeName: string;
+}) {
+	const [event] = await db
+		.select({ title: eventListing.title })
+		.from(eventListing)
+		.where(eq(eventListing.id, comp.eventId))
+		.limit(1);
+	await recordAuditEntry({
+		action: 'event.tickets_comped',
+		subject: { type: 'event', id: comp.eventId, label: event?.title ?? null },
+		details: {
+			purchaseId: comp.purchaseId,
+			quantity: comp.quantity,
+			attendeeName: comp.attendeeName
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------

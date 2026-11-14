@@ -25,6 +25,7 @@ type AuditClass = {
 const CLASSES: AuditClass[] = [
 	{
 		name: 'money',
+		// `complete…` is a status move, not a comp (#2891).
 		applies: (r, caps) =>
 			[
 				'finance.refund',
@@ -32,7 +33,7 @@ const CLASSES: AuditClass[] = [
 				'reservation.comp',
 				'credit.adjust',
 				'credit.comp'
-			].some((c) => caps.has(c)) || /^(comp|refund)/.test(r.name)
+			].some((c) => caps.has(c)) || /^(comp(?!lete)|refund)/.test(r.name)
 	},
 	{
 		name: 'clearance',
