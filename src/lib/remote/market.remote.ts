@@ -19,6 +19,7 @@ import {
 } from '#lib/config.js';
 import {
 	decideApplication,
+	resendDecisionMessage,
 	getApplicationWindow,
 	getMarketDay,
 	getMarketEvent,
@@ -248,6 +249,17 @@ export const decideVendorForm = form(
 		void getCommitteeMarketVendors(id).refresh();
 		// The decision stands either way; the page says whether the vendor was told (#2819).
 		const delivery = outboxId ? await deliverNow(outboxId) : null;
+		return { success: true, messageSent: delivery?.status === 'sent' };
+	}
+);
+
+/** Send a decision message that did not reach the vendor (#2819). */
+export const resendVendorDecisionForm = form(
+	z.object({ vendorId: z.string().min(1) }),
+	async (data) => {
+		await requireVendorMarketDecider(data.vendorId);
+		const delivery = await resendDecisionMessage(data.vendorId);
+		refreshMarket(await getVendorEventId(data.vendorId));
 		return { success: true, messageSent: delivery?.status === 'sent' };
 	}
 );

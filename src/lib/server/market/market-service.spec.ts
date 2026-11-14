@@ -47,6 +47,7 @@ const {
 	submitApplication,
 	listApplications,
 	decideApplication,
+	resendDecisionMessage,
 	setTableLabel,
 	withdrawApplication,
 	listPublicVendors,
@@ -363,6 +364,28 @@ describe('deciding', () => {
 			.all() as { channel_message_id: string }[];
 		expect(message.channel_message_id).toBe('<pm-1@corvmc.org>');
 		expect(sent()[0].status).toBe('sent');
+	});
+
+	// #2819: the vendors page shows a message that has not gone, and sends it on request.
+	it('shows an unsent decision message on the row, and resends it', async () => {
+		const { outboxId } = await decideApplication(
+			vendorId,
+			{ decision: 'accepted', message: 'You are in.' },
+			ACTOR
+		);
+		dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+		await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+		expect((await listApplications(EVENT))[0].decisionMessage).toBe('pending');
+
+		dispatchReply.mockResolvedValueOnce('<pm-2@corvmc.org>');
+		expect(await resendDecisionMessage(vendorId)).toMatchObject({ status: 'sent' });
+		expect((await listApplications(EVENT))[0].decisionMessage).toBe('sent');
+		expect(await resendDecisionMessage(vendorId)).toBeNull();
+	});
+
+	it('has no decision message on a row nobody decided', async () => {
+		expect((await listApplications(EVENT))[0].decisionMessage).toBeNull();
+		expect(await resendDecisionMessage(vendorId)).toBeNull();
 	});
 
 	// #2822: a second application from the same business landed under Applied

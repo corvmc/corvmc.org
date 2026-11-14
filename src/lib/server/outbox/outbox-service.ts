@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import {
 	outboxMessage,
@@ -199,6 +199,7 @@ async function deliveryOf(id: string): Promise<Delivery> {
 export async function latestDelivery(subject: OutboxSubject) {
 	const [row] = await db
 		.select({
+			id: outboxMessage.id,
 			status: outboxMessage.status,
 			lastError: outboxMessage.lastError,
 			attempts: outboxMessage.attempts,
@@ -212,4 +213,42 @@ export async function latestDelivery(subject: OutboxSubject) {
 		.orderBy(desc(outboxMessage.createdAt), desc(outboxMessage.id))
 		.limit(1);
 	return row ?? null;
+}
+
+/** The newest message owed for each record of one type, by record id, for a list page. */
+export async function latestDeliveries(
+	type: string,
+	ids: string[]
+): Promise<Map<string, OutboxStatus>> {
+	const out = new Map<string, OutboxStatus>();
+	for (const group of chunk(ids, IDS_PER_STATEMENT)) {
+		const rows = await db
+			.select({ subjectId: outboxMessage.subjectId, status: outboxMessage.status })
+			.from(outboxMessage)
+			.where(and(eq(outboxMessage.subjectType, type), inArray(outboxMessage.subjectId, group)))
+			.orderBy(desc(outboxMessage.createdAt), desc(outboxMessage.id));
+		for (const r of rows) if (r.subjectId && !out.has(r.subjectId)) out.set(r.subjectId, r.status);
+	}
+	return out;
+}
+
+/**
+ * Send a message that has not gone, now, with a fresh set of attempts: a
+ * person asking again. Null when it has gone, or a sender holds it right now.
+ */
+export async function retryNow(id: string): Promise<Delivery | null> {
+	const now = new Date();
+	const reset = await db
+		.update(outboxMessage)
+		.set({ status: 'pending', attempts: 0, nextAttemptAt: now, lastError: null })
+		.where(
+			and(
+				eq(outboxMessage.id, id),
+				ne(outboxMessage.status, 'sent'),
+				or(isNull(outboxMessage.claimedUntil), lt(outboxMessage.claimedUntil, now))
+			)
+		)
+		.returning({ id: outboxMessage.id });
+	if (reset.length === 0) return null;
+	return deliverNow(id);
 }

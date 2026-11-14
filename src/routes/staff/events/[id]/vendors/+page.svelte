@@ -33,7 +33,8 @@
 		getStaffMarketVendors,
 		openMarketDayForm,
 		setTableLabelForm,
-		withdrawVendorForm
+		withdrawVendorForm,
+		resendVendorDecisionForm
 	} from '#lib/remote/market.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import { toastDelivery } from '#lib/utils/delivery-toast.js';
@@ -51,6 +52,7 @@
 	const decideFields = decideVendorForm.fields;
 	const tableFields = setTableLabelForm.fields;
 	const withdrawFields = withdrawVendorForm.fields;
+	const resendFields = resendVendorDecisionForm.fields;
 
 	const eventId = $derived(params.id);
 	const data = $derived(await getStaffMarketVendors(eventId));
@@ -269,6 +271,26 @@
 							<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
 							<PreviousMarketNote previous={row.previous} />
 							<AlsoAppliedNote others={row.alsoApplied} />
+							{#if row.decisionMessage && row.decisionMessage !== 'sent'}
+								<Form
+									remote={resendVendorDecisionForm.for(row.id)}
+									onsuccess={(r) =>
+										toastDelivery(r, {
+											sent: m.staff_events_id_vendors_message_sent_toast(),
+											notSent: m.staff_events_id_vendors_message_not_sent_toast()
+										})}
+									class="mt-1 flex items-center gap-2 text-sm text-warning"
+									data-testid="decision-not-sent"
+								>
+									<input {...resendFields.vendorId.as('hidden', row.id)} />
+									{m.staff_events_id_vendors_message_not_sent_text()}
+									<SubmitButton
+										label={m.staff_events_id_vendors_resend_message_label()}
+										variant="ghost"
+										size="xs"
+									/>
+								</Form>
+							{/if}
 						</td>
 						<td class="col-support">
 							{row.tablesRequested}

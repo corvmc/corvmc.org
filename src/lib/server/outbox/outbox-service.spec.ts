@@ -41,8 +41,15 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 const { outboxMessage } = await import('#lib/server/db/schema/outbox.js');
 const { reminderSent } = await import('#lib/server/db/schema/reminder.js');
 const { emailRow, htmlEmailRow } = await import('./outbox-row');
-const { deliverOutbox, deliverNow, queueEmail, MAX_ATTEMPTS, backoffMs } =
-	await import('./outbox-service');
+const {
+	deliverOutbox,
+	deliverNow,
+	queueEmail,
+	MAX_ATTEMPTS,
+	backoffMs,
+	retryNow,
+	latestDeliveries
+} = await import('./outbox-service');
 const { resetMailClient } = await import('#lib/server/notification/email/postmark-client.js');
 
 const MAIL = { to: 'vendor@example.com', templateAlias: 'notification', model: { heading: 'Hi' } };
@@ -224,5 +231,66 @@ describe('the log driver', () => {
 			expect.objectContaining({ to: MAIL.to, template: 'notification' })
 		);
 		log.mockRestore();
+	});
+});
+
+// #2819: staff resend a message the outbox gave up on, or is still backing off.
+describe('sending again on request', () => {
+	it('sends a failed message now, with fresh attempts', async () => {
+		const id = await insertDue();
+		sqlite
+			.prepare(
+				`update outbox_message set status = 'failed', attempts = ?, last_error = 'x' where id = ?`
+			)
+			.run(MAX_ATTEMPTS, id);
+		accept();
+
+		expect(await retryNow(id)).toMatchObject({ id, status: 'sent' });
+		expect(rows()[0]).toMatchObject({ status: 'sent', attempts: 1, last_error: null });
+	});
+
+	it('brings a backing-off message forward', async () => {
+		const id = await insertDue();
+		sqlite
+			.prepare(`update outbox_message set next_attempt_at = ? where id = ?`)
+			.run(Math.floor(Date.now() / 1000) + 3600, id);
+		accept();
+
+		expect(await retryNow(id)).toMatchObject({ status: 'sent' });
+	});
+
+	it('does not send a message twice', async () => {
+		const id = await insertDue();
+		sqlite.prepare(`update outbox_message set status = 'sent' where id = ?`).run(id);
+
+		expect(await retryNow(id)).toBeNull();
+		expect(batchSend).not.toHaveBeenCalled();
+	});
+
+	it('leaves a message a sender holds right now', async () => {
+		const id = await insertDue();
+		sqlite
+			.prepare(`update outbox_message set claimed_until = ? where id = ?`)
+			.run(Math.floor(Date.now() / 1000) + 60, id);
+
+		expect(await retryNow(id)).toBeNull();
+		expect(batchSend).not.toHaveBeenCalled();
+	});
+});
+
+describe('the newest message per record', () => {
+	it('answers each record with its latest message, for a list page', async () => {
+		const older = emailRow(MAIL, { type: 'market_vendor', id: 'v-1' });
+		const newer = emailRow(MAIL, { type: 'market_vendor', id: 'v-1' });
+		const other = emailRow(MAIL, { type: 'campaign', id: 'v-2' });
+		await testDb.insert(outboxMessage).values([
+			{ ...older, status: 'failed', createdAt: at(0) },
+			{ ...newer, status: 'sent', createdAt: at(60_000) },
+			{ ...other, status: 'failed', createdAt: at(0) }
+		]);
+
+		const told = await latestDeliveries('market_vendor', ['v-1', 'v-2']);
+
+		expect([...told]).toEqual([['v-1', 'sent']]);
 	});
 });
