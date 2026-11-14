@@ -71,6 +71,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'reservation.cancelled_by_staff': ['Reservations', 'Reservation cancelled by staff'],
 	'reservation.comped': ['Reservations', 'Reservation comped'],
 	'reservation.refunded': ['Reservations', 'Reservation refunded'],
+	'reservation.payment_reminder': ['Reservations', 'Payment reminder'],
 	'event.visibility_changed': ['Events and shows', 'Event visibility changed'],
 	'event.published_over_warnings': ['Events and shows', 'Event published over warnings'],
 	'event.emailed_beyond_visibility': ['Events and shows', 'Event emailed past its visibility'],
@@ -274,6 +275,13 @@ function plural(n: number, one: string, many = `${one}s`): string {
 	return `${n} ${n === 1 ? one : many}`;
 }
 
+/** Why a payment reminder sent no email, as the log reads it. */
+const PAYMENT_REMINDER_REASONS: Record<string, string> = {
+	preference: 'email turned off',
+	undeliverable: 'account removed',
+	no_content: 'no email'
+};
+
 /** The one line a staffer reads for an audit entry. The actor and time render beside it. */
 export function summarizeAuditEntry(entry: AuditEntry): string {
 	switch (entry.action) {
@@ -291,6 +299,13 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const head = `Refunded the ${slot(d)} reservation`;
 			const line = d.cancelled ? `${head} and cancelled it` : head;
 			return d.reason ? `${line}: “${d.reason}”` : line;
+		}
+		case 'reservation.payment_reminder': {
+			const d = entry.details;
+			const head = `Day ${d.daysAfter} payment reminder for the ${slot(d)} reservation`;
+			if (d.outcome === 'sent') return `${head}: sent`;
+			const why = d.reason ? ` (${PAYMENT_REMINDER_REASONS[d.reason] ?? d.reason})` : '';
+			return `${head}: ${d.outcome}${why}`;
 		}
 		case 'clearance.granted': {
 			const d = entry.details;

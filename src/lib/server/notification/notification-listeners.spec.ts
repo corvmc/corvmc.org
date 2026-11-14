@@ -155,6 +155,7 @@ describe('registerAllNotificationListeners', () => {
 			'ticket.purchased',
 			'event.cancelled',
 			'reservation.reminder_due',
+			'reservation.payment_due',
 			'reservation.confirmed',
 			'reservation.cancelled',
 			'band.invitation_sent',

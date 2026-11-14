@@ -99,6 +99,23 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			}
 		},
 		{
+			daysAgo: 6,
+			action: 'reservation.payment_reminder',
+			subject: subject(b),
+			actor: system,
+			details: {
+				reservationId: 'seed-unpaid-reservation',
+				date: '2026-11-03',
+				startTime: '18:00',
+				endTime: '20:00',
+				daysAfter: 1,
+				amountCents: 3000,
+				outcome: 'skipped',
+				reason: 'preference',
+				outboxId: null
+			}
+		},
+		{
 			daysAgo: 5,
 			action: 'clearance.granted',
 			subject: subject(b),

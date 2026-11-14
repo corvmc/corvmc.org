@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -78,6 +79,36 @@ export async function listOutstandingFees(
 		)
 		.orderBy(asc(reservation.startsAt));
 	return rows;
+}
+
+/**
+ * Outstanding fees of every member whose session ended in `[from, until)`, with
+ * the booker to remind. The payment reminders read this (#2876), so a booking
+ * paid, comped or refunded drops out and gets no later stage.
+ */
+export async function listFeesEndedBetween(from: Date, until: Date, cutoff: Date) {
+	return db
+		.select({
+			id: reservation.id,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			amountCents: reservation.cashDueCents,
+			userId: user.id,
+			userName: user.name,
+			userEmail: user.email
+		})
+		.from(reservation)
+		.innerJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(
+			and(
+				gte(reservation.startsAt, cutoff),
+				gte(reservation.endsAt, from),
+				lt(reservation.endsAt, until),
+				confirmedUnpaidSql()
+			)
+		)
+		.orderBy(asc(reservation.endsAt))
+		.limit(500);
 }
 
 /** Staff booking on a member's behalf see the fees, but are never refused. */

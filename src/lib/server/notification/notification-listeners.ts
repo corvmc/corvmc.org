@@ -17,6 +17,7 @@ import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } fr
 import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '#lib/server/sentry.js';
+import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { applicationNotice } from '#lib/server/group/application-reviewers.js';
 import { buildReplyToAddress } from '#lib/server/inbox/reply-address.js';
@@ -470,6 +471,11 @@ export function registerAllNotificationListeners(): void {
 				cta: { label: 'View my reservations' }
 			}
 		});
+	});
+
+	// --- A session ended still payment due (#2876); audits every attempt ---
+	domainEvents.on('reservation.payment_due', async ({ data: event }) => {
+		await sendPaymentReminder(event);
 	});
 
 	// --- Band invitation sent ---

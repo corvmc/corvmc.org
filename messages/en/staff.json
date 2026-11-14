@@ -2568,6 +2568,8 @@
 	],
 	"staff_reservations_id_retry_pending_door_codes_label": "Retry pending door codes",
 	"staff_reservations_id_stripe_record_label": "Stripe record",
+	"staff_reservations_id_payment_reminders_text": "Payment reminders",
+	"staff_reservations_id_payment_reminder_text": "Day {days}, sent {date}",
 	"staff_reservations_id_view_band_label": "View band",
 	"staff_reservations_id_view_event_label": "View event",
 	"staff_reservations_id_view_profile_label": "View profile",

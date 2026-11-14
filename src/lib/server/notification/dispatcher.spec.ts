@@ -168,7 +168,10 @@ describe('dispatch', () => {
 		createNotification.mockRejectedValue(new Error('DB error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		await expect(dispatch({ ...BASE_PARAMS, email: undefined })).resolves.toBeUndefined();
+		await expect(dispatch({ ...BASE_PARAMS, email: undefined })).resolves.toEqual({
+			email: 'skipped',
+			reason: 'no_content'
+		});
 
 		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();
@@ -179,7 +182,7 @@ describe('dispatch', () => {
 		queueEmail.mockRejectedValue(new Error('Postmark error'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		await expect(dispatch(BASE_PARAMS)).resolves.toBeUndefined();
+		await expect(dispatch(BASE_PARAMS)).resolves.toEqual({ email: 'failed' });
 
 		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
 		consoleSpy.mockRestore();

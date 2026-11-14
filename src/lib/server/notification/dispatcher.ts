@@ -93,6 +93,15 @@ export interface DispatchParams {
 }
 
 /**
+ * What became of the email. `queued` is in the outbox, which sends and retries
+ * it; `skipped` sent none, and says why; `failed` is an outbox insert refused.
+ */
+export type DispatchOutcome =
+	| { email: 'queued'; outboxId: string }
+	| { email: 'skipped'; reason: 'undeliverable' | 'preference' | 'no_content' }
+	| { email: 'failed' };
+
+/**
  * Dispatch a notification through enabled channels.
  * Checks user preferences, creates in-app notification, sends email,
  * and pushes SSE event. Fire-and-forget — errors are logged, not thrown.
@@ -101,7 +110,7 @@ export interface DispatchParams {
  * looking at the bell when it lands; the email goes to the outbox, which
  * sends it after the response and retries it if Postmark refuses.
  */
-export async function dispatch(params: DispatchParams): Promise<void> {
+export async function dispatch(params: DispatchParams): Promise<DispatchOutcome> {
 	// A removed account is not a recipient, on any channel. Guarded at the seam
 	// rather than in each fan-out, so a sender written next year inherits it —
 	// the lists feeding this are roster reads and any of them can go stale.
@@ -110,7 +119,9 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 	// goes through `dispatchEmailOnly`, which is the accountless path and is
 	// deliberately not guarded here. Nor is a `forceEmail` send with no userId,
 	// which has no account to check.
-	if (params.userId && !(await isDeliverable(params.userId))) return;
+	if (params.userId && !(await isDeliverable(params.userId))) {
+		return { email: 'skipped', reason: 'undeliverable' };
+	}
 
 	const pref = await getPreference(params.userId, params.type);
 
@@ -141,18 +152,19 @@ export async function dispatch(params: DispatchParams): Promise<void> {
 	}
 
 	const content = params.email;
-	if ((pref.email || params.forceEmail) && content) {
-		await enqueue(
-			() =>
-				queueEmail({
-					to: params.userEmail,
-					templateAlias: GENERIC_ALIAS,
-					model: genericModel(content, params.type, params.href),
-					tag: params.type
-				}),
-			{ channel: 'email', type: params.type }
-		);
-	}
+	if (!content) return { email: 'skipped', reason: 'no_content' };
+	if (!pref.email && !params.forceEmail) return { email: 'skipped', reason: 'preference' };
+	const ids = await enqueue(
+		() =>
+			queueEmail({
+				to: params.userEmail,
+				templateAlias: GENERIC_ALIAS,
+				model: genericModel(content, params.type, params.href),
+				tag: params.type
+			}),
+		{ channel: 'email', type: params.type }
+	);
+	return ids?.[0] ? { email: 'queued', outboxId: ids[0] } : { email: 'failed' };
 }
 
 /** Declared content as an outbox email, for a caller that inserts the row in its own batch. */
@@ -165,11 +177,15 @@ export function standaloneEmail(
 }
 
 /** Into the outbox. A notification never fails its caller, so a refused insert is reported, not thrown. */
-async function enqueue(queue: () => Promise<unknown>, tags: Record<string, unknown>) {
+async function enqueue<T>(
+	queue: () => Promise<T>,
+	tags: Record<string, unknown>
+): Promise<T | undefined> {
 	try {
-		await queue();
+		return await queue();
 	} catch (err) {
 		captureException(err, tags);
+		return undefined;
 	}
 }
 
