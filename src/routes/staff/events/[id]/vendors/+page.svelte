@@ -24,6 +24,7 @@
 		type MarketVendorStatus
 	} from '#lib/config.js';
 	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
+	import AlsoAppliedNote from '#lib/components/market/AlsoAppliedNote.svelte';
 	import {
 		decideVendorForm,
 		getStaffMarketVendors,
@@ -262,6 +263,7 @@
 							</div>
 							<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
 							<PreviousMarketNote previous={row.previous} />
+							<AlsoAppliedNote others={row.alsoApplied} />
 						</td>
 						<td class="col-support">
 							{row.tablesRequested}

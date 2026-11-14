@@ -341,6 +341,27 @@ describe('deciding', () => {
 		expect(sent()[0].status).toBe('sent');
 	});
 
+	// #2822: a second application from the same business landed under Applied
+	// with nothing to say the business already had a table.
+	it('marks each application with the same business’s other ones for the market', async () => {
+		await decideApplication(
+			vendorId,
+			{ decision: 'accepted', tableLabel: 'A1', message: 'In.' },
+			ACTOR
+		);
+		const { id: repeatId } = await submitApplication(
+			EVENT,
+			{ ...application, businessName: 'Rosa Ceramics Co.' },
+			NOW
+		);
+
+		const rows = await listApplications(EVENT);
+		const first = rows.find((r) => r.id === vendorId)!;
+		const repeat = rows.find((r) => r.id === repeatId)!;
+		expect(repeat.alsoApplied).toEqual([{ id: vendorId, status: 'accepted', tableLabel: 'A1' }]);
+		expect(first.alsoApplied).toEqual([{ id: repeatId, status: 'applied', tableLabel: null }]);
+	});
+
 	it('declines and clears any table', async () => {
 		await decideApplication(
 			vendorId,

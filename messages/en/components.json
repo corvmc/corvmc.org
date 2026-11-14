@@ -936,6 +936,8 @@
 	"inventory_location_field_description_body": "No locations yet — add them under Inventory → Locations and everything you enter can be filed as you go.",
 	"inventory_location_field_location_label": "Location",
 	"inventory_location_field_unassigned_label": "Unassigned",
+	"market_also_applied_table_text": "table {label}",
+	"market_also_applied_text": "Also applied:",
 	"market_do_not_invite_back_text": "Do not invite back",
 	"market_invite_back_text": "Invite back",
 	"market_previous_market_note_no_show_text": ", no-show",
