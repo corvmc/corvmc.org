@@ -53,6 +53,9 @@ const people = {
 	getPerson: vi.fn(async (id: string) => ({ id, name: id === 'c2' ? 'Sam Okafor' : 'Priya' }))
 };
 vi.mock('#lib/server/directory/contact-service.js', () => people);
+vi.mock('#lib/server/directory/contact-sheet-service.js', () => ({
+	liveContactSheetLink: async () => ({ email: 'act@example.test', emailed: true })
+}));
 const list = {
 	listContacts: vi.fn(async (input: { people: boolean }) => ({
 		rows: [
@@ -336,13 +339,18 @@ describe('contacts.remote views', () => {
 		expect(page.act).toEqual({
 			entryId: 'de-1',
 			canClaim: false,
-			canSendContactSheet: false
+			canSendContactSheet: false,
+			sheetLink: null
 		});
 
 		held = new Set(['event.read', 'event.manage', 'directory.shareContactSheet']);
 		const booker = (await remote.getOrganizationPage('o1')) as ActPage;
 		expect(booker.records.shows).toHaveLength(1);
-		expect(booker.act).toMatchObject({ canClaim: true, canSendContactSheet: true });
+		expect(booker.act).toMatchObject({
+			canClaim: true,
+			canSendContactSheet: true,
+			sheetLink: { email: 'act@example.test' }
+		});
 		orgs.getOrganization.mockReset();
 		orgs.getOrganization.mockImplementation(async () => ({
 			...org,

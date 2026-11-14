@@ -1,7 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { directoryEntryLink } from '#lib/server/db/schema/directory-link.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { requireCapability } from '#lib/server/authorization.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
@@ -11,6 +11,7 @@ import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 import * as publicEnv from '$app/env/public';
 import { outboxMessage } from '#lib/server/db/schema/outbox.js';
 import { emailRow } from '#lib/server/outbox/outbox-row.js';
+import { latestDelivery } from '#lib/server/outbox/outbox-service.js';
 import { standaloneEmail } from '#lib/server/notification/dispatcher.js';
 import type { StandaloneEmailContent } from '#lib/types/notification-email.js';
 
@@ -124,6 +125,41 @@ function contactSheetEmail(
 			{ text: `The link works until ${expires}. No account is needed.` }
 		],
 		cta: { label: 'Open contact sheet', url }
+	};
+}
+
+/**
+ * The act's live link, for its record: who holds it, until when, and whether
+ * the email reached them. Null when no link is live (#2781).
+ */
+export async function liveContactSheetLink(entryId: string) {
+	await requireCapability('directory.shareContactSheet');
+
+	const [link] = await db
+		.select({
+			id: directoryEntryLink.id,
+			email: directoryEntryLink.email,
+			expiresAt: directoryEntryLink.expiresAt,
+			lastUsedAt: directoryEntryLink.lastUsedAt
+		})
+		.from(directoryEntryLink)
+		.where(
+			and(
+				eq(directoryEntryLink.entryId, entryId),
+				isNull(directoryEntryLink.revokedAt),
+				gt(directoryEntryLink.expiresAt, new Date())
+			)
+		)
+		.orderBy(desc(directoryEntryLink.createdAt), desc(directoryEntryLink.id))
+		.limit(1);
+	if (!link) return null;
+
+	const delivery = await latestDelivery(contactSheetSubject(link.id));
+	return {
+		email: link.email,
+		expiresAt: link.expiresAt,
+		lastUsedAt: link.lastUsedAt,
+		emailed: delivery?.status === 'sent'
 	};
 }
 
