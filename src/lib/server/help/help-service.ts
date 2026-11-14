@@ -362,9 +362,16 @@ export interface CreateArticleData {
 	content: string;
 	source?: string;
 	minRole?: string;
+	/** See `helpArticle.capabilities`. Callers validate each with `isCapability`. */
+	capabilities?: readonly string[] | null;
 	published?: boolean;
 	sortOrder?: number;
 	createdByUserId?: string;
+}
+
+/** None stored as NULL, as `help:sync` writes it, so the row reads as naming none. */
+function storedCapabilities(caps: readonly string[] | null | undefined): string[] | null {
+	return caps && caps.length > 0 ? [...new Set(caps)] : null;
 }
 
 export async function createArticle(data: CreateArticleData) {
@@ -378,6 +385,7 @@ export async function createArticle(data: CreateArticleData) {
 			content: data.content,
 			source: data.source ?? 'dynamic',
 			minRole: normalizeAudience(data.minRole ?? 'member'),
+			capabilities: storedCapabilities(data.capabilities),
 			published: data.published ?? false,
 			sortOrder: data.sortOrder ?? 0,
 			createdByUserId: data.createdByUserId ?? null
@@ -394,6 +402,10 @@ export async function updateArticle(id: string, data: Partial<CreateArticleData>
 			// Normalised on the way in so a legacy or hand-posted value can never
 			// land outside the ladder and make the row invisible to everyone.
 			...(data.minRole === undefined ? {} : { minRole: normalizeAudience(data.minRole) }),
+			// Absent leaves them; the editor omits the picker below the staff tier.
+			...(data.capabilities === undefined
+				? {}
+				: { capabilities: storedCapabilities(data.capabilities) }),
 			updatedAt: new Date()
 		})
 		.where(eq(helpArticle.id, id))

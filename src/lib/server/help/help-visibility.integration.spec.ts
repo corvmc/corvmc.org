@@ -36,7 +36,9 @@ const {
 	getArticleBySlug,
 	listNonEmptyCategories,
 	listArticlesByCategory,
-	listReadableArticles
+	listReadableArticles,
+	createArticle,
+	updateArticle
 } = await import('./help-service');
 const searchArticles = (await import('./help-service')).searchArticles;
 
@@ -163,6 +165,42 @@ describe('a position holder, against the capabilities a staff article names (#30
 			'staff-incidents',
 			'staff-purge',
 			'staff-sponsors-grants'
+		]);
+	});
+});
+
+describe('an article written in the staff editor (#3011)', () => {
+	async function editorArticle(slug: string, capabilities?: string[]) {
+		return createArticle({
+			categoryId: 'c-staff',
+			title: `Editor ${slug}`,
+			slug,
+			content: 'ledger body',
+			minRole: 'staff',
+			published: true,
+			capabilities
+		});
+	}
+
+	it('hides one naming a capability from a position holder without it, in search and links', async () => {
+		const article = await editorArticle('editor-incidents', ['incident.read']);
+		expect(article.source).toBe('dynamic');
+		const treasurer = await resolveHelpReader('u-treasurer');
+		expect(await searchArticles('ledger', treasurer)).toEqual([]);
+		expect(await listReadableArticles([article.id], treasurer)).toEqual([]);
+		const staff = await resolveHelpReader('u-staff');
+		expect((await searchArticles('ledger', staff)).map((r) => r.id)).toEqual([article.id]);
+	});
+
+	it('keeps capabilities a save leaves out, and clears them on an empty list', async () => {
+		const article = await editorArticle('editor-kept', ['incident.read']);
+		const treasurer = await resolveHelpReader('u-treasurer');
+		await updateArticle(article.id, { title: 'Editor kept, renamed' });
+		expect(await listReadableArticles([article.id], treasurer)).toEqual([]);
+		const cleared = await updateArticle(article.id, { capabilities: [] });
+		expect(cleared.capabilities).toBeNull();
+		expect((await listReadableArticles([article.id], treasurer)).map((a) => a.id)).toEqual([
+			article.id
 		]);
 	});
 });

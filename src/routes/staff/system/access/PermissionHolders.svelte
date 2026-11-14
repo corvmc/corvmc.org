@@ -15,7 +15,7 @@
 	import { positionLabels, positionOrder, type Capability, type Position } from '#lib/config.js';
 	import type { RosterPerson } from '#lib/types/roster.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
-	import { capabilityLabel, everyCapability } from './capability-label';
+	import { capabilityLabel, everyCapability } from '#lib/capability-label.js';
 
 	type Kind = 'capability' | 'position' | 'clearance';
 	type ClearanceFilter = '' | 'current' | 'lapsing' | 'expiring' | 'expired' | 'revoked';
