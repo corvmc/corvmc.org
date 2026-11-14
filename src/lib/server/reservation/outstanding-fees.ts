@@ -5,13 +5,13 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { getReservationConfig } from './config';
-import { confirmedUnpaidSql } from './payment-due';
+import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
 import { buildDateInTz } from './timezone';
 
 /**
  * Outstanding fees and the gate they drive (#2748, #2859). An outstanding fee
- * is a practice space session that has ended still payment due, by the same
- * `confirmedUnpaidSql` the staff list uses, and that started on or after the
+ * is a practice space session on the Payment due track (`paymentDueSql`, the
+ * same reading the staff list filters by) that started on or after the
  * cutoff. Rows before the cutoff keep their status and count as zero. One fee
  * refuses the member's own booking and withholds their door code messages.
  */
@@ -73,8 +73,7 @@ export async function listOutstandingFees(
 			and(
 				eq(reservation.createdByUserId, userId),
 				gte(reservation.startsAt, cutoff),
-				lt(reservation.endsAt, now),
-				confirmedUnpaidSql()
+				paymentDueSql(now)
 			)
 		)
 		.orderBy(asc(reservation.startsAt));
@@ -161,8 +160,7 @@ export async function membersOwingFees(
 			and(
 				inArray(reservation.createdByUserId, [...new Set(userIds)]),
 				gte(reservation.startsAt, from),
-				lt(reservation.endsAt, now),
-				confirmedUnpaidSql()
+				paymentDueSql(now)
 			)
 		);
 	return new Set(rows.map((r) => r.userId).filter((id): id is string => id !== null));

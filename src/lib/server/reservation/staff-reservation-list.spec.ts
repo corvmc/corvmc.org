@@ -12,12 +12,10 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { confirmedUnpaidSql, countOwedAfterSession, countStaffStatuses, listStaffReservations } =
+const { countOwedAfterSession, countStaffStatuses, listStaffReservations } =
 	await import('./staff-reservation-list');
 const { reservation, closure } = await import('#lib/server/db/schema/reservation.js');
-const { owesMoney, reservationPaymentState } = await import('#lib/utils/reservation-actions.js');
-const { reservationStatuses } = await import('#lib/server/db/schema/reservation.js');
-const { bookerTypes } = await import('#lib/config.js');
+const { reservationTrack } = await import('#lib/utils/reservation-actions.js');
 
 const HOUR = 3_600_000;
 // Noon in Corvallis, so no preset boundary sits within a few hours of it.
@@ -90,23 +88,46 @@ describe('date presets', () => {
 });
 
 describe('status', () => {
-	it('Payment due is ended with money owed plus upcoming unpaid', async () => {
-		const { rows } = await listStaffReservations({ range: 'any', status: 'payment_due' }, now);
-		expect(ids(rows)).toEqual(['past-owed', 'today']);
+	const none = {
+		waitlisted: 0,
+		booked: 0,
+		paid: 0,
+		payment_due: 0,
+		covered: 0,
+		no_show: 0,
+		cancelled: 0,
+		refunded: 0
+	};
+
+	it('Payment due is ended with money owed; upcoming unpaid is Booked', async () => {
+		const due = await listStaffReservations({ range: 'any', status: 'payment_due' }, now);
+		expect(ids(due.rows)).toEqual(['past-owed']);
+		const booked = await listStaffReservations({ range: 'any', status: 'booked' }, now);
+		expect(ids(booked.rows)).toEqual(['today']);
+	});
+
+	it('a status lists the rows whose track it is', async () => {
+		const list = async (status: keyof typeof none) =>
+			ids((await listStaffReservations({ range: 'any', status }, now)).rows);
+		expect(await list('paid')).toEqual(['past-paid']);
+		expect(await list('covered')).toEqual(['long-ago']);
+		expect(await list('waitlisted')).toEqual(['next-week']);
+		expect(await list('cancelled')).toEqual(['far']);
 	});
 
 	it('counts what each option would list, Payment due over any date', async () => {
 		expect(await countStaffStatuses({ range: 'from_today' }, now)).toEqual({
-			confirmed: 1,
-			payment_due: 2,
+			...none,
+			booked: 1,
+			payment_due: 1,
 			waitlisted: 1,
 			cancelled: 1
 		});
 	});
 
 	it('counts under the search and booker filters', async () => {
-		expect(await countStaffStatuses({ range: 'any', search: 'rowan' }, now)).toMatchObject({
-			confirmed: 1,
+		expect(await countStaffStatuses({ range: 'any', search: 'rowan' }, now)).toEqual({
+			...none,
 			payment_due: 1
 		});
 	});
@@ -133,14 +154,14 @@ describe('payment', () => {
 		const paid = Object.fromEntries(
 			rows.map((r) => {
 				if (r.kind !== 'reservation') throw new Error('expected only bookings');
-				return [r.id, [r.creditsUsed, r.cashDueCents, reservationPaymentState(r)]];
+				return [r.id, [r.creditsUsed, r.cashDueCents, reservationTrack(r, now)]];
 			})
 		);
 		expect(paid).toEqual({
-			cash: [null, 3000, 'cash_due'],
-			half: [0.5, 1500, 'cash_due'],
-			credits: [2, 0, 'credits'],
-			comped: [null, 0, 'comped']
+			cash: [null, 3000, 'booked'],
+			half: [0.5, 1500, 'booked'],
+			credits: [2, 0, 'covered'],
+			comped: [null, 0, 'covered']
 		});
 	});
 });
@@ -162,64 +183,18 @@ describe('closures', () => {
 		expect(rows.map((r) => r.id)).toEqual(['tour']);
 		expect(pagination.total).toBe(1);
 		const withStatus = await listStaffReservations(
-			{ bookerType: 'closure', status: 'confirmed' },
+			{ bookerType: 'closure', status: 'booked' },
 			now
 		);
 		expect(withStatus.rows).toEqual([]);
-		expect(await countStaffStatuses({ bookerType: 'closure' }, now)).toEqual({
-			confirmed: 0,
-			payment_due: 0,
-			waitlisted: 0,
-			cancelled: 0
-		});
+		const counts = await countStaffStatuses({ bookerType: 'closure' }, now);
+		expect(Object.values(counts)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
 	});
 
 	it('leave the list under a status or a booker type', async () => {
-		const byStatus = await listStaffReservations({ status: 'confirmed' }, now);
+		const byStatus = await listStaffReservations({ status: 'booked' }, now);
 		const byBooker = await listStaffReservations({ bookerType: 'user' }, now);
 		expect(byStatus.rows.some((r) => r.kind === 'closure')).toBe(false);
 		expect(byBooker.rows.some((r) => r.kind === 'closure')).toBe(false);
-	});
-});
-
-describe('confirmedUnpaidSql and owesMoney agree', () => {
-	// Every combination of the columns either reading looks at.
-	it('on every combination of status, payment, refund, balance and booker', async () => {
-		sqlite.exec('delete from reservation');
-		const rows: Row[] = [];
-		let n = 0;
-		for (const status of reservationStatuses)
-			for (const paid of [false, true])
-				for (const refunded of [false, true])
-					for (const cashDueCents of [null, 0, 1500])
-						for (const bookerType of bookerTypes)
-							rows.push(
-								row(`r${n++}`, n * 3, {
-									status,
-									bookerType,
-									paidAt: paid ? now : null,
-									refundedAt: refunded ? now : null,
-									cashDueCents
-								})
-							);
-		// Twelve bound parameters a row, under D1's 100 a statement.
-		for (let i = 0; i < rows.length; i += 8) {
-			await testDb.insert(reservation).values(rows.slice(i, i + 8));
-		}
-		const viaSql = await testDb
-			.select({ id: reservation.id })
-			.from(reservation)
-			.where(confirmedUnpaidSql());
-		const viaJs = rows.filter((r) =>
-			owesMoney({
-				status: r.status!,
-				paidAt: r.paidAt,
-				cashDueCents: r.cashDueCents,
-				bookerType: r.bookerType,
-				refundedAt: r.refundedAt ?? null
-			})
-		);
-		expect(ids(viaSql)).toEqual(ids(viaJs as { id: string }[]));
-		expect(viaSql.length).toBeGreaterThan(0);
 	});
 });

@@ -3,9 +3,6 @@ import { isEventHold } from '#lib/config.js';
 export type ReservationActionKey =
 	'cashReceived' | 'comp' | 'complete' | 'noShow' | 'cancel' | 'refundAndCancel' | 'refundOnly';
 
-export type ReservationPaymentState =
-	'paid' | 'cash_due' | 'unpaid' | 'credits' | 'comped' | 'cancelled' | 'refunded' | 'no_show';
-
 /** Statuses that end a reservation's lifecycle (no further member actions). */
 export function isTerminalStatus(status: string): boolean {
 	return status === 'completed' || status === 'cancelled' || status === 'no_show';
@@ -38,41 +35,57 @@ export function overlappingReservations<T extends OverlapCandidate>(
 	);
 }
 
-/**
- * Derive a reservation's payment state for display. Order matters: refunded →
- * cancelled → paid → cash owed → not-yet-settled → credit-settled → comped.
- * Credit-settled and comped share `paidAt null & cashDueCents 0`; `creditsUsed`
- * is what distinguishes them. A null `cashDueCents` means the booking was never
- * priced — that's `unpaid`, never `comped`.
- */
-export function reservationPaymentState(r: {
+export const reservationTracks = [
+	'waitlisted',
+	'booked',
+	'paid',
+	'payment_due',
+	'covered',
+	'no_show',
+	'cancelled',
+	'refunded'
+] as const;
+/** The one status a reservation is shown with (#2861). Derived, never stored. */
+export type ReservationTrack = (typeof reservationTracks)[number];
+
+/** The columns the track reads. All required, so a query cannot forget one. */
+export interface TrackedReservation {
 	status: string;
-	paidAt?: Date | null;
-	cashDueCents?: number | null;
-	creditsUsed?: number | null;
-	/**
-	 * Required, unlike its neighbours, and that is the point: a query that
-	 * forgets to select it would otherwise report every refunded booking as a
-	 * plain cancellation with nothing to catch it. `stripePaymentRecordId` used
-	 * to be read here and is gone from the shape rather than left as a field
-	 * nothing uses.
-	 */
+	bookerType: string;
+	endsAt: Date;
+	paidAt: Date | null;
 	refundedAt: Date | null;
-}): ReservationPaymentState {
+	cashDueCents: number | null;
+}
+
+/**
+ * A reservation's track. `reservationTrackSql` is the same reading in SQL and
+ * `reservation-track.spec.ts` holds the two together. Order matters: money that
+ * went back never reads Paid, and a refund-only booking keeps its `paidAt`.
+ * Payment due is `owesMoney` on a session that has ended; before that it reads
+ * Booked. `completed` is not a track: a closed booking reads Paid or Covered.
+ */
+export function reservationTrack(r: TrackedReservation, now: Date = new Date()): ReservationTrack {
+	if (r.status === 'waitlisted') return 'waitlisted';
 	if (r.status === 'no_show') return 'no_show';
-	// `refundedAt`, not "was there ever a payment" (#573): having been charged is
-	// not evidence of having been repaid, and `reservation-service` writes the
-	// column inside the try around `refund()`, so a refund that threw leaves a
-	// payment record and no refund. Read above `paidAt` and above the status
-	// check, because "Refund only" leaves a booking standing with its `paidAt`
-	// intact and money that has gone back must never read as Paid (#669).
 	if (r.refundedAt) return 'refunded';
 	if (r.status === 'cancelled') return 'cancelled';
 	if (r.paidAt) return 'paid';
-	if ((r.cashDueCents ?? 0) > 0) return 'cash_due';
-	if (r.cashDueCents == null) return 'unpaid';
-	if ((r.creditsUsed ?? 0) > 0) return 'credits';
-	return 'comped';
+	const ended = r.endsAt.getTime() < now.getTime();
+	if (owesMoney(r)) return ended ? 'payment_due' : 'booked';
+	// An event hold is never charged, so it has nothing to be covered until it ends.
+	if (r.status === 'confirmed' && isEventHold(r.bookerType) && !ended) return 'booked';
+	return 'covered';
+}
+
+/** What settled a Covered reservation: the detail page says which (#2861). */
+export function coveredBy(r: { creditsUsed: number | null }): 'credits' | 'comp' {
+	return (r.creditsUsed ?? 0) > 0 ? 'credits' : 'comp';
+}
+
+/** Tracks with no further member action: the session will not happen or is undone. */
+export function isClosedTrack(track: ReservationTrack): boolean {
+	return track === 'cancelled' || track === 'refunded' || track === 'no_show';
 }
 
 export function visibleActions(
@@ -140,22 +153,9 @@ export function memberPayAction(r: PayableReservation): 'balance' | null {
 }
 
 /**
- * A session that has ended with money still owed: not paid, not refunded, and
- * not settled to zero. The same reading as `ReservationSummary`'s Overdue
- * label, plus a confirmed booking whose session has passed unpaid (#1952).
- */
-export function isOverdue(
-	r: PayableReservation & { endsAt: Date; refundedAt?: Date | null },
-	now: Date = new Date()
-): boolean {
-	if (r.endsAt > now || r.paidAt || r.refundedAt || r.cashDueCents === 0) return false;
-	return r.status === 'confirmed' || r.status === 'completed' || r.status === 'no_show';
-}
-
-/**
- * Payment due on the staff Practice space list: confirmed and unpaid, not
- * refunded, and not an event hold, which is never charged. `confirmedUnpaidSql`
- * in `staff-reservation-list` is the same reading in SQL.
+ * Owes money: confirmed and unpaid, not refunded, and not an event hold, which
+ * is never charged. `confirmedUnpaidSql` in `payment-due` is the same reading
+ * in SQL. The Payment due track is this on a session that has ended.
  */
 export function owesMoney(
 	r: PayableReservation & { bookerType: string; refundedAt: Date | null }
@@ -164,9 +164,6 @@ export function owesMoney(
 }
 
 /** A session that has ended still owing: its row offers Cash received and No-show. */
-export function owedAfterSession(
-	r: PayableReservation & { bookerType: string; refundedAt: Date | null; endsAt: Date },
-	now: Date = new Date()
-): boolean {
-	return r.endsAt.getTime() < now.getTime() && owesMoney(r);
+export function owedAfterSession(r: TrackedReservation, now: Date = new Date()): boolean {
+	return reservationTrack(r, now) === 'payment_due';
 }
