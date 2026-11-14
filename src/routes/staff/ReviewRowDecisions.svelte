@@ -4,7 +4,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
-	import type { ReviewItem } from '#lib/types/review.js';
+	import type { ReviewDecision, ReviewItem } from '#lib/types/review.js';
 	import { decisionsFor } from './review-decisions';
 
 	/**
@@ -22,9 +22,28 @@
 		ondecided: () => void;
 	} = $props();
 
+	/** Each decision's own words, so a new decision cannot borrow another's. */
+	const words: Record<
+		ReviewDecision,
+		{ label: () => string; title?: (kind: string) => string; toast: () => string }
+	> = {
+		approve: { label: m.staff_approve_label, toast: m.staff_review_approved_toast },
+		decline: {
+			label: m.staff_review_decline_label,
+			title: (kind) => m.staff_review_decline_title({ kind }),
+			toast: m.staff_review_declined_toast
+		},
+		return: {
+			label: m.staff_return_label,
+			title: (kind) => m.staff_review_return_title({ kind }),
+			toast: m.staff_returned_toast
+		}
+	};
+
 	let decisions = $derived(
 		decisionsFor(item).map(([decision, bound]) => ({
 			decision,
+			words: words[decision],
 			bound,
 			form: bound.form.for(`${item.id}:${decision}`),
 			values: Object.entries(bound.values(item))
@@ -38,14 +57,14 @@
 			{#if d.bound.message}
 				<Action
 					action={d.form}
-					label={m.staff_review_decline_label()}
+					label={d.words.label()}
 					variant="ghost"
 					size="sm"
 					class="text-error"
-					modalTitle={m.staff_review_decline_title({ kind: kindLabel.toLowerCase() })}
-					submitLabel={m.staff_review_decline_label()}
+					modalTitle={d.words.title?.(kindLabel.toLowerCase())}
+					submitLabel={d.words.label()}
 					submitVariant="error"
-					successToast={m.staff_review_declined_toast()}
+					successToast={d.words.toast()}
 					onsuccess={ondecided}
 					data-review-decision={d.decision}
 				>
@@ -61,20 +80,12 @@
 					{/snippet}
 				</Action>
 			{:else}
-				<Form
-					remote={d.form}
-					successToast={d.decision === 'approve'
-						? m.staff_review_approved_toast()
-						: m.staff_review_declined_toast()}
-					onsuccess={ondecided}
-				>
+				<Form remote={d.form} successToast={d.words.toast()} onsuccess={ondecided}>
 					{#each d.values as [name, value] (name)}
 						<input {...d.form.fields[name].as('hidden', value)} />
 					{/each}
 					<SubmitButton
-						label={d.decision === 'approve'
-							? m.staff_approve_label()
-							: m.staff_review_decline_label()}
+						label={d.words.label()}
 						variant="ghost"
 						size="sm"
 						class={d.decision === 'approve' ? 'text-success' : 'text-error'}

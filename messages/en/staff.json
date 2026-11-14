@@ -3363,6 +3363,7 @@
 	"staff_review_kind_minor_volunteer_label": "Volunteer sign-off",
 	"staff_review_decline_label": "Decline",
 	"staff_review_decline_title": "Decline {kind}",
+	"staff_review_return_title": "Return {kind}",
 	"staff_review_approved_toast": "Approved",
 	"staff_review_declined_toast": "Declined",
 	"staff_contacts_title": "Contacts",

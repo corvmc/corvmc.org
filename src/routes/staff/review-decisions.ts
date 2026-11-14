@@ -79,7 +79,7 @@ export const reviewDecisionForms = {
 	},
 	resource_tip: {
 		approve: { form: publishLocalResourceForm, values: (i) => ({ id: i.subjectId }) },
-		decline: {
+		return: {
 			form: rejectLocalResourceForm,
 			values: (i) => ({ id: i.subjectId }),
 			message: 'note'
@@ -87,7 +87,7 @@ export const reviewDecisionForms = {
 	},
 	hour_log: {
 		approve: { form: approveVolunteerHours, values: (i) => ({ id: i.subjectId }) },
-		decline: { form: rejectVolunteerHours, values: (i) => ({ id: i.subjectId }), message: 'notes' }
+		return: { form: rejectVolunteerHours, values: (i) => ({ id: i.subjectId }), message: 'notes' }
 	},
 	shift_claim: {
 		approve: {
