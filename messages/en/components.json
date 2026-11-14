@@ -964,7 +964,7 @@
 	"market_vendor_fee_due_text": "{amount} due",
 	"market_vendor_fee_paid_text": "Paid {amount}",
 	"market_vendor_fee_refunded_text": "Refunded",
-	"market_vendor_check_in_take_payment_label": "Take payment",
+	"market_vendor_check_in_take_payment_text": "Take payment",
 	"market_vendor_check_in_next_market_label": "Next market",
 	"market_vendor_check_in_no_show_label": "No-show",
 	"market_vendor_check_in_no_shows_title": "No-shows",

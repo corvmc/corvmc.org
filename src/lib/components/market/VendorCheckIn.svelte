@@ -100,7 +100,7 @@
 										class="ml-2 link"
 										href={resolve(`market/pay/${vendor.id}`)}
 										target="_blank"
-										rel="noopener">{m.market_vendor_check_in_take_payment_label()}</a
+										rel="noopener">{m.market_vendor_check_in_take_payment_text()}</a
 									>
 								{/if}
 							</p>
