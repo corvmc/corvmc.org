@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '#lib/server/db/test-factory.js';
 import { noticeFor } from '#lib/server/reservation/conflict-service.js';
+import { getByUserId } from '#lib/server/instructor/instructor-service.js';
 
 // ---------------------------------------------------------------------------
 // The member reservations page carries the first-booking rules (#2747) only
@@ -99,5 +100,24 @@ describe('getMemberReservationsPage first-booking rules', () => {
 		const page = await getMemberReservationsPage();
 
 		expect(page.firstBooking).toBeNull();
+	});
+});
+
+// The page offers Book teaching time only on this flag; `requireInstructor` refuses the rest.
+describe('getMemberReservationsPage teaching', () => {
+	beforeEach(() => {
+		vi.mocked(noticeFor).mockResolvedValue({ minutes: 60, newMember: false, tourMinutes: 0 });
+	});
+
+	it('offers teaching only to an active instructor', async () => {
+		const asStatus = async (status: string | null) => {
+			vi.mocked(getByUserId).mockResolvedValue((status ? { id: 'ins-1', status } : null) as never);
+			return (await getMemberReservationsPage()).isInstructor;
+		};
+
+		expect(await asStatus('active')).toBe(true);
+		for (const status of [null, 'requested', 'rejected', 'paused', 'retired']) {
+			expect(await asStatus(status)).toBe(false);
+		}
 	});
 });

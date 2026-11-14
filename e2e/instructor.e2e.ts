@@ -1,41 +1,17 @@
-import { expect, test, type Page } from './fixtures/test';
-import { signInAs } from './fixtures/auth';
-import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
+import { expect, test } from './fixtures/test';
 import {
-	SEED_TEACHER_EMAIL,
-	SEED_TEACHER_PASSWORD,
 	SEED_TEACHER_CONTACT,
-	SEED_APPLICANT_EMAIL,
-	SEED_APPLICANT_PASSWORD,
 	SEED_INSTRUCTOR_HEADLINE,
 	SEED_APPLICANT_HEADLINE,
 	SEED_APPLICANT_NOTE
 } from './fixtures/seed-instructors';
 
 /**
- * Teaching, end to end.
- *
- * Three things here are only observable from outside, which is what earns an e2e
- * over the unit coverage underneath:
- *
- * - the public listing is **unauthenticated**, so the only honest test of it is
- *   a browser with no session;
- * - "Book teaching time" appears for an instructor and for nobody else, which is
- *   a fact about two different users seeing two different pages;
- * - a staff approval moves an application out of the review queue, which spans
- *   two panels and a write.
+ * The public teacher listing is unauthenticated, so the only honest test of it
+ * is a browser with no session. Booking teaching time and approving an
+ * application are pinned in `reservations.remote.member-page.spec.ts`,
+ * `DateTimeStep.svelte.spec.ts` and `instructor-service.spec.ts`.
  */
-/** Minutes between two `HH:MM` strings, for asserting the offered slot length. */
-function minutesBetween(from: string, to: string): number {
-	const [fh, fm] = from.split(':').map(Number);
-	const [th, tm] = to.split(':').map(Number);
-	return th * 60 + tm - (fh * 60 + fm);
-}
-
-async function login(page: Page, email: string, password: string) {
-	await signInAs(page, { email, password });
-}
-
 test('the teacher directory is public, and shows only approved instructors', async ({ page }) => {
 	// No login: the whole point of the route is that the person looking for a
 	// teacher is not a member.
@@ -51,86 +27,4 @@ test('the teacher directory is public, and shows only approved instructors', asy
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toHaveCount(0);
 	// And their staff-only note must not be anywhere in the document.
 	await expect(page.locator('body')).not.toContainText(SEED_APPLICANT_NOTE);
-});
-
-test('an instructor can book teaching time; a member without a grant cannot', async ({ page }) => {
-	await login(page, SEED_TEACHER_EMAIL, SEED_TEACHER_PASSWORD);
-	await page.goto('/member/reservations');
-
-	const teachingButton = page.getByTestId('book-teaching');
-	await expect(teachingButton).toBeVisible({ timeout: 15000 });
-
-	await teachingButton.click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toBeVisible({ timeout: 15000 });
-
-	const startTime = dialog.locator('select:is([name="startTime"], [name^="startTime/"])');
-	await expect(startTime).toBeEnabled({ timeout: 15000 });
-	// The earliest *bookable* start, found by value: the list carries the taken
-	// hours too now (#874), so a fixed index can land on a disabled option and
-	// `selectOption` waits for it forever.
-	const firstFree = await startTime
-		.locator('option:not([disabled]):not([value=""])')
-		.first()
-		.getAttribute('value');
-	await startTime.selectOption(firstFree ?? '');
-
-	const endTime = dialog.locator('select:is([name="endTime"], [name^="endTime/"])');
-	await expect(endTime).toBeEnabled({ timeout: 15000 });
-	// Index 1, not 0: the Select renders a placeholder at 0, and choosing it
-	// leaves `endTime` empty so `step1Valid` never clears and Continue stays
-	// disabled. Index 1 is the *shortest* offered end — which for a teaching
-	// booking is a half-hour, the duration `minDurationHours: 1` forbids a member.
-	// Asserted below rather than assumed, because it is the whole reason the
-	// duration floor is resolved per booker type.
-	const shortest = await endTime.locator('option').nth(1).getAttribute('value');
-	await endTime.selectOption({ index: 1 });
-
-	const phone = dialog.locator('input:is([name="phone"], [name^="phone/"])');
-	if (await phone.count()) await phone.fill('541-555-0199');
-
-	// 16:00 + 30 minutes. If the picker ever reverts to the member floor this is
-	// the assertion that says so, instead of a booking that quietly got longer.
-	const start = await startTime.inputValue();
-	expect(minutesBetween(start, shortest ?? '')).toBe(30);
-
-	// Steps stay mounted, hidden, so each is found by index. `Form.SubmitButton`
-	// (the only button carrying `data-status`) is `type="button"` until the last.
-	const advance = dialog.locator('[data-step="0"] button[data-status]');
-	await expect(advance).toBeEnabled({ timeout: 15000 });
-	await advance.click();
-
-	// A member-shaped booking submits through the confirm step's own submit, and
-	// with `payAhead={false}` it is the only action on the step.
-	await dialog.locator('[data-step="1"] button[type="submit"]').click();
-	await expect(dialog).toBeHidden({ timeout: 20000 });
-
-	// A member with no grant is offered nothing — the button is the visible half
-	// of `requireInstructor`, which refuses them on the server regardless.
-	await login(page, SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD);
-	await page.goto('/member/reservations');
-	await expect(page.getByTestId('book-space')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByTestId('book-teaching')).toHaveCount(0);
-});
-
-test('staff see a waiting application, and approving it clears the queue', async ({ page }) => {
-	await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-	// Applications are the Instructors view's Pending filter (#2074).
-	await page.goto('/staff/members?role=teacher&status=requested');
-
-	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
-	// The private half of the application is staff-only, and this is the one
-	// surface allowed to render it.
-	await expect(page.getByText(SEED_APPLICANT_NOTE)).toBeVisible();
-
-	await page.getByTestId('approve-instructor').first().click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toBeVisible({ timeout: 15000 });
-	await dialog.locator('button[type="submit"]').click();
-	await expect(dialog).toBeHidden({ timeout: 20000 });
-
-	// They leave Pending and appear among who is teaching.
-	await expect(page.getByTestId('approve-instructor')).toHaveCount(0, { timeout: 15000 });
-	await page.goto('/staff/members?role=teacher');
-	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
 });

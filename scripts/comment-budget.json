@@ -36,7 +36,6 @@
 	"e2e/global-setup.ts",
 	"e2e/group-announcements.e2e.ts",
 	"e2e/inbox-awaiting-reply.e2e.ts",
-	"e2e/instructor.e2e.ts",
 	"e2e/inventory-intake.e2e.ts",
 	"e2e/inventory.e2e.ts",
 	"e2e/lock.ts",

@@ -491,6 +491,21 @@ describe('the Members instructors view', () => {
 		expect(found.pagination.total).toBe(1);
 	});
 
+	it('moves an approved application from Pending to teaching, note and all until then', async () => {
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar', applicationNote: 'Ten years' });
+
+		const before = await svc.listInstructorRoster({ status: 'requested' });
+		expect(before.rows.map((r) => [r.personId, r.applicationNote])).toEqual([[USER, 'Ten years']]);
+
+		await svc.approve(before.rows[0].id, STAFF);
+
+		const after = await svc.listInstructorRoster({ status: 'requested' });
+		expect(after.rows).toEqual([]);
+		expect(after.pending).toBe(0);
+		const teaching = await svc.listInstructorRoster({ status: 'active' });
+		expect(teaching.rows.map((r) => r.personId)).toEqual([USER]);
+	});
+
 	it('carries the listing as it would publish, and where it would show', async () => {
 		await svc.apply(USER, {
 			headline: 'Guitar',

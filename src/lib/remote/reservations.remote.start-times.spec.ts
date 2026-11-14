@@ -18,6 +18,7 @@ vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff: 14,
 		minDurationHours: 1,
+		teachingMinDurationHours: 0.5,
 		maxDurationHours: 8,
 		timeSlotMinutes: 30,
 		hourlyRateCents: 1500
@@ -32,13 +33,13 @@ vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) =>
 	).isBookableStart,
 	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => [
-		{ startTime: '09:00', available: true },
-		{ startTime: '09:30', available: true },
-		{ startTime: '10:00', available: false },
-		{ startTime: '10:30', available: false },
-		{ startTime: '11:00', available: true },
-		{ startTime: '11:30', available: true },
-		{ startTime: '12:00', available: true }
+		{ startTime: '09:00', endTime: '09:30', available: true },
+		{ startTime: '09:30', endTime: '10:00', available: true },
+		{ startTime: '10:00', endTime: '10:30', available: false },
+		{ startTime: '10:30', endTime: '11:00', available: false },
+		{ startTime: '11:00', endTime: '11:30', available: true },
+		{ startTime: '11:30', endTime: '12:00', available: true },
+		{ startTime: '12:00', endTime: '12:30', available: true }
 	]),
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn(),
@@ -71,7 +72,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getReservationStartTimes } = (await import('#lib/remote/reservations.remote.js')) as any;
+const { getReservationStartTimes, getReservationEndTimes } =
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 type Option = { value: string; label: string; disabled?: boolean };
 
@@ -118,5 +120,26 @@ describe('getReservationStartTimes', () => {
 			'11:00',
 			'11:30'
 		]);
+	});
+});
+
+// The duration floor is a fact about the booker: a half-hour lesson is the teaching unit.
+describe('getReservationEndTimes', () => {
+	const ends = async (bookerType?: string) =>
+		(
+			(await getReservationEndTimes({
+				date: '2026-09-09',
+				startTime: '11:00',
+				bookerType
+			})) as Option[]
+		).map((o) => o.value);
+
+	it('offers a teaching booking a half-hour', async () => {
+		expect(await ends('instructor')).toEqual(['11:30', '12:00', '12:30']);
+	});
+
+	it('holds a member to the hour', async () => {
+		expect(await ends()).toEqual(['12:00', '12:30']);
+		expect(await ends('user')).toEqual(['12:00', '12:30']);
 	});
 });
