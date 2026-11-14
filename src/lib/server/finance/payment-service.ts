@@ -2,6 +2,7 @@ import { captureException } from '#lib/server/sentry.js';
 import { reverseEntriesForPaymentRecord } from './financial-entry-service';
 import type Stripe from 'stripe';
 import { stripe } from '#lib/server/stripe.js';
+import { refuseWhileImpersonating } from '#lib/server/impersonation/impersonation-guard.js';
 import { db } from '#lib/server/db/index.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { eq } from 'drizzle-orm';
@@ -126,6 +127,8 @@ interface CreditDeduction {
 // ---------------------------------------------------------------------------
 
 export async function checkout(options: CheckoutOptions): Promise<CheckoutResult> {
+	// Before any write: no payment on someone else's card (#2847).
+	refuseWhileImpersonating();
 	const {
 		stripeCustomerId,
 		customerEmail,

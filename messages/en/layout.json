@@ -1,6 +1,8 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"layout_account_menu_label": "Account menu",
+	"layout_impersonation_viewing_as_text": "Viewing as {name}",
+	"layout_impersonation_stop_label": "Stop",
 	"layout_brand_text": "CorvMC",
 	"layout_messages_label": "Messages",
 	"layout_messages_unread_label": "Messages, {count} unread",

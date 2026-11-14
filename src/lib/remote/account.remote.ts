@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { refuseWhileImpersonating } from '#lib/server/impersonation/impersonation-guard.js';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -122,6 +123,7 @@ export const changePassword = form(
 		}),
 	async (data) => {
 		requireUser();
+		refuseWhileImpersonating();
 		const event = getRequestEvent();
 
 		// Use better-auth's change-password endpoint via internal API
@@ -144,6 +146,7 @@ export const deleteAccount = form(
 	}),
 	async (data) => {
 		const currentUser = requireUser();
+		refuseWhileImpersonating();
 		const event = getRequestEvent();
 
 		// An account holding any position cannot be self-deleted.

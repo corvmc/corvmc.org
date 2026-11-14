@@ -14,6 +14,11 @@ import { env as bindings, waitUntil } from 'cloudflare:workers';
 import { resolvePendingInvites } from '#lib/server/group/group-invite-service.js';
 import { resolveMemberInvite } from '#lib/server/user/member-invite-service.js';
 import { captureException } from '#lib/server/sentry.js';
+import {
+	auditImpersonatedRequest,
+	impersonatorFor,
+	refusedWhileImpersonating
+} from '#lib/server/impersonation/impersonation-request.js';
 import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 import * as publicEnv from '$app/env/public';
@@ -86,13 +91,28 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 		event.locals.session = session.session;
 		event.locals.user = session.user;
 
+		// An admin viewing as this member (#2847): they are the actor, and some
+		// account endpoints are theirs to refuse.
+		const adminId = session.session.impersonatedBy;
+		if (adminId) {
+			event.locals.impersonator = await impersonatorFor(adminId);
+			if (refusedWhileImpersonating(event.url.pathname)) {
+				return Response.json(
+					{ message: 'Not available while viewing the app as a member.' },
+					{ status: 403 }
+				);
+			}
+		}
+
 		if (markSessionResolved(session.session.id)) {
 			resolvePendingInvites(session.user.id, session.user.email).catch(captureException);
 			resolveMemberInvite(session.user.id, session.user.email).catch(captureException);
 		}
 	}
 
-	return svelteKitHandler({ event, resolve, auth, building });
+	const response = await svelteKitHandler({ event, resolve, auth, building });
+	await auditImpersonatedRequest(event, response.status);
+	return response;
 };
 
 /**

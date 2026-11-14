@@ -1,5 +1,9 @@
 import Stripe from 'stripe';
 import * as env from '$app/env/private';
+import {
+	impersonatorId,
+	refuseWhileImpersonating
+} from '#lib/server/impersonation/impersonation-guard.js';
 import { createStripeGateway } from '#lib/server/finance/gateway/stripe-gateway.js';
 import { createFakeGateway } from '#lib/server/finance/gateway/fake-gateway.js';
 import type { PaymentDriver, PaymentGateway } from '#lib/server/finance/gateway/types.js';
@@ -59,6 +63,30 @@ export const webhookCryptoProvider = Stripe.createSubtleCryptoProvider();
  */
 export const stripe = new Proxy({} as PaymentGateway, {
 	get(_, prop) {
-		return (getGateway() as unknown as Record<string | symbol, unknown>)[prop];
+		const value = (getGateway() as unknown as Record<string | symbol, unknown>)[prop];
+		return impersonatorId() && value && typeof value === 'object' ? readOnly(value) : value;
 	}
 });
+
+const READS = new Set(['retrieve', 'list']);
+
+/**
+ * The gateway as an admin viewing as a member sees it (#2847): reads pass, and
+ * every call that could move money or change the member's billing is refused.
+ * Money moved on someone else's card is the one thing acting as them must not do.
+ */
+function readOnly(resource: object): unknown {
+	return new Proxy(resource, {
+		get(target, prop) {
+			const value: unknown = Reflect.get(target, prop);
+			if (typeof value === 'function') {
+				if (READS.has(String(prop))) return value.bind(target);
+				return () => {
+					refuseWhileImpersonating();
+					throw new Error(`Payment gateway ${String(prop)} refused while viewing as a member`);
+				};
+			}
+			return value && typeof value === 'object' ? readOnly(value) : value;
+		}
+	});
+}

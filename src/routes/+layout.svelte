@@ -10,6 +10,7 @@
 	import { navigating, updated } from '$app/state';
 	import { ignoreRepeatTap } from '#lib/repeat-tap.js';
 	import RadioPlayer from '#lib/components/radio/RadioPlayer.svelte';
+	import ImpersonationBanner from '#lib/components/layout/ImpersonationBanner.svelte';
 
 	let { children } = $props();
 
@@ -79,6 +80,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 <Tooltip.Provider delayDuration={300}>
+	<ImpersonationBanner />
 	{@render children()}
 	<!--
 		The station bar lives here and nowhere else. This is the only layout that

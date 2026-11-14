@@ -15,7 +15,10 @@ declare global {
 	namespace App {
 		interface Locals {
 			user?: User;
-			session?: Session;
+			/** `impersonatedBy` is set on a session an admin opened as this user (#2847). */
+			session?: Session & { impersonatedBy?: string | null };
+			/** The admin viewing the app as `user`; every write is audited with them as the actor. */
+			impersonator?: { id: string; name: string; email: string };
 			/**
 			 * The caller's authorization positions, memoised for this request.
 			 *

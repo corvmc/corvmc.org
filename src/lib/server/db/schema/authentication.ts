@@ -142,7 +142,13 @@ export const session = sqliteTable('session', {
 	userAgent: text('user_agent'),
 	userId: text('user_id')
 		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' })
+		.references(() => user.id, { onDelete: 'cascade' }),
+	/**
+	 * The admin viewing the app as `userId` (#2847). Set only on a session the
+	 * impersonation plugin created; every write made on it is audited with this
+	 * admin as the actor.
+	 */
+	impersonatedBy: text('impersonated_by')
 });
 
 export const account = sqliteTable('account', {

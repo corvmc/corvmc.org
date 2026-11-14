@@ -33,6 +33,9 @@ export const auditActions = [
 	'blocklist.removed',
 	'user.email_change_requested',
 	'user.email_changed',
+	'user.impersonation_started',
+	'user.impersonation_stopped',
+	'user.impersonated_write',
 	'credits.adjusted',
 	'incident.deleted',
 	'incident.reopened',
@@ -200,6 +203,11 @@ export interface AuditDetailsByAction {
 	'user.email_change_requested': { email: string };
 	/** The actor is the member, who confirmed from the new mailbox. Kept so staff can reverse it. */
 	'user.email_changed': { previousEmail: string; newEmail: string };
+	/** The actor is the admin, the subject the member they view the app as (#2847). */
+	'user.impersonation_started': Record<string, never>;
+	'user.impersonation_stopped': Record<string, never>;
+	/** A request that could write, made while viewing as the member: what it hit and how it ended. */
+	'user.impersonated_write': { method: string; path: string; status: number };
 	'credits.adjusted': {
 		creditType: 'free_hours' | 'equipment_credits';
 		delta: number;

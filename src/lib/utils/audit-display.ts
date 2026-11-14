@@ -61,6 +61,9 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'user.suspension_lifted': ['Members', 'Suspension lifted'],
 	'user.email_change_requested': ['Members', 'Email change requested'],
 	'user.email_changed': ['Members', 'Login email changed'],
+	'user.impersonation_started': ['Members', 'Viewing as member'],
+	'user.impersonation_stopped': ['Members', 'Stopped viewing as member'],
+	'user.impersonated_write': ['Members', 'Change as member'],
 	'credits.adjusted': ['Members', 'Credits adjusted'],
 	'blocklist.added': ['Members', 'Address blocked'],
 	'blocklist.removed': ['Members', 'Address unblocked'],
@@ -379,6 +382,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Asked to change the login email to ${entry.details.email}`;
 		case 'user.email_changed':
 			return `Changed the login email from ${entry.details.previousEmail} to ${entry.details.newEmail}`;
+		case 'user.impersonation_started':
+			return 'Started viewing the app as this member';
+		case 'user.impersonation_stopped':
+			return 'Stopped viewing the app as this member';
+		case 'user.impersonated_write':
+			return `As this member: ${entry.details.method} ${entry.details.path} (${entry.details.status})`;
 		case 'credits.adjusted': {
 			const d = entry.details;
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';
