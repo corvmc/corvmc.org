@@ -111,7 +111,7 @@
 							>
 						{:else if row.taskId}
 							<a class="link" href={resolve(`staff/tasks/${row.taskId}`)}
-								>{m.staff_inventory_restock_list_task_label()}</a
+								>{m.staff_inventory_restock_list_task_text()}</a
 							>
 						{:else}
 							<span class="text-subtle">—</span>

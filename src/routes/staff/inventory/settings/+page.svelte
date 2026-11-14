@@ -34,7 +34,7 @@
 						size="sm"
 					/>
 				</div>
-				<p class="text-subtle">{m.staff_gear_settings_task_roles_body()}</p>
+				<p class="text-subtle">{m.staff_gear_settings_task_roles_text()}</p>
 
 				<div class="mt-2 grid gap-4 sm:grid-cols-2">
 					<FormField
