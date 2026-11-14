@@ -1002,20 +1002,26 @@ export const checkConflicts = query(
 /**
  * Booking policy facts for the info strip — live config, so staff changes to
  * `reservation.*` site-config show up instead of drifting from hard-coded copy.
+ * `instructor` gives a teacher the teaching terms, which carry no new-member
+ * notice (#2808).
  */
-export const getReservationPolicy = query(async () => {
-	const reservationConfig = await getReservationConfig();
-	// The viewer's own notice: a new member is told 3 days, not the room's hour.
-	const notice = await viewerNotice(reservationConfig, 'user');
-	return {
-		hourlyRateCents: reservationConfig.hourlyRateCents,
-		operatingHoursStart: reservationConfig.operatingHoursStart,
-		operatingHoursEnd: reservationConfig.operatingHoursEnd,
-		minDurationHours: reservationConfig.minDurationHours,
-		maxDurationHours: reservationConfig.maxDurationHours,
-		minAdvanceMinutes: notice.minutes
-	};
-});
+export const getReservationPolicy = query(
+	z.enum(['user', 'instructor']).optional(),
+	async (bookerType = 'user') => {
+		const reservationConfig = await getReservationConfig();
+		const terms = termsFor(bookerType, reservationConfig);
+		// The viewer's own notice: a new member is told 3 days, not the room's hour.
+		const notice = await viewerNotice(reservationConfig, bookerType);
+		return {
+			hourlyRateCents: terms.hourlyRateCents,
+			operatingHoursStart: reservationConfig.operatingHoursStart,
+			operatingHoursEnd: reservationConfig.operatingHoursEnd,
+			minDurationHours: terms.minDurationHours,
+			maxDurationHours: reservationConfig.maxDurationHours,
+			minAdvanceMinutes: notice.minutes
+		};
+	}
+);
 
 /**
  * Member: the contact number on file, so the booking forms know whether to ask

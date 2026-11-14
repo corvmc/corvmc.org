@@ -6,6 +6,7 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { claimedSql, liveShift } from './work-order-service';
 import { holdsPracticeSpaceClearanceSql } from './practice-space-clearance';
+import { CLEARANCE_BOOKER } from '#lib/config.js';
 
 /** The reads behind the two orientation reminders (#2567, #2569). */
 
@@ -99,7 +100,7 @@ export async function listFirstVisitsBetween(
 		.where(
 			and(
 				eq(reservation.status, 'confirmed'),
-				eq(reservation.bookerType, 'user'),
+				eq(reservation.bookerType, CLEARANCE_BOOKER),
 				gte(reservation.startsAt, from),
 				lt(reservation.startsAt, to),
 				not(holdsPracticeSpaceClearanceSql(reservation.createdByUserId, at))

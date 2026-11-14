@@ -55,6 +55,14 @@ const own = (userId: string, slot: { startsAt: Date; endsAt: Date }) => ({
 	...slot
 });
 
+/** A teaching booking: `bookerId` names the instructor row (#2808). */
+const teaching = (userId: string, slot: { startsAt: Date; endsAt: Date }) => ({
+	userId,
+	bookerType: 'instructor' as const,
+	bookerId: 'instr-1',
+	...slot
+});
+
 const grants = (userId: string) =>
 	sqlite
 		.prepare(
@@ -137,6 +145,17 @@ describe('new-member notice', () => {
 		expect(result.valid).toBe(true);
 	});
 
+	// #2808: teaching needs neither the clearance nor the new-member notice.
+	it('lets an uncleared teacher book teaching time on the room minimum', async () => {
+		const notice = await noticeFor(await getReservationConfig(), {
+			userId: 'u-new',
+			bookerType: 'instructor'
+		});
+		expect(notice).toEqual({ minutes: 60, newMember: false, tourMinutes: 0 });
+		const row = await create(teaching('u-new', TWO_HOURS));
+		expect(row.status).toBe('confirmed');
+	});
+
 	it('offers the uncleared member no start before the notice', async () => {
 		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
 		expect(notice).toEqual({ minutes: 4320, newMember: true, tourMinutes: 0 });
@@ -180,6 +199,12 @@ describe('tour time', () => {
 	it('adds no tour for a cleared member', async () => {
 		await waiveOrientation('u-new', { waivedByUserId: 'u-staff', reason: 'Knows the room' });
 		const row = await create(own('u-new', FOUR_DAYS));
+		expect(row.startsAt).toEqual(FOUR_DAYS.startsAt);
+		expect(row.tourMinutes).toBe(0);
+	});
+
+	it('adds no tour to a teaching booking (#2808)', async () => {
+		const row = await create(teaching('u-new', FOUR_DAYS));
 		expect(row.startsAt).toEqual(FOUR_DAYS.startsAt);
 		expect(row.tourMinutes).toBe(0);
 	});

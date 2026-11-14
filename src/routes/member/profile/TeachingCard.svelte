@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -65,7 +68,9 @@
 <InfoCard title={m.member_profile_teaching_card_title()}>
 	{#if !instructor}
 		<p class="mb-4 text-subtle">
-			{m.member_profile_teaching_card_teach_here_can_book_room_text()}
+			{#await getReservationPolicy('instructor') then teaching}{m.member_profile_teaching_card_teach_here_can_book_room_text(
+					{ rate: formatCents(teaching.hourlyRateCents) }
+				)}{:catch error}{m.ui_load_failed_body({ error: errorMessage(error) })}{/await}
 		</p>
 
 		<!-- A link to its own page, not an embedded form: new members submitted

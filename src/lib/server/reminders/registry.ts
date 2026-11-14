@@ -10,6 +10,7 @@ import {
 	formatTimeSimple
 } from '#lib/server/reservation/timezone.js';
 import {
+	CLEARANCE_BOOKER,
 	CLASSIFIED_EXPIRY_REMINDER_DAYS,
 	DEFAULT_TIMEZONE,
 	clubToday,
@@ -222,7 +223,7 @@ async function reservationsStartingWithin(ms: number, now: Date) {
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, new Date(now.getTime() + ms)),
 				or(
-					ne(reservation.bookerType, 'user'),
+					ne(reservation.bookerType, CLEARANCE_BOOKER),
 					holdsPracticeSpaceClearanceSql(reservation.createdByUserId, now)
 				),
 				sql`not exists (select 1 from ${reminderSent} where ${reminderSent.reminderKey} = ${FIRST_VISIT} and ${reminderSent.subjectId} = ${reservation.id})`

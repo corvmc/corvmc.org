@@ -4,6 +4,9 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { errorMessage } from '#lib/error-message.js';
 
+	/** `instructor` shows the teaching terms (#2808). */
+	let { bookerType = 'user' }: { bookerType?: 'user' | 'instructor' } = $props();
+
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
 	function fmtHour(hhmm: string): string {
 		const [h, m] = hhmm.split(':').map(Number);
@@ -32,7 +35,7 @@
 </script>
 
 <div class="overflow-hidden rounded-lg border-[2.5px] border-base-300 bg-base-200">
-	{#await getReservationPolicy()}
+	{#await getReservationPolicy(bookerType)}
 		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
 			{#each ['Rate', 'Hours', 'Length', 'Notice'] as label (label)}
 				<div class="px-4 py-3 text-center">
@@ -80,15 +83,17 @@
 	{:catch error}
 		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
-	<details class="border-t-[2.5px] border-base-300">
-		<summary
-			class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
-		>
-			{msg.reservations_booking_policy_booking_policy_label()}
-		</summary>
-		<div class="space-y-1 px-4 pb-3 text-muted">
-			<p>{msg.reservations_booking_policy_payment_due_at_reservation_start_text()}</p>
-			<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment_text()}</p>
-		</div>
-	</details>
+	{#if bookerType === 'user'}
+		<details class="border-t-[2.5px] border-base-300">
+			<summary
+				class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
+			>
+				{msg.reservations_booking_policy_booking_policy_label()}
+			</summary>
+			<div class="space-y-1 px-4 pb-3 text-muted">
+				<p>{msg.reservations_booking_policy_payment_due_at_reservation_start_text()}</p>
+				<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment_text()}</p>
+			</div>
+		</details>
+	{/if}
 </div>

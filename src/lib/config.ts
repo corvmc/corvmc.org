@@ -2808,6 +2808,14 @@ export type BookerType = (typeof bookerTypes)[number];
  */
 export const eventHoldBookers = ['production', 'event_listing'] as const satisfies BookerType[];
 
+/**
+ * The one booker whose booking needs the Practice space clearance: a member's
+ * own practice time. The new-member notice, the tour and the orientation shift
+ * all key on it. Teaching (`instructor`) does not need it (#2808), nor does a
+ * band's or CMC's own hold.
+ */
+export const CLEARANCE_BOOKER = 'user' as const satisfies BookerType;
+
 export function isEventHold(bookerType: string): boolean {
 	return (eventHoldBookers as readonly string[]).includes(bookerType);
 }

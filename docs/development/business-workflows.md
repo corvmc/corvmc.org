@@ -43,7 +43,7 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
 bookings up to 14 days ahead.
 
-**New-member notice (#2565).** A member's own booking (`bookerType: 'user'`) needs
+**New-member notice (#2565).** A member's own booking (`CLEARANCE_BOOKER`, `bookerType: 'user'`) needs
 `reservation.newMemberMinAdvanceMinutes` of notice (default 4320, 3 days) while they hold no
 current **Practice space** clearance, so someone can be found to show them around. With the
 clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
@@ -53,7 +53,13 @@ never offers a start the server refuses. The picker says why in one line. Above 
 reservations page lists the first-booking rules to a member without the clearance: the notice
 and, while an orientation role is set, the tour length and that it is free (`firstBooking` on
 `getMemberReservationsPage`, #2747); a cleared member sees nothing. Band, teaching and
-event bookings keep the room minimum, and `staffCreate()` checks neither. The clearance is
+event bookings keep the room minimum, and `staffCreate()` checks neither. Teaching bookings need
+neither the clearance nor the tour, and raise no orientation shift (#2808): the notice, the tour,
+the orientation listener and the first-visit and orientation reminders all key on
+`CLEARANCE_BOOKER` in `config.ts`, and `clearance-booker.spec.ts` fails a clearance reader that
+names a booker type of its own. A teacher sees two strips on the reservations page, practice
+terms and teaching terms (`getReservationPolicy('instructor')`), and teaching bookings carry a
+Teaching badge in the list. The clearance is
 granted when an orientation is completed or waived — see
 [Rehearsal orientation](#rehearsal-orientation).
 
