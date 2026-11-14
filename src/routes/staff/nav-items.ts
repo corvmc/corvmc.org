@@ -145,14 +145,12 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('staff/members')
 			},
 			// Bands, Clubs and Committees are its views, each with its own gate (#2086).
-			// External acts stay at their address, linked from the Bands view.
 			{
 				key: 'groups',
 				capability: 'band.read',
 				alsoFor: ['group.read', 'committee.reviewApplications'],
 				label: 'Groups',
-				href: resolve('staff/groups'),
-				also: [resolve('staff/bands/acts')]
+				href: resolve('staff/groups')
 			}
 		]
 	},

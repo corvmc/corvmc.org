@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
+import { groupViewPath } from '../groups/views';
 
-// Bands, Clubs and Committees are views on Groups (#2086).
+// Bands, Clubs and Committees are kinds on the Groups list (#2086, #2765).
 export function load({ url }) {
-	redirect(308, `/staff/groups/clubs${url.search}`);
+	redirect(308, groupViewPath('club', url.search));
 }

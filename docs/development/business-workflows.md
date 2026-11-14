@@ -509,8 +509,9 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
 
 ### Outside acts
 
-"Outside act" is the one UI name for this record: the acts list, the Contacts role (`performer`),
-a bill chip and the console action. An act CMC books that has no account is a `directory_entry`
+"Outside act" is the one UI name for this record: the Contacts role (`performer`), a bill chip
+and the console action. The acts list is Contacts with that role (`/staff/contacts?role=performer`,
+where **Add act** creates one); `/staff/bands/acts` is a 308 to it (#2765). An act CMC books that has no account is a `directory_entry`
 with no user and no group, forced hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
 `external-acts.remote.ts` under `event.manage`). Its private side is an `organization` with the
 `performer` role and `directory_entry_id` set (`performerFor()` in `organization-service.ts`,

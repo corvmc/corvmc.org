@@ -33,7 +33,7 @@ test.describe('staff groups', () => {
 		await loginAsStaff(page);
 		// The old address, which is also the proof that it still lands somewhere.
 		await page.goto('/staff/clubs');
-		await page.waitForURL('**/staff/groups/clubs', { timeout: 15000 });
+		await page.waitForURL(/\/staff\/groups\?kind=club$/, { timeout: 15000 });
 
 		const table = page.locator('table');
 		// `goto` resolves before an awaited remote query commits, so wait for a row
@@ -51,7 +51,7 @@ test.describe('staff groups', () => {
 	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/committees');
-		await page.waitForURL('**/staff/groups/committees', { timeout: 15000 });
+		await page.waitForURL(/\/staff\/groups\?kind=committee$/, { timeout: 15000 });
 
 		const card = page.getByRole('button', { name: new RegExp(SEED_COMMITTEE_NAME) });
 		await expect(card).toBeVisible();
@@ -60,10 +60,8 @@ test.describe('staff groups', () => {
 		await expect(nav.locator('a[href="/staff/groups"]')).toHaveCount(1);
 		await expect(nav.locator('a[href="/staff/clubs"]')).toHaveCount(0);
 		await expect(nav.locator('a[href="/staff/committees"]')).toHaveCount(0);
-		// The view tabs sit in the page header, above what the chosen view holds.
-		await expect(
-			page.locator('[data-page-header] a[href="/staff/groups/committees"]')
-		).toHaveAttribute('aria-current', 'page');
+		// The kind is a filter on the one list, holding the chosen kind.
+		await expect(page.locator('select:has(option[value="committee"])')).toHaveValue('committee');
 
 		// The card opens the record beside the list, which links on to its page.
 		// The seeded committee carries one open application; its answer is
@@ -91,7 +89,7 @@ test.describe('staff groups', () => {
 
 	test('creates a club and appoints its first chair in one step', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/groups/clubs');
+		await page.goto('/staff/groups?kind=club');
 
 		await page.getByTestId('create-group').click();
 

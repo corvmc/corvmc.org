@@ -16,6 +16,7 @@
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import OrganizationFields from './OrganizationFields.svelte';
+	import CreateActAction from './CreateActAction.svelte';
 	import { createOrganization, getContactsPage } from '#lib/remote/contacts.remote.js';
 	import { createContractorForm } from '#lib/remote/contractors.remote.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -133,6 +134,8 @@
 				{/snippet}
 			</Action>
 		{/if}
+	{:else if only === 'performer'}
+		<CreateActAction />
 	{:else if only === 'sponsor'}
 		<Button variant="ghost" href={resolve('staff/funding')}>
 			{m.staff_contacts_sponsorships_page_label()}
