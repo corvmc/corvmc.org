@@ -37,11 +37,8 @@
 		setStaffEventLineup
 	} from '#lib/remote/events.remote.js';
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
-	import {
-		approveListing,
-		rejectListing,
-		searchBandsForListing
-	} from '#lib/remote/community-events.remote.js';
+	import { approveListing, rejectListing } from '#lib/remote/community-events.remote.js';
+	import { searchBillActs } from '#lib/remote/external-acts.remote.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from '#lib/components/events/RecapText.svelte';
@@ -84,7 +81,11 @@
 	let lineup = $state<LineupChip[]>([]);
 
 	function startEditing() {
-		lineup = detail.lineup.map((l) => ({ name: l.name, bandId: l.bandId ?? undefined }));
+		lineup = detail.lineup.map((l) => ({
+			name: l.name,
+			bandId: l.bandId ?? undefined,
+			actId: l.actId ?? undefined
+		}));
 		editing = true;
 	}
 
@@ -360,7 +361,7 @@
 					<LineupEditor
 						field={setStaffEventLineup.fields.lineup}
 						bind:value={lineup}
-						search={searchBandsForListing}
+						search={(q) => searchBillActs({ eventId: evt.id, q })}
 					/>
 					<div class="mt-3"><SubmitButton label={m.staff_events_id_save_bill_label()} /></div>
 				</Form>

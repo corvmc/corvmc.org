@@ -7,7 +7,7 @@ import {
 } from '#lib/server/db/schema/directory.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -228,6 +228,34 @@ export async function createExternalAct(data: CreateExternalActData): Promise<st
 	// The act's private side: a performer organization, where its people go (#2622).
 	await performerFor(row.id);
 	return row.id;
+}
+
+/** Unowned entries: no member and no band. That pair *is* an outside act. */
+const isOutsideAct = () => and(isNull(directoryEntry.userId), isNull(directoryEntry.groupId));
+
+/** Outside acts by name, for the staff bill's search (#2782). */
+export async function searchOutsideActs(query: string) {
+	return db
+		.select({ id: directoryEntry.id, name: directoryEntry.name, hometown: directoryEntry.hometown })
+		.from(directoryEntry)
+		.where(and(isOutsideAct(), containsLiteral(directoryEntry.name, query)))
+		.orderBy(asc(directoryEntry.name), asc(directoryEntry.id))
+		.limit(10);
+}
+
+/**
+ * The outside act already on file under this name, ignoring case and spacing.
+ * The oldest wins when several match; Possible duplicates merges the rest.
+ */
+export async function findOutsideActByName(name: string): Promise<string | null> {
+	const key = name.trim().toLowerCase().replace(/\s+/g, ' ');
+	if (!key) return null;
+	const rows = await db
+		.select({ id: directoryEntry.id, name: directoryEntry.name })
+		.from(directoryEntry)
+		.where(and(isOutsideAct(), containsLiteral(directoryEntry.name, name.trim())))
+		.orderBy(asc(directoryEntry.createdAt), asc(directoryEntry.id));
+	return rows.find((r) => r.name.trim().toLowerCase().replace(/\s+/g, ' ') === key)?.id ?? null;
 }
 
 /**
