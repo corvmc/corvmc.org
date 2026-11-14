@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 /**
  * One action for work with a time and work without (#1933). These pin that the
@@ -88,14 +89,14 @@ describe('NewWorkOrderAction', () => {
 	it('moves the capacity to the default of whichever role is picked', async () => {
 		const { locator } = await render(NewWorkOrderAction, {});
 		await locator.getByRole('button').click();
-		const role = field('volunteerRoleId') as unknown as HTMLSelectElement;
+		const role = page.getByCss('[role="dialog"] select[name="volunteerRoleId"]');
 		await expect.poll(() => field('capacity')?.value).toBe('3');
 
-		await page.elementLocator(role).selectOptions('role-3');
+		await role.selectOptions('role-3');
 		await expect.poll(() => field('capacity')?.value).toBe('6');
-		await page.elementLocator(role).selectOptions('role-1');
+		await role.selectOptions('role-1');
 		await expect.poll(() => field('capacity')?.value).toBe('3');
-		expect(role.value).toBe('role-1');
+		expect(field('volunteerRoleId')?.value).toBe('role-1');
 	});
 
 	it('renders nothing when there is no live role to pick', async () => {
