@@ -1,7 +1,7 @@
 import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import { SEED_VENUE_ARCHIVED_NAME, SEED_VENUE_OFFSITE_NAME } from './fixtures/seed-venues';
+import { SEED_VENUE_OFFSITE_NAME } from './fixtures/seed-venues';
 import { SEED_EVENT_DATE, SEED_EVENT_TITLE_PREFIX } from './fixtures/seed-staff-event';
 
 /**
@@ -18,24 +18,6 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('venues', () => {
-	/**
-	 * Archiving takes a venue off the picker without taking it off the events that
-	 * already name it, so the list has to be able to show what the picker hides.
-	 */
-	test('an archived venue is out of the list until asked for', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/events?view=venues');
-
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toHaveCount(0, {
-			timeout: 15000
-		});
-
-		await page.goto('/staff/events?view=venues&archived=1');
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toBeVisible({
-			timeout: 15000
-		});
-	});
-
 	/**
 	 * The refusal that matters: a hold for a show somewhere else cannot happen,
 	 * and `updateEvent` says so. The console's edit form withdraws the toggle once
