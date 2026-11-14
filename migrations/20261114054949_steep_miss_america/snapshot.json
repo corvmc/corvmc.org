@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "0e3dd9ab-8de2-4331-9814-1469ee6c977f",
+  "id": "a4fdfe8b-29a2-40ea-be39-96f096786d0a",
   "prevIds": [
-    "1d662726-e472-4c3a-bed8-014d06bb9027"
+    "0e3dd9ab-8de2-4331-9814-1469ee6c977f"
   ],
   "ddl": [
     {
@@ -11518,6 +11518,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "created_by_user_id",
       "entityType": "columns",
       "table": "work_order"
@@ -11779,6 +11799,16 @@
       "default": null,
       "generated": null,
       "name": "reservation_id",
+      "entityType": "columns",
+      "table": "work_order_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "item_id",
       "entityType": "columns",
       "table": "work_order_link"
     },
@@ -19849,6 +19879,21 @@
     },
     {
       "columns": [
+        "item_id"
+      ],
+      "tableTo": "inventory_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_link_item_id_inventory_item_id_fk",
+      "entityType": "fks",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
         "organization_id"
       ],
       "tableTo": "organization",
@@ -26046,6 +26091,24 @@
     {
       "columns": [
         {
+          "value": "source",
+          "isExpression": false
+        },
+        {
+          "value": "source_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "source is not null and source_id is not null and resolved_at is null and cancelled_at is null",
+      "origin": "manual",
+      "name": "uq_work_order_open_source",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
           "value": "group_id",
           "isExpression": false
         }
@@ -26218,6 +26281,24 @@
       "where": "reservation_id is not null",
       "origin": "manual",
       "name": "idx_work_order_link_reservation",
+      "entityType": "indexes",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        {
+          "value": "item_id",
+          "isExpression": false
+        },
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "item_id is not null",
+      "origin": "manual",
+      "name": "idx_work_order_link_item",
       "entityType": "indexes",
       "table": "work_order_link"
     },
@@ -28088,7 +28169,7 @@
       "table": "work_task"
     },
     {
-      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) = 1",
+      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) = 1",
       "name": "work_order_link_one_target",
       "entityType": "checks",
       "table": "work_order_link"
