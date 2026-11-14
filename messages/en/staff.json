@@ -1183,10 +1183,8 @@
 	"staff_gear_body": "Gear",
 	"staff_gear_loans_label": "Loans",
 	"staff_gear_problems_label": "Reported problems",
-	"staff_gear_compliance_label": "Compliance",
 	"staff_gear_loans_title": "Loans",
 	"staff_gear_problems_title": "Reported problems",
-	"staff_gear_compliance_title": "Compliance",
 	"staff_reservations_closures_label": "Closures",
 	"staff_reservations_lock_offline_link_label": "Lock offline",
 	"staff_space_views_reservations_label": "Reservations",
@@ -3698,7 +3696,6 @@
 	"staff_seating_label": "Seating",
 	"staff_no_label": "No",
 	"staff_unknown_label": "Unknown",
-	"staff_inventory_kits_open_title": "Open kits",
 	"staff_inventory_kits_returned_units_title": "Returned units",
 	"staff_inventory_kits_check_in_title": "Kit check-in",
 	"staff_inventory_kits_lent_units_title": "Lent units",
@@ -3731,5 +3728,12 @@
 	"staff_content_title": "Content",
 	"staff_content_help_label": "Help articles",
 	"staff_content_resources_label": "Local resources",
-	"staff_local_resources_pending_tips_label": "Pending ({count})"
+	"staff_local_resources_pending_tips_label": "Pending ({count})",
+	"staff_gear_orders_label": "Orders",
+	"staff_gear_orders_title": "Purchase orders",
+	"staff_inventory_orders_empty_body": "No purchase orders",
+	"staff_inventory_loans_kits_label": "Kits",
+	"staff_inventory_kits_empty_title": "No open kits",
+	"staff_acquisitions_form_8282_due_label": "Form 8282 due",
+	"staff_order_2_2_text": "Order"
 }

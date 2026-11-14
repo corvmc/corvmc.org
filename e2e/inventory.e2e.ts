@@ -132,7 +132,7 @@ async function visit(page: Page, path: string) {
 
 /** Whether the compliance queue currently lists a unit, re-read from scratch. */
 async function complianceLists(page: Page, tag: string): Promise<boolean> {
-	await visit(page, '/staff/inventory/compliance');
+	await visit(page, '/staff/inventory/acquisitions?show=form-8282');
 	return page.getByText(tag).isVisible();
 }
 
@@ -274,7 +274,7 @@ test.describe('inventory', () => {
 	test.describe('form 8282', () => {
 		test('recording an outcome clears it from the list', async ({ page }) => {
 			await loginAsStaff(page);
-			await page.goto('/staff/inventory/compliance');
+			await page.goto('/staff/inventory/acquisitions?show=form-8282');
 
 			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
 			await row.getByRole('button').click();
@@ -508,7 +508,7 @@ test.describe('inventory', () => {
 		test('marking a fronted purchase reimbursed clears it from the owed list', async ({ page }) => {
 			await loginAsStaff(page);
 
-			await visit(page, '/staff/reports/acquisitions?owed=1');
+			await visit(page, '/staff/inventory/acquisitions?owed=1');
 			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
 
 			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
@@ -520,7 +520,7 @@ test.describe('inventory', () => {
 			await expect
 				.poll(
 					async () => {
-						await visit(page, '/staff/reports/acquisitions?owed=1');
+						await visit(page, '/staff/inventory/acquisitions?owed=1');
 						return page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER }).isVisible();
 					},
 					{ timeout: 15000 }

@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getAnnualReportPage } from '#lib/remote/reports.remote.js';
 import { getVolunteerReportPage } from '#lib/remote/volunteer.remote.js';
-import { getAcquisitions, getSpendReport } from '#lib/remote/inventory.remote.js';
+import { getSpendReport } from '#lib/remote/inventory.remote.js';
 import { getMusicSalesReport } from '#lib/remote/staff-music.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
 import { reportViews } from './views';
 import { load as bare } from './+page.server';
 import { load as oldSpend } from '../inventory/spend/+page';
-import { load as oldAcquisitions } from '../inventory/acquisitions/+page';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
@@ -23,9 +22,8 @@ vi.mock('$app/server', async () =>
 const ANNUAL = 'finance.read';
 const VOLUNTEERING = 'volunteer.report';
 const SPEND = 'inventory.report';
-const ACQUISITIONS = 'inventory.manageAcquisitions';
 const MUSIC = 'music.read';
-const ALL = [ANNUAL, VOLUNTEERING, SPEND, ACQUISITIONS, MUSIC];
+const ALL = [ANNUAL, VOLUNTEERING, SPEND, MUSIC];
 
 beforeEach(() => {
 	auth.held = [];
@@ -44,7 +42,6 @@ describe('tabs', () => {
 		[ANNUAL, 'annual'],
 		[VOLUNTEERING, 'volunteering'],
 		[SPEND, 'inventory-spend'],
-		[ACQUISITIONS, 'acquisitions'],
 		[MUSIC, 'music']
 	])('holding only %s shows only %s, and still offers the row', (cap, key) => {
 		expect(visibleViews(reportViews, [cap]).map((v) => v.key)).toEqual([key]);
@@ -52,12 +49,11 @@ describe('tabs', () => {
 		expect(rows.map((r) => r.key)).toContain('reports');
 	});
 
-	it('shows all five, in order, to someone holding them all', () => {
+	it('shows all four, in order, to someone holding them all', () => {
 		expect(visibleViews(reportViews, ALL).map((v) => v.key)).toEqual([
 			'annual',
 			'volunteering',
 			'inventory-spend',
-			'acquisitions',
 			'music'
 		]);
 	});
@@ -68,7 +64,6 @@ describe('remotes', () => {
 		[ANNUAL, getAnnualReportPage],
 		[VOLUNTEERING, getVolunteerReportPage],
 		[SPEND, getSpendReport],
-		[ACQUISITIONS, getAcquisitions],
 		[MUSIC, getMusicSalesReport]
 	])('without %s, its report is refused to a holder of the others', async (cap, remote) => {
 		auth.held = ALL.filter((c) => c !== cap);
@@ -83,7 +78,6 @@ describe('addresses', () => {
 		[ALL, '/staff/reports/annual?from=2026-01-01'],
 		[[VOLUNTEERING, SPEND], '/staff/reports/volunteering?from=2026-01-01'],
 		[[SPEND], '/staff/reports/inventory-spend?from=2026-01-01'],
-		[[ACQUISITIONS], '/staff/reports/acquisitions?from=2026-01-01'],
 		[[], '/staff/reports/annual?from=2026-01-01']
 	])('bare parent, holding %j, goes to %s', async (held, location) => {
 		auth.held = held;
@@ -94,12 +88,7 @@ describe('addresses', () => {
 	});
 
 	it.each([
-		[oldSpend, 'http://x/staff/inventory/spend?from=a', '/staff/reports/inventory-spend?from=a'],
-		[
-			oldAcquisitions,
-			'http://x/staff/inventory/acquisitions?owed=1',
-			'/staff/reports/acquisitions?owed=1'
-		]
+		[oldSpend, 'http://x/staff/inventory/spend?from=a', '/staff/reports/inventory-spend?from=a']
 	])('old address 308s', async (load, url, location) => {
 		await expect(run(load, url)).rejects.toMatchObject({ status: 308, location });
 	});

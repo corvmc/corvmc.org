@@ -528,15 +528,15 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/acquisitions",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/acquisitions/[id]",
 		"panel": "staff"
 	},
 	{
 		"route": "/staff/inventory/assets/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/inventory/compliance",
 		"panel": "staff"
 	},
 	{
@@ -557,6 +557,10 @@
 	},
 	{
 		"route": "/staff/inventory/locations",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inventory/orders",
 		"panel": "staff"
 	},
 	{
@@ -653,10 +657,6 @@
 	},
 	{
 		"route": "/staff/recurring/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/reports/acquisitions",
 		"panel": "staff"
 	},
 	{

@@ -9,7 +9,8 @@ import {
 import { user } from '#lib/server/db/schema/authentication.js';
 import { organization } from '#lib/server/db/schema/party.js';
 import { listOrganizations, requireRole } from '#lib/server/party/organization-service.js';
-import { and, asc, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { OrderStatus } from '#lib/config.js';
@@ -181,26 +182,30 @@ export async function listSupplierNames(): Promise<string[]> {
 	return [...new Set(rows.map((r) => r.name))];
 }
 
-export async function listOrders(opts: { status?: OrderStatus } = {}) {
-	const conditions = [];
-	if (opts.status) conditions.push(eq(purchaseOrder.status, opts.status));
+/** Open ones first, then most recent: the list is a worklist, not an archive. */
+const worklistOrder = [
+	sql`CASE ${purchaseOrder.status} WHEN 'placed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END`,
+	desc(purchaseOrder.createdAt),
+	desc(purchaseOrder.id)
+];
 
-	const orders = await db
+function ordersQuery(status?: OrderStatus) {
+	return db
 		.select({ order: orderColumns, createdBy: user })
 		.from(purchaseOrder)
 		.leftJoin(user, eq(purchaseOrder.createdByUserId, user.id))
 		.leftJoin(organization, supplierJoin)
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		// Open ones first, then most recent — the list is a worklist, not an archive.
-		.orderBy(
-			sql`CASE ${purchaseOrder.status} WHEN 'placed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END`,
-			desc(purchaseOrder.createdAt),
-			desc(purchaseOrder.id)
-		);
+		.where(status ? eq(purchaseOrder.status, status) : undefined)
+		.orderBy(...worklistOrder)
+		.$dynamic();
+}
 
+type OrderHeaderRow = Awaited<ReturnType<typeof ordersQuery>>[number];
+
+/** Each order with its lines and their totals: one query for every line, grouped in memory. */
+async function withLines(orders: OrderHeaderRow[]) {
 	if (orders.length === 0) return [];
 
-	// One query for every line, then grouped in memory — not one query per order.
 	const lines = await db
 		.select({ line: purchaseOrderLine, item: inventoryItem })
 		.from(purchaseOrderLine)
@@ -237,6 +242,23 @@ export async function listOrders(opts: { status?: OrderStatus } = {}) {
 			)
 		};
 	});
+}
+
+export async function listOrders(opts: { status?: OrderStatus } = {}) {
+	return withLines(await ordersQuery(opts.status));
+}
+
+/** One page of the Orders list. A page's ids stay inside D1's bound-parameter cap. */
+export async function listOrdersPage(
+	opts: { status?: OrderStatus } = {},
+	pagination: PaginationInput = {}
+) {
+	const countQ = db
+		.select({ count: count() })
+		.from(purchaseOrder)
+		.where(opts.status ? eq(purchaseOrder.status, opts.status) : undefined);
+	const page = await paginate(ordersQuery(opts.status), countQ, pagination);
+	return { rows: await withLines(page.rows), pagination: page.pagination };
 }
 
 export async function getOrderById(id: string) {

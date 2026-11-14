@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
-/** Restock and Orders were list pages until #2021/#2022; bookmarks land on the list's view. */
+/** Restock was a list page until #2021; bookmarks land on the list's view. */
 
 const restock = await import('./restock/+page');
-const orders = await import('./orders/+page');
 
 type Load = (e: unknown) => unknown;
 // The build wraps each load in Sentry's, which reads the URL and route off the event.
@@ -15,13 +14,6 @@ describe('retired Inventory lists, now Supplies views', () => {
 		await expect(run(restock.load, '/staff/inventory/restock')).rejects.toMatchObject({
 			status: 308,
 			location: '/staff/inventory/supplies?show=restock'
-		});
-	});
-
-	it('forwards Orders to the on-order view', async () => {
-		await expect(run(orders.load, '/staff/inventory/orders')).rejects.toMatchObject({
-			status: 308,
-			location: '/staff/inventory/supplies?show=on-order'
 		});
 	});
 });

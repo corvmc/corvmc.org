@@ -210,7 +210,7 @@ export const staffNavSections: StaffNavSection[] = [
 			},
 			// Gear is what is tracked unit by unit or lent out; Supplies is what is
 			// used up (#2573, predicate in `server/inventory/sections.ts`). Loans,
-			// reported problems and compliance are Gear's tabs, at their old URLs.
+			// problems, orders and acquisitions are Gear's other lists (#2767).
 			{
 				key: 'gear',
 				capability: 'inventory.read',
@@ -336,20 +336,14 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'reports',
 		title: 'Reports',
 		items: [
-			// Each view has its own gate (#2396). An acquisition's record stays under
-			// inventory, where its receipt and its items are, and lights this row.
+			// Each view has its own gate (#2396).
 			{
 				key: 'reports',
 				capability: 'finance.read',
-				alsoFor: [
-					'volunteer.report',
-					'inventory.report',
-					'inventory.manageAcquisitions',
-					'music.read'
-				],
+				alsoFor: ['volunteer.report', 'inventory.report', 'music.read'],
 				label: 'Reports',
 				href: resolve('staff/reports'),
-				also: [resolve('staff/inventory/spend'), resolve('staff/inventory/acquisitions')]
+				also: [resolve('staff/inventory/spend')]
 			}
 		]
 	},

@@ -3,17 +3,17 @@ import { visibleViews } from '../views';
 import { activeNavKey } from '../nav-items';
 import { gearViews } from './views';
 
-// Loans, reported problems and compliance are Gear's tabs (#2573), each behind its old gate.
+// Gear's lists (#2573, #2767), each behind its remotes' gate.
 describe('Gear tabs', () => {
 	it.each([
-		[['inventory.read'], ['items']],
+		[['inventory.read'], ['items', 'orders']],
 		[
 			['inventory.read', 'inventory.manageLoans'],
-			['items', 'loans']
+			['items', 'loans', 'orders']
 		],
 		[
 			['inventory.read', 'inventory.manageAssets', 'inventory.manageAcquisitions'],
-			['items', 'problems', 'compliance']
+			['items', 'problems', 'orders', 'acquisitions']
 		]
 	])('holding %j shows %j', (held, keys) => {
 		expect(visibleViews(gearViews, held).map((v) => v.key)).toEqual(keys);

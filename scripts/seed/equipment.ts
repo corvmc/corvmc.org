@@ -794,7 +794,7 @@ export async function seedEquipment(users: SeedUser[]) {
 		.where(eq(inventoryAsset.id, blues.id!));
 
 	// Disposed of 40 days ago: donated, inside the three-year window, and nobody
-	// has recorded a Form 8282 outcome — so it shows on /staff/inventory/compliance
+	// has recorded a Form 8282 outcome — so it shows on the Form 8282 filter of /staff/inventory/acquisitions
 	// with roughly 85 of the 125 days left.
 	const donatedDisposal = assets.find((a) => a.assetTag === 'CMC-000110');
 	if (donatedDisposal) {
