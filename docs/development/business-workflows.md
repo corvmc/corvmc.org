@@ -151,7 +151,8 @@ override), atomic conditional status update, Stripe refund if a payment record e
 waitlist listener uses to promote the next person (workflow 2).
 
 **Staff resolution.** Unresolved reservations (past end with cash owed)
-surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resolve with the
+surface under the `payment_due` status on the staff reservations page (`getStaffReservationsPage`
+in `reservations.remote.ts`, counted by `countOwedAfterSession`); staff resolve with the
 `completeReservation` / `noShowReservation` / `cashReceivedReservation` /
 `compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
 file. The two refund forms are the staff member's intent made explicit: the first delegates to
@@ -475,9 +476,9 @@ premium subscription that unlocks a public band microsite.
 
 - **Create:** `member/bands` UI → `bands.remote.ts` / `band-page-editor` remotes →
   `create()` in `src/lib/server/band/band-service.ts` — a `db.batch` inserts the `band` row
-  and the owner's `bandMember` row atomically; the slug is uniquified by
+  and the owner's `groupMember` row atomically; the slug is uniquified by
   `ensureUniqueSlug()`.
-- **Invite:** `invite()` in `band-service.ts`. Existing users get a pending `bandMember`
+- **Invite:** `invite()` in `band-service.ts`. Existing users get a pending `groupMember`
   row + a `band.invitation_sent` event (email/in-app notification). Unknown emails go
   through `createInvite()` in `group-invite-service.ts` (a `groupInvite` row with a token)
   and a `group_invite.created` event that emails a signup link.
@@ -497,7 +498,7 @@ premium subscription that unlocks a public band microsite.
   `customer.subscription.updated/deleted` webhooks via `syncFromWebhook()` (dispatched by
   `metadata.subscription_type === 'band_premium'`). The public microsite lives under
   `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
-  member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
+  member-editable page config on `bandSite` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
   (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
 - **Addresses:** every band answers at `{slug}.corvmc.org`. `handleBandSubdomain` in
@@ -512,7 +513,7 @@ premium subscription that unlocks a public band microsite.
 
 ### Data touched
 
-`group`, `groupMember`, `groupInvite`, `groupSlugHistory`, `bandSite`, `bandPageConfig`,
+`group`, `groupMember`, `groupInvite`, `groupSlugHistory`, `bandSite`,
 `directoryEntry`, Stripe subscription (band premium).
 
 ### Where it breaks
@@ -2116,7 +2117,7 @@ tells the band's admins 30 and 7 days before it lapses.
   `beginPurchase` re-checks `destinationFor` rather than trusting publish-time
   state, and the release page hides the Buy control instead of offering one that
   409s.
-- **An empty rotation.** The scheduler writes nothing and `nowPlaying` is null;
+- **An empty rotation.** The scheduler writes nothing and `getRadioState` returns no `current`;
   the widget renders nothing at all. This is the expected pre-launch state, not a
   fault.
 - **A track outside the duration bounds** is opted in and still never heard.
@@ -2564,11 +2565,13 @@ Accepted vendors are listed on the event page.
   under the contact. `vendor-recipient.spec.ts` fails a market sender that skips the resolver or
   reads an address off the thread. `waitlisted` (#2832) is reachable
   from `applied` and moves on to `accepted`, `declined` or `withdrawn`. While the market has
-  free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`). The guard is
-  `requireCommitteeMember` on the committee that owns the listing's project
-  (`getMarketOwnerGroupId`, read off the vendor's row), with `event.manage` as staff cover
-  (#1503). Committee members decide from `/member/groups/[slug]/markets/[eventId]`, reached from
-  the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
+  free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`).
+- **Guard:** `requireMarketDecider` in `market.remote.ts` takes the market's event id; a form
+  acting on one vendor reads it off the vendor's row with `getVendorEventId`. It passes the
+  market's vendor host (`can('market.host', { eventId })`), then a committee on the market's
+  project (`requireProjectCommittee` on `getMarketProjectId`), with `event.manage` as staff cover
+  (#1503). A market on no project is decided by its host and staff. Committee members decide
+  from `/member/groups/[slug]/markets/[eventId]`, reached from the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
 - **Vendor host (#2993):** a market's vendor host passes the same guard (`requireMarketDecider`)
   through `market.host`, a volunteer-role grant scoped to the vendor's own market, read off the
   vendor's row. The role's `grant_lead_days` opens it that many days before the market; it closes
@@ -2594,8 +2597,8 @@ Accepted vendors are listed on the event page.
   `checked_in_at` on an accepted vendor, or clears it. `markNoShowForm` moves `accepted` to
   `no_show` for a vendor not checked in, or back. No decision or withdrawal moves a no-show, and
   its fee is kept. `inviteBackForm` records `invite_back` and a note on an accepted vendor or a
-  no-show. Its form starts with no answer chosen and a blank answer is refused. All three use the committee guard above, with staff as cover. Tables still move on
-  the staff vendors page (`setTableLabelForm`).
+  no-show. Its form starts with no answer chosen and a blank answer is refused. All three use
+  `requireMarketDecider`. Tables still move on the staff vendors page (`setTableLabelForm`).
 - **Invite back on the next application:** `listApplications` attaches `previous`: the newest
   invite-back record from a market that started earlier, matched on `organization_id`. Both
   applications views show it under the vendor.
@@ -2710,12 +2713,12 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   task and its deadline. A closed row with open work stays listed. `/staff/grants`,
   `/staff/sponsors` and `/staff/agreements` redirect here.
 
-- **Sponsors:** `getSponsors` / `getSponsorDetail` in `sponsors.remote.ts`, guarded by
-  `sponsor.read`, call `listSponsors` / `getSponsor` in `sponsor-service.ts` with `clubToday()`.
+- **Sponsors:** `getSponsorDetail` in `sponsors.remote.ts`, guarded by `sponsor.read`, calls
+  `getSponsor` in `sponsor-service.ts` with `clubToday()`.
   `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
   `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
   an organization without the `sponsor` role.
-- **Grants:** `getGrants` / `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
+- **Grants:** `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
   `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect and the
   award's end once awarded. Writes are guarded by `grant.manage`; a funder with applications
   cannot be deleted, and `createGrant` refuses an organization without the `funder` role.
