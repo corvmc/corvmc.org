@@ -3007,7 +3007,9 @@ export const entityTypes = [
 	'work_request',
 	'group_application',
 	'market_vendor',
-	'volunteer'
+	'volunteer',
+	'organization',
+	'contact'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 

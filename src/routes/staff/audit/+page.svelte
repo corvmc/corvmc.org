@@ -9,14 +9,19 @@
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { getAuditLog } from '#lib/remote/audit.remote.js';
-	import { auditActions, type AuditAction } from '#lib/types/audit.js';
-	import { auditActionLabel, summarizeAuditEntry } from '#lib/utils/audit-display.js';
+	import { auditActions, type AuditAction, type AuditSubjectType } from '#lib/types/audit.js';
+	import {
+		auditActionLabel,
+		auditSubjectOptions,
+		summarizeAuditEntry
+	} from '#lib/utils/audit-display.js';
 	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
 	let searchText = $state('');
-	let actor = $state('');
+	let search = $state('');
 	let action = $state<AuditAction | ''>('');
+	let subjectType = $state<AuditSubjectType | ''>('');
 	let dateFrom = $state('');
 	let dateTo = $state('');
 	let page = $state(1);
@@ -24,7 +29,8 @@
 	let result = $derived(
 		getAuditLog({
 			action: action || undefined,
-			actor: actor || undefined,
+			search: search || undefined,
+			subjectType: subjectType || undefined,
 			from: dateFrom || undefined,
 			to: dateTo || undefined,
 			page
@@ -32,13 +38,18 @@
 	);
 
 	const activeFilterCount = $derived(
-		(actor ? 1 : 0) + (action ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0)
+		(search ? 1 : 0) +
+			(action ? 1 : 0) +
+			(subjectType ? 1 : 0) +
+			(dateFrom ? 1 : 0) +
+			(dateTo ? 1 : 0)
 	);
 
 	function clearFilters() {
 		searchText = '';
-		actor = '';
+		search = '';
 		action = '';
+		subjectType = '';
 		dateFrom = '';
 		dateTo = '';
 		page = 1;
@@ -53,7 +64,7 @@
 				bind:value={searchText}
 				placeholder={m.staff_audit_placeholder()}
 				onsearch={(q) => {
-					actor = q;
+					search = q;
 					page = 1;
 				}}
 			/>
@@ -70,6 +81,20 @@
 			<option value="">{m.staff_audit_all_actions_label()}</option>
 			{#each auditActions as value (value)}
 				<option {value}>{auditActionLabel(value)}</option>
+			{/each}
+		</Select>
+		<Select
+			size="sm"
+			aria-label={m.staff_audit_record_type_label()}
+			value={subjectType}
+			onchange={(e: Event) => {
+				subjectType = (e.currentTarget as HTMLSelectElement).value as AuditSubjectType | '';
+				page = 1;
+			}}
+		>
+			<option value="">{m.staff_audit_all_records_label()}</option>
+			{#each auditSubjectOptions as option (option.value)}
+				<option value={option.value}>{option.label}</option>
 			{/each}
 		</Select>
 		<input
@@ -97,7 +122,7 @@
 			<Table>
 				{#snippet head()}
 					<th>{m.staff_audit_action_label()}</th>
-					<th>{m.staff_audit_account_label()}</th>
+					<th>{m.staff_audit_record_label()}</th>
 					<th class="col-support">{m.staff_by_2_label()}</th>
 				{/snippet}
 				{#each entries as entry (entry.id)}
@@ -108,7 +133,12 @@
 								{formatDateTimeShort(entry.createdAt)}
 							</div>
 						</td>
-						<td class="min-w-0"><EntityChip ref={entry.subject} /></td>
+						<td class="min-w-0">
+							<div class="flex flex-col items-start gap-1">
+								<EntityChip ref={entry.subject} />
+								{#if entry.related}<EntityChip ref={entry.related} />{/if}
+							</div>
+						</td>
 						<td class="col-support min-w-0"><EntityChip ref={entry.actor} icon={false} /></td>
 					</tr>
 				{/each}

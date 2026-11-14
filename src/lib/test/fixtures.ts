@@ -87,5 +87,7 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	work_request: { title: 'Bass amp crackles', subtitle: 'Ampeg BA-112' },
 	group_application: { title: 'Real Book Club', subtitle: 'Club', groupId: 'club-1' },
 	market_vendor: { title: 'Riverside Records', subtitle: 'Used vinyl', eventId: 'event-1' },
-	volunteer: { title: 'Sam Rivera', subtitle: 'Door' }
+	volunteer: { title: 'Sam Rivera', subtitle: 'Door' },
+	organization: { title: 'Mid-Valley Media', subtitle: 'Press' },
+	contact: { title: 'Sam Okafor', subtitle: 'Mid-Valley Media' }
 };

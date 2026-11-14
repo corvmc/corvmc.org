@@ -22,9 +22,16 @@ import { paginate, type PaginationInput, type PaginatedResult } from '#lib/serve
 import {
 	bandRefColumns,
 	memberRefColumns,
+	reservationRefColumns,
 	toBandRef,
-	toMemberRef
+	toMemberRef,
+	toReservationRef,
+	type ReservationRefRow
 } from '#lib/server/entity/refs.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { contact } from '#lib/server/db/schema/contact.js';
+import { incident } from '#lib/server/db/schema/incident.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { captureException } from '#lib/server/sentry.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
@@ -141,14 +148,91 @@ export async function listAuditEntriesForSubject(
 
 export interface AuditLogFilters {
 	action?: AuditAction;
-	/** Matched against the actor's stored name and email, so a purged staffer is still findable. */
-	actor?: string;
+	/**
+	 * Matched against the actor's stored name and email and the subject's stored
+	 * label, so a purged staffer or a deleted record is still findable.
+	 */
+	search?: string;
+	/** An event's show rows are its production's, so `event` takes both. */
+	subjectType?: AuditSubjectType;
 	/** `YYYY-MM-DD`, whole days in the collective's time zone, inclusive. */
 	from?: string;
 	to?: string;
 }
 
-export type AuditLogRow = AuditEntry & { subject: EntityRef; actor: MemberRef };
+/** `related` is a second record the row is about, such as the booking a staff cancellation took. */
+export type AuditLogRow = AuditEntry & {
+	subject: EntityRef;
+	actor: MemberRef;
+	related: EntityRef | null;
+};
+
+type SubjectRow = {
+	entry: typeof auditLog.$inferSelect;
+	subjectUser: Parameters<typeof toMemberRef>[0];
+	subjectBand: Parameters<typeof toBandRef>[0];
+	subjectOrganization: string | null;
+	subjectContact: string | null;
+	subjectIncident: string | null;
+};
+
+/**
+ * What an entry's subject chip shows and links to. A subject whose row is gone
+ * keeps its stored label, unlinked.
+ */
+function subjectRef(row: SubjectRow): EntityRef {
+	const { entry } = row;
+	const title = entry.subjectLabel ?? entry.subjectId;
+	const stored = { id: null, name: title };
+	switch (entry.subjectType) {
+		case 'user':
+			return toMemberRef(row.subjectUser?.id ? row.subjectUser : stored);
+		case 'band':
+			return toBandRef(row.subjectBand?.id ? row.subjectBand : stored);
+		// A club or committee has no band page, so it renders unlinked.
+		case 'group':
+			return toBandRef(stored);
+		case 'incident':
+			return { type: 'incident', id: row.subjectIncident, title };
+		case 'organization':
+			return { type: 'organization', id: row.subjectOrganization, title };
+		case 'contact':
+			return { type: 'contact', id: row.subjectContact, title };
+		// A production has no page of its own; its event's console is where it lives.
+		case 'production':
+			return {
+				type: 'event',
+				id: (entry.details as { eventId?: string | null }).eventId ?? null,
+				title
+			};
+		case 'event':
+			return { type: 'event', id: entry.subjectId, title };
+		case 'role':
+			return { type: 'role', id: entry.subjectId, title };
+		case 'project':
+			return { type: 'project', id: entry.subjectId, title };
+		case 'work_order':
+			return { type: 'shift', id: entry.subjectId, title };
+		case 'inventory_asset':
+			return { type: 'asset', id: entry.subjectId, title };
+		// The label is the address; the entry's id is not a member's.
+		case 'email_blocklist':
+			return toMemberRef(stored);
+		default:
+			// No page of its own (a purchase order): the stored label, unlinked.
+			return { type: 'equipment', id: null, title };
+	}
+}
+
+/** The booking a reservation row names in its details, linked while it exists. */
+function relatedRef(
+	entry: SubjectRow['entry'],
+	booking: ReservationRefRow | null
+): EntityRef | null {
+	const id = (entry.details as { reservationId?: unknown }).reservationId;
+	if (typeof id !== 'string' || !entry.action.startsWith('reservation.')) return null;
+	return booking?.id ? toReservationRef(booking) : null;
+}
 
 /** Every subject's entries, newest first. A purged subject or actor renders its stored label, unlinked. */
 export async function listAuditEntries(
@@ -157,10 +241,21 @@ export async function listAuditEntries(
 ): Promise<PaginatedResult<AuditLogRow>> {
 	const conditions: SQL[] = [];
 	if (filters.action) conditions.push(eq(auditLog.action, filters.action));
-	const actor = filters.actor?.trim();
-	if (actor) {
+	if (filters.subjectType) {
 		conditions.push(
-			or(containsLiteral(auditLog.actorName, actor), containsLiteral(auditLog.actorEmail, actor))!
+			filters.subjectType === 'event'
+				? inArray(auditLog.subjectType, ['event', 'production'])
+				: eq(auditLog.subjectType, filters.subjectType)
+		);
+	}
+	const search = filters.search?.trim();
+	if (search) {
+		conditions.push(
+			or(
+				containsLiteral(auditLog.actorName, search),
+				containsLiteral(auditLog.actorEmail, search),
+				containsLiteral(auditLog.subjectLabel, search)
+			)!
 		);
 	}
 	if (filters.from) {
@@ -175,20 +270,28 @@ export async function listAuditEntries(
 
 	const subjectUser = alias(user, 'subject_user');
 	const actorUser = alias(user, 'actor_user');
+	// Raw SQL on the type: a subject type is stored data and need not be in the enum yet.
+	const of = (type: string, id: Parameters<typeof eq>[0]) =>
+		and(sql`${auditLog.subjectType} = ${type}`, eq(id, auditLog.subjectId));
+	const bookingId = sql`json_extract(${auditLog.details}, '$.reservationId')`;
 	const dataQ = db
 		.select({
 			entry: auditLog,
 			subjectUser: memberRefColumns(subjectUser),
 			subjectBand: bandRefColumns(group),
+			subjectOrganization: organization.id,
+			subjectContact: contact.id,
+			subjectIncident: incident.id,
+			booking: reservationRefColumns(reservation),
 			actorUser: memberRefColumns(actorUser)
 		})
 		.from(auditLog)
-		.leftJoin(
-			subjectUser,
-			and(eq(auditLog.subjectType, 'user'), eq(subjectUser.id, auditLog.subjectId))
-		)
-		// Raw SQL: a subject type is stored data, and `'band'` need not be in the enum yet.
-		.leftJoin(group, and(sql`${auditLog.subjectType} = 'band'`, eq(group.id, auditLog.subjectId)))
+		.leftJoin(subjectUser, of('user', subjectUser.id))
+		.leftJoin(group, of('band', group.id))
+		.leftJoin(organization, of('organization', organization.id))
+		.leftJoin(contact, of('contact', contact.id))
+		.leftJoin(incident, of('incident', incident.id))
+		.leftJoin(reservation, eq(reservation.id, bookingId))
 		.leftJoin(actorUser, eq(actorUser.id, auditLog.actorUserId))
 		.where(where)
 		.orderBy(desc(auditLog.createdAt), desc(writeOrder))
@@ -198,37 +301,13 @@ export async function listAuditEntries(
 	const result = await paginate(dataQ, countQ, pagination);
 	return {
 		...result,
-		rows: result.rows.map(({ entry, subjectUser, subjectBand, actorUser }) => {
-			const stored = { id: null, name: entry.subjectLabel ?? entry.subjectId };
-			return {
-				...(entry as AuditEntry),
-				subject:
-					entry.subjectType === 'user'
-						? toMemberRef(subjectUser?.id ? subjectUser : stored)
-						: entry.subjectType === 'incident'
-							? // A deleted record: its stored label, unlinked.
-								({ type: 'incident', id: null, title: stored.name } as const)
-							: entry.subjectType === 'production'
-								? // A production has no page of its own; its event's console is where it lives.
-									({
-										type: 'event',
-										id: (entry.details as { eventId?: string | null }).eventId ?? null,
-										title: stored.name
-									} as const)
-								: entry.subjectType === 'event'
-									? ({ type: 'event', id: entry.subjectId, title: stored.name } as const)
-									: entry.subjectType === 'role'
-										? ({ type: 'role', id: entry.subjectId, title: stored.name } as const)
-										: entry.subjectType === 'project'
-											? ({ type: 'project', id: entry.subjectId, title: stored.name } as const)
-											: entry.subjectType === 'work_order'
-												? ({ type: 'shift', id: entry.subjectId, title: stored.name } as const)
-												: entry.subjectType === 'group'
-													? // A club or committee has no band page, so it renders unlinked.
-														toBandRef(stored)
-													: toBandRef(subjectBand?.id ? subjectBand : stored),
-				actor: toMemberRef(actorUser?.id ? actorUser : { id: null, name: entry.actorName })
-			};
-		})
+		rows: result.rows.map((row) => ({
+			...(row.entry as AuditEntry),
+			subject: subjectRef(row),
+			related: relatedRef(row.entry, row.booking?.id ? (row.booking as ReservationRefRow) : null),
+			actor: toMemberRef(
+				row.actorUser?.id ? row.actorUser : { id: null, name: row.entry.actorName }
+			)
+		}))
 	};
 }
