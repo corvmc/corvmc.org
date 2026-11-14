@@ -6,10 +6,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { copyFileSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
+import { MIGRATIONS_FOLDER } from './migrate-local';
+import { migratedTemplate } from './migrated-template';
 
 const dir = readdirSync(MIGRATIONS_FOLDER).find((n) => n.endsWith('_development_contact_grants'));
 const GRANT = readFileSync(join(MIGRATIONS_FOLDER, dir ?? 'missing', 'migration.sql'), 'utf8');
@@ -18,15 +18,7 @@ function runGrant(db: DatabaseSync) {
 	for (const statement of GRANT.split('--> statement-breakpoint')) db.exec(statement);
 }
 
-// Migrated once at load, outside any test's timeout; each test takes a copy.
-const TEMPLATE = join(mkdtempSync(join(tmpdir(), 'corvmc-dev-contact-')), 'template.sqlite');
-applyMigrations(TEMPLATE);
-
-function migrated(): DatabaseSync {
-	const file = join(mkdtempSync(join(tmpdir(), 'corvmc-dev-contact-')), 'd1.sqlite');
-	copyFileSync(TEMPLATE, file);
-	return new DatabaseSync(file);
-}
+const migrated = migratedTemplate();
 
 const grantsOf = (db: DatabaseSync, id: string) =>
 	(

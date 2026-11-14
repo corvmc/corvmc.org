@@ -7,10 +7,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
+import { MIGRATIONS_FOLDER } from './migrate-local';
+import { migratedTemplate } from './migrated-template';
 
 const dir = readdirSync(MIGRATIONS_FOLDER).find((n) =>
 	n.endsWith('_committee_deliverables_defaults')
@@ -21,11 +21,11 @@ function run(db: DatabaseSync) {
 	for (const statement of SQL.split('--> statement-breakpoint')) db.exec(statement);
 }
 
+const fresh = migratedTemplate();
+
 /** Migrated, with the list's items cleared so the committees below are what it finds. */
 function migrated(committees: string): DatabaseSync {
-	const file = join(mkdtempSync(join(tmpdir(), 'corvmc-deliverables-')), 'd1.sqlite');
-	applyMigrations(file);
-	const db = new DatabaseSync(file);
+	const db = fresh();
 	// The trigger this migration finds its list by, which a later one clears (#2387).
 	db.exec(`UPDATE duty_list SET auto_apply_on = 'production.created' WHERE name = 'Show deliverables';
 		DELETE FROM duty_list_item; ${committees}`);
