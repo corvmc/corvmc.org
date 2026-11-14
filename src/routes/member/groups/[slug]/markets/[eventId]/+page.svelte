@@ -19,6 +19,8 @@
 	} from '#lib/config.js';
 	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
 	import AlsoAppliedNote from '#lib/components/market/AlsoAppliedNote.svelte';
+	import WaitlistPrompt from '#lib/components/market/WaitlistPrompt.svelte';
+	import WaitlistVendorAction from '#lib/components/market/WaitlistVendorAction.svelte';
 	import {
 		decideVendorForm,
 		getCommitteeMarketVendors,
@@ -83,6 +85,8 @@
 </PageHeader>
 
 <PageContent>
+	<WaitlistPrompt applications={data.applications} tableCount={data.market.tableCount} />
+
 	<TabBar {tabs} active={tab} onchange={(key) => (tab = key as Tab)} collapse />
 
 	{#if rows.length === 0}
@@ -123,7 +127,7 @@
 					<td>{row.tableLabel ?? '—'}</td>
 					<td>
 						<div class="flex w-max justify-end gap-1">
-							{#if row.status === 'applied' || row.status === 'declined'}
+							{#if row.status === 'applied' || row.status === 'waitlisted' || row.status === 'declined'}
 								<Action
 									action={decideVendorForm.for(`accept-${row.id}`)}
 									label={m.member_accept_label()}
@@ -182,7 +186,14 @@
 									{/snippet}
 								</Action>
 							{/if}
-							{#if row.status === 'applied' || row.status === 'accepted'}
+							{#if row.status === 'applied'}
+								<WaitlistVendorAction
+									vendorId={row.id}
+									businessName={row.businessName}
+									eventTitle={data.event.title}
+								/>
+							{/if}
+							{#if row.status === 'applied' || row.status === 'waitlisted' || row.status === 'accepted'}
 								<Action
 									action={decideVendorForm.for(`decline-${row.id}`)}
 									label={m.member_decline_label()}

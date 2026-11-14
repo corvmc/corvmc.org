@@ -2408,8 +2408,8 @@ Decision: [a market vendor is an organization](../decisions/0073-a-market-vendor
 Staff make a listing a market day on `/staff/events/[id]/vendors`, setting when applications
 close and how many tables there are. The public event page then shows **Apply for a table**.
 A vendor with no account fills in `/events/[id]/vendors/apply`, and staff accept each vendor
-with a table label, or decline. Either way a message goes to the vendor by email. Accepted
-vendors are listed on the event page.
+with a table label, waitlist or decline. Each way a message goes to the vendor by email.
+Accepted vendors are listed on the event page.
 
 ### Code path
 
@@ -2425,7 +2425,9 @@ vendors are listed on the event page.
   its blank setup notes and website from it and the organization. The public form shows none of
   it. Then `market_vendor` is inserted with its own copy of what was asked.
 - **Decide:** `decideVendorForm` → `decideApplication` moves the status and sends the written
-  message through `addOutboundMessage`. `withdrawn` is final. The guard is
+  message through `addOutboundMessage`. `withdrawn` is final. `waitlisted` (#2832) is reachable
+  from `applied` and moves on to `accepted`, `declined` or `withdrawn`. While the market has
+  free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`). The guard is
   `requireCommitteeMember` on the committee that owns the listing's project
   (`getMarketOwnerGroupId`, read off the vendor's row), with `event.manage` as staff cover
   (#1503). Committee members decide from `/member/groups/[slug]/markets/[eventId]`, reached from
