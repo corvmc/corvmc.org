@@ -20,6 +20,7 @@ const DB: Key = 'src/lib/server/db/index.ts#db';
  */
 const SCOPE_LOOKUPS = new Set<string>([
 	'src/lib/server/production/production-scope.ts',
+	'src/lib/server/capability/record-scope.ts',
 	'src/lib/server/inbox/band-service.ts#bandOfThread',
 	'src/lib/server/inbox/group-chat-service.ts#groupOfChatThread',
 	'src/lib/server/volunteer/deliverables-service.ts#getDeliverableOwner',
