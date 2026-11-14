@@ -896,7 +896,9 @@ A contractor is somebody the collective pays: an `organization` holding the `con
 where null means no certificate is on file (`listLapsingInsurance` leaves those out). The person to
 call is a `contact` at the organization. A contractor is archived, never deleted. A
 `contractor_job` is one contractor's engagement on a work order, which holds the title, the unit
-and the project. `createJob` refuses an organization that does not hold the role. Staff work them at `/staff/contractors` and its Jobs view.
+and the project. `createJob` refuses an organization that does not hold the role. Staff work them in Contacts with the contractor role (`/staff/contacts?role=contractor`, which
+also shows lapsing insurance and overdue jobs and adds a contractor with its trade) and on each
+contractor's Contacts page (#2764); jobs are the Tasks table's contractor filter.
 
 `contractor/contractor-job-service.ts` moves an engagement `asked → booked → completed`, or ends
 it `declined`, `no_show` or `cancelled`. Custody goes through `setAssetStatus`, the one writer of
@@ -2604,7 +2606,13 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   organization's row and page open to `contact.read`, or to one of its roles' own capability
   (`grant.read`, `sponsor.read`, `contractor.read`), which sees only those roles' rows and role
   options, without the people. Person rows need `contact.read`. Every write needs `contact.manage`. A
-  contractor is added from `/staff/contractors`, which asks for the trade. Possible duplicates
+  contractor is added from the contractor view (`?role=contractor`), which asks for the trade.
+  `/staff/contractors`, `/staff/contractors/[id]`, `/staff/grants/funders` and
+  `/staff/sponsors/[id]` redirect into Contacts (#2764). An organization page shows each role's
+  section only to that role's capability: grant applications to `grant.read`; contractor details
+  and jobs to `contractor.read`; a sponsor's logo, sponsorships (anchored `#sponsorships`, where
+  Funding links) and event placements to `sponsor.read`. An organization with no role, person or
+  record can be deleted (`deleteOrganization`, `contact.manage`). Possible duplicates
   (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
   the same website domain or the same name (case, punctuation and a trailing "Co.", "Inc." or
   "LLC" ignored); merging moves roles, records, people, notes and task links to the one

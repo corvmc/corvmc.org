@@ -444,14 +444,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/contractors",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/contractors/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/events",
 		"panel": "staff"
 	},
@@ -489,10 +481,6 @@
 	},
 	{
 		"route": "/staff/grants/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/grants/funders",
 		"panel": "staff"
 	},
 	{
@@ -725,10 +713,6 @@
 	},
 	{
 		"route": "/staff/settings",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/sponsors/[id]",
 		"panel": "staff"
 	},
 	{

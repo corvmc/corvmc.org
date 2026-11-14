@@ -18,6 +18,7 @@
 		addOrganizationRole,
 		addPerson,
 		archiveOrganization,
+		deleteOrganization,
 		getOrganizationPage,
 		removeOrganizationRole,
 		removePerson,
@@ -26,11 +27,9 @@
 		updatePerson
 	} from '#lib/remote/contacts.remote.js';
 	import {
-		contractorTradeLabels,
 		grantStatusLabels,
 		partyRoleLabels,
 		partyRoles,
-		sponsorshipStatusLabels,
 		contractorJobStatusLabels,
 		orderStatusLabels,
 		marketVendorStatusLabels,
@@ -45,6 +44,9 @@
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import PartyTimeline from '../PartyTimeline.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import ContractorSection from './ContractorSection.svelte';
+	import SponsorSection from './SponsorSection.svelte';
+	import { goto } from '$app/navigation';
 
 	const params = routeParams('id');
 	const id = $derived(params.id);
@@ -91,6 +93,26 @@
 				<OrganizationFields fields={editForm.fields} value={org} />
 			{/snippet}
 		</Action>
+		{#if org.roles.length === 0}
+			{@const dropForm = deleteOrganization.for(org.id)}
+			<Action
+				action={dropForm}
+				label={m.staff_delete_label()}
+				variant="ghost"
+				size="sm"
+				class="text-error"
+				modalTitle={m.staff_delete_2_title({ name: org.name })}
+				submitLabel={m.staff_delete_label()}
+				submitVariant="error"
+				successToast={m.staff_deleted_toast()}
+				onsuccess={() => goto(resolve('staff/contacts'))}
+			>
+				{#snippet form()}
+					<input {...dropForm.fields.id.as('hidden', org.id)} />
+					<p class="text-sm">{m.staff_sponsors_id_row_should_never_have_existed_2_text()}</p>
+				{/snippet}
+			</Action>
+		{/if}
 	{/if}
 </PageHeader>
 
@@ -102,10 +124,6 @@
 	<InfoCard title={m.staff_contacts_details_title()}>
 		<DefinitionList>
 			<Fact label={m.staff_website_label()} value={org.website ?? '—'} />
-			{#if org.contractor}
-				<Fact label={m.staff_trade_label()} value={contractorTradeLabels[org.contractor.trade]} />
-				<Fact label={m.staff_licence_number_label()} value={org.contractor.licenseNumber ?? '—'} />
-			{/if}
 			{#if org.notes}
 				<Fact label={m.staff_notes_label()} wrap>{org.notes}</Fact>
 			{/if}
@@ -161,16 +179,6 @@
 				</span>
 			{/each}
 		</div>
-		{#if org.roles.includes('contractor')}
-			<a class="link text-sm" href={resolve(`staff/contractors/${org.id}`)}>
-				{m.staff_contacts_open_contractor_text()}
-			</a>
-		{/if}
-		{#if org.roles.includes('sponsor')}
-			<a class="link text-sm" href={resolve(`staff/sponsors/${org.id}`)}>
-				{m.staff_contacts_open_sponsor_text()}
-			</a>
-		{/if}
 	</InfoCard>
 
 	<InfoCard title={m.staff_contacts_people_title()}>
@@ -261,7 +269,15 @@
 		{/if}
 	</InfoCard>
 
-	{#if org.roles.includes('funder') || org.records.grants.length > 0}
+	{#if org.sections.contractor}
+		<ContractorSection id={org.id} canManage={org.sections.manageContractor} />
+	{/if}
+
+	{#if org.sections.sponsor}
+		<SponsorSection id={org.id} />
+	{/if}
+
+	{#if org.sections.grant && (org.roles.includes('funder') || org.records.grants.length > 0)}
 		<InfoCard title={m.staff_contacts_grant_applications_title()}>
 			{#if org.records.grants.length === 0}
 				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
@@ -278,30 +294,8 @@
 		</InfoCard>
 	{/if}
 
-	{#if org.roles.includes('sponsor') || org.records.sponsorships.length > 0}
-		<InfoCard title={m.staff_contacts_sponsorships_title()}>
-			{#if org.records.sponsorships.length === 0}
-				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
-			{:else}
-				<ul class="space-y-1">
-					{#each org.records.sponsorships as s (s.id)}
-						<li>
-							<a class="link" href={resolve(`staff/sponsors/${org.id}`)}>{s.title}</a>
-							<span class="text-muted">· {sponsorshipStatusLabels[s.status]}</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</InfoCard>
-	{/if}
-
-	{#if org.roles.includes('contractor') || org.records.jobs.length > 0}
+	{#if org.sections.contractor}
 		<InfoCard title={m.staff_contacts_contractor_jobs_title()}>
-			{#if org.contractor?.insuranceExpiresAt}
-				<p class="text-muted text-sm">
-					{m.staff_insurance_text()}: {formatDateShort(org.contractor.insuranceExpiresAt)}
-				</p>
-			{/if}
 			{#if org.records.jobs.length === 0}
 				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
 			{:else}

@@ -61,7 +61,7 @@
 			),
 			context: {
 				label: item.contractor.name,
-				href: resolve('/staff/contractors/[id]', { id: item.contractor.id })
+				href: resolve('/staff/contacts/[id]', { id: item.contractor.id })
 			}
 		};
 	}

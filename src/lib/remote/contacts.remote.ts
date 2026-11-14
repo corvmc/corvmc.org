@@ -6,8 +6,9 @@ import { can, requireCapability, requireUser } from '#lib/server/authorization.j
 import { mapDomainError } from '#lib/server/errors.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import * as orgs from '#lib/server/party/organization-service.js';
+import { listLapsingInsurance } from '#lib/server/contractor/contractor-service.js';
+import { listOverdueJobs } from '#lib/server/contractor/contractor-job-service.js';
 import * as people from '#lib/server/directory/contact-service.js';
-import { getContractorById } from '#lib/server/contractor/contractor-service.js';
 import { canSeeRole, requireOrganizationReader } from '#lib/server/party/organization-guard.js';
 import * as notes from '#lib/server/party/activity-service.js';
 import type { PartyRef } from '#lib/server/party/activity-service.js';
@@ -70,6 +71,12 @@ export const getContactsPage = query(
 			: 'name';
 		const roles =
 			visible === 'all' ? filters.roles : filters.roles?.filter((r) => visible.includes(r));
+		// The contractor view keeps the two warnings its own page carried (#2764).
+		const contractorView = roles?.length === 1 && roles[0] === 'contractor';
+		const [warnings, addContractor] =
+			contractorView && (await can('contractor.read'))
+				? await Promise.all([contractorWarnings(), can('contractor.manage')])
+				: [null, false];
 		const list = await listContacts({
 			visibleRoles: visible,
 			people: staff,
@@ -96,28 +103,56 @@ export const getContactsPage = query(
 				lastActivity: staff ? r.lastActivity : null,
 				nextTask: tasks ? r.nextTask : null
 			})),
-			pagination: list.pagination
+			pagination: list.pagination,
+			contractorWarnings: warnings,
+			canAddContractor: addContractor
 		};
 	}
 );
+
+async function contractorWarnings() {
+	const [lapsing, overdue] = await Promise.all([listLapsingInsurance(), listOverdueJobs()]);
+	return {
+		lapsing: lapsing.map((c) => ({
+			id: c.id,
+			name: c.name,
+			insuranceExpiresAt: c.insuranceExpiresAt
+		})),
+		overdue: overdue.length
+	};
+}
 
 export const getOrganizationPage = query(z.string().min(1), async (id) => {
 	const org = await requireOrganizationReader(id);
 	try {
 		const act = org.roles.includes('performer') ? org.directoryEntryId : null;
-		const [records, contractor, vendor, staff, manage, recordGift, shows, claim, sheet] =
-			await Promise.all([
-				orgs.organizationRecords(id),
-				org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,
-				org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
-				can('contact.read'),
-				can('contact.manage'),
-				can('finance.refund'),
-				// An act's shows carry its deal and pay: the events staff's read.
-				can('event.read'),
-				act ? can('event.manage') : false,
-				act ? can('directory.shareContactSheet') : false
-			]);
+		const [
+			records,
+			vendor,
+			staff,
+			manage,
+			recordGift,
+			grants,
+			sponsors,
+			contractors,
+			shows,
+			claim,
+			sheet
+		] = await Promise.all([
+			orgs.organizationRecords(id),
+			org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
+			can('contact.read'),
+			can('contact.manage'),
+			can('finance.refund'),
+			can('grant.read'),
+			can('sponsor.read'),
+			can('contractor.read'),
+			// An act's shows carry its deal and pay: the events staff's read.
+			can('event.read'),
+			act ? can('event.manage') : false,
+			act ? can('directory.shareContactSheet') : false
+		]);
+		const manageContractor = contractors && (await can('contractor.manage'));
 		return {
 			id: org.id,
 			name: org.name,
@@ -125,11 +160,6 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 			notes: org.notes,
 			archivedAt: org.archivedAt,
 			roles: org.roles,
-			contractor: contractor && {
-				trade: contractor.trade,
-				licenseNumber: contractor.licenseNumber,
-				insuranceExpiresAt: contractor.insuranceExpiresAt
-			},
 			vendor: vendor && {
 				offering: vendor.offering,
 				tablesNeeded: vendor.tablesNeeded,
@@ -138,7 +168,20 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 				bringsTent: vendor.bringsTent,
 				setupNotes: vendor.setupNotes
 			},
-			records: { ...records, shows: shows ? records.shows : [] },
+			// Each role's records keep the capability their own pages had (#2764).
+			records: {
+				...records,
+				grants: grants ? records.grants : [],
+				sponsorships: sponsors ? records.sponsorships : [],
+				jobs: contractors ? records.jobs : [],
+				shows: shows ? records.shows : []
+			},
+			sections: {
+				grant: grants,
+				contractor: contractors && org.roles.includes('contractor'),
+				manageContractor,
+				sponsor: sponsors && org.roles.includes('sponsor')
+			},
 			act: act ? { entryId: act, canClaim: claim, canSendContactSheet: sheet } : null,
 			people: staff ? await people.listPeople(id) : null,
 			canManage: manage,
@@ -199,6 +242,17 @@ export const archiveOrganization = form(
 		return { success: true };
 	}
 );
+
+/**
+ * Delete an organization that should never have existed. `deleteUnusedOrganization`
+ * keeps one that still holds a role, a person or a record; the answer says which.
+ */
+export const deleteOrganization = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('contact.manage');
+	const deleted = await orgs.deleteUnusedOrganization(data.id);
+	if (!deleted) error(409, 'Remove its roles, people and records first');
+	return { success: true };
+});
 
 /** A vendor's standing tabling needs, which a new application falls back on. */
 export const saveVendorDetail = form(

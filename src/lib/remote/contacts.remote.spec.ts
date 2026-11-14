@@ -36,7 +36,8 @@ const orgs = {
 	addRole: vi.fn(async () => undefined),
 	removeRole: vi.fn(async () => false),
 	listOrganizationMergeSuggestions: vi.fn(async () => []),
-	mergeOrganizations: vi.fn(async () => ({ survivor: 'A', other: 'B' }))
+	mergeOrganizations: vi.fn(async () => ({ survivor: 'A', other: 'B' })),
+	deleteUnusedOrganization: vi.fn(async () => true)
 };
 vi.mock('#lib/server/party/organization-service.js', () => orgs);
 
@@ -82,7 +83,12 @@ vi.mock('#lib/server/development/funding-project.js', () => ({
 	listFundableProjects: vi.fn(async () => [])
 }));
 vi.mock('#lib/server/contractor/contractor-service.js', () => ({
-	getContractorById: vi.fn(async () => null)
+	listLapsingInsurance: vi.fn(async () => [
+		{ id: 'k1', name: 'Volt Electric', insuranceExpiresAt: new Date('2026-01-01') }
+	])
+}));
+vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({
+	listOverdueJobs: vi.fn(async () => [{ id: 'j1' }, { id: 'j2' }])
 }));
 
 vi.mock('$app/server', () => ({
@@ -126,6 +132,7 @@ const WRITES: Array<{ name: string; arg: unknown; spy: ReturnType<typeof vi.fn> 
 		spy: orgs.setOrganizationArchived
 	},
 	{ name: 'addOrganizationRole', arg: { id: 'o1', role: 'press' }, spy: orgs.addRole },
+	{ name: 'deleteOrganization', arg: { id: 'o1' }, spy: orgs.deleteUnusedOrganization },
 	{ name: 'removeOrganizationRole', arg: { id: 'o1', role: 'press' }, spy: orgs.removeRole },
 	{ name: 'addPerson', arg: { organizationId: 'o1', name: 'Priya' }, spy: people.createContact },
 	{
@@ -342,6 +349,65 @@ describe('contacts.remote views', () => {
 			directoryEntryId: null,
 			roles: ['funder']
 		}));
+	});
+
+	// #2764: the old grant, sponsor and contractor pages each had their own
+	// capability; folded into one page, each section keeps it.
+	it("keeps each role's records behind that role's capability", async () => {
+		orgs.organizationRecords.mockResolvedValueOnce({
+			grants: [{ id: 'g1' }],
+			sponsorships: [{ id: 's1' }],
+			jobs: [{ id: 'j1' }],
+			orders: [],
+			markets: [],
+			bands: [],
+			shows: []
+		} as never);
+		held = new Set(['contact.read']);
+		const page = (await remote.getOrganizationPage('o1')) as {
+			records: Record<string, unknown[]>;
+			sections: Record<string, boolean>;
+		};
+		expect([page.records.grants, page.records.sponsorships, page.records.jobs]).toEqual([
+			[],
+			[],
+			[]
+		]);
+		expect(page.sections).toEqual({
+			grant: false,
+			contractor: false,
+			manageContractor: false,
+			sponsor: false
+		});
+
+		held = new Set(['grant.read']);
+		const funderPage = (await remote.getOrganizationPage('o1')) as {
+			records: Record<string, unknown[]>;
+			sections: Record<string, boolean>;
+		};
+		expect(funderPage.sections.grant).toBe(true);
+	});
+
+	it('refuses to delete an organization still in use', async () => {
+		held = new Set(['contact.manage']);
+		orgs.deleteUnusedOrganization.mockResolvedValueOnce(false);
+		await expect(remote.deleteOrganization({ id: 'o1' })).rejects.toMatchObject({
+			status: 409
+		});
+	});
+
+	it('gives the contractor view its warnings, and only to contractor.read', async () => {
+		held = new Set(['contractor.read']);
+		const view = (await remote.getContactsPage({ roles: ['contractor'] })) as {
+			contractorWarnings: { overdue: number; lapsing: { id: string }[] } | null;
+		};
+		expect(view.contractorWarnings).toMatchObject({ overdue: 2, lapsing: [{ id: 'k1' }] });
+
+		held = new Set(['contact.read']);
+		const other = (await remote.getContactsPage({ roles: ['contractor'] })) as {
+			contractorWarnings: unknown;
+		};
+		expect(other.contractorWarnings).toBeNull();
 	});
 
 	it('refuses an organization page to a viewer with none of its roles', async () => {

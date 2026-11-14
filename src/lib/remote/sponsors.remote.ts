@@ -98,38 +98,6 @@ export const updateSponsor = form(
 	}
 );
 
-export const archiveSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.archiveSponsor(data.id);
-		await getSponsorDetail(data.id).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-export const restoreSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.restoreSponsor(data.id);
-		await getSponsorDetail(data.id).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.deleteSponsor(data.id);
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
 export const createSponsorship = form(
 	z.object({ sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {

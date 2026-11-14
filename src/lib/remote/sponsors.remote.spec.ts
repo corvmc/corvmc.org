@@ -99,7 +99,6 @@ const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<t
 		arg: { id: 's1', ...SPONSOR },
 		spy: service.updateSponsor
 	},
-	{ name: 'deleteSponsor', cap: 'sponsor.manage', arg: { id: 's1' }, spy: service.deleteSponsor },
 	{ name: 'createSponsorship', cap: 'sponsor.manage', arg: SHIP, spy: service.createSponsorship },
 	{
 		name: 'updateSponsorship',
