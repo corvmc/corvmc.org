@@ -9,7 +9,7 @@ import {
 } from '#lib/server/help/help-service.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
-import { form } from './_remote';
+import { command, form } from './_remote';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	listRoleGrants,
@@ -123,10 +123,12 @@ import {
 import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
+	findOtherShowForCode,
 	getEventTickets,
 	getTicketById,
 	getTicketsSold
 } from '#lib/server/ticket/ticket-service.js';
+import { doorListTickets } from '#lib/server/ticket/door-list.js';
 import {
 	createShift as createShiftService,
 	copyShiftForward as copyShiftForwardService,
@@ -2813,51 +2815,85 @@ export const setMyWorkTaskDone = form(
  * a ticket stays with staff.
  */
 export const getMyShiftCheckIn = query(z.string().min(1), async (signupId) => {
+	const eventId = await doorShiftEvent(signupId);
+
+	const event = await getById(eventId);
+	if (!event) throw error(404, 'Event not found');
+	if (!event.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
+
+	const [tickets, sold] = await Promise.all([getEventTickets(event.id), getTicketsSold(event.id)]);
+	const listed = doorListTickets(tickets);
+
+	return {
+		signupId,
+		event: { id: event.id, title: event.title, startsAt: event.startsAt },
+		tickets: listed.map((t) => ({
+			id: t.id,
+			attendeeName: t.attendeeName,
+			code: t.code,
+			status: t.status,
+			cancelledAt: t.cancelledAt
+		})),
+		stats: { sold, checkedIn: listed.filter((t) => t.status === 'checked_in').length }
+	};
+});
+
+/**
+ * The show this member's door shift is for, while the role grants check-in.
+ * The scope comes from the signup, not from a ticket: the signup is already
+ * this member's, and it names the one show they are working.
+ */
+async function doorShiftEvent(signupId: string): Promise<string> {
 	const currentUser = requireUser();
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift?.eventId) throw error(404, 'Shift not found');
 	if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
 	await requireCapability('event.checkIn', { eventId: shift.eventId });
+	return shift.eventId;
+}
 
-	const event = await getById(shift.eventId);
-	if (!event) throw error(404, 'Event not found');
-	if (!event.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
+/** Refuses a ticket from any show but the one the shift is for. */
+async function ticketOnShow(ticketId: string, eventId: string) {
+	const ticket = await getTicketById(ticketId);
+	if (!ticket) throw error(404, 'Ticket not found');
+	if (ticket.eventId !== eventId)
+		throw error(403, 'That ticket is not for the show you are working');
+}
 
-	const [tickets, sold] = await Promise.all([getEventTickets(event.id), getTicketsSold(event.id)]);
-	const live = tickets.filter((t) => t.status === 'valid' || t.status === 'checked_in');
+/**
+ * The scanner on the volunteer's door list (#2795): `scanTicketIn`'s answer,
+ * scoped by the signup as `checkInAsVolunteer` is.
+ */
+export const scanTicketInAsVolunteer = command(
+	z.object({ ticketId: z.string().min(1), signupId: z.string().min(1) }),
+	async (data) => {
+		const eventId = await doorShiftEvent(data.signupId);
+		await ticketOnShow(data.ticketId, eventId);
+		const currentUser = requireUser();
+		try {
+			const result = await checkInTicketService(data.ticketId, currentUser.id);
+			await getMyShiftCheckIn(data.signupId).refresh();
+			return result;
+		} catch (err) {
+			mapDomainError(err);
+			throw err;
+		}
+	}
+);
 
-	return {
-		signupId,
-		event: { id: event.id, title: event.title, startsAt: event.startsAt },
-		tickets: live.map((t) => ({
-			id: t.id,
-			attendeeName: t.attendeeName,
-			code: t.code,
-			status: t.status
-		})),
-		stats: { sold, checkedIn: live.filter((t) => t.status === 'checked_in').length }
-	};
-});
+/** `identifyTicketCode`, for the volunteer's door list (#2797). */
+export const identifyTicketCodeAsVolunteer = query(
+	z.object({ code: z.string().min(1).max(64), signupId: z.string().min(1) }),
+	async (data) => findOtherShowForCode(data.code, await doorShiftEvent(data.signupId))
+);
 
 export const checkInAsVolunteer = form(
 	z.object({ ticketId: z.string().min(1), signupId: z.string().min(1) }),
 	async (data) => {
 		const currentUser = requireUser();
-
-		// The scope comes from the signup, not from the ticket: the signup is
-		// already this member's, and it names the one show they are working. A
-		// volunteer rostered on Friday cannot reach Saturday's door by posting a
+		// A volunteer rostered on Friday cannot reach Saturday's door by posting a
 		// ticket id, because the ticket has to belong to Friday's show.
-		const shift = await getSignupForUser(data.signupId, currentUser.id);
-		if (!shift?.eventId) throw error(404, 'Shift not found');
-		if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
-		await requireCapability('event.checkIn', { eventId: shift.eventId });
-
-		const ticket = await getTicketById(data.ticketId);
-		if (!ticket) throw error(404, 'Ticket not found');
-		if (ticket.eventId !== shift.eventId) {
-			throw error(403, 'That ticket is not for the show you are working');
-		}
+		await ticketOnShow(data.ticketId, await doorShiftEvent(data.signupId));
 
 		try {
 			await checkInTicketService(data.ticketId, currentUser.id);

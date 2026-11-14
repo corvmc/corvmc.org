@@ -18,7 +18,13 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { resolve } from '$app/paths';
-	import { checkInAsVolunteer, getMyShiftCheckIn } from '#lib/remote/volunteer.remote.js';
+	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import {
+		checkInAsVolunteer,
+		getMyShiftCheckIn,
+		identifyTicketCodeAsVolunteer,
+		scanTicketInAsVolunteer
+	} from '#lib/remote/volunteer.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('signupId');
@@ -28,9 +34,10 @@
 
 	let search = $state('');
 
+	// Cancelled tickets show only to a search, which says why one will not go in (#2797).
 	const matching = $derived(
 		data.tickets.filter((t) => {
-			if (!search.trim()) return true;
+			if (!search.trim()) return t.status !== 'cancelled';
 			const q = search.trim().toLowerCase();
 			return t.attendeeName.toLowerCase().includes(q) || t.code.toLowerCase().includes(q);
 		})
@@ -62,6 +69,12 @@
 		/>
 	</div>
 
+	<DoorScanner
+		tickets={data.tickets}
+		checkIn={(ticketId) => scanTicketInAsVolunteer({ ticketId, signupId })}
+		identify={(code) => identifyTicketCodeAsVolunteer({ code, signupId })}
+	/>
+
 	<SearchInput
 		bind:value={search}
 		placeholder={m.member_volunteer_shifts_signup_id_check_in_placeholder()}
@@ -75,8 +88,8 @@
 						<p class="truncate font-medium">{ticket.attendeeName}</p>
 						<p class="font-mono text-subtle text-sm">{ticket.code}</p>
 					</div>
-					{#if ticket.status === 'checked_in'}
-						<StatusBadge status="checked_in" />
+					{#if ticket.status === 'checked_in' || ticket.status === 'cancelled'}
+						<StatusBadge status={ticket.status} />
 					{:else}
 						<!-- 44px on purpose: tapped a hundred times in a row, standing
 						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->

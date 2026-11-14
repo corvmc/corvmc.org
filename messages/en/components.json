@@ -321,6 +321,8 @@
 	"events_create_event_modal_submit_label": "Create event",
 	"events_create_event_modal_title": "Create event",
 	"events_date_label": "Date",
+	"events_door_scanner_cancelled_body": "{name}: ticket cancelled {date}",
+	"events_door_scanner_other_show_body": "Ticket for {title}, {date}",
 	"events_door_sales_card_card_text": "Card",
 	"events_door_sales_card_let_at_no_charge_text": "let in at no charge",
 	"events_door_sales_card_open_till_text": "Open the till →",

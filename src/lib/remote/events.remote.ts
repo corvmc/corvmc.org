@@ -108,8 +108,10 @@ import {
 	type EventTicketMoney,
 	countTicketsForEmail,
 	checkIn,
+	findOtherShowForCode,
 	cancelTicket as cancelTicketService
 } from '#lib/server/ticket/ticket-service.js';
+import { doorListTickets } from '#lib/server/ticket/door-list.js';
 import {
 	getEventDoorTakings,
 	isOnTheDoor,
@@ -574,16 +576,15 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 			startsAt: evt.startsAt,
 			ticketQuantity: evt.ticketQuantity
 		},
-		tickets: tickets
-			.filter((t) => t.status === 'valid' || t.status === 'checked_in')
-			.map((t) => ({
-				id: t.id,
-				attendeeName: t.attendeeName,
-				attendeeEmail: t.attendeeEmail,
-				code: t.code,
-				status: t.status,
-				checkedInAt: t.checkedInAt
-			})),
+		tickets: doorListTickets(tickets).map((t) => ({
+			id: t.id,
+			attendeeName: t.attendeeName,
+			attendeeEmail: t.attendeeEmail,
+			code: t.code,
+			status: t.status,
+			checkedInAt: t.checkedInAt,
+			cancelledAt: t.cancelledAt
+		})),
 		stats: { sold, checkedIn }
 	};
 });
@@ -1794,6 +1795,19 @@ export const scanTicketIn = command(
 			mapDomainError(err);
 			throw err;
 		}
+	}
+);
+
+/**
+ * The show a scanned code belongs to, when it is not this one (#2797), so the
+ * door can say "that ticket is for Friday" rather than "no match". Null for an
+ * unknown code, or one on this show.
+ */
+export const identifyTicketCode = query(
+	z.object({ code: z.string().min(1).max(64), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manageTickets');
+		return findOtherShowForCode(data.code, data.eventId);
 	}
 );
 
