@@ -44,9 +44,9 @@ describe('tabs', () => {
 	it.each([
 		[
 			['project.read', 'event.manage', 'volunteer.read'],
-			['tasks', 'projects', 'recurring', 'productions', 'templates']
+			['tasks', 'projects', 'productions']
 		],
-		[['project.read'], ['tasks', 'projects', 'templates']],
+		[['project.read'], ['tasks', 'projects']],
 		[['event.manage'], ['productions']]
 	])('holding %j shows %j', (caps, keys) => {
 		expect(visibleViews(taskViews, caps).map((v) => v.key)).toEqual(keys);

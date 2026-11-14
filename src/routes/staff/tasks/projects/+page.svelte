@@ -12,6 +12,7 @@
 	import StaffViews from '../../StaffViews.svelte';
 	import NewProjectAction from '#lib/components/actions/NewProjectAction.svelte';
 	import { taskViews } from '../views';
+	import TaskSettings from '../TaskSettings.svelte';
 
 	/**
 	 * Every body of work with a budget and an owner. Budget and burn share a
@@ -39,6 +40,7 @@
 
 <PageHeader title={m.staff_tasks_title()}>
 	<StaffViews views={taskViews} active="projects" collapse />
+	<TaskSettings />
 </PageHeader>
 
 <PageContent>

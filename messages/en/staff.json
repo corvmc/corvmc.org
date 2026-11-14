@@ -3712,5 +3712,7 @@
 	"staff_members_role_filter_label": "Role",
 	"staff_members_any_role_label": "Any role",
 	"staff_members_role_volunteer_label": "Volunteer",
-	"staff_members_role_teacher_label": "Teacher"
+	"staff_members_role_teacher_label": "Teacher",
+	"staff_tasks_recurring_work_label": "Recurring work",
+	"staff_tasks_recurring_work_title": "Recurring work"
 }

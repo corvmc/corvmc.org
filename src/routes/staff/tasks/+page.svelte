@@ -5,10 +5,12 @@
 	import TaskCatalogue from '#lib/components/task/TaskCatalogue.svelte';
 	import StaffViews from '../StaffViews.svelte';
 	import { taskViews } from './views';
+	import TaskSettings from './TaskSettings.svelte';
 </script>
 
 <PageHeader title={m.staff_tasks_title()}>
 	<StaffViews views={taskViews} active="tasks" collapse />
+	<TaskSettings />
 </PageHeader>
 
 <PageContent>

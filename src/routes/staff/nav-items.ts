@@ -173,8 +173,9 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Ballots',
 				href: resolve('staff/ballots')
 			},
-			// Every task, with Projects, Recurring, Productions and Templates as
-			// views (#2625). The key stays `projects`, which starred rows store.
+			// Every task, with Projects and Productions as views (#2625) and
+			// recurring work and templates as its settings (#2767). The key stays
+			// `projects`, which starred rows store.
 			{
 				key: 'projects',
 				capability: 'project.read',

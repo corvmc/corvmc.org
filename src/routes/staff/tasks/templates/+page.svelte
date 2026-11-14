@@ -12,20 +12,13 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { getDutyLists, createDutyList } from '#lib/remote/duty-lists.remote.js';
 	import { dutyListAnchors, dutyListAnchorLabels } from '#lib/config.js';
-	import StaffViews from '../../StaffViews.svelte';
-	import { taskViews } from '../views';
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
 
 	const rows = $derived(await getDutyLists());
 </script>
 
-<PageHeader
-	title={m.staff_tasks_title()}
-	documentTitle={m.staff_project_templates_project_templates_title()}
->
-	<StaffViews views={taskViews} active="templates" collapse />
-</PageHeader>
+<PageHeader title={m.staff_project_templates_project_templates_title()} />
 
 <PageContent>
 	<div class="flex justify-end">

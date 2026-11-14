@@ -227,7 +227,7 @@ describe('the nav tree', () => {
 		const keys = (key: string) => section(key).items.map((i) => i.key);
 		expect(keys('people')).toEqual(['users', 'groups']);
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
-		// Recurring work is a Tasks view (#2087, #2625).
+		// Recurring work is a Tasks setting (#2087, #2767).
 		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Building access is a Practice space view (#2766), not a row.
@@ -269,8 +269,8 @@ describe('route coverage', () => {
 		'/staff/volunteer/roles',
 		'/staff/tasks/projects', // a Tasks view (#2625)
 		'/staff/tasks/productions', // a Tasks view (#2101, #2625)
-		'/staff/tasks/templates', // a Tasks view (#2385, #2625)
-		'/staff/tasks/recurring', // a Tasks view (#2087, #2625)
+		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
+		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
