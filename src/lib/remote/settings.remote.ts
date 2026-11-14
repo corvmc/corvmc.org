@@ -623,7 +623,7 @@ export const updateGearTaskRoles = form(
 		repairRoleId: z.string().max(100).optional(),
 		restockRoleId: z.string().max(100).optional()
 	}),
-	async (data) => {
+	writesAudit('settings.changed', async (data) => {
 		await requireCapability('settings.update');
 		await saveSettings([
 			{ key: 'inventory.repairRoleId', value: data.repairRoleId?.trim() ?? '' },
@@ -631,5 +631,5 @@ export const updateGearTaskRoles = form(
 		]);
 		void getGearSettings().refresh();
 		return { success: true };
-	}
+	})
 );
