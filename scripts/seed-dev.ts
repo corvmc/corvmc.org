@@ -80,7 +80,7 @@ import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
-import { seedRestockTasks } from './seed/restock-tasks';
+import { seedSourcedTasks } from './seed/sourced-tasks';
 import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
@@ -217,7 +217,6 @@ async function main() {
 	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
 	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
 	const eq = await seedEquipment(allUsers);
-	const restockTasks = await seedRestockTasks();
 	// After the equipment, which is the last thing it borrows from: the rest of
 	// what a weekly booker accumulates — bookings, a ticket, credits — needs only
 	// the events that already exist.
@@ -230,6 +229,8 @@ async function main() {
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
+	// After the stock, orders, disposals and contractors whose state opens them.
+	const sourcedTasks = await seedSourcedTasks();
 	const contacts = await seedContacts();
 	// After the contacts: it writes notes and follow-ups on the Arts Center.
 	const partyActivity = await seedPartyActivity(adminUser.id);
@@ -422,7 +423,11 @@ async function main() {
 	console.log(
 		`  ${equipmentReports.reports} equipment reports, ${equipmentReports.workOrders} tasks raised from them`
 	);
-	console.log(`  ${restockTasks.tasks} restock tasks for low stock`);
+	console.log(
+		`  Tasks records opened: ${Object.entries(sourcedTasks)
+			.map(([k, n]) => `${n} ${k}`)
+			.join(', ')}`
+	);
 	console.log(
 		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened), ${crewIncidents.filings} crew filing awaiting review`
 	);
