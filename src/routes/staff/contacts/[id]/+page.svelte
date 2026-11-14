@@ -36,7 +36,10 @@
 		marketVendorStatusLabels,
 		MARKET_MAX_TABLES_REQUESTED
 	} from '#lib/config.js';
-	import { formatDateShort } from '#lib/utils/format.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
+	import { describeTerms } from '#lib/production/terms.js';
+	import SendContactSheetAction from '#lib/components/actions/SendContactSheetAction.svelte';
+	import ClaimExternalActAction from '#lib/components/actions/ClaimExternalActAction.svelte';
 	import { resolve } from '$app/paths';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
@@ -321,6 +324,51 @@
 					<li><a class="link" href={resolve(`staff/groups/${b.id}`)}>{b.name}</a></li>
 				{/each}
 			</ul>
+		</InfoCard>
+	{/if}
+
+	{#if org.act}
+		<InfoCard title={m.staff_contacts_booked_events_title()}>
+			{#snippet action()}
+				<div class="flex gap-2">
+					{#if org.act?.canSendContactSheet}
+						<SendContactSheetAction
+							entryId={org.act.entryId}
+							actName={org.name}
+							defaultEmail={org.people?.[0]?.email ?? ''}
+							variant="ghost"
+							size="xs"
+							outline={false}
+						/>
+					{/if}
+					{#if org.act?.canClaim}
+						<ClaimExternalActAction entryId={org.act.entryId} actName={org.name} />
+					{/if}
+				</div>
+			{/snippet}
+			{#if org.records.shows.length === 0}
+				<p class="text-muted">{m.staff_contacts_no_records_text()}</p>
+			{:else}
+				<ul class="space-y-1" data-testid="act-shows">
+					{#each org.records.shows as s (s.key)}
+						<li>
+							<span class="text-muted">{formatDateShort(s.startsAt)}</span>
+							<a class="link" href={resolve(`staff/events/${s.eventId}`)}>{s.title}</a>
+							{#if s.terms}
+								<span class="text-muted">· {describeTerms(s.terms)}</span>
+							{/if}
+							{#if s.paidCents != null && s.paidAt}
+								<span class="text-muted"
+									>· {m.staff_contacts_paid_text({
+										amount: formatCents(s.paidCents),
+										date: formatDateShort(s.paidAt)
+									})}</span
+								>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</InfoCard>
 	{/if}
 

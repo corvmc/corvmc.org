@@ -278,9 +278,12 @@ export async function listExternalActs(search?: string, pagination: PaginationIn
 			name: directoryEntry.name,
 			hometown: directoryEntry.hometown,
 			links: directoryEntry.links,
-			createdAt: directoryEntry.createdAt
+			createdAt: directoryEntry.createdAt,
+			// The act's page in Contacts (#2783): its people, shows and actions.
+			organizationId: organization.id
 		})
 		.from(directoryEntry)
+		.leftJoin(organization, eq(organization.directoryEntryId, directoryEntry.id))
 		.where(where)
 		.orderBy(desc(directoryEntry.createdAt), desc(directoryEntry.id))
 		.$dynamic();

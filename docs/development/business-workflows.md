@@ -532,6 +532,12 @@ creates one only when none matches.
 organization and gives its people a retention horizon a year out. The band's staff page links to
 that organization, which keeps the act's gigs, payments and people.
 
+The act's organization page in Contacts (`/staff/contacts/[id]`, linked from each row of the acts
+list) has a Booked events section: every bill crediting the act's entry, newest first, with the
+slot's terms (`describeTerms()`) and payment (`organizationRecords().shows`). The section's rows
+need `event.read`. Its actions are Send contact sheet (`directory.shareContactSheet`) and Claim
+(`event.manage`).
+
 ---
 
 ## 5. Events and tickets

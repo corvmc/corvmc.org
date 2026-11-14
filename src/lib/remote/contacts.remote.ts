@@ -104,14 +104,20 @@ export const getContactsPage = query(
 export const getOrganizationPage = query(z.string().min(1), async (id) => {
 	const org = await requireOrganizationReader(id);
 	try {
-		const [records, contractor, vendor, staff, manage, recordGift] = await Promise.all([
-			orgs.organizationRecords(id),
-			org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,
-			org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
-			can('contact.read'),
-			can('contact.manage'),
-			can('finance.refund')
-		]);
+		const act = org.roles.includes('performer') ? org.directoryEntryId : null;
+		const [records, contractor, vendor, staff, manage, recordGift, shows, claim, sheet] =
+			await Promise.all([
+				orgs.organizationRecords(id),
+				org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,
+				org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
+				can('contact.read'),
+				can('contact.manage'),
+				can('finance.refund'),
+				// An act's shows carry its deal and pay: the events staff's read.
+				can('event.read'),
+				act ? can('event.manage') : false,
+				act ? can('directory.shareContactSheet') : false
+			]);
 		return {
 			id: org.id,
 			name: org.name,
@@ -132,7 +138,8 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 				bringsTent: vendor.bringsTent,
 				setupNotes: vendor.setupNotes
 			},
-			records,
+			records: { ...records, shows: shows ? records.shows : [] },
+			act: act ? { entryId: act, canClaim: claim, canSendContactSheet: sheet } : null,
 			people: staff ? await people.listPeople(id) : null,
 			canManage: manage,
 			canRecordGift: recordGift
