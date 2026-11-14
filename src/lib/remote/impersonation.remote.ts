@@ -46,7 +46,7 @@ export const startImpersonation = form(z.object({ userId: z.string().min(1) }), 
 	redirect(303, '/member');
 });
 
-export const stopImpersonation = form(z.object({}), async () => {
+export const stopImpersonation = form('unchecked', async () => {
 	requireUser();
 	if (!getRequestEvent().locals.impersonator) error(400, 'Not viewing as a member.');
 	const { memberId } = await auth.api.stopImpersonating({
