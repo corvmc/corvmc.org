@@ -1881,16 +1881,17 @@ export const payForReservation = form(
 /** Member: pay for a reservation via Stripe checkout (from pay page). */
 export const payReservation = form(
 	z.object({
+		reservationId: z.string().min(1),
 		coverFees: z.boolean().default(false)
 	}),
 	async (data, _issue) => {
 		const currentUser = requireUser();
-		const { params, url } = getRequestEvent();
+		const { url } = getRequestEvent();
 
 		const [row] = await db
 			.select()
 			.from(reservation)
-			.where(eq(reservation.id, params.id!))
+			.where(eq(reservation.id, data.reservationId))
 			.limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');

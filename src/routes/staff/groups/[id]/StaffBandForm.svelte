@@ -77,6 +77,7 @@
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title={m.staff_groups_id_staff_band_form_band_info_title()}>
 				<div class="grid grid-cols-1 gap-x-2">
+					<input {...bandFields.id.as('hidden', id)} />
 					<Field
 						field={updateBand.fields.name}
 						label={m.staff_name_label()}

@@ -4,7 +4,7 @@ import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '#lib/config.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
-import { query, getRequestEvent } from '$app/server';
+import { query } from '$app/server';
 import { form } from './_remote';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
@@ -279,21 +279,21 @@ export const getMemberBands = query(async () => {
 
 export const updateStaffBand = form(
 	z.object({
+		id: z.string().min(1),
 		name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		await requireCapability('band.manage');
-		const { params } = getRequestEvent();
-		const id = params.id!;
-		await update(id, { name: data.name, bio: data.bio || undefined });
-		void getStaffBandPage(id).refresh();
+		await update(data.id, { name: data.name, bio: data.bio || undefined });
+		void getStaffBandPage(data.id).refresh();
 		return { success: true };
 	}
 );
 
 export const updateMemberRole = form(
 	z.object({
+		bandId: z.string().min(1),
 		memberId: z.string().min(1),
 		role: z.enum(['admin', 'member']),
 		position: z.string().optional()
@@ -301,15 +301,16 @@ export const updateMemberRole = form(
 	async (data) => {
 		await requireCapability('band.manageMembers');
 		try {
-			await updateMember(data.memberId, {
-				role: data.role,
-				position: data.position ?? undefined
-			});
+			// Scoped to the band, so a member id from another band is not found.
+			await updateMember(
+				data.memberId,
+				{ role: data.role, position: data.position ?? undefined },
+				data.bandId
+			);
 		} catch (err) {
 			mapDomainError(err);
 		}
-		const { params } = getRequestEvent();
-		void getStaffBandPage(params.id!).refresh();
+		void getStaffBandPage(data.bandId).refresh();
 		return { success: true };
 	}
 );
