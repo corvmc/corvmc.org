@@ -92,7 +92,12 @@
 		     stood than the row you clicked (#1066). -->
 		{#if !calledOff}
 			<div class="mt-3">
-				<ShiftProgress status={data.shift.status} notes={null} />
+				<ShiftProgress
+					status={data.shift.status}
+					notes={null}
+					startsAt={data.shift.startsAt}
+					endsAt={data.shift.endsAt}
+				/>
 			</div>
 		{/if}
 	</InfoCard>

@@ -1417,6 +1417,7 @@
 	"volunteer_shift_progress_awaiting_staff_confirmation_text": "Awaiting staff confirmation.",
 	"volunteer_shift_progress_claimed_text": "Signed up",
 	"volunteer_shift_progress_reminder_lands_day_before_text": "Reminder lands the day before.",
+	"volunteer_shift_progress_on_until_text": "On until {time}.",
 	"volunteer_shift_progress_worked_log_hours_when_get_text": "Worked. Log your hours when you get a moment.",
 	"volunteer_shift_row_full_text": "Full",
 	"volunteer_shift_row_needs_text": "Needs {names}",
