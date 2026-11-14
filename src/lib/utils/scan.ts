@@ -72,3 +72,18 @@ function safeUrlPath(text: string): string | null {
 		return null;
 	}
 }
+
+/**
+ * Drops a repeat of the last code read inside `windowMs` (#2796). Each read of the
+ * code restarts the window, so a code held in front of the camera passes once; a
+ * different code passes at once.
+ */
+export function repeatGate(windowMs: number, now: () => number = Date.now) {
+	let last: { value: string; at: number } | null = null;
+	return (value: string): boolean => {
+		const at = now();
+		const repeat = last !== null && last.value === value && at - last.at < windowMs;
+		last = { value, at };
+		return !repeat;
+	};
+}

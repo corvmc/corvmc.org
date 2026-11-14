@@ -13,9 +13,14 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { refreshAll } from '$app/navigation';
 	import { CancelTicketAction } from '#lib/components/actions/index.js';
-	import { checkInTicket, getStaffCheckIn } from '#lib/remote/events.remote.js';
+	import {
+		checkInTicket,
+		getStaffCheckIn,
+		identifyTicketCode,
+		scanTicketIn
+	} from '#lib/remote/events.remote.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
-	import DoorScanner from './DoorScanner.svelte';
+	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -25,9 +30,10 @@
 
 	let search = $state('');
 
+	// Cancelled tickets show only to a search, which says why one will not go in (#2797).
 	const filteredTickets = $derived(
 		data.tickets.filter((t) => {
-			if (!search) return true;
+			if (!search) return t.status !== 'cancelled';
 			const q = search.toLowerCase();
 			return (
 				t.attendeeName.toLowerCase().includes(q) ||
@@ -63,7 +69,11 @@
 
 	<!-- The scanner leads, and the list below is the fallback it degrades to.
 	     Searching per person is workable for fifty and not for two hundred. -->
-	<DoorScanner tickets={data.tickets} eventId={data.event.id} />
+	<DoorScanner
+		tickets={data.tickets}
+		checkIn={(ticketId) => scanTicketIn({ ticketId, eventId: data.event.id })}
+		identify={(code) => identifyTicketCode({ code, eventId: data.event.id })}
+	/>
 
 	<!-- Search -->
 	<input

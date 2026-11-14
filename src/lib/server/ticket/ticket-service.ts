@@ -285,6 +285,29 @@ export async function checkIn(ticketId: string, staffUserId: string): Promise<Ch
 // Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * The other show a scanned code belongs to, or null when the code is unknown or
+ * is this show's (#2797). Case-blind, as the door matches. Lets the door say
+ * which night a ticket is for rather than "no match".
+ */
+export async function findOtherShowForCode(
+	code: string,
+	eventId: string
+): Promise<{ eventTitle: string; startsAt: Date } | null> {
+	const [row] = await db
+		.select({
+			eventId: ticket.eventId,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt
+		})
+		.from(ticket)
+		.innerJoin(eventListing, eq(eventListing.id, ticket.eventId))
+		.where(sql`lower(${ticket.code}) = ${code.trim().toLowerCase()}`)
+		.limit(1);
+	if (!row || row.eventId === eventId) return null;
+	return { eventTitle: row.eventTitle, startsAt: row.startsAt };
+}
+
 /** One ticket, or null. The caller that needs to know which show it is for. */
 export async function getTicketById(ticketId: string) {
 	const [row] = await db.select().from(ticket).where(eq(ticket.id, ticketId)).limit(1);
@@ -323,7 +346,8 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 			checkedInAt: ticket.checkedInAt,
 			checkedInByUserId: ticket.checkedInByUserId,
 			checkedInByName: user.name,
-			createdAt: ticket.createdAt
+			createdAt: ticket.createdAt,
+			updatedAt: ticket.updatedAt
 		})
 		.from(ticket)
 		.leftJoin(user, eq(user.id, ticket.checkedInByUserId))

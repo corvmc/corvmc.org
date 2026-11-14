@@ -611,7 +611,11 @@ events use RSVP instead.
   lower than that floor, and on those the purchase page points at the door and staff
   `compTickets` remains the mechanism for a free ticket.
 - **Check-in:** `staff/events/[id]/check-in` → `checkInTicket` form → `checkIn()` in
-  `ticket-service.ts` (records who checked in and when; rejects reused codes).
+  `ticket-service.ts` (records who checked in and when; rejects reused codes). Both door lists
+  (staff and the volunteer's shift) mount `DoorScanner`, which keeps the camera open between
+  tickets and takes the page's own check-in call (`scanTicketIn`, `scanTicketInAsVolunteer`).
+  The lists carry cancelled tickets through `doorListTickets`, off the default list, so a scan or
+  search says the ticket was cancelled; a code from another show names that show (#2795–#2797).
 - **Cancellation:** `cancelEvent` → `event-service.cancel()` — collects ticket holders and
   emits `event.cancelled` so every holder is notified with the refund note.
 - **RSVP / comps:** `event/rsvp-service.ts`; staff `compTickets` form creates valid
