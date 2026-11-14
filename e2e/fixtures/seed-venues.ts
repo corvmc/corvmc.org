@@ -22,11 +22,7 @@ export const SEED_VENUE_ROOM_NAME = 'E2E Practice Room';
 export const SEED_VENUE_OFFSITE_ID = 'e2e-venue-offsite';
 export const SEED_VENUE_OFFSITE_NAME = 'E2E Riverfront Stage';
 
-/** Archived, so the picker's exclusion of them is assertable. */
-export const SEED_VENUE_ARCHIVED_ID = 'e2e-venue-archived';
-export const SEED_VENUE_ARCHIVED_NAME = 'E2E Closed Hall';
-
-const VENUE_IDS = [SEED_VENUE_ROOM_ID, SEED_VENUE_OFFSITE_ID, SEED_VENUE_ARCHIVED_ID];
+const VENUE_IDS = [SEED_VENUE_ROOM_ID, SEED_VENUE_OFFSITE_ID];
 
 export async function seedVenues(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
@@ -57,15 +53,6 @@ export async function seedVenues(): Promise<void> {
 				state: 'OR',
 				capacity: 400,
 				loadInNotes: 'E2E van to the north gate.',
-				createdAt: now,
-				updatedAt: now
-			},
-			{
-				id: SEED_VENUE_ARCHIVED_ID,
-				name: SEED_VENUE_ARCHIVED_NAME,
-				slug: 'e2e-closed-hall',
-				isPrimary: false,
-				deletedAt: now,
 				createdAt: now,
 				updatedAt: now
 			}
