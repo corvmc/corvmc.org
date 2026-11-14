@@ -23,8 +23,10 @@ const svc = vi.hoisted(() => ({
 }));
 vi.mock('#lib/server/group/position-service.js', () => svc);
 
+// The `$app/server` mock above makes each form a plain async function.
+type Call = (data: unknown) => Promise<unknown>;
 const { createCommitteePosition, updateCommitteePosition, deleteCommitteePosition } =
-	await import('./group-positions.remote');
+	(await import('./group-positions.remote')) as unknown as Record<string, Call>;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -37,14 +39,14 @@ beforeEach(() => {
 
 describe('committee position remotes', () => {
 	it('each names the chair role and admits group.manage', async () => {
-		await createCommitteePosition({ slug: 'booking', name: 'Treasurer' } as never);
+		await createCommitteePosition({ slug: 'booking', name: 'Treasurer' });
 		await updateCommitteePosition({
 			slug: 'booking',
 			positionId: 'p-1',
 			name: 'Treasurer',
 			memberIds: ['m-1']
-		} as never);
-		await deleteCommitteePosition({ slug: 'booking', positionId: 'p-1' } as never);
+		});
+		await deleteCommitteePosition({ slug: 'booking', positionId: 'p-1' });
 
 		expect(guard.requireProgramRole.mock.calls).toEqual(
 			Array(3).fill([{ slug: 'booking' }, 'admin', { staff: 'group.manage' }])
@@ -57,16 +59,14 @@ describe('committee position remotes', () => {
 			positionId: 'p-1',
 			name: 'Treasurer',
 			memberIds: ['m-1']
-		} as never);
+		});
 		expect(svc.renamePosition).toHaveBeenCalledWith('g-resolved', 'p-1', 'Treasurer');
 		expect(svc.setHolders).toHaveBeenCalledWith('g-resolved', 'p-1', ['m-1'], 'u-chair');
 	});
 
 	it('writes nothing for a caller the guard refuses', async () => {
 		guard.requireProgramRole.mockRejectedValue(Object.assign(new Error('no'), { status: 403 }));
-		await expect(
-			deleteCommitteePosition({ slug: 'booking', positionId: 'p-1' } as never)
-		).rejects.toThrow();
+		await expect(deleteCommitteePosition({ slug: 'booking', positionId: 'p-1' })).rejects.toThrow();
 		expect(svc.deletePosition).not.toHaveBeenCalled();
 	});
 });
