@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
+	import VendorFee from '#lib/components/market/VendorFee.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
@@ -17,7 +18,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
 	import { IconCheck, IconX, IconArrowBackUp, IconTable } from '@tabler/icons-svelte';
-	import { formatCents, formatDateTime, toLocalDateTime } from '#lib/utils/format.js';
+	import { formatDateTime, toLocalDateTime } from '#lib/utils/format.js';
 	import {
 		marketVendorStatuses,
 		marketVendorStatusLabels,
@@ -286,17 +287,7 @@
 						</td>
 						<td>{row.tableLabel ?? '—'}</td>
 						<td class="col-support">
-							{#if row.feeCents === 0}
-								<span class="text-muted">—</span>
-							{:else if row.refundedAt}
-								{m.staff_events_id_vendors_refunded_text()}
-							{:else if row.paidAt}
-								{m.staff_events_id_vendors_paid_text({
-									formatCents: formatCents(row.paidCents ?? 0)
-								})}
-							{:else}
-								{m.staff_events_id_vendors_due_text({ formatCents: formatCents(row.feeCents) })}
-							{/if}
+							<VendorFee fee={row.fee} />
 						</td>
 						<td>
 							<div class="flex w-max justify-end gap-1">

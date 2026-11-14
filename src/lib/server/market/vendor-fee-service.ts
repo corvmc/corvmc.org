@@ -34,6 +34,48 @@ export function vendorPayPath(vendorId: string): string {
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
+export type VendorFeeState =
+	| { state: 'none' }
+	| { state: 'due'; cents: number }
+	| { state: 'paid'; cents: number }
+	| { state: 'refunded' };
+
+/**
+ * The one reading of a vendor's fee columns (#2828). Lists return this in place
+ * of the columns, so no view can leave the fee out or read them its own way.
+ */
+export function vendorFeeState(row: {
+	feeCents: number;
+	paidCents: number | null;
+	paidAt: Date | null;
+	refundedAt: Date | null;
+}): VendorFeeState {
+	if (row.refundedAt) return { state: 'refunded' };
+	if (row.paidAt) return { state: 'paid', cents: row.paidCents ?? row.feeCents };
+	if (row.feeCents > 0) return { state: 'due', cents: row.feeCents };
+	return { state: 'none' };
+}
+
+/** The fee columns `vendorFeeState` reads, for a select. */
+export const vendorFeeColumns = {
+	feeCents: marketVendor.feeCents,
+	paidCents: marketVendor.paidCents,
+	paidAt: marketVendor.paidAt,
+	refundedAt: marketVendor.refundedAt
+};
+
+/** Swap a row's fee columns for its fee state. */
+export function withFeeState<
+	R extends {
+		feeCents: number;
+		paidCents: number | null;
+		paidAt: Date | null;
+		refundedAt: Date | null;
+	}
+>({ feeCents, paidCents, paidAt, refundedAt, ...rest }: R) {
+	return { ...rest, fee: vendorFeeState({ feeCents, paidCents, paidAt, refundedAt }) };
+}
+
 async function loadFeeRow(vendorId: string) {
 	const [row] = await db
 		.select({

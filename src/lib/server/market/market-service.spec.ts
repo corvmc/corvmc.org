@@ -543,6 +543,31 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		expect(Object.keys(rows[0])).not.toContain('threadId');
 	});
 
+	it('shows what each booked vendor still owes (#2828)', async () => {
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: 20, tableFeeCents: 2500 });
+		const { id: paidId } = await submitApplication(
+			EVENT,
+			{ ...application, businessName: 'Paid Co', contactEmail: 'paid@example.com' },
+			NOW
+		);
+		await accept();
+		await decideApplication(
+			paidId,
+			{ decision: 'accepted', tableLabel: 'B1', message: 'In.' },
+			ACTOR
+		);
+		sqlite.exec(
+			`update market_vendor set paid_cents = 2500, paid_at = 1760000000 where id = '${paidId}'`
+		);
+
+		const rows = await listMarketDayVendors(EVENT);
+		expect(rows.map((r) => [r.businessName, r.fee])).toEqual([
+			['Rosa Ceramics', { state: 'due', cents: 5000 }],
+			['Paid Co', { state: 'paid', cents: 2500 }]
+		]);
+		expect(Object.keys(rows[0])).not.toContain('paidAt');
+	});
+
 	it('records whether to invite a vendor back, with a note', async () => {
 		await accept();
 		await recordInviteBack(vendorId, { inviteBack: true, note: '  Sold out by two.  ' });

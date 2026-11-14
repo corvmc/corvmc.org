@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
+	import VendorFee from './VendorFee.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -22,8 +24,9 @@
 
 	/**
 	 * A market day at the door (#1505): mark each booked vendor arrived or a
-	 * no-show, and record whether to ask them back. Shared by the staff and the
-	 * owning committee's routes; `getMarketDayCheckIn` carries no contact detail.
+	 * no-show, see what each still owes, and record whether to ask them back.
+	 * Shared by the staff and the owning committee's routes; `getMarketDayCheckIn`
+	 * carries no contact detail.
 	 */
 	let { eventId, parent }: { eventId: string; parent: Crumb[] } = $props();
 
@@ -89,6 +92,19 @@
 								? m.market_vendor_check_in_own_table_text()
 								: ''}{vendor.bringsTent ? m.market_vendor_check_in_tent_text() : ''}
 						</p>
+						{#if vendor.fee.state !== 'none'}
+							<p class="text-sm">
+								<VendorFee fee={vendor.fee} />
+								{#if vendor.fee.state === 'due' && vendor.status === 'accepted'}
+									<a
+										class="ml-2 link"
+										href={resolve(`market/pay/${vendor.id}`)}
+										target="_blank"
+										rel="noopener">{m.market_vendor_check_in_take_payment_text()}</a
+									>
+								{/if}
+							</p>
+						{/if}
 						{#if vendor.inviteBack !== null}
 							<p class="text-sm">
 								{vendor.inviteBack
