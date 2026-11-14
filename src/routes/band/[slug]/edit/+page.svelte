@@ -19,8 +19,8 @@
 	// Above the await, and read from the resolved layout rather than
 	// `page.params`: it is the ref the editor query guards on.
 	const band = layout.band;
-	const { profile, genreSuggestions, instrumentSuggestions } = await getBandProfileEditor(
-		band.slug
+	const { profile, genreSuggestions, instrumentSuggestions } = $derived(
+		await getBandProfileEditor(band.slug)
 	);
 </script>
 

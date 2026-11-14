@@ -21,12 +21,7 @@ const READ_ONCE = new Set([
 	'src/routes/staff/groups/clubs/ClubTotals.svelte',
 	'src/routes/staff/groups/bands/BandTotals.svelte',
 	'src/routes/staff/members/UserTotals.svelte',
-	'src/routes/staff/events/CalendarTotals.svelte',
-	// Present when this spec landed and not reviewed one by one.
-	'src/routes/band/[slug]/PressKitCard.svelte',
-	'src/routes/band/[slug]/press-kit/+page.svelte',
-	'src/routes/band/[slug]/edit/+page.svelte',
-	'src/routes/member/groups/[slug]/edit/+page.svelte'
+	'src/routes/staff/events/CalendarTotals.svelte'
 ]);
 
 /** Names imported from a `*.remote` module. */

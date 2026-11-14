@@ -17,7 +17,9 @@
 	// Above the await, and read from the resolved layout rather than
 	// `page.params`: it is the ref the editor query guards on.
 	const band = layout.band;
-	const editor = await getPressKitEditor(band.slug);
+	// Derived so Kit's refresh after a save or an upload reaches the progress
+	// bar and the photo list; the form below seeds itself once from its props.
+	const editor = $derived(await getPressKitEditor(band.slug));
 </script>
 
 <PageHeader width="3xl" title={m.band_slug_press_kit_title()} subtitle={band.name} />
