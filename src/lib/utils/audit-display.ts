@@ -128,6 +128,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'incident.reopened': ['Records and settings', 'Incident reopened'],
 	'incident.retention_changed': ['Records and settings', 'Incident retention changed'],
 	'event.tickets_comped': ['Events and shows', 'Tickets comped'],
+	'event.door_cash_sale': ['Events and shows', 'Door cash sale'],
 	'music_purchase.refunded': ['Programs and access', 'Music purchase refunded'],
 	'production.expense_removed': ['Events and shows', 'Show expense removed'],
 	'classified.visibility_changed': ['Records and settings', 'Classified visibility changed'],
@@ -540,6 +541,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		}
 		case 'event.tickets_comped':
 			return `Comped ${plural(entry.details.quantity, 'ticket')} for ${entry.details.attendeeName}`;
+		case 'event.door_cash_sale':
+			return `Took ${formatCents(entry.details.amountCents)} cash for ${plural(entry.details.quantity, 'ticket')}`;
 		case 'music_purchase.refunded':
 			return `Refunded a ${formatCents(entry.details.amountCents)} purchase of “${entry.details.releaseTitle}”`;
 		case 'production.expense_removed':

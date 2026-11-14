@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { ticket, ticketSale } from '#lib/server/db/schema/ticket.js';
@@ -10,6 +10,14 @@ import { captureException } from '#lib/server/sentry.js';
 import { openUnmatchedPaymentTask } from '#lib/server/finance/unmatched-payment-task.js';
 import { doorTicketSplit } from '#lib/finance/ticket-split.js';
 import { recordDoorTicketSale, recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import {
+	DOOR_PURCHASE_PREFIX,
+	doorPaymentOf,
+	doorPayments,
+	newDoorPurchaseId,
+	type DoorTakings
+} from '#lib/door/takings.js';
 import {
 	cancelPurchase,
 	createTickets,
@@ -94,6 +102,7 @@ export async function listDoorEvents(now = new Date()): Promise<DoorEvent[]> {
 
 export type DoorSaleStart =
 	| { kind: 'free'; purchaseId: string; quantity: number }
+	| { kind: 'cash'; purchaseId: string; quantity: number; chargeCents: number }
 	| {
 			kind: 'card';
 			eventId: string;
@@ -103,7 +112,8 @@ export type DoorSaleStart =
 	  };
 
 /**
- * Price a door sale and either let them in free or open a card-present intent.
+ * Price a door sale and let them in free, take cash (#2800), or open a
+ * card-present intent. Free and cash are checked in on the spot.
  *
  * The rows are minted `pending` under the intent's id, as online checkout
  * mints them before the redirect, so the seats are held during the tap and
@@ -114,9 +124,10 @@ export async function startDoorSale(input: {
 	quantity: number;
 	unitPriceCents: number;
 	staffUserId: string;
+	payment?: 'card' | 'cash';
 	now?: Date;
 }): Promise<DoorSaleStart> {
-	const { eventId, quantity, unitPriceCents, staffUserId, now = new Date() } = input;
+	const { eventId, quantity, unitPriceCents, staffUserId, payment, now = new Date() } = input;
 	const row = (await doorEvents(now)).find((e) => e.id === eventId);
 	if (!row) throw new DoorSaleError('That show is not on sale at the door');
 	const event = await toDoorEvent(row);
@@ -128,7 +139,8 @@ export async function startDoorSale(input: {
 	const split = doorTicketSplit({
 		unitPriceCents,
 		quantity,
-		suggestedUnitCents: event.suggestedCents
+		suggestedUnitCents: event.suggestedCents,
+		payment
 	});
 	const tickets = {
 		eventId,
@@ -142,7 +154,7 @@ export async function startDoorSale(input: {
 	};
 
 	if (split.chargeCents === 0) {
-		const purchaseId = `door-${crypto.randomUUID()}`;
+		const purchaseId = newDoorPurchaseId('free');
 		await createTickets({
 			...tickets,
 			purchaseId,
@@ -151,6 +163,31 @@ export async function startDoorSale(input: {
 		});
 		await recordFreeTicketSale({ purchaseId, eventId, quantity, occurredAt: now });
 		return { kind: 'free', purchaseId, quantity };
+	}
+
+	if (payment === 'cash') {
+		const purchaseId = newDoorPurchaseId('cash');
+		await createTickets({
+			...tickets,
+			purchaseId,
+			status: 'checked_in',
+			checkedInByUserId: staffUserId
+		});
+		await recordDoorTicketSale({
+			purchaseId,
+			eventId,
+			chargeCents: split.chargeCents,
+			actsCents: split.actsCents,
+			feeCents: 0,
+			occurredAt: now,
+			payment: 'cash'
+		});
+		await recordAuditEntry({
+			action: 'event.door_cash_sale',
+			subject: { type: 'event', id: eventId, label: event.title },
+			details: { purchaseId, quantity, amountCents: split.chargeCents }
+		});
+		return { kind: 'cash', purchaseId, quantity, chargeCents: split.chargeCents };
 	}
 
 	const intent = await stripe.paymentIntents.create({
@@ -283,7 +320,7 @@ export async function sweepDoorSales(now = new Date()): Promise<DoorSaleSweep> {
  * id is not a door purchase. Online purchase ids are bare UUIDs, never `pi_`.
  */
 export async function doorSaleEventId(purchaseId: string): Promise<string | null> {
-	if (!purchaseId.startsWith('pi_')) return null;
+	if (doorPaymentOf(purchaseId) !== 'card') return null;
 	const [row] = await getTicketsByPurchase(purchaseId);
 	return row?.eventId ?? null;
 }
@@ -301,30 +338,31 @@ export async function getDoorSale(
 	return { status: paid ? 'paid' : 'pending', quantity: live.length };
 }
 
-/** A show's door takings, by how they were paid. There is no cash path at the door. */
-export interface DoorTakings {
-	card: { tickets: number; grossCents: number };
-	free: { tickets: number };
-	/** Paid gifts taken on the door phone (#2799). Beside the tickets, never in them. */
-	donations: { count: number; grossCents: number };
-	/** Tickets checked in for the show, however sold: what a door count is read against (#2801). */
-	checkedIn: number;
+export type { DoorTakings } from '#lib/door/takings.js';
+
+/** A ticket row's door method, as SQL, from the same prefixes `doorPaymentOf` reads. */
+function soldBy(payment: keyof typeof DOOR_PURCHASE_PREFIX) {
+	const prefix = DOOR_PURCHASE_PREFIX[payment];
+	return sql`substr(${ticket.purchaseId}, 1, ${prefix.length}) = ${prefix}`;
 }
 
 /**
- * Summed from the door's own ticket rows: card sales are keyed on their `pi_`
- * intent, free let-ins on `door-`. Live rows only, so an untapped or cancelled
- * sale counts nothing. As sold: a refund is made in Stripe, which this cannot see.
+ * Summed from the door's own ticket rows, one line per method in
+ * `doorPayments`. Live rows only, so an untapped or cancelled sale counts
+ * nothing. As sold: a refund is made in Stripe, which this cannot see.
  */
 export async function getEventDoorTakings(eventId: string): Promise<DoorTakings> {
-	const card = sql`substr(${ticket.purchaseId}, 1, 3) = 'pi_'`;
-	const free = sql`substr(${ticket.purchaseId}, 1, 5) = 'door-'`;
+	const gross = sql`coalesce(${ticket.unitPriceCents}, 0) + ${ticket.contributionCents}`;
+	const lines = Object.fromEntries(
+		doorPayments.flatMap((p) => [
+			[`${p}Tickets`, sql<number>`coalesce(sum(case when ${soldBy(p)} then 1 else 0 end), 0)`],
+			[`${p}Gross`, sql<number>`coalesce(sum(case when ${soldBy(p)} then ${gross} else 0 end), 0)`]
+		])
+	) as Record<string, SQL<number>>;
 	const [[row], [gifts]] = await Promise.all([
 		db
 			.select({
-				cardTickets: sql<number>`coalesce(sum(case when ${card} then 1 else 0 end), 0)`,
-				cardGrossCents: sql<number>`coalesce(sum(case when ${card} then coalesce(${ticket.unitPriceCents}, 0) + ${ticket.contributionCents} else 0 end), 0)`,
-				freeTickets: sql<number>`coalesce(sum(case when ${free} then 1 else 0 end), 0)`,
+				...lines,
 				checkedIn: sql<number>`coalesce(sum(case when ${ticket.status} = 'checked_in' then 1 else 0 end), 0)`
 			})
 			.from(ticket)
@@ -337,9 +375,14 @@ export async function getEventDoorTakings(eventId: string): Promise<DoorTakings>
 			.from(donation)
 			.where(and(eq(donation.eventId, eventId), eq(donation.status, 'paid')))
 	]);
+	const line = (p: (typeof doorPayments)[number]) => ({
+		tickets: Number(row?.[`${p}Tickets`] ?? 0),
+		grossCents: Number(row?.[`${p}Gross`] ?? 0)
+	});
 	return {
-		card: { tickets: row?.cardTickets ?? 0, grossCents: row?.cardGrossCents ?? 0 },
-		free: { tickets: row?.freeTickets ?? 0 },
+		card: line('card'),
+		cash: line('cash'),
+		free: line('free'),
 		donations: { count: gifts?.count ?? 0, grossCents: gifts?.grossCents ?? 0 },
 		checkedIn: row?.checkedIn ?? 0
 	};

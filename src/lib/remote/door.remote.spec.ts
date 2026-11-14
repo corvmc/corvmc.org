@@ -204,8 +204,16 @@ describe('the door remotes', () => {
 			eventId: 'evt-1',
 			quantity: 2,
 			unitPriceCents: 1500,
+			payment: 'card',
 			staffUserId: 'staff-1'
 		});
+	});
+
+	it('passes a cash sale through as cash', async () => {
+		await remote.startDoorSale({ eventId: 'evt-1', quantity: 1, payment: 'cash' });
+		expect(door.startDoorSale).toHaveBeenCalledWith(
+			expect.objectContaining({ payment: 'cash', unitPriceCents: 0 })
+		);
 	});
 
 	it('simulates a tap only under the fake driver', async () => {

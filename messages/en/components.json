@@ -324,6 +324,7 @@
 	"events_door_scanner_cancelled_body": "{name}: ticket cancelled {date}",
 	"events_door_scanner_other_show_body": "Ticket for {title}, {date}",
 	"events_door_sales_card_card_text": "Card",
+	"events_door_sales_card_cash_text": "Cash",
 	"events_door_sales_card_donations_text": "Donations",
 	"events_door_sales_card_donation_count_text": "{count} taken on the door phone",
 	"events_door_sales_card_let_at_no_charge_text": "let in at no charge",

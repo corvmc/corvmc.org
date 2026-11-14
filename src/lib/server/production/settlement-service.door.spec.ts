@@ -57,4 +57,35 @@ describe('splitDoorTake', () => {
 		expect(at(50_00, null, 120)?.count).toBe(120);
 		expect(at(50_00)?.count).toBeNull();
 	});
+
+	// Cash sales recorded at the door are in the ledger already (#2800).
+	describe('beside recorded cash sales', () => {
+		const withRecorded = (counted: number, recorded: number) =>
+			splitDoorTake({
+				doorCashCents: counted,
+				doorCount: null,
+				doorSplitActsPercent: null,
+				recordedCashCents: recorded
+			});
+
+		it('splits only what was counted beyond them', () => {
+			expect(withRecorded(130_00, 100_00)).toMatchObject({
+				recordedCents: 100_00,
+				gapCents: 30_00,
+				unrecordedCents: 30_00,
+				actsCents: 21_00,
+				collectiveCents: 9_00
+			});
+		});
+
+		it('splits nothing when the drawer matches, and nothing when it is short', () => {
+			expect(withRecorded(100_00, 100_00)).toMatchObject({ gapCents: 0, actsCents: 0 });
+			expect(withRecorded(90_00, 100_00)).toMatchObject({
+				gapCents: -10_00,
+				unrecordedCents: 0,
+				actsCents: 0,
+				collectiveCents: 0
+			});
+		});
+	});
 });

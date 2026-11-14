@@ -140,6 +140,7 @@
 					description={m.staff_events_id_production_settlement_panel_through_door_body({
 						checkedIn: settlement.doorTakings.checkedIn,
 						card: settlement.doorTakings.card.tickets,
+						cash: settlement.doorTakings.cash.tickets,
 						free: settlement.doorTakings.free.tickets
 					})}
 					value={settlement.door?.count ?? undefined}
@@ -162,11 +163,36 @@
 		</Form>
 
 		{#if settlement.door}
-			<p class="mt-3 text-muted">
+			<!-- Recorded cash sales are split in the ledger already (#2800); the
+			     door rule splits only what was counted beyond them. -->
+			{#if settlement.door.recordedCents > 0}
+				<p class="mt-3 text-muted" data-testid="door-cash-recorded">
+					{m.staff_events_id_production_settlement_panel_cash_sales_recorded_text({
+						amount: formatCents(settlement.door.recordedCents)
+					})}
+				</p>
+			{/if}
+			{#if settlement.door.gapCents !== 0}
+				<div class="mt-3" data-testid="door-cash-gap">
+					<Alert type="warning">
+						{settlement.door.gapCents > 0
+							? m.staff_events_id_production_settlement_panel_cash_over_body({
+									amount: formatCents(settlement.door.gapCents)
+								})
+							: m.staff_events_id_production_settlement_panel_cash_short_body({
+									amount: formatCents(-settlement.door.gapCents)
+								})}
+					</Alert>
+				</div>
+			{/if}
+			<p
+				class="mt-3 text-muted"
+				hidden={settlement.door.recordedCents > 0 && !settlement.door.unrecordedCents}
+			>
 				<ParaglideMessage
 					message={m.staff_events_id_production_settlement_panel_splits_bands_col_text}
 					inputs={{
-						formatCents: formatCents(settlement.door.cashCents),
+						formatCents: formatCents(settlement.door.unrecordedCents),
 						actsPercent: settlement.door.actsPercent,
 						value: 100 - settlement.door.actsPercent,
 						formatCents2: formatCents(settlement.door.actsCents),

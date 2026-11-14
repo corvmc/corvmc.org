@@ -131,11 +131,19 @@ export const startDoorSale = form(
 		eventId: z.string().min(1),
 		quantity: z.number().int().min(1).max(20),
 		// An emptied price box submits nothing, and nothing at the door is free.
-		unitPriceCents: z.number().int().min(0).max(100_000).optional()
+		unitPriceCents: z.number().int().min(0).max(100_000).optional(),
+		// Cash is checked in on the spot and split as a card sale is (#2800).
+		payment: z.enum(['card', 'cash']).optional()
 	}),
-	async ({ eventId, quantity, unitPriceCents = 0 }) => {
+	async ({ eventId, quantity, unitPriceCents = 0, payment = 'card' }) => {
 		const seller = await requireDoorSeller(eventId);
-		return startDoorSaleService({ eventId, quantity, unitPriceCents, staffUserId: seller.id });
+		return startDoorSaleService({
+			eventId,
+			quantity,
+			unitPriceCents,
+			payment,
+			staffUserId: seller.id
+		});
 	}
 );
 

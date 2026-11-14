@@ -262,7 +262,7 @@ describe('production console', () => {
 	});
 
 	describe('settlement tab', () => {
-		const night = (count: number | null, checkedIn: number) => ({
+		const night = (count: number | null, checkedIn: number, recordedCents = 100_00) => ({
 			productionId: 'prod-1',
 			eventId: 'evt-1',
 			status: 'completed',
@@ -270,6 +270,9 @@ describe('production console', () => {
 			actsPoolCents: 0,
 			door: {
 				cashCents: 100_00,
+				recordedCents,
+				gapCents: 100_00 - recordedCents,
+				unrecordedCents: Math.max(0, 100_00 - recordedCents),
 				count,
 				actsPercent: 70,
 				actsCents: 70_00,
@@ -279,7 +282,8 @@ describe('production console', () => {
 			doorCounts: { check: 'single', first: { byName: null, at: null }, second: null },
 			doorTakings: {
 				card: { tickets: 1, grossCents: 15_00 },
-				free: { tickets: 0 },
+				cash: { tickets: 0, grossCents: recordedCents },
+				free: { tickets: 0, grossCents: 0 },
 				donations: { count: 0, grossCents: 0 },
 				checkedIn
 			},
@@ -316,6 +320,21 @@ describe('production console', () => {
 			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
 			await expect.element(panel().getByCss('button[type="submit"]').first()).toBeVisible();
 			expect(document.querySelector('[data-testid="door-count-gap"]')).toBeNull();
+		});
+
+		// Counted cash is read against the cash sales the door recorded (#2800).
+		it('warns when the cash counted differs from cash sales recorded, and only then', async () => {
+			fixture.loaded = { ...loaded(record), settlement: night(3, 3, 90_00) };
+			const { unmount } = await render(Console);
+			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await expect.element(panel().getByTestId('door-cash-gap')).toBeVisible();
+			unmount();
+
+			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
+			await render(Console);
+			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await expect.element(panel().getByTestId('door-cash-recorded')).toBeVisible();
+			expect(document.querySelector('[data-testid="door-cash-gap"]')).toBeNull();
 		});
 	});
 });

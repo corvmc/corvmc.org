@@ -5,8 +5,14 @@ import { formatCents } from '#lib/utils/format.js';
 const DoorSalesCard = (await import('./DoorSalesCard.svelte')).default;
 
 const noGifts = { count: 0, grossCents: 0 };
-const none = { card: { tickets: 0, grossCents: 0 }, free: { tickets: 0 }, donations: noGifts };
-const sold = { card: { tickets: 3, grossCents: 4500 }, free: { tickets: 2 }, donations: noGifts };
+const zero = { tickets: 0, grossCents: 0 };
+const none = { card: zero, cash: zero, free: zero, donations: noGifts };
+const sold = {
+	card: { tickets: 3, grossCents: 4500 },
+	cash: { tickets: 1, grossCents: 1000 },
+	free: { tickets: 2, grossCents: 0 },
+	donations: noGifts
+};
 const tillLink = 'a[href*="/member/volunteer/door?event=evt-1"]';
 
 describe('DoorSalesCard', () => {
@@ -17,10 +23,12 @@ describe('DoorSalesCard', () => {
 			open: false
 		});
 
-		// The heading carries the admitted total: card plus free.
-		const admitted = sold.card.tickets + sold.free.tickets;
+		// The heading carries the admitted total: card, cash and free.
+		const admitted = sold.card.tickets + sold.cash.tickets + sold.free.tickets;
 		await expect.element(locator.getByRole('heading')).toMatchTextContent(String(admitted));
 		expect(container.textContent).toContain(formatCents(sold.card.grossCents));
+		const cash = container.querySelector('[data-testid="door-cash"]');
+		expect(cash?.textContent).toContain(formatCents(sold.cash.grossCents));
 		expect(container.querySelector(tillLink)).toBeNull();
 	});
 

@@ -282,16 +282,19 @@ export type DoorTicketSplit = {
  *
  * The staffer sets one number and the acts get their guarantee, the way the
  * bar opens online; the collective is the residual. Below the charge minimum
- * the sale is free, because a quarter offered at the door is not a decline.
+ * a card sale is free, because a quarter offered at the door is not a decline.
+ * Cash has no fee and no minimum: any amount handed over is the sale (#2800).
  */
 export function doorTicketSplit(input: {
 	unitPriceCents: number;
 	quantity: number;
 	suggestedUnitCents: number;
+	payment?: 'card' | 'cash';
 }): DoorTicketSplit {
-	const { unitPriceCents, quantity, suggestedUnitCents } = input;
+	const { unitPriceCents, quantity, suggestedUnitCents, payment = 'card' } = input;
 	const gross = unitPriceCents * quantity;
-	if (gross < TICKET_MIN_CHARGE_CENTS) {
+	const minimum = payment === 'cash' ? 1 : TICKET_MIN_CHARGE_CENTS;
+	if (gross < minimum) {
 		return {
 			chargeCents: 0,
 			feeCents: 0,
@@ -301,7 +304,7 @@ export function doorTicketSplit(input: {
 			contributionCents: 0
 		};
 	}
-	const feeCents = calculateCardPresentFee(gross);
+	const feeCents = payment === 'cash' ? 0 : calculateCardPresentFee(gross);
 	const actsCents = otherTakeCents({
 		baseCents: suggestedUnitCents * quantity,
 		grossPaidCents: gross,

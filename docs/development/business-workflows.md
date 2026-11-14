@@ -685,9 +685,11 @@ events use RSVP instead.
 
 ### Door sales
 
-A card payment taken at the door on the CMC phone, which runs the `door-app/` shell over
-`/member/volunteer/door` ([door-app.md](door-app.md); decision:
-[Door sales on one Tap to Pay phone](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md)).
+A card or cash payment taken at the door. Cards are taken on the CMC phone, which runs the
+`door-app/` shell over `/member/volunteer/door` ([door-app.md](door-app.md); decisions:
+[Door sales on one Tap to Pay phone](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md),
+[Door cash is a ticket sale](../decisions/0083-door-cash-is-a-ticket-sale.md)). Cash is
+recorded from any browser.
 
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
@@ -696,9 +698,16 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
   on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
 - **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
-  $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. Anything
-  else opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
+  $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. A card
+  sale opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
   id. Capacity only warns, and the door can still sell past it.
+- **Cash (#2800):** a cash sale of any amount above zero mints `checked_in` tickets under a
+  `cash-…` purchase id, with no intent. `doorTicketSplit` divides it as it divides a card, with no
+  fee and no charge minimum. `recordDoorTicketSale` writes `ticket_sales` and `act_payout` rows
+  with `settlement: 'cash'`, and the sale writes an `event.door_cash_sale` audit row.
+- **How it was paid:** `src/lib/door/takings.ts` maps each method to its purchase-id prefix
+  (`pi_`, `cash-`, `door-`). `getEventDoorTakings` builds one line per method from that table,
+  and the Door sales card, the settlement and the check-in count read those lines.
 - **Fulfilment:** the `payment_intent.succeeded` webhook → `fulfillDoorSale` flips the purchase's
   `pending` rows to `checked_in` and writes the ledger rows: `ticket_sales` earns the charge less
   the acts' share, `act_payout` holds the acts' share, and `card_fees` spends the fee once, so a
@@ -2186,9 +2195,13 @@ restore crew shifts or retract a cancellation notice.
     settlement group plus the acts' share of the door cash; the collective's revenue is the
     show's tickets' `ticket_sales`, `fee_coverage` and `card_fees` rows, found through
     `ticket.purchaseId` because no ticket row carries the group (#2733), plus its share of the
-    door. `recordDoorTake`
-    (`production.run`) records the drawer and count, split at `doorSplitActsPercent` or the
-    house `DOOR_SPLIT_ACTS_PERCENT`, and stamps whoever changed the figure as the counter.
+    door. Cash sales recorded at the door are ticket rows like any other, so they reach both
+    sides through the ledger. `recordDoorTake`
+    (`production.run`) records the drawer and count, and stamps whoever changed the figure as
+    the counter. `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
+    `doorSplitActsPercent` or the house `DOOR_SPLIT_ACTS_PERCENT`; a short drawer splits nothing.
+    A drawer that differs from the recorded cash sales warns on the console, and never blocks
+    (#2800).
     `recordDoorRecount` records a second count by somebody else; the first counter is
     refused. One count, or two that differ, warns on the console and on a move to `settled`
     or `closed`, and never blocks (#2722). Expenses come from `production_expense`. Each act's

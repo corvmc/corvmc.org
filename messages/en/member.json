@@ -963,17 +963,30 @@
 			}
 		}
 	],
+	"member_volunteer_door_cash_sale_body": [
+		{
+			"declarations": ["input count", "input amount", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Cash, {amount}. {count} ticket checked in. Let them in.",
+				"countPlural=*": "Cash, {amount}. {count} tickets checked in. Let them in."
+			}
+		}
+	],
+	"member_volunteer_door_payment_label": "Payment",
+	"member_volunteer_door_payment_card_label": "Card",
+	"member_volunteer_door_payment_cash_label": "Cash",
 	"member_volunteer_door_hand_phone_over_have_them_body": "Hand the phone over and have them tap their card.",
 	"member_volunteer_door_how_many_label": "Quantity",
 	"member_volunteer_door_next_sale_label": "Next sale",
-	"member_volunteer_door_no_card_reader_here_door_body": "No card reader here. Door sales take cards only in the door phone's app.",
+	"member_volunteer_door_no_card_reader_here_door_body": "No card reader here. Take cash, or use the door phone's app for cards.",
 	"member_volunteer_door_no_show_at_door_title": "No upcoming shows",
 	"member_volunteer_door_online_sales_closed_show_text": "Online sales are closed for this show.",
 	"member_volunteer_door_take_payment_label": "Take payment",
 	"member_volunteer_door_tap_pay_label": "Tap to pay",
 	"member_volunteer_door_they_can_buy_their_own_text": "They can buy on their own phone at {#a}corvmc.org/events/{id}{/a}.",
 	"member_volunteer_door_try_tap_again_label": "Try the tap again",
-	"member_volunteer_door_whatever_they_can_pay_at_body": "Any amount at or above the floor; under {formatCents} in total is free.",
+	"member_volunteer_door_whatever_they_can_pay_at_body": "Any amount at or above the floor. By card, under {formatCents} in total is free.",
 	"member_volunteer_feedback_signup_id_action_label": "Back to volunteering",
 	"member_volunteer_feedback_signup_id_action_text": "Back to volunteering",
 	"member_volunteer_feedback_signup_id_already_answered_shift_text": "You already answered for this shift.",

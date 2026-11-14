@@ -4,10 +4,11 @@
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { formatCents } from '#lib/utils/format.js';
 	import { withQuery } from '#lib/utils/with-query.js';
+	import { admittedAtDoor, type DoorTakings } from '#lib/door/takings.js';
 
 	/**
-	 * What this show took at the door (#1809): tapped card sales, free let-ins
-	 * and door donations (#2799), from the door's own rows. Door sales have no buyer account,
+	 * What this show took at the door (#1809): tapped card sales, cash sales
+	 * (#2800), free let-ins and door donations (#2799), from the door's own rows. Door sales have no buyer account,
 	 * so they never reach Payments; this card is where staff read them.
 	 */
 	let {
@@ -16,16 +17,14 @@
 		open
 	}: {
 		eventId: string;
-		takings: {
-			card: { tickets: number; grossCents: number };
-			free: { tickets: number };
-			donations: { count: number; grossCents: number };
-		};
+		takings: Omit<DoorTakings, 'checkedIn'>;
 		/** The till offers this show right now. */
 		open: boolean;
 	} = $props();
 
-	const total = $derived(takings.card.tickets + takings.free.tickets);
+	const total = $derived(admittedAtDoor(takings));
+	const tickets = (n: number) =>
+		`${n} ${n === 1 ? m.events_door_sales_card_ticket_text() : m.events_door_sales_card_tickets_text()}`;
 	const tillHref = $derived(
 		withQuery(resolve('member/volunteer/door'), new URLSearchParams({ event: eventId }))
 	);
@@ -40,12 +39,12 @@
 			<div>
 				<p class="text-muted">{m.events_door_sales_card_card_text()}</p>
 				<p class="text-lg font-medium">{formatCents(takings.card.grossCents)}</p>
-				<p class="text-muted text-sm">
-					{takings.card.tickets}
-					{takings.card.tickets === 1
-						? m.events_door_sales_card_ticket_text()
-						: m.events_door_sales_card_tickets_text()}
-				</p>
+				<p class="text-muted text-sm">{tickets(takings.card.tickets)}</p>
+			</div>
+			<div data-testid="door-cash">
+				<p class="text-muted">{m.events_door_sales_card_cash_text()}</p>
+				<p class="text-lg font-medium">{formatCents(takings.cash.grossCents)}</p>
+				<p class="text-muted text-sm">{tickets(takings.cash.tickets)}</p>
 			</div>
 			<div>
 				<p class="text-muted">{m.events_free_text()}</p>
