@@ -89,6 +89,7 @@ import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '#lib/server/db/schema/finance.js';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { parseBirthDateInput } from '#lib/utils/age.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -434,7 +435,7 @@ export const adjustCredits = form(
 		amount: z.string(),
 		description: z.string().min(1)
 	}),
-	async (data, issue) => {
+	writesAudit('credits.adjusted', async (data, issue) => {
 		// `credit.comp` alone is bounded by `creditCompCeiling`; see below.
 		const unbounded = await can('credit.adjust');
 		if (!unbounded) await requireCapability('credit.comp');
@@ -508,7 +509,7 @@ export const adjustCredits = form(
 
 		void getUserCredits(userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const deactivateUser = form(
@@ -652,7 +653,7 @@ export const purgeUser = form(
 	z.object({
 		id: z.string().min(1)
 	}),
-	async (data) => {
+	writesAudit('user.purged', async (data) => {
 		await requireCapability('user.purge');
 		try {
 			await purgeUserService(data.id);
@@ -663,7 +664,7 @@ export const purgeUser = form(
 			mapDomainError(err);
 		}
 		return { success: true };
-	}
+	})
 );
 
 export const getLocalUser = query(async () => {

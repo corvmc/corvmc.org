@@ -50,6 +50,7 @@ import {
 } from '#lib/server/task/related-tasks.js';
 import { linkSubjectTypes, relatedSubjectTypes } from '#lib/utils/related-tasks.js';
 import { requireOrganizationReader } from '#lib/server/party/organization-guard.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * The Tasks table (#2625) and the task it creates. A task's own writes are on
@@ -374,12 +375,15 @@ export const renameSectionForm = form(
 );
 
 /** Its tasks move to no section; none is deleted. */
-export const deleteSectionForm = form(z.object({ projectId, sectionId }), async (data) => {
-	await guardProject(data.projectId);
-	const moved = await deleteSection(data.projectId, data.sectionId);
-	await refresh(data.projectId);
-	return { moved };
-});
+export const deleteSectionForm = form(
+	z.object({ projectId, sectionId }),
+	writesAudit('project.section_deleted', async (data) => {
+		await guardProject(data.projectId);
+		const moved = await deleteSection(data.projectId, data.sectionId);
+		await refresh(data.projectId);
+		return { moved };
+	})
+);
 
 /** `sectionIds` names every section of the project, in its new order. */
 export const reorderSectionsCommand = command(

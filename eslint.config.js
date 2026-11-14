@@ -15,6 +15,7 @@ import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.j
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
 import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
+import auditDeclared from './eslint-rules/audit-declared.js';
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 import definiteActionLabels from './eslint-rules/definite-action-labels.js';
@@ -67,6 +68,7 @@ const customPlugin = {
 		'no-contact-schema-imports': noContactSchemaImports,
 		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
+		'audit-declared': auditDeclared,
 		'no-clipped-row-action': noClippedRowAction,
 		'definite-action-labels': definiteActionLabels,
 		'no-raw-file-input': noRawFileInput,
@@ -313,6 +315,10 @@ export default defineConfig(
 		files: ['src/lib/remote/**/*.ts'],
 		ignores: ['src/lib/remote/_remote.ts'],
 		rules: { 'custom/no-unwrapped-remote-mutation': 'error' }
+	},
+	{
+		files: ['src/lib/remote/*.remote.ts'],
+		rules: { 'custom/audit-declared': 'error' }
 	},
 	{
 		// Driver text is matched only in the helper; specs build errors with it.

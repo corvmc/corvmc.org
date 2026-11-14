@@ -22,6 +22,7 @@ import {
 	deleteCategory as deleteCategorySvc,
 	getArticleById
 } from '#lib/server/help/help-service.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -169,11 +170,14 @@ export const setArticlesPublishedForm = form(
 	}
 );
 
-export const deleteArticle = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('help.manage');
-	await deleteArticleSvc(data.id);
-	return { success: true };
-});
+export const deleteArticle = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited('Help centre content: no standing, money or access changes.', async (data) => {
+		await requireCapability('help.manage');
+		await deleteArticleSvc(data.id);
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Category Forms
@@ -221,11 +225,14 @@ export const updateCategory = form(updateCategorySchema, async (data) => {
 	return { success: true };
 });
 
-export const deleteCategory = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('help.manage');
-	await deleteCategorySvc(data.id);
-	return { success: true };
-});
+export const deleteCategory = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited('Help centre content: no standing, money or access changes.', async (data) => {
+		await requireCapability('help.manage');
+		await deleteCategorySvc(data.id);
+		return { success: true };
+	})
+);
 
 /** The staff help list's one load-bearing query. See `getMemberArticlePage`. */
 export const getStaffHelpPage = query(z.void(), async () => {

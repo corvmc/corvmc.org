@@ -50,6 +50,7 @@ import { listCampaignSends } from '#lib/server/marketing/campaign-send-service.j
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import { audience } from '#lib/server/db/schema/marketing.js';
 import { audienceCount } from '#lib/utils/audience-reach.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Public queries
@@ -386,12 +387,12 @@ export const deleteAudience = form(
 	z.object({
 		id: z.string()
 	}),
-	async (data) => {
+	unaudited('A saved mailing audience definition, not a change to any member.', async (data) => {
 		await requireCapability('marketing.manageAudiences');
 		await deleteAudienceService(data.id as string);
 		void getAudienceList().refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const bulkAddMembers = form(
@@ -434,12 +435,12 @@ export const removeSubscriber = form(
 		audienceId: z.string(),
 		subscriberId: z.string()
 	}),
-	async (data) => {
+	writesAudit('audience.subscriber_removed', async (data) => {
 		await requireCapability('marketing.manageAudiences');
 		await removeSubscriberService(data.audienceId as string, data.subscriberId as string);
 		void getStaffAudienceDetail(data.audienceId as string).refresh();
 		return { success: true };
-	}
+	})
 );
 
 // ---------------------------------------------------------------------------
@@ -582,15 +583,18 @@ export const scheduleCampaign = command(
 
 export const deleteCampaign = command(
 	z.object({ campaignId: z.string().min(1) }),
-	async ({ campaignId }) => {
-		await requireCapability('marketing.manageCampaigns');
-		try {
-			await deleteCampaignService(campaignId);
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		'Campaign content; sending one past its visibility is audited as event.emailed_beyond_visibility.',
+		async ({ campaignId }) => {
+			await requireCapability('marketing.manageCampaigns');
+			try {
+				await deleteCampaignService(campaignId);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			return { success: true };
 		}
-		return { success: true };
-	}
+	)
 );
 
 /**

@@ -10,6 +10,7 @@ import {
 	normalizeBlocklistEmail,
 	unblockEmail
 } from '#lib/server/moderation/blocklist-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * The email blocklist: addresses refused at sign-up. Behind `user.ban`, the
@@ -44,14 +45,17 @@ export const addToBlocklist = form(
 	}
 );
 
-export const removeFromBlocklist = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('user.ban');
-	const email = await unblockEmail(data.id);
-	await recordAuditEntry({
-		action: 'blocklist.removed',
-		subject: { type: 'email_blocklist', id: data.id, label: email },
-		details: {}
-	});
-	void getBlocklist().refresh();
-	return { success: true };
-});
+export const removeFromBlocklist = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('blocklist.removed', async (data) => {
+		await requireCapability('user.ban');
+		const email = await unblockEmail(data.id);
+		await recordAuditEntry({
+			action: 'blocklist.removed',
+			subject: { type: 'email_blocklist', id: data.id, label: email },
+			details: {}
+		});
+		void getBlocklist().refresh();
+		return { success: true };
+	})
+);

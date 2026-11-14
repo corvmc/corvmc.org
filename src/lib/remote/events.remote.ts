@@ -155,6 +155,7 @@ import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js'
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
 import { getMemberGigGuide, getPublicGigGuide } from './calendar.remote';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -1522,7 +1523,7 @@ export const updateEvent = form(
 		reservationEndTime: z.string().optional(),
 		overrideConflicts: z.boolean().default(false)
 	}),
-	async (data) => {
+	writesAudit('event.visibility_changed', async (data) => {
 		const staff = await requireListingWriter(data.eventId);
 		const tz = DEFAULT_TIMEZONE;
 
@@ -1618,7 +1619,7 @@ export const updateEvent = form(
 			mapDomainError(err);
 		}
 		return { success: true };
-	}
+	})
 );
 
 /**
@@ -1705,19 +1706,22 @@ export const getEventDeletionImpact = query(z.string(), async (id) => {
 	return getDeletionImpact(id);
 });
 
-export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('event.manage');
-	try {
-		await removeEvent(data.id, staff.id);
-	} catch (err) {
-		// The ticket refusal is a business rule with a written explanation, not an
-		// internal fault. It used to be picked out by matching the word "tickets"
-		// in the message, which left `EventNotFoundError` as a 500.
-		mapDomainError(err);
-	}
-	void getStaffEvents({}).refresh();
-	return { success: true };
-});
+export const deleteEvent = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('work_order.cancelled', async (data) => {
+		const staff = await requireCapability('event.manage');
+		try {
+			await removeEvent(data.id, staff.id);
+		} catch (err) {
+			// The ticket refusal is a business rule with a written explanation, not an
+			// internal fault. It used to be picked out by matching the word "tickets"
+			// in the message, which left `EventNotFoundError` as a 500.
+			mapDomainError(err);
+		}
+		void getStaffEvents({}).refresh();
+		return { success: true };
+	})
+);
 
 export const compTickets = form(
 	z.object({
@@ -1726,7 +1730,7 @@ export const compTickets = form(
 		attendeeEmail: z.string().min(1),
 		quantity: z.string().transform(Number)
 	}),
-	async (data, issue) => {
+	writesAudit('event.tickets_comped', async (data, issue) => {
 		await requireCapability('event.manageTickets');
 
 		const issues: Parameters<typeof invalid> = [];
@@ -1763,7 +1767,7 @@ export const compTickets = form(
 		});
 
 		return { success: true };
-	}
+	})
 );
 
 export const cancelTicket = form(

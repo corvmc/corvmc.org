@@ -10,6 +10,7 @@ import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primar
 import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
 import { listFundableProjects } from '#lib/server/development/funding-project.js';
 import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '#lib/config.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
 const isoDay = z
@@ -131,12 +132,12 @@ export const updateSponsorship = form(
 
 export const deleteSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('sponsorship.deleted', async (data) => {
 		await requireCapability('sponsor.manage');
 		await service.deleteSponsorship(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const placeSponsorship = form(
@@ -162,12 +163,12 @@ export const placeSponsorship = form(
 
 export const removePlacement = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
-	async (data) => {
+	unaudited('Sponsor display content: no standing, money or access changes.', async (data) => {
 		await requireCapability('sponsor.manage');
 		await credits.removePlacement(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const setSponsorLogo = form(
@@ -190,9 +191,12 @@ export const setSponsorLogo = form(
 	}
 );
 
-export const removeSponsorLogo = form(z.object({ sponsorId: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	await credits.removeSponsorLogo(data.sponsorId);
-	await getSponsorDetail(data.sponsorId).refresh();
-	return { success: true };
-});
+export const removeSponsorLogo = form(
+	z.object({ sponsorId: z.string().min(1) }),
+	unaudited('Sponsor display content: no standing, money or access changes.', async (data) => {
+		await requireCapability('sponsor.manage');
+		await credits.removeSponsorLogo(data.sponsorId);
+		await getSponsorDetail(data.sponsorId).refresh();
+		return { success: true };
+	})
+);

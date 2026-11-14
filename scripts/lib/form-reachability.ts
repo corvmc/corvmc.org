@@ -114,7 +114,9 @@ export function analyse(
 				report.unchecked.push(remote);
 				continue;
 			}
-			const handler = call.arguments[call.arguments.length - 1];
+			let handler = call.arguments.at(-1);
+			// `audited(decl, fn)` and the other audit declarations wrap the handler last.
+			if (handler && ts.isCallExpression(handler)) handler = handler.arguments.at(-1);
 			if (!handler || !(ts.isArrowFunction(handler) || ts.isFunctionExpression(handler))) continue;
 
 			let found = 0;

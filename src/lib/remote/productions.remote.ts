@@ -60,6 +60,7 @@ import {
 	productionExpenseCategories,
 	requestableArtifacts
 } from '#lib/config.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Productions are guarded on the two halves of a show
@@ -567,16 +568,22 @@ export const moveRunOfShowSlot = form(
 	}
 );
 
-export const removeRunOfShowSlot = form(z.object(slotRef), async (data) => {
-	await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
-	try {
-		await removeSlot(data.slotId);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await getStaffEventProduction(data.eventId).refresh();
-	return { success: true };
-});
+export const removeRunOfShowSlot = form(
+	z.object(slotRef),
+	unaudited(
+		'A running-order slot on a show: planning content, not money or standing.',
+		async (data) => {
+			await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
+			try {
+				await removeSlot(data.slotId);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		}
+	)
+);
 
 /** The empty state's one button: a bill is already a running order, usually. */
 export const buildRunOfShowFromLineup = form(
@@ -649,7 +656,7 @@ export const recordActPayout = form(
 		...slotRef,
 		amountCents: z.number().int().min(0).max(100_000_000)
 	}),
-	async (data) => {
+	writesAudit('production.payout_recorded', async (data) => {
 		const staff = await requireCapability('finance.refund');
 		try {
 			await recordSlotPayout(data.slotId, data.amountCents, staff.id);
@@ -658,7 +665,7 @@ export const recordActPayout = form(
 		}
 		await getStaffEventProduction(data.eventId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 /**
@@ -706,20 +713,23 @@ export const addProductionExpense = form(
  * Take back a recorded payout, under the same `finance.refund` that recorded it.
  * The ledger gets reversing rows for this act alone; nothing is edited in place.
  */
-export const undoActPayout = form(z.object(slotRef), async (data) => {
-	await requireCapability('finance.refund');
-	try {
-		await undoSlotPayout(data.slotId);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await getStaffEventProduction(data.eventId).refresh();
-	return { success: true };
-});
+export const undoActPayout = form(
+	z.object(slotRef),
+	writesAudit('production.payout_undone', async (data) => {
+		await requireCapability('finance.refund');
+		try {
+			await undoSlotPayout(data.slotId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	})
+);
 
 export const removeProductionExpense = form(
 	z.object({ eventId: z.string().min(1), expenseId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('production.expense_removed', async (data) => {
 		await requireProjectCommittee(await projectOfExpense(data.expenseId), 'production.run');
 		try {
 			await removeExpense(data.expenseId);
@@ -728,7 +738,7 @@ export const removeProductionExpense = form(
 		}
 		await getStaffEventProduction(data.eventId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 /**

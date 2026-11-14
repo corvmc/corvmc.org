@@ -7,7 +7,7 @@ import { closure } from '#lib/server/db/schema/reservation.js';
 import { eq } from 'drizzle-orm';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
-import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { audited, type AuditSnapshot } from '#lib/server/audit/declared.js';
 
 // The list is the staff reservations page (#1833); its actions invalidate it.
 
@@ -77,36 +77,42 @@ export const updateClosure = form(
 	}
 );
 
+/** The closure as the audit row keeps it; the delete is refused while it is past or active. */
+async function readClosure(id: string): Promise<AuditSnapshot> {
+	const [row] = await db
+		.select({ startsAt: closure.startsAt, endsAt: closure.endsAt, reason: closure.reason })
+		.from(closure)
+		.where(eq(closure.id, id))
+		.limit(1);
+	return row
+		? { startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason }
+		: null;
+}
+
 export const deleteClosure = form(
 	z.object({
 		id: z.string()
 	}),
-	async (data) => {
-		await requireCapability('reservation.manageClosures');
-
-		const id = data.id as string;
-
-		const [row] = await db
-			.select({ startsAt: closure.startsAt, endsAt: closure.endsAt, reason: closure.reason })
-			.from(closure)
-			.where(eq(closure.id, id))
-			.limit(1);
-
-		if (!row) throw error(404, 'Closure not found');
-		if (row.startsAt <= new Date()) throw error(400, 'Cannot delete a past or active closure');
-
-		await db.delete(closure).where(eq(closure.id, id));
-		await recordAuditEntry({
+	audited(
+		{
+			guard: () => requireCapability('reservation.manageClosures'),
 			action: 'closure.deleted',
-			subject: { type: 'setting', id: 'reservation', label: null },
-			details: {
-				closureId: id,
-				startsAt: row.startsAt.toISOString(),
-				endsAt: row.endsAt.toISOString(),
-				reason: row.reason
+			read: (data) => readClosure(data.id),
+			subject: () => ({ type: 'setting', id: 'reservation', label: null }),
+			details: ({ data, before }) => ({
+				closureId: data.id,
+				startsAt: String(before?.startsAt),
+				endsAt: String(before?.endsAt),
+				reason: String(before?.reason)
+			})
+		},
+		async (data, { before }) => {
+			if (!before) throw error(404, 'Closure not found');
+			if (new Date(String(before.startsAt)) <= new Date()) {
+				throw error(400, 'Cannot delete a past or active closure');
 			}
-		});
-
-		return { success: true };
-	}
+			await db.delete(closure).where(eq(closure.id, data.id));
+			return { success: true };
+		}
+	)
 );

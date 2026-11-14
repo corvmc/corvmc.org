@@ -45,6 +45,7 @@ import { getProjectForSuggestion, listCommittees } from '#lib/server/project/pro
 import { getSuggestionChain } from '#lib/server/project/decision-chain.js';
 import { listCommitteeRosters } from '#lib/server/ballot/ballot-service.js';
 import { getAcquisitionForSuggestion } from '#lib/server/inventory/acquisition-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 const BOARD_PAGE_SIZE = 20;
 const STAFF_PAGE_SIZE = 25;
@@ -373,7 +374,7 @@ export const setSuggestionVisibility = form(
 		visibility: z.enum(suggestionVisibilities),
 		note: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
 	}),
-	async (data) => {
+	writesAudit('suggestion.visibility_changed', async (data) => {
 		const staff = await requireCapability('suggestion.review');
 		try {
 			await setVisibility(data.suggestionId, {
@@ -387,12 +388,12 @@ export const setSuggestionVisibility = form(
 		}
 		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const mergeSuggestion = form(
 	z.object({ sourceId: z.string().min(1), targetId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('suggestion.merged', async (data) => {
 		const staff = await requireCapability('suggestion.review');
 		try {
 			await mergeSuggestions({ ...data, staffId: staff.id });
@@ -402,7 +403,7 @@ export const mergeSuggestion = form(
 		void getStaffSuggestionDetailPage(data.sourceId).refresh();
 		void getStaffSuggestionDetailPage(data.targetId).refresh();
 		return { targetId: data.targetId };
-	}
+	})
 );
 
 export const reviewSuggestionEdit = form(

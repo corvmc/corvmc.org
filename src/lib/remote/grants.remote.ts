@@ -14,6 +14,7 @@ import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX
 } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
 const isoDay = z
@@ -108,11 +109,14 @@ export const updateGrant = form(
 	}
 );
 
-export const deleteGrant = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('grant.manage');
-	await grants.deleteGrant(data.id);
-	return { success: true };
-});
+export const deleteGrant = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('grant.deleted', async (data) => {
+		await requireCapability('grant.manage');
+		await grants.deleteGrant(data.id);
+		return { success: true };
+	})
+);
 
 /** One click from the grant page: the next stage's tasks, which nothing applies unasked. */
 export const applyGrantStage = form(

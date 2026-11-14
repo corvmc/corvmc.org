@@ -38,6 +38,7 @@ import {
 	CLASSIFIED_TITLE_MAX,
 	MAX_UNRESOLVED_REPORTS
 } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 const PAGE_SIZE = 25;
 
@@ -284,7 +285,7 @@ export const moderateClassified = form(
 		visibility: z.enum(['visible', 'hidden']),
 		note: z.string().trim().max(CLASSIFIED_NOTE_MAX).optional()
 	}),
-	async (data, issue) => {
+	writesAudit('classified.visibility_changed', async (data, issue) => {
 		const staff = await requireCapability('listing.review');
 		requireSurface('classifieds');
 		// The note is the author's whole route back, so a takedown without one is refused.
@@ -302,5 +303,5 @@ export const moderateClassified = form(
 		}
 		void getStaffClassifiedDetail(data.postId).refresh();
 		return { success: true };
-	}
+	})
 );
