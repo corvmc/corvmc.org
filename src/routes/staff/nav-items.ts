@@ -48,8 +48,7 @@ export type StaffNavKey =
 	| 'suggestions'
 	| 'classifieds'
 	| 'outreach'
-	| 'help'
-	| 'local-resources'
+	| 'content'
 	| 'payments'
 	| 'contacts'
 	| 'funding'
@@ -259,11 +258,14 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Venues',
 				href: resolve('staff/venues')
 			},
+			// Help articles and Local resources are its views, each with its own gate (#2765).
 			{
-				key: 'local-resources',
-				capability: 'localResource.manage',
-				label: 'Local resources',
-				href: resolve('staff/local-resources')
+				key: 'content',
+				capability: 'help.read',
+				alsoFor: ['localResource.manage'],
+				label: 'Content',
+				href: resolve('staff/content'),
+				also: [resolve('staff/help'), resolve('staff/local-resources')]
 			}
 		]
 	},
@@ -360,13 +362,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'settings.read',
 				label: 'Settings',
 				href: resolve('staff/settings')
-			},
-			// The app's own documentation for members and staff.
-			{
-				key: 'help',
-				capability: 'help.read',
-				label: 'Help articles',
-				href: resolve('staff/help')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit log', href: resolve('staff/audit') }
 		]

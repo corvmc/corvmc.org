@@ -113,16 +113,16 @@ describe('activeNavKey', () => {
 		['/staff/money', 'payments'],
 		['/staff/money/payments', 'payments'],
 		['/staff/money/credits', 'payments'],
-		['/staff/help', 'help'],
+		['/staff/content', 'content'],
+		['/staff/help', 'content'],
 		['/staff/marketing', 'outreach'],
 		['/staff/marketing/campaigns', 'outreach'],
 		['/staff/marketing/audiences/abc', 'outreach'],
 		['/staff/marketing/campaigns/new', 'outreach'],
 		['/staff/marketing/campaigns/abc/edit', 'outreach'],
-		['/staff/help/create', 'help'],
-		['/staff/local-resources', 'local-resources'],
-		['/staff/local-resources/categories', 'local-resources'],
-		['/staff/local-resources/tips', 'local-resources'],
+		['/staff/help/create', 'content'],
+		['/staff/local-resources', 'content'],
+		['/staff/local-resources/categories', 'content'],
 		['/staff/settings', 'settings'],
 		['/staff/audit', 'audit']
 	];
@@ -215,10 +215,11 @@ describe('the nav tree', () => {
 		]);
 	});
 
-	it('reaches the resource tips queue through Local Resources (#2623)', () => {
-		const parent = allStaffNavItems().find((i) => i.key === 'local-resources');
-		expect(parent?.children).toBeUndefined();
-		expect(activeNavKey('/staff/local-resources/tips')).toBe('local-resources');
+	it('holds Help articles and Local resources in one Content row (#2765)', () => {
+		const content = allStaffNavItems().find((i) => i.key === 'content');
+		expect(content?.children).toBeUndefined();
+		expect(activeNavKey('/staff/help/abc')).toBe('content');
+		expect(activeNavKey('/staff/local-resources/abc')).toBe('content');
 	});
 
 	// The #1788 regrouping: each row in the section that owns what it is about.
@@ -232,12 +233,11 @@ describe('the nav tree', () => {
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Building access is a Practice space view (#2766), not a row.
 		expect(activeNavKey('/staff/building-access')).toBe('reservations');
-		expect(keys('partners')).toEqual(['contacts', 'funding', 'venues', 'local-resources']);
+		expect(keys('partners')).toEqual(['contacts', 'funding', 'venues', 'content']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).not.toContain('grants');
 		expect(keys('reports')).toEqual(['reports']);
-		expect(keys('system')).toContain('help');
 		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox', 'calendar']);
 	});
 
@@ -271,6 +271,9 @@ describe('route coverage', () => {
 		'/staff/tasks/productions', // a Tasks view (#2101, #2625)
 		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
 		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
+		// Content's views, reached from its tab bar (#2765).
+		'/staff/help',
+		'/staff/local-resources',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
@@ -280,7 +283,6 @@ describe('route coverage', () => {
 		'/staff/inventory/problems',
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
-		'/staff/local-resources/tips', // a Local Resources tab, and the review feed's tip rows (#2623)
 		'/staff/recurring', // a Practice space view (#2766)
 		'/staff/building-access', // a Practice space view (#2766)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)

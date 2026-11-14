@@ -143,8 +143,20 @@ export async function listPublishedByCategory() {
 // Staff: listings
 // ---------------------------------------------------------------------------
 
-/** Pending first — the review queue — then everything else by name. */
+/**
+ * Pending first — the review queue — then everything else by name. Filtered to
+ * pending, it is the tips queue (#1566): oldest first, so nothing waits behind
+ * newer tips.
+ */
 export async function listResourcesForStaff(filters: { status?: LocalResourceStatus } = {}) {
+	const order =
+		filters.status === 'pending'
+			? [asc(localResource.createdAt), asc(localResource.id)]
+			: [
+					sql`case ${localResource.status} when 'pending' then 0 when 'rejected' then 1 else 2 end`,
+					asc(localResource.name),
+					asc(localResource.id)
+				];
 	return db
 		.select({
 			id: localResource.id,
@@ -152,6 +164,7 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 			status: localResource.status,
 			website: localResource.website,
 			categoryName: localResourceCategory.name,
+			submitterEmail: localResource.submitterEmail,
 			createdAt: localResource.createdAt
 		})
 		.from(localResource)
@@ -162,33 +175,12 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 				filters.status ? eq(localResource.status, filters.status) : undefined
 			)
 		)
-		.orderBy(
-			sql`case ${localResource.status} when 'pending' then 0 when 'rejected' then 1 else 2 end`,
-			asc(localResource.name),
-			asc(localResource.id)
-		);
+		.orderBy(...order);
 }
 
 /** Only a public tip is ever `pending`: staff listings publish as they save. */
 export const pendingTip = () =>
 	and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
-
-/** The tips queue (#1566): oldest first, so nothing waits behind newer tips. */
-export async function listTips() {
-	return db
-		.select({
-			id: localResource.id,
-			name: localResource.name,
-			categoryName: localResourceCategory.name,
-			website: localResource.website,
-			submitterEmail: localResource.submitterEmail,
-			createdAt: localResource.createdAt
-		})
-		.from(localResource)
-		.innerJoin(localResourceCategory, eq(localResourceCategory.id, localResource.categoryId))
-		.where(pendingTip())
-		.orderBy(asc(localResource.createdAt), asc(localResource.id));
-}
 
 export async function countPendingTips(): Promise<number> {
 	const [row] = await db.select({ value: count() }).from(localResource).where(pendingTip());

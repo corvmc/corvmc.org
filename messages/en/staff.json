@@ -1555,7 +1555,6 @@
 	"staff_local_resources_no_listings_title": "No listings",
 	"staff_local_resources_resource_fields_description_body": "A sentence or two — what they are and why they are worth knowing.",
 	"staff_local_resources_resource_fields_everything_here_shown_text": "Everything here is shown publicly on /local-resources.",
-	"staff_local_resources_resource_tabs_tips_label": "Tips",
 	"staff_local_resources_success_toast": "Listing published",
 	"staff_local_resources_tips_description_body": "Tips sent from the public directory land here until you publish or return them.",
 	"staff_local_resources_tips_no_tips_waiting_title": "No tips waiting",
@@ -3728,5 +3727,9 @@
 	"staff_members_role_volunteer_label": "Volunteer",
 	"staff_members_role_teacher_label": "Teacher",
 	"staff_tasks_recurring_work_label": "Recurring work",
-	"staff_tasks_recurring_work_title": "Recurring work"
+	"staff_tasks_recurring_work_title": "Recurring work",
+	"staff_content_title": "Content",
+	"staff_content_help_label": "Help articles",
+	"staff_content_resources_label": "Local resources",
+	"staff_local_resources_pending_tips_label": "Pending ({count})"
 }
