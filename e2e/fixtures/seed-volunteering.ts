@@ -61,7 +61,6 @@ export const SEED_VOL_ROLE_BOLD_PHRASE = 'E2E training provided on site';
  */
 export const SEED_VOL_ROLE_DEFAULT_CAPACITY = 3;
 export const SEED_VOL_ROLE_DEFAULT_MINUTES = 240;
-export const SEED_VOL_GATED_DEFAULT_CAPACITY = 7;
 export const SEED_VOL_ROLE_DESCRIPTION = `Cover the door during open hours.\n\n**${SEED_VOL_ROLE_BOLD_PHRASE}** — we will show you the ropes.`;
 
 /** A already-reviewed rejection, so the member-side rendering of the reason can
@@ -510,7 +509,6 @@ export async function seedVolunteering(): Promise<void> {
 			description: 'Run the desk.',
 			displayOrder: 2,
 			isActive: true,
-			defaultCapacity: SEED_VOL_GATED_DEFAULT_CAPACITY,
 			createdAt: now,
 			updatedAt: now
 		});

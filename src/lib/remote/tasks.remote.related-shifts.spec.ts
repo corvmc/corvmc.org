@@ -135,6 +135,16 @@ describe('getRelatedShifts', () => {
 		expect(res?.addShift).toMatchObject({ startsAt: doors });
 		expect(shifts.relatedShiftStart).toHaveBeenCalledWith({ type: 'event', id: 'e1' });
 	});
+
+	it("starts a role's Add shift on that role, with its shift defaults", async () => {
+		granted = new Set(['volunteer.read', 'volunteer.manageShifts']);
+		newTaskPrefill.mockResolvedValue({ volunteerRoleId: 'door' });
+		const res = await getRelatedShifts({ type: 'role', id: 'door' });
+		expect(res?.addShift).toMatchObject({
+			newTask: { roleId: 'door' },
+			roles: [{ id: 'door', capacity: 2, minutes: 240 }]
+		});
+	});
 });
 
 describe('addRelatedShift', () => {

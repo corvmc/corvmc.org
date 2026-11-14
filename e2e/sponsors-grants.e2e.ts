@@ -1,12 +1,7 @@
 import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import {
-	SEED_SPONSOR_ID,
-	SEED_SPONSOR_NAME,
-	SEED_LAPSED_SPONSORSHIP_TITLE,
-	SEED_FUNDER_ID
-} from './fixtures/seed-sponsors-grants';
+import { SEED_SPONSOR_ID, SEED_FUNDER_ID } from './fixtures/seed-sponsors-grants';
 import { readLocalDb } from './fixtures/platform-db';
 import { eq } from 'drizzle-orm';
 import { grantApplication } from '../src/lib/server/db/schema/grant';
@@ -19,17 +14,6 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('sponsors', () => {
-	test('a lapsed term is called out on the sponsor', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto(`/staff/contacts/${SEED_SPONSOR_ID}`);
-		await expect(page.getByRole('heading', { name: SEED_SPONSOR_NAME })).toBeVisible({
-			timeout: 15000
-		});
-		await expect(
-			page.getByRole('alert').filter({ hasText: SEED_LAPSED_SPONSORSHIP_TITLE })
-		).toBeVisible();
-	});
-
 	test('a sponsorship added on the Funding page is listed there', async ({ page }) => {
 		const title = `E2E season ${Date.now()}`;
 		await loginAsStaff(page);

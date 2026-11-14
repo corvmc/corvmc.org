@@ -165,6 +165,10 @@ describe('linked records (#2622)', () => {
 			about: { type: 'asset', id: 'amp' }
 		});
 	});
+
+	it("starts a role's new task on that role", async () => {
+		expect(await newTaskPrefill({ type: 'role', id: 'door' })).toEqual({ volunteerRoleId: 'door' });
+	});
 });
 
 describe('relatedTaskWhere', () => {

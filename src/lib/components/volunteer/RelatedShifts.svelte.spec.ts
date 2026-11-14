@@ -243,6 +243,29 @@ describe('RelatedShifts', () => {
 		}
 	);
 
+	it("prefills a new task's places from the role it is on", async () => {
+		response = {
+			groups: [],
+			ended: 0,
+			addShift: {
+				tasks: [],
+				newTask: { roleId: 'door' },
+				roles: [
+					{ id: 'bar', name: 'Bar', capacity: 2, minutes: 120 },
+					{ id: 'door', name: 'Door', capacity: 5, minutes: 120 }
+				]
+			}
+		};
+		await render(RelatedShifts, { subject: { type: 'role', id: 'door' } });
+		await vi.waitFor(() => expect(addShift()).not.toBeNull());
+		(addShift() as HTMLElement).click();
+		const capacity = () =>
+			document.querySelector<HTMLInputElement>('[role="dialog"] input[name="capacity"]');
+		await vi.waitFor(() => expect(capacity()?.value).toBe('5'));
+		// The role is the record's, so it is not asked for again.
+		expect(document.querySelector('[role="dialog"] [name="volunteerRoleId"]')).toBeNull();
+	});
+
 	it('draws nothing for a viewer who may not read shifts', async () => {
 		response = null;
 		await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });

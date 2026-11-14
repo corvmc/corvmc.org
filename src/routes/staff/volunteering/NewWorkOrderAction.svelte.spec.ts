@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 /**
  * One action for work with a time and work without (#1933). These pin that the
@@ -10,7 +11,8 @@ import { render } from 'vitest-browser-svelte';
 
 let roles = [
 	{ id: 'role-1', name: 'Booking Lead', isActive: true, defaultCapacity: 3 },
-	{ id: 'role-2', name: 'Retired Role', isActive: false }
+	{ id: 'role-2', name: 'Retired Role', isActive: false },
+	{ id: 'role-3', name: 'Sound', isActive: true, defaultCapacity: 6 }
 ];
 
 // Every field the form spreads, prefixed as kit prefixes a boolean checkbox.
@@ -81,6 +83,20 @@ describe('NewWorkOrderAction', () => {
 		await expect.poll(() => field('dueAt')?.type).toBe('datetime-local');
 		expect(field('startsAt')).toBeNull();
 		expect(field('endsAt')).toBeNull();
+	});
+
+	// The select is bound; a bound value matching no option would post an empty role.
+	it('moves the capacity to the default of whichever role is picked', async () => {
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
+		const role = page.getByCss('[role="dialog"] select[name="volunteerRoleId"]');
+		await expect.poll(() => field('capacity')?.value).toBe('3');
+
+		await role.selectOptions('role-3');
+		await expect.poll(() => field('capacity')?.value).toBe('6');
+		await role.selectOptions('role-1');
+		await expect.poll(() => field('capacity')?.value).toBe('3');
+		expect(field('volunteerRoleId')?.value).toBe('role-1');
 	});
 
 	it('renders nothing when there is no live role to pick', async () => {

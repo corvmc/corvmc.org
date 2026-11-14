@@ -15,7 +15,7 @@ vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 const { confirmedUnpaidSql, countOwedAfterSession, countStaffStatuses, listStaffReservations } =
 	await import('./staff-reservation-list');
 const { reservation, closure } = await import('#lib/server/db/schema/reservation.js');
-const { owesMoney } = await import('#lib/utils/reservation-actions.js');
+const { owesMoney, reservationPaymentState } = await import('#lib/utils/reservation-actions.js');
 const { reservationStatuses } = await import('#lib/server/db/schema/reservation.js');
 const { bookerTypes } = await import('#lib/config.js');
 
@@ -113,6 +113,35 @@ describe('status', () => {
 
 	it('the dot counts only sessions that have ended owing', async () => {
 		expect(await countOwedAfterSession(now)).toBe(1);
+	});
+});
+
+// The Payment column reads these off each row; it used to print the gross for a credit-paid booking.
+describe('payment', () => {
+	it('carries the credits and cash each booking was settled with', async () => {
+		sqlite.exec('delete from reservation');
+		await testDb
+			.insert(reservation)
+			.values([
+				row('cash', 2, { cashDueCents: 3000 }),
+				row('half', 4, { creditsUsed: 0.5, cashDueCents: 1500 }),
+				row('credits', 6, { creditsUsed: 2, cashDueCents: 0 }),
+				row('comped', 8, { creditsUsed: null, cashDueCents: 0 })
+			]);
+
+		const { rows } = await listStaffReservations({ range: 'any' }, now);
+		const paid = Object.fromEntries(
+			rows.map((r) => {
+				if (r.kind !== 'reservation') throw new Error('expected only bookings');
+				return [r.id, [r.creditsUsed, r.cashDueCents, reservationPaymentState(r)]];
+			})
+		);
+		expect(paid).toEqual({
+			cash: [null, 3000, 'cash_due'],
+			half: [0.5, 1500, 'cash_due'],
+			credits: [2, 0, 'credits'],
+			comped: [null, 0, 'comped']
+		});
 	});
 });
 
