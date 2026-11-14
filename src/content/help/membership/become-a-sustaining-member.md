@@ -14,7 +14,7 @@ sortOrder: 1
 3. Pick a contribution amount on the sliding scale.
 4. Complete the secure card checkout.
 
-Your benefits — including [free practice hours](/member/help/practice-credits) and
+Your benefits — including [practice credits](/member/help/practice-credits) and
 [recurring reservations](/member/help/recurring-reservations) — activate as soon as
 the subscription is set up.
 

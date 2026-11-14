@@ -19,10 +19,10 @@ Any member of the band can book practice sessions in the band's name.
 The session belongs to the band and shows up on the band dashboard for everyone
 in it.
 
-## Whose free hours get used
+## Whose credits get used
 
-Bands don't have free hours of their own. Whoever books spends **their own**
-personal free hours, and the confirmation screen says so before you commit —
+Bands don't have credits of their own. Whoever books spends **their own**
+personal credits, and the confirmation screen says so before you commit —
 so two bandmates can see different prices for the same slot, and that's why.
 Anything left over is due at the door.
 

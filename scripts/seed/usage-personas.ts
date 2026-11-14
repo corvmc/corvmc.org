@@ -331,7 +331,7 @@ export async function seedUsagePersonaLife(
 			amount: allocated,
 			balanceAfter: allocated,
 			source: 'monthly_allocation' as const,
-			description: 'Monthly free hours allocation',
+			description: 'Monthly credit allocation',
 			metadata: {},
 			createdAt: ago(21)
 		},

@@ -21,19 +21,19 @@
 	const tiers = [
 		{
 			amount: '$10',
-			hours: '2 free practice hours',
+			hours: '2 hrs of practice credits',
 			body: 'A great way to start — and the practice time refreshes every month.',
 			featured: false
 		},
 		{
 			amount: '$25',
-			hours: '5 free practice hours',
+			hours: '5 hrs of practice credits',
 			body: 'Free gear accessories and invites to member-only events.',
 			featured: true
 		},
 		{
 			amount: '$60',
-			hours: '12 free practice hours',
+			hours: '12 hrs of practice credits',
 			body: 'The most practice time per dollar, with every member benefit included.',
 			featured: false
 		}
@@ -67,7 +67,7 @@
 	<title>{m.public_membership_membership_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
-		content="A free account gets you started at the Corvallis Music Collective. Sustaining membership is a sliding-scale monthly contribution that supports the space and unlocks free practice hours and more."
+		content="A free account gets you started at the Corvallis Music Collective. Sustaining membership is a sliding-scale monthly contribution that supports the space and unlocks practice credits and more."
 	/>
 </svelte:head>
 

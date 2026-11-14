@@ -3162,6 +3162,5 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 		keys: /^staff_(return|local_resources|members_instructors|members_id_panels_instructor)/
 	},
 	{ word: /\bwork orders?\b/i, use: 'task' },
-	// The catalog still says free hours in many places (#2842); only the audit log is held to it.
-	{ word: /\bfree hours?\b/i, use: 'credits', keys: /^audit$/ }
+	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' }
 ];

@@ -176,7 +176,7 @@ export async function seedSustainingPersonas(roles: SeedRole[]) {
 			amount: allocated,
 			balanceAfter: allocated,
 			source: 'monthly_allocation',
-			description: 'Monthly free hours allocation',
+			description: 'Monthly credit allocation',
 			metadata: {},
 			createdAt: ago(19)
 		});

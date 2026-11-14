@@ -623,7 +623,7 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 		await expectFieldIssue(
 			() => users.adjustCredits({ ...VALID, amount: '-300' }),
 			'amount',
-			'Free hours'
+			'Credits balance'
 		);
 	});
 

@@ -3,9 +3,9 @@
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	const tiers = [
-		{ amount: '$10/month', hours: '2 free hours' },
-		{ amount: '$25/month', hours: '5 free hours' },
-		{ amount: '$60/month', hours: '12 free hours' }
+		{ amount: '$10/month', hours: '2 hrs of credits' },
+		{ amount: '$25/month', hours: '5 hrs of credits' },
+		{ amount: '$60/month', hours: '12 hrs of credits' }
 	];
 </script>
 

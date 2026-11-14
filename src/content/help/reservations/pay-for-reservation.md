@@ -16,11 +16,11 @@ Open the reservation and choose to pay.
 2. Review the amount and hourly rate.
 3. Complete payment by card through the secure checkout.
 
-## Free hours and credits
+## Credits
 
 If you're a sustaining member, your monthly
-[free practice hours](/member/help/practice-credits) are applied first, reducing or
-covering the cost automatically. Anything beyond your free hours is charged at the
+[practice credits](/member/help/practice-credits) are applied first, reducing or
+covering the cost automatically. Anything beyond your credits is charged at the
 hourly rate.
 
 ## Paying at the space
@@ -36,7 +36,7 @@ session there yourself, from two hours before it starts until it ends.
 
 1. Open the reservation on your phone. The sticker on the reader links to
    **Reservations**.
-2. Choose **Pay at the reader**. Your free hours are applied first, and the reader
+2. Choose **Pay at the reader**. Your credits are applied first, and the reader
    shows what is left to pay.
 3. Tap, insert or swipe your card on the reader.
 4. Your phone shows **Paid** once the payment has gone through, and the booking is
@@ -48,5 +48,5 @@ is busy with someone else's payment, wait a minute and try again.
 
 ## Related
 
-- [Understand practice credits & free hours](/member/help/practice-credits)
+- [Understand practice credits](/member/help/practice-credits)
 - [Cancel or change a reservation](/member/help/cancel-reservation)
