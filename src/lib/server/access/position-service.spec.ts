@@ -21,10 +21,23 @@ const { setPosition, positionChangeRefusal, PositionChangeRefusedError } =
 	await import('./position-service');
 const { role, modelHasRole } = await import('#lib/server/db/schema/authorization.js');
 const { user } = await import('#lib/server/db/schema/authentication.js');
-const { getUserRoles } = await import('#lib/server/authorization.js');
+const { getUserRoles, positionsFor } = await import('#lib/server/authorization.js');
+
+/** Each Operations seat: who holds which job. */
+const seats = () =>
+	sqlite
+		.prepare(
+			`select gm.user_id as userId, gp.job from group_position_holder h
+			join group_position gp on gp.id = h.position_id
+			join group_member gm on gm.id = h.member_id
+			where gp.group_id = 'operations' order by 1, 2`
+		)
+		.all();
 
 beforeEach(async () => {
-	for (const t of ['model_has_roles', 'roles', 'user']) sqlite.exec(`delete from ${t}`);
+	for (const t of ['group_position_holder', 'group_member', 'model_has_roles', 'roles', 'user']) {
+		sqlite.exec(`delete from ${t}`);
+	}
 	recordAuditEntry.mockClear();
 	await testDb.insert(user).values(
 		['ada', 'bo'].map((n) => ({
@@ -42,7 +55,7 @@ beforeEach(async () => {
 });
 
 describe('setPosition', () => {
-	it('assigns a position, creating its roles row, and records it like the profile form', async () => {
+	it('assigns a job as an Operations seat, and records it like the profile form', async () => {
 		const change = await setPosition({
 			actorId: 'u-ada',
 			targetId: 'u-bo',
@@ -51,11 +64,29 @@ describe('setPosition', () => {
 		});
 		expect(change).toEqual({ added: ['treasurer'], removed: [] });
 		expect(await getUserRoles('u-bo')).toEqual(['treasurer']);
+		expect(await positionsFor('u-bo')).toEqual(['treasurer']);
+		expect(seats()).toEqual([{ userId: 'u-bo', job: 'treasurer' }]);
+		expect(
+			sqlite.prepare(`select count(*) as n from model_has_roles where user_id = 'u-bo'`).get()
+		).toEqual({ n: 0 });
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'user.roles_changed',
 			subject: { type: 'user', id: 'u-bo', label: 'BO' },
 			details: { added: ['treasurer'], removed: [] }
 		});
+	});
+
+	it('takes a job away by vacating the seat, leaving the other seats', async () => {
+		await setPosition({ actorId: 'u-ada', targetId: 'u-bo', position: 'treasurer', held: true });
+		await setPosition({ actorId: 'u-ada', targetId: 'u-bo', position: 'auditor', held: true });
+		await setPosition({ actorId: 'u-ada', targetId: 'u-bo', position: 'treasurer', held: false });
+		expect(await positionsFor('u-bo')).toEqual(['auditor']);
+		expect(seats()).toEqual([{ userId: 'u-bo', job: 'auditor' }]);
+	});
+
+	it('grants nothing from a job name left in model_has_roles', async () => {
+		await testDb.insert(modelHasRole).values([{ roleId: 2, userId: 'u-bo' }]);
+		expect(await positionsFor('u-bo')).toEqual([]);
 	});
 
 	it('is a no-op, recording nothing, when nothing changes', async () => {

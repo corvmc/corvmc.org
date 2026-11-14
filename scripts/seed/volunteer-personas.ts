@@ -1,5 +1,7 @@
 import { account, user } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
+import { seatInOperations } from './operations';
+import { isJob } from '../../src/lib/config';
 import {
 	memberCertification,
 	volunteerHourLog,
@@ -136,6 +138,10 @@ export async function seedVolunteerPersonas(
 			updatedAt: ago(400)
 		});
 		for (const roleName of p.roles) {
+			if (isJob(roleName)) {
+				await seatInOperations(p.id, roleName);
+				continue;
+			}
 			const roleId = roleByName.get(roleName);
 			if (roleId) await db.insert(modelHasRole).values({ roleId, userId: p.id });
 		}

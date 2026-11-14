@@ -1,10 +1,10 @@
 {
+  "id": "22f79837-6e38-46d7-9a06-5441876578c8",
+  "prevIds": [
+    "abb7d525-47f7-44c6-a4b8-8a78492b1ba9"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "2eac7da9-a201-496e-8ce3-5cdc48c52aa6",
-  "prevIds": [
-    "fc228583-696b-40cd-9ba5-405cc864a36b"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -6417,6 +6417,16 @@
       "default": "false",
       "generated": null,
       "name": "is_chair",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "job",
       "entityType": "columns",
       "table": "group_position"
     },
@@ -24651,6 +24661,20 @@
       "where": "\"group_position\".\"is_chair\" = 1",
       "origin": "manual",
       "name": "idx_group_position_chair",
+      "entityType": "indexes",
+      "table": "group_position"
+    },
+    {
+      "columns": [
+        {
+          "value": "job",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"group_position\".\"job\" is not null",
+      "origin": "manual",
+      "name": "idx_group_position_job",
       "entityType": "indexes",
       "table": "group_position"
     },

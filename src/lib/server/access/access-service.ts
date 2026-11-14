@@ -2,10 +2,16 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
+import {
+	group,
+	groupCapability,
+	groupMember,
+	groupPosition,
+	groupPositionHolder
+} from '#lib/server/db/schema/group.js';
 import { volunteerRole, volunteerRoleCapability } from '#lib/server/db/schema/volunteer.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
-import { capabilitySet } from '#lib/server/authorization.js';
+import { capabilitySet, positionsFor } from '#lib/server/authorization.js';
 import {
 	listClearances,
 	listForUser,
@@ -14,6 +20,8 @@ import {
 } from '#lib/server/volunteer/member-certification-service.js';
 import {
 	grantRuleFor,
+	isJob,
+	OPERATIONS_GROUP_ID,
 	positionLabels,
 	positionOrder,
 	positionsGranting,
@@ -35,17 +43,42 @@ export interface PositionHolder {
 	position: Position;
 }
 
-/** Every position held by a live account, by position then name. */
+/**
+ * Every position held by a live account, ordered by name: `admin` role rows
+ * and Operations seats (#2992).
+ */
 async function listPositionHolders(only?: readonly Position[]): Promise<PositionHolder[]> {
 	const names = only ?? positionOrder;
-	if (names.length === 0) return [];
-	const rows = await db
-		.select({ member: memberRefColumns(), position: role.name })
-		.from(modelHasRole)
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.innerJoin(user, eq(user.id, modelHasRole.userId))
-		.where(and(inArray(role.name, [...names]), isNull(user.deletedAt)))
-		.orderBy(user.name);
+	const jobNames = names.filter(isJob);
+	const [admins, seats] = await Promise.all([
+		names.includes('admin')
+			? db
+					.select({ member: memberRefColumns(), position: role.name })
+					.from(modelHasRole)
+					.innerJoin(role, eq(role.id, modelHasRole.roleId))
+					.innerJoin(user, eq(user.id, modelHasRole.userId))
+					.where(and(eq(role.name, 'admin'), isNull(user.deletedAt)))
+			: [],
+		jobNames.length === 0
+			? []
+			: db
+					.select({ member: memberRefColumns(), position: groupPosition.job })
+					.from(groupPositionHolder)
+					.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+					.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+					.innerJoin(user, eq(user.id, groupMember.userId))
+					.where(
+						and(
+							eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+							eq(groupMember.status, 'active'),
+							inArray(groupPosition.job, jobNames),
+							isNull(user.deletedAt)
+						)
+					)
+	]);
+	const rows = [...admins, ...seats].sort((a, b) =>
+		String(a.member.name).localeCompare(String(b.member.name))
+	);
 	return rows.map((r) => ({
 		member: toMemberRef(r.member),
 		person: toRosterPerson(r.member),
@@ -95,12 +128,8 @@ export interface PersonAccess {
 
 /** Everything one person holds, each item carrying its source. */
 export async function getPersonAccess(userId: string): Promise<PersonAccess> {
-	const [roleRows, seatRows, clearances] = await Promise.all([
-		db
-			.select({ name: role.name })
-			.from(modelHasRole)
-			.innerJoin(role, eq(role.id, modelHasRole.roleId))
-			.where(eq(modelHasRole.userId, userId)),
+	const [positions, seatRows, clearances] = await Promise.all([
+		positionsFor(userId),
 		db
 			.select({
 				groupId: group.id,
@@ -123,9 +152,10 @@ export async function getPersonAccess(userId: string): Promise<PersonAccess> {
 		listForUser(userId)
 	]);
 
-	const positions = positionOrder.filter((p) => roleRows.some((r) => r.name === p));
 	const seats = new Map<string, CommitteeSeat>();
 	for (const r of seatRows) {
+		// Operations seats are the positions above, not a committee seat.
+		if (r.groupId === OPERATIONS_GROUP_ID) continue;
 		const seat = seats.get(r.groupId) ?? {
 			groupId: r.groupId,
 			name: r.name,

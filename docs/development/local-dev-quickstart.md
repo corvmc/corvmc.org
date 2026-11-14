@@ -103,11 +103,12 @@ not a state — it is a spread across features — so no state fixture could rea
 | `editor@`      | content editor — local resources and help articles, nothing else               |
 | `teachers@`    | teacher reviewer — the teacher queue, not the member list                      |
 | `auditor@`     | auditor — the audit log, read only                                             |
+| `opschair@`    | Operations chair — committee oversight, nothing else                           |
 
-The last eight are the only way to see the capability matrix narrow anything. `staff` holds
+The last nine are the only way to see the capability matrix narrow anything. `staff` holds
 almost everything, so a handler guarded by capability behaves identically for `admin` and
 for a position until you sign in as the position — which is also why none of them holds
-`staff` as well.
+`staff` as well. Each holds its job as a seat in the Operations committee, as production does.
 
 **Usage-style personas** (`scripts/seed/style-personas.ts`) are a third axis: not what
 somebody wants, but _how_ they use the thing. They cut across every page rather than

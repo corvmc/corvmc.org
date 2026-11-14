@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "fc228583-696b-40cd-9ba5-405cc864a36b",
+  "id": "abb7d525-47f7-44c6-a4b8-8a78492b1ba9",
   "prevIds": [
-    "c25e6662-19b7-41c0-9b7e-33432b1e3490"
+    "2eac7da9-a201-496e-8ce3-5cdc48c52aa6"
   ],
   "ddl": [
     {
@@ -6421,6 +6421,16 @@
       "table": "group_position"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "job",
+      "entityType": "columns",
+      "table": "group_position"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -11627,6 +11637,16 @@
       "default": null,
       "generated": null,
       "name": "group_id",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position_id",
       "entityType": "columns",
       "table": "work_order"
     },
@@ -19857,6 +19877,21 @@
     },
     {
       "columns": [
+        "position_id"
+      ],
+      "tableTo": "group_position",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_position_id_group_position_id_fk",
+      "entityType": "fks",
+      "table": "work_order"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -24632,6 +24667,20 @@
     {
       "columns": [
         {
+          "value": "job",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "\"group_position\".\"job\" is not null",
+      "origin": "manual",
+      "name": "idx_group_position_job",
+      "entityType": "indexes",
+      "table": "group_position"
+    },
+    {
+      "columns": [
+        {
           "value": "member_id",
           "isExpression": false
         }
@@ -26370,6 +26419,20 @@
       "where": null,
       "origin": "manual",
       "name": "work_order_group_idx",
+      "entityType": "indexes",
+      "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "position_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_position_idx",
       "entityType": "indexes",
       "table": "work_order"
     },

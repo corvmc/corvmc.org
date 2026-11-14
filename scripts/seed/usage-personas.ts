@@ -9,6 +9,8 @@ import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { suggestion, suggestionVote } from '../../src/lib/server/db/schema/suggestion';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { insertBandWithOwner } from './bands';
+import { seatInOperations } from './operations';
+import { isJob } from '../../src/lib/config';
 import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingSites, pendingTags } from './pending';
@@ -132,6 +134,15 @@ export const USAGE_PERSONAS = [
 		/** "I answer who changed what." */
 		job: 'auditor — the audit log, read only',
 		roles: ['member', 'auditor'] as const
+	},
+	{
+		id: 'seed-use-opschair',
+		email: 'opschair@corvallismusic.org',
+		name: 'Esme Thorvaldsen',
+		memberNumber: 96,
+		/** "I look after the committees: their positions, chairs and grants." */
+		job: 'Operations chair — committee oversight, nothing else',
+		roles: ['member', 'operations_chair'] as const
 	}
 ] as const;
 
@@ -185,6 +196,10 @@ export async function seedUsagePersonas(roles: SeedRole[]) {
 			updatedAt: createdAt
 		});
 		for (const name of p.roles) {
+			if (isJob(name)) {
+				await seatInOperations(p.id, name);
+				continue;
+			}
 			const id = roleId(name);
 			if (id) await db.insert(modelHasRole).values({ roleId: id, userId: p.id });
 		}

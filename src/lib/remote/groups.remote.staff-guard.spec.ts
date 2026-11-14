@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
-import { groupJoinPolicies, positionOrder, type Capability, type Position } from '#lib/config.js';
+import {
+	groupJoinPolicies,
+	positionOrder,
+	positionsGranting,
+	type Capability,
+	type Position
+} from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -259,9 +265,10 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 	});
 
 	// Before: `requireStaff`, any position at all. After: only the holders of
-	// `group.*`, which today are admin and staff. Every named position alone
-	// loses this surface, as #1388 intends.
-	it('admits exactly the admin or staff holders, where any position used to pass', async () => {
+	// the named capability — admin, staff, and for committee oversight the
+	// Operations chair (#2992). Every other named position alone loses it (#1388).
+	it('admits exactly the capability’s holders, where any position used to pass', async () => {
+		const holders = new Set<string>(positionsGranting(cap as Capability));
 		const table = [];
 		for (const held of subsets) {
 			heldPositions = held;
@@ -272,7 +279,7 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 			});
 		}
 		for (const row of table) {
-			const holdsGroup = row.held.split('+').some((p) => p === 'admin' || p === 'staff');
+			const holdsGroup = row.held.split('+').some((p) => holders.has(p));
 			expect(row, row.held).toMatchObject({ after: holdsGroup ? 'allowed' : 403 });
 		}
 		const narrowed = table.filter((r) => r.before !== r.after).map((r) => r.held);
@@ -280,8 +287,8 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 		expect(narrowed).toContain(
 			'technology_coordinator+volunteer_coordinator+site_moderator+treasurer'
 		);
-		// Every non-empty set of named positions, admin and staff aside.
-		expect(narrowed).toHaveLength(2 ** (positionOrder.length - 2) - 1);
+		// Every non-empty set of positions that holds none of them.
+		expect(narrowed).toHaveLength(2 ** (positionOrder.length - holders.size) - 1);
 	});
 });
 

@@ -25,6 +25,7 @@ const { user } = await import('#lib/server/db/schema/authentication.js');
 const { group, groupMember, groupCapability } = await import('#lib/server/db/schema/group.js');
 const { volunteerCertification, memberCertification } =
 	await import('#lib/server/db/schema/volunteer.js');
+const { seatSql } = await import('#lib/server/testing/operations-seat.js');
 
 const DAY = 86_400_000;
 const now = new Date();
@@ -35,9 +36,10 @@ beforeEach(async () => {
 		'volunteer_certification',
 		'group_capability',
 		'group_position_holder',
-		'group_position',
+		// Operations and its positions come from the migrations; keep them.
+		"group_position where group_id <> 'operations'",
 		'group_member',
-		'"group"',
+		`"group" where id <> 'operations'`,
 		'model_has_roles',
 		'roles',
 		'user'
@@ -60,12 +62,13 @@ beforeEach(async () => {
 		);
 	await testDb.insert(modelHasRole).values([
 		{ roleId: 1, userId: 'u-ada' },
-		{ roleId: 2, userId: 'u-bo' },
-		{ roleId: 3, userId: 'u-cy' },
 		{ roleId: 4, userId: 'u-di' },
+		// A job name left as a role row grants nothing (#2992).
+		{ roleId: 3, userId: 'u-di' },
 		// A deleted account holds nothing worth counting.
 		{ roleId: 1, userId: 'u-gone' }
 	]);
+	sqlite.exec(seatSql('u-bo', 'staff') + seatSql('u-cy', 'treasurer') + seatSql('u-gone', 'staff'));
 	await testDb.insert(group).values([
 		{ id: 'g-dev', kind: 'committee', name: 'Development', slug: 'development' },
 		{ id: 'g-club', kind: 'club', name: 'Jazz', slug: 'jazz' }

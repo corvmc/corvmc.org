@@ -9,7 +9,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { groupKinds, groupJoinPolicies } from '../../../config';
+import { groupKinds, groupJoinPolicies, jobs } from '../../../config';
 
 /**
  * A set of CMC members who organise together — a band, a club, or a committee.
@@ -247,6 +247,10 @@ export const groupCapability = sqliteTable(
  *
  * `isChair` marks the committee's chair (#3009): holding it is what makes
  * someone chair, read through `isCommitteeChair`. At most one per committee.
+ *
+ * `job` names the staff position a seat in Operations grants (#2992). It is
+ * read only for the Operations group and written only by the migration, the
+ * seed and `operations-service.ts`; one position per job.
  */
 export const groupPosition = sqliteTable(
 	'group_position',
@@ -259,6 +263,7 @@ export const groupPosition = sqliteTable(
 			.references(() => group.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		isChair: integer('is_chair', { mode: 'boolean' }).notNull().default(false),
+		job: text('job', { enum: jobs }),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -270,7 +275,10 @@ export const groupPosition = sqliteTable(
 		uniqueIndex('idx_group_position_name').on(t.groupId, t.name),
 		uniqueIndex('idx_group_position_chair')
 			.on(t.groupId)
-			.where(sql`${t.isChair} = 1`)
+			.where(sql`${t.isChair} = 1`),
+		uniqueIndex('idx_group_position_job')
+			.on(t.job)
+			.where(sql`${t.job} is not null`)
 	]
 );
 

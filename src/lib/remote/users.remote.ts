@@ -6,6 +6,7 @@ import {
 	creditCompCeiling,
 	creditsToHours,
 	hoursToCredits,
+	isJob,
 	surfaces
 } from '#lib/config.js';
 import { mapDomainError } from '#lib/server/errors.js';
@@ -253,7 +254,9 @@ export const getRoleCatalog = query(async () => {
 	await requireCapability('user.update');
 	const canSetRole = await can('user.setRole');
 	if (!canSetRole) return { canSetRole, roles: [] as { id: number; name: string }[] };
-	return { canSetRole, roles: await db.select({ id: role.id, name: role.name }).from(role) };
+	// Jobs are Operations seats, set on the Access page (#2992), not role rows.
+	const rows = await db.select({ id: role.id, name: role.name }).from(role);
+	return { canSetRole, roles: rows.filter((r) => !isJob(r.name)) };
 });
 
 export const getUserPayments = query(z.string(), async (userId) => {
@@ -303,7 +306,10 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	const actor = await requireCapability('user.update');
 	const id = data.id;
 
-	const targetCurrentRoles = await getUserRoles(id);
+	const targetHeld = await getUserRoles(id);
+	// The picker edits role rows only; jobs are Operations seats (#2992).
+	const targetCurrentRoles = targetHeld.filter((n) => !isJob(n));
+	const targetJobs = targetHeld.filter(isJob);
 	// `undefined` means the form did not carry the field at all — the caller
 	// cannot edit roles, so leave them alone. An empty array is a real request
 	// to remove every role and is handled as one.
@@ -314,8 +320,10 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 		const namesById = new Map(
 			(await db.select({ id: role.id, name: role.name }).from(role)).map((r) => [r.id, r.name])
 		);
-		const submitted = data.roles.map(Number);
-		const nextRoleNames = submitted.map((rid) => namesById.get(rid)).filter(Boolean) as string[];
+		const submitted = data.roles
+			.map(Number)
+			.filter((rid) => namesById.has(rid) && !isJob(namesById.get(rid)!));
+		const nextRoleNames = submitted.map((rid) => namesById.get(rid)!);
 
 		const unchanged =
 			nextRoleNames.length === targetCurrentRoles.length &&
@@ -330,8 +338,8 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 			const refusal = await positionChangeRefusal({
 				actorId: actor.id,
 				targetId: id,
-				current: targetCurrentRoles,
-				next: nextRoleNames
+				current: targetHeld,
+				next: [...nextRoleNames, ...targetJobs]
 			});
 			if (refusal) error(refusal.httpStatus, refusal.message);
 

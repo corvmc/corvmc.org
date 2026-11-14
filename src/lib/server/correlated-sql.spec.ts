@@ -65,6 +65,8 @@ describe('topPositionFor', () => {
 		// subquery and the predicate could never match a user id.
 		expect(rendered).toContain('mhr.user_id = "user"."id"');
 		expect(rendered).not.toMatch(/mhr\.user_id = "id"/);
+		expect(rendered).toContain('gm.user_id = "user"."id"');
+		expect(rendered).not.toMatch(/gm\.user_id = "id"/);
 	});
 
 	it('restricts to real positions, so a legacy role row cannot be returned', () => {
@@ -75,7 +77,8 @@ describe('topPositionFor', () => {
 
 		// Without the `in (…)` filter a member holding only the legacy 'member'
 		// row comes back with that name, and memberSubtype would badge them.
-		expect(rendered).toContain("r.name in ('admin', 'staff'");
+		expect(rendered).toContain("r.name = 'admin'");
+		expect(rendered).toContain("gp.job in ('admin', 'staff'");
 		expect(rendered).not.toContain("'member'");
 		expect(rendered).not.toContain("'sustaining'");
 	});

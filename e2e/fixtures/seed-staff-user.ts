@@ -92,8 +92,7 @@ export async function seedStaffUser(): Promise<void> {
 		await db.delete(user).where(inArray(user.id, ALL_IDS));
 
 		const now = new Date();
-		const [staffRole, adminRole, memberRole] = await Promise.all([
-			ensureRole(db, 'staff'),
+		const [adminRole, memberRole] = await Promise.all([
 			ensureRole(db, 'admin'),
 			ensureRole(db, SEED_TARGET_ROLE)
 		]);
@@ -117,12 +116,10 @@ export async function seedStaffUser(): Promise<void> {
 			updatedAt: now
 		});
 
-		// Both roles: requireStaff() accepts either, and holding `admin` keeps the
-		// last-admin guard in updateUser from tripping on unrelated edits.
-		await db.insert(modelHasRole).values([
-			{ roleId: staffRole.id, userId: SEED_STAFF_ID },
-			{ roleId: adminRole.id, userId: SEED_STAFF_ID }
-		]);
+		// `admin` holds every capability, and keeps the last-admin guard in
+		// updateUser from tripping on unrelated edits. Other positions are
+		// Operations seats (#2992), which this user does not need.
+		await db.insert(modelHasRole).values([{ roleId: adminRole.id, userId: SEED_STAFF_ID }]);
 
 		const { startsAt, endsAt } = buildTimeRangeInTz(
 			STAFF_RESERVATION_DATE,

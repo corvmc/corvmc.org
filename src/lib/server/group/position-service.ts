@@ -42,12 +42,22 @@ async function requireCommittee(groupId: string) {
 	if (g.kind !== 'committee') throw new PositionError('Only a committee has positions.', 400);
 }
 
+/**
+ * A position the committee may edit. One that carries a job grants staff
+ * capabilities (#2992), so it is set only where `user.setRole` is checked.
+ */
 async function requirePosition(groupId: string, positionId: string) {
 	const [p] = await db
-		.select({ id: groupPosition.id, name: groupPosition.name, isChair: groupPosition.isChair })
+		.select({
+			id: groupPosition.id,
+			name: groupPosition.name,
+			isChair: groupPosition.isChair,
+			job: groupPosition.job
+		})
 		.from(groupPosition)
 		.where(and(eq(groupPosition.id, positionId), eq(groupPosition.groupId, groupId)));
 	if (!p) throw new PositionError('Position not found.', 404);
+	if (p.job) throw new PositionError('Staff positions are set on the Access page.', 400);
 	return p;
 }
 
@@ -66,7 +76,12 @@ function duplicate(err: unknown, name: string): never {
 export async function listPositions(groupId: string) {
 	const [positions, holders] = await Promise.all([
 		db
-			.select({ id: groupPosition.id, name: groupPosition.name, isChair: groupPosition.isChair })
+			.select({
+				id: groupPosition.id,
+				name: groupPosition.name,
+				isChair: groupPosition.isChair,
+				job: groupPosition.job
+			})
 			.from(groupPosition)
 			.where(eq(groupPosition.groupId, groupId))
 			.orderBy(desc(groupPosition.isChair), asc(groupPosition.name)),

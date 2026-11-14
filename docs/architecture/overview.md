@@ -210,7 +210,8 @@ production rejects submissions instead of accepting everyone.
 ### Roles
 
 Site-wide roles live in the `roles` / `model_has_roles` tables (names inherited from the
-Laravel app). Priority order, from `primaryRoleFor()` in `src/lib/server/authorization.ts`:
+Laravel app), except the positions below `admin`: each of those is a seat in the Operations
+committee (#2992), a `group_position` row whose `job` names the position. Priority order, from `primaryRoleFor()` in `src/lib/server/authorization.ts`:
 
 ```
 admin > staff > sustaining > member

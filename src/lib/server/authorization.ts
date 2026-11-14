@@ -5,13 +5,17 @@ import { db } from '#lib/server/db/index.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { eq, and, getColumnTable, getTableName, sql, inArray, type AnyColumn } from 'drizzle-orm';
 import { user } from '#lib/server/db/schema/authentication.js';
+import { groupMember, groupPosition, groupPositionHolder } from '#lib/server/db/schema/group.js';
 import {
 	capabilities,
 	positions,
 	positionOrder,
 	positionsGranting,
 	grantRuleFor,
+	isJob,
+	OPERATIONS_GROUP_ID,
 	type Capability,
+	type Job,
 	type Position
 } from '#lib/config.js';
 import {
@@ -94,20 +98,65 @@ export function capabilitySet(held: readonly Position[]): Capability[] {
 }
 
 /**
- * The positions a user holds.
+ * The positions a user holds: `admin` from `model_has_roles`, every other one
+ * from a seat in Operations (#2992).
  *
  * `roles` still carries legacy rows — `member`, `sustaining`, `volunteer` —
- * that are not positions and grant nothing. They are filtered here rather than
- * in SQL so the matrix stays the only place the list of real positions is
- * written down.
+ * that grant nothing, and a job name there grants nothing either: the seat is
+ * the assignment. Filtered here rather than in SQL so the matrix stays the
+ * only place the list of real positions is written down.
  */
 export async function positionsFor(userId: string): Promise<Position[]> {
+	const [rows, seats] = await Promise.all([
+		db
+			.select({ name: role.name })
+			.from(role)
+			.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
+			.where(eq(modelHasRole.userId, userId)),
+		jobsFor(userId)
+	]);
+	const held = new Set<string>([...rows.map((r) => r.name).filter(isAdmin), ...seats]);
+	return positionOrder.filter((p) => held.has(p));
+}
+
+const isAdmin = (name: string) => name === 'admin';
+
+/**
+ * The jobs a user holds through Operations seats. An inactive roster row holds
+ * nothing. The group row is not joined: archiving Operations must not strip
+ * every staff member at once.
+ */
+export async function jobsFor(userId: string): Promise<Job[]> {
 	const rows = await db
-		.select({ name: role.name })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(eq(modelHasRole.userId, userId));
-	return rows.map((r) => r.name).filter(isPosition);
+		.select({ job: groupPosition.job })
+		.from(groupPositionHolder)
+		.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+		.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+		.where(
+			and(
+				eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
+			)
+		);
+	return rows.flatMap((r) => (r.job && isJob(r.job) ? [r.job] : []));
+}
+
+/** Operations seat holders of these jobs, as live user rows. */
+function seatHolders(names: readonly Job[]) {
+	return db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.innerJoin(groupMember, eq(groupMember.userId, user.id))
+		.innerJoin(groupPositionHolder, eq(groupPositionHolder.memberId, groupMember.id))
+		.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+		.where(
+			and(
+				eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+				eq(groupMember.status, 'active'),
+				inArray(groupPosition.job, [...names])
+			)
+		);
 }
 
 /**
@@ -262,19 +311,21 @@ export async function listUsersWithCapability(
 	cap: Capability
 ): Promise<Array<{ id: string; name: string; email: string }>> {
 	const names = positionsGranting(cap);
-	const [byPosition, bySeat] = await Promise.all([
-		names.length === 0
-			? []
-			: db
+	const jobNames = names.filter(isJob);
+	const [byAdmin, byJob, bySeat] = await Promise.all([
+		names.includes('admin')
+			? db
 					.select({ id: user.id, name: user.name, email: user.email })
 					.from(user)
 					.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
 					.innerJoin(role, eq(role.id, modelHasRole.roleId))
-					.where(inArray(role.name, names)),
+					.where(eq(role.name, 'admin'))
+			: [],
+		jobNames.length === 0 ? [] : seatHolders(jobNames),
 		// An org-wide committee grant makes its members holders too (#1578, #1602).
 		listCommitteeHolders(cap)
 	]);
-	const rows = [...byPosition, ...bySeat];
+	const rows = [...byAdmin, ...byJob, ...bySeat];
 
 	// De-duplicated in JS rather than with groupBy: the specs in this directory
 	// mock `drizzle-orm` export by export, so importing one more operator here
@@ -313,12 +364,20 @@ export function topPositionFor(userIdCol: AnyColumn) {
 	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	const names = sql.raw(positionOrder.map((p) => `'${p}'`).join(', '));
 	const ladder = sql.raw(positionOrder.map((p, i) => `when '${p}' then ${i}`).join(' '));
-	return sql<string | null>`(
-		select r.name from roles r
+	// `admin` heads `positionOrder`, so its role row is consulted first and a
+	// seat in Operations (#2992) only when there is none.
+	return sql<string | null>`coalesce(
+		(select r.name from roles r
 		inner join model_has_roles mhr on mhr.role_id = r.id
-		where mhr.user_id = ${outerRef} and r.name in (${names})
-		order by case r.name ${ladder} else ${sql.raw(String(positionOrder.length))} end
-		limit 1
+		where mhr.user_id = ${outerRef} and r.name = 'admin'
+		limit 1),
+		(select gp.job from group_position_holder gph
+		inner join group_position gp on gp.id = gph.position_id
+		inner join group_member gm on gm.id = gph.member_id
+		where gm.user_id = ${outerRef} and gm.status = 'active'
+			and gp.group_id = ${sql.raw(`'${OPERATIONS_GROUP_ID}'`)} and gp.job in (${names})
+		order by case gp.job ${ladder} else ${sql.raw(String(positionOrder.length))} end
+		limit 1)
 	)`;
 }
 
@@ -337,16 +396,19 @@ export function requireUser() {
 export const requireMember = requireUser;
 
 /**
- * Get all role names for a user.
+ * Every role row name a user carries, plus the jobs their Operations seats
+ * hold. A job name left in `model_has_roles` grants nothing and is dropped.
  */
 export async function getUserRoles(userId: string): Promise<string[]> {
-	const rows = await db
-		.select({ name: role.name })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(eq(modelHasRole.userId, userId));
-
-	return rows.map((r) => r.name);
+	const [rows, seats] = await Promise.all([
+		db
+			.select({ name: role.name })
+			.from(role)
+			.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
+			.where(eq(modelHasRole.userId, userId)),
+		jobsFor(userId)
+	]);
+	return [...rows.map((r) => r.name).filter((n) => !isJob(n)), ...seats];
 }
 
 /**
@@ -386,9 +448,8 @@ export async function removeRole(userId: string, roleName: string): Promise<void
  *
  * Used to tell a staff member's emailed reply apart from a contact's, so the
  * inbox can relay theirs instead of filing it as inbound. Deliberately not a
- * capability check — the question is "does this person work here", which is
- * `isElevated` expressed in SQL, and a volunteer coordinator replying to a
- * thread is still not the contact. Matched
+ * capability check — the question is "does this person hold a position", and
+ * a volunteer coordinator replying to a thread is still not the contact. Matched
  * case-insensitively: SQLite compares TEXT with `=` case-sensitively, and no
  * mail client normalises the envelope From, so a plain `eq` would silently
  * treat `Ada@corvmc.org` as a stranger.
@@ -399,13 +460,12 @@ export async function findStaffUserByEmail(
 	const normalized = email.trim().toLowerCase();
 	if (!normalized) return null;
 
-	const [row] = await db
+	const found = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
-		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(and(eq(sql`lower(${user.email})`, normalized), inArray(role.name, positionOrder)))
-		.limit(1);
-
-	return row ?? null;
+		.where(eq(sql`lower(${user.email})`, normalized));
+	for (const row of found) {
+		if ((await positionsFor(row.id)).length > 0) return row;
+	}
+	return null;
 }

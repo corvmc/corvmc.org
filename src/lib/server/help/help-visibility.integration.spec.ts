@@ -13,6 +13,8 @@ import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 
+import { seatSql } from '#lib/server/testing/operations-seat.js';
+
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 const CONTENT_DIR = join(import.meta.dirname, '..', '..', '..', 'content', 'help');
 
@@ -57,14 +59,11 @@ beforeAll(() => {
 			('u-treasurer', 'Tia Books',  'tia@example.com',  1),
 			('u-admin',     'Ada Admin',  'ada@example.com',  1);
 
-		INSERT OR IGNORE INTO roles (name, guard_name) VALUES
-			('staff', 'web'), ('treasurer', 'web'), ('admin', 'web');
-		INSERT INTO model_has_roles (role_id, user_id)
-			SELECT id, 'u-staff' FROM roles WHERE name = 'staff';
-		INSERT INTO model_has_roles (role_id, user_id)
-			SELECT id, 'u-treasurer' FROM roles WHERE name = 'treasurer';
+		INSERT OR IGNORE INTO roles (name, guard_name) VALUES ('admin', 'web');
 		INSERT INTO model_has_roles (role_id, user_id)
 			SELECT id, 'u-admin' FROM roles WHERE name = 'admin';
+		${seatSql('u-staff', 'staff')}
+		${seatSql('u-treasurer', 'treasurer')}
 
 		INSERT INTO "group" (id, kind, name, slug) VALUES ('g-dev', 'committee', 'Development', 'development');
 		INSERT INTO group_member (id, group_id, user_id, role, status) VALUES
