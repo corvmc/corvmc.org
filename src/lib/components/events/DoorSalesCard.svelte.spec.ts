@@ -4,8 +4,9 @@ import { formatCents } from '#lib/utils/format.js';
 
 const DoorSalesCard = (await import('./DoorSalesCard.svelte')).default;
 
-const none = { card: { tickets: 0, grossCents: 0 }, free: { tickets: 0 } };
-const sold = { card: { tickets: 3, grossCents: 4500 }, free: { tickets: 2 } };
+const noGifts = { count: 0, grossCents: 0 };
+const none = { card: { tickets: 0, grossCents: 0 }, free: { tickets: 0 }, donations: noGifts };
+const sold = { card: { tickets: 3, grossCents: 4500 }, free: { tickets: 2 }, donations: noGifts };
 const tillLink = 'a[href*="/member/volunteer/door?event=evt-1"]';
 
 describe('DoorSalesCard', () => {
@@ -43,5 +44,17 @@ describe('DoorSalesCard', () => {
 		});
 
 		expect(container.textContent?.trim()).toBe('');
+	});
+
+	// Gifts on the door phone are the show's money too (#2799).
+	it('shows door donations beside the tickets, even on a night with no sales', async () => {
+		const { container } = await render(DoorSalesCard, {
+			eventId: 'evt-1',
+			takings: { ...none, donations: { count: 2, grossCents: 3000 } },
+			open: false
+		});
+
+		const gifts = container.querySelector('[data-testid="door-donations"]');
+		expect(gifts?.textContent).toContain(formatCents(3000));
 	});
 });

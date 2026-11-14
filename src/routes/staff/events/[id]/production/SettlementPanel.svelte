@@ -18,6 +18,7 @@
 		recordDoorTake,
 		recordDoorRecount,
 		addProductionExpense,
+		createProduction,
 		removeProductionExpense
 	} from '#lib/remote/productions.remote.js';
 	import { productionExpenseCategoryLabels, productionExpenseCategories } from '#lib/config.js';
@@ -41,6 +42,11 @@
 	const expenses = $derived(settlement?.expenses ?? []);
 	const counts = $derived(settlement?.doorCounts ?? null);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
+	const takings = $derived(settlement?.doorTakings ?? null);
+	// Warns, never refuses: a guest list or a re-entry can make the counts differ (#2801).
+	const countGap = $derived(
+		settlement?.door?.count != null && takings ? settlement.door.count - takings.checkedIn : 0
+	);
 	/** Closed or cancelled: the worksheet is the record now. The server refuses edits too. */
 	const locked = $derived(
 		settlement ? isTerminalProduction(settlement.status as ProductionStatus) : false
@@ -48,10 +54,19 @@
 </script>
 
 {#if !settlement}
+	<!-- The action itself, not a pointer to it (#2802, as #976 did for Overview). -->
 	<EmptyState
 		title={m.staff_no_production_title()}
-		description={m.staff_events_id_production_settlement_panel_open_one_from_ev_body()}
+		description={m.staff_events_id_production_settlement_panel_open_one_body()}
 	/>
+	<Form remote={createProduction} class="-mt-8 flex justify-center">
+		<input {...createProduction.fields.eventId.as('hidden', eventId)} />
+		<SubmitButton
+			label={m.staff_events_id_production_open_production_label()}
+			variant="primary"
+			size="sm"
+		/>
+	</Form>
 {:else}
 	<Alert type="info">
 		{m.staff_events_id_production_settlement_panel_what_night_took_body()}
@@ -90,6 +105,13 @@
 				</p>
 			</div>
 		</div>
+		{#if settlement.doorTakings.donations.count > 0}
+			<p class="mt-3 text-muted">
+				{m.staff_events_id_production_settlement_panel_door_donations_text({
+					amount: formatCents(settlement.doorTakings.donations.grossCents)
+				})}
+			</p>
+		{/if}
 	</InfoCard>
 
 	<!-- The drawer, and the split that follows from it. Its own card because
@@ -115,6 +137,11 @@
 				<FormField
 					{...recordDoorTake.fields.doorCount.as('number')}
 					label={m.staff_events_id_production_settlement_panel_through_door_label()}
+					description={m.staff_events_id_production_settlement_panel_through_door_body({
+						checkedIn: settlement.doorTakings.checkedIn,
+						card: settlement.doorTakings.card.tickets,
+						free: settlement.doorTakings.free.tickets
+					})}
 					value={settlement.door?.count ?? undefined}
 					min={0}
 				/>
@@ -154,6 +181,16 @@
 					>
 				{/if}
 			</p>
+
+			{#if countGap !== 0}
+				<div class="mt-3" data-testid="door-count-gap">
+					<Alert type="warning">
+						{m.staff_events_id_production_settlement_panel_count_off_check_ins_body({
+							count: Math.abs(countGap)
+						})}
+					</Alert>
+				</div>
+			{/if}
 
 			<!-- A second count by somebody else (#2722). A difference warns here
 			     and at close; the server refuses only the first counter. -->

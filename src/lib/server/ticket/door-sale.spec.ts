@@ -69,7 +69,7 @@ const rows = (purchaseId: string) =>
 		.all(purchaseId) as Record<string, unknown>[];
 
 beforeEach(() => {
-	for (const table of ['ticket', 'ticket_sale', 'event_listing'])
+	for (const table of ['donation', 'ticket', 'ticket_sale', 'event_listing'])
 		sqlite.exec(`delete from ${table}`);
 	resetFakeGateway();
 	initStripe(createFakeGateway());
@@ -334,7 +334,9 @@ describe('what the door took', () => {
 	it('is nothing for a show the door never sold', async () => {
 		expect(await getEventDoorTakings('tonight')).toEqual({
 			card: { tickets: 0, grossCents: 0 },
-			free: { tickets: 0 }
+			free: { tickets: 0 },
+			donations: { count: 0, grossCents: 0 },
+			checkedIn: 0
 		});
 	});
 
@@ -350,7 +352,7 @@ describe('what the door took', () => {
 			 values ('online-1', 'tonight', '0b8e1c0a-online', 'Buyer', 'b@example.com', 'ONLINE1', 'valid', 1500)`
 		);
 
-		expect(await getEventDoorTakings('tonight')).toEqual({
+		expect(await getEventDoorTakings('tonight')).toMatchObject({
 			card: { tickets: 2, grossCents: 3000 },
 			free: { tickets: 3 }
 		});
@@ -361,5 +363,37 @@ describe('what the door took', () => {
 		if (backedOut.kind !== 'card') throw new Error('expected a card sale');
 		await cancelDoorSale(backedOut.paymentIntentId);
 		expect((await getEventDoorTakings('tonight')).card).toEqual({ tickets: 0, grossCents: 0 });
+	});
+
+	// Gifts taken on the door phone are the show's too (#2799): paid ones only.
+	it('counts paid door donations for the show, and no other', async () => {
+		sqlite.exec(`
+			insert into donation (id, payment_intent_id, event_id, amount_cents, status) values
+				('d1', 'pi_d1', 'tonight', 500, 'paid'),
+				('d2', 'pi_d2', 'tonight', 2500, 'paid'),
+				('d3', 'pi_d3', 'tonight', 900, 'pending'),
+				('d4', 'pi_d4', 'tonight', 700, 'cancelled')
+		`);
+		listing('other', 'cmc', at(1));
+		sqlite.exec(
+			`insert into donation (id, payment_intent_id, event_id, amount_cents, status)
+			 values ('d5', 'pi_d5', 'other', 4000, 'paid')`
+		);
+		expect((await getEventDoorTakings('tonight')).donations).toEqual({
+			count: 2,
+			grossCents: 3000
+		});
+	});
+
+	// The settlement's door count is checked against this (#2801): every ticket in, however sold.
+	it('counts every ticket checked in for the show, however it was sold', async () => {
+		await sell(2, 0); // free let-ins are checked in at sale
+		sqlite.exec(
+			`insert into ticket (id, event_id, purchase_id, attendee_name, attendee_email, code, status) values
+				('on-1', 'tonight', 'pur-on', 'A', 'a@example.com', 'ON1', 'checked_in'),
+				('on-2', 'tonight', 'pur-on', 'B', 'b@example.com', 'ON2', 'valid'),
+				('on-3', 'tonight', 'pur-on', 'C', 'c@example.com', 'ON3', 'cancelled')`
+		);
+		expect((await getEventDoorTakings('tonight')).checkedIn).toBe(3);
 	});
 });

@@ -51,7 +51,8 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 	stubs(
 		'addProductionExpense addRunOfShowSlot advanceProduction askForArtifact ' +
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markSlotTiming ' +
-			'moveRunOfShowSlot openHostShift recordActPayout recordDoorTake removeProductionExpense ' +
+			'moveRunOfShowSlot openHostShift recordActPayout recordDoorRecount recordDoorTake ' +
+			'removeProductionExpense ' +
 			'removeRunOfShowSlot reopenProduction searchShowLeadCandidates setRunOfShowTerms ' +
 			'setRiderStock setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
@@ -258,5 +259,63 @@ describe('production console', () => {
 		await expect.element(page.getByCss('.card-title > span.text-muted')).toBeVisible();
 		for (const key of ['advance', 'runOfShow', 'settlement'])
 			expect(document.querySelector(`#tab-${key} .badge`)).toBeNull();
+	});
+
+	describe('settlement tab', () => {
+		const night = (count: number | null, checkedIn: number) => ({
+			productionId: 'prod-1',
+			eventId: 'evt-1',
+			status: 'completed',
+			collectiveRevenueCents: 0,
+			actsPoolCents: 0,
+			door: {
+				cashCents: 100_00,
+				count,
+				actsPercent: 70,
+				actsCents: 70_00,
+				collectiveCents: 30_00,
+				overridden: false
+			},
+			doorCounts: { check: 'single', first: { byName: null, at: null }, second: null },
+			doorTakings: {
+				card: { tickets: 1, grossCents: 15_00 },
+				free: { tickets: 0 },
+				donations: { count: 0, grossCents: 0 },
+				checkedIn
+			},
+			expensesCents: 0,
+			deductibleExpensesCents: 0,
+			expenses: [],
+			acts: [],
+			suggestedPayoutTotalCents: 0,
+			paidTotalCents: 0,
+			unpaidActCount: 0,
+			netCents: 0
+		});
+		const panel = () => page.getByCss('[aria-labelledby="tab-settlement"]');
+
+		// It pointed at the event page; the button is here (#2802).
+		it('opens a production from its own empty state', async () => {
+			fixture.loaded = loaded(null);
+			await render(Console);
+			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+
+			await expect.element(panel().getByCss('button[type="submit"]')).toBeVisible();
+		});
+
+		// Warn, never refuse: the typed count is read against the check-ins (#2801).
+		it('warns when the headcount differs from check-ins, and only then', async () => {
+			fixture.loaded = { ...loaded(record), settlement: night(5, 3) };
+			const { unmount } = await render(Console);
+			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await expect.element(panel().getByTestId('door-count-gap')).toBeVisible();
+			unmount();
+
+			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
+			await render(Console);
+			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await expect.element(panel().getByCss('button[type="submit"]').first()).toBeVisible();
+			expect(document.querySelector('[data-testid="door-count-gap"]')).toBeNull();
+		});
 	});
 });
