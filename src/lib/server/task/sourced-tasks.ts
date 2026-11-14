@@ -12,15 +12,17 @@ import { linkInsertIfTaskExists, linkTargets, type LinkTo } from './work-order-l
  * closing the task by hand never changes the record.
  */
 
-/** The volunteer role each kind's tasks take: one setting per kind. */
-const ROLE_SETTING: Record<TaskSource, () => Promise<unknown>> = {
+/** The volunteer role each kind's tasks take: one setting per kind, where it has one. */
+const ROLE_SETTING: Partial<Record<TaskSource, () => Promise<unknown>>> = {
 	repair: () => config('inventory.repairRoleId'),
-	restock: () => config('inventory.restockRoleId')
+	restock: () => config('inventory.restockRoleId'),
+	late_order: () => config('inventory.lateOrderRoleId'),
+	form_8282: () => config('inventory.form8282RoleId')
 };
 
 /** The configured role for this kind, when it names a live role; else none. */
 export async function sourceRoleId(source: TaskSource): Promise<string | null> {
-	const id = String((await ROLE_SETTING[source]()) ?? '').trim();
+	const id = String((await ROLE_SETTING[source]?.()) ?? '').trim();
 	if (!id) return null;
 	const [role] = await db
 		.select({ isActive: volunteerRole.isActive })
@@ -38,7 +40,14 @@ export interface SourcedTaskInput {
 	title: string;
 	notes?: string | null;
 	dueAt?: Date | null;
+	/** The show it is at (`work_order.event_id`). */
+	eventId?: string | null;
 	links?: LinkTo;
+	/**
+	 * Open at most one task per record, ever: for a record nothing in the app
+	 * can resolve, whose task is closed by hand and must not come back.
+	 */
+	once?: boolean;
 }
 
 /**
@@ -48,7 +57,7 @@ export interface SourcedTaskInput {
 export async function openSourcedTask(
 	input: SourcedTaskInput
 ): Promise<{ id: string; opened: boolean }> {
-	const existing = await openTaskFor(input.source, input.sourceId);
+	const existing = await openTaskFor(input.source, input.sourceId, input.once);
 	if (existing) return { id: existing, opened: false };
 
 	const id = crypto.randomUUID();
@@ -67,7 +76,8 @@ export async function openSourcedTask(
 				title: input.title,
 				volunteerRoleId,
 				notes: input.notes ?? null,
-				dueAt: input.dueAt ?? null
+				dueAt: input.dueAt ?? null,
+				eventId: input.eventId ?? null
 			})
 			.onConflictDoNothing()
 			.returning({ id: workOrder.id }),
@@ -80,11 +90,21 @@ export async function openSourcedTask(
 	return { id: winner, opened: false };
 }
 
-async function openTaskFor(source: TaskSource, sourceId: string): Promise<string | null> {
+async function openTaskFor(
+	source: TaskSource,
+	sourceId: string,
+	everOpened = false
+): Promise<string | null> {
 	const [row] = await db
 		.select({ id: workOrder.id })
 		.from(workOrder)
-		.where(and(eq(workOrder.source, source), eq(workOrder.sourceId, sourceId), openOnly()))
+		.where(
+			and(
+				eq(workOrder.source, source),
+				eq(workOrder.sourceId, sourceId),
+				everOpened ? undefined : openOnly()
+			)
+		)
 		.limit(1);
 	return row?.id ?? null;
 }
@@ -139,4 +159,35 @@ export async function closeSourcedTasks(
 			.returning({ id: workOrder.id })
 	]);
 	return closed.length;
+}
+
+/**
+ * Make one kind's open tasks match the records that call for one: open the
+ * missing, close the rest. `scope` limits the closing to these records, for a
+ * caller that read only some; without it every open task of the kind is in play.
+ */
+export async function reconcileSourcedTasks(
+	source: TaskSource,
+	wanted: Omit<SourcedTaskInput, 'source'>[],
+	closeNote: string,
+	scope?: string[]
+): Promise<{ opened: number; closed: number }> {
+	const open = await openSourceIds(source, scope);
+	let opened = 0;
+	for (const w of wanted) {
+		if (open.has(w.sourceId)) continue;
+		if ((await openSourcedTask({ ...w, source })).opened) opened++;
+	}
+	const want = new Set(wanted.map((w) => w.sourceId));
+	const stale = [...open.keys()].filter((id) => !want.has(id));
+	return { opened, closed: await closeSourcedTasks(source, stale, closeNote) };
+}
+
+/** `reconcileSourcedTasks` after a write that has landed: logged, never thrown. */
+export async function afterSourceChange(label: string, sync: () => Promise<unknown>) {
+	try {
+		await sync();
+	} catch (err) {
+		console.error(`[sourced-tasks] ${label} sync failed:`, err);
+	}
 }

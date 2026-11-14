@@ -44,6 +44,8 @@ const READERS: Record<string, string> = {
 
 	'inventory.repairRoleId': 'src/lib/server/task/sourced-tasks.ts',
 	'inventory.restockRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.lateOrderRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.form8282RoleId': 'src/lib/server/task/sourced-tasks.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 

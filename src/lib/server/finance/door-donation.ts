@@ -5,6 +5,7 @@ import { donation, type DonationStatus } from '#lib/server/db/schema/donation.js
 import { stripe } from '#lib/server/stripe.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
+import { openUnmatchedPaymentTask } from './unmatched-payment-task';
 import { calculateCardPresentFee } from '#lib/finance/fees.js';
 import { isOnTheDoor } from '#lib/server/ticket/door-sale.js';
 import { recordEntries, type RecordEntryInput } from './financial-entry-service';
@@ -209,6 +210,12 @@ export async function sweepDoorDonations(now = new Date()): Promise<DoorDonation
 					event: 'door-donation.unmatched',
 					paymentIntentId: intent.id,
 					amountCents: intent.amount
+				});
+				await openUnmatchedPaymentTask({
+					paymentIntentId: intent.id,
+					kind: 'gift',
+					amountCents: intent.amount,
+					eventId: row?.eventId ?? intent.metadata?.event_id
 				});
 			}
 		}

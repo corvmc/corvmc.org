@@ -59,7 +59,7 @@ async function start(amountCents = 5000) {
 }
 
 beforeEach(() => {
-	for (const table of ['financial_entry', 'donation', 'event_listing'])
+	for (const table of ['work_order', 'financial_entry', 'donation', 'event_listing'])
 		sqlite.exec(`delete from ${table}`);
 	resetFakeGateway();
 	initStripe(createFakeGateway());
@@ -161,5 +161,32 @@ describe('door donations', () => {
 		expect(sweep.unmatched).toEqual([gift.paymentIntentId]);
 		expect(captureException).toHaveBeenCalledTimes(1);
 		expect(ledger(gift.paymentIntentId)).toEqual([]);
+	});
+
+	it('an unmatched donation opens one task, which a closed task never reopens (#2757)', async () => {
+		const gift = await start();
+		sqlite.exec(
+			`update donation set status = 'cancelled' where payment_intent_id = '${gift.paymentIntentId}'`
+		);
+		completeFakeTerminalPayment(gift.paymentIntentId);
+		const tasks = () =>
+			sqlite
+				.prepare(`select source_id, resolved_at from work_order where source = 'door_payment'`)
+				.all();
+
+		await sweepDoorDonations();
+		await sweepDoorDonations();
+		expect(tasks()).toEqual([{ source_id: gift.paymentIntentId, resolved_at: null }]);
+
+		sqlite.exec(`update work_order set resolved_at = unixepoch() where source = 'door_payment'`);
+		await sweepDoorDonations();
+		expect(tasks()).toHaveLength(1);
+		// The task is all it writes: the gift and the ledger are as the sweep left them.
+		expect(ledger(gift.paymentIntentId)).toEqual([]);
+		expect(
+			sqlite
+				.prepare(`select status from donation where payment_intent_id = ?`)
+				.get(gift.paymentIntentId)
+		).toEqual({ status: 'cancelled' });
 	});
 });

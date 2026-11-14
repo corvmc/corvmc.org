@@ -17,7 +17,7 @@ import { listFor } from '#lib/server/media/media-service.js';
 import { isReceiptKey } from '#lib/server/storage-keys.js';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
-import { createAsset, AssetTagTakenError } from './asset-service';
+import { createAsset, AssetTagTakenError, afterForm8282Change } from './asset-service';
 import { inventoryAsset } from '#lib/server/db/schema/inventory.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
@@ -765,6 +765,7 @@ export async function acknowledgeForm8283(
 		.returning();
 
 	if (!row) throw new AcquisitionNotFoundError();
+	await afterForm8282Change();
 	return row;
 }
 

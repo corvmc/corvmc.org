@@ -7,6 +7,7 @@ import { donation } from '#lib/server/db/schema/donation.js';
 import { stripe } from '#lib/server/stripe.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
+import { openUnmatchedPaymentTask } from '#lib/server/finance/unmatched-payment-task.js';
 import { doorTicketSplit } from '#lib/finance/ticket-split.js';
 import { recordDoorTicketSale, recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
 import {
@@ -262,6 +263,12 @@ export async function sweepDoorSales(now = new Date()): Promise<DoorSaleSweep> {
 					paymentIntentId: intent.id,
 					eventId: intent.metadata.event_id,
 					amountCents: intent.amount
+				});
+				await openUnmatchedPaymentTask({
+					paymentIntentId: intent.id,
+					kind: 'sale',
+					amountCents: intent.amount,
+					eventId: intent.metadata.event_id
 				});
 			}
 		}

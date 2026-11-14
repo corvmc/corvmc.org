@@ -3,6 +3,7 @@ import { contractorDetail, organization } from '#lib/server/db/schema/party.js';
 import { partyRole } from '#lib/server/db/schema/contact.js';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
+import { afterSourceChange, reconcileSourcedTasks } from '#lib/server/task/sourced-tasks.js';
 import type { ContractorTrade } from '#lib/config.js';
 import {
 	addRole,
@@ -90,6 +91,7 @@ export async function createContractor(data: ContractorInput, organizationId?: s
 			target: contractorDetail.organizationId,
 			set: { ...detailOf(data), updatedAt: new Date() }
 		});
+	await afterInsuranceChange();
 	return getContractorById(id);
 }
 
@@ -106,6 +108,7 @@ export async function updateContractor(id: string, data: Partial<ContractorInput
 			.update(contractorDetail)
 			.set({ ...detail, updatedAt: new Date() })
 			.where(eq(contractorDetail.organizationId, id));
+		await afterInsuranceChange();
 	}
 	return getContractorById(id);
 }
@@ -149,3 +152,24 @@ export async function listLapsingInsurance(days = 30, now: Date = new Date()) {
 		)
 		.orderBy(asc(contractorDetail.insuranceExpiresAt));
 }
+
+/**
+ * A contractor whose certificate lapses within 30 days has one open task
+ * (#2757), linked to the organization and due on the expiry date, until a later
+ * date is saved. Run after a contractor's details change, and daily.
+ */
+export async function syncInsuranceTasks(now: Date = new Date()) {
+	const lapsing = await listLapsingInsurance(30, now);
+	return reconcileSourcedTasks(
+		'insurance',
+		lapsing.map((c) => ({
+			sourceId: c.id,
+			title: `Get a new insurance certificate from ${c.name}`,
+			dueAt: c.insuranceExpiresAt,
+			links: { organizationId: c.id }
+		})),
+		'Closed: a new expiry date is on file.'
+	);
+}
+
+const afterInsuranceChange = () => afterSourceChange('insurance', () => syncInsuranceTasks());
