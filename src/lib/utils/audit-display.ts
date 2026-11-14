@@ -122,7 +122,21 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'organization.merged': ['Records and settings', 'Organizations merged'],
 	'incident.deleted': ['Records and settings', 'Incident deleted'],
 	'incident.reopened': ['Records and settings', 'Incident reopened'],
-	'incident.retention_changed': ['Records and settings', 'Incident retention changed']
+	'incident.retention_changed': ['Records and settings', 'Incident retention changed'],
+	'event.tickets_comped': ['Events and shows', 'Tickets comped'],
+	'music_purchase.refunded': ['Programs and access', 'Music purchase refunded'],
+	'production.expense_removed': ['Events and shows', 'Show expense removed'],
+	'classified.visibility_changed': ['Records and settings', 'Classified visibility changed'],
+	'suggestion.visibility_changed': ['Projects', 'Suggestion visibility changed'],
+	'group.visibility_changed': ['Programs and access', 'Program visibility changed'],
+	'grant.deleted': ['Records and settings', 'Grant deleted'],
+	'sponsorship.deleted': ['Records and settings', 'Sponsorship deleted'],
+	'suggestion.merged': ['Projects', 'Suggestions merged'],
+	'role.deleted': ['Tasks', 'Volunteer role deleted'],
+	'clearance.deleted': ['Members', 'Clearance deleted'],
+	'venue.deleted': ['Events and shows', 'Venue deleted'],
+	'closure.deleted': ['Reservations', 'Closure deleted'],
+	'audience.subscriber_removed': ['Members', 'Removed from audience']
 };
 
 /** What the log's action filter calls an action. */
