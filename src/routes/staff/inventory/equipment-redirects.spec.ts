@@ -31,12 +31,12 @@ describe('moved addresses', () => {
 		[
 			reportsAcquisitions,
 			'http://x/staff/reports/acquisitions?owed=1',
-			'/staff/inventory/acquisitions?owed=1'
+			'/staff/inventory/acquisitions?owed=1&via=reports'
 		],
 		[
 			compliance,
 			'http://x/staff/inventory/compliance',
-			'/staff/inventory/acquisitions?show=form-8282'
+			'/staff/inventory/acquisitions?show=form-8282&via=compliance'
 		]
 	])('308s to the Equipment list', async (load, url, location) => {
 		await expect(run(load, url)).rejects.toMatchObject({ status: 308, location });
