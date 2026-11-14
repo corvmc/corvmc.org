@@ -23,6 +23,7 @@ import { flagStatuses } from '#lib/server/db/schema/flag.js';
 import { groupMemberStatuses } from '#lib/server/db/schema/group.js';
 import { bandTiers } from '#lib/server/db/schema/band-site.js';
 import { inviteStatuses } from '#lib/server/db/schema/group-invite.js';
+import { campaignSendStatuses } from '#lib/types/marketing.js';
 
 /**
  * An unmapped status falls back to a neutral dot that says nothing. Before this
@@ -68,6 +69,7 @@ const vocabularies: Record<string, readonly string[]> = {
 	bandTier: bandTiers,
 	groupInvite: inviteStatuses,
 	ticket: ticketStatuses,
+	campaignSend: campaignSendStatuses,
 	// `assetStatuses`, not the pre-#286 `equipmentStatuses`. Guarding the dead
 	// vocabulary is why `in_service`, `on_loan` and `lost` went unmapped: three of
 	// the five statuses a unit can hold rendered the neutral fallback dot, which

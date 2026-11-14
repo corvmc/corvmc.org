@@ -30,7 +30,9 @@ cannot see it. You can still send; the send is recorded in the event's history.
 ## Editing and viewing
 
 - Drafts open in the editor so you can keep working on them.
-- Sent campaigns open read-only with their delivery details.
+- Sent campaigns open read-only. **Recipients** counts each send by status: sent, delivered, failed,
+  bounced or complained. Staff who manage audiences also see each address, its audience, and why a
+  send failed.
 
 ## Tips
 

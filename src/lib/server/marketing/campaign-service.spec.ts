@@ -22,7 +22,9 @@ vi.mock('#lib/server/sponsor/credit-service.js', () => ({
 }));
 vi.mock('./unsubscribe', () => ({ signUnsubscribeToken: vi.fn(() => 'unsub-token') }));
 vi.mock('#lib/server/notification/email/index.js', () => ({
-	sendBroadcastBatch: vi.fn().mockResolvedValue(undefined)
+	sendBroadcastBatch: vi.fn(async (messages: { to: string }[]) =>
+		messages.map((m) => ({ ok: true, messageId: `pm-${m.to}` }))
+	)
 }));
 vi.mock('#lib/server/outbox/outbox-service.js', () => ({
 	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null }))
@@ -127,6 +129,12 @@ const links = (campaignId: string) =>
 			)
 			.all(campaignId) as { audience_id: string }[]
 	).map((r) => r.audience_id);
+const sends = (campaignId: string) =>
+	sqlite
+		.prepare(
+			'select email, audience_id, status, provider_message_id, error from campaign_send where campaign_id = ? order by email'
+		)
+		.all(campaignId);
 const sentTo = () => vi.mocked(sendBroadcastBatch).mock.calls.flatMap(([m]) => m.map((x) => x.to));
 
 beforeEach(() => {
@@ -134,6 +142,7 @@ beforeEach(() => {
 	vi.useFakeTimers({ toFake: ['Date'] });
 	vi.setSystemTime(NOW);
 	for (const t of [
+		'campaign_send',
 		'campaign_audience',
 		'campaign',
 		'audience_member',
@@ -495,6 +504,40 @@ describe('executeSend', () => {
 
 		expect(campRow('camp-1')).toMatchObject({ sent_at: NOW_S, recipient_count: 1 });
 		expect(await processDueCampaigns()).toBe(0);
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({
+				email: 'member@example.com',
+				status: 'failed',
+				error: 'Postmark 500'
+			})
+		]);
+	});
+
+	// #2777: a sent campaign showed only a count.
+	it('records each recipient with its audience and what Postmark answered', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'a@example.com');
+		sub('sub-2', 'b@example.com');
+		member('aud-1', 'sub-1');
+		member('aud-1', 'sub-2');
+		vi.mocked(sendBroadcastBatch).mockResolvedValueOnce([
+			{ ok: true, messageId: 'pm-a' },
+			{ ok: false, error: '406: Inactive recipient' }
+		]);
+
+		await executeSend('camp-1');
+
+		const byEmail = Object.fromEntries(
+			(sends('camp-1') as { email: string }[]).map((r) => [r.email, r])
+		);
+		const order = vi.mocked(sendBroadcastBatch).mock.calls[0][0].map((m) => m.to);
+		expect(byEmail[order[0]]).toMatchObject({
+			audience_id: 'aud-1',
+			status: 'sent',
+			provider_message_id: 'pm-a'
+		});
+		expect(byEmail[order[1]]).toMatchObject({ status: 'failed', error: '406: Inactive recipient' });
 	});
 
 	it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {

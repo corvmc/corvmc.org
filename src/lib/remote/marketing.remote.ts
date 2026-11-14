@@ -46,6 +46,7 @@ import {
 	clearSelfServiceSuppression
 } from '#lib/server/marketing/subscriber-service.js';
 import { verifyUnsubscribeToken } from '#lib/server/marketing/unsubscribe.js';
+import { listCampaignSends } from '#lib/server/marketing/campaign-send-service.js';
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import { audience } from '#lib/server/db/schema/marketing.js';
 import { audienceCount } from '#lib/utils/audience-reach.js';
@@ -288,7 +289,13 @@ export const getCampaignDetail = query(z.string(), async (id) => {
 	// with no `{:else}`, so a mistyped or deleted id rendered an entirely blank
 	// document — no header, no title, no back link (#1069).
 	if (!campaign) throw error(404, 'Campaign not found');
-	return campaign;
+	if (!campaign.sentAt) return { ...campaign, sends: null };
+	// Counts follow marketing.read; the addresses follow the audience pages' guard.
+	const [sends, seesPeople] = await Promise.all([
+		listCampaignSends(id),
+		can('marketing.manageAudiences')
+	]);
+	return { ...campaign, sends: { counts: sends.counts, rows: seesPeople ? sends.rows : null } };
 });
 
 /** Render markdown to campaign HTML preview. */

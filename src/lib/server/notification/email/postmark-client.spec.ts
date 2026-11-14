@@ -108,6 +108,38 @@ describe('message stream configuration', () => {
 		expect(batch[0]).toMatchObject({ MessageStream: 'test-broadcast' });
 	});
 
+	it('answers a broadcast per message, so one refused recipient fails alone', async () => {
+		sendEmailBatchMock.mockResolvedValueOnce([
+			{ ErrorCode: 0, Message: 'OK', MessageID: 'pm-1' },
+			{ ErrorCode: 406, Message: 'Inactive recipient', MessageID: '' }
+		]);
+
+		const results = await sendBroadcastBatch([
+			{ to: 'a@example.com', subject: 'Hi', htmlBody: '<p>Hi</p>' },
+			{ to: 'b@example.com', subject: 'Hi', htmlBody: '<p>Hi</p>' }
+		]);
+
+		expect(results).toEqual([
+			{ ok: true, messageId: 'pm-1' },
+			{ ok: false, error: '406: Inactive recipient' }
+		]);
+	});
+
+	it('fails a thrown chunk and every chunk after it, unsent', async () => {
+		sendEmailBatchMock.mockRejectedValueOnce(new Error('Postmark 500'));
+		const messages = Array.from({ length: 501 }, (_, i) => ({
+			to: `r${i}@example.com`,
+			subject: 'Hi',
+			htmlBody: '<p>Hi</p>'
+		}));
+
+		const results = await sendBroadcastBatch(messages);
+
+		expect(sendEmailBatchMock).toHaveBeenCalledOnce();
+		expect(results).toHaveLength(501);
+		expect(results.every((r) => !r.ok)).toBe(true);
+	});
+
 	it('throws without sending when the transactional stream is unset', async () => {
 		delete mockEnv.POSTMARK_TRANSACTIONAL_STREAM;
 

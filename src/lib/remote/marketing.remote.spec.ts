@@ -60,8 +60,17 @@ const verifyTurnstile = vi.fn(async () => true);
 vi.mock('#lib/server/turnstile.js', () => ({
 	verifyTurnstile: (...a: unknown[]) => verifyTurnstile(...(a as []))
 }));
+let held = new Set<string>();
 vi.mock('#lib/server/authorization.js', () => ({
-	requireCapability: vi.fn(async () => undefined)
+	requireCapability: vi.fn(async () => undefined),
+	can: vi.fn(async (cap: string) => held.has(cap))
+}));
+const listCampaignSends = vi.fn(async () => ({
+	rows: [{ id: 's1', email: 'a@example.com', status: 'delivered', error: null, audience: 'News' }],
+	counts: { delivered: 1 }
+}));
+vi.mock('#lib/server/marketing/campaign-send-service.js', () => ({
+	listCampaignSends: (...a: unknown[]) => listCampaignSends(...(a as []))
 }));
 vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 vi.mock('#lib/server/utils/slug.js', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
@@ -207,5 +216,36 @@ describe('getCampaignAudienceOptions (#2772)', () => {
 			['ev', 4],
 			['nl', 30]
 		]);
+	});
+});
+
+// #2777: a sent campaign lists who it went to. The addresses are subscriber
+// data, so they follow the audience pages' capability; the counts do not.
+describe('getCampaignDetail', () => {
+	const campaignService = async () =>
+		vi.mocked(await import('#lib/server/marketing/campaign-service.js'));
+
+	it('counts a sent campaign for marketing.read, and lists addresses only for audience managers', async () => {
+		(await campaignService()).getCampaign.mockResolvedValue({
+			id: 'c1',
+			sentAt: new Date()
+		} as never);
+
+		held = new Set(['marketing.read']);
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({
+			sends: { counts: { delivered: 1 }, rows: null }
+		});
+
+		held = new Set(['marketing.read', 'marketing.manageAudiences']);
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({
+			sends: { rows: [expect.objectContaining({ email: 'a@example.com' })] }
+		});
+	});
+
+	it('has no sends before the campaign goes out', async () => {
+		(await campaignService()).getCampaign.mockResolvedValue({ id: 'c1', sentAt: null } as never);
+
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({ sends: null });
+		expect(listCampaignSends).not.toHaveBeenCalled();
 	});
 });

@@ -140,6 +140,7 @@ export const tableOrder = [
 	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',
+	'campaign_send',
 	'session',
 	'audience_member',
 	'acquisition_line',

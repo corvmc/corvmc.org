@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, unique, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
+import { campaignSendStatuses } from '../../../types/marketing';
 
 // ---------------------------------------------------------------------------
 // Subscribers
@@ -145,6 +146,43 @@ export const campaignAudience = sqliteTable(
 			.references(() => audience.id, { onDelete: 'cascade' })
 	},
 	(t) => [primaryKey({ columns: [t.campaignId, t.audienceId] })]
+);
+
+// ---------------------------------------------------------------------------
+// One recipient's copy of a sent campaign (#2777)
+// ---------------------------------------------------------------------------
+
+export const campaignSend = sqliteTable(
+	'campaign_send',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		campaignId: text('campaign_id')
+			.notNull()
+			.references(() => campaign.id, { onDelete: 'cascade' }),
+		subscriberId: text('subscriber_id').references(() => subscriber.id, {
+			onDelete: 'set null'
+		}),
+		/** The audience that put them on the send, which scopes their unsubscribe link. */
+		audienceId: text('audience_id').references(() => audience.id, { onDelete: 'set null' }),
+		/** The address it went to, kept when the subscriber row changes or goes. */
+		email: text('email').notNull(),
+		status: text('status', { enum: campaignSendStatuses }).notNull(),
+		providerMessageId: text('provider_message_id'),
+		error: text('error'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_campaign_send_campaign').on(t.campaignId, t.status),
+		index('idx_campaign_send_message').on(t.providerMessageId),
+		index('idx_campaign_send_subscriber').on(t.subscriberId)
+	]
 );
 
 // ---------------------------------------------------------------------------

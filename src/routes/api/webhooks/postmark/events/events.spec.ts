@@ -11,6 +11,11 @@ vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	__esModule: true
 }));
 
+const mockRecordSendEvent = vi.fn(async () => true);
+vi.mock('#lib/server/marketing/campaign-send-service.js', () => ({
+	recordSendEvent: (...args: unknown[]) => mockRecordSendEvent(...(args as []))
+}));
+
 vi.mock('$app/env/private', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ POSTMARK_WEBHOOK_TOKEN: 'hook-secret' })
 );
@@ -51,6 +56,22 @@ const { POST } = await import('./+server');
 // ---------------------------------------------------------------------------
 
 describe('POST /api/webhooks/postmark/events', () => {
+	it.each([
+		['Delivery', 'delivered'],
+		['Bounce', 'bounced'],
+		['SpamComplaint', 'complained']
+	])('moves the campaign send a %s is about', async (recordType, status) => {
+		await POST(req({ RecordType: recordType, MessageID: 'pm-1', Recipient: 'a@b.com' }));
+
+		expect(mockRecordSendEvent).toHaveBeenCalledWith('pm-1', status);
+	});
+
+	it('suppresses nobody on a delivery', async () => {
+		await POST(req({ RecordType: 'Delivery', MessageID: 'pm-1', Email: 'a@b.com' }));
+
+		expect(mockSuppressByEmail).not.toHaveBeenCalled();
+	});
+
 	it('rejects requests with a missing/wrong token', async () => {
 		await expect(
 			POST(req({ RecordType: 'SpamComplaint', Email: 'a@b.com' }, 'nope'))
