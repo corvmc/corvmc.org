@@ -2,8 +2,13 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-/** The Gear row's tabs (#2573). Each keeps the capability its page's remotes check. */
-export const gearViews: readonly StaffView<'items' | 'loans' | 'problems' | 'compliance'>[] = [
+/**
+ * The Gear row's lists, one per object (#2573, #2767). Kits are a filter on
+ * Loans and Form 8282 one on Acquisitions. Each keeps its remotes' capability.
+ */
+export const gearViews: readonly StaffView<
+	'items' | 'loans' | 'problems' | 'orders' | 'acquisitions'
+>[] = [
 	{
 		key: 'items',
 		label: () => m.staff_items_label(),
@@ -23,9 +28,15 @@ export const gearViews: readonly StaffView<'items' | 'loans' | 'problems' | 'com
 		cap: 'inventory.manageAssets'
 	},
 	{
-		key: 'compliance',
-		label: () => m.staff_gear_compliance_label(),
-		href: resolve('staff/inventory/compliance'),
+		key: 'orders',
+		label: () => m.staff_gear_orders_label(),
+		href: resolve('staff/inventory/orders'),
+		cap: 'inventory.read'
+	},
+	{
+		key: 'acquisitions',
+		label: () => m.staff_acquisitions_label(),
+		href: resolve('staff/inventory/acquisitions'),
 		cap: 'inventory.manageAcquisitions'
 	}
 ];

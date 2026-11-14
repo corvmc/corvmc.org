@@ -72,6 +72,7 @@ import {
 	closeOrderShort,
 	createOrder,
 	getOrderById,
+	listOrdersPage,
 	listSupplierNames,
 	onOrderQuantities,
 	placeOrder,
@@ -107,6 +108,7 @@ import {
 	assetStatuses,
 	equipmentConditions,
 	itemKinds,
+	orderStatuses,
 	inventoryListViews,
 	inventoryListViewMeta,
 	inventorySections,
@@ -956,6 +958,15 @@ export const recordIntake = form(
 // Purchase orders
 // ---------------------------------------------------------------------------
 
+/** The Orders list (#2767): every purchase order, open ones first. */
+export const getStaffOrders = query(
+	z.object({ status: z.enum(orderStatuses).optional(), page: z.number().int().min(1).optional() }),
+	async (filters) => {
+		await requireCapability('inventory.read');
+		return listOrdersPage({ status: filters.status }, { page: filters.page ?? 1, pageSize: 50 });
+	}
+);
+
 export const getOrder = query(z.string(), async (id) => {
 	await requireCapability('inventory.read');
 	const order = await getOrderById(id);
@@ -1751,7 +1762,7 @@ export const editAcquisition = form(
  * Recording that CMC signed the donor's Form 8283.
  *
  * **This is the switch that arms Form 8282.** Until it is set, a donated unit
- * can be disposed of and `/staff/inventory/compliance` stays silent, because a
+ * can be disposed of and the Form 8282 filter on Acquisitions stays silent, because a
  * gift with no signed 8283 is not "charitable deduction property" and owes
  * nothing. The rule shipped in #302/#309 with no way to reach it.
  */

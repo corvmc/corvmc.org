@@ -82,12 +82,12 @@ describe('activeNavKey', () => {
 		['/staff/inventory/intake', 'gear'],
 		// Gear and Supplies split the list (#2573); Supplies is the longer match.
 		['/staff/inventory/supplies', 'supplies'],
-		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
+		// Orders and Acquisitions are Gear's lists (#2767), with their records.
+		['/staff/inventory/orders', 'gear'],
 		['/staff/inventory/orders/abc', 'gear'],
 		['/staff/inventory/spend', 'reports'],
-		['/staff/inventory/acquisitions/abc', 'reports'],
-		// Loans, reported problems and compliance are Gear's tabs; their URLs did not move.
-		['/staff/inventory/compliance', 'gear'],
+		['/staff/inventory/acquisitions', 'gear'],
+		['/staff/inventory/acquisitions/abc', 'gear'],
 		['/staff/inventory/loans', 'gear'],
 		['/staff/inventory/loans/abc', 'gear'],
 		['/staff/reservations/abc', 'reservations'],
@@ -106,7 +106,6 @@ describe('activeNavKey', () => {
 		['/staff/reports/annual', 'reports'],
 		['/staff/reports/volunteering', 'reports'],
 		['/staff/reports/inventory-spend', 'reports'],
-		['/staff/reports/acquisitions', 'reports'],
 		['/staff/volunteering/hours', 'volunteer-schedule'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
@@ -278,10 +277,11 @@ describe('route coverage', () => {
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
 		'/staff/inventory/intake', // a session started from Gear or Supplies, not a list (#1838)
-		// Gear's tabs (#2573).
+		// Gear's lists (#2573, #2767).
 		'/staff/inventory/loans',
 		'/staff/inventory/problems',
-		'/staff/inventory/compliance',
+		'/staff/inventory/orders',
+		'/staff/inventory/acquisitions',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/recurring', // a Practice space view (#2766)
 		'/staff/building-access', // a Practice space view (#2766)
@@ -301,7 +301,6 @@ describe('route coverage', () => {
 		'/staff/reports/annual',
 		'/staff/reports/volunteering',
 		'/staff/reports/inventory-spend',
-		'/staff/reports/acquisitions',
 		'/staff/reports/music',
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most

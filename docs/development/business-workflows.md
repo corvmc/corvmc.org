@@ -737,9 +737,12 @@ carry both.
 Staff see the catalog as two lists, two sidebar rows under Space (#2573):
 
 - **Gear**, `/staff/inventory`: `kind = 'serialized' OR is_loanable`. The room's
-  PA is serialized and never lent, and it is Gear. Its tabs are Items, Loans
-  (`/staff/inventory/loans`), Reported problems (`/staff/inventory/problems`) and
-  Compliance (`/staff/inventory/compliance`), each behind its own capability.
+  PA is serialized and never lent, and it is Gear. Its lists are Items, Loans
+  (`/staff/inventory/loans`, with kit loans as `?kind=kits`), Reported problems
+  (`/staff/inventory/problems`), Orders (`/staff/inventory/orders`) and
+  Acquisitions (`/staff/inventory/acquisitions`, with the Form 8282 queue as
+  `?show=form-8282`), each behind its own capability (#2767). Locations and
+  categories are its settings, opened from the item list's toolbar.
 - **Supplies**, `/staff/inventory/supplies`: `kind = 'bulk' AND NOT is_loanable`,
   the consumable definition, with stock levels, restocking and orders.
 
@@ -817,8 +820,8 @@ purchase order with a line per ticked item. Its supplier is an organization hold
 `supplier` role: the field suggests the suppliers in Contacts, and a name not on file, compared
 trimmed and case-insensitively, becomes a new one. The lists' other cross-item views
 (`?show=on-order` and `late` on both; `on-loan`, `overdue` and `problems` on Gear)
-replaced the Orders list, and `/staff/inventory/orders` and `/staff/inventory/restock`
-redirect to Supplies; an order's own page stays, reached from the items on it.
+stay as filters; `/staff/inventory/restock` redirects to Supplies. Every purchase order,
+open ones first, is listed on Gear's Orders list (#2767), and each has its own page.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
 current calendar year), per category via `spendByCategory()` and per supplier via
@@ -953,8 +956,8 @@ collective to file IRS Form 8282 within 125 days, with a copy to the donor.
 disposed, unresolved) and applies the window in JS so the rule lives in one
 place.
 
-It surfaces on the unit's page when it is retired and on
-`/staff/inventory/compliance` thereafter. Resolving it writes
+It surfaces on the unit's page when it is retired and on the Acquisitions list's
+Form 8282 filter (`/staff/inventory/acquisitions?show=form-8282`) thereafter. Resolving it writes
 `form8282ResolvedAt` plus a free-text `form8282Note`, which covers both "filed"
 and "no filing was due, because…".
 
