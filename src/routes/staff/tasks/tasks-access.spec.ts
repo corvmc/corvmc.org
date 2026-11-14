@@ -7,7 +7,6 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const tasks = await import('./+page.server');
-const productions = await import('../productions/+page');
 const { visibleViews } = await import('../views');
 const { taskViews } = await import('./views');
 
@@ -31,11 +30,11 @@ describe('/staff/tasks', () => {
 		await expect(run(tasks.load)).resolves.toBeUndefined();
 	});
 
-	it('sends an event.manage-only staffer to Productions', async () => {
+	it('sends an event.manage-only staffer to Productions on Events', async () => {
 		held = ['event.manage'];
 		await expect(run(tasks.load)).rejects.toMatchObject({
 			status: 307,
-			location: '/staff/tasks/productions'
+			location: '/staff/events?view=productions'
 		});
 	});
 });
@@ -44,22 +43,11 @@ describe('tabs', () => {
 	it.each([
 		[
 			['project.read', 'event.manage', 'volunteer.read'],
-			['tasks', 'projects', 'productions']
+			['tasks', 'projects']
 		],
 		[['project.read'], ['tasks', 'projects']],
-		[['event.manage'], ['productions']]
+		[['event.manage'], []]
 	])('holding %j shows %j', (caps, keys) => {
 		expect(visibleViews(taskViews, caps).map((v) => v.key)).toEqual(keys);
-	});
-});
-
-describe('/staff/productions', () => {
-	it('lands on the Productions view with its filters', async () => {
-		await expect(
-			run(productions.load, {}, 'http://x/staff/productions?status=draft&needs=1')
-		).rejects.toMatchObject({
-			status: 308,
-			location: '/staff/tasks/productions?status=draft&needs=1'
-		});
 	});
 });

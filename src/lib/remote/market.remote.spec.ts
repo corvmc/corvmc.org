@@ -101,6 +101,7 @@ const svc = vi.hoisted(() => ({
 	getMarketDay: vi.fn(async () => null),
 	getMarketEvent: vi.fn(async () => ({ id: 'evt-1' })),
 	listApplications: vi.fn(async () => []),
+	listAllApplications: vi.fn(async () => ({ rows: [], pagination: {} })),
 	listPublicVendors: vi.fn(async () => []),
 	openMarketDay: vi.fn(async () => undefined),
 	setTableLabel: vi.fn(async () => ({ eventId: 'evt-1' })),
@@ -179,6 +180,7 @@ describe('the public application form', () => {
 describe('staff exports', () => {
 	const calls: [string, () => Promise<unknown>][] = [
 		['getStaffMarketVendors', () => remote.getStaffMarketVendors('evt-1')],
+		['getStaffVendorApplications', () => remote.getStaffVendorApplications({})],
 		['openMarketDayForm', () => submit(remote.openMarketDayForm, { eventId: 'evt-1' })]
 	];
 

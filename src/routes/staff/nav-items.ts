@@ -42,7 +42,6 @@ export type StaffNavKey =
 	| 'gear'
 	| 'supplies'
 	| 'projects'
-	| 'venues'
 	| 'calendar'
 	| 'moderation'
 	| 'suggestions'
@@ -120,13 +119,14 @@ export const staffNavTop: StaffNavItem[] = [
 		href: resolve('staff/inbox'),
 		badgeKey: 'inboxUnread'
 	},
-	// Every source, everything the public can see plus what is asking to join
-	// it. The CMC work surface over the same table is Productions on Projects.
+	// Every listing, with Productions, Venues and vendor applications as views
+	// (#2766). A venue's own page stays under `/staff/venues` and lights this row.
 	{
 		key: 'calendar',
 		capability: 'event.read',
 		label: 'Events',
-		href: resolve('staff/events')
+		href: resolve('staff/events'),
+		also: [resolve('staff/venues')]
 	}
 ];
 
@@ -172,13 +172,12 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Ballots',
 				href: resolve('staff/ballots')
 			},
-			// Every task, with Projects and Productions as views (#2625) and
-			// recurring work and templates as its settings (#2767). The key stays
-			// `projects`, which starred rows store.
+			// Every task, with Projects as a view (#2625) and recurring work and
+			// templates as its settings (#2767). The key stays `projects`, which
+			// starred rows store.
 			{
 				key: 'projects',
 				capability: 'project.read',
-				alsoFor: ['event.manage'],
 				label: 'Tasks',
 				href: resolve('staff/tasks')
 			},
@@ -250,13 +249,6 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Funding',
 				href: resolve('staff/funding'),
 				also: [resolve('staff/grants')]
-			},
-			// Guarded as an event because that is what a venue is a fact about.
-			{
-				key: 'venues',
-				capability: 'event.read',
-				label: 'Venues',
-				href: resolve('staff/venues')
 			},
 			// Help articles and Local resources are its views, each with its own gate (#2765).
 			{

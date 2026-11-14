@@ -1307,6 +1307,16 @@ describe('EventService', () => {
 			expect(whereParams()).toContain('ven-1');
 		});
 
+		// The Events list's Productions view filters by the production's status (#2766).
+		it('filters by production status in the shared predicate', async () => {
+			await listAll({ source: 'cmc', productionStatus: 'offered' });
+
+			const wheres = selectChainCalls.filter((c) => c.method === 'where');
+			const sql = new SQLiteSyncDialect().sqlToQuery(wheres[1].args[0] as any);
+			expect(sql.sql).toContain('"p"."status"');
+			expect(sql.params).toContain('offered');
+		});
+
 		// A member's private working copy is not a staff browsing surface, and the
 		// new filters must not have displaced the exclusion that says so.
 		it('still holds back community drafts', async () => {

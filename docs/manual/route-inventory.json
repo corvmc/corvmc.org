@@ -708,10 +708,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/tasks/productions",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/tasks/projects",
 		"panel": "staff"
 	},
@@ -733,10 +729,6 @@
 	},
 	{
 		"route": "/staff/tasks/templates/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/venues",
 		"panel": "staff"
 	},
 	{

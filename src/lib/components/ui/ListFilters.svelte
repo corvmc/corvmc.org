@@ -6,7 +6,7 @@
 </script>
 
 <script lang="ts" generics="TType extends string, TStatus extends string">
-	import { untrack } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import FilterBar from './FilterBar.svelte';
 	import Select from './Form/Select.svelte';
@@ -34,7 +34,8 @@
 		status = $bindable(),
 		statusDot,
 		onstatus,
-		page = $bindable()
+		page = $bindable(),
+		children
 	}: {
 		types: ListFilterOption<TType>[];
 		/** The type select's empty option. */
@@ -56,6 +57,8 @@
 		/** After the status changes, before the page resets: for a status that widens the dates. */
 		onstatus?: (next: TStatus | '') => void;
 		page: number;
+		/** Filters of the page's own, ahead of the date range. */
+		children?: Snippet;
 	} = $props();
 
 	// The box's own text, seeded once; `query` only moves when the debounce lands.
@@ -107,6 +110,7 @@
 			/>
 		</div>
 	{/snippet}
+	{@render children?.()}
 	<DateFilter bind:range bind:from bind:to onchange={() => (page = 1)} />
 	<div class="indicator">
 		{#if statusDot}

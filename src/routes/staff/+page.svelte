@@ -118,7 +118,7 @@
 	}
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
-			? resolve('staff/tasks/productions')
+			? withQuery(resolve('staff/events'), 'view=productions')
 			: resolve('staff/events')
 	);
 </script>

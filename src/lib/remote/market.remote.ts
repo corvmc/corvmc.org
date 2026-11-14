@@ -15,6 +15,7 @@ import {
 	LONG_TEXT_MAX,
 	MARKET_MAX_TABLES_REQUESTED,
 	marketVendorDecisions,
+	marketVendorStatuses,
 	SHORT_TEXT_MAX
 } from '#lib/config.js';
 import {
@@ -26,6 +27,7 @@ import {
 	getMarketProjectId,
 	getVendorEventId,
 	checkInVendor,
+	listAllApplications,
 	listApplications,
 	listCommitteeMarkets,
 	listMarketDayVendors,
@@ -169,6 +171,18 @@ export const getStaffMarketVendors = query(eventId, async (id) => {
 	const [market, applications] = await Promise.all([getMarketDay(id), listApplications(id)]);
 	return { event, market, applications };
 });
+
+/** Every market's applications, for the Events list's vendor view (#2766). */
+export const getStaffVendorApplications = query(
+	z.object({
+		status: z.enum(marketVendorStatuses).optional(),
+		page: z.number().int().positive().optional()
+	}),
+	async ({ status, page }) => {
+		await requireCapability('event.manage');
+		return listAllApplications({ status }, { page: page ?? 1 });
+	}
+);
 
 /** "YYYY-MM-DDTHH:mm" from a datetime-local input, read in venue time. */
 function parseLocalDateTime(value: string | undefined): Date | null {

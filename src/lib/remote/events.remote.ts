@@ -3,6 +3,7 @@ import { captureException } from '#lib/server/sentry.js';
 import { recordFreeTicketSale, ticketSplitMetadata } from '#lib/server/finance/ticket-entries.js';
 import { sellerFor } from '#lib/server/ticket/ticket-seller.js';
 import { z } from 'zod';
+import { productionStatuses } from '#lib/server/db/schema/production.js';
 import { historyArgs } from './_history';
 import { listEventHistory } from '#lib/server/event/event-history.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
@@ -602,6 +603,7 @@ const staffEventsFilters = z.object({
 	dateTo: z.string().optional(),
 	/** Only bills short of the act count their production asks for (#859). */
 	needsActs: z.boolean().optional(),
+	productionStatus: z.enum(productionStatuses).optional(),
 	page: z.number().optional()
 });
 
@@ -626,6 +628,7 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 			status: filters.status,
 			venueId: filters.venueId,
 			needsActs: filters.needsActs,
+			productionStatus: filters.productionStatus,
 			from: filters.dateFrom
 				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
 				: undefined,

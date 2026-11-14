@@ -50,7 +50,7 @@ describe('the Projects row (#2411)', () => {
 
 		await vi.waitFor(() =>
 			expect(
-				container.querySelector('[data-page-header] a[href="/staff/tasks/productions"]')
+				container.querySelector('[data-page-header] a[href="/staff/tasks/templates"]')
 			).not.toBeNull()
 		);
 		expect(container.querySelector('[data-page-header] [data-testid="new-project"]')).toBeNull();
