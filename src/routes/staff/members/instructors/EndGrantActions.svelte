@@ -4,6 +4,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { pauseInstructor, retireInstructor } from '#lib/remote/instructors.remote.js';
 	import { refreshAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	/**
 	 * Pause and retire both block booking and differ only in intent — which is the
@@ -14,11 +15,37 @@
 	 * about the future, and a booked lesson has a student on the other end who has
 	 * already been told a time. Cancelling those is a separate, deliberate act.
 	 */
-	let { id, name, pause = true }: { id: string; name: string; pause?: boolean } = $props();
+	let {
+		id,
+		name,
+		pause = true,
+		bookings,
+		email
+	}: {
+		id: string;
+		name: string;
+		pause?: boolean;
+		bookings: number;
+		email: string | null;
+	} = $props();
 
 	const pauseFields = pauseInstructor.fields;
 	const retireFields = retireInstructor.fields;
 </script>
+
+{#snippet heldBookings()}
+	{#if bookings > 0}
+		<p class="text-sm" data-testid="held-bookings">
+			{#if email}
+				<a class="link" href={`${resolve('staff/reservations')}?q=${encodeURIComponent(email)}`}
+					>{m.staff_members_instructors_end_grant_actions_bookings_text({ count: bookings })}</a
+				>
+			{:else}
+				{m.staff_members_instructors_end_grant_actions_bookings_text({ count: bookings })}
+			{/if}
+		</p>
+	{/if}
+{/snippet}
 
 <div class="flex w-max gap-2">
 	{#if pause}
@@ -44,6 +71,7 @@
 					<p class="text-subtle">
 						{m.staff_members_instructors_end_grant_actions_they_stop_being_text()}
 					</p>
+					{@render heldBookings()}
 				</div>
 			{/snippet}
 		</Action>
@@ -71,6 +99,7 @@
 				<p class="text-subtle">
 					{m.staff_members_instructors_end_grant_actions_someone_who_has_text()}
 				</p>
+				{@render heldBookings()}
 			</div>
 		{/snippet}
 	</Action>

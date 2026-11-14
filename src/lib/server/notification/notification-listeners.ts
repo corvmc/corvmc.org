@@ -1663,7 +1663,19 @@ export function registerAllNotificationListeners(): void {
 			userEmail: event.userEmail,
 			title: `Can you take ${shiftLabel(event)}?`,
 			body: `${formatShiftWhen(event.startsAt, event.endsAt)} — say yes or no from your dashboard`,
-			href: '/member/volunteer'
+			href: '/member/volunteer',
+			email: {
+				recipientName: event.userName,
+				subject: `Can you take ${shiftLabel(event)}?`,
+				heading: 'Shift invitation',
+				paragraphs: [
+					{
+						text: `A coordinator asked whether you can take ${shiftLabel(event)} on ${formatShiftWhen(event.startsAt, event.endsAt)}.`
+					},
+					{ text: 'Say yes or no from your volunteering page.' }
+				],
+				cta: { label: 'Answer invitation' }
+			}
 		});
 	});
 
@@ -1980,7 +1992,17 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.applicantName} applied to teach`,
 					body: event.headline ?? 'A teaching application is waiting for review',
-					href: '/staff/members/instructors?status=requested'
+					href: '/staff/members/instructors?status=requested',
+					email: {
+						recipientName: member.name,
+						subject: `${event.applicantName} applied to teach`,
+						heading: 'Teaching application',
+						paragraphs: [
+							{ text: `${event.applicantName} has applied to teach at the Collective.` },
+							{ text: 'Open it to read their listing and approve it or send it back.' }
+						],
+						cta: { label: 'Review application' }
+					}
 				});
 			} catch (err) {
 				captureException(err, {
@@ -2047,7 +2069,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: approved
 					? [
 							{
-								text: 'Your teaching application is approved. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted. Your profile page shows whether the teacher directory lists you.'
+								text: 'Staff have approved you to teach. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted. Your profile page shows whether the teacher directory lists you.'
 							}
 						]
 					: [
@@ -2061,6 +2083,36 @@ export function registerAllNotificationListeners(): void {
 				// what was asked for cannot answer it.
 				...(event.reviewNotes ? { quote: event.reviewNotes } : {}),
 				cta: { label: approved ? 'See your listing' : 'Edit and send it back' }
+			}
+		});
+	});
+
+	// --- Teaching paused or retired (notify the teacher) ---
+	// The staff note stays staff-only; the teacher is told the status, not the reason.
+	domainEvents.on('instructor.status_ended', async ({ data: event }) => {
+		const paused = event.status === 'paused';
+		const title = paused ? 'Your teaching is paused' : 'Your teaching has ended';
+		await dispatch({
+			type: 'instructor_status_ended',
+			userId: event.userId,
+			userEmail: event.email,
+			title,
+			href: '/member/profile',
+			email: {
+				recipientName: event.name,
+				subject: title,
+				heading: title,
+				paragraphs: [
+					{
+						text: paused
+							? 'Staff have paused your teaching at the Collective. You can no longer book the practice room on teaching terms.'
+							: 'Staff have ended your teaching at the Collective. You can no longer book the practice room on teaching terms.'
+					},
+					{
+						text: 'Teaching bookings you already hold still stand. Get in touch with staff if you have questions.'
+					}
+				],
+				cta: { label: 'View profile' }
 			}
 		});
 	});

@@ -222,8 +222,12 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
   directly, pause, resume, retire or reinstate from the Teachers view or the member's record
   panel (`instructor-service.ts`). `STAFF_TRANSITIONS` in `instructor-transitions.ts` scopes
   each write, and `staff-actions.ts` gives each status its controls. Pause and retire need a
-  `statusNote` and leave future teaching bookings in place; resume and reinstate are `grant()`.
-  The approve modal and the record panel show the listing as it would publish.
+  `statusNote` and leave future teaching bookings in place; their modals show how many, linked
+  to the reservations list. Resume and reinstate are `grant()`. The approve modal and the record
+  panel show the listing as it would publish.
+- **Notices:** an application emails every holder of `instructor.review`. Every staff transition
+  tells the member: approve, send back and grant through `instructor.application_reviewed`, pause
+  and retire through `instructor.status_ended`. The staff note is never sent to the teacher.
 - **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
   `requireInstructor()`, which matches `status = 'active'` only, and books with
   `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in

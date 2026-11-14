@@ -776,6 +776,15 @@ export interface GroupApplicationSubmittedEvent {
 	applicantUserId: string;
 }
 
+/** Staff paused or retired a teacher. The staff note is not carried: it is staff-only. */
+export interface InstructorStatusEndedEvent {
+	instructorId: string;
+	userId: string;
+	name: string;
+	email: string;
+	status: 'paused' | 'retired';
+}
+
 export interface InstructorApplicationReviewedEvent {
 	instructorId: string;
 	applicantUserId: string;
@@ -1015,6 +1024,7 @@ export type DomainEvents = {
 	'local_resource.reviewed': LocalResourceReviewedEvent;
 	'instructor.application_submitted': InstructorApplicationSubmittedEvent;
 	'instructor.application_reviewed': InstructorApplicationReviewedEvent;
+	'instructor.status_ended': InstructorStatusEndedEvent;
 	'group.application_submitted': GroupApplicationSubmittedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;

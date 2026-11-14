@@ -77,8 +77,17 @@ export const getUserInstructor = query(z.string().min(1), async (userId) => {
 	await requireCapabilityOrOwner('instructor.read', userId);
 	const row = await instructorService.getByUserId(userId);
 	if (!row) return null;
-	const reach = await directoryReach([userId]);
-	return { ...row, directoryReach: reach.get(userId) ?? 'missing' };
+	const [reach, bookings, email] = await Promise.all([
+		directoryReach([userId]),
+		instructorService.futureTeachingBookings([row.id]),
+		instructorService.emailOf(userId)
+	]);
+	return {
+		...row,
+		directoryReach: reach.get(userId) ?? 'missing',
+		futureBookings: bookings.get(row.id) ?? 0,
+		email
+	};
 });
 
 const idSchema = z.object({ id: z.string().min(1) });
