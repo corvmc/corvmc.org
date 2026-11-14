@@ -6,6 +6,8 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { memberViewQuery } from './views';
 	import { groupKindLabels } from '#lib/terms.js';
 	import { getMemberInviteGroups, inviteMemberForm } from '#lib/remote/users.remote.js';
 
@@ -26,7 +28,7 @@
 				action: { label: m.staff_open_label(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'pending') {
-			const href = resolve('staff/members/invites');
+			const href = withQuery(resolve('staff/members'), memberViewQuery('invited'));
 			toast.info(
 				m.staff_members_invite_member_already_has_pending_invitation_toast({ email: r.email }),
 				{

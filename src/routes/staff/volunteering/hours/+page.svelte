@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
-	import MemberViews from '../../MemberViews.svelte';
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
@@ -37,7 +36,7 @@
 
 	// Seeded from the query string and mirrored back into it, so a reload lands
 	// on the same view.
-	const filters = urlState(resolve('staff/members/volunteers/hours'), {
+	const filters = urlState(resolve('staff/volunteering/hours'), {
 		status: oneOf(statusViews, 'pending' as StatusView),
 		role: text(),
 		from: text(),
@@ -133,10 +132,7 @@
 	}
 </script>
 
-<!-- A view on Members → Volunteers (#2075), so it wears that page's frame. -->
-<PageHeader title={m.staff_members_title()}>
-	<MemberViews active="volunteers" />
-</PageHeader>
+<PageHeader title={m.staff_volunteering_hours_title()} />
 
 <PageContent>
 	<VolunteerStatusTabs

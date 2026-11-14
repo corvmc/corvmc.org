@@ -209,14 +209,14 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			break;
 		case 'hour_log':
 			if (can('volunteer.reviewHours'))
-				out.push({ panel: 'staff', href: resolve('staff/members/volunteers/hours') });
+				out.push({ panel: 'staff', href: resolve('staff/volunteering/hours') });
 			break;
 		// A minor is signed off from the roster, filtered to who is waiting.
 		case 'volunteer':
 			if (can('volunteer.manageRoster'))
 				out.push({
 					panel: 'staff',
-					href: withQuery(resolve('staff/members/volunteers'), 'status=blocked')
+					href: withQuery(resolve('staff/members'), 'role=volunteer&status=blocked')
 				});
 			break;
 		case 'work_request':

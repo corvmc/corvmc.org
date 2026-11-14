@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	const filters = volunteerRosterFilters.parse({
 		q: url.searchParams.get('q') ?? undefined,
-		role: url.searchParams.get('role') ?? undefined,
+		role: url.searchParams.get('interest') ?? undefined,
 		status: url.searchParams.get('status') ?? undefined,
 		cert: url.searchParams.get('cert') ?? undefined,
 		lapsing: url.searchParams.get('lapsing') ?? undefined

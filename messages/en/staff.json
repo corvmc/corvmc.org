@@ -1962,8 +1962,6 @@
 	"staff_members_invites_send_invitation_again_body": "Send the invitation to {email} again?",
 	"staff_members_invites_sent_label": "Sent",
 	"staff_members_joined_month_text": "{newThisMonth} members joined this month.",
-	"staff_members_member_views_instructors_label": "Teachers",
-	"staff_members_member_views_invites_label": "Invites",
 	"staff_members_modal_title": "Deactivate members",
 	"staff_members_no_label": "No",
 	"staff_members_select_label": "Select {title}",
@@ -3212,7 +3210,6 @@
 	"staff_volunteer_shifts_id_engage_contractor_when_they_come_label": "Visit date",
 	"staff_volunteer_short_staffed_card_title_label": "Understaffed shifts",
 	"staff_volunteering_body": "Volunteering",
-	"staff_volunteers_label": "Volunteers",
 	"staff_volunteers_title": "Volunteers",
 	"staff_votes_label": "Votes",
 	"staff_website_label": "Website",
@@ -3708,5 +3705,12 @@
 	"staff_events_id_no_campaigns_text": "No campaigns",
 	"staff_return_reason_label": "Return reason",
 	"staff_members_instructors_status_teaching_label": "Teaching",
-	"staff_members_instructors_status_paused_label": "Paused"
+	"staff_members_instructors_status_paused_label": "Paused",
+	"staff_members_invite_state_label": "Invite status",
+	"staff_volunteering_hours_title": "Hour logs",
+	"staff_volunteering_hour_logs_label": "Hour logs",
+	"staff_members_role_filter_label": "Role",
+	"staff_members_any_role_label": "Any role",
+	"staff_members_role_volunteer_label": "Volunteer",
+	"staff_members_role_teacher_label": "Teacher"
 }

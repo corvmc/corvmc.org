@@ -83,6 +83,8 @@ export function parseFields<S extends Record<string, unknown>>(
  * rule bans mutable instances of it, and defaults are left out so a clean view
  * has a clean URL. Key order follows the field declaration order, which makes
  * the address stable rather than dependent on which filter was touched last.
+ * A `path` may carry a fixed query of its own (`/staff/members?role=teacher`),
+ * which the values are appended to.
  */
 export function toHref<S extends Record<string, unknown>>(
 	path: string,
@@ -96,5 +98,6 @@ export function toHref<S extends Record<string, unknown>>(
 		if (value === field.default) continue;
 		pairs.push(`${String(key)}=${encodeURIComponent(field.encode(value))}`);
 	}
-	return pairs.length ? `${path}?${pairs.join('&')}` : path;
+	if (!pairs.length) return path;
+	return `${path}${path.includes('?') ? '&' : '?'}${pairs.join('&')}`;
 }

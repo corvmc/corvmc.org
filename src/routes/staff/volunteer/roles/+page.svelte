@@ -435,7 +435,7 @@
 										<!-- The one thing on this screen that is a person rather
 										     than a definition, so it links to the people. -->
 										<a
-											href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
+											href={withQuery(resolve('staff/members'), 'role=volunteer&lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
 											{m.staff_volunteer_roles_lapse_before_booked_shift_text({
@@ -452,7 +452,11 @@
 					{/if}
 				</InfoCard>
 
-				<Button href={resolve('staff/members/volunteers')} variant="ghost" size="sm">
+				<Button
+					href={withQuery(resolve('staff/members'), 'role=volunteer')}
+					variant="ghost"
+					size="sm"
+				>
 					{m.staff_volunteer_roles_see_who_s_cleared_label()}
 				</Button>
 			</div>

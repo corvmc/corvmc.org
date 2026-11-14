@@ -628,22 +628,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/members/instructors",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/members/invites",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/members/volunteers",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/members/volunteers/hours",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/moderation/blocklist",
 		"panel": "staff"
 	},
@@ -769,6 +753,10 @@
 	},
 	{
 		"route": "/staff/volunteering",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteering/hours",
 		"panel": "staff"
 	},
 	{

@@ -137,7 +137,7 @@ test.describe('volunteering — staff review queue', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		// The queue moved off the section root when that became the coordinator's
 		// dashboard. Everything it asserts is unchanged; only the address is.
-		await page.goto('/staff/members/volunteers/hours');
+		await page.goto('/staff/volunteering/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_APPROVE_DESC);
 		await expect(row).toBeVisible();
@@ -168,7 +168,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('rejecting without a reason shows written copy, not raw zod text', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/members/volunteers/hours');
+		await page.goto('/staff/volunteering/hours');
 
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await rowAction(row, 'Return').click();
@@ -188,7 +188,7 @@ test.describe('volunteering — staff review queue', () => {
 
 	test('a rejection records its reason and leaves the pending queue', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/members/volunteers/hours');
+		await page.goto('/staff/volunteering/hours');
 
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
@@ -409,7 +409,7 @@ test.describe('volunteering — roles', () => {
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteer/interest');
-		await expect(page).toHaveURL(/\/staff\/members\/volunteers$/);
+		await expect(page).toHaveURL(/\/staff\/members\?role=volunteer$/);
 
 		await page.goto('/staff/volunteer/recurring');
 		await expect(page).toHaveURL(/\/staff\/tasks\/recurring$/);
@@ -419,7 +419,7 @@ test.describe('volunteering — roles', () => {
 		await expect(page).toHaveURL(/\/staff\/tasks\/recurring$/);
 
 		await page.goto('/staff/volunteer/people?tab=signoff');
-		await expect(page).toHaveURL(/\/staff\/members\/volunteers\?/);
+		await expect(page).toHaveURL(/\/staff\/members\?role=volunteer&/);
 		await expect(page).toHaveURL(/status=blocked/);
 		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
@@ -444,7 +444,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/members/volunteers');
+		await page.goto('/staff/members?role=volunteer');
 
 		const interested = page.getByRole('row', { name: SEED_VOL_MEMBER_NAME });
 		await expect(interested).toBeVisible({ timeout: 15000 });
@@ -462,7 +462,7 @@ test.describe('volunteering — roles', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/members/volunteers');
+		await page.goto('/staff/members?role=volunteer');
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toBeVisible({
 			timeout: 15000
 		});
@@ -479,7 +479,7 @@ test.describe('volunteering — roles', () => {
 		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toHaveCount(0);
 
 		// The filter survives a reload, which is what the URL mirroring is for.
-		await expect(page).toHaveURL(/role=/);
+		await expect(page).toHaveURL(/interest=/);
 		await page.reload();
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toBeVisible({
 			timeout: 15000
@@ -665,7 +665,7 @@ test.describe('volunteering — onboarding', () => {
 	test('staff can approve a blocked minor, and then they get in', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		// Guardian sign-off lives on the roster, not the dashboard.
-		await page.goto('/staff/members/volunteers');
+		await page.goto('/staff/members?role=volunteer');
 
 		// The roster names people by account, not by their volunteer profile.
 		const row = rowFor(page, SEED_VOL_BLOCKED_MINOR_EMAIL);

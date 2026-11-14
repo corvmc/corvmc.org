@@ -74,7 +74,7 @@
 		<ParaglideMessage
 			message={m.volunteer_work_order_hours_return_log_correction_use_text}
 			inputs={{}}
-			>{#snippet a({ children })}<a class="link" href={resolve('staff/members/volunteers/hours')}
+			>{#snippet a({ children })}<a class="link" href={resolve('staff/volunteering/hours')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

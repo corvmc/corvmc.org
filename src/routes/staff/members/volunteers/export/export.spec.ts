@@ -68,7 +68,7 @@ describe('the volunteers roster export', () => {
 	);
 
 	it('exports the view on screen: the page URL keys are the filters', async () => {
-		await call('?q=ada&role=r1&status=active&cert=c1&page=3');
+		await call('?q=ada&interest=r1&status=active&cert=c1&page=3');
 		expect(listAllVolunteers).toHaveBeenCalledWith({
 			q: 'ada',
 			role: 'r1',

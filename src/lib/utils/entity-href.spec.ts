@@ -171,7 +171,7 @@ describe('entityHref', () => {
 			['work_request', '/staff/inventory/problems/work_request-1'],
 			['group_application', '/staff/groups/club-1'],
 			['market_vendor', '/staff/events/event-1/vendors'],
-			['volunteer', '/staff/members/volunteers?status=blocked']
+			['volunteer', '/staff/members?role=volunteer&status=blocked']
 		] as const)('links a %s to where it is decided', (type, href) => {
 			expect(entityHref(fakeRef(type), staff)).toBe(href);
 		});

@@ -107,7 +107,7 @@ describe('activeNavKey', () => {
 		['/staff/reports/volunteering', 'reports'],
 		['/staff/reports/inventory-spend', 'reports'],
 		['/staff/reports/acquisitions', 'reports'],
-		['/staff/members/volunteers/hours', 'users'],
+		['/staff/volunteering/hours', 'volunteer-schedule'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
 		['/staff/money', 'payments'],
@@ -263,14 +263,10 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		// The full hour-log queue, a Members → Volunteers view (#2075).
-		'/staff/members/volunteers/hours',
+		// The full hour-log queue, reached from Volunteering's header (#2765).
+		'/staff/volunteering/hours',
 		// Roles and clearances: reached from Volunteering's header (#1791).
 		'/staff/volunteer/roles',
-		// Members views, reached from its tab bar (#2074).
-		'/staff/members/volunteers',
-		'/staff/members/instructors',
-		'/staff/members/invites',
 		'/staff/tasks/projects', // a Tasks view (#2625)
 		'/staff/tasks/productions', // a Tasks view (#2101, #2625)
 		'/staff/tasks/templates', // a Tasks view (#2385, #2625)
