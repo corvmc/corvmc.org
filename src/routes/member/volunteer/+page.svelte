@@ -22,6 +22,7 @@
 	import MyShiftCard from '#lib/components/volunteer/MyShiftCard.svelte';
 	import LogHoursAction from '#lib/components/volunteer/LogHoursAction.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import { resolve } from '$app/paths';
@@ -167,26 +168,32 @@
 									>
 										{m.member_volunteer_assigned_tasks_open_label()}
 									</Button>
-									<!-- A task with a done condition closes itself when it holds. -->
-									{#if !task.closesItself}
-										<Action
-											action={markMyTaskDone.for(task.workOrderId)}
-											label={m.member_volunteer_assigned_tasks_mark_done_label()}
-											variant="ghost"
-											modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
-											submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
-											successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
-										>
-											{#snippet form()}
-												<input
-													{...markMyTaskDone
-														.for(task.workOrderId)
-														.fields.workOrderId.as('hidden', task.workOrderId)}
+
+									<Action
+										action={markMyTaskDone.for(task.workOrderId)}
+										label={m.member_volunteer_assigned_tasks_mark_done_label()}
+										variant="ghost"
+										modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
+										submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
+										successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
+									>
+										{#snippet form()}
+											<input
+												{...markMyTaskDone
+													.for(task.workOrderId)
+													.fields.workOrderId.as('hidden', task.workOrderId)}
+											/>
+											<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_text()}</p>
+											{#if task.closesItself}
+												<FormField
+													field={markMyTaskDone.for(task.workOrderId).fields.reason}
+													label={m.member_volunteer_tasks_reason_label()}
+													type="textarea"
+													required
 												/>
-												<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_text()}</p>
-											{/snippet}
-										</Action>
-									{/if}
+											{/if}
+										{/snippet}
+									</Action>
 								</CardActions>
 							</li>
 						{/each}

@@ -67,8 +67,8 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 
 	const [myWork, room, shows, review, reviewCounts, shortShifts, deadlines, members] =
 		await Promise.all([
-			// The task pages read under either gate.
-			holds('project.read') || holds('volunteer.read') ? listMyWork(me.id) : null,
+			// Every row is one `canActOnTask` admits, so it needs no section gate (#2989).
+			listMyWork(me.id),
 			holds('reservation.read') ? listRoomDays() : null,
 			holds('event.read') ? listUpcomingShows() : null,
 			// Each kind is read only for a viewer who may decide it.

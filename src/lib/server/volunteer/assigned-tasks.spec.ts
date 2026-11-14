@@ -16,8 +16,7 @@ vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
 const emit = vi.spyOn(domainEvents, 'emit');
 const svc = await import('./work-order-service');
-const { assignToTask, listAssignedTasksForUser, markAssignedTaskDone, NotAssignedToTaskError } =
-	await import('./assignee-service');
+const { assignToTask, listAssignedTasksForUser, markTaskDone } = await import('./assignee-service');
 const { submitHours } = await import('./hour-log-service');
 
 const one = <T>(query: string) => sqlite.prepare(query).get() as T;
@@ -30,6 +29,8 @@ beforeEach(() => {
 		'work_order',
 		'volunteer_profile',
 		'volunteer_role',
+		'group_member',
+		'"group"',
 		'"user"'
 	]) {
 		sqlite.exec(`delete from ${table}`);
@@ -136,6 +137,25 @@ describe('listAssignedTasksForUser', () => {
 		expect(await listAssignedTasksForUser('nia')).toEqual([]);
 	});
 
+	it('lists an unassigned task of a committee the member sits on (#2989)', async () => {
+		sqlite.exec(`
+			insert into "group" (id, kind, name, slug, join_policy)
+				values ('booking', 'committee', 'Booking', 'booking', 'invite_only');
+			insert into group_member (id, group_id, user_id, role, status)
+				values ('m1', 'booking', 'sam', 'member', 'active');
+		`);
+		const task = await svc.createWorkOrder({
+			title: 'Book acts',
+			createdByUserId: 'staff',
+			groupId: 'booking'
+		});
+		expect((await listAssignedTasksForUser('sam')).map((t) => t.workOrderId)).toEqual([task.id]);
+		expect(await listAssignedTasksForUser('nia')).toEqual([]);
+
+		await assignToTask(task, 'nia', 'staff');
+		expect(await listAssignedTasksForUser('sam')).toEqual([]);
+	});
+
 	it('drops a cancelled task', async () => {
 		const task = await assignedTask();
 		sqlite.exec(`update work_order set cancelled_at = unixepoch() where id = '${task.id}'`);
@@ -143,12 +163,12 @@ describe('listAssignedTasksForUser', () => {
 	});
 });
 
-describe('markAssignedTaskDone', () => {
+describe('markTaskDone', () => {
 	it('closes the task and stamps every assignee', async () => {
 		const task = await assignedTask();
 		await assignToTask(task, 'sam', 'staff');
 
-		await markAssignedTaskDone(task.id, 'nia');
+		await markTaskDone(task.id, 'nia');
 
 		expect(
 			one<{ resolved_by_user_id: string }>(
@@ -162,20 +182,18 @@ describe('markAssignedTaskDone', () => {
 		).toBe(2);
 	});
 
-	it('refuses somebody the task is not assigned to', async () => {
-		const task = await assignedTask('sam');
-		await expect(markAssignedTaskDone(task.id, 'nia')).rejects.toBeInstanceOf(
-			NotAssignedToTaskError
-		);
-	});
-
-	it('refuses a task with a done condition, which closes itself', async () => {
+	it('closes a task with a done condition once given a reason (#2983 case 4)', async () => {
 		const task = await assignedTask();
 		sqlite.exec(`update work_order set done_when = 'poster_set' where id = '${task.id}'`);
-		await expect(markAssignedTaskDone(task.id, 'nia')).rejects.toBeInstanceOf(
-			svc.ShiftValidationError
-		);
 		expect((await listAssignedTasksForUser('nia'))[0].closesItself).toBe(true);
+		await expect(markTaskDone(task.id, 'nia')).rejects.toBeInstanceOf(svc.ShiftValidationError);
+
+		await markTaskDone(task.id, 'nia', 'Put up by hand');
+		expect(
+			one<{ resolved_by_user_id: string }>(
+				`select resolved_by_user_id from work_order where id = '${task.id}'`
+			).resolved_by_user_id
+		).toBe('nia');
 	});
 });
 

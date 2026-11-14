@@ -11,7 +11,6 @@ import {
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
-import { DomainError } from '#lib/server/errors.js';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
 	requireActiveVolunteer,
@@ -20,7 +19,8 @@ import {
 } from './volunteer-profile-service';
 import { missingRequirements } from './member-certification-service';
 import { VolunteerUnderReviewError } from './volunteer-signup-service';
-import { resolveWorkOrder, ShiftValidationError, workOrderAuditLabel } from './work-order-service';
+import { resolveWorkOrder, workOrderAuditLabel } from './work-order-service';
+import { waitingOn } from '#lib/server/task/can-act.js';
 import { listWorkTasks, setWorkTaskDone, WorkTaskNotFoundError } from './duty-list-service';
 
 // ---------------------------------------------------------------------------
@@ -156,13 +156,6 @@ export function removeAllAssignees(workOrderId: string) {
 // and the done ones whose hours they have not logged.
 // ---------------------------------------------------------------------------
 
-export class NotAssignedToTaskError extends DomainError {
-	readonly httpStatus = 403;
-	constructor() {
-		super('That task is not assigned to you');
-	}
-}
-
 export interface AssignedTask {
 	workOrderId: string;
 	title: string | null;
@@ -179,8 +172,9 @@ export interface AssignedTask {
 }
 
 /**
- * Open tasks assigned to `userId`, then done ones with no hour log naming the
- * task, inside the backdate window `submitHours` accepts.
+ * The tasks `waitingOn` the user (#2989), then done ones they were assigned
+ * with no hour log naming the task, inside the backdate window `submitHours`
+ * accepts.
  */
 export async function listAssignedTasksForUser(userId: string): Promise<AssignedTask[]> {
 	const earliest = new Date(Date.now() - VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000);
@@ -203,31 +197,34 @@ export async function listAssignedTasksForUser(userId: string): Promise<Assigned
 				where wt."work_order_id" = ${workOrder.id} and wt."done" = 1
 			)`
 		})
-		.from(workOrderAssignee)
-		.innerJoin(workOrder, eq(workOrder.id, workOrderAssignee.workOrderId))
+		.from(workOrder)
+		.leftJoin(
+			workOrderAssignee,
+			and(eq(workOrderAssignee.workOrderId, workOrder.id), eq(workOrderAssignee.userId, userId))
+		)
 		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 		.where(
-			and(
-				eq(workOrderAssignee.userId, userId),
-				isNull(workOrder.cancelledAt),
-				or(
-					isNull(workOrder.resolvedAt),
-					and(
-						isNotNull(workOrderAssignee.completedAt),
-						gte(workOrderAssignee.completedAt, earliest),
-						sql`not exists (
-							select 1 from "volunteer_hour_log" vhl
-							where vhl."work_order_id" = ${workOrder.id} and vhl."user_id" = ${userId}
-						)`
-					)
+			or(
+				waitingOn(userId),
+				and(
+					isNull(workOrder.cancelledAt),
+					isNotNull(workOrder.resolvedAt),
+					isNotNull(workOrderAssignee.completedAt),
+					gte(workOrderAssignee.completedAt, earliest),
+					sql`not exists (
+						select 1 from "volunteer_hour_log" vhl
+						where vhl."work_order_id" = ${workOrder.id} and vhl."user_id" = ${userId}
+					)`
 				)
 			)
 		)
 		.orderBy(
 			sql`${workOrder.dueAt} is null`,
 			asc(workOrder.dueAt),
-			asc(workOrderAssignee.assignedAt)
+			asc(workOrderAssignee.assignedAt),
+			asc(workOrder.createdAt),
+			asc(workOrder.id)
 		);
 
 	return rows.map(({ doneWhen, checklistTotal, checklistDone, ...row }) => ({
@@ -238,41 +235,27 @@ export async function listAssignedTasksForUser(userId: string): Promise<Assigned
 }
 
 /**
- * Mark a task done as one of its assignees. A task with a done condition is
- * the app's to close; overriding that takes a reason, which is staff's call.
+ * Mark a task done. Who may is `canActOnTask`, asked by the remote. A task with
+ * a done condition closes by hand too, with a reason (`resolveWorkOrder`).
  */
-export async function markAssignedTaskDone(workOrderId: string, userId: string): Promise<void> {
-	const [row] = await db
-		.select({ doneWhen: workOrder.doneWhen })
-		.from(workOrderAssignee)
-		.innerJoin(workOrder, eq(workOrder.id, workOrderAssignee.workOrderId))
-		.where(
-			and(eq(workOrderAssignee.workOrderId, workOrderId), eq(workOrderAssignee.userId, userId))
-		)
-		.limit(1);
-	if (!row) throw new NotAssignedToTaskError();
-	if (row.doneWhen !== null) {
-		throw new ShiftValidationError('This task closes itself when its condition holds.');
-	}
-	await resolveWorkOrder(workOrderId, { resolvedByUserId: userId });
+export async function markTaskDone(workOrderId: string, userId: string, notes?: string) {
+	await resolveWorkOrder(workOrderId, { resolvedByUserId: userId, notes });
+}
+
+/** Take a task yourself. Who may is `canActOnTask`, asked by the remote. */
+export async function takeTask(task: TaskRef, userId: string) {
+	return assignToTask(task, userId, userId);
+}
+
+/** Hand a task back: the caller comes off it. False when they were not on it. */
+export async function handBackTask(task: Pick<TaskRef, 'id' | 'title'>, userId: string) {
+	return unassignFromTask(task, userId);
 }
 
 // ---------------------------------------------------------------------------
-// The assignee's task page (#2582): the task's notes, due date and checklist.
+// A task's page (#2582): its notes, due date and checklist.
 // Who may read or tick is the remote's guard; these only load and write.
 // ---------------------------------------------------------------------------
-
-/** Whether `userId` is on the task's `work_order_assignee` rows. */
-export async function isTaskAssignee(workOrderId: string, userId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ userId: workOrderAssignee.userId })
-		.from(workOrderAssignee)
-		.where(
-			and(eq(workOrderAssignee.workOrderId, workOrderId), eq(workOrderAssignee.userId, userId))
-		)
-		.limit(1);
-	return row !== undefined;
-}
 
 export interface AssignedTaskDetail {
 	workOrderId: string;

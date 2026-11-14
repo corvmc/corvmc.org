@@ -3,7 +3,9 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { can, requireCapability } from '#lib/server/authorization.js';
-import { eventScope, workTaskScope } from '#lib/server/capability/record-scope.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
+import { requireActOnTask } from '#lib/server/task/can-act.js';
+import { getTaskWorkOrderId } from '#lib/server/volunteer/deliverables-service.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { dutyListAnchors, workDoneConditions } from '#lib/config.js';
 
@@ -372,13 +374,16 @@ export const setWorkTaskDone = form(
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts', () => workTaskScope(data.id));
+		const owner = await getTaskWorkOrderId(data.id);
+		if (!owner) error(404, 'Task not found');
+		const { user } = await requireActOnTask(owner);
 		try {
-			await setTaskService(data.id, data.done, staff.id);
+			await setTaskService(data.id, data.done, user.id);
 			const projectId = await workOrderProjectId(data.shiftId);
 			// Whichever page is canonical for it; the task page's guard is the project's.
 			const workOrderId = data.shiftId;
-			if (!projectId) {
+			// A committee seat may tick without reading the staff page; refresh only a page it reads.
+			if (!projectId && ((await can('project.read')) || (await can('volunteer.read')))) {
 				void getWorkOrderActivity({ workOrderId }).refresh();
 				await getTaskPage(workOrderId).refresh();
 			} else if (await can('project.read')) {

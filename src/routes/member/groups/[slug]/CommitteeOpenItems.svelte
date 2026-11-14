@@ -49,7 +49,7 @@
 				<th>{m.member_show_label()}</th>
 				<th>{m.member_due_label()}</th>
 				<th>{m.member_groups_slug_committee_open_items_who_label()}</th>
-				{#if data.canKeep}<th class="w-px"
+				{#if data.canAct}<th class="w-px"
 						><span class="sr-only">{m.member_actions_label()}</span></th
 					>{/if}
 			{/snippet}
@@ -62,7 +62,7 @@
 							<ul class="mt-1 flex flex-col gap-0.5 font-normal">
 								{#each item.tasks as task (task.id)}
 									<li>
-										{#if data.canKeep}
+										{#if data.canAct}
 											<Form
 												remote={tickDeliverableTask.for(task.id)}
 												onchange={(e: Event) =>
@@ -120,7 +120,7 @@
 							? item.assignees.map((a) => a.name).join(', ')
 							: m.member_groups_slug_committee_open_items_nobody_yet_text()}
 					</td>
-					{#if data.canKeep}
+					{#if data.canAct}
 						<td class="w-px">
 							<div class="flex w-max justify-end gap-2">
 								{#if !mine}
@@ -166,33 +166,37 @@
 										/>
 									{/snippet}
 								</Action>
-								<Action
-									action={reassignDeliverableForm.for(item.id)}
-									label={m.member_groups_slug_committee_open_items_hand_label()}
-									aria-label={m.member_groups_slug_committee_open_items_hand_another_committ_label({
-										title: item.title
-									})}
-									modalTitle={m.member_groups_slug_committee_open_items_hand_another_committ_2_title()}
-									submitLabel={m.member_groups_slug_committee_open_items_hand_label()}
-									variant="ghost"
-									size="xs"
-									successToast={m.member_groups_slug_committee_open_items_handed_toast()}
-								>
-									{#snippet form()}
-										<input
-											{...reassignDeliverableForm.for(item.id).fields.id.as('hidden', item.id)}
-										/>
-										<input
-											{...reassignDeliverableForm.for(item.id).fields.slug.as('hidden', slug)}
-										/>
-										<FormField
-											field={reassignDeliverableForm.for(item.id).fields.groupId}
-											label={m.member_groups_slug_committee_open_items_committee_label()}
-											type="select"
-											options={handTo}
-										/>
-									{/snippet}
-								</Action>
+								{#if data.canReassign}
+									<Action
+										action={reassignDeliverableForm.for(item.id)}
+										label={m.member_groups_slug_committee_open_items_hand_label()}
+										aria-label={m.member_groups_slug_committee_open_items_hand_another_committ_label(
+											{
+												title: item.title
+											}
+										)}
+										modalTitle={m.member_groups_slug_committee_open_items_hand_another_committ_2_title()}
+										submitLabel={m.member_groups_slug_committee_open_items_hand_label()}
+										variant="ghost"
+										size="xs"
+										successToast={m.member_groups_slug_committee_open_items_handed_toast()}
+									>
+										{#snippet form()}
+											<input
+												{...reassignDeliverableForm.for(item.id).fields.id.as('hidden', item.id)}
+											/>
+											<input
+												{...reassignDeliverableForm.for(item.id).fields.slug.as('hidden', slug)}
+											/>
+											<FormField
+												field={reassignDeliverableForm.for(item.id).fields.groupId}
+												label={m.member_groups_slug_committee_open_items_committee_label()}
+												type="select"
+												options={handTo}
+											/>
+										{/snippet}
+									</Action>
+								{/if}
 							</div>
 						</td>
 					{/if}
