@@ -166,6 +166,26 @@ describe('salesTotals', () => {
 	});
 });
 
+describe('recentSales', () => {
+	it('narrows to one release for its detail panel (#2766)', async () => {
+		band('b1');
+		release('rel-1', 'b1');
+		release('rel-2', 'b1');
+		insertSales([sale(1000), sale(500)]);
+		sqlite
+			.prepare(
+				`insert into release_purchase (id, release_id, buyer_email, purchase_id, amount_paid_cents,
+				   platform_fee_cents, band_net_cents, download_token, status)
+				 values ('other', 'rel-2', 'c@example.com', 'p-other', 700, 0, 700, 'tok-other', 'paid')`
+			)
+			.run();
+
+		expect(await service.recentSales(50)).toHaveLength(3);
+		const one = await service.recentSales(50, 'rel-2');
+		expect(one.map((r) => r.purchaseId)).toEqual(['p-other']);
+	});
+});
+
 describe('the radio readiness panel (#1516)', () => {
 	beforeEach(() => {
 		vi.useFakeTimers({ toFake: ['Date'] });

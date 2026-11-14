@@ -317,17 +317,13 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Payments',
 				href: resolve('staff/money')
 			},
-			// Money rather than Moderation: the page's first job is answering
-			// whether there is enough music to switch the station on, and its
-			// second is the sales the collective takes a share of. The takedown
-			// controls ride along because they act on the same rows.
-			//
-			// `music.read`: the treasurer for the sales, the site moderator for the
-			// takedowns.
+			// The radio's state and every release (#2766); its sales totals are a
+			// Reports view and each release's sales are on its panel. `music.read`:
+			// the treasurer for the sales, the site moderator for the takedowns.
 			{
 				key: 'music',
 				capability: 'music.read',
-				label: 'Releases',
+				label: 'Music',
 				href: resolve('staff/music')
 			}
 		]
@@ -342,7 +338,12 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'reports',
 				capability: 'finance.read',
-				alsoFor: ['volunteer.report', 'inventory.report', 'inventory.manageAcquisitions'],
+				alsoFor: [
+					'volunteer.report',
+					'inventory.report',
+					'inventory.manageAcquisitions',
+					'music.read'
+				],
 				label: 'Reports',
 				href: resolve('staff/reports'),
 				also: [resolve('staff/inventory/spend'), resolve('staff/inventory/acquisitions')]

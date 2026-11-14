@@ -29,47 +29,38 @@ import { LONG_TEXT_MAX } from '#lib/config.js';
  * `music.moderate`, and a refund is `finance.refund`.
  */
 
-/** The one load-bearing query for /staff/music. */
+/** The one load-bearing query for /staff/music: the radio card and the releases table. */
 export const getStaffMusicPage = query(async () => {
 	await requireCapability('music.read');
 
-	const [
-		releases,
-		pool,
-		sales,
-		purchases,
-		radioEnabled,
-		audioEnabled,
-		now,
-		recent,
-		canModerate,
-		canRefund
-	] = await Promise.all([
+	const [releases, pool, radioEnabled, audioEnabled, now, recent, canModerate] = await Promise.all([
 		listAllReleases(),
 		radioPoolStats(),
-		salesTotals(),
-		recentSales(),
 		isFeatureEnabled('cmcRadio'),
 		isFeatureEnabled('bandAudio'),
 		getRadioNow(),
 		getRecentlyPlayed(15),
 		// UI only: which controls to offer. The forms below are the guards.
-		can('music.moderate'),
-		can('finance.refund')
+		can('music.moderate')
 	]);
 
-	return {
-		releases,
-		pool,
-		sales,
-		purchases,
-		radioEnabled,
-		audioEnabled,
-		now,
-		recent,
-		canModerate,
-		canRefund
-	};
+	return { releases, pool, radioEnabled, audioEnabled, now, recent, canModerate };
+});
+
+/** One release's recent sales, for its detail panel on /staff/music (#2766). */
+export const getStaffReleaseSales = query(z.string().min(1), async (releaseId) => {
+	await requireCapability('music.read');
+	const [purchases, canRefund] = await Promise.all([
+		recentSales(50, releaseId),
+		can('finance.refund')
+	]);
+	return { purchases, canRefund };
+});
+
+/** Sales across every band: the Music report (#2766). */
+export const getMusicSalesReport = query(async () => {
+	await requireCapability('music.read');
+	return salesTotals();
 });
 
 /**

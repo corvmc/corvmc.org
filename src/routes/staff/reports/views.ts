@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-type ReportView = 'annual' | 'volunteering' | 'inventory-spend' | 'acquisitions';
+type ReportView = 'annual' | 'volunteering' | 'inventory-spend' | 'acquisitions' | 'music';
 
 // Separate gates, so the fold does not reopen #2154: the Annual report's money
 // lines decide who opens it, and the others have their own capability.
@@ -30,5 +30,12 @@ export const reportViews: readonly StaffView<ReportView>[] = [
 		label: () => m.staff_acquisitions_label(),
 		href: resolve('staff/reports/acquisitions'),
 		cap: 'inventory.manageAcquisitions'
+	},
+	// Release sales, on the Music page's own gate (#2766).
+	{
+		key: 'music',
+		label: () => m.staff_reports_music_label(),
+		href: resolve('staff/reports/music'),
+		cap: 'music.read'
 	}
 ];

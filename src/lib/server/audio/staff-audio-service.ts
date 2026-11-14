@@ -237,7 +237,7 @@ export type StaffSaleRow = {
  * here is the difference between "the buyer never paid" and "we lost the
  * webhook", and hiding it would leave staff answering that question blind.
  */
-export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
+export async function recentSales(limit = 50, releaseId?: string): Promise<StaffSaleRow[]> {
 	const rows = await db
 		.select({
 			purchaseId: releasePurchase.purchaseId,
@@ -255,6 +255,7 @@ export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
 		.from(releasePurchase)
 		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
 		.innerJoin(group, eq(group.id, audioRelease.groupId))
+		.where(releaseId ? eq(releasePurchase.releaseId, releaseId) : undefined)
 		.orderBy(desc(releasePurchase.createdAt), desc(releasePurchase.id))
 		.limit(limit);
 

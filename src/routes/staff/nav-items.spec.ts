@@ -304,6 +304,7 @@ describe('route coverage', () => {
 		'/staff/reports/volunteering',
 		'/staff/reports/inventory-spend',
 		'/staff/reports/acquisitions',
+		'/staff/reports/music',
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.

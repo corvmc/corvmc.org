@@ -178,7 +178,7 @@ for you.
 6. **Buy it again with fee coverage ticked** and confirm the band receives the full amount.
 7. **Buy a free release** and confirm it never touches Stripe — no PaymentIntent, a `paid`
    row at $0, and a working download link.
-8. **Refund the paid purchase** from _Recent sales_ on `/staff/music` and confirm the
+8. **Refund the paid purchase** from _Recent sales_ in its release's panel on `/staff/music` and confirm the
    transfer reverses — the connected account's balance falls by the band's share, the
    platform's by its cut, and the buyer's download link stops working.
 
@@ -188,7 +188,7 @@ prerequisite — enough uploaded music for a rotation to sound like a station, w
 
 ## 6. Refunds
 
-There is a **Refund** button on each row of _Recent sales_ on `/staff/music`. It is
+There is a **Refund** button on each row of _Recent sales_ in a release's panel on `/staff/music`. It is
 staff-only and deliberately not self-serve: a refund moves money out of a _band's_
 account as well as the collective's, so somebody has to have read the request.
 
@@ -238,11 +238,11 @@ settled. For one, use the Stripe dashboard and set the row's status by hand.
 | "This band has not set up payouts yet"             | `ConnectNotConfiguredError` — no row at all   | Whether `ensureAccount` ever ran; the band may have bounced off the first screen                                              |
 | Release page says the band hasn't finished payouts | `destinationFor()` returned null              | `charges_enabled` again — this is the same failure wearing a public face                                                      |
 | Band sold but sees nothing in Stripe               | Looking at the platform dashboard, not theirs | Send them via **Open Stripe dashboard** on `/band/<slug>/music/payouts`                                                       |
-| CMC's realised take is under 10%                   | Working as designed                           | `/staff/music` reports realised take; buyers can move the split, and free downloads dilute it                                 |
+| CMC's realised take is under 10%                   | Working as designed                           | `/staff/reports/music` reports realised take; buyers can move the split, and free downloads dilute it                         |
 | Buyer charged, no `paid` row                       | Platform webhook, not Connect                 | `checkout.session.completed` deliveries on the **platform** endpoint                                                          |
 | `account.updated` returns `handled: false`         | An account this feature did not create        | Expected for platform accounts from elsewhere; not an error                                                                   |
 
-Sales figures across all bands are on `/staff/music`, which reports gross, to-bands, card
+Sales figures across all bands are on the Music report (`/staff/reports/music`), which reports gross, to-bands, card
 fees and CMC's net separately — they reconcile to the gross, and a regression test
 (`staff-audio-service.spec.ts`) holds them to it.
 
