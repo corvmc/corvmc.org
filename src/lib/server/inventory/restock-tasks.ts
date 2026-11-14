@@ -11,10 +11,7 @@ import {
  * Restock tasks (#2756). An item at or below its reorder point, with nothing on
  * a placed order, has one open task; a placed order or stock back above the
  * point closes it. Run where stock or an order changes, and daily over every
- * item, which also opens tasks for items that were already low.
- *
- * Reads the ledger and the orders directly rather than through the stock and
- * order services, which both call this.
+ * item. Reads the ledger and orders directly: their services both call this.
  */
 export async function syncRestockTasks(itemIds?: string[]): Promise<{
 	opened: number;
