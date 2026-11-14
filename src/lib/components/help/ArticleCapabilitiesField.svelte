@@ -32,7 +32,7 @@
 		{field}
 		type="tags"
 		label={m.staff_help_capabilities_label()}
-		description={m.staff_help_capabilities_description()}
+		description={m.staff_help_capabilities_body()}
 		{options}
 		value={[...(value ?? [])]}
 	/>
