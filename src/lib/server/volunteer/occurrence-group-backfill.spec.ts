@@ -7,7 +7,7 @@ import { migratedSqlite } from '#lib/server/testing/migrated-sqlite.js';
 const [backfill] = globSync('migrations/*_backfill_occurrence_group/migration.sql');
 
 function run() {
-	const { sqlite } = migratedSqlite({ through: 'steep_miss_america' });
+	const { sqlite } = migratedSqlite({ through: 'equal_next_avengers' });
 	sqlite.exec(`
 		insert into volunteer_role (id, name) values ('role', 'Cleaner');
 		insert into "group" (id, name, slug) values ('comm', 'Space', 'space'), ('other', 'Gear', 'gear');
