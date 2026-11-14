@@ -7,7 +7,7 @@ import {
 } from '../../src/lib/server/db/schema/group';
 import { db } from './db';
 
-/** `chair` is the committee's admin row; a number is the nth plain member. */
+/** `chair` holds the committee's chair position; a number is the nth other member. */
 type Holder = 'chair' | number | { personaId: string };
 
 /**
@@ -44,12 +44,18 @@ export async function seedCommitteePositions() {
 		const [g] = await db.select({ id: group.id }).from(group).where(eq(group.slug, slug));
 		if (!g) continue;
 		const roster = await db
-			.select({ id: groupMember.id, userId: groupMember.userId, role: groupMember.role })
+			.select({ id: groupMember.id, userId: groupMember.userId })
 			.from(groupMember)
 			.where(and(eq(groupMember.groupId, g.id), eq(groupMember.status, 'active')))
 			.orderBy(asc(groupMember.userId));
-		const chair = roster.find((r) => r.role === 'admin');
-		const plain = roster.filter((r) => r.role === 'member');
+		const chairRows = await db
+			.select({ memberId: groupPositionHolder.memberId })
+			.from(groupPositionHolder)
+			.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+			.where(and(eq(groupPosition.groupId, g.id), eq(groupPosition.isChair, true)));
+		const chairIds = new Set(chairRows.map((c) => c.memberId));
+		const chair = roster.find((r) => chairIds.has(r.id));
+		const plain = roster.filter((r) => !chairIds.has(r.id));
 		const resolve = (h: Holder) =>
 			h === 'chair'
 				? chair

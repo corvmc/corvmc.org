@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '#lib/server/db/index.js';
 import {
@@ -44,7 +44,7 @@ async function requireCommittee(groupId: string) {
 
 async function requirePosition(groupId: string, positionId: string) {
 	const [p] = await db
-		.select({ id: groupPosition.id, name: groupPosition.name })
+		.select({ id: groupPosition.id, name: groupPosition.name, isChair: groupPosition.isChair })
 		.from(groupPosition)
 		.where(and(eq(groupPosition.id, positionId), eq(groupPosition.groupId, groupId)));
 	if (!p) throw new PositionError('Position not found.', 404);
@@ -62,14 +62,14 @@ function duplicate(err: unknown, name: string): never {
 // Queries
 // ---------------------------------------------------------------------------
 
-/** A committee's positions, A to Z, each with its holders. */
+/** A committee's positions, the chair first then A to Z, each with its holders. */
 export async function listPositions(groupId: string) {
 	const [positions, holders] = await Promise.all([
 		db
-			.select({ id: groupPosition.id, name: groupPosition.name })
+			.select({ id: groupPosition.id, name: groupPosition.name, isChair: groupPosition.isChair })
 			.from(groupPosition)
 			.where(eq(groupPosition.groupId, groupId))
-			.orderBy(asc(groupPosition.name)),
+			.orderBy(desc(groupPosition.isChair), asc(groupPosition.name)),
 		db
 			.select({
 				positionId: groupPositionHolder.positionId,
@@ -97,6 +97,7 @@ export async function listPositionsHeld(userId: string) {
 		.select({
 			positionId: groupPosition.id,
 			name: groupPosition.name,
+			isChair: groupPosition.isChair,
 			groupId: group.id,
 			groupName: group.name,
 			groupSlug: group.slug
@@ -142,9 +143,10 @@ export async function renamePosition(groupId: string, positionId: string, name: 
 	}
 }
 
-/** Its holders go with it. */
+/** Its holders go with it. The chair position stays: a committee always has one. */
 export async function deletePosition(groupId: string, positionId: string) {
-	await requirePosition(groupId, positionId);
+	const p = await requirePosition(groupId, positionId);
+	if (p.isChair) throw new PositionError('The chair position cannot be removed.', 400);
 	await db.delete(groupPosition).where(eq(groupPosition.id, positionId));
 }
 

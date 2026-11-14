@@ -118,6 +118,19 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
+// chair.ts builds its subqueries on the real `db`; its own spec runs them on SQLite.
+vi.mock('#lib/server/group/chair.js', async () => {
+	const { sql } = await import('drizzle-orm');
+	return {
+		CHAIR_POSITION_NAME: 'Chair',
+		isCommitteeChair: vi.fn(async () => false),
+		leadsGroup: () => sql`leads_group`,
+		leadersFirst: () => sql`leaders_first`,
+		rosterRole: () => sql`roster_role`,
+		setChairHolder: vi.fn()
+	};
+});
+
 vi.mock('#lib/server/utils/slug.js', () => ({
 	generateSlug: vi.fn((name: string) => name.toLowerCase().replace(/[^a-z0-9-]+/g, '')),
 	ensureUniqueSlug: vi.fn(async (slug: string) => slug)
@@ -445,19 +458,32 @@ describe('BandService', () => {
 			expect(ownerRows[0].values.groupId).toBe(bandRows[0].values.id);
 		});
 
-		// A club or committee has chairs (admins), never an owner (#1760).
-		it.each(['club', 'committee'] as const)(
-			'writes a %s’s first member as an admin, not an owner',
-			async (kind) => {
-				selectResult = [{ ...mockBand, kind }];
+		// A club has chairs (admins), never an owner (#1760).
+		it('writes a club’s first member as an admin, not an owner', async () => {
+			selectResult = [{ ...mockBand, kind: 'club' }];
 
-				await create('user-chair', { name: 'Real Book Club', kind });
+			await create('user-chair', { name: 'Real Book Club', kind: 'club' });
 
-				const rows = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
-				expect(rows).toHaveLength(1);
-				expect(rows[0].values).toMatchObject({ userId: 'user-chair', role: 'admin' });
-			}
-		);
+			const rows = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
+			expect(rows).toHaveLength(1);
+			expect(rows[0].values).toMatchObject({ userId: 'user-chair', role: 'admin' });
+		});
+
+		// A committee's chair is its chair position (#3009).
+		it('gives a committee a chair position held by its first member', async () => {
+			selectResult = [{ ...mockBand, kind: 'committee' }];
+
+			await create('user-chair', { name: 'Booking', kind: 'committee' });
+
+			const [member] = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
+			const [position] = writes.filter((w) => w.table === 'group_position' && w.op === 'insert');
+			const [holder] = writes.filter(
+				(w) => w.table === 'group_position_holder' && w.op === 'insert'
+			);
+			expect(member.values).toMatchObject({ userId: 'user-chair', role: 'member' });
+			expect(position.values).toMatchObject({ name: 'Chair', isChair: true });
+			expect(holder.values).toEqual({ positionId: position.values.id, memberId: member.values.id });
+		});
 	});
 
 	// -----------------------------------------------------------------------

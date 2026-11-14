@@ -181,6 +181,7 @@ describe('the capability matrix', () => {
 			'band.setTier',
 			'group.read',
 			'group.manage',
+			'committee.manage',
 			'event.manage',
 			'event.publish',
 			'event.manageTickets',

@@ -66,6 +66,7 @@ import {
 	directoryReach,
 	publicContactStatus
 } from '#lib/server/instructor/instructor-directory-service.js';
+import { leadersFirst } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // JSON-encoded form/filter fields
@@ -446,10 +447,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.leftJoin(directoryEntry, eq(directoryEntry.userId, user.id))
 		.where(and(eq(groupMember.groupId, row.id), eq(groupMember.status, 'active')))
-		.orderBy(
-			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
-			user.name
-		);
+		.orderBy(leadersFirst(), user.name);
 
 	/**
 	 * The band's published records, folded into this query rather than fetched

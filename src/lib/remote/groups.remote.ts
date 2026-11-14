@@ -18,7 +18,7 @@ import { setCommitteeCapabilityGrants } from '#lib/server/capability/capability-
 import { allowlisted } from '#lib/server/capability/grant-rules.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireGroupRole, requireProgramRole } from '#lib/server/group/group-context.js';
-import { groupRead } from '#lib/server/group/group-read.js';
+import { groupRead, programManage } from '#lib/server/group/group-read.js';
 import {
 	hasOpenApplication,
 	listForApplicant,
@@ -28,6 +28,7 @@ import { directoryVisibilities } from '#lib/server/db/schema/directory.js';
 import {
 	acceptInvitation,
 	declineInvitation,
+	getByIdActive,
 	getMembers,
 	getRosterMembers,
 	getUserRole,
@@ -258,14 +259,14 @@ export const updateStaffGroup = form(
 	})
 );
 
-/** What a committee's active members may do. Staff only: `group.manage`. */
+/** What a committee's active members may do. Staff only: `committee.manage`. */
 export const setCommitteeGrants = form(
 	z.object({
 		groupId: z.string().min(1),
 		capabilities: z.array(z.string().min(1)).max(20).default([])
 	}),
 	async (data) => {
-		await requireCapability('group.manage');
+		await requireCapability('committee.manage');
 		try {
 			await setCommitteeCapabilityGrants(data.groupId, data.capabilities);
 		} catch (err) {
@@ -276,9 +277,11 @@ export const setCommitteeGrants = form(
 );
 
 /**
- * Make a club or committee member a chair (`admin`), or take it away. Adding a
- * chair who is not on the roster puts them on it, active. Programs have no
- * owner, so `owner` is not a value this accepts.
+ * Make a club or committee member a chair, or take it away: a club's `admin`
+ * role, a committee's chair position. Adding a chair who is not on the roster
+ * puts them on it, active. Programs have no owner, so `owner` is not a value
+ * this accepts. A committee's chair is `committee.manage`'s, a club's
+ * `group.manage`'s.
  */
 export const setStaffGroupRole = form(
 	z.object({
@@ -287,9 +290,11 @@ export const setStaffGroupRole = form(
 		role: z.enum(['admin', 'member'])
 	}),
 	async (data) => {
-		await requireCapability('group.manage');
+		requireUser();
+		const target = await getByIdActive(data.groupId);
+		const user = await requireCapability(programManage(target ?? { kind: 'club' }));
 		try {
-			await setChairRole(data.groupId, data.userId, data.role);
+			await setChairRole(data.groupId, data.userId, data.role, user.id);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -459,9 +464,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	const canReviewApplications =
 		canManage ||
 		(group.kind === 'committee' && role === 'staff' && (await can('committee.reviewApplications')));
-	// `createCommitteePosition`'s guard: the chair, or Operations for a committee without one.
+	// `createCommitteePosition`'s guard: the chair, or `committee.manage` for a committee without one.
 	const canManagePositions =
-		group.kind === 'committee' && (canManage || (role === 'staff' && (await can('group.manage'))));
+		group.kind === 'committee' &&
+		(canManage || (role === 'staff' && (await can('committee.manage'))));
 
 	// One round trip, per the custom/no-concurrent-remote-queries rule. Announcements
 	// belong here rather than in a query of the tab's own: a club is small by
@@ -676,9 +682,11 @@ export const inviteGroupMember = form(
 	async (data) => {
 		const { user, group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
-			// A committee's seats are defined positions, filled after joining.
-			const position = group.kind === 'committee' ? null : data.position || null;
-			const member = await invite(group.id, data.userId, data.role, position, user.id);
+			// A committee's seats, the chair's included, are positions filled after joining.
+			const committee = group.kind === 'committee';
+			const position = committee ? null : data.position || null;
+			const role = committee ? 'member' : data.role;
+			const member = await invite(group.id, data.userId, role, position, user.id);
 			return { success: true, memberId: member.id };
 		} catch (err) {
 			mapDomainError(err);
@@ -698,7 +706,7 @@ export const inviteGroupByEmail = form(
 			const result = await createEmailInvite(
 				data.email,
 				group.id,
-				data.role,
+				group.kind === 'committee' ? 'member' : data.role,
 				group.kind === 'committee' ? null : data.position || null,
 				user.id
 			);
@@ -845,7 +853,7 @@ export const declineGroupInvite = form(z.object({ groupId: z.string().min(1) }),
 // `requireProgramRole`, so a band slug 404s here: a band edits at
 // `/band/{slug}/edit`, which carries a listing this form deliberately omits.
 export const getGroupEditor = query(z.string(), async (slug) => {
-	const { group } = await requireProgramRole({ slug }, 'admin', { staff: 'group.manage' });
+	const { group } = await requireProgramRole({ slug }, 'admin', { staff: programManage });
 
 	return {
 		id: group.id,

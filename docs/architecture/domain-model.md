@@ -192,18 +192,29 @@ a bug invisible on exactly the rows you test with.
 the ownership, capped by a partial unique index that permits zero. The second copy drifted
 once: five of sixteen production bands had no usable owner row behind it.
 
-Only a band has an owner. Programs (`club`, `committee`) are ownerless by design: they have
-zero or more `admin` rows, and those admins are the program's **chairs**. Staff add and
-remove chairs from the program's staff page (`setChairRole`); nothing on the program side
-writes an `owner` row, and a program with no chairs is legal. Positions on a program roster
-are set by its chairs or staff, never by the member themselves.
+Only a band has an owner. Programs (`club`, `committee`) are ownerless by design and have
+zero or more **chairs**. A club's chairs are its `admin` rows. A committee's chair is
+whoever holds its chair position (below). Staff add and remove chairs from the program's
+staff page (`setChairRole`); nothing on the program side writes an `owner` row, and a
+program with no chairs is legal. Positions on a program roster are set by its chairs or
+staff, never by the member themselves.
 
 A committee acts as a department, and its positions are rows (#2988). `group_position`
 names a standing role in one committee, unique by name within it; `group_position_holder`
 says who holds it, keyed on the holder's `group_member` row, so leaving the committee
-vacates it. A position may have several holders or none, and grants nothing yet. A band's
-or club's seat title stays the free-text `group_member.position`, which for a band is the
-instrument line on its site and press kit.
+vacates it. A position may have several holders or none. A band's or club's seat title
+stays the free-text `group_member.position`, which for a band is the instrument line on
+its site and press kit.
+
+One position per committee has `is_chair` set, enforced by a partial unique index, and
+holding it makes someone chair (#3009). Every committee has one from creation, and it
+cannot be removed. A committee row's stored `group_member.role` is always `member`.
+Leadership is read through `src/lib/server/group/chair.ts`: `isCommitteeChair` for one
+person, `leadsGroup()` for recipient lists, and `rosterRole()` where a role goes to the
+UI. Guards keep the `owner > admin > member` tiers, and `getUserRole` reports a committee
+chair as `admin`. `scripts/committee-chair-guard.spec.ts` fails on a stored-role leader
+test anywhere else. Staff oversight of committees (positions, chair, grants) is
+`committee.manage`; `group.manage` covers clubs.
 
 ## Seven models that recur
 

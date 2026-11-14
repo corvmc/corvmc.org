@@ -83,10 +83,12 @@ vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProgramRole: vi.fn()
 }));
 const getUserRole = vi.hoisted(() => vi.fn(async (): Promise<string | null> => null));
+const getByIdActive = vi.hoisted(() => vi.fn(async () => ({ id: 'group-1', kind: 'club' })));
 vi.mock('#lib/server/band/band-service.js', () => ({
 	getMembers: vi.fn(async () => []),
 	getRosterMembers: vi.fn(async () => []),
 	getUserRole,
+	getByIdActive,
 	partitionByStatus: () => ({ active: [], pending: [] }),
 	acceptInvitation: vi.fn(),
 	declineInvitation: vi.fn(),
@@ -188,7 +190,7 @@ const EXPORTS = [
 	[
 		'setCommitteeGrants',
 		{ groupId: 'group-1', capabilities: ['sponsor.manage'] },
-		'group.manage',
+		'committee.manage',
 		svc.setCommitteeCapabilityGrants
 	]
 ] as const;
@@ -289,9 +291,15 @@ describe('setStaffGroupRole', () => {
 		'hands %s to the service, scoped to the group',
 		async (role) => {
 			await groups.setStaffGroupRole({ groupId: 'group-1', userId: 'user-9', role });
-			expect(svc.setChairRole).toHaveBeenCalledWith('group-1', 'user-9', role);
+			expect(svc.setChairRole).toHaveBeenCalledWith('group-1', 'user-9', role, 'user-1');
 		}
 	);
+
+	it('names committee.manage for a committee (#3009)', async () => {
+		getByIdActive.mockResolvedValueOnce({ id: 'group-2', kind: 'committee' });
+		await groups.setStaffGroupRole({ groupId: 'group-2', userId: 'user-9', role: 'admin' });
+		expect(requested).toEqual(['committee.manage']);
+	});
 
 	it('refuses owner before reaching the service', async () => {
 		await expect(

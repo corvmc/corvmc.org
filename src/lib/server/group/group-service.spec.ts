@@ -100,6 +100,12 @@ vi.mock('#lib/server/band/band-service.js', () => ({
 	reactivate: vi.fn()
 }));
 
+const setChairHolder = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('#lib/server/group/chair.js', async (actual) => ({
+	...(await actual<typeof import('#lib/server/group/chair.js')>()),
+	setChairHolder: (...a: unknown[]) => setChairHolder(...a)
+}));
+
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
 vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
@@ -239,13 +245,28 @@ describe('setChairRole', () => {
 		});
 	});
 
-	it('takes the chair away in a committee, leaving them on the roster', async () => {
+	it('vacates a committee chair position, leaving them on the roster (#3009)', async () => {
 		selectResultQueue = [[COMMITTEE], [{ id: 'member-9', role: 'admin', name: 'Nine' }]];
 
-		await setChairRole('group-2', 'user-9', 'member');
+		await setChairRole('group-2', 'user-9', 'member', 'staff-1');
 
-		expect(writes).toHaveLength(1);
-		expect(writes[0]).toMatchObject({ op: 'update', values: { role: 'member' } });
+		expect(writes).toEqual([]);
+		expect(setChairHolder).toHaveBeenCalledWith('group-2', 'member-9', false, 'staff-1');
+	});
+
+	it('appoints a committee chair by the position, adding them as a member', async () => {
+		selectResultQueue = [[COMMITTEE], [], [{ name: 'New' }]];
+
+		await setChairRole('group-2', 'user-new', 'admin', 'staff-1');
+
+		expect(writes).toEqual([
+			{
+				table: 'group_member',
+				op: 'insert',
+				values: { groupId: 'group-2', userId: 'user-new', role: 'member', status: 'active' }
+			}
+		]);
+		expect(setChairHolder).toHaveBeenCalledWith('group-2', 'new-row', true, 'staff-1');
 	});
 
 	it('adds someone not on the roster as an active chair, never an owner', async () => {

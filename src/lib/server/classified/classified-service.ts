@@ -24,6 +24,7 @@ import {
 	type ClassifiedTagKind,
 	type ClassifiedVisibility
 } from '#lib/config.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 const DAY_MS = 86_400_000;
 
@@ -133,7 +134,7 @@ async function assertRunsGroup(userId: string, groupId: string) {
 				eq(groupMember.groupId, groupId),
 				eq(groupMember.userId, userId),
 				eq(groupMember.status, 'active'),
-				inArray(groupMember.role, ['owner', 'admin'])
+				leadsGroup()
 			)
 		)
 		.limit(1);

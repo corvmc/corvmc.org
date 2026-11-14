@@ -3,6 +3,8 @@ import {
 	group,
 	groupCapability,
 	groupMember,
+	groupPosition,
+	groupPositionHolder,
 	groupSlugHistory
 } from '../../src/lib/server/db/schema/group';
 import { groupInvite } from '../../src/lib/server/db/schema/group-invite';
@@ -44,14 +46,26 @@ export async function insertBandWithOwner(
 			capabilityGrants.map((capability) => ({ groupId: b.id, capability }))
 		);
 	}
-	await db.insert(groupMember).values({
-		groupId: b.id,
-		userId: ownerId,
-		// A club or committee gets a chair (admin): programs never have an owner.
-		role: (values.kind ?? 'band') === 'band' ? 'owner' : 'admin',
-		position: position ?? null,
-		status: 'active'
-	});
+	const kind = values.kind ?? 'band';
+	const [row] = await db
+		.insert(groupMember)
+		.values({
+			groupId: b.id,
+			userId: ownerId,
+			// A band has an owner, a club a chair (`admin`), and a committee a chair
+			// position (#3009), so its stored role is `member`.
+			role: kind === 'band' ? 'owner' : kind === 'club' ? 'admin' : 'member',
+			position: position ?? null,
+			status: 'active'
+		})
+		.returning({ id: groupMember.id });
+	if (kind === 'committee') {
+		const [chair] = await db
+			.insert(groupPosition)
+			.values({ groupId: b.id, name: 'Chair', isChair: true })
+			.returning({ id: groupPosition.id });
+		await db.insert(groupPositionHolder).values({ positionId: chair.id, memberId: row.id });
+	}
 	// `ownerId` rides along in memory only — the column was dropped in phase 3c,
 	// and the owner is the `group_member` row written just above. Seed code
 	// downstream needs the id to attribute events and reservations, and looking

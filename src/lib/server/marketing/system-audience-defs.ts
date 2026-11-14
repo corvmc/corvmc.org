@@ -4,6 +4,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
 import { ticket } from '#lib/server/db/schema/ticket.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audience definitions
@@ -71,7 +72,7 @@ const LEADS_A_BAND = sql`exists (
 	select 1 from ${groupMember}
 	inner join ${group} on ${group.id} = ${groupMember.groupId}
 	where ${groupMember.userId} = ${user.id}
-		and ${groupMember.role} in ('owner', 'admin')
+		and ${leadsGroup()}
 		and ${groupMember.status} = 'active'
 		and ${group.deletedAt} is null
 )`;

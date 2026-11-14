@@ -31,7 +31,8 @@ async function member(id: string, groupId: string, userId: string, role: string,
 
 beforeEach(async () => {
 	holders.mockClear();
-	for (const t of ['group_member', '"group"', 'user']) sqlite.exec(`delete from ${t}`);
+	for (const t of ['group_position_holder', 'group_position', 'group_member', '"group"', 'user'])
+		sqlite.exec(`delete from ${t}`);
 	const { user } = await import('#lib/server/db/schema/authentication.js');
 	const { group } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(user).values(
@@ -64,8 +65,12 @@ describe('applicationNotice', () => {
 		expect(holders).not.toHaveBeenCalled();
 	});
 
-	it('sends a chaired committee to its chair alone', async () => {
-		await member('gm-5', COMMITTEE, 'usr-owner', 'owner', 'active');
+	it('sends a chaired committee to its chair position holder alone (#3009)', async () => {
+		await member('gm-5', COMMITTEE, 'usr-owner', 'member', 'active');
+		await member('gm-7', COMMITTEE, 'usr-admin', 'admin', 'active');
+		sqlite.exec(`insert into group_position (id, group_id, name, is_chair)
+			values ('pos-chair', '${COMMITTEE}', 'Chair', 1);
+			insert into group_position_holder (position_id, member_id) values ('pos-chair', 'gm-5')`);
 
 		const notice = await applicationNotice(COMMITTEE, 'usr-applicant');
 

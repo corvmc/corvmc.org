@@ -47,6 +47,7 @@ import {
 	type BallotKind,
 	type BallotStatus
 } from '#lib/config.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -388,7 +389,7 @@ export async function listCommitteeRosters(
 							eq(groupMember.groupId, group.id),
 							eq(groupMember.userId, opts.adminUserId),
 							eq(groupMember.status, 'active'),
-							inArray(groupMember.role, ['owner', 'admin'])
+							leadsGroup()
 						)
 					)
 			)

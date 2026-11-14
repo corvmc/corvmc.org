@@ -2369,10 +2369,11 @@ export const capabilities = {
 	directory: ['readContact', 'shareContactSheet'],
 	band: ['read', 'manage', 'manageMembers', 'setTier'],
 	group: ['read', 'manage'],
-	// Reviewing what arrives on a committee, for somebody who holds no seat on
-	// it. A chair does this through `group_member.role = 'admin'`; this is the
-	// other door, and a headless committee has only this one.
-	committee: ['reviewApplications'],
+	// `reviewApplications` is what arrives on a committee, for somebody with no
+	// seat on it; its chair (the chair position) is the other door. `manage` is
+	// staff oversight of committees: their positions, chair and grants (#3009).
+	// `group.manage` keeps bands and clubs.
+	committee: ['reviewApplications', 'manage'],
 	// `uploadRecap` and `checkIn` are also held for one show by its crew, through
 	// a volunteer-role grant: see `grantableCapabilities`.
 	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap', 'checkIn'],

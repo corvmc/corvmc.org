@@ -23,6 +23,7 @@ import {
 import type { MemberRef } from '#lib/types/entity.js';
 import type { RosterPerson } from '#lib/types/roster.js';
 import { toRosterPerson } from '#lib/server/roster/roster.js';
+import { holdsChair } from '#lib/server/group/chair.js';
 
 /** How far ahead "lapsing" looks on this page. Not `CERT_EXPIRY_WARNING_DAYS`, which is 60. */
 export const ACCESS_LAPSING_DAYS = 30;
@@ -79,7 +80,7 @@ export async function getAccessSummary(now = new Date()): Promise<AccessSummary>
 export interface CommitteeSeat {
 	groupId: string;
 	name: string;
-	/** `owner` and `admin` both chair a committee. */
+	/** Holds the committee's chair position. */
 	chair: boolean;
 	grants: Capability[];
 }
@@ -104,7 +105,7 @@ export async function getPersonAccess(userId: string): Promise<PersonAccess> {
 			.select({
 				groupId: group.id,
 				name: group.name,
-				role: groupMember.role,
+				chair: holdsChair(),
 				capability: groupCapability.capability
 			})
 			.from(groupMember)
@@ -128,7 +129,7 @@ export async function getPersonAccess(userId: string): Promise<PersonAccess> {
 		const seat = seats.get(r.groupId) ?? {
 			groupId: r.groupId,
 			name: r.name,
-			chair: r.role !== 'member',
+			chair: !!r.chair,
 			grants: []
 		};
 		if (r.capability && grantRuleFor(r.capability)?.committee) {

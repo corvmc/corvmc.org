@@ -30,10 +30,14 @@
 
 	const { fields } = updateGroupMember;
 
-	const roleOptions = [
+	// A committee's `admin` tier is its chair position, which this fills or vacates.
+	const roleOptions = $derived([
 		{ value: 'member', label: m.groups_member_label() },
-		{ value: 'admin', label: m.groups_admin_label() }
-	];
+		{
+			value: 'admin',
+			label: kindLabel === 'committee' ? m.groups_chair_label() : m.groups_admin_label()
+		}
+	]);
 </script>
 
 <Action

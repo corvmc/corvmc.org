@@ -16,7 +16,8 @@
 
 	/**
 	 * A committee's defined positions and who holds each (#2988). Its chair names
-	 * and fills them; everyone on the roster reads them.
+	 * and fills them; everyone on the roster reads them. The chair position is
+	 * one of them and cannot be removed (#3009).
 	 */
 	let {
 		slug,
@@ -29,6 +30,7 @@
 		positions: {
 			id: string;
 			name: string;
+			isChair: boolean;
 			holders: { memberId: string; member: MemberRef }[];
 		}[];
 		/** Active roster rows, the only people a position can go to. */
@@ -133,21 +135,23 @@
 										</div>
 									{/snippet}
 								</Action>
-								<Action
-									action={remove}
-									label={msg.member_groups_slug_remove_label()}
-									aria-label={msg.member_groups_slug_remove_2_label({ title: p.name })}
-									confirm={msg.member_groups_slug_remove_position_body({ name: p.name })}
-									successToast={msg.member_groups_slug_position_removed_toast()}
-									variant="ghost"
-									size="xs"
-									onsuccess={onchanged}
-								>
-									{#snippet form()}
-										<input {...remove.fields.slug.as('hidden', slug)} />
-										<input {...remove.fields.positionId.as('hidden', p.id)} />
-									{/snippet}
-								</Action>
+								{#if !p.isChair}
+									<Action
+										action={remove}
+										label={msg.member_groups_slug_remove_label()}
+										aria-label={msg.member_groups_slug_remove_2_label({ title: p.name })}
+										confirm={msg.member_groups_slug_remove_position_body({ name: p.name })}
+										successToast={msg.member_groups_slug_position_removed_toast()}
+										variant="ghost"
+										size="xs"
+										onsuccess={onchanged}
+									>
+										{#snippet form()}
+											<input {...remove.fields.slug.as('hidden', slug)} />
+											<input {...remove.fields.positionId.as('hidden', p.id)} />
+										{/snippet}
+									</Action>
+								{/if}
 							</div>
 						</td>
 					{/if}

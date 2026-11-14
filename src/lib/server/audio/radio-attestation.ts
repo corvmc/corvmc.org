@@ -10,6 +10,7 @@ import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, gt, gte, inArray, isNull, lt, type SQL } from 'drizzle-orm';
 import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 function addMonths(d: Date, months: number): Date {
 	const out = new Date(d);
@@ -86,7 +87,7 @@ export async function listRadioAttestationsExpiringBetween(
 				isNull(audioRelease.deletedAt),
 				isNull(group.deletedAt),
 				// The same people `listBandAdmins` returns.
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active'),
 				isNull(user.deletedAt)
 			)
