@@ -7,7 +7,8 @@ export function projectsTarget(rest: string, search: string): string {
 	const parts = rest.split('/').filter(Boolean);
 	if (parts.length === 0) return '/staff/tasks?group=project';
 	const [head, ...tail] = parts;
-	if (head === 'productions' || head === 'templates') {
+	if (head === 'productions') return `/staff/events?view=productions${search.replace(/^\?/, '&')}`;
+	if (head === 'templates') {
 		return `/staff/tasks/${parts.join('/')}${search}`;
 	}
 	if (tail[0] === 'tasks' && tail[1]) return `/staff/tasks/${tail[1]}`;

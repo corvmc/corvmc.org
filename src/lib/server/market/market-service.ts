@@ -15,6 +15,7 @@ import {
 	queuedReplyStatements
 } from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import {
 	latestDeliveries,
 	latestDelivery,
@@ -638,6 +639,40 @@ export async function getMarketProjectId(eventId: string): Promise<string | null
 
 /** An application nobody has answered: the review feed's predicate. */
 export const appliedVendor = () => eq(marketVendor.status, 'applied');
+
+/**
+ * Every market's applications on one list, latest market first, for the staff
+ * Events list's vendor view (#2766). No contact detail: the row links to its
+ * market's vendors page, which has it.
+ */
+export async function listAllApplications(
+	opts: { status?: MarketVendorStatus } = {},
+	pagination: PaginationInput = {}
+) {
+	const where = opts.status ? eq(marketVendor.status, opts.status) : undefined;
+	const dataQ = db
+		.select({
+			id: marketVendor.id,
+			eventId: marketVendor.eventId,
+			eventTitle: eventListing.title,
+			eventStartsAt: eventListing.startsAt,
+			businessName: marketVendor.businessName,
+			offering: marketVendor.offering,
+			tablesRequested: marketVendor.tablesRequested,
+			status: marketVendor.status,
+			createdAt: marketVendor.createdAt
+		})
+		.from(marketVendor)
+		.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
+		.where(where)
+		.orderBy(desc(eventListing.startsAt), asc(marketVendor.createdAt), asc(marketVendor.id))
+		.$dynamic();
+	const countQ = db
+		.select({ count: sql<number>`count(*)` })
+		.from(marketVendor)
+		.where(where);
+	return paginate(dataQ, countQ, pagination);
+}
 
 /** A committee's market days, soonest first, with how many applications wait on a decision. */
 export async function listCommitteeMarkets(groupId: string) {

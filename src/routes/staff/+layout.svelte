@@ -33,7 +33,6 @@
 		IconReportAnalytics,
 		IconCalendarWeek,
 		IconCalendarMonth,
-		IconMapPin,
 		IconAddressBook,
 		IconContract
 	} from '@tabler/icons-svelte';
@@ -111,7 +110,6 @@
 		gear: IconTool,
 		supplies: IconPackage,
 		projects: IconFolders,
-		venues: IconMapPin,
 		calendar: IconCalendarMonth,
 		moderation: IconFlag,
 		suggestions: IconBulb,

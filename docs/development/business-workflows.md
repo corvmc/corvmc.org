@@ -565,9 +565,10 @@ events use RSVP instead.
   (a community draft is its author's alone), filtered by source, search, date range and status
   with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
   soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
-  badge; the dashboard feed collects the ones waiting for review. `/staff/tasks/productions`
-  is the CMC work index, `source='cmc'` at every status via `getStaffEvents` → `listAll()`. A
-  published CMC show is on both.
+  badge; the dashboard feed collects the ones waiting for review. Its Productions view
+  (`/staff/events?view=productions`) is the CMC work index, `source='cmc'` at every status via
+  `getStaffEvents` → `listAll()`, filterable by production status. A published CMC show is on
+  both. Venues and every market's vendor applications are the list's other views (#2766).
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
   every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
   else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
@@ -2087,7 +2088,7 @@ restore crew shifts or retract a cancellation notice.
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-8. `/staff/tasks/productions` reads everything through the one `getStaffEvents` query:
+8. The Productions view (`/staff/events?view=productions`) reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
 9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →

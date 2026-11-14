@@ -18,6 +18,7 @@
 	import VenueFeeds from './VenueFeeds.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import {
 		getVenueDetail,
 		updateVenue,
@@ -294,7 +295,7 @@
 				submitLabel={m.staff_delete_label()}
 				submitVariant="error"
 				successToast={m.staff_deleted_toast()}
-				onsuccess={() => goto(resolve('staff/venues'))}
+				onsuccess={() => goto(withQuery(resolve('staff/events'), 'view=venues'))}
 			>
 				{#snippet form()}
 					<input {...deleteVenue.for(venue.id).fields.id.as('hidden', venue.id)} />

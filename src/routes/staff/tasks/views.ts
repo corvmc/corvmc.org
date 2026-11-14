@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-export type TaskViewKey = 'tasks' | 'projects' | 'productions';
+export type TaskViewKey = 'tasks' | 'projects';
 
 /**
  * The Tasks row's lists (#2625): tasks, and the projects that group them.
@@ -20,11 +20,5 @@ export const taskViews: readonly StaffView<TaskViewKey>[] = [
 		label: () => m.staff_projects_label(),
 		href: resolve('staff/tasks/projects'),
 		cap: 'project.read'
-	},
-	{
-		key: 'productions',
-		label: () => m.staff_projects_project_views_productions_label(),
-		href: resolve('staff/tasks/productions'),
-		cap: 'event.manage'
 	}
 ];

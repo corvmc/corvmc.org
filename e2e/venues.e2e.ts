@@ -24,13 +24,13 @@ test.describe('venues', () => {
 	 */
 	test('an archived venue is out of the list until asked for', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/venues');
+		await page.goto('/staff/events?view=venues');
 
 		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toHaveCount(0, {
 			timeout: 15000
 		});
 
-		await page.goto('/staff/venues?archived=1');
+		await page.goto('/staff/events?view=venues&archived=1');
 		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toBeVisible({
 			timeout: 15000
 		});

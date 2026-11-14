@@ -67,7 +67,8 @@ describe('activeNavKey', () => {
 		// page you navigate to rather than a section of its own.
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
-		['/staff/tasks/productions', 'projects'],
+		// Venues is an Events view; a venue's page lights Events (#2766).
+		['/staff/venues/abc', 'calendar'],
 		['/staff/contacts', 'contacts'],
 		['/staff/contacts/abc', 'contacts'],
 		['/staff/funding', 'funding'],
@@ -175,10 +176,10 @@ describe('the nav tree', () => {
 		expect(allStaffNavItems().some((i) => i.href === '/staff/volunteer')).toBe(false);
 	});
 
-	it('folds Productions into Tasks (#2101, #2625)', () => {
+	it('folds Productions and Venues into Events (#2766)', () => {
 		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
-		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(1);
-		expect(filterNavItems([projects], ['event.read'])).toHaveLength(0);
+		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(0);
+		expect(allStaffNavItems().some((i) => i.href === '/staff/venues')).toBe(false);
 	});
 
 	it('folds Bands, Clubs and Committees into Groups (#2086)', () => {
@@ -232,7 +233,7 @@ describe('the nav tree', () => {
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Building access is a Practice space view (#2766), not a row.
 		expect(activeNavKey('/staff/building-access')).toBe('reservations');
-		expect(keys('partners')).toEqual(['contacts', 'funding', 'venues', 'content']);
+		expect(keys('partners')).toEqual(['contacts', 'funding', 'content']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).not.toContain('grants');
@@ -267,7 +268,6 @@ describe('route coverage', () => {
 		// Roles and clearances: reached from Volunteering's header (#1791).
 		'/staff/volunteer/roles',
 		'/staff/tasks/projects', // a Tasks view (#2625)
-		'/staff/tasks/productions', // a Tasks view (#2101, #2625)
 		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
 		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
 		// Content's views, reached from its tab bar (#2765).

@@ -58,6 +58,7 @@ const {
 	checkInVendor,
 	markVendorNoShow,
 	recordInviteBack,
+	listAllApplications,
 	MarketClosedError,
 	VendorTransitionError
 } = await import('./market-service');
@@ -457,6 +458,24 @@ describe('deciding', () => {
 			withdrawn: 0,
 			no_show: 0
 		});
+	});
+});
+
+describe("every market's applications (#2766)", () => {
+	it('lists them with their market, filtered by status', async () => {
+		insertEvent();
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: 20 });
+		const { id } = await submitApplication(EVENT, application, NOW);
+		await submitApplication(EVENT, { ...application, businessName: 'Kiln Co' }, NOW);
+		await decideApplication(id, { decision: 'declined', message: 'Full' }, ACTOR);
+
+		const all = await listAllApplications();
+		expect(all.pagination.total).toBe(2);
+		expect(all.rows[0]).toMatchObject({ eventId: EVENT, eventTitle: 'Autumn Market' });
+
+		const applied = await listAllApplications({ status: 'applied' });
+		expect(applied.rows.map((r) => r.businessName)).toEqual(['Kiln Co']);
+		expect(applied.pagination.total).toBe(1);
 	});
 });
 

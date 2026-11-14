@@ -14,6 +14,7 @@ import {
 	eventListingColumns,
 	eventPosterKeySql,
 	shortOfActsSql,
+	productionStatusSql,
 	ticketSaleColumns,
 	noSaleTerms,
 	type ListingSaleTerms
@@ -31,7 +32,7 @@ import { ticket } from '#lib/server/db/schema/ticket.js';
 import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
 import { contentFlag } from '#lib/server/db/schema/flag.js';
 import { venue } from '#lib/server/db/schema/venue.js';
-import { production } from '#lib/server/db/schema/production.js';
+import { production, type ProductionStatus } from '#lib/server/db/schema/production.js';
 import { cancelProductionsForEvent } from '#lib/server/production/production-service.js';
 import { openDeliverablesOnListing } from '#lib/server/production/cancellation-notice.js';
 import { assertProjectTakesListing } from '#lib/server/production/production-scope.js';
@@ -1705,6 +1706,7 @@ export async function listAll(
 		to?: Date;
 		/** Only bills short of the act count their production asks for (#859). */
 		needsActs?: boolean;
+		productionStatus?: ProductionStatus;
 	} = {},
 	pagination: PaginationInput = {}
 ) {
@@ -1715,6 +1717,7 @@ export async function listAll(
 		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
 		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
 		opts.needsActs ? shortOfActsSql : undefined,
+		opts.productionStatus ? productionStatusSql(opts.productionStatus) : undefined,
 		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
