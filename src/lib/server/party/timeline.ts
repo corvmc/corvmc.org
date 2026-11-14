@@ -5,7 +5,9 @@ import { workOrder, volunteerRole } from '#lib/server/db/schema/volunteer.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { partySubscribersUnguarded } from '#lib/server/directory/contact-service.js';
+import { campaign, campaignSend } from '#lib/server/db/schema/marketing.js';
 import {
 	listAuditEntriesForSubject,
 	type AuditSubjectFilter
@@ -22,8 +24,8 @@ import { inKindGiftsFor } from '#lib/server/finance/in-kind-gift.js';
 /**
  * One timeline per organization or person (#2622), newest first: the notes
  * staff logged, the Inbox conversations filed to it, the audit entries for its
- * grants, sponsorships and jobs, the tasks about it that were marked done, and
- * its in-kind gifts (#2727). Each source is read with
+ * grants, sponsorships and jobs, the tasks about it that were marked done, its
+ * in-kind gifts (#2727), and the campaigns its people were sent. Each source is read with
  * `limit + 1` and merged, so "Show older" is exact.
  */
 
@@ -37,6 +39,7 @@ export type TimelineItem = FeedItem &
 		| { source: 'task'; workOrderId: string }
 		| { source: 'thread'; threadId: string }
 		| { source: 'gift'; amountCents: number }
+		| { source: 'campaign'; campaignId: string }
 	);
 
 async function notes(party: PartyRef, limit: number): Promise<FeedPage<TimelineItem>> {
@@ -140,6 +143,45 @@ async function doneTasks(party: PartyRef, limit: number): Promise<FeedPage<Timel
 	};
 }
 
+/** Campaign copies sent to the party's people, matched through their subscriber row. */
+async function campaignsReceived(party: PartyRef, limit: number): Promise<FeedPage<TimelineItem>> {
+	const at = sql<Date>`coalesce(${campaign.sentAt}, ${campaignSend.createdAt})`.mapWith(
+		campaignSend.createdAt
+	);
+	const rows = await db
+		.select({
+			id: campaignSend.id,
+			campaignId: campaign.id,
+			subject: campaign.subject,
+			at,
+			senderId: campaign.sentById,
+			senderName: user.name
+		})
+		.from(campaignSend)
+		.innerJoin(campaign, eq(campaign.id, campaignSend.campaignId))
+		.leftJoin(user, eq(user.id, campaign.sentById))
+		.where(
+			and(
+				inArray(campaignSend.subscriberId, partySubscribersUnguarded(party)),
+				inArray(campaignSend.status, ['sent', 'delivered'])
+			)
+		)
+		.orderBy(desc(at), desc(campaignSend.id))
+		.limit(limit + 1);
+	return {
+		items: rows.slice(0, limit).map((r) => ({
+			source: 'campaign',
+			id: `campaign:${r.id}`,
+			at: r.at,
+			actorId: r.senderId,
+			actorName: r.senderName,
+			summary: r.subject,
+			campaignId: r.campaignId
+		})),
+		hasMore: rows.length > limit
+	};
+}
+
 export async function partyTimeline(
 	party: PartyRef,
 	opts: { limit?: number } = {}
@@ -153,7 +195,8 @@ export async function partyTimeline(
 		inKindGiftsFor(party, limit).then((p) => ({
 			...p,
 			items: p.items.map((i) => ({ ...i, source: 'gift' as const }))
-		}))
+		})),
+		campaignsReceived(party, limit)
 	]);
 	return mergeFeed(limit, ...pages);
 }

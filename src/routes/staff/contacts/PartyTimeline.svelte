@@ -17,8 +17,8 @@
 	/**
 	 * One organization's or person's timeline (#2622): the notes staff logged,
 	 * changes to its grants, sponsorships and jobs, and the tasks about it that
-	 * were marked done, and its in-kind gifts. Notes are added, edited and
-	 * deleted here, and gifts recorded.
+	 * were marked done, its in-kind gifts, and the campaigns its people were
+	 * sent. Notes are added, edited and deleted here, and gifts recorded.
 	 */
 	let {
 		party,
@@ -51,6 +51,13 @@
 				...row,
 				summary: `${item.summary} — ${formatCents(item.amountCents)}`,
 				context: { label: m.staff_contacts_gift_label() }
+			};
+		}
+		if (item.source === 'campaign') {
+			return {
+				...row,
+				href: resolve('/staff/marketing/campaigns/[id]', { id: item.campaignId }),
+				context: { label: m.staff_campaign_label() }
 			};
 		}
 		if (item.source === 'task') {

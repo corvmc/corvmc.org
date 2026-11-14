@@ -552,6 +552,20 @@ export async function countOrganizationPeopleUnguarded(organizationId: string): 
 	return rows.length;
 }
 
+/** The subscriber rows of a person, or of everyone kept at an organization, as a subquery. Callers guard. */
+export function partySubscribersUnguarded(party: { type: 'organization' | 'contact'; id: string }) {
+	return db
+		.select({ id: contact.subscriberId })
+		.from(contact)
+		.where(
+			and(
+				party.type === 'contact' ? eq(contact.id, party.id) : eq(contact.organizationId, party.id),
+				isNotNull(contact.subscriberId),
+				kept(new Date())
+			)
+		);
+}
+
 /** Everyone kept at an organization, the main person first. */
 export async function listPeople(organizationId: string) {
 	await requireCapability('contact.read');
