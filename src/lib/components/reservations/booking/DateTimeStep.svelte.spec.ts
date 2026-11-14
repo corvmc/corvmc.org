@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { getReservationEndTimes } from '#lib/remote/reservations.remote.js';
+import '#lib/test/locators.js';
 
 /**
  * The shortest end the picker offers is a fact about the booker: teaching time
@@ -52,14 +53,14 @@ const remote = {
 };
 
 const select = (name: string) =>
-	document.querySelector<HTMLSelectElement>(`select[name="${name}"]`);
+	document.querySelector(`select[name="${name}"]`) as HTMLSelectElement | null;
 const offered = (name: string) =>
 	[...(select(name)?.options ?? [])].map((o) => o.value).filter((v) => v !== '');
 
 async function endsAfterPicking(bookerType?: 'instructor') {
 	await render(Harness, { remote: remote as never, bookerType });
 	await vi.waitFor(() => expect(offered('startTime')).toEqual(['11:00', '11:30']));
-	await page.elementLocator(select('startTime')!).selectOptions('11:00');
+	await page.getByCss('select[name="startTime"]').selectOptions('11:00');
 	await vi.waitFor(() => expect(offered('endTime').length).toBeGreaterThan(0));
 	return offered('endTime');
 }
