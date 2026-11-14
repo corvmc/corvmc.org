@@ -54,7 +54,9 @@ vi.mock('#lib/server/capability/capability-grant-service.js', async (orig) => ({
 vi.mock('#lib/server/band/band-service.js', async (orig) => ({
 	...(await orig<object>()),
 	deactivate: vi.fn(),
-	reactivate: vi.fn()
+	reactivate: vi.fn(),
+	// `setStaffGroupRole` reads the kind to pick its capability (#3009).
+	getByIdActive: vi.fn(async () => ({ id: 'g-1', kind: 'committee' }))
 }));
 vi.mock('#lib/server/group/group-service.js', async (orig) => ({
 	...(await orig<object>()),
