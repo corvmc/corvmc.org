@@ -4,7 +4,7 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { getReservationConfig } from './config';
-import { confirmedUnpaidSql } from './staff-reservation-list';
+import { confirmedUnpaidSql } from './payment-due';
 import { buildDateInTz } from './timezone';
 
 /**
