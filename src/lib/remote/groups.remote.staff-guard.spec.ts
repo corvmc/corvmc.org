@@ -138,6 +138,7 @@ vi.mock('#lib/server/project/project-service.js', () => ({
 }));
 vi.mock('#lib/server/group/group-totals-service.js', () => ({ getClubTotals: vi.fn() }));
 vi.mock('#lib/server/group/file-service.js', () => ({ list: vi.fn(), getUsage: vi.fn() }));
+vi.mock('#lib/server/group/position-service.js', () => ({ listPositions: vi.fn(async () => []) }));
 vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v }));
 vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {

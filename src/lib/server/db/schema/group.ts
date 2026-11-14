@@ -239,3 +239,54 @@ export const groupCapability = sqliteTable(
 	},
 	(t) => [primaryKey({ columns: [t.groupId, t.capability] })]
 );
+
+/**
+ * A named standing role inside a committee, such as Treasurer or Booker
+ * (#2988). A committee acts as a department and this is a seat in it; a band's
+ * or club's `group_member.position` stays free text. Grants nothing yet.
+ */
+export const groupPosition = sqliteTable(
+	'group_position',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [uniqueIndex('idx_group_position_name').on(t.groupId, t.name)]
+);
+
+/**
+ * Who holds a position. Keyed on the roster row, so leaving the committee
+ * vacates every position held in it. A position may have several holders.
+ */
+export const groupPositionHolder = sqliteTable(
+	'group_position_holder',
+	{
+		positionId: text('position_id')
+			.notNull()
+			.references(() => groupPosition.id, { onDelete: 'cascade' }),
+		memberId: text('member_id')
+			.notNull()
+			.references(() => groupMember.id, { onDelete: 'cascade' }),
+		assignedById: text('assigned_by_id').references(() => user.id, { onDelete: 'set null' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		primaryKey({ columns: [t.positionId, t.memberId] }),
+		index('idx_group_position_holder_member').on(t.memberId)
+	]
+);
+
+export type GroupPosition = typeof groupPosition.$inferSelect;

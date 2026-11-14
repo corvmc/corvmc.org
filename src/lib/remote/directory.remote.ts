@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { listPositionsHeld } from '#lib/server/group/position-service.js';
 import { LONG_TEXT_MAX } from '#lib/config.js';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
@@ -263,15 +264,20 @@ export const searchMessageRecipients = query(
 export const getDirectoryMember = query(z.string(), async (userId) => {
 	const viewer = requireUser();
 
-	const [profile, shows, features] = await Promise.all([
+	const [profile, shows, features, positions] = await Promise.all([
 		getMemberProfileService(userId, 'members'),
 		getMemberShows(userId),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		listPositionsHeld(userId)
 	]);
 
 	return {
 		profile,
 		shows,
+		// Committee positions (#2988). Withheld with a hidden profile.
+		positions: profile
+			? positions.map((p) => ({ id: p.positionId, name: p.name, committee: p.groupName }))
+			: [],
 		viewer: {
 			canReport: viewer.id !== userId,
 			// No "message yourself" button. Whether they will actually receive it depends on

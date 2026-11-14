@@ -48,6 +48,7 @@
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 	import CommitteeOpenItems from './CommitteeOpenItems.svelte';
+	import CommitteePositions from './CommitteePositions.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
@@ -139,6 +140,18 @@
 		data.canManage || members.active.some((m) => m.userId === data.viewerId)
 	);
 	const pendingEmailInvites = $derived(data.emailInvites.filter((i) => i.status === 'pending'));
+
+	/** A committee member's defined positions, by roster row (#2988). */
+	const positionsByMember = $derived.by(() => {
+		const byMember = new Map<string, string[]>();
+		for (const p of data.positions) {
+			for (const h of p.holders)
+				byMember.set(h.memberId, [...(byMember.get(h.memberId) ?? []), p.name]);
+		}
+		return byMember;
+	});
+	const seatTitle = (m: { id: string; position: string | null }) =>
+		group.kind === 'committee' ? positionsByMember.get(m.id)?.join(', ') || null : m.position;
 
 	// Repointed at the wrapper query: nothing reads the parts, so refreshing one
 	// of those would repaint nothing. See `custom/refresh-the-composed-query`.
@@ -548,7 +561,12 @@
 
 		{#if data.canManage}
 			<div class="flex justify-end">
-				<InviteGroupMemberAction {slug} groupName={group.name} onchanged={refreshRoster} />
+				<InviteGroupMemberAction
+					{slug}
+					groupName={group.name}
+					positions={group.kind !== 'committee'}
+					onchanged={refreshRoster}
+				/>
 			</div>
 		{/if}
 
@@ -578,7 +596,7 @@
 							     the ref already does that. -->
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-							<td>{m.position ?? '—'}</td>
+							<td>{seatTitle(m) ?? '—'}</td>
 							<td class="w-px text-right tabular-nums">{data.attendance[m.userId] ?? 0}</td>
 							{#if rosterActions}
 								<td class="w-px">
@@ -645,6 +663,16 @@
 				</Table>
 			{/if}
 		</InfoCard>
+
+		{#if group.kind === 'committee'}
+			<CommitteePositions
+				{slug}
+				positions={data.positions}
+				members={members.active}
+				canManage={data.canManagePositions}
+				onchanged={refreshRoster}
+			/>
+		{/if}
 
 		{#if data.canManage && pendingEmailInvites.length > 0}
 			<!-- Invitations to an address rather than an account. They have no roster

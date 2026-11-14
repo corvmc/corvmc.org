@@ -133,7 +133,7 @@ each are in
 | ---------------------------- | ------------------------------------------------------------------ |
 | Member directory and profile | `directory_entry`, `directory_tag`, the four intent signals        |
 | The organization             | `group`, `group_member`, `group_invite`, ownership as a roster row |
-| Governance                   | Committees, chairs, `by_application`, ballots                      |
+| Governance                   | Committees, chairs, committee positions, `by_application`, ballots |
 | Self-published presence      | `band_site`, `band_page_config`, custom domains                    |
 | Identity and claiming        | External acts: `directory_entry` with both FKs null                |
 | Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
@@ -197,6 +197,13 @@ zero or more `admin` rows, and those admins are the program's **chairs**. Staff 
 remove chairs from the program's staff page (`setChairRole`); nothing on the program side
 writes an `owner` row, and a program with no chairs is legal. Positions on a program roster
 are set by its chairs or staff, never by the member themselves.
+
+A committee acts as a department, and its positions are rows (#2988). `group_position`
+names a standing role in one committee, unique by name within it; `group_position_holder`
+says who holds it, keyed on the holder's `group_member` row, so leaving the committee
+vacates it. A position may have several holders or none, and grants nothing yet. A band's
+or club's seat title stays the free-text `group_member.position`, which for a band is the
+instrument line on its site and press kit.
 
 ## Seven models that recur
 

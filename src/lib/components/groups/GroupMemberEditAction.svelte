@@ -58,16 +58,17 @@
 				options={roleOptions}
 				description={m.groups_group_member_edit_description_body()}
 			/>
-			<FormField
-				field={fields.position}
-				type="text"
-				label={m.groups_position_label()}
-				value={position ?? ''}
-				maxlength="100"
-				placeholder={m.groups_group_member_edit_placeholder({
-					value: kindLabel === 'committee' ? 'Secretary' : 'Chart librarian'
-				})}
-			/>
+			<!-- A committee's seats are defined positions, edited on its Positions card. -->
+			{#if kindLabel !== 'committee'}
+				<FormField
+					field={fields.position}
+					type="text"
+					label={m.groups_position_label()}
+					value={position ?? ''}
+					maxlength="100"
+					placeholder={m.groups_group_member_edit_placeholder({ value: 'Chart librarian' })}
+				/>
+			{/if}
 		</div>
 	{/snippet}
 </Action>

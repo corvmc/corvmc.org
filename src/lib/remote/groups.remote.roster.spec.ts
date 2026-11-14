@@ -196,6 +196,7 @@ vi.mock('#lib/server/project/project-service.js', () => ({
 }));
 vi.mock('#lib/server/group/group-totals-service.js', () => ({ getClubTotals: vi.fn() }));
 vi.mock('#lib/server/group/file-service.js', () => ({ list: vi.fn(), getUsage: vi.fn() }));
+vi.mock('#lib/server/group/position-service.js', () => ({ listPositions: vi.fn(async () => []) }));
 vi.mock('#lib/server/capability/capability-grant-service.js', () => ({
 	setCommitteeCapabilityGrants: vi.fn()
 }));

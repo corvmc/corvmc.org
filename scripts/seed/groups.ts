@@ -77,7 +77,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinPolicy: 'by_application' as const,
 			joinInstructions:
 				'Tell us what you want to see programmed and roughly how much time you can give.',
-			positions: ['Chair', 'Secretary', 'Member'],
+			positions: [],
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
@@ -108,7 +108,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Keeps the room standing: repairs, gear, and the long list of things nobody notices until they break.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			// The baseline only: under #1564 opening work orders is Production's.
 			capabilityGrants: ['finance.read', 'project.manage'],
@@ -123,7 +123,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Runs the shows Booking books: crew, sound, the run of show, the door and settling up.',
 			joinPolicy: 'by_application' as const,
 			joinInstructions: null as string | null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			// The show's running half (#1673), and #1564's work orders.
 			capabilityGrants: [
@@ -145,7 +145,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Coordinate show posters, announce on social media and with local press. Write and deliver the newsletter.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
 			announcements: [],
@@ -158,7 +158,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Create and manage CMC merch, and work with local artists for poster art.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			// `event.manage` decides and seats vendors for the market its project owns (#2834).
 			capabilityGrants: [
@@ -213,7 +213,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				capabilityGrants: d.capabilityGrants
 			},
 			leader.id,
-			d.positions[0]
+			// A committee's seats are `group_position` rows (committee-positions.ts).
+			d.kind === 'committee' ? undefined : d.positions[0]
 		);
 		groups.push(g);
 
@@ -233,7 +234,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				groupId: g.id,
 				userId: m.id,
 				role: 'member',
-				position: pick(d.positions.slice(1)),
+				position: d.kind === 'committee' ? null : pick(d.positions.slice(1)),
 				status: 'active'
 			});
 		}
@@ -375,7 +376,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 /**
  * The Development Committee, carrying the grants the owner gave it (#1578,
  * #1602). Staff can re-point any of them on the group page. The open club's host
- * sits on it with no position, so a login exists for the seat-only staff panel.
+ * sits on it, so a login exists for the seat-only staff panel.
  */
 async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) {
 	const leaderIds = new Set(leaders.map((l) => l.id));
@@ -403,8 +404,7 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 				'sponsor.read'
 			]
 		},
-		chair.id,
-		'Chair'
+		chair.id
 	);
 	const host = leaders.find((l) => l.id === 'seed-group-leader-open');
 	for (const u of [member, host].filter((x): x is SeedUser => !!x)) {
@@ -412,7 +412,6 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 			groupId: dev.id,
 			userId: u.id,
 			role: 'member',
-			position: 'Member',
 			status: 'active'
 		});
 	}

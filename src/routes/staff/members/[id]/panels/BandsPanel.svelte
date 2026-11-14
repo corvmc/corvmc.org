@@ -36,6 +36,9 @@
 						<EntityIdentity ref={b.ref} size="md">
 							{#snippet meta()}
 								<StatusBadge status={b.role} label />
+								{#each b.positions as name (name)}
+									<Badge variant="ghost" size="sm">{name}</Badge>
+								{/each}
 								{#if b.status !== 'active'}
 									<Badge variant="warning" size="sm"
 										>{m.staff_members_id_panels_bands_panel_invite_pending_label()}</Badge

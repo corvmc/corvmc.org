@@ -1,4 +1,5 @@
 import { reservationTrack } from '#lib/utils/reservation-actions.js';
+import { listPositionsHeld } from '#lib/server/group/position-service.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
 import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
@@ -792,9 +793,14 @@ export const getUserBands = query(z.string(), async (userId) => {
 	// Every kind and every status: a staff member looking at one person's record
 	// wants the whole picture, including an invitation that was never accepted
 	// and any club or committee they sit on.
-	const bands = await listForUser(userId, groupKinds);
+	const [bands, held] = await Promise.all([
+		listForUser(userId, groupKinds),
+		listPositionsHeld(userId)
+	]);
 	return bands.map((b) => ({
 		...b,
+		// A committee's defined positions this person holds (#2988).
+		positions: held.filter((p) => p.groupId === b.id).map((p) => p.name),
 		// The member count is what qualifies a band in this list, so it takes the
 		// ref's subline rather than a column of its own.
 		ref: {

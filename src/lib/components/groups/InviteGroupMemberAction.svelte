@@ -16,8 +16,18 @@
 	 * owns its modal, so flipping between them would unmount the dialog the
 	 * leader was typing in.
 	 */
-	let { slug, groupName, onchanged }: { slug: string; groupName: string; onchanged: () => void } =
-		$props();
+	let {
+		slug,
+		groupName,
+		positions = true,
+		onchanged
+	}: {
+		slug: string;
+		groupName: string;
+		/** False for a committee, whose seats are defined positions filled after joining. */
+		positions?: boolean;
+		onchanged: () => void;
+	} = $props();
 
 	const memberFields = inviteGroupMember.fields;
 	const emailFields = inviteGroupByEmail.fields;
@@ -114,13 +124,15 @@
 				value="member"
 				options={roleOptions}
 			/>
-			<FormField
-				field={memberFields.position}
-				type="text"
-				label={m.groups_position_label()}
-				maxlength="100"
-				placeholder={m.groups_invite_group_member_optional_placeholder()}
-			/>
+			{#if positions}
+				<FormField
+					field={memberFields.position}
+					type="text"
+					label={m.groups_position_label()}
+					maxlength="100"
+					placeholder={m.groups_invite_group_member_optional_placeholder()}
+				/>
+			{/if}
 		</div>
 	{/snippet}
 </Action>
@@ -156,13 +168,15 @@
 				value="member"
 				options={roleOptions}
 			/>
-			<FormField
-				field={emailFields.position}
-				type="text"
-				label={m.groups_position_label()}
-				maxlength="100"
-				placeholder={m.groups_invite_group_member_optional_placeholder()}
-			/>
+			{#if positions}
+				<FormField
+					field={emailFields.position}
+					type="text"
+					label={m.groups_position_label()}
+					maxlength="100"
+					placeholder={m.groups_invite_group_member_optional_placeholder()}
+				/>
+			{/if}
 		</div>
 	{/snippet}
 </Action>
