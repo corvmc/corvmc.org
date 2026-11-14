@@ -305,7 +305,7 @@
 
 				{#if data.paymentReminders.length > 0}
 					<div class="mt-3 pt-3 rule-top" data-testid="payment-reminders">
-						<p class="text-sm font-medium">{m.staff_reservations_id_payment_reminders_label()}</p>
+						<p class="text-sm font-medium">{m.staff_reservations_id_payment_reminders_text()}</p>
 						<ul class="text-muted text-sm">
 							{#each data.paymentReminders as sent (sent.daysAfter)}
 								<li>
