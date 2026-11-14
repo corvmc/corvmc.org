@@ -10,6 +10,7 @@ export const auditActions = [
 	'reservation.cancelled_by_staff',
 	'reservation.comped',
 	'reservation.refunded',
+	'reservation.payment_reminder',
 	'clearance.granted',
 	'clearance.revoked',
 	'orientation.waived',
@@ -138,6 +139,17 @@ export interface AuditDetailsByAction {
 	'reservation.comped': ReservationWhen & { waivedCents: number };
 	/** The subject is the member who booked. `cancelled` when the refund also cancelled it. */
 	'reservation.refunded': ReservationWhen & { cancelled: boolean; reason: string | null };
+	/**
+	 * The subject is the member who booked; the actor is System. Every attempt is
+	 * a row (#2876): `sent` is in the outbox as `outboxId`, `skipped` says why.
+	 */
+	'reservation.payment_reminder': ReservationWhen & {
+		daysAfter: number;
+		amountCents: number | null;
+		outcome: 'sent' | 'skipped' | 'failed';
+		reason: string | null;
+		outboxId: string | null;
+	};
 	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */
 	'clearance.granted': ClearanceRef & { grantedOn: string; expiresOn: string | null };
 	'clearance.revoked': ClearanceRef & { reason: string };

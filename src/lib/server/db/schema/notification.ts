@@ -153,6 +153,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		mandatory: true
 	},
 	{
+		key: 'reservation_payment_due',
+		category: 'practice-space',
+		label: 'Payment due',
+		description: 'Reminder 1, 7 and 21 days after a reservation ends unpaid',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'band_invitation',
 		category: 'people',
 		label: 'Band invitation',

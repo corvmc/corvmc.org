@@ -1,4 +1,5 @@
 import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
+import { listPaymentRemindersSent } from '#lib/server/reservation/payment-reminder.js';
 import {
 	recordReservationCash,
 	recordReservationCredit
@@ -638,6 +639,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 	// One more read inside this remote rather than a second query fanned out of
 	// the page — see `custom/no-concurrent-remote-queries`.
 	const orientation = await orientationForReservation(id);
+	const paymentReminders = await listPaymentRemindersSent(id);
 
 	return {
 		reservation: row,
@@ -660,6 +662,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			row.status !== 'waitlisted' &&
 			priorCount === 0,
 		orientation,
+		paymentReminders,
 		hourlyRateCents: (await getBookingTerms(row.bookerType)).hourlyRateCents
 	};
 });

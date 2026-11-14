@@ -206,6 +206,20 @@ Two things differ from the member path:
   set the check is off; rows before it keep their status and are never counted
   (`src/lib/server/reservation/outstanding-fees.ts`).
 
+- **An outstanding fee is reminded by email at 1, 7 and 21 days** after the session ended
+  (#2876). Three reminder registry stages (`PAYMENT_DUE_BANDS` in
+  `src/lib/server/reservation/payment-reminder.ts`) read the same rows the fee gate counts
+  (`listFeesEndedBetween`: `confirmedUnpaidSql`, started on or after **Count from**). Each band
+  runs to the next stage, and the last ends at 35 days, so a drain sends one stage and fees older
+  than five weeks get none. Each stage sends once per reservation; a session paid, comped or
+  refunded drops out before its next stage. With no **Count from** set none are sent. The email
+  names the date and amount, links to the reservation's pay page, and says new reservations and
+  door codes are held. It follows the member's **Payment due** notification preference and does
+  not copy staff. Every attempt writes a `reservation.payment_reminder` audit row on the member,
+  with its outcome: `sent` (with the outbox row), `skipped` (email turned off or account removed)
+  or `failed` (the outbox refused it; the stage stays owed for the next pass). The staff
+  reservation's Payment card lists the stages sent.
+
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
 shared action component under `$lib/components/actions/`, so the member and staff
 surfaces cannot drift in what they do — only in who may do it.

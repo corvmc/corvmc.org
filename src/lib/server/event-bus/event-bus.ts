@@ -150,6 +150,13 @@ export interface ReservationReminderDueEvent {
 	endTime: ClubTime;
 }
 
+/** A session that ended still payment due, `daysAfter` days on (#2876). */
+export interface ReservationPaymentDueEvent extends ReservationReminderDueEvent {
+	daysAfter: number;
+	/** Null when the booking was never priced; it is owed in full. */
+	amountCents: number | null;
+}
+
 /** A member's booking before they hold the Practice space clearance (#2569). */
 export interface FirstVisitDueEvent extends ReservationReminderDueEvent {
 	/** When the orientation shift starts, club time; null with no live shift. */
@@ -972,6 +979,7 @@ export type DomainEvents = {
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;
 	'reservation.door_code_ready': DoorCodeReadyEvent;
+	'reservation.payment_due': ReservationPaymentDueEvent;
 	'reservation.first_visit_due': FirstVisitDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;

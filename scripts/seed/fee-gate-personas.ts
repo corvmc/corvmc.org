@@ -1,6 +1,7 @@
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { reminderSent } from '../../src/lib/server/db/schema/reminder';
 import { formatDateInTz } from '../../src/lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '../../src/lib/config';
 import { db, env } from './db';
@@ -12,7 +13,8 @@ import { type SeedRole } from './types';
  * The outstanding-fee limit (#2748, #2859), switched on. `fees-one@` owes one
  * session since the cutoff and `fees-two@` owes two; both are refused and get
  * no door code messages. Each also owes one session from before the cutoff,
- * which never counts. Password `password`; member numbers 77–78.
+ * which never counts. The owed sessions carry the payment reminders the drain
+ * would have sent (#2876). Password `password`; member numbers 77–78.
  */
 export async function seedFeeGatePersonas(roles: SeedRole[]) {
 	console.log('Seeding outstanding-fee personas...');
@@ -62,7 +64,9 @@ export async function seedFeeGatePersonas(roles: SeedRole[]) {
 		await db.insert(modelHasRole).values({ roleId: memberRole, userId: p.id });
 		// Before the cutoff: payment due on the staff list, never counted.
 		for (const day of [...p.owed, -30]) {
+			const id = `${p.id}-owed${day}`;
 			await db.insert(reservation).values({
+				id,
 				bookerType: 'user',
 				bookerId: p.id,
 				createdByUserId: p.id,
@@ -72,6 +76,15 @@ export async function seedFeeGatePersonas(roles: SeedRole[]) {
 				cashDueCents: 3000,
 				createdAt: ptDate(day - 2, 12)
 			});
+			const stages = day === -30 ? [] : [1, 7].filter((d) => d <= -day);
+			for (const d of stages) {
+				await db.insert(reminderSent).values({
+					reminderKey: `reservation_payment_due_${d}d`,
+					subjectType: 'reservation',
+					subjectId: id,
+					sentAt: ptDate(day + d, 13)
+				});
+			}
 		}
 	}
 	return { users: personas.length, cutoff };

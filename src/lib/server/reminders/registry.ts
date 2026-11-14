@@ -32,7 +32,12 @@ import {
 	listUnclaimedOrientationsBetween
 } from '#lib/server/volunteer/orientation-reminders.js';
 import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
-import { membersOwingFees } from '#lib/server/reservation/outstanding-fees.js';
+import {
+	getFeeGateCutoff,
+	listFeesEndedBetween,
+	membersOwingFees
+} from '#lib/server/reservation/outstanding-fees.js';
+import { PAYMENT_DUE_BANDS, paymentDueKey } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
@@ -75,6 +80,40 @@ function overdueLoans({ days, until }: { days: number; until: number }) {
 					userEmail: row.userEmail,
 					equipmentName: row.equipmentName,
 					dueDate: formatDateFull(row.dueDate, TZ)
+				}
+			}));
+		}
+	});
+}
+
+/**
+ * One payment reminder stage: sessions that ended inside the band still owing,
+ * by the fee gate's own rule and cutoff. With no cutoff set nothing is sent,
+ * as the gate refuses nothing.
+ */
+function paymentDue({ days, until }: { days: number; until: number }) {
+	return defineReminder({
+		key: paymentDueKey(days),
+		subjectType: 'reservation',
+		event: 'reservation.payment_due' as const,
+		async due(now: Date) {
+			const cutoff = await getFeeGateCutoff();
+			if (!cutoff) return [];
+			const rows = await listFeesEndedBetween(
+				new Date(now.getTime() - until * DAY),
+				new Date(now.getTime() - days * DAY),
+				cutoff
+			);
+			return rows.map((row) => ({
+				subjectId: row.id,
+				payload: {
+					reservationId: row.id,
+					daysAfter: days,
+					amountCents: row.amountCents,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					...when(row)
 				}
 			}));
 		}
@@ -458,6 +497,7 @@ export const reminders: ReminderDefinition[] = [
 	}),
 
 	...OVERDUE_BANDS.map(overdueLoans),
+	...PAYMENT_DUE_BANDS.map(paymentDue),
 
 	// Non-overlapping bands, so one drain sends one stage: a deadline first seen
 	// inside three days gets only the last reminder. Past deadlines get none;
