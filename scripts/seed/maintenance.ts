@@ -181,7 +181,14 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		{ ...holds, volunteerRoleId: role.id, capacity: 1, createdByUserId: staffId }
 	]);
 	await batchInsert(workOrder, [
-		{ id: randomUUID(), ...base, maintenanceScheduleId: holds.id, title: holds.name, dueAt: at(4) }
+		{
+			id: randomUUID(),
+			...base,
+			maintenanceScheduleId: holds.id,
+			groupId: booking.id,
+			title: holds.name,
+			dueAt: at(4)
+		}
 	]);
 
 	return { schedules: 7 };
