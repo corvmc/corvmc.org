@@ -16,6 +16,7 @@ import {
 	listRoomDays,
 	listUpcomingShows
 } from '#lib/server/user/staff-dashboard-service.js';
+import { listMyWork } from '#lib/server/task/my-work.js';
 import { countReviewFeed, listReviewFeed } from '#lib/server/review/review-registry.js';
 import { reviewKinds } from '#lib/types/review.js';
 import { FEED_MAX, feedLimit } from '#lib/types/activity.js';
@@ -65,8 +66,10 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 	if (capabilities.length === 0) error(403, 'Not permitted');
 	const holds = (c: Capability) => capabilities.includes(c);
 
-	const [room, shows, review, reviewCounts, lowStock, shortShifts, deadlines, members] =
+	const [myWork, room, shows, review, reviewCounts, lowStock, shortShifts, deadlines, members] =
 		await Promise.all([
+			// The task pages read under either gate.
+			holds('project.read') || holds('volunteer.read') ? listMyWork(me.id) : null,
 			holds('reservation.read') ? listRoomDays() : null,
 			holds('event.read') ? listUpcomingShows() : null,
 			// Each kind is read only for a viewer who may decide it.
@@ -80,6 +83,7 @@ export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) =>
 
 	return {
 		capabilities,
+		myWork: capped(myWork),
 		room,
 		shows,
 		review: { ...review, counts: reviewCounts },

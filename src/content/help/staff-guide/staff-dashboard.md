@@ -9,9 +9,18 @@ sortOrder: 0
 
 ## The staff area
 
-The **Staff** panel is where you run day-to-day operations. The dashboard shows today's and
-tomorrow's room bookings, upcoming shows, everything waiting for your review, short-staffed
-shifts, deadlines, low stock and recent members. Each section appears only if you can act on it.
+The **Staff** panel is where you run day-to-day operations. The dashboard shows your tasks,
+everything waiting for your review, today's and tomorrow's room bookings, upcoming shows,
+short-staffed shifts, deadlines, low stock and recent members. Each section appears only if you
+can act on it.
+
+## Your tasks
+
+**Your tasks** lists the open tasks waiting on you: the ones you are assigned to and have not
+marked done, and the unassigned ones belonging to a committee you sit on. Overdue tasks come
+first, then the rest by date, then those with no date. A task about a record, such as an amp or
+a booking, opens that record; any other task opens its own page. The section is hidden when
+nothing is waiting.
 
 ## Waiting for review
 

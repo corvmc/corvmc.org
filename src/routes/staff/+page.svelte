@@ -31,7 +31,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withHash, withQuery } from '#lib/utils/with-query.js';
-	import { hasCapability } from '#lib/config.js';
+	import { hasCapability, type EntityType } from '#lib/config.js';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import {
 		formatDateShort,
 		formatDateShortYear,
@@ -40,6 +41,9 @@
 	} from '#lib/utils/format.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
+	import { shiftLabel } from '#lib/utils/shift-label.js';
+	import { isOverdue } from '#lib/utils/work-order-due.js';
+	import { whenOf } from '#lib/utils/task-facts.js';
 
 	// Typed by the kinds, so a new review kind cannot reach this page unnamed.
 	const kindLabels: Record<ReviewKind, () => string> = {
@@ -106,6 +110,12 @@
 	let doorCodes = $derived(
 		data.room?.[0].reservations.filter((r) => r.doorCodeUnconfirmed).length ?? 0
 	);
+	const now = new Date();
+	// A task about a record opens that record, where its work is done.
+	function taskHref(t: { id: string; about: { type: EntityType; id: string } | null }) {
+		const about = t.about && entityHref({ ...t.about, title: '' } as EntityRef, viewer);
+		return about ?? resolve(`staff/tasks/${t.id}`);
+	}
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
 			? resolve('staff/tasks/productions')
@@ -115,6 +125,89 @@
 
 <PageHeader title={m.staff_dashboard_title()} />
 <PageContent>
+	{#if data.myWork?.total}
+		<SectionLabel label={m.staff_your_tasks_label()} count={data.myWork.total} />
+		<Table>
+			{#snippet head()}
+				<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+				<th>{m.staff_task_label()}</th>
+			{/snippet}
+			{#each data.myWork.rows as t (t.id)}
+				{@const when = whenOf(t)}
+				{@const late = isOverdue(t, now)}
+				<tr class="hover cursor-pointer" data-task={t.id} use:rowLink={taskHref(t)}>
+					<td class="whitespace-nowrap" class:text-error={late}>
+						{when ? formatDateShort(when) : ''}
+					</td>
+					<td class="cell-primary">
+						{shiftLabel(t)}
+						{#if late}
+							<Badge variant="error" size="xs">{m.staff_overdue_label()}</Badge>
+						{/if}
+						{#if t.projectName}
+							<div class="text-muted">{t.projectName}</div>
+						{/if}
+					</td>
+				</tr>
+			{/each}
+		</Table>
+		{#if data.myWork.total > data.myWork.rows.length}
+			<p class="mt-2 text-muted">
+				{m.staff_more_your_tasks_text({ count: data.myWork.total - data.myWork.rows.length })}
+			</p>
+		{/if}
+		{#if hasCapability(data.capabilities, 'project.read')}
+			<div class="mt-2">
+				<Button variant="ghost" size="sm" href={resolve('staff/tasks')}>
+					{m.staff_open_tasks_list_label()}
+				</Button>
+			</div>
+		{/if}
+	{/if}
+
+	<SectionLabel label={m.staff_review_waiting_label()} count={data.review.counts.total} />
+	{#if chips.length > 0}
+		<div class="mb-2 flex flex-wrap gap-2" data-testid="review-filter">
+			<Button
+				size="sm"
+				variant={kind ? 'ghost' : 'primary'}
+				aria-pressed={!kind}
+				onclick={() => filter(undefined)}
+			>
+				{m.staff_review_all_label()}
+				<Badge size="sm">{data.review.counts.total}</Badge>
+			</Button>
+			{#each chips as chip (chip.kind)}
+				<Button
+					size="sm"
+					variant={kind === chip.kind ? 'primary' : 'ghost'}
+					aria-pressed={kind === chip.kind}
+					data-review-kind={chip.kind}
+					onclick={() => filter(kind === chip.kind ? undefined : chip.kind)}
+				>
+					{kindLabels[chip.kind]()}
+					<Badge size="sm">{chip.count}</Badge>
+				</Button>
+			{/each}
+		</div>
+	{/if}
+	<ActivityFeed
+		rows={reviewRows}
+		label={m.staff_review_waiting_label()}
+		hasMore={data.review.hasMore && limit < FEED_MAX}
+		moreLabel={m.staff_review_show_more_label()}
+		onmore={() => (limit = Math.min(limit + FEED_PAGE, FEED_MAX))}
+		empty={{ description: m.staff_review_empty_body() }}
+	>
+		{#snippet trailing(row)}
+			<ReviewRowDecisions
+				item={row.item}
+				kindLabel={kindLabels[row.item.kind]()}
+				ondecided={refreshReview}
+			/>
+		{/snippet}
+	</ActivityFeed>
+
 	{#if data.room}
 		{#if doorCodes > 0}
 			<Alert type="warning">
@@ -219,49 +312,6 @@
 			<Button variant="ghost" size="sm" href={showsHref}>{m.staff_open_shows_list_label()}</Button>
 		</div>
 	{/if}
-
-	<SectionLabel label={m.staff_review_waiting_label()} count={data.review.counts.total} />
-	{#if chips.length > 0}
-		<div class="mb-2 flex flex-wrap gap-2" data-testid="review-filter">
-			<Button
-				size="sm"
-				variant={kind ? 'ghost' : 'primary'}
-				aria-pressed={!kind}
-				onclick={() => filter(undefined)}
-			>
-				{m.staff_review_all_label()}
-				<Badge size="sm">{data.review.counts.total}</Badge>
-			</Button>
-			{#each chips as chip (chip.kind)}
-				<Button
-					size="sm"
-					variant={kind === chip.kind ? 'primary' : 'ghost'}
-					aria-pressed={kind === chip.kind}
-					data-review-kind={chip.kind}
-					onclick={() => filter(kind === chip.kind ? undefined : chip.kind)}
-				>
-					{kindLabels[chip.kind]()}
-					<Badge size="sm">{chip.count}</Badge>
-				</Button>
-			{/each}
-		</div>
-	{/if}
-	<ActivityFeed
-		rows={reviewRows}
-		label={m.staff_review_waiting_label()}
-		hasMore={data.review.hasMore && limit < FEED_MAX}
-		moreLabel={m.staff_review_show_more_label()}
-		onmore={() => (limit = Math.min(limit + FEED_PAGE, FEED_MAX))}
-		empty={{ description: m.staff_review_empty_body() }}
-	>
-		{#snippet trailing(row)}
-			<ReviewRowDecisions
-				item={row.item}
-				kindLabel={kindLabels[row.item.kind]()}
-				ondecided={refreshReview}
-			/>
-		{/snippet}
-	</ActivityFeed>
 
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->

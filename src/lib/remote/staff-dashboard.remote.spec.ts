@@ -44,6 +44,11 @@ vi.mock('#lib/server/development/deadline-service.js', () => ({
 	listDevelopmentDeadlinesBetween: () => listDeadlines()
 }));
 
+const listMyWork = vi.fn(async () => Array.from({ length: 7 }, (_, i) => ({ id: `t${i}` })));
+vi.mock('#lib/server/task/my-work.js', () => ({
+	listMyWork: (...a: unknown[]) => listMyWork(...(a as []))
+}));
+
 const { getStaffDashboard } = await import('./staff-dashboard.remote');
 
 beforeEach(() => {
@@ -89,6 +94,18 @@ describe('getStaffDashboard', () => {
 			kind: undefined,
 			limit: 25
 		});
+	});
+
+	it('reads the viewer’s own tasks under either task gate, capped with the total', async () => {
+		caps = ['volunteer.read'];
+		const data = await getStaffDashboard({});
+		expect(listMyWork).toHaveBeenCalledWith('u1');
+		expect(data.myWork?.rows).toHaveLength(5);
+		expect(data.myWork?.total).toBe(7);
+
+		caps = ['user.list'];
+		expect((await getStaffDashboard({})).myWork).toBeNull();
+		expect(listMyWork).toHaveBeenCalledTimes(1);
 	});
 
 	it('refuses a caller with neither a position nor a seat', async () => {
