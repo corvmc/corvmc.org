@@ -225,6 +225,11 @@ admin > staff > sustaining > member
   on a capability outside the admin-only set that no job position or org-wide committee grant
   carries, apart from a named list still waiting for a position. See
   [the decision record](../decisions/0032-guards-name-capabilities.md).
+- A committee grant with `'owned'` reach counts only when the guard names the record: a guard
+  on a task, shift, sign-up, schedule, project or event passes
+  `requireCapability(cap, () => taskScope(id))` (the resolvers are in
+  `src/lib/server/capability/record-scope.ts`), which reads the committee and project off the
+  row. `scripts/owned-grant-scope.spec.ts` fails on an owned capability guarded without one.
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
