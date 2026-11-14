@@ -148,11 +148,6 @@ export async function listRequests(
 	});
 }
 
-/** What is still owed across the whole bill — the number staff act on. */
-export async function outstandingCount(eventId: string, now = new Date()): Promise<number> {
-	return (await listRequests(eventId, now)).filter((r) => !r.fulfilled).length;
-}
-
 /**
  * Who a request can be sent to.
  *

@@ -135,13 +135,6 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 // restricted for abusing DMs. It is derived rather than stored as a
 // restriction, so it lifts itself on their eighteenth birthday.
 
-/** May this member start new conversations? Restriction and age; a preference doesn't stop them replying. */
-export async function canInitiateMessages(userId: string): Promise<boolean> {
-	if (await isMessagingAgeRestricted(userId)) return false;
-	const { status } = await getStanding(userId, 'messaging');
-	return status === 'none';
-}
-
 /**
  * Is this member under the age at which the collective opens messaging?
  *

@@ -266,13 +266,6 @@ describe('the reviewer', () => {
 			svc.declineApplication(choice.choiceId, BOOKING, CHAIR, null)
 		).rejects.toBeInstanceOf(svc.ApplicationNotFoundError);
 	});
-
-	it('counts what is still open', async () => {
-		const choice = await submitted();
-		expect(await svc.countOpenForGroup(BOOKING)).toBe(1);
-		await svc.acceptApplication(choice.choiceId, BOOKING, CHAIR);
-		expect(await svc.countOpenForGroup(BOOKING)).toBe(0);
-	});
 });
 
 describe('withdrawing', () => {

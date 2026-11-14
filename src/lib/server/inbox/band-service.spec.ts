@@ -26,7 +26,6 @@ const {
 	replyToBandThread,
 	setBandThreadStatus,
 	markBandThreadRead,
-	countBandUnread,
 	bandOfThread
 } = await import('./band-service');
 
@@ -230,22 +229,6 @@ describe('markBandThreadRead', () => {
 
 		expect(count('inbox_group_read')).toBe(1);
 		expect(count('inbox_participant')).toBe(0);
-	});
-});
-
-describe('countBandUnread', () => {
-	it('counts only this band’s open threads this reader has not caught up on', async () => {
-		thread('unread');
-		thread('read');
-		sqlite.exec(
-			`insert into inbox_group_read (id, thread_id, user_id, last_read_at) values ('r1', 'read', 'user-1', ${T0 + 10})`
-		);
-		thread('resolved', { status: 'resolved' });
-		thread('theirs', { groupId: 'band-2' });
-
-		expect(await countBandUnread('band-1', 'user-1')).toBe(1);
-		// Another bandmate's cursor is not this reader's.
-		expect(await countBandUnread('band-1', 'user-2')).toBe(2);
 	});
 });
 

@@ -414,19 +414,3 @@ export function openApplicationCount(groupIdColumn: SQLiteColumn) {
 		.where(and(eq(groupApplicationChoice.groupId, groupIdColumn), openChoice()));
 	return sql<number>`(${counted})`;
 }
-
-/** The badge on a reviewer's nav row. */
-export async function countOpenForGroup(groupId: string): Promise<number> {
-	const [row] = await db
-		.select({ total: sql<number>`count(*)` })
-		.from(groupApplicationChoice)
-		.innerJoin(groupApplication, eq(groupApplication.id, groupApplicationChoice.applicationId))
-		.where(
-			and(
-				eq(groupApplicationChoice.groupId, groupId),
-				isNull(groupApplication.withdrawnAt),
-				inArray(groupApplicationChoice.status, [...OPEN_STATUSES])
-			)
-		);
-	return Number(row?.total ?? 0);
-}

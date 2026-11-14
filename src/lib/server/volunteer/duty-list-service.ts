@@ -1047,28 +1047,6 @@ export async function setWorkTaskDoneAsAssignee(id: string, done: boolean, userI
 	return setWorkTaskDone(id, done, userId);
 }
 
-/** How many of a work order's tasks are ticked — the close-out card's number. */
-export async function countTasks(workOrderIds: string[]) {
-	if (workOrderIds.length === 0) return new Map<string, { total: number; done: number }>();
-
-	const rows = await db
-		.select({
-			workOrderId: workTask.workOrderId,
-			total: count(),
-			done: sql<number>`sum(case when ${workTask.done} then 1 else 0 end)`
-		})
-		.from(workTask)
-		.where(
-			sql`${workTask.workOrderId} in (${sql.join(
-				workOrderIds.map((id) => sql`${id}`),
-				sql`, `
-			)})`
-		)
-		.groupBy(workTask.workOrderId);
-
-	return new Map(rows.map((r) => [r.workOrderId, { total: r.total, done: Number(r.done) }]));
-}
-
 // ---------------------------------------------------------------------------
 // Item dependencies (#2625)
 // ---------------------------------------------------------------------------

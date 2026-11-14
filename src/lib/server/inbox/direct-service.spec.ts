@@ -38,8 +38,7 @@ const {
 	acceptDirectThread,
 	declineDirectThread,
 	getDirectThread,
-	countDirectUnread,
-	listDirectThreads
+	countDirectUnread
 } = await import('./direct-service');
 const { MAX_PENDING_SENT_REQUESTS } = await import('#lib/config.js');
 
@@ -424,15 +423,6 @@ describe('the unread count', () => {
 
 	it('countDirectUnread counts accepted threads only', async () => {
 		expect(await countDirectUnread('alice')).toBe(1);
-	});
-
-	it('listDirectThreads lists requests too, tagged so the UI can mark them', async () => {
-		const result = await listDirectThreads('alice', { page: 1, pageSize: 25 });
-
-		expect(result.rows.map((r) => [r.id, r.pending])).toEqual([
-			['accepted', false],
-			['request', true]
-		]);
 	});
 });
 

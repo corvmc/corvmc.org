@@ -9,7 +9,7 @@ import {
 	volunteerShiftFeedback
 } from '#lib/server/db/schema/volunteer.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { DomainError } from '#lib/server/errors.js';
 import {
@@ -622,21 +622,6 @@ export async function markSignupNotified(signupId: string): Promise<void> {
 		.update(volunteerSignup)
 		.set({ notifiedAt: now, updatedAt: now })
 		.where(and(eq(volunteerSignup.id, signupId), isNull(volunteerSignup.notifiedAt)));
-}
-
-/** How many people on a called-off shift still have to be told. */
-export async function countUnnotified(shiftId: string): Promise<number> {
-	const [row] = await db
-		.select({ n: count() })
-		.from(volunteerSignup)
-		.where(
-			and(
-				eq(volunteerSignup.shiftId, shiftId),
-				ne(volunteerSignup.status, 'cancelled'),
-				isNull(volunteerSignup.notifiedAt)
-			)
-		);
-	return Number(row?.n ?? 0);
 }
 
 /** Confirmed signups for shifts starting inside a window — the reminder cron. */

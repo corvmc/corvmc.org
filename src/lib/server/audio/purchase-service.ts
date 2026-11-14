@@ -14,7 +14,7 @@
 import { db } from '#lib/server/db/index.js';
 import { audioRelease, audioTrack, releasePurchase } from '#lib/server/db/schema/audio.js';
 import { group } from '#lib/server/db/schema/group.js';
-import { and, count, eq, lt, sql } from 'drizzle-orm';
+import { and, eq, lt, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { checkout } from '#lib/server/finance/payment-service.js';
 import { getStripeProductId } from '#lib/server/finance/product-config-service.js';
@@ -478,25 +478,4 @@ export async function sweepAbandonedPurchases(now = new Date()): Promise<number>
 		.where(and(eq(releasePurchase.status, 'pending'), lt(releasePurchase.createdAt, cutoff)))
 		.returning({ id: releasePurchase.id });
 	return removed.length;
-}
-
-/** Sales for a band, for its payouts page. */
-export async function salesSummaryForBand(groupId: string) {
-	const [row] = await db
-		.select({
-			sales: count(),
-			gross: sql<number>`COALESCE(SUM(${releasePurchase.amountPaidCents}), 0)`,
-			toBand: sql<number>`COALESCE(SUM(${releasePurchase.bandNetCents}), 0)`,
-			toCollective: sql<number>`COALESCE(SUM(${releasePurchase.platformFeeCents}), 0)`
-		})
-		.from(releasePurchase)
-		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
-		.where(and(eq(audioRelease.groupId, groupId), eq(releasePurchase.status, 'paid')));
-
-	return {
-		sales: Number(row?.sales ?? 0),
-		grossCents: Number(row?.gross ?? 0),
-		toBandCents: Number(row?.toBand ?? 0),
-		toCollectiveCents: Number(row?.toCollective ?? 0)
-	};
 }

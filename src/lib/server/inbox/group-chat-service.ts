@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { inboxThread, inboxMessage, inboxGroupRead } from '#lib/server/db/schema/inbox.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -327,38 +327,6 @@ export async function markGroupChatRead(threadId: string, userId: string): Promi
 			target: [inboxGroupRead.threadId, inboxGroupRead.userId],
 			set: { lastReadAt: new Date() }
 		});
-}
-
-/**
- * How many of a group's topics this reader has unread.
- *
- * A count of topics, not of messages: the badge answers "how many rooms want
- * you", which is the number you can act on one at a time. Before topics this
- * was structurally 0 or 1 and read as a dot.
- */
-export async function countGroupChatUnread(groupId: string, userId: string): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(inboxThread)
-		.leftJoin(
-			inboxGroupRead,
-			and(eq(inboxGroupRead.threadId, inboxThread.id), eq(inboxGroupRead.userId, userId))
-		)
-		.where(
-			and(
-				topicsOf(groupId),
-				// An empty topic is not unread — see `listGroupTopics`.
-				isNotNull(inboxThread.lastMessageAt),
-				// A LEFT JOIN with no row is a reader who never opened it, which
-				// is unread and unmuted both.
-				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false)),
-				or(
-					isNull(inboxGroupRead.lastReadAt),
-					gt(inboxThread.lastMessageAt, inboxGroupRead.lastReadAt)
-				)
-			)
-		);
-	return row?.count ?? 0;
 }
 
 /**

@@ -265,15 +265,6 @@ export async function listCertifications(
 	}));
 }
 
-export async function getCertificationById(id: string): Promise<VolunteerCertification | null> {
-	const [row] = await db
-		.select()
-		.from(volunteerCertification)
-		.where(eq(volunteerCertification.id, id))
-		.limit(1);
-	return row ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Role requirements
 // ---------------------------------------------------------------------------

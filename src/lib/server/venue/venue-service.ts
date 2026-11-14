@@ -169,17 +169,6 @@ export async function getVenue(id: string): Promise<Venue> {
 	return row;
 }
 
-export async function getVenueBySlug(slug: string): Promise<Venue | null> {
-	const [row] = await db.select().from(venue).where(eq(venue.slug, slug)).limit(1);
-	return row ?? null;
-}
-
-/** The practice room, or null before anybody has said which one it is. */
-export async function getPrimaryVenue(): Promise<Venue | null> {
-	const [row] = await db.select().from(venue).where(eq(venue.isPrimary, true)).limit(1);
-	return row ?? null;
-}
-
 export interface VenueWithUse extends Venue {
 	/** How many events name it — the number that decides archive versus delete. */
 	eventCount: number;

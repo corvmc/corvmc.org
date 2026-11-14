@@ -18,7 +18,6 @@ const {
 	unblockUser,
 	isBlockedEitherWay,
 	blockExistsBetween,
-	canInitiateMessages,
 	messagingIsDisabled,
 	setAcceptsDirectMessages,
 	getMessagingState
@@ -136,28 +135,6 @@ describe('block checks read both directions', () => {
 		expect(await hit('alice', 'bob')).toBe(1);
 		expect(await hit('bob', 'alice')).toBe(1);
 		expect(await hit('bob', 'carol')).toBe(0);
-	});
-});
-
-describe('canInitiateMessages', () => {
-	// Their own switch stops people reaching them; it is not a finding against
-	// them, so it does not close conversations they are already in.
-	it('is about the restriction only — a member who switched themselves off may still reply', async () => {
-		account('alice', { accepts: false });
-		expect(await canInitiateMessages('alice')).toBe(true);
-	});
-
-	it('a restricted member may not start conversations', async () => {
-		account('alice');
-		standing('alice', 'restricted');
-		expect(await canInitiateMessages('alice')).toBe(false);
-	});
-
-	// Nobody restricted this member, so there is no note to quote and nothing
-	// to appeal (#556).
-	it('a member under 18 may not start conversations either', async () => {
-		account('alice', { dob: yearsAgo(16) });
-		expect(await canInitiateMessages('alice')).toBe(false);
 	});
 });
 

@@ -204,15 +204,6 @@ function readMetadata(raw: unknown): Record<string, unknown> | null {
 	}
 }
 
-/** What the collective kept over a window. Excludes in-kind and pass-through by construction. */
-export async function totalEarnedCents(range: RangeFilter): Promise<number> {
-	const [row] = await db
-		.select({ total: sum(financialEntry.amountCents) })
-		.from(financialEntry)
-		.where(and(inRange(range), eq(financialEntry.kind, 'earned')));
-	return asCents(row?.total ?? null);
-}
-
 /** Totals by category for one kind — the shape every report line is built from. */
 export async function totalsByCategory(
 	kind: FinancialEntryKind,

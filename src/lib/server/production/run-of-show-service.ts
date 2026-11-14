@@ -729,18 +729,3 @@ async function ownSlots(act: SQL): Promise<ActSlotTerms[]> {
 		paidAt: r.paidAt
 	}));
 }
-
-/**
- * Which production a listing has, or null.
- *
- * Here rather than in `production-service` so a remote that only writes slots
- * needs one import, and so the arrow between the two modules stays one-way.
- */
-export async function findProductionIdForEvent(eventId: string): Promise<string | null> {
-	const [row] = await db
-		.select({ id: production.id })
-		.from(production)
-		.where(announcedBy(eventId))
-		.limit(1);
-	return row?.id ?? null;
-}
