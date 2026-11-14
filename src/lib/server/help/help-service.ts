@@ -94,14 +94,15 @@ export async function resolveHelpReader(userId: string): Promise<HelpReader> {
 	return { audience, capabilities: [...new Set([...capabilitySet(held), ...committee])] };
 }
 
-/** Articles naming a capability the reader holds, whatever their tier. */
+/**
+ * Articles naming a capability the reader holds, whatever their tier. The held
+ * set is bound as one JSON parameter: admin holds ~100 capabilities, and D1
+ * refuses a statement binding more than 100 parameters.
+ */
 function admittedByCapability(reader: HelpReader): SQL | undefined {
 	if (reader.capabilities.length === 0) return undefined;
-	const held = sql.join(
-		reader.capabilities.map((c) => sql`${c}`),
-		sql`, `
-	);
-	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (${held}))`;
+	const held = JSON.stringify(reader.capabilities);
+	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (select value from json_each(${held})))`;
 }
 
 /** Stored values that read as the top tier, where an article's capabilities gate it. */
@@ -117,7 +118,7 @@ const STAFF_TIER = accessibleAudiences('staff').filter(
  * naming none is for every position holder. Below staff, capabilities only add
  * readers (a committee granted `sponsor.read`).
  */
-function articleVisibleTo(reader: HelpReader): SQL {
+export function articleVisibleTo(reader: HelpReader): SQL {
 	const tiers = accessibleAudiences(reader.audience);
 	const belowStaff = tiers.filter((a) => !STAFF_TIER.includes(a));
 	const byTier =
