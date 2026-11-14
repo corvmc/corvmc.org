@@ -2,9 +2,12 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-export type TaskViewKey = 'tasks' | 'projects' | 'recurring' | 'productions' | 'templates';
+export type TaskViewKey = 'tasks' | 'projects' | 'productions';
 
-/** The Tasks row's views (#2625): the table, then the things that group or generate tasks. */
+/**
+ * The Tasks row's lists (#2625): tasks, and the projects that group them.
+ * Recurring work and templates generate tasks, so they are its settings (#2767).
+ */
 export const taskViews: readonly StaffView<TaskViewKey>[] = [
 	{
 		key: 'tasks',
@@ -19,21 +22,9 @@ export const taskViews: readonly StaffView<TaskViewKey>[] = [
 		cap: 'project.read'
 	},
 	{
-		key: 'recurring',
-		label: () => m.staff_recurring_label(),
-		href: resolve('staff/tasks/recurring'),
-		cap: 'volunteer.read'
-	},
-	{
 		key: 'productions',
 		label: () => m.staff_projects_project_views_productions_label(),
 		href: resolve('staff/tasks/productions'),
 		cap: 'event.manage'
-	},
-	{
-		key: 'templates',
-		label: () => m.staff_project_templates_templates_label(),
-		href: resolve('staff/tasks/templates'),
-		cap: 'project.read'
 	}
 ];
