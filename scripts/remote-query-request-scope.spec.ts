@@ -72,61 +72,54 @@ describe('queries do not read the page from the request event', () => {
 	});
 
 	it('reach no event.url, params or route', () => {
-		const offenders: string[] = [];
-		for (const q of queries) {
-			const seen = new Set<Key>([q.key]);
-			const stack: Key[] = [q.key];
-			while (stack.length) {
-				const key = stack.pop()!;
-				const body = g.body(key);
-				if (!body) continue;
-				for (const hit of pageScopedReads(body.node)) offenders.push(`${q.key} → ${key}: ${hit}`);
-				walkEvents(g, body.mod, body.node, (e) => {
-					if (e.kind === 'call' && !seen.has(e.key)) {
-						seen.add(e.key);
-						stack.push(e.key);
-					}
-					return undefined;
-				});
-			}
-		}
+		const offenders = queries.flatMap((q) => reachedReads(g, q.key).map((h) => `${q.key} → ${h}`));
 		expect(offenders).toEqual([]);
 	});
 });
 
+/** Every function a remote reaches, its own handler first, with the reads of `PAGE_SCOPED` in each. */
+function reachedReads(g: CallGraph, start: Key): string[] {
+	const hits: string[] = [];
+	const seen = new Set<Key>([start]);
+	const stack: Key[] = [start];
+	while (stack.length) {
+		const key = stack.pop()!;
+		const body = g.body(key);
+		if (!body) continue;
+		for (const hit of pageScopedReads(body.node)) hits.push(`${key}: ${hit}`);
+		walkEvents(g, body.mod, body.node, (e) => {
+			if (e.kind === 'call' && !seen.has(e.key)) {
+				seen.add(e.key);
+				stack.push(e.key);
+			}
+			return undefined;
+		});
+	}
+	return hits;
+}
+
 /**
  * A form or command may read the URL, but not `params`: on a remote call they
  * come from a client header, so an id taken from them skips the schema and the
- * mutation works from one route only (#2778). The id is a schema field instead.
+ * mutation works from one route only (#2778, #2870). The id is a schema field
+ * instead. Checked through every function the mutation reaches, as for queries.
  */
-const PARAMS_KEYED = new Set<Key>([
-	// #2870
-	'src/lib/remote/bands.remote.ts#updateStaffBand',
-	'src/lib/remote/bands.remote.ts#updateMemberRole',
-	'src/lib/remote/reservations.remote.ts#payReservation'
-]);
-
 describe('mutations take their ids from the schema', () => {
 	const g = new CallGraph();
 	const mutations = g
 		.remotes(sourceFiles(REMOTE_GLOB, new Set()))
 		.filter((r) => r.kind === 'form' || r.kind === 'command');
-	const keyed = mutations
-		.filter((r) => {
-			const body = g.body(r.key);
-			return body && pageScopedReads(body.node).some((h) => h.startsWith('params '));
-		})
-		.map((r) => r.key);
 
 	it('finds the mutations', () => {
 		expect(mutations.length).toBeGreaterThan(300);
 	});
 
-	it('read no route params', () => {
-		expect(keyed.filter((k) => !PARAMS_KEYED.has(k))).toEqual([]);
-	});
-
-	it('list only mutations that still read them', () => {
-		expect([...PARAMS_KEYED].filter((k) => !keyed.includes(k))).toEqual([]);
+	it('reach no route params', () => {
+		const offenders = mutations.flatMap((r) =>
+			reachedReads(g, r.key)
+				.filter((h) => h.includes(': params '))
+				.map((h) => `${r.key} → ${h}`)
+		);
+		expect(offenders).toEqual([]);
 	});
 });

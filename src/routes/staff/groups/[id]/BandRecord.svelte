@@ -81,6 +81,7 @@
 						{#if m.role !== 'owner' && m.status === 'active'}
 							{@const rf = updateMemberRole.for(m.id)}
 							<Form remote={rf} successToast={msg.staff_groups_id_band_record_success_toast()}>
+								<input {...rf.fields.bandId.as('hidden', id)} />
 								<input {...rf.fields.memberId.as('hidden', m.id)} />
 								<Select
 									class="select-xs"

@@ -151,7 +151,7 @@ describe('payForReservation with credits, ten days out', () => {
 });
 
 describe('payReservation (the pay page), ten days out', () => {
-	const run = () => payReservation({ coverFees: false });
+	const run = () => payReservation({ reservationId: 'res-1', coverFees: false });
 
 	it('settles from free hours a session one minute before the reset, charging nothing', async () => {
 		bookTenDaysOut(MINUTE);

@@ -84,7 +84,12 @@ describe('reservation coverFees accepts a boolean', () => {
 	});
 
 	it('payReservation parses coverFees as a boolean', () => {
-		expect(payReservation.__schema.parse({ coverFees: true }).coverFees).toBe(true);
-		expect(payReservation.__schema.parse({}).coverFees).toBe(false);
+		const id = { reservationId: 'res-1' };
+		expect(payReservation.__schema.parse({ ...id, coverFees: true }).coverFees).toBe(true);
+		expect(payReservation.__schema.parse(id).coverFees).toBe(false);
+	});
+
+	it('payReservation requires the reservation id', () => {
+		expect(payReservation.__schema.safeParse({ coverFees: true }).success).toBe(false);
 	});
 });

@@ -3,6 +3,8 @@ import { error, isHttpError, isRedirect } from '@sveltejs/kit';
 import { mockUser } from '#lib/server/db/test-factory.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 
 // #2095: any active member of the booking band may pay a band session; the
 // booker's free hours settle it first, and the payer is charged the rest.
@@ -37,13 +39,14 @@ const bandRow = () => ({
 
 // Rows served per table, so the reservation read and the booker lookup differ.
 const rows = new Map<unknown, unknown[]>();
+const wheres: { table: unknown; where: unknown }[] = [];
 vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			let table: unknown;
 			const c: Record<string, unknown> = {
 				from: (t: unknown) => ((table = t), c),
-				where: () => c,
+				where: (w: unknown) => (wheres.push({ table, where: w }), c),
 				limit: () => Promise.resolve(rows.get(table) ?? [])
 			};
 			return c;
@@ -153,7 +156,8 @@ vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: currentUser },
-		params: { id: 'res-1' },
+		// Not the reservation: the id must come from the form's input (#2870).
+		params: { id: 'route-id' },
 		url: new URL('http://localhost/member/reservations/res-1/pay'),
 		request: { headers: new Headers() }
 	}),
@@ -188,6 +192,7 @@ async function settle(p: Promise<unknown>): Promise<unknown> {
 beforeEach(() => {
 	vi.clearAllMocks();
 	rows.clear();
+	wheres.length = 0;
 	rows.set(reservation, [bandRow()]);
 	rows.set(user, [{ email: booker.email, name: booker.name }]);
 	currentUser = bandmate;
@@ -199,7 +204,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 		const e = await settle(getReservationPayment('res-1'));
 		expect(isHttpError(e) && e.status).toBe(403);
 
-		const p = await settle(payReservation({ coverFees: false }));
+		const p = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
 		expect(isHttpError(p) && p.status).toBe(403);
 		expect(commitReservationCredits).not.toHaveBeenCalled();
 		expect(checkout).not.toHaveBeenCalled();
@@ -207,7 +212,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 
 	it("refuses a stranger to someone else's solo booking without a band lookup", async () => {
 		rows.set(reservation, [{ ...bandRow(), bookerType: 'user', bookerId: booker.id }]);
-		const p = await settle(payReservation({ coverFees: false }));
+		const p = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
 		expect(isHttpError(p) && p.status).toBe(403);
 		expect(requireGroupRole).not.toHaveBeenCalled();
 		expect(checkout).not.toHaveBeenCalled();
@@ -222,7 +227,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 	});
 
 	it("admits a bandmate: the booker's free hours settle first, the payer is charged the rest", async () => {
-		const r = await settle(payReservation({ coverFees: false }));
+		const r = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
 		expect(isRedirect(r) && r.location).toBe('/checkout/cs_test_session');
 
 		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
@@ -275,6 +280,23 @@ describe('bookBandReservation with a pay step', () => {
 		const r = await bookBandReservation({ ...booking, payNow: undefined });
 		expect(r).toMatchObject({ reservationId: 'res-1', waitlisted: false });
 		expect(commitReservationCredits).not.toHaveBeenCalled();
+		expect(checkout).not.toHaveBeenCalled();
+	});
+});
+
+describe('payReservation', () => {
+	it('reads the reservation named by its input, not the route', async () => {
+		await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
+
+		const read = wheres.find((w) => w.table === reservation);
+		const { params } = new SQLiteSyncDialect().sqlToQuery(read!.where as SQL);
+		expect(params).toEqual(['res-1']);
+	});
+
+	it('refuses a reservation id that matches no row', async () => {
+		rows.set(reservation, []);
+		const p = await settle(payReservation({ reservationId: 'res-missing', coverFees: false }));
+		expect(isHttpError(p) && p.status).toBe(404);
 		expect(checkout).not.toHaveBeenCalled();
 	});
 });

@@ -117,6 +117,7 @@
 	</Card>
 
 	<Form remote={payReservation}>
+		<input {...payReservation.fields.reservationId.as('hidden', res.id)} />
 		{#if remainingCents > 0}
 			<Field
 				field={payReservation.fields.coverFees}

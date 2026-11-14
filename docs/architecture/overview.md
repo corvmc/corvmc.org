@@ -113,10 +113,15 @@ enforced by a custom ESLint rule):
 ```svelte
 <!-- src/routes/member/reservations/[id]/pay/+page.svelte -->
 <Form remote={payReservation}>
+	<input {...payReservation.fields.reservationId.as('hidden', res.id)} />
 	<Field name="coverFees" type="checkbox" ... />
 	<SubmitButton class="mt-4 w-full btn-primary">Pay</SubmitButton>
 </Form>
 ```
+
+The record id travels as a schema field. A form or command never reads it from
+`getRequestEvent().params`, which on a remote call comes from a client header;
+`scripts/remote-query-request-scope.spec.ts` enforces this.
 
 ```ts
 // src/lib/remote/reservations.remote.ts — a short staff mutation
