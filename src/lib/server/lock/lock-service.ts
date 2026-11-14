@@ -196,7 +196,7 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
 						value: health.batteryLevel === null ? 'unknown' : `${health.batteryLevel} of 5`
 					}
 				],
-				cta: { url: '/staff/reservations?access', label: 'Open building access' }
+				cta: { url: '/staff/building-access', label: 'Open building access' }
 			}
 		});
 	} catch (err) {

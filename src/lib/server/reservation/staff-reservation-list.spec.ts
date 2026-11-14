@@ -128,6 +128,23 @@ describe('closures', () => {
 		expect(rows.map((r) => r.id)).toEqual(['today', 'tour', 'next-week', 'far']);
 	});
 
+	it('list alone under the Closures type, with no status counts (#2766)', async () => {
+		const { rows, pagination } = await listStaffReservations({ bookerType: 'closure' }, now);
+		expect(rows.map((r) => r.id)).toEqual(['tour']);
+		expect(pagination.total).toBe(1);
+		const withStatus = await listStaffReservations(
+			{ bookerType: 'closure', status: 'confirmed' },
+			now
+		);
+		expect(withStatus.rows).toEqual([]);
+		expect(await countStaffStatuses({ bookerType: 'closure' }, now)).toEqual({
+			confirmed: 0,
+			payment_due: 0,
+			waitlisted: 0,
+			cancelled: 0
+		});
+	});
+
 	it('leave the list under a status or a booker type', async () => {
 		const byStatus = await listStaffReservations({ status: 'confirmed' }, now);
 		const byBooker = await listStaffReservations({ bookerType: 'user' }, now);

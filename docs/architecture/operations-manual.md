@@ -377,9 +377,9 @@ Pressing it twice is safe — every stage filters on work still outstanding, so 
 reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
 
-**The Building access sidebar reads KV and D1 only.** Lock status is the daily job's last
+**The Building access view reads KV and D1 only.** Lock status is the daily job's last
 health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the
-red dot on the header's Building access button is the same reading. Active codes list
+Lock offline link in the Practice space header is the same reading. Active codes list
 per-booking codes, standing key-holder codes and the break-glass code, each by its last two
 digits and whether the lock has confirmed it. Recent usage is not shown: no U-tec directive
 for access history has been confirmed (#2589).

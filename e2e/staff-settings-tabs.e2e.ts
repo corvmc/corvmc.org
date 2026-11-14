@@ -72,11 +72,10 @@ test.describe('staff settings tabs', () => {
 	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/settings?tab=integrations');
-		await page.waitForURL(/\/staff\/reservations/);
-		const sidebar = page.getByRole('dialog');
-		await expect(sidebar.getByTestId('lock-status')).toBeVisible();
-		await expect(sidebar.getByTestId('active-codes')).toBeVisible();
-		await expect(sidebar.getByTestId('lock-settings')).toBeVisible();
+		await page.waitForURL(/\/staff\/building-access$/);
+		await expect(page.getByTestId('lock-status')).toBeVisible();
+		await expect(page.getByTestId('active-codes')).toBeVisible();
+		await expect(page.getByTestId('lock-settings')).toBeVisible();
 		await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	});
 });

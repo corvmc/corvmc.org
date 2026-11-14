@@ -45,6 +45,7 @@ import {
 	countStaffStatuses,
 	listStaffReservations,
 	staffDateRanges,
+	staffListTypes,
 	staffStatusViews
 } from '#lib/server/reservation/staff-reservation-list.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
@@ -2373,7 +2374,7 @@ const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const staffReservationsPageSchema = z.object({
 	search: z.string().max(200).optional(),
 	// Derived, so a booker type added later is filterable here and in the select alike.
-	bookerType: z.enum(bookerTypes).optional(),
+	bookerType: z.enum(staffListTypes).optional(),
 	range: z.enum(staffDateRanges).optional(),
 	dateFrom: dateString.optional(),
 	dateTo: dateString.optional(),

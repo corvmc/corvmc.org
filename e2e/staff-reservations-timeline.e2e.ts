@@ -113,11 +113,11 @@ test.describe('reservations timeline', () => {
 		await expect(page).toHaveURL(/[?&]date=next_7/);
 	});
 
-	test('the old recurring address opens the series modal', async ({ page }) => {
+	test('the old recurring link lands on the series list', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/recurring');
-		await page.waitForURL(/\/staff\/reservations\?recurring/, { timeout: 15000 });
-		// The only modal `?recurring` opens.
-		await expect(page.getByRole('dialog')).toBeVisible();
+		await page.goto('/staff/reservations?recurring');
+		await page.waitForURL(/\/staff\/recurring$/, { timeout: 15000 });
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+		await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	});
 });

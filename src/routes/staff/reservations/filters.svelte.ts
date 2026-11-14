@@ -2,9 +2,10 @@ import { createContext } from 'svelte';
 import { datePresets, type DateRange } from '#lib/components/ui/DateFilter.svelte';
 
 export type Status = 'confirmed' | 'payment_due' | 'waitlisted' | 'cancelled';
-export type Booker = 'user' | 'group' | 'production' | 'event_listing';
+/** Who booked, or `closure` for closures alone (#2766). */
+export type Booker = 'user' | 'group' | 'production' | 'event_listing' | 'closure';
 export const statuses: Status[] = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'];
-export const bookers: Booker[] = ['user', 'group', 'production', 'event_listing'];
+export const bookers: Booker[] = ['user', 'group', 'production', 'event_listing', 'closure'];
 const ranges: DateRange[] = [...datePresets, 'custom'];
 
 /** The URL keys these filters own; any other key on the address is left alone. */

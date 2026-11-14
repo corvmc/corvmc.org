@@ -30,11 +30,11 @@
 	import ListFilters from '#lib/components/ui/ListFilters.svelte';
 	import OverflowMenu from '#lib/components/ui/OverflowMenu.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
-	import BuildingAccess from './BuildingAccess.svelte';
+	import StaffViews from '../StaffViews.svelte';
+	import { spaceViews } from './views';
 	import ReservationCard from './ReservationCard.svelte';
 	import { paymentStatus } from './payment-status';
-	import { page as appPage, navigating } from '$app/state';
+	import { navigating } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
 	import {
@@ -75,17 +75,11 @@
 		openId: string | null;
 	} = $props();
 
-	const params = appPage.url.searchParams;
-	// `?access` opens Building access: where the lock-offline email and the U-tec sign-in land.
-	let accessOpen = $state(params.has('access') || params.has('utec'));
-	const utecParam = params.get('utec');
-
 	// Mirrored onto the current pathname, so the view survives a reload or a link
 	// copied while a reservation is open.
 	$effect(() => {
 		const query = filters.urlQuery;
-		// Only the filters' own keys decide whether the address is stale, so a link's
-		// `?recurring` or `?access` is not rewritten away on arrival.
+		// Only the filters' own keys decide whether the address is stale.
 		if (urlFilterQuery(new URL(location.href)) === query) return;
 		// A search landing just after a row was clicked must not replace the
 		// navigation that click started.
@@ -186,16 +180,19 @@
 	title={m.staff_reservations_practice_space_title()}
 	documentTitle={openId ? null : undefined}
 >
+	<StaffViews views={spaceViews} active="reservations" />
 	<div class="flex flex-wrap justify-end gap-2">
-		{#if settled?.lock}
-			<BuildingAccess
-				bind:open={accessOpen}
-				offline={settled.lock.offline}
-				canReadSettings={settled.canSettings}
-				utec={utecParam}
-			/>
+		{#if settled?.lock?.offline}
+			<Button
+				variant="ghost"
+				size="sm"
+				href={resolve('staff/building-access')}
+				data-testid="lock-offline-dot"
+			>
+				<span class="status status-error"></span>
+				{m.staff_reservations_lock_offline_link_label()}
+			</Button>
 		{/if}
-		<RecurringSeriesModal />
 		{#if settled?.canSettings}
 			<Button variant="ghost" size="sm" href={resolve('staff/reservations/settings')}>
 				{m.staff_reservations_settings_label()}
@@ -220,7 +217,8 @@
 				// A programme's session books as its group too.
 				{ value: 'group', label: m.staff_reservations_groups_label() },
 				{ value: 'production', label: m.staff_reservations_productions_label() },
-				{ value: 'event_listing', label: m.staff_reservations_events_label() }
+				{ value: 'event_listing', label: m.staff_reservations_events_label() },
+				{ value: 'closure', label: m.staff_reservations_closures_label() }
 			] satisfies { value: Booker; label: string }[]}
 			typeAllLabel={m.staff_reservations_all_bookers_label()}
 			typeLabel={m.staff_reservations_booker_type_label()}
