@@ -1,0 +1,5 @@
+# Member directory
+
+Status: ✅ /directory + /member/directory
+
+Two-tier directory (members-only + public opt-in). Rich profiles with bio, tagline, instruments, genres, links w/ embeds (YouTube, SoundCloud, Spotify), looking-for-band/members flags, contact info. Filtering by instruments, genres, status. Member + band profile edit pages. The member side is two pages (#2115): `/member/directory` lists members only, with a **Teaches at the Collective** filter over the instructor record beside the self-declared **Teaches privately**, and `/member/directory/bands` is the band browse page, under My Bands in the sidebar. The public view leads with bands and its tabs are real links, so the tab lives in the URL (`?tab=`) and survives a refresh, a shared link, or a back-navigation from a profile. Public search (`?q=`) and single-select genre chips (`?genre=`) filter client-side over one unfiltered payload — see `src/lib/utils/directory-browse.ts` for why, and for the switch back to the server filters if it outgrows that. Both grids render incrementally behind "Show more".

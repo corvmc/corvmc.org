@@ -1,0 +1,5 @@
+# Events listing
+
+Status: ✅ /events gig guide
+
+Next-3 CMC hero posters + a unified poster-forward gig list across CMC events and member bands' gigs (compact mini-calendar date-jumper with `?from=` anchoring, "This Week / This Month / Looking Ahead" sections, Show-more paging). Band events link to a generalized `/events/[id]` (band byline → `/directory/bands/[slug]`, external Tickets button, RSVPs like any other event). CMC never sells a band's gig — `ticketingEnabled` is refused for a `source='band'` row in `update()`, staff see no sell-through-the-site toggle, and the ticket/purchase endpoints reject band events on source. A band gig still carries a door/external price and its own ticket link. Member-authored `source='community'` listings sit alongside both (phase 2). Cancelled events stay on the guide marked cancelled until their date passes — the cancellation is the announcement — while the hero posters and mini-calendar dots stay published-only. See `docs/development/business-workflows.md` §9.
