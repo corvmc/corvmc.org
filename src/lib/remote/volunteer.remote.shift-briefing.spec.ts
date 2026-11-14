@@ -41,6 +41,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 	can: async () => false,
 	getUserRoles: async () => [],
 	committeeCapabilitiesFor: async () => [],
+	positionsFor: async () => [],
+	capabilitySet: () => [],
 	// The crew list on the page selects member refs, which carry a position.
 	topPositionFor: () => sql`null`,
 	requireCapability: async () => {

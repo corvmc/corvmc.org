@@ -52,6 +52,8 @@ vi.mock('#lib/server/authorization.js', async () => {
 		},
 		getUserRoles: async () => [],
 		committeeCapabilitiesFor: async () => [],
+		positionsFor: async () => [],
+		capabilitySet: () => [],
 		topPositionFor: () => sql`null`
 	};
 });
