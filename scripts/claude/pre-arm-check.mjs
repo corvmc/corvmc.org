@@ -24,7 +24,7 @@ import { pathToFileURL } from 'node:url';
 /**
  * @typedef {{ number: number, headRefName: string, headRefOid: string, title: string }} PrRef
  * @typedef {PrRef & { queued: boolean, armed: boolean, merged: boolean }} Pr
- * @typedef {{ subject: PrRef, others: Pr[] }} State
+ * @typedef {{ subject: PrRef & { isCrossRepository?: boolean }, others: Pr[] }} State
  * @typedef {{ pr: Pr, files: string[] }} Overlap
  * @typedef {{ exit: number, lines: string[] }} Verdict
  */
@@ -62,8 +62,9 @@ const label = (/** @type {Pr} */ p) =>
 
 /**
  * Fetches the heads the check merges: `main`, the subject, and every queued or armed PR. Pull refs
- * rather than branches, so a PR from a fork or with a renamed branch still resolves. GitHub moves
- * a pull ref seconds after the push, so a ref behind the head GitHub reports is fetched by SHA.
+ * rather than branches, so a PR from a fork or with a renamed branch still resolves. A pull ref
+ * and the head GitHub reports both lag a push by seconds; the branch does not, so the subject is
+ * read from its branch when that is in this repository.
  *
  * @param {string} cwd @param {State} state
  */
@@ -81,6 +82,23 @@ export function fetchHeads(cwd, state) {
 		git(cwd, ['fetch', '-q', 'origin', p.headRefOid]);
 		git(cwd, ['update-ref', ref(p.number), p.headRefOid]);
 	}
+	const { number, headRefName, isCrossRepository } = state.subject;
+	if (isCrossRepository) return;
+	try {
+		git(cwd, ['fetch', '-q', 'origin', `+refs/heads/${headRefName}:${ref(number)}`]);
+	} catch {
+		// The branch is gone or was renamed; the pull ref stands.
+	}
+}
+
+/** Files `main` has changed since `pr` branched from it. */
+function movedOnMain(
+	/** @type {string} */ cwd,
+	/** @type {string} */ pr,
+	/** @type {string} */ main
+) {
+	const base = git(cwd, ['merge-base', pr, main]).trim();
+	return git(cwd, ['diff', '--name-only', base, main]).split('\n').filter(Boolean);
 }
 
 const ahead = (/** @type {State} */ s) => s.others.filter((p) => p.queued || p.armed);
@@ -93,7 +111,9 @@ export function check(cwd, state) {
 	const subject = ref(state.subject.number);
 	const main = 'refs/remotes/origin/main';
 	/** @type {string[]} */
-	const lines = [];
+	const lines = [
+		`Checked #${state.subject.number} at ${git(cwd, ['rev-parse', '--short', subject]).trim()}`
+	];
 
 	// A PR whose commits sit under ours and are not in main: we are stacked on it.
 	const bases = state.others.filter(
@@ -135,6 +155,17 @@ export function check(cwd, state) {
 	}
 	if (overlaps.length === 1) {
 		const p = overlaps[0].pr;
+		// A stack on a base behind main inherits the base's distance from main in these files.
+		const moved = movedOnMain(cwd, ref(p.number), main).filter((f) =>
+			overlaps[0].files.includes(f)
+		);
+		if (moved.length) {
+			lines.push(
+				`Next: wait for #${p.number} to merge. main has changed ${moved.join(', ')} since it branched,`,
+				'  so a stack on it would conflict with main. Rebase onto main after it merges.'
+			);
+			return { exit: 2, lines };
+		}
 		lines.push(
 			`Next: stack on #${p.number}, push, wait for the new checks to start, then arm.`,
 			`  git fetch origin pull/${p.number}/head && git rebase FETCH_HEAD && git push --force-with-lease`,
@@ -157,7 +188,7 @@ export function check(cwd, state) {
 
 const QUERY = `query($owner: String!, $name: String!, $n: Int!) {
   repository(owner: $owner, name: $name) {
-    pullRequest(number: $n) { number headRefName headRefOid title }
+    pullRequest(number: $n) { number headRefName headRefOid title isCrossRepository }
     mergeQueue { entries(first: 100) { nodes { pullRequest { number } } } }
     open: pullRequests(states: OPEN, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
       nodes { number headRefName headRefOid title autoMergeRequest { enabledAt } }

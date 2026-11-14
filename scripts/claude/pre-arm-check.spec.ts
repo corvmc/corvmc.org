@@ -124,15 +124,28 @@ describe('pre-arm-check', () => {
 		expect(r.out).toContain('Stacked on #2');
 	});
 
-	it('reads the head GitHub reports when the pull ref has not moved yet', () => {
+	it('reads the pushed branch when the pull ref has not moved yet', () => {
 		pr(1, 'main', 'other.ts', 'y\n');
 		const queued = pr(2, 'main', 'nav.ts', 'Q\nb\nc\n');
 		git('checkout', '-q', 'pr-1');
 		writeFileSync(join(work, 'nav.ts'), 'S\nb\nc\n');
 		git('commit', '-qam', 'pushed, pull ref not yet moved');
 		git('push', '-q', 'origin', 'HEAD:refs/heads/pr-1');
-		const r = run(1, [{ number: 2, queued: true, oid: queued }], git('rev-parse', 'HEAD'));
+		const r = run(1, [{ number: 2, queued: true, oid: queued }]);
 		expect(r.exit).toBe(2);
+		expect(r.out).toContain(`Checked #1 at ${git('rev-parse', '--short', 'HEAD')}`);
+	});
+
+	it('waits instead of stacking when main has moved the conflicting file past the base', () => {
+		const queued = pr(2, 'main', 'nav.ts', 'Q\nb\nc\n');
+		git('checkout', '-q', 'main');
+		writeFileSync(join(work, 'nav.ts'), 'a\nb\nZ\n');
+		git('commit', '-qam', 'main moves');
+		git('push', '-q', 'origin', 'main');
+		pr(1, 'main', 'nav.ts', 'S\nb\nZ\n');
+		const r = run(1, [{ number: 2, queued: true, oid: queued }]);
+		expect(r.exit).toBe(2);
+		expect(r.out).not.toContain('pull/2/head');
 	});
 
 	it('sends a stack back to main when its base left the queue without merging', () => {

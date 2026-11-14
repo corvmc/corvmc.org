@@ -110,14 +110,14 @@ against every PR in the merge queue or armed for auto-merge. The queue drops a P
 with one merged ahead of it as UNMERGEABLE, with no run and no guard comment, so this is the only
 place that conflict shows before it costs a queue slot. Its exit code is the policy:
 
-| Exit | Means                                               | Do                                                                                       |
-| ---- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 0    | clear                                               | arm                                                                                      |
-| 1    | conflicts with `main`                               | rebase onto `main`, push, wait for the new checks to start, check again                  |
-| 2    | conflicts with one queued or armed PR               | rebase onto that PR's head (stack), push, wait for checks, arm; keep the unstack command |
-| 2    | conflicts with several                              | wait for them to merge, then rebase onto `main`                                          |
-| 3    | stacked on a PR that left the queue without merging | `git rebase --onto origin/main <its head>`, push, check again                            |
-| 4    | usage, `git` or `gh` error                          | read the message                                                                         |
+| Exit | Means                                                                                 | Do                                                                                       |
+| ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 0    | clear                                                                                 | arm                                                                                      |
+| 1    | conflicts with `main`                                                                 | rebase onto `main`, push, wait for the new checks to start, check again                  |
+| 2    | conflicts with one queued or armed PR                                                 | rebase onto that PR's head (stack), push, wait for checks, arm; keep the unstack command |
+| 2    | conflicts with several, or with one that `main` has since moved past in the same file | wait for them to merge, then rebase onto `main`                                          |
+| 3    | stacked on a PR that left the queue without merging                                   | `git rebase --onto origin/main <its head>`, push, check again                            |
+| 4    | usage, `git` or `gh` error                                                            | read the message                                                                         |
 
 A stacked PR keeps `main` as its base, so the queue still takes it. If its base PR leaves the queue
 unmerged, arming the stack would carry the base's commits into `main`, which is why every re-arm
