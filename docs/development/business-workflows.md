@@ -2448,8 +2448,8 @@ vendors are listed on the event page.
 - **A vendor was never told.** The decision is recorded even if the thread was deleted
   (`thread_id` set null). In that case no message is sent.
 - **A returning vendor shows no invite-back record.** The match is on the organization. A
-  vendor who applied from an address not on file became a second organization; merging the two
-  on Possible duplicates joins their history.
+  vendor who applied from an address not on file became a second organization of the same name.
+  Possible duplicates offers the two for merge, and merging joins their history.
 - **Applications are open but nobody can apply.** Check that the listing is `published`. A
   draft market returns 404 on the apply page.
 
@@ -2581,7 +2581,8 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   options, without the people. Person rows need `contact.read`. Every write needs `contact.manage`. A
   contractor is added from `/staff/contractors`, which asks for the trade. Possible duplicates
   (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
-  the same website domain; merging moves roles, records, people, notes and task links to the one
+  the same website domain or the same name (case, punctuation and a trailing "Co.", "Inc." or
+  "LLC" ignored); merging moves roles, records, people, notes and task links to the one
   kept, deletes the other, and writes `contact.merged` or `organization.merged` to the audit log.
   The list shows each organization's last activity (its latest note, `contact.read`) and next
   open task (`project.read`): the soonest-due open task linked to it, on its contractor jobs, or on

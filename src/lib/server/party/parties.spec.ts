@@ -327,11 +327,30 @@ describe('merging organizations', () => {
 		});
 
 		const groups = await orgs.listOrganizationMergeSuggestions();
-		expect(groups.map((g) => g.domain)).toEqual(['block15.example']);
+		expect(groups.map((g) => [g.reason, g.key])).toEqual([['website', 'block15.example']]);
 		expect(groups[0].organizations.map((o) => o.name).sort()).toEqual([
 			'Block 15',
 			'Block 15 Brewing'
 		]);
+	});
+
+	// #2824: a vendor applying from a new address became a second organization
+	// of the same name, and with no website the pair was never offered.
+	it('suggests organizations with the same name, ignoring case, punctuation and a business suffix', async () => {
+		await funders.createFunder({ name: 'Marys River Ceramics' });
+		await sponsors.createSponsor({ name: ' marys river  ceramics ' });
+		await funders.createFunder({ name: 'Willamette Honey' });
+		await sponsors.createSponsor({ name: 'Willamette Honey Co.' });
+		await funders.createFunder({ name: 'Willamette Bakery' });
+
+		const groups = await orgs.listOrganizationMergeSuggestions();
+		expect(groups.map((g) => [g.reason, g.organizations.length])).toEqual([
+			['name', 2],
+			['name', 2]
+		]);
+		expect(groups.flatMap((g) => g.organizations.map((o) => o.name))).not.toContain(
+			'Willamette Bakery'
+		);
 	});
 
 	it('refuses to merge an organization into itself', async () => {
