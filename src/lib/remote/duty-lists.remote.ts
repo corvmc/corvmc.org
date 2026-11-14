@@ -383,9 +383,11 @@ export const setWorkTaskDone = form(
 			// Whichever page is canonical for it; the task page's guard is the project's.
 			const workOrderId = data.shiftId;
 			// A committee seat may tick without reading the staff page; refresh only a page it reads.
-			if (!projectId && ((await can('project.read')) || (await can('volunteer.read')))) {
-				void getWorkOrderActivity({ workOrderId }).refresh();
-				await getTaskPage(workOrderId).refresh();
+			if (!projectId) {
+				if ((await can('project.read')) || (await can('volunteer.read'))) {
+					void getWorkOrderActivity({ workOrderId }).refresh();
+					await getTaskPage(workOrderId).refresh();
+				}
 			} else if (await can('project.read')) {
 				void getProjectActivity({ projectId, workOrderId }).refresh();
 				await getTaskPage(workOrderId).refresh();
