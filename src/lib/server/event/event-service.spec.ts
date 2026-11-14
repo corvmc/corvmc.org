@@ -2141,6 +2141,8 @@ describe('EventService', () => {
 		it('records nothing when the visibility stays', async () => {
 			selectResult = [{ ...mockEventRow, visibility: 'members' }];
 			await update('evt-1', { visibility: 'members' });
+			selectResult = [mockEventRow];
+			await update('evt-1', { visibility: 'public' });
 			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 	});
