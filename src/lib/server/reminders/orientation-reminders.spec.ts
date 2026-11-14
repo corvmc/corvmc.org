@@ -146,7 +146,8 @@ describe('unclaimed orientation alert', () => {
 		sqlite.exec(`update work_order set group_id = 'welcome' where id = 'wo-1'`);
 
 		const [due] = await byKey('orientation_unclaimed').due(NOW);
-		expect(due.recipients.map((r) => r.userId)).toEqual(['u-vol']);
+		expect(due).toMatchObject({ recipients: [{ userId: 'u-vol' }] });
+		expect((due as { recipients: unknown[] }).recipients).toHaveLength(1);
 	});
 });
 

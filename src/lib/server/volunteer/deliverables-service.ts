@@ -326,6 +326,7 @@ export interface DueDeliverable {
 	id: string;
 	title: string;
 	dueAt: Date;
+	eventId: string | null;
 	eventTitle: string | null;
 	projectName: string | null;
 	groupName: string;
@@ -391,6 +392,7 @@ export async function listDeliverablesDueBetween(
 		id: r.id,
 		title: r.title,
 		dueAt: r.dueAt!,
+		eventId: r.eventId,
 		eventTitle: r.eventTitle,
 		projectName: r.projectName,
 		groupName: r.groupName ?? '',
