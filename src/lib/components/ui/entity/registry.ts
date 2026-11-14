@@ -316,6 +316,7 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'returned',
 	'checked_in',
 	'sent',
+	'delivered',
 	'accepted',
 	'current',
 	'approved',

@@ -4,6 +4,7 @@ import {
 	campaignAudience,
 	audience,
 	audienceMember,
+	campaignSend,
 	subscriber
 } from '#lib/server/db/schema/marketing.js';
 import { eq, and, sql, isNull, lte, inArray, desc } from 'drizzle-orm';
@@ -13,7 +14,12 @@ import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { withSponsorCredit } from '#lib/utils/sponsor-credit.js';
 import { signUnsubscribeToken } from './unsubscribe';
-import { sendBroadcastBatch, type BroadcastMessage } from '#lib/server/notification/email/index.js';
+import {
+	sendBroadcastBatch,
+	type BroadcastMessage,
+	type SendResult
+} from '#lib/server/notification/email/index.js';
+import { chunkInsert } from '#lib/server/utils/chunk.js';
 import * as env from '$app/env/public';
 import { DomainError } from '#lib/server/domain-error.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
@@ -528,9 +534,41 @@ export async function executeSend(campaignId: string): Promise<number> {
 		})
 		.where(eq(campaign.id, campaignId));
 
-	await sendBroadcastBatch(messages);
+	let results: SendResult[];
+	let thrown: unknown = null;
+	try {
+		results = await sendBroadcastBatch(messages);
+	} catch (err) {
+		thrown = err;
+		const error = err instanceof Error ? err.message : String(err);
+		results = recipients.map(() => ({ ok: false, error }));
+	}
+	await recordSends(campaignId, recipients, results);
+	if (thrown) throw thrown;
 
 	return recipients.length;
+}
+
+/** One row per recipient, so the campaign page can say who it went to and what happened (#2777). */
+async function recordSends(
+	campaignId: string,
+	recipients: { subscriberId: string; audienceId: string; email: string }[],
+	results: SendResult[]
+): Promise<void> {
+	const rows = recipients.map((r, i) => {
+		const result = results[i] ?? { ok: false as const, error: 'No response' };
+		return {
+			campaignId,
+			subscriberId: r.subscriberId,
+			audienceId: r.audienceId,
+			email: r.email,
+			status: result.ok ? ('sent' as const) : ('failed' as const),
+			providerMessageId: result.ok ? result.messageId : null,
+			error: result.ok ? null : result.error
+		};
+	});
+	const inserts = chunkInsert(rows, (group) => db.insert(campaignSend).values(group));
+	if (inserts.length > 0) await db.batch(inserts as [(typeof inserts)[number], ...typeof inserts]);
 }
 
 // ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ vi.mock('#lib/server/marketing/audience-service.js', () => ({
 }));
 vi.mock('#lib/server/marketing/campaign-service.js', () => ({}));
 vi.mock('#lib/server/marketing/unsubscribe.js', () => ({}));
+vi.mock('#lib/server/marketing/campaign-send-service.js', () => ({}));
 vi.mock('#lib/server/marketing/subscriber-service.js', () => ({}));
 vi.mock('#lib/server/turnstile.js', () => ({}));
 vi.mock('#lib/server/utils/slug.js', () => ({

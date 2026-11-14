@@ -3,6 +3,7 @@ import {
 	audienceMember,
 	campaign,
 	campaignAudience,
+	campaignSend,
 	subscriber
 } from '../../src/lib/server/db/schema/marketing';
 import { SYSTEM_AUDIENCES } from '../../src/lib/server/marketing/system-audience-defs';
@@ -178,7 +179,16 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 		}
 	];
 
+	// Who the sent campaigns went to (#2777): the newsletter's live members, one
+	// refused by Postmark and one bounced, so the recipients card shows each kind.
+	const emailOf = new Map(allSubs.map((sub) => [sub.id, sub.email]));
+	const newsletterIds = membershipRows
+		.filter((r) => r.audienceId === audienceRows[0].id && !r.unsubscribedAt)
+		.map((r) => r.subscriberId);
+
 	for (const c of sentCampaigns) {
+		const recipients = newsletterIds.slice(0, c.recipientCount);
+		c.recipientCount = recipients.length;
 		const [row] = await db
 			.insert(campaign)
 			.values({
@@ -196,6 +206,18 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 			{ campaignId: row.id, audienceId: audienceRows[0].id },
 			{ campaignId: row.id, audienceId: audienceRows[1].id }
 		]);
+		const sends = recipients.map((subscriberId, i) => ({
+			campaignId: row.id,
+			subscriberId,
+			audienceId: audienceRows[0].id,
+			email: emailOf.get(subscriberId) ?? `${subscriberId}@example.com`,
+			status:
+				i === 0 ? ('failed' as const) : i === 1 ? ('bounced' as const) : ('delivered' as const),
+			providerMessageId: i === 0 ? null : randomUUID(),
+			error:
+				i === 0 ? '406: You tried to send to recipient(s) that have been marked as inactive.' : null
+		}));
+		if (sends.length > 0) await batchInsert(campaignSend, sends);
 	}
 
 	const [scheduled] = await db

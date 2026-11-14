@@ -42,7 +42,10 @@
 		IconCalendarEvent,
 		IconArrowMerge,
 		IconEyeOff,
-		IconReceipt
+		IconReceipt,
+		IconMailX,
+		IconMailOff,
+		IconMailExclamation
 	} from '@tabler/icons-svelte';
 	import {
 		volunteerHourStatusLabels,
@@ -136,6 +139,11 @@
 		// Campaigns
 		sending: 'badge-info',
 		sent: 'badge-success',
+		// One recipient's copy of a campaign (#2777)
+		delivered: 'badge-success',
+		failed: 'badge-error',
+		bounced: 'badge-error',
+		complained: 'badge-error',
 		// Ballots: a certified result is final and published.
 		certified: 'badge-success',
 		// Contractor engagements; `declined`, `completed`, `cancelled` and
@@ -258,6 +266,11 @@
 		// Campaign statuses
 		sending: { icon: IconSend, color: 'text-info' },
 		sent: { icon: IconMailCheck, color: 'text-success' },
+		// One recipient's copy of a campaign (#2777)
+		delivered: { icon: IconMailCheck, color: 'text-success' },
+		failed: { icon: IconMailX, color: 'text-error' },
+		bounced: { icon: IconMailOff, color: 'text-error' },
+		complained: { icon: IconMailExclamation, color: 'text-error' },
 		certified: { icon: IconCircleCheckFilled, color: 'text-success' },
 
 		// Contractor engagements; the other four are shared and mean the same.

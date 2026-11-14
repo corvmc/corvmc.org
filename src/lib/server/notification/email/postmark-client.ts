@@ -80,22 +80,25 @@ export interface BroadcastMessage {
 const BATCH_SIZE = 500;
 
 /**
- * Send a batch of emails via Postmark's broadcast message stream.
- * Automatically chunks into batches of 500 (Postmark's limit).
+ * Send a batch of emails via Postmark's broadcast message stream, answered per
+ * message in order. Postmark refuses single messages inside an accepted batch
+ * (an inactive recipient is ErrorCode 406). A chunk whose call throws fails,
+ * and so does every chunk after it, unsent: a broadcast is at-most-once.
  */
-export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<void> {
-	if (messages.length === 0) return;
+export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
 
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
 	const messageStream = getBroadcastStream();
 
+	const out: SendResult[] = [];
 	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
 		const chunk = messages.slice(i, i + BATCH_SIZE);
 
 		try {
-			await getClient().sendEmailBatch(
+			const responses = await getClient().sendEmailBatch(
 				chunk.map((msg) => ({
 					From: from,
 					To: msg.to,
@@ -107,6 +110,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					MessageStream: messageStream
 				}))
 			);
+			chunk.forEach((_, j) => out.push(sendResult(responses[j])));
 		} catch (err) {
 			captureException(err, {
 				event: 'email.send',
@@ -114,9 +118,12 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 				batchStart: i,
 				batchSize: chunk.length
 			});
-			throw err;
+			const error = err instanceof Error ? err.message : String(err);
+			while (out.length < messages.length) out.push({ ok: false, error });
+			break;
 		}
 	}
+	return out;
 }
 
 // ---------------------------------------------------------------------------

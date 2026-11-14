@@ -5,7 +5,9 @@
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { campaignSendStatuses } from '#lib/types/marketing.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { UnscheduleCampaignAction } from '#lib/components/actions/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -72,6 +74,38 @@
 				class="max-h-64 overflow-auto code-block p-3 whitespace-pre-wrap">{campaign.markdownBody}</pre>
 		</InfoCard>
 	</div>
+
+	{#if campaign.sends}
+		{@const sends = campaign.sends}
+		<InfoCard title={m.staff_recipients_title()} class="mb-6">
+			<DefinitionList>
+				{#each campaignSendStatuses.filter((st) => sends.counts[st]) as st (st)}
+					<Fact label={statusLabel(st)}>{sends.counts[st]}</Fact>
+				{/each}
+			</DefinitionList>
+			{#if sends.rows && sends.rows.length > 0}
+				<Table size="sm" class="mt-4">
+					{#snippet head()}
+						<th>{m.staff_email_label()}</th>
+						<th>{m.staff_audience_label()}</th>
+						<th class="w-px">{m.staff_status_label()}</th>
+					{/snippet}
+					{#each sends.rows as r (r.id)}
+						<tr>
+							<td class="cell-primary">
+								<div class="truncate font-mono text-sm">{r.email}</div>
+								{#if r.error}
+									<div class="truncate text-muted">{r.error}</div>
+								{/if}
+							</td>
+							<td>{r.audience ?? '—'}</td>
+							<td class="w-px"><StatusBadge status={r.status} /></td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+	{/if}
 
 	<InfoCard title={m.staff_marketing_campaigns_id_rendered_preview_title()}>
 		<div class="overflow-hidden rounded-lg border bg-white">

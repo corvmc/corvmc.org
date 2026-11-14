@@ -2,15 +2,18 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import * as env from '$app/env/private';
 import { suppressByEmail } from '#lib/server/marketing/subscriber-service.js';
+import { recordSendEvent } from '#lib/server/marketing/campaign-send-service.js';
 
 // ---------------------------------------------------------------------------
-// Postmark event webhook (bounces + spam complaints)
+// Postmark event webhook (deliveries, bounces + spam complaints)
 // ---------------------------------------------------------------------------
 // Configured per-server in the Postmark dashboard (Settings -> Webhooks) with
 // the Bounce and SpamComplaint events enabled. Authenticated with a shared
 // secret in the `x-postmark-token` header (Postmark webhooks support a custom
 // header / Basic Auth, not an HMAC signature). Marks the address globally
-// suppressed so future campaign sends skip it.
+// suppressed so future campaign sends skip it. Every one of the three also
+// moves the campaign send it is about (#2777), found by MessageID; Delivery
+// does only that, and needs the Delivery event enabled on the broadcast stream.
 //
 // Postmark delivers one event per request:
 //   - RecordType: 'SpamComplaint'           -> complaint
@@ -20,6 +23,7 @@ import { suppressByEmail } from '#lib/server/marketing/subscriber-service.js';
 
 interface PostmarkEventPayload {
 	RecordType?: string;
+	MessageID?: string;
 	Email?: string;
 	Type?: string;
 	TypeCode?: number;
@@ -42,6 +46,23 @@ export const POST: RequestHandler = async ({ request }) => {
 		payload = await request.json();
 	} catch {
 		error(400, 'Invalid JSON body');
+	}
+
+	const sendStatus =
+		payload.RecordType === 'Delivery'
+			? 'delivered'
+			: payload.RecordType === 'Bounce'
+				? 'bounced'
+				: payload.RecordType === 'SpamComplaint'
+					? 'complained'
+					: null;
+	if (sendStatus && payload.MessageID) {
+		try {
+			await recordSendEvent(payload.MessageID, sendStatus);
+		} catch (err) {
+			console.error('[webhooks/postmark/events] campaign send update failed:', err);
+			if (import.meta.env.DEV) throw err;
+		}
 	}
 
 	const email = payload.Email?.trim();
