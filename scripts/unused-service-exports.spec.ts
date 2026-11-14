@@ -18,7 +18,9 @@ const GRANDFATHERED: string[] = JSON.parse(
 
 function unused(): string[] {
 	const files = sourceFiles(SOURCES, new Set()).filter((f) => !/\.spec\.[jt]s$/.test(f));
-	const words = new Map(files.map((f) => [f, readFileSync(f, 'utf8').match(/\w+/g) ?? []]));
+	const words = new Map<string, string[]>(
+		files.map((f) => [f, readFileSync(f, 'utf8').match(/\w+/g) ?? []])
+	);
 	const found: string[] = [];
 	for (const service of sourceFiles(SERVICES, new Set())) {
 		const own = words.get(service) ?? [];
