@@ -27,7 +27,7 @@ export function auditActionLabel(action: AuditAction): string {
  * What each kind of record is called in the log's record-type filter. A show's
  * rows file under its event, so `production` is not offered on its own.
  */
-const SUBJECT_LABELS: Partial<Record<AuditSubjectType, string>> = {
+const SUBJECT_LABELS: Record<Exclude<AuditSubjectType, 'production'>, string> = {
 	user: 'Member',
 	band: 'Band',
 	group: 'Group',
@@ -40,12 +40,13 @@ const SUBJECT_LABELS: Partial<Record<AuditSubjectType, string>> = {
 	contact: 'Contact',
 	inventory_asset: 'Equipment',
 	purchase_order: 'Purchase order',
-	email_blocklist: 'Blocked address'
+	email_blocklist: 'Blocked address',
+	setting: 'Setting'
 };
 
-/** The record types the log can filter by, labelled; a type with no label here is not offered. */
+/** The record types the log can filter by, labelled. */
 export const auditSubjectOptions = auditSubjectTypes.flatMap((value) =>
-	SUBJECT_LABELS[value] ? [{ value, label: SUBJECT_LABELS[value]! }] : []
+	value === 'production' ? [] : [{ value, label: SUBJECT_LABELS[value] }]
 );
 
 const FIELD_LABELS: Record<AuditProfileField, string> = {

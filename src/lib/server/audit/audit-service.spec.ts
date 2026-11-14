@@ -358,6 +358,15 @@ describe('listAuditEntries', () => {
 		expect(bySubject['inc-gone']).toMatchObject({ type: 'incident', id: null });
 	});
 
+	it('names a settings row by the area it changed', async () => {
+		sqlite.exec(
+			`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, details)
+			 values ('a-set', 'settings.changed', 'Sam Staff', '', 'setting', 'reservation', '{"changes":[]}')`
+		);
+		const [row] = (await listAuditEntries({})).rows;
+		expect(row.subject).toMatchObject({ type: 'setting', id: null, title: 'Reservation settings' });
+	});
+
 	it('links the booking a reservation row names, while it exists', async () => {
 		sqlite.exec(
 			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)

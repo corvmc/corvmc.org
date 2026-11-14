@@ -240,6 +240,16 @@
 			}
 		}
 	],
+	"term_setting": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "setting",
+				"countPlural=*": "settings"
+			}
+		}
+	],
 	"term_incident": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

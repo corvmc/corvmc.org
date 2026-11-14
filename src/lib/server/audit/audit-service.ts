@@ -217,9 +217,23 @@ function subjectRef(row: SubjectRow): EntityRef {
 		// The label is the address; the entry's id is not a member's.
 		case 'email_blocklist':
 			return toMemberRef(stored);
-		default:
-			// No page of its own (a purchase order): the stored label, unlinked.
+		// No staff page of its own: the stored label, unlinked.
+		case 'purchase_order':
 			return { type: 'equipment', id: null, title };
+		// The id is the key prefix (`reservation`, `feature`); settings span several pages.
+		case 'setting': {
+			const area = entry.subjectLabel ?? entry.subjectId;
+			return {
+				type: 'setting',
+				id: null,
+				title: `${area[0].toUpperCase()}${area.slice(1)} settings`
+			};
+		}
+		default: {
+			// A new subject type fails the type check here until it is mapped.
+			const unmapped: never = entry.subjectType;
+			return { type: 'equipment', id: null, title: String(unmapped) };
+		}
 	}
 }
 

@@ -89,5 +89,6 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	market_vendor: { title: 'Riverside Records', subtitle: 'Used vinyl', eventId: 'event-1' },
 	volunteer: { title: 'Sam Rivera', subtitle: 'Door' },
 	organization: { title: 'Mid-Valley Media', subtitle: 'Press' },
-	contact: { title: 'Sam Okafor', subtitle: 'Mid-Valley Media' }
+	contact: { title: 'Sam Okafor', subtitle: 'Mid-Valley Media' },
+	setting: { title: 'Reservation settings' }
 };

@@ -43,7 +43,8 @@ export const entityTerms: Record<EntityType, Term> = {
 	market_vendor: m.term_market_vendor,
 	volunteer: m.term_volunteer,
 	organization: m.term_organization,
-	contact: m.term_contact
+	contact: m.term_contact,
+	setting: m.term_setting
 };
 
 /**

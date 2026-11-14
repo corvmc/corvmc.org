@@ -49,7 +49,8 @@ import {
 	IconBuildingStore,
 	IconUserCheck,
 	IconBuilding,
-	IconId
+	IconId,
+	IconSettings
 } from '@tabler/icons-svelte';
 import { entityTypes, type EntityType, type EntitySubtypeKey } from '#lib/config.js';
 import { entityLabels } from '#lib/terms.js';
@@ -166,7 +167,8 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	market_vendor: { icon: IconBuildingStore, shape: 'none' },
 	volunteer: { icon: IconUserCheck, shape: 'none' },
 	organization: { icon: IconBuilding, shape: 'none' },
-	contact: { icon: IconId, shape: 'none' }
+	contact: { icon: IconId, shape: 'none' },
+	setting: { icon: IconSettings, shape: 'none' }
 };
 
 /** Declaration order, for exhaustiveness checks. */
