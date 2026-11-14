@@ -9,6 +9,7 @@ import * as orgs from '#lib/server/party/organization-service.js';
 import { listLapsingInsurance } from '#lib/server/contractor/contractor-service.js';
 import { listOverdueJobs } from '#lib/server/contractor/contractor-job-service.js';
 import * as people from '#lib/server/directory/contact-service.js';
+import { liveContactSheetLink } from '#lib/server/directory/contact-sheet-service.js';
 import { canSeeRole, requireOrganizationReader } from '#lib/server/party/organization-guard.js';
 import * as notes from '#lib/server/party/activity-service.js';
 import type { PartyRef } from '#lib/server/party/activity-service.js';
@@ -153,6 +154,7 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 			act ? can('directory.shareContactSheet') : false
 		]);
 		const manageContractor = contractors && (await can('contractor.manage'));
+		const sheetLink = act && sheet ? await liveContactSheetLink(act) : null;
 		return {
 			id: org.id,
 			name: org.name,
@@ -182,7 +184,7 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 				manageContractor,
 				sponsor: sponsors && org.roles.includes('sponsor')
 			},
-			act: act ? { entryId: act, canClaim: claim, canSendContactSheet: sheet } : null,
+			act: act ? { entryId: act, canClaim: claim, canSendContactSheet: sheet, sheetLink } : null,
 			people: staff ? await people.listPeople(id) : null,
 			canManage: manage,
 			canRecordGift: recordGift

@@ -363,6 +363,18 @@
 					{/each}
 				</ul>
 			{/if}
+			{#if org.act.sheetLink}
+				{@const link = org.act.sheetLink}
+				{@const parts = { email: link.email, date: formatDateShort(link.expiresAt) }}
+				<p class="mt-2 text-sm text-fg-2" data-testid="contact-sheet-status">
+					{link.emailed
+						? m.staff_contacts_sheet_link_sent_text(parts)
+						: m.staff_contacts_sheet_link_not_sent_text(parts)}
+					{#if link.lastUsedAt}
+						{m.staff_contacts_sheet_link_used_text({ date: formatDateShort(link.lastUsedAt) })}
+					{/if}
+				</p>
+			{/if}
 		</InfoCard>
 	{/if}
 
