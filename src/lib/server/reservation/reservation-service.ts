@@ -15,12 +15,14 @@ import {
 	isNotNull,
 	inArray,
 	notInArray,
+	not,
 	sql,
 	type AnyColumn
 } from 'drizzle-orm';
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
 import { insertReservation } from './insert-reservation';
+import { confirmedUnpaidSql } from './payment-due';
 import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -729,14 +731,15 @@ export async function recordCashAndComplete(
 }
 
 // ---------------------------------------------------------------------------
-// autoCompleteExpired() — bulk-complete paid reservations past their end time
+// autoCompleteExpired() — bulk-complete ended reservations that owe nothing
 // ---------------------------------------------------------------------------
 
 export async function autoCompleteExpired(): Promise<number> {
 	const now = new Date();
-	// Auto-complete confirmed reservations past their end time that owe no cash:
-	// paid (has a payment record) or comped/credit-settled (cashDueCents = 0).
-	// Cash-owed reservations (cashDueCents > 0) are left for staff to collect.
+	// Completes every ended booking that is not payment due, by the definition the
+	// staff list and the fee gate read, so none is left confirmed with nobody asked
+	// to act on it. An unpriced (null) booking is owed in full and stays for staff.
+	// A payment record still completes, as it always has.
 	const result = await db
 		.update(reservation)
 		.set({ status: 'completed', updatedAt: now })
@@ -744,7 +747,7 @@ export async function autoCompleteExpired(): Promise<number> {
 			and(
 				eq(reservation.status, 'confirmed'),
 				lt(reservation.endsAt, now),
-				or(isNotNull(reservation.stripePaymentRecordId), eq(reservation.cashDueCents, 0))
+				or(isNotNull(reservation.stripePaymentRecordId), not(confirmedUnpaidSql()))
 			)
 		);
 	return getRowCount(result);

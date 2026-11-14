@@ -1,17 +1,4 @@
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	gt,
-	gte,
-	inArray,
-	isNull,
-	lt,
-	notInArray,
-	or
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, inArray, lt, or } from 'drizzle-orm';
 import { parseDate } from '@internationalized/date';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -26,11 +13,14 @@ import {
 	memberRefColumns,
 	toBookerRef
 } from '#lib/server/entity/refs.js';
-import { bookerTypes, DEFAULT_TIMEZONE, eventHoldBookers } from '#lib/config.js';
+import { bookerTypes, DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { Pagination } from '#lib/types/pagination.js';
 import { bandBookerJoin, eventBookerJoin } from './event-hold.js';
+import { confirmedUnpaidSql } from './payment-due.js';
 import { isFirstReservationSql } from './reservation-service.js';
 import { buildDateInTz, formatDateInTz } from './timezone.js';
+
+export { confirmedUnpaidSql };
 import {
 	closurePage,
 	closuresInWindow,
@@ -106,21 +96,6 @@ export function rangeBounds(
 				order: 'asc'
 			};
 	}
-}
-
-/**
- * Confirmed, not paid, and owing something: a null `cashDueCents` was never
- * priced, so it is owed in full. Event holds are never charged. The SQL twin of
- * `owesMoney` in `reservation-actions`; the spec holds the two together.
- */
-export function confirmedUnpaidSql() {
-	return and(
-		eq(reservation.status, 'confirmed'),
-		isNull(reservation.paidAt),
-		isNull(reservation.refundedAt),
-		or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),
-		notInArray(reservation.bookerType, [...eventHoldBookers])
-	);
 }
 
 function statusCondition(status: StaffStatusView) {
