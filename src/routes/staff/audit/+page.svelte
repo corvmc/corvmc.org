@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { page as appPage } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import Select from '#lib/components/ui/Form/Select.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -16,15 +19,39 @@
 		summarizeAuditEntry
 	} from '#lib/utils/audit-display.js';
 	import { formatDateTimeShort } from '#lib/utils/format.js';
+	import { auditQuerySearch, parseAuditQuery } from './audit-query';
+
+	// Seeded from the URL once, then mirrored back to it, so Back, reload and a
+	// shared link keep the view. `goto`, not `replaceState`, which updates neither
+	// `page.url` nor the router's entry.
+	const path = appPage.url.pathname;
+	const initial = parseAuditQuery(appPage.url.searchParams);
 
 	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
-	let searchText = $state('');
-	let searchQuery = $state('');
-	let action = $state<AuditAction | ''>('');
-	let subjectType = $state<AuditSubjectType | ''>('');
-	let dateFrom = $state('');
-	let dateTo = $state('');
-	let page = $state(1);
+	let searchText = $state(initial.search);
+	let searchQuery = $state(initial.search);
+	let action = $state<AuditAction | ''>(initial.action);
+	let subjectType = $state<AuditSubjectType | ''>(initial.subjectType);
+	let dateFrom = $state(initial.from);
+	let dateTo = $state(initial.to);
+	let page = $state(initial.page);
+
+	$effect(() => {
+		const href = withQuery(
+			path,
+			auditQuerySearch({
+				search: searchQuery,
+				action,
+				subjectType,
+				from: dateFrom,
+				to: dateTo,
+				page
+			})
+		);
+		if (location.pathname + location.search !== href) {
+			void goto(href, { replace: true, reset: false });
+		}
+	});
 
 	let result = $derived(
 		getAuditLog({
