@@ -86,7 +86,12 @@ import {
 } from '#lib/server/reservation/reservation-service.js';
 import { orientationForReservation } from '#lib/server/volunteer/orientation-service.js';
 import { mapDomainError } from '#lib/server/errors.js';
-import { isAwaitingPayment, isOverdue, isTerminalStatus } from '#lib/utils/reservation-actions.js';
+import {
+	isAwaitingPayment,
+	isTerminalStatus,
+	reservationTrack,
+	trackDetail
+} from '#lib/utils/reservation-actions.js';
 import { bookerTypes, type BookerType } from '#lib/config.js';
 import {
 	getReservationConfig,
@@ -395,6 +400,8 @@ export const getBandReservations = query(
 		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
 			...r,
 			ref: toReservationRef(r.ref, band),
+			// The one status the card shows, as staff read it (#2861).
+			track: reservationTrack(r.ref, now),
 			bookedBy: toMemberRef(r.bookedBy),
 			canCancel: cancellable && canCancelRow(r.createdByUserId),
 			canPay: canPayRow(r)
@@ -484,8 +491,8 @@ export const getBandReservationDetail = query(
 			hourlyRateCents,
 			// What the act owes and whether it has been settled. `cashDueCents` is
 			// null until credits are committed at Confirm; see the schema comment.
-			paidAt: res.paidAt,
-			refundedAt: res.refundedAt,
+			track: reservationTrack(res),
+			trackDetail: trackDetail(res),
 			cashDueCents: res.cashDueCents,
 			creditsUsed: res.creditsUsed,
 			// Every member of the act, not just whoever booked (#756): a band loads
@@ -2113,7 +2120,7 @@ export const refundAndCancelReservation = form(
 /**
  * Staff: refund the payment and leave the booking standing — a comp after the
  * fact on a session that went ahead. `status` and `paidAt` are deliberately
- * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
+ * untouched; `reservationTrack` reads `refundedAt` first, so the row
  * reports as refunded without pretending the session never happened (#669).
  */
 export const refundOnlyReservation = form(
@@ -2465,8 +2472,9 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// member-facing DTO by construction rather than by remembering to omit it.
 	return {
 		active,
-		// Kept in `all` as well: Overdue is what is owed, All is the history.
-		overdue: all.filter((r) => isOverdue(r)),
+		// Kept in `all` as well: this is what is owed, All is the history. The
+		// Payment due track, so it lists what the fee gate counts.
+		overdue: all.filter((r) => reservationTrack(r) === 'payment_due'),
 		all,
 		membership,
 		contact,

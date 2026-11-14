@@ -97,6 +97,22 @@ describe('ReservationCard', () => {
 		expect(cancelled.querySelectorAll(':scope > div > [role="img"]')).toHaveLength(1);
 	});
 
+	// The track, not the stored status: an ended session still owing is marked.
+	it('marks Payment due and leaves Booked, Paid and Covered unmarked', async () => {
+		const mark = (li: Element) => li.querySelector(':scope > div > [role="img"]');
+		const due = await show({ paidAt: null, cashDueCents: 3000 });
+		expect(mark(due)?.getAttribute('data-status')).toBe('payment_due');
+
+		for (const quiet of [
+			{ ...future, paidAt: null, cashDueCents: 3000 },
+			{ paidAt: null, cashDueCents: 0 },
+			{ status: 'completed' }
+		]) {
+			document.body.innerHTML = '';
+			expect(mark(await show(quiet))).toBeNull();
+		}
+	});
+
 	// Slot 2: every fact carries a label, since no header row names it.
 	it('labels each fact', async () => {
 		const li = await show({ recurringSeriesId: 'series-1' });

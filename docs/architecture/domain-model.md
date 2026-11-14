@@ -220,6 +220,10 @@ unavailable and it is not a booking), `recurring_series` ≡ a standing loan, th
 it is not derived alike: a JS predicate for loans, a SQL condition for contractor jobs, and
 not at all for reservations (#1559).
 
+A reservation's stored status is not what is shown. Every surface shows the track derived from
+it and the payment columns (`reservationTrack`, #2861): Waitlisted, Booked, Paid, Payment due,
+Covered, No-show, Cancelled, Refunded.
+
 What does _not_ unify: the room has capacity 1 and a calendar, gear has units and a tag.
 Availability genuinely differs. The state machine and the settlement do not.
 

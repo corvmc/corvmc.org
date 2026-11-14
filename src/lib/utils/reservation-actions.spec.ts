@@ -1,122 +1,100 @@
 import { describe, it, expect } from 'vitest';
 import {
 	isAwaitingPayment,
-	isOverdue,
 	isTerminalStatus,
 	memberPayAction,
 	overlappingReservations,
-	owedAfterSession,
-	reservationPaymentState,
-	visibleActions
+	reservationTrack,
+	trackDetail,
+	visibleActions,
+	type TrackedReservation
 } from './reservation-actions';
 
-describe('reservationPaymentState', () => {
-	const base = { status: 'confirmed' as const, refundedAt: null };
+describe('reservationTrack', () => {
+	const now = new Date('2026-10-29T12:00:00Z');
+	const ahead = new Date('2026-10-30T12:00:00Z');
+	const ended = new Date('2026-10-28T12:00:00Z');
+	const base: TrackedReservation = {
+		status: 'confirmed',
+		bookerType: 'user',
+		endsAt: ahead,
+		paidAt: null,
+		refundedAt: null,
+		cashDueCents: 1500
+	};
+	const track = (extra: Partial<TrackedReservation> = {}) =>
+		reservationTrack({ ...base, ...extra }, now);
 
-	it('cash/online paid → paid', () => {
-		expect(reservationPaymentState({ ...base, paidAt: new Date(), cashDueCents: 0 })).toBe('paid');
+	it('an upcoming unpaid reservation reads Booked, priced or not', () => {
+		expect(track()).toBe('booked');
+		expect(track({ cashDueCents: null })).toBe('booked');
 	});
 
-	it('cash owed at door → cash_due', () => {
-		expect(reservationPaymentState({ ...base, paidAt: null, cashDueCents: 500 })).toBe('cash_due');
+	it('Payment due starts when the reservation ends', () => {
+		expect(track({ endsAt: ended })).toBe('payment_due');
+		expect(track({ endsAt: ended, cashDueCents: null })).toBe('payment_due');
+		expect(track({ endsAt: now })).toBe('booked');
 	});
 
-	it('not yet settled → unpaid', () => {
-		expect(
-			reservationPaymentState({
-				status: 'confirmed',
-				paidAt: null,
-				cashDueCents: null,
-				refundedAt: null
-			})
-		).toBe('unpaid');
+	it('credits and comps both read Covered, before and after the session', () => {
+		expect(track({ cashDueCents: 0 })).toBe('covered');
+		expect(track({ cashDueCents: 0, endsAt: ended, status: 'completed' })).toBe('covered');
 	});
 
-	it('fully credit-covered → credits (the bug: must not read as comped)', () => {
-		expect(
-			reservationPaymentState({ ...base, paidAt: null, cashDueCents: 0, creditsUsed: 2 })
-		).toBe('credits');
+	it('paid reads Paid whatever the stored status', () => {
+		expect(track({ paidAt: ended, cashDueCents: 0 })).toBe('paid');
+		expect(track({ paidAt: ended, cashDueCents: 0, status: 'completed' })).toBe('paid');
 	});
 
-	it('zero-charge waiver → comped', () => {
-		expect(
-			reservationPaymentState({ ...base, paidAt: null, cashDueCents: 0, creditsUsed: 0 })
-		).toBe('comped');
-		expect(reservationPaymentState({ ...base, paidAt: null, cashDueCents: 0 })).toBe('comped');
+	// #669: refund-only leaves the booking standing with its `paidAt`.
+	it('money that went back reads Refunded, never Paid or Cancelled', () => {
+		expect(track({ paidAt: ended, refundedAt: now })).toBe('refunded');
+		expect(track({ status: 'cancelled', refundedAt: now })).toBe('refunded');
+		expect(track({ status: 'cancelled', paidAt: ended })).toBe('cancelled');
 	});
 
-	it('paid takes priority over credits when both present', () => {
-		expect(
-			reservationPaymentState({ ...base, paidAt: new Date(), cashDueCents: 0, creditsUsed: 1 })
-		).toBe('paid');
+	it('no-show and waitlisted read as themselves', () => {
+		expect(track({ status: 'no_show', paidAt: ended, refundedAt: now })).toBe('no_show');
+		expect(track({ status: 'waitlisted' })).toBe('waitlisted');
 	});
 
-	it('cancelled and refunded → refunded, cancelled alone → cancelled', () => {
-		expect(reservationPaymentState({ status: 'cancelled', refundedAt: new Date() })).toBe(
-			'refunded'
-		);
-		expect(reservationPaymentState({ status: 'cancelled', refundedAt: null })).toBe('cancelled');
+	it('an event hold is Booked until it ends and never Payment due', () => {
+		expect(track({ bookerType: 'production', cashDueCents: null })).toBe('booked');
+		expect(track({ bookerType: 'production', cashDueCents: null, endsAt: ended })).toBe('covered');
 	});
 
-	/**
-	 * The whole of #573. Having been charged is not evidence of having been
-	 * repaid: `reservation-service` writes `refundedAt` *inside* the try around
-	 * `refund()`, so a refund that throws leaves a cancelled booking with a
-	 * payment record and no refund — and the old inference called that
-	 * "refunded" to the member whose money we still have.
-	 */
-	it('cancelled with a payment but no refund → cancelled, not refunded', () => {
-		expect(
-			reservationPaymentState({ status: 'cancelled', paidAt: new Date(), refundedAt: null })
-		).toBe('cancelled');
+	it('a completed booking is never Payment due', () => {
+		expect(track({ status: 'completed', endsAt: ended })).toBe('covered');
+	});
+});
+
+describe('trackDetail', () => {
+	const now = new Date('2026-10-29T12:00:00Z');
+	const base = {
+		status: 'confirmed',
+		bookerType: 'user',
+		endsAt: new Date('2026-10-30T12:00:00Z'),
+		paidAt: null,
+		refundedAt: null,
+		cashDueCents: 0 as number | null,
+		creditsUsed: null as number | null
+	};
+
+	it('tells credits from a comp on a Covered reservation', () => {
+		expect(trackDetail({ ...base, creditsUsed: 2 }, now)).toBe('credits');
+		expect(trackDetail({ ...base, creditsUsed: 0 }, now)).toBe('comp');
+		expect(trackDetail(base, now)).toBe('comp');
 	});
 
-	/**
-	 * #669: "Refund only" leaves the booking standing (a comp after the fact),
-	 * so the row is still `confirmed` with a `paidAt` on it. `paidAt` used to be
-	 * read first, and staff saw "Paid" on money that had already gone back.
-	 */
-	it('refunded but not cancelled → refunded, not paid', () => {
-		expect(
-			reservationPaymentState({
-				status: 'confirmed',
-				paidAt: new Date(),
-				cashDueCents: 0,
-				refundedAt: new Date()
-			})
-		).toBe('refunded');
+	it('tells a priced balance from one never priced', () => {
+		expect(trackDetail({ ...base, cashDueCents: 1500 }, now)).toBe('cash_due');
+		expect(trackDetail({ ...base, cashDueCents: null }, now)).toBe('unpriced');
 	});
 
-	it('refunded on a completed booking → refunded, not paid', () => {
-		expect(
-			reservationPaymentState({
-				status: 'completed',
-				paidAt: new Date(),
-				cashDueCents: 0,
-				refundedAt: new Date()
-			})
-		).toBe('refunded');
-	});
-
-	it('no_show → no_show', () => {
-		expect(
-			reservationPaymentState({ status: 'no_show', paidAt: new Date(), refundedAt: null })
-		).toBe('no_show');
-	});
-
-	it('confirmed with credits never committed (staff-created) → unpaid, not comped', () => {
-		expect(reservationPaymentState({ ...base, paidAt: null, cashDueCents: null })).toBe('unpaid');
-	});
-
-	it('completed with credits never committed → unpaid, not comped', () => {
-		expect(
-			reservationPaymentState({
-				status: 'completed',
-				paidAt: null,
-				cashDueCents: null,
-				refundedAt: null
-			})
-		).toBe('unpaid');
+	it('adds nothing to a paid, cancelled or event-hold reservation', () => {
+		expect(trackDetail({ ...base, paidAt: now }, now)).toBeNull();
+		expect(trackDetail({ ...base, status: 'cancelled' }, now)).toBeNull();
+		expect(trackDetail({ ...base, bookerType: 'production' }, now)).toBeNull();
 	});
 });
 
@@ -283,57 +261,5 @@ describe('memberPayAction', () => {
 		const r = { status: 'confirmed', startsAt: hoursFromNow(-2), paidAt: null, cashDueCents: 500 };
 		expect(isAwaitingPayment(r)).toBe(true);
 		expect(memberPayAction(r)).toBe('balance');
-	});
-});
-
-describe('isOverdue', () => {
-	const now = new Date('2026-10-29T12:00:00Z');
-	const ended = new Date('2026-10-28T12:00:00Z');
-	const base = { status: 'confirmed', endsAt: ended, paidAt: null, cashDueCents: 1500 };
-
-	it('a confirmed session that ended with a balance owed', () => {
-		expect(isOverdue(base, now)).toBe(true);
-		expect(isOverdue({ ...base, cashDueCents: null }, now)).toBe(true);
-	});
-
-	it('a completed or no-show session never paid', () => {
-		expect(isOverdue({ ...base, status: 'completed' }, now)).toBe(true);
-		expect(isOverdue({ ...base, status: 'no_show' }, now)).toBe(true);
-	});
-
-	it('not before the session ends', () => {
-		expect(isOverdue({ ...base, endsAt: new Date('2026-10-29T13:00:00Z') }, now)).toBe(false);
-	});
-
-	it('not once paid, refunded, settled to zero or cancelled', () => {
-		expect(isOverdue({ ...base, paidAt: ended }, now)).toBe(false);
-		expect(isOverdue({ ...base, refundedAt: ended }, now)).toBe(false);
-		expect(isOverdue({ ...base, cashDueCents: 0 }, now)).toBe(false);
-		expect(isOverdue({ ...base, status: 'cancelled' }, now)).toBe(false);
-	});
-});
-
-describe('owedAfterSession', () => {
-	const now = new Date('2026-06-15T19:00:00Z');
-	const ended = new Date(now.getTime() - 1);
-	const r = (endsAt: Date, extra: Record<string, unknown> = {}) => ({
-		status: 'confirmed',
-		paidAt: null,
-		cashDueCents: 3000,
-		bookerType: 'user',
-		refundedAt: null,
-		endsAt,
-		...extra
-	});
-
-	it('offers settling once the session has ended owing', () => {
-		expect(owedAfterSession(r(ended), now)).toBe(true);
-		expect(owedAfterSession(r(now), now)).toBe(false);
-	});
-
-	it('leaves a paid, settled or event-hold session alone', () => {
-		expect(owedAfterSession(r(ended, { paidAt: now }), now)).toBe(false);
-		expect(owedAfterSession(r(ended, { cashDueCents: 0 }), now)).toBe(false);
-		expect(owedAfterSession(r(ended, { bookerType: 'production' }), now)).toBe(false);
 	});
 });

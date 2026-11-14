@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { isEventHold } from '#lib/config.js';
-	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
@@ -10,13 +10,8 @@
 	import NoShowReservationAction from '#lib/components/actions/NoShowReservationAction.svelte';
 	import CompleteReservationAction from '#lib/components/actions/CompleteReservationAction.svelte';
 	import { formatTimeRange, formatPaymentBreakdown } from '#lib/utils/format.js';
-	import {
-		visibleActions,
-		reservationPaymentState,
-		owedAfterSession
-	} from '#lib/utils/reservation-actions.js';
+	import { visibleActions, reservationTrack, trackDetail } from '#lib/utils/reservation-actions.js';
 	import type { getStaffReservationsPage } from '#lib/remote/reservations.remote.js';
-	import { paymentStatus } from './payment-status';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
 
@@ -50,7 +45,8 @@
 		].filter(Boolean)
 	);
 	const hasPayment = $derived(!isEventHold(r.bookerType));
-	const owed = $derived(owedAfterSession(r));
+	const track = $derived(reservationTrack(r));
+	const owed = $derived(track === 'payment_due');
 	const canComplete = $derived(
 		visibleActions(r.status, r.startsAt, r.endsAt, r.stripePaymentRecordId).has('complete')
 	);
@@ -63,8 +59,8 @@
 	aria-current={current ? 'page' : undefined}
 >
 	<div class="flex items-center gap-2">
-		{#if isNoteworthyStatus(r.status)}
-			<StatusBadge status={r.status} />
+		{#if isNoteworthyStatus(track)}
+			<StatusBadge status={track} />
 		{/if}
 		<a
 			href={withQuery(resolve(`staff/reservations/${r.id}`), query)}
@@ -79,15 +75,10 @@
 		<DefinitionList layout="strip">
 			{#if hasPayment}
 				{#await rates then table}
-					{@const state = reservationPaymentState(r)}
-					{@const ps = paymentStatus(state)}
 					<Fact label={m.staff_payment_label()}>
 						<span class="inline-flex flex-wrap items-center gap-1">
-							<ps.icon size={16} class={ps.color} />
-							<span class="font-medium"
-								>{state === 'cash_due' || state === 'unpaid' ? m.staff_due_text() : ps.label}</span
-							>
-							<span class="text-muted" class:line-through={state === 'comped'}>
+							<span class="font-medium">{statusLabel(track)}</span>
+							<span class="text-muted" class:line-through={trackDetail(r) === 'comp'}>
 								{formatPaymentBreakdown(r.startsAt, r.endsAt, table[r.bookerType], r.creditsUsed)}
 							</span>
 						</span>

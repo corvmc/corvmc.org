@@ -1,3 +1,4 @@
+import { reservationTrack } from '#lib/utils/reservation-actions.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
 import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
@@ -195,6 +196,8 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	return rows.map((r) => ({
 		...r,
 		ref: toReservationRef(r.ref, band),
+		// The one status the card shows, as staff read it (#2861).
+		track: reservationTrack(r.ref, now),
 		bookedBy: toMemberRef(r.bookedBy)
 	}));
 });

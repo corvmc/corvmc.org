@@ -20,6 +20,16 @@ describe('ReservationFilters', () => {
 		expect(filters.urlQuery).toBe('date=next_7');
 	});
 
+	it('reads a status value from before the track as the track it became', () => {
+		const status = (value: string) =>
+			new ReservationFilters(new URLSearchParams(`status=${value}`)).status;
+		expect(status('confirmed')).toBe('booked');
+		expect(status('completed')).toBe('paid');
+		expect(status('waitlisted')).toBe('waitlisted');
+		expect(status('cancelled')).toBe('cancelled');
+		expect(status('payment_due')).toBe('payment_due');
+	});
+
 	it('compares against the URL by filter keys alone', () => {
 		const url = new URL('https://x.test/staff/reservations/r1?access&date=any&recurring=1');
 		expect(urlFilterQuery(url)).toBe(new ReservationFilters(url.searchParams).urlQuery);

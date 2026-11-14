@@ -33,7 +33,6 @@
 	import StaffViews from '../StaffViews.svelte';
 	import { spaceViews } from './views';
 	import ReservationCard from './ReservationCard.svelte';
-	import { paymentStatus } from './payment-status';
 	import { navigating } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
@@ -53,11 +52,7 @@
 		formatSpan
 	} from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
-	import {
-		visibleActions,
-		reservationPaymentState,
-		owedAfterSession
-	} from '#lib/utils/reservation-actions.js';
+	import { visibleActions, reservationTrack, trackDetail } from '#lib/utils/reservation-actions.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { getStaffReservationsPage } from '#lib/remote/reservations.remote.js';
 	import { Latest } from '#lib/latest.svelte.js';
@@ -142,10 +137,14 @@
 	);
 
 	const statusLabel: Record<Status, (count: number) => string> = {
-		confirmed: (count) => m.staff_reservations_status_confirmed_label({ count }),
-		payment_due: (count) => m.staff_reservations_status_payment_due_label({ count }),
 		waitlisted: (count) => m.staff_reservations_status_waitlisted_label({ count }),
-		cancelled: (count) => m.staff_reservations_status_cancelled_label({ count })
+		booked: (count) => m.staff_reservations_status_booked_label({ count }),
+		paid: (count) => m.staff_reservations_status_paid_label({ count }),
+		payment_due: (count) => m.staff_reservations_status_payment_due_label({ count }),
+		covered: (count) => m.staff_reservations_status_covered_label({ count }),
+		no_show: (count) => m.staff_reservations_status_no_show_label({ count }),
+		cancelled: (count) => m.staff_reservations_status_cancelled_label({ count }),
+		refunded: (count) => m.staff_reservations_status_refunded_label({ count })
 	};
 
 	// Money owed is not bound to a date, so Payment due shows every date.
@@ -285,6 +284,7 @@
 								r.endsAt,
 								r.stripePaymentRecordId
 							)}
+							{@const track = reservationTrack(r)}
 							{@const href = withQuery(resolve(`staff/reservations/${r.id}`), filters.urlQuery)}
 							{@const current = r.id === openId}
 							<tr
@@ -296,7 +296,7 @@
 						     tooltip left keyboard users nothing (#896), so `group/row` opens
 						     it while a link in the row holds focus. -->
 								<td class="w-px">
-									<StatusBadge status={r.status} label responsive />
+									<StatusBadge status={track} label responsive />
 								</td>
 
 								<!-- Member, band or event — the chip's glyph is what says which. -->
@@ -369,24 +369,16 @@
 										{#if isEventHold(r.bookerType)}
 											<span class="opacity-40">—</span>
 										{:else}
-											{@const state = reservationPaymentState(r)}
-											{@const ps = paymentStatus(state)}
-											<span class="inline-flex items-center justify-end gap-1">
-												<!-- Comped keeps its cash value on screen but strikes it, so the row
-										     still says what the room time was worth while reading as waived.
-										     A comped booking never carries credits: once credits are
-										     committed the row reports as `credits`, not `comped`. -->
-												<span class:line-through={state === 'comped'}>
-													{formatPaymentBreakdown(
-														r.startsAt,
-														r.endsAt,
-														rates[r.bookerType],
-														r.creditsUsed
-													)}
-												</span>
-												<span class="tooltip" data-tip={ps.label}>
-													<ps.icon size={16} class={ps.color} />
-												</span>
+											<!-- The Status column says where the money stands. A comp keeps
+											     its cash value on screen but strikes it, so the row still says
+											     what the room time was worth. -->
+											<span class:line-through={trackDetail(r) === 'comp'}>
+												{formatPaymentBreakdown(
+													r.startsAt,
+													r.endsAt,
+													rates[r.bookerType],
+													r.creditsUsed
+												)}
 											</span>
 										{/if}
 									{:catch}
@@ -396,7 +388,7 @@
 
 								<td class="col-support w-px">
 									<div class="flex w-max items-center justify-end gap-1">
-										{#if owedAfterSession(r)}
+										{#if track === 'payment_due'}
 											{@render settleActions(r)}
 										{:else if actions.has('complete')}
 											<CompleteReservationAction

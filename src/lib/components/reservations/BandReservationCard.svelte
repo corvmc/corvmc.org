@@ -9,6 +9,7 @@
 	import { cancelBandReservation } from '#lib/remote/reservations.remote.js';
 	import { toast } from 'svelte-sonner';
 	import type { MemberRef, ReservationRef } from '#lib/types/entity.js';
+	import type { ReservationTrack } from '#lib/utils/reservation-actions.js';
 
 	/**
 	 * One of the act's own bookings, on the same card the member panel uses.
@@ -24,7 +25,10 @@
 		reservation: {
 			id: string;
 			status: string;
+			/** What the card shows; `status` only decides whether Cancel is offered. */
+			track: ReservationTrack;
 			startsAt: Date;
+			endsAt: Date;
 			notes: string | null;
 			ref: ReservationRef;
 			bookedBy: MemberRef;
@@ -73,7 +77,8 @@
 
 <ReservationCardShell
 	startsAt={reservation.startsAt}
-	status={reservation.status}
+	ended={reservation.endsAt.getTime() < Date.now()}
+	track={reservation.track}
 	actions={showCancel || reservation.canPay ? rowActions : undefined}
 >
 	<div class="p-2 px-3">

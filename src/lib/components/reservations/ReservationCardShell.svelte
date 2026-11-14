@@ -9,13 +9,13 @@
 		isVenueTomorrow,
 		isVenueThisWeek
 	} from '#lib/utils/format.js';
-	import { isTerminalStatus } from '#lib/utils/reservation-actions.js';
+	import { isClosedTrack, type ReservationTrack } from '#lib/utils/reservation-actions.js';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 
 	/**
-	 * A booking as a card: a date block tinted by status, the status, and a body
-	 * the panel supplies. The block is shared with the band panel (#566); the
+	 * A booking as a card: a date block tinted by its track, the track, and a body
+	 * the panel supplies. Members read the same track staff do (#2861). The block is shared with the band panel (#566); the
 	 * action row is not.
 	 *
 	 * Two status channels on purpose — the tint glances, `StatusBadge` names.
@@ -23,18 +23,21 @@
 	 */
 	let {
 		startsAt,
-		status,
+		ended = false,
+		track,
 		children,
 		actions
 	}: {
 		startsAt: Date;
-		status: string;
+		/** The session is over, so it is not flagged as coming up. */
+		ended?: boolean;
+		track: ReservationTrack;
 		children: Snippet;
 		/** Labelled buttons, full width at the card's foot. Omit for a card with no controls. */
 		actions?: Snippet;
 	} = $props();
 
-	const terminal = $derived(isTerminalStatus(status));
+	const terminal = $derived(ended || isClosedTrack(track));
 </script>
 
 <!-- `reservation-card` is the handle the e2e locates a booking by; it replaced
@@ -44,7 +47,7 @@
      `my-2` inside a `gap-2` grid made a 24px one and stopped the card filling
      its stretched cell, so borders did not line up across a row (#1043). -->
 <div
-	class="reservation-card relative flex h-full rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100 {status}"
+	class="reservation-card relative flex h-full rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100 {track}"
 >
 	<div class="date-block">
 		{#if !terminal && isVenueThisWeek(startsAt)}
@@ -62,7 +65,7 @@
 		     and an in-flow column wrapped every line short (#1043, #1782). -->
 		<div class="flow-root min-w-0">
 			<span class="float-right pt-2 pr-2 pl-2">
-				<StatusBadge {status} label size={14} />
+				<StatusBadge status={track} label size={14} />
 			</span>
 			{@render children()}
 		</div>
@@ -87,20 +90,26 @@
 		@apply relative flex w-20 shrink-0 flex-col items-center justify-center rounded-l-sm border-r-2 border-(--cmc-brown) py-3 text-xs leading-tight font-bold;
 	}
 
-	.confirmed .date-block {
+	.booked .date-block {
 		@apply bg-secondary text-secondary-content;
 	}
 
-	.completed .date-block {
+	.paid .date-block,
+	.covered .date-block {
 		@apply bg-success text-success-content;
 	}
 
-	/* Class comes from the raw status value, so underscore — not hyphen. */
+	/* Class comes from the raw track value, so underscore — not hyphen. */
+	.payment_due .date-block {
+		@apply bg-warning text-warning-content;
+	}
+
 	.no_show .date-block {
 		@apply bg-base-300 text-error;
 	}
 
-	.cancelled .date-block {
+	.cancelled .date-block,
+	.refunded .date-block {
 		@apply bg-base-300 text-base-content/50;
 	}
 </style>

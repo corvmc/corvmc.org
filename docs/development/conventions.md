@@ -617,6 +617,7 @@ spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 | Sibling specs broke after a service imported a new drizzle operator               | partial `drizzle-orm` mocks                  | real SQLite + invariant spec |
 | `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared           | inexact role locators                        | lint rule                    |
 | Service functions left with no caller after their pages moved (#2903)             | a service export only its spec calls         | invariant spec (allowlist)   |
+| A reservation's status and payment state read differently per surface (#2861)     | two definitions of one derived state         | real SQLite + invariant spec |
 | Two overlapping get-or-creates inserted twice, or the second threw (#2621, #2681) | select-then-insert without conflict handling | lint rule                    |
 
 ## Forms: no raw elements

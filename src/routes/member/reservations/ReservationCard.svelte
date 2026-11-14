@@ -11,7 +11,7 @@
 	import ReservationSummary from '#lib/components/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '#lib/server/db/schema.js';
 	import { resolve } from '$app/paths';
-	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import { memberPayAction, reservationTrack } from '#lib/utils/reservation-actions.js';
 	import { payForReservation } from '#lib/remote/reservations.remote.js';
 
 	let {
@@ -29,7 +29,11 @@
 	const creditPay = $derived(payForReservation.for(reservation.id));
 </script>
 
-<ReservationCardShell startsAt={reservation.startsAt} status={reservation.status}>
+<ReservationCardShell
+	startsAt={reservation.startsAt}
+	ended={reservation.endsAt.getTime() < Date.now()}
+	track={reservationTrack(reservation)}
+>
 	<a
 		href={resolve('/member/reservations/[id]', { id: reservation.id })}
 		class="block hover:bg-base-200/40"

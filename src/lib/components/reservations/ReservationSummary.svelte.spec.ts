@@ -58,3 +58,35 @@ describe('ReservationSummary, waitlisted', () => {
 		expect(text()).not.toContain('A slot opened up');
 	});
 });
+
+/** The money line follows the track (#2861); the card's badge carries the word. */
+describe('ReservationSummary, money line', () => {
+	const row = { ...base, status: 'confirmed', bookerType: 'user', cashDueCents: 3000 };
+	const when = (r: object) => render(ReservationSummary, { reservation: { ...row, ...r } });
+
+	it('says when an upcoming unpaid booking is due', async () => {
+		await when({});
+		expect(text()).toContain('$30.00');
+		expect(text()).toContain('Due in');
+	});
+
+	it('dates a payment, and a refund ahead of the payment it undid', async () => {
+		await when({ paidAt: new Date('2026-03-01T20:00:00Z') });
+		expect(text()).toContain('Paid Mar 1');
+
+		document.body.innerHTML = '';
+		await when({
+			paidAt: new Date('2026-03-01T20:00:00Z'),
+			refundedAt: new Date('2026-03-05T20:00:00Z')
+		});
+		expect(text()).toContain('Refunded Mar 5');
+		expect(text()).not.toContain('Paid');
+	});
+
+	it('leaves the price alone once the session has ended owing', async () => {
+		const ended = new Date(Date.now() - 86400000);
+		await when({ startsAt: new Date(ended.getTime() - 7200000), endsAt: ended });
+		expect(text()).toContain('$30.00');
+		expect(text()).not.toContain('Due');
+	});
+});

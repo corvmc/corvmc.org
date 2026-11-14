@@ -1,3 +1,4 @@
+import { reservationTrack } from '#lib/utils/reservation-actions.js';
 import { and, asc, count, desc, eq, gt, gte, inArray, lt, lte, ne, not, sql } from 'drizzle-orm';
 import { clubToday, DEFAULT_TIMEZONE } from '#lib/config.js';
 import { db } from '#lib/server/db/index.js';
@@ -49,6 +50,9 @@ export async function listRoomDays(now = new Date()) {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			bookerType: reservation.bookerType,
+			paidAt: reservation.paidAt,
+			refundedAt: reservation.refundedAt,
+			cashDueCents: reservation.cashDueCents,
 			lockCode: reservation.lockCode,
 			lockSyncedAt: reservation.lockSyncedAt,
 			member: memberRefColumns(),
@@ -71,6 +75,8 @@ export async function listRoomDays(now = new Date()) {
 	const items = rows.map(({ member, band, event, lockCode, lockSyncedAt, ...r }) => ({
 		...r,
 		kind: 'reservation' as const,
+		// The one status a reservation is shown with (#2861).
+		track: reservationTrack(r, now),
 		booker: toBookerRef({ bookerType: r.bookerType, member, band, event }),
 		// A code the lock has not reported back opens nothing (#780); the digits stay off this page.
 		doorCodeUnconfirmed:

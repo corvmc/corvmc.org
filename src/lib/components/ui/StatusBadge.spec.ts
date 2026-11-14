@@ -17,6 +17,7 @@ import {
 } from '#lib/config.js';
 import { ticketStatuses } from '#lib/server/db/schema/ticket.js';
 import { reservationStatuses } from '#lib/server/db/schema/reservation.js';
+import { reservationTracks } from '#lib/utils/reservation-actions.js';
 import { eventStatuses } from '#lib/server/db/schema/event.js';
 import { productionStatuses } from '#lib/server/db/schema/production.js';
 import { flagStatuses } from '#lib/server/db/schema/flag.js';
@@ -63,6 +64,8 @@ const derivedStatuses = {
 
 const vocabularies: Record<string, readonly string[]> = {
 	reservation: reservationStatuses,
+	// `reservationTrack` — derived from status and the payment columns, never stored.
+	reservationTrack: reservationTracks,
 	event: eventStatuses,
 	flag: flagStatuses,
 	groupMember: groupMemberStatuses,

@@ -35,7 +35,8 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		visibleActions,
-		reservationPaymentState,
+		reservationTrack,
+		trackDetail,
 		overlappingReservations
 	} from '#lib/utils/reservation-actions.js';
 	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
@@ -77,11 +78,7 @@
 		}
 	}
 	const actions = $derived(
-		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), {
-			cashDueCents: r.cashDueCents,
-			paidAt: r.paidAt,
-			refundedAt: r.refundedAt
-		})
+		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), r)
 	);
 
 	// Double-bookings for this slot — surfaced so staff see the collision before
@@ -102,29 +99,22 @@
 		formatCents(Math.round((r.creditsUsed ?? 0) * data.hourlyRateCents))
 	);
 
-	const paymentStatus = $derived.by((): { label: string; class: string } => {
-		switch (reservationPaymentState(r)) {
-			case 'no_show':
-				return { label: m.staff_no_show_label(), class: 'badge-error' };
-			case 'refunded':
-				return { label: m.staff_refunded_label(), class: 'badge-error' };
-			case 'cancelled':
-				return { label: m.staff_cancelled_label(), class: 'badge-ghost' };
-			case 'paid':
-				return { label: m.staff_paid_label(), class: 'badge-success' };
+	const track = $derived(reservationTrack(r));
+	// The header carries the track; this card says what the track leaves out.
+	const paymentDetail = $derived.by((): string | null => {
+		switch (trackDetail(r)) {
 			case 'cash_due':
-				return {
-					label: m.staff_reservations_id_cash_due_label({
-						formatCents: formatCents(r.cashDueCents ?? 0)
-					}),
-					class: 'badge-warning'
-				};
-			case 'unpaid':
-				return { label: m.staff_unpaid_label(), class: 'badge-warning' };
+				return m.staff_reservations_id_cash_due_label({
+					formatCents: formatCents(r.cashDueCents ?? 0)
+				});
+			case 'unpriced':
+				return m.staff_unpaid_label();
 			case 'credits':
-				return { label: m.staff_paid_with_credits_label(), class: 'badge-info' };
-			case 'comped':
-				return { label: m.staff_comped_label(), class: 'badge-info' };
+				return m.staff_paid_with_credits_label();
+			case 'comp':
+				return m.staff_comped_label();
+			case null:
+				return null;
 		}
 	});
 </script>
@@ -161,7 +151,7 @@
 				<hgroup>
 					<p class="flex items-center gap-2 text-xl font-medium">
 						{fullDate(r.startsAt)}
-						<StatusBadge status={r.status} />
+						<StatusBadge status={track} label />
 						{#if data.isFirstReservation}
 							<!-- Spelled out rather than icon-only: the list has a flag cluster
 							     to read this out of, and this page has the room. -->
@@ -289,7 +279,9 @@
 				{/snippet}
 				<div class="mb-1 flex items-baseline justify-between">
 					<span class="text-2xl font-medium">{amountFormatted}</span>
-					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
+					{#if paymentDetail}
+						<Badge variant="ghost">{paymentDetail}</Badge>
+					{/if}
 				</div>
 				<p class="text-muted">
 					{m.staff_reservations_id_hr_text({ durationLabel, rateFormatted })}

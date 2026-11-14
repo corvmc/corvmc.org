@@ -17,7 +17,7 @@ describe('StatusBadge accessibility', () => {
 	it('names the icon-only form', async () => {
 		await render(StatusBadge, { status: 'no_show' });
 		const el = document.querySelector('[role="img"]');
-		expect(el?.getAttribute('aria-label')).toBe('No show');
+		expect(el?.getAttribute('aria-label')).toBe(statusLabel('no_show'));
 	});
 
 	it('uses the humanised label, not the raw enum value', async () => {
@@ -33,7 +33,7 @@ describe('StatusBadge accessibility', () => {
 	it('does not double up the name when the label is already visible', async () => {
 		await render(StatusBadge, { status: 'no_show', label: true });
 		expect(document.querySelector('[role="img"]')).toBeNull();
-		expect(document.body.textContent).toContain('No show');
+		expect(document.body.textContent).toContain(statusLabel('no_show'));
 	});
 
 	it('still names a status it has no mapping for', async () => {

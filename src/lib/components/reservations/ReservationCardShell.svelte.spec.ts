@@ -6,7 +6,7 @@ import ReservationCardShell from './ReservationCardShell.svelte';
 /**
  * The treatment both panels now share (#566).
  *
- * The tint is `.confirmed .date-block`, so the status reaching the root as a
+ * The tint is `.booked .date-block`, so the track reaching the root as a
  * class is load-bearing — drop it and every card silently un-tints, which no
  * page test would notice.
  */
@@ -17,23 +17,23 @@ const card = () => document.querySelector('.reservation-card');
 const body = createRawSnippet(() => ({ render: () => '<p>Practice</p>' }));
 
 describe('ReservationCardShell', () => {
-	it('puts the status on the root, which is what tints the date block', async () => {
+	it('puts the track on the root, which is what tints the date block', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'confirmed',
+			track: 'booked',
 			children: body
 		});
 
-		expect(card()?.classList.contains('confirmed')).toBe(true);
+		expect(card()?.classList.contains('booked')).toBe(true);
 		expect(document.querySelector('.date-block')).not.toBeNull();
 	});
 
-	// `no_show` is the one status whose class carries an underscore, because it
+	// `no_show` is one of two tracks whose class carries an underscore, because it
 	// comes from the raw enum value rather than a display label.
 	it('keeps the underscore in no_show', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'no_show',
+			track: 'no_show',
 			children: body
 		});
 
@@ -43,7 +43,7 @@ describe('ReservationCardShell', () => {
 	it('flags a session happening today', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'confirmed',
+			track: 'booked',
 			children: body
 		});
 
@@ -54,7 +54,18 @@ describe('ReservationCardShell', () => {
 	it('does not flag a session that is already over', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'cancelled',
+			track: 'cancelled',
+			children: body
+		});
+
+		expect(document.querySelector('.upcoming-tag')).toBeNull();
+	});
+
+	it('does not flag a paid session that has ended', async () => {
+		await render(ReservationCardShell, {
+			startsAt: new Date(),
+			ended: true,
+			track: 'paid',
 			children: body
 		});
 
@@ -66,7 +77,7 @@ describe('ReservationCardShell', () => {
 	it('renders no action row when no actions are passed', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'completed',
+			track: 'paid',
 			children: body
 		});
 
@@ -76,7 +87,7 @@ describe('ReservationCardShell', () => {
 	it('puts its actions in the card action row', async () => {
 		await render(ReservationCardShell, {
 			startsAt: new Date(),
-			status: 'confirmed',
+			track: 'booked',
 			children: body,
 			actions: createRawSnippet(() => ({ render: () => '<button class="btn">x</button>' }))
 		});
