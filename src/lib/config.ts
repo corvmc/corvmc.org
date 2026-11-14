@@ -3134,3 +3134,23 @@ export type AccessAnswer = (typeof accessAnswers)[number];
 /** The fixed set of questions, in display order. Each is a `venue` column. */
 export const venueAccessFields = ['stepFreeEntry', 'accessibleRestroom', 'seating'] as const;
 export type VenueAccessField = (typeof venueAccessFields)[number];
+
+// ---------------------------------------------------------------------------
+// Interface vocabulary (#2842)
+// ---------------------------------------------------------------------------
+
+/**
+ * One word per concept: each entry is a word the interface no longer uses and
+ * the term that replaced it. `keys` limits a ban to message keys where the word
+ * names that concept, for words that are right elsewhere ("Rejected" events).
+ * scripts/message-copy.spec.ts holds the message catalog to this list.
+ */
+export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
+	{ word: /\binstructors?\b/i, use: 'teacher' },
+	{
+		// A returned tip or teaching application is edited and resubmitted, not refused.
+		word: /\b(reject(s|ed|ing)?|turned down|unpublish(es|ed|ing)?)\b/i,
+		use: 'return / returned',
+		keys: /^staff_(return|local_resources|members_instructors|members_id_panels_instructor)/
+	}
+];

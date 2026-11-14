@@ -41,7 +41,7 @@
 			<option value="">{m.staff_local_resources_all_listings_label()}</option>
 			<option value="pending">{m.staff_pending_label()}</option>
 			<option value="published">{m.staff_published_label()}</option>
-			<option value="rejected">{m.staff_local_resources_rejected_label()}</option>
+			<option value="rejected">{m.staff_returned_label()}</option>
 		</Select>
 		{#snippet actions()}
 			<Button href="/staff/local-resources/categories" variant="ghost" size="sm"
@@ -55,7 +55,7 @@
 					successToast={m.staff_local_resources_success_toast()}
 				>
 					{#snippet form()}
-						<ResourceFields {fields} categories={data.categories} />
+						<ResourceFields {fields} categories={data.categories} published />
 					{/snippet}
 				</Action>
 			{/if}

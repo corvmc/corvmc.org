@@ -51,7 +51,7 @@
 				{#if instructor.reviewNotes}
 					<!-- What the member was told, as opposed to statusNote below, which
 					     is what staff told each other. -->
-					<Fact label={m.staff_rejected_label()}>{instructor.reviewNotes}</Fact>
+					<Fact label={m.staff_return_reason_label()}>{instructor.reviewNotes}</Fact>
 				{/if}
 				{#if instructor.statusNote}
 					<Fact label={m.staff_members_id_panels_instructor_panel_staff_note_label()}
