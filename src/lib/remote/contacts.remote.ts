@@ -139,7 +139,7 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 				setupNotes: vendor.setupNotes
 			},
 			records: { ...records, shows: shows ? records.shows : [] },
-			act: act && { entryId: act, canClaim: claim, canSendContactSheet: sheet },
+			act: act ? { entryId: act, canClaim: claim, canSendContactSheet: sheet } : null,
 			people: staff ? await people.listPeople(id) : null,
 			canManage: manage,
 			canRecordGift: recordGift

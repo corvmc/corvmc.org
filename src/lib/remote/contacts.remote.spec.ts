@@ -297,19 +297,20 @@ describe('contacts.remote views', () => {
 			directoryEntryId: 'de-1',
 			roles: ['performer']
 		} as never);
+		type ActPage = { records: { shows: unknown[] }; act: Record<string, unknown> | null };
 		held = new Set(['contact.read']);
-		const page = await remote.getOrganizationPage('o1');
-		expect(page?.records.shows).toEqual([]);
-		expect(page?.act).toEqual({
+		const page = (await remote.getOrganizationPage('o1')) as ActPage;
+		expect(page.records.shows).toEqual([]);
+		expect(page.act).toEqual({
 			entryId: 'de-1',
 			canClaim: false,
 			canSendContactSheet: false
 		});
 
 		held = new Set(['event.read', 'event.manage', 'directory.shareContactSheet']);
-		const booker = await remote.getOrganizationPage('o1');
-		expect(booker?.records.shows).toHaveLength(1);
-		expect(booker?.act).toMatchObject({ canClaim: true, canSendContactSheet: true });
+		const booker = (await remote.getOrganizationPage('o1')) as ActPage;
+		expect(booker.records.shows).toHaveLength(1);
+		expect(booker.act).toMatchObject({ canClaim: true, canSendContactSheet: true });
 		orgs.getOrganization.mockReset();
 		orgs.getOrganization.mockImplementation(async () => ({
 			...org,
