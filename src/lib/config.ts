@@ -2691,6 +2691,13 @@ export function hasCapability(held: readonly string[], cap: Capability): boolean
 	return held.includes(cap);
 }
 
+/** Is this string a capability in the matrix? For names written outside code, like frontmatter. */
+export function isCapability(name: string): name is Capability {
+	const dot = name.indexOf('.');
+	const actions = (capabilities as Record<string, readonly string[]>)[name.slice(0, dot)];
+	return dot > 0 && (actions?.includes(name.slice(dot + 1)) ?? false);
+}
+
 // ---------------------------------------------------------------------------
 // Capability grants: volunteer roles and committees
 // ---------------------------------------------------------------------------

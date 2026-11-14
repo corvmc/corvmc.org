@@ -4,6 +4,7 @@ import { helpArticle } from '#lib/server/db/schema/help.js';
 import { asc, eq } from 'drizzle-orm';
 import { listFor } from '#lib/server/media/media-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
+import { listReadableArticles, type HelpReader } from '#lib/server/help/help-service.js';
 import { raiseFlag } from './work-request-service';
 
 /**
@@ -56,15 +57,18 @@ export async function listItemResources(itemId: string) {
 }
 
 /**
- * What a member is allowed to see.
- *
- * Unpublished articles are drafts — help sync imports as drafts for staff
- * review — so showing one from a scanned tag would leak an unreviewed page to
- * whoever picked up the amp.
+ * What a member is allowed to see: published articles their help reader may
+ * open, through the help centre's own filter, so a scanned tag never shows a
+ * draft or a staff article's title.
  */
-export async function listMemberItemResources(itemId: string) {
+export async function listMemberItemResources(itemId: string, reader: HelpReader) {
 	const { manuals, articles } = await listItemResources(itemId);
-	return { manuals, articles: articles.filter((a) => a.published) };
+	const readable = await listReadableArticles(
+		articles.map((a) => a.id),
+		reader
+	);
+	const ids = new Set(readable.map((a) => a.id));
+	return { manuals, articles: articles.filter((a) => ids.has(a.id)) };
 }
 
 export async function linkArticle(itemId: string, articleId: string) {

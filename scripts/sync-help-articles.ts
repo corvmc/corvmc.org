@@ -18,7 +18,7 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { eq, and, notInArray } from 'drizzle-orm';
 import { databaseIdFromWrangler } from '../drizzle.config';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
-import { grantRuleFor, helpAudiences } from '../src/lib/config';
+import { helpAudiences, isCapability } from '../src/lib/config';
 
 const CONTENT_DIR = join(import.meta.dirname, '../src/content/help');
 
@@ -28,7 +28,10 @@ interface ArticleFrontmatter {
 	category: string;
 	summary?: string;
 	minRole?: string;
-	/** Comma-separated; any one admits a reader below `minRole`. */
+	/**
+	 * Comma-separated. On a staff article, only their holders read it; below
+	 * staff, any one also admits a reader under `minRole`.
+	 */
 	capabilities?: string;
 	sortOrder?: number;
 }
@@ -65,19 +68,15 @@ const audienceOf = (a?: string) => {
 	return (helpAudiences as readonly string[]).includes(v) ? v : 'staff';
 };
 
-/**
- * A capability here admits a reader who holds it through a committee, so one no
- * committee can hold org-wide would admit nobody: a typo, and it fails the sync.
- */
+/** A capability that is not in the matrix admits nobody: a typo, and it fails the sync. */
 function capabilitiesOf(file: string, raw?: string): string[] | null {
 	const caps = (raw ?? '')
 		.split(',')
 		.map((c) => c.trim())
 		.filter(Boolean);
 	for (const c of caps) {
-		if (grantRuleFor(c)?.committee !== 'org') {
-			throw new Error(`${file}: capability "${c}" is not one a committee can hold org-wide`);
-		}
+		if (!isCapability(c))
+			throw new Error(`${file}: "${c}" is not a capability in src/lib/config.ts`);
 	}
 	return caps.length > 0 ? caps : null;
 }

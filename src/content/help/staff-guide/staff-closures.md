@@ -4,6 +4,7 @@ slug: staff-closures
 category: staff-guide
 summary: Block out dates when the space is closed for holidays or maintenance.
 minRole: staff
+capabilities: reservation.manageClosures
 sortOrder: 7
 ---
 

@@ -4,6 +4,7 @@ slug: staff-moderation
 category: staff-guide
 summary: Working the report queue, deciding what an upheld report costs, and running the suggestion board.
 minRole: staff
+capabilities: moderation.reviewFlags, suggestion.read
 sortOrder: 18
 ---
 

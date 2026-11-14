@@ -1,9 +1,9 @@
 /**
  * Who can read a help article, against real SQLite on the real migrated tables.
  *
- * An article may name capabilities that admit a reader in addition to its tier
- * (#1638): a committee granted `sponsor.read` holds no position, so reads at
- * `member`, but must still reach the staff article for the page it can open.
+ * An article's capabilities admit a reader below its tier (#1638: a committee
+ * granted `sponsor.read` reads at `member`) and, on a staff article, narrow it to
+ * their holders (#3005). One naming none is for every position holder.
  * The capability clause is a correlated `json_each`, which only the engine can judge.
  */
 import { describe, expect, it, beforeAll, afterAll, vi } from 'vitest';
@@ -51,11 +51,18 @@ beforeAll(() => {
 		INSERT INTO user (id, name, email, email_verified) VALUES
 			('u-committee', 'Cora Dev',   'cora@example.com', 1),
 			('u-member',    'Max Plain',  'max@example.com',  1),
-			('u-staff',     'Sal Staff',  'sal@example.com',  1);
+			('u-staff',     'Sal Staff',  'sal@example.com',  1),
+			('u-treasurer', 'Tia Books',  'tia@example.com',  1),
+			('u-admin',     'Ada Admin',  'ada@example.com',  1);
 
-		INSERT OR IGNORE INTO roles (name, guard_name) VALUES ('staff', 'web');
+		INSERT OR IGNORE INTO roles (name, guard_name) VALUES
+			('staff', 'web'), ('treasurer', 'web'), ('admin', 'web');
 		INSERT INTO model_has_roles (role_id, user_id)
 			SELECT id, 'u-staff' FROM roles WHERE name = 'staff';
+		INSERT INTO model_has_roles (role_id, user_id)
+			SELECT id, 'u-treasurer' FROM roles WHERE name = 'treasurer';
+		INSERT INTO model_has_roles (role_id, user_id)
+			SELECT id, 'u-admin' FROM roles WHERE name = 'admin';
 
 		INSERT INTO "group" (id, kind, name, slug) VALUES ('g-dev', 'committee', 'Development', 'development');
 		INSERT INTO group_member (id, group_id, user_id, role, status) VALUES
@@ -70,6 +77,7 @@ beforeAll(() => {
 			('a-sponsors', 'c-staff', 'Track Sponsors and Grants', 'staff-sponsors-grants', 'sponsor body', 'staff', 1, '["sponsor.read","grant.read"]'),
 			('a-incidents', 'c-staff', 'Read Incidents', 'staff-incidents', 'incident body', 'staff', 1, '["incident.read"]'),
 			('a-bookings', 'c-staff', 'Manage Bookings', 'staff-bookings', 'sponsor mention', 'staff', 1, NULL),
+			('a-purge', 'c-staff', 'Purge an Account', 'staff-purge', 'purge body', 'staff', 1, '["user.purge"]'),
 			('a-welcome', 'c-member', 'Welcome', 'welcome', 'hello', 'member', 1, NULL),
 			('a-draft', 'c-member', 'Door Policy', 'door-policy', 'draft', 'member', 0, NULL);
 	`);
@@ -112,13 +120,48 @@ describe('readers the capability clause must not change', () => {
 		expect((await listNonEmptyCategories(reader)).map((c) => c.slug)).toEqual(['getting-started']);
 	});
 
-	it('lets staff read every staff article, capability or not', async () => {
+	it('lets staff read every staff article but the admin-only one', async () => {
 		const reader = await resolveHelpReader('u-staff');
 		expect(reader.audience).toBe('staff');
 		const articles = await listArticlesByCategory('c-staff', reader);
 		expect(articles.map((a) => a.slug).sort()).toEqual([
 			'staff-bookings',
 			'staff-incidents',
+			'staff-sponsors-grants'
+		]);
+	});
+});
+
+describe('a position holder, against the capabilities a staff article names (#3005)', () => {
+	it('reads articles naming a capability they hold, and those naming none', async () => {
+		const reader = await resolveHelpReader('u-treasurer');
+		expect(reader.audience).toBe('staff');
+		const articles = await listArticlesByCategory('c-staff', reader);
+		expect(articles.map((a) => a.slug).sort()).toEqual(['staff-bookings', 'staff-sponsors-grants']);
+		expect(await getArticleBySlug('staff-incidents', reader)).toBeNull();
+	});
+
+	it('cannot find a hidden article in search, by its title or its body', async () => {
+		const reader = await resolveHelpReader('u-treasurer');
+		expect(await searchArticles('Incidents', reader)).toEqual([]);
+		expect(await searchArticles('purge', reader)).toEqual([]);
+	});
+
+	it('leaves a hidden article out of links another record makes', async () => {
+		const reader = await resolveHelpReader('u-treasurer');
+		const ids = (await listReadableArticles(['a-incidents', 'a-bookings'], reader)).map(
+			(a) => a.id
+		);
+		expect(ids).toEqual(['a-bookings']);
+	});
+
+	it('lets admin read every staff article', async () => {
+		const reader = await resolveHelpReader('u-admin');
+		const articles = await listArticlesByCategory('c-staff', reader);
+		expect(articles.map((a) => a.slug).sort()).toEqual([
+			'staff-bookings',
+			'staff-incidents',
+			'staff-purge',
 			'staff-sponsors-grants'
 		]);
 	});

@@ -7,7 +7,10 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
 
 - Member / band / staff articles are markdown files in [`src/content/help/<category>/<slug>.md`](../../src/content/help).
   Each has YAML frontmatter (`title`, `slug`, `category`, `summary`, `minRole`, `sortOrder`) + a
-  CommonMark body. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
+  CommonMark body. A `minRole: staff` article also names `capabilities:`, the capability of the
+  page it documents (comma-separated, any one admits); only their holders read it, and admin holds
+  all. One naming none is shown to every position holder, and
+  `scripts/sync-help-articles.spec.ts` lists those. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
   auto-creates categories; every production deploy does the same remotely. A new article lands
   as a draft, and appears at `/member/help` once staff publish it.
 - **Public-site** articles live under [`public/`](public) here — the in-app KB (`/member/help`) is

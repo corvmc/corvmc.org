@@ -88,6 +88,7 @@ import {
 	reportDamage,
 	unlinkArticle
 } from '#lib/server/inventory/resources-service.js';
+import { resolveHelpReader } from '#lib/server/help/help-service.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import {
 	getLoanById,
@@ -394,7 +395,7 @@ export const getMemberEquipmentLoans = query(
  * gave it. Phase 4 adds the manual and the report-damage button here.
  */
 export const getMemberAsset = query(z.string(), async (id) => {
-	requireUser();
+	const user = requireUser();
 	const asset = await getAssetById(id);
 	if (!asset) error(404, 'Not found');
 
@@ -417,7 +418,7 @@ export const getMemberAsset = query(z.string(), async (id) => {
 		// first paint and keyed by the same id, so a second query from the page
 		// would be a fan-out — which the custom lint rule rejects and which kit
 		// renders as `effect_update_depth_exceeded` past 2.64.
-		resources: await listMemberItemResources(asset.itemId)
+		resources: await listMemberItemResources(asset.itemId, await resolveHelpReader(user.id))
 	};
 });
 

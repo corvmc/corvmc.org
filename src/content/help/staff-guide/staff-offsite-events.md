@@ -4,6 +4,7 @@ slug: staff-offsite-events
 category: staff-guide
 summary: Set up a show CMC produces somewhere other than the practice room, or one that runs across more than one day.
 minRole: staff
+capabilities: event.read
 sortOrder: 19
 ---
 

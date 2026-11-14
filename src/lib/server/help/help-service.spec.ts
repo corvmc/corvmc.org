@@ -22,7 +22,9 @@ const isSustainingMember = vi.fn<(userId: string) => Promise<boolean>>();
 
 vi.mock('#lib/server/authorization.js', () => ({
 	getUserRoles: (id: string) => getUserRoles(id),
-	committeeCapabilitiesFor: async () => []
+	committeeCapabilitiesFor: async () => [],
+	positionsFor: async () => [],
+	capabilitySet: () => []
 }));
 vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: (id: string) => isSustainingMember(id)

@@ -4,6 +4,7 @@ slug: staff-events
 category: staff-guide
 summary: Create events, configure ticketing, and check attendees in at the door.
 minRole: staff
+capabilities: event.read
 sortOrder: 8
 ---
 
