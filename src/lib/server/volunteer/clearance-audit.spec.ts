@@ -17,6 +17,7 @@ vi.mock('$app/server', () => ({
 
 const { grantCertification, revokeCertification } = await import('./member-certification-service');
 const { waiveOrientation } = await import('./orientation-service');
+const { deleteCertification } = await import('./volunteer-certification-service');
 const { listAuditEntriesForSubject } = await import('#lib/server/audit/audit-service.js');
 const { volunteerCertification } = await import('#lib/server/db/schema/volunteer.js');
 
@@ -80,6 +81,20 @@ describe('clearance audit', () => {
 			expect.objectContaining({
 				action: 'orientation.waived',
 				details: { reason: 'Played here for years' }
+			})
+		]);
+	});
+
+	// #2891: a clearance taken out of the catalog keeps its name in the log.
+	it('records a catalog deletion under the clearance', async () => {
+		await deleteCertification('sound');
+
+		const { entries } = await listAuditEntriesForSubject({ type: 'clearance', id: 'sound' });
+		expect(entries).toEqual([
+			expect.objectContaining({
+				action: 'clearance.deleted',
+				actorUserId: 'staff-1',
+				subjectLabel: 'Sound Desk Cleared'
 			})
 		]);
 	});

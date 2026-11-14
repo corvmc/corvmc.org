@@ -38,9 +38,11 @@ vi.mock('#lib/server/production/production-scope.js', () => ({
 
 const createTickets = vi.fn(async () => []);
 const cancelTicketService = vi.fn(async () => undefined);
+const recordTicketComp = vi.fn(async () => undefined);
 vi.mock('#lib/server/ticket/ticket-service.js', async (orig) => ({
 	...(await orig<object>()),
 	createTickets: (...a: unknown[]) => createTickets(...(a as [])),
+	recordTicketComp: (...a: unknown[]) => recordTicketComp(...(a as [])),
 	cancelTicket: (...a: unknown[]) => cancelTicketService(...(a as [])),
 	getTicketsRemaining: vi.fn(async () => 50)
 }));
@@ -84,18 +86,28 @@ describe('compTickets', () => {
 		expect(createTickets).toHaveBeenCalledWith(
 			expect.objectContaining({ eventId: 'evt-show', quantity: 2 })
 		);
+		// #2891: the comp is recorded under the purchase id its tickets carry.
+		const [[issued]] = createTickets.mock.calls as unknown as [[{ purchaseId: string }]];
+		expect(recordTicketComp).toHaveBeenCalledWith({
+			eventId: 'evt-show',
+			purchaseId: issued.purchaseId,
+			quantity: 2,
+			attendeeName: 'Guest'
+		});
 	});
 
 	it("refuses the show's committee, issuing nothing", async () => {
 		persona = 'booker';
 		await expect(compTickets(COMP, issue)).rejects.toMatchObject({ status: 403 });
 		expect(createTickets).not.toHaveBeenCalled();
+		expect(recordTicketComp).not.toHaveBeenCalled();
 	});
 
 	it('refuses someone off the committee, issuing nothing', async () => {
 		persona = 'outsider';
 		await expect(compTickets(COMP, issue)).rejects.toMatchObject({ status: 403 });
 		expect(createTickets).not.toHaveBeenCalled();
+		expect(recordTicketComp).not.toHaveBeenCalled();
 	});
 });
 

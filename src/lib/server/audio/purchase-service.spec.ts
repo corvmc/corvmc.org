@@ -30,6 +30,9 @@ vi.mock('#lib/server/stripe.js', () => ({ stripe: { refunds: { create: refundsCr
 const emit = vi.fn(async (..._a: unknown[]) => {});
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 const service = await import('./purchase-service');
 
 const T0 = 1_750_000_000;
@@ -303,6 +306,25 @@ describe('refundPurchase', () => {
 		await service.refundPurchase('p1');
 		await service.refundPurchase('p1');
 		expect(refundsCreate).toHaveBeenCalledOnce();
+	});
+
+	// #2891: the staff audit log says who gave the money back.
+	it('records one audit row against the band, however often it is asked', async () => {
+		purchase('p1');
+		await service.refundPurchase('p1');
+		await service.refundPurchase('p1');
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'music_purchase.refunded',
+			subject: { type: 'band', id: 'band-1', label: 'Sour Cherry' },
+			details: { purchaseId: 'p1', releaseTitle: 'Marys Peak', amountCents: expect.any(Number) }
+		});
+	});
+
+	it('records no audit row when the refund is refused', async () => {
+		purchase('p1', { pi: null });
+		await expect(service.refundPurchase('p1')).rejects.toThrow();
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
 	it('revokes a free download without calling Stripe', async () => {

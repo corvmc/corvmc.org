@@ -220,6 +220,15 @@ function subjectRef(row: SubjectRow): EntityRef {
 		// No staff page of its own: the stored label, unlinked.
 		case 'purchase_order':
 			return { type: 'equipment', id: null, title };
+		case 'classified':
+			return { type: 'classified', id: entry.subjectId, title };
+		case 'suggestion':
+			return { type: 'suggestion', id: entry.subjectId, title };
+		// Only deletions are recorded against these, so there is nothing to link to.
+		case 'clearance':
+			return { type: 'role', id: null, title };
+		case 'venue':
+			return { type: 'setting', id: null, title };
 		// The id is the key prefix (`reservation`, `feature`); settings span several pages.
 		case 'setting': {
 			const area = entry.subjectLabel ?? entry.subjectId;

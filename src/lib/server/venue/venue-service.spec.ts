@@ -46,6 +46,9 @@ vi.mock('#lib/server/utils/slug.js', () => ({
 	ensureUniqueSlug: vi.fn(async (base: string) => base)
 }));
 
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 import {
 	archiveVenue,
 	deleteVenue,
@@ -182,6 +185,19 @@ describe('deleteVenue', () => {
 		selectResult = [venueRow({ isPrimary: true })];
 
 		await expect(deleteVenue('venue-1')).rejects.toThrow(PrimaryVenueError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	// #2891: the audit log keeps the name of a venue that was deleted.
+	it('records the deletion in the audit log', async () => {
+		selectResult = [{ ...venueRow(), n: 0 }];
+
+		await deleteVenue('venue-1');
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'venue.deleted',
+			subject: { type: 'venue', id: 'venue-1', label: 'The Practice Room' },
+			details: {}
+		});
 	});
 });
 

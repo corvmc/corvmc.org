@@ -4,6 +4,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
 import { and, count, desc, eq, gt, inArray, lte, ne, or, type SQL } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
@@ -318,6 +319,11 @@ export async function setVisibility(
 			updatedAt: new Date()
 		})
 		.where(eq(classifiedPost.id, postId));
+	await recordAuditEntry({
+		action: 'classified.visibility_changed',
+		subject: { type: 'classified', id: postId, label: existing.title },
+		details: { from: existing.visibility, to: params.visibility }
+	});
 
 	const { visibility } = params;
 	if (visibility !== 'visible' && visibility !== 'hidden') return;

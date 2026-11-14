@@ -79,7 +79,21 @@ export const auditActions = [
 	'project.section_deleted',
 	'volunteer_hours.approved_over_return',
 	'organization.merged',
-	'contact.merged'
+	'contact.merged',
+	'event.tickets_comped',
+	'music_purchase.refunded',
+	'production.expense_removed',
+	'classified.visibility_changed',
+	'suggestion.visibility_changed',
+	'group.visibility_changed',
+	'grant.deleted',
+	'sponsorship.deleted',
+	'suggestion.merged',
+	'role.deleted',
+	'clearance.deleted',
+	'venue.deleted',
+	'closure.deleted',
+	'audience.subscriber_removed'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -98,7 +112,11 @@ export const auditSubjectTypes = [
 	'organization',
 	'contact',
 	'email_blocklist',
-	'setting'
+	'setting',
+	'classified',
+	'suggestion',
+	'clearance',
+	'venue'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -322,6 +340,37 @@ export interface AuditDetailsByAction {
 	'project.section_renamed': { sectionId: string; from: string; to: string };
 	/** Its tasks moved to the unlabelled group; `tasks` counts them. */
 	'project.section_deleted': { sectionId: string; name: string; tasks: number };
+	/** Free tickets issued from the staff door list; `purchaseId` is the `comp-…` id they share. */
+	'event.tickets_comped': { purchaseId: string; quantity: number; attendeeName: string };
+	/** The subject is the band. Stripe reversed the band's share and CMC's fee. */
+	'music_purchase.refunded': { purchaseId: string; releaseTitle: string; amountCents: number };
+	/** A cost-sheet line, as it was. A settled one is reversed in the ledger. */
+	'production.expense_removed': {
+		eventId: string | null;
+		label: string;
+		category: string;
+		amountCents: number;
+	};
+	'classified.visibility_changed': { from: string; to: string };
+	'suggestion.visibility_changed': { from: string; to: string };
+	/** The program's directory listing. */
+	'group.visibility_changed': { from: string; to: string };
+	/** The subject is the funder; the grant and its funding project are gone. */
+	'grant.deleted': { grantId: string; title: string };
+	/** The subject is the sponsor; the sponsorship and its funding project are gone. */
+	'sponsorship.deleted': { sponsorshipId: string; title: string; amountCents: number | null };
+	/** The subject survived; its votes now include the merged suggestion's. */
+	'suggestion.merged': { mergedId: string; mergedTitle: string; votesMoved: number };
+	/** The subject label is the deleted volunteer role's name. */
+	'role.deleted': Record<string, never>;
+	/** A clearance in the catalog, which no member held. The label is its name. */
+	'clearance.deleted': Record<string, never>;
+	/** The subject label is the deleted venue's name. */
+	'venue.deleted': Record<string, never>;
+	/** The subject is the reservation settings. Times are ISO strings. */
+	'closure.deleted': { closureId: string; startsAt: string; endsAt: string; reason: string };
+	/** The subject is the subscriber: a member's id, else the subscriber row's. */
+	'audience.subscriber_removed': { audienceId: string; audienceName: string };
 }
 
 /** Mirrors `contractorJobStatuses` in `$lib/config`, which the schema cannot import by alias. */

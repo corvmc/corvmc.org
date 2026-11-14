@@ -2,6 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { audience, audienceMember, subscriber } from '#lib/server/db/schema/marketing.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull, isNotNull, asc } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { findOrCreateByEmail } from './subscriber-service';
 import {
 	countSystemAudience,
@@ -236,11 +237,30 @@ export async function addSubscriber(audienceId: string, subscriberId: string) {
 export async function removeSubscriber(audienceId: string, subscriberId: string) {
 	await assertNotSystem(audienceId, 'remove a subscriber from');
 
-	await db
+	const removed = await db
 		.delete(audienceMember)
 		.where(
 			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
-		);
+		)
+		.returning({ id: audienceMember.subscriberId });
+	if (removed.length === 0) return;
+
+	const [who] = await db
+		.select({
+			userId: subscriber.userId,
+			name: subscriber.name,
+			email: subscriber.email,
+			audienceName: audience.name
+		})
+		.from(subscriber)
+		.innerJoin(audience, eq(audience.id, audienceId))
+		.where(eq(subscriber.id, subscriberId))
+		.limit(1);
+	await recordAuditEntry({
+		action: 'audience.subscriber_removed',
+		subject: { type: 'user', id: who?.userId ?? subscriberId, label: who?.name ?? who?.email },
+		details: { audienceId, audienceName: who?.audienceName ?? '' }
+	});
 }
 
 /**

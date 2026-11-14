@@ -6,6 +6,7 @@ import {
 } from '#lib/server/db/schema/sponsor.js';
 import { organization } from '#lib/server/db/schema/party.js';
 import { and, count, eq, gte, lte } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import {
 	createOrganization,
 	getOrganizationInRole,
@@ -190,8 +191,15 @@ export async function updateSponsorship(
 /** Its placements, its project and that project's tasks go with it. */
 export async function deleteSponsorship(id: string): Promise<void> {
 	const [row] = await db
-		.select({ projectId: sponsorship.projectId })
+		.select({
+			projectId: sponsorship.projectId,
+			title: sponsorship.title,
+			amountCents: sponsorship.amountCents,
+			sponsorId: sponsorship.organizationId,
+			sponsorName: organization.name
+		})
 		.from(sponsorship)
+		.leftJoin(organization, eq(organization.id, sponsorship.organizationId))
 		.where(eq(sponsorship.id, id))
 		.limit(1);
 	if (!row) throw new SponsorshipNotFoundError();
@@ -199,4 +207,9 @@ export async function deleteSponsorship(id: string): Promise<void> {
 		db.delete(sponsorship).where(eq(sponsorship.id, id)),
 		...(row.projectId ? deleteFundingProjectWrites(row.projectId) : [])
 	]);
+	await recordAuditEntry({
+		action: 'sponsorship.deleted',
+		subject: { type: 'organization', id: row.sponsorId, label: row.sponsorName },
+		details: { sponsorshipId: id, title: row.title, amountCents: row.amountCents }
+	});
 }

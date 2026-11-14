@@ -3,6 +3,7 @@ import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { volunteerRole, volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
 import { helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/errors.js';
 import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
@@ -284,6 +285,11 @@ export async function deleteVolunteerRole(id: string): Promise<VolunteerRole> {
 	const [row] = await db.delete(volunteerRole).where(eq(volunteerRole.id, id)).returning();
 
 	if (!row) throw new VolunteerRoleNotFoundError();
+	await recordAuditEntry({
+		action: 'role.deleted',
+		subject: { type: 'role', id, label: row.name },
+		details: {}
+	});
 	return row;
 }
 

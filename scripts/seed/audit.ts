@@ -131,6 +131,18 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			details: { organizationId: null }
 		},
 		{
+			daysAgo: 2,
+			action: 'venue.deleted',
+			subject: { type: 'venue', id: 'seed-deleted-venue', label: 'Old Granary Loft' },
+			details: {}
+		},
+		{
+			daysAgo: 1,
+			action: 'music_purchase.refunded',
+			subject: { type: 'band', id: 'seed-refunded-band', label: 'Sour Cherry' },
+			details: { purchaseId: 'seed-music-refund', releaseTitle: 'Marys Peak', amountCents: 1000 }
+		},
+		{
 			daysAgo: 7,
 			action: 'user.purged',
 			subject: { type: 'user', id: 'purged-seed-account', label: 'Casey Former' },

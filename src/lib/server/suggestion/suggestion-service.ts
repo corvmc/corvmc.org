@@ -26,6 +26,7 @@ import {
 	suggestionStatusLabels
 } from '#lib/config.js';
 import { ne } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -393,6 +394,11 @@ export async function setVisibility(
 			updatedAt: new Date()
 		})
 		.where(eq(suggestion.id, suggestionId));
+	await recordAuditEntry({
+		action: 'suggestion.visibility_changed',
+		subject: { type: 'suggestion', id: suggestionId, label: existing.title },
+		details: { from: existing.visibility, to: params.visibility }
+	});
 
 	notifyAuthor('suggestion.moderated', existing, params.staffId, {
 		suggestionId,
@@ -534,6 +540,11 @@ export async function mergeSuggestions(params: MergeParams): Promise<{ transferr
 			updatedAt: new Date()
 		})
 		.where(and(eq(suggestion.id, sourceId), isNull(suggestion.mergedIntoId)));
+	await recordAuditEntry({
+		action: 'suggestion.merged',
+		subject: { type: 'suggestion', id: targetId, label: target.title },
+		details: { mergedId: sourceId, mergedTitle: source.title, votesMoved: voters.length }
+	});
 
 	// The source's own vote rows are kept. Merge stays purely additive: nothing
 	// is destroyed, re-running is a total no-op, and the source is invisible on

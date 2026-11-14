@@ -29,6 +29,7 @@ vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getUserTickets: vi.fn(),
 	getTicketsByPurchase: vi.fn(),
 	createTickets: (...a: unknown[]) => createTickets(...(a as [])),
+	recordTicketComp: vi.fn(),
 	checkIn: (...a: unknown[]) => checkIn(...a),
 	cancelTicket: (...a: unknown[]) => cancelTicket(...a)
 }));

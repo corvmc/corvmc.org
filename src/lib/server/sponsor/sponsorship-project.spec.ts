@@ -17,6 +17,7 @@ const count = (table: string) => one<{ n: number }>(`select count(*) n from ${ta
 
 beforeEach(() => {
 	for (const t of [
+		'audit_log',
 		'work_order',
 		'project_committee',
 		'sponsorship',
@@ -71,5 +72,20 @@ describe('a sponsorship and its project', () => {
 		);
 		await deleteSponsorship(row.id);
 		expect([count('sponsorship'), count('project'), count('work_order')]).toEqual([0, 0, 0]);
+	});
+
+	// #2891: the sponsor's audit log keeps the sponsorship that was deleted.
+	it('records the deletion against the sponsor', async () => {
+		const row = await createSponsorship({ ...input, amountCents: 50_000 });
+		await deleteSponsorship(row.id);
+		const entry = one<{ action: string; subject_id: string; details: string }>(
+			`select action, subject_id, details from audit_log`
+		);
+		expect(entry).toMatchObject({ action: 'sponsorship.deleted', subject_id: 'shop' });
+		expect(JSON.parse(entry.details)).toEqual({
+			sponsorshipId: row.id,
+			title: 'Season sponsor',
+			amountCents: 50_000
+		});
 	});
 });

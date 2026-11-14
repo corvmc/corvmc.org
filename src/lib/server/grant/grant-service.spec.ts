@@ -200,6 +200,17 @@ describe('deleteGrant', () => {
 		expect(one<{ n: number }>(`select count(*) n from work_order`).n).toBe(0);
 		expect(one<{ n: number }>(`select count(*) n from grant_application`).n).toBe(0);
 	});
+
+	// #2891: the funder's audit log keeps the grant that was deleted.
+	it('records the deletion against the funder', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		await deleteGrant(grant.id);
+		const row = one<{ action: string; subject_id: string; subject_label: string; details: string }>(
+			`select action, subject_id, subject_label, details from audit_log where action = 'grant.deleted'`
+		);
+		expect(row).toMatchObject({ subject_id: 'oac', subject_label: 'Oregon Arts Commission' });
+		expect(JSON.parse(row.details)).toEqual({ grantId: grant.id, title: expect.any(String) });
+	});
 });
 
 describe('grantStageOffers', () => {

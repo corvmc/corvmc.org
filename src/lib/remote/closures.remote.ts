@@ -7,6 +7,7 @@ import { closure } from '#lib/server/db/schema/reservation.js';
 import { eq } from 'drizzle-orm';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // The list is the staff reservations page (#1833); its actions invalidate it.
 
@@ -86,7 +87,7 @@ export const deleteClosure = form(
 		const id = data.id as string;
 
 		const [row] = await db
-			.select({ startsAt: closure.startsAt })
+			.select({ startsAt: closure.startsAt, endsAt: closure.endsAt, reason: closure.reason })
 			.from(closure)
 			.where(eq(closure.id, id))
 			.limit(1);
@@ -95,6 +96,16 @@ export const deleteClosure = form(
 		if (row.startsAt <= new Date()) throw error(400, 'Cannot delete a past or active closure');
 
 		await db.delete(closure).where(eq(closure.id, id));
+		await recordAuditEntry({
+			action: 'closure.deleted',
+			subject: { type: 'setting', id: 'reservation', label: null },
+			details: {
+				closureId: id,
+				startsAt: row.startsAt.toISOString(),
+				endsAt: row.endsAt.toISOString(),
+				reason: row.reason
+			}
+		});
 
 		return { success: true };
 	}

@@ -41,7 +41,11 @@ const SUBJECT_LABELS: Record<Exclude<AuditSubjectType, 'production'>, string> = 
 	inventory_asset: 'Equipment',
 	purchase_order: 'Purchase order',
 	email_blocklist: 'Blocked address',
-	setting: 'Setting'
+	setting: 'Setting',
+	classified: 'Classified',
+	suggestion: 'Suggestion',
+	clearance: 'Clearance',
+	venue: 'Venue'
 };
 
 /** The record types the log can filter by, labelled. */
@@ -350,6 +354,36 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const head = `Deleted the section “${d.name}”`;
 			return d.tasks > 0 ? `${head}, keeping its ${plural(d.tasks, 'task')}` : head;
 		}
+		case 'event.tickets_comped':
+			return `Comped ${plural(entry.details.quantity, 'ticket')} for ${entry.details.attendeeName}`;
+		case 'music_purchase.refunded':
+			return `Refunded a ${formatCents(entry.details.amountCents)} purchase of “${entry.details.releaseTitle}”`;
+		case 'production.expense_removed':
+			return `Removed the ${formatCents(entry.details.amountCents)} expense “${entry.details.label}”`;
+		case 'classified.visibility_changed':
+		case 'suggestion.visibility_changed':
+		case 'group.visibility_changed':
+			return `Changed visibility from ${entry.details.from} to ${entry.details.to}`;
+		case 'grant.deleted':
+			return `Deleted the grant “${entry.details.title}”`;
+		case 'sponsorship.deleted':
+			return `Deleted the sponsorship “${entry.details.title}”`;
+		case 'suggestion.merged': {
+			const d = entry.details;
+			return `Merged “${d.mergedTitle}” into it, moving ${plural(d.votesMoved, 'vote')}`;
+		}
+		case 'role.deleted':
+			return 'Deleted the volunteer role';
+		case 'clearance.deleted':
+			return 'Deleted the clearance';
+		case 'venue.deleted':
+			return 'Deleted the venue';
+		case 'closure.deleted': {
+			const d = entry.details;
+			return `Deleted the ${formatDateShort(new Date(d.startsAt))} closure: “${d.reason}”`;
+		}
+		case 'audience.subscriber_removed':
+			return `Removed from the audience “${entry.details.audienceName}”`;
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;

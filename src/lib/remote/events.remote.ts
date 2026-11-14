@@ -103,6 +103,7 @@ import {
 	getUserTickets,
 	getTicketsByPurchase,
 	createTickets,
+	recordTicketComp,
 	issueFreeTickets,
 	getEventTicketMoney,
 	type EventTicketMoney,
@@ -1745,13 +1746,20 @@ export const compTickets = form(
 			throw error(400, `Only ${remaining} ticket(s) remaining`);
 		}
 
+		const purchaseId = `comp-${crypto.randomUUID()}`;
 		await createTickets({
 			eventId: data.eventId,
-			purchaseId: `comp-${crypto.randomUUID()}`,
+			purchaseId,
 			quantity: data.quantity,
 			attendeeName: data.attendeeName,
 			attendeeEmail: data.attendeeEmail,
 			status: 'valid'
+		});
+		await recordTicketComp({
+			eventId: data.eventId,
+			purchaseId,
+			quantity: data.quantity,
+			attendeeName: data.attendeeName
 		});
 
 		return { success: true };
