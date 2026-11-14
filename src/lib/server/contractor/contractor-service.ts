@@ -7,7 +7,6 @@ import type { ContractorTrade } from '#lib/config.js';
 import {
 	addRole,
 	createOrganization,
-	setOrganizationArchived,
 	updateOrganization
 } from '#lib/server/party/organization-service.js';
 
@@ -108,17 +107,6 @@ export async function updateContractor(id: string, data: Partial<ContractorInput
 			.set({ ...detail, updatedAt: new Date() })
 			.where(eq(contractorDetail.organizationId, id));
 	}
-	return getContractorById(id);
-}
-
-/**
- * Retire someone from the pickers without pretending they never worked here.
- * `contractor_job.organization_id` restricts deletion, so this is the way out
- * for anyone with history.
- */
-export async function archiveContractor(id: string, archived = true) {
-	await getContractorById(id);
-	await setOrganizationArchived(id, archived);
 	return getContractorById(id);
 }
 

@@ -5,16 +5,12 @@ import {
 	type Sponsorship
 } from '#lib/server/db/schema/sponsor.js';
 import { organization } from '#lib/server/db/schema/party.js';
-import { and, count, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import {
-	createOrganization,
 	getOrganizationInRole,
 	OrganizationNotFoundError,
-	removeRole,
-	deleteUnusedOrganization,
 	requireRole,
-	setOrganizationArchived,
 	updateOrganization,
 	type OrganizationInput
 } from '#lib/server/party/organization-service.js';
@@ -115,38 +111,9 @@ export async function getSponsor(id: string, today: string) {
 
 export type SponsorInput = OrganizationInput;
 
-export function createSponsor(input: SponsorInput) {
-	return createOrganization(input, ['sponsor']);
-}
-
 export async function updateSponsor(id: string, input: SponsorInput): Promise<void> {
 	await getSponsorOrg(id);
 	await updateOrganization(id, input);
-}
-
-/** Off the active list; its sponsorships, placements and logo all stay. */
-export async function archiveSponsor(id: string): Promise<void> {
-	await getSponsorOrg(id);
-	await setOrganizationArchived(id, true);
-}
-
-export async function restoreSponsor(id: string): Promise<void> {
-	await getSponsorOrg(id);
-	await setOrganizationArchived(id, false);
-}
-
-/**
- * Only for a row that should never have been a sponsor. Refused once a sponsorship
- * names it. The organization goes only when nothing else names it.
- */
-export async function deleteSponsor(id: string): Promise<void> {
-	await getSponsorOrg(id);
-	const [used] = await db
-		.select({ n: count() })
-		.from(sponsorship)
-		.where(eq(sponsorship.organizationId, id));
-	await removeRole(id, 'sponsor', Number(used?.n ?? 0));
-	await deleteUnusedOrganization(id);
 }
 
 export type SponsorshipInput = Omit<NewSponsorship, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;

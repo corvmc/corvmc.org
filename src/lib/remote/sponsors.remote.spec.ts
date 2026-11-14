@@ -16,7 +16,6 @@ vi.mock('#lib/server/authorization.js', () => ({
 const service = {
 	getSponsor: vi.fn(async () => ({ id: 's1', sponsorships: [] })),
 	updateSponsor: vi.fn(async () => undefined),
-	deleteSponsor: vi.fn(async () => undefined),
 	createSponsorship: vi.fn(async () => ({ id: 'p1' })),
 	updateSponsorship: vi.fn(async () => undefined),
 	deleteSponsorship: vi.fn(async () => undefined)
