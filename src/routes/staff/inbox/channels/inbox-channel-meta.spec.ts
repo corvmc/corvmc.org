@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { inboxChannels, staffInboxChannels, alwaysEnabledInboxChannels } from '#lib/config.js';
 import { inboxChannelMeta } from './inbox-channel-meta';
 
-// The Inbox Channels tab reads `inboxChannelMeta[cfg.channel]` and then
+// The Inbox Channels view reads `inboxChannelMeta[cfg.channel]` and then
 // `.description` on it. `getAllChannelConfigs` synthesises a row for every
 // channel in `staffInboxChannels`, so a channel there without a row here is a
-// TypeError that blanks the entire settings page behind its error boundary —
+// TypeError that blanks the entire page behind its error boundary —
 // which is what `direct` did after #213 added it to `inboxChannels` and the
 // service enumerated the whole vocabulary.
 

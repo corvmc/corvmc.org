@@ -153,7 +153,7 @@ wrangler d1 execute corvmc --remote --command \
 ## 5. Before you switch it on
 
 `bandAudio` and `cmcRadio` both default off. Before flipping `bandAudio` on
-`/staff/settings`, run this in **Stripe test mode** — it is the pass nothing in CI can do
+`/staff/system/features`, run this in **Stripe test mode** — it is the pass nothing in CI can do
 for you.
 
 1. **Swap the key.** The local `.env` has historically carried a live `rk_live` key. Put a

@@ -1,7 +1,7 @@
 import type { FeatureFlag } from '#lib/server/feature-flags.js';
 
 /**
- * What the Features tab says about each flag.
+ * What the Features page says about each flag.
  *
  * Keyed by `FeatureFlag`, which is the whole point: this was the fifth
  * hand-maintained copy of the flag list and the only one nothing guarded, so
@@ -11,7 +11,7 @@ import type { FeatureFlag } from '#lib/server/feature-flags.js';
  * 400 on click, which is exactly what `contentFlags` once did from the other
  * side of the same gap.
  *
- * Its own file, like `inbox-channel-meta.ts` beside it, so the coverage is
+ * Its own file, like `inbox/channels/inbox-channel-meta.ts`, so the coverage is
  * testable without rendering the page.
  */
 export const featureMeta: Record<FeatureFlag, { label: string; description: string }> = {

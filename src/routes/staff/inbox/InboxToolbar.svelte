@@ -27,6 +27,10 @@
 	>
 		<h1 class="text-xl font-bold">{m.staff_inbox_inbox_toolbar_inbox_title()}</h1>
 
+		<Button href={resolve('staff/inbox/channels')} variant="ghost" size="sm" class="ms-auto">
+			{m.staff_inbox_channels_label()}
+		</Button>
+
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->
 		{#await getInboxThreadCounts() then counts}

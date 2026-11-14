@@ -8,7 +8,12 @@ import { describe, expect, it } from 'vitest';
  * being read. A card listed below shows its state another way, or has none.
  */
 const ROOT = join(import.meta.dirname, '..');
-const CONSOLES = ['src/routes/staff/events/[id]/production', 'src/routes/staff/settings'];
+const CONSOLES = [
+	'src/routes/staff/events/[id]/production',
+	'src/routes/staff/system',
+	'src/routes/staff/inbox/channels',
+	'src/routes/staff/volunteering/settings'
+];
 
 /** `file › title expression` → why it passes no `state`. */
 const ALLOWED: Record<string, string> = {

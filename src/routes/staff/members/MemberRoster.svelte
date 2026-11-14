@@ -22,6 +22,9 @@
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import UserTotals from './UserTotals.svelte';
 	import InviteMemberAction from './InviteMemberAction.svelte';
+	import SyncSubscriptionsAction from './SyncSubscriptionsAction.svelte';
+	import RefreshStatsAction from './RefreshStatsAction.svelte';
+	import IfHeld from '../IfHeld.svelte';
 	import MemberRoleFilter from './MemberRoleFilter.svelte';
 	import InvitedStatusOption from './InvitedStatusOption.svelte';
 	import { goto } from '$app/navigation';
@@ -109,6 +112,10 @@
 >
 	{#snippet toolbar()}
 		<InviteMemberAction />
+		<IfHeld cap="settings.update">
+			<SyncSubscriptionsAction />
+			<RefreshStatsAction />
+		</IfHeld>
 	{/snippet}
 
 	{#snippet filters()}

@@ -66,7 +66,7 @@
 			<ParaglideMessage
 				message={m.staff_music_music_storefront_switched_off_so_body}
 				inputs={{ staff_music_settings_features: m.staff_music_settings_features_body() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/system/features')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -121,7 +121,7 @@
 					<ParaglideMessage
 						message={m.staff_music_switch_station_when_pool_above_text}
 						inputs={{ staff_music_settings_features: m.staff_music_settings_features_text() }}
-						>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
+						>{#snippet a({ children })}<a class="link" href={resolve('staff/system/features')}
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>

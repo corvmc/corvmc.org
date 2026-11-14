@@ -28,6 +28,7 @@
 	import { aboutParam, parseAbout } from '#lib/utils/task-filters.js';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
 	import EndedShiftsTable from './EndedShiftsTable.svelte';
+	import IfHeld from '../IfHeld.svelte';
 	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
 	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
@@ -105,6 +106,11 @@
 	<Button href={resolve('staff/volunteering/hours')} variant="ghost" size="sm">
 		{m.staff_volunteering_hour_logs_label()}
 	</Button>
+	<IfHeld cap="settings.read">
+		<Button href={resolve('staff/volunteering/settings')} variant="ghost" size="sm">
+			{m.staff_volunteering_settings_label()}
+		</Button>
+	</IfHeld>
 </PageHeader>
 
 <PageContent>

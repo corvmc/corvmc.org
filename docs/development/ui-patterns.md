@@ -120,10 +120,26 @@ could go either way. The rules for each shape are in its own section: lists in "
 desks in "Section dashboards" and "The dashboard review feed", card lists in "A table, unless the
 row earns a card", detail pages in "The detail tier".
 
+### The staff panel: one list, one detail, its actions
+
+**Each object type has one list, one detail page and its action pages** (#2762). The dashboard is
+the queue of work, and each item on it links to the page where the work is done.
+
+- **One list per type.** A view that narrows a type (status, role, kind) is a filter on its list,
+  kept in the URL. A second page listing the same type folds in, and its URL redirects.
+- **One detail page per record**, whatever roles the record plays.
+- **Rows sit in four systems:** Relationships, Community, Programs and Operations, with Dashboard
+  and Inbox above and Reports and System below. Rows and sections are data in
+  `src/routes/staff/nav-items.ts`; a new module joins one of the four.
+- **A module's settings live on its row**, behind a Settings button in its header, or a view such
+  as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
+  spans modules: organization, features, access and the audit log.
+- **A moved page keeps its old URL as a redirect**, with a spec that names it.
+
 ### Consoles
 
 **A console opens with what is done and what is not.** It is a staff page that edits one record
-across many sections: `staff/events/[id]/production` and `staff/settings` are the two. Built as a
+across many sections: `staff/events/[id]/production` and the settings pages (System, a module's Settings) are the examples. Built as a
 long detail page, a console hides facts behind its forms; #1068 was the show time, visible only in
 edit mode.
 

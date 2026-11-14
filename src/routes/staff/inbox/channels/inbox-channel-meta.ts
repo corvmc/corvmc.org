@@ -1,13 +1,13 @@
 import type { StaffInboxChannel } from '#lib/config.js';
 
 /**
- * What the Inbox Channels tab says about each channel, beyond its name and icon
+ * What the Inbox Channels view says about each channel, beyond its name and icon
  * — those come from `#lib/components/inbox/channels.js`, which the inbox pages
  * share.
  *
  * Keyed by `StaffInboxChannel` so a channel added to that list without a row
  * here is a type error rather than a `Cannot read properties of undefined`
- * behind the settings page's error boundary, which is how `direct` blanked the
+ * behind the page's error boundary, which is how `direct` blanked the
  * whole page. Its own file so the coverage is testable without rendering the
  * page.
  */

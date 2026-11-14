@@ -94,7 +94,7 @@ not a state — it is a spread across features — so no state fixture could rea
 | `frontperson@` | owns the premium band Saltmarsh Radio — releases, payouts, gigs, no staff role |
 | `bandmate@`    | plays in it without owning it, so an owner-only gate has something that fails  |
 | `restricted@`  | messaging restricted by an upheld report                                       |
-| `treasurer@`   | treasurer — reaches `/staff/money/payments` and not `/staff/settings`          |
+| `treasurer@`   | treasurer — reaches `/staff/money/payments` and not `/staff/system`            |
 | `techcoord@`   | technology coordinator — settings and locks, not the flag queue                |
 | `moderator@`   | site moderator — flags and standing, not the money                             |
 | `shiftlead@`   | volunteer coordinator — the hour queue, not the role picker                    |
@@ -162,7 +162,7 @@ context where the proxy couldn't initialize.
 
 Feature-flagged areas (inbox, marketing, equipment, band premium/reservations/events, help
 center) are **off by default** — the flags are KV site-config keys with `false` defaults.
-Turn them on at `/staff/settings` as the admin user, or leave them off; see
+Turn them on at `/staff/system/features` as the admin user, or leave them off; see
 [feature flags in the overview](../architecture/overview.md#configuration-three-tiers).
 
 Other useful processes:

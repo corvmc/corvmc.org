@@ -404,10 +404,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/audit",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/ballots",
 		"panel": "staff"
 	},
@@ -509,6 +505,10 @@
 	},
 	{
 		"route": "/staff/inbox/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/inbox/channels",
 		"panel": "staff"
 	},
 	{
@@ -692,15 +692,27 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/settings",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/suggestions",
 		"panel": "staff"
 	},
 	{
 		"route": "/staff/suggestions/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/access",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/audit",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/features",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/organization",
 		"panel": "staff"
 	},
 	{
@@ -753,6 +765,10 @@
 	},
 	{
 		"route": "/staff/volunteering/hours",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/volunteering/settings",
 		"panel": "staff"
 	},
 	{

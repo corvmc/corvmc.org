@@ -1,7 +1,7 @@
 import { auditActions, auditSubjectTypes } from '#lib/types/audit.js';
 import type { AuditAction, AuditSubjectType } from '#lib/types/audit.js';
 
-/** The audit log's filters, as `/staff/audit` keeps them in its query string (#2826). */
+/** The audit log's filters, as `/staff/system/audit` keeps them in its query string (#2826). */
 export interface AuditQuery {
 	search: string;
 	action: AuditAction | '';

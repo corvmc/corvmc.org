@@ -119,7 +119,7 @@ vi.mock('$app/server', () => ({
 		request: { headers: new Headers() }
 	}),
 	// The returned promise carries `.refresh()` because that is the shape the
-	// forms call — `void getStaffSettingsPage().refresh()` after a write. Without
+	// forms call — `void getOrgSettings().refresh()` after a write. Without
 	// it no successful submit could be exercised here, only the rejection path.
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
@@ -171,7 +171,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'updateGearTaskRoles', cap: 'settings.update', args: [{}] },
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
-	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
+	{ name: 'getVolunteeringSettingsPage', cap: 'settings.read' },
 	{ name: 'getPracticeSpaceSettingsPage', cap: 'settings.read' },
 	{ name: 'getTeachingTerms', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },

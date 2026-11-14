@@ -1,7 +1,7 @@
 import { m } from '#lib/paraglide/messages.js';
 import { formatCents } from '#lib/utils/format.js';
 
-/** Each settings section's state, and each tab's summary of its sections. */
+/** Each settings section's state, stated on its card (#2692). */
 
 const filled = (values: unknown[]) => values.filter((v) => String(v ?? '').trim() !== '').length;
 
@@ -23,12 +23,3 @@ export const hourValueState = (cents: number) =>
 
 export const switchState = (enabled: boolean) =>
 	enabled ? m.staff_settings_state_on_label() : m.staff_settings_state_off_label();
-
-export const onOfState = (flags: boolean[]) =>
-	m.staff_settings_state_on_of_label({ on: flags.filter(Boolean).length, total: flags.length });
-
-/** The Organization tab: how many of its required sections are not fully set. */
-export function organizationBadge(sections: unknown[][]): string | undefined {
-	const count = sections.filter((values) => filled(values) < values.length).length;
-	return count > 0 ? m.staff_settings_state_sections_not_set_label({ count }) : undefined;
-}

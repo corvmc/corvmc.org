@@ -71,7 +71,7 @@ test.describe('staff sidebar', () => {
 
 		// A row from each of the far ends of the list, both reachable by role.
 		await expect(navLink(page, '/staff/members')).toBeVisible();
-		await expect(navLink(page, '/staff/settings')).toBeVisible();
+		await expect(navLink(page, '/staff/system')).toBeVisible();
 
 		// Exactly one row highlights, including on a detail page.
 		await page.goto('/staff/members');

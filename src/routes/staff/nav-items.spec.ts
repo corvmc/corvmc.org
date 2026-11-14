@@ -3,12 +3,16 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	activeNavKey,
+	activeSystemKey,
 	allStaffNavItems,
 	filterNavItems,
 	filterNavSections,
+	inSystemPanel,
 	sectionHasKey,
+	staffNavBottom,
 	staffNavSections,
 	staffNavTop,
+	systemNavItems,
 	type StaffNavItem,
 	type StaffNavKey
 } from './nav-items';
@@ -123,8 +127,11 @@ describe('activeNavKey', () => {
 		['/staff/help/create', 'content'],
 		['/staff/local-resources', 'content'],
 		['/staff/local-resources/categories', 'content'],
-		['/staff/settings', 'settings'],
-		['/staff/audit', 'audit']
+		// The System row opens its own panel (#2763); module settings light their module.
+		['/staff/system', 'settings'],
+		['/staff/system/audit', 'settings'],
+		['/staff/inbox/channels', 'inbox'],
+		['/staff/volunteering/settings', 'volunteer-schedule']
 	];
 
 	it.each(cases)('lights exactly one row for %s', (path, key) => {
@@ -222,23 +229,48 @@ describe('the nav tree', () => {
 		expect(activeNavKey('/staff/local-resources/abc')).toBe('content');
 	});
 
-	// The #1788 regrouping: each row in the section that owns what it is about.
-	it('groups rows by what they are about', () => {
-		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
-		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('people')).toEqual(['users', 'groups']);
-		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
-		// Recurring work is a Tasks setting (#2087, #2767).
+	// The four systems (#2762, #2763), with Reports and System below them.
+	it('groups rows into the four systems', () => {
+		const keys = (key: string) =>
+			staffNavSections.find((s) => s.key === key)!.items.map((i) => i.key);
+		expect(staffNavSections.map((s) => s.title)).toEqual([
+			'Relationships',
+			'Community',
+			'Programs',
+			'Operations'
+		]);
+		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox']);
+		expect(keys('relationships')).toEqual(['contacts', 'outreach', 'funding']);
+		expect(keys('community')).toEqual([
+			'users',
+			'groups',
+			'suggestions',
+			'ballots',
+			'moderation',
+			'classifieds',
+			'content'
+		]);
+		expect(keys('programs')).toEqual(['calendar', 'reservations', 'music']);
+		expect(keys('operations')).toEqual([
+			'projects',
+			'volunteer-schedule',
+			'gear',
+			'supplies',
+			'payments'
+		]);
+		expect(staffNavBottom.map((i) => i.key)).toEqual(['reports', 'settings']);
+		// Recurring work is a Tasks setting (#2087, #2767); Building access a
+		// Practice space view (#2766).
 		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
-		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
-		// Building access is a Practice space view (#2766), not a row.
 		expect(activeNavKey('/staff/building-access')).toBe('reservations');
-		expect(keys('partners')).toEqual(['contacts', 'funding', 'content']);
-		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
-		expect(keys('outreach')).toEqual(['outreach']);
-		expect(keys('money')).not.toContain('grants');
-		expect(keys('reports')).toEqual(['reports']);
-		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox', 'calendar']);
+	});
+
+	it('names rows by what they hold (#2763)', () => {
+		const label = (key: StaffNavKey) => allStaffNavItems().find((i) => i.key === key)!.label;
+		expect(label('gear')).toBe('Equipment');
+		expect(label('music')).toBe('Music');
+		expect(label('payments')).toBe('Money');
+		expect(label('settings')).toBe('System');
 	});
 
 	// A show's door takings are on its staff page (#1809); the till is reached from there.
@@ -250,7 +282,7 @@ describe('the nav tree', () => {
 
 	it('finds the owning section for every row', () => {
 		for (const item of allStaffNavItems()) {
-			if (staffNavTop.some((t) => t.key === item.key)) continue;
+			if ([...staffNavTop, ...staffNavBottom].some((t) => t.key === item.key)) continue;
 			const owners = staffNavSections.filter((s) => sectionHasKey(s, item.key));
 			expect(owners).toHaveLength(1);
 		}
@@ -308,7 +340,15 @@ describe('route coverage', () => {
 		// of the day, from a place that cannot tell you whether it is.
 		'/staff/inbox/daily',
 		// Contacts' duplicate view (#2622), reached from the Contacts header.
-		'/staff/contacts/duplicates'
+		'/staff/contacts/duplicates',
+		// The System panel's rows, in its own sidebar (#2763).
+		'/staff/system/organization',
+		'/staff/system/features',
+		'/staff/system/access',
+		'/staff/system/audit',
+		// Module settings, reached from their module's header (#2763).
+		'/staff/inbox/channels',
+		'/staff/volunteering/settings'
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {
@@ -429,9 +469,9 @@ describe('filterNavSections', () => {
 	it('gives a treasurer a narrower panel, with Money in it', () => {
 		const held = everyCapability.filter((c) => grantsCapability(positions.treasurer, c as never));
 		const kept = filterNavSections(staffNavSections, held);
-		const keys = kept.map((s) => s.key);
-		expect(keys).toContain('money');
-		expect(keys.length).toBeLessThan(staffNavSections.length);
+		const rows = kept.flatMap((s) => s.items.map((i) => i.key));
+		expect(rows).toContain('payments');
+		expect(rows.length).toBeLessThan(staffNavSections.flatMap((s) => s.items).length);
 	});
 });
 
@@ -453,6 +493,48 @@ describe('surfaces switched off in code (#2116)', () => {
 			expect(keys()).toEqual(expect.arrayContaining(['ballots', 'classifieds']));
 		} finally {
 			Object.assign(surfaces, saved);
+		}
+	});
+});
+
+describe('the System panel (#2763)', () => {
+	it('holds only what spans modules', () => {
+		expect(systemNavItems.map((i) => i.key)).toEqual([
+			'organization',
+			'features',
+			'access',
+			'audit'
+		]);
+	});
+
+	it.each(systemNavItems.map((i) => [i.key, i] as const))(
+		'lights %s on its own page',
+		(key, row) => {
+			expect(activeSystemKey(row.href)).toBe(key);
+			expect(activeSystemKey(`${row.href}/x`)).toBe(key);
+			expect(inSystemPanel(row.href)).toBe(true);
+		}
+	);
+
+	it('swaps the sidebar only inside the panel', () => {
+		expect(inSystemPanel('/staff/system')).toBe(true);
+		expect(inSystemPanel('/staff/systemic')).toBe(false);
+		expect(inSystemPanel('/staff/settings')).toBe(false);
+	});
+
+	it('gates every row on a real capability someone holds', () => {
+		for (const item of systemNavItems) {
+			expect(everyCapability).toContain(item.capability);
+			expect(positionOrder.some((p) => grantsCapability(positions[p], item.capability!))).toBe(
+				true
+			);
+		}
+	});
+
+	it("offers the System row to a holder of any one of its rows' capabilities", () => {
+		for (const item of systemNavItems) {
+			const kept = filterNavItems(staffNavBottom, [item.capability!]).map((i) => i.key);
+			expect(kept, item.key).toContain('settings');
 		}
 	});
 });

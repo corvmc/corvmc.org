@@ -17,14 +17,17 @@
 	// filtering hides the only feedback the panel gives.
 	const threadOpen = $derived(page.route.id === '/staff/inbox/[id]' || filterPanel.open);
 
-	// Daily is the opposite of a list you scan, so it does not get one beside it.
-	// It stays under this layout for the nav frame and nothing else.
-	const daily = $derived(page.route.id === '/staff/inbox/daily');
+	// Daily is the opposite of a list you scan, so it does not get one beside it,
+	// and Channels is the inbox's settings. Both stay under this layout for the
+	// nav frame and nothing else.
+	const standalone = $derived(
+		page.route.id === '/staff/inbox/daily' || page.route.id === '/staff/inbox/channels'
+	);
 
 	let saving = $state(false);
 </script>
 
-{#if daily}
+{#if standalone}
 	{@render children()}
 {:else}
 	<ListDetailShell open={threadOpen}>

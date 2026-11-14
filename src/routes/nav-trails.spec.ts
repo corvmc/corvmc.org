@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { flattenNav } from '#lib/components/layout/Nav/active-nav.js';
 import { navTrail, type NavTrailGroup } from '#lib/components/layout/nav-trail.js';
-import { staffNavSections, staffNavTop } from './staff/nav-items';
+import { staffNavBottom, staffNavSections, staffNavTop } from './staff/nav-items';
 import { memberNavItems } from './member/nav-items';
 import { bandNavItems } from './band/[slug]/nav-items';
 
@@ -11,7 +11,7 @@ import { bandNavItems } from './band/[slug]/nav-items';
  * page beneath it must yield the row as a link (#1827).
  */
 const panels: Record<string, NavTrailGroup[]> = {
-	staff: [{ items: staffNavTop }, ...staffNavSections],
+	staff: [{ items: staffNavTop }, ...staffNavSections, { items: staffNavBottom }],
 	member: [{ items: memberNavItems({ hasLoanableEquipment: true }) }],
 	band: [
 		{
