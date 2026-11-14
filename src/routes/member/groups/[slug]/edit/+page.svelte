@@ -13,7 +13,8 @@
 	// `fields.X.as()` in the form's template into an async derived — the churn
 	// behind JAVASCRIPT-SVELTEKIT-W. Pinned by `src/async-effect-shape.spec.ts`.
 	const slug = params.slug;
-	const group = await getGroupEditor(slug);
+	// Derived so the header follows a rename once Kit refreshes the query.
+	const group = $derived(await getGroupEditor(slug));
 </script>
 
 <PageHeader

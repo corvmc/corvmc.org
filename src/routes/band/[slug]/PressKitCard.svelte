@@ -13,7 +13,7 @@
 	 */
 	let { slug }: { slug: string } = $props();
 
-	const progress = await getPressKitProgress(slug);
+	const progress = $derived(await getPressKitProgress(slug));
 </script>
 
 <PressKitProgress
