@@ -2489,7 +2489,7 @@ Accepted vendors are listed on the event page.
   `checked_in_at` on an accepted vendor, or clears it. `markNoShowForm` moves `accepted` to
   `no_show` for a vendor not checked in, or back. No decision or withdrawal moves a no-show, and
   its fee is kept. `inviteBackForm` records `invite_back` and a note on an accepted vendor or a
-  no-show. All three use the committee guard above, with staff as cover. Tables still move on
+  no-show. Its form starts with no answer chosen and a blank answer is refused. All three use the committee guard above, with staff as cover. Tables still move on
   the staff vendors page (`setTableLabelForm`).
 - **Invite back on the next application:** `listApplications` attaches `previous`: the newest
   invite-back record from a market that started earlier, matched on `organization_id`. Both
