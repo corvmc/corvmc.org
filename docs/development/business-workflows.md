@@ -2436,7 +2436,14 @@ Accepted vendors are listed on the event page.
   message as an inbox reply in the outbox, in the same batch (#2819). A refused send leaves the
   decision standing. The staff vendors page marks a row whose message has not gone ("Message not
   sent", from `latestDeliveries`), and `resendVendorDecisionForm` sends it again now with fresh
-  attempts (`retryNow`). `withdrawn` is final. `waitlisted` (#2832) is reachable
+  attempts (`retryNow`). `withdrawn` is final.
+- **Recipient (#2830):** every message to a vendor goes to the vendor organization's primary
+  contact in Contacts (the first kept person with an email), read when the message is queued or
+  resent. `addressVendorThread` in `vendor-recipient.ts` points the thread at that address in
+  the same batch, so replies from it land on the same thread. Only an organization with no such
+  contact falls back to the address typed on the application, and the staff vendors page says so
+  under the contact. `vendor-recipient.spec.ts` fails a market sender that skips the resolver or
+  reads an address off the thread. `waitlisted` (#2832) is reachable
   from `applied` and moves on to `accepted`, `declined` or `withdrawn`. While the market has
   free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`). The guard is
   `requireCommitteeMember` on the committee that owns the listing's project
@@ -2477,8 +2484,8 @@ Accepted vendors are listed on the event page.
   and its standing setup (offering, tables, power, own table, tent, setup notes).
 - `market_vendor`: one row per application, with `organization_id`, its own copy of what was
   asked (`tables_requested`, `needs_power`, `brings_own_table`, `brings_tent`, `notes`) and no
-  contact columns. The linked `inbox_thread` is the conversation, and keeps the address replies
-  go to. Fee columns: `fee_cents`, `fee_floor_cents`,
+  contact columns. The linked `inbox_thread` is the conversation; its address follows the
+  organization's primary contact each time a message is sent. Fee columns: `fee_cents`, `fee_floor_cents`,
   `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`. Day-of columns:
   `checked_in_at`, `invite_back` (null until someone says), `invite_back_note`.
 - `financial_entry`: `market_fees` earned and `card_fees` spent, subject `market_vendor`.

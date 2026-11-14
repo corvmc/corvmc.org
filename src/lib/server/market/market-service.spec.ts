@@ -383,6 +383,64 @@ describe('deciding', () => {
 		expect(await resendDecisionMessage(vendorId)).toBeNull();
 	});
 
+	// #2830: the address on the organization in Contacts is the one mail goes to.
+	describe('the recipient (#2830)', () => {
+		function threadEmail(): string {
+			return (sqlite.prepare(`select contact_email as e from inbox_thread`).get() as { e: string })
+				.e;
+		}
+		function changeContactEmail(email: string) {
+			sqlite.prepare(`update contact set email = ?`).run(email);
+		}
+
+		it('is the organization contact, read at decision time', async () => {
+			changeContactEmail('rosa@studio.example.com');
+			expect((await listApplications(EVENT))[0]).toMatchObject({
+				contactEmail: 'rosa@studio.example.com',
+				contactSource: 'contact'
+			});
+
+			const { outboxId } = await decideApplication(
+				vendorId,
+				{ decision: 'waitlisted', message: 'On the waitlist.' },
+				ACTOR
+			);
+			await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+			expect(dispatchReply).toHaveBeenLastCalledWith(
+				expect.objectContaining({ contactEmail: 'rosa@studio.example.com' })
+			);
+			expect(sent().map((m) => m.body)).toEqual(['On the waitlist.']);
+		});
+
+		it('follows a contact changed between the decision and a resend', async () => {
+			const { outboxId } = await decideApplication(
+				vendorId,
+				{ decision: 'accepted', message: 'You are in.' },
+				ACTOR
+			);
+			dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+			await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+
+			changeContactEmail('rosa@new.example.com');
+			dispatchReply.mockResolvedValueOnce('<pm-3@corvmc.org>');
+			expect(await resendDecisionMessage(vendorId)).toMatchObject({ status: 'sent' });
+			expect(dispatchReply).toHaveBeenLastCalledWith(
+				expect.objectContaining({ contactEmail: 'rosa@new.example.com' })
+			);
+		});
+
+		it('falls back to the application email when the organization has no contact', async () => {
+			sqlite.exec(`delete from contact`);
+			expect((await listApplications(EVENT))[0]).toMatchObject({
+				contactEmail: 'rosa@example.com',
+				contactSource: 'application'
+			});
+			await decideApplication(vendorId, { decision: 'declined', message: 'Not this time.' }, ACTOR);
+			expect(threadEmail()).toBe('rosa@example.com');
+			expect(sent().map((m) => m.body)).toEqual(['Not this time.']);
+		});
+	});
+
 	it('has no decision message on a row nobody decided', async () => {
 		expect((await listApplications(EVENT))[0].decisionMessage).toBeNull();
 		expect(await resendDecisionMessage(vendorId)).toBeNull();

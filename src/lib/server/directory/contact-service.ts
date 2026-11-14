@@ -257,6 +257,13 @@ export async function primaryContacts(
 	organizationIds: string[]
 ): Promise<Map<string, PrimaryContact>> {
 	await requireCapability('contact.read');
+	return primaryContactsUnguarded(organizationIds);
+}
+
+/** `primaryContacts` for a sender that addresses mail, not a viewer. Callers guard. */
+export async function primaryContactsUnguarded(
+	organizationIds: string[]
+): Promise<Map<string, PrimaryContact>> {
 	const out = new Map<string, PrimaryContact>();
 	for (const row of await peopleAt(organizationIds)) {
 		if (out.has(row.organizationId!)) continue;
