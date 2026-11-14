@@ -164,6 +164,17 @@ describe('summarizeAuditEntry', () => {
 			)
 		).toBe('Added 2 equipment credits (balance 2): “Goodwill”');
 	});
+
+	it("says a role's lead time changed, from and to (#2993)", () => {
+		const line = summarizeAuditEntry(
+			entry('capability.grants_changed', {
+				added: [],
+				removed: [],
+				leadDays: { from: 0, to: 30 }
+			})
+		);
+		expect(line).toMatch(/\b0\b.*\b30\b/);
+	});
 });
 
 describe('the action filter', () => {

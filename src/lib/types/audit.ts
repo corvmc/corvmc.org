@@ -226,7 +226,12 @@ export interface AuditDetailsByAction {
 	/** The retention hold set (`retain`) or released, and why. Kept as long as the incident is. */
 	'incident.retention_changed': { retain: boolean; reason: string };
 	/** A volunteer role's (`role`) or a committee's (`group`) grant list was edited. */
-	'capability.grants_changed': { added: string[]; removed: string[] };
+	'capability.grants_changed': {
+		added: string[];
+		removed: string[];
+		/** A role's lead time, when it changed (#2993). */
+		leadDays?: { from: number; to: number };
+	};
 	/** The subject is the member put on or taken off a member-wide ballot's roll. */
 	'ballot.elector_overridden': {
 		ballotId: string;
