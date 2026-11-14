@@ -671,6 +671,7 @@
 	"staff_events_id_vendors_applications_close_label": "Applications close",
 	"staff_events_id_vendors_blank_means_open_until_market_body": "Blank means open until the market starts.",
 	"staff_events_id_vendors_contact_label": "Contact",
+	"staff_events_id_vendors_application_email_text": "Mail goes to the application email: no contact on file.",
 	"staff_events_id_vendors_decline_label": "Decline",
 	"staff_events_id_vendors_decline_2_title": "Decline {businessName}",
 	"staff_events_id_vendors_declined_vendor_told_toast": "Declined — vendor told",

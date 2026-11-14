@@ -310,6 +310,14 @@
 							{:else}
 								<span class="text-muted">{row.contactName ?? '—'}</span>
 							{/if}
+							{#if row.contactName && row.contactEmail}
+								<div class="text-muted text-sm">{row.contactEmail}</div>
+							{/if}
+							{#if row.contactSource === 'application'}
+								<div class="text-sm text-warning" data-testid="application-email">
+									{m.staff_events_id_vendors_application_email_text()}
+								</div>
+							{/if}
 						</td>
 						<td>{row.tableLabel ?? '—'}</td>
 						<td class="col-support">

@@ -2,7 +2,6 @@ import * as env from '$app/env/public';
 import { db } from '#lib/server/db/index.js';
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
-import { inboxThread } from '#lib/server/db/schema/inbox.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { marketDay, marketVendor, type MarketVendor } from '#lib/server/db/schema/market.js';
 import { organization, vendorDetail } from '#lib/server/db/schema/party.js';
@@ -33,6 +32,7 @@ import {
 	vendorPayPath,
 	withFeeState
 } from './vendor-fee-service';
+import { addressVendorThread, vendorRecipients } from './vendor-recipient';
 
 /**
  * Vendor applications for a market day CMC hosts. docs/development/business-workflows.md §19.
@@ -336,16 +336,12 @@ export async function listApplications(eventId: string) {
 			decidedByUserId: marketVendor.decidedByUserId,
 			decidedAt: marketVendor.decidedAt,
 			...vendorFeeColumns,
-			createdAt: marketVendor.createdAt,
-			contactName: inboxThread.contactName,
-			contactEmail: inboxThread.contactEmail,
-			contactPhone: inboxThread.contactPhone
+			createdAt: marketVendor.createdAt
 		})
 		.from(marketVendor)
-		.leftJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.where(eq(marketVendor.eventId, eventId))
 		.orderBy(asc(marketVendor.createdAt), asc(marketVendor.businessName));
-	const [previous, told] = await Promise.all([
+	const [previous, told, recipients] = await Promise.all([
 		previousRecords(
 			eventId,
 			rows.map((r) => r.organizationId)
@@ -353,19 +349,28 @@ export async function listApplications(eventId: string) {
 		latestDeliveries(
 			vendorDecisionSubject('').type,
 			rows.map((r) => r.id)
-		)
+		),
+		vendorRecipients(rows)
 	]);
-	return rows.map((r) => ({
-		...withFeeState(r),
-		/** Whether the decision message reached the vendor; null when none was sent (#2819). */
-		decisionMessage: told.get(r.id) ?? null,
-		previous: (r.organizationId && previous.get(r.organizationId)) || null,
-		alsoApplied: r.organizationId
-			? rows
-					.filter((o) => o.id !== r.id && o.organizationId === r.organizationId)
-					.map(({ id, status, tableLabel }) => ({ id, status, tableLabel }))
-			: []
-	}));
+	return rows.map((r) => {
+		const to = recipients.get(r.id)!;
+		return {
+			...withFeeState(r),
+			contactName: to.name,
+			contactEmail: to.email,
+			contactPhone: to.phone,
+			/** `application` when the organization has no contact with an email (#2830). */
+			contactSource: to.source,
+			/** Whether the decision message reached the vendor; null when none was sent (#2819). */
+			decisionMessage: told.get(r.id) ?? null,
+			previous: (r.organizationId && previous.get(r.organizationId)) || null,
+			alsoApplied: r.organizationId
+				? rows
+						.filter((o) => o.id !== r.id && o.organizationId === r.organizationId)
+						.map(({ id, status, tableLabel }) => ({ id, status, tableLabel }))
+				: []
+		};
+	});
 }
 
 export interface PreviousMarketRecord {
@@ -596,6 +601,7 @@ export async function decideApplication(
 		return { eventId: vendor.eventId, outboxId: null };
 	}
 
+	const address = await addressVendorThread(vendor);
 	const queued = await queuedReplyStatements({
 		threadId: vendor.threadId,
 		body: decision.message.trim() + payLine,
@@ -603,7 +609,7 @@ export async function decideApplication(
 		authorName: actor.name,
 		subject: vendorDecisionSubject(vendorId)
 	});
-	await db.batch([update, ...queued.statements]);
+	await db.batch([update, ...address, ...queued.statements]);
 	announceQueuedReply(queued, actor.id);
 	return { eventId: vendor.eventId, outboxId: queued.outboxId };
 }
@@ -615,6 +621,8 @@ export async function decideApplication(
 export async function resendDecisionMessage(vendorId: string): Promise<Delivery | null> {
 	const latest = await latestDelivery(vendorDecisionSubject(vendorId));
 	if (!latest || latest.status === 'sent') return null;
+	// The contact may have changed since the decision; the resend follows it.
+	for (const statement of await addressVendorThread(await loadVendor(vendorId))) await statement;
 	return retryNow(latest.id);
 }
 

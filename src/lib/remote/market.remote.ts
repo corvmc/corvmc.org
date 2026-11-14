@@ -221,8 +221,8 @@ export const openMarketDayForm = form(
 
 /**
  * The owning committee's view of a market: the applications, with no contact
- * detail. Those live on the inbox thread, which is staff-only, and the decision
- * message reaches the vendor through it all the same.
+ * detail. Those are staff-only, and the decision message reaches the vendor's
+ * contact all the same.
  */
 export const getCommitteeMarketVendors = query(eventId, async (id) => {
 	await requireMarketDecider(id);
@@ -234,7 +234,14 @@ export const getCommitteeMarketVendors = query(eventId, async (id) => {
 		event,
 		market,
 		applications: applications.map(
-			({ threadId: _t, contactName: _n, contactEmail: _e, contactPhone: _p, ...rest }) => rest
+			({
+				threadId: _t,
+				contactName: _n,
+				contactEmail: _e,
+				contactPhone: _p,
+				contactSource: _s,
+				...rest
+			}) => rest
 		)
 	};
 });
