@@ -9,9 +9,11 @@ vi.mock('#lib/server/authorization.js', () => ({
 const content = await import('./+page.server');
 const tips = await import('../local-resources/tips/+page');
 
-// The build wraps each load for Sentry, which reads the URL and route.
-const at = (path: string) =>
-	({ url: new URL(`https://corvmc.test${path}`), params: {}, route: { id: path } }) as never;
+// The build wraps each load for Sentry, which reads the URL, route and request.
+const at = (path: string) => {
+	const url = `https://corvmc.test${path}`;
+	return { url: new URL(url), params: {}, route: { id: path }, request: new Request(url) } as never;
+};
 
 const thrown = async (run: () => unknown) => {
 	try {
