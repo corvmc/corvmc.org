@@ -88,20 +88,3 @@ test('a member adds, defaults and removes a card without leaving the site', asyn
 	await expect(cardRow(page, '4444')).toBeVisible();
 	await expect(methods.locator('li')).toHaveCount(1);
 });
-
-test('the membership page renders even though billing is a separate query', async ({ page }) => {
-	await login(page);
-	await page.goto('/member/membership');
-
-	// The portal link this replaced sat inside `getMemberMembership`'s own
-	// Promise.all, so a Stripe failure took the page down for every sustaining
-	// member. Both are on screen together now, which is what proves the billing
-	// section is loaded beside the page rather than inside it.
-	await expect(page.getByTestId('contribution')).toBeVisible();
-	await expect(page.getByTestId('billing-history')).toBeVisible();
-
-	// And the portal itself is gone: nothing in either card links off the site.
-	for (const card of ['contribution', 'payment-methods']) {
-		await expect(page.getByTestId(card).locator('a:not([href^="/"])')).toHaveCount(0);
-	}
-});

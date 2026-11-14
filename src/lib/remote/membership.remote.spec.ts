@@ -144,4 +144,12 @@ describe('getMemberMembership', () => {
 		// absence.
 		expect(data).not.toHaveProperty('billingPortalUrl');
 	});
+
+	// The page used to link off-site to Stripe's portal; the cards now do all of it here.
+	it('has no Stripe billing portal anywhere to link off-site to', async () => {
+		const { globSync, readFileSync } = await import('node:fs');
+		const sources = globSync('src/**/*.{ts,svelte}').filter((f) => !/\.(spec|test)\./.test(f));
+		expect(sources.length).toBeGreaterThan(100);
+		expect(sources.filter((f) => readFileSync(f, 'utf8').includes('billingPortal'))).toEqual([]);
+	});
 });

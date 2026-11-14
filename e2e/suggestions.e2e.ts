@@ -12,14 +12,9 @@ import {
 	SEED_SG_UPHOLD_TITLE,
 	SEED_SG_VISIBLE_ID,
 	SEED_SG_VISIBLE_TITLE,
-	SEED_SG_UNVOTED_ID,
 	SEED_SG_EDIT_ID,
 	SEED_SG_EDIT_TITLE,
 	SEED_SG_EDIT_PROPOSED_TITLE,
-	SEED_SG_MERGE_TARGET_ID,
-	SEED_SG_MERGE_SOURCE_ID,
-	SEED_SG_MERGE_SOURCE_TITLE,
-	SEED_SG_MERGE_UNION_VOTES,
 	readSuggestionState,
 	readSuggestionStanding,
 	readSuggestionText
@@ -41,8 +36,8 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  *      its author) that no unit test can assert together.
  *   3. Upholding reaches forward in time: the author's NEXT suggestion is
  *      withheld, and approving it releases it onto the board.
- *   4. A merged pair's vote count is the union of both voter sets, read back
- *      through the real board query rather than a mocked select.
+ *
+ * The merge union and the direct edit are in suggestion-sql.spec.ts.
  */
 
 /**
@@ -137,40 +132,6 @@ test.describe('suggestion board', () => {
 			.poll(async () => (await readSuggestionState(SEED_SG_DISMISS_ID)).voteCount, DB_POLL)
 			.toBe(before);
 		await expect(vote).toHaveAttribute('aria-pressed', 'false');
-	});
-
-	test('a merged suggestion carries the union of both voter sets, not the sum', async ({
-		page
-	}) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/suggestions/${SEED_SG_MERGE_SOURCE_ID}`);
-
-		await page.getByTestId('merge-suggestion').click();
-		await page
-			.locator('select:is([name="targetId"], [name^="targetId/"])')
-			.selectOption(SEED_SG_MERGE_TARGET_ID);
-		await dialogSubmit(page).click();
-
-		// 3 voters on the target + 2 on the source, one of whom voted for both.
-		// A correct merge lands on 4; double-counting lands on 5.
-		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_TARGET_ID)).voteCount, DB_POLL)
-			.toBe(SEED_SG_MERGE_UNION_VOTES);
-
-		// Polled, not read once: `mergeSuggestions` transfers the votes and points
-		// the source at the target in two separate writes (see the "Step 2" comment
-		// in suggestion-service.ts — the split is what makes a half-finished merge
-		// repairable). So the poll above proves step 1 landed and says nothing about
-		// step 2, and a bare read here loses the race under CI load. It did, on the
-		// merge-queue run for #282, taking a required check down with it.
-		await expect
-			.poll(async () => (await readSuggestionState(SEED_SG_MERGE_SOURCE_ID)).mergedIntoId, DB_POLL)
-			.toBe(SEED_SG_MERGE_TARGET_ID);
-
-		// Off the board, but reachable by URL with an explanation — no redirect.
-		await switchUser(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
-		await page.goto('/member/suggestions');
-		await expect(page.getByRole('link', { name: SEED_SG_MERGE_SOURCE_TITLE })).toHaveCount(0);
 	});
 });
 
@@ -297,20 +258,6 @@ test.describe('editing a suggestion', () => {
 		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 	}
-
-	test('the author can rewrite freely while nobody else has voted', async ({ page }) => {
-		await login(page, SEED_SG_AUTHOR_EMAIL, SEED_SG_PASSWORD);
-		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
-
-		await expect(page.getByTestId('edit-suggestion')).toBeVisible();
-
-		await submitEdit(page, SEED_SG_UNVOTED_ID, 'E2E Rewritten Directly', 'Rewritten body.');
-
-		await expect
-			.poll(async () => (await readSuggestionText(SEED_SG_UNVOTED_ID)).title, DB_POLL)
-			.toBe('E2E Rewritten Directly');
-		expect((await readSuggestionText(SEED_SG_UNVOTED_ID)).edited).toBe(true);
-	});
 
 	test('once someone else has voted, an edit becomes a request and the text does not move', async ({
 		page

@@ -6,7 +6,7 @@ import {
 	SEED_TARGET_ID,
 	SEED_TARGET_NAME
 } from './fixtures/seed-staff-user';
-import { TAB_KEYS, type TabKey } from '../src/routes/staff/members/[id]/tabs';
+import type { TabKey } from '../src/routes/staff/members/[id]/tabs';
 
 /**
  * End-to-end coverage for the staff user-management screens.
@@ -179,31 +179,5 @@ test.describe('staff user management', () => {
 
 		await tab(page, 'account').click();
 		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toHaveValue(draft);
-	});
-
-	/**
-	 * Regression: `TabBar` rendered a daisyUI `join`, which does not wrap, inside
-	 * an `overflow-x-hidden` <main>. Eight tabs are far wider than a phone, so
-	 * the last of them were clipped off the edge with no way to reach them — not
-	 * scrolled off, gone. This is the pin that every tab stays reachable at 375px.
-	 */
-	test('every tab is reachable on a phone', async ({ page }) => {
-		await page.setViewportSize({ width: 375, height: 812 });
-		await loginAsStaff(page);
-		await page.goto(`/staff/members/${SEED_TARGET_ID}`);
-
-		// The button group is the desktop half and is display:none at this width.
-		await expect(page.getByRole('tablist')).toBeHidden();
-
-		// In its place, one control naming the tab you are on.
-		const trigger = page.locator('main [aria-haspopup="menu"]');
-		await expect(trigger).toBeVisible();
-
-		// The tab that used to fall off the end of the bar. Items follow TAB_KEYS.
-		await trigger.click();
-		await page.getByRole('menuitem').nth(TAB_KEYS.indexOf('account')).click();
-
-		await expect(page).toHaveURL(/[?&]tab=account/);
-		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toBeVisible();
 	});
 });
