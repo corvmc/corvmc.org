@@ -73,14 +73,17 @@ export function audited<A extends AuditAction, D, I, G, O>(
 }
 
 /** The handler's services write these actions; the coverage spec checks it reaches each one. */
-export function writesAudit<F extends (...args: never[]) => unknown>(
+export function writesAudit<A extends unknown[], R>(
 	_actions: AuditAction | AuditAction[],
-	fn: F
-): F {
+	fn: (...args: A) => R
+): (...args: A) => R {
 	return fn;
 }
 
 /** A staff change that needs no row, and why. The reason is read by the coverage spec. */
-export function unaudited<F extends (...args: never[]) => unknown>(_reason: string, fn: F): F {
+export function unaudited<A extends unknown[], R>(
+	_reason: string,
+	fn: (...args: A) => R
+): (...args: A) => R {
 	return fn;
 }

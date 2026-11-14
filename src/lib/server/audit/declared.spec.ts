@@ -9,8 +9,10 @@ type Row = { name: string; visible: boolean } | null;
 let row: Row;
 const calls: string[] = [];
 
+type Input = { id: string; visible: boolean };
+
 function remote() {
-	return audited(
+	return audited<'event.visibility_changed', Input, undefined, { id: string }, { ok: boolean }>(
 		{
 			guard: async () => {
 				calls.push('guard');
@@ -27,7 +29,7 @@ function remote() {
 				to: String(changes[0]?.to)
 			})
 		},
-		async (data: { id: string; visible: boolean }, { before }) => {
+		async (data, { before }) => {
 			calls.push('write');
 			if (!before) throw new Error('missing');
 			row = { ...before, visible: data.visible } as Row;
