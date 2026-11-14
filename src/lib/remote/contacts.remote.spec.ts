@@ -246,6 +246,33 @@ describe('recording an in-kind gift', () => {
 			'acting-staff'
 		);
 	});
+
+	it('records the gift in the audit log after it is written', async () => {
+		held = new Set(['contact.read', 'finance.refund']);
+		recordAuditEntry.mockClear();
+		await remote.recordGiftForm(gift);
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'gift.recorded',
+			subject: { type: 'organization', id: 'o1', label: 'Arts Council' },
+			details: {
+				giftId: 'g1',
+				description: 'Printed posters',
+				valueCents: 12000,
+				occurredOn: '2026-11-01',
+				projectId: null
+			}
+		});
+		const written = gifts.recordInKindGift.mock.invocationCallOrder.at(-1)!;
+		expect(recordAuditEntry.mock.invocationCallOrder[0]).toBeGreaterThan(written);
+	});
+
+	it('writes no audit row when the gift is refused', async () => {
+		held = new Set(['contact.read', 'finance.refund']);
+		recordAuditEntry.mockClear();
+		gifts.recordInKindGift.mockRejectedValueOnce(new Error('refused'));
+		await expect(remote.recordGiftForm(gift)).rejects.toThrow('refused');
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
 });
 
 describe('contacts.remote views', () => {

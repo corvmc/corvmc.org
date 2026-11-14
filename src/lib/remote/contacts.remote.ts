@@ -449,12 +449,31 @@ export const recordGiftForm = form(
 		const staff = await requireCapability('finance.refund');
 		const p = { type: partyType, id: partyId };
 		await requirePartyReader(p);
+		let label: string | null = null;
+		let giftId: string;
 		try {
-			if (p.type === 'contact') await people.getPerson(p.id);
-			await recordInKindGift(p, input, staff.id);
+			if (p.type === 'contact') label = (await people.getPerson(p.id)).name;
+			({ giftId } = await recordInKindGift(p, input, staff.id));
 		} catch (err) {
 			mapDomainError(err);
 		}
+		if (p.type === 'organization') {
+			label = await orgs.getOrganization(p.id).then(
+				(o) => o.name,
+				() => null
+			);
+		}
+		await recordAuditEntry({
+			action: 'gift.recorded',
+			subject: { type: p.type, id: p.id, label },
+			details: {
+				giftId,
+				description: input.description,
+				valueCents: input.valueCents,
+				occurredOn: input.occurredOn,
+				projectId: input.projectId || null
+			}
+		});
 		void getPartyTimeline(p).refresh();
 		return { success: true };
 	}

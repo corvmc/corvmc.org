@@ -1,7 +1,5 @@
 {
-	"src/lib/remote/bands.remote.ts#removeBandMember": "Unaudited; filed as #2891.",
 	"src/lib/remote/contacts.remote.ts#deleteActivityForm": "A staff note on a timeline: content, not a change to standing, money or access.",
-	"src/lib/remote/contacts.remote.ts#recordGiftForm": "Unaudited; filed as #2891.",
 	"src/lib/remote/contacts.remote.ts#removeOrganizationRole": "Removes one role row, refused while records use it; the organization stays (#2843).",
 	"src/lib/remote/duty-lists.remote.ts#deleteDutyList": "Template editing; applying a template is audited as project.duty_list_applied.",
 	"src/lib/remote/duty-lists.remote.ts#removeDutyListItem": "Template editing; applying a template is audited as project.duty_list_applied.",

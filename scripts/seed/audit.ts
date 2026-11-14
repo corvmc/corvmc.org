@@ -143,6 +143,28 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			details: { purchaseId: 'seed-music-refund', releaseTitle: 'Marys Peak', amountCents: 1000 }
 		},
 		{
+			daysAgo: 3,
+			action: 'band.member_removed',
+			subject: { type: 'band', id: 'seed-removed-member-band', label: 'Sour Cherry' },
+			details: {
+				memberId: 'seed-removed-member',
+				userId: 'seed-removed-user',
+				memberName: 'Jo Lark'
+			}
+		},
+		{
+			daysAgo: 4,
+			action: 'gift.recorded',
+			subject: { type: 'organization', id: 'seed-gift-org', label: 'Riverbend Print Shop' },
+			details: {
+				giftId: 'seed-gift',
+				description: 'Show posters, 200 copies',
+				valueCents: 18000,
+				occurredOn: '2026-10-30',
+				projectId: null
+			}
+		},
+		{
 			daysAgo: 7,
 			action: 'user.purged',
 			subject: { type: 'user', id: 'purged-seed-account', label: 'Casey Former' },

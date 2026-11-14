@@ -136,7 +136,9 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'clearance.deleted': ['Members', 'Clearance deleted'],
 	'venue.deleted': ['Events and shows', 'Venue deleted'],
 	'closure.deleted': ['Reservations', 'Closure deleted'],
-	'audience.subscriber_removed': ['Members', 'Removed from audience']
+	'audience.subscriber_removed': ['Members', 'Removed from audience'],
+	'band.member_removed': ['Programs and access', 'Band member removed'],
+	'gift.recorded': ['Records and settings', 'Gift recorded']
 };
 
 /** What the log's action filter calls an action. */
@@ -544,6 +546,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		}
 		case 'audience.subscriber_removed':
 			return `Removed from the audience “${entry.details.audienceName}”`;
+		case 'band.member_removed':
+			return `Removed ${entry.details.memberName} from the band`;
+		case 'gift.recorded': {
+			const d = entry.details;
+			return `Recorded a ${formatCents(d.valueCents)} gift given ${day(d.occurredOn)}: “${d.description}”`;
+		}
 		case 'group.role_changed': {
 			const d = entry.details;
 			if (d.role === 'member') return `Removed ${d.memberName} as a chair`;
