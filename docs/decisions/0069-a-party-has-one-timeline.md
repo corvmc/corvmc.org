@@ -44,6 +44,7 @@ audit log.
 
 ## Consequences
 
-- Campaign sends are not on the timeline: marketing stores no per-recipient record yet.
+- Campaign sends joined the timeline once `campaign_send` recorded each recipient (#2777): a
+  copy sent or delivered to a person's subscriber row shows on that person and their organization.
 - The Contacts list shows each organization's last activity (latest note or filed message) and its
   next open task.

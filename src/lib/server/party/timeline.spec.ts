@@ -29,6 +29,7 @@ const sec = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 
 beforeEach(() => {
 	sqlite.exec(`
+		delete from campaign_send; delete from campaign; delete from subscriber;
 		delete from inbox_thread; delete from "group";
 		delete from activity; delete from work_order_link; delete from audit_log;
 		delete from contractor_job; delete from grant_application; delete from work_order;
@@ -115,6 +116,38 @@ describe('the timeline', () => {
 		);
 		const page = await partyTimeline({ type: 'contact', id: 'p-1' });
 		expect(page.items.map((i) => i.summary)).toEqual(['Coffee']);
+	});
+});
+
+describe('campaigns on the timeline', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into subscriber (id, email) values ('sub-1', 'priya@arts.test'), ('sub-2', 'other@x.test');
+			update contact set subscriber_id = 'sub-1' where id = 'p-1';
+			insert into campaign (id, subject, markdown_body, html_body, sent_by_id, sent_at) values
+				('c-1', 'Spring newsletter', '', '', 'staff-1', ${sec('2026-11-06T18:00:00Z')}),
+				('c-2', 'Gear drive', '', '', 'staff-1', ${sec('2026-11-07T18:00:00Z')});
+			insert into campaign_send (id, campaign_id, subscriber_id, email, status) values
+				('s-1', 'c-1', 'sub-1', 'priya@arts.test', 'delivered'),
+				('s-2', 'c-2', 'sub-1', 'priya@arts.test', 'bounced'),
+				('s-3', 'c-2', 'sub-2', 'other@x.test', 'sent');
+		`);
+	});
+
+	it("shows a campaign its person received on the person's and the organization's timeline", async () => {
+		for (const party of [ARTS, { type: 'contact', id: 'p-1' } as const]) {
+			const { items } = await partyTimeline(party);
+			const sent = items.filter((i) => i.source === 'campaign');
+			expect(sent.map((i) => i.summary)).toEqual(['Spring newsletter']);
+			expect(sent[0]).toMatchObject({ campaignId: 'c-1', actorName: 'Nia Okafor' });
+			expect(sent[0].at).toEqual(new Date('2026-11-06T18:00:00Z'));
+		}
+	});
+
+	it('leaves out another party, and a person with no subscriber row', async () => {
+		const amps = await partyTimeline({ type: 'organization', id: 'org-amps' });
+		const loner = await partyTimeline({ type: 'contact', id: 'p-2' });
+		expect([...amps.items, ...loner.items].some((i) => i.source === 'campaign')).toBe(false);
 	});
 });
 

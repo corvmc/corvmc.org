@@ -2646,7 +2646,7 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   under `contact.read`: notes staff log (`activity`: call, meeting, email or note, on a day, added,
   edited and deleted under `contact.manage`), Inbox conversations filed to it, the audit entries for the organization and for its
   grant and sponsorship projects and contractor jobs, and the tasks linked to it through
-  `work_order_link` that were marked done, and in-kind gifts from it. Follow-ups are tasks: Related tasks on the same pages
+  `work_order_link` that were marked done, in-kind gifts from it, and the campaigns sent or delivered to its people (a `campaign_send` row matched through `contact.subscriber_id`; for an organization, every person kept there). Follow-ups are tasks: Related tasks on the same pages
   adds one linked to the record. A staff Inbox conversation is filed from its Details panel
   (`fileThreadForm`, `inbox.reply` and `contact.manage`) to an organization or person; one from an
   address on file is offered for filing to that person. See
