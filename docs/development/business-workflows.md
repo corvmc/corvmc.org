@@ -2429,8 +2429,11 @@ Accepted vendors are listed on the event page.
   organization. A first application writes `vendor_detail`; a later one leaves it alone and takes
   its blank setup notes and website from it and the organization. The public form shows none of
   it. Then `market_vendor` is inserted with its own copy of what was asked.
-- **Decide:** `decideVendorForm` → `decideApplication` moves the status and sends the written
-  message through `addOutboundMessage`. `withdrawn` is final. `waitlisted` (#2832) is reachable
+- **Decide:** `decideVendorForm` → `decideApplication` moves the status and queues the written
+  message as an inbox reply in the outbox, in the same batch (#2819). A refused send leaves the
+  decision standing. The staff vendors page marks a row whose message has not gone ("Message not
+  sent", from `latestDeliveries`), and `resendVendorDecisionForm` sends it again now with fresh
+  attempts (`retryNow`). `withdrawn` is final. `waitlisted` (#2832) is reachable
   from `applied` and moves on to `accepted`, `declined` or `withdrawn`. While the market has
   free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`). The guard is
   `requireCommitteeMember` on the committee that owns the listing's project

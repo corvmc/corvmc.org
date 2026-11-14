@@ -16,6 +16,12 @@ import {
 } from '#lib/server/inbox/message-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import {
+	latestDeliveries,
+	latestDelivery,
+	retryNow,
+	type Delivery
+} from '#lib/server/outbox/outbox-service.js';
+import {
 	marketVendorDecisions,
 	marketVendorStatuses,
 	type MarketVendorStatus
@@ -338,12 +344,20 @@ export async function listApplications(eventId: string) {
 		.leftJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.where(eq(marketVendor.eventId, eventId))
 		.orderBy(asc(marketVendor.createdAt), asc(marketVendor.businessName));
-	const previous = await previousRecords(
-		eventId,
-		rows.map((r) => r.organizationId)
-	);
+	const [previous, told] = await Promise.all([
+		previousRecords(
+			eventId,
+			rows.map((r) => r.organizationId)
+		),
+		latestDeliveries(
+			vendorDecisionSubject('').type,
+			rows.map((r) => r.id)
+		)
+	]);
 	return rows.map((r) => ({
 		...withFeeState(r),
+		/** Whether the decision message reached the vendor; null when none was sent (#2819). */
+		decisionMessage: told.get(r.id) ?? null,
 		previous: (r.organizationId && previous.get(r.organizationId)) || null,
 		alsoApplied: r.organizationId
 			? rows
@@ -591,6 +605,16 @@ export async function decideApplication(
 	await db.batch([update, ...queued.statements]);
 	announceQueuedReply(queued, actor.id);
 	return { eventId: vendor.eventId, outboxId: queued.outboxId };
+}
+
+/**
+ * Send a decision message that did not reach the vendor, now (#2819). Null when
+ * there is none to send: it went, or none was written.
+ */
+export async function resendDecisionMessage(vendorId: string): Promise<Delivery | null> {
+	const latest = await latestDelivery(vendorDecisionSubject(vendorId));
+	if (!latest || latest.status === 'sent') return null;
+	return retryNow(latest.id);
 }
 
 /** A vendor's market, read off the row: what a guard on a vendor id checks against. */
