@@ -2045,7 +2045,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: approved
 					? [
 							{
-								text: 'Your teaching application is approved. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted — and your listing is now on the teacher directory.'
+								text: 'Your teaching application is approved. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted. Your profile page shows whether the teacher directory lists you.'
 							}
 						]
 					: [

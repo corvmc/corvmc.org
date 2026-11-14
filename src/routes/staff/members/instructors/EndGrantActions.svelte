@@ -14,38 +14,40 @@
 	 * about the future, and a booked lesson has a student on the other end who has
 	 * already been told a time. Cancelling those is a separate, deliberate act.
 	 */
-	let { id, name }: { id: string; name: string } = $props();
+	let { id, name, pause = true }: { id: string; name: string; pause?: boolean } = $props();
 
 	const pauseFields = pauseInstructor.fields;
 	const retireFields = retireInstructor.fields;
 </script>
 
 <div class="flex w-max gap-2">
-	<Action
-		action={pauseInstructor}
-		label={m.staff_members_instructors_end_grant_actions_pause_label()}
-		modalTitle={m.staff_members_instructors_end_grant_actions_pause_2_title({ name })}
-		submitLabel={m.staff_members_instructors_end_grant_actions_pause_label()}
-		successToast={m.staff_members_instructors_end_grant_actions_paused_toast()}
-		variant="ghost"
-		size="sm"
-		onsuccess={() => refreshAll()}
-	>
-		{#snippet form()}
-			<div class="space-y-4">
-				<input {...pauseFields.id.as('hidden', id)} />
-				<FormField
-					field={pauseFields.note}
-					label={m.staff_members_instructors_end_grant_actions_why_label()}
-					type="textarea"
-					required
-				/>
-				<p class="text-subtle">
-					{m.staff_members_instructors_end_grant_actions_they_stop_being_text()}
-				</p>
-			</div>
-		{/snippet}
-	</Action>
+	{#if pause}
+		<Action
+			action={pauseInstructor}
+			label={m.staff_members_instructors_end_grant_actions_pause_label()}
+			modalTitle={m.staff_members_instructors_end_grant_actions_pause_2_title({ name })}
+			submitLabel={m.staff_members_instructors_end_grant_actions_pause_label()}
+			successToast={m.staff_members_instructors_end_grant_actions_paused_toast()}
+			variant="ghost"
+			size="sm"
+			onsuccess={() => refreshAll()}
+		>
+			{#snippet form()}
+				<div class="space-y-4">
+					<input {...pauseFields.id.as('hidden', id)} />
+					<FormField
+						field={pauseFields.note}
+						label={m.staff_members_instructors_end_grant_actions_why_label()}
+						type="textarea"
+						required
+					/>
+					<p class="text-subtle">
+						{m.staff_members_instructors_end_grant_actions_they_stop_being_text()}
+					</p>
+				</div>
+			{/snippet}
+		</Action>
+	{/if}
 
 	<Action
 		action={retireInstructor}

@@ -19,8 +19,7 @@
 	import MemberViews from '../MemberViews.svelte';
 	import GrantInstructorAction from './GrantInstructorAction.svelte';
 	import TeachingTermsAction from './TeachingTermsAction.svelte';
-	import ReviewApplicationActions from './ReviewApplicationActions.svelte';
-	import EndGrantActions from './EndGrantActions.svelte';
+	import InstructorActions from './InstructorActions.svelte';
 	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 
 	const statusLabels = {
@@ -140,11 +139,7 @@
 		{/snippet}
 
 		{#snippet actions(row)}
-			{#if row.status === 'requested'}
-				<ReviewApplicationActions id={row.id} name={row.member.title} />
-			{:else if row.status === 'active'}
-				<EndGrantActions id={row.id} name={row.member.title} />
-			{/if}
+			<InstructorActions record={row} name={row.member.title} />
 		{/snippet}
 
 		{#snippet panel(row, ctl)}

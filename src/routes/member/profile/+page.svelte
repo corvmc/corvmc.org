@@ -76,6 +76,7 @@
 				instructor={teaching.instructor}
 				hasPublicContact={teaching.hasPublicContact}
 				hasAnyContact={teaching.hasAnyContact}
+				directoryReach={teaching.directoryReach}
 			/>
 		</div>
 	{/if}

@@ -24,7 +24,8 @@ import {
 import {
 	listInstructors,
 	type InstructorFilters,
-	listInstructorInstruments
+	listInstructorInstruments,
+	directoryReach
 } from '#lib/server/instructor/instructor-directory-service.js';
 
 // NOTE: a `.remote.ts` module may export **only** remote functions — SvelteKit
@@ -74,7 +75,10 @@ export const getStaffInstructorEmails = query(instructorRosterFilters, async (f)
  */
 export const getUserInstructor = query(z.string().min(1), async (userId) => {
 	await requireCapabilityOrOwner('instructor.read', userId);
-	return instructorService.getByUserId(userId);
+	const row = await instructorService.getByUserId(userId);
+	if (!row) return null;
+	const reach = await directoryReach([userId]);
+	return { ...row, directoryReach: reach.get(userId) ?? 'missing' };
 });
 
 const idSchema = z.object({ id: z.string().min(1) });

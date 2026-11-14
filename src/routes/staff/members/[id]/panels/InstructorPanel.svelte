@@ -7,11 +7,12 @@
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { formatDateShortYear } from '#lib/utils/format.js';
-	import ReviewApplicationActions from '../../instructors/ReviewApplicationActions.svelte';
+	import InstructorListingFacts from '../../instructors/InstructorListingFacts.svelte';
+	import InstructorActions from '../../instructors/InstructorActions.svelte';
 
 	/**
-	 * This member's teaching status. A pending application is reviewed here as
-	 * well as on the Instructors view's rows; pausing and retiring stay there.
+	 * This member's teaching status and the listing as it would publish, with
+	 * the same controls the Teachers view's row offers for that status.
 	 */
 	let { id, name }: { id: string; name: string } = $props();
 </script>
@@ -26,9 +27,7 @@
 		{:else}
 			<DefinitionList>
 				<Fact label={m.staff_status_label()}><StatusBadge status={instructor.status} /></Fact>
-				{#if instructor.headline}
-					<Fact label={m.staff_teaches_label()}>{instructor.headline}</Fact>
-				{/if}
+				<InstructorListingFacts listing={instructor} />
 				<Fact label={m.staff_members_id_panels_instructor_panel_applied_label()}
 					>{formatDateShortYear(instructor.createdAt)}</Fact
 				>
@@ -61,11 +60,9 @@
 				{/if}
 			</DefinitionList>
 
-			{#if instructor.status === 'requested'}
-				<div class="mt-3">
-					<ReviewApplicationActions id={instructor.id} {name} />
-				</div>
-			{/if}
+			<div class="mt-3">
+				<InstructorActions record={instructor} {name} />
+			</div>
 		{/if}
 	{/snippet}
 </RelatedList>

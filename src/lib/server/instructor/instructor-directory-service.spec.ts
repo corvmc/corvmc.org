@@ -26,7 +26,7 @@ vi.mock('#lib/server/db/index.js', async () => {
 const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
-const { listInstructors } = await import('./instructor-directory-service');
+const { listInstructors, directoryReach } = await import('./instructor-directory-service');
 
 let seq = 0;
 
@@ -202,5 +202,28 @@ describe('filters', () => {
 		addInstructor({ name: 'Ada' });
 		addInstructor({ name: 'Grace' });
 		expect((await listInstructors('public', { search: 'ad' })).map((r) => r.name)).toEqual(['Ada']);
+	});
+});
+
+describe('directoryReach — what a teacher is told agrees with what is listed', () => {
+	// Each entry state gate 2 distinguishes. The reach a teacher, and the staffer
+	// approving them, are shown must match the listing for every one (#2806).
+	const STATES = [
+		{ name: 'Public', entryVisibility: 'public', reach: 'public' },
+		{ name: 'Members', entryVisibility: 'members', reach: 'members' },
+		{ name: 'Hidden', entryVisibility: 'hidden', reach: 'hidden' },
+		{ name: 'Deleted', entryDeleted: true, reach: 'missing' },
+		{ name: 'None', withEntry: false, reach: 'missing' }
+	] as const;
+
+	it.each(STATES)('$name entry', async ({ reach, ...opts }) => {
+		const uid = addInstructor(opts);
+		const listedPublic = (await listInstructors('public')).some((r) => r.userId === uid);
+		const listedMembers = (await listInstructors('members')).some((r) => r.userId === uid);
+		const got = (await directoryReach([uid])).get(uid);
+
+		expect(got).toBe(reach);
+		expect(listedPublic).toBe(got === 'public');
+		expect(listedMembers).toBe(got === 'public' || got === 'members');
 	});
 });
