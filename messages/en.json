@@ -220,6 +220,36 @@
 			}
 		}
 	],
+	"term_organization": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "organization",
+				"countPlural=*": "organizations"
+			}
+		}
+	],
+	"term_contact": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "contact",
+				"countPlural=*": "contacts"
+			}
+		}
+	],
+	"term_setting": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "setting",
+				"countPlural=*": "settings"
+			}
+		}
+	],
 	"term_incident": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

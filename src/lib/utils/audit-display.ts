@@ -1,5 +1,7 @@
+import { auditSubjectTypes } from '#lib/types/audit.js';
 import type {
 	AuditAction,
+	AuditSubjectType,
 	AuditEntry,
 	AuditProfileField,
 	EventEditField,
@@ -20,6 +22,32 @@ export function auditActionLabel(action: AuditAction): string {
 	const words = action.replace('.', ' ').replaceAll('_', ' ');
 	return words.charAt(0).toUpperCase() + words.slice(1);
 }
+
+/**
+ * What each kind of record is called in the log's record-type filter. A show's
+ * rows file under its event, so `production` is not offered on its own.
+ */
+const SUBJECT_LABELS: Record<Exclude<AuditSubjectType, 'production'>, string> = {
+	user: 'Member',
+	band: 'Band',
+	group: 'Group',
+	event: 'Event',
+	project: 'Project',
+	work_order: 'Task',
+	role: 'Volunteer role',
+	incident: 'Incident',
+	organization: 'Organization',
+	contact: 'Contact',
+	inventory_asset: 'Equipment',
+	purchase_order: 'Purchase order',
+	email_blocklist: 'Blocked address',
+	setting: 'Setting'
+};
+
+/** The record types the log can filter by, labelled. */
+export const auditSubjectOptions = auditSubjectTypes.flatMap((value) =>
+	value === 'production' ? [] : [{ value, label: SUBJECT_LABELS[value] }]
+);
 
 const FIELD_LABELS: Record<AuditProfileField, string> = {
 	name: 'name',

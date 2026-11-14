@@ -226,6 +226,16 @@ describe('listAuditEntries', () => {
 			.run(Math.floor(new Date(`${isoDay}T19:00:00Z`).getTime() / 1000), id);
 	}
 
+	function insert(id: string, type: string, subjectId: string, label: string) {
+		sqlite
+			.prepare(
+				`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, subject_label, details)
+				 values (?, 'organization.merged', 'Sam Staff', '', ?, ?, ?, '{}')`
+			)
+			.run(id, type, subjectId, label);
+	}
+	const ids = (r: { rows: { id: string }[] }) => r.rows.map((x) => x.id).sort();
+
 	async function seed() {
 		insertUser('staff-2', 'Riley Admin');
 		await recordAuditEntry({
@@ -262,10 +272,27 @@ describe('listAuditEntries', () => {
 
 	it('searches the actor by name or email, including a staffer since purged', async () => {
 		await seed();
-		expect((await listAuditEntries({ actor: 'riley@' })).rows).toHaveLength(1);
+		expect((await listAuditEntries({ search: 'riley@' })).rows).toHaveLength(1);
 		sqlite.exec(`delete from user where id = 'staff-1'`);
-		const { rows } = await listAuditEntries({ actor: 'Sam' });
+		const { rows } = await listAuditEntries({ search: 'Sam' });
 		expect(rows.map((r) => r.actorName)).toEqual(['Sam Staff']);
+	});
+
+	// #2825: "everything that happened to X", by the record's stored name.
+	it('searches the record a row is about, including one since deleted', async () => {
+		await seed();
+		const { rows } = await listAuditEntries({ search: 'Purged Pers' });
+		expect(rows.map((r) => r.subjectId)).toEqual(['gone-1']);
+	});
+
+	it('filters by record type, an event taking its show rows too', async () => {
+		await seed();
+		insert('a-org', 'organization', 'org-gone', 'Mid-Valley Media');
+		insert('a-show', 'production', 'prod-1', 'Friday show');
+		insert('a-event', 'event', 'ev-1', 'Friday show');
+		expect(ids(await listAuditEntries({ subjectType: 'organization' }))).toEqual(['a-org']);
+		expect(ids(await listAuditEntries({ subjectType: 'event' }))).toEqual(['a-event', 'a-show']);
+		expect((await listAuditEntries({ subjectType: 'user' })).rows).toHaveLength(2);
 	});
 
 	it('bounds by whole local days, inclusive', async () => {
@@ -299,6 +326,66 @@ describe('listAuditEntries', () => {
 		const [row] = (await listAuditEntries({})).rows;
 		expect(row.subject).toMatchObject({ type: 'band', id: 'band-1', title: 'The Velvets' });
 		sqlite.exec(`delete from "group" where id = 'band-1'`);
+	});
+
+	// #2829: each kind of record links to its own page while it still exists.
+	it('links contacts, organizations and incidents that still exist, and names the ones that do not', async () => {
+		sqlite.exec(`insert into organization (id, name) values ('org-1', 'Mid-Valley Media')`);
+		sqlite.exec(
+			`insert into contact (id, name, source) values ('person-1', 'Sam Okafor', 'staff_entered')`
+		);
+		insert('a-org', 'organization', 'org-1', 'Mid-Valley Media');
+		insert('a-org-gone', 'organization', 'org-gone', 'MVM News');
+		insert('a-person', 'contact', 'person-1', 'Sam Okafor');
+		insert('a-person-gone', 'contact', 'person-gone', 'Robin Former');
+		sqlite.exec(`update audit_log set action = 'contact.deleted' where id = 'a-person-gone'`);
+		insert('a-incident-gone', 'incident', 'inc-gone', 'Load-out noise');
+		const bySubject = Object.fromEntries(
+			(await listAuditEntries({})).rows.map((r) => [r.subjectId, r.subject])
+		);
+		expect(bySubject['org-1']).toMatchObject({ type: 'organization', id: 'org-1' });
+		expect(bySubject['org-gone']).toMatchObject({
+			type: 'organization',
+			id: null,
+			title: 'MVM News'
+		});
+		expect(bySubject['person-1']).toMatchObject({ type: 'contact', id: 'person-1' });
+		expect(bySubject['person-gone']).toMatchObject({
+			type: 'contact',
+			id: null,
+			title: 'Robin Former'
+		});
+		expect(bySubject['inc-gone']).toMatchObject({ type: 'incident', id: null });
+	});
+
+	it('names a settings row by the area it changed', async () => {
+		sqlite.exec(
+			`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, details)
+			 values ('a-set', 'settings.changed', 'Sam Staff', '', 'setting', 'reservation', '{"changes":[]}')`
+		);
+		const [row] = (await listAuditEntries({})).rows;
+		expect(row.subject).toMatchObject({ type: 'setting', id: null, title: 'Reservation settings' });
+	});
+
+	it('links the booking a reservation row names, while it exists', async () => {
+		sqlite.exec(
+			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 values ('res-1', 'user', 'member-1', 'member-1', 'cancelled', 1900000000, 1900007200)`
+		);
+		for (const [id, reservationId] of [
+			['a-res', 'res-1'],
+			['a-res-gone', 'res-gone']
+		]) {
+			sqlite
+				.prepare(
+					`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, subject_label, details)
+					 values (?, 'reservation.cancelled_by_staff', 'Sam Staff', '', 'user', 'member-1', 'Jordan Member', ?)`
+				)
+				.run(id, JSON.stringify({ reservationId }));
+		}
+		const byId = Object.fromEntries((await listAuditEntries({})).rows.map((r) => [r.id, r]));
+		expect(byId['a-res'].related).toMatchObject({ type: 'reservation', id: 'res-1' });
+		expect(byId['a-res-gone'].related).toBeNull();
 	});
 
 	it('names System as the actor when nobody was signed in', async () => {

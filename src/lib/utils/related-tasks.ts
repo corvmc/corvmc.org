@@ -6,13 +6,7 @@ import { entityTypes } from '#lib/config.js';
  * recurring reservation; `recurring_work` is a maintenance schedule.
  * Client-safe: no server imports.
  */
-export const relatedSubjectTypes = [
-	...entityTypes,
-	'group',
-	'recurring_work',
-	'organization',
-	'contact'
-] as const;
+export const relatedSubjectTypes = [...entityTypes, 'group', 'recurring_work'] as const;
 export type RelatedSubjectType = (typeof relatedSubjectTypes)[number];
 
 /** Records a task is about through `work_order_link` (#2622). */

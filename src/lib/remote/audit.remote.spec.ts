@@ -62,13 +62,13 @@ describe('getAuditLog', () => {
 		heldPositions = ['admin'];
 		await getAuditLog({
 			action: 'user.purged',
-			actor: 'sam',
+			search: 'sam',
 			from: '2026-09-01',
 			to: '2026-09-30',
 			page: 2
 		});
 		expect(listAuditEntries).toHaveBeenCalledWith(
-			{ action: 'user.purged', actor: 'sam', from: '2026-09-01', to: '2026-09-30' },
+			{ action: 'user.purged', search: 'sam', from: '2026-09-01', to: '2026-09-30' },
 			{ page: 2, pageSize: 50 }
 		);
 	});

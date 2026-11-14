@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { requireCapability } from '#lib/server/authorization.js';
 import { listAuditEntries } from '#lib/server/audit/audit-service.js';
-import { auditActions } from '#lib/types/audit.js';
+import { auditActions, auditSubjectTypes } from '#lib/types/audit.js';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const auditLogFilters = z.object({
 	action: z.enum(auditActions).optional(),
-	actor: z.string().max(200).optional(),
+	search: z.string().max(200).optional(),
+	subjectType: z.enum(auditSubjectTypes).optional(),
 	from: day.optional(),
 	to: day.optional(),
 	page: z.number().int().min(1).optional()
