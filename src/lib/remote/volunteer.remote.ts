@@ -2709,11 +2709,12 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, door, filedIncidents, briefing, crewMates] = await Promise.all([
+	const [tasks, event, crew, door, till, filedIncidents, briefing, crewMates] = await Promise.all([
 		listWorkTasks(shift.workOrderId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
 		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
 		shift.eventId ? can('event.checkIn', { eventId: shift.eventId }) : Promise.resolve(false),
+		shift.eventId ? can('finance.collect', { eventId: shift.eventId }) : Promise.resolve(false),
 		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
 		shift.briefingArticleId
 			? resolveHelpReader(currentUser.id).then((reader) =>
@@ -2742,6 +2743,9 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 			door && event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
 				? { eventId: event.id, eventTitle: event.title }
 				: null,
+		// Door payments for this show, while the role grants them (#2798).
+		doorSales:
+			till && event && !shift.cancelledAt && !shift.shiftCancelledAt ? { eventId: event.id } : null,
 		// Crew of a show can file an incident for it, and see only what they filed.
 		incidentEventId: crew ? shift.eventId : null,
 		filedIncidents,

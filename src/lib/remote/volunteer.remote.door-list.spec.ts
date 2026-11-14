@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { sql } from 'drizzle-orm';
+import { grantableBy } from '#lib/config.js';
 
 /**
  * The door list on a volunteer's shift page (#2794), through the remotes, against a real
@@ -56,10 +57,13 @@ vi.mock('#lib/server/authorization.js', async () => {
 });
 
 const remote = (await import('./volunteer.remote')) as unknown as {
-	getMyShift: (id: string) => PromiseLike<{ checkIn: { eventId: string } | null }>;
+	getMyShift: (id: string) => PromiseLike<Record<string, unknown> & { checkIn: unknown }>;
 	getMyShiftCheckIn: (id: string) => PromiseLike<{ tickets: unknown[] }>;
 	checkInAsVolunteer: (data: { ticketId: string; signupId: string }) => Promise<unknown>;
 };
+
+const { listConfirmedSignupsForEvents } =
+	await import('#lib/server/volunteer/volunteer-signup-service.js');
 
 const now = Math.floor(Date.now() / 1000);
 const HOUR = 3600;
@@ -124,5 +128,44 @@ describe('the door list on a shift', () => {
 		setUp({ status: 'confirmed', startsIn: -HOUR, grants: ['incident.file'] });
 		expect((await remote.getMyShift('s1')).checkIn).toBeNull();
 		await expect(remote.getMyShiftCheckIn('s1')).rejects.toMatchObject({ status: 403 });
+	});
+});
+
+/**
+ * Every power a shift's role can carry is offered from the shift page, or names
+ * the page that offers it. Door sales had no link anywhere a volunteer looks (#2798).
+ */
+const shiftPageOffers: Record<string, string | null> = {
+	'event.checkIn': 'checkIn',
+	'finance.collect': 'doorSales',
+	'incident.file': 'incidentEventId',
+	// The event page offers the recap upload, and the shift page links the event.
+	'event.uploadRecap': null
+};
+
+describe('what a shift page offers', () => {
+	it('names every capability a volunteer role can carry', () => {
+		expect(Object.keys(shiftPageOffers).toSorted()).toEqual(grantableBy('role').toSorted());
+	});
+
+	it.each(Object.entries(shiftPageOffers).filter(([, field]) => field !== null))(
+		'offers %s while the role grants it, and not otherwise',
+		async (cap, field) => {
+			setUp({ status: 'confirmed', startsIn: -HOUR, grants: [cap] });
+			expect((await remote.getMyShift('s1'))[field!]).toBeTruthy();
+			sqlite.exec(`delete from volunteer_role_capability`);
+			expect((await remote.getMyShift('s1'))[field!]).toBeFalsy();
+		}
+	);
+});
+
+describe('the signups the door screen links to', () => {
+	it('returns a confirmed signup on the show, and not one awaiting confirmation', async () => {
+		setUp({ status: 'confirmed', startsIn: -HOUR, grants: [] });
+		expect(await listConfirmedSignupsForEvents('nia', ['evt'])).toEqual([
+			{ eventId: 'evt', signupId: 's1' }
+		]);
+		sqlite.exec(`update volunteer_signup set status = 'pending'`);
+		expect(await listConfirmedSignupsForEvents('nia', ['evt'])).toEqual([]);
 	});
 });

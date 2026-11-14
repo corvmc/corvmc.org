@@ -832,6 +832,33 @@ export async function listBriefingsForEvents(userId: string, eventIds: readonly 
 		.orderBy(asc(volunteerRole.name));
 }
 
+/**
+ * This member's confirmed signups on these shows, one per show, so the door
+ * screen can link each show to the member's own door list. A dropped signup or
+ * a called-off shift links nothing.
+ */
+export async function listConfirmedSignupsForEvents(userId: string, eventIds: readonly string[]) {
+	if (eventIds.length === 0) return [];
+	return db
+		.selectDistinct({
+			eventId: sql<string>`${workOrder.eventId}`,
+			signupId: volunteerSignup.id
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.where(
+			and(
+				eq(volunteerSignup.userId, userId),
+				eq(volunteerSignup.status, 'confirmed'),
+				inArray(workOrder.eventId, [...eventIds]),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt)
+			)
+		)
+		.orderBy(asc(volunteerShift.startsAt));
+}
+
 // ---------------------------------------------------------------------------
 // The coordinator's worklist
 // ---------------------------------------------------------------------------
