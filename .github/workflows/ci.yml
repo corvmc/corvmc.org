@@ -28,7 +28,8 @@ concurrency:
 # time of writing were E2E 14.8m and Unit tests 15.1m, against medians of 4.8m
 # and 2.4m. These bound a hang; they are not a performance budget, and a job
 # that starts timing out is reporting a real regression rather than a limit set
-# too tight.
+# too tight. A timed-out job with no steps never started on its runner; see
+# `.claude/commands/queue-triage.md`.
 
 jobs:
   lint-changed:

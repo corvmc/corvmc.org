@@ -85,6 +85,18 @@ onto `main` and a force-push. Either way, wait for the new head's checks to star
 — arming straight after a force-push queues on the old head's checks and gets the PR ejected.
 **Unarmed**: arm it if it is finished, or ask.
 
+A job that **never started** is not a red check. Its signature: conclusion `cancelled`, an
+annotation that it exceeded `timeout-minutes`, a reported duration about five minutes past that
+limit, no log (`BlobNotFound`), and no steps at all:
+
+```bash
+gh api repos/corvmc/corvmc.org/actions/jobs/<job-id> --jq '.steps | length'   # 0
+```
+
+The runner took the job and never ran "Set up job", so no code was checked and there is no result
+to overturn. Re-run that one job (`gh run rerun <run-id> --job <job-id>`); that is not re-running to
+get green. A timeout with steps is the job itself and gets diagnosed (#2877).
+
 Never `--admin` and never `gh pr update-branch` — both defeat the queue. See `CLAUDE.md`.
 
 ## Watch mode
