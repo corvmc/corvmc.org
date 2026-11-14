@@ -1,11 +1,1 @@
-[
-	"src/lib/server/inventory/acquisition-service.ts → inKindContributions",
-	"src/lib/server/inventory/item-service.ts → getCategoryById",
-	"src/lib/server/inventory/loan-service.ts → getLoanHistory",
-	"src/lib/server/inventory/stock-service.ts → listMovements",
-	"src/lib/server/inventory/stock-service.ts → transferStock",
-	"src/lib/server/inventory/work-request-service.ts → listFlagsForAsset",
-	"src/lib/server/site-config/site-config-service.ts → clearSiteConfigMemo",
-	"src/lib/server/volunteer/work-order-service.ts → listWorkOrdersByIds",
-	"src/lib/server/volunteer/work-order-service.ts → unassignedTaskWhere"
-]
+["src/lib/server/site-config/site-config-service.ts → clearSiteConfigMemo"]

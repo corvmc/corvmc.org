@@ -53,8 +53,7 @@ vi.mock('#lib/server/inventory/asset-service.js', () => ({
 }));
 
 vi.mock('#lib/server/inventory/stock-service.js', () => ({
-	listLowStock: vi.fn(),
-	listMovements: vi.fn()
+	listLowStock: vi.fn()
 }));
 
 vi.mock('#lib/server/inventory/acquisition-service.js', () => ({
@@ -65,7 +64,6 @@ vi.mock('#lib/server/inventory/acquisition-service.js', () => ({
 
 vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	getLoanById: vi.fn(),
-	getLoanHistory: vi.fn(),
 	scheduleLoan: vi.fn(),
 	checkoutLoan: vi.fn(),
 	requestLoan: vi.fn(),

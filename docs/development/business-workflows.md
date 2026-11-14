@@ -859,10 +859,10 @@ task. The dashboard's low-stock list is gone; the task is the reminder.
 current calendar year), per category via `spendByCategory()` and per supplier via
 `spendBySource()`. **Donations and
 grants are excluded** — a gift is not spend, and counting one would overstate the
-budget by exactly what was given. `inKindContributions()` exists for the
-gifts-in-kind disclosure and still has no screen: ASU 2020-07 binds the financial
-statements rather than the organisation, and CMC has never been asked for a GAAP
-statement.
+budget by exactly what was given. The gifts-in-kind disclosure has no query or
+screen: ASU 2020-07 binds the financial statements rather than the organisation,
+and CMC has never been asked for a GAAP statement. The fields it needs
+(`acquisition.monetized`, line values, category) are captured.
 
 ### Acquisitions
 
@@ -1598,8 +1598,6 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
   the member board. It is offered on the task page, on Today's ended-shift rows, on the
   Schedule's rows with no shift, and as the project assign picker's "Open shift" tab. Every
   call adds a shift; a task can be assigned and have shifts at once.
-- **Unassigned tasks** are open tasks with no live shift and nobody assigned
-  (`unassignedTaskWhere`). The Schedule's chip and the sidebar badge both read it.
 - **The clock never closes a task.** When a shift ends, the completion cron completes its
   sign-ups. The task stays open, and an open task whose last live shift has ended is on the
   Schedule's **Tasks with ended shifts** list (`listTasksWithEndedShifts`) until someone marks

@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * The reporting queries, run against a real SQLite.
  *
  * Named for what it covers rather than for a module: there is no `reports.ts`.
- * `spendByCategory` and `inKindContributions` live in `acquisition-service.ts`
+ * `spendByCategory` and `spendBySource` live in `acquisition-service.ts`
  * and `listForm8282Obligations` in `asset-service.ts`, but all three are
  * aggregate SQL that wants a database rather than the mocked `db` their
  * neighbours use.
@@ -37,8 +37,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { spendByCategory, spendBySource, inKindContributions } =
-	await import('./acquisition-service');
+const { spendByCategory, spendBySource } = await import('./acquisition-service');
 const { listForm8282Obligations } = await import('./asset-service');
 
 const secs = (d: Date) => Math.floor(d.getTime() / 1000);
@@ -257,64 +256,6 @@ describe('spendBySource', () => {
 
 	it('is empty rather than throwing when nothing was bought', async () => {
 		expect(await spendBySource(YEAR_START, YEAR_END)).toEqual([]);
-	});
-});
-
-describe('inKindContributions', () => {
-	it('disaggregates gifts by category, which is what the disclosure asks for', async () => {
-		acquisition('a1', 'donation', JAN);
-		line('l1', 'a1', 'it-amp', 1, 250_000);
-		acquisition('a2', 'donation', JUN);
-		line('l2', 'a2', 'it-strings', 20, 700);
-
-		const rows = await inKindContributions(YEAR_START, YEAR_END);
-		const byName = Object.fromEntries(rows.map((r) => [r.categoryName, r]));
-
-		expect(Number(byName['Amplifiers'].fairValueCents)).toBe(250_000);
-		expect(Number(byName['Consumables'].fairValueCents)).toBe(14_000);
-	});
-
-	/** ASU 2020-07 wants monetized and utilized gifts told apart, so they cannot
-	 *  share a row even within one category. */
-	it('separates monetized from utilized within a category', async () => {
-		acquisition('a1', 'donation', JAN, { monetized: 0 });
-		line('l1', 'a1', 'it-amp', 1, 100_000);
-		acquisition('a2', 'donation', JUN, { monetized: 1 });
-		line('l2', 'a2', 'it-amp', 1, 60_000);
-
-		const rows = await inKindContributions(YEAR_START, YEAR_END);
-		const amps = rows.filter((r) => r.categoryName === 'Amplifiers');
-
-		expect(amps).toHaveLength(2);
-		expect(Number(amps.find((r) => !r.monetized)!.fairValueCents)).toBe(100_000);
-		expect(Number(amps.find((r) => r.monetized)!.fairValueCents)).toBe(60_000);
-	});
-
-	it('excludes purchases and grants — only gifts are contributions', async () => {
-		acquisition('a1', 'donation', JAN);
-		line('l1', 'a1', 'it-amp', 1, 250_000);
-		acquisition('a2', 'purchase', JAN);
-		line('l2', 'a2', 'it-amp', 1, 94_100);
-		acquisition('a3', 'grant', JAN);
-		line('l3', 'a3', 'it-amp', 1, 48_000);
-
-		const rows = await inKindContributions(YEAR_START, YEAR_END);
-		expect(rows).toHaveLength(1);
-		expect(Number(rows[0].fairValueCents)).toBe(250_000);
-	});
-
-	it('excludes gifts outside the reporting year', async () => {
-		acquisition('a1', 'donation', JAN);
-		line('l1', 'a1', 'it-amp', 1, 250_000);
-		acquisition('a2', 'donation', NEXT_YEAR);
-		line('l2', 'a2', 'it-amp', 1, 999_999);
-
-		const rows = await inKindContributions(YEAR_START, YEAR_END);
-		expect(Number(rows[0].fairValueCents)).toBe(250_000);
-	});
-
-	it('is empty rather than throwing in a year with no gifts', async () => {
-		expect(await inKindContributions(YEAR_START, YEAR_END)).toEqual([]);
 	});
 });
 

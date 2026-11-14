@@ -304,16 +304,6 @@ export async function listPendingFlags() {
 		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
 }
 
-/** Everything ever raised against one unit, newest first — the unit's own page. */
-export async function listFlagsForAsset(assetId: string) {
-	return db
-		.select({ flag: workRequest, reporterName: user.name })
-		.from(workRequest)
-		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-		.where(eq(workRequest.assetId, assetId))
-		.orderBy(desc(workRequest.createdAt), desc(workRequest.id));
-}
-
 /** Flags answered by one work order, so resolving it can close them together. */
 export async function listFlagsForWorkOrder(workOrderId: string) {
 	return db.select().from(workRequest).where(eq(workRequest.workOrderId, workOrderId));

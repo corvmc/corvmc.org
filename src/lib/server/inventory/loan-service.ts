@@ -792,11 +792,6 @@ export async function listUserLoans(
 	return listLoans({ userId, statuses }, pagination);
 }
 
-export async function getLoanHistory(itemId: string) {
-	const { rows } = await listLoans({ itemId });
-	return rows;
-}
-
 export interface LoanDueRow {
 	loanId: string;
 	userId: string;
