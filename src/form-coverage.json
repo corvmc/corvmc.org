@@ -1,11 +1,9 @@
 [
-	"createContractorForm.website",
 	"createVolunteerRole.defaultCapacity",
 	"createVolunteerRole.defaultDurationMinutes",
 	"createVolunteerRole.isSpecializedSkill",
 	"createVolunteerRole.marketRate",
 	"refundAndCancelReservation.reason",
 	"replyToThread.disposition",
-	"saveMemberProfile.hometown",
-	"updateContractorForm.website"
+	"saveMemberProfile.hometown"
 ]

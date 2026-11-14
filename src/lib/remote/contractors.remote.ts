@@ -10,7 +10,6 @@ import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '#lib/
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { engageContractorOnTask } from '#lib/server/volunteer/task-people.js';
 import {
-	archiveContractor,
 	createContractor,
 	getContractorById,
 	listContractors,
@@ -217,22 +216,6 @@ export const updateContractorForm = form(
 		try {
 			await updateContractor(id, contractorInput(data));
 			await savePrimaryContact(id, contractorContact(data));
-			void getContractorDetail(id).refresh();
-			void getContractorsPage().refresh();
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-export const archiveContractorForm = form(
-	z.object({ id: z.string().min(1), archived: z.boolean().optional().default(false) }),
-	async (raw) => {
-		await requireCapability('contractor.manage');
-		const { id, archived } = raw as { id: string; archived: boolean };
-		try {
-			await archiveContractor(id, archived);
 			void getContractorDetail(id).refresh();
 			void getContractorsPage().refresh();
 			return { success: true };

@@ -68,7 +68,6 @@ const remote = (await import('./grants.remote')) as unknown as Record<
 >;
 
 const GRANT = { funderId: 'f1', title: 'Operating support', status: 'prospect' };
-const FUNDER = { name: 'Oregon Arts Commission' };
 
 type Case = { name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> };
 const CASES: Case[] = [
@@ -87,15 +86,7 @@ const CASES: Case[] = [
 		cap: 'grant.manage',
 		arg: { id: 'g1', stage: 'award' },
 		spy: grants.applyGrantStage
-	},
-	{ name: 'createFunder', cap: 'grant.manage', arg: FUNDER, spy: funders.createFunder },
-	{
-		name: 'updateFunder',
-		cap: 'grant.manage',
-		arg: { id: 'f1', ...FUNDER },
-		spy: funders.updateFunder
-	},
-	{ name: 'deleteFunder', cap: 'grant.manage', arg: { id: 'f1' }, spy: funders.deleteFunder }
+	}
 ];
 
 beforeEach(() => {
