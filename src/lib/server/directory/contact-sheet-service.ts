@@ -150,7 +150,7 @@ export async function liveContactSheetLink(entryId: string) {
 				gt(directoryEntryLink.expiresAt, new Date())
 			)
 		)
-		.orderBy(desc(directoryEntryLink.createdAt))
+		.orderBy(desc(directoryEntryLink.createdAt), desc(directoryEntryLink.id))
 		.limit(1);
 	if (!link) return null;
 
