@@ -23,8 +23,7 @@
 	import UserTotals from './UserTotals.svelte';
 	import InviteMemberAction from './InviteMemberAction.svelte';
 	import MemberRoleFilter from './MemberRoleFilter.svelte';
-	import { hasCapability } from '#lib/config.js';
-	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import InvitedStatusOption from './InvitedStatusOption.svelte';
 	import { goto } from '$app/navigation';
 	import { memberViewQuery } from './views';
 	import { withQuery } from '#lib/utils/with-query.js';
@@ -79,8 +78,6 @@
 	}
 
 	// Invited people have no account, so that status is the invite list (#2765).
-	const canInvite = $derived(hasCapability((await getStaffLayout()).capabilities, 'user.invite'));
-
 	function setStatus(value: string) {
 		if (value === 'invited')
 			void goto(withQuery(resolve('staff/members'), memberViewQuery('invited')));
@@ -124,9 +121,7 @@
 		>
 			<option value="active">{m.staff_active_label()}</option>
 			<option value="deactivated">{m.staff_deactivated_label()}</option>
-			{#if canInvite}
-				<option value="invited">{m.staff_members_invites_invited_label()}</option>
-			{/if}
+			<InvitedStatusOption />
 			<option value="all">{m.staff_all_statuses_label()}</option>
 		</Select>
 	{/snippet}
