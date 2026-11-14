@@ -66,7 +66,7 @@
 		}
 		if (c.unpaidReservations > 0) {
 			items.push({
-				text: `${c.unpaidReservations} booking${c.unpaidReservations === 1 ? '' : 's'} with cash still owed.`,
+				text: `${c.unpaidReservations} booking${c.unpaidReservations === 1 ? '' : 's'} with payment due.`,
 				tab: 'space',
 				tone: 'warning'
 			});

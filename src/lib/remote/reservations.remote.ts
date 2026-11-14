@@ -350,7 +350,9 @@ export const getBandReservations = query(
 				bookedBy: memberRefColumns(),
 				// Not for display — `canCancel` and `canPay` below derive from these.
 				createdByUserId: reservation.createdByUserId,
+				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
+				refundedAt: reservation.refundedAt,
 				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
@@ -374,7 +376,9 @@ export const getBandReservations = query(
 				bookedBy: memberRefColumns(),
 				// Not for display — `canCancel` and `canPay` below derive from these.
 				createdByUserId: reservation.createdByUserId,
+				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
+				refundedAt: reservation.refundedAt,
 				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
@@ -604,7 +608,11 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bookerType: reservation.bookerType,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
-			status: reservation.status
+			status: reservation.status,
+			// The overlap warning names each one by its track (#2991).
+			paidAt: reservation.paidAt,
+			refundedAt: reservation.refundedAt,
+			cashDueCents: reservation.cashDueCents
 		})
 		.from(reservation)
 		.where(
@@ -662,7 +670,10 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bookerType: r.bookerType,
 			startsAt: r.startsAt,
 			endsAt: r.endsAt,
-			status: r.status
+			status: r.status,
+			paidAt: r.paidAt,
+			refundedAt: r.refundedAt,
+			cashDueCents: r.cashDueCents
 		})),
 		sameDayClosures,
 		doorFallback,

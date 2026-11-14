@@ -11,7 +11,6 @@ import {
 	desc,
 	asc,
 	count,
-	isNull,
 	isNotNull,
 	inArray,
 	notInArray,
@@ -22,7 +21,7 @@ import {
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
 import { insertReservation } from './insert-reservation';
-import { confirmedUnpaidSql } from './payment-due';
+import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
 import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -888,14 +887,7 @@ export async function listForMember(
 			db
 				.select({ count: count() })
 				.from(reservation)
-				.where(
-					and(
-						scope,
-						ne(reservation.status, 'cancelled'),
-						gt(reservation.cashDueCents, 0),
-						isNull(reservation.paidAt)
-					)
-				),
+				.where(and(scope, paymentDueSql(now))),
 			db
 				.select({ count: count() })
 				.from(reservation)

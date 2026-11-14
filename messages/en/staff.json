@@ -1866,7 +1866,7 @@
 	"staff_members_id_panels_space_panel_runs_until_label": "Runs until",
 	"staff_members_id_panels_space_panel_themselves_text": "Themselves",
 	"staff_members_id_panels_space_panel_time_label": "Time",
-	"staff_members_id_panels_space_panel_unpaid_text": "{unpaid} unpaid",
+	"staff_members_id_panels_space_panel_unpaid_text": "{unpaid} payment due",
 	"staff_members_id_panels_space_panel_upcoming_label": "Upcoming",
 	"staff_members_id_panels_space_panel_upcoming_past_text": "{upcoming} upcoming · {past} past",
 	"staff_members_id_panels_user_scoreboard_free_hours_label": "Credits",

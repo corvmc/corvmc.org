@@ -28,7 +28,7 @@ import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
 import { group } from '#lib/server/db/schema/group.js';
-import { eq, or, gt, gte, lte, ne, inArray, isNull, sql, and } from 'drizzle-orm';
+import { eq, or, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '#lib/server/authorization.js';
 import { positionChangeRefusal } from '#lib/server/access/position-service.js';
 import { toEventRef, toGenericRef } from '#lib/server/entity/refs.js';
@@ -57,6 +57,7 @@ import {
 	freeHoursResetAt
 } from '#lib/server/reservation/reservation-credit-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
+import { confirmedUnpaidSql } from '#lib/server/reservation/payment-due.js';
 import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
 import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
 import { getOpenRemoval, listRemovals } from '#lib/server/moderation/removal-service.js';
@@ -752,9 +753,7 @@ export const getMemberDashboard = query(async () => {
 			.from(reservation)
 			.where(
 				and(
-					eq(reservation.status, 'confirmed'),
-					isNull(reservation.paidAt),
-					or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),
+					confirmedUnpaidSql(),
 					gte(reservation.startsAt, nowDate),
 					lte(reservation.startsAt, bookingLeadHorizon(nowDate)),
 					or(
@@ -794,7 +793,9 @@ export const getMemberDashboard = query(async () => {
 			id: r.id,
 			startsAt: r.startsAt,
 			status: r.status,
+			bookerType: r.bookerType,
 			paidAt: r.paidAt,
+			refundedAt: r.refundedAt,
 			cashDueCents: r.cashDueCents,
 			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
 			coveredByFreeHours:

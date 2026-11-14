@@ -1,6 +1,6 @@
 import { resolve } from '$app/paths';
 import { bookingLeadHorizon } from '#lib/config.js';
-import { confirmedUnpaid } from '#lib/utils/reservation-actions.js';
+import { owesMoney } from '#lib/utils/reservation-actions.js';
 import type { NeedsYouItem } from '#lib/types/needs-you.js';
 
 /** A booking the dashboard may ask the member to pay for. */
@@ -8,7 +8,9 @@ export interface ReservationNeedingYou {
 	id: string;
 	startsAt: Date;
 	status: string;
+	bookerType: string;
 	paidAt: Date | null;
+	refundedAt: Date | null;
 	cashDueCents: number | null;
 	bandName: string | null;
 	/** Live figure: the member's usable free hours cover it right now. */
@@ -24,7 +26,7 @@ export function reservationNeedsYouItems(rows: ReservationNeedingYou[], now: Dat
 	const items: NeedsYouItem[] = [];
 	for (const r of rows) {
 		if (r.startsAt <= now || r.startsAt > bookingLeadHorizon(now)) continue;
-		if (!confirmedUnpaid(r)) continue;
+		if (!owesMoney(r)) continue;
 		const detail = (text: string) =>
 			r.bandName ? `${r.bandName}: ${text}` : text[0].toUpperCase() + text.slice(1);
 		const credits = r.coveredByFreeHours;
