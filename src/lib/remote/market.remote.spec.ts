@@ -396,6 +396,17 @@ describe('market day: seating, withdrawals, check-in, no-shows and invite-back (
 		expect(thrown).toMatchObject({ body: { message: 'A no_show cannot' } });
 	});
 
+	it.each([[''], [undefined]])(
+		'inviteBackForm records nothing for a blank choice (%j)',
+		async (inviteBack) => {
+			committeeOf = ['proj-dev'];
+			await expect(
+				submit(remote.inviteBackForm, { vendorId: 'v-1', inviteBack, note: '' })
+			).rejects.toThrow(/Choose whether to invite/);
+			expect(svc.recordInviteBack).not.toHaveBeenCalled();
+		}
+	);
+
 	it('shows the day-of list to the committees on the market, and to staff', async () => {
 		committeeOf = ['proj-dev'];
 		svc.getMarketDay.mockResolvedValueOnce({ eventId: 'evt-1' } as never);

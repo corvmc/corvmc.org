@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
 	import VendorFee from './VendorFee.svelte';
+	import InviteBackAction from './InviteBackAction.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -10,15 +11,12 @@
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import Action from '#lib/components/ui/Action.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
-	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { formatDateTime, formatTime } from '#lib/utils/format.js';
 	import {
 		checkInVendorForm,
 		getMarketDayCheckIn,
-		inviteBackForm,
 		markNoShowForm
 	} from '#lib/remote/market.remote.js';
 
@@ -34,11 +32,6 @@
 	const arrived = $derived(data.vendors.filter((v) => v.checkedInAt).length);
 	const noShows = $derived(data.vendors.filter((v) => v.status === 'no_show').length);
 	const booked = $derived(data.vendors.length - noShows);
-
-	const inviteOptions = [
-		{ value: 'yes', label: m.market_vendor_check_in_invite_back_label() },
-		{ value: 'no', label: m.market_vendor_check_in_do_not_invite_back_label() }
-	];
 </script>
 
 <PageHeader
@@ -72,7 +65,6 @@
 
 	<div class="space-y-2">
 		{#each data.vendors as vendor (vendor.id)}
-			{@const inviteFields = inviteBackForm.for(vendor.id).fields}
 			<Card>
 				<CardBody row padding="sm">
 					<div>
@@ -200,36 +192,7 @@
 							</Form>
 						{/if}
 
-						<Action
-							action={inviteBackForm.for(vendor.id)}
-							label={m.market_vendor_check_in_invite_back_2_label()}
-							modalTitle={m.market_vendor_check_in_modal_title({
-								businessName: vendor.businessName
-							})}
-							submitLabel={m.market_vendor_check_in_submit_label()}
-							successToast={m.market_vendor_check_in_saved_toast()}
-							variant="ghost"
-							size="sm"
-						>
-							{#snippet form()}
-								<div class="space-y-4">
-									<input {...inviteFields.vendorId.as('hidden', vendor.id)} />
-									<FormField
-										field={inviteFields.inviteBack}
-										type="select"
-										label={m.market_vendor_check_in_next_market_label()}
-										options={inviteOptions}
-										value={vendor.inviteBack === false ? 'no' : 'yes'}
-									/>
-									<FormField
-										field={inviteFields.note}
-										label={m.market_vendor_check_in_note_label()}
-										description={m.market_vendor_check_in_shown_vendor_s_next_application_body()}
-										value={vendor.inviteBackNote ?? ''}
-									/>
-								</div>
-							{/snippet}
-						</Action>
+						<InviteBackAction {vendor} />
 					</div>
 				</CardBody>
 			</Card>

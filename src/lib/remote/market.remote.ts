@@ -351,7 +351,8 @@ export const markNoShowForm = form(
 export const inviteBackForm = form(
 	z.object({
 		vendorId: z.string().min(1),
-		inviteBack: yesNo,
+		// No default: a blank choice is refused, not read as either answer (#2827).
+		inviteBack: z.enum(['yes', 'no'], { message: 'Choose whether to invite this vendor back' }),
 		note: z.string().trim().max(LONG_TEXT_MAX).optional()
 	}),
 	async (data) => {
