@@ -1197,11 +1197,13 @@ them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. 
 
 ### The dashboard's own tasks
 
-**Your tasks** heads `/staff` (#2768): open tasks assigned to the viewer and not marked done by
-them, plus unassigned tasks of a committee they sit on, from `listMyWork` in
-`src/lib/server/task/my-work.ts`. Overdue first, then by date. A row opens the record its
-`work_order_link` names, else the task. It comes from `getStaffDashboard` like every other
-section, and is hidden when empty. A source that should reach staff as work opens a task, and the
+**Your tasks** heads `/staff` (#2768) and `/member/volunteer`: open tasks assigned to the viewer
+and not marked done by them, plus unassigned tasks of a committee they sit on. Both lists filter
+on `waitingOn` in `src/lib/server/task/can-act.ts`, the list form of `canActOnTask` (#2989), so a
+row is always one its remotes accept. Overdue first, then by date. A row opens the record its
+`work_order_link` names when the viewer can open it, else the staff task page, else
+`/member/volunteer/tasks/[id]`. It comes from `getStaffDashboard` like every other section, with
+no section gate, and is hidden when empty. A source that should reach staff as work opens a task, and the
 dashboard alert list for it is retired once it does (low stock, #2756).
 
 ### The dashboard review feed

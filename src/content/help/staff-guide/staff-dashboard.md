@@ -19,8 +19,12 @@ can act on it.
 **Your tasks** lists the open tasks waiting on you: the ones you are assigned to and have not
 marked done, and the unassigned ones belonging to a committee you sit on. Overdue tasks come
 first, then the rest by date, then those with no date. A task about a record, such as an amp or
-a booking, opens that record; any other task opens its own page. The section is hidden when
-nothing is waiting.
+a booking, opens that record when you can open it; any other task opens its own page. The section
+is hidden when nothing is waiting.
+
+Anyone on a task's committee may take it, tick its checklist, mark it done and hand it back, as
+may its assignee. Editing, assigning someone else or calling the task off needs the volunteer
+coordinator's permission.
 
 ## Waiting for review
 
