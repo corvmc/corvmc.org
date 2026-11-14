@@ -9,6 +9,8 @@ import { form } from './_remote';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import { listAll, listForUser, partitionByStatus } from '#lib/server/band/band-service.js';
@@ -392,10 +394,30 @@ export const removeBandMember = form(
 	}),
 	async (data) => {
 		await requireCapability('band.manageMembers');
+		// Read first: the row is gone after, and these names are all the log keeps of it.
+		const [row] = await db
+			.select({
+				bandId: groupMember.groupId,
+				bandName: group.name,
+				userId: groupMember.userId,
+				memberName: user.name
+			})
+			.from(groupMember)
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.innerJoin(user, eq(user.id, groupMember.userId))
+			.where(eq(groupMember.id, data.memberId))
+			.limit(1);
 		try {
 			await removeMemberService(data.memberId);
 		} catch (err) {
 			mapDomainError(err);
+		}
+		if (row) {
+			await recordAuditEntry({
+				action: 'band.member_removed',
+				subject: { type: 'band', id: row.bandId, label: row.bandName },
+				details: { memberId: data.memberId, userId: row.userId, memberName: row.memberName }
+			});
 		}
 		return { success: true };
 	}

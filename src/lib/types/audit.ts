@@ -93,7 +93,9 @@ export const auditActions = [
 	'clearance.deleted',
 	'venue.deleted',
 	'closure.deleted',
-	'audience.subscriber_removed'
+	'audience.subscriber_removed',
+	'band.member_removed',
+	'gift.recorded'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -371,6 +373,16 @@ export interface AuditDetailsByAction {
 	'closure.deleted': { closureId: string; startsAt: string; endsAt: string; reason: string };
 	/** The subject is the subscriber: a member's id, else the subscriber row's. */
 	'audience.subscriber_removed': { audienceId: string; audienceName: string };
+	/** The subject is the band; the member row is gone, so its names are kept here. */
+	'band.member_removed': { memberId: string; userId: string; memberName: string };
+	/** The subject is the giver, a contact or an organization. `occurredOn` is `YYYY-MM-DD`. */
+	'gift.recorded': {
+		giftId: string;
+		description: string;
+		valueCents: number;
+		occurredOn: string;
+		projectId: string | null;
+	};
 }
 
 /** Mirrors `contractorJobStatuses` in `$lib/config`, which the schema cannot import by alias. */
