@@ -136,3 +136,23 @@ export async function membersOwingFees(
 		);
 	return new Set(rows.map((r) => r.userId).filter((id): id is string => id !== null));
 }
+
+/**
+ * Members owing a fee read no door code until they pay (#2874). Returns the
+ * oldest fee's start, or null when nothing is owed or the gate is off. Every
+ * member-facing remote returning a code calls this; staff surfaces do not.
+ */
+export async function doorCodeHeldSince(bookerId: string, now = new Date()): Promise<Date | null> {
+	const gate = await getFeeGate(bookerId, { now });
+	return gate.fees[0]?.startsAt ?? null;
+}
+
+/** `codeWithheld` is for the page's notice, so only on a session still to come. */
+export function withholdDoorCode<T extends { lockCode: string | null; endsAt: Date }>(
+	row: T,
+	held: boolean,
+	now = new Date()
+): T & { codeWithheld: boolean } {
+	if (!held) return { ...row, codeWithheld: false };
+	return { ...row, lockCode: null, codeWithheld: row.endsAt > now };
+}

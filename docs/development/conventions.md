@@ -1065,7 +1065,9 @@ Between the first state and a terminal one, anything else that blocks is a bug a
 - **An outstanding fee refuses a member's own booking and withholds their door code messages**
   (#2748, #2859). One practice space session that ended still payment due, counted from the cutoff
   in Practice space settings, refuses a new booking at the reservation remote and drops the
-  member's `door_code_ready` reminder until it is paid. Staff booking on a member's behalf see the
+  member's `door_code_ready` reminder until it is paid. Member-facing remotes return no door code
+  or break-glass code for that member's bookings (#2874); `door-code-readers.spec.ts` holds every
+  remote returning a code to staff-only or this check. Staff booking on a member's behalf see the
   fees and are never refused; the code is still minted. `src/lib/server/reservation/outstanding-fees.ts`.
 
 **The override is an escape hatch, not a feature.** The UI is designed for the usual path. Overrides
