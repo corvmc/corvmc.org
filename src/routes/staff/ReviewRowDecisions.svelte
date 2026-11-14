@@ -25,13 +25,9 @@
 	/** Each decision's own words, so a new decision cannot borrow another's. */
 	const words: Record<
 		ReviewDecision,
-		{ label: () => string; title: (kind: string) => string; toast: () => string }
+		{ label: () => string; title?: (kind: string) => string; toast: () => string }
 	> = {
-		approve: {
-			label: m.staff_approve_label,
-			title: () => m.staff_approve_label(),
-			toast: m.staff_review_approved_toast
-		},
+		approve: { label: m.staff_approve_label, toast: m.staff_review_approved_toast },
 		decline: {
 			label: m.staff_review_decline_label,
 			title: (kind) => m.staff_review_decline_title({ kind }),
@@ -65,7 +61,7 @@
 					variant="ghost"
 					size="sm"
 					class="text-error"
-					modalTitle={d.words.title(kindLabel.toLowerCase())}
+					modalTitle={d.words.title?.(kindLabel.toLowerCase())}
 					submitLabel={d.words.label()}
 					submitVariant="error"
 					successToast={d.words.toast()}
