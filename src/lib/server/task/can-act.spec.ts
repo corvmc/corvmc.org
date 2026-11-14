@@ -19,12 +19,20 @@ vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'me' })
 }));
 
-const { canActOnTask } = await import('./can-act');
+const { canActOnTask, waitingOn } = await import('./can-act');
+const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
+
+/** The ids `waitingOn` lists for a user, sorted. */
+const waiting = async (userId: string) =>
+	(await testDb.select({ id: workOrder.id }).from(workOrder).where(waitingOn(userId)))
+		.map((r) => r.id)
+		.sort();
 
 beforeEach(() => {
 	grant.mockReset().mockResolvedValue(false);
 	sqlite.exec(`
 		delete from work_order_assignee; delete from work_order;
+		delete from group_position_holder; delete from group_position;
 		delete from group_member; delete from "group"; delete from "user";
 		insert into "user" (id, name, email) values
 			('me', 'Me', 'me@example.com'), ('other', 'Other', 'other@example.com');
@@ -39,7 +47,8 @@ beforeEach(() => {
 			('m2', 'lapsed', 'me', 'member', 'inactive'),
 			('m3', 'closed', 'me', 'member', 'active'),
 			('m4', 'club', 'me', 'member', 'active'),
-			('m5', 'sound', 'other', 'member', 'active');
+			('m5', 'sound', 'other', 'member', 'active'),
+			('m6', 'booking', 'other', 'member', 'active');
 		insert into work_order (id, title, group_id) values
 			('booking-task', 'Book acts', 'booking'),
 			('sound-task', 'Wire the stage', 'sound'),
@@ -88,5 +97,72 @@ describe('canActOnTask', () => {
 		grant.mockResolvedValue(true);
 		expect(await canActOnTask('me', 'no-such-task')).toBeNull();
 		expect(grant).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * A task tagged for a position (#2990) waits on that position's holders, and
+ * on the department only while the position is vacant.
+ */
+describe('position-tagged tasks', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into group_position (id, group_id, name) values
+				('treasurer', 'booking', 'Treasurer'), ('vacant', 'booking', 'Vacant');
+			insert into group_position_holder (position_id, member_id) values ('treasurer', 'm6');
+			insert into work_order (id, title, group_id, position_id) values
+				('held-task', 'Count the till', 'booking', 'treasurer'),
+				('vacant-task', 'Nobody yet', 'booking', 'vacant');
+		`);
+	});
+
+	it('gives the holder the position reason', async () => {
+		expect(await canActOnTask('other', 'held-task')).toBe('position');
+	});
+
+	it('still admits the rest of the department', async () => {
+		expect(await canActOnTask('me', 'held-task')).toBe('department');
+	});
+
+	it('drops the reason when the holder leaves the committee', async () => {
+		sqlite.exec(`update group_member set status = 'inactive' where id = 'm6'`);
+		expect(await canActOnTask('other', 'held-task')).toBeNull();
+	});
+
+	it('lists a held task for its holder and not for the rest of the department', async () => {
+		expect(await waiting('other')).toContain('held-task');
+		expect(await waiting('me')).not.toContain('held-task');
+	});
+
+	it('lists a vacant position’s task for the whole department', async () => {
+		expect(await waiting('me')).toContain('vacant-task');
+		expect(await waiting('other')).toContain('vacant-task');
+	});
+
+	it('lists a task once somebody has it only for that person', async () => {
+		sqlite.exec(
+			`insert into work_order_assignee (work_order_id, user_id) values ('held-task', 'me')`
+		);
+		expect(await waiting('me')).toContain('held-task');
+		expect(await waiting('other')).not.toContain('held-task');
+	});
+
+	it("gives no position reason for another committee's position", async () => {
+		sqlite.exec(`
+			insert into group_position (id, group_id, name) values ('engineer', 'sound', 'Engineer');
+			insert into group_position_holder (position_id, member_id) values ('engineer', 'm5');
+			insert into work_order (id, title, group_id, position_id) values
+				('stray-task', 'Stray', 'booking', 'engineer');
+		`);
+		expect(await canActOnTask('other', 'stray-task')).toBe('department');
+		expect(await waiting('me')).toContain('stray-task');
+	});
+
+	it('never lists what canActOnTask refuses', async () => {
+		for (const userId of ['me', 'other']) {
+			for (const id of await waiting(userId)) {
+				expect(await canActOnTask(userId, id)).not.toBeNull();
+			}
+		}
 	});
 });

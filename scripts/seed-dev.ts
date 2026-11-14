@@ -40,7 +40,7 @@ import { seedPartyActivity } from './seed/party-activity';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
-import { seedCommitteePositions } from './seed/committee-positions';
+import { seedCommitteePositions, seedPositionTaggedTasks } from './seed/committee-positions';
 import { seedBallots } from './seed/ballots';
 import {
 	GROUP_INVITEE_PERSONA,
@@ -341,6 +341,8 @@ async function main() {
 	const ballots = await seedBallots(groups, adminUser);
 	// After every seeder that writes shifts: a task with both an assignee and a shift (#2518).
 	const tasksAndShifts = await seedTasksAndShifts();
+	// After every seeder that writes committee tasks (#2990).
+	const positionTagged = await seedPositionTaggedTasks();
 	// Last: its backfill reads every booking and orientation seeded above.
 	const practiceSpace = await seedPracticeSpaceClearance(volunteerRoles);
 
@@ -374,6 +376,7 @@ async function main() {
 	console.log(
 		`  ${committeePositions.positions} committee positions, ${committeePositions.holders} holders (one shared, two vacant)`
 	);
+	console.log(`  ${positionTagged} committee tasks tagged for a position`);
 	console.log(
 		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);

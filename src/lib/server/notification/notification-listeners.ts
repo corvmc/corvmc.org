@@ -19,6 +19,7 @@ import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '#lib/server/sentry.js';
 import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { taskNoticeRecipients } from '#lib/server/task/task-audience.js';
 import { applicationNotice } from '#lib/server/group/application-reviewers.js';
 import { buildReplyToAddress } from '#lib/server/inbox/reply-address.js';
 import * as env from '$app/env/private';
@@ -1445,6 +1446,7 @@ export function registerAllNotificationListeners(): void {
 		);
 		const late = items.filter((i) => i.stage === 'overdue').length;
 		const oneCommittee = new Set(items.map((i) => i.groupSlug)).size === 1;
+		const oneShow = new Set(items.map((i) => i.eventId)).size === 1;
 		const forWhat = (i: (typeof items)[number]) => i.eventTitle ?? i.projectName;
 		const on = (i: (typeof items)[number]) => (forWhat(i) ? ` for ${forWhat(i)}` : '');
 		const shows = items.every((i) => i.eventTitle);
@@ -1470,7 +1472,13 @@ export function registerAllNotificationListeners(): void {
 			userEmail: recipient.userEmail,
 			title,
 			body: single ? `${first.groupName} · ${line}` : line,
-			href: oneCommittee ? `/member/groups/${first.groupSlug}?tab=items` : '/member/groups',
+			href: items.every((i) => i.forLead)
+				? oneShow && first.eventId
+					? `/staff/events/${first.eventId}/production`
+					: '/staff'
+				: oneCommittee
+					? `/member/groups/${first.groupSlug}?tab=items`
+					: '/member/groups',
 			data: { workOrderIds: items.map((i) => i.workOrderId) },
 			email: {
 				recipientName: recipient.userName,
@@ -1765,16 +1773,16 @@ export function registerAllNotificationListeners(): void {
 		}
 	);
 
-	// Declined (notify staff). Fanned out like a claim, because the next move is
-	// somebody else's to ask and whoever picks it up needs to know.
+	// Declined. The task's news (#2990): its position, else its committee, else
+	// every coordinator, because the next move is somebody's to ask.
 	domainEvents.on('volunteer.signup_declined', async ({ data: event }) => {
-		const staff = await listUsersWithCapability('volunteer.manageShifts');
+		const staff = await taskNoticeRecipients(event.workOrderId, 'volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
 					type: 'volunteer_shift_declined',
-					userId: member.id,
-					userEmail: member.email,
+					userId: member.userId,
+					userEmail: member.userEmail,
 					title: `${event.userName} can't do ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
 					href: '/staff/volunteering'
@@ -1782,7 +1790,7 @@ export function registerAllNotificationListeners(): void {
 			} catch (err) {
 				captureException(err, {
 					event: 'notification.volunteer_shift_declined',
-					to: member.email
+					to: member.userEmail
 				});
 			}
 		}
@@ -1874,15 +1882,15 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
-	// Dropped (notify staff). The useful half is that a place reopened.
+	// Dropped. The useful half is that a place reopened; routed like a decline.
 	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
-		const staff = await listUsersWithCapability('volunteer.manageShifts');
+		const staff = await taskNoticeRecipients(event.workOrderId, 'volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
 					type: 'volunteer_shift_dropped',
-					userId: member.id,
-					userEmail: member.email,
+					userId: member.userId,
+					userEmail: member.userEmail,
 					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
 					href: '/staff/volunteering?needs=short'
@@ -1890,7 +1898,7 @@ export function registerAllNotificationListeners(): void {
 			} catch (err) {
 				captureException(err, {
 					event: 'notification.volunteer_shift_dropped',
-					to: member.email
+					to: member.userEmail
 				});
 			}
 		}

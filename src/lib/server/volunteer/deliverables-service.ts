@@ -29,6 +29,7 @@ import { DomainError } from '#lib/server/domain-error.js';
 import type { ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import { evaluateDone, type DeliverableState } from './done-conditions';
 import { assertOwningCommittee } from './duty-list-service';
+import { showLeads, taskAudiences } from '#lib/server/task/task-audience.js';
 
 /**
  * A committee's deliverables: the work orders it answers for (#1701). Reads for
@@ -232,7 +233,12 @@ export async function reassignDeliverable(id: string, groupId: string | null): P
 	const owner = await assertOwningCommittee(groupId);
 	const result = await db
 		.update(workOrder)
-		.set({ groupId: owner, updatedAt: new Date() })
+		.set({
+			groupId: owner,
+			// A position is its committee's: handing the item on drops the tag.
+			positionId: sql`case when ${workOrder.groupId} is ${owner} then ${workOrder.positionId} end`,
+			updatedAt: new Date()
+		})
 		.where(and(eq(workOrder.id, id), live))
 		.returning({ id: workOrder.id });
 	if (result.length === 0) throw new DeliverableNotFoundError();
@@ -324,8 +330,13 @@ export interface DueDeliverable {
 	projectName: string | null;
 	groupName: string;
 	groupSlug: string;
-	/** Its live assignees, or the owning committee's active members when nobody has it. */
+	/**
+	 * Its live assignees; with nobody on it, its position's holders, else the
+	 * owning committee's active members (#2990).
+	 */
 	recipients: Recipient[];
+	/** The show's event lead, who hears about its items as well (#2983 case 6). */
+	lead: Recipient | null;
 }
 
 /**
@@ -360,7 +371,9 @@ export async function listDeliverablesDueBetween(
 
 	const assigneeIds = [...new Set(owed.flatMap((r) => r.assignees.map((a) => a.userId)))];
 	const groupIds = [...new Set(owed.map((r) => r.groupId!))];
-	const [people, slugs, seats] = await Promise.all([
+	const unassigned = owed.filter((r) => r.assignees.length === 0).map((r) => r.id);
+	const eventIds = [...new Set(owed.flatMap((r) => r.eventId ?? []))];
+	const [people, slugs, routed, leads] = await Promise.all([
 		assigneeIds.length
 			? db
 					.select({ userId: user.id, userName: user.name, userEmail: user.email })
@@ -368,7 +381,8 @@ export async function listDeliverablesDueBetween(
 					.where(and(inArray(user.id, assigneeIds), isNull(user.deletedAt)))
 			: Promise.resolve([]),
 		db.select({ id: group.id, slug: group.slug }).from(group).where(inArray(group.id, groupIds)),
-		committeeSeats(groupIds)
+		taskAudiences(unassigned),
+		showLeads(eventIds)
 	]);
 	const person = new Map(people.map((p) => [p.userId, p]));
 	const slugOf = new Map(slugs.map((g) => [g.id, g.slug]));
@@ -384,10 +398,7 @@ export async function listDeliverablesDueBetween(
 		recipients:
 			r.assignees.length > 0
 				? r.assignees.flatMap((a) => person.get(a.userId) ?? [])
-				: (seats.get(r.groupId!) ?? []).map(({ userId, userName, userEmail }) => ({
-						userId,
-						userName,
-						userEmail
-					}))
+				: (routed.get(r.id)?.recipients ?? []),
+		lead: (r.eventId && leads.get(r.eventId)) || null
 	}));
 }

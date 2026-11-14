@@ -31,6 +31,19 @@ vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: (cap: string) => mockStaffUsers(cap)
 }));
 
+// A task's notice goes to its position, else its committee, else every holder
+// (#2990). Unrouted by default, so it falls through to `mockStaffUsers`.
+const mockTaskAudience = vi.fn(
+	async (
+		_workOrderId: string
+	): Promise<{ userId: string; userName: string; userEmail: string }[] | null> => null
+);
+vi.mock('#lib/server/task/task-audience.js', () => ({
+	taskNoticeRecipients: async (workOrderId: string, cap: string) =>
+		(await mockTaskAudience(workOrderId)) ??
+		(await mockStaffUsers(cap)).map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
+}));
+
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
 // production state — both branches are exercised below.
 const mockBuildReplyToAddress = vi.fn((threadId: string) => `reply+${threadId}.sig@replies.test`);
@@ -244,6 +257,66 @@ describe('what a shift notification calls the shift', () => {
 		await emit('volunteer.shift_reminder_due', { ...shift, title: 'Spring Deep Clean' });
 
 		expect(dispatchedTitle('volunteer_shift_reminder')).toContain('Spring Deep Clean');
+	});
+});
+
+/**
+ * A place reopening is the task's news (#2990): it goes to the position the task
+ * waits on, else its committee, and to every coordinator only when neither has
+ * anybody. A claim still goes to coordinators: confirming it needs the roster
+ * grant, which no committee carries.
+ */
+describe('shift notices route to the task first', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+		mockDispatch.mockClear();
+		mockTaskAudience.mockReset().mockResolvedValue(null);
+	});
+
+	const signup = {
+		signupId: 'sg-1',
+		shiftId: 'sh-1',
+		workOrderId: 'wo-1',
+		userId: 'vol-1',
+		userName: 'Sam',
+		userEmail: 'sam@test.com',
+		roleName: 'Door',
+		title: null,
+		eventTitle: null,
+		startsAt: '2026-09-06T00:45:00.000Z',
+		endsAt: '2026-09-06T01:30:00.000Z'
+	};
+	const recipientsOf = (type: string) =>
+		mockDispatch.mock.calls
+			.map(([a]) => a as { type: string; userId: string })
+			.filter((a) => a.type === type)
+			.map((a) => a.userId);
+
+	for (const [event, type] of [
+		['volunteer.signup_declined', 'volunteer_shift_declined'],
+		['volunteer.signup_cancelled', 'volunteer_shift_dropped']
+	] as const) {
+		it(`sends ${type} to the task's position holder and nobody else`, async () => {
+			mockTaskAudience.mockResolvedValue([
+				{ userId: 'holder', userName: 'Hol', userEmail: 'hol@test.com' }
+			]);
+			await emit(event, signup);
+			expect(mockTaskAudience).toHaveBeenCalledWith('wo-1');
+			expect(recipientsOf(type)).toEqual(['holder']);
+		});
+
+		it(`sends ${type} to every coordinator when the task routes nowhere`, async () => {
+			await emit(event, signup);
+			expect(recipientsOf(type)).toEqual(['staff-1', 'staff-2']);
+		});
+	}
+
+	it('still sends a claim to every coordinator', async () => {
+		mockTaskAudience.mockResolvedValue([
+			{ userId: 'holder', userName: 'Hol', userEmail: 'hol@test.com' }
+		]);
+		await emit('volunteer.signup_claimed', signup);
+		expect(recipientsOf('volunteer_shift_claimed')).toEqual(['staff-1', 'staff-2']);
 	});
 });
 
@@ -1670,6 +1743,13 @@ describe('committee show work due (#1709)', () => {
 		expect(sent.email.subject).toContain('Poster art made');
 		expect(sent.email.subject).toContain('Friday Night Fuzz');
 		expect(detailText(sent.email)).toContain('Committee: Art and Merchandise Committee');
+	});
+
+	// #2990: the show's lead is not on the committee, so their mail opens the show.
+	it("links the event lead's digest to the show", async () => {
+		mockDispatch.mockClear();
+		await emit('volunteer.deliverable_due', digest({ ...item, eventId: 'evt-1', forLead: true }));
+		expect(calls()[0].href).toBe('/staff/events/evt-1/production');
 	});
 
 	it('names a grant item by its project, two weeks ahead', async () => {

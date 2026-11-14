@@ -15,8 +15,10 @@ import {
 	getNotificationType,
 	NOTIFICATION_CAPABILITIES,
 	preferenceTypesFor,
-	receivable
+	receivable,
+	SEAT_HOLDER
 } from '#lib/server/db/schema/notification.js';
+import { seatsOf } from '#lib/server/task/can-act.js';
 
 function requireUser() {
 	const { locals } = getRequestEvent();
@@ -44,17 +46,23 @@ export const markAllNotificationsRead = command(async () => {
 // Preferences
 // ---------------------------------------------------------------------------
 
-/** Which of the capabilities notification types are gated on the caller holds. */
-async function heldNotificationCaps(): Promise<Set<string>> {
-	const held = await Promise.all(
-		NOTIFICATION_CAPABILITIES.map(async (c) => [c, await can(c)] as const)
-	);
-	return new Set(held.filter(([, ok]) => ok).map(([c]) => c));
+/** Which of the capabilities notification types are gated on the caller holds, and a seat. */
+async function heldNotificationCaps(userId: string): Promise<Set<string>> {
+	const [held, seats] = await Promise.all([
+		Promise.all(NOTIFICATION_CAPABILITIES.map(async (c) => [c, await can(c)] as const)),
+		seatsOf(userId).limit(1)
+	]);
+	const out = new Set<string>(held.filter(([, ok]) => ok).map(([c]) => c));
+	if (seats.length > 0) out.add(SEAT_HOLDER);
+	return out;
 }
 
 export const getNotificationPreferences = query(async () => {
 	const user = requireUser();
-	const [prefs, held] = await Promise.all([getAllPreferences(user.id), heldNotificationCaps()]);
+	const [prefs, held] = await Promise.all([
+		getAllPreferences(user.id),
+		heldNotificationCaps(user.id)
+	]);
 	return preferenceTypesFor(held).map((t) => ({
 		key: t.key,
 		label: t.label,
@@ -80,7 +88,8 @@ export const setNotificationPreference = command(
 			throw error(400, 'Cannot change preferences for mandatory notifications');
 		// A member must not be able to write a row for a type they can never
 		// receive, whatever the table happened to render.
-		if (!receivable(typeDef, await heldNotificationCaps())) throw error(403, 'Not authorized');
+		if (!receivable(typeDef, await heldNotificationCaps(user.id)))
+			throw error(403, 'Not authorized');
 
 		await setPreference(user.id, notificationType, { email, inApp, sms });
 		void getMemberAccountPage().refresh();

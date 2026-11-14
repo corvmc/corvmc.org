@@ -1,8 +1,13 @@
 import { error } from '@sveltejs/kit';
-import { and, eq, exists, inArray, isNull, notExists, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, not, notExists, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { workOrder, workOrderAssignee } from '#lib/server/db/schema/volunteer.js';
-import { group, groupMember } from '#lib/server/db/schema/group.js';
+import {
+	group,
+	groupMember,
+	groupPosition,
+	groupPositionHolder
+} from '#lib/server/db/schema/group.js';
 import { requireUser, userHasCapability } from '#lib/server/authorization.js';
 
 /**
@@ -10,7 +15,7 @@ import { requireUser, userHasCapability } from '#lib/server/authorization.js';
  * hand it back. A duty grants that and nothing on the linked record or show
  * (#2983 rule 2). Editing, assigning others and calling it off need the grant.
  */
-export type TaskActReason = 'assignee' | 'department' | 'grant';
+export type TaskActReason = 'assignee' | 'position' | 'department' | 'grant';
 
 /** The grant that covers any task, scoped by the row's committee and project. */
 export const TASK_GRANT = 'volunteer.manageShifts' as const;
@@ -30,6 +35,49 @@ export function seatsOf(userId: string) {
 			)
 		);
 }
+
+/**
+ * The task is tagged for a position the user holds through an active seat on
+ * a live committee (#2990). The position must be the task's own committee's,
+ * so a tag that outlived a reassignment admits nobody.
+ */
+export function heldBy(userId: string): SQL {
+	return exists(
+		db
+			.select({ one: sql`1` })
+			.from(groupPositionHolder)
+			.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+			.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.where(
+				and(
+					eq(groupPosition.id, workOrder.positionId),
+					eq(groupPosition.groupId, workOrder.groupId),
+					eq(groupMember.userId, userId),
+					eq(groupMember.status, 'active'),
+					eq(group.kind, 'committee'),
+					isNull(group.deletedAt)
+				)
+			)
+	);
+}
+
+/** The task's position has an active holder, so it waits on them, not the department. */
+const positionFilled = () =>
+	exists(
+		db
+			.select({ one: sql`1` })
+			.from(groupPositionHolder)
+			.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+			.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+			.where(
+				and(
+					eq(groupPosition.id, workOrder.positionId),
+					eq(groupPosition.groupId, workOrder.groupId),
+					eq(groupMember.status, 'active')
+				)
+			)
+	);
 
 /** The user is on the task's `work_order_assignee` rows; `open` drops ones they finished. */
 export function assignedTo(userId: string, opts: { open?: boolean } = {}): SQL {
@@ -60,15 +108,22 @@ const anyAssignee = () =>
 
 /**
  * The open tasks waiting on this user, for "Your tasks" on both dashboards:
- * assigned to them and not yet done by them, or in a committee they sit on
- * with nobody assigned. A subset of what `canActOnTask` admits, so a list
- * never offers a task its remotes refuse.
+ * assigned to them and not yet done by them; else, with nobody assigned,
+ * tagged for a position they hold, or in a committee they sit on whose
+ * position (if any) is vacant. A subset of what `canActOnTask` admits, so a
+ * list never offers a task its remotes refuse.
  */
 export function waitingOn(userId: string): SQL {
 	return and(
 		isNull(workOrder.resolvedAt),
 		isNull(workOrder.cancelledAt),
-		or(assignedTo(userId, { open: true }), and(inDepartmentOf(userId), notExists(anyAssignee())))
+		or(
+			assignedTo(userId, { open: true }),
+			and(
+				notExists(anyAssignee()),
+				or(heldBy(userId), and(inDepartmentOf(userId), not(positionFilled())))
+			)
+		)
 	)!;
 }
 
@@ -85,6 +140,7 @@ export async function canActOnTask(
 			groupId: workOrder.groupId,
 			projectId: workOrder.projectId,
 			assignee: sql<number>`${assignedTo(userId)}`,
+			position: sql<number>`${heldBy(userId)}`,
 			department: sql<number>`${inDepartmentOf(userId)}`
 		})
 		.from(workOrder)
@@ -92,6 +148,7 @@ export async function canActOnTask(
 		.limit(1);
 	if (!row) return null;
 	if (Number(row.assignee)) return 'assignee';
+	if (Number(row.position)) return 'position';
 	if (Number(row.department)) return 'department';
 	const scope = { groupId: row.groupId, projectId: row.projectId };
 	return (await userHasCapability(userId, TASK_GRANT, scope)) ? 'grant' : null;

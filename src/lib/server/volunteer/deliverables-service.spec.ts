@@ -32,6 +32,10 @@ beforeEach(() => {
 		'artifact_request',
 		'directory_entry',
 		'event_listing',
+		'production',
+		'project',
+		'group_position_holder',
+		'group_position',
 		'group_member'
 	])
 		exec(`delete from ${t}`);
@@ -146,6 +150,22 @@ describe('reassignDeliverable', () => {
 		expect(await svc.getDeliverableOwner('x')).toMatchObject({ groupId: null });
 	});
 
+	// A position is its committee's (#2990): handing the item on drops the tag.
+	it('drops the position tag only when the committee changes', async () => {
+		exec(`insert into group_position (id, group_id, name) values ('designer', 'art', 'Designer')`);
+		wo('x', { group_id: 'art', position_id: 'designer' });
+		const tag = () =>
+			(
+				sqlite.prepare(`select position_id as p from work_order where id = 'x'`).get() as {
+					p: string | null;
+				}
+			).p;
+		await svc.reassignDeliverable('x', 'art');
+		expect(tag()).toBe('designer');
+		await svc.reassignDeliverable('x', 'book');
+		expect(tag()).toBeNull();
+	});
+
 	it('refuses a band, and an item that is already closed', async () => {
 		wo('x', { group_id: 'art' });
 		wo('shut', { group_id: 'art', resolved_at: T0 });
@@ -174,6 +194,31 @@ describe('listDeliverablesDueBetween', () => {
 		const by = Object.fromEntries(rows.map((r) => [r.id, r.recipients.map((p) => p.userName)]));
 		expect(by).toEqual({ free: ['Bo'], held: ['Ada'] });
 		expect(rows[0]).toMatchObject({ groupSlug: 'art', groupName: 'Art and Merchandise Committee' });
+	});
+
+	// #2990: a tagged item waits on its position's holder, not the whole committee.
+	it("tells the position's holder in place of the committee", async () => {
+		exec(`insert into group_member (id, group_id, user_id, role, status) values
+			('m1', 'art', 'u1', 'member', 'active')`);
+		exec(`insert into group_position (id, group_id, name) values ('designer', 'art', 'Designer')`);
+		exec(`insert into group_position_holder (position_id, member_id) values ('designer', 'm1')`);
+		wo('tagged', { group_id: 'art', position_id: 'designer', due_at: T0 });
+
+		const [row] = await svc.listDeliverablesDueBetween(from, to);
+		expect(row.recipients.map((p) => p.userName)).toEqual(['Ada']);
+	});
+
+	// #2983 case 6: the event lead hears about the show's items too.
+	it("names the show's event lead", async () => {
+		exec(`insert into project (id, name, kind) values ('show', 'Friday', 'production')`);
+		exec(`update event_listing set project_id = 'show'`);
+		exec(`insert into production (id, project_id, producer_user_id) values ('pn', 'show', 'u3')`);
+		wo('poster', { group_id: 'art', due_at: T0 });
+		wo('report', { group_id: 'art', event_id: null, due_at: T0 });
+
+		const rows = await svc.listDeliverablesDueBetween(from, to);
+		const lead = Object.fromEntries(rows.map((r) => [r.id, r.lead?.userName ?? null]));
+		expect(lead).toEqual({ poster: 'Cy', report: null });
 	});
 
 	it('leaves out what is done, staff’s own work, and anything outside the band', async () => {

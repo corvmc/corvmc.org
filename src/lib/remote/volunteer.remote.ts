@@ -128,6 +128,10 @@ import {
 	unassignFromTask as unassignFromTaskService
 } from '#lib/server/volunteer/assignee-service.js';
 import { requireActOnTask } from '#lib/server/task/can-act.js';
+import {
+	setTaskPosition as setTaskPositionService,
+	taskPositionChoices
+} from '#lib/server/task/task-position.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
@@ -2620,7 +2624,18 @@ export const getTaskPage = query(z.string(), async (id) => {
 	const sections = project
 		? (await listSections(project.id)).map((sec) => ({ id: sec.id, name: sec.name }))
 		: [];
-	return { project, ...view, engagements, contractors, dependencies, dependencyOptions, sections };
+	// The committee's positions the task may wait on (#2990).
+	const position = await taskPositionChoices(id);
+	return {
+		project,
+		...view,
+		engagements,
+		contractors,
+		dependencies,
+		dependencyOptions,
+		sections,
+		position
+	};
 });
 
 /** A task's write: its project's committee (or staff holding `project.manage`), else the coordinator's. */
@@ -2649,6 +2664,21 @@ export const setTaskSection = form(
 			const task = await requireTaskInProject(projectId, data.id);
 			if (task.sectionId === sectionId) return { success: true };
 			await moveTask(projectId, data.id, { sectionId, index: Number.MAX_SAFE_INTEGER });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshWorkOrderPage(data.id);
+		return { success: true };
+	}
+);
+
+/** Tag a task for one of its committee's positions, or clear it (#2990). */
+export const setTaskPosition = form(
+	z.object({ id: z.string().min(1), positionId: z.string().optional() }),
+	async (data) => {
+		await guardTaskWrite(data.id);
+		try {
+			await setTaskPositionService(data.id, data.positionId || null);
 		} catch (err) {
 			mapDomainError(err);
 		}

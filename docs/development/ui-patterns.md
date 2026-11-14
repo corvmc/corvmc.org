@@ -1198,7 +1198,8 @@ them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. 
 ### The dashboard's own tasks
 
 **Your tasks** heads `/staff` (#2768) and `/member/volunteer`: open tasks assigned to the viewer
-and not marked done by them, plus unassigned tasks of a committee they sit on. Both lists filter
+and not marked done by them, plus unassigned tasks tagged for a position they hold or of a
+committee they sit on whose tagged position is vacant (#2990). Both lists filter
 on `waitingOn` in `src/lib/server/task/can-act.ts`, the list form of `canActOnTask` (#2989), so a
 row is always one its remotes accept. Overdue first, then by date. A row opens the record its
 `work_order_link` names when the viewer can open it, else the staff task page, else

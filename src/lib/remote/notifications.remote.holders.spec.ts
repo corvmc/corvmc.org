@@ -28,7 +28,10 @@ vi.mock('$app/server', () => {
 	};
 });
 
-const held = vi.hoisted(() => ({ caps: new Set<string>() }));
+const held = vi.hoisted(() => ({ caps: new Set<string>(), seat: false }));
+vi.mock('#lib/server/task/can-act.js', () => ({
+	seatsOf: () => ({ limit: async () => (held.seat ? [{ id: 'g-1' }] : []) })
+}));
 vi.mock('#lib/server/authorization.js', () => ({
 	can: async (cap: string) => held.caps.has(cap),
 	requireCapability: async () => ({ id: 'u-1' })
@@ -51,6 +54,7 @@ const save = (notificationType: string) =>
 
 beforeEach(() => {
 	held.caps = new Set();
+	held.seat = false;
 	setPreference.mockClear();
 });
 
@@ -76,5 +80,15 @@ describe('staff-only notification switches', () => {
 			inApp: true,
 			sms: false
 		});
+	});
+
+	// #2990: a committee's task notices reach its seats before any coordinator.
+	it('offers and saves a routed task notice for a committee seat', async () => {
+		held.seat = true;
+		const keys = (await remote.getNotificationPreferences()).map((t) => t.key);
+		expect(keys).toContain('volunteer_shift_dropped');
+		expect(keys).not.toContain('volunteer_shift_claimed');
+		await save('volunteer_shift_dropped');
+		expect(setPreference).toHaveBeenCalled();
 	});
 });

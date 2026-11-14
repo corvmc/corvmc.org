@@ -38,6 +38,11 @@ export interface NotificationTypeDef {
 	 */
 	forHolders?: readonly Capability[];
 	/**
+	 * Also reaches a committee seat: a task's notice goes to its position, then
+	 * its committee, before any capability holder (#2990).
+	 */
+	forSeats?: boolean;
+	/**
 	 * This type's email must never carry text a member wrote.
 	 *
 	 * Enforced in the email layer rather than at the call site: there are ~23
@@ -527,7 +532,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// and it belongs next to the shift rather than in their inbox.
 		description: 'Notification when somebody you invited to a shift says no',
 		defaults: { email: false, inApp: true, sms: false },
-		forHolders: ['volunteer.manageShifts']
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
 	},
 	{
 		key: 'volunteer_shift_claimed',
@@ -559,7 +565,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// coordinator's problem and nobody else's.
 		description: 'Notification when somebody comes off a shift and their place reopens',
 		defaults: { email: false, inApp: true, sms: false },
-		forHolders: ['volunteer.manageShifts']
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
 	},
 	{
 		key: 'volunteer_shift_cancelled',
@@ -623,7 +630,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Unstaffed orientation',
 		description: 'A day before an orientation shift that has no volunteer signed up',
 		defaults: { email: true, inApp: true, sms: false },
-		forHolders: ['volunteer.manageShifts']
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
 	},
 	{
 		key: 'community_event_submitted',
@@ -770,9 +778,14 @@ export function preferenceTypesFor(held: ReadonlySet<string>): NotificationTypeD
 	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && receivable(t, held));
 }
 
+/** In `held`: the person sits on a committee, so `forSeats` types reach them. */
+export const SEAT_HOLDER = 'committee seat';
+
 /** Can someone holding `held` ever receive this type? */
 export function receivable(t: NotificationTypeDef, held: ReadonlySet<string>): boolean {
-	return !t.forHolders || t.forHolders.some((c) => held.has(c));
+	if (!t.forHolders) return true;
+	if (t.forSeats && held.has(SEAT_HOLDER)) return true;
+	return t.forHolders.some((c) => held.has(c));
 }
 
 /** Every capability some type is gated on, for resolving `held` once. */

@@ -40,6 +40,7 @@ import {
 } from '#lib/server/reservation/outstanding-fees.js';
 import { PAYMENT_DUE_BANDS, paymentDueKey } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { taskAudiences } from '#lib/server/task/task-audience.js';
 import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import { defineReminder, type ReminderDefinition } from './types';
@@ -201,22 +202,28 @@ function deliverablesDue(
 				new Date(now.getTime() + until * DAY),
 				projectKinds ? { projectKinds } : {}
 			);
-			return rows
-				.filter((r) => r.recipients.length > 0)
-				.map((r) => ({
-					subjectId: `${r.id}:${r.dueAt.toISOString()}`,
-					recipients: r.recipients,
-					item: {
-						stage,
-						workOrderId: r.id,
-						title: r.title,
-						eventTitle: r.eventTitle,
-						projectName: r.projectName,
-						dueAt: r.dueAt.toISOString(),
-						groupName: r.groupName,
-						groupSlug: r.groupSlug
-					}
-				}));
+			return rows.flatMap((r) => {
+				const subjectId = `${r.id}:${r.dueAt.toISOString()}`;
+				const item = {
+					stage,
+					workOrderId: r.id,
+					title: r.title,
+					eventTitle: r.eventTitle,
+					eventId: r.eventId,
+					projectName: r.projectName,
+					dueAt: r.dueAt.toISOString(),
+					groupName: r.groupName,
+					groupSlug: r.groupSlug
+				};
+				const owed = r.recipients.length > 0 ? [{ subjectId, recipients: r.recipients, item }] : [];
+				// The show's lead as a subject of its own, so their mail links to the show (#2990).
+				const { lead } = r;
+				if (!lead || r.recipients.some((p) => p.userId === lead.userId)) return owed;
+				return [
+					...owed,
+					{ subjectId: `${subjectId}:lead`, recipients: [lead], item: { ...item, forLead: true } }
+				];
+			});
 		}
 	});
 }
@@ -340,23 +347,33 @@ export const reminders: ReminderDefinition[] = [
 		async due(now) {
 			const rows = await listUnclaimedOrientationsBetween(now, new Date(now.getTime() + DAY));
 			if (rows.length === 0) return [];
-			const staff = await listUsersWithCapability('volunteer.manageShifts');
-			if (staff.length === 0) return [];
-			const recipients = staff.map((s) => ({
+			// The task's position or committee first (#2990), every coordinator otherwise.
+			const routed = await taskAudiences(rows.map((r) => r.workOrderId));
+			const staff = rows.every((r) => routed.has(r.workOrderId))
+				? []
+				: await listUsersWithCapability('volunteer.manageShifts');
+			const coordinators = staff.map((s) => ({
 				userId: s.id,
 				userName: s.name,
 				userEmail: s.email
 			}));
-			return rows.map((r) => ({
-				subjectId: `${r.workOrderId}:${r.startsAt.toISOString()}`,
-				recipients,
-				item: {
-					workOrderId: r.workOrderId,
-					memberName: r.memberName,
-					startsAt: r.startsAt.toISOString(),
-					endsAt: r.endsAt.toISOString()
-				}
-			}));
+			return rows.flatMap((r) => {
+				const recipients = routed.get(r.workOrderId)?.recipients ?? coordinators;
+				return recipients.length === 0
+					? []
+					: [
+							{
+								subjectId: `${r.workOrderId}:${r.startsAt.toISOString()}`,
+								recipients,
+								item: {
+									workOrderId: r.workOrderId,
+									memberName: r.memberName,
+									startsAt: r.startsAt.toISOString(),
+									endsAt: r.endsAt.toISOString()
+								}
+							}
+						];
+			});
 		}
 	}),
 

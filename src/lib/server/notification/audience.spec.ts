@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NOTIFICATION_TYPES, preferenceTypesFor } from '#lib/server/db/schema/notification.js';
+import {
+	NOTIFICATION_TYPES,
+	preferenceTypesFor,
+	SEAT_HOLDER
+} from '#lib/server/db/schema/notification.js';
 import { capabilities } from '#lib/config.js';
 
 const capabilityList = Object.entries(capabilities).flatMap(([r, as]) =>
@@ -41,6 +45,18 @@ describe('notification audience', () => {
 		expect(moderator).toContain('content_flagged');
 		expect(moderator).toContain('reservation_reminder');
 		expect(moderator).not.toContain('volunteer_hours_submitted');
+	});
+
+	// #2990: a task's notice reaches its position or committee before any holder.
+	it('offers a committee seat the task notices routed to it, and no other staff type', () => {
+		const seat = preferenceTypesFor(new Set([SEAT_HOLDER])).map((t) => t.key);
+		const routed = NOTIFICATION_TYPES.filter((t) => t.forSeats).map((t) => t.key);
+
+		expect(routed.sort()).toEqual(
+			['orientation_unclaimed', 'volunteer_shift_declined', 'volunteer_shift_dropped'].sort()
+		);
+		expect(seat).toEqual(expect.arrayContaining(routed));
+		expect(seat).not.toContain('volunteer_shift_claimed');
 	});
 
 	it('gates every staff type on capabilities that exist', () => {

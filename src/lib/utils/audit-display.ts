@@ -210,7 +210,8 @@ const WORK_ORDER_FIELDS: Record<WorkOrderField, string> = {
 	capacity: 'places',
 	notes: 'briefing',
 	event: 'event',
-	equipment: 'equipment'
+	equipment: 'equipment',
+	position: 'position'
 };
 
 const PROJECT_FIELDS: Record<ProjectField, string> = {

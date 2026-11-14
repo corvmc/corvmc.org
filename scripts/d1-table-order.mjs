@@ -109,6 +109,9 @@ export const tableOrder = [
 	'duty_list_item_dependency',
 	// References volunteer_role, project and user; work_order points back at it.
 	'maintenance_schedule',
+	// A committee's positions. References only group; work_order.position_id
+	// points at it, so it precedes work_order.
+	'group_position',
 	// references volunteer_role + event + duty_list + reservation, and is
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.
@@ -162,8 +165,7 @@ export const tableOrder = [
 	'group_member',
 	// Grant rows: each references only its carrier, and nothing references them.
 	'group_capability',
-	// A committee's positions; a holder references a position and a roster row.
-	'group_position',
+	// A holder references a position and a roster row.
 	'group_position_holder',
 	// References only `user`; its choices reference it and `group`, so the pair
 	// sits together and after both.
