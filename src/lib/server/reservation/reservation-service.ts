@@ -11,6 +11,7 @@ import {
 	desc,
 	asc,
 	count,
+	isNull,
 	isNotNull,
 	inArray,
 	notInArray,
