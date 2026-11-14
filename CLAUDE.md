@@ -108,7 +108,8 @@ lowest-ranked Up next or Todo item with no open PR. Add an issue you file with
 to place; move an item to In progress or In review as its PR opens. `gh` needs the `project`
 scope (`gh auth refresh -s project`).
 
-**Finish in the same turn:** commit, push, open the PR, arm `gh pr merge --auto` (no merge method,
+**Finish in the same turn:** commit, push, open the PR, run `node scripts/claude/pre-arm-check.mjs <n>`
+and follow its `Next:` line (stack, rebase, or arm; `/queue-triage` has the policy), arm `gh pr merge --auto` (no merge method,
 no `--admin`, no `--delete-branch`, no `gh pr update-branch`), then start `gh queue await <n>` with
 `run_in_background`. A PR that genuinely needs a human first is opened as a draft. A queue
 rejection disarms the PR and labels it `queue-rejected`; `/queue-triage` and the `qc` agent own
