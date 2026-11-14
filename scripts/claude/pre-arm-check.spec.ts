@@ -30,12 +30,17 @@ function pr(n: number, from: string, file: string, content: string): string {
 
 type Other = { number: number; queued?: boolean; armed?: boolean; merged?: boolean; oid: string };
 
-function run(subject: number, others: Other[]) {
+function run(subject: number, others: Other[], subjectOid = '') {
 	const fixture = join(root, 'state.json');
 	writeFileSync(
 		fixture,
 		JSON.stringify({
-			subject: { number: subject, headRefName: `pr-${subject}`, headRefOid: '', title: 'subject' },
+			subject: {
+				number: subject,
+				headRefName: `pr-${subject}`,
+				headRefOid: subjectOid,
+				title: 'subject'
+			},
 			others: others.map((o) => ({
 				number: o.number,
 				headRefName: `pr-${o.number}`,
@@ -117,6 +122,17 @@ describe('pre-arm-check', () => {
 		const r = run(1, [{ number: 2, queued: true, oid: base }]);
 		expect(r.exit).toBe(0);
 		expect(r.out).toContain('Stacked on #2');
+	});
+
+	it('reads the head GitHub reports when the pull ref has not moved yet', () => {
+		pr(1, 'main', 'other.ts', 'y\n');
+		const queued = pr(2, 'main', 'nav.ts', 'Q\nb\nc\n');
+		git('checkout', '-q', 'pr-1');
+		writeFileSync(join(work, 'nav.ts'), 'S\nb\nc\n');
+		git('commit', '-qam', 'pushed, pull ref not yet moved');
+		git('push', '-q', 'origin', 'HEAD:refs/heads/pr-1');
+		const r = run(1, [{ number: 2, queued: true, oid: queued }], git('rev-parse', 'HEAD'));
+		expect(r.exit).toBe(2);
 	});
 
 	it('sends a stack back to main when its base left the queue without merging', () => {

@@ -62,19 +62,25 @@ const label = (/** @type {Pr} */ p) =>
 
 /**
  * Fetches the heads the check merges: `main`, the subject, and every queued or armed PR. Pull refs
- * rather than branches, so a PR from a fork or with a renamed branch still resolves.
+ * rather than branches, so a PR from a fork or with a renamed branch still resolves. GitHub moves
+ * a pull ref seconds after the push, so a ref behind the head GitHub reports is fetched by SHA.
  *
  * @param {string} cwd @param {State} state
  */
 export function fetchHeads(cwd, state) {
-	const numbers = [state.subject.number, ...ahead(state).map((p) => p.number)];
+	const prs = [state.subject, ...ahead(state)];
 	git(cwd, [
 		'fetch',
 		'-q',
 		'origin',
 		'+refs/heads/main:refs/remotes/origin/main',
-		...numbers.map((n) => `+refs/pull/${n}/head:${ref(n)}`)
+		...prs.map((p) => `+refs/pull/${p.number}/head:${ref(p.number)}`)
 	]);
+	for (const p of prs) {
+		if (!p.headRefOid || git(cwd, ['rev-parse', ref(p.number)]).trim() === p.headRefOid) continue;
+		git(cwd, ['fetch', '-q', 'origin', p.headRefOid]);
+		git(cwd, ['update-ref', ref(p.number), p.headRefOid]);
+	}
 }
 
 const ahead = (/** @type {State} */ s) => s.others.filter((p) => p.queued || p.armed);
