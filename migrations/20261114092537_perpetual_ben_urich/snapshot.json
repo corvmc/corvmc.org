@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "97a20034-99f8-4e10-b5de-4d3dabd53ddb",
+  "id": "fc228583-696b-40cd-9ba5-405cc864a36b",
   "prevIds": [
-    "c9f30124-7c11-4257-bf83-ed4a87782eb9"
+    "c25e6662-19b7-41c0-9b7e-33432b1e3490"
   ],
   "ddl": [
     {
@@ -10927,6 +10927,16 @@
       "default": null,
       "generated": null,
       "name": "briefing_article_id",
+      "entityType": "columns",
+      "table": "volunteer_role"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "grant_lead_days",
       "entityType": "columns",
       "table": "volunteer_role"
     },

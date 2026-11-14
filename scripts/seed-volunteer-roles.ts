@@ -26,6 +26,8 @@ interface RoleSeed {
 	description: string;
 	/** Only applied when the role is created; an existing role keeps what staff ticked. */
 	capabilityGrants?: string[];
+	/** Days before the event its grants start; created roles only, like the grants. */
+	grantLeadDays?: number;
 }
 
 // Wording follows the volunteer interest form these came from — members
@@ -44,6 +46,14 @@ const ROLES: RoleSeed[] = [
 		// A confirmed door volunteer takes card payments and checks people in for that
 		// show, during the shift (#1630, #2794).
 		capabilityGrants: ['finance.collect', 'event.checkIn']
+	},
+	{
+		name: 'Vendor host',
+		group: 'at-shows',
+		description: 'Decide vendor applications for a market, check vendors in, and take table fees.',
+		// One market's host, from 30 days before it (#2993).
+		capabilityGrants: ['market.host'],
+		grantLeadDays: 30
 	},
 	{
 		name: 'Merch',
@@ -152,6 +162,7 @@ async function main() {
 				description: role.description,
 				group: role.group,
 				displayOrder: offset + i++,
+				grantLeadDays: role.grantLeadDays ?? 0,
 				isActive: true
 			})
 			.returning({ id: volunteerRole.id });

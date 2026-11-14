@@ -3125,6 +3125,8 @@
 	"staff_volunteer_roles_id_role_grants_card_role_grants_nothin_text": "This role grants nothing beyond claiming its shifts.",
 	"staff_volunteer_roles_id_role_grants_card_success_toast": "Grants saved",
 	"staff_volunteer_roles_id_role_grants_card_title": "Grants",
+	"staff_volunteer_roles_id_role_grants_card_lead_days_label": "Days before the event",
+	"staff_volunteer_roles_id_role_grants_card_lead_days_body": "Leave at 0 to start them with the shift.",
 	"staff_volunteer_roles_id_role_grants_card_volunteer_confirme_text": "A volunteer confirmed on a shift in this role can do these for that shift's event and no other. You can only grant what your own position allows.",
 	"staff_volunteer_roles_id_role_info_title": "Role info",
 	"staff_volunteer_roles_id_role_interested_card_cleared_today_title": "· {length} of {length2} cleared today",

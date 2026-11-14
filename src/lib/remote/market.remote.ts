@@ -3,7 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { eventScope } from '#lib/server/capability/record-scope.js';
 import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import {
@@ -53,12 +53,16 @@ import { mapDomainError } from '#lib/server/errors.js';
  *
  * The public half takes no session. Setup and the staff page, which carries
  * vendor contacts, guard on `event.manage`. Deciding, seating, withdrawals and
- * check-in also belong to the committees taking part in the market's project
- * (#1503, #2834), read off the row, never the request.
+ * check-in also belong to the committees on the market's project (#1503,
+ * #2834) and its vendor host (#2993), read off the row, never the request.
  */
 
-/** Members of a committee on the market's project, or staff holding `event.manage`. */
+/**
+ * The market's vendor host (`market.host` for this event, through a shift
+ * role), members of a committee on its project, or staff holding `event.manage`.
+ */
 async function requireMarketDecider(eventId: string) {
+	if (await can('market.host', { eventId })) return { user: requireUser() };
 	return requireProjectCommittee(await getMarketProjectId(eventId), 'event.manage');
 }
 

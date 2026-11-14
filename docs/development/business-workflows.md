@@ -694,6 +694,8 @@ recorded from any browser.
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
   shift. Only collective-sold shows are offered (#1629).
+- **Lead time (#2993):** a role grant opens at the shift's start unless the role sets
+  `grant_lead_days`, which opens it that many days before the event (`grantWindow`).
 - **Door list:** the shift page's Check people in list and `checkInAsVolunteer` take
   `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
   on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
@@ -2551,6 +2553,12 @@ Accepted vendors are listed on the event page.
   (`getMarketOwnerGroupId`, read off the vendor's row), with `event.manage` as staff cover
   (#1503). Committee members decide from `/member/groups/[slug]/markets/[eventId]`, reached from
   the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
+- **Vendor host (#2993):** a market's vendor host passes the same guard (`requireMarketDecider`)
+  through `market.host`, a volunteer-role grant scoped to the vendor's own market, read off the
+  vendor's row. The role's `grant_lead_days` opens it that many days before the market; it closes
+  7 days after the shift. The host decides, seats, withdraws, checks in and takes table fees from
+  `/member/volunteer/markets/[eventId]`, linked from their shift page. Setup and vendor contacts
+  stay with `event.manage`. Staff set the lead time beside the role's grants.
 - **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
   returns accepted rows only.
 - **Table fee (#1502):** the market's setup carries a per-table fee and an opt-in sliding scale
@@ -2562,8 +2570,9 @@ Accepted vendors are listed on the event page.
 - **Refunds:** CMC cancelling refunds through `refund()` — declining an accepted vendor who
   paid, or `event.cancelled` for the market (`refundMarketFees`). A vendor who withdraws is
   not refunded.
-- **Market day (#1505):** `/staff/events/[id]/vendors/check-in` and
-  `/member/groups/[slug]/markets/[eventId]/check-in` both render
+- **Market day (#1505):** `/staff/events/[id]/vendors/check-in`,
+  `/member/groups/[slug]/markets/[eventId]/check-in` and
+  `/member/volunteer/markets/[eventId]/check-in` all render
   `src/lib/components/market/VendorCheckIn.svelte` over `getMarketDayCheckIn`, which lists
   accepted vendors and no-shows with no contact detail. `checkInVendorForm` stamps
   `checked_in_at` on an accepted vendor, or clears it. `markNoShowForm` moves `accepted` to

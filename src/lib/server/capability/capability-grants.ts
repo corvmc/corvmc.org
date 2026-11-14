@@ -7,6 +7,7 @@ import { eventListing } from '#lib/server/db/schema/event.js';
 import { production } from '#lib/server/db/schema/production.js';
 import { TERMINAL_PRODUCTION_STATUSES } from '#lib/production/status.js';
 import {
+	volunteerRole,
 	volunteerRoleCapability,
 	volunteerShift,
 	volunteerSignup,
@@ -152,14 +153,20 @@ type ShiftWindowRow = {
 	endsAt: Date | null;
 	eventStartsAt: Date;
 	eventEndsAt: Date | null;
+	/** The role's `grantLeadDays`; absent or zero opens the window at the shift's start. */
+	leadDays?: number | null;
 };
 
 /**
- * When a role grant is live: from the shift's start until `graceDays` after it
- * ends. An assignment has no shift, so it borrows its task's event's times.
+ * When a role grant is live: from the shift's start, or `leadDays` before the
+ * event when the role sets a lead time, until `graceDays` after it ends. An
+ * assignment has no shift, so it borrows its task's event's times.
  */
 export function grantWindow(row: ShiftWindowRow, graceDays: number): { from: Date; until: Date } {
-	const from = row.startsAt ?? row.eventStartsAt;
+	const start = row.startsAt ?? row.eventStartsAt;
+	const lead = row.leadDays ?? 0;
+	const early = new Date(row.eventStartsAt.getTime() - lead * DAY_MS);
+	const from = lead > 0 && early < start ? early : start;
 	const end = row.endsAt ?? row.eventEndsAt ?? row.eventStartsAt;
 	return { from, until: new Date(end.getTime() + graceDays * DAY_MS) };
 }
@@ -168,7 +175,8 @@ export function grantWindow(row: ShiftWindowRow, graceDays: number): { from: Dat
  * Does `userId` hold `cap` for `eventId` through a volunteer role? Needs, on a
  * live task for that event in a role that grants `cap`, either a confirmed or
  * completed sign-up on a live shift (its window) or an assignment (the event's
- * window), with `now` inside the grant window (#2518).
+ * window), with `now` inside the grant window (#2518), which opens early when
+ * the role sets a lead time (#2993).
  */
 export async function roleGrantAllows(
 	userId: string,
@@ -190,7 +198,8 @@ export async function roleGrantAllows(
 				startsAt: volunteerShift.startsAt,
 				endsAt: volunteerShift.endsAt,
 				eventStartsAt: eventListing.startsAt,
-				eventEndsAt: eventListing.endsAt
+				eventEndsAt: eventListing.endsAt,
+				leadDays: volunteerRole.grantLeadDays
 			})
 			.from(volunteerSignup)
 			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
@@ -199,6 +208,7 @@ export async function roleGrantAllows(
 				volunteerRoleCapability,
 				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
 			)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.where(
 				and(
@@ -213,7 +223,8 @@ export async function roleGrantAllows(
 				startsAt: sql<Date | null>`null`,
 				endsAt: sql<Date | null>`null`,
 				eventStartsAt: eventListing.startsAt,
-				eventEndsAt: eventListing.endsAt
+				eventEndsAt: eventListing.endsAt,
+				leadDays: volunteerRole.grantLeadDays
 			})
 			.from(workOrderAssignee)
 			.innerJoin(workOrder, eq(workOrder.id, workOrderAssignee.workOrderId))
@@ -221,6 +232,7 @@ export async function roleGrantAllows(
 				volunteerRoleCapability,
 				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
 			)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.where(and(onTask, eq(workOrderAssignee.userId, userId)))
 	]);

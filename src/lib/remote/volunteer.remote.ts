@@ -218,7 +218,9 @@ import {
 	VOLUNTEER_NAME_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
-	VOLUNTEER_ROLE_NAME_MAX
+	VOLUNTEER_ROLE_NAME_MAX,
+	ROLE_GRANT_LEAD_DAYS_MAX,
+	type Capability
 } from '#lib/config.js';
 import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 import { clubInstant } from '#lib/utils/format.js';
@@ -1491,12 +1493,17 @@ export const setRoleCertifications = form(
 export const setVolunteerRoleGrants = form(
 	z.object({
 		roleId: z.string().min(1),
-		capabilities: z.array(z.string().min(1)).max(20).default([])
+		capabilities: z.array(z.string().min(1)).max(20).default([]),
+		/** Days before the event the grants start. The form always sends it, so a cleared box is 0. */
+		grantLeadDays: z.number().int().min(0).max(ROLE_GRANT_LEAD_DAYS_MAX).optional()
 	}),
 	async (data) => {
 		const user = await requireCapability('volunteer.manageRoles');
 		try {
-			await setRoleCapabilityGrants(data.roleId, data.capabilities, { editorId: user.id });
+			await setRoleCapabilityGrants(data.roleId, data.capabilities, {
+				editorId: user.id,
+				leadDays: data.grantLeadDays ?? 0
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -2778,22 +2785,26 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, door, till, filedIncidents, briefing, crewMates] = await Promise.all([
-		listWorkTasks(shift.workOrderId),
-		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
-		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
-		shift.eventId ? can('event.checkIn', { eventId: shift.eventId }) : Promise.resolve(false),
-		shift.eventId ? can('finance.collect', { eventId: shift.eventId }) : Promise.resolve(false),
-		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
-		shift.briefingArticleId
-			? resolveHelpReader(currentUser.id).then((reader) =>
-					listReadableArticles([shift.briefingArticleId!], reader)
-				)
-			: Promise.resolve([]),
-		shift.cancelledAt || shift.shiftCancelledAt
-			? Promise.resolve([])
-			: listCrewMates(signupId, shift.shiftId)
-	]);
+	const grants = (cap: Capability) =>
+		shift.eventId ? can(cap, { eventId: shift.eventId }) : Promise.resolve(false);
+	const [tasks, event, crew, door, till, host, filedIncidents, briefing, crewMates] =
+		await Promise.all([
+			listWorkTasks(shift.workOrderId),
+			shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
+			grants('incident.file'),
+			grants('event.checkIn'),
+			grants('finance.collect'),
+			grants('market.host'),
+			shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
+			shift.briefingArticleId
+				? resolveHelpReader(currentUser.id).then((reader) =>
+						listReadableArticles([shift.briefingArticleId!], reader)
+					)
+				: Promise.resolve([]),
+			shift.cancelledAt || shift.shiftCancelledAt
+				? Promise.resolve([])
+				: listCrewMates(signupId, shift.shiftId)
+		]);
 
 	return {
 		shift,
@@ -2815,6 +2826,9 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 		// Door payments for this show, while the role grants them (#2798).
 		doorSales:
 			till && event && !shift.cancelledAt && !shift.shiftCancelledAt ? { eventId: event.id } : null,
+		// The market's vendors, while the role grants hosting it (#2993).
+		vendorHost:
+			host && event && !shift.cancelledAt && !shift.shiftCancelledAt ? { eventId: event.id } : null,
 		// Crew of a show can file an incident for it, and see only what they filed.
 		incidentEventId: crew ? shift.eventId : null,
 		filedIncidents,

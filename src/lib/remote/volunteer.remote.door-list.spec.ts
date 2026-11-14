@@ -142,7 +142,8 @@ const shiftPageOffers: Record<string, string | null> = {
 	'finance.collect': 'doorSales',
 	'incident.file': 'incidentEventId',
 	// The event page offers the recap upload, and the shift page links the event.
-	'event.uploadRecap': null
+	'event.uploadRecap': null,
+	'market.host': 'vendorHost'
 };
 
 describe('what a shift page offers', () => {

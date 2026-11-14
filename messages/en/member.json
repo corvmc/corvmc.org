@@ -1045,6 +1045,8 @@
 	"member_volunteer_shifts_signup_id_checklist_title": "Checklist",
 	"member_volunteer_shifts_signup_id_door_title": "Door check-in",
 	"member_volunteer_shifts_signup_id_take_door_payments_label": "Take door payments",
+	"member_volunteer_shifts_signup_id_market_vendors_title": "Market vendors",
+	"member_volunteer_shifts_signup_id_review_vendors_label": "Review vendors",
 	"member_volunteer_shifts_signup_id_dropped_out_shift_body": "You dropped out of this shift.",
 	"member_volunteer_shifts_signup_id_file_incident_description_body": "One line.",
 	"member_volunteer_shifts_signup_id_file_incident_kind_label": "Kind",

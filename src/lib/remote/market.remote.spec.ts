@@ -52,9 +52,20 @@ vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: () => turnstileOk(
 
 let signedIn = false;
 const requested: string[] = [];
+// The markets the caller hosts, as a `market.host` role grant scoped to each (#2993).
+let hostOf: string[] = [];
+const hostScopes: unknown[] = [];
 vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
+		can: async (cap: string, scope?: { eventId?: string }) => {
+			if (cap === 'market.host') hostScopes.push(scope);
+			return signedIn && cap === 'market.host' && hostOf.includes(scope?.eventId ?? '');
+		},
+		requireUser: () => {
+			if (!signedIn) throw error(401, 'Not authenticated');
+			return { id: 'host-1', name: 'Hana Host' };
+		},
 		requireCapability: async (cap: string) => {
 			requested.push(cap);
 			if (!signedIn) throw error(401, 'Not authenticated');
@@ -113,7 +124,8 @@ const svc = vi.hoisted(() => ({
 	listMarketDayVendors: vi.fn(async () => []),
 	checkInVendor: vi.fn(async () => ({ eventId: 'evt-1' })),
 	markVendorNoShow: vi.fn(async () => ({ eventId: 'evt-1' })),
-	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' }))
+	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' })),
+	resendDecisionMessage: vi.fn(async () => null)
 }));
 vi.mock('#lib/server/market/market-service.js', () => svc);
 
@@ -147,6 +159,8 @@ beforeEach(() => {
 	signedIn = false;
 	staff = true;
 	committeeOf = [];
+	hostOf = [];
+	hostScopes.length = 0;
 	requested.length = 0;
 	guardedOn.length = 0;
 	vi.clearAllMocks();
@@ -418,5 +432,62 @@ describe('market day: seating, withdrawals, check-in, no-shows and invite-back (
 		staff = false;
 		committeeOf = [];
 		await expect(remote.getMarketDayCheckIn('evt-1')).rejects.toMatchObject({ status: 403 });
+	});
+});
+
+describe("a market's vendor host (#2993)", () => {
+	const decide = () =>
+		submit(remote.decideVendorForm, { vendorId: 'v-1', decision: 'accepted', message: 'In' });
+	const hostWrites: [string, () => Promise<unknown>][] = [
+		['decideVendorForm', decide],
+		['setTableLabelForm', () => submit(remote.setTableLabelForm, { vendorId: 'v-1' })],
+		['withdrawVendorForm', () => submit(remote.withdrawVendorForm, { vendorId: 'v-1' })],
+		[
+			'checkInVendorForm',
+			() => submit(remote.checkInVendorForm, { vendorId: 'v-1', arrived: 'yes' })
+		],
+		['markNoShowForm', () => submit(remote.markNoShowForm, { vendorId: 'v-1', noShow: 'yes' })],
+		[
+			'inviteBackForm',
+			() => submit(remote.inviteBackForm, { vendorId: 'v-1', inviteBack: 'no', note: '' })
+		],
+		['resendVendorDecisionForm', () => submit(remote.resendVendorDecisionForm, { vendorId: 'v-1' })]
+	];
+
+	beforeEach(() => {
+		signedIn = true;
+		staff = false;
+	});
+
+	it.each(hostWrites)("%s admits the host of the vendor's own market", async (_name, call) => {
+		hostOf = ['evt-1'];
+		await call();
+		expect(hostScopes).toContainEqual({ eventId: 'evt-1' });
+	});
+
+	it.each(hostWrites)('%s refuses the host of another market', async (_name, call) => {
+		hostOf = ['evt-2'];
+		await expect(call()).rejects.toMatchObject({ status: 403 });
+		expect(hostScopes).toContainEqual({ eventId: 'evt-1' });
+	});
+
+	it('records the decision as the host', async () => {
+		hostOf = ['evt-1'];
+		await decide();
+		expect(svc.decideApplication).toHaveBeenCalledWith(
+			'v-1',
+			expect.objectContaining({ decision: 'accepted' }),
+			{ id: 'host-1', name: 'Hana Host' }
+		);
+	});
+
+	it('shows the host the applications and the day-of list for that market only', async () => {
+		hostOf = ['evt-1'];
+		svc.getMarketDay.mockResolvedValue({ eventId: 'evt-1' } as never);
+		await expect(remote.getCommitteeMarketVendors('evt-1')).resolves.toBeTruthy();
+		await expect(remote.getMarketDayCheckIn('evt-1')).resolves.toBeTruthy();
+		await expect(remote.getCommitteeMarketVendors('evt-2')).rejects.toMatchObject({ status: 403 });
+		await expect(remote.getMarketDayCheckIn('evt-2')).rejects.toMatchObject({ status: 403 });
+		svc.getMarketDay.mockReset();
 	});
 });
