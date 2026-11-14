@@ -57,7 +57,7 @@ import {
 	freeHoursResetAt
 } from '#lib/server/reservation/reservation-credit-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
-import { confirmedUnpaidSql } from '#lib/server/reservation/payment-due.js';
+import { owesMoneySql } from '#lib/server/reservation/payment-due.js';
 import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
 import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
 import { getOpenRemoval, listRemovals } from '#lib/server/moderation/removal-service.js';
@@ -753,7 +753,7 @@ export const getMemberDashboard = query(async () => {
 			.from(reservation)
 			.where(
 				and(
-					confirmedUnpaidSql(),
+					owesMoneySql(),
 					gte(reservation.startsAt, nowDate),
 					lte(reservation.startsAt, bookingLeadHorizon(nowDate)),
 					or(

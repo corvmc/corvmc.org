@@ -1,5 +1,6 @@
 import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
 import { listPaymentRemindersSent } from '#lib/server/reservation/payment-reminder.js';
+import { payableStatusSql } from '#lib/server/reservation/payment-due.js';
 import {
 	recordReservationCash,
 	recordReservationCredit
@@ -1317,7 +1318,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
-		.where(and(eq(reservation.id, opts.reservationId), eq(reservation.status, 'confirmed')));
+		.where(and(eq(reservation.id, opts.reservationId), payableStatusSql()));
 
 	return { remainingCents: 0, settled: true };
 }
@@ -1866,7 +1867,7 @@ export const payForReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { isBooker, backPath } = await requireReservationPayer(row);
-		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (!isAwaitingPayment(row)) throw error(400, 'Not eligible for payment');
 		// Spending free hours is the booker's call; a bandmate only pays.
 		if (data.skipPayment === 'on' && !isBooker) throw error(403, 'Not your reservation');
 
@@ -1931,7 +1932,7 @@ export const payReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { backPath } = await requireReservationPayer(row);
-		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (!isAwaitingPayment(row)) throw error(400, 'Not eligible for payment');
 
 		// No window gate: free hours settle a covered session before the next
 		// reset at any time, and anything else is a real charge (#2060).

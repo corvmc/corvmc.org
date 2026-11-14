@@ -63,8 +63,10 @@ describe('reservationTrack', () => {
 		expect(track({ bookerType: 'production', cashDueCents: null, endsAt: ended })).toBe('covered');
 	});
 
-	it('a completed booking is never Payment due', () => {
-		expect(track({ status: 'completed', endsAt: ended })).toBe('covered');
+	it('a completed booking still owing is Payment due, and a no-show is not (#3003)', () => {
+		expect(track({ status: 'completed', endsAt: ended })).toBe('payment_due');
+		expect(track({ status: 'completed', endsAt: ended, cashDueCents: null })).toBe('payment_due');
+		expect(track({ status: 'no_show', endsAt: ended })).toBe('no_show');
 	});
 });
 
@@ -159,6 +161,16 @@ describe('visibleActions comp (#1818)', () => {
 			});
 			expect(actions.has('comp')).toBe(true);
 		}
+	});
+
+	it('offers cash received and comp on a completed booking still owing (#3003)', () => {
+		const actions = visibleActions('completed', past, pastEnd, null, new Date(), {
+			cashDueCents: 1500,
+			paidAt: null
+		});
+		expect(actions.has('cashReceived')).toBe(true);
+		expect(actions.has('comp')).toBe(true);
+		expect(actions.has('complete')).toBe(false);
 	});
 
 	it('does not offer comp on a confirmed booking that owes nothing', () => {
@@ -264,6 +276,12 @@ describe('memberPayAction', () => {
 	it('a refunded booking or an event hold offers nothing (#2991)', () => {
 		expect(memberPayAction({ ...owed, refundedAt: now })).toBeNull();
 		expect(memberPayAction({ ...owed, bookerType: 'production' })).toBeNull();
+	});
+
+	it('a completed, unpaid reservation offers payment, a no-show does not (#3003)', () => {
+		expect(memberPayAction({ ...owed, status: 'completed' })).toBe('balance');
+		expect(isAwaitingPayment({ ...owed, status: 'completed' })).toBe(true);
+		expect(memberPayAction({ ...owed, status: 'no_show' })).toBeNull();
 	});
 
 	it('only offers a confirmed balance the server gate accepts', () => {
