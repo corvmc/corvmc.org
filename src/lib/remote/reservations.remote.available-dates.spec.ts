@@ -12,6 +12,7 @@ import { mockUser } from '#lib/server/db/test-factory.js';
 // ---------------------------------------------------------------------------
 
 const MAX_ADVANCE_DAYS = 14;
+const TEACHING_MAX_ADVANCE_DAYS = 60;
 
 // Mutable so a test can exercise a fractional advance-day config.
 let maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
@@ -30,6 +31,8 @@ vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff,
 		minDurationHours: 1,
+		teachingMinDurationHours: 0.5,
+		teachingMaxAdvanceDaysOneoff: TEACHING_MAX_ADVANCE_DAYS,
 		timeSlotMinutes: 30
 	}))
 }));
@@ -83,6 +86,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js')) as any;
+const { getAvailableSlotsForDates } = await import('#lib/server/reservation/conflict-service.js');
 
 describe('getAvailableDates window', () => {
 	it('offers exactly maxAdvanceDaysOneoff days starting today, and no farther', async () => {
@@ -114,5 +118,30 @@ describe('getAvailableDates window', () => {
 		} finally {
 			maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
 		}
+	});
+});
+
+// #2957: the floor and the window are the booker's, as `validateBooking` reads them.
+describe('getAvailableDates for a teaching booking', () => {
+	it('offers a day whose only gap is a half-hour, and withholds it from a member', async () => {
+		const halfHourOnly = [
+			{ startTime: '09:00', available: true },
+			{ startTime: '09:30', available: false }
+		];
+		vi.mocked(getAvailableSlotsForDates).mockImplementation(
+			async (dates: string[]) => new Map(dates.map((d) => [d, halfHourOnly])) as never
+		);
+		try {
+			expect((await getAvailableDates('instructor')).dates).not.toHaveLength(0);
+			expect((await getAvailableDates('user')).dates).toHaveLength(0);
+		} finally {
+			vi.mocked(getAvailableSlotsForDates).mockImplementation(
+				async (dates: string[]) => new Map(dates.map((d) => [d, openDay])) as never
+			);
+		}
+	});
+
+	it('offers the teaching window of days', async () => {
+		expect((await getAvailableDates('instructor')).dates).toHaveLength(TEACHING_MAX_ADVANCE_DAYS);
 	});
 });

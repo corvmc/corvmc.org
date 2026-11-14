@@ -88,7 +88,12 @@ import { orientationForReservation } from '#lib/server/volunteer/orientation-ser
 import { mapDomainError } from '#lib/server/errors.js';
 import { isAwaitingPayment, isOverdue, isTerminalStatus } from '#lib/utils/reservation-actions.js';
 import { bookerTypes, type BookerType } from '#lib/config.js';
-import { getReservationConfig, getBookingTerms, termsFor } from '#lib/server/reservation/config.js';
+import {
+	getReservationConfig,
+	getBookingTerms,
+	minSlotsFor,
+	termsFor
+} from '#lib/server/reservation/config.js';
 import {
 	assertFeeGateAllows,
 	doorCodeHeldSince,
@@ -727,14 +732,16 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
+	// Staff book for a member or a band, never as a teacher.
+	const terms = termsFor('user', reservationConfig);
 
 	return {
 		date: dateStr,
 		slots,
 		config: {
-			hourlyRateCents: reservationConfig.hourlyRateCents,
+			hourlyRateCents: terms.hourlyRateCents,
 			slotMinutes: reservationConfig.timeSlotMinutes,
-			minDurationHours: reservationConfig.minDurationHours,
+			minDurationHours: terms.minDurationHours,
 			maxDurationHours: reservationConfig.maxDurationHours
 		}
 	};
@@ -759,14 +766,14 @@ async function viewerNotice(
 export const getAvailableDates = query(z.enum(bookerTypes).optional(), async (bookerType) => {
 	const config = await getReservationConfig();
 	const notice = await viewerNotice(config, bookerType);
-	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
+	const minSlots = minSlotsFor(bookerType, config);
 	// Floor, not ceil: the validator (validateBooking) rejects any start *instant*
 	// more than `maxAdvanceDaysOneoff * 24h` past now. A whole calendar day is only
 	// fully bookable when its latest instant is still within that window, i.e. up to
 	// offset `floor(maxAdvanceDays) - 1`. Using ceil could offer a day whose later
 	// slots exceed a fractional limit (e.g. 14.5), recreating the "dead zone" where
 	// the picker shows a date that then 500s on Book & Pay.
-	const days = Math.floor(config.maxAdvanceDaysOneoff);
+	const days = Math.floor(termsFor(bookerType ?? 'user', config).maxAdvanceDaysOneoff);
 	const tz = DEFAULT_TIMEZONE;
 	const todayStr = formatDateInTz(new Date(), tz);
 
@@ -807,7 +814,7 @@ export const getReservationStartTimes = query(
 		const notice = await viewerNotice(reservationConfig, bookerType);
 		const slots = await getAvailableSlots(dateStr, { minAdvanceMinutes: notice.minutes });
 
-		const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
+		const minSlots = minSlotsFor(bookerType, reservationConfig);
 		const tourSlots = tourSlotsFor(notice.tourMinutes, reservationConfig);
 
 		// Every operating-hour slot, not only the bookable ones. Dropping the rest
@@ -846,8 +853,7 @@ export const getReservationEndTimes = query(
 		]);
 
 		const slotMinutes = reservationConfig.timeSlotMinutes;
-		const { minDurationHours } = termsFor(bookerType ?? 'user', reservationConfig);
-		const minSlots = minDurationHours * (60 / slotMinutes);
+		const minSlots = minSlotsFor(bookerType, reservationConfig);
 		const maxSlots = reservationConfig.maxDurationHours * (60 / slotMinutes);
 
 		const startIdx = slots.findIndex((s) => s.startTime === startTime);

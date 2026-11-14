@@ -31,6 +31,7 @@ import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
 import requireAwaitCatch from './eslint-rules/require-await-catch.js';
 import messageKeyRole from './eslint-rules/message-key-role.js';
+import bookingTermsByBooker from './eslint-rules/booking-terms-by-booker.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -61,6 +62,7 @@ const customPlugin = {
 		'no-check-then-insert': noCheckThenInsert,
 		'no-db-transaction': noDbTransaction,
 		'no-driver-message-match': noDriverMessageMatch,
+		'booking-terms-by-booker': bookingTermsByBooker,
 		'no-unqualified-correlation': noUnqualifiedCorrelation,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
@@ -319,6 +321,11 @@ export default defineConfig(
 	{
 		files: ['src/lib/remote/*.remote.ts'],
 		rules: { 'custom/audit-declared': 'error' }
+	},
+	{
+		files: ['src/lib/remote/**/*.ts'],
+		ignores: ['**/*.spec.ts'],
+		rules: { 'custom/booking-terms-by-booker': 'error' }
 	},
 	{
 		// Driver text is matched only in the helper; specs build errors with it.

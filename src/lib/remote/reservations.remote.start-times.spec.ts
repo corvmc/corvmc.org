@@ -112,6 +112,22 @@ describe('getReservationStartTimes', () => {
 		expect(short.label).toBe('9:30 AM');
 	});
 
+	// #2957: the floor is the booker's, so a half-hour gap is a teaching start.
+	it('offers a teaching booking a start with a half-hour after it', async () => {
+		const options: Option[] = await getReservationStartTimes({
+			date: '2026-09-09',
+			bookerType: 'instructor'
+		});
+
+		expect(options.filter((o) => !o.disabled).map((o) => o.value)).toEqual([
+			'09:00',
+			'09:30',
+			'11:00',
+			'11:30',
+			'12:00'
+		]);
+	});
+
 	it('leaves a genuinely bookable slot selectable', async () => {
 		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 

@@ -134,6 +134,11 @@ export function termsFor(bookerType: BookerType, cfg: ReservationConfig): Bookin
 	};
 }
 
+/** The booker's duration floor in slots: what every picker counts a start against. */
+export function minSlotsFor(bookerType: BookerType | undefined, cfg: ReservationConfig): number {
+	return termsFor(bookerType ?? 'user', cfg).minDurationHours * (60 / cfg.timeSlotMinutes);
+}
+
 /** One config read, then `termsFor`. The form every call site should take. */
 export async function getBookingTerms(bookerType: BookerType): Promise<BookingTerms> {
 	return termsFor(bookerType, await getReservationConfig());
