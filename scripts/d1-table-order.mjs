@@ -162,6 +162,9 @@ export const tableOrder = [
 	'group_member',
 	// Grant rows: each references only its carrier, and nothing references them.
 	'group_capability',
+	// A committee's positions; a holder references a position and a roster row.
+	'group_position',
+	'group_position_holder',
 	// References only `user`; its choices reference it and `group`, so the pair
 	// sits together and after both.
 	'group_application',
