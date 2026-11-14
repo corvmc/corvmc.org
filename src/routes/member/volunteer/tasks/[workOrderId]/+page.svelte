@@ -13,6 +13,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import TaskActReason from '#lib/components/task/TaskActReason.svelte';
 	import { formatDateLong, formatDateShort } from '#lib/utils/format.js';
 	import {
 		getMyTask,
@@ -108,6 +109,9 @@
 		</p>
 		{#if task.notes}
 			<p class="mt-2 text-muted whitespace-pre-line">{task.notes}</p>
+		{/if}
+		{#if task.why}
+			<div class="mt-2"><TaskActReason why={task.why} /></div>
 		{/if}
 	</InfoCard>
 

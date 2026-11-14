@@ -225,6 +225,17 @@ chair as `admin`. `scripts/committee-chair-guard.spec.ts` fails on a stored-role
 test anywhere else. Staff oversight of committees (positions, chair, grants) is
 `committee.manage`; `group.manage` covers clubs.
 
+A duty grants the duty (#2983, decision
+[0085](../decisions/0085-committees-are-departments.md)). `canActOnTask` in
+`src/lib/server/task/can-act.ts` admits a task's assignee, the holder of the position it is tagged
+for, an active seat on its committee, or a holder of `volunteer.manageShifts` scoped to the row,
+and returns which. `waitingOn` is the "Your tasks" list, a subset of that. The reason is shown
+from the same functions: `explainAccess` (`src/lib/server/access/why-can-act.ts`) lists a
+person's positions, committee seats and live shift roles with what each gives, and
+`waitsOnTask` and `explainTaskAct` say who a task waits on and why a viewer can or cannot act.
+Each spec checks the explanation against its guard, so a new way of holding a capability has to
+be added to both.
+
 ## Seven models that recur
 
 Naming these is the point of the document: each is implemented more than once, and

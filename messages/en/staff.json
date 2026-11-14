@@ -3760,5 +3760,12 @@
 	"staff_acquisitions_form_8282_due_label": "Form 8282 due",
 	"staff_order_2_2_text": "Order",
 	"staff_volunteering_settings_label": "Settings",
-	"staff_volunteering_settings_title": "Volunteering settings"
+	"staff_volunteering_settings_title": "Volunteering settings",
+	"staff_tasks_id_responsible_title": "Responsible people",
+	"staff_tasks_id_your_access_title": "Your access",
+	"staff_tasks_id_responsible_assigned_label": "Assigned",
+	"staff_tasks_id_responsible_holds_label": "Holds {position}",
+	"staff_tasks_id_responsible_seat_label": "Seat on {committee}",
+	"staff_tasks_id_responsible_none_title": "No named people",
+	"staff_tasks_id_responsible_none_body": "Anyone holding {grant} for it may act on it."
 }

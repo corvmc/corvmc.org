@@ -1,7 +1,7 @@
 # 0049 A committee is a group, chaired by its admins
 
 - **Date:** 2026-08-28
-- **Status:** Accepted
+- **Status:** Amended by [0085](0085-committees-are-departments.md): positions are rows, and the chair is a position (§4)
 - **Issue:** [#607](https://github.com/corvmc/corvmc.org/issues/607)
 
 ## Context

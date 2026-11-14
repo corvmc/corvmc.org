@@ -48,7 +48,8 @@
 		parent,
 		context,
 		activity,
-		actions
+		actions,
+		access
 	}: {
 		view: View;
 		subtitle: string;
@@ -60,6 +61,8 @@
 		activity?: Snippet;
 		/** Header actions a page adds to the view's own. */
 		actions?: Snippet;
+		/** Who the task waits on and why, read by the page through its own guard. */
+		access?: Snippet;
 	} = $props();
 
 	const task = $derived(view.task);
@@ -180,6 +183,8 @@
 
 	<div class="grid gap-6 {open ? 'lg:grid-cols-2' : ''}">
 		<div class="flex flex-col gap-6">
+			{@render access?.()}
+
 			{#if view.assignees.length > 0}
 				<InfoCard
 					title={m.volunteer_work_order_view_assignees_title()}

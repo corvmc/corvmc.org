@@ -1,7 +1,7 @@
 # 0053 A committee owns show work; ownership grants no permission
 
 - **Date:** 2026-09-29
-- **Status:** Accepted
+- **Status:** Amended by [0085](0085-committees-are-departments.md): a committee seat may act on its committee's tasks (§5)
 - **Issue:** [#1701](https://github.com/corvmc/corvmc.org/issues/1701), with the decisions in
   [#1706](https://github.com/corvmc/corvmc.org/issues/1706),
   [#1707](https://github.com/corvmc/corvmc.org/issues/1707),

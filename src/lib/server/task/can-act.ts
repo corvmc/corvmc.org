@@ -8,6 +8,7 @@ import {
 	groupPosition,
 	groupPositionHolder
 } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { requireUser, userHasCapability } from '#lib/server/authorization.js';
 
 /**
@@ -160,4 +161,123 @@ export async function requireActOnTask(workOrderId: string) {
 	const reason = await canActOnTask(user.id, workOrderId);
 	if (!reason) error(403, 'That task is not yours to act on');
 	return { user, reason };
+}
+
+/** Why the task waits on someone: the reasons `waitingOn` admits. */
+export type WaitReason = Exclude<TaskActReason, 'grant'>;
+
+export interface TaskWaiter {
+	userId: string;
+	name: string;
+	reason: WaitReason;
+}
+
+/**
+ * Who the task waits on and why (#2994): `waitingOn` asked of everyone it could
+ * admit (the assignees, the position's holders, the committee's active seats)
+ * in one read, so this list and "Your tasks" cannot disagree.
+ */
+export async function waitsOnTask(workOrderId: string): Promise<TaskWaiter[]> {
+	const [assignees, members, holders] = await Promise.all([
+		db
+			.select({ userId: workOrderAssignee.userId })
+			.from(workOrderAssignee)
+			.where(eq(workOrderAssignee.workOrderId, workOrderId)),
+		db
+			.select({ userId: groupMember.userId })
+			.from(groupMember)
+			.innerJoin(workOrder, eq(workOrder.groupId, groupMember.groupId))
+			.where(and(eq(workOrder.id, workOrderId), eq(groupMember.status, 'active'))),
+		db
+			.select({ userId: groupMember.userId })
+			.from(groupPositionHolder)
+			.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+			.innerJoin(workOrder, eq(workOrder.positionId, groupPositionHolder.positionId))
+			.where(eq(workOrder.id, workOrderId))
+	]);
+	const candidates = [...new Set([...assignees, ...members, ...holders].map((r) => r.userId))];
+	if (candidates.length === 0) return [];
+
+	const columns: Record<string, SQL<number>> = {};
+	candidates.forEach((uid, i) => {
+		columns[`w${i}`] = sql<number>`${waitingOn(uid)}`;
+		columns[`a${i}`] = sql<number>`${assignedTo(uid, { open: true })}`;
+		columns[`p${i}`] = sql<number>`${heldBy(uid)}`;
+	});
+	const [row] = await db.select(columns).from(workOrder).where(eq(workOrder.id, workOrderId));
+	if (!row) return [];
+	const waiting = candidates.flatMap((userId, i) => {
+		if (!Number(row[`w${i}`])) return [];
+		const reason: WaitReason = Number(row[`a${i}`])
+			? 'assignee'
+			: Number(row[`p${i}`])
+				? 'position'
+				: 'department';
+		return [{ userId, reason }];
+	});
+	if (waiting.length === 0) return [];
+	const names = await db
+		.select({ id: user.id, name: user.name })
+		.from(user)
+		.where(
+			inArray(
+				user.id,
+				waiting.map((w) => w.userId)
+			)
+		);
+	const nameOf = new Map(names.map((n) => [n.id, n.name]));
+	return waiting
+		.map((w) => ({ ...w, name: nameOf.get(w.userId) ?? '' }))
+		.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface TaskActExplanation {
+	/** `canActOnTask`'s answer; null means every route below failed. */
+	reason: TaskActReason | null;
+	/** The committee whose seats may act, when the task has one. */
+	committee: { id: string; name: string } | null;
+	/** The position the task is tagged for, when it has one. */
+	position: { id: string; name: string } | null;
+	/** The grant that covers any task. */
+	grant: typeof TASK_GRANT;
+}
+
+/**
+ * Why `userId` can or cannot act on the task: `canActOnTask`'s reason with the
+ * task's committee and position named. Null for a missing task.
+ */
+export async function explainTaskAct(
+	userId: string,
+	workOrderId: string
+): Promise<TaskActExplanation | null> {
+	const [[ctx], reason] = await Promise.all([
+		db
+			.select({
+				committeeId: group.id,
+				committeeName: group.name,
+				committeeKind: group.kind,
+				positionId: groupPosition.id,
+				positionName: groupPosition.name
+			})
+			.from(workOrder)
+			.leftJoin(group, eq(group.id, workOrder.groupId))
+			.leftJoin(
+				groupPosition,
+				and(
+					eq(groupPosition.id, workOrder.positionId),
+					eq(groupPosition.groupId, workOrder.groupId)
+				)
+			)
+			.where(eq(workOrder.id, workOrderId))
+			.limit(1),
+		canActOnTask(userId, workOrderId)
+	]);
+	if (!ctx) return null;
+	const committee =
+		ctx.committeeId && ctx.committeeName && ctx.committeeKind === 'committee'
+			? { id: ctx.committeeId, name: ctx.committeeName }
+			: null;
+	const position =
+		ctx.positionId && ctx.positionName ? { id: ctx.positionId, name: ctx.positionName } : null;
+	return { reason, committee, position, grant: TASK_GRANT };
 }

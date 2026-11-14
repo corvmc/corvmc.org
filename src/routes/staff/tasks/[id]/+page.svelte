@@ -8,6 +8,7 @@
 	import EngageContractorAction from './EngageContractorAction.svelte';
 	import TaskSectionAction from './TaskSectionAction.svelte';
 	import TaskPositionAction from './TaskPositionAction.svelte';
+	import TaskResponsible from './TaskResponsible.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -45,6 +46,9 @@
 		{#if view.contractors.length > 0 && !view.task.cancelledAt && !view.task.resolvedAt}
 			<EngageContractorAction workOrderId={view.task.id} contractors={view.contractors} />
 		{/if}
+	{/snippet}
+	{#snippet access()}
+		<TaskResponsible workOrderId={view.task.id} />
 	{/snippet}
 	{#snippet activity()}
 		{#if project}

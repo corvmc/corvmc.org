@@ -1585,5 +1585,22 @@
 	"events_facts_accessible_restroom_text": "Accessible restroom",
 	"events_facts_no_accessible_restroom_text": "No accessible restroom",
 	"events_facts_seating_text": "Seating",
-	"events_facts_no_seating_text": "No seating"
+	"events_facts_no_seating_text": "No seating",
+	"access_why_positions_title": "Staff positions",
+	"access_why_committees_title": "Committee seats",
+	"access_why_shift_roles_title": "Current shift roles",
+	"access_why_none_title": "Member access",
+	"access_why_none_body": "No position, committee seat or shift role adds to it.",
+	"access_why_member_text": "Member",
+	"access_why_tasks_text": "Take, complete and hand back its tasks",
+	"access_why_owned_text": "{label}, on its own records",
+	"task_act_reason_assignee_text": "You are assigned this task.",
+	"task_act_reason_position_text": "You hold {position}, the position this task waits on.",
+	"task_act_reason_department_text": "You have a seat on {committee}, which owns this task.",
+	"task_act_reason_grant_text": "You hold {grant} for this task.",
+	"task_act_reason_none_text": "You cannot act on this task:",
+	"task_act_reason_not_assigned_text": "It is not assigned to you.",
+	"task_act_reason_no_position_text": "You do not hold {position}.",
+	"task_act_reason_no_seat_text": "You have no seat on {committee}.",
+	"task_act_reason_no_grant_text": "You do not hold {grant} for it."
 }

@@ -19,6 +19,8 @@
 	import ProfileFields from '#lib/components/volunteer/ProfileFields.svelte';
 	import InterestFields from '#lib/components/volunteer/InterestFields.svelte';
 	import LogHoursAction from '#lib/components/volunteer/LogHoursAction.svelte';
+	import WhyCanAct from '#lib/components/access/WhyCanAct.svelte';
+	import { getMyAccessWhy } from '#lib/remote/why-can-act.remote.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		formatVolunteerHours,
@@ -35,6 +37,8 @@
 	// Not a top-level await, which async-gates the forms' bindings, and not
 	// `{#await}`, which re-pends on every refresh and remounts them.
 	const pageData = new Latest(() => getMemberVolunteerProfilePage());
+	// What the member's positions, committee seats and shift roles let them do (#2994).
+	const why = new Latest(() => getMyAccessWhy());
 	// A gate's redirect has already navigated by the time it rejects; rethrowing
 	// it would flash the error boundary on the way out.
 	$effect(() => {
@@ -203,5 +207,9 @@
 				</ul>
 			{/if}
 		</InfoCard>
+	{/if}
+	<!-- A member with nothing beyond member access sees no card for it. -->
+	{#if why.current && (why.current.positions.length || why.current.departments.length || why.current.shiftRoles.length)}
+		<WhyCanAct why={why.current} />
 	{/if}
 </PageContent>
