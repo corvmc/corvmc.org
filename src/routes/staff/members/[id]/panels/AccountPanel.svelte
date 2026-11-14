@@ -17,7 +17,7 @@
 		resendRemovalNotice,
 		getUserRemovals
 	} from '#lib/remote/users.remote.js';
-	import { removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
+	import { positionLabels, removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
 	import { getUserDirectoryProfile } from '#lib/remote/directory.remote.js';
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
@@ -88,7 +88,10 @@
 -->
 {#if roleCatalog.current}
 	{@const catalog = roleCatalog.current}
-	{@const roleOptions = catalog.roles.map((r) => ({ id: String(r.id), label: r.name }))}
+	{@const roleOptions = catalog.roles.map((r) => ({
+		id: String(r.id),
+		label: (positionLabels as Record<string, string>)[r.name] ?? r.name
+	}))}
 	{@const initialRoles = catalog.roles
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}

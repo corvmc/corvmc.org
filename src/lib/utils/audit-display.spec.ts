@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { auditActionLabel, summarizeAuditEntry } from './audit-display';
-import type { AuditEntry } from '#lib/types/audit.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import ts from 'typescript';
+import { auditActionGroups, auditActionLabel, summarizeAuditEntry } from './audit-display';
+import { auditActions, type AuditEntry } from '#lib/types/audit.js';
+import { retiredTerms } from '#lib/config.js';
 
 function entry<E extends AuditEntry>(action: E['action'], details: E['details']): AuditEntry {
 	return {
@@ -18,19 +22,26 @@ function entry<E extends AuditEntry>(action: E['action'], details: E['details'])
 }
 
 describe('summarizeAuditEntry', () => {
-	it('dates a staff cancellation and quotes its reason', () => {
-		const d = {
-			reservationId: 'r1',
-			date: 'Thu, May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
-		};
+	it('dates a staff cancellation as the app does, and quotes its reason', () => {
+		const d = { reservationId: 'r1', date: '2026-11-17', startTime: '13:30', endTime: '15:30' };
 		expect(
 			summarizeAuditEntry(entry('reservation.cancelled_by_staff', { ...d, reason: 'Flooded' }))
-		).toBe('Cancelled the Thu, May 21 10:00 AM–11:00 AM reservation: “Flooded”');
+		).toBe('Cancelled the Tue, Nov 17, 1:30 PM–3:30 PM reservation: “Flooded”');
 		expect(
 			summarizeAuditEntry(entry('reservation.cancelled_by_staff', { ...d, reason: null }))
-		).toBe('Cancelled the Thu, May 21 10:00 AM–11:00 AM reservation');
+		).toBe('Cancelled the Tue, Nov 17, 1:30 PM–3:30 PM reservation');
+	});
+
+	it('passes through a slot an older row stored as display text', () => {
+		const d = {
+			reservationId: 'r1',
+			date: 'Nov 3, 2026',
+			startTime: '6:00 PM',
+			endTime: '8:00 PM'
+		};
+		expect(summarizeAuditEntry(entry('reservation.comped', { ...d, waivedCents: 3000 }))).toBe(
+			'Comped the Nov 3, 2026 6:00 PM–8:00 PM reservation, waiving $30.00'
+		);
 	});
 
 	it('names the band deactivated or reactivated', () => {
@@ -43,13 +54,15 @@ describe('summarizeAuditEntry', () => {
 		);
 	});
 
-	it('names roles granted and removed', () => {
+	it('names positions granted and removed by their titles', () => {
 		expect(
-			summarizeAuditEntry(entry('user.roles_changed', { added: ['admin'], removed: ['member'] }))
-		).toBe('Granted admin; removed member');
+			summarizeAuditEntry(
+				entry('user.roles_changed', { added: ['treasurer'], removed: ['member'] })
+			)
+		).toBe('Granted Treasurer; removed member');
 		expect(
 			summarizeAuditEntry(entry('user.roles_changed', { added: [], removed: ['staff'] }))
-		).toBe('Removed staff');
+		).toBe('Removed Staff');
 	});
 
 	it('quotes the reason a ban was given, and names an unban plainly', () => {
@@ -139,7 +152,7 @@ describe('summarizeAuditEntry', () => {
 					description: 'Double booking'
 				})
 			)
-		).toBe('Deducted 3 free hours (balance 5): “Double booking”');
+		).toBe('Deducted 3 credits (balance 5): “Double booking”');
 		expect(
 			summarizeAuditEntry(
 				entry('credits.adjusted', {
@@ -153,10 +166,48 @@ describe('summarizeAuditEntry', () => {
 	});
 });
 
-describe('auditActionLabel', () => {
-	it('reads an action key as words, for the filter', () => {
-		expect(auditActionLabel('user.roles_changed')).toBe('User roles changed');
-		expect(auditActionLabel('credits.adjusted')).toBe('Credits adjusted');
+describe('the action filter', () => {
+	it('offers every action once, in an area', () => {
+		const offered = auditActionGroups.flatMap((g) => g.options.map((o) => o.value));
+		expect([...offered].sort()).toEqual([...auditActions].sort());
+	});
+
+	it('lists each area alphabetically', () => {
+		for (const { options } of auditActionGroups) {
+			const labels = options.map((o) => o.label);
+			expect(labels).toEqual([...labels].sort((a, b) => a.localeCompare(b)));
+		}
+	});
+
+	it('gives each action its own label', () => {
+		const labels = auditActions.map(auditActionLabel);
+		expect(labels.filter((l, i) => labels.indexOf(l) !== i)).toEqual([]);
+	});
+});
+
+/**
+ * Every literal in audit-display.ts, labels and summary templates alike, held
+ * to the vocabulary the message catalog is (#2831). Read from the source, so a
+ * summary no fixture reaches is checked too.
+ */
+describe('audit wording', () => {
+	const file = join(import.meta.dirname, 'audit-display.ts');
+	const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest);
+	const texts: string[] = [];
+	const visit = (n: ts.Node): void => {
+		if (ts.isStringLiteralLike(n) || ts.isTemplateLiteralToken(n)) texts.push(n.text);
+		ts.forEachChild(n, visit);
+	};
+	visit(source);
+	if (source.statements.length === 0) throw new Error(`could not parse ${file}`);
+
+	it('uses no retired term (retiredTerms in src/lib/config.ts)', () => {
+		const terms = retiredTerms.filter(({ keys }) => !keys || keys.test('audit'));
+		const found = texts.flatMap((text) =>
+			terms.filter(({ word }) => word.test(text)).map(({ use }) => `"${text}" (use ${use})`)
+		);
+		expect(texts.length).toBeGreaterThan(100);
+		expect(found).toEqual([]);
 	});
 });
 

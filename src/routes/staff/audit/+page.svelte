@@ -12,9 +12,9 @@
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { getAuditLog } from '#lib/remote/audit.remote.js';
-	import { auditActions, type AuditAction, type AuditSubjectType } from '#lib/types/audit.js';
+	import type { AuditAction, AuditSubjectType } from '#lib/types/audit.js';
 	import {
-		auditActionLabel,
+		auditActionGroups,
 		auditSubjectOptions,
 		summarizeAuditEntry
 	} from '#lib/utils/audit-display.js';
@@ -106,8 +106,12 @@
 			}}
 		>
 			<option value="">{m.staff_audit_all_actions_label()}</option>
-			{#each auditActions as value (value)}
-				<option {value}>{auditActionLabel(value)}</option>
+			{#each auditActionGroups as group (group.label)}
+				<optgroup label={group.label}>
+					{#each group.options as option (option.value)}
+						<option value={option.value}>{option.label}</option>
+					{/each}
+				</optgroup>
 			{/each}
 		</Select>
 		<Select
@@ -155,7 +159,7 @@
 				{#each entries as entry (entry.id)}
 					<tr>
 						<td class="cell-primary">
-							<div class="truncate">{summarizeAuditEntry(entry)}</div>
+							<div class="break-words">{summarizeAuditEntry(entry)}</div>
 							<div class="text-muted whitespace-nowrap">
 								{formatDateTimeShort(entry.createdAt)}
 							</div>

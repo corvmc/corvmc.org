@@ -10,18 +10,134 @@ import type {
 	WorkOrderField
 } from '#lib/types/audit.js';
 import {
+	assetStatusLabels,
 	contractorJobStatusLabels,
 	formatVolunteerHours,
+	orderStatusLabels,
+	positionLabels,
 	projectStatusLabels
 } from '#lib/config.js';
-import { formatCents, formatDateShort } from '#lib/utils/format.js';
+import {
+	clubInstant,
+	formatCents,
+	formatDate,
+	formatDateShort,
+	formatDateShortYear,
+	formatTime
+} from '#lib/utils/format.js';
 import type { FeedItem } from '#lib/types/activity.js';
 
-/** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
+type Area =
+	| 'Members'
+	| 'Reservations'
+	| 'Events and shows'
+	| 'Tasks'
+	| 'Projects'
+	| 'Equipment'
+	| 'Programs and access'
+	| 'Records and settings';
+
+const AREAS: Area[] = [
+	'Members',
+	'Reservations',
+	'Events and shows',
+	'Tasks',
+	'Projects',
+	'Equipment',
+	'Programs and access',
+	'Records and settings'
+];
+
+/** Each action's area and its name in the log's filter. Typed, so a new action needs both. */
+const ACTIONS: Record<AuditAction, [Area, string]> = {
+	'user.roles_changed': ['Members', 'Positions changed'],
+	'user.profile_updated': ['Members', 'Profile edited'],
+	'user.deactivated': ['Members', 'Account deactivated'],
+	'user.reactivated': ['Members', 'Account reactivated'],
+	'user.purged': ['Members', 'Account permanently deleted'],
+	'user.banned': ['Members', 'Member banned'],
+	'user.unbanned': ['Members', 'Ban lifted'],
+	'user.suspended': ['Members', 'Member suspended'],
+	'user.suspension_lifted': ['Members', 'Suspension lifted'],
+	'user.email_change_requested': ['Members', 'Email change requested'],
+	'user.email_changed': ['Members', 'Login email changed'],
+	'credits.adjusted': ['Members', 'Credits adjusted'],
+	'blocklist.added': ['Members', 'Address blocked'],
+	'blocklist.removed': ['Members', 'Address unblocked'],
+	'clearance.granted': ['Members', 'Clearance granted'],
+	'clearance.revoked': ['Members', 'Clearance revoked'],
+	'orientation.waived': ['Members', 'Orientation waived'],
+	'ballot.elector_overridden': ['Members', 'Ballot roll changed'],
+	'reservation.cancelled_by_staff': ['Reservations', 'Reservation cancelled by staff'],
+	'reservation.comped': ['Reservations', 'Reservation comped'],
+	'reservation.refunded': ['Reservations', 'Reservation refunded'],
+	'event.visibility_changed': ['Events and shows', 'Event visibility changed'],
+	'event.published_over_warnings': ['Events and shows', 'Event published over warnings'],
+	'event.emailed_beyond_visibility': ['Events and shows', 'Event emailed past its visibility'],
+	'event.edited_while_cancelled': ['Events and shows', 'Cancelled event edited'],
+	'production.status_changed': ['Events and shows', 'Show moved'],
+	'production.override': ['Events and shows', 'Show moved over warnings'],
+	'production.reopened': ['Events and shows', 'Show reopened'],
+	'production.payout_recorded': ['Events and shows', 'Payout recorded'],
+	'production.payout_undone': ['Events and shows', 'Payout undone'],
+	'production.door_recounted': ['Events and shows', 'Door counted again'],
+	'work_order.created': ['Tasks', 'Task added'],
+	'work_order.assigned': ['Tasks', 'Task assignment changed'],
+	'work_order.member_assigned': ['Tasks', 'Member assigned'],
+	'work_order.assigned_over_warnings': ['Tasks', 'Member assigned over warnings'],
+	'work_order.member_unassigned': ['Tasks', 'Member unassigned'],
+	'work_order.rescheduled': ['Tasks', 'Task rescheduled'],
+	'work_order.resolved': ['Tasks', 'Task marked done'],
+	'work_order.reopened': ['Tasks', 'Task reopened'],
+	'work_order.cancelled': ['Tasks', 'Task called off'],
+	'work_order.moved': ['Tasks', 'Task moved'],
+	'work_order.edited': ['Tasks', 'Task edited'],
+	'work_order.member_invited': ['Tasks', 'Member invited'],
+	'work_order.dependency_added': ['Tasks', 'Task dependency added'],
+	'work_order.dependency_removed': ['Tasks', 'Task dependency removed'],
+	'contractor_job.status_changed': ['Tasks', 'Contractor job moved'],
+	'contractor_job.invoice_recorded': ['Tasks', 'Contractor invoice recorded'],
+	'contractor_job.reopened': ['Tasks', 'Contractor job reopened'],
+	'volunteer_hours.approved_over_return': ['Tasks', 'Returned hours approved'],
+	'project.edited': ['Projects', 'Project edited'],
+	'project.status_changed': ['Projects', 'Project moved'],
+	'project.duty_list_applied': ['Projects', 'Template applied'],
+	'project.section_created': ['Projects', 'Section added'],
+	'project.section_renamed': ['Projects', 'Section renamed'],
+	'project.section_deleted': ['Projects', 'Section deleted'],
+	'purchase_order.reopened': ['Equipment', 'Purchase order reopened'],
+	'inventory_asset.reopened': ['Equipment', 'Equipment back in service'],
+	'equipment_loan.checked_out_unscheduled': ['Equipment', 'Loan checked out unscheduled'],
+	'kit_loan.checked_out_incomplete': ['Equipment', 'Kit checked out incomplete'],
+	'kit_loan.returned_incomplete': ['Equipment', 'Kit checked in incomplete'],
+	'band.deactivated': ['Programs and access', 'Band deactivated'],
+	'band.reactivated': ['Programs and access', 'Band reactivated'],
+	'group.roster_imported': ['Programs and access', 'Roster imported'],
+	'group.role_changed': ['Programs and access', 'Chair changed'],
+	'capability.grants_changed': ['Programs and access', 'Permissions changed'],
+	'settings.changed': ['Records and settings', 'Settings changed'],
+	'contact.deleted': ['Records and settings', 'Person deleted'],
+	'contact.merged': ['Records and settings', 'People merged'],
+	'organization.deleted': ['Records and settings', 'Organization deleted'],
+	'organization.merged': ['Records and settings', 'Organizations merged'],
+	'incident.deleted': ['Records and settings', 'Incident deleted'],
+	'incident.reopened': ['Records and settings', 'Incident reopened'],
+	'incident.retention_changed': ['Records and settings', 'Incident retention changed']
+};
+
+/** What the log's action filter calls an action. */
 export function auditActionLabel(action: AuditAction): string {
-	const words = action.replace('.', ' ').replaceAll('_', ' ');
-	return words.charAt(0).toUpperCase() + words.slice(1);
+	return ACTIONS[action][1];
 }
+
+/** The action filter's options: grouped by area, alphabetical within one. */
+export const auditActionGroups = AREAS.map((area) => ({
+	label: area,
+	options: (Object.entries(ACTIONS) as [AuditAction, [Area, string]][])
+		.filter(([, [a]]) => a === area)
+		.map(([value, [, label]]) => ({ value, label }))
+		.sort((x, y) => x.label.localeCompare(y.label))
+}));
 
 /**
  * What each kind of record is called in the log's record-type filter. A show's
@@ -103,7 +219,36 @@ const EVENT_FIELDS: Record<EventEditField, string> = {
 const statusWord = (s: string) =>
 	(projectStatusLabels as Record<string, string>)[s]?.toLowerCase() ?? s;
 
-const CREDIT_LABELS = { free_hours: 'free hours', equipment_credits: 'equipment credits' };
+const CREDIT_LABELS = { free_hours: 'credits', equipment_credits: 'equipment credits' };
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const CLOCK = /^\d{2}:\d{2}$/;
+
+/** A club date (`YYYY-MM-DD`) as "May 13, 2026"; anything else as stored. */
+function day(value: string): string {
+	return ISO_DAY.test(value) ? formatDateShortYear(clubInstant(value, '12:00')) : value;
+}
+
+/** An ISO timestamp's club date, as "May 13, 2026". */
+const dayOf = (iso: string) => formatDateShortYear(new Date(iso));
+
+/**
+ * A booking's slot as "Tue, Nov 17, 1:30 PM–3:30 PM". Rows store the club date
+ * and 24-hour clock; older rows stored display text, which passes through.
+ */
+function slot(d: { date: string; startTime: string; endTime: string }): string {
+	if (!ISO_DAY.test(d.date) || !CLOCK.test(d.startTime) || !CLOCK.test(d.endTime)) {
+		return `${d.date} ${d.startTime}–${d.endTime}`;
+	}
+	const at = (time: string) => formatTime(clubInstant(d.date, time));
+	return `${formatDate(clubInstant(d.date, d.startTime))}, ${at(d.startTime)}–${at(d.endTime)}`;
+}
+
+/** A stored status key as its lower-case label, or as stored when it has none. */
+const word = (labels: Record<string, string>, key: string) => labels[key]?.toLowerCase() ?? key;
+
+/** A position key as its title; a key no longer offered as stored. */
+const position = (key: string) => (positionLabels as Record<string, string>)[key] ?? key;
 
 /** An empty string reads as a word, so a cleared setting is visible. */
 const settingValue = (v: string | number | boolean | undefined) =>
@@ -118,23 +263,23 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 	switch (entry.action) {
 		case 'reservation.cancelled_by_staff': {
 			const d = entry.details;
-			const head = `Cancelled the ${d.date} ${d.startTime}–${d.endTime} reservation`;
+			const head = `Cancelled the ${slot(d)} reservation`;
 			return d.reason ? `${head}: “${d.reason}”` : head;
 		}
 		case 'reservation.comped': {
 			const d = entry.details;
-			return `Comped the ${d.date} ${d.startTime}–${d.endTime} reservation, waiving ${formatCents(d.waivedCents)}`;
+			return `Comped the ${slot(d)} reservation, waiving ${formatCents(d.waivedCents)}`;
 		}
 		case 'reservation.refunded': {
 			const d = entry.details;
-			const head = `Refunded the ${d.date} ${d.startTime}–${d.endTime} reservation`;
+			const head = `Refunded the ${slot(d)} reservation`;
 			const line = d.cancelled ? `${head} and cancelled it` : head;
 			return d.reason ? `${line}: “${d.reason}”` : line;
 		}
 		case 'clearance.granted': {
 			const d = entry.details;
-			const until = d.expiresOn ? `, valid to ${d.expiresOn}` : '';
-			return `Granted ${d.certificationName} from ${d.grantedOn}${until}`;
+			const until = d.expiresOn ? `, valid to ${day(d.expiresOn)}` : '';
+			return `Granted ${d.certificationName} from ${day(d.grantedOn)}${until}`;
 		}
 		case 'clearance.revoked':
 			return `Revoked ${entry.details.certificationName}: “${entry.details.reason}”`;
@@ -161,9 +306,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Reactivated ${entry.details.bandName}`;
 		case 'user.roles_changed': {
 			const parts: string[] = [];
-			if (entry.details.added.length) parts.push(`granted ${entry.details.added.join(', ')}`);
-			if (entry.details.removed.length) parts.push(`removed ${entry.details.removed.join(', ')}`);
-			const line = parts.join('; ') || 'changed roles';
+			const { added, removed } = entry.details;
+			if (added.length) parts.push(`granted ${added.map(position).join(', ')}`);
+			if (removed.length) parts.push(`removed ${removed.map(position).join(', ')}`);
+			const line = parts.join('; ') || 'changed positions';
 			return line.charAt(0).toUpperCase() + line.slice(1);
 		}
 		case 'user.profile_updated':
@@ -189,7 +335,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'user.unbanned':
 			return 'Lifted the ban';
 		case 'user.suspended':
-			return `Suspended the account until ${entry.details.endsAt.slice(0, 10)}: “${entry.details.reason}”`;
+			return `Suspended the account until ${dayOf(entry.details.endsAt)}: “${entry.details.reason}”`;
 		case 'user.suspension_lifted':
 			return entry.details.liftReason === 'term_lapsed'
 				? 'Suspension ended at the end of its term'
@@ -223,7 +369,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				? `Merged ${entry.details.mergedName} into them`
 				: 'Merged a duplicate person into them';
 		case 'incident.deleted':
-			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
+			return `Deleted after ${entry.details.retentionYears} years (occurred ${dayOf(entry.details.occurredAt)})`;
 		case 'incident.reopened':
 			return entry.details.previousResolution
 				? `Reopened it, setting aside “${entry.details.previousResolution}”`
@@ -265,7 +411,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
 		case 'volunteer_hours.approved_over_return':
-			return `Approved ${formatVolunteerHours(entry.details.minutes)} from ${entry.details.workedOn} that had been returned: “${entry.details.reason}”`;
+			return `Approved ${formatVolunteerHours(entry.details.minutes)} from ${day(entry.details.workedOn)} that had been returned: “${entry.details.reason}”`;
 		case 'event.edited_while_cancelled': {
 			const fields = entry.details.fields.map((f) => EVENT_FIELDS[f] ?? f);
 			return fields.length
@@ -324,9 +470,9 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'contractor_job.reopened':
 			return `Reopened ${entry.details.contractorName}'s engagement from ${contractorJobStatusLabels[entry.details.from].toLowerCase()}: “${entry.details.reason}”`;
 		case 'purchase_order.reopened':
-			return `Reopened the order from ${entry.details.from} to ${entry.details.to}: “${entry.details.reason}”`;
+			return `Reopened the order from ${word(orderStatusLabels, entry.details.from)} to ${word(orderStatusLabels, entry.details.to)}: “${entry.details.reason}”`;
 		case 'inventory_asset.reopened':
-			return `Put the unit back in service from ${entry.details.from}: “${entry.details.reason}”`;
+			return `Put the unit back in service from ${word(assetStatusLabels, entry.details.from)}: “${entry.details.reason}”`;
 		case 'equipment_loan.checked_out_unscheduled':
 			return `Checked out ${entry.details.equipmentName ?? 'a loan'} without scheduling it: “${entry.details.reason}”`;
 		case 'kit_loan.checked_out_incomplete':
