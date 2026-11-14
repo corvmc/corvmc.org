@@ -13,8 +13,12 @@ export function resourceLabel(resource: string): string {
 	return RESOURCE_LABELS[resource as Resource] ?? words(resource);
 }
 
+/** Actions whose interface term is not their key, as for resources above. */
+const ACTION_LABELS: Record<string, string> = { manageCertifications: 'Manage clearances' };
+
 export function actionLabel(cap: Capability | string): string {
-	return words(cap.slice(cap.indexOf('.') + 1));
+	const action = cap.slice(cap.indexOf('.') + 1);
+	return ACTION_LABELS[action] ?? words(action);
 }
 
 /** "Volunteer: Manage shifts" — for a picker, where the group is not on screen. */
