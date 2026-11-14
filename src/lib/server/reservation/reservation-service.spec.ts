@@ -780,8 +780,14 @@ describe('ReservationService', () => {
 			expect(sets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
 		});
 
-		it('refuses a terminal booking', async () => {
-			setup('completed');
+		it('waives a completed booking still owing (#3003)', async () => {
+			const sets = setup('completed');
+			await comp('res-1');
+			expect(sets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
+		});
+
+		it('refuses a booking that owes nothing by status', async () => {
+			setup('no_show');
 			await expect(comp('res-1')).rejects.toThrow(ReservationStateError);
 		});
 

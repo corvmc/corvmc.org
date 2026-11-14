@@ -1,17 +1,22 @@
-import { and, eq, gt, isNull, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, gt, inArray, isNull, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import { eventHoldBookers } from '#lib/config.js';
-import type { ReservationTrack } from '#lib/utils/reservation-actions.js';
+import { payableStatuses, type ReservationTrack } from '#lib/utils/reservation-actions.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 
+/** The stored statuses a payment or waiver may settle: `payableStatuses`. */
+export function payableStatusSql() {
+	return inArray(reservation.status, [...payableStatuses]);
+}
+
 /**
- * Confirmed, not paid, and owing something: a null `cashDueCents` was never
- * priced, so it is owed in full. Event holds are never charged. The SQL twin of
- * `owesMoney` in `reservation-actions`; the spec holds the two together.
- * Auto-complete, the reminders and `paymentDueSql` read this one definition.
+ * Confirmed or completed, not paid, and owing something: a null `cashDueCents`
+ * was never priced, so it is owed in full. Event holds are never charged. The
+ * SQL twin of `owesMoney` in `reservation-actions`; the spec holds the two
+ * together. Auto-complete, the reminders and `paymentDueSql` read this.
  */
-export function confirmedUnpaidSql() {
+export function owesMoneySql() {
 	return and(
-		eq(reservation.status, 'confirmed'),
+		payableStatusSql(),
 		isNull(reservation.paidAt),
 		isNull(reservation.refundedAt),
 		or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),
@@ -24,7 +29,7 @@ export function confirmedUnpaidSql() {
  * the staff filter and the Payment due dot all read this.
  */
 export function paymentDueSql(now: Date) {
-	return and(lt(reservation.endsAt, now), confirmedUnpaidSql())!;
+	return and(lt(reservation.endsAt, now), owesMoneySql())!;
 }
 
 /**
@@ -44,7 +49,7 @@ export function reservationTrackSql(now: Date): SQL<ReservationTrack> {
 		when ${reservation.status} = 'cancelled' then 'cancelled'
 		when ${reservation.paidAt} is not null then 'paid'
 		when ${paymentDueSql(now)} then 'payment_due'
-		when ${confirmedUnpaidSql()} then 'booked'
+		when ${owesMoneySql()} then 'booked'
 		when ${reservation.status} = 'confirmed' and ${reservation.bookerType} in (${holds})
 			and not ${lt(reservation.endsAt, now)} then 'booked'
 		else 'covered' end)`;

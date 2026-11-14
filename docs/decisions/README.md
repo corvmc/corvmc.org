@@ -115,3 +115,4 @@ A page or less. Link the issue and the PRs.
 | 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Accepted           |
 | 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                           | 2026-11-13 | Accepted           |
 | 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                               | 2026-11-13 | Accepted           |
+| 0084 | [Owing is decided by money](0084-owing-is-decided-by-money.md)                                                                 | 2026-11-14 | Accepted           |

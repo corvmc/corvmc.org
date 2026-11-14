@@ -184,7 +184,8 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 ### The status track
 
 A reservation is shown with one status, its track (#2861,
-[decision 0082](../decisions/0082-a-reservation-shows-one-status-track.md)). It is derived from
+[decision 0082](../decisions/0082-a-reservation-shows-one-status-track.md),
+[0084](../decisions/0084-owing-is-decided-by-money.md)). It is derived from
 `status` and the payment columns and never stored. Staff and members read the same words.
 
 | Track       | Rule, first match wins                                                          |
@@ -194,7 +195,7 @@ A reservation is shown with one status, its track (#2861,
 | Refunded    | `refundedAt` set                                                                |
 | Cancelled   | `status = cancelled`                                                            |
 | Paid        | `paidAt` set                                                                    |
-| Payment due | confirmed, ended, owes money (`confirmedUnpaidSql`)                             |
+| Payment due | confirmed or completed, ended, owes money (`owesMoneySql`)                      |
 | Booked      | confirmed and owes money but has not ended, or an event hold that has not ended |
 | Covered     | everything else: credits or a comp settled it, or an event hold ended           |
 
@@ -203,7 +204,8 @@ A reservation is shown with one status, its track (#2861,
   `reservation-track.spec.ts` runs every combination of the columns through both.
 - Payment due is `paymentDueSql`: the staff filter, the dot, the member's Payment due list and
   the fee gate read it. An upcoming booking that owes cash at the session reads Booked.
-- `completed` is stored and not shown. A completed booking reads Paid or Covered.
+- `completed` is stored and not shown. A completed booking reads Paid, Payment due or Covered:
+  owing is decided by money ([decision 0084](../decisions/0084-owing-is-decided-by-money.md)).
 - Covered does not say whether credits or a comp settled it. `trackDetail` does, on the staff
   reservation page; a comp is also a `reservation.comped` audit row.
 - A reservation ref (`toReservationRef`) carries the track as its status.
@@ -245,7 +247,7 @@ Two things differ from the member path:
 - **An outstanding fee is reminded by email at 1, 7 and 21 days** after the session ended
   (#2876). Three reminder registry stages (`PAYMENT_DUE_BANDS` in
   `src/lib/server/reservation/payment-reminder.ts`) read the same rows the fee gate counts
-  (`listFeesEndedBetween`: `confirmedUnpaidSql`, started on or after **Count from**). Each band
+  (`listFeesEndedBetween`: `owesMoneySql`, started on or after **Count from**). Each band
   runs to the next stage, and the last ends at 35 days, so a drain sends one stage and fees older
   than five weeks get none. Each stage sends once per reservation; a session paid, comped or
   refunded drops out before its next stage. With no **Count from** set none are sent. The email
