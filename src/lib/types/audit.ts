@@ -148,13 +148,14 @@ export interface AuditDetailsByAction {
 	'reservation.refunded': ReservationWhen & { cancelled: boolean; reason: string | null };
 	/**
 	 * The subject is the member who booked; the actor is System. Every attempt is
-	 * a row (#2876): `sent` is in the outbox as `outboxId`, `skipped` says why.
+	 * a row (#2876): `sent` is in the outbox as `outboxId`; `skipped` is an account
+	 * removed, the only reason a mandatory reminder sends none (#2981).
 	 */
 	'reservation.payment_reminder': ReservationWhen & {
 		daysAfter: number;
 		amountCents: number | null;
 		outcome: 'sent' | 'skipped' | 'failed';
-		reason: string | null;
+		reason: 'undeliverable' | null;
 		outboxId: string | null;
 	};
 	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */

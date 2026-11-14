@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
  * Payment reminders (#2876) end to end against a real SQLite: the registry's
- * stages, the drain's sent-marks, the dispatcher's preference read, the outbox
+ * stages, the drain's sent-marks, the dispatcher (no preference applies), the outbox
  * row and the audit row. Who is owed which stage is a `WHERE`, so nothing here
  * is a mocked `db`. Postmark is never reached: the outbox send is deferred.
  */
@@ -31,7 +31,8 @@ const { reservation } = await import('#lib/server/db/schema/reservation.js');
 const { outboxMessage } = await import('#lib/server/db/schema/outbox.js');
 const { auditLog } = await import('#lib/server/db/schema/audit.js');
 const { reminderSent } = await import('#lib/server/db/schema/reminder.js');
-const { notificationPreference } = await import('#lib/server/db/schema/notification.js');
+const { notification, notificationPreference, preferenceTypesFor } =
+	await import('#lib/server/db/schema/notification.js');
 
 domainEvents.on('reservation.payment_due', ({ data }) => sendPaymentReminder(data));
 
@@ -188,30 +189,34 @@ describe('the audit log', () => {
 		});
 	});
 
-	it('records a skipped reminder when the member turned the email off', async () => {
+	// Mandatory (#2981): a stored opt-out, on either channel, turns nothing off.
+	it('sends over a stored opt-out, and offers no preference to set', async () => {
 		await testDb.insert(notificationPreference).values({
 			userId: 'user-1',
 			notificationType: 'reservation_payment_due',
 			emailEnabled: false,
-			inAppEnabled: true
+			inAppEnabled: false
 		});
 		await insert(session('owed', 2));
 		await drain();
-		expect(await testDb.select().from(outboxMessage)).toEqual([]);
+		const [mail] = await testDb.select().from(outboxMessage);
 		expect(await audits()).toEqual([
-			expect.objectContaining({ outcome: 'skipped', reason: 'preference', outboxId: null })
+			expect.objectContaining({ outcome: 'sent', reason: null, outboxId: mail.id })
 		]);
-		// Skipped is final for the stage: it is not retried every pass.
-		expect(await marks()).toEqual(['owed:1d']);
+		expect(await testDb.select().from(notification)).toHaveLength(1);
+		expect(preferenceTypesFor('staff').map((t) => t.key)).not.toContain('reservation_payment_due');
 	});
 
 	it('records a skipped reminder for a removed account', async () => {
 		sqlite.exec(`update user set deleted_at = 1 where id = 'user-1'`);
 		await insert(session('owed', 2));
 		await drain();
+		expect(await testDb.select().from(outboxMessage)).toEqual([]);
 		expect(await audits()).toEqual([
-			expect.objectContaining({ outcome: 'skipped', reason: 'undeliverable' })
+			expect.objectContaining({ outcome: 'skipped', reason: 'undeliverable', outboxId: null })
 		]);
+		// Skipped is final for the stage: it is not retried every pass.
+		expect(await marks()).toEqual(['owed:1d']);
 	});
 
 	it('records a failed reminder and leaves the stage owed for the next pass', async () => {
