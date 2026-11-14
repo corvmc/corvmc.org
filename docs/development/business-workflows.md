@@ -503,10 +503,11 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   `private, no-store`, `Vary: Cookie`, as an attachment. Removing a document sets `deletedAt`;
   `sweepGroupFiles()` in the media sweep reclaims the object.
 
-### External acts
+### Outside acts
 
-An act CMC books that has no account is a `directory_entry` with no user and no group, forced
-hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
+"Outside act" is the one UI name for this record: the acts list, the Contacts role (`performer`),
+a bill chip and the console action. An act CMC books that has no account is a `directory_entry`
+with no user and no group, forced hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
 `external-acts.remote.ts` under `event.manage`). Its private side is an `organization` with the
 `performer` role and `directory_entry_id` set (`performerFor()` in `organization-service.ts`,
 made with the entry). Its people are `contact` rows on that organization, read and written only
@@ -521,6 +522,12 @@ The same page lists the act's own booked shows from `offered` on, upcoming and t
 (`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
 call times, `describeTerms()`, the show's contact by name (`actContactNamesUnguarded()`, people at
 that act's own organization only) and, once settled, what it was paid. Never another act's slot.
+The staff bill's search (`searchBillActs` in `external-acts.remote.ts`, under the listing's
+writer guard) offers member bands and outside acts; a picked act is saved as the credit's
+`directory_entry_id` (`actId` on the lineup entry). A credit already naming an outside act keeps
+that link when any editor saves the bill by name. **Record as outside act** on the console
+(`listCreditInDirectory()`) links the outside act already on file under the credit's name, and
+creates one only when none matches.
 `claimExternalAct()` turns the entry into a band, sets `group.from_organization_id`, archives the
 organization and gives its people a retention horizon a year out. The band's staff page links to
 that organization, which keeps the act's gigs, payments and people.

@@ -359,6 +359,8 @@ export type EventGroup = typeof eventGroup.$inferSelect;
 export const lineupEntrySchema = z.object({
 	name: z.string().trim().min(1, 'Name is required').max(200),
 	bandId: z.string().optional(),
+	/** An outside act's `directory_entry` id, picked from the staff bill's search (#2782). */
+	actId: z.string().optional(),
 	billingOrder: z.number().int().min(0).max(11),
 	note: z.string().max(100).optional()
 });

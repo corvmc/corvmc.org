@@ -24,7 +24,7 @@ import type { EventSource } from '#lib/config.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
-import { createExternalAct } from '#lib/server/directory/entry-service.js';
+import { createExternalAct, findOutsideActByName } from '#lib/server/directory/entry-service.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { ticket } from '#lib/server/db/schema/ticket.js';
@@ -58,7 +58,8 @@ import {
 	inArray,
 	not,
 	count,
-	getTableColumns
+	getTableColumns,
+	isNull
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
@@ -1854,6 +1855,8 @@ export interface LineupRow {
 	name: string;
 	/** The CMC band behind this credit, if the entry has one. */
 	bandId: string | null;
+	/** The outside act behind this credit: an entry with no band and no member. */
+	actId: string | null;
 	bandSlug: string | null;
 	/**
 	 * Where to send someone for an act with no CMC page — the first link the act
@@ -1895,6 +1898,23 @@ async function entryIdsForGroups(groupIds: string[]): Promise<Map<string, string
 	return new Map(rows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id]));
 }
 
+/** Which of these entries are outside acts: no band and no member own them. */
+async function outsideActIds(entryIds: string[]): Promise<Set<string>> {
+	const unique = [...new Set(entryIds)];
+	if (unique.length === 0) return new Set();
+	const rows = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(
+			and(
+				inArray(directoryEntry.id, unique),
+				isNull(directoryEntry.groupId),
+				isNull(directoryEntry.userId)
+			)
+		);
+	return new Set(rows.map((r) => r.id));
+}
+
 /** One group's entry id, for the single-credit write paths. */
 async function entryIdForGroup(groupId: string): Promise<string | null> {
 	return (await entryIdsForGroups([groupId])).get(groupId) ?? null;
@@ -1910,6 +1930,8 @@ function lineupSelect() {
 			// for an external act, which is the same fact as "there is no CMC page
 			// to link to".
 			bandId: directoryEntry.groupId,
+			entryId: eventBand.directoryEntryId,
+			entryUserId: directoryEntry.userId,
 			bandSlug: group.slug,
 			bandAvatarKey: group.avatarKey,
 			// Where an unowned act's name should point instead. Public attribution
@@ -1931,8 +1953,9 @@ function lineupSelect() {
  * page. One helper so the single and batched reads cannot disagree about it.
  */
 function toLineupRow(row: Awaited<ReturnType<typeof lineupSelect>>[number]): LineupRow {
-	const { eventId: _eventId, links, ...rest } = row;
-	return { ...rest, externalUrl: links?.[0]?.url ?? null };
+	const { eventId: _eventId, links, entryId, entryUserId, ...rest } = row;
+	const actId = entryId && !rest.bandId && !entryUserId ? entryId : null;
+	return { ...rest, actId, externalUrl: links?.[0]?.url ?? null };
 }
 
 export async function getEventLineup(eventId: string): Promise<LineupRow[]> {
@@ -2003,9 +2026,10 @@ export async function setEventLineup(
 		const name = e.name.trim();
 		if (!name) continue;
 		const nameKey = name.toLowerCase();
-		if (e.bandId) {
-			if (seenBands.has(e.bandId)) continue;
-			seenBands.add(e.bandId);
+		const identity = e.bandId ?? (e.actId ? `act:${e.actId}` : undefined);
+		if (identity) {
+			if (seenBands.has(identity)) continue;
+			seenBands.add(identity);
 		} else if (seenNames.has(nameKey)) {
 			continue;
 		}
@@ -2022,6 +2046,25 @@ export async function setEventLineup(
 	]);
 
 	const existing = await db.select().from(eventBand).where(eq(eventBand.eventId, eventId));
+	// Outside acts this bill may name: the ones picked, and the ones already on
+	// it, so a chip saved by name by an editor that cannot search acts keeps its link.
+	const outsideActs = await outsideActIds([
+		...deduped.map((e) => e.actId).filter((id): id is string => !!id),
+		...existing.map((r) => r.directoryEntryId).filter((id): id is string => !!id)
+	]);
+	const actByName = new Map(
+		existing
+			.filter((r) => r.directoryEntryId && outsideActs.has(r.directoryEntryId))
+			.map((r) => [r.name.toLowerCase(), r.directoryEntryId!])
+	);
+	const actFor = (e: LineupEntry): string | null =>
+		e.bandId
+			? null
+			: e.actId
+				? outsideActs.has(e.actId)
+					? e.actId
+					: null
+				: (actByName.get(e.name.toLowerCase()) ?? null);
 	// Existing credits are keyed by the entry they name, so matching an incoming
 	// group against them goes through `entryIds` rather than comparing directly.
 	const byEntry = new Map(
@@ -2051,7 +2094,12 @@ export async function setEventLineup(
 
 	const invited: { bandId: string; name: string }[] = [];
 	const rows = deduped.map((e, i) => {
-		const prior = e.bandId ? priorFor(e.bandId) : byName.get(e.name.toLowerCase());
+		const actId = actFor(e);
+		const prior = e.bandId
+			? priorFor(e.bandId)
+			: actId
+				? byEntry.get(actId)
+				: byName.get(e.name.toLowerCase());
 
 		let status: EventBandStatus;
 		if (!e.bandId) {
@@ -2078,7 +2126,7 @@ export async function setEventLineup(
 			name: e.name,
 			// `e.bandId` is the *group* a lineup editor picked; the credit stores
 			// that band's entry.
-			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : null,
+			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : actId,
 			billingOrder: i,
 			status,
 			note: e.note ?? null,
@@ -3508,7 +3556,9 @@ export async function listCreditInDirectory(eventBandId: string): Promise<string
 	// double-clicked button.
 	if (credit.entryId) return credit.entryId;
 
-	const entryId = await createExternalAct({ name: credit.name });
+	// An act already on file under this name is the one meant (#2782).
+	const entryId =
+		(await findOutsideActByName(credit.name)) ?? (await createExternalAct({ name: credit.name }));
 	await db
 		.update(eventBand)
 		.set({ directoryEntryId: entryId })

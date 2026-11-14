@@ -6,6 +6,8 @@
 	export type LineupChip = {
 		name: string;
 		bandId?: string;
+		/** An outside act already on file, picked from the staff bill's search. */
+		actId?: string;
 		/** Absent on chips added in this session — the server decides. */
 		status?: 'unlinked' | 'pending' | 'confirmed' | 'declined';
 	};
@@ -42,7 +44,7 @@
 		 * community listing over its own `requireUser` version, since its author
 		 * may not be in a band at all.
 		 */
-		search: (q: string) => Promise<Array<{ id: string; name: string }>>;
+		search: (q: string) => Promise<Array<{ id: string; name: string; kind?: 'band' | 'act' }>>;
 		/** The line under the box on how confirmation works. */
 		hint?: boolean;
 	} = $props();
@@ -58,14 +60,18 @@
 	const matches = $derived(!readonly && query.trim().length >= 2 ? await search(query.trim()) : []);
 
 	/** Suggestions minus anyone already on the bill. */
-	const suggestions = $derived(matches.filter((m) => !value.some((v) => v.bandId === m.id)));
+	const suggestions = $derived(
+		matches.filter((m) => !value.some((v) => v.bandId === m.id || v.actId === m.id))
+	);
 
 	function add(chip: LineupChip) {
 		const nameKey = chip.name.trim().toLowerCase();
 		if (!nameKey) return;
 		const dupe = chip.bandId
 			? value.some((v) => v.bandId === chip.bandId)
-			: value.some((v) => v.name.trim().toLowerCase() === nameKey);
+			: chip.actId
+				? value.some((v) => v.actId === chip.actId)
+				: value.some((v) => v.name.trim().toLowerCase() === nameKey);
 		if (dupe) return;
 
 		value = [...value, { ...chip, name: chip.name.trim() }];
@@ -95,7 +101,8 @@
 	}
 
 	function chipLabel(chip: LineupChip): string {
-		if (!chip.bandId) return 'not on CMC';
+		if (chip.actId) return msg.events_lineup_editor_outside_act_label();
+		if (!chip.bandId) return msg.events_lineup_editor_name_only_label();
 		if (chip.status === 'confirmed') return 'confirmed';
 		if (chip.status === 'declined') return 'declined';
 		return 'awaiting reply';
@@ -110,7 +117,9 @@
 
 	/** Serialized for the remote form; billingOrder is just the visual order. */
 	const serialized = $derived(
-		JSON.stringify(value.map((v, i) => ({ name: v.name, bandId: v.bandId, billingOrder: i })))
+		JSON.stringify(
+			value.map((v, i) => ({ name: v.name, bandId: v.bandId, actId: v.actId, billingOrder: i }))
+		)
 	);
 </script>
 
@@ -174,10 +183,20 @@
 				<ul class="menu mt-1 menu-sm rounded border border-base-300 bg-base-100 p-1">
 					{#each suggestions as b (b.id)}
 						<li>
-							<button type="button" onclick={() => add({ name: b.name, bandId: b.id })}>
+							<button
+								type="button"
+								onclick={() =>
+									add(
+										b.kind === 'act'
+											? { name: b.name, actId: b.id }
+											: { name: b.name, bandId: b.id }
+									)}
+							>
 								{b.name}
 								<span class="badge badge-ghost badge-xs"
-									>{msg.events_lineup_editor_cmc_label()}</span
+									>{b.kind === 'act'
+										? msg.events_lineup_editor_outside_act_label()
+										: msg.events_lineup_editor_cmc_label()}</span
 								>
 							</button>
 						</li>

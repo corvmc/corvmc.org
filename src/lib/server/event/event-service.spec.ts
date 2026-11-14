@@ -227,7 +227,8 @@ vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 
 const mockCancelProductions = vi.fn().mockResolvedValue(0);
 vi.mock('#lib/server/directory/entry-service.js', () => ({
-	createExternalAct: vi.fn(async () => 'entry-new')
+	createExternalAct: vi.fn(async () => 'entry-new'),
+	findOutsideActByName: vi.fn(async () => null)
 }));
 
 const mockCreateProduction = vi.fn(async (_eventId: string, opts?: { id?: string }) => ({
