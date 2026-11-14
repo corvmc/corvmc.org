@@ -57,12 +57,12 @@ git merge origin/main     # a real merge commit. Never rebase: other worktrees h
 
 Resolve conflicts, minding the four that recur:
 
-| File                                                             | How to resolve                                                                                                                                                                                            |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/d1-table-order.mjs`                                     | **Position is semantic** — a table must follow everything it references. Taking both sides yields a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph. |
-| `scripts/seed-dev.ts`                                            | Take both. Each feature owns one `seedX()` appended at the end plus one line in `main()`.                                                                                                                 |
-| `src/lib/server/db/schema/index.ts`, `src/routes/*/nav-items.ts` | Append-only lists; take both sides, then run the adjacent `nav-items.spec.ts`.                                                                                                                            |
-| `pnpm-lock.yaml`                                                 | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                               |
+| File                                                                                                | How to resolve                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/d1-table-order.mjs`                                                                        | **Position is semantic** — a table must follow everything it references. Taking both sides yields a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph. |
+| `scripts/seed-dev.ts`                                                                               | Take both. Each feature owns one `seedX()` appended at the end plus one line in `main()`.                                                                                                                 |
+| `src/lib/server/db/schema/index.ts`, `src/routes/*/nav-items.ts`, `src/routes/staff/nav-items/*.ts` | Append-only lists; take both sides, then run the adjacent `nav-items.spec.ts`.                                                                                                                            |
+| `pnpm-lock.yaml`                                                                                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                               |
 
 Then, **only if this branch owns migrations**:
 
