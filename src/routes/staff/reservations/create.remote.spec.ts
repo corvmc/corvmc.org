@@ -110,8 +110,9 @@ vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
-// requireStaff() runs a real role query — one row is all hasAnyRole needs.
-let selectResult: unknown[] = [{ name: 'staff' }];
+// The capability check runs real position reads; `job` is the Operations seat
+// read's column (#2992), `name` the role row's.
+let selectResult: unknown[] = [{ name: 'staff', job: 'staff' }];
 
 function chainable() {
 	const proxy: any = new Proxy(() => proxy, {
@@ -182,7 +183,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	getConflictDetails.mockResolvedValue([]);
 	refreshed.length = 0;
-	selectResult = [{ name: 'staff' }];
+	selectResult = [{ name: 'staff', job: 'staff' }];
 });
 
 // ---------------------------------------------------------------------------
