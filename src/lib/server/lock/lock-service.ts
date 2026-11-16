@@ -335,8 +335,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 			// table for no gain.
 			if (await hasActiveMemberCode(row.createdByUserId)) continue;
 
-			await provisionAccessFor(row);
-			count++;
+			if ((await provisionAccessFor(row)) !== null) count++;
 		} catch (err) {
 			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
 			console.error(msg);
@@ -393,8 +392,7 @@ export async function provisionOnConfirm(reservationId: string): Promise<boolean
 
 		if (await hasActiveMemberCode(row.createdByUserId)) return false;
 
-		await provisionAccessFor(row);
-		return true;
+		return (await provisionAccessFor(row)) !== null;
 	} catch (err) {
 		console.error(
 			`Failed to provision lock access on confirm for reservation ${reservationId}: ${(err as Error).message}`
@@ -419,20 +417,28 @@ export async function reprovisionAccessFor(row: {
 }): Promise<{ ok: boolean; code?: number; error?: string }> {
 	try {
 		const code = await provisionAccessFor(row);
+		if (code === null) return { ok: false, error: 'Reservation is not confirmed' };
 		return { ok: true, code };
 	} catch (err) {
 		return { ok: false, error: (err as Error).message };
 	}
 }
 
-/** One reservation's worth of provisioning: mint a code, open the window, record it. */
+/**
+ * One reservation's worth of provisioning: mint a code, open the window, record it.
+ * The caller's read may be stale (a deferred listener, a slow daily run), so status
+ * is read again before the add and after it is recorded. Null when the booking
+ * stopped being confirmed: no add, or the add removed again.
+ */
 async function provisionAccessFor(row: {
 	id: string;
 	startsAt: Date;
 	endsAt: Date;
 	memberName: string;
 	code?: number;
-}): Promise<number> {
+}): Promise<number | null> {
+	if (!(await isConfirmed(row.id))) return null;
+
 	const code = row.code ?? generateLockCode();
 
 	const lockAccessId = await createTemporaryUser({
@@ -455,7 +461,25 @@ async function provisionAccessFor(row: {
 		})
 		.where(eq(reservation.id, row.id));
 
-	return code;
+	// Recorded before this read, so a cancel landing after it has a code to revoke.
+	if (await isConfirmed(row.id)) return code;
+
+	await removeHeldAccess({
+		id: row.id,
+		startsAt: row.startsAt,
+		lockCode: String(code),
+		lockAccessId: lockAccessId === null ? null : String(lockAccessId)
+	});
+	return null;
+}
+
+async function isConfirmed(reservationId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ status: reservation.status })
+		.from(reservation)
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	return row?.status === 'confirmed';
 }
 
 // ---------------------------------------------------------------------------
@@ -521,8 +545,7 @@ export async function syncAccessWindow(
 		try {
 			// A standing member code already opens the door, as in the other mint paths.
 			if (await hasActiveMemberCode(row.createdByUserId)) return { synced: false, errors };
-			await provisionAccessFor(row);
-			return { synced: true, errors };
+			return { synced: (await provisionAccessFor(row)) !== null, errors };
 		} catch (err) {
 			const msg = `Failed to provision lock access for reservation ${row.id}: ${(err as Error).message}`;
 			console.error(msg);
@@ -575,8 +598,8 @@ export async function syncAccessWindow(
 	}
 
 	try {
-		await provisionAccessFor({ ...row, code: Number(row.lockCode) });
-		return { synced: true, errors };
+		const code = await provisionAccessFor({ ...row, code: Number(row.lockCode) });
+		return { synced: code !== null, errors };
 	} catch (err) {
 		const msg = `Failed to re-provision lock access for reservation ${row.id}: ${(err as Error).message}`;
 		console.error(msg);
@@ -679,11 +702,18 @@ type HeldAccess = {
  * Delete a booking's lock user, then clear its three lock columns. A row with
  * no `lockAccessId` predates the id being recorded, so its user is found by
  * window start, and by keypad code when `get` returns one. Throws on a lock
- * failure and leaves the columns set, so the daily sweep can retry.
+ * failure and leaves the columns set, so the daily sweep can retry. A delete
+ * that fails on a user already gone counts as removed: a cancel racing a
+ * provision can send two.
  */
 async function removeHeldAccess(row: HeldAccess): Promise<void> {
 	if (row.lockAccessId) {
-		await removeTemporaryUser(Number(row.lockAccessId));
+		const id = Number(row.lockAccessId);
+		try {
+			await removeTemporaryUser(id);
+		} catch (err) {
+			if ((await getLockUser(id).catch(() => undefined)) !== null) throw err;
+		}
 	} else {
 		const start = lockDateTime(row.startsAt);
 		for (const u of await listLockUsers()) {
