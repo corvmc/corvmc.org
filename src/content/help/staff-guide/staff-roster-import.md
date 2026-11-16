@@ -8,8 +8,8 @@ capabilities: group.manage
 sortOrder: 22
 ---
 
-Open the club under **Staff → People → Clubs**, or the committee under **Staff → Planning →
-Committees**, and choose **Import emails** on the **Roster** card.
+Open the club under **Staff → Clubs**, or the committee under **Staff → Committees**, and
+choose **Import emails** on the **Roster** card.
 
 ## What to give it
 

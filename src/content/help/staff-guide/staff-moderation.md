@@ -8,15 +8,16 @@ capabilities: moderation.reviewFlags, suggestion.read
 sortOrder: 18
 ---
 
-## Two queues under Moderation
+## Two queues
 
-**Content Flags** is reports members have filed — on a profile, a band, an event,
-a suggestion, or a conversation. **Suggestions** is the member idea
-board and its review work. Both carry a count in the sidebar.
+**Staff → Moderation → Content flags** is reports members have filed — on a profile, a
+band, an event, a suggestion, or a conversation. **Staff → Suggestions** is the member idea
+board and its review work. What waits on you in either is on the dashboard's **Waiting for
+review**.
 
 ## The flag queue
 
-**Moderation → Content Flags** opens on pending reports. Each row is one report:
+**Content flags** opens on pending reports. Each row is one report:
 what was reported, who reported it, the reason they gave, and when.
 
 Open one and you get the reported thing alongside the report, so you are reading
@@ -24,17 +25,17 @@ the actual listing or profile rather than a description of it. A reported
 conversation is readable here and only here — filing the report is what made it
 readable, and it exposes only the thread the reporter was in.
 
-Two outcomes:
+**Resolve / dismiss** asks for one of two outcomes:
 
-- **Dismiss** — nothing happens to anyone. Dismissing costs the reported member
-  nothing at all, so it is the right answer whenever you are unsure.
-- **Uphold** — the report stands. This is the only action that moderates
-  anything, and everything below follows from it.
+- **Dismiss — no action** — nothing happens to anyone. Dismissing costs the reported
+  member nothing at all, so it is the right answer whenever you are unsure.
+- **Resolve — action taken** — the report is upheld. This is the only action that
+  moderates anything, and everything below follows from it.
 
 Leave a note either way. It is what the next staffer reads when the same name
 comes up again.
 
-For an event, upholding offers to **unpublish** it in the same step. Do
+For an event, upholding offers **Also unpublish this event** in the same step. Do
 that rather than deleting: an unpublished event is editable, so the member can
 fix it and put it back, and the record of what happened survives.
 
@@ -57,7 +58,7 @@ is the whole reason there is one table and not one flag on the user.
 | **Suggestions** | Posts go to review before appearing         | Not available |
 | **Messaging**   | Reply-only — cannot start new conversations | Available     |
 
-Standing lives on the member's record — **Members → the member → Moderation** —
+Standing lives on the member's record — **Staff → Members → _the member_ → Moderation** —
 where you can also see every report for and against them. Restore from the same
 place, and restore promptly once the conversation has moved on; nothing sweeps
 these up for you.
@@ -68,7 +69,7 @@ which is what you want the next time you are asked.
 
 ## The suggestion board
 
-**Moderation → Suggestions** shows the board sorted by votes — which is the
+**Staff → Suggestions** shows the board sorted by votes — which is the
 board's whole output, so read it that way rather than by date.
 
 What there is to do:
@@ -78,10 +79,10 @@ What there is to do:
   forever; an honest no is more useful to members than silence.
 - **Review pending posts** — from members whose standing puts them through
   review. Approve onto the board or take it down.
-- **Review pending edits** — an author editing a post that other people have
+- **Pending edits** — an author editing a post that other people have
   already voted on. Check the edit is a clarification and not a different idea
   wearing the same votes.
-- **Merge duplicates** — votes transfer and dedupe per member, and the merged
+- **Merge** duplicates — votes transfer and dedupe per member, and the merged
   post points at the survivor. Merge freely; nobody loses anything.
 
 A reported suggestion is off the board while it waits, so this queue is time
@@ -101,8 +102,9 @@ reason next to their objection.
 ## Appeals
 
 A member can appeal any upheld report against their own post or standing, once.
-The appeal appears on the report's page under the decision, and the **Content
-Flags** badge counts appeals waiting for an answer. Nothing changes while one is
+The appeal appears on the report's page under the decision. On **Content flags** its row
+is marked **Appeal waiting**, and the dashboard's **Waiting for review** lists it until it is
+answered. Nothing changes while one is
 pending: the post stays down and the restriction stays on.
 
 Deciding is two questions — does the content go back up, and does the member come

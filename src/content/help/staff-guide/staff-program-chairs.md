@@ -18,8 +18,7 @@ their own position; a chair or staff does that.
 
 ## Add a chair
 
-Open the club under **Staff → People → Clubs**, or the committee under **Staff → Planning →
-Committees**.
+Open the club under **Staff → Clubs**, or the committee under **Staff → Committees**.
 
 - **Someone already on the roster:** choose **Make chair** on their row.
 - **Anyone else:** choose **Add chair** at the top of the page and search for the member. They are

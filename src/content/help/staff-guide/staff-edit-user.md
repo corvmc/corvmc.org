@@ -10,20 +10,20 @@ sortOrder: 2
 
 ## The user detail page
 
-Open a member from **Staff → Members** to see and manage their account.
+Open a member from **Staff → Members**, then **Open record**, to see and manage their account.
 
 ## What you can do
 
-- **Edit details** — Name, pronouns, and phone. The sign-in email is not typed over here;
-  see below.
-- **Manage roles** — Assign or remove roles via the role selector.
-- **Adjust credits** — Change a member's practice or equipment credits
-  with the _Adjust credits_ action.
-- **Review payments** — A table of their payment records, with amounts, methods,
-  status, and Stripe references to copy.
+- **Edit details** — Name, pronouns, and phone, in **Account info** on the **Account** tab.
+  The sign-in email is not typed over here; see below.
+- **Manage roles** — Assign or remove roles in the **Roles** field of the same card.
+- **Adjust credits** — Change a member's practice or equipment credits with **Adjust** on
+  the **Money** tab.
+- **Review payments** — The **Money** tab's table of their payment records, with amounts,
+  methods, status, and Stripe references to copy.
 
-You'll also see reference details: user ID, Stripe ID, join date, and deletion date
-if applicable.
+The **Account** tab also shows reference details: user ID, Stripe ID, join date, and
+deletion date if applicable.
 
 ## Correct a member's email
 

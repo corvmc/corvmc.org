@@ -13,20 +13,21 @@ sortOrder: 8
 **Staff → Events** lists events by date with status, tags, and space-reservation
 info. Create a new one with **Create event**, or open an event to manage it. Creating asks only
 for the title, kind, date and times; the event's page opens next, with its edit form open, for
-everything else. An event has no production until someone opens one: **Staff → Productions →
-New Production** attaches one to a show already on the calendar, or makes the event and its
-production together.
+everything else. An event has no production until someone opens one: **New production**, on
+**Staff → Events** with **View** set to **Productions**, attaches one to a show already on the
+calendar, or makes the event and its production together.
 
 ## On the event detail page
 
-- **Edit details** — Title, description, date, start/end/doors times, venue and tags, plus
-  ticketing (**price** and **quantity**) and the practice-space reservation.
+- **Edit** — Title, description, date, start/end/doors times, venue and tags, plus
+  ticketing (**price** and **quantity**) and **Reserve practice space**.
 - **Poster, ticket sales and repeats** — the poster card, the ticket list and comps, and
-  **Repeat this event** to make it a series, all on the same page.
+  **Repeat event** to make it a series, all on the same page.
 - **Publish / Unpublish** — Control whether the event is visible.
-- **Cancel** — Call off an event.
-- **Rebook** — If you change the time, rebook the linked reservation; conflicts are
-  flagged so you can override deliberately.
+- **Cancel event** — Call off an event.
+- **Confirm rebook** — If you change the time, the edit form rebooks the linked reservation;
+  conflicts are flagged so you can override deliberately. **Edit hold** on the **Room hold**
+  card moves the hold without changing the event's times.
 
 ## The production console
 
@@ -40,7 +41,7 @@ and sees it on their member dashboard.
 
 ## Check-in
 
-For ticketed events, open the **Check-In** tool from the event. Scan attendees'
+For ticketed events, open the **Check-in** tool from the event. Scan attendees'
 ticket QR codes to admit them.
 
 ## Related

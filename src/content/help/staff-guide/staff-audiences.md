@@ -10,17 +10,19 @@ sortOrder: 13
 
 ## Audiences
 
-**Staff → Marketing → Audiences** holds the lists you send campaigns to. There
+**Staff → Outreach → Audiences** holds the lists you send campaigns to. There
 are two kinds, and the difference is who decides who's on them.
 
 ## Built-in audiences
 
-Four audiences ship with the site and are marked **Built-in**:
+Five audiences ship with the site and are marked **Built-in**:
 
 - **All Members** — every active member account
 - **Sustaining Members** — members with an active sustaining membership
 - **Non-Sustaining Members** — active members without one
 - **Band Leaders** — members who own or administer an active band
+- **Event audience** — ticket holders and RSVPs for the show a campaign is about;
+  empty when the campaign names no show
 
 You don't add anyone to these. Membership is worked out from member records
 every time you send, so the count is always current and there is nothing to
@@ -37,9 +39,9 @@ in, even though they still match.
 Create a custom audience for anything the built-ins don't cover — press
 contacts, past performers, a one-off invite list.
 
-1. Create the audience and name it.
-2. Add subscribers by email, or use **Add all members** to seed it from the
-   current membership. That's a one-time copy, not a live link.
+1. Choose **Create audience** and name it.
+2. Add subscribers by email with **Add subscriber**, or use **Add all active
+   members** to seed it from the current membership. That's a one-time copy, not a live link.
 3. Turn on **Allow public opt-in** if you want a signup page at
    `/subscribe/your-slug`.
 

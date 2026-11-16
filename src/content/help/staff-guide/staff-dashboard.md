@@ -53,23 +53,27 @@ Two rows sit on their own at the top:
 
 Everything else is grouped by what it's for:
 
-- **People** — **Members** (member accounts, roles, and credits, with volunteers and the hours
-  queue as views) and **Bands** (all bands, their members, and moderation). Volunteer shifts
-  are **Planning → Volunteering**, whose badge counts shifts in the next week short of bookings
-  and shifts that ended. Every task,
-  in a project or not, is on **Planning → Tasks**, with Projects, Recurring work, Productions
-  and Templates as views beside the table. A task can wait on others: set it on the task's page
-  under **Waits on**. It shows as **Blocked** on the table until they are done, and the project's
-  **Task graph** draws the order.
-- **Space** — **Reservations** (practice-space bookings and payments), with **Recurring** standing
-  series and **Closures** blackout dates beneath it; and **Equipment** (the inventory), with
-  **Loans** beneath it.
-- **Programs** — **Events**: creating and running events, ticketing, and check-in.
-- **Moderation** — **Content Flags** and **Suggestions**. What waits on you in either is on the
-  dashboard.
-- **Outreach** — **Campaigns**, **Audiences**, and **Help articles**.
-- **Money** — **Payments** and **Credits**.
-- **System** — **Settings**.
+- **Relationships** — **Contacts** (outside organizations, with funders, sponsors and
+  contractors among them), **Outreach** (**Campaigns**, **Audiences** and **Posters**) and
+  **Funding** (grant applications and sponsorships).
+- **Community** — **Members** (member accounts, roles, and credits; volunteers and teachers are
+  role filters), **Bands**, **Suggestions**, **Ballots**, **Moderation** (**Content flags**,
+  **Incidents** and **Blocklist**), **Classifieds** and **Content** (**Help articles** and
+  **Local resources**).
+- **Programs** — **Events** (creating and running events, ticketing and check-in, with
+  productions, venues and vendor applications as views), **Practice space** (**Reservations**,
+  **Recurring series** and **Building access**), **Clubs** and **Music**.
+- **Operations** — **Tasks**, **Committees**, **Volunteering**, **Equipment**, **Supplies** and
+  **Money** (**Payments** and **Credit transactions**). Every task, in a project or not, is on
+  **Tasks**, with **Projects** beside it and **Recurring work** and **Templates** in its header.
+  A task can wait on others: set it on the task's page under **Waits on**. It shows as
+  **Blocked** on the table until they are done, and the project's **Task graph** draws the
+  order. Volunteer shifts are **Volunteering**, whose badge counts understaffed shifts in the
+  next seven days and tasks with ended shifts.
+
+Below the groups, **Reports** holds the annual, volunteering, inventory spend and music
+reports, and **System** opens the site-wide settings: **Organization**, **Features**,
+**Access** and **Audit log**.
 
 Click a group's heading to collapse it, and the sidebar remembers your choice next time. Opening a
 page inside a group you collapsed re-opens that group, so you can always see where you are.

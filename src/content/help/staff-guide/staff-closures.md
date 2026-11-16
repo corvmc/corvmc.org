@@ -15,14 +15,15 @@ private events. During a closure, members can't book the affected times.
 
 ## Creating a closure
 
-1. Open **Staff → Practice space**.
+1. Open **Staff → Practice space → Reservations**.
 2. Open the menu beside **New reservation** and choose **Add closure**.
-3. Set a **reason** and a **start** and **end** date and time, then save it.
+3. Set a **Reason** and a **Start** and **End** date and time, then choose **Add closure**.
 
 ## Managing closures
 
-Closures are rows of the Practice space list, under All bookers and All statuses. A
-closure that has not started can be **edited** or **deleted** from its row.
+Closures are rows of the Reservations list, under All bookers or the **Closures** booker
+type, with All statuses. A closure that has not started can be changed with **Edit closure**
+or deleted from its row.
 
 ## Tips
 

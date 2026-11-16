@@ -10,19 +10,20 @@ sortOrder: 10
 
 ## Equipment inventory
 
-**Staff → Equipment** is the catalog of lendable gear, grouped by category. Search
-by name, serial, or resource ID, and filter by category and status.
+**Staff → Equipment → Items** is the catalog of lendable gear, grouped by category. Search
+by name, barcode, or resource ID, and filter by category and status.
 
 ## Managing items
 
-- **Add Equipment** — Create a new item with its details and pricing tier.
-- Open an item to edit its **condition notes**, **status**, **serial**, and
-  depreciation/cost info.
-- Each item shows its availability and pricing tier at a glance.
+- **Add item** — Create a new item with its details and category.
+- Open an item to see each unit's **Serial** and **Condition**, and edit its
+  details and cost info.
+- Each item shows its availability and its category's pricing tier at a glance.
 
 ## Categories
 
-Use the **Categories** action to add, rename, or delete equipment categories.
+Use the **Categories** action to add, rename, or delete equipment categories, and to
+set each one's pricing tier.
 Keeping categories tidy makes the catalog easy for members to browse.
 
 ## Related

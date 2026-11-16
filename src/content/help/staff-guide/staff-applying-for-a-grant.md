@@ -11,13 +11,14 @@ sortOrder: 21
 This walks through one grant from the first look to the final report. The app adds the tasks for
 each stage, each with a note on what it means. You do the work and tick the tasks off.
 
-Everything here happens on **Staff → Partners → Funding**, on the grant's page, and on the grant's
-project, which holds its tasks. **Track Sponsors and Grants** covers the lists and the statuses.
+Everything here happens on **Staff → Funding**, on the grant's page, and on the grant's
+project, which holds its tasks. **Track sponsors and grants** covers the lists and the statuses.
 
 ## 1. Add the funder and the application
 
-1. Under **Funders**, add the foundation or agency if it is not there yet. Add the program officer
-   as its contact if you know who that is.
+1. **Funders** on **Funding** opens the funders on **Contacts**. If the foundation or agency is not
+   there yet, choose **Add organization** with the **Funder** role. Add the program officer as its
+   contact if you know who that is.
 2. On **Funding**, choose **New application**. Give it a name you will recognise, such as "2027
    operating support", and set **Apply by** to the funder's deadline.
 3. Leave the status as **Prospect**.
@@ -69,8 +70,7 @@ Set the status to **Closed** once the final report is in.
 
 ## When something is off
 
-- **The grant has no tasks.** The template may be switched off under **Staff → Planning → Tasks →
-  Templates**. Apply **Grant application**, **Grant award** or **Grant close-out** from the grant's
+- **The grant has no tasks.** The template may be switched off under **Staff → Tasks → Templates**. Apply **Grant application**, **Grant award** or **Grant close-out** from the grant's
   project instead.
 - **The tasks have no dates.** The grant had no apply-by date, award start or award end when they
   were added. Set the date on the grant and they are placed.

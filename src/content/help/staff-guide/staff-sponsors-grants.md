@@ -8,7 +8,7 @@ capabilities: sponsor.read, grant.read
 sortOrder: 20
 ---
 
-Both live on one list: **Staff → Partners → Funding**. The funders and sponsors themselves are
+Both live on one list: **Staff → Funding**. The funders and sponsors themselves are
 organizations under **Contacts**.
 
 Staff can add and change both, and so can members of any committee whose grants include them.
@@ -16,7 +16,7 @@ The Development Committee has them to start with. The treasurer can read both. A
 who holds no staff position still gets a **Staff** tab, which opens on the lists their committee
 can use, and they receive the deadline reminders.
 
-To change which committee manages these, open the committee under **Staff → People → Groups**
+To change which committee manages these, open the committee under **Staff → Committees**
 and edit its **Grants**.
 
 ## The Funding page
@@ -65,7 +65,8 @@ sent keep their credit.
 
 ## Grants
 
-Add the funder first under **Funders**, then choose **New application** on the Funding page. The
+Add the funder first under **Contacts** with the **Funder** role (**Funders** on the Funding page
+opens that list), then choose **New application** on the Funding page. The
 application opens with its first tasks already on its project. **Applying for a grant** walks
 through one grant from start to finish.
 

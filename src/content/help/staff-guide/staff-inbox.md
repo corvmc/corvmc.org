@@ -33,8 +33,7 @@ says which of the two it is, and a dated one says when it is due back.
 
 Below that you can **search** by sender or subject, and filter by **channel**, by
 **status**, by **inquiry type**, by who a conversation is **assigned to**
-(including _Unassigned_ and _Assigned to me_), and by how long it has been
-**waiting**. Your filters live in the address bar, so opening a conversation and
+(including _Me_ and _Unassigned_), and by how long it has been **waiting**. Your filters live in the address bar, so opening a conversation and
 coming back leaves you where you were.
 
 ## Inside a conversation
@@ -61,17 +60,17 @@ reopens automatically.
 
 ## Status and assignment
 
-The sidebar carries the actions:
+The conversation's action bar carries the actions:
 
 - **Resolve** when you're done. It leaves the open queue.
-- **Snooze** when it needs picking up later — pick tomorrow, three days, next
-  Monday or two weeks, and the conversation drops out of the open queue and
-  returns to it on the morning you chose.
+- **Snooze** when it needs picking up later — pick Tomorrow, Later this week, Next
+  week, In two weeks or **Pick a date**, and the conversation drops out of the open
+  queue and returns to it on the morning you chose.
 - **Reopen** / **Unsnooze** to pull one back by hand.
-- **Awaiting reply** marks a conversation as waiting on the other person. Sending a
-  reply does this for you — the button is for the times you answered somewhere the
-  inbox cannot see, like a phone call. **Needs a reply** takes it back.
-- **Assignment** puts a conversation on a specific staff member, who is notified.
+- **When they reply**, in the Snooze menu, marks a conversation as waiting on the other
+  person. Sending a reply does this for you — the option is for the times you answered
+  somewhere the inbox cannot see, like a phone call. **Needs a reply** takes it back.
+- **Assign** puts a conversation on a specific staff member, who is notified.
 
 A conversation marked as awaiting a reply moves out of Open and into Snoozed, and
 stops counting towards the number on the Inbox nav item — that number is there to
