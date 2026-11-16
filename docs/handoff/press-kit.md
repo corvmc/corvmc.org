@@ -177,10 +177,10 @@ do not just filter" item is unbuilt.
 ![desktop](press-kit/images/band-dashboard-ladder-desktop.png)
 ![mobile](press-kit/images/band-dashboard-ladder-mobile.png)
 
-**Route** `/band/wren-halloway` · **File** `src/routes/band/[slug]/+page.svelte`, card in
-`PressKitCard.svelte` · **Guard** `requireGroupRole('member', { staff: 'band.read' })`; the card is
-owner/admin only · **Data** `getPressKitProgress`, behind its own boundary so the dashboard's
-sessions do not wait on it.
+**Route** `/band/wren-halloway` · **File** `src/routes/band/[slug]/+page.svelte` · **Guard**
+`requireGroupRole('member', { staff: 'band.read' })`; the card is owner/admin only · **Data**
+`getPressKitProgress`, read inside `getBandDashboard`, the page's one query. Since #3128 the card
+shows only after the four setup steps are done, and only while the free ladder is incomplete.
 
 The first thing a band member sees after choosing their act. The card is a compact form of
 the ladder — a count, the next missing piece, and a way in. It exists because nothing
