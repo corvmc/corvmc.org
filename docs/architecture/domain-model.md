@@ -116,11 +116,13 @@ two worth knowing:
 
 A task links to the records it is about through `work_order_link` (#2622): one row per link,
 one nullable column per kind of record (`organization_id`, `contact_id`, `asset_id`,
-`reservation_id`), exactly one set, each a cascading foreign key with its own partial index. A
+`reservation_id`, `item_id`, `incident_id`, `inbox_thread_id`), exactly one set, each a cascading foreign key with its own partial index. A
 new kind of target is one nullable column and its index. Columns that code acts on stay on
 `work_order`: `project_id`, `event_id`, `volunteer_role_id`, `group_id`, `duty_list_id`,
 `maintenance_schedule_id`. Reads go through `src/lib/server/task/work-order-link.ts`, and the
-related-tasks registry finds an organization's, contact's, unit's or booking's tasks with it.
+related-tasks registry finds an organization's, contact's, unit's, item's, booking's, incident's
+or Inbox thread's tasks with it. A task made from an incident or a thread also links the people
+it names (#2758); the record and the task keep independent status.
 
 ## Inside the social vertical
 

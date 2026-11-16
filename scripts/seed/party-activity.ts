@@ -11,9 +11,8 @@ const ARTS = 'seed-org-arts-center';
  * The Corvallis Arts Center's timeline (#2622): one note of each kind, a note
  * on its programs director, an open follow-up due next week and one done last
  * month, and two emails from its director: one filed to it, one not yet, which
- * the Inbox offers to file to her. So the organization page, the person page,
- * the Inbox's filing and the Contacts list all render something. Needs
- * `seedContacts`.
+ * the Inbox offers to file to her; the filed one is resolved, its task still
+ * open (#2758). So the party pages, filing and Contacts render. Needs `seedContacts`.
  */
 export async function seedPartyActivity(staffId: string) {
 	console.log('Seeding contact activity...');
@@ -86,6 +85,19 @@ export async function seedPartyActivity(staffId: string) {
 			createdAt: new Date(now - day)
 		}
 	]);
+	const deposit = 'seed-task-arts-deposit';
+	await batchInsert(workOrder, [
+		{
+			id: deposit,
+			title: 'Pay the hall deposit',
+			dueAt: new Date(now + 3 * day),
+			createdByUserId: staffId
+		}
+	]);
+	await batchInsert(workOrderLink, [
+		{ workOrderId: deposit, inboxThreadId: filed },
+		{ workOrderId: deposit, organizationId: ARTS }
+	]);
 	await batchInsert(inboxMessage, [
 		{
 			threadId: filed,
@@ -102,5 +114,5 @@ export async function seedPartyActivity(staffId: string) {
 			createdAt: new Date(now - day)
 		}
 	]);
-	return { notes: notes.length + 1, tasks: 2, threads: 2 };
+	return { notes: notes.length + 1, tasks: 3, threads: 2 };
 }

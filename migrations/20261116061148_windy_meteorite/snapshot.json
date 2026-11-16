@@ -1,10 +1,10 @@
 {
-  "id": "f679dfa0-be2f-40c2-b176-412e468d3996",
-  "prevIds": [
-    "22f79837-6e38-46d7-9a06-5441876578c8"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "81ad3d9a-2d37-49df-a0be-741ebe5ef3c7",
+  "prevIds": [
+    "f679dfa0-be2f-40c2-b176-412e468d3996"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -11961,6 +11961,26 @@
       "table": "work_order_link"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "incident_id",
+      "entityType": "columns",
+      "table": "work_order_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "inbox_thread_id",
+      "entityType": "columns",
+      "table": "work_order_link"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -20117,6 +20137,36 @@
     },
     {
       "columns": [
+        "incident_id"
+      ],
+      "tableTo": "incident",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_link_incident_id_incident_id_fk",
+      "entityType": "fks",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        "inbox_thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_link_inbox_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
         "organization_id"
       ],
       "tableTo": "organization",
@@ -26621,6 +26671,42 @@
     {
       "columns": [
         {
+          "value": "incident_id",
+          "isExpression": false
+        },
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "incident_id is not null",
+      "origin": "manual",
+      "name": "idx_work_order_link_incident",
+      "entityType": "indexes",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        {
+          "value": "inbox_thread_id",
+          "isExpression": false
+        },
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "inbox_thread_id is not null",
+      "origin": "manual",
+      "name": "idx_work_order_link_inbox_thread",
+      "entityType": "indexes",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        {
           "value": "organization_id",
           "isExpression": false
         },
@@ -28485,7 +28571,7 @@
       "table": "work_task"
     },
     {
-      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) = 1",
+      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) + (incident_id is not null) + (inbox_thread_id is not null) = 1",
       "name": "work_order_link_one_target",
       "entityType": "checks",
       "table": "work_order_link"
