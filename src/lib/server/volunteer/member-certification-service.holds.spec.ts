@@ -12,7 +12,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { holdsCertificationSql } = await import('./member-certification-service');
+const { holdsCertificationSql, missingCertifications } =
+	await import('./member-certification-service');
 const { user } = await import('#lib/server/db/schema/authentication.js');
 const { db } = await import('#lib/server/db/index.js');
 
@@ -34,6 +35,10 @@ beforeAll(() => {
 		from = '2026-01-01'
 	) => `('${id}', '${userId}', '${cert}', ${s(from)}, ${extra})`;
 	sqlite.exec(
+		`insert into volunteer_certification (id, name) values
+			('food', 'Test food handler'), ('sound', 'Test sound desk')`
+	);
+	sqlite.exec(
 		`insert into member_certification (id, user_id, certification_id, granted_at, expires_at, revoked_at, revoked_reason) values
 			${grant('g1', 'current', 'food', `${s('2027-01-01')}, null, null`)},
 			${grant('g2', 'expired', 'food', `${s('2026-10-01')}, null, null`)},
@@ -51,5 +56,22 @@ describe('holdsCertificationSql', () => {
 			.where(holdsCertificationSql('food', AT));
 
 		expect(rows.map((r) => r.id)).toEqual(['current']);
+	});
+});
+
+describe('missingCertifications', () => {
+	it('names only the clearances not in force on the date asked about', async () => {
+		expect(await missingCertifications('current', ['food', 'sound'], AT)).toEqual([
+			{ id: 'sound', name: 'Test sound desk' }
+		]);
+		expect(await missingCertifications('expired', ['food'], AT)).toEqual([
+			{ id: 'food', name: 'Test food handler' }
+		]);
+		expect(await missingCertifications('future', ['food'], AT)).toHaveLength(1);
+		expect(await missingCertifications('future', ['food'], new Date('2026-11-02'))).toEqual([]);
+	});
+
+	it('asks nothing of an empty list', async () => {
+		expect(await missingCertifications('none', [], AT)).toEqual([]);
 	});
 });

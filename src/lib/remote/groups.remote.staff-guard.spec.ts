@@ -7,6 +7,7 @@ import {
 	type Capability,
 	type Position
 } from '#lib/config.js';
+import { allStaffNavItems } from '../../routes/staff/nav-items';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -362,6 +363,29 @@ describe('the committee pages', () => {
 			manage: { group: unknown } | null;
 		};
 		expect(page.manage?.group).toEqual(committee);
+	});
+
+	// The nav row and the page's guards name the same capabilities (#3027): a
+	// row that shows to a position whose page then 403s is a dead end.
+	it.each([
+		['committees', ['getStaffCommittees', 'getStaffCommitteePage']],
+		['clubs', ['getStaffGroups', 'getStaffClubTotals']]
+	] as const)('opens the %s pages to every position its nav row shows to', async (key, remotes) => {
+		const row = allStaffNavItems().find((i) => i.key === key)!;
+		const rowCaps = [row.capability!, ...(row.alsoFor ?? [])];
+		for (const position of positionOrder) {
+			if (!rowCaps.some((c) => positionsGranting(c).includes(position))) continue;
+			heldPositions = [position];
+			for (const remote of remotes) {
+				const input =
+					remote === 'getStaffGroups'
+						? { kind: 'club' }
+						: remote.endsWith('Page')
+							? 'group-1'
+							: undefined;
+				expect(await outcome(remote, input), `${position} on ${remote}`).toBe('allowed');
+			}
+		}
 	});
 
 	it('refuses a treasurer, and 404s a club', async () => {

@@ -5,7 +5,7 @@ import { volunteerShift, workOrder } from '#lib/server/db/schema/volunteer.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { claimedSql, liveShift } from './work-order-service';
-import { holdsPracticeSpaceClearanceSql } from './practice-space-clearance';
+import { clearedForPracticeSpaceSql } from './practice-space-clearance';
 import { CLEARANCE_BOOKER } from '#lib/config.js';
 
 /** The reads behind the two orientation reminders (#2567, #2569). */
@@ -63,8 +63,8 @@ export interface FirstVisit {
 }
 
 /**
- * A member's own confirmed bookings starting in [from, to) while they hold no
- * Practice space clearance at `at`. Band, teaching and event bookings are not
+ * A member's own confirmed bookings starting in [from, to) while they are not
+ * cleared for the room at `at`, own or through a band. Band, teaching and event bookings are not
  * a member's visit, the same split the booking notice makes.
  */
 export async function listFirstVisitsBetween(
@@ -103,7 +103,7 @@ export async function listFirstVisitsBetween(
 				eq(reservation.bookerType, CLEARANCE_BOOKER),
 				gte(reservation.startsAt, from),
 				lt(reservation.startsAt, to),
-				not(holdsPracticeSpaceClearanceSql(reservation.createdByUserId, at))
+				not(clearedForPracticeSpaceSql(reservation.createdByUserId, at))
 			)
 		)
 		.limit(500);

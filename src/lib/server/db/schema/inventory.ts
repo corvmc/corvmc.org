@@ -5,6 +5,7 @@ import { user } from './authentication';
 import { flagStatuses } from './flag';
 import { project } from './project';
 import { organization } from './party';
+import { volunteerCertification } from './volunteer';
 import {
 	acquisitionKinds,
 	assetStatuses,
@@ -199,6 +200,10 @@ export const inventoryItem = sqliteTable(
 		reorderPoint: integer('reorder_point'),
 		reorderQuantity: integer('reorder_quantity'),
 		resourceId: text('resource_id'),
+		/** A clearance a borrower should hold on the loan's start date. Missing it warns (#2953). */
+		clearanceId: text('clearance_id').references(() => volunteerCertification.id, {
+			onDelete: 'set null'
+		}),
 		imageUrl: text('image_url'),
 		notes: text('notes'),
 		createdAt: integer('created_at', { mode: 'timestamp' })
@@ -616,6 +621,10 @@ export const inventoryLoan = sqliteTable(
 		cashCents: integer('cash_cents'),
 		memberNotes: text('member_notes'),
 		staffNotes: text('staff_notes'),
+		/** The item's clearance the member did not hold on the requested pickup date. */
+		missingClearanceId: text('missing_clearance_id').references(() => volunteerCertification.id, {
+			onDelete: 'set null'
+		}),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),

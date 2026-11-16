@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "d93a12d4-9102-4dd0-9605-1d3a2a903845",
+  "id": "c5880f0a-cbc6-40b5-b09d-a6e3c16810a2",
   "prevIds": [
-    "22f79837-6e38-46d7-9a06-5441876578c8"
+    "a330bfc4-d537-4744-8aa4-9c988bc06970"
   ],
   "ddl": [
     {
@@ -5180,6 +5180,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "clearance_id",
+      "entityType": "columns",
+      "table": "inventory_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "image_url",
       "entityType": "columns",
       "table": "inventory_item"
@@ -5581,6 +5591,16 @@
       "default": null,
       "generated": null,
       "name": "staff_notes",
+      "entityType": "columns",
+      "table": "inventory_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "missing_clearance_id",
       "entityType": "columns",
       "table": "inventory_loan"
     },
@@ -12085,6 +12105,26 @@
       "table": "work_order_link"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "incident_id",
+      "entityType": "columns",
+      "table": "work_order_link"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "inbox_thread_id",
+      "entityType": "columns",
+      "table": "work_order_link"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -17796,6 +17836,21 @@
     },
     {
       "columns": [
+        "clearance_id"
+      ],
+      "tableTo": "volunteer_certification",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_item_clearance_id_volunteer_certification_id_fk",
+      "entityType": "fks",
+      "table": "inventory_item"
+    },
+    {
+      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -17911,6 +17966,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_inventory_loan_kit_loan_id_inventory_kit_loan_id_fk",
+      "entityType": "fks",
+      "table": "inventory_loan"
+    },
+    {
+      "columns": [
+        "missing_clearance_id"
+      ],
+      "tableTo": "volunteer_certification",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_loan_missing_clearance_id_volunteer_certification_id_fk",
       "entityType": "fks",
       "table": "inventory_loan"
     },
@@ -20281,6 +20351,36 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_work_order_link_item_id_inventory_item_id_fk",
+      "entityType": "fks",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        "incident_id"
+      ],
+      "tableTo": "incident",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_link_incident_id_incident_id_fk",
+      "entityType": "fks",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        "inbox_thread_id"
+      ],
+      "tableTo": "inbox_thread",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_link_inbox_thread_id_inbox_thread_id_fk",
       "entityType": "fks",
       "table": "work_order_link"
     },
@@ -26831,6 +26931,42 @@
     {
       "columns": [
         {
+          "value": "incident_id",
+          "isExpression": false
+        },
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "incident_id is not null",
+      "origin": "manual",
+      "name": "idx_work_order_link_incident",
+      "entityType": "indexes",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        {
+          "value": "inbox_thread_id",
+          "isExpression": false
+        },
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "inbox_thread_id is not null",
+      "origin": "manual",
+      "name": "idx_work_order_link_inbox_thread",
+      "entityType": "indexes",
+      "table": "work_order_link"
+    },
+    {
+      "columns": [
+        {
           "value": "organization_id",
           "isExpression": false
         },
@@ -28695,7 +28831,7 @@
       "table": "work_task"
     },
     {
-      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) = 1",
+      "value": "(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) + (incident_id is not null) + (inbox_thread_id is not null) = 1",
       "name": "work_order_link_one_target",
       "entityType": "checks",
       "table": "work_order_link"

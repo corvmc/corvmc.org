@@ -535,7 +535,8 @@ describe('ReservationService', () => {
 
 		it('says nothing for a waitlisted booking, which is a queue position not a visit', async () => {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
-			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([]) }) });
+			// Empty `.limit(1)` too: the same-booker check finds nothing held.
+			txSelect.mockReturnValue({ from: () => ({ where: () => whereResult([], []) }) });
 			insertReturns({ ...row, status: 'waitlisted' });
 
 			await createWaitlisted(params);

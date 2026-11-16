@@ -11,6 +11,7 @@ import { buildRRule, generationWindowEnd, getOccurrences, type MonthlyMode } fro
 import { buildDateInTz, formatDateInTz, formatTimeInTz } from './timezone';
 import { validateBooking } from './conflict-service';
 import { insertReservation } from './insert-reservation';
+import { heldBySameBooker } from './same-booker-hold';
 import { announceConfirmed, cancel as cancelReservation } from './reservation-service';
 import { promoteNextWaitlisted } from './waitlist-service';
 import {
@@ -214,6 +215,14 @@ export async function reschedule(
 	if (closed) {
 		throw new RecurringSeriesError(`The first session clashes with: ${closed.reason}`);
 	}
+	const duplicate = await heldBySameBooker({
+		bookerType: series.bookerType,
+		bookerId: series.bookerId,
+		startsAt: schedule.startsAt,
+		endsAt: schedule.endsAt,
+		excludeSeriesId: series.id
+	});
+	if (duplicate) throw new RecurringSeriesError('You already have this time booked');
 	const waitlisted = await checkReservationConflict(schedule.startsAt, schedule.endsAt, series.id);
 
 	const from = changeDay(schedule);

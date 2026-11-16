@@ -11,6 +11,7 @@ export const auditActions = [
 	'reservation.comped',
 	'reservation.refunded',
 	'reservation.payment_reminder',
+	'reservation.cleared_through_band',
 	'clearance.granted',
 	'clearance.revoked',
 	'orientation.waived',
@@ -73,6 +74,7 @@ export const auditActions = [
 	'purchase_order.reopened',
 	'inventory_asset.reopened',
 	'equipment_loan.checked_out_unscheduled',
+	'equipment_loan.requested_without_clearance',
 	'kit_loan.checked_out_incomplete',
 	'kit_loan.returned_incomplete',
 	'project.edited',
@@ -161,6 +163,16 @@ export interface AuditDetailsByAction {
 		outcome: 'sent' | 'skipped' | 'failed';
 		reason: 'undeliverable' | null;
 		outboxId: string | null;
+	};
+	/**
+	 * The subject is the member who booked with no clearance of their own; the
+	 * band and bandmate are what cleared the booking (#3028).
+	 */
+	'reservation.cleared_through_band': ReservationWhen & {
+		groupId: string;
+		groupName: string;
+		bandmateUserId: string;
+		bandmateName: string;
 	};
 	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */
 	'clearance.granted': ClearanceRef & { grantedOn: string; expiresOn: string | null };
@@ -353,6 +365,13 @@ export interface AuditDetailsByAction {
 		equipmentName: string | null;
 		warnings: string[];
 		reason: string;
+	};
+	/** The subject is the borrower. Requested without the item's clearance on the pickup date (#2953). */
+	'equipment_loan.requested_without_clearance': {
+		loanId: string;
+		equipmentName: string | null;
+		clearanceId: string;
+		warnings: string[];
 	};
 	/** The subject is the borrower. Units in the location that did not go out, and why (#2725). */
 	'kit_loan.checked_out_incomplete': {

@@ -17,7 +17,12 @@
 		reservation,
 		onchange
 	}: {
-		reservation: Reservation & { payableWithCredits?: boolean; codeWithheld?: boolean };
+		reservation: Reservation & {
+			payableWithCredits?: boolean;
+			codeWithheld?: boolean;
+			/** The band a group booking is for. */
+			groupName?: string | null;
+		};
 		onchange?: () => void;
 	} = $props();
 
@@ -43,6 +48,10 @@
 				<span class="badge badge-sm" data-testid="teaching-booking"
 					>{m.member_reservations_teaching_badge_text()}</span
 				>
+			</p>
+		{:else if reservation.groupName}
+			<p class="px-3 pb-1">
+				<span class="badge badge-sm" data-testid="group-booking">{reservation.groupName}</span>
 			</p>
 		{/if}
 		{#if reservation.notes}

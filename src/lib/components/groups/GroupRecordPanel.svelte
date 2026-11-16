@@ -4,7 +4,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import type { GroupKind } from '#lib/config.js';
-	import { resolve } from '$app/paths';
+	import { staffGroupHref } from '#lib/utils/group-href.js';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import { getStaffBandPage } from '#lib/remote/bands.remote.js';
 	import { getStaffGroupPage, getStaffCommitteePage } from '#lib/remote/groups.remote.js';
@@ -30,7 +30,7 @@
 	<svelte:boundary>
 		<GroupRecord {kind} {id} variant="panel">
 			{#snippet actions()}
-				<Button href={resolve(`staff/groups/${id}`)} variant="ghost" size="sm"
+				<Button href={staffGroupHref(kind, id)} variant="ghost" size="sm"
 					>{m.staff_groups_id_group_record_panel_open_record_label()}</Button
 				>
 			{/snippet}

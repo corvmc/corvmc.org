@@ -1,5 +1,6 @@
 import { db } from '#lib/server/db/index.js';
-import { volunteerRole, workOrder, workOrderAssignee } from '#lib/server/db/schema/volunteer.js';
+import { workOrder, workOrderAssignee } from '#lib/server/db/schema/volunteer.js';
+import { group, groupPosition } from '#lib/server/db/schema/group.js';
 import { and, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import type { TaskSource } from '#lib/config.js';
@@ -12,24 +13,37 @@ import { linkInsertIfTaskExists, linkTargets, type LinkTo } from './work-order-l
  * closing the task by hand never changes the record.
  */
 
-/** The volunteer role each kind's tasks take: one setting per kind, where it has one. */
-const ROLE_SETTING: Partial<Record<TaskSource, () => Promise<unknown>>> = {
-	repair: () => config('inventory.repairRoleId'),
-	restock: () => config('inventory.restockRoleId'),
-	late_order: () => config('inventory.lateOrderRoleId'),
-	form_8282: () => config('inventory.form8282RoleId')
+/**
+ * The position each kind's tasks wait on (#2940), one setting per kind on its
+ * module's settings page. A full record, so a new kind needs a setting to
+ * compile.
+ */
+const POSITION_SETTING: Record<TaskSource, () => Promise<unknown>> = {
+	repair: () => config('inventory.repairPositionId'),
+	restock: () => config('inventory.restockPositionId'),
+	late_order: () => config('inventory.lateOrderPositionId'),
+	form_8282: () => config('inventory.form8282PositionId'),
+	insurance: () => config('contractor.insurancePositionId'),
+	door_payment: () => config('finance.doorPaymentPositionId')
 };
 
-/** The configured role for this kind, when it names a live role; else none. */
-export async function sourceRoleId(source: TaskSource): Promise<string | null> {
-	const id = String((await ROLE_SETTING[source]?.()) ?? '').trim();
+/**
+ * The configured position for this kind, with its committee, when it names a
+ * position on a live committee; else none. The task takes both, since a
+ * position counts only on its own committee's tasks.
+ */
+export async function sourcePosition(
+	source: TaskSource
+): Promise<{ positionId: string; groupId: string } | null> {
+	const id = String((await POSITION_SETTING[source]()) ?? '').trim();
 	if (!id) return null;
-	const [role] = await db
-		.select({ isActive: volunteerRole.isActive })
-		.from(volunteerRole)
-		.where(eq(volunteerRole.id, id))
+	const [row] = await db
+		.select({ positionId: groupPosition.id, groupId: groupPosition.groupId })
+		.from(groupPosition)
+		.innerJoin(group, eq(group.id, groupPosition.groupId))
+		.where(and(eq(groupPosition.id, id), eq(group.kind, 'committee'), isNull(group.deletedAt)))
 		.limit(1);
-	return role?.isActive ? id : null;
+	return row ?? null;
 }
 
 const openOnly = () => and(isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt));
@@ -61,7 +75,7 @@ export async function openSourcedTask(
 	if (existing) return { id: existing, opened: false };
 
 	const id = crypto.randomUUID();
-	const volunteerRoleId = await sourceRoleId(input.source);
+	const position = await sourcePosition(input.source);
 	const links = linkTargets.flatMap((target) => {
 		const to = input.links?.[target];
 		return to ? [linkInsertIfTaskExists(id, target, to)] : [];
@@ -74,7 +88,8 @@ export async function openSourcedTask(
 				source: input.source,
 				sourceId: input.sourceId,
 				title: input.title,
-				volunteerRoleId,
+				positionId: position?.positionId ?? null,
+				groupId: position?.groupId ?? null,
 				notes: input.notes ?? null,
 				dueAt: input.dueAt ?? null,
 				eventId: input.eventId ?? null

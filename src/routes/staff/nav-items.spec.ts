@@ -55,8 +55,10 @@ describe('activeNavKey', () => {
 		['/staff/members', 'users'],
 		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
-		['/staff/groups', 'groups'],
-		['/staff/groups/abc', 'groups'],
+		['/staff/bands', 'groups'],
+		['/staff/bands/abc', 'groups'],
+		['/staff/clubs/abc', 'clubs'],
+		['/staff/committees/abc', 'committees'],
 		// Volunteering owns the rest of the path (#2379, #2625).
 		['/staff/volunteering', 'volunteer-schedule'],
 		['/staff/volunteer', 'volunteer-schedule'],
@@ -189,12 +191,15 @@ describe('the nav tree', () => {
 		expect(allStaffNavItems().some((i) => i.href === '/staff/venues')).toBe(false);
 	});
 
-	it('folds Bands, Clubs and Committees into Groups (#2086)', () => {
-		const groups = allStaffNavItems().find((i) => i.key === 'groups')!;
-		expect(filterNavItems([groups], ['band.read'])).toHaveLength(1);
-		expect(filterNavItems([groups], ['group.read'])).toHaveLength(1);
-		expect(filterNavItems([groups], ['committee.reviewApplications'])).toHaveLength(1);
-		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
+	it('lists bands, clubs and committees apart, each for its own capability (#3027)', () => {
+		const shown = (held: string[]) =>
+			filterNavItems(allStaffNavItems(), held)
+				.map((i) => i.key)
+				.filter((k) => ['groups', 'clubs', 'committees'].includes(k));
+		expect(shown(['band.read'])).toEqual(['groups']);
+		expect(shown(['group.read'])).toEqual(['clubs']);
+		expect(shown(['committee.manage'])).toEqual(['committees']);
+		expect(shown(['committee.reviewApplications'])).toEqual(['committees']);
 	});
 
 	it('reaches Project Templates through Tasks (#2385, #2625)', () => {
@@ -250,9 +255,10 @@ describe('the nav tree', () => {
 			'classifieds',
 			'content'
 		]);
-		expect(keys('programs')).toEqual(['calendar', 'reservations', 'music']);
+		expect(keys('programs')).toEqual(['calendar', 'reservations', 'clubs', 'music']);
 		expect(keys('operations')).toEqual([
 			'projects',
+			'committees',
 			'volunteer-schedule',
 			'gear',
 			'supplies',
@@ -320,6 +326,8 @@ describe('route coverage', () => {
 		'/staff/building-access/door-poster', // a print page from Booking codes (#2120)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
 		'/staff/inventory/settings', // reached from Gear's header (#2756)
+		'/staff/contacts/settings', // reached from Contacts' header (#2940)
+		'/staff/money/settings', // reached from Money's header (#2940)
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
 		'/staff/moderation/incidents',

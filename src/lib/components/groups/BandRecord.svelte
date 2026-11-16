@@ -27,7 +27,7 @@
 	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
 	import StaffBandForm from './StaffBandForm.svelte';
 
-	/** A band's staff record: the page at /staff/groups/[id], and the Bands view's side panel. */
+	/** A band's staff record: the page at /staff/bands/[id], and the Bands list's side panel. */
 	let {
 		id,
 		variant = 'page',

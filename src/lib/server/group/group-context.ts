@@ -126,8 +126,9 @@ export async function requireCommitteeMember(
 }
 
 /**
- * A committee taking part in the project, whose grants carry `cover`, or staff,
- * or for `production.run` the show's event lead (#2726).
+ * A committee on the project (named, or owning a live deliverable; #2959) whose
+ * grants carry `cover`, or a holder of `cover` itself (staff, or an org-wide
+ * grant such as `production.book`), or for `production.run` the event lead (#2726).
  *
  * The project comes from the record being acted on, never from the request.
  * `groups` is every seat that passed, so the caller can refresh each committee's

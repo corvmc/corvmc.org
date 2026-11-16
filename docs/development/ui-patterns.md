@@ -560,6 +560,10 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `modalTitle` — title for the modal (callback modal and form modal modes)
 - `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
 - `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
+  The `<Form>` is keyed on `action`, so a different remote form remounts its steps and fields.
+- `lead` — snippet above the `<Form>` and outside it, in form-modal mode. For a choice that picks
+  which remote form the dialog submits, such as **For** on `BookingDialog`: outside the form it
+  posts nothing, and kit refuses a name the remote did not hand out.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
 - `submitVariant` — colour of the modal's submit button (defaults to the trigger's `variant`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.
@@ -894,7 +898,7 @@ Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags a
 
 Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
 that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
-`actions` (`/staff/groups/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
+`actions` (`/staff/moderation/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
 An action that is the same on every tab stays in the header (`/staff/reservations`).
 
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
@@ -1388,7 +1392,7 @@ Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge
 `menuCount`; reach for it when a page's filters would fill more than a couple of rows
 on a phone, not to hide the primary ones.
 `actions` sits at the row's end, for what belongs to the current view rather than
-the page — a tabbed page's per-tab create button (`/staff/groups/*`).
+the page — a tabbed page's per-tab create button (`/staff/moderation/incidents`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'fs';
-import { DELEGATED, nearestIndex, checkDocIndexes } from './check-docs-drift.mjs';
+import {
+	DELEGATED,
+	nearestIndex,
+	checkDocIndexes,
+	codeSymbolsIn,
+	checkDocSymbols
+} from './check-docs-drift.mjs';
 
 // A folder README is a landing page on github.com, not a second catalog: `docs/README.md`
 // stays the one index and the folder README carries `<!-- docs-index: delegated -->`. The
@@ -79,5 +85,25 @@ describe('the real docs tree', () => {
 			}
 		}
 		expect(missing).toEqual([]);
+	});
+});
+
+describe('codeSymbolsIn', () => {
+	it('takes camelCase and PascalCase names, dropping call parentheses', () => {
+		const doc =
+			'Call `applyDutyList(id, subject)` with a `DutySubject`, then `countStaffQueues()`.';
+		expect(codeSymbolsIn(doc)).toEqual(['applyDutyList', 'DutySubject', 'countStaffQueues']);
+	});
+
+	it('skips paths, dotted names, columns, capabilities and single words', () => {
+		const doc =
+			'`volunteer.remote.ts` `organization.archivedAt` `duty_list.subject` `grant.manage` `project` `Door`';
+		expect(codeSymbolsIn(doc)).toEqual([]);
+	});
+});
+
+describe('the real workflows doc', () => {
+	it('names no code symbol that is gone from the code', () => {
+		expect(checkDocSymbols()).toEqual([]);
 	});
 });

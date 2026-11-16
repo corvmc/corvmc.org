@@ -15,7 +15,7 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn(), on: vi.fn() }
 }));
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
-	config: vi.fn(async () => ''),
+	config: vi.fn(),
 	getConfigsByPrefix: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -39,6 +39,11 @@ const { getReservationConfig } = await import('./config');
 const { completeOrientation, waiveOrientation } =
 	await import('#lib/server/volunteer/orientation-service.js');
 const { buildDateInTz } = await import('./timezone');
+
+// An orientation role is set unless a test says otherwise: decision 0055 uses
+// the 3-day notice only while the orientation shift is on (#2752).
+const withRole = async (key: string) =>
+	key === 'volunteer.orientationRoleId' ? 'role-orientation' : '';
 
 const at = (date: string, time: string) => buildDateInTz(date, time, 'America/Los_Angeles');
 // Monday 10:00 club time. Wednesday noon is two days out; today 12:00 two hours.
@@ -72,6 +77,7 @@ const grants = (userId: string) =>
 		.all(userId);
 
 beforeEach(() => {
+	vi.mocked(siteConfig.config).mockImplementation(withRole);
 	vi.useFakeTimers({ toFake: ['Date'] });
 	vi.setSystemTime(NOW);
 	sqlite.exec(
@@ -132,6 +138,24 @@ describe('new-member notice', () => {
 		expect(result.code).toBe('NEW_MEMBER_NOTICE');
 	});
 
+	// #3028: a bandmate's clearance clears the member while both are active in the band.
+	it('lets a member cleared through a bandmate book 2 hours out', async () => {
+		sqlite.exec(
+			`delete from group_member; delete from "group";
+			 insert into user (id, name, email) values ('u-mate', 'Mate', 'mate@x.test');
+			 insert into "group" (id, kind, name, slug) values ('g-1', 'band', 'Static', 'static');
+			 insert into group_member (id, group_id, user_id, role, status) values
+				('gm-1', 'g-1', 'u-new', 'member', 'active'), ('gm-2', 'g-1', 'u-mate', 'owner', 'active');`
+		);
+		await waiveOrientation('u-mate', { waivedByUserId: 'u-staff', reason: 'Knows the room' });
+
+		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
+		expect(notice).toEqual({ minutes: 60, newMember: false, tourMinutes: 0 });
+		const row = await create(own('u-new', TWO_HOURS));
+		expect(row.status).toBe('confirmed');
+		expect(grants('u-new')).toEqual([]);
+	});
+
 	it('lets staff book an uncleared member 1 hour out', async () => {
 		const row = await staffCreate({ ...own('u-new', ONE_HOUR), staffUserId: 'u-staff' });
 		expect(row.status).toBe('confirmed');
@@ -167,6 +191,24 @@ describe('new-member notice', () => {
 	});
 });
 
+/** #2752: with no orientation role nobody runs a tour, so the 3 days buy nothing. */
+describe('no orientation role', () => {
+	beforeEach(() => {
+		vi.mocked(siteConfig.config).mockImplementation(async () => '');
+	});
+
+	it('gives an uncleared member the room minimum and no tour', async () => {
+		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
+		expect(notice).toEqual({ minutes: 60, newMember: false, tourMinutes: 0 });
+	});
+
+	it('accepts the uncleared member 2 hours out', async () => {
+		const row = await create(own('u-new', TWO_HOURS));
+		expect(row.status).toBe('confirmed');
+		expect(row.tourMinutes).toBe(0);
+	});
+});
+
 /** #2568: with an orientation role set, a new member's booking starts with a tour. */
 describe('tour time', () => {
 	beforeEach(() => {
@@ -177,9 +219,6 @@ describe('tour time', () => {
 					? 30
 					: ''
 		);
-	});
-	afterEach(() => {
-		vi.mocked(siteConfig.config).mockImplementation(async () => '');
 	});
 
 	it('holds the room from 30 minutes before the requested start, and charges the rest', async () => {

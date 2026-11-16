@@ -161,12 +161,19 @@ export const getStaffGroupPage = query(z.string(), async (id) => {
 });
 
 /**
- * `/staff/committees`: every committee, each with its open applications
- * counted. `committee.reviewApplications` rather than `group.read`, because
- * the volunteer coordinator works applications and holds no `group.read`.
+ * Either committee capability opens `/staff/committees`, as it shows the nav row
+ * (#3027): the volunteer coordinator reviews applications and holds no
+ * `group.read`; the Operations chair oversees committees and reviews nothing.
  */
+async function requireCommitteeAccess() {
+	return requireCapability(
+		(await can('committee.manage')) ? 'committee.manage' : 'committee.reviewApplications'
+	);
+}
+
+/** `/staff/committees`: every committee, each with its open applications counted. */
 export const getStaffCommittees = query(async () => {
-	await requireCapability('committee.reviewApplications');
+	await requireCommitteeAccess();
 	const [page, canManage] = await Promise.all([
 		listGroups({ kinds: ['committee'] }, { page: 1, pageSize: 50 }),
 		can('group.read')
@@ -181,7 +188,7 @@ export const getStaffCommittees = query(async () => {
  * review, so only a manager, who can reactivate it, reaches it at all.
  */
 export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
-	await requireCapability('committee.reviewApplications');
+	await requireCommitteeAccess();
 	const [group, canManage] = await Promise.all([getGroupDetail(id), can('group.read')]);
 	if (!group || group.kind !== 'committee' || (group.deletedAt && !canManage)) {
 		error(404, 'Committee not found');

@@ -1,7 +1,7 @@
 # 0011 Productions are projects
 
 - **Date:** 2026-09-29
-- **Status:** Accepted
+- **Status:** Amended by [0086](0086-production-capabilities-by-consequence.md): the two capabilities are cut by consequence, not by committee
 - **Issue:** [#1673](https://github.com/corvmc/corvmc.org/issues/1673)
 
 ## Context

@@ -92,7 +92,12 @@
 								<div>
 									<p class="font-medium">{invite.name}</p>
 									<p class="text-muted">
-										{m.member_bands_invited_as_text({ role: invite.role })}
+										{invite.invitedByName
+											? m.member_bands_invited_by_text({
+													invitedByName: invite.invitedByName,
+													role: invite.role
+												})
+											: m.member_bands_invited_as_text({ role: invite.role })}
 									</p>
 								</div>
 								<div class="flex gap-2">

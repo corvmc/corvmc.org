@@ -254,6 +254,63 @@ describe('reservation.created', () => {
 		expect(shifts()).toHaveLength(0);
 	});
 
+	describe('a member cleared for the room (#3028)', () => {
+		beforeEach(() => {
+			for (const t of ['member_certification', 'group_member', '"group"', 'audit_log']) {
+				sqlite.exec(`DELETE FROM ${t}`);
+			}
+			sqlite.exec(`DELETE FROM user WHERE id = 'u-mate'`);
+			sqlite.exec(
+				`INSERT INTO user (id, name, email, email_verified) VALUES ('u-mate','Bea','bea@example.test',1)`
+			);
+		});
+
+		const clearanceOf = (userId: string) =>
+			sqlite.exec(
+				`INSERT INTO member_certification (id, user_id, certification_id, granted_at)
+				 VALUES ('mc-${userId}','${userId}','practice-space', 1000)`
+			);
+		const audits = () =>
+			sqlite
+				.prepare(`SELECT subject_id, details FROM audit_log WHERE action = ?`)
+				.all('reservation.cleared_through_band') as { subject_id: string; details: string }[];
+
+		it('raises nothing for a member with their own clearance', async () => {
+			seedList();
+			clearanceOf('u-member');
+
+			await fire('reservation.created', createdEvent());
+
+			expect(shifts()).toHaveLength(0);
+			expect(audits()).toHaveLength(0);
+		});
+
+		it('raises nothing through a bandmate, and records the band once', async () => {
+			seedList();
+			sqlite.exec(
+				`INSERT INTO "group" (id, kind, name, slug) VALUES ('g-1','band','Static','static')`
+			);
+			sqlite.exec(
+				`INSERT INTO group_member (id, group_id, user_id, role, status) VALUES
+				 ('gm-1','g-1','u-member','member','active'), ('gm-2','g-1','u-mate','owner','active')`
+			);
+			clearanceOf('u-mate');
+
+			await fire('reservation.created', createdEvent());
+			await fire('reservation.created', createdEvent());
+
+			expect(shifts()).toHaveLength(0);
+			const rows = audits();
+			expect(rows).toHaveLength(1);
+			expect(rows[0].subject_id).toBe('u-member');
+			expect(JSON.parse(rows[0].details)).toMatchObject({
+				reservationId: 'res-1',
+				groupId: 'g-1',
+				bandmateUserId: 'u-mate'
+			});
+		});
+	});
+
 	it('does nothing on a second booking', async () => {
 		seedList();
 		sqlite.exec(

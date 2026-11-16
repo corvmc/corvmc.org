@@ -1,36 +1,30 @@
-import type { Capability } from '#lib/config.js';
-import { pastCachedRedirect } from '#lib/utils/permanent-redirects.js';
+import type { GroupKind } from '#lib/config.js';
+import { pastCachedKey, pastCachedRedirect } from '#lib/utils/permanent-redirects.js';
+import { staffGroupHref, staffGroupListHref } from '#lib/utils/group-href.js';
 
-/**
- * Groups is one list (#2765) whose kind filter chooses which rows, columns and
- * actions it shows. Bands are the unfiltered list, as they were its first view.
- */
-export type GroupView = 'band' | 'club' | 'committee';
-
-/** The capability each view's remotes guard on. */
-export const groupViewCapability: Record<GroupView, Capability> = {
-	band: 'band.read',
-	club: 'group.read',
-	committee: 'committee.reviewApplications'
-};
-
-export function groupView(params: Pick<URLSearchParams, 'get'>): GroupView {
+/** The kind an old `/staff/groups` address named. Bands were its unfiltered list. */
+export function groupView(params: Pick<URLSearchParams, 'get'>): GroupKind {
 	const kind = params.get('kind');
 	return kind === 'club' || kind === 'committee' ? kind : 'band';
 }
 
-/** The query that picks a view on `/staff/groups`, before the view's own filters. */
-export function groupViewQuery(view: GroupView): string {
-	return view === 'band' ? '' : `kind=${view}`;
+/** An old address's query, less what only the combined list read. */
+function carried(search: string): string {
+	const params = new URLSearchParams(search);
+	params.delete('kind');
+	params.delete(pastCachedKey);
+	const query = params.toString();
+	return query ? `?${query}` : '';
 }
 
-/** The list's address for a view, carrying an old URL's query along. */
-export function groupViewPath(view: GroupView, search = ''): string {
-	const query = [groupViewQuery(view), search.replace(/^\?/, '')].filter(Boolean).join('&');
-	return query ? `/staff/groups?${query}` : '/staff/groups';
+/**
+ * Where an old Groups address lands. Each kind's list and record once 308'd to
+ * `/staff/groups`, so a browser holding that 308 loops without `via` (#2961).
+ */
+export function groupListRedirect(kind: GroupKind, search: string): string {
+	return pastCachedRedirect(`${staffGroupListHref(kind)}${carried(search)}`, 'groups');
 }
 
-/** Where an old kind's 308 lands. `/staff/groups` itself once 308'd to `/staff/groups/bands`. */
-export function groupViewRedirect(view: GroupView, search: string): string {
-	return pastCachedRedirect(groupViewPath(view, search), 'groups');
+export function groupRecordRedirect(kind: GroupKind, id: string, search: string): string {
+	return pastCachedRedirect(`${staffGroupHref(kind, id)}${carried(search)}`, 'groups');
 }

@@ -18,6 +18,7 @@ import {
 	parseOrientationTasks
 } from '#lib/server/volunteer/orientation-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listCommitteePositions } from '#lib/server/group/position-service.js';
 import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/feature-flags.js';
 import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
 import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
@@ -605,39 +606,87 @@ export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Gear — the role on the tasks gear opens (#2756, #2757)
+// Task positions — the committee position each kind of app-opened task waits
+// on (#2940), on its own module's settings page
 // ---------------------------------------------------------------------------
 
-/** Gear settings' one query: each kind's role, and the roles to pick from. */
+/** The positions to pick from, labelled with their committee. */
+async function positionChoices() {
+	const rows = await listCommitteePositions();
+	return rows.map((p) => ({ id: p.id, name: `${p.groupName}: ${p.name}` }));
+}
+
+// Empty leaves new tasks with no position.
+const positionId = z.string().max(100).optional();
+const clean = (id: string | undefined) => id?.trim() ?? '';
+
+/** Gear settings' one query: each gear kind's position, and the positions to pick from. */
 export const getGearSettings = query(async () => {
 	await requireCapability('settings.read');
-	const [raw, roles] = await Promise.all([getConfigsByPrefix('inventory'), listVolunteerRoles()]);
+	const [raw, positions] = await Promise.all([getConfigsByPrefix('inventory'), positionChoices()]);
 	return {
-		repairRoleId: String(raw.repairRoleId ?? ''),
-		restockRoleId: String(raw.restockRoleId ?? ''),
-		lateOrderRoleId: String(raw.lateOrderRoleId ?? ''),
-		form8282RoleId: String(raw.form8282RoleId ?? ''),
-		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
+		repairPositionId: String(raw.repairPositionId ?? ''),
+		restockPositionId: String(raw.restockPositionId ?? ''),
+		lateOrderPositionId: String(raw.lateOrderPositionId ?? ''),
+		form8282PositionId: String(raw.form8282PositionId ?? ''),
+		positions
 	};
 });
 
-export const updateGearTaskRoles = form(
+export const updateGearTaskPositions = form(
 	z.object({
-		// Empty leaves new tasks with no role.
-		repairRoleId: z.string().max(100).optional(),
-		restockRoleId: z.string().max(100).optional(),
-		lateOrderRoleId: z.string().max(100).optional(),
-		form8282RoleId: z.string().max(100).optional()
+		repairPositionId: positionId,
+		restockPositionId: positionId,
+		lateOrderPositionId: positionId,
+		form8282PositionId: positionId
 	}),
 	writesAudit('settings.changed', async (data) => {
 		await requireCapability('settings.update');
 		await saveSettings([
-			{ key: 'inventory.repairRoleId', value: data.repairRoleId?.trim() ?? '' },
-			{ key: 'inventory.restockRoleId', value: data.restockRoleId?.trim() ?? '' },
-			{ key: 'inventory.lateOrderRoleId', value: data.lateOrderRoleId?.trim() ?? '' },
-			{ key: 'inventory.form8282RoleId', value: data.form8282RoleId?.trim() ?? '' }
+			{ key: 'inventory.repairPositionId', value: clean(data.repairPositionId) },
+			{ key: 'inventory.restockPositionId', value: clean(data.restockPositionId) },
+			{ key: 'inventory.lateOrderPositionId', value: clean(data.lateOrderPositionId) },
+			{ key: 'inventory.form8282PositionId', value: clean(data.form8282PositionId) }
 		]);
 		void getGearSettings().refresh();
+		return { success: true };
+	})
+);
+
+/** Contacts settings' one query: the position on lapsing contractor insurance tasks. */
+export const getContactsSettings = query(async () => {
+	await requireCapability('settings.read');
+	const [raw, positions] = await Promise.all([getConfigsByPrefix('contractor'), positionChoices()]);
+	return { insurancePositionId: String(raw.insurancePositionId ?? ''), positions };
+});
+
+export const updateContactsTaskPositions = form(
+	z.object({ insurancePositionId: positionId }),
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([
+			{ key: 'contractor.insurancePositionId', value: clean(data.insurancePositionId) }
+		]);
+		void getContactsSettings().refresh();
+		return { success: true };
+	})
+);
+
+/** Money settings' one query: the position on unmatched door payment tasks. */
+export const getMoneySettings = query(async () => {
+	await requireCapability('settings.read');
+	const [raw, positions] = await Promise.all([getConfigsByPrefix('finance'), positionChoices()]);
+	return { doorPaymentPositionId: String(raw.doorPaymentPositionId ?? ''), positions };
+});
+
+export const updateMoneyTaskPositions = form(
+	z.object({ doorPaymentPositionId: positionId }),
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([
+			{ key: 'finance.doorPaymentPositionId', value: clean(data.doorPaymentPositionId) }
+		]);
+		void getMoneySettings().refresh();
 		return { success: true };
 	})
 );

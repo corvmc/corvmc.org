@@ -40,7 +40,7 @@ vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 // A cleared member, so only the two window reads count here; the clearance read
 // is per request, not per day, and `booking-notice.spec.ts` owns it.
 vi.mock('#lib/server/volunteer/practice-space-clearance.js', () => ({
-	holdsPracticeSpaceClearance: vi.fn(async () => true)
+	practiceSpaceClearance: vi.fn(async () => ({ via: 'own' }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });

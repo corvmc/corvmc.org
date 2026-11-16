@@ -9,6 +9,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
+// The task's position setting (#2940): none here.
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({ config: async () => '' }));
 
 const recordDoorTicketSale = vi.fn(async () => undefined);
 const recordFreeTicketSale = vi.fn(async () => undefined);

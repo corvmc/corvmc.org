@@ -453,6 +453,27 @@ export async function missingRequirements(
 	return required.filter((r) => !held.has(r.id));
 }
 
+/**
+ * Which of `certificationIds` a member did not hold on `at`, with names. The
+ * shift gate's as-of check for callers that name the clearances themselves,
+ * such as an equipment item's.
+ */
+export async function missingCertifications(
+	userId: string,
+	certificationIds: string[],
+	at = new Date()
+): Promise<{ id: string; name: string }[]> {
+	if (certificationIds.length === 0) return [];
+	const held = await heldCertificationIds(userId, at);
+	const missing = [...new Set(certificationIds)].filter((id) => !held.has(id));
+	if (missing.length === 0) return [];
+	return db
+		.select({ id: volunteerCertification.id, name: volunteerCertification.name })
+		.from(volunteerCertification)
+		.where(inArray(volunteerCertification.id, missing))
+		.orderBy(asc(volunteerCertification.name));
+}
+
 export interface ClearanceRow extends RosterPerson {
 	/** The grant row, so the list can revoke without a second lookup. */
 	id: string;

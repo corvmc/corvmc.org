@@ -193,7 +193,6 @@ describe('the capability matrix', () => {
 			'inventory.manageOrders',
 			'contractor.manage',
 			'incident.record',
-			'production.book',
 			'production.run'
 		];
 		const adminOnly = new Set<string>(adminOnlyCapabilities);

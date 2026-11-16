@@ -120,6 +120,22 @@ describe('what each committee may do on a show', () => {
 		]);
 	});
 
+	// Owning a deliverable puts a committee on the show (#2959, reversing #1708).
+	it('puts a committee that owns a live deliverable on the show, and no other', async () => {
+		committee('g-art', ['production.run']);
+		seat('g-art', 'u-book');
+		exec(`insert into volunteer_role (id, name) values ('role-art', 'Poster')`);
+		exec(`insert into work_order (id, volunteer_role_id, project_id, group_id, cancelled_at) values
+			('wo-poster', 'role-art', '${SHOW}', 'g-art', null),
+			('wo-dropped', 'role-art', '${OTHER}', 'g-art', ${T0})`);
+		expect(await holds('u-book', SHOW, 'production.run')).toBe(true);
+		expect(await holds('u-book', OTHER, 'production.run')).toBe(false);
+		expect((await projectCommitteeGrantsFor('u-book', SHOW)).map((s) => s.groupId).sort()).toEqual([
+			'g-art',
+			'g-book'
+		]);
+	});
+
 	it('drops a grant that has left the allowlist', async () => {
 		exec(`insert into group_capability (group_id, capability) values ('g-book', 'user.purge')`);
 		const [seatRow] = await projectCommitteeGrantsFor('u-book', SHOW);

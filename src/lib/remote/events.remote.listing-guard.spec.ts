@@ -4,11 +4,13 @@ import { mockUser } from '#lib/server/db/test-factory.js';
 // ---------------------------------------------------------------------------
 // Listing writes take `event.manage` or the show's committee (#1948), through
 // the real `requireListingWriter`. What is faked is who holds what: a staffer
-// holds `event.manage`, a booker holds `production.book` only through a seat on
-// the show's project, and an outsider holds neither.
+// holds `event.manage`; a booker holds `production.book` org-wide and
+// `production.run` through a seat on the show's project; a worker, on the show
+// by a deliverable, holds `production.run` there only (#2959); an outsider
+// holds neither.
 // ---------------------------------------------------------------------------
 
-type Persona = 'staff' | 'booker' | 'outsider';
+type Persona = 'staff' | 'booker' | 'worker' | 'outsider';
 let persona: Persona = 'staff';
 
 const denied = (msg = 'Not permitted') => Object.assign(new Error(`403: ${msg}`), { status: 403 });
@@ -23,8 +25,9 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: string) => {
-	if (persona === 'booker' && projectId === 'proj-show' && cap === 'production.book') {
-		return { user: mockUser({ id: 'booker-1' }), groups: [], via: 'committee' };
+	const onShow = projectId === 'proj-show' && (persona === 'booker' || persona === 'worker');
+	if ((cap === 'production.run' && onShow) || (cap === 'production.book' && persona === 'booker')) {
+		return { user: mockUser({ id: `${persona}-1` }), groups: [], via: 'committee' };
 	}
 	throw denied('Not on a committee taking part in this project');
 });
@@ -139,6 +142,14 @@ describe('updateEvent', () => {
 		expect(update).not.toHaveBeenCalled();
 	});
 
+	// The description and times are show work, for every committee on the show (#2959).
+	it('lets a committee on the show by a deliverable edit its listing', async () => {
+		persona = 'worker';
+		await updateEvent({ eventId: 'evt-show', ...EDIT });
+		expect(update).toHaveBeenCalledTimes(1);
+		expect(requireProjectCommittee).toHaveBeenCalledWith('proj-show', 'production.run');
+	});
+
 	// The committee's reach is its show. A listing with no production has none.
 	it('refuses a booker on a listing with no production', async () => {
 		persona = 'booker';
@@ -179,8 +190,9 @@ describe('cancelEventSeries', () => {
 		);
 	});
 
-	it('refuses someone off the committee, cancelling nothing', async () => {
-		persona = 'outsider';
+	// Cancelling commits CMC outside it: `production.book`, not show work (#2959).
+	it.each(['outsider', 'worker'] as const)('refuses %s, cancelling nothing', async (who) => {
+		persona = who;
 		await expect(cancelEventSeries({ eventId: 'evt-show' })).rejects.toMatchObject({
 			status: 403
 		});
@@ -223,8 +235,9 @@ describe('setStaffEventLineup', () => {
 		expect(setEventLineup).toHaveBeenCalledTimes(1);
 	});
 
-	it('refuses someone off the committee', async () => {
-		persona = 'outsider';
+	// Confirming the lineup is `production.book`, not show work (#2959).
+	it.each(['outsider', 'worker'] as const)('refuses %s', async (who) => {
+		persona = who;
 		await expect(setStaffEventLineup({ eventId: 'evt-show', lineup: BILL })).rejects.toMatchObject({
 			status: 403
 		});

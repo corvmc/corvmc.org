@@ -530,6 +530,18 @@ export async function getPerson(id: string) {
 	return { ...row, roles: roles.map((r) => r.role) };
 }
 
+/** The kept person on file for a member, if any: a task made from an incident links them. */
+export async function findPersonByUser(userId: string): Promise<string | null> {
+	await requireCapability('contact.read');
+	const [row] = await db
+		.select({ id: contact.id })
+		.from(contact)
+		.where(and(eq(contact.userId, userId), kept(new Date())))
+		.orderBy(asc(contact.createdAt), asc(contact.id))
+		.limit(1);
+	return row?.id ?? null;
+}
+
 /** The kept person holding an address, with their organization: an Inbox filing suggestion. */
 export async function findPersonByEmail(email: string | null | undefined) {
 	await requireCapability('contact.read');

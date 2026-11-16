@@ -133,6 +133,16 @@
 						label={msg.staff_inventory_id_resource_id_label()}
 						value={item.resourceId ?? ''}
 					/>
+					<Field
+						field={fields.clearanceId}
+						type="select"
+						label={msg.staff_clearance_label()}
+						value={item.clearanceId ?? ''}
+						options={[
+							{ value: '', label: msg.staff_inventory_id_no_clearance_label() },
+							...data.clearances.map((c) => ({ value: c.id, label: c.name }))
+						]}
+					/>
 					<Field field={fields.notes} type="textarea" value={item.notes ?? ''} />
 				</div>
 			</InfoCard>

@@ -5,6 +5,9 @@ import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
+import { incident } from '#lib/server/db/schema/incident.js';
+import { inboxThread } from '#lib/server/db/schema/inbox.js';
+import { findPersonByUser } from '#lib/server/directory/contact-service.js';
 import { and, desc, eq, inArray, isNull, ne, not, or, sql, type SQL } from 'drizzle-orm';
 import { linkedTo, type LinkTarget, type LinkTo } from './work-order-link';
 import { taskRowQuery, toTaskRow } from '#lib/server/volunteer/task-catalogue.js';
@@ -102,7 +105,9 @@ const resolvers: Partial<Record<RelatedSubjectType, Resolver>> = {
 	contact: (id) => [{ key: 'about', where: linkedTo('contactId', id) }],
 	asset: (id) => [{ key: 'about', where: linkedTo('assetId', id) }],
 	reservation: (id) => [{ key: 'about', where: linkedTo('reservationId', id) }],
-	equipment: (id) => [{ key: 'about', where: linkedTo('itemId', id) }]
+	equipment: (id) => [{ key: 'about', where: linkedTo('itemId', id) }],
+	incident: (id) => [{ key: 'about', where: linkedTo('incidentId', id) }],
+	thread: (id) => [{ key: 'about', where: linkedTo('inboxThreadId', id) }]
 };
 
 /** The `work_order_link` column each linkable record type writes. */
@@ -111,7 +116,9 @@ export const LINK_TARGET: Record<LinkSubjectType, LinkTarget> = {
 	contact: 'contactId',
 	asset: 'assetId',
 	reservation: 'reservationId',
-	equipment: 'itemId'
+	equipment: 'itemId',
+	incident: 'incidentId',
+	thread: 'inboxThreadId'
 };
 
 const isLinkSubject = (type: RelatedSubjectType): type is LinkSubjectType => type in LINK_TARGET;
@@ -119,6 +126,38 @@ const isLinkSubject = (type: RelatedSubjectType): type is LinkSubjectType => typ
 /** The link a new task about this record writes. */
 export function linkFor(subject: { type: LinkSubjectType; id: string }): LinkTo {
 	return { [LINK_TARGET[subject.type]]: subject.id };
+}
+
+/**
+ * Every link a new task about this record writes: the record, plus the people
+ * it names (#2758). The caller has checked the viewer reads the record, and
+ * passes `people` only for a viewer who reads contacts: an incident's member
+ * is linked through the person kept on file for them.
+ */
+export async function linksFor(
+	subject: { type: LinkSubjectType; id: string },
+	{ people = false }: { people?: boolean } = {}
+): Promise<LinkTo> {
+	const own = linkFor(subject);
+	if (!people) return own;
+	if (subject.type === 'thread') {
+		const [row] = await db
+			.select({ contactId: inboxThread.contactId, organizationId: inboxThread.organizationId })
+			.from(inboxThread)
+			.where(eq(inboxThread.id, subject.id))
+			.limit(1);
+		return { ...own, contactId: row?.contactId, organizationId: row?.organizationId };
+	}
+	if (subject.type === 'incident') {
+		const [row] = await db
+			.select({ userId: incident.involvedUserId })
+			.from(incident)
+			.where(eq(incident.id, subject.id))
+			.limit(1);
+		if (!row?.userId) return own;
+		return { ...own, contactId: await findPersonByUser(row.userId) };
+	}
+	return own;
 }
 
 /** The types that resolve to anything; every other type has no related tasks. */
@@ -163,6 +202,20 @@ export async function newTaskPrefill(subject: RelatedSubject): Promise<NewTaskPr
 			return { groupId: subject.id };
 		case 'role':
 			return { volunteerRoleId: subject.id };
+		case 'incident': {
+			// The show it happened at, as an anchor; its project stays unset so
+			// the incident's reader, not the show's committee, makes the task.
+			const [row] = await db
+				.select({ eventId: incident.eventId })
+				.from(incident)
+				.where(eq(incident.id, subject.id))
+				.limit(1);
+			if (!row) return null;
+			return {
+				...(row.eventId ? { eventId: row.eventId } : {}),
+				about: { type: 'incident', id: subject.id }
+			};
+		}
 		default:
 			return isLinkSubject(subject.type) ? { about: { type: subject.type, id: subject.id } } : null;
 	}

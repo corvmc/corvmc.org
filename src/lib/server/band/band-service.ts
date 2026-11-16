@@ -557,6 +557,35 @@ export async function listForUser(
 		.orderBy(group.name);
 }
 
+const inviter = alias(user, 'inviter');
+
+/**
+ * The invitations waiting on this user's answer, with the group and the person
+ * who sent each, so every surface that asks for an answer can say who is asking.
+ */
+export async function listPendingInvites(userId: string, kinds?: readonly GroupKind[]) {
+	return db
+		.select({
+			id: group.id,
+			name: group.name,
+			kind: group.kind,
+			role: rosterRole(),
+			invitedByName: inviter.name
+		})
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.leftJoin(inviter, eq(inviter.id, groupMember.invitedById))
+		.where(
+			and(
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'pending'),
+				isNull(group.deletedAt),
+				kinds ? inArray(group.kind, [...kinds]) : undefined
+			)
+		)
+		.orderBy(group.name);
+}
+
 /**
  * Split a roster by status, with one bucket per value of `groupMemberStatuses`.
  *

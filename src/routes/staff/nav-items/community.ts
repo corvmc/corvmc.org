@@ -16,13 +16,13 @@ export const community: StaffNavSection = {
 			label: 'Members',
 			href: resolve('staff/members')
 		},
-		// Bands, Clubs and Committees are its views, each with its own gate (#2086).
+		// Clubs are in Programs and committees in Operations (#3027). The key stays
+		// `groups`, which starred rows store.
 		{
 			key: 'groups',
 			capability: 'band.read',
-			alsoFor: ['group.read', 'committee.reviewApplications'],
-			label: 'Groups',
-			href: resolve('staff/groups')
+			label: 'Bands',
+			href: resolve('staff/bands')
 		},
 		{
 			key: 'suggestions',
