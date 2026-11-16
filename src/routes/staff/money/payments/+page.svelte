@@ -16,6 +16,8 @@
 	import StaffViews from '../../StaffViews.svelte';
 	import { moneyViews } from '../views';
 	import { formatDateTimeShort, formatCents } from '#lib/utils/format.js';
+	import { resolve } from '$app/paths';
+	import SettingsLink from '../../SettingsLink.svelte';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -59,6 +61,7 @@
 
 <PageHeader title={m.staff_payments_title()}>
 	<StaffViews views={moneyViews} active="payments" />
+	<SettingsLink href={resolve('staff/money/settings')} />
 </PageHeader>
 <PageContent>
 	<p class="mb-4 text-sm text-base-content/60">

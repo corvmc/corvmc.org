@@ -8,6 +8,10 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+const settings: Record<string, string> = {};
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: async (key: string) => settings[key] ?? ''
+}));
 
 const { createContractor, updateContractor, syncInsuranceTasks } =
 	await import('./contractor-service');
@@ -28,10 +32,29 @@ const tasks = () =>
 
 beforeEach(() => {
 	sqlite.exec(`delete from work_order; delete from contractor_detail; delete from party_role;
-		delete from organization;`);
+		delete from organization; delete from group_position; delete from "group";`);
+	delete settings['contractor.insurancePositionId'];
 });
 
 describe('insurance tasks', () => {
+	// #2940: they opened with no position, waiting unassigned.
+	it('wait on the position Contacts settings name', async () => {
+		sqlite.exec(`insert into "group" (id, kind, name, slug, join_policy)
+				values ('ops', 'committee', 'Operations', 'ops', 'invite_only');
+			insert into group_position (id, group_id, name) values ('facilities', 'ops', 'Facilities')`);
+		settings['contractor.insurancePositionId'] = 'facilities';
+		await createContractor({
+			name: 'Amp Works',
+			trade: 'general',
+			insuranceExpiresAt: new Date(Date.now() + 20 * DAY)
+		});
+		expect(
+			sqlite
+				.prepare(`select position_id, group_id from work_order where source = 'insurance'`)
+				.all()
+		).toEqual([{ position_id: 'facilities', group_id: 'ops' }]);
+	});
+
 	it('open 30 days out, due on the expiry, linked to the contractor', async () => {
 		const expires = new Date(Date.now() + 20 * DAY);
 		const c = await createContractor({
