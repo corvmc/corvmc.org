@@ -6,6 +6,10 @@ Feature flags did one job here — let a half-built feature sit on `main` withou
 [Long-lived feature branches](../development/conventions.md#long-lived-feature-branches) do that job
 now, so the flags come out. This is the per-flag ledger; it outlives any one session.
 
+**Closed by #3117.** The last three runtime flags (`directMessages`, `bandAudio`, `cmcRadio`) moved
+into `surfaces` in `src/lib/config.ts`, off, and the KV flag mechanism and its staff page are gone.
+See [decision 0089](../decisions/0089-feature-switches-are-code-config.md).
+
 **Removing a flag is not a cleanup for most of these.** Five were never switchable at all, so
 deleting their guards is the moment the feature goes live. Those are launch decisions, and they
 belong to staff, not to whoever is doing the deletion.

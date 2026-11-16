@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { StaffNavItem } from './types';
 
-export type SystemNavKey = 'organization' | 'features' | 'access' | 'payments' | 'audit';
+export type SystemNavKey = 'organization' | 'access' | 'payments' | 'audit';
 
 /**
  * The System panel's sidebar (#2763): only what spans modules. A module's own
@@ -14,12 +14,6 @@ export const systemNavItems: StaffNavItem[] = [
 		capability: 'settings.read',
 		label: 'Organization',
 		href: resolve('staff/system/organization')
-	},
-	{
-		key: 'features',
-		capability: 'settings.read',
-		label: 'Features',
-		href: resolve('staff/system/features')
 	},
 	{
 		key: 'access',

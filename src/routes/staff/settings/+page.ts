@@ -9,7 +9,6 @@ const MOVED: Record<string, string> = {
 	pricing: '/staff/reservations/settings',
 	reservations: '/staff/reservations/settings',
 	organization: '/staff/system/organization',
-	features: '/staff/system/features',
 	access: '/staff/system/access',
 	inbox: '/staff/inbox/channels',
 	subscriptions: '/staff/members'

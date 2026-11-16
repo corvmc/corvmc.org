@@ -19,15 +19,31 @@ export function pageTitle(title?: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Off until usable (#2116). Not a feature flag: turning one on is a deploy, so
- * staff cannot toggle it. Nav, routes, remotes and links all read this object at
- * call time, never at module load, which is what lets a spec switch one on.
+ * The only feature switches (#2116, #3117): turning one on is a deploy, and no
+ * staff page or KV key can. Nav, routes, remotes and links all read this object
+ * at call time, never at module load, which is what lets a spec switch one on.
+ * Server code gates with `requireFeature`/`isFeatureEnabled`, universal code
+ * with `requireSurface`.
  */
-export const surfaces: Record<'classifieds' | 'ballots', boolean> = {
+export const surfaces: Record<
+	'classifieds' | 'ballots' | 'directMessages' | 'bandAudio' | 'cmcRadio',
+	boolean
+> = {
 	classifieds: false,
-	ballots: false
+	ballots: false,
+	directMessages: false,
+	bandAudio: false,
+	cmcRadio: false
 };
 export type Surface = keyof typeof surfaces;
+
+// The e2e build (playwright.config.ts) switches on the surfaces its specs walk.
+// The cast is for tsx scripts, which import this file with no `import.meta.env`.
+for (const name of String(
+	(import.meta.env as ImportMetaEnv | undefined)?.VITE_E2E_SURFACES ?? ''
+).split(',')) {
+	if (isSurface(name)) surfaces[name] = true;
+}
 
 /** Is this string a key of `surfaces`? For names written outside code, like frontmatter. */
 export function isSurface(name: string): name is Surface {

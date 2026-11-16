@@ -3225,6 +3225,5 @@ changes are refused.
   D1 has no transactions. Follow the same pattern for any new state machine.
 - **Side effects ride the event bus** and must stay idempotent — Stripe re-delivery and
   cron overlap both re-run them.
-- **Feature flags gate whole workflows** (`requireFeature()`); when something "doesn't
-  exist" in production but works locally, check the flag first
-  (`site-config` KV, `feature.*` keys).
+- **Feature switches gate whole workflows** (`requireFeature()`, `requireSurface()`); when
+  something "doesn't exist" in production, check `surfaces` in `src/lib/config.ts` first.

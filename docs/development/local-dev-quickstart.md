@@ -162,10 +162,10 @@ the local state dir. If you see `Missing platform bindings: ...` in the console,
 is `validateEnv()` in `src/hooks.server.ts` — it usually means the dev server started in a
 context where the proxy couldn't initialize.
 
-Feature-flagged areas (inbox, marketing, equipment, band premium/reservations/events, help
-center) are **off by default** — the flags are KV site-config keys with `false` defaults.
-Turn them on at `/staff/system/features` as the admin user, or leave them off; see
-[feature flags in the overview](../architecture/overview.md#configuration-three-tiers).
+Switched-off areas (classifieds, ballots, direct messages, band audio, CMC Radio) are off in
+every environment: `surfaces` in `src/lib/config.ts` holds the switches. To try one locally,
+set it to `true` in that file and leave the change uncommitted; see
+[feature switches in the overview](../architecture/overview.md#feature-switches).
 
 Other useful processes:
 

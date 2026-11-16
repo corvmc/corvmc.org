@@ -14,7 +14,6 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 
 const PAGES = [
 	'/staff/system/organization',
-	'/staff/system/features',
 	'/staff/system/access',
 	'/staff/system/audit',
 	'/staff/inbox/channels',

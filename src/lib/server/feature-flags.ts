@@ -1,26 +1,24 @@
 import { error } from '@sveltejs/kit';
-import { config, getConfigsByPrefix } from './site-config/site-config-service';
+import { surfaces } from '#lib/config.js';
 
+/** The switches in `surfaces` that server code gates on by name. */
 export type FeatureFlag = 'directMessages' | 'bandAudio' | 'cmcRadio';
 
 export const ALL_FLAGS: FeatureFlag[] = ['directMessages', 'bandAudio', 'cmcRadio'];
 
 export async function isFeatureEnabled(flag: FeatureFlag): Promise<boolean> {
-	const value = await config<boolean>(`feature.${flag}`);
-	return value === true;
+	return surfaces[flag];
 }
 
 export async function getAllFeatureFlags(): Promise<Record<FeatureFlag, boolean>> {
-	const raw = await getConfigsByPrefix('feature');
-	const flags = {} as Record<FeatureFlag, boolean>;
-	for (const key of ALL_FLAGS) {
-		flags[key] = raw[key] === true;
-	}
-	return flags;
+	return Object.fromEntries(ALL_FLAGS.map((flag) => [flag, surfaces[flag]])) as Record<
+		FeatureFlag,
+		boolean
+	>;
 }
 
 export async function requireFeature(flag: FeatureFlag): Promise<void> {
-	if (!(await isFeatureEnabled(flag))) {
+	if (!surfaces[flag]) {
 		throw error(404, 'Not found');
 	}
 }

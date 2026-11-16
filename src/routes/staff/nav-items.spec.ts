@@ -358,7 +358,6 @@ describe('route coverage', () => {
 		'/staff/contacts/duplicates',
 		// The System panel's rows, in its own sidebar (#2763).
 		'/staff/system/organization',
-		'/staff/system/features',
 		'/staff/system/access',
 		'/staff/system/audit',
 		// Module settings, reached from their module's header (#2763).
@@ -516,13 +515,7 @@ describe('surfaces switched off in code (#2116)', () => {
 
 describe('the System panel (#2763)', () => {
 	it('holds only what spans modules', () => {
-		expect(systemNavItems.map((i) => i.key)).toEqual([
-			'organization',
-			'features',
-			'access',
-			'payments',
-			'audit'
-		]);
+		expect(systemNavItems.map((i) => i.key)).toEqual(['organization', 'access', 'payments', 'audit']);
 	});
 
 	it.each(systemNavItems.map((i) => [i.key, i] as const))(

@@ -252,13 +252,13 @@ function starts with a guard call. The guards:
 | `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                                                                                                                  |
 | `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ staff: cap }` admits a non-member holding that capability as `role: 'staff'`; holding a position is never enough (`scripts/guards-name-capabilities.spec.ts`) |
 | `requireCommitteeMember(groupId, cap)`   | `src/lib/server/group/group-context.ts` | For a record a committee owns: an active member of that committee whose grants carry `cap`, or any holder of `cap`. `groupId` is read off the record, never the request                                                                                                                                                                                        |
-| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                                                                                                               |
+| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the switch in `surfaces` is on (see Feature switches below)                                                                                                                                                                                                                                                                                         |
 
 Each of the three logged-in areas also has a **layout guard remote** in
 `src/lib/remote/layout.remote.ts` that the layout component awaits: `getMemberLayout()`
 (redirects to `/login` if anonymous), `getStaffLayout()` (redirects `/` unless staff), and
 `getBandLayout(slug)` (403 unless band member or staff). These return the nav data (user,
-bands, feature flags) in the same call.
+bands, feature switches) in the same call.
 
 **Important:** the layout guard only protects the page shell. The real security boundary is
 the guard inside each remote function — a new remote function without a guard is publicly
@@ -455,9 +455,7 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursStart': '09:00',
 	'reservation.operatingHoursEnd': '22:00',
 	'reservation.hourlyRateCents': 1500,
-	'org.addressStreet': '6775 SW Philomath Blvd',
-	'feature.directMessages': false,
-	'feature.bandAudio': false
+	'org.addressStreet': '6775 SW Philomath Blvd'
 	// ...
 };
 ```
@@ -467,18 +465,25 @@ otherwise the default. **A key belongs here only if something reads it** — the
 short name, contact email and timezone lived here for a long time while the app read
 `SITE_NAME` and `DEFAULT_TIMEZONE` from `#lib/config.js`, so staff had four settings fields
 that saved into a void. `site-config-consumers.spec.ts` now fails on a key with no declared
-reader; settings that never change without someone editing text belong in `#lib/config.js`. **Feature flags** are just `feature.*` config keys, wrapped by
-`src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
-`requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
-missing page). Current flags: `directMessages`, `bandAudio` and `cmcRadio` — and the whole mechanism is being
-retired in favour of feature branches, see
-[the ledger](../plans/feature-flag-retirement.md).
+reader; settings that never change without someone editing text belong in `#lib/config.js`.
 
-A flag gates the **member, band and public** surfaces only. The staff panel ignores flags
-entirely — `getStaffLayout` does not read them, the staff nav is unconditional, and staff
-remote functions are guarded by `requireCapability()` rather than `requireFeature()` — so a
-feature can be configured and run by staff before (and after) it is switched on for
-everyone else.
+### Feature switches
+
+A feature that is built but not launched is switched off in code, not in KV: `surfaces` in
+`src/lib/config.ts` holds `classifieds`, `ballots`, `directMessages`, `bandAudio` and `cmcRadio`,
+all `false` (#3117). Turning one on is a deploy; there is no staff toggle. Server code gates with
+`requireFeature` and `isFeatureEnabled` (`src/lib/server/feature-flags.ts`), universal code with
+`requireSurface` (`src/lib/surfaces.ts`); both 404, so a switched-off feature reads as a missing
+page. A help article's `surface:` frontmatter names one of the five and is hidden while it is off.
+`feature-flags.spec.ts` fails on any code that reads or writes a `feature.*` site-config key.
+
+The e2e build turns on the switches its specs walk through `VITE_E2E_SURFACES` in
+`playwright.config.ts`; no production build sets it.
+
+`directMessages`, `bandAudio` and `cmcRadio` gate the **member, band and public** surfaces only.
+The staff panel ignores them — `getStaffLayout` does not read them and staff remote functions
+are guarded by `requireCapability()` rather than `requireFeature()` — so staff can configure a
+feature before it is switched on for everyone else.
 
 ## Money (orientation)
 

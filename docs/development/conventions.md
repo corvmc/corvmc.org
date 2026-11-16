@@ -102,6 +102,12 @@ were not a kill switch and not a rollout tool — the staff panel ignored them d
 branch does the same job without the registration, the toggle, the guard at every call site, and the
 404 that hides a bug as effectively as it hides a feature.
 
+A feature that is built but not launched is switched off in code instead: `surfaces` in
+`src/lib/config.ts` (#3117). Turning one on is a PR, and there is no staff toggle or KV key behind
+it; `src/lib/server/feature-flags.spec.ts` fails on any code that reads or writes a `feature.*`
+site-config key. See
+[feature switches in the overview](../architecture/overview.md#feature-switches).
+
 The shape: `feature/<slug>` cut from `main`, phases are PRs **into** that branch squash-merged as
 they pass, and one PR merges the finished feature into `main` through the queue. `/feature-branch`
 carries the sequences; what follows is why they are what they are.
