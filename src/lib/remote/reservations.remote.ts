@@ -82,6 +82,7 @@ import {
 	priorBookingCount,
 	announceWaitlistConfirmed,
 	ReservationConflictError,
+	DuplicateBookingError,
 	ReservationValidationError
 } from '#lib/server/reservation/reservation-service.js';
 import { orientationForReservation } from '#lib/server/volunteer/orientation-service.js';
@@ -1465,14 +1466,20 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	} catch (err) {
 		if (err instanceof ReservationConflictError) {
 			if (isRecurring) {
-				res = await createWaitlisted({
-					userId: locals.user.id,
-					bookerType: 'user',
-					bookerId: locals.user.id,
-					startsAt,
-					endsAt,
-					notes: data.notes
-				});
+				try {
+					res = await createWaitlisted({
+						userId: locals.user.id,
+						bookerType: 'user',
+						bookerId: locals.user.id,
+						startsAt,
+						endsAt,
+						notes: data.notes
+					});
+				} catch (dup) {
+					// The member already holds this time: say so in the wizard (#3031).
+					if (dup instanceof DuplicateBookingError) return { validationError: dup.message };
+					throw dup;
+				}
 				waitlisted = true;
 			} else {
 				// One-time slot was taken between selection and submit. create()
@@ -1658,7 +1665,7 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 		res = await create(booking);
 	} catch (err) {
 		if (isRecurring && err instanceof ReservationConflictError) {
-			res = await createWaitlisted(booking);
+			res = await createWaitlisted(booking).catch(mapDomainError);
 			waitlisted = true;
 		} else {
 			mapDomainError(err);
@@ -1730,7 +1737,7 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 				startsAt,
 				endsAt,
 				notes: data.notes
-			});
+			}).catch(mapDomainError);
 			waitlisted = true;
 		} else {
 			// Non-wizard form: map domain errors to proper HTTP responses

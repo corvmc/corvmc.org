@@ -309,7 +309,8 @@ Sustaining members can make a booking repeat (weekly, biweekly, monthly). The fi
 occurrence is a normal reservation that acts as the **prototype**; a nightly job clones it
 forward into concrete rows. If an occurrence collides with an existing booking, it's
 created as **waitlisted** instead; when the blocking reservation cancels, the waitlisted
-one is offered the slot with a 24-hour window to confirm.
+one is offered the slot with a 24-hour window to confirm. A booker never waits behind
+themselves: a slot the same booker already holds is a duplicate and is refused, not waitlisted.
 
 ### Code path
 
@@ -318,12 +319,16 @@ one is offered the slot with a 24-hour window to confirm.
   `create()` in `src/lib/server/reservation/recurring-series-service.ts` with the prototype
   reservation id and an RRULE built by `buildRRule()` in `rrule-helpers.ts`. If the first
   slot itself conflicts, the booking is created via `createWaitlisted()` instead of failing.
+  `createWaitlisted()` throws `DuplicateBookingError` ("You already have this time booked")
+  when the same booker (`booker_type` + `booker_id`) already holds a row overlapping the slot,
+  `heldBySameBooker()` in `same-booker-hold.ts` (#3031).
 - **Daily generation:** cron `generate-recurring-reservations` → `generateRecurring()` in
   `src/lib/server/reservation/generation-job.ts`. Events are expanded **before**
   reservations (recurring events book their own space reservations, which the reservation
   pass must treat as hard blocks — see the doc comment in that file). Occurrences that
   can't be booked emit `reservation.recurring_skipped` / `reservation.recurring_waitlisted`
-  events so the member hears about it. The generation window is ~2.5 weeks
+  events so the member hears about it. An occurrence the same booker already holds through
+  another booking is skipped silently, with no row written. The generation window is ~2.5 weeks
   (`reservation.maxAdvanceDaysRecurring` config, default 17.5). It is longer than the 14-day
   one-off window on purpose: an occurrence is already booked before any one-off booking can
   reach its day. An instance already generated for a day, cancelled ones included, is never
@@ -336,7 +341,7 @@ one is offered the slot with a 24-hour window to confirm.
 - **Changing the schedule:** `reschedule()` in `recurring-series-reschedule.ts`, from
   **Edit schedule** on the member's recurring list or the staff series page. It writes a new
   series whose prototype is the first session of the new schedule (waitlisted if that slot is
-  booked; refused if it falls on a closure or show), sets `cancelledAt` and `supersededBy` on
+  booked; refused if it falls on a closure or show, or on the booker's own other booking), sets `cancelledAt` and `supersededBy` on
   the old one, and generates the new window at once. Old bookings before the change day stand.
   From that day an untouched one is deleted (the old prototype is cancelled instead); one that
   is paid, has a door code or is referenced is kept and listed for the booker to keep or
