@@ -9,10 +9,11 @@ sortOrder: 3
 
 ## Changing your password
 
-1. Open **Account** from the sidebar.
-2. Find the **Password** section and choose to change it.
-3. Enter your new password. It must be at least 8 characters.
-4. Confirm and save.
+1. Select your picture at the top right, then **Account**.
+2. In the **Security** section, choose **Change password**.
+3. Enter your **Current password**, then a **New password** of at least 8
+   characters.
+4. Enter it again in **Confirm new password** and submit.
 
 You'll stay signed in on this device after changing it.
 

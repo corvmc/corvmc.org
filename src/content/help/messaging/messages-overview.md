@@ -7,15 +7,21 @@ minRole: member
 sortOrder: 0
 ---
 
-## One list, two kinds of conversation
+## One list for every conversation
 
-**Messages** in the member panel holds every conversation you are part of:
+**Messages** — the speech-bubble icon at the top of every page — holds every
+conversation you are part of:
 
 - **Threads with staff** — the way to ask us something while signed in. We can
   see who you are, so you do not have to explain which booking or which band you
   mean.
 - **Threads with other members** — direct messages, where those are switched on.
   See [Messaging another member](/member/help/direct-messages).
+- **Your bands' and groups' inboxes** — booking enquiries to a band you are in,
+  and your groups' chats. Each row names the inbox it came from.
+
+If you are in a band or group, the menu above the list narrows it: **All
+inboxes**, **Just mine**, or one band or group.
 
 The icon at the left of each row says which kind it is. Rows show who it is
 with, the last thing said, and when. A dot means there is something you have not
@@ -23,7 +29,7 @@ read; **Closed** means staff marked the conversation resolved.
 
 ## Writing to staff
 
-Press **New Conversation**, give it a subject, and write. It lands in the staff
+Press **Message staff**, fill in the **Subject**, and write. It lands in the staff
 inbox alongside everything else that reaches us, so it gets worked like any
 other request rather than sitting in one person's mail.
 
@@ -40,9 +46,9 @@ A first message from another member arrives as a **Request** rather than a
 conversation. You decide whether to let it become one — nothing from a stranger
 lands in your notifications until you do.
 
-Requests are deliberately not counted on the Messages badge in the sidebar. An
-unopened message from someone you do not know should not follow you around the
-site; the count appears on the Messages page itself, and nowhere else.
+Requests are deliberately not counted on the **Messages** icon at the top of
+the page. An unopened message from someone you do not know should not follow you
+around the site; the count appears on the Messages page itself, and nowhere else.
 
 ## On a phone
 

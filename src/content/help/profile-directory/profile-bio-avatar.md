@@ -9,7 +9,7 @@ sortOrder: 1
 
 ## Avatar
 
-On your **Profile** page, upload an avatar image. This is the photo shown on your
+In the **About you** section of your **Profile** page, upload an avatar image. This is the photo shown on your
 directory card and next to your name across the site. A clear, square image works
 best.
 

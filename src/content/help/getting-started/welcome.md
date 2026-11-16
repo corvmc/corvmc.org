@@ -20,20 +20,30 @@ events.
 - **Create or join bands** — Coordinate schedules and manage a shared band page.
 - **Attend events** — Browse shows, buy tickets, and check in at the door.
 - **Borrow equipment** — The Collective keeps a library of gear members can borrow.
-  Lending is arranged in person for now, so ask a staff member or
-  [get in touch](/contact) and we'll sort you out.
+  **Equipment** appears in the sidebar once there is gear to borrow; until then,
+  ask a staff member or [get in touch](/contact).
 - **Become a sustaining member** — Support the space and unlock practice credits.
 
 ## Finding your way around
 
-Everything lives in the sidebar of your member area:
+The sidebar of your member area holds:
 
-- **Dashboard** — your home base, with this week's reservations and quick links.
-- **Reservations** — book and manage practice time.
+- **Dashboard** — your home base, with what is waiting on you and this week's
+  reservations.
+- **Practice space** — book and manage practice time.
 - **Events** — upcoming shows and your tickets.
 - **Directory** — find other members and bands.
-- **Bands** — the bands you belong to, and the place to start a new one.
-- **Profile** — your public directory listing.
-- **Account** — your email, password, and notification preferences.
-- **Membership** — your sustaining membership and billing.
+- **Volunteering** — shifts and the hours you have given.
+- **My bands** — the bands you belong to. **New** starts one, and
+  **Browse bands** finds others.
+- **My groups** — the clubs and committees you belong to.
+- **Suggestions** — ideas for the Collective, and votes on them.
 - **Help** — these articles. Use the search bar above to jump straight to a topic.
+
+**Messages** is the speech-bubble icon at the top of every page. Your picture at
+the top right opens the rest:
+
+- **Profile** — your public directory listing.
+- **Account** — your contact details, password, and notification preferences.
+- **Purchases** — your receipts.
+- **Membership** — your sustaining membership and billing.

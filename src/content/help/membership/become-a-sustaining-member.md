@@ -9,9 +9,10 @@ sortOrder: 1
 
 ## Becoming a sustaining member
 
-1. Open **Membership** from the sidebar.
+1. Select your picture at the top right, then **Membership**.
 2. Choose **Become a sustaining member**.
-3. Pick a contribution amount on the sliding scale.
+3. Set your **Monthly contribution**. Tick **Cover processing fees** if you want
+   the Collective to receive all of it.
 4. Complete the secure card checkout.
 
 Your benefits — including [practice credits](/member/help/practice-credits) and
@@ -20,9 +21,10 @@ the subscription is set up.
 
 ## The sliding scale
 
-Membership uses a sliding scale so you can contribute what works for you. Higher
-tiers support the space more, but the core benefits apply across the scale. You can
-change your amount later from your [Membership page](/member/help/manage-billing).
+Membership uses a sliding scale so you can contribute what works for you. Every
+amount gets the same benefits; the only difference is practice time — each $5 a
+month is an hour of practice credit. You can change your amount later with
+**Modify amount** on your [Membership page](/member/help/manage-billing).
 
 ## Related
 

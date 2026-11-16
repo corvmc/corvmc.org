@@ -10,16 +10,20 @@ sortOrder: 2
 ## Account settings
 
 Your account settings hold your personal details — separate from the public
-profile that appears in the directory. Open **Account** from the sidebar.
+profile that appears in the directory. Select your picture at the top right, then
+**Account**.
 
 ## What you can change
 
-- **Display name** — How your name appears across the site.
-- **Pronouns** — Optional, shown alongside your name where relevant.
-- **Phone number** — Used for booking-related contact, not shown publicly.
+Under **Contact information**:
 
-Make your changes and save. Your email address is shown here too, but changing
-the sign-in email is handled separately — contact staff if you need it updated.
+- **Name** — How your name appears across the site.
+- **Pronouns** — Optional, shown alongside your name where relevant.
+- **Phone** — Used for booking-related contact, not shown publicly.
+- **Date of birth** — Optional, and set once. Contact staff if it is wrong.
+
+Make your changes and choose **Save**. Your email address is shown here too, but
+you cannot change it yourself — contact staff if you need it updated.
 
 ## Related
 

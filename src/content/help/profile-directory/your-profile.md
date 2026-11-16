@@ -10,20 +10,19 @@ sortOrder: 0
 ## Your profile
 
 Your profile is your public listing in the CorvMC directory. It's how other
-musicians find you, see what you play, and reach out. Open **Profile** from the
-sidebar to edit it.
+musicians find you, see what you play, and reach out. Select your picture at the
+top right, then **Profile**, to edit it.
 
 ## What's on it
 
-- **Avatar, name & tagline** — A photo and a one-line description shown on your
-  directory card.
-- **Bio** — A longer rich-text description.
-- **Instruments & genres** — What you play and the styles you're into.
-- **Status flags** — Whether you're looking for a band, available for hire,
-  teaching lessons, or open to collaboration.
+- **About you** — Your **Tagline**, a photo, and your **Bio**.
+- **Music** — **Instruments**, **Genres** and **Skills**; what you are
+  **Looking for**; and whether you're available for hire, teach privately, or
+  are open to collaboration.
 - **Links** — YouTube, Spotify, SoundCloud, and other profiles.
-- **Directory contact info** — Optional public email, phone, or social handles.
+- **Directory contact info** — Optional email, phone, or social handle.
 - **Visibility** — Whether your profile is public, members-only, or hidden.
+- **Teaching at CMC** — Apply to teach at the Collective.
 
 Press **Save** (or `Mod+S`) when you're done.
 

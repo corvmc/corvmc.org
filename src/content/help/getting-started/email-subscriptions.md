@@ -14,10 +14,12 @@ announcements. You choose which ones you're on.
 
 ## Managing your lists
 
-1. Open **Account** from the sidebar.
+1. Select your picture at the top right, then **Account**.
 2. Find the **Email subscriptions** section.
-3. Your current subscriptions are listed. Toggle any list off to unsubscribe.
-4. Available lists you're not on yet can be subscribed to from the same place.
+3. Lists you are on are under **Your subscriptions**. Choose **Unsubscribe** on
+   any you want to leave.
+4. Lists you are not on yet are under **Available lists**, each with
+   **Subscribe**.
 
 Every marketing email also includes an unsubscribe link at the bottom, so you can
 opt out directly from any message.
