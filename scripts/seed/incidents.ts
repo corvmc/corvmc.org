@@ -1,12 +1,15 @@
 import { incident, incidentNote } from '../../src/lib/server/db/schema/incident';
 import { auditLog } from '../../src/lib/server/db/schema/audit';
+import { workOrder } from '../../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert } from './db';
 import { randomUUID } from 'crypto';
 
 /**
  * The incident log. Every category, both statuses, one incident with a member
  * linked, and one that was reopened and one held — each with the audit entry
- * the detail page's History card renders.
+ * the detail page's History card renders. The noise complaint has an open
+ * follow-up task made from it (#2758).
  */
 export async function seedIncidents(
 	staff: { id: string; name: string; email: string },
@@ -130,6 +133,17 @@ export async function seedIncidents(
 		}
 	]);
 
+	const followUp = randomUUID();
+	await batchInsert(workOrder, [
+		{
+			id: followUp,
+			title: 'Fit a door closer to the alley door',
+			dueAt: new Date(Date.now() + 10 * day),
+			createdByUserId: staff.id
+		}
+	]);
+	await batchInsert(workOrderLink, [{ workOrderId: followUp, incidentId: ids.noise }]);
+
 	const actor = { actorUserId: staff.id, actorName: staff.name, actorEmail: staff.email };
 	await batchInsert(auditLog, [
 		{
@@ -152,7 +166,7 @@ export async function seedIncidents(
 		}
 	]);
 
-	return { incidents: incidents.length, notes: notes.length };
+	return { incidents: incidents.length, notes: notes.length, tasks: 1 };
 }
 
 /**

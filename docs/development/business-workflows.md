@@ -1202,6 +1202,11 @@ the reply carries a plus-addressed `Reply-To` so their response threads back int
 conversation. The thread stays `channel: 'web'`; that provenance is what the staff UI shows,
 and re-labelling it `email` would let unrelated mail from the same address merge into it.
 
+Follow-up work on a conversation is a task (#2758). The details strip carries the thread's
+Related tasks card; its New task links the task to the thread (`work_order_link.inbox_thread_id`)
+and to the person or organization the thread is filed to, for a viewer with `contact.read`. The
+thread and the task keep their own status: resolving one leaves the other open.
+
 ### Code path
 
 - **Inbound email:** Postmark inbound webhook → `src/routes/api/inbox/postmark/+server.ts`
@@ -2685,6 +2690,11 @@ lists only what that member filed for that show, without staff notes.
 The account is written once and later facts are notes, so the record reads the way it happened.
 Recording an incident changes nothing on the linked member's account, and that member cannot see
 it.
+
+Follow-up work, such as a repair after a hazard, is a task made from the incident's Related tasks
+card (#2758). It links to the incident (`work_order_link.incident_id`), starts on the show it
+happened at, and links the involved member's contact record when one is kept and the viewer has
+`contact.read`. The incident and the task keep their own status.
 
 ### Code path
 

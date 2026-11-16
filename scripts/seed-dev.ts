@@ -444,7 +444,7 @@ async function main() {
 			.join(', ')}`
 	);
 	console.log(
-		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened), ${crewIncidents.filings} crew filing awaiting review`
+		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened, 1 with a task), ${crewIncidents.filings} crew filing awaiting review`
 	);
 	console.log(
 		`  ${memberInvites.invites} invitations to join (pending from staff and a member, expired, revoked, accepted)`

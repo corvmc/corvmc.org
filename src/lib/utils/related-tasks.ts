@@ -15,7 +15,9 @@ export const linkSubjectTypes = [
 	'contact',
 	'asset',
 	'reservation',
-	'equipment'
+	'equipment',
+	'incident',
+	'thread'
 ] as const;
 export type LinkSubjectType = (typeof linkSubjectTypes)[number];
 

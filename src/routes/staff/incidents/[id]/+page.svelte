@@ -22,6 +22,7 @@
 	} from '#lib/remote/incidents.remote.js';
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 
 	const params = routeParams('id');
 
@@ -121,6 +122,9 @@
 				</ol>
 			{/if}
 		</InfoCard>
+
+		<!-- Follow-up work keeps its own status: closing a task resolves nothing here. -->
+		<RelatedTasks subject={{ type: 'incident', id }} />
 
 		<InfoCard title={m.staff_resolution_title()} class="bg-base-200 shadow-none">
 			{#if incident.status !== 'resolved' && !canRecord}

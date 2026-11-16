@@ -44,7 +44,7 @@ import { shiftLabel } from '#lib/utils/shift-label.js';
 import { requireListingReader } from '#lib/server/event/listing-guard.js';
 import {
 	aboutWhere,
-	linkFor,
+	linksFor,
 	newTaskPrefill,
 	relatedTasks,
 	type RelatedSubject
@@ -172,6 +172,10 @@ async function requireSubjectReader(s: RelatedSubject) {
 			return requireCapability('inventory.read');
 		case 'reservation':
 			return requireCapability('reservation.read');
+		case 'incident':
+			return requireCapability('incident.read');
+		case 'thread':
+			return requireCapability('inbox.read');
 		default:
 			return requireUser();
 	}
@@ -284,7 +288,7 @@ export const addRelatedShift = form(
 			const { about, ...anchors } = prefill;
 			const task = await createWorkOrder({
 				...anchors,
-				links: about && linkFor(about),
+				links: about && (await linksFor(about, { people: await can('contact.read') })),
 				volunteerRoleId: roleId,
 				title: data.title || null,
 				createdByUserId: staff.id
@@ -336,7 +340,7 @@ export const createCatalogueTaskForm = form(
 			eventId: data.eventId || null,
 			groupId: data.groupId || null,
 			volunteerRoleId: data.volunteerRoleId || null,
-			links: about ? linkFor(about) : undefined
+			links: about ? await linksFor(about, { people: await can('contact.read') }) : undefined
 		};
 		if (data.projectId) {
 			const { user } = await guardProject(data.projectId);

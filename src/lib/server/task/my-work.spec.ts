@@ -112,4 +112,18 @@ describe('listMyWork', () => {
 			plain: null
 		});
 	});
+
+	it('names the record a task was made from before the parties it names (#2758)', async () => {
+		task('callback');
+		assign('callback');
+		sqlite.exec(`
+			delete from inbox_thread;
+			insert into inbox_thread (id, channel, organization_id) values ('t1', 'email', 'o1');
+			insert into work_order_link (id, work_order_id, organization_id) values ('l1', 'callback', 'o1');
+			insert into work_order_link (id, work_order_id, inbox_thread_id) values ('l2', 'callback', 't1');
+		`);
+
+		const [row] = await listMyWork('me', NOW);
+		expect(row.about).toEqual({ type: 'thread', id: 't1' });
+	});
 });
