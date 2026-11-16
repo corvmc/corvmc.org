@@ -160,6 +160,29 @@ export function renderMarkdown(content: string): string {
 	return sanitizeHtml(marked.parse(content) as string);
 }
 
+/** The help article slug a link points at (`/member/help/x`, `./x`), or null. */
+export function helpSlugOf(href: string): string | null {
+	const path = href.split(/[?#]/, 1)[0];
+	const rest = path.startsWith('/member/help/')
+		? path.slice('/member/help/'.length)
+		: path.startsWith('./')
+			? path.slice(2)
+			: null;
+	return rest && !rest.includes('/') ? rest : null;
+}
+
+/** `content` with every link to one of `slugs` reduced to its text. */
+export function unlinkHelpArticles(content: string, slugs: ReadonlySet<string>): string {
+	if (slugs.size === 0) return content;
+	const links: { raw: string; text: string }[] = [];
+	marked.walkTokens(marked.lexer(content), (token) => {
+		if (token.type !== 'link') return;
+		const slug = helpSlugOf(token.href);
+		if (slug && slugs.has(slug)) links.push({ raw: token.raw, text: token.text });
+	});
+	return links.reduce((out, { raw, text }) => out.replaceAll(raw, text), content);
+}
+
 // Every party on these writes in the app. The rest carry text from outside
 // (email, SMS, a public form), where `*` and `#` are just characters.
 const markdownChannels: ReadonlySet<string> = new Set<InboxChannel>(['portal', 'direct', 'group']);

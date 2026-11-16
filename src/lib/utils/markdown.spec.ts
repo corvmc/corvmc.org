@@ -6,8 +6,29 @@ import {
 	extractHeadings,
 	markdownExcerpt,
 	renderMessageMarkdown,
-	messageBodyIsMarkdown
+	messageBodyIsMarkdown,
+	unlinkHelpArticles
 } from './markdown';
+
+describe('unlinkHelpArticles', () => {
+	const hidden = new Set(['ballots']);
+
+	it.each([
+		['inline', 'a [vote](/member/help/ballots) here', 'a vote here'],
+		['anchored', 'a [vote](/member/help/ballots#how) here', 'a vote here'],
+		['relative', 'a [vote](./ballots) here', 'a vote here'],
+		['reference-style', 'a [vote][b] here\n\n[b]: /member/help/ballots', 'a vote here']
+	])('reduces an %s link to a hidden article to its text', (_shape, input, start) => {
+		const out = unlinkHelpArticles(input, hidden);
+		expect(out.startsWith(start)).toBe(true);
+		expect(renderMarkdown(out)).not.toContain('href="/member/help/ballots');
+	});
+
+	it('keeps links to other articles and pages', () => {
+		const input = '[a](/member/help/welcome) [b](/member/ballots) [c](https://x.org/ballots)';
+		expect(unlinkHelpArticles(input, hidden)).toBe(input);
+	});
+});
 
 describe('renderMessageMarkdown', () => {
 	// Every attack shape against one renderer: the class is user text rendered

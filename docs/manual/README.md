@@ -12,8 +12,8 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
   all. One naming none is shown to every position holder, and
   `scripts/sync-help-articles.spec.ts` lists those. An article documenting a surface in
   `surfaces` (`src/lib/config.ts`) names it as `surface:`; while that surface is off, no reader
-  sees the article in listings, search or by its link, and a name that is not a surface fails the
-  sync. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
+  sees the article in listings, search or by its link, links to it from other articles render as
+  plain text, and a name that is not a surface fails the sync. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
   auto-creates categories; every production deploy does the same remotely. A new article lands
   as a draft, and appears at `/member/help` once staff publish it.
 - **Public-site** articles live under [`public/`](public) here — the in-app KB (`/member/help`) is

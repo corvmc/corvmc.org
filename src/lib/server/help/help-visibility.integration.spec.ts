@@ -8,13 +8,14 @@
  */
 import { describe, expect, it, beforeAll, afterAll, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 
 import { seatSql } from '#lib/server/testing/operations-seat.js';
 import { surfaces } from '#lib/config.js';
+import { helpSlugOf, renderMarkdown, unlinkHelpArticles } from '#lib/utils/markdown.js';
 
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 const CONTENT_DIR = join(import.meta.dirname, '..', '..', '..', 'content', 'help');
@@ -86,7 +87,9 @@ beforeAll(() => {
 		INSERT INTO help_categories (id, name, slug, min_role) VALUES
 			('c-votes', 'Votes', 'votes', 'member');
 		INSERT INTO help_articles (id, category_id, title, slug, content, min_role, published, surface) VALUES
-			('a-ballots', 'c-votes', 'Ballots', 'ballots', 'ballot body', 'member', 1, 'ballots');
+			('a-ballots', 'c-votes', 'Ballots', 'ballots', 'ballot body', 'member', 1, 'ballots'),
+			('a-board', 'c-member', 'Suggestion Board', 'suggestion-board',
+				'Put it to a [ballot](/member/help/ballots). Say [hello](/member/help/welcome).', 'member', 1, NULL);
 	`);
 }, 30_000);
 
@@ -234,7 +237,7 @@ describe('an article naming a switched-off surface', () => {
 		expect(surfaces.ballots).toBe(false);
 		const reader = await resolveHelpReader(user);
 		expect(await getArticleBySlug('ballots', reader)).toBeNull();
-		expect(await searchArticles('ballot', reader)).toEqual([]);
+		expect((await searchArticles('ballot', reader)).map((r) => r.id)).not.toContain('a-ballots');
 		expect(await listArticlesByCategory('c-votes', reader)).toEqual([]);
 		expect(await listReadableArticles(['a-ballots'], reader)).toEqual([]);
 		expect((await listNonEmptyCategories(reader)).map((c) => c.slug)).not.toContain('votes');
@@ -245,12 +248,55 @@ describe('an article naming a switched-off surface', () => {
 		try {
 			const reader = await resolveHelpReader('u-member');
 			expect((await getArticleBySlug('ballots', reader))?.id).toBe('a-ballots');
-			expect((await searchArticles('ballot', reader)).map((r) => r.id)).toEqual(['a-ballots']);
+			expect((await searchArticles('ballot', reader)).map((r) => r.id)).toContain('a-ballots');
 			expect((await listNonEmptyCategories(reader)).map((c) => c.slug)).toContain('votes');
 		} finally {
 			surfaces.ballots = false;
 		}
 	});
+
+	it('is not linked from an article that stays visible (#3123)', async () => {
+		const reader = await resolveHelpReader('u-member');
+		const read = async () => (await getArticleBySlug('suggestion-board', reader))?.content;
+		expect(await read()).toBe('Put it to a ballot. Say [hello](/member/help/welcome).');
+		surfaces.ballots = true;
+		try {
+			expect(await read()).toContain('[ballot](/member/help/ballots)');
+		} finally {
+			surfaces.ballots = false;
+		}
+	});
+});
+
+/** Every shipped help article: its slug, surface (if any) and markdown body. */
+function shippedArticles() {
+	return readdirSync(CONTENT_DIR, { recursive: true, encoding: 'utf-8' })
+		.filter((f) => f.endsWith('.md'))
+		.map((file) => {
+			const raw = readFileSync(join(CONTENT_DIR, file), 'utf-8');
+			const [, front = '', body = ''] = raw.split(/^---$/m);
+			const field = (k: string) => front.match(new RegExp(`^${k}:\\s*(.+)$`, 'm'))?.[1].trim();
+			return { file, slug: field('slug'), surface: field('surface'), body };
+		});
+}
+
+describe('the shipped help tree', () => {
+	// Every surface-tagged article counts as hidden, so the guard holds whichever switch is off.
+	const articles = shippedArticles();
+	const hidden = new Set(articles.filter((a) => a.surface).map((a) => a.slug!));
+
+	it('has articles hidden by a surface to guard', () => {
+		expect(hidden.size).toBeGreaterThan(0);
+	});
+
+	it.each(articles.map((a) => [a.file, a.body]))(
+		'%s renders no link to a surface-hidden article',
+		(_file, body) => {
+			const html = renderMarkdown(unlinkHelpArticles(body, hidden));
+			const hrefs = [...html.matchAll(/href="([^"]*)"/g)].map((m) => helpSlugOf(m[1]));
+			expect(hrefs.filter((slug) => slug && hidden.has(slug))).toEqual([]);
+		}
+	);
 });
 
 describe('the shipped frontmatter', () => {
