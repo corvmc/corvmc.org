@@ -25,7 +25,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { recordAuditEntry, listAuditEntriesForSubject, listAuditEntries } =
+const { recordAuditEntry, listAuditEntriesForSubject, listAuditEntries, listAuditActors } =
 	await import('./audit-service');
 
 function insertUser(id: string, name: string) {
@@ -283,6 +283,49 @@ describe('listAuditEntries', () => {
 		await seed();
 		const { rows } = await listAuditEntries({ search: 'Purged Pers' });
 		expect(rows.map((r) => r.subjectId)).toEqual(['gone-1']);
+	});
+
+	// #3055: what one staffer did, without the entries about them.
+	it('filters by actor, leaving out entries the actor is only the subject of', async () => {
+		await seed();
+		await recordAuditEntry({
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'staff-1', label: 'Sam Staff' },
+			details: { subscription: 'none' }
+		});
+		expect((await listAuditEntries({ search: 'Sam Staff' })).rows).toHaveLength(2);
+		const { rows } = await listAuditEntries({ actorId: 'staff-1' });
+		expect(rows.map((r) => r.action)).toEqual(['user.reactivated']);
+		expect(rows[0].subjectId).toBe('member-1');
+	});
+
+	it('offers each actor with a live account once, by name', async () => {
+		await seed();
+		await recordAuditEntry({
+			actor: { id: null, name: 'System', email: '' },
+			action: 'user.reactivated',
+			subject: { type: 'user', id: 'member-1', label: 'Jordan Member' },
+			details: { subscription: 'none' }
+		});
+		expect(await listAuditActors()).toEqual([
+			{ id: 'staff-2', name: 'Riley Admin' },
+			{ id: 'staff-1', name: 'Sam Staff' }
+		]);
+	});
+
+	// #3056: a second record named only in the details.
+	it("searches the text values in an entry's details, nested ones too, but not its keys", async () => {
+		await seed();
+		sqlite
+			.prepare(
+				`insert into audit_log (id, action, actor_name, actor_email, subject_type, subject_id, subject_label, details)
+				 values ('a-band', 'band.member_removed', 'Sam Staff', '', 'band', 'band-1', 'Sour Cherry', ?)`
+			)
+			.run(JSON.stringify({ memberName: 'Jo Lark', change: { key: 'reservation.feeGateFrom' } }));
+		expect(ids(await listAuditEntries({ search: 'jo lark' }))).toEqual(['a-band']);
+		expect(ids(await listAuditEntries({ search: 'feeGateFrom' }))).toEqual(['a-band']);
+		expect((await listAuditEntries({ search: 'memberName' })).rows).toEqual([]);
+		expect((await listAuditEntries({ search: '50%' })).rows).toEqual([]);
 	});
 
 	it('filters by record type, an event taking its show rows too', async () => {

@@ -23,22 +23,31 @@ const listAuditEntries = vi.fn(async (..._args: unknown[]) => ({
 	rows: [],
 	pagination: { page: 1, pageSize: 50, total: 0, totalPages: 0 }
 }));
+const listAuditActors = vi.fn(async () => [{ id: 'u-staff', name: 'Sam Staff' }]);
 vi.mock('#lib/server/audit/audit-service.js', () => ({
-	listAuditEntries: (...args: unknown[]) => listAuditEntries(...args)
+	listAuditEntries: (...args: unknown[]) => listAuditEntries(...args),
+	listAuditActors: () => listAuditActors()
 }));
 
 vi.mock('$app/server', () => ({
-	query: (schema: { parse: (v: unknown) => unknown }, handler: (v: unknown) => unknown) => {
-		const wrapped = async (v: unknown) => handler(schema.parse(v));
+	query: (
+		schemaOrHandler: { parse: (v: unknown) => unknown } | (() => unknown),
+		handler?: (v: unknown) => unknown
+	) => {
+		const wrapped = async (v: unknown) =>
+			typeof schemaOrHandler === 'function'
+				? schemaOrHandler()
+				: handler!(schemaOrHandler.parse(v));
 		(wrapped as unknown as Record<string, unknown>).__ = { type: 'query' };
 		return wrapped;
 	}
 }));
 
-const { getAuditLog } = await import('./audit.remote');
+const { getAuditLog, getAuditActors } = await import('./audit.remote');
 
 beforeEach(() => {
 	listAuditEntries.mockClear();
+	listAuditActors.mockClear();
 	currentUser = { id: 'u-staff' };
 	heldPositions = ['staff'];
 });
@@ -63,12 +72,19 @@ describe('getAuditLog', () => {
 		await getAuditLog({
 			action: 'user.purged',
 			search: 'sam',
+			actorId: 'u-staff',
 			from: '2026-09-01',
 			to: '2026-09-30',
 			page: 2
 		});
 		expect(listAuditEntries).toHaveBeenCalledWith(
-			{ action: 'user.purged', search: 'sam', from: '2026-09-01', to: '2026-09-30' },
+			{
+				action: 'user.purged',
+				search: 'sam',
+				actorId: 'u-staff',
+				from: '2026-09-01',
+				to: '2026-09-30'
+			},
 			{ page: 2, pageSize: 50 }
 		);
 	});
@@ -76,5 +92,15 @@ describe('getAuditLog', () => {
 	it('refuses an action the log does not record, and a malformed date', async () => {
 		await expect(getAuditLog({ action: 'user.nonsense' as never })).rejects.toThrow();
 		await expect(getAuditLog({ from: 'yesterday' })).rejects.toThrow();
+	});
+});
+
+describe('getAuditActors', () => {
+	it('guards on audit.read, like the log it filters', async () => {
+		heldPositions = ['volunteer_coordinator'];
+		await expect(getAuditActors()).rejects.toThrow(/audit\.read/);
+		expect(listAuditActors).not.toHaveBeenCalled();
+		heldPositions = ['admin'];
+		await expect(getAuditActors()).resolves.toHaveLength(1);
 	});
 });

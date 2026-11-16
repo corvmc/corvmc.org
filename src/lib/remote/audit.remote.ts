@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { requireCapability } from '#lib/server/authorization.js';
-import { listAuditEntries } from '#lib/server/audit/audit-service.js';
+import { listAuditActors, listAuditEntries } from '#lib/server/audit/audit-service.js';
 import { auditActions, auditSubjectTypes } from '#lib/types/audit.js';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -9,6 +9,7 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const auditLogFilters = z.object({
 	action: z.enum(auditActions).optional(),
 	search: z.string().max(200).optional(),
+	actorId: z.string().max(64).optional(),
 	subjectType: z.enum(auditSubjectTypes).optional(),
 	from: day.optional(),
 	to: day.optional(),
@@ -19,4 +20,10 @@ const auditLogFilters = z.object({
 export const getAuditLog = query(auditLogFilters, async ({ page, ...filters }) => {
 	await requireCapability('audit.read');
 	return listAuditEntries(filters, { page: page ?? 1, pageSize: 50 });
+});
+
+/** The people the log's actor filter offers. */
+export const getAuditActors = query(async () => {
+	await requireCapability('audit.read');
+	return listAuditActors();
 });

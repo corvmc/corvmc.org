@@ -22,6 +22,7 @@
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
 	import ViewAsMember from '../ViewAsMember.svelte';
+	import AuditActionsLink from './AuditActionsLink.svelte';
 	import { RelatedList } from '#lib/components/ui/entity/index.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -258,7 +259,9 @@
 		title: m.staff_no_recorded_changes_title(),
 		description: m.staff_members_id_panels_account_panel_role_profile_credit_ac_body()
 	}}
-/>
+>
+	{#snippet actions()}<AuditActionsLink userId={id} />{/snippet}
+</ActivityFeedCard>
 
 <!-- Each row is one removal; it rests on the report linked beside it. -->
 <RelatedList

@@ -7,6 +7,7 @@ describe('audit log query string', () => {
 	it('reads back every filter it writes', () => {
 		const q: AuditQuery = {
 			search: 'Ellis & Park',
+			actor: 'user-1',
 			action: 'user.roles_changed',
 			subjectType: 'user',
 			from: '2026-11-01',
