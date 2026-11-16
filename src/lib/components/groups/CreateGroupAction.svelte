@@ -19,15 +19,13 @@
 	// holds the awaited query.
 	const fields = createStaffGroup.fields;
 
-	/** Which kind the form starts on: the page it is opened from. */
+	/**
+	 * The page fixes the kind, so the form never offers one: each kind has its
+	 * own create capability (#3098), and a choice could name one the viewer lacks.
+	 */
 	let { kind = 'club' }: { kind?: 'club' | 'committee' } = $props();
 
 	let chair = $state<{ id: string; name: string; email: string } | null>(null);
-
-	const kindOptions = [
-		{ value: 'club', label: m.groups_create_group_club_label() },
-		{ value: 'committee', label: m.groups_create_group_committee_label() }
-	];
 
 	// Same wording as GroupSettingsForm, which is the other writer of both.
 	const policyOptions = [
@@ -42,11 +40,9 @@
 		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere_label() }
 	];
 
-	// svelte-ignore state_referenced_locally
-	let selectedKind = $state(kind);
 	let joinPolicy = $state('invite_only');
 	// Committees all join by application (#1700), so a committee is not asked.
-	const showsInstructions = $derived(selectedKind === 'committee' || joinPolicy !== 'invite_only');
+	const showsInstructions = $derived(kind === 'committee' || joinPolicy !== 'invite_only');
 </script>
 
 <Action
@@ -72,15 +68,7 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField
-				field={fields.kind}
-				type="select"
-				label={m.groups_create_group_kind_label()}
-				bind:value={selectedKind}
-				options={kindOptions}
-				description={m.groups_create_group_club_program_members_drop_into_body()}
-				required
-			/>
+			<input {...fields.kind.as('hidden', kind)} />
 
 			<FormField
 				field={fields.name}
@@ -100,7 +88,7 @@
 			<!-- Asked at creation, not left to the column defaults: those make a
 			     group public and invite-only at once, so it is advertised and
 			     unjoinable until someone finds the settings form (#1106). -->
-			{#if selectedKind === 'committee'}
+			{#if kind === 'committee'}
 				<input {...fields.joinPolicy.as('hidden', 'by_application')} />
 				<p class="text-muted">
 					{m.groups_create_group_committees_take_members_by_application_text()}
