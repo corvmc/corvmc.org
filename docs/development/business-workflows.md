@@ -598,8 +598,8 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   Announcements thread (`channel: 'group'`, `post_policy: 'leadership'`), title first, and emits an
   event. The listener in `announcement-fanout.ts` latches on the row's `notified_at`, reads
   recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
-  thread, not the author), inserts in-app rows in chunks, and emails through `sendTemplateBatch()`
-  on the transactional stream. See
+  thread, not the author), inserts in-app rows in chunks, and writes one outbox `email` row per
+  recipient, sent on the transactional stream (#2971). See
   [0064](../decisions/0064-a-group-has-one-announcements-thread.md).
 - **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
   `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against

@@ -391,9 +391,13 @@ export async function claimForNotification(id: string): Promise<boolean> {
 	return claimed.length > 0;
 }
 
-/** Written after the send, so the number reflects what was actually attempted. */
+/** Who the fan-out was for: the roster it resolved, whatever each one's channels. */
+export function recipientCountStatement(id: string, recipientCount: number) {
+	return db.update(groupAnnouncement).set({ recipientCount }).where(eq(groupAnnouncement.id, id));
+}
+
 export async function recordRecipientCount(id: string, recipientCount: number): Promise<void> {
-	await db.update(groupAnnouncement).set({ recipientCount }).where(eq(groupAnnouncement.id, id));
+	await recipientCountStatement(id, recipientCount);
 }
 
 export interface AnnouncementRecipient {

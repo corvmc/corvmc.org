@@ -29,28 +29,35 @@ vi.mock('./announcement-service', () => ({
 	claimForNotification: (...a: unknown[]) => mockClaim(...(a as [])),
 	findAnnouncementThread: async () => 'thread-announcements',
 	listRecipients: (...a: unknown[]) => mockList(...(a as [])),
-	recordRecipientCount: (id: string, n: number) => mockRecord(id, n)
+	recordRecipientCount: (id: string, n: number) => mockRecord(id, n),
+	recipientCountStatement: (id: string, n: number) => ({ count: { id, n } })
 }));
 
-/** Every `db.insert(...).values(rows)` the batch was handed. */
-let insertedBatches: unknown[][] = [];
+type Statement = { table?: unknown; rows?: unknown[]; count?: { id: string; n: number } };
+
+/** Every statement handed to `db.batch`, one array per call. */
+let batches: Statement[][] = [];
 
 vi.mock('#lib/server/db/index.js', () => ({
 	db: {
-		insert: () => ({
-			values: (rows: unknown[]) => {
-				insertedBatches.push(rows);
-				return { __statement: true };
-			}
+		insert: (table: unknown) => ({
+			values: (rows: unknown[]) => ({
+				table,
+				rows,
+				// What `chunkInsert` measures: nine bound parameters per outbox row.
+				toSQL: () => ({ params: new Array(rows.length * 9) })
+			})
 		}),
-		batch: (statements: unknown[]) => Promise.resolve(statements.map(() => []))
+		batch: (statements: Statement[]) => {
+			batches.push(statements);
+			return Promise.resolve(statements.map(() => []));
+		}
 	}
 }));
 
-const mockSendBatch = vi.fn(async () => {});
-vi.mock('#lib/server/notification/email/index.js', () => ({
-	sendTemplateBatch: (...a: unknown[]) => mockSendBatch(...(a as [])),
-	type: {}
+const mockDeliverSoon = vi.fn(async (_ids: string[]) => {});
+vi.mock('#lib/server/outbox/outbox-service.js', () => ({
+	deliverSoon: (ids: string[]) => mockDeliverSoon(ids)
 }));
 
 const mockPush = vi.fn();
@@ -64,6 +71,22 @@ vi.mock('#lib/server/db/schema/notification.js', () => ({
 }));
 
 const { fanOutAnnouncement, announcementsHref } = await import('./announcement-fanout');
+const { outboxMessage } = await import('#lib/server/db/schema/outbox.js');
+const { notification } = await import('#lib/server/db/schema/notification.js');
+
+const statementsInto = (table: unknown) => batches.flat().filter((st) => st.table === table);
+/** The in-app inserts, one array of rows per statement. */
+const inAppInserts = () => statementsInto(notification).map((st) => st.rows ?? []);
+
+type EmailRow = {
+	id: string;
+	kind: string;
+	subjectType: string;
+	subjectId: string;
+	payload: { to: string; templateAlias: string; tag: string; model: Record<string, unknown> };
+};
+/** The outbox rows written, one per email. */
+const emails = () => statementsInto(outboxMessage).flatMap((st) => st.rows as EmailRow[]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,7 +123,7 @@ beforeEach(() => {
 	claimed = true;
 	recipients = [];
 	recordedCount = null;
-	insertedBatches = [];
+	batches = [];
 });
 
 // ---------------------------------------------------------------------------
@@ -114,8 +137,8 @@ describe('the latch', () => {
 
 		// Not "sends less" — sends nothing, and does not even resolve recipients.
 		expect(mockList).not.toHaveBeenCalled();
-		expect(mockSendBatch).not.toHaveBeenCalled();
-		expect(insertedBatches).toHaveLength(0);
+		expect(batches).toHaveLength(0);
+		expect(mockDeliverSoon).not.toHaveBeenCalled();
 	});
 
 	it('claims before doing any work', async () => {
@@ -124,7 +147,7 @@ describe('the latch', () => {
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
 		expect(mockClaim).toHaveBeenCalledWith('ann-1');
-		expect(mockSendBatch).toHaveBeenCalledTimes(1);
+		expect(emails()).toHaveLength(1);
 	});
 });
 
@@ -147,16 +170,21 @@ describe('recipients', () => {
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
 		expect(recordedCount).toBe(0);
-		expect(mockSendBatch).not.toHaveBeenCalled();
-		expect(insertedBatches).toHaveLength(0);
+		expect(batches).toHaveLength(0);
+		expect(mockDeliverSoon).not.toHaveBeenCalled();
 	});
 
-	it('records what the send reached', async () => {
+	it('records the roster in the same batch as its email rows', async () => {
 		recipients = [member(1), member(2), member(3)];
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		expect(recordedCount).toBe(3);
+		const withCount = batches.filter((b) => b.some((st) => st.count));
+		expect(withCount).toHaveLength(1);
+		expect(withCount[0].find((st) => st.count)?.count).toEqual({ id: 'ann-1', n: 3 });
+		expect(
+			withCount[0].filter((st) => st.table === outboxMessage).flatMap((st) => st.rows)
+		).toHaveLength(3);
 	});
 });
 
@@ -166,8 +194,9 @@ describe('channel preferences', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		expect(insertedBatches.flat()).toHaveLength(1);
-		expect(mockSendBatch).not.toHaveBeenCalled();
+		expect(inAppInserts().flat()).toHaveLength(1);
+		expect(emails()).toHaveLength(0);
+		expect(mockDeliverSoon).not.toHaveBeenCalled();
 	});
 
 	it('emails someone who turned the bell off', async () => {
@@ -175,8 +204,8 @@ describe('channel preferences', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		expect(insertedBatches).toHaveLength(0);
-		expect(mockSendBatch).toHaveBeenCalledTimes(1);
+		expect(inAppInserts()).toHaveLength(0);
+		expect(emails()).toHaveLength(1);
 	});
 
 	it('still counts a member who receives on neither channel', async () => {
@@ -186,7 +215,7 @@ describe('channel preferences', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		expect(recordedCount).toBe(1);
+		expect(batches.flat().find((st) => st.count)?.count?.n).toBe(1);
 	});
 });
 
@@ -201,24 +230,32 @@ describe('chunking', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		expect(insertedBatches.length).toBeGreaterThan(1);
-		for (const rows of insertedBatches) {
+		expect(inAppInserts().length).toBeGreaterThan(1);
+		for (const rows of inAppInserts()) {
 			expect(rows.length * 7).toBeLessThanOrEqual(100);
 		}
 		// Chunked, not truncated.
-		expect(insertedBatches.flat()).toHaveLength(30);
+		expect(inAppInserts().flat()).toHaveLength(30);
 	});
 
-	it('sends the whole roster in one call to the batch sender', async () => {
+	it('writes an outbox row per email, in statements D1 will accept', async () => {
 		recipients = Array.from({ length: 30 }, (_, i) => member(i));
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		// One subrequest's worth of intent — `sendTemplateBatch` does Postmark's
-		// own 500-per-call chunking internally.
-		expect(mockSendBatch).toHaveBeenCalledTimes(1);
-		const [, messages] = mockSendBatch.mock.calls[0] as unknown as [string, unknown[]];
-		expect(messages).toHaveLength(30);
+		const inserts = statementsInto(outboxMessage);
+		expect(inserts.length).toBeGreaterThan(1);
+		for (const st of inserts) expect((st.rows ?? []).length * 9).toBeLessThanOrEqual(100);
+		expect(emails()).toHaveLength(30);
+		expect(emails()[0]).toMatchObject({
+			kind: 'email',
+			subjectType: 'group_announcement',
+			subjectId: 'ann-1',
+			payload: { templateAlias: 'notification', tag: 'announcement', to: 'member0@test.com' }
+		});
+		// Sent by the outbox, once, for every row written.
+		expect(mockDeliverSoon).toHaveBeenCalledTimes(1);
+		expect(mockDeliverSoon.mock.calls[0][0]).toEqual(emails().map((e) => e.id));
 	});
 });
 
@@ -228,15 +265,12 @@ describe('the email', () => {
 
 		await fanOutAnnouncement(event(), 'https://test.corvmc.org');
 
-		const [, messages] = mockSendBatch.mock.calls[0] as unknown as [
-			string,
-			{ to: string; model: Record<string, unknown> }[]
-		];
+		const model = firstModel();
 		// Not decoration. These ride the transactional stream, which also carries
 		// password resets, so a spam complaint here is expensive — and "there is a
 		// setting somewhere" is what makes people press that button instead.
-		expect(String(messages[0].model.footnote)).toContain('Real Book Club');
-		expect(String(messages[0].model.footnote)).toContain('/member/groups/real-book-club');
+		expect(String(model.footnote)).toContain('Real Book Club');
+		expect(String(model.footnote)).toContain('/member/groups/real-book-club');
 	});
 
 	it('reads as the message, with the author as a byline', async () => {
@@ -295,18 +329,14 @@ describe('the email', () => {
 
 		await fanOutAnnouncement(event({ body: long }), 'https://test.corvmc.org');
 
-		const [row] = insertedBatches.flat() as { body: string }[];
+		const [row] = inAppInserts().flat() as { body: string }[];
 		expect(row.body.length).toBeLessThanOrEqual(400);
 		expect(row.body).not.toContain('THE-END');
 	});
 });
 
 function firstModel(): Record<string, unknown> {
-	const [, messages] = mockSendBatch.mock.calls[0] as unknown as [
-		string,
-		{ model: Record<string, unknown> }[]
-	];
-	return messages[0].model;
+	return emails()[0].payload.model;
 }
 
 describe('announcementsHref', () => {
