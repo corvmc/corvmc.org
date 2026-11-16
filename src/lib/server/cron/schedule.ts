@@ -14,7 +14,12 @@ import type { CronCheckIn } from './sentry-check-in';
  */
 export const CRON_SCHEDULE: Record<string, string[]> = {
 	// The outbox retries on a 1-minute-and-up backoff, so a 5-minute tick is its floor.
-	'*/5 * * * *': ['/api/cron/send-campaigns', '/api/cron/send-outbox'],
+	// lock-job-requested is staff's Run now: a no-op unless someone pressed it.
+	'*/5 * * * *': [
+		'/api/cron/send-campaigns',
+		'/api/cron/send-outbox',
+		'/api/cron/lock-job-requested'
+	],
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
 		'/api/cron/complete-shifts',
@@ -83,6 +88,7 @@ export type RetiredMonitor = { retired: string; ref: string };
 export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'send-campaigns': 'live',
 	'send-outbox': 'live',
+	'lock-job-requested': 'live',
 	'auto-complete': 'live',
 	'complete-shifts': 'live',
 	'expire-waitlisted': 'live',

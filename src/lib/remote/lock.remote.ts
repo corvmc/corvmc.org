@@ -12,9 +12,9 @@ import { listActiveCodes } from '#lib/server/lock/building-access.js';
 import {
 	getLastLockJobRun,
 	getLockStatus,
-	reprovisionAccessFor,
-	runDailyLockJob
+	reprovisionAccessFor
 } from '#lib/server/lock/lock-service.js';
+import { getLockJobRequest, requestLockJobRun } from '#lib/server/lock/lock-job-request.js';
 import {
 	getActiveFallbackCode,
 	rotateFallbackCodeNow
@@ -54,7 +54,7 @@ export const getLockHealth = query(async () => {
 
 	// Read outside the try: an unreachable lock is exactly when the last run's
 	// errors are worth showing, and they are a KV read rather than a U-tec call.
-	const lastRun = await getLastLockJobRun();
+	const [lastRun, requested] = await Promise.all([getLastLockJobRun(), getLockJobRequest()]);
 
 	try {
 		const [health, fallback] = await Promise.all([queryDeviceHealth(), getActiveFallbackCode()]);
@@ -62,6 +62,7 @@ export const getLockHealth = query(async () => {
 		return {
 			ok: true as const,
 			lastRun,
+			requested,
 			online: health.online,
 			lockState: health.lockState,
 			batteryLevel: health.batteryLevel,
@@ -69,7 +70,7 @@ export const getLockHealth = query(async () => {
 			fallbackSyncedAt: fallback?.syncedAt ?? null
 		};
 	} catch (err) {
-		return { ok: false as const, lastRun, error: (err as Error).message };
+		return { ok: false as const, lastRun, requested, error: (err as Error).message };
 	}
 });
 
@@ -90,16 +91,15 @@ export const getBuildingAccess = query(async () => {
 });
 
 /**
- * Run the daily lock job now, rather than waiting for the 16:00 UTC batch.
+ * Queue the daily lock job for the next 5-minute cron tick: it runs past 40 s,
+ * too long for this request. `getLockHealth` shows the request until it lands.
  *
- * Safe to repeat: every stage is filtered on work still outstanding — a
- * booking with no code, a code not yet confirmed on the device, a missing
- * break-glass code — so a second run reports zeros instead of issuing anything
- * twice.
+ * Safe to repeat: every stage is filtered on work still outstanding, so a
+ * second run reports zeros instead of issuing anything twice.
  */
 export const runLockJobNow = command(async () => {
 	const staff = await requireCapability('lock.manage');
-	return runDailyLockJob(staff.name);
+	return requestLockJobRun(staff.name);
 });
 
 /** Type-0 lock users the app does not account for, for staff to adopt or revoke. */
@@ -115,9 +115,10 @@ export const getMemberCodes = query(async () => {
 });
 
 /**
- * The reservation page's retry (#1813): re-issue this booking's code, then run
- * the daily job, since codes tend to fail together. This booking goes first and
- * always — the job skips one that already has a code or sits outside its window.
+ * The reservation page's retry (#1813): re-issue this booking's code, then
+ * queue the daily job, since codes tend to fail together. This booking goes
+ * first and always — the job skips one that already has a code or sits outside
+ * its window. The job runs on the next 5-minute tick, not in this request.
  */
 export const retryDoorCodes = command(z.string(), async (reservationId) => {
 	const staff = await requireCapability('lock.manage');
@@ -148,7 +149,7 @@ export const retryDoorCodes = command(z.string(), async (reservationId) => {
 		memberName: row.memberName,
 		code: row.lockCode ? Number(row.lockCode) : undefined
 	});
-	const job = await runDailyLockJob(staff.name);
+	const job = await requestLockJobRun(staff.name);
 	return { booking, job };
 });
 

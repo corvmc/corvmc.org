@@ -397,8 +397,8 @@
 				{#if retryError}
 					<Alert type="error" class="mt-2">{retryError}</Alert>
 				{:else if retryResult}
-					{@const { booking, job } = retryResult}
-					<Alert type={booking.ok && job.errors.length === 0 ? 'success' : 'warning'} class="mt-2">
+					{@const { booking } = retryResult}
+					<Alert type={booking.ok ? 'success' : 'warning'} class="mt-2">
 						<div>
 							<p>
 								{booking.ok
@@ -407,17 +407,8 @@
 										})
 									: m.staff_reservations_id_booking_text({ error: booking.error ?? '' })}
 							</p>
-							<p>
-								{m.staff_reservations_id_all_bookings_provisioned_confirmed_loc_text({
-									provisioned: job.provisioned,
-									confirmed: job.confirmed
-								})}
-							</p>
-							{#if job.errors.length > 0}
-								<ul class="list-disc pl-5">
-									{#each job.errors as e, i (i)}<li>{e}</li>{/each}
-								</ul>
-							{/if}
+							<!-- The job is queued for the 5-minute cron, not run here (#3144). -->
+							<p>{m.staff_reservations_id_other_codes_queued_text()}</p>
 						</div>
 					</Alert>
 				{/if}

@@ -101,8 +101,12 @@
 </div>
 
 {#if connected}
+	<!-- Each U-tec read pends on its own, so neither holds the page or the other (#3144). -->
 	<svelte:boundary>
 		<LockHealth />
+		{#snippet pending()}
+			<span class="loading mt-2 loading-sm loading-spinner"></span>
+		{/snippet}
 		{#snippet failed(error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getLockHealth(), reset)}>
 				{m.staff_settings_lock_did_not_answer_body({ errorMessage: errorMessage(error) })}
@@ -199,6 +203,9 @@
 {#if connected}
 	<svelte:boundary>
 		<UnmanagedLockCodes />
+		{#snippet pending()}
+			<span class="loading mt-2 loading-sm loading-spinner"></span>
+		{/snippet}
 		{#snippet failed(error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getUnmanagedLockUsers(), reset)}>
 				{m.staff_settings_could_not_read_lock_s_body({ errorMessage: errorMessage(error) })}
@@ -229,6 +236,9 @@
 		/>
 		<svelte:boundary>
 			<UtecDevicePicker deviceId={integration.deviceId} />
+			{#snippet pending()}
+				<span class="loading loading-sm loading-spinner"></span>
+			{/snippet}
 			{#snippet failed()}
 				<FormField
 					field={updateIntegrationSettings.fields.deviceId}
