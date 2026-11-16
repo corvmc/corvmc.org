@@ -38,7 +38,6 @@ const SENDERS = new Set([
  */
 const NOT_YET_ON_THE_OUTBOX = new Set([
 	'src/lib/server/marketing/campaign-service.ts',
-	'src/lib/server/group/announcement-fanout.ts',
 	'src/lib/server/ballot/ballot-fanout.ts'
 ]);
 

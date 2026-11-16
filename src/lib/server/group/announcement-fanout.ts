@@ -1,7 +1,10 @@
 import { db } from '#lib/server/db/index.js';
 import { notification } from '#lib/server/db/schema/notification.js';
 import { normalizeNotificationModel } from '#lib/server/notification/email/normalize-model.js';
-import { sendTemplateBatch } from '#lib/server/notification/email/index.js';
+import { outboxMessage } from '#lib/server/db/schema/outbox.js';
+import { emailRow } from '#lib/server/outbox/outbox-row.js';
+import { deliverSoon } from '#lib/server/outbox/outbox-service.js';
+import { chunkInsert } from '#lib/server/utils/chunk.js';
 import { pushToUser } from '#lib/server/notification/sse.js';
 import { captureException } from '#lib/server/sentry.js';
 import { markdownExcerpt } from '#lib/utils/markdown.js';
@@ -12,6 +15,7 @@ import {
 	findAnnouncementThread,
 	listRecipients,
 	recordRecipientCount,
+	recipientCountStatement,
 	type AnnouncementRecipient
 } from './announcement-service';
 
@@ -27,8 +31,9 @@ import {
  * and a mid-loop failure that leaves half a group notified with no record of
  * where it stopped.
  *
- * This does the same work in one recipient query, ~20 statements across a
- * couple of `db.batch` calls, and one Postmark subrequest.
+ * This does the same work in one recipient query and ~20 statements across a
+ * couple of `db.batch` calls. Each email is an outbox row, sent and retried by
+ * the outbox in batches of 500 (docs/architecture/outbox.md).
  */
 
 /** The generic, model-driven Postmark template. No new template is needed. */
@@ -40,9 +45,6 @@ const GENERIC_ALIAS = 'notification';
  * would be rejected outright rather than truncated.
  */
 const NOTIFICATION_INSERT_CHUNK = 12;
-
-/** Postmark's own per-call limit, which `sendTemplateBatch` also chunks on. */
-const EMAIL_BATCH_SIZE = 500;
 
 /**
  * The size at which this stops being the right shape.
@@ -114,8 +116,8 @@ function emailModel(
  * Notify a group that one of its announcements was published.
  *
  * Latches first and returns quietly if another invocation already claimed the
- * send. Everything after the latch is best-effort per channel: a failed email
- * batch must not prevent the in-app rows that already landed from being counted.
+ * send. The in-app rows and the email rows are written separately, so a failed
+ * in-app batch does not stop the emails.
  */
 export async function fanOutAnnouncement(
 	event: AnnouncementPublishedEvent,
@@ -195,30 +197,27 @@ export async function fanOutAnnouncement(
 		}
 	}
 
-	// 4. One batched send per 500, on the transactional stream.
-	const byEmail = recipients.filter((r) => r.emailEnabled);
-	if (byEmail.length > 0) {
-		try {
-			await sendTemplateBatch(
-				GENERIC_ALIAS,
-				byEmail.map((r) => ({
+	// 4. One outbox row per email, written with the count in one batch so the
+	//    count names exactly the roster the rows were written for. The outbox
+	//    sends them in batches of 500 on the transactional stream and retries
+	//    each refused one on its own.
+	const subject = { type: 'group_announcement', id: event.announcementId };
+	const emails = recipients
+		.filter((r) => r.emailEnabled)
+		.map((r) =>
+			emailRow(
+				{
 					to: r.email,
-					model: emailModel(event, r, siteUrl)
-				})),
-				{ tag: 'announcement' }
-			);
-		} catch (err) {
-			captureException(err, {
-				event: 'announcement.fanout',
-				channel: 'email',
-				announcementId: event.announcementId,
-				recipients: byEmail.length,
-				batchSize: EMAIL_BATCH_SIZE
-			});
-		}
-	}
-
-	// 5. What the send actually reached, written last so it reflects the attempt
-	//    rather than the intention.
-	await recordRecipientCount(event.announcementId, recipients.length);
+					templateAlias: GENERIC_ALIAS,
+					model: emailModel(event, r, siteUrl),
+					tag: 'announcement'
+				},
+				subject
+			)
+		);
+	await db.batch([
+		recipientCountStatement(event.announcementId, recipients.length),
+		...chunkInsert(emails, (group) => db.insert(outboxMessage).values(group))
+	]);
+	if (emails.length > 0) await deliverSoon(emails.map((e) => e.id));
 }
