@@ -6,11 +6,12 @@
  *
  * The queue drops a PR that conflicts with one merged ahead of it as UNMERGEABLE, with no
  * `merge_group` run and no guard comment. This merges the PR's pushed head, in memory, against
- * `main` and against every PR in the merge queue or armed for auto-merge, and names what to do.
+ * its base branch (`main`, or a `feature/*` branch) and against every PR on that base in the merge
+ * queue or armed for auto-merge, and names what to do.
  *
  * Exit codes, most urgent first:
- *   3  stacked on a PR that left the queue without merging: rebase back onto main
- *   1  conflicts with main: rebase onto main
+ *   3  stacked on a PR that left the queue without merging: rebase back onto the base
+ *   1  conflicts with the base: rebase onto it
  *   2  conflicts with a queued or armed PR: stack on it, or wait for it
  *   0  clear to arm
  *   4  usage or git/gh error
@@ -22,7 +23,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 /**
- * @typedef {{ number: number, headRefName: string, headRefOid: string, title: string }} PrRef
+ * @typedef {{ number: number, headRefName: string, headRefOid: string, title: string, baseRefName?: string }} PrRef
  * @typedef {PrRef & { queued: boolean, armed: boolean, merged: boolean }} Pr
  * @typedef {{ subject: PrRef & { isCrossRepository?: boolean }, others: Pr[] }} State
  * @typedef {{ pr: Pr, files: string[] }} Overlap
@@ -31,7 +32,11 @@ import { pathToFileURL } from 'node:url';
 
 /** @param {string} cwd @param {string[]} args */
 function git(cwd, args) {
-	return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+	return execFileSync('git', args, {
+		cwd,
+		encoding: 'utf8',
+		stdio: ['ignore', 'pipe', 'pipe']
+	});
 }
 
 /**
@@ -60,21 +65,25 @@ const ref = (/** @type {number} */ n) => `refs/pre-arm/${n}`;
 const label = (/** @type {Pr} */ p) =>
 	`#${p.number} (${p.queued ? 'queued' : p.armed ? 'armed' : p.merged ? 'merged' : 'open'})`;
 
+/** The branch a PR merges into. A fixture that names none means `main`. */
+export const baseOf = (/** @type {PrRef} */ p) => p.baseRefName || 'main';
+
 /**
- * Fetches the heads the check merges: `main`, the subject, and every queued or armed PR. Pull refs
- * rather than branches, so a PR from a fork or with a renamed branch still resolves. A pull ref
- * and the head GitHub reports both lag a push by seconds; the branch does not, so the subject is
- * read from its branch when that is in this repository.
+ * Fetches the heads the check merges: the subject's base, the subject, and every queued or armed
+ * PR on that base. Pull refs rather than branches, so a PR from a fork or with a renamed branch
+ * still resolves. A pull ref and the head GitHub reports both lag a push by seconds; the branch
+ * does not, so the subject is read from its branch when that is in this repository.
  *
  * @param {string} cwd @param {State} state
  */
 export function fetchHeads(cwd, state) {
 	const prs = [state.subject, ...ahead(state)];
+	const base = baseOf(state.subject);
 	git(cwd, [
 		'fetch',
 		'-q',
 		'origin',
-		'+refs/heads/main:refs/remotes/origin/main',
+		`+refs/heads/${base}:refs/remotes/origin/${base}`,
 		...prs.map((p) => `+refs/pull/${p.number}/head:${ref(p.number)}`)
 	]);
 	for (const p of prs) {
@@ -91,17 +100,19 @@ export function fetchHeads(cwd, state) {
 	}
 }
 
-/** Files `main` has changed since `pr` branched from it. */
-function movedOnMain(
+/** Files the base has changed since `pr` branched from it. */
+function movedOnBase(
 	/** @type {string} */ cwd,
 	/** @type {string} */ pr,
-	/** @type {string} */ main
+	/** @type {string} */ base
 ) {
-	const base = git(cwd, ['merge-base', pr, main]).trim();
-	return git(cwd, ['diff', '--name-only', base, main]).split('\n').filter(Boolean);
+	const fork = git(cwd, ['merge-base', pr, base]).trim();
+	return git(cwd, ['diff', '--name-only', fork, base]).split('\n').filter(Boolean);
 }
 
-const ahead = (/** @type {State} */ s) => s.others.filter((p) => p.queued || p.armed);
+/** Queued or armed PRs into the subject's base: a queue is per base branch. */
+const ahead = (/** @type {State} */ s) =>
+	s.others.filter((p) => (p.queued || p.armed) && baseOf(p) === baseOf(s.subject));
 
 /**
  * @param {string} cwd @param {State} state
@@ -109,92 +120,98 @@ const ahead = (/** @type {State} */ s) => s.others.filter((p) => p.queued || p.a
  */
 export function check(cwd, state) {
 	const subject = ref(state.subject.number);
-	const main = 'refs/remotes/origin/main';
+	const name = baseOf(state.subject);
+	const base = `refs/remotes/origin/${name}`;
+	const onto = `origin/${name}`;
 	/** @type {string[]} */
 	const lines = [
-		`Checked #${state.subject.number} at ${git(cwd, ['rev-parse', '--short', subject]).trim()}`
+		`Checked #${state.subject.number} at ${git(cwd, ['rev-parse', '--short', subject]).trim()} against ${name}`
 	];
 
-	// A PR whose commits sit under ours and are not in main: we are stacked on it.
+	// A PR whose commits sit under ours and are not in the base: we are stacked on it. The PR
+	// whose head is the base branch (a feature branch's landing PR) is the base, not a stack.
 	const bases = state.others.filter(
-		(p) => isAncestor(cwd, p.headRefOid, subject) && !isAncestor(cwd, p.headRefOid, main)
+		(p) =>
+			p.headRefName !== name &&
+			isAncestor(cwd, p.headRefOid, subject) &&
+			!isAncestor(cwd, p.headRefOid, base)
 	);
 	const stale = bases.filter((p) => !p.queued && !p.armed && !p.merged);
 	for (const p of bases) {
 		lines.push(`Stacked on ${label(p)} ${p.title}`);
-		lines.push(`  to unstack: git rebase --onto origin/main ${p.headRefOid}`);
+		lines.push(`  to unstack: git rebase --onto ${onto} ${p.headRefOid}`);
 	}
 
-	const onMain = conflicts(cwd, subject, main);
-	// An armed PR that conflicts with main cannot enter the queue, so it is not ahead of us.
-	const blocked = ahead(state).filter((p) => conflicts(cwd, ref(p.number), main).length > 0);
+	const onBase = conflicts(cwd, subject, base);
+	// An armed PR that conflicts with the base cannot enter the queue, so it is not ahead of us.
+	const blocked = ahead(state).filter((p) => conflicts(cwd, ref(p.number), base).length > 0);
 	/** @type {Overlap[]} */
 	const overlaps = ahead(state)
 		.filter((p) => !blocked.includes(p))
 		.map((pr) => ({ pr, files: conflicts(cwd, subject, ref(pr.number)) }))
 		.filter((o) => o.files.length > 0);
 
-	for (const p of blocked) lines.push(`Skipped ${label(p)}: it conflicts with main itself`);
-	if (onMain.length) lines.push(`Conflicts with main: ${onMain.join(', ')}`);
+	for (const p of blocked) lines.push(`Skipped ${label(p)}: it conflicts with ${name} itself`);
+	if (onBase.length) lines.push(`Conflicts with ${name}: ${onBase.join(', ')}`);
 	for (const o of overlaps) lines.push(`Conflicts with ${label(o.pr)}: ${o.files.join(', ')}`);
 
 	if (stale.length) {
 		const p = stale[0];
 		lines.push(
-			`Next: #${p.number} left the queue without merging, so arming would carry its commits into main.`,
-			`  git rebase --onto origin/main ${p.headRefOid} && git push --force-with-lease`
+			`Next: #${p.number} left the queue without merging, so arming would carry its commits into ${name}.`,
+			`  git rebase --onto ${onto} ${p.headRefOid} && git push --force-with-lease`
 		);
 		return { exit: 3, lines };
 	}
-	if (onMain.length) {
+	if (onBase.length) {
 		lines.push(
-			'Next: rebase onto main, push, wait for the new checks to start, then check again.',
-			'  git fetch origin main && git rebase origin/main && git push --force-with-lease'
+			`Next: rebase onto ${name}, push, wait for the new checks to start, then check again.`,
+			`  git fetch origin ${name} && git rebase ${onto} && git push --force-with-lease`
 		);
 		return { exit: 1, lines };
 	}
 	if (overlaps.length === 1) {
 		const p = overlaps[0].pr;
-		// A stack on a base behind main inherits the base's distance from main in these files.
-		const moved = movedOnMain(cwd, ref(p.number), main).filter((f) =>
+		// A stack on a PR behind the base inherits that PR's distance from the base in these files.
+		const moved = movedOnBase(cwd, ref(p.number), base).filter((f) =>
 			overlaps[0].files.includes(f)
 		);
 		if (moved.length) {
 			lines.push(
-				`Next: wait for #${p.number} to merge. main has changed ${moved.join(', ')} since it branched,`,
-				'  so a stack on it would conflict with main. Rebase onto main after it merges.'
+				`Next: wait for #${p.number} to merge. ${name} has changed ${moved.join(', ')} since it branched,`,
+				`  so a stack on it would conflict with ${name}. Rebase onto ${name} after it merges.`
 			);
 			return { exit: 2, lines };
 		}
 		lines.push(
 			`Next: stack on #${p.number}, push, wait for the new checks to start, then arm.`,
 			`  git fetch origin pull/${p.number}/head && git rebase FETCH_HEAD && git push --force-with-lease`,
-			`  if #${p.number} leaves the queue without merging: git rebase --onto origin/main ${p.headRefOid}`
+			`  if #${p.number} leaves the queue without merging: git rebase --onto ${onto} ${p.headRefOid}`
 		);
 		return { exit: 2, lines };
 	}
 	if (overlaps.length > 1) {
 		lines.push(
 			`Next: wait. A stack carries one base; ${overlaps.map((o) => `#${o.pr.number}`).join(', ')} all overlap.`,
-			'  Rebase onto main after they merge, then check again.'
+			`  Rebase onto ${name} after they merge, then check again.`
 		);
 		return { exit: 2, lines };
 	}
 	lines.push(
-		`Clear to arm: no conflict with main or the ${ahead(state).length - blocked.length} PRs ahead.`
+		`Clear to arm: no conflict with ${name} or the ${ahead(state).length - blocked.length} PRs ahead.`
 	);
 	return { exit: 0, lines };
 }
 
 const QUERY = `query($owner: String!, $name: String!, $n: Int!) {
   repository(owner: $owner, name: $name) {
-    pullRequest(number: $n) { number headRefName headRefOid title isCrossRepository }
+    pullRequest(number: $n) { number headRefName headRefOid title baseRefName isCrossRepository }
     mergeQueue { entries(first: 100) { nodes { pullRequest { number } } } }
     open: pullRequests(states: OPEN, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
-      nodes { number headRefName headRefOid title autoMergeRequest { enabledAt } }
+      nodes { number headRefName headRefOid title baseRefName autoMergeRequest { enabledAt } }
     }
     merged: pullRequests(states: MERGED, first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
-      nodes { number headRefName headRefOid title }
+      nodes { number headRefName headRefOid title baseRefName }
     }
   }
 }`;

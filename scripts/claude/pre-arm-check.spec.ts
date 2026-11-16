@@ -28,9 +28,17 @@ function pr(n: number, from: string, file: string, content: string): string {
 	return git('rev-parse', 'HEAD');
 }
 
-type Other = { number: number; queued?: boolean; armed?: boolean; merged?: boolean; oid: string };
+type Other = {
+	number: number;
+	queued?: boolean;
+	armed?: boolean;
+	merged?: boolean;
+	oid: string;
+	head?: string;
+	base?: string;
+};
 
-function run(subject: number, others: Other[], subjectOid = '') {
+function run(subject: number, others: Other[], subjectOid = '', base = 'main') {
 	const fixture = join(root, 'state.json');
 	writeFileSync(
 		fixture,
@@ -39,11 +47,13 @@ function run(subject: number, others: Other[], subjectOid = '') {
 				number: subject,
 				headRefName: `pr-${subject}`,
 				headRefOid: subjectOid,
-				title: 'subject'
+				title: 'subject',
+				baseRefName: base
 			},
 			others: others.map((o) => ({
 				number: o.number,
-				headRefName: `pr-${o.number}`,
+				headRefName: o.head ?? `pr-${o.number}`,
+				baseRefName: o.base ?? 'main',
 				headRefOid: o.oid,
 				title: `pr ${o.number}`,
 				queued: o.queued ?? false,
@@ -154,5 +164,56 @@ describe('pre-arm-check', () => {
 		const r = run(1, [{ number: 2, oid: base }]);
 		expect(r.exit).toBe(3);
 		expect(r.out).toContain(`git rebase --onto origin/main ${base}`);
+	});
+});
+
+// A phase PR targets `feature/<slug>`, whose landing PR into main is open and unarmed (#3100).
+describe('pre-arm-check, for a PR whose base is a feature branch', () => {
+	const feature = 'feature/door';
+	let landing: string;
+
+	beforeEach(() => {
+		landing = pr(9, 'main', 'nav.ts', 'F\nb\nc\n');
+		git('push', '-q', 'origin', `HEAD:refs/heads/${feature}`);
+	});
+
+	const landingPr = () => ({ number: 9, oid: landing, head: feature });
+
+	it('does not read the landing PR as a stack, and clears against the feature branch', () => {
+		pr(1, 'pr-9', 'other.ts', 'y\n');
+		const r = run(1, [landingPr()], '', feature);
+		expect(r.exit).toBe(0);
+		expect(r.out).not.toContain('Stacked on');
+	});
+
+	it('sends a PR that conflicts with the feature branch to rebase onto it', () => {
+		pr(1, 'pr-9', 'other.ts', 'y\n');
+		git('checkout', '-q', 'pr-9');
+		writeFileSync(join(work, 'other.ts'), 'z\n');
+		git('commit', '-qam', 'feature moves');
+		git('push', '-q', 'origin', `HEAD:refs/heads/${feature}`);
+		const r = run(1, [landingPr()], '', feature);
+		expect(r.exit).toBe(1);
+		expect(r.out).toContain(`git rebase origin/${feature}`);
+	});
+
+	it('ignores a queued PR into main that it would conflict with', () => {
+		const intoMain = pr(2, 'main', 'other.ts', 'm\n');
+		pr(1, 'pr-9', 'other.ts', 'y\n');
+		const r = run(1, [landingPr(), { number: 2, queued: true, oid: intoMain }], '', feature);
+		expect(r.exit).toBe(0);
+	});
+
+	it('stacks on a queued PR into the same feature branch', () => {
+		const sibling = pr(3, 'pr-9', 'other.ts', 's\n');
+		pr(1, 'pr-9', 'other.ts', 'y\n');
+		const r = run(
+			1,
+			[landingPr(), { number: 3, queued: true, oid: sibling, base: feature }],
+			'',
+			feature
+		);
+		expect(r.exit).toBe(2);
+		expect(r.out).toContain('pull/3/head');
 	});
 });
