@@ -72,10 +72,10 @@
 			<div class="flex gap-3 text-sm">
 				<a
 					href={resolve('/band/[slug]/reservations', { slug: band.slug })}
-					class="link link-primary">{m.band_slug_all_reservations_label()}</a
+					class="link link-primary">{m.band_slug_all_reservations_text()}</a
 				>
 				<a href={resolve('/band/[slug]/events', { slug: band.slug })} class="link link-primary"
-					>{m.band_slug_all_events_label()}</a
+					>{m.band_slug_all_events_text()}</a
 				>
 			</div>
 		{/snippet}
@@ -118,7 +118,7 @@
 
 	{#if address}
 		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
-			{m.band_slug_address_card_body()}
+			{m.band_slug_address_card_text()}
 		</AddressCard>
 	{/if}
 </PageContent>

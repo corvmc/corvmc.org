@@ -9,10 +9,10 @@
 	let { steps }: { steps: BandSetupStep[] } = $props();
 
 	const labels: Record<BandSetupKey, () => string> = {
-		invite: m.band_slug_next_steps_invite_member_label,
-		reserve: m.band_slug_next_steps_reserve_label,
-		profile: m.band_slug_setup_profile_label,
-		event: m.band_slug_setup_event_label
+		invite: m.band_slug_next_steps_invite_member_text,
+		reserve: m.band_slug_next_steps_reserve_text,
+		profile: m.band_slug_setup_profile_text,
+		event: m.band_slug_setup_event_text
 	};
 
 	const done = $derived(steps.filter((s) => s.done).length);
@@ -25,7 +25,7 @@
 				{#if step.done}
 					<IconCircleCheckFilled size={20} class="text-success" aria-hidden="true" />
 					<span class="text-subtle line-through">{labels[step.key]()}</span>
-					<span class="sr-only">{m.band_slug_setup_done_label()}</span>
+					<span class="sr-only">{m.band_slug_setup_done_text()}</span>
 				{:else}
 					<IconCircle size={20} class="text-base-content/40" aria-hidden="true" />
 					<a href={step.href} class="link link-primary">{labels[step.key]()}</a>
