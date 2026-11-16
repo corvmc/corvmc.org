@@ -138,7 +138,8 @@ describe('getPersonAccess', () => {
 				grants: expect.arrayContaining([
 					{ capability: 'sponsor.manage', reach: 'org' },
 					{ capability: 'project.manage', reach: 'owned' }
-				])
+				]),
+				projects: []
 			}
 		]);
 		expect(access.shiftRoles).toEqual([]);

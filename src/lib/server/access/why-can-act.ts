@@ -10,7 +10,9 @@ import { capabilitySet, positionsFor } from '#lib/server/authorization.js';
 import {
 	committeeGrantsFor,
 	liveRoleGrantsFor,
-	type LiveRoleGrant
+	projectsOfCommittees,
+	type LiveRoleGrant,
+	type OnProjectVia
 } from '#lib/server/capability/capability-grants.js';
 import { grantRuleFor, OPERATIONS_GROUP_ID, type Capability, type Position } from '#lib/config.js';
 
@@ -26,6 +28,8 @@ export interface DepartmentAccess {
 	/** The committee's positions this person holds, chair first. */
 	positions: string[];
 	grants: { capability: Capability; reach: 'org' | 'owned' }[];
+	/** Where its `'owned'` grants reach: each project it is on, and how (#2959). */
+	projects: { projectId: string; name: string; via: OnProjectVia }[];
 }
 
 export interface AccessExplanation {
@@ -36,10 +40,10 @@ export interface AccessExplanation {
 
 /**
  * Why a person can act (#2994): their positions, the committees they sit on
- * with the positions they hold there, and the shift roles live at `now`. Each
- * capability comes from the function its guard asks (`capabilitySet`,
- * `committeeGrantsFor`, `liveRoleGrantsFor`), so this cannot list what a
- * guard refuses. `why-can-act.spec.ts` holds the two together.
+ * with the positions they hold there and the projects each is on, and the shift
+ * roles live at `now`. Each comes from what its guard reads (`capabilitySet`,
+ * `committeeGrantsFor`, `projectsOfCommittees`, `liveRoleGrantsFor`), so this
+ * cannot list what a guard refuses. `why-can-act.spec.ts` holds the two together.
  */
 export async function explainAccess(
 	userId: string,
@@ -73,6 +77,7 @@ export async function explainAccess(
 		liveRoleGrantsFor(userId, now)
 	]);
 
+	const onProjects = await projectsOfCommittees([...new Set(seatRows.map((r) => r.groupId))]);
 	const departments = new Map<string, DepartmentAccess>();
 	for (const r of seatRows) {
 		const dept = departments.get(r.groupId) ?? {
@@ -82,7 +87,10 @@ export async function explainAccess(
 			grants: (grants.find((g) => g.groupId === r.groupId)?.capabilities ?? []).flatMap((c) => {
 				const reach = grantRuleFor(c)?.committee;
 				return reach ? [{ capability: c as Capability, reach }] : [];
-			})
+			}),
+			projects: onProjects
+				.filter((p) => p.groupId === r.groupId)
+				.map((p) => ({ projectId: p.projectId, name: p.projectName, via: p.via }))
 		};
 		if (r.position) {
 			if (r.isChair) dept.positions.unshift(r.position);

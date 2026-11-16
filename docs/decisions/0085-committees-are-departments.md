@@ -1,7 +1,7 @@
 # 0085 Committees are departments, and a duty grants the duty
 
 - **Date:** 2026-11-14
-- **Status:** Accepted
+- **Status:** Amended by [0086](0086-production-capabilities-by-consequence.md): owning a deliverable puts a committee on the show (§4)
 - **Issue:** [#2983](https://github.com/corvmc/corvmc.org/issues/2983) and its sub-issues, the
   last [#2994](https://github.com/corvmc/corvmc.org/issues/2994); the chair in
   [#3009](https://github.com/corvmc/corvmc.org/issues/3009)

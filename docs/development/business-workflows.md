@@ -2015,6 +2015,9 @@ publish and close-out gates (`event/show-readiness.ts`), and a deliverable never
   tab on `/member/groups/[slug]`, `listShowDeliverables` for a show's Deliverables card,
   `reassignDeliverable` to hand an item to another committee. The remote is
   `deliverables.remote.ts`, guarded by `requireCommitteeMember(groupId, 'volunteer.manageShifts')`.
+- **Reach:** owning a live (not cancelled) deliverable on a project puts the committee on it, so
+  its `'owned'` grants reach that project as if it were named in `project_committee`
+  (`projectCommitteeGrantsFor`, #2959). A person's access page lists each project and how.
 - **Cancellation:** cancelling a show reads its committees' open items first, cancels them, and
   notifies each committee that had one (`production/cancellation-notice.ts`).
 - **Reminders:** `deliverable_due_3d` and `deliverable_overdue` in the reminders registry, over
@@ -2178,13 +2181,16 @@ restore crew shifts or retract a cancellation notice.
    rows are deleted and the call answers `ProductionExistsError`. There is no
    `production.event_id`; `announcedBy(eventId)` finds a listing's production through
    `event_listing.project_id`.
-2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`: a member
-   of a committee taking part in the show whose grants carry the capability, or staff.
-   `production.book` covers the bill, the deal, billing and poster art; `production.run`
-   covers times, run of show, the door take, expenses and the advance. `advanceProduction`
-   asks for `book` to move to `draft`, `offered`, `confirmed` or `cancelled` and `run` for
-   the rest. `updateProduction` compares each field with the stored row and asks only for
-   the capability whose fields changed.
+2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`, cut by
+   what an action commits CMC to ([0086](../decisions/0086-production-capabilities-by-consequence.md)).
+   `production.run` is the show's own work: times and notes (`updateProduction`), run of
+   show, the advance, the door take, expenses, poster art, and the listing's description and
+   times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
+   `project_committee`, or one owning a live deliverable on the show's project. Staff and the
+   event lead hold it too. `production.book` is what binds CMC outside it: the deal terms
+   (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
+   `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
+   `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
 3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
 4. **Overview** tab → `updateProduction` (times and notes) and
@@ -2242,7 +2248,7 @@ restore crew shifts or retract a cancellation notice.
 11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
     `poster_art`, and the artist uploads on `/act/{token}` through
     `/api/acts/{token}/poster-art` → `deliverPosterArt`, which attaches the file to the
-    **request**, slot `poster`. `usePosterArt` (`production.book`) → `promotePosterArt`
+    **request**, slot `poster`. `usePosterArt` (`production.run`) → `promotePosterArt`
     points the listing's poster slot at the same media row. `usePosterArtWithFooter` and
     `useTemplateFlyerAsPoster` render a 1080×1350 PNG with `renderFlyer`
     (`src/lib/server/poster/flyer.ts`, on `@cf-wasm/og`) and replace the slot; a flyer is a

@@ -1246,7 +1246,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 export const setStaffEventLineup = form(
 	z.object({ eventId: z.string().min(1), lineup: z.string().optional() }),
 	async (data) => {
-		await requireListingWriter(data.eventId);
+		await requireListingWriter(data.eventId, 'production.book');
 		const evt = await getById(data.eventId);
 		if (!evt) error(404, 'Event not found');
 
@@ -1452,7 +1452,7 @@ export const startEventSeries = form(
  * on the occurrence, so the guard and the series are read off the same row.
  */
 export const cancelEventSeries = form(z.object({ eventId: z.string().min(1) }), async (data) => {
-	const writer = await requireListingWriter(data.eventId);
+	const writer = await requireListingWriter(data.eventId, 'production.book');
 	const series = await getByEvent(data.eventId);
 	if (!series) error(404, 'This event is not part of a series');
 	try {
