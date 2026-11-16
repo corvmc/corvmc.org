@@ -403,7 +403,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 }
 
 /**
- * Waive what a confirmed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
+ * Waive what a confirmed or completed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
  * member's "Pay online" link, which `getReservationPayment` gates on.
  */
 export async function comp(reservationId: string): Promise<void> {

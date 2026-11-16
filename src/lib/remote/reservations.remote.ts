@@ -2081,7 +2081,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	return { success: true };
 });
 
-/** Staff: comp a scheduled or confirmed reservation (waive payment — no credits used). */
+/** Staff: comp a confirmed or completed reservation (waive payment — no credits used). */
 export const compReservation = form(
 	z.object({ id: z.string() }),
 	writesAudit('reservation.comped', async (data, _issue) => {
