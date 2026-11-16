@@ -101,6 +101,8 @@
 		if (mode === 'register') {
 			body.name = data.get('name') as string;
 			headers['x-turnstile-token'] = turnstileToken;
+			// The sign-up hook refuses any address but the invited one.
+			if (inviteToken) headers['x-invite-token'] = inviteToken;
 			// The verification email's link lands on the return path too, so an
 			// action started signed out resumes from the inbox.
 			const callbackURL = verificationCallbackURL(returnTo);
@@ -204,12 +206,19 @@
 						{#if mode === 'register'}
 							<Field name="name" type="text" label={m.public_name_label()} />
 						{/if}
-						<Field
-							name="email"
-							type="email"
-							label={m.public_email_label()}
-							value={inviteMeta?.email ?? ''}
-						/>
+						{#if inviteMeta}
+							<!-- A readonly Field renders no control, so the address posts from here. -->
+							<input type="hidden" name="email" value={inviteMeta.email} />
+							<Field
+								type="email"
+								label={m.public_email_label()}
+								value={inviteMeta.email}
+								description={m.public_login_invite_email_help()}
+								readonly
+							/>
+						{:else}
+							<Field name="email" type="email" label={m.public_email_label()} />
+						{/if}
 						<Field
 							name="password"
 							type={showPassword ? 'text' : 'password'}

@@ -19,6 +19,7 @@ import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
 import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { findBlockedEmail, recordRefusedSignup } from '#lib/server/moderation/blocklist-service.js';
+import { getByToken } from '#lib/server/group/group-invite-service.js';
 import {
 	ACCOUNT_SUSPENDED_MESSAGE,
 	STAFF_CONTACT_EMAIL,
@@ -614,6 +615,11 @@ function createAuth() {
 export const BLOCKED_SIGNUP_CODE = 'SIGNUP_BLOCKED';
 export const BLOCKED_SIGNUP_MESSAGE = `This address can't be used to create an account. Contact ${STAFF_CONTACT_EMAIL} if you think that's a mistake.`;
 
+/** The `code` a sign-up from an invite link carries when its address is not the invited one. */
+export const INVITE_EMAIL_MISMATCH_CODE = 'INVITE_EMAIL_MISMATCH';
+export const INVITE_EMAIL_MISMATCH_MESSAGE =
+	'This invite is for a different email address. Use the address it was sent to, or ask for a new invite.';
+
 /** What the before hook reads of better-auth's context; narrow so a spec can build one. */
 export interface AuthBeforeContext {
 	path: string;
@@ -646,6 +652,16 @@ export async function beforeAuth(ctx: AuthBeforeContext): Promise<void> {
 			throw new APIError('FORBIDDEN', {
 				message: BLOCKED_SIGNUP_MESSAGE,
 				code: BLOCKED_SIGNUP_CODE
+			});
+		}
+		// Invites match on email (#2165), so an account opened from an invite
+		// link under another address would never join the group (#3049).
+		const inviteToken = ctx.headers?.get('x-invite-token');
+		const invite = inviteToken ? await getByToken(inviteToken) : null;
+		if (invite && invite.email !== signUpEmail) {
+			throw new APIError('BAD_REQUEST', {
+				message: INVITE_EMAIL_MISMATCH_MESSAGE,
+				code: INVITE_EMAIL_MISMATCH_CODE
 			});
 		}
 		return;
