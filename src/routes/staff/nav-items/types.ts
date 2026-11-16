@@ -7,6 +7,7 @@ import type { ProgramsNavKey } from './programs';
 import type { GovernanceNavKey } from './governance';
 import type { BottomNavKey } from './bottom';
 import type { SystemNavKey } from './system';
+import type { ContentNavKey } from './content';
 
 /** Each file in this folder names its own keys, so adding a row edits only that file. */
 export type StaffNavKey =
@@ -16,7 +17,8 @@ export type StaffNavKey =
 	| ProgramsNavKey
 	| GovernanceNavKey
 	| BottomNavKey
-	| SystemNavKey;
+	| SystemNavKey
+	| ContentNavKey;
 
 /** The four sections (#3112). Reports and System sit below them, outside any section. */
 export type StaffNavSectionKey = 'outreach' | 'community' | 'programs' | 'governance';

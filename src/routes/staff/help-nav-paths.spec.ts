@@ -1,18 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { sourceFiles } from '../../../scripts/lib/source-files';
-import { allStaffNavItems, staffNavBottom, staffNavSections, systemNavItems } from './nav-items';
+import { allStaffNavItems, contentNavItems, staffNavSections, systemNavItems } from './nav-items';
 
 /**
  * A help article names a staff page as **Staff → row → …**, or starts from a
- * section title. The row must be a sidebar label, and after **System** the next
- * step must be one of its pages. Later steps name tabs, header links, records
+ * section title. The row must be a sidebar label, and after a panel's row
+ * (**System**, **Content**) the next step must be one of its pages. Later steps name tabs, header links, records
  * and buttons, which no list here holds.
  */
 const rows = new Set(allStaffNavItems().map((r) => r.label));
 const sectionTitles = new Set(staffNavSections.map((s) => s.title));
-const systemLabel = staffNavBottom.find((r) => r.key === 'settings')?.label;
-const systemPages = new Set(systemNavItems.map((i) => i.label));
+const label = (key: string) => allStaffNavItems().find((r) => r.key === key)?.label;
+const panelPages = new Map([
+	[label('settings'), new Set(systemNavItems.map((i) => i.label))],
+	[label('content'), new Set(contentNavItems.map((i) => i.label))]
+]);
 
 const files = sourceFiles(['src/content/help/**/*.md'], new Set());
 
@@ -26,8 +29,9 @@ function staffPaths(text: string): string[][] {
 
 function resolves([row, next]: string[]): boolean {
 	if (!rows.has(row)) return false;
-	if (row !== systemLabel || !next) return true;
-	return systemPages.has(next.replace(/\.$/, ''));
+	const pages = panelPages.get(row);
+	if (!pages || !next) return true;
+	return pages.has(next.replace(/\.$/, ''));
 }
 
 describe('staff paths in help articles', () => {

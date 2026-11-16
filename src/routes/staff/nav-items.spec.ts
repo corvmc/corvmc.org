@@ -2,11 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+	activeContentKey,
 	activeNavKey,
 	activeSystemKey,
 	allStaffNavItems,
+	contentNavItems,
 	filterNavItems,
 	filterNavSections,
+	inContentPanel,
 	inSystemPanel,
 	sectionHasKey,
 	staffNavBottom,
@@ -127,9 +130,9 @@ describe('activeNavKey', () => {
 		['/staff/marketing/campaigns/new', 'outreach'],
 		['/staff/marketing/campaigns/abc/edit', 'outreach'],
 		['/staff/help/create', 'content'],
-		// Local resources is Content's sub-row (#3112).
-		['/staff/local-resources', 'local-resources'],
-		['/staff/local-resources/categories', 'local-resources'],
+		// Local resources is in the Content panel (#3119).
+		['/staff/local-resources', 'content'],
+		['/staff/local-resources/categories', 'content'],
 		// The month's poster is a Print poster action on Events (#3112).
 		['/staff/events/poster', 'calendar'],
 		// The System row opens its own panel (#2763); module settings light their module.
@@ -229,18 +232,11 @@ describe('the nav tree', () => {
 		]);
 	});
 
-	it('holds Local resources as a sub-row of Content (#2765, #3112)', () => {
+	it('keeps Content a plain row that opens its panel (#3119)', () => {
 		const content = allStaffNavItems().find((i) => i.key === 'content');
-		expect(content?.children?.map((c) => c.key)).toEqual(['local-resources']);
+		expect(content?.children).toBeUndefined();
 		expect(activeNavKey('/staff/help/abc')).toBe('content');
-		expect(activeNavKey('/staff/local-resources/abc')).toBe('local-resources');
-	});
-
-	it('keeps Content for a holder of help.read alone, as a plain row', () => {
-		const content = staffNavSections.flatMap((s) => s.items).filter((i) => i.key === 'content');
-		const kept = filterNavItems(content, ['help.read']);
-		expect(kept.map((i) => i.key)).toEqual(['content']);
-		expect(kept[0].children).toBeUndefined();
+		expect(activeNavKey('/staff/local-resources/abc')).toBe('content');
 	});
 
 	// The four sections (#3112), with Reports and System below them.
@@ -316,9 +312,10 @@ describe('route coverage', () => {
 		'/staff/tasks/projects', // a Tasks view (#2625)
 		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
 		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
-		// Content's views, reached from its tab bar (#2765).
+		// The Content panel's pages, in its own sidebar (#3119).
 		'/staff/help',
 		'/staff/help/create', // the create flow for Help Articles
+		'/staff/local-resources',
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
 		'/staff/inventory/intake', // a session started from Gear or Supplies, not a list (#1838)
@@ -554,5 +551,50 @@ describe('the System panel (#2763)', () => {
 			const kept = filterNavItems(staffNavBottom, [item.capability!]).map((i) => i.key);
 			expect(kept, item.key).toContain('settings');
 		}
+	});
+});
+
+describe('the Content panel (#3119)', () => {
+	const contentPages = staffPageRoutes().filter((r) => inContentPanel(concrete(r)));
+
+	it('holds Help articles and Local resources', () => {
+		expect(contentNavItems.map((i) => i.key)).toEqual(['help', 'local-resources']);
+	});
+
+	it('gates every row on a real capability someone holds', () => {
+		for (const item of contentNavItems) {
+			expect(everyCapability).toContain(item.capability);
+			expect(positionOrder.some((p) => grantsCapability(positions[p], item.capability!))).toBe(
+				true
+			);
+		}
+	});
+
+	it("offers the Content row to a holder of any one of its rows' capabilities", () => {
+		const sections = staffNavSections.flatMap((s) => s.items);
+		for (const item of contentNavItems) {
+			const kept = filterNavItems(sections, [item.capability!]).map((i) => i.key);
+			expect(kept, item.key).toContain('content');
+		}
+	});
+
+	it('reaches every page under the panel from one of its rows', () => {
+		expect(contentPages).toContain('/staff/help');
+		expect(contentPages).toContain('/staff/local-resources/categories');
+		const unlit = contentPages.filter((r) => activeContentKey(concrete(r)) === null);
+		expect(unlit).toEqual([]);
+	});
+
+	it('swaps the sidebar only inside the panel', () => {
+		expect(inContentPanel('/staff/content')).toBe(true);
+		expect(inContentPanel('/staff/help/abc')).toBe(true);
+		expect(inContentPanel('/staff/helpers')).toBe(false);
+		expect(inContentPanel('/staff/local-resources-x')).toBe(false);
+		expect(inContentPanel('/staff/marketing')).toBe(false);
+	});
+
+	it('keeps Content rows out of the main sidebar', () => {
+		const main = new Set(allStaffNavItems().map((i) => i.key));
+		for (const item of contentNavItems) expect(main.has(item.key), item.key).toBe(false);
 	});
 });

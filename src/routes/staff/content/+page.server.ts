@@ -1,5 +1,5 @@
 import { redirectToFirstView } from '../views.server';
-import { contentNavItems } from '../nav-items/content';
+import { contentNavItems } from '../nav-items';
 import type { StaffView } from '../views';
 import type { PageServerLoad } from './$types';
 

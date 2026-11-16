@@ -51,8 +51,10 @@
 	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import {
 		activeNavKey,
+		activeContentKey,
 		activeSystemKey,
 		childHrefsFor,
+		inContentPanel,
 		inSystemPanel,
 		filterNavItems,
 		filterNavSections,
@@ -61,11 +63,11 @@
 		staffNavSections,
 		staffNavTop,
 		systemNavItems,
+		contentNavItems,
 		type StaffNavBadgeKey,
 		type StaffNavItem,
 		type StaffNavKey
 	} from './nav-items';
-	import { activeContentKey, contentNavItems, inContentPanel } from './nav-items/content';
 
 	let { children } = $props();
 
