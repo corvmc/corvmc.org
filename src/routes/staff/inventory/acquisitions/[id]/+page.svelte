@@ -249,7 +249,7 @@
 				/>
 
 				<div class="mt-3">
-					<SubmitButton>
+					<SubmitButton label={m.staff_save_label()}>
 						{#snippet icon()}
 							<IconDeviceFloppy size={20} />
 						{/snippet}

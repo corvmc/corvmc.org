@@ -628,7 +628,8 @@ spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 
 Every form in a route file uses the shared components from
 `$lib/components/ui/Form/` — `Form`, `FormField`, `SubmitButton` — never raw `<form>`,
-`<input>`, or `<select>` elements, even for small inline forms. Mutations use `form()` from
+`<input>`, or `<select>` elements, even for small inline forms. `SubmitButton` takes a `label` or
+children naming its action; its props type refuses neither. Mutations use `form()` from
 `$app/server` in a `.remote.ts` file so `<Form>` wires up validation and dirty tracking
 automatically. Full patterns and component API: [ui-patterns.md](ui-patterns.md).
 
