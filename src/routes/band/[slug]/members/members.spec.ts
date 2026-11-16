@@ -213,7 +213,9 @@ describe('inviteSeveral', () => {
 	});
 
 	it('reports a duplicate against its person and still invites the rest', async () => {
-		bandServiceMock.invite.mockRejectedValueOnce(new bandServiceMock.BandMemberExistsError());
+		bandServiceMock.invite.mockRejectedValueOnce(
+			new bandServiceMock.BandMemberExistsError('already invited')
+		);
 
 		const result = await inviteSeveral(batch(['user-3', 'user-4']), issue);
 
