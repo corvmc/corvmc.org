@@ -13,7 +13,7 @@ import {
 import { leadsOpenShow } from '#lib/server/capability/capability-grants.js';
 import { hasLoanableItems } from '#lib/server/inventory/item-service.js';
 import { getAllFeatureFlags } from '#lib/server/feature-flags.js';
-import { countUnifiedUnread } from '#lib/server/inbox/unified-service.js';
+import { countGroupInboxUnread, countUnifiedUnread } from '#lib/server/inbox/unified-service.js';
 import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
 import { acceptsDirectMessages } from '#lib/server/moderation/moderation-service.js';
 import { getForUser, getUnreadCount } from '#lib/server/notification/in-app-service.js';
@@ -288,22 +288,23 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		redirect(302, `/member/groups/${band.slug}`);
 	}
 
-	// No per-band unread here any more. Messages left the sidebar for the
-	// topbar, which draws its own badge from `chrome.messagesUnread` — one
-	// `countUnifiedUnread` across every inbox the viewer can read. These were
-	// two more indexed COUNTs on every band page load, for a badge nothing
-	// renders.
-	const [role, isStaff, userBands, features, chrome] = await Promise.all([
+	// The Messages row's badge (#3136), in the same round trip as the role it
+	// depends on: both halves are counted, and the role picks what it may read.
+	const [role, isStaff, userBands, features, chrome, unread] = await Promise.all([
 		getUserRole(band.id, locals.user.id),
 		can('band.read'),
 		listForUser(locals.user.id, ['band']).catch(() => []),
 		getAllFeatureFlags(),
-		appChrome(locals.user)
+		appChrome(locals.user),
+		countGroupInboxUnread(locals.user.id, band.id).catch(() => ({ chat: 0, enquiries: 0 }))
 	]);
 
 	if (!role && !isStaff) {
 		throw error(403, 'You are not a member of this band');
 	}
+
+	const readsEnquiries = role === 'owner' || role === 'admin';
+	const inboxUnread = role ? unread.chat + (readsEnquiries ? unread.enquiries : 0) : 0;
 
 	return {
 		band: { ...band, avatarUrl: resolveImageUrl(band.avatarKey) },
@@ -313,6 +314,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
 		// See `appChrome`.
 		chrome,
-		features
+		features,
+		inboxUnread
 	};
 });
