@@ -14,9 +14,11 @@ a record of past ones.
 
 ## On the page
 
-- **Filters** — Narrow events by tag (genre or type).
-- **Event posters** — Each event shows its poster, date, and details.
-- **My Tickets** — Tickets you've bought appear here as stubs.
+- **My tickets** — Tickets you've bought appear here as stubs.
+- **At the collective** — Our own upcoming events, each with its poster and
+  date. Tag buttons (genre or type) narrow the list.
+- **Your events** — Shows you've added to the calendar.
+- **Past events** — A record of earlier shows.
 
 ## What you can do
 
@@ -30,7 +32,7 @@ Not all events are ticketed; some are free to attend.
 ## Adding a show to the calendar
 
 Know about a gig around town? Put it on the community calendar so the rest of
-the scene finds out. Use **Add a show** on the Events page.
+the scene finds out. Use **Add event** on the Events page.
 
 This is for shows at **other venues** — a gig, a house show, a festival. It is
 not for booking the CMC space; that's a
@@ -38,8 +40,8 @@ not for booking the CMC space; that's a
 
 A few things worth knowing:
 
-- **You start with the name, date, start time and venue.** Everything else —
-  description, who's playing, poster, tickets — goes on the event's page,
+- **You start with the title, date, start time and venue.** Everything else —
+  description, performers, poster, tickets — goes on the event's page,
   which opens once you save.
 - **Nothing goes public until you publish it.** Saving gives you a draft only
   you can see, so you can come back and finish it later.
@@ -51,7 +53,7 @@ A few things worth knowing:
 - **Naming a band that's on the site asks them to confirm.** They show as a
   plain credit until they do, and the event never appears on their profile
   without their say-so.
-- **If the show gets cancelled**, mark it cancelled rather than deleting it. It
+- **If the show gets cancelled**, use **Cancel event** rather than deleting it. It
   stays on the calendar marked cancelled until its date passes, so anyone who
   already had the date finds out.
 
