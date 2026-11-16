@@ -18,7 +18,8 @@
 	import { errorMessage } from '#lib/error-message.js';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import { formatSlotTime } from '#lib/utils/format.js';
-	import { clubToday } from '#lib/config.js';
+	import { clubToday, type GroupKind } from '#lib/config.js';
+	import { groupKindLabels } from '#lib/terms.js';
 
 	let { class: className = '' }: { class?: string } = $props();
 
@@ -29,6 +30,9 @@
 	let selectedBand = $state<{
 		id: string;
 		name: string;
+		kind: GroupKind;
+		/** The kind, then the owner: a club or committee is booked here too (#3036). */
+		description: string;
 		// Null when the band's owner seat is empty, which is legal since phase 3c.
 		ownerId: string | null;
 		ownerName: string | null;
@@ -98,6 +102,12 @@
 			.padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
 	}
 
+	const searchGroups = async (q: string) =>
+		(await searchBands(q)).map((g) => ({
+			...g,
+			description: [groupKindLabels[g.kind], g.ownerName].filter(Boolean).join(' · ')
+		}));
+
 	// Picking a band fills the member field with its owner — a band booking still
 	// needs a person, since free hours and cash settle against them.
 	function onBandSelected(b: typeof selectedBand) {
@@ -152,18 +162,20 @@
 				<legend class="fieldset-legend">{m.staff_reservations_create_modal_booking_title()}</legend>
 				<Select bind:value={bookerType} class="w-full">
 					<option value="user">{m.staff_reservations_create_modal_member_label()}</option>
-					<option value="group">{m.staff_reservations_create_modal_band_label()}</option>
+					<option value="group">{m.staff_reservations_create_modal_band_or_group_label()}</option>
 				</Select>
 			</fieldset>
 
 			{#if bookerType === 'group'}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend">{m.staff_band_title()}</legend>
+					<legend class="fieldset-legend">
+						{m.staff_reservations_create_modal_band_or_group_title()}
+					</legend>
 					<SearchSelect
-						search={searchBands}
+						search={searchGroups}
 						bind:value={selectedBand}
-						descriptionKey="ownerName"
-						placeholder={m.staff_reservations_create_modal_search_bands_by_name_placeholder()}
+						descriptionKey="description"
+						placeholder={m.staff_reservations_create_modal_search_bands_groups_placeholder()}
 						onselect={onBandSelected}
 					/>
 				</fieldset>
