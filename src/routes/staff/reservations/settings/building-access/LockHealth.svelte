@@ -10,10 +10,26 @@
 	// this says whether a door code will actually work.
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '#lib/remote/lock.remote.js';
+	import {
+		getBuildingAccess,
+		getLockHealth,
+		rotateFallbackCode,
+		runLockJobNow
+	} from '#lib/remote/lock.remote.js';
 	import { timeAgo } from '#lib/utils/format.js';
 
 	const health = $derived(await getLockHealth());
+
+	// Run now queues the job for the 5-minute cron (#3144). Re-read until the
+	// request clears, so the run's result replaces it without a reload.
+	$effect(() => {
+		if (!health.requested) return;
+		const timer = setInterval(() => {
+			void getLockHealth().refresh();
+			void getBuildingAccess().refresh();
+		}, 60_000);
+		return () => clearInterval(timer);
+	});
 
 	let rotating = $state(false);
 	let rotateResult = $state<{ ok: boolean; error?: string } | null>(null);
@@ -36,6 +52,7 @@
 
 	// Safe to press twice: every stage of the job is filtered on work still
 	// outstanding, so a repeat run reports zeros rather than issuing a code again.
+	// It only queues the run; the refresh brings back the request it made.
 	async function handleRun() {
 		running = true;
 		runError = null;
@@ -100,11 +117,16 @@
 		{:else}
 			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was_text()}</span>
 		{/if}
-		<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
-			{running
-				? m.staff_settings_lock_health_running_label()
-				: m.staff_settings_lock_health_run_now_label()}
-		</Button>
+		{#if health.requested}
+			<Badge variant="info">{m.staff_settings_lock_health_queued_label()}</Badge>
+			<span class="text-subtle">{m.staff_settings_lock_health_runs_within_5_minutes_text()}</span>
+		{:else}
+			<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
+				{running
+					? m.staff_settings_lock_health_running_label()
+					: m.staff_settings_lock_health_run_now_label()}
+			</Button>
+		{/if}
 	</div>
 
 	{#if health.lastRun?.errors.length}
