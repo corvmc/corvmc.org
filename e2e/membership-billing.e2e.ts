@@ -38,6 +38,10 @@ async function addCard(page: Page, cardNumber: string) {
 	);
 	await dialog.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])').fill(cardNumber);
 	await dialog.locator('button[type=submit]').click();
+	// The new row renders with the submit's refreshed queries, before `Form`
+	// runs `onsuccess` and the modal closes. A click in that gap lands on the
+	// closing modal, so the next step waits for it to go (#3046).
+	await expect(dialog).toHaveCount(0);
 }
 
 const readCardOnUser = async () => {
@@ -81,15 +85,8 @@ test('a member adds, defaults and removes a card without leaving the site', asyn
 
 	// Remove the first one: its row's last button. `Action` opens a confirm
 	// modal, so the click that matters is the one inside it, which comes last.
-	// The "Card saved" toasts sit over these rows, and a click whose mouseup
-	// lands on one opens nothing (#3046), so it repeats until the dialog shows.
-	const confirmDialog = page.getByRole('dialog');
-	await expect(async () => {
-		if (!(await confirmDialog.isVisible()))
-			await cardRow(page, '4242').getByRole('button').last().click();
-		await expect(confirmDialog).toBeVisible({ timeout: 1000 });
-	}).toPass({ timeout: 15000 });
-	await confirmDialog.getByRole('button').last().click();
+	await cardRow(page, '4242').getByRole('button').last().click();
+	await page.getByRole('dialog').getByRole('button').last().click();
 
 	await expect(cardRow(page, '4242')).toHaveCount(0, { timeout: 15000 });
 	await expect(cardRow(page, '4444')).toBeVisible();
