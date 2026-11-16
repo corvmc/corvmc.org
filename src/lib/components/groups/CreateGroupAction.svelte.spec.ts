@@ -34,8 +34,9 @@ vi.mock('$app/navigation', () => ({
 
 const CreateGroupAction = (await import('./CreateGroupAction.svelte')).default;
 
-const dialogSelects = () =>
-	[...document.querySelectorAll('[role="dialog"] select')] as HTMLSelectElement[];
+const dialogSelects = () => [
+	...(document.querySelector('[role="dialog"]')?.querySelectorAll('select') ?? [])
+];
 
 describe('CreateGroupAction', () => {
 	it.each(['club', 'committee'] as const)('offers no kind from the %s page', async (kind) => {
