@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 import { activeNavKey } from '#lib/components/layout/Nav/active-nav.js';
 import type { StaffNavItem } from './types';
 
-export type ContentNavKey = 'help' | 'resources';
+export type ContentNavKey = 'help' | 'local-resources';
 
 /**
  * The Content panel's sidebar (#3119), like System's. Each row keeps its own
@@ -16,7 +16,7 @@ export const contentNavItems: StaffNavItem[] = [
 		href: resolve('staff/help')
 	},
 	{
-		key: 'resources',
+		key: 'local-resources',
 		capability: 'localResource.manage',
 		label: 'Local resources',
 		href: resolve('staff/local-resources')
