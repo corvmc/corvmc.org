@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { splitUpcoming } from '#lib/utils/upcoming.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
@@ -84,7 +85,7 @@ export const getBandEventsPage = query(z.string(), async (slug) => {
 		getBandLineupInvites(slug),
 		getBandBookings(slug)
 	]);
-	return { events, invites, bookings };
+	return { ...splitUpcoming(events, new Date()), invites, bookings };
 });
 
 /**
