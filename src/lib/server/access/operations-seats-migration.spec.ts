@@ -14,6 +14,12 @@ const carry = readFileSync(globSync('migrations/*_operations_seats/migration.sql
 	.map((s) => s.trim())
 	.filter(Boolean);
 
+/** The later #3093 rename, so the rows compare with today's `operationsPositionRows()`. */
+const rename = readFileSync(
+	globSync('migrations/*_position_names_sentence_case/migration.sql')[0],
+	'utf8'
+);
+
 const { sqlite } = migratedSqlite({ foreignKeys: true, through: 'operations_job' });
 const all = (sql: string) => sqlite.prepare(sql).all();
 
@@ -40,6 +46,7 @@ beforeAll(() => {
 		(1, 'u-both'), (2, 'u-both'), (3, 'u-both'),
 		(4, 'u-member')`);
 	for (const s of carry) sqlite.exec(s);
+	sqlite.exec(rename);
 });
 
 describe('operations seats migration', () => {
