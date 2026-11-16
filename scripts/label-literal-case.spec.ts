@@ -8,7 +8,7 @@ import { sourceFiles } from './lib/source-files';
  * catalog, so `message-copy.spec.ts` cannot hold it to sentence case. This runs
  * the same check over every such literal in source: nav rows, block names, menus.
  */
-const LITERAL = /\blabel(?::\s*|=)(['"`])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
+const LITERAL = /\blabel(?:\s*[:=]\s*)(['"`])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
 
 /** A label map: `const channelLabels: Record<Channel, string> = {`, `RESOURCE_LABELS`. */
 const MAP = /\b(\w*(?:Labels|LABELS))\b[^=;\n]*=\s*\{/g;

@@ -27,7 +27,7 @@ const labels = (groups: [string, CalendarEntry[]][]) => groups.map(([label]) => 
 describe('groupGigs', () => {
 	const today = '2026-08-12'; // a Wednesday mid-month
 
-	it('buckets into This Week, This Month, Looking Ahead', () => {
+	it('buckets into this week, this month and later', () => {
 		const groups = groupGigs(
 			[
 				entry('today', '2026-08-12'),
@@ -39,15 +39,15 @@ describe('groupGigs', () => {
 			today
 		);
 
-		expect(labels(groups)).toEqual(['This Week', 'This Month', 'Looking Ahead']);
+		expect(labels(groups)).toEqual(['This week', 'This month', 'Looking ahead']);
 		expect(groups[0][1].map((e) => e.id)).toEqual(['today', 'week-edge']);
 		expect(groups[1][1].map((e) => e.id)).toEqual(['month', 'month-end']);
 		expect(groups[2][1].map((e) => e.id)).toEqual(['next-month']);
 	});
 
-	it('puts a next-month event within 6 days into This Week', () => {
+	it('puts a next-month event within 6 days into this week', () => {
 		const groups = groupGigs([entry('soon', '2026-09-02')], '2026-08-30');
-		expect(labels(groups)).toEqual(['This Week']);
+		expect(labels(groups)).toEqual(['This week']);
 	});
 
 	it('groups past entries under their month name', () => {
@@ -55,7 +55,7 @@ describe('groupGigs', () => {
 			[entry('past-july', '2026-07-05'), entry('past-aug', '2026-08-01'), entry('now', today)],
 			today
 		);
-		expect(labels(groups)).toEqual(['July 2026', 'August 2026', 'This Week']);
+		expect(labels(groups)).toEqual(['July 2026', 'August 2026', 'This week']);
 	});
 
 	it('returns no groups for no entries', () => {
