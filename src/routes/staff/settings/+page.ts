@@ -5,7 +5,7 @@ import { redirect } from '@sveltejs/kit';
  * System panel; old links land where each tab went.
  */
 const MOVED: Record<string, string> = {
-	integrations: '/staff/building-access',
+	integrations: '/staff/reservations/settings/building-access',
 	pricing: '/staff/reservations/settings',
 	reservations: '/staff/reservations/settings',
 	organization: '/staff/system/organization',

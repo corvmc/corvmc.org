@@ -17,13 +17,13 @@ export const programs: StaffNavSection = {
 			also: [resolve('staff/venues')]
 		},
 		{
-			// Reservations (closures a type filter), Recurring series and Building
-			// access are its views (#2766); a series' own page lights it too.
+			// Reservations (closures a type filter) and Recurring series are its
+			// views (#2766); a series' own page lights it too.
 			key: 'reservations',
 			capability: 'reservation.read',
 			label: 'Practice space',
 			href: resolve('staff/reservations'),
-			also: [resolve('staff/recurring'), resolve('staff/building-access')]
+			also: [resolve('staff/recurring')]
 		},
 		// A club is a program staff run with its chairs (#3027).
 		{

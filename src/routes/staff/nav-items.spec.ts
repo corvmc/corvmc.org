@@ -266,9 +266,9 @@ describe('the nav tree', () => {
 		]);
 		expect(staffNavBottom.map((i) => i.key)).toEqual(['reports', 'settings']);
 		// Recurring work is a Tasks setting (#2087, #2767); Building access a
-		// Practice space view (#2766).
+		// Practice space setting (#3102).
 		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
-		expect(activeNavKey('/staff/building-access')).toBe('reservations');
+		expect(activeNavKey('/staff/reservations/settings/building-access')).toBe('reservations');
 	});
 
 	it('names rows by what they hold (#2763)', () => {
@@ -322,8 +322,8 @@ describe('route coverage', () => {
 		'/staff/inventory/acquisitions',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/recurring', // a Practice space view (#2766)
-		'/staff/building-access', // a Practice space view (#2766)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
+		'/staff/reservations/settings/building-access', // a settings tab (#3102)
 		'/staff/inventory/settings', // reached from Gear's header (#2756)
 		'/staff/contacts/settings', // reached from Contacts' header (#2940)
 		'/staff/money/settings', // reached from Money's header (#2940)

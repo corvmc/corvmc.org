@@ -41,7 +41,7 @@ describe('old addresses', () => {
 		['/staff/settings?tab=inbox', '/staff/inbox/channels'],
 		['/staff/settings?tab=subscriptions', '/staff/members'],
 		['/staff/settings?tab=pricing', '/staff/reservations/settings'],
-		['/staff/settings?tab=integrations', '/staff/building-access']
+		['/staff/settings?tab=integrations', '/staff/reservations/settings/building-access']
 	])('%s 308s to %s', async (from, location) => {
 		expect(await run(settings, `http://x${from}`)).toMatchObject({ status: 308, location });
 	});

@@ -26,8 +26,8 @@ changes are validated and saved per page. Some settings are admin-only.
 
 - Pricing, booking rules, operating hours and the room are on **Practice space settings**:
   **Settings** in the **Staff → Practice space** header.
-- The smart-lock (U-tec) settings are under **Lock settings** on
-  **Staff → Practice space → Building access**.
+- The smart-lock (U-tec) settings are under **Lock settings** on the **Building access** tab
+  of **Practice space settings**.
 - The volunteer hour value and new-member orientation are on **Volunteering settings**:
   **Settings** in the **Staff → Volunteering** header.
 - **Channels** in the **Staff → Inbox** toolbar configures the email, SMS, web, Instagram,

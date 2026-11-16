@@ -128,7 +128,7 @@
 							{#if row.returnNotes}<div class="text-subtle">{row.returnNotes}</div>{/if}
 						{:else if row.source === 'lock'}
 							<Button
-								href="{resolve('staff/building-access')}#active-codes"
+								href="{resolve('staff/reservations/settings/building-access')}#active-codes"
 								variant="ghost"
 								size="sm"
 							>

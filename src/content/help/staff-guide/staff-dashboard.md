@@ -61,8 +61,8 @@ Everything else is grouped by what it's for:
   **Incidents** and **Blocklist**), **Classifieds** and **Content** (**Help articles** and
   **Local resources**).
 - **Programs** — **Events** (creating and running events, ticketing and check-in, with
-  productions, venues and vendor applications as views), **Practice space** (**Reservations**,
-  **Recurring series** and **Building access**), **Clubs** and **Music**.
+  productions, venues and vendor applications as views), **Practice space** (**Reservations** and
+  **Recurring series**, with **Building access** in its settings), **Clubs** and **Music**.
 - **Operations** — **Tasks**, **Committees**, **Volunteering**, **Equipment**, **Supplies** and
   **Money** (**Payments** and **Credit transactions**). Every task, in a project or not, is on
   **Tasks**, with **Projects** beside it and **Recurring work** and **Templates** in its header.

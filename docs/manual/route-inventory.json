@@ -428,10 +428,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/building-access",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/classifieds",
 		"panel": "staff"
 	},
@@ -721,6 +717,10 @@
 	},
 	{
 		"route": "/staff/reservations/settings",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reservations/settings/building-access",
 		"panel": "staff"
 	},
 	{
