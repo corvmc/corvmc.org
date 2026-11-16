@@ -90,8 +90,12 @@ production with no listing is a show being built before it is announced. See #12
 
 A festival or a run of nights is a parent project over its show projects:
 `project.parent_project_id`, one level deep, checked in `project-service.ts`. Each night
-stays its own production. The parent's burn is its own plus its children's
-([0079](../decisions/0079-a-festival-is-a-parent-project.md)).
+stays its own production. The parent's burn is its own plus its children's (#2543).
+
+- Not one production with several listings, because a production is one night's
+  back-of-house and its settlement and door take are per night (#2543).
+- Not deeper nesting, because no case needs it and a one-level sum needs no recursive query
+  (#2543).
 
 Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
@@ -101,7 +105,12 @@ A listing's room hold is booked to its production when it has one, else to the g
 running it, else to the listing itself (#2004). Holding the room never opens a
 production: a CMC workshop with no back-of-house can still take the room.
 
-See [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md).
+- Not a project as a kind of event, because a facility job has no event and a festival has
+  many (#822).
+- Not deal columns on `event_band`, because the public gig guide joins that table and about nine
+  rows in ten are not CMC shows. The deal is on `production_slot` (#822, #1133).
+- Not recurring work materialized ahead, as `recurring_series` does, because a window
+  materializer can pile up unclosed duplicates. Recurring work is generated on close (#822).
 
 ## The seam
 
@@ -227,8 +236,7 @@ chair as `admin`. `scripts/committee-chair-guard.spec.ts` fails on a stored-role
 test anywhere else. Staff oversight of committees (positions, chair, grants) is
 `committee.manage`; `group.manage` covers clubs.
 
-A duty grants the duty (#2983, decision
-[0085](../decisions/0085-committees-are-departments.md)). `canActOnTask` in
+A duty grants the duty (#2983). `canActOnTask` in
 `src/lib/server/task/can-act.ts` admits a task's assignee, the holder of the position it is tagged
 for, an active seat on its committee, or a holder of `volunteer.manageShifts` scoped to the row,
 and returns which. `waitingOn` is the "Your tasks" list, a subset of that. The reason is shown
@@ -239,11 +247,24 @@ Each spec checks the explanation against its guard, so a new way of holding a ca
 be added to both.
 
 A committee's `'owned'` grants reach a project it is on: named in `project_committee`, or owning
-a live task in it (#2959, decision
-[0086](../decisions/0086-production-capabilities-by-consequence.md)). On a show that reach covers
+a live task in it (#2959). On a show that reach covers
 `production.run`, the show's own work. What binds CMC to someone outside it (the deal, the
 lineup, cancelling) is `production.book`, which is org-wide. `explainAccess` lists each
 committee's projects and how it is on them.
+
+- Not responsibility stored as permission, such as `volunteer.manageShifts` granted to every
+  committee, because that reaches every task the committee touches, not the ones it owns
+  (#2983).
+- Not a separate department table, because committees already carry rosters, grants, chairs
+  and projects (#2983).
+- Not a written explanation of access beside the guards, because it drifts from what the guards
+  admit. The explanation calls the guards' own functions (#2983).
+- Not a `project_committee` row written when a committee is given a deliverable, because it
+  drifts when the task is cancelled or reassigned. The reach is derived (#2959).
+- Not show work for every committee on a show without a grant, because it would bypass the
+  grant allowlist (#2959).
+- Not `owner` for a chair, because `owner` carries transfer and delete, which belong to staff
+  for a committee (#607).
 
 ## Seven models that recur
 
@@ -329,6 +350,10 @@ contributed services over specialized-skill minutes at each role's market rate. 
 role with no rate counts as zero and is reported as unpriced. A parent project's burn adds
 its children's to its own, and `parts` lists each one's cash spend.
 
+- Not a stored burn total, because something would have to keep it right (#822).
+- Not one combined value for volunteer time, because the two valuations overlap by
+  construction and the sum double-counts (#822).
+
 `financial_entry` is the collective's accounting ledger: what was earned, spent, given and
 held for others. Stripe stays the record of settlement. Each row has a signed `amountCents`, a
 `kind` (`earned` · `spent` · `in_kind` · `pass_through`), a `category` from
@@ -339,7 +364,16 @@ describes. `occurredAt` is when the money moved. Writers go through
 still writes a $0 row, and `in_kind` is never summed with `earned`. `pass_through` rows share a
 `settlementGroup`, and a pool that does not net to zero is an anomaly to read, not a constraint.
 The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's balance transactions
-(`reconciliation.ts`). Decision: [A local financial record](../decisions/0016-a-local-financial-record.md).
+(`reconciliation.ts`).
+
+- Not a local mirror of each Stripe charge, because Stripe holds a charge's lifecycle. The
+  ledger records purpose (#825).
+- Not double-entry bookkeeping, because an account tree, period closing and statements are more
+  than the reports need (#825).
+- Not a categories table, because a category added as a row would not reach the reports that
+  read categories (#825).
+- Not a `spent` entry for a post-settlement loss, because it would count money that left once as
+  two losses (#825).
 
 ### 5. Container membership `[social, projects, comms]`
 
@@ -355,7 +389,14 @@ count them in RSVP totals and RSVP-built audiences. A ticketed show's check-in i
 One certification has a job in code: **Practice space** (`PRACTICE_SPACE_CLEARANCE_ID`, id
 `practice-space`) says a member has been shown around the room. Completing or waiving their
 orientation grants it, and without a current grant their own booking needs 3 days' notice.
-Decision: [Space training is a clearance](../decisions/0055-space-training-is-a-clearance-and-sets-booking-notice.md).
+Code finds the clearance by id, so staff can rename it.
+
+- Not a count of prior bookings, because a member shown around before the app tracked it would
+  still wait, and a cancelled first booking would make the next one look like a repeat visit
+  (#2565).
+- Not a flag on `member_orientation`, because the clearance already has grant history and
+  revocation (#2565).
+- Not a lookup by name, because a rename would switch the rule off without warning (#2565).
 
 The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
@@ -393,7 +434,7 @@ off the row, never off the request.
 **When to group-scope a tool.** Most of `/staff` is a tool scoped to an organization that
 happens to be the collective. Once a tool is genuinely group-scoped, a band, a club and a
 committee can all have one; the inbox was the clearest case, and band chat
-([decision](../decisions/0041-band-enquiries-are-threads-the-band-owns.md),
+(#487,
 [workflow](../development/business-workflows.md#10-messaging-portal-threads-direct-messages-and-band-enquiries))
 is what it became. Three conditions, all of which band chat demonstrates:
 
@@ -494,20 +535,17 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 - **Polymorphic attachment.** `media` / `media_attachment` over `attachableTypes`. No write
   path deletes an R2 object: a row detaches, and `/api/cron/sweep-media` reaps objects nothing
   points at, after a grace window. A count across parents goes through
-  `liveAttachmentCondition()`. See
-  [uploads are detached and swept](../decisions/0026-uploads-are-detached-and-swept.md).
+  `liveAttachmentCondition()` (#289). Not a typed foreign key per parent, because the parent
+  set is open and each new consumer would migrate the table. Not inline reference counting,
+  because two concurrent detaches both read zero and both delete, and D1 has no transaction.
+  Not private documents in `media`, because an unattached private file has no owner to
+  authorize against.
 - **One vocabulary file.** [config.ts](../../src/lib/config.ts), imported by schema _by
   relative path_ — a `$lib` alias breaks `db:generate`.
 
 ## Further reading
 
-- [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md)
-  — the `project` decision
-- [A festival is a parent project](../decisions/0079-a-festival-is-a-parent-project.md) — the
-  one-level parent over several shows
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
 - [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
   what those products do better
-- [A committee is a group, chaired by its admins](../decisions/0049-a-committee-is-a-group-chaired-by-admins.md)
-  — what a committee is in the data

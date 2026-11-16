@@ -260,4 +260,9 @@ fees and CMC's net separately — they reconcile to the gross, and a regression 
 | Band-facing surface                         | `src/routes/band/[slug]/music/payouts/`            |
 | Staff reporting                             | `src/routes/staff/music/`                          |
 
-Rationale: [band music sells files](../decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md).
+- Not a fixed percentage for CMC, because a cut the buyer cannot refuse is a rake. The realised
+  take is reported on `/staff/music` so the default can move on evidence (#1572).
+- Not fees split evenly, because the collective would pay half the fee on a sale it took
+  nothing from (#1572).
+- Not `STRIPE_WEBHOOK_SECRET` for Connect events, because verification fails silently and
+  `charges_enabled` never flips (#1572).
