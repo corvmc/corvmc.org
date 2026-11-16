@@ -125,14 +125,14 @@
 						{#if msg.delivery.error || msg.delivery.status === 'failed'}
 							<span class="flex items-center gap-1 text-xs text-error">
 								<IconAlertTriangle size={13} />
-								{m.inbox_thread_timeline_not_sent_label()}
+								{m.inbox_thread_timeline_not_sent_text()}
 							</span>
 							{#if msg.delivery.error}
 								<span class="text-muted text-xs">{msg.delivery.error}</span>
 							{/if}
 							{@render retry?.(msg.id)}
 						{:else}
-							<span class="text-muted text-xs">{m.inbox_thread_timeline_sending_label()}</span>
+							<span class="text-muted text-xs">{m.inbox_thread_timeline_sending_text()}</span>
 						{/if}
 					</div>
 				{/if}
