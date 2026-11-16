@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import { rangeCondition } from './range';
@@ -40,14 +42,14 @@ describe('rangeCondition', () => {
 		expect(new Date(at * 1000).toISOString()).toBe('2026-07-01T07:00:00.000Z');
 	});
 
-	it('includes the whole final day, not just its first instant', () => {
-		// An upper bound spelled as a date reads correct and silently drops the
-		// last day's work if it lands on 00:00.
-		const at = paramAt(rangeCondition(volunteerHourLog.workedOn, { to: '2026-07-31' }), 0);
-		const asIso = new Date(at * 1000).toISOString();
+	// #3061: timestamps are whole seconds, so `<= 23:59` dropped 23:59:01–23:59:59.
+	it('includes the whole final day, up to the next midnight and not including it', () => {
+		const c = rangeCondition(volunteerHourLog.workedOn, { to: '2026-07-31' });
+		const at = paramAt(c, 0);
 
-		// 23:59 club time on the 31st, which is the small hours of Aug 1 in UTC.
-		expect(asIso).toBe('2026-08-01T06:59:00.000Z');
+		// Midnight club time on Aug 1, which is 07:00 UTC.
+		expect(new Date(at * 1000).toISOString()).toBe('2026-08-01T07:00:00.000Z');
+		expect(render(c).sql).toMatch(/ < \?$/);
 	});
 
 	it('respects an explicit timezone over the club default', () => {
@@ -56,5 +58,31 @@ describe('rangeCondition', () => {
 			0
 		);
 		expect(new Date(utc * 1000).toISOString()).toBe('2026-07-01T00:00:00.000Z');
+	});
+});
+
+/**
+ * The class behind #3061: an inclusive "to" day bounded with `lte(…, 23:59)`.
+ * Every such filter goes through `rangeCondition`, so no server module spells
+ * the bound itself.
+ */
+describe('end-of-day bounds', () => {
+	const src = join(import.meta.dirname, '../..');
+	const files = (dir: string): string[] =>
+		readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+			e.isDirectory()
+				? files(join(dir, e.name))
+				: e.name.endsWith('.ts') && !e.name.endsWith('.spec.ts')
+					? [join(dir, e.name)]
+					: []
+		);
+
+	it("bounds no column with lte at 23:59; rangeCondition's next-midnight bound covers the day", () => {
+		const scanned = [...files(join(src, 'server')), ...files(join(src, 'remote'))];
+		const found = scanned.filter((f) =>
+			/\blte\([^;]*?buildDateInTz\([^)]*'23:59'/s.test(readFileSync(f, 'utf8'))
+		);
+		expect(scanned.length).toBeGreaterThan(100);
+		expect(found.map((f) => relative(src, f))).toEqual([]);
 	});
 });

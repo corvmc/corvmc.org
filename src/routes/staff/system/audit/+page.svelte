@@ -173,14 +173,17 @@
 				{#snippet head()}
 					<th>{m.staff_audit_action_label()}</th>
 					<th>{m.staff_audit_record_label()}</th>
-					<th class="col-support">{m.staff_by_2_label()}</th>
 				{/snippet}
 				{#each entries as entry (entry.id)}
 					<tr>
 						<td class="cell-primary">
 							<div class="break-words">{summarizeAuditEntry(entry)}</div>
-							<div class="text-muted whitespace-nowrap">
-								{formatDateTimeShort(entry.createdAt)}
+							<!-- The actor sits beside the time, so a phone shows who acted (#3058). -->
+							<div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+								<EntityChip ref={entry.actor} icon={false} />
+								<span class="text-muted whitespace-nowrap">
+									{formatDateTimeShort(entry.createdAt)}
+								</span>
 							</div>
 						</td>
 						<td class="min-w-0">
@@ -189,7 +192,6 @@
 								{#if entry.related}<EntityChip ref={entry.related} />{/if}
 							</div>
 						</td>
-						<td class="col-support min-w-0"><EntityChip ref={entry.actor} icon={false} /></td>
 					</tr>
 				{/each}
 			</Table>

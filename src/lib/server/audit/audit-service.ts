@@ -4,10 +4,8 @@ import {
 	count,
 	desc,
 	eq,
-	gte,
 	inArray,
 	isNotNull,
-	lte,
 	or,
 	sql,
 	type SQL,
@@ -33,9 +31,8 @@ import {
 import { organization } from '#lib/server/db/schema/party.js';
 import { incident } from '#lib/server/db/schema/incident.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { rangeCondition } from '#lib/server/report/range.js';
 import { captureException } from '#lib/server/sentry.js';
-import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { EntityRef, MemberRef } from '#lib/types/entity.js';
 import { feedLimit } from '#lib/types/activity.js';
 import type {
@@ -307,14 +304,8 @@ export async function listAuditEntries(
 			)!
 		);
 	}
-	if (filters.from) {
-		conditions.push(
-			gte(auditLog.createdAt, buildDateInTz(filters.from, '00:00', DEFAULT_TIMEZONE))
-		);
-	}
-	if (filters.to) {
-		conditions.push(lte(auditLog.createdAt, buildDateInTz(filters.to, '23:59', DEFAULT_TIMEZONE)));
-	}
+	const dates = rangeCondition(auditLog.createdAt, filters);
+	if (dates) conditions.push(dates);
 	const where = conditions.length ? and(...conditions) : undefined;
 
 	const subjectUser = alias(user, 'subject_user');

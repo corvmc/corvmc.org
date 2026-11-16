@@ -2,11 +2,11 @@ import { db } from '#lib/server/db/index.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, desc, and, gte, lte, or, count, type SQL } from 'drizzle-orm';
+import { eq, desc, and, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '#lib/server/entity/refs.js';
 import type { MemberRef } from '#lib/types/entity.js';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { rangeCondition } from '#lib/server/report/range.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -76,13 +76,8 @@ function buildFilters(filters: PaymentCacheFilters): SQL[] {
 		conditions.push(eq(paymentCache.status, filters.status));
 	}
 
-	if (filters.from) {
-		conditions.push(gte(paymentCache.paidAt, buildDateInTz(filters.from, '00:00', TZ)));
-	}
-
-	if (filters.to) {
-		conditions.push(lte(paymentCache.paidAt, buildDateInTz(filters.to, '23:59', TZ)));
-	}
+	const dates = rangeCondition(paymentCache.paidAt, filters, TZ);
+	if (dates) conditions.push(dates);
 
 	return conditions;
 }

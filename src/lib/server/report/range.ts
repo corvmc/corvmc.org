@@ -1,5 +1,5 @@
-import { and, gte, lte, type SQL, type SQLWrapper } from 'drizzle-orm';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { and, gte, lt, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { buildDateInTz, nextDay } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 /**
@@ -32,10 +32,11 @@ export function rangeCondition(
 	const conditions: SQL[] = [];
 
 	if (range.from) conditions.push(gte(column, buildDateInTz(range.from, '00:00', timezone)));
-	// 23:59 rather than the next day's 00:00: the columns this filters are
-	// minute-resolution, and an exclusive upper bound spelled as a date is the
-	// kind of thing that reads correct and quietly excludes the last minute.
-	if (range.to) conditions.push(lte(column, buildDateInTz(range.to, '23:59', timezone)));
+	// Before the next day's midnight, not up to 23:59: timestamps are stored in
+	// whole seconds, so `<= 23:59` drops 23:59:01–23:59:59 from both days.
+	if (range.to) {
+		conditions.push(lt(column, buildDateInTz(nextDay(range.to), '00:00', timezone)));
+	}
 
 	return conditions.length > 0 ? and(...conditions) : undefined;
 }

@@ -243,7 +243,82 @@ const EVENT_FIELDS: Record<EventEditField, string> = {
 const statusWord = (s: string) =>
 	(projectStatusLabels as Record<string, string>)[s]?.toLowerCase() ?? s;
 
-const CREDIT_LABELS = { free_hours: 'credits', equipment_credits: 'equipment credits' };
+/** Each credit type's unit, singular and plural; `plural()` picks by the count. */
+export const CREDIT_UNITS = {
+	free_hours: ['credit', 'credits'],
+	equipment_credits: ['equipment credit', 'equipment credits']
+} as const;
+
+/**
+ * Each setting key as a settings entry names it. Every registered key has one
+ * (`setting-labels.spec.ts` walks the registry); a key since removed reads as stored.
+ */
+export const SETTING_LABELS: Record<string, string> = {
+	'reservation.operatingHoursStart': 'opening time',
+	'reservation.operatingHoursEnd': 'closing time',
+	'reservation.minDurationHours': 'minimum duration (hours)',
+	'reservation.maxDurationHours': 'maximum duration (hours)',
+	'reservation.timeSlotMinutes': 'time slot (minutes)',
+	'reservation.bufferMinutes': 'buffer between reservations (minutes)',
+	'reservation.maxAdvanceDaysOneoff': 'max advance booking, one-off (days)',
+	'reservation.maxAdvanceDaysRecurring': 'max advance booking, recurring (days)',
+	'reservation.minAdvanceMinutes': 'min advance booking (minutes)',
+	'reservation.newMemberMinAdvanceMinutes': 'first booking notice (minutes)',
+	'reservation.hourlyRateCents': 'hourly rate',
+	'reservation.teachingRateCents': 'teaching hourly rate',
+	'reservation.teachingMinDurationHours': 'teaching minimum duration (hours)',
+	'reservation.teachingMaxAdvanceDaysOneoff': 'teaching max advance booking, one-off (days)',
+	'reservation.teachingMaxAdvanceDaysRecurring': 'teaching max advance booking, recurring (days)',
+	'reservation.feeGateFrom': 'outstanding fees count from',
+	'moderation.suspensionDefaultDays': 'default suspension (days)',
+	'moderation.suspensionMaxDays': 'maximum suspension (days)',
+	'volunteer.hourValueCents': 'volunteer hour value',
+	'volunteer.hourValueSource': 'volunteer hour value source',
+	'volunteer.orientationRoleId': 'orientation role',
+	'volunteer.orientationMinutes': 'orientation length (minutes)',
+	'volunteer.orientationLeadMinutes': 'orientation start before the booking (minutes)',
+	'volunteer.orientationTasks': 'orientation checklist',
+	'volunteer.firstVisitNotes': 'first-visit notes',
+	'inventory.repairPositionId': 'repair position',
+	'inventory.restockPositionId': 'restock position',
+	'inventory.lateOrderPositionId': 'late order position',
+	'inventory.form8282PositionId': 'Form 8282 position',
+	'contractor.insurancePositionId': 'insurance position',
+	'finance.doorPaymentPositionId': 'door payment position',
+	'venue.consoleChannels': 'console channels',
+	'ballot.memberOfRecordDays': 'account age for a ballot roll (days)',
+	'org.addressStreet': 'street address',
+	'org.addressCity': 'city',
+	'org.addressState': 'state',
+	'org.addressZip': 'ZIP',
+	'org.contactEmail': 'contact email',
+	'org.socialFacebook': 'Facebook URL',
+	'org.socialInstagram': 'Instagram URL',
+	'integration.utec.clientId': 'U-tec client ID',
+	'integration.utec.clientSecret': 'U-tec client secret',
+	'integration.utec.deviceId': 'U-tec device ID',
+	'integration.utec.refreshToken': 'U-tec refresh token',
+	'feature.directMessages': 'Direct messages feature',
+	'feature.bandAudio': 'Band music feature',
+	'feature.cmcRadio': 'CMC Radio feature'
+};
+
+/** The fields a product edit records, as `product.<key>.<field>`. */
+const PRODUCT_FIELDS: Record<string, string> = {
+	name: 'name',
+	description: 'description',
+	unitAmountCents: 'price'
+};
+
+/** A setting key in words; a product key names its product's field. */
+export function settingLabel(key: string): string {
+	if (SETTING_LABELS[key]) return SETTING_LABELS[key];
+	const product = /^product\.([a-z_]+)\.(\w+)$/.exec(key);
+	if (product && PRODUCT_FIELDS[product[2]]) {
+		return `${product[1].replace(/_/g, ' ')} product ${PRODUCT_FIELDS[product[2]]}`;
+	}
+	return key;
+}
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK = /^\d{2}:\d{2}$/;
@@ -274,9 +349,19 @@ const word = (labels: Record<string, string>, key: string) => labels[key]?.toLow
 /** A position key as its title; a key no longer offered as stored. */
 const position = (key: string) => (positionLabels as Record<string, string>)[key] ?? key;
 
-/** An empty string reads as a word, so a cleared setting is visible. */
-const settingValue = (v: string | number | boolean | undefined) =>
-	v === undefined || v === '' ? 'empty' : String(v);
+/**
+ * A setting's value as the settings form shows it: a date, a clock time, money
+ * for a `…Cents` key, on or off. An empty string reads as a word, so a cleared
+ * setting is visible.
+ */
+function settingValue(key: string, v: string | number | boolean | undefined): string {
+	if (v === undefined || v === '') return 'empty';
+	if (typeof v === 'boolean') return v ? 'on' : 'off';
+	if (typeof v === 'number' && key.endsWith('Cents')) return formatCents(v);
+	if (typeof v === 'string' && ISO_DAY.test(v)) return day(v);
+	if (typeof v === 'string' && CLOCK.test(v)) return formatTime(clubInstant('2026-01-01', v));
+	return String(v);
+}
 
 function plural(n: number, one: string, many = `${one}s`): string {
 	return `${n} ${n === 1 ? one : many}`;
@@ -329,10 +414,11 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const d = entry.details;
 			const shown = d.changes.map((c) =>
 				c.from === undefined && c.to === undefined
-					? c.key
-					: `${c.key} from ${settingValue(c.from)} to ${settingValue(c.to)}`
+					? settingLabel(c.key)
+					: `${settingLabel(c.key)} from ${settingValue(c.key, c.from)} to ${settingValue(c.key, c.to)}`
 			);
-			return `Changed ${[...shown, ...(d.redacted ?? [])].join('; ') || 'nothing'}`;
+			const redacted = (d.redacted ?? []).map(settingLabel);
+			return `Changed ${[...shown, ...redacted].join('; ') || 'nothing'}`;
 		}
 		case 'event.visibility_changed':
 			return `Changed visibility from ${entry.details.from} to ${entry.details.to}`;
@@ -399,7 +485,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 		case 'credits.adjusted': {
 			const d = entry.details;
 			const verb = d.delta < 0 ? 'Deducted' : 'Added';
-			return `${verb} ${Math.abs(d.delta)} ${CREDIT_LABELS[d.creditType]} (balance ${d.balanceAfter}): “${d.description}”`;
+			const [one, many] = CREDIT_UNITS[d.creditType];
+			return `${verb} ${plural(Math.abs(d.delta), one, many)} (balance ${d.balanceAfter}): “${d.description}”`;
 		}
 		case 'capability.grants_changed': {
 			const parts: string[] = [];
@@ -419,7 +506,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				? `Merged ${entry.details.mergedName} into them`
 				: 'Merged a duplicate person into them';
 		case 'incident.deleted':
-			return `Deleted after ${entry.details.retentionYears} years (occurred ${dayOf(entry.details.occurredAt)})`;
+			return `Deleted after ${plural(entry.details.retentionYears, 'year')} (occurred ${dayOf(entry.details.occurredAt)})`;
 		case 'incident.reopened':
 			return entry.details.previousResolution
 				? `Reopened it, setting aside “${entry.details.previousResolution}”`
@@ -494,7 +581,7 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			if (open === 0) return done;
 			return open === 1
 				? `${done}, while a task it waits on was open`
-				: `${done}, while ${open} tasks it waits on were open`;
+				: `${done}, while ${plural(open, 'task')} it waits on were open`;
 		}
 		case 'work_order.dependency_added':
 			return `Set it to wait on ${entry.details.dependsOnLabel}`;

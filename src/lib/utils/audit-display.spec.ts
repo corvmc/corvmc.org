@@ -2,7 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import { auditActionGroups, auditActionLabel, summarizeAuditEntry } from './audit-display';
+import {
+	auditActionGroups,
+	auditActionLabel,
+	CREDIT_UNITS,
+	settingLabel,
+	summarizeAuditEntry
+} from './audit-display';
 import { auditActions, type AuditEntry } from '#lib/types/audit.js';
 import { retiredTerms } from '#lib/config.js';
 
@@ -165,6 +171,39 @@ describe('summarizeAuditEntry', () => {
 		).toBe('Added 2 equipment credits (balance 2): “Goodwill”');
 	});
 
+	// #3059: the count picks the unit's number, for every credit type.
+	it('gives a credit adjustment of one a singular unit', () => {
+		for (const [creditType, [one, many]] of Object.entries(CREDIT_UNITS)) {
+			const line = summarizeAuditEntry(
+				entry('credits.adjusted', {
+					creditType: creditType as keyof typeof CREDIT_UNITS,
+					delta: -1,
+					balanceAfter: 0,
+					description: 'x'
+				})
+			);
+			expect(line).toContain(`1 ${one} `);
+			expect(line).not.toContain(`1 ${many}`);
+		}
+	});
+
+	// #3059: a settings entry reads as the settings form does, not as stored.
+	it('names a changed setting and formats its value, never printing the key or ISO date', () => {
+		const key = 'reservation.feeGateFrom';
+		const line = summarizeAuditEntry(
+			entry('settings.changed', { changes: [{ key, from: '', to: '2026-11-01' }] })
+		);
+		expect(line).toContain(settingLabel(key));
+		expect(line).not.toContain(key);
+		expect(line).not.toContain('2026-11-01');
+	});
+
+	it('names a redacted setting too', () => {
+		const key = 'integration.utec.clientSecret';
+		const line = summarizeAuditEntry(entry('settings.changed', { changes: [], redacted: [key] }));
+		expect(line).not.toContain(key);
+	});
+
 	it("says a role's lead time changed, from and to (#2993)", () => {
 		const line = summarizeAuditEntry(
 			entry('capability.grants_changed', {
@@ -218,6 +257,24 @@ describe('audit wording', () => {
 			terms.filter(({ word }) => word.test(text)).map(({ use }) => `"${text}" (use ${use})`)
 		);
 		expect(texts.length).toBeGreaterThan(100);
+		expect(found).toEqual([]);
+	});
+
+	// #3059: "1 equipment credits". A count goes through `plural()`, which picks the
+	// noun's number, so no template follows a substitution with a plural noun.
+	it('puts no plural noun straight after a substitution', () => {
+		const notNouns = new Set(['is', 'was', 'has', 'holds', 'its', 'this', 'as', 'us']);
+		const spans: string[] = [];
+		const collect = (n: ts.Node): void => {
+			if (ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) spans.push(n.text);
+			ts.forEachChild(n, collect);
+		};
+		collect(source);
+		const found = spans.filter((text) => {
+			const word = /^ ([a-z]+s)\b/.exec(text)?.[1];
+			return word !== undefined && !notNouns.has(word);
+		});
+		expect(spans.length).toBeGreaterThan(50);
 		expect(found).toEqual([]);
 	});
 });
