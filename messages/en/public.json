@@ -391,7 +391,7 @@
 	"public_login_create_account_2_title": "Create your account",
 	"public_login_don_t_have_account_sign_label": "Don't have an account? Sign up",
 	"public_login_forgot_password_text": "Forgot your password?",
-	"public_login_invite_email_help": "Your invite was sent to this address.",
+	"public_login_invite_email_body": "Your invite was sent to this address.",
 	"public_login_invited_join_create_account_get_body": "{#strong}{inviterName}{/strong} invited you to join {#strong}{groupName}{/strong}. Create an account to get started.",
 	"public_login_password_label": "Password",
 	"public_login_sign_account_title": "Sign in to your account",

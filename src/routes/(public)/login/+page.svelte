@@ -213,7 +213,7 @@
 								type="email"
 								label={m.public_email_label()}
 								value={inviteMeta.email}
-								description={m.public_login_invite_email_help()}
+								description={m.public_login_invite_email_body()}
 								readonly
 							/>
 						{:else}
