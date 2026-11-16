@@ -713,7 +713,10 @@ export const searchMembers = query(z.string(), async (q) => {
 	return results;
 });
 
-/** Staff: band lookup for booking on a band's behalf. */
+/**
+ * Staff: group lookup for booking on a group's behalf. Every kind, as club and
+ * committee holds stay a staff action (#3036); `kind` lets the picker say which.
+ */
 export const searchBands = query(z.string(), async (q) => {
 	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
@@ -723,6 +726,7 @@ export const searchBands = query(z.string(), async (q) => {
 			.select({
 				id: group.id,
 				name: group.name,
+				kind: group.kind,
 				ownerId: ownerMember.userId,
 				ownerName: user.name,
 				ownerEmail: user.email

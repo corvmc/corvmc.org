@@ -1,4 +1,4 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { forEachClockEdge } from '#lib/test/clock-edges.js';
@@ -23,7 +23,16 @@ vi.mock('#lib/remote/reservations.remote.js', () => {
 			result: undefined
 		},
 		searchMembers: vi.fn(async () => []),
-		searchBands: vi.fn(async () => []),
+		searchBands: vi.fn(async () => [
+			{
+				id: 'club-1',
+				name: 'Real Book Club',
+				kind: 'club',
+				ownerId: null,
+				ownerName: null,
+				ownerEmail: null
+			}
+		]),
 		getStaffSlots: vi.fn(async () => ({
 			slots,
 			config: { slotMinutes: 30, minDurationHours: 1, maxDurationHours: 2 }
@@ -51,6 +60,7 @@ vi.mock('$app/navigation', () => ({
 }));
 
 const CreateModal = (await import('./CreateModal.svelte')).default;
+const { groupKindLabels } = await import('#lib/terms.js');
 
 describe('CreateModal', () => {
 	// #1688: the double-booking warning showed, but the submit stayed live.
@@ -73,6 +83,23 @@ describe('CreateModal', () => {
 
 		await override.click();
 		await expect.element(submit).toBeEnabled();
+	});
+
+	// #3116: the picker finds clubs and committees too, so each result names its kind.
+	it('shows each group result with its kind', async () => {
+		const { locator } = await render(CreateModal);
+		await locator.getByRole('button').click();
+
+		await page.getByRole('combobox').first().selectOptions('group');
+		// The group picker renders first, above the member picker.
+		const picker = () =>
+			document.querySelector<HTMLInputElement>('[role="dialog"] input[role="combobox"]')!;
+		await expect.poll(() => picker()).toBeTruthy();
+		await userEvent.click(picker());
+		await userEvent.type(picker(), 'Real');
+
+		const result = () => document.querySelector('[role="listbox"] [role="option"]')?.textContent;
+		await expect.poll(result).toContain(groupKindLabels.club);
 	});
 
 	// #1984: 6pm PDT on Oct 26 was already Oct 27 in UTC.
