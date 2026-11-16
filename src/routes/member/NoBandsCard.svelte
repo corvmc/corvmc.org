@@ -11,7 +11,7 @@
 
 {#if bandCount === 0}
 	<InfoCard title={many(m.term_band)} testid="no-bands">
-		<p class="text-muted">{m.member_bands_re_not_any_bands_yet_body()}</p>
+		<p class="text-muted">{m.member_bands_re_not_any_bands_yet_text()}</p>
 		<div class="mt-3 flex flex-wrap gap-2">
 			<!-- A full reload, as the sidebar's link does: the bands page opens its modal on arrival. -->
 			<Button
