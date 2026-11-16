@@ -15,20 +15,21 @@ hour, there is something useful you can do.
 
 ## Finding a role
 
-Open **Volunteering** in the member panel. Each role there is a job type with a
-description of what it actually involves — what you would be doing, roughly how
+Open **Volunteering** in the member panel, then **Profile**. Each role under
+**Preferred roles** is a job type with a description of what it actually involves — what you would be doing, roughly how
 long it takes, and whether we will train you. Nothing needs experience up front
 unless the description says so.
 
-Roles are grouped three ways: things that happen **at shows**, things **away
-from shows**, and **committees**, which meet monthly to steer the organization.
+Roles are grouped two ways: **At shows** and **Away from shows**. Committees,
+which steer the organization, are not volunteer roles: apply to join one from
+**My groups → Browse groups**.
 
 If nothing fits what you have to offer, [get in touch](/contact) and we will
 find something.
 
 ## Telling us what interests you
 
-Tick the roles that interest you and press **Save**. That is not a commitment
+Under **Preferred roles**, tick the roles that interest you and press **Save**. That is not a commitment
 to any particular date — it is a standing note to staff about who to contact
 when something comes up, and we will show you how to do the job.
 
@@ -41,18 +42,19 @@ Ideas that are not a role — a program, a club, a class, showing art, performin
 ## Taking a shift
 
 Staff post dated shifts — "Door, Saturday 6–10pm" — and the **Volunteering**
-page lists the upcoming ones, with shifts for roles you picked at the top. Claim
-one and staff will confirm you; you'll get a reminder the day before. If
-something comes up, drop the shift from the same page so somebody else can take
-it — that is far more useful to us than a no-show.
+page lists them under **Open shifts**, with shifts for roles you picked first.
+**Sign up** for one and staff will confirm you; you'll get a reminder the day
+before. If something comes up, use **Drop out** on the shift under **My shifts**
+so somebody else can take it — that is far more useful to us than a no-show.
 
 Some roles need a clearance (First Aid, sound desk sign-off) before you can
-claim them. The shift will say exactly what's missing and the role's
+sign up for them. The shift will say exactly what's missing and the role's
 description says how to get it. Hours can always be logged either way —
 clearances gate scheduling, never the record of work you already did.
 
-After a shift you worked, the page offers a pre-filled hour log — check it and
-submit rather than typing it up. The day after, we'll ask two quick questions
+After a shift you worked, **Unlogged work** offers a pre-filled hour log —
+**Log these hours**, check it and submit rather than typing it up. The day
+after, we'll ask two quick questions (**Give feedback** on the shift)
 about how it went; answers reach staff without your name on the rollup, and
 they're what fix the briefing for the next person.
 
@@ -61,8 +63,9 @@ they're what fix the briefing for the next person.
 After you have helped out, log the time from your volunteer **Profile**:
 
 1. Click **Log hours**.
-2. Pick the role, the date you worked, and how long — to the nearest quarter hour.
-3. Write a sentence about what you did. "Ran sound for the Thursday open mic"
+2. Pick the role, the **Date** you worked, and the **Hours** — to the nearest
+   quarter hour.
+3. Write a sentence about what you did in **Description**. "Ran sound for the Thursday open mic"
    beats "volunteered."
 
 Log hours within 90 days of doing the work. For anything older, ask staff to
@@ -78,9 +81,9 @@ A few logs are **Pending** until staff look at them: a role you were not cleared
 for on that date, a specialized-skill role, or more than 8 hours in one log.
 
 - **Returned** — something did not line up. The reason comes with the
-  notification; correct it and save it again.
+  notification; press **Fix it** on the log, correct it and save it again.
 
-If you claimed a shift, it completes on its own after it ends, and you will be
+If you signed up for a shift, it completes on its own after it ends, and you will be
 asked to log the hours with the shift's length already filled in.
 
 ## Do volunteer hours earn anything?

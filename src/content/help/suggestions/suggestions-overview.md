@@ -19,7 +19,7 @@ one on the board can be counted, argued with, and answered in public.
 
 ## Posting an idea
 
-Press **New Suggestion**, pick a category and write it up.
+Press **New suggestion**, give it a **Title**, pick a **Category** and write it up.
 
 - **Website & Tools**, **Gear & Equipment**, **Events & Programming**,
   **The Space**, **Policy**, **Other**.
@@ -33,8 +33,8 @@ more than a second copy of it.
 ## Voting
 
 One vote per member per suggestion, and pressing it again takes it back. Sort by
-**Top** to see what the room actually wants, or **New** to see what has just
-landed.
+**Most votes** to see what the room actually wants, or **Newest** to see what has
+just landed.
 
 Votes are the whole signal. Staff read the board sorted by them, so voting is not
 decoration — it is how something moves.
@@ -46,6 +46,7 @@ Staff set a status and, where it needs one, write a public response.
 | Status          | What it means                                  |
 | --------------- | ---------------------------------------------- |
 | **Open**        | On the board, not yet decided                  |
+| **In ballot**   | Put to a vote; the ballot decides it           |
 | **Planned**     | We intend to do it                             |
 | **In progress** | Somebody is working on it now                  |
 | **Done**        | It happened                                    |
@@ -57,8 +58,8 @@ something was declined is worth more than the post quietly disappearing.
 ## Editing your own post
 
 You can edit while nobody else has voted on it — those edits apply immediately.
-Once somebody else has voted, your edit goes to staff for review first, because
-people voted for what it said at the time.
+Once somebody else has voted, **Request an edit** sends your change to staff for
+review first, because people voted for what it said at the time.
 
 Your own vote never locks your post.
 
@@ -70,7 +71,7 @@ nobody is punished for not having searched first.
 
 ## Reporting a suggestion
 
-Every suggestion has a report action. Reporting pulls it off the board while
+Every suggestion has a **Flag** action. Flagging pulls it off the board while
 staff look at it, so use it for something that breaks the rules rather than for
 an idea you disagree with — the vote is what disagreement is for.
 
@@ -83,6 +84,10 @@ checked before they appear. See
 It is not a ballot. There is no eligibility rule, no secrecy, and no closing
 date — an upvote counter cannot do the job of a vote on a board election or a
 budget, and this deliberately does not pretend to.
+
+When an idea needs a real vote, staff can put the suggestion to a
+[ballot](/member/help/ballots), and its status reads **In ballot** until the vote
+is decided.
 
 ## Related
 

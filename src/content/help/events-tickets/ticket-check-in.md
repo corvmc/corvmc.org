@@ -9,12 +9,12 @@ sortOrder: 2
 
 ## Your ticket stubs
 
-Every ticket you buy shows up under **My Tickets** on the **Events** page. Each one
+Every ticket you buy shows up under **My tickets** on the **Events** page. Each one
 is a stub for a specific event.
 
 ## Checking in
 
-1. At the event, open **Events → My Tickets**.
+1. At the event, open **Events → My tickets**.
 2. Tap the ticket stub for that event.
 3. A **QR code** appears — show it to the staff member at the door.
 

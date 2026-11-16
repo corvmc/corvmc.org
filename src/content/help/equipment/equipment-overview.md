@@ -14,16 +14,18 @@ the sidebar to browse the catalog.
 
 ## Browsing
 
-- **Search** by name to find a specific item.
-- **Filter by category** (e.g. microphones, cables, pedals) to narrow the list.
-- Each item shows its condition and availability, and an estimated cost — or
-  **"Free for sustaining members"** where that applies.
+- **Search equipment** by name to find a specific item.
+- Pick a category from **All categories** (e.g. microphones, cables, pedals) to
+  narrow the list.
+- Each item shows its daily rate and how many are available. The request form
+  shows the estimated cost for your dates — or **Free for sustaining members**
+  where that applies.
 
 ## Borrowing
 
 - [Request a loan](/member/help/request-equipment-loan) for the dates you need.
-- If we don't have what you're looking for, you can submit a **free-form request**
-  and staff will see it.
+- If we don't have what you're looking for, use **Describe your request** and
+  staff will see it.
 - Track everything you've borrowed on the
   [My loans](/member/help/track-equipment-loans) page.
 
