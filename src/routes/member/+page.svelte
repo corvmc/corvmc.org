@@ -18,8 +18,13 @@
 	import ClassifiedMatchesCard from './ClassifiedMatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import JoinedBandsCard from './JoinedBandsCard.svelte';
+	import NoBandsCard from './NoBandsCard.svelte';
+	import { getMemberLayoutContext } from './layout-context';
 	import { creditsToHours } from '#lib/config.js';
 	import { resolve } from '$app/paths';
+
+	// The layout already holds the member's bands; a second query would race it.
+	const layout = getMemberLayoutContext();
 
 	let data = $derived(await getMemberDashboard());
 
@@ -42,6 +47,7 @@
 	<!-- Before the actions: a bandmate's booking can be one of them. -->
 	<JoinedBandsCard bands={data.joinedBands} />
 	<NeedsYouCard items={data.needsYou} />
+	<NoBandsCard bandCount={layout.current.userBands.length} />
 
 	<!-- Reservations + Credits grid -->
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
