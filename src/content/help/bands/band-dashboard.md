@@ -9,15 +9,20 @@ sortOrder: 3
 
 ## Band dashboard
 
-Click a band in **My Bands** to open its dashboard — the band's home base. What you
-can do here depends on your role in the band.
+Click a band under **My bands** in the sidebar to open its dashboard — the band's
+home base. What you can do here depends on your role in the band.
 
 ## On the page
 
-- **Overview** — Member count, your role, and the band's upcoming reservations.
-- **Upcoming reservations** — The next ones on the calendar and their status.
-- **Quick links** — Owners and admins get shortcuts to manage members and edit the
-  profile.
+- **Next steps** — While nobody else is in the band, owners and admins get
+  **Invite member** and **Reserve practice space** here.
+- **Band address** — The band's web address, to put on a flyer or in a bio.
+- **Press kit** — Owners and admins see how far the press kit is filled in.
+- **Members** and **Your role** — Member count and your role in the band.
+- **Upcoming reservations** — The next ones on the calendar and their status;
+  **View all** opens the band's **Reservations** page.
+- **Manage members**, and for owners and admins **Edit band profile**, at the foot
+  of the page.
 
 ## What's in the band area
 

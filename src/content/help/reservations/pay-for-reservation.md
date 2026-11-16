@@ -9,12 +9,12 @@ sortOrder: 4
 
 ## Paying for a reservation
 
-When a reservation has a balance due, its card shows the amount and a way to pay.
-Open the reservation and choose to pay.
+When a reservation has a balance due, its card shows the amount and **Pay
+online**.
 
-1. From **Reservations**, open the reservation with a balance.
+1. From **Practice space**, choose **Pay online** on the reservation.
 2. Review the amount and hourly rate.
-3. Complete payment by card through the secure checkout.
+3. Choose **Pay** and complete payment by card through the secure checkout.
 
 ## Credits
 
@@ -34,8 +34,8 @@ current amount due.
 When the space has a card reader by the practice room door, you can pay for your
 reservation there yourself, from two hours before it starts until it ends.
 
-1. Open the reservation on your phone. The sticker on the reader links to
-   **Reservations**.
+1. Open the reservation on your phone. The sticker on the reader links to your
+   reservations.
 2. Choose **Pay at the reader**. Your credits are applied first, and the reader
    shows what is left to pay.
 3. Tap, insert or swipe your card on the reader.

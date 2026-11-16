@@ -15,8 +15,8 @@ monthly limit.
 
 ## How they're applied
 
-- Your remaining hours for the month are shown on your **Dashboard** and on the
-  **Reservations** page.
+- Your remaining hours for the month are shown under **Practice credits** on your
+  **Dashboard**, and on the **Practice space** page.
 - Booking doesn't spend credits. They're applied when you pay, or
   when you confirm in the three days before the reservation, before any charge. Two
   bookings can both show as covered; whichever you pay for first uses the hours.

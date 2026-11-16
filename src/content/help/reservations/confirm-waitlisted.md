@@ -9,17 +9,18 @@ sortOrder: 3
 
 ## Waitlisted reservations
 
-Some bookings start out **waitlisted** — your request is held, but the slot isn't
-confirmed yet (for example, when it depends on staff approval or a contested
-time). These show with a waitlisted status on your Reservations page.
+When you book a recurring series and one of its slots is already taken, that
+reservation starts out **waitlisted**: your place is held, but the slot isn't
+yours yet. These show with a waitlisted status on your **Practice space** page.
 
 ## Confirming
 
-When a waitlisted slot becomes available:
+When a waitlisted slot becomes available, you're told, and you have until a
+deadline to take it before it goes to the next person:
 
-1. Open **Reservations** and find the waitlisted booking.
-2. Open it to review the slot details (date, time, duration).
-3. Confirm to lock it in.
+1. Open **Practice space** and find the waitlisted booking.
+2. Choose **Confirm reservation** and check the date and time.
+3. Choose **Confirm reservation** again to lock it in.
 
 Once confirmed, it behaves like any other reservation — including any
 [payment](/member/help/pay-for-reservation) that's due.

@@ -9,15 +9,15 @@ sortOrder: 5
 
 ## Media for your page
 
-Uploads live on the block that shows them. Open a block's settings with the gear
-in its control strip and the picker is right there:
+Uploads live on the block that shows them. Open a block's settings with the
+settings button in its control strip and the picker is right there:
 
-- **Hero** — your banner art.
-- **Gallery** — press photos. Add as many as your plan allows; they appear in
-  the block as you upload them.
-- **Tech rider** — your stage plot and your rider (an image or a PDF). Both also
-  belong to your [tech rider](/member/help/electronic-press-kit) page, which is
-  where the backline lives.
+- **Hero** — your **Hero image**.
+- **Gallery** — photos, with **Add a photo**. They appear in the block as you
+  upload them.
+- **Tech rider** — your **Stage plot** and your **Tech rider (PDF or image)**.
+  Both also belong to the band's **Tech rider** page, which is where the backline
+  lives.
 
 ## Uploading
 

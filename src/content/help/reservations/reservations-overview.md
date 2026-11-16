@@ -9,18 +9,20 @@ sortOrder: 0
 
 ## Practice space
 
-CorvMC's rehearsal rooms are bookable by the hour. Open **Reservations** from the
-sidebar to see your bookings and make new ones.
+CorvMC's rehearsal rooms are bookable by the hour. Open **Practice space** from the
+sidebar to see your bookings and make new ones with **Reserve space**.
 
-## The Reservations page
+## The Practice space page
 
-- **Active / All tabs** — Switch between your upcoming reservations and your full
-  history.
-- **Reservation cards** — Each shows the date, time, duration, and status.
-- **Search** — Filter your reservations when the list gets long.
-- **Recurring** — A section for managing standing weekly or monthly bookings.
-- **Booking policy & credits** — Your current policy and any remaining
-  credits are shown here.
+- **Rate, Hours, Length and Notice** — The current booking terms. **Booking
+  policy** opens the rest.
+- Credits — How many hours of practice credits you have left and when they reset.
+- **My reservations** — **Upcoming** and **All** tabs switch between your upcoming
+  reservations and your full history. Each card shows the date, time, duration,
+  and status.
+- **My recurring reservations** — Your standing weekly, biweekly or monthly
+  bookings. Without a sustaining membership this is **Recurring reservations**,
+  with a link to learn more.
 
 ## Good to know
 

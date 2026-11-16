@@ -12,9 +12,12 @@ sortOrder: 8
 Any member of the band can book the practice space in the band's name.
 
 1. Open the band's **Reservations** page and choose **Reserve space**.
-2. Pick a **date**, a **start time**, and an **end time**.
-3. Add **notes** if you need to.
-4. Review the cost and confirm.
+2. Pick a date, a **Start time**, and an **End time**.
+3. Add **Notes (optional)** if you need to, and choose **Continue**.
+4. Review the cost and choose **Book reservation**.
+
+You can also book from **Practice space**: **Reserve space** there has a **For**
+field, where you pick the band instead of **Me**.
 
 The reservation belongs to the band and shows up on the band dashboard for everyone
 in it.
@@ -28,15 +31,15 @@ Anything left over is due at the door.
 
 ## Recurring band reservations
 
-If your band practices on a schedule, choose a recurrence (weekly, bi-weekly, or
-monthly) when booking. Recurring bookings are a
+If your band practices on a schedule, pick a **Frequency** (**Weekly**,
+**Biweekly** or **Monthly**) when booking. Recurring bookings are a
 [sustaining-member benefit](/member/help/recurring-reservations), and at least
 one active member of the band needs a sustaining membership.
 
 ## Cancelling
 
 Whoever booked a reservation can cancel it. Band **owners and admins** can cancel
-any of the band's reservations. If you don't see a Cancel button on a booking,
+any of the band's reservations. If you don't see **Cancel reservation** on a booking,
 someone else made it — ask them, or ask an admin.
 
 ## Related

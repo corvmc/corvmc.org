@@ -12,17 +12,17 @@ sortOrder: 1
 Only the band **owner** can manage the subscription. From the band's
 **Subscription** page:
 
-1. Review the plans — **Monthly** or **Yearly** (yearly includes a discount over
+1. Review the plans — **Monthly** or **Yearly** (yearly includes months free over
    paying monthly).
-2. Choose a plan.
+2. Choose **Subscribe monthly** or **Subscribe yearly**.
 3. Complete the secure checkout.
 
 Premium features unlock for the band as soon as the subscription is active.
 
 ## Managing the subscription
 
-The Subscription page shows your status and renewal date. Owners can **cancel** or
-**resume** from there. If you cancel, Premium features stay active until the end of
+The **Subscription** page shows your status and renewal date. Owners can choose
+**Cancel subscription** or **Resume subscription** from there. If you cancel, Premium features stay active until the end of
 the paid period.
 
 ## Next

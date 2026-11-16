@@ -9,9 +9,9 @@ sortOrder: 6
 
 ## Cancelling
 
-1. Open **Reservations** from the sidebar.
-2. Find the upcoming reservation and open it.
-3. Choose to cancel and confirm.
+1. Open **Practice space** from the sidebar.
+2. Find the upcoming reservation under **My reservations**.
+3. Choose **Cancel reservation**, then confirm.
 
 ## Cancellation policy
 
@@ -23,7 +23,8 @@ cancellations may incur a fee, and no-shows may be charged in full.
 To move a reservation, cancel the existing one and
 [book the new time](/member/help/booking-a-session). If you booked a
 [recurring series](/member/help/recurring-reservations), you can cancel a single
-occurrence without ending the whole series.
+occurrence without ending the whole series, or end the series with **Cancel
+series** under **My recurring reservations**.
 
 ## Refunds
 
