@@ -623,6 +623,8 @@
 	"member_my_groups_title": "My groups",
 	"member_name_label": "Name",
 	"member_needs_you_card_title": "Pending actions",
+	"member_joined_bands_card_title": "New bands",
+	"member_joined_bands_card_invited_by_text": "Invited by {invitedByName}",
 	"member_new_label": "New",
 	"member_no_events_horizon_body": "No events on the horizon.",
 	"member_no_sessions_booked_week_body": "No reservations this week.",

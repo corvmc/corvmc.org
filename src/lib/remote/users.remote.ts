@@ -29,6 +29,7 @@ import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
 import { listPendingInvites } from '#lib/server/band/band-service.js';
+import { listBandsJoinedByInvite } from '#lib/server/group/group-invite-service.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { eq, or, gte, lte, ne, inArray, and } from 'drizzle-orm';
 import { getUserRoles } from '#lib/server/authorization.js';
@@ -715,7 +716,8 @@ export const getMemberDashboard = query(async () => {
 		profileComplete,
 		matches,
 		owing,
-		classifiedMatches
+		classifiedMatches,
+		joinedBands
 	] = await Promise.all([
 		db
 			.select()
@@ -779,7 +781,8 @@ export const getMemberDashboard = query(async () => {
 			)
 			.orderBy(reservation.startsAt)
 			.limit(5),
-		surfaces.classifieds ? listPostsMatching(currentUser.id) : Promise.resolve([])
+		surfaces.classifieds ? listPostsMatching(currentUser.id) : Promise.resolve([]),
+		listBandsJoinedByInvite(currentUser.id, currentUser.email, nowDate)
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
@@ -832,6 +835,13 @@ export const getMemberDashboard = query(async () => {
 		 * with it; everything below is the calm half (#1245).
 		 */
 		needsYou,
+		/** Bands joined at signup through an emailed invitation, which the member never answered (#3051). */
+		joinedBands: joinedBands.map((b) => ({
+			id: b.id,
+			name: b.name,
+			slug: b.slug,
+			invitedByName: b.invitedByName
+		})),
 		weekReservations: allReservations.map((r) => ({
 			id: r.id,
 			bookerType: r.bookerType,
