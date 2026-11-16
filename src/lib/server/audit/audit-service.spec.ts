@@ -291,7 +291,7 @@ describe('listAuditEntries', () => {
 		await recordAuditEntry({
 			action: 'user.reactivated',
 			subject: { type: 'user', id: 'staff-1', label: 'Sam Staff' },
-			details: {}
+			details: { subscription: 'none' }
 		});
 		expect((await listAuditEntries({ search: 'Sam Staff' })).rows).toHaveLength(2);
 		const { rows } = await listAuditEntries({ actorId: 'staff-1' });
@@ -305,7 +305,7 @@ describe('listAuditEntries', () => {
 			actor: { id: null, name: 'System', email: '' },
 			action: 'user.reactivated',
 			subject: { type: 'user', id: 'member-1', label: 'Jordan Member' },
-			details: {}
+			details: { subscription: 'none' }
 		});
 		expect(await listAuditActors()).toEqual([
 			{ id: 'staff-2', name: 'Riley Admin' },
