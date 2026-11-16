@@ -90,20 +90,20 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		await collapseGroup(page, '/staff/money');
-		await expect(navLink(page, '/staff/money')).toBeHidden();
+		await collapseGroup(page, '/staff/inventory');
+		await expect(navLink(page, '/staff/inventory')).toBeHidden();
 
 		await page.reload();
 
-		await expect(groupToggle(page, '/staff/money')).toHaveAttribute('aria-expanded', 'false');
-		await expect(navLink(page, '/staff/money')).toBeHidden();
+		await expect(groupToggle(page, '/staff/inventory')).toHaveAttribute('aria-expanded', 'false');
+		await expect(navLink(page, '/staff/inventory')).toBeHidden();
 
 		// And navigating into the collapsed group opens it.
-		await page.goto('/staff/money');
+		await page.goto('/staff/inventory');
 
 		// A highlighted row you cannot see is worse than no highlight at all.
-		await expect(groupToggle(page, '/staff/money')).toHaveAttribute('aria-expanded', 'true');
-		await expect(navLink(page, '/staff/money')).toBeVisible();
+		await expect(groupToggle(page, '/staff/inventory')).toHaveAttribute('aria-expanded', 'true');
+		await expect(navLink(page, '/staff/inventory')).toBeVisible();
 	});
 
 	test('scrolls the nav itself, leaving the brand pinned', async ({ page }) => {

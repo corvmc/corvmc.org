@@ -25,7 +25,6 @@
 		IconMail,
 		IconTool,
 		IconFolders,
-		IconPackage,
 		IconBook,
 		IconLayoutDashboard,
 		IconInbox,
@@ -41,7 +40,9 @@
 		IconArrowLeft,
 		IconBuilding,
 		IconToggleRight,
-		IconKey
+		IconKey,
+		IconAlertTriangle,
+		IconMapPin
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
@@ -91,7 +92,7 @@
 	// Only the rows this viewer can use. `getStaffLayout` settled that they may
 	// open the panel; this settles which of it is worth showing them. Hiding a
 	// row is not a guard — the guard is on the remote function behind it — but
-	// offering a treasurer a Volunteering row is offering them a 403.
+	// offering a treasurer a Shifts row is offering them a 403.
 	const navTop = $derived(filterNavItems(staffNavTop, layout.capabilities));
 	const navSections = $derived(filterNavSections(staffNavSections, layout.capabilities));
 	const navBottom = $derived(filterNavItems(staffNavBottom, layout.capabilities));
@@ -125,7 +126,7 @@
 		'volunteer-schedule': IconCalendarWeek,
 		reservations: IconClipboardCheck,
 		gear: IconTool,
-		supplies: IconPackage,
+		incidents: IconAlertTriangle,
 		projects: IconFolders,
 		calendar: IconCalendarMonth,
 		moderation: IconFlag,
@@ -133,6 +134,7 @@
 		classifieds: IconSpeakerphone,
 		outreach: IconMail,
 		content: IconBook,
+		'local-resources': IconMapPin,
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		contacts: IconAddressBook,

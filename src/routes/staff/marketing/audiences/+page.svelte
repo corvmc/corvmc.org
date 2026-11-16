@@ -14,13 +14,13 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import StaffViews from '../../StaffViews.svelte';
-	import { outreachViews } from '../views';
+	import { marketingViews } from '../views';
 
 	let audiences = $derived(await getAudienceList());
 </script>
 
-<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_audiences_title()}>
-	<StaffViews views={outreachViews} active="audiences" />
+<PageHeader title={m.staff_marketing_title()} documentTitle={m.staff_audiences_title()}>
+	<StaffViews views={marketingViews} active="audiences" />
 </PageHeader>
 <PageContent>
 	<div class="flex justify-end">

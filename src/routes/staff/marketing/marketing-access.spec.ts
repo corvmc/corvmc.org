@@ -10,8 +10,9 @@ import {
 } from '#lib/remote/marketing.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
-import { outreachViews } from './views';
+import { marketingViews } from './views';
 import { load as bare } from './+page.server';
+import { load as oldPosters } from './posters/+page';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
@@ -68,18 +69,26 @@ describe('tabs', () => {
 	it.each([
 		[
 			[READ, AUDIENCES],
-			['campaigns', 'audiences', 'posters']
+			['campaigns', 'audiences']
 		],
-		[[READ], ['campaigns', 'posters']],
+		[[READ], ['campaigns']],
 		[[AUDIENCES], ['audiences']],
 		[[], []]
 	])('holding %j shows %j', (held, keys) => {
-		expect(visibleViews(outreachViews, held).map((v) => v.key)).toEqual(keys);
+		expect(visibleViews(marketingViews, held).map((v) => v.key)).toEqual(keys);
 	});
 
 	it.each([[READ], [AUDIENCES]])('offers the row to a holder of only %s', (cap) => {
 		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
 		expect(rows.map((r) => r.key)).toContain('outreach');
+	});
+});
+
+// The poster is a Print poster action on Events (#3112).
+it('308s the old poster tab to the poster page', async () => {
+	await expect(run(oldPosters, 'http://x/staff/marketing/posters')).rejects.toMatchObject({
+		status: 308,
+		location: '/staff/events/poster'
 	});
 });
 

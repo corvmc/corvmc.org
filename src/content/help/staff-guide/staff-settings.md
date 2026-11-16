@@ -29,7 +29,7 @@ changes are validated and saved per page. Some settings are admin-only.
 - The smart-lock (U-tec) settings are under **Lock settings** on the **Building access** tab
   of **Practice space settings**.
 - The volunteer hour value and new-member orientation are on **Volunteering settings**:
-  **Settings** in the **Staff → Volunteering** header.
+  **Settings** in the **Staff → Shifts** header.
 - **Channels** in the **Staff → Inbox** toolbar configures the email, SMS, web, Instagram,
   and Messenger channels that feed the [inbox](/member/help/staff-inbox).
 

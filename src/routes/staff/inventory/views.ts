@@ -3,16 +3,23 @@ import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
 /**
- * The Equipment row's lists, one per object (#2573, #2767). Kits are a filter on
- * Loans and Form 8282 one on Acquisitions. Each keeps its remotes' capability.
+ * The Equipment row's lists, one per object (#2573, #2767). Supplies is what is
+ * used up (#3112). Kits are a filter on Loans and Form 8282 one on
+ * Acquisitions. Each keeps its remotes' capability.
  */
 export const gearViews: readonly StaffView<
-	'items' | 'loans' | 'problems' | 'orders' | 'acquisitions'
+	'items' | 'supplies' | 'loans' | 'problems' | 'orders' | 'acquisitions'
 >[] = [
 	{
 		key: 'items',
 		label: () => m.staff_items_label(),
 		href: resolve('staff/inventory'),
+		cap: 'inventory.read'
+	},
+	{
+		key: 'supplies',
+		label: () => m.staff_supplies_label(),
+		href: resolve('staff/inventory/supplies'),
 		cap: 'inventory.read'
 	},
 	{

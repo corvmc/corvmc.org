@@ -10,7 +10,7 @@ sortOrder: 2
 
 ## What needs you today
 
-**Operations → Volunteering** opens with a row of counts above the table. Each is something
+**Governance → Shifts** opens with a row of counts above the table. Each is something
 waiting on a person, and a count you cannot see has nothing in it. Three narrow the table:
 
 - **Pending assignments** — shifts with claims nobody has confirmed. This is the one to clear
@@ -31,17 +31,17 @@ One is about people, and opens the page that holds them:
   shown as a filter on **Members**. Not the same list as **View cleared volunteers**: this
   one has a deadline.
 
-Work with no shift and nobody on it is on **Operations → Tasks**, under the **Unassigned**
+Work with no shift and nobody on it is on **Governance → Tasks**, under the **Unassigned**
 filter; **No set time** narrows that to volunteer work. On each row, **Open shift** gives the
 task a time, **Assign** opens it to put somebody on it, and **Mark done** closes it.
 
-The count beside **Volunteering** in the sidebar is understaffed shifts in the next seven days
+The count beside **Shifts** in the sidebar is understaffed shifts in the next seven days
 and tasks with ended shifts, added up. Hours waiting for review are on **Hour logs**.
 
 ## The hours queue
 
 Hours members log count straight away. Only three kinds wait on the **Pending** tab of
-**Volunteering → Hour logs**:
+**Shifts → Hour logs**:
 
 - the role needs a clearance the member did not hold on the date worked;
 - the role is a **Specialized skill**, valued at a market rate, so approving it records an
@@ -68,7 +68,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log hours** on this page, or on **Volunteering**, is how you do that. It is also how
+anything older. **Log hours** on this page, or on **Shifts**, is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.
@@ -78,7 +78,7 @@ to you. You typing it in is the review.
 
 ## Scheduling shifts
 
-**Volunteering** shows the **Next 14 days**, grouped by day — the view for "who is on
+**Shifts** shows the **Next 14 days**, grouped by day — the view for "who is on
 tonight". Its **Any date** window is the whole catalog, past included, for finding one.
 
 Create a shift from a role (times and headcount prefill from the role's defaults), and
@@ -101,7 +101,7 @@ When a shift is called off, its roster stays put — that is who you have to tel
 page turns into a notify list: **Notify all** emails everybody still on it, and **Mark
 notified** is for the ones you already rang.
 
-A role can require clearances (**Roles**, on **Volunteering**) before its
+A role can require clearances (**Roles**, on **Shifts**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
 lapsing card is caught before it matters. The **Clearance** filter on **Members**
 shows who holds one today. Grant and revoke from the member's page, which lists what
@@ -137,7 +137,7 @@ several people at once.
 
 ## Managing roles
 
-**Roles**, on **Volunteering**, holds both halves of what volunteering is made of: the roles
+**Roles**, on **Shifts**, holds both halves of what volunteering is made of: the roles
 members pick from on the left, the clearances that gate some of them on the right. A role
 is a name plus a job description in markdown — the description is what members read when
 deciding whether to help, so write what the job actually involves rather than a label.

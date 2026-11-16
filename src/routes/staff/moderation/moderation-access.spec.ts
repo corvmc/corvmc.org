@@ -7,7 +7,7 @@ import { visibleViews } from '../views';
 import { moderationViews } from './views';
 import { load as bare } from './+page.server';
 import { load as oldFlags } from '../flags/+page';
-import { load as oldIncidents } from '../incidents/+page';
+import { load as oldIncidents } from './incidents/+page';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
@@ -38,20 +38,27 @@ const run = async (load: unknown, url: string) =>
 describe('tabs', () => {
 	it.each([
 		[
-			[FLAGS, INCIDENTS],
-			['flags', 'incidents']
+			[FLAGS, BAN],
+			['flags', 'blocklist']
 		],
 		[[FLAGS], ['flags']],
-		[[INCIDENTS], ['incidents']],
+		[[INCIDENTS], []],
 		[[BAN], ['blocklist']],
 		[[], []]
 	])('holding %j shows %j', (held, keys) => {
 		expect(visibleViews(moderationViews, held).map((v) => v.key)).toEqual(keys);
 	});
 
-	it.each([[FLAGS], [INCIDENTS], [BAN]])('offers the row to a holder of only %s', (cap) => {
+	it.each([[FLAGS], [BAN]])('offers the row to a holder of only %s', (cap) => {
 		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
 		expect(rows.map((r) => r.key)).toContain('moderation');
+	});
+
+	// Incidents are a Governance row of their own (#3112).
+	it('offers Incidents, not Moderation, to a holder of only incident.read', () => {
+		const rows = filterNavSections(staffNavSections, [INCIDENTS]).flatMap((s) => s.items);
+		expect(rows.map((r) => r.key)).toContain('incidents');
+		expect(rows.map((r) => r.key)).not.toContain('moderation');
 	});
 });
 
@@ -80,8 +87,8 @@ describe('remotes', () => {
 
 describe('addresses', () => {
 	it.each([
-		[[FLAGS, INCIDENTS], '/staff/moderation/flags?x=1'],
-		[[INCIDENTS], '/staff/moderation/incidents?x=1'],
+		[[FLAGS, BAN], '/staff/moderation/flags?x=1'],
+		[[BAN], '/staff/moderation/blocklist?x=1'],
 		[[], '/staff/moderation/flags?x=1']
 	])('bare parent, holding %j, goes to %s', async (held, location) => {
 		auth.held = held;
@@ -93,7 +100,11 @@ describe('addresses', () => {
 
 	it.each([
 		[oldFlags, 'http://x/staff/flags?status=pending', '/staff/moderation/flags?status=pending'],
-		[oldIncidents, 'http://x/staff/incidents', '/staff/moderation/incidents']
+		[
+			oldIncidents,
+			'http://x/staff/moderation/incidents',
+			'/staff/incidents?via=%2Fstaff%2Fmoderation%2Fincidents'
+		]
 	])('old address 308s', async (load, url, location) => {
 		await expect(run(load, url)).rejects.toMatchObject({ status: 308, location });
 	});

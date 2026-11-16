@@ -3,7 +3,7 @@ import type { StaffNavItem } from './types';
 
 export type BottomNavKey = 'reports' | 'settings';
 
-/** Rows below the last section, outside any of the four systems. */
+/** Rows below the last section, outside any of the four. */
 export const staffNavBottom: StaffNavItem[] = [
 	// Each view has its own gate (#2396).
 	{
@@ -19,7 +19,7 @@ export const staffNavBottom: StaffNavItem[] = [
 	{
 		key: 'settings',
 		capability: 'settings.read',
-		alsoFor: ['user.setRole', 'audit.read'],
+		alsoFor: ['user.setRole', 'audit.read', 'finance.read', 'credit.read'],
 		label: 'System',
 		href: resolve('staff/system')
 	}

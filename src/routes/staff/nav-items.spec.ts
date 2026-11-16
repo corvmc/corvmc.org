@@ -59,7 +59,7 @@ describe('activeNavKey', () => {
 		['/staff/bands/abc', 'groups'],
 		['/staff/clubs/abc', 'clubs'],
 		['/staff/committees/abc', 'committees'],
-		// Volunteering owns the rest of the path (#2379, #2625).
+		// Shifts owns the rest of the path (#2379, #2625).
 		['/staff/volunteering', 'volunteer-schedule'],
 		['/staff/volunteer', 'volunteer-schedule'],
 		['/staff/members/volunteers', 'users'],
@@ -87,8 +87,8 @@ describe('activeNavKey', () => {
 		['/staff/inventory', 'gear'],
 		['/staff/inventory/abc', 'gear'],
 		['/staff/inventory/intake', 'gear'],
-		// Gear and Supplies split the list (#2573); Supplies is the longer match.
-		['/staff/inventory/supplies', 'supplies'],
+		// Supplies is an Equipment tab (#3112).
+		['/staff/inventory/supplies', 'gear'],
 		// Orders and Acquisitions are Gear's lists (#2767), with their records.
 		['/staff/inventory/orders', 'gear'],
 		['/staff/inventory/orders/abc', 'gear'],
@@ -106,9 +106,10 @@ describe('activeNavKey', () => {
 		// Records keep their addresses under the row they moved to (#2393).
 		['/staff/moderation', 'moderation'],
 		['/staff/moderation/flags', 'moderation'],
-		['/staff/moderation/incidents', 'moderation'],
 		['/staff/flags/abc', 'moderation'],
-		['/staff/incidents/abc', 'moderation'],
+		// Incidents are a Governance row (#3112).
+		['/staff/incidents', 'incidents'],
+		['/staff/incidents/abc', 'incidents'],
 		['/staff/reports', 'reports'],
 		['/staff/reports/annual', 'reports'],
 		['/staff/reports/volunteering', 'reports'],
@@ -116,9 +117,8 @@ describe('activeNavKey', () => {
 		['/staff/volunteering/hours', 'volunteer-schedule'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
-		['/staff/money', 'payments'],
-		['/staff/money/payments', 'payments'],
-		['/staff/money/credits', 'payments'],
+		// Transactions is in the System panel (#3112).
+		['/staff/system/transactions/payments', 'settings'],
 		['/staff/content', 'content'],
 		['/staff/help', 'content'],
 		['/staff/marketing', 'outreach'],
@@ -127,8 +127,11 @@ describe('activeNavKey', () => {
 		['/staff/marketing/campaigns/new', 'outreach'],
 		['/staff/marketing/campaigns/abc/edit', 'outreach'],
 		['/staff/help/create', 'content'],
-		['/staff/local-resources', 'content'],
-		['/staff/local-resources/categories', 'content'],
+		// Local resources is Content's sub-row (#3112).
+		['/staff/local-resources', 'local-resources'],
+		['/staff/local-resources/categories', 'local-resources'],
+		// The month's poster is a Print poster action on Events (#3112).
+		['/staff/events/poster', 'calendar'],
 		// The System row opens its own panel (#2763); module settings light their module.
 		['/staff/system', 'settings'],
 		['/staff/system/audit', 'settings'],
@@ -164,7 +167,7 @@ describe('the nav tree', () => {
 
 	it('resolves every row to its own key, so no row is shadowed by another', () => {
 		// The property `activeNavKey` actually needs. Note it holds without every
-		// child sitting under its parent's path: Volunteering's rows do, but
+		// child sitting under its parent's path: Shifts' rows do, but
 		// Reservations claims `/staff/recurring` through `also`.
 		for (const item of allStaffNavItems()) {
 			expect(activeNavKey(item.href)).toBe(item.key);
@@ -178,7 +181,7 @@ describe('the nav tree', () => {
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
-	it('keeps the volunteer badge and gate on Volunteering (#2379, #2625)', () => {
+	it('keeps the volunteer badge and gate on Shifts (#2379, #2625)', () => {
 		const schedule = allStaffNavItems().find((i) => i.key === 'volunteer-schedule')!;
 		expect(schedule.badgeKey).toBe('volunteerPending');
 		expect(filterNavItems([schedule], ['volunteer.read'])).toHaveLength(1);
@@ -207,16 +210,15 @@ describe('the nav tree', () => {
 		expect(activeNavKey('/staff/tasks/templates/abc')).toBe('projects');
 	});
 
-	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
-		// e2e/inbox-awaiting-reply.e2e.ts selects `a[href="/staff/inbox"] .badge`.
-		expect(staffNavTop.map((i) => i.key)).toContain('inbox');
-		for (const section of staffNavSections) {
-			expect(sectionHasKey(section, 'inbox')).toBe(false);
-		}
+	// A section opens on landing in it, so the badge e2e reads stays shown there.
+	it('puts Inbox first in Outreach (#3112)', () => {
+		const outreach = staffNavSections.find((s) => s.key === 'outreach')!;
+		expect(outreach.items[0].key).toBe('inbox');
+		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard']);
 	});
 
 	// Submissions waiting on a decision are one badge, on the review feed (#2623).
-	it('badges only the Dashboard, Inbox and Volunteering', () => {
+	it('badges only the Dashboard, Inbox and Shifts', () => {
 		const badged = allStaffNavItems()
 			.filter((i) => i.badgeKey)
 			.map((i) => [i.key, i.badgeKey]);
@@ -227,42 +229,41 @@ describe('the nav tree', () => {
 		]);
 	});
 
-	it('holds Help articles and Local resources in one Content row (#2765)', () => {
+	it('holds Local resources as a sub-row of Content (#2765, #3112)', () => {
 		const content = allStaffNavItems().find((i) => i.key === 'content');
-		expect(content?.children).toBeUndefined();
+		expect(content?.children?.map((c) => c.key)).toEqual(['local-resources']);
 		expect(activeNavKey('/staff/help/abc')).toBe('content');
-		expect(activeNavKey('/staff/local-resources/abc')).toBe('content');
+		expect(activeNavKey('/staff/local-resources/abc')).toBe('local-resources');
 	});
 
-	// The four systems (#2762, #2763), with Reports and System below them.
-	it('groups rows into the four systems', () => {
+	it('keeps Content for a holder of help.read alone, as a plain row', () => {
+		const content = staffNavSections.flatMap((s) => s.items).filter((i) => i.key === 'content');
+		const kept = filterNavItems(content, ['help.read']);
+		expect(kept.map((i) => i.key)).toEqual(['content']);
+		expect(kept[0].children).toBeUndefined();
+	});
+
+	// The four sections (#3112), with Reports and System below them.
+	it('groups rows into the four sections', () => {
 		const keys = (key: string) =>
 			staffNavSections.find((s) => s.key === key)!.items.map((i) => i.key);
 		expect(staffNavSections.map((s) => s.title)).toEqual([
-			'Relationships',
+			'Outreach',
 			'Community',
 			'Programs',
-			'Operations'
+			'Governance'
 		]);
-		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox']);
-		expect(keys('relationships')).toEqual(['contacts', 'outreach', 'funding']);
-		expect(keys('community')).toEqual([
-			'users',
-			'groups',
-			'suggestions',
-			'ballots',
-			'moderation',
-			'classifieds',
-			'content'
-		]);
-		expect(keys('programs')).toEqual(['calendar', 'reservations', 'clubs', 'music']);
-		expect(keys('operations')).toEqual([
+		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard']);
+		expect(keys('outreach')).toEqual(['inbox', 'contacts', 'funding', 'outreach', 'content']);
+		expect(keys('community')).toEqual(['users', 'groups', 'calendar', 'moderation', 'classifieds']);
+		expect(keys('programs')).toEqual(['reservations', 'gear', 'clubs', 'music']);
+		expect(keys('governance')).toEqual([
 			'projects',
-			'committees',
 			'volunteer-schedule',
-			'gear',
-			'supplies',
-			'payments'
+			'committees',
+			'incidents',
+			'suggestions',
+			'ballots'
 		]);
 		expect(staffNavBottom.map((i) => i.key)).toEqual(['reports', 'settings']);
 		// Recurring work is a Tasks setting (#2087, #2767); Building access a
@@ -275,8 +276,10 @@ describe('the nav tree', () => {
 		const label = (key: StaffNavKey) => allStaffNavItems().find((i) => i.key === key)!.label;
 		expect(label('gear')).toBe('Equipment');
 		expect(label('music')).toBe('Music');
-		expect(label('payments')).toBe('Money');
+		expect(label('outreach')).toBe('Marketing');
+		expect(label('volunteer-schedule')).toBe('Shifts');
 		expect(label('settings')).toBe('System');
+		expect(systemNavItems.find((i) => i.key === 'payments')!.label).toBe('Transactions');
 	});
 
 	// A show's door takings are on its staff page (#1809); the till is reached from there.
@@ -286,12 +289,17 @@ describe('the nav tree', () => {
 		expect(allStaffNavItems().map((i) => i.key)).not.toContain('door-sales');
 	});
 
-	it('finds the owning section for every row', () => {
+	it('puts every row in exactly one place: the top, one section, or the bottom', () => {
 		for (const item of allStaffNavItems()) {
-			if ([...staffNavTop, ...staffNavBottom].some((t) => t.key === item.key)) continue;
+			const outside = [...staffNavTop, ...staffNavBottom].filter((t) => t.key === item.key);
 			const owners = staffNavSections.filter((s) => sectionHasKey(s, item.key));
-			expect(owners).toHaveLength(1);
+			expect(outside.length + owners.length, item.key).toBe(1);
 		}
+	});
+
+	it('keeps System rows out of the main sidebar', () => {
+		const main = new Set(allStaffNavItems().map((i) => i.key));
+		for (const item of systemNavItems) expect(main.has(item.key), item.key).toBe(false);
 	});
 });
 
@@ -301,16 +309,15 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		// The full hour-log queue, reached from Volunteering's header (#2765).
+		// The full hour-log queue, reached from Shifts' header (#2765).
 		'/staff/volunteering/hours',
-		// Roles and clearances: reached from Volunteering's header (#1791).
+		// Roles and clearances: reached from Shifts' header (#1791).
 		'/staff/volunteer/roles',
 		'/staff/tasks/projects', // a Tasks view (#2625)
 		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
 		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
 		// Content's views, reached from its tab bar (#2765).
 		'/staff/help',
-		'/staff/local-resources',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
@@ -321,23 +328,23 @@ describe('route coverage', () => {
 		'/staff/inventory/orders',
 		'/staff/inventory/acquisitions',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
+		'/staff/inventory/supplies', // an Equipment tab (#3112)
+		'/staff/events/poster', // Events' Print poster action (#3112)
 		'/staff/recurring', // a Practice space view (#2766)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
 		'/staff/reservations/settings/building-access', // a settings tab (#3102)
 		'/staff/inventory/settings', // reached from Gear's header (#2756)
 		'/staff/contacts/settings', // reached from Contacts' header (#2940)
-		'/staff/money/settings', // reached from Money's header (#2940)
+		'/staff/system/transactions/settings', // reached from Transactions' header (#2940)
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
-		'/staff/moderation/incidents',
 		'/staff/moderation/blocklist',
-		// Outreach views, reached from its tab bar (#2394).
+		// Marketing views, reached from its tab bar (#2394).
 		'/staff/marketing/campaigns',
 		'/staff/marketing/audiences',
-		'/staff/marketing/posters',
-		// Payments views, reached from its tab bar (#2395).
-		'/staff/money/payments',
-		'/staff/money/credits',
+		// Transactions views, reached from its tab bar (#2395).
+		'/staff/system/transactions/payments',
+		'/staff/system/transactions/credits',
 		// Reports views, reached from its tab bar (#2396).
 		'/staff/reports/annual',
 		'/staff/reports/volunteering',
@@ -443,11 +450,12 @@ describe('filterNavItems', () => {
 		expect(filterNavItems(tree, []).map((i) => i.key)).toEqual(['dashboard']);
 	});
 
-	it('drops a parent whose children all fail, even when the parent passes', () => {
-		// The case that matters. Keeping the parent would open a Collapsible onto
-		// nothing, which reads as broken rather than as empty.
-		const held = ['inventory.read'];
-		expect(filterNavItems(tree, held).map((i) => i.key)).toEqual(['dashboard']);
+	it('flattens a parent whose children all fail, when the parent passes', () => {
+		// A Collapsible that opens onto nothing reads as broken rather than as
+		// empty, but the parent's own page is still the viewer's.
+		const out = filterNavItems(tree, ['inventory.read']);
+		expect(out.map((i) => i.key)).toEqual(['dashboard', 'equipment']);
+		expect(out[1].children).toBeUndefined();
 	});
 
 	it('keeps a parent with at least one usable child', () => {
@@ -474,12 +482,13 @@ describe('filterNavSections', () => {
 		expect(kept.map((s) => s.key)).toEqual(staffNavSections.map((s) => s.key));
 	});
 
-	it('gives a treasurer a narrower panel, with Money in it', () => {
+	it('gives a treasurer a narrower panel, with Transactions in System', () => {
 		const held = everyCapability.filter((c) => grantsCapability(positions.treasurer, c as never));
 		const kept = filterNavSections(staffNavSections, held);
 		const rows = kept.flatMap((s) => s.items.map((i) => i.key));
-		expect(rows).toContain('payments');
 		expect(rows.length).toBeLessThan(staffNavSections.flatMap((s) => s.items).length);
+		expect(filterNavItems(staffNavBottom, held).map((i) => i.key)).toContain('settings');
+		expect(filterNavItems(systemNavItems, held).map((i) => i.key)).toContain('payments');
 	});
 });
 
@@ -511,6 +520,7 @@ describe('the System panel (#2763)', () => {
 			'organization',
 			'features',
 			'access',
+			'payments',
 			'audit'
 		]);
 	});
