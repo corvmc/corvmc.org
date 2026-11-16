@@ -1,23 +1,86 @@
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { auditLog } from '../../src/lib/server/db/schema/audit';
+import { user } from '../../src/lib/server/db/schema/authentication';
+import { group, groupMember } from '../../src/lib/server/db/schema/group';
+import { inventoryItem, inventoryLoan } from '../../src/lib/server/db/schema/inventory';
+import { formatDateInTz, formatTimeInTz } from '../../src/lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '../../src/lib/config';
 import type { AuditEntryInput } from '../../src/lib/types/audit';
 import { db } from './db';
-import type { SeedUser } from './types';
+import type { SeedReservation, SeedUser } from './types';
 
 const DAY = 86_400_000;
 
+/** A booking's club date and times, as the reservation rows store them. */
+function when(r: SeedReservation) {
+	return {
+		reservationId: r.id,
+		date: formatDateInTz(r.startsAt, DEFAULT_TIMEZONE),
+		startTime: formatTimeInTz(r.startsAt, DEFAULT_TIMEZONE),
+		endTime: formatTimeInTz(r.endsAt, DEFAULT_TIMEZONE)
+	};
+}
+
+/** The first active band with two members, one of whom has a seeded booking. */
+async function bandPair(reservations: SeedReservation[]) {
+	const rows = await db
+		.select({
+			groupId: group.id,
+			groupName: group.name,
+			userId: groupMember.userId,
+			userName: user.name
+		})
+		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
+		.innerJoin(user, eq(user.id, groupMember.userId))
+		.where(and(eq(group.kind, 'band'), isNull(group.deletedAt), eq(groupMember.status, 'active')))
+		.orderBy(asc(group.name), asc(user.name));
+	for (const booking of reservations) {
+		const member = rows.find((r) => r.userId === booking.createdByUserId);
+		const mate = rows.find((r) => r.groupId === member?.groupId && r.userId !== member?.userId);
+		if (member && mate) return { booking, member, mate };
+	}
+	throw new Error('Audit seed: no band has two members and a seeded booking');
+}
+
 /**
  * Staff history on a handful of members, so the History card on
- * /staff/members/[id] has something to show. Covers every action key, a
- * self-closed account, a bulk pair sharing a batch id, a "System" row, and a
- * purge whose subject no longer exists.
+ * /staff/members/[id] has something to show: a self-closed account, a bulk
+ * pair sharing a batch id, a "System" row, and a purge whose subject no longer
+ * exists. A row that names a booking, band, loan or clearance names a seeded
+ * one, so its chip links (`audit.spec.ts`).
  */
-export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
+export async function seedAuditLog(
+	users: SeedUser[],
+	admin: SeedUser,
+	seeded: { reservations: SeedReservation[]; deskCert: { id: string; name: string } }
+) {
 	console.log('Seeding audit log...');
 	const [a, b, c, d] = users;
 	const staff = { id: admin.id, name: admin.name, email: admin.email };
 	const system = { id: null, name: 'System', email: '' };
 	const batchId = '00000000-0000-4000-8000-00000000a0d1';
-	const subject = (u: SeedUser) => ({ type: 'user' as const, id: u.id, label: u.name });
+	const subject = (u: { id: string; name: string }) => ({
+		type: 'user' as const,
+		id: u.id,
+		label: u.name
+	});
+	const byId = new Map(users.map((u) => [u.id, u]));
+	const booked = seeded.reservations
+		.filter((r) => r.status === 'completed' && byId.has(r.createdByUserId))
+		.sort((x, y) => y.startsAt.getTime() - x.startsAt.getTime());
+	const [comped, unpaid] = booked;
+	if (!unpaid) throw new Error('Audit seed: fewer than two completed member bookings');
+	// A third booking where one exists, so each reservation row has its own.
+	const cleared = await bandPair([...booked.slice(2), comped, unpaid]);
+	const loans = await db
+		.select({ id: inventoryLoan.id, userId: inventoryLoan.userId, itemName: inventoryItem.name })
+		.from(inventoryLoan)
+		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryLoan.itemId))
+		.orderBy(desc(inventoryLoan.requestedPickupDate), asc(inventoryLoan.id));
+	const loan = loans.find((l) => byId.has(l.userId));
+	if (!loan) throw new Error('Audit seed: no seeded loan to a seeded member');
+	const borrower = byId.get(loan.userId)!;
 
 	const rows: (AuditEntryInput & { daysAgo: number })[] = [
 		{
@@ -89,25 +152,16 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 		{
 			daysAgo: 6,
 			action: 'reservation.comped',
-			subject: subject(b),
-			details: {
-				reservationId: 'seed-comped-reservation',
-				date: 'Nov 3, 2026',
-				startTime: '6:00 PM',
-				endTime: '8:00 PM',
-				waivedCents: 3000
-			}
+			subject: subject(byId.get(comped.createdByUserId)!),
+			details: { ...when(comped), waivedCents: 3000 }
 		},
 		{
 			daysAgo: 6,
 			action: 'reservation.payment_reminder',
-			subject: subject(b),
+			subject: subject(byId.get(unpaid.createdByUserId)!),
 			actor: system,
 			details: {
-				reservationId: 'seed-unpaid-reservation',
-				date: '2026-11-03',
-				startTime: '18:00',
-				endTime: '20:00',
+				...when(unpaid),
 				daysAfter: 1,
 				amountCents: 3000,
 				outcome: 'failed',
@@ -121,8 +175,8 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			subject: subject(b),
 			details: {
 				memberCertificationId: 'seed-clearance-grant',
-				certificationId: 'seed-sound-desk',
-				certificationName: 'Sound Desk Cleared',
+				certificationId: seeded.deskCert.id,
+				certificationName: seeded.deskCert.name,
 				grantedOn: '2026-11-08',
 				expiresOn: '2027-11-08'
 			}
@@ -132,6 +186,31 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			action: 'orientation.waived',
 			subject: subject(b),
 			details: { reason: 'Played here for years before orientation existed' }
+		},
+		{
+			daysAgo: 5,
+			action: 'reservation.cleared_through_band',
+			subject: subject({ id: cleared.member.userId, name: cleared.member.userName }),
+			actor: system,
+			details: {
+				...when(cleared.booking),
+				groupId: cleared.member.groupId,
+				groupName: cleared.member.groupName,
+				bandmateUserId: cleared.mate.userId,
+				bandmateName: cleared.mate.userName
+			}
+		},
+		{
+			daysAgo: 8,
+			action: 'equipment_loan.requested_without_clearance',
+			subject: subject(borrower),
+			actor: { id: borrower.id, name: borrower.name, email: borrower.email },
+			details: {
+				loanId: loan.id,
+				equipmentName: loan.itemName,
+				clearanceId: seeded.deskCert.id,
+				warnings: [`Member did not hold the ${seeded.deskCert.name} clearance on the pickup date.`]
+			}
 		},
 		{
 			daysAgo: 4,
