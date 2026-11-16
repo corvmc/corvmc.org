@@ -687,7 +687,7 @@
 	"band_slug_members_invite_members_label": "Invite members",
 	"band_slug_members_invite_members_title": "Invite members",
 	"band_slug_members_people_label": "People",
-	"band_slug_members_people_help_text": "Add members by name, or anyone by email address.",
+	"band_slug_members_people_help_body": "Add members by name, or anyone by email address.",
 	"band_slug_members_people_placeholder": "Name or email address",
 	"band_slug_members_add_email_label": "Add {email}",
 	"band_slug_members_pick_one_text": "Pick one of the matching members.",

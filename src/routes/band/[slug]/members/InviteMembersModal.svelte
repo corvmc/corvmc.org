@@ -138,7 +138,7 @@
 			<Field
 				label={msg.band_slug_members_people_label()}
 				id="invite-people"
-				description={msg.band_slug_members_people_help_text()}
+				description={msg.band_slug_members_people_help_body()}
 				issues={fields.userIds.issues()}
 			>
 				{#if recipients.length > 0}
