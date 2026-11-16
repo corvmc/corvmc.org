@@ -81,8 +81,15 @@ test('a member adds, defaults and removes a card without leaving the site', asyn
 
 	// Remove the first one: its row's last button. `Action` opens a confirm
 	// modal, so the click that matters is the one inside it, which comes last.
-	await cardRow(page, '4242').getByRole('button').last().click();
-	await page.getByRole('dialog').getByRole('button').last().click();
+	// The "Card saved" toasts sit over these rows, and a click whose mouseup
+	// lands on one opens nothing (#3046), so it repeats until the dialog shows.
+	const confirmDialog = page.getByRole('dialog');
+	await expect(async () => {
+		if (!(await confirmDialog.isVisible()))
+			await cardRow(page, '4242').getByRole('button').last().click();
+		await expect(confirmDialog).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 15000 });
+	await confirmDialog.getByRole('button').last().click();
 
 	await expect(cardRow(page, '4242')).toHaveCount(0, { timeout: 15000 });
 	await expect(cardRow(page, '4444')).toBeVisible();
