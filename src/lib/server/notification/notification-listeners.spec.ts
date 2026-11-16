@@ -65,6 +65,21 @@ const mockClaimPoolCode = vi.fn(
 vi.mock('#lib/server/lock/fallback-code-service.js', () => ({
 	claimPoolCode: (reservationId: string) => mockClaimPoolCode(reservationId)
 }));
+// The booking band's active members; none for a member's own booking.
+const mockBandmatesOn = vi.fn(async (_reservationId: string): Promise<string[]> => []);
+vi.mock('#lib/server/lock/door-audience.js', () => ({
+	bandmatesOn: (id: string) => mockBandmatesOn(id)
+}));
+// Per-recipient door-code marks, as a set the tests can pre-fill.
+const sentMarks = vi.hoisted(() => ({ ids: new Set<string>() }));
+const mockMarkAllSent = vi.fn(async (_key: string, _type: string, ids: string[]) => {
+	for (const id of ids) sentMarks.ids.add(id);
+});
+vi.mock('#lib/server/reminders/sent-marks.js', () => ({
+	alreadySentFor: async (_key: string, ids: string[]) =>
+		new Set(ids.filter((id) => sentMarks.ids.has(id))),
+	markAllSent: (k: string, t: string, ids: string[]) => mockMarkAllSent(k, t, ids)
+}));
 vi.mock('$app/env/public', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.corvmc.com' })
 );
@@ -477,7 +492,11 @@ describe('ticket.purchased handler (dedicated template)', () => {
 });
 
 describe('door code ready', () => {
-	beforeEach(() => registerAllNotificationListeners());
+	beforeEach(() => {
+		registerAllNotificationListeners();
+		sentMarks.ids = new Set();
+		mockBandmatesOn.mockResolvedValue([]);
+	});
 
 	const due = {
 		reservationId: 'res-1',
@@ -489,25 +508,61 @@ describe('door code ready', () => {
 		endTime: '11:00'
 	};
 
+	const sent = () => mockDispatchBatch.mock.calls.map((c) => c[0]);
+
 	it('claims the booking’s pool code and sends it', async () => {
 		await emit('reservation.door_code_ready', due);
 
 		expect(mockClaimPoolCode).toHaveBeenCalledWith('res-1');
-		const params = mockDispatch.mock.calls[0][0];
+		expect(sent()).toHaveLength(1);
+		const params = sent()[0];
 		expect(params.type).toBe('door_code_ready');
-		expect(params.userId).toBe('user-1');
 		expect(detailText(params.email)).toContain('Door code: 48291300');
 		expect(params.href).toBe('/member/reservations');
 	});
 
-	it('tells the member to call staff when the pool is empty', async () => {
-		mockClaimPoolCode.mockResolvedValueOnce(null);
+	it('sends a member’s own booking to the booker only', async () => {
+		await emit('reservation.door_code_ready', due);
+
+		expect(sent()[0].userIds).toEqual(['user-1']);
+	});
+
+	// #2120: a bandmate who arrives first has the code too.
+	it('sends a band booking to the booker and every active bandmate, once each', async () => {
+		mockBandmatesOn.mockResolvedValue(['user-1', 'user-2', 'user-3']);
 
 		await emit('reservation.door_code_ready', due);
 
-		expect(mockDispatch).toHaveBeenCalledTimes(1);
-		const params = mockDispatch.mock.calls[0][0];
+		expect(mockBandmatesOn).toHaveBeenCalledWith('res-1');
+		expect(sent()[0].userIds).toEqual(['user-1', 'user-2', 'user-3']);
+		expect(mockMarkAllSent).toHaveBeenCalledWith('door_code_ready:recipient', 'reservation', [
+			'res-1:user-1',
+			'res-1:user-2',
+			'res-1:user-3'
+		]);
+	});
+
+	it('sends nobody theirs twice when the notice runs again', async () => {
+		mockBandmatesOn.mockResolvedValue(['user-1', 'user-2']);
+		sentMarks.ids = new Set(['res-1:user-1']);
+
+		await emit('reservation.door_code_ready', due);
+		expect(sent()[0].userIds).toEqual(['user-2']);
+
+		await emit('reservation.door_code_ready', due);
+		expect(sent()).toHaveLength(1);
+	});
+
+	it('tells every recipient to call staff when the pool is empty', async () => {
+		mockClaimPoolCode.mockResolvedValueOnce(null);
+		mockBandmatesOn.mockResolvedValue(['user-1', 'user-2']);
+
+		await emit('reservation.door_code_ready', due);
+
+		expect(sent()).toHaveLength(1);
+		const params = sent()[0];
 		expect(params.type).toBe('door_code_ready');
+		expect(params.userIds).toEqual(['user-1', 'user-2']);
 		expect(JSON.stringify(params)).not.toContain('48291300');
 	});
 });

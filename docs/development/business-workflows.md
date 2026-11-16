@@ -300,7 +300,10 @@ locally, so a code already on it opens the door while the lock is offline.
   `lock_fallback_code`, minted while the lock is online and counted only once the lock reports
   them synced.
 - **Claim.** A booking claims a code when its `door_code_ready` notice is sent, a day before it
-  starts, and the notice carries the code (`claimPoolCode` in the notification listener). A
+  starts, and the notice carries the code (`claimPoolCode` in the notification listener). The
+  notice goes to the booker and every active member of a band booking's band (`bandmatesOn` in
+  `src/lib/server/lock/door-audience.ts`), each marked once in `reminder_sent` under
+  `door_code_ready:recipient`; someone who joins the band later is not sent it. A
   claimed code counts as revealed. One live code per booking (a unique index). The reminder
   waits while the booker owes a fee and skips a booker who holds a standing code, except on a
   band booking, which claims one so a bandmate who arrives first has a code on `/door`

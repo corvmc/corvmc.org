@@ -1,9 +1,9 @@
 import { db } from '#lib/server/db/index.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
-import { and, eq, inArray } from 'drizzle-orm';
 import { domainEvents, type DomainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
 import { reminders } from './registry';
+import { alreadySentFor } from './sent-marks';
 import type { DigestDue, ReminderDefinition, ReminderDue, ReminderRecipient } from './types';
 
 export interface DrainResult {
@@ -11,29 +11,6 @@ export interface DrainResult {
 	sent: number;
 	alreadySent: number;
 	failed: number;
-}
-
-/**
- * Which of these subjects this reminder has already been sent for.
- *
- * Chunked: D1 caps a statement at 100 bound parameters, and a busy Saturday
- * can put more reservations than that inside one window.
- */
-async function alreadySentFor(key: string, subjectIds: string[]): Promise<Set<string>> {
-	const seen = new Set<string>();
-	for (let i = 0; i < subjectIds.length; i += 90) {
-		const rows = await db
-			.select({ subjectId: reminderSent.subjectId })
-			.from(reminderSent)
-			.where(
-				and(
-					eq(reminderSent.reminderKey, key),
-					inArray(reminderSent.subjectId, subjectIds.slice(i, i + 90))
-				)
-			);
-		for (const row of rows) seen.add(row.subjectId);
-	}
-	return seen;
 }
 
 // After the emit, never before: a mark written first would swallow the
