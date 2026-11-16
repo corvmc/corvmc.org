@@ -30,7 +30,9 @@
 		activeBandNavKey,
 		bandNavFooter,
 		bandNavItems,
-		bandNavMain,
+		bandNavSections,
+		bandNavTop,
+		sectionHasKey,
 		type BandNavKey,
 		type BandNavItem
 	} from './nav-items';
@@ -75,10 +77,12 @@
 		tier: layout.band.tier,
 		userRole: layout.userRole,
 		isStaff: layout.isStaff,
+		memberCount: layout.band.memberCount,
 		features: layout.features
 	});
 
-	const mainItems = $derived(bandNavMain(navInput));
+	const topItems = $derived(bandNavTop(navInput));
+	const sections = $derived(bandNavSections(navInput));
 	const footerItems = $derived(bandNavFooter(navInput));
 	let activeKey = $derived(activeBandNavKey(navInput, page.url.pathname));
 
@@ -106,20 +110,40 @@
 
 {#snippet row(item: BandNavItem)}
 	{@const Icon = icons[item.key]}
-	<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
+	<Nav.Item
+		href={item.href}
+		label={item.label}
+		active={activeKey === item.key}
+		badge={item.badgeKey ? layout[item.badgeKey] : undefined}
+		class={item.quiet ? 'text-base-content/50' : undefined}
+		data-quiet={item.quiet || undefined}
+	>
 		{#snippet icon()}<Icon />{/snippet}
 	</Nav.Item>
 {/snippet}
 
 <AppShell drawerId="band-drawer" {panels} activePanel={layout.band.slug} chrome={layout.chrome}>
 	{#snippet navigation()}
-		{#each mainItems as item (item.key)}
+		{#each topItems as item (item.key)}
 			{@render row(item)}
 		{/each}
 
-		<!-- The spacer the member panel uses: administering the band is about it
-		     rather than in it, so those rows sit at the foot rather than at the
-		     end of the list where the useful ones are. -->
+		{#each sections as section (section.key)}
+			<Nav.Group
+				title={section.title}
+				collapsible
+				persistScope="band"
+				persistKey={section.key}
+				containsActive={sectionHasKey(section, activeKey)}
+			>
+				{#each section.items as item (item.key)}
+					{@render row(item)}
+				{/each}
+			</Nav.Group>
+		{/each}
+
+		<!-- Administering the band is about it rather than in it, so a spacer
+		     pins those rows to the foot. -->
 		<div class="flex grow"></div>
 
 		{#each footerItems as item (item.key)}

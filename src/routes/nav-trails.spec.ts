@@ -21,6 +21,7 @@ const panels: Record<string, NavTrailGroup[]> = {
 				tier: 'premium',
 				userRole: 'owner',
 				isStaff: false,
+				memberCount: 3,
 				features: { bandAudio: true }
 			})
 		}
