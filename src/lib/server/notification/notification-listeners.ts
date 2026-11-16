@@ -18,6 +18,7 @@ import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
 import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '#lib/server/sentry.js';
 import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
+import { claimPoolCode } from '#lib/server/lock/fallback-code-service.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { taskNoticeRecipients } from '#lib/server/task/task-audience.js';
 import { applicationNotice } from '#lib/server/group/application-reviewers.js';
@@ -448,8 +449,34 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
-	// --- Door code ready (the lock has confirmed it) ---
+	// --- Door code ready: sending it claims the booking's pool code (#2120) ---
 	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
+		const held = await claimPoolCode(event.reservationId);
+		if (!held) {
+			// The pool is empty, and claiming alerted staff.
+			await dispatch({
+				type: 'door_code_ready',
+				userId: event.userId,
+				userEmail: event.userEmail,
+				title: 'Call staff to get in',
+				body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
+				href: '/member/reservations',
+				email: {
+					recipientName: event.userName,
+					subject: `Call staff to get in on ${clubDay(event.date)}`,
+					preview_text: `There is no door code for your booking on ${clubDay(event.date)}.`,
+					heading: 'Call staff to get in',
+					paragraphs: [
+						{
+							text: 'There is no door code for this booking. Call staff before you arrive and they will let you in.'
+						}
+					],
+					details: whenDetails(event.date, event.startTime, event.endTime),
+					cta: { label: 'View my reservations' }
+				}
+			});
+			return;
+		}
 		await dispatch({
 			type: 'door_code_ready',
 			userId: event.userId,
@@ -460,16 +487,18 @@ export function registerAllNotificationListeners(): void {
 			email: {
 				recipientName: event.userName,
 				subject: `Your door code for ${clubDay(event.date)}`,
-				preview_text: `The lock has your code for ${clubDay(event.date)}.`,
+				preview_text: `Your door code for ${clubDay(event.date)}.`,
 				heading: 'Your door code is ready',
 				paragraphs: [
-					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' }
+					{
+						text: 'Check in on the door page by the back door. If the door does not open, enter this code on the keypad.'
+					}
 				],
 				details: [
-					{ label: 'Door code', value: event.code },
+					{ label: 'Door code', value: held.code },
 					...whenDetails(event.date, event.startTime, event.endTime)
 				],
-				footnote: 'It works from your start time until shortly after your booking ends.',
+				footnote: 'It stops working shortly after your booking ends.',
 				cta: { label: 'View my reservations' }
 			}
 		});

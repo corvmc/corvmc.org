@@ -12,13 +12,15 @@ import {
 import { getJson, putJson } from '#lib/server/kv.js';
 import { dispatchEmailOnly } from '#lib/server/notification/index.js';
 import * as env from '$app/env/private';
-import { clubToday, DOOR_CODE_POOL_SIZE } from '#lib/config.js';
+import { clubToday } from '#lib/config.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import type { LockFallbackCode } from '#lib/server/db/schema/reservation.js';
 
 // The door-code pool (#2120). The lock checks codes locally, so a code minted
-// while it is online still opens the door during an outage — which is exactly
-// when a code minted for one booking never arrives. Codes are type-0 users with
-// no lock-side expiry, since an expiry is itself a change the lock must learn.
+// while it is online still opens the door during an outage. Codes are type-0
+// users with no lock-side expiry, since an expiry is itself a change the lock
+// must learn. A booking claims one when its door-code notice goes out, and the
+// member has it from then: every claimed code is burned after its booking.
 
 /** Name on the lock for a pool code. The unmanaged-code list filters on it. */
 export const POOL_NAME_PREFIX = 'CMC Door';
@@ -26,6 +28,12 @@ export const POOL_NAME_PREFIX = 'CMC Door';
 const POOL_EMPTY_ALERT_KEY = 'ultraloc:poolEmptyAlertedOn';
 
 const graceMs = () => LOCK_GRACE_MINUTES * 60_000;
+
+/** How many unclaimed codes the daily job keeps on the lock: the `lock.poolSize` setting. */
+export async function poolSize(): Promise<number> {
+	const n = Math.floor(Number(await config('lock.poolSize')));
+	return Number.isFinite(n) && n >= 0 ? n : 0;
+}
 
 /** Synced, never handed to anyone, still on the lock. */
 const available = () =>
@@ -72,11 +80,12 @@ async function heldBy(reservationId: string): Promise<LockFallbackCode | null> {
 }
 
 /**
- * The booking's code, claiming one from the pool the first time. The same code
- * serves the whole booking. Null when the pool is empty, which alerts staff.
+ * The booking's code, claiming one from the pool the first time. A claim is a
+ * reveal: whoever claims hands the code to a person. The same code serves the
+ * whole booking. Null when the pool is empty, which alerts staff.
  *
  * The update re-checks the claim, and a unique index allows one live code per
- * booking, so two loads racing for one code or one booking both end on one row.
+ * booking, so two callers racing for one code or one booking end on one row.
  */
 export async function claimPoolCode(
 	reservationId: string,
@@ -101,7 +110,7 @@ export async function claimPoolCode(
 		try {
 			const [won] = await db
 				.update(lockFallbackCode)
-				.set({ claimedByReservationId: reservationId, claimedAt: now })
+				.set({ claimedByReservationId: reservationId, claimedAt: now, revealedAt: now })
 				.where(and(eq(lockFallbackCode.id, candidate.id), available()))
 				.returning();
 			if (won) return won;
@@ -112,43 +121,19 @@ export async function claimPoolCode(
 	return heldBy(reservationId);
 }
 
-/** Claim and mark shown. A revealed code is burned once the booking is over. */
-export async function revealPoolCode(
-	reservationId: string,
-	now: Date = new Date()
-): Promise<LockFallbackCode | null> {
-	const code = await claimPoolCode(reservationId, now);
-	if (!code || code.revealedAt) return code;
-
-	await db
-		.update(lockFallbackCode)
-		.set({ revealedAt: now })
-		.where(eq(lockFallbackCode.id, code.id));
-	return { ...code, revealedAt: now };
-}
-
 /** The booking's live code, without claiming one. */
 export async function poolCodeFor(reservationId: string): Promise<LockFallbackCode | null> {
 	return heldBy(reservationId);
 }
 
 /**
- * At check-out: an unrevealed code goes back to the pool now, and a revealed
- * one is sent its delete. `removedAt` still waits for the daily job to see it
- * gone, since an offline lock only queues the delete.
+ * At check-out or cancellation: send the booking's code its delete now.
+ * `removedAt` waits for the daily job to see it gone, since an offline lock
+ * only queues the delete.
  */
 export async function settleBookingCode(reservationId: string, errors: string[]): Promise<void> {
 	const held = await heldBy(reservationId);
-	if (!held) return;
-
-	if (!held.revealedAt) {
-		await db
-			.update(lockFallbackCode)
-			.set({ claimedByReservationId: null, claimedAt: null })
-			.where(and(eq(lockFallbackCode.id, held.id), isNull(lockFallbackCode.revealedAt)));
-		return;
-	}
-	if (!held.lockAccessId) return;
+	if (!held?.lockAccessId) return;
 	try {
 		await removeTemporaryUser(Number(held.lockAccessId));
 	} catch (err) {
@@ -171,7 +156,7 @@ async function alertPoolEmpty(now: Date): Promise<void> {
 				heading: 'Door code pool is empty',
 				paragraphs: [
 					{
-						text: 'A member with a booking needed a door code and none was left. Members are being told to call staff. The daily lock job mints more once the lock is online.'
+						text: 'A booking needed a door code and none was left, so its member was told to call staff. The daily lock job mints more once the lock is online; a larger pool size in Building access covers a longer outage.'
 					}
 				],
 				cta: { url: '/staff/building-access', label: 'See door codes' }
@@ -188,7 +173,6 @@ async function alertPoolEmpty(now: Date): Promise<void> {
 
 export interface PoolSummary {
 	confirmed: number;
-	released: number;
 	burned: number;
 	awaitingRemoval: number;
 	minted: number;
@@ -197,8 +181,8 @@ export interface PoolSummary {
 
 /**
  * Keep the pool at depth, in order: confirm minted codes that reached the lock,
- * release unrevealed claims whose booking is over, burn revealed ones (and the
- * legacy break-glass codes), then mint back up to `DOOR_CODE_POOL_SIZE`.
+ * burn claimed ones whose booking is over or cancelled (and the legacy
+ * break-glass codes), then mint back up to the pool size.
  */
 export async function maintainCodePool(
 	errors: string[],
@@ -206,7 +190,6 @@ export async function maintainCodePool(
 ): Promise<PoolSummary> {
 	const summary: PoolSummary = {
 		confirmed: 0,
-		released: 0,
 		burned: 0,
 		awaitingRemoval: 0,
 		minted: 0,
@@ -226,9 +209,6 @@ export async function maintainCodePool(
 
 	await stage('confirm', async () => {
 		summary.confirmed = await confirmMinted(errors);
-	});
-	await stage('release', async () => {
-		summary.released = await releaseUnrevealed(now);
 	});
 	await stage('burn', async () => {
 		const burn = await burnSpent(errors, now);
@@ -298,28 +278,10 @@ async function finishedBookingIds(now: Date): Promise<string[]> {
 	return rows.map((r) => r.id);
 }
 
-async function releaseUnrevealed(now: Date): Promise<number> {
-	const ids = await finishedBookingIds(now);
-	if (ids.length === 0) return 0;
-
-	const released = await db
-		.update(lockFallbackCode)
-		.set({ claimedByReservationId: null, claimedAt: null })
-		.where(
-			and(
-				inArray(lockFallbackCode.claimedByReservationId, ids),
-				isNull(lockFallbackCode.revealedAt),
-				isNull(lockFallbackCode.removedAt)
-			)
-		)
-		.returning({ id: lockFallbackCode.id });
-	return released.length;
-}
-
 /**
- * Codes that must come off the lock: revealed ones whose booking is over (or
- * gone), and break-glass codes from before the pool — those only once the pool
- * has a code to offer, so there is never a moment with no fallback at all.
+ * Codes that must come off the lock: claimed ones whose booking is over (or
+ * cancelled, or gone), and break-glass codes from before the pool — those only
+ * once the pool has a code to offer, so there is never a moment with none.
  */
 async function spentCodes(now: Date): Promise<LockFallbackCode[]> {
 	const finished = await finishedBookingIds(now);
@@ -386,7 +348,7 @@ async function burnSpent(
 /** Mint up to depth, counting codes still on their way so an outage cannot over-mint. */
 async function refill(errors: string[]): Promise<number> {
 	const [row] = await db.select({ n: count() }).from(lockFallbackCode).where(inPool());
-	const missing = DOOR_CODE_POOL_SIZE - (row?.n ?? 0);
+	const missing = (await poolSize()) - (row?.n ?? 0);
 
 	let minted = 0;
 	for (let i = 0; i < missing; i++) {

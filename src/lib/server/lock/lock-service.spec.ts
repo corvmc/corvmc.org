@@ -99,16 +99,18 @@ vi.mock('#lib/server/notification/index.js', () => ({
 vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const mockMaintainCodePool = vi.fn().mockResolvedValue(null);
+const mockPoolCodeFor = vi.fn().mockResolvedValue(null);
+const mockSettleBookingCode = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('./fallback-code-service', () => ({
-	maintainCodePool: (...args: unknown[]) => mockMaintainCodePool(...args)
+	maintainCodePool: (...args: unknown[]) => mockMaintainCodePool(...args),
+	poolCodeFor: (...args: unknown[]) => mockPoolCodeFor(...args),
+	settleBookingCode: (...args: unknown[]) => mockSettleBookingCode(...args)
 }));
 
-const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
 const mockReconcileMemberCodeSync = vi.fn().mockResolvedValue(0);
 
 vi.mock('./member-code-service', () => ({
-	hasActiveMemberCode: (...args: unknown[]) => mockHasActiveMemberCode(...args),
 	reconcileMemberCodeSync: (...args: unknown[]) => mockReconcileMemberCodeSync(...args)
 }));
 
@@ -200,7 +202,8 @@ beforeEach(() => {
 	mockPutJson.mockResolvedValue(undefined);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	mockMaintainCodePool.mockResolvedValue(null);
-	mockHasActiveMemberCode.mockResolvedValue(false);
+	mockPoolCodeFor.mockResolvedValue(null);
+	mockSettleBookingCode.mockResolvedValue(undefined);
 	mockReconcileMemberCodeSync.mockResolvedValue(0);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
@@ -821,6 +824,25 @@ describe('revokeAccessFor', () => {
 
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledTimes(1);
 		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(444);
+	});
+
+	// Cancelled after its notice went out: the code it holds comes off the lock.
+	it('sends a claimed pool code its delete', async () => {
+		selectResults.push([cancelledRow({ lockCode: null, lockAccessId: null })]);
+		mockPoolCodeFor.mockResolvedValue({ id: 'code-1', lockAccessId: '901' });
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(true);
+
+		expect(mockSettleBookingCode).toHaveBeenCalledWith('res-1', expect.any(Array));
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('has nothing to remove for a booking cancelled before its notice', async () => {
+		selectResults.push([cancelledRow({ lockCode: null, lockAccessId: null })]);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(false);
+
+		expect(mockSettleBookingCode).not.toHaveBeenCalled();
 	});
 
 	it('leaves a confirmed booking alone', async () => {

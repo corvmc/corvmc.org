@@ -27,7 +27,7 @@ const {
 	grantMemberCode,
 	revokeMemberCode,
 	listMemberCodes,
-	hasActiveMemberCode,
+	membersWithStandingCodes,
 	reconcileMemberCodeSync
 } = await import('./member-code-service');
 
@@ -238,16 +238,17 @@ describe('listMemberCodes', () => {
 	});
 });
 
-describe('hasActiveMemberCode', () => {
-	it('is true for a member holding a live standing code', async () => {
+describe('membersWithStandingCodes', () => {
+	it('names members holding a live standing code, and no others', async () => {
 		memberCode('mc-1');
-		expect(await hasActiveMemberCode('user-1')).toBe(true);
+		memberCode('mc-2', { userId: 'user-2', lockAccessId: '200', revokedAt: T0 });
+		expect(await membersWithStandingCodes(['user-1', 'user-2', 'user-3'])).toEqual(
+			new Set(['user-1'])
+		);
 	});
 
-	it("is false for a revoked code or another member's code", async () => {
-		memberCode('mc-1', { revokedAt: T0 });
-		memberCode('mc-2', { userId: 'user-2', lockAccessId: '200' });
-		expect(await hasActiveMemberCode('user-1')).toBe(false);
+	it('asks nothing for an empty list', async () => {
+		expect(await membersWithStandingCodes([])).toEqual(new Set());
 	});
 });
 

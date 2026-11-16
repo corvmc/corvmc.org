@@ -54,6 +54,17 @@ vi.mock('#lib/server/inbox/reply-address.js', () => ({
 vi.mock('$app/env/private', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ STAFF_CONTACT_EMAIL: 'staff@test.com' })
 );
+
+// The door-code notice claims its booking's pool code (#2120); null is an empty pool.
+const mockClaimPoolCode = vi.fn(
+	async (_reservationId: string) =>
+		({ code: '48291300' }) as {
+			code: string;
+		} | null
+);
+vi.mock('#lib/server/lock/fallback-code-service.js', () => ({
+	claimPoolCode: (reservationId: string) => mockClaimPoolCode(reservationId)
+}));
 vi.mock('$app/env/public', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.corvmc.com' })
 );
@@ -468,23 +479,36 @@ describe('ticket.purchased handler (dedicated template)', () => {
 describe('door code ready', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
-	it('tells the member the code, now that the lock has it', async () => {
-		await emit('reservation.door_code_ready', {
-			reservationId: 'res-1',
-			code: '482913',
-			userId: 'user-1',
-			userEmail: 'user@test.com',
-			userName: 'Bob',
-			date: '2026-05-21',
-			startTime: '10:00',
-			endTime: '11:00'
-		});
+	const due = {
+		reservationId: 'res-1',
+		userId: 'user-1',
+		userEmail: 'user@test.com',
+		userName: 'Bob',
+		date: '2026-05-21',
+		startTime: '10:00',
+		endTime: '11:00'
+	};
 
+	it('claims the booking’s pool code and sends it', async () => {
+		await emit('reservation.door_code_ready', due);
+
+		expect(mockClaimPoolCode).toHaveBeenCalledWith('res-1');
 		const params = mockDispatch.mock.calls[0][0];
 		expect(params.type).toBe('door_code_ready');
 		expect(params.userId).toBe('user-1');
-		expect(detailText(params.email)).toContain('Door code: 482913');
+		expect(detailText(params.email)).toContain('Door code: 48291300');
 		expect(params.href).toBe('/member/reservations');
+	});
+
+	it('tells the member to call staff when the pool is empty', async () => {
+		mockClaimPoolCode.mockResolvedValueOnce(null);
+
+		await emit('reservation.door_code_ready', due);
+
+		expect(mockDispatch).toHaveBeenCalledTimes(1);
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('door_code_ready');
+		expect(JSON.stringify(params)).not.toContain('48291300');
 	});
 });
 

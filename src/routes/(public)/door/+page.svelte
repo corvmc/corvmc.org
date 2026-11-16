@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { onMount } from 'svelte';
 	import { pageTitle } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -8,20 +7,14 @@
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
-	import {
-		getBackDoor,
-		openBackDoor,
-		checkOutBackDoor,
-		reportOfflineReveal
-	} from '#lib/remote/back-door.remote.js';
+	import { getBackDoor, openBackDoor, checkOutBackDoor } from '#lib/remote/back-door.remote.js';
 	import { errorMessage } from '#lib/error-message.js';
 	import { formatTime, relativeDay } from '#lib/utils/format.js';
 
 	// Everything a timed-out unlock needs is already in this page's data, so a
-	// phone with no signal at the door can still show the code (#2157). A reveal
-	// that could not reach the server is remembered and reported once it can.
+	// phone with no signal at the door can still show the code (#2157). The code
+	// is the one the booking's notice already sent; the page never claims one.
 	type Outcome = 'unlocked' | 'locked' | 'timed_out' | 'lock_offline';
-	const PENDING_KEY = 'door:pendingReveal';
 
 	let busy = $state<'open' | 'close' | null>(null);
 	let opened = $state<Outcome | null>(null);
@@ -30,42 +23,12 @@
 	let leaving = $state(false);
 	let failure = $state<string | null>(null);
 
-	function remember(id: string) {
-		try {
-			localStorage.setItem(PENDING_KEY, id);
-		} catch {
-			// Nothing else to do; the code still shows.
-		}
-	}
-
-	async function flushPending() {
-		let id: string | null;
-		try {
-			id = localStorage.getItem(PENDING_KEY);
-		} catch {
-			return;
-		}
-		if (!id) return;
-		try {
-			await reportOfflineReveal(id);
-			localStorage.removeItem(PENDING_KEY);
-		} catch {
-			// Still offline; the next load or `online` event tries again.
-		}
-	}
-
-	onMount(() => {
-		void flushPending();
-		window.addEventListener('online', flushPending);
-		return () => window.removeEventListener('online', flushPending);
-	});
-
 	/** A thrown TypeError is fetch failing: no signal, not a refusal. */
 	const offline = (err: unknown) =>
 		err instanceof TypeError || (typeof navigator !== 'undefined' && !navigator.onLine);
 
 	const door = $derived(await getBackDoor());
-	const code = $derived(revealedCode ?? (door.codeRevealed ? door.code : null));
+	const code = $derived(revealedCode);
 	const failedToOpen = $derived(opened === 'timed_out' || opened === 'lock_offline');
 
 	async function open(id: string) {
@@ -82,7 +45,6 @@
 			}
 			opened = 'timed_out';
 			revealedCode = door.code;
-			remember(id);
 		} finally {
 			busy = null;
 		}
@@ -171,10 +133,6 @@
 								</div>
 							{:else if failedToOpen}
 								<Alert type="warning">{m.public_door_no_code_call_staff_body()}</Alert>
-							{:else if door.poolEmpty}
-								<p class="text-center text-subtle">
-									{m.public_door_no_backup_text()}
-								</p>
 							{/if}
 
 							{#if leaving}

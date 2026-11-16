@@ -380,10 +380,17 @@ reports zeros rather than issuing a code again. The run record lives in KV at
 
 **The Building access view reads KV and D1 only.** Lock status is the daily job's last
 health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the
-Lock offline link in the Practice space header is the same reading. Active codes list
-per-booking codes, standing key-holder codes and the break-glass code, each by its last two
-digits and whether the lock has confirmed it. Recent usage is not shown: no U-tec directive
-for access history has been confirmed (#2589).
+Lock offline link in the Practice space header is the same reading. Active codes list the
+booking codes claimed from the door-code pool and still on the lock, and standing key-holder
+codes, each by its last two digits and whether the lock has confirmed it. Recent usage is not
+shown: no U-tec directive for access history has been confirmed (#2589).
+
+**The door-code pool is sized for an outage.** Each booking claims a pool code when its
+door-code notice goes out, a day ahead, and only an online lock takes replacements. Set **Door
+codes in the pool** (Lock settings, `lock.poolSize`, default 20) to at least a day's bookings.
+An empty pool emails staff once a day and tells members to call staff; the booking's staff page
+can then read out a code once the job has minted more. The workflow is in
+[business workflows](../development/business-workflows.md#door-codes).
 
 ### Cloudflare for SaaS (band addresses)
 

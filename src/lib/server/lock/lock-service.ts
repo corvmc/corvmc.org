@@ -16,7 +16,12 @@ import {
 	LOCK_GRACE_MINUTES,
 	type LockDeviceHealth
 } from './ultraloc-client';
-import { maintainCodePool, type PoolSummary } from './fallback-code-service';
+import {
+	maintainCodePool,
+	poolCodeFor,
+	settleBookingCode,
+	type PoolSummary
+} from './fallback-code-service';
 import { reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '#lib/server/kv.js';
 import { dispatchEmailOnly } from '#lib/server/notification/index.js';
@@ -558,7 +563,8 @@ async function removeHeldAccess(row: HeldAccess): Promise<void> {
 
 /**
  * Revoke the door code of a booking that is no longer confirmed, including one
- * cancelled inside its own window. Never throws: it runs as a
+ * cancelled inside its own window: a claimed pool code is sent its delete, and
+ * a legacy per-booking code is removed. Never throws: it runs as a
  * `reservation.cancelled` listener, and emittery would reject the emit.
  */
 export async function revokeAccessFor(reservationId: string): Promise<boolean> {
@@ -576,8 +582,14 @@ export async function revokeAccessFor(reservationId: string): Promise<boolean> {
 			.limit(1);
 
 		if (!row || row.status === 'confirmed') return false;
-		if (!row.lockCode && !row.lockAccessId) return false;
 
+		// The daily job's burn retries a delete that fails here.
+		const errors: string[] = [];
+		const pooled = await poolCodeFor(row.id);
+		if (pooled) await settleBookingCode(row.id, errors);
+		for (const msg of errors) console.error(msg);
+
+		if (!row.lockCode && !row.lockAccessId) return pooled !== null;
 		await removeHeldAccess(row);
 		return true;
 	} catch (err) {

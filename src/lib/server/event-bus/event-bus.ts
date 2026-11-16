@@ -181,10 +181,8 @@ export interface OrientationUnclaimedEvent {
 	items: OrientationUnclaimedItem[];
 }
 
-/** The lock has reported a booking's code as synced, so the member may be told it. */
-export interface DoorCodeReadyEvent extends ReservationReminderDueEvent {
-	code: string;
-}
+/** A booking starts within a day: its listener claims the pool code it sends (#2120). */
+export type DoorCodeReadyEvent = ReservationReminderDueEvent;
 
 /**
  * A record was bought — free or paid, both arrive here.

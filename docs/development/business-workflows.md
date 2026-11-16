@@ -175,9 +175,10 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
   (created by an event) is holding the slot.
 - **Member got two "Reservation confirmed" emails** → something other than a transition
   into `confirmed` called `announceConfirmed()`; the settle paths must not (#2502).
-- **Booked inside the lead days but no door code** → the confirm-time mint failed; look for
-  `Failed to provision lock access on confirm` in the logs. The next daily lock job (or Run now
-  in Staff Settings, or re-issue on the staff reservation page) mints it.
+- **Member got no door code for tomorrow's booking** → read the staff reservation's Door
+  access card. No code there and none sent: the booker owes a fee or holds a standing code (see
+  [Door codes](#door-codes)). A "call staff" notice went out: the pool was empty, and staff were
+  emailed. **Read out a code** on the card claims one from the pool once it has stock.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.
@@ -235,11 +236,11 @@ Two things differ from the member path:
   on the booking member's own fees. The booking button opens **Payment due** instead of the form,
   naming the reservation date, with **Message staff** prefilled with that date. Staff booking on a
   member's behalf see the fees and are never refused. While a fee is owed, the `door_code_ready`
-  reminder skips the member's upcoming reservations; the code is still minted and shown to staff,
-  and the first reminder drain after the fee is paid sends it (`membersOwingFees`). Member-facing
-  reads hold the code too (#2874): the member's detail and list, and the band detail for every
-  bandmate, return no door code and no break-glass code (`doorCodeHeldSince`), and the page shows
-  the payment-due notice with **Message staff** where the code would be. Staff pages keep it. With no date
+  reminder skips the member's upcoming reservations, so no pool code is claimed for them, and the
+  first reminder drain after the fee is paid sends it (`membersOwingFees`). Member-facing reads
+  hold the code too (#2874): the member's detail and list, and the band detail for every
+  bandmate, return no door code (`doorCodeHeldSince`), and the page shows the payment-due notice
+  with **Message staff** where the door page link would be. Staff pages keep it. With no date
   set the check is off; rows before it keep their status and are never counted
   (`src/lib/server/reservation/outstanding-fees.ts`).
 
@@ -256,6 +257,35 @@ Two things differ from the member path:
   with its outcome: `sent` (with the outbox row), `skipped` (account removed)
   or `failed` (the outbox refused it; the stage stays owed for the next pass). The staff
   reservation's Payment card lists the stages sent.
+
+### Door codes
+
+A booking gets in through the door page at `/door` (unlock over the U-tec API) and, when the
+unlock does not confirm, a keypad code from the **door-code pool** (#2120). The lock checks codes
+locally, so a code already on it opens the door while the lock is offline.
+
+- **The pool.** The daily lock job keeps `lock.poolSize` unclaimed codes on the lock (default
+  20, set under Lock settings on Building access): type-0 users with no lock-side expiry, in
+  `lock_fallback_code`, minted while the lock is online and counted only once the lock reports
+  them synced.
+- **Claim.** A booking claims a code when its `door_code_ready` notice is sent, a day before it
+  starts, and the notice carries the code (`claimPoolCode` in the notification listener). A
+  claimed code counts as revealed. One live code per booking (a unique index). The reminder
+  waits while the booker owes a fee and skips a booker who holds a standing code
+  (`doorCodeHolds` in `src/lib/server/reminders/registry.ts`); an unpaid teaching booking will
+  wait there too (#3025).
+- **Empty pool.** The claim returns nothing and emails staff once a day (`lock_pool_empty`); the
+  notice tells the member to call staff instead.
+- **`/door` never claims.** It carries the booking's code with the page and shows it only when
+  an unlock times out or the lock is offline. A booking with no code is told to call staff.
+- **Burn.** Check-out sends the booking's code its delete; so does a cancellation after the
+  notice (`revokeAccessFor`). The daily job removes every claimed code whose booking ended more
+  than the grace period ago, or was cancelled, and marks it removed only once the user is gone
+  from the lock: an offline lock queues the delete and the code keeps working until it lands.
+  Then it mints back to the pool size.
+- **Staff.** Building access lists every claimed code still on the lock (awaiting removal once
+  its booking is over) and the pool's depth. **Read out a code** on a staff reservation hands
+  over the code the booking holds, claiming one if its notice has not gone out.
 
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
 shared action component under `$lib/components/actions/`, so the member and staff

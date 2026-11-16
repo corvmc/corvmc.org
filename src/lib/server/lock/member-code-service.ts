@@ -1,7 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { lockMemberCode, lockFallbackCode } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
 	addLockUser,
 	getLockUser,
@@ -152,20 +152,17 @@ export async function listMemberCodes(): Promise<
 }
 
 /**
- * Whether this member already holds a standing code.
- *
- * Provisioning skips them: a member who can already open the door does not need
- * a second code per booking, and every code not issued is one less user on the
- * lock's finite table.
+ * Which of these members hold a live standing code. Their bookings claim no
+ * pool code: a member who can already open the door does not need a second
+ * one, and the pool is finite.
  */
-export async function hasActiveMemberCode(userId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: lockMemberCode.id })
+export async function membersWithStandingCodes(userIds: string[]): Promise<Set<string>> {
+	if (userIds.length === 0) return new Set();
+	const rows = await db
+		.selectDistinct({ userId: lockMemberCode.userId })
 		.from(lockMemberCode)
-		.where(and(eq(lockMemberCode.userId, userId), isNull(lockMemberCode.revokedAt)))
-		.limit(1);
-
-	return Boolean(row);
+		.where(and(inArray(lockMemberCode.userId, userIds), isNull(lockMemberCode.revokedAt)));
+	return new Set(rows.map((r) => r.userId).filter((id): id is string => id !== null));
 }
 
 /**

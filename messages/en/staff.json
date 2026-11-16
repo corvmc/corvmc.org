@@ -3793,5 +3793,7 @@
 	"staff_reservations_id_code_label": "Code",
 	"staff_reservations_id_sent_at_text": "sent {time}",
 	"staff_reservations_id_no_code_text": "None",
-	"staff_reservations_id_read_out_code_label": "Read out a code"
+	"staff_reservations_id_read_out_code_label": "Read out a code",
+	"staff_settings_lock_pool_size_label": "Door codes in the pool",
+	"staff_settings_lock_pool_size_body": "Each booking takes one the day before. Enough for a day of bookings while the lock is offline."
 }

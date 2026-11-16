@@ -7,6 +7,12 @@ minRole: member
 sortOrder: 2
 ---
 
+## Your door code
+
+The day before your booking we email you a door code. Keep it: it's your
+backup if the door doesn't open, and it stops working shortly after your
+booking ends.
+
 ## Getting in
 
 The back door has a QR code. Scan it with your phone camera to open the
@@ -17,14 +23,14 @@ it ends. It works for whoever booked, and for anyone in the band the booking
 is for.
 
 1. Tap **Check in**. The door unlocks, and the page says when it's open.
-2. If the door doesn't answer, the page shows a **door code** instead. Touch
+2. If the door doesn't answer, the page shows your **door code** instead. Touch
    the keypad to wake it, enter the code, then press the check key.
 3. Stepped out? Tap **Open door** to get back in.
 
 ## Phone signal
 
 There may be no signal at the back door. Open the page before you get there,
-from **Open door page** on your booking. It already has your backup code, so it
+from **Open door page** on your booking. It already has your door code, so it
 still works if your phone loses signal.
 
 ## Leaving
@@ -34,5 +40,5 @@ out**. If the lock doesn't confirm, press the lock key on the keypad.
 
 ## If nothing works
 
-If the door doesn't open and there's no backup code, the page tells you to call
-staff. Don't wait outside: [get in touch](/contact).
+If the door doesn't open and you have no door code, call staff. Don't wait
+outside: [get in touch](/contact).
