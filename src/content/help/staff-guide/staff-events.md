@@ -10,12 +10,16 @@ sortOrder: 8
 
 ## Managing events
 
-**Staff → Events** lists events by date with status, tags, and space-reservation
-info. Create a new one with **Create event**, or open an event to manage it. Creating asks only
-for the title, kind, date and times; the event's page opens next, with its edit form open, for
-everything else. An event has no production until someone opens one: **New production**, on
-**Staff → Events** with **View** set to **Productions**, attaches one to a show already on the
-calendar, or makes the event and its production together.
+**Staff → Calendar** lists every event by date with status, tags, and space-reservation
+info, drafts included. Create a new one with **Create event**, or open an event to manage it.
+Creating asks only for the title, kind, date and times; the event's page opens next, with its edit
+form open, for everything else. An event with a production shows the production's status in the
+**Production** column, which opens it.
+
+**Staff → Productions** lists every production, from draft to closed. An event has no production
+until someone opens one: **New production**, on **Staff → Productions**, attaches one to an event
+already on the calendar, or makes the event and its production together. Each row opens its
+event.
 
 ## On the event detail page
 

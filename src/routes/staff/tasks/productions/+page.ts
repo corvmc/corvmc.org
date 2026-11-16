@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-import { eventViewPath } from '../../events/views';
+import { productionsPath } from '../../productions/path';
 
-// Productions is a view on Events (#2766), after Projects (#2101) and Tasks (#2625).
+// Productions, after Projects (#2101), Tasks (#2625) and Events (#2766, #3112).
 export function load({ url }) {
-	redirect(308, eventViewPath('productions', url.search));
+	redirect(308, productionsPath(url.search, '/staff/tasks/productions'));
 }

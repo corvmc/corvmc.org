@@ -5,13 +5,12 @@ import { readLocalDb } from './fixtures/platform-db';
 import { production } from '../src/lib/server/db/schema/production';
 import { eventListing } from '../src/lib/server/db/schema/event';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import { SEED_VENUE_OFFSITE_NAME, SEED_VENUE_ROOM_NAME } from './fixtures/seed-venues';
+import { SEED_VENUE_OFFSITE_NAME } from './fixtures/seed-venues';
 import {
 	SEED_PRODUCTION_BARE_EVENT_ID,
 	SEED_PRODUCTION_EMPTY_EVENT_TITLE,
 	SEED_PRODUCTION_EVENT_ID,
-	SEED_PRODUCTION_EVENT_TITLE,
-	SEED_PRODUCTION_HEADLINER
+	SEED_PRODUCTION_EVENT_TITLE
 } from './fixtures/seed-productions';
 
 /**
@@ -101,48 +100,41 @@ test.describe('productions', () => {
 	});
 
 	/**
-	 * The acceptance test for the absorb decision. The Productions view is still
-	 * the CMC event index — it did not become a table of production records — but
-	 * it now answers the questions the production table was wanted for, on the
-	 * rows it already had.
+	 * Productions and Calendar are two lists (#3112). Productions holds production
+	 * records, with their status and venue; a show with no production is on the
+	 * Calendar only.
 	 */
-	test('the index carries the production, the venue and the bill on one row', async ({ page }) => {
+	test('Productions lists the production with its status and venue', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events?view=productions');
+		await page.goto('/staff/productions');
 
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
-		// The production's own status column: a badge when there is one.
-		await expect(row.locator('td').nth(2).locator('.badge')).toBeVisible();
+		await expect(row.locator('td').first().locator('.badge')).toBeVisible();
 		await expect(row.getByText(SEED_VENUE_OFFSITE_NAME)).toBeVisible();
-		// The bill is an avatar stack, so the acts are its accessible name, not text.
-		await expect(row.getByLabel(SEED_PRODUCTION_HEADLINER)).toBeVisible();
+		// The row opens its event.
+		await expect(row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}"]`)).toBeVisible();
 
-		// A CMC show with no production reads as absent, not as blank — the two
-		// have to be told apart, which is the reason the column carries words. A
-		// row of its own, because the sibling test above opens one on the other.
-		const empty = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EMPTY_EVENT_TITLE });
-		const absent = empty.locator('td').nth(2);
-		await expect(absent).toBeVisible();
-		await expect(absent).not.toBeEmpty();
-		await expect(absent.locator('.badge')).toHaveCount(0);
+		await expect(
+			page.locator('tr').filter({ hasText: SEED_PRODUCTION_EMPTY_EVENT_TITLE })
+		).toHaveCount(0);
 	});
 
-	test('filtering by venue narrows the index to the off-site shows', async ({ page }) => {
+	test('the Calendar links a listing to its production, and only one that has it', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/events?view=productions');
-		await expect(page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE })).toBeVisible({
-			timeout: 15000
-		});
+		await page.goto('/staff/events?date=any');
 
-		await page.getByLabel('Venue').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
+		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
+		await expect(row).toBeVisible({ timeout: 15000 });
+		await expect(
+			row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}/production"]`)
+		).toBeVisible();
 
-		await expect(page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE })).toBeVisible({
-			timeout: 15000
-		});
-		// Every other fixture's event is in the room, so the room's name going
-		// missing is what says the filter reached the query rather than the DOM.
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ROOM_NAME })).toHaveCount(0);
+		const empty = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EMPTY_EVENT_TITLE });
+		await expect(empty).toBeVisible();
+		await expect(empty.getByTestId('production-link')).toHaveCount(0);
 	});
 
 	/**

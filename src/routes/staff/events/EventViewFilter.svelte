@@ -13,7 +13,6 @@
 	// Presentation only: each view's remotes guard for themselves.
 	const options: { value: EventView; label: string }[] = [
 		{ value: 'listings', label: m.staff_events_view_listings_label() },
-		{ value: 'productions', label: m.staff_projects_project_views_productions_label() },
 		{ value: 'venues', label: m.staff_venues_venues_label() },
 		{ value: 'vendors', label: m.staff_events_view_vendors_label() }
 	];

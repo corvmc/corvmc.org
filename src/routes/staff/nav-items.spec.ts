@@ -76,7 +76,8 @@ describe('activeNavKey', () => {
 		// page you navigate to rather than a section of its own.
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
-		// Venues is an Events view; a venue's page lights Events (#2766).
+		// Venues is a Calendar view; a venue's page lights Calendar (#2766).
+		['/staff/productions', 'productions'],
 		['/staff/venues/abc', 'calendar'],
 		['/staff/contacts', 'contacts'],
 		['/staff/contacts/abc', 'contacts'],
@@ -191,9 +192,11 @@ describe('the nav tree', () => {
 		expect(allStaffNavItems().some((i) => i.href === '/staff/volunteer')).toBe(false);
 	});
 
-	it('folds Productions and Venues into Events (#2766)', () => {
-		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
-		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(0);
+	// Two lists: Calendar in Community, Productions in Programs (#3112).
+	it('lists Calendar and Productions apart, with Venues a Calendar view', () => {
+		const owner = (key: StaffNavKey) => staffNavSections.find((s) => sectionHasKey(s, key))?.key;
+		expect(owner('calendar')).toBe('community');
+		expect(owner('productions')).toBe('programs');
 		expect(allStaffNavItems().some((i) => i.href === '/staff/venues')).toBe(false);
 	});
 
@@ -252,7 +255,7 @@ describe('the nav tree', () => {
 		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard']);
 		expect(keys('outreach')).toEqual(['inbox', 'contacts', 'funding', 'outreach', 'content']);
 		expect(keys('community')).toEqual(['users', 'groups', 'calendar', 'moderation', 'classifieds']);
-		expect(keys('programs')).toEqual(['reservations', 'gear', 'clubs', 'music']);
+		expect(keys('programs')).toEqual(['reservations', 'gear', 'clubs', 'music', 'productions']);
 		expect(keys('governance')).toEqual([
 			'projects',
 			'volunteer-schedule',
@@ -272,6 +275,7 @@ describe('the nav tree', () => {
 		const label = (key: StaffNavKey) => allStaffNavItems().find((i) => i.key === key)!.label;
 		expect(label('gear')).toBe('Equipment');
 		expect(label('music')).toBe('Music');
+		expect(label('calendar')).toBe('Calendar');
 		expect(label('outreach')).toBe('Marketing');
 		expect(label('volunteer-schedule')).toBe('Shifts');
 		expect(label('settings')).toBe('System');

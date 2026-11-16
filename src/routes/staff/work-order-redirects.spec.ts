@@ -39,7 +39,11 @@ beforeEach(() => {
 describe('/staff/projects/*', () => {
 	it.each([
 		['', '', '/staff/tasks?group=project'],
-		['productions', '?status=draft', '/staff/events?view=productions&status=draft'],
+		[
+			'productions',
+			'?production=draft',
+			'/staff/productions?status=draft&via=%2Fstaff%2Fprojects%2Fproductions'
+		],
 		['templates', '', '/staff/tasks/templates'],
 		['templates/t1', '', '/staff/tasks/templates/t1'],
 		['p1', '?task=wo-1', '/staff/tasks/projects/p1?task=wo-1'],

@@ -661,14 +661,16 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
+  is **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
   (a community draft is its author's alone), filtered by source, search, date range and status
   with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
   soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
-  badge; the dashboard feed collects the ones waiting for review. Its Productions view
-  (`/staff/events?view=productions`) is the CMC work index, `source='cmc'` at every status via
-  `getStaffEvents` → `listAll()`, filterable by production status. A published CMC show is on
-  both. Venues and every market's vendor applications are the list's other views (#2766).
+  badge; the dashboard feed collects the ones waiting for review. A listing with a production
+  links to it. **Productions** (`/staff/productions`, #3112) is a list of its own:
+  `getStaffProductions` → `listProductions()`, every `production` row from draft to closed,
+  listed or not, filterable by production status and short-of-acts. Each row opens its listing,
+  or its project when it has none. Venues and every market's vendor applications are the
+  Calendar's other views (#2766).
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
   every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
   else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
@@ -1912,8 +1914,8 @@ One template may carry `duty_list.project_kind = 'production'`, a checkbox on it
 marking another moves it. Picking that one starts a show in one action: `createShowProject` writes
 the project (`kind = 'production'`), the `production` row (`draft`) and the show's committees in one
 `db.batch`, then the checklist is applied. The listing attaches when it exists, and event-timed
-items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on the Projects
-view, since the Productions view lists listings. Turning an existing general project into a show
+items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on
+Productions with no event, and its row opens the project. Turning an existing general project into a show
 is not offered.
 
 The other ways of opening a show have nobody to ask, so they stamp that same template with
@@ -2283,9 +2285,9 @@ restore crew shifts or retract a cancellation notice.
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-8. The Productions view (`/staff/events?view=productions`) reads everything through the one `getStaffEvents` query:
-   `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
-   `getEventLineups()` — the batched helper — supplies the headliner and the count.
+8. Productions (`/staff/productions`) reads through `getStaffProductions`: `listProductions()`
+   reads `production` joined to its project, and left-joins the listing and its `venue` (both
+   1:1, so no fan-out).
 9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
    `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
    `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
