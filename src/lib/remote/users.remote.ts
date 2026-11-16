@@ -28,8 +28,9 @@ import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
+import { listPendingInvites } from '#lib/server/band/band-service.js';
 import { group } from '#lib/server/db/schema/group.js';
-import { eq, or, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
+import { eq, or, gte, lte, ne, inArray, and } from 'drizzle-orm';
 import { getUserRoles } from '#lib/server/authorization.js';
 import { positionChangeRefusal } from '#lib/server/access/position-service.js';
 import { toEventRef, toGenericRef } from '#lib/server/entity/refs.js';
@@ -702,10 +703,8 @@ export const getMemberDashboard = query(async () => {
 	const activeBandIds = userBands.map((b) => b.bandId);
 	const bandNameMap = Object.fromEntries(userBands.map((b) => [b.bandId, b.bandName]));
 
-	const [{ count: pendingInviteCount }] = await db
-		.select({ count: sql<number>`cast(count(*) as integer)` })
-		.from(groupMember)
-		.where(and(eq(groupMember.userId, currentUser.id), eq(groupMember.status, 'pending')));
+	const pendingInvites = await listPendingInvites(currentUser.id);
+	const pendingInviteCount = pendingInvites.length;
 
 	const [
 		weekReservations,
@@ -811,7 +810,7 @@ export const getMemberDashboard = query(async () => {
 				reservationConfig != null &&
 				coveredByFreeHours(r, freeHoursWallet, reservationConfig)
 		})),
-		pendingInviteCount,
+		pendingInvites,
 		profileComplete,
 		now: nowDate
 	});
