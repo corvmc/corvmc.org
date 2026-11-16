@@ -8,7 +8,7 @@ import {
 	notificationPreference
 } from '#lib/server/db/schema/notification.js';
 import { normalizeNotificationModel } from '#lib/server/notification/email/normalize-model.js';
-import { sendTemplateBatch } from '#lib/server/notification/email/index.js';
+import { queueEmails } from '#lib/server/outbox/outbox-service.js';
 import { pushToUser } from '#lib/server/notification/sse.js';
 import { captureException } from '#lib/server/sentry.js';
 import type { BallotEvent } from '#lib/server/event-bus/event-bus.js';
@@ -18,6 +18,7 @@ import { surfaces } from '#lib/config.js';
  * The two ballot notices. Opening reaches the electors; certification reaches
  * every active account. Both are roster-sized, so they batch the way
  * `announcement-fanout.ts` does rather than calling `dispatch()` in a loop.
+ * Each email is an outbox row, sent and retried per recipient.
  */
 
 type NoticeType = 'ballot_opened' | 'ballot_result';
@@ -123,25 +124,23 @@ export async function fanOutBallotNotice(
 		}
 	}
 
-	const byEmail = people.filter((p) => p.emailEnabled);
-	if (byEmail.length > 0) {
-		try {
-			await sendTemplateBatch(
-				'notification',
-				byEmail.map((p) => ({
-					to: p.email,
-					model: normalizeNotificationModel({
-						subject: title,
-						heading: title,
-						greeting: `Hi ${p.name.split(' ')[0]},`,
-						paragraphs: [{ text: body }],
-						cta: { url: `${siteUrl}${href}`, label: 'Open the ballot' }
-					})
-				})),
-				{ tag: type }
-			);
-		} catch (err) {
-			captureException(err, { event: `${type}.fanout`, channel: 'email' });
-		}
-	}
+	// One outbox row per email, written in one batch and sent by the outbox,
+	// which records and retries each refused recipient on its own.
+	await queueEmails(
+		people
+			.filter((p) => p.emailEnabled)
+			.map((p) => ({
+				to: p.email,
+				templateAlias: 'notification',
+				tag: type,
+				model: normalizeNotificationModel({
+					subject: title,
+					heading: title,
+					greeting: `Hi ${p.name.split(' ')[0]},`,
+					paragraphs: [{ text: body }],
+					cta: { url: `${siteUrl}${href}`, label: 'Open the ballot' }
+				})
+			})),
+		{ type, id: event.ballotId }
+	);
 }

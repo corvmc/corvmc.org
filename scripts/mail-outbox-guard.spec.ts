@@ -36,10 +36,7 @@ const SENDERS = new Set([
  * Senders not yet moved to the outbox. A path list that only shrinks: moving
  * one deletes its line, and adding one needs a reason in review. #2839 tracks it.
  */
-const NOT_YET_ON_THE_OUTBOX = new Set([
-	'src/lib/server/marketing/campaign-service.ts',
-	'src/lib/server/ballot/ballot-fanout.ts'
-]);
+const NOT_YET_ON_THE_OUTBOX = new Set(['src/lib/server/marketing/campaign-service.ts']);
 
 /** Each value import's specifiers and module, skipping `import type`. */
 function valueImports(source: string): { names: string[]; from: string }[] {
