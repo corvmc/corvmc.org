@@ -16,6 +16,8 @@
 	import LockCodes from './LockCodes.svelte';
 	import KeyRegister from './KeyRegister.svelte';
 	import LockSettings from './LockSettings.svelte';
+	import PoolCodes from './PoolCodes.svelte';
+	import { getPoolCodes } from '#lib/remote/lock.remote.js';
 
 	/**
 	 * Who can get into the building (#2766): the lock and its codes, the key
@@ -47,6 +49,14 @@
 
 <PageContent>
 	<LockCodes />
+	<svelte:boundary>
+		<PoolCodes />
+		{#snippet failed(error, reset)}
+			<Alert type="warning" reset={() => retryQuery(getPoolCodes(), reset)}>
+				{errorMessage(error)}
+			</Alert>
+		{/snippet}
+	</svelte:boundary>
 	<KeyRegister />
 	{#if canReadSettings}
 		<section

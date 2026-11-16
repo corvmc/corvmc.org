@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
  * #2874: while the booker owes a fee, member-facing reads return no door code
- * and no break-glass code. Staff keep both. Real SQLite, because who owes is a
+ * and say it is held. Staff keep it. Real SQLite, because who owes is a
  * `WHERE` over the reservation table.
  */
 
@@ -53,16 +53,15 @@ vi.mock('$app/server', () => ({
 }));
 
 const remote = (await import('#lib/remote/reservations.remote.js')) as any;
-const { reservation, lockFallbackCode } = await import('#lib/server/db/schema/reservation.js');
+const { reservation } = await import('#lib/server/db/schema/reservation.js');
 
 const HOUR = 3_600_000;
 const at = (hours: number) => new Date(Date.now() + hours * HOUR);
-const BREAK_GLASS = '771100';
 /** Whole seconds, as the timestamp column stores them. */
 const OWED_AT = new Date(Math.floor(at(-24 * 7).getTime() / 1000) * 1000);
 
 type Row = typeof reservation.$inferInsert;
-/** For `userId`: a code confirmed on the lock later today, and a session running now on the break-glass code. */
+/** For `userId`: a code confirmed on the lock later today, and a session running now. */
 function bookings(userId: string, extra: Partial<Row> = {}): Row[] {
 	const base = { bookerType: 'user' as const, bookerId: userId, createdByUserId: userId };
 	return [
@@ -104,7 +103,6 @@ beforeEach(async () => {
 			.toISOString()
 			.slice(0, 10)
 	};
-	await testDb.insert(lockFallbackCode).values({ code: BREAK_GLASS, syncedAt: at(-24 * 7) });
 	await testDb.insert(reservation).values([
 		{
 			id: 'owed',
@@ -130,17 +128,9 @@ beforeEach(async () => {
 const as = (id: string) => {
 	viewer.user = { id, name: id, email: `${id}@example.com` };
 };
-const revealed = (id: string) =>
-	(
-		sqlite
-			.prepare('select lock_fallback_revealed_at as at from reservation where id = ?')
-			.get(id) as {
-			at: number | null;
-		}
-	).at;
 
 describe('member detail', () => {
-	it('holds both codes from a member owing a fee, and records no reveal', async () => {
+	it('holds the code from a member owing a fee', async () => {
 		const synced = await remote.getReservationDetail('owing-synced');
 		expect(synced.reservation.lockCode).toBeNull();
 		expect(synced.reservation.codeWithheld).toBe(true);
@@ -148,24 +138,20 @@ describe('member detail', () => {
 
 		const live = await remote.getReservationDetail('owing-live');
 		expect(live.reservation.lockCode).toBeNull();
-		expect(live.fallbackCode).toBeNull();
-		expect(revealed('owing-live')).toBeNull();
 	});
 
-	it('gives a cleared member their code and the break-glass code', async () => {
+	it('gives a cleared member their code', async () => {
 		as('cleared');
 		const synced = await remote.getReservationDetail('cleared-synced');
 		expect(synced.reservation.lockCode).toBe('482913');
 		expect(synced.reservation.codeWithheld).toBe(false);
 		expect(synced.paymentDueOn).toBeNull();
-		expect((await remote.getReservationDetail('cleared-live')).fallbackCode).toBe(BREAK_GLASS);
 	});
 
 	it('holds nothing while the cutoff is unset', async () => {
 		stored.value = {};
 		const synced = await remote.getReservationDetail('owing-synced');
 		expect(synced.reservation.lockCode).toBe('482913');
-		expect((await remote.getReservationDetail('owing-live')).fallbackCode).toBe(BREAK_GLASS);
 	});
 });
 
@@ -194,21 +180,19 @@ describe('band detail', () => {
 	const read = (reservationId: string) =>
 		remote.getBandReservationDetail({ slug: 'the-velvets', reservationId });
 
-	it('holds both codes from every bandmate while the booker owes', async () => {
+	it('says the code is held from every bandmate while the booker owes', async () => {
 		as('cleared');
 		const synced = await read('band-owing-synced');
-		expect(synced.lockCode).toBeNull();
+		expect(synced).not.toHaveProperty('lockCode');
 		expect(synced.codeWithheld).toBe(true);
 		// The fee's date is the booker's, not the act's.
 		expect(synced.paymentDueOn).toBeNull();
-		expect((await read('band-owing-live')).fallbackCode).toBeNull();
 	});
 
-	it('keeps both codes for staff', async () => {
+	it('holds nothing from staff', async () => {
 		as('staff');
 		viewer.bandRole = 'staff';
-		expect((await read('band-owing-synced')).lockCode).toBe('482913');
-		expect((await read('band-owing-live')).fallbackCode).toBe(BREAK_GLASS);
+		expect((await read('band-owing-synced')).codeWithheld).toBe(false);
 	});
 });
 

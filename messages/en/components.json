@@ -1613,5 +1613,8 @@
 	"task_act_reason_not_assigned_text": "It is not assigned to you.",
 	"task_act_reason_no_position_text": "You do not hold {position}.",
 	"task_act_reason_no_seat_text": "You have no seat on {committee}.",
-	"task_act_reason_no_grant_text": "You do not hold {grant} for it."
+	"task_act_reason_no_grant_text": "You do not hold {grant} for it.",
+	"components_door_check_in_title": "Check in at the back door",
+	"components_door_check_in_scan_text": "Scan the code on the door, or open the page before you get there.",
+	"components_door_check_in_open_label": "Open door page"
 }

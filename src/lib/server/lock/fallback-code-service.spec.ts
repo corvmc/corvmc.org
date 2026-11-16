@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+/** The pool's claims and job stage against a real SQLite; the lock is mocked. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
@@ -7,332 +9,368 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-// The U-tec lock is the outside service here.
+const kv = new Map<string, unknown>();
+vi.mock('#lib/server/kv.js', () => ({
+	getJson: async (key: string) => kv.get(key) ?? null,
+	putJson: async (key: string, value: unknown) => void kv.set(key, value)
+}));
+
+const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
+vi.mock('#lib/server/notification/index.js', () => ({
+	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
+}));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
+
 const mockAddLockUser = vi.fn();
 const mockGetLockUser = vi.fn();
+const mockListLockUsers = vi.fn();
 const mockRemoveTemporaryUser = vi.fn();
 
 vi.mock('./ultraloc-client', () => ({
 	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	getLockUser: (...args: unknown[]) => mockGetLockUser(...args),
+	listLockUsers: (...args: unknown[]) => mockListLockUsers(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
 	generateLockCode: () => 4242,
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const {
-	maintainFallbackCode,
-	rotateFallbackCodeNow,
-	revealFallbackCodeFor,
-	fallbackShownFor,
-	FALLBACK_ROTATION_DAYS
-} = await import('./fallback-code-service');
+const { claimPoolCode, revealPoolCode, maintainCodePool, listPoolCodes, poolDepth } =
+	await import('./fallback-code-service');
+const { DOOR_CODE_POOL_SIZE } = await import('#lib/config.js');
 
-const T0 = 1_750_000_000;
-const DAY = 86_400;
-const NOW = new Date(T0 * 1000);
-const at = (offsetSeconds: number) => new Date((T0 + offsetSeconds) * 1000);
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
 
-function fallback(
-	id: string,
-	cols: {
-		code?: string;
-		lockAccessId?: string | null;
-		syncedAt?: number | null;
-		retiredAt?: number | null;
-		createdAt?: number;
-	} = {}
-) {
+const NOW = new Date('2026-11-02T20:00:00Z');
+const s = (d: Date) => Math.floor(d.getTime() / 1000);
+const hours = (n: number) => new Date(NOW.getTime() + n * 3_600_000);
+
+function booking(id: string, startsAt: Date, endsAt: Date, status = 'confirmed') {
 	sqlite
 		.prepare(
-			`insert into lock_fallback_code (id, code, lock_access_id, synced_at, retired_at, created_at)
-			 values (?, ?, ?, ?, ?, ?)`
+			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 values (?, 'user', 'u-1', 'u-1', ?, ?, ?)`
+		)
+		.run(id, status, s(startsAt), s(endsAt));
+}
+
+let seq = 0;
+function code(
+	fields: Partial<{
+		lockAccessId: string | null;
+		synced: boolean;
+		pooled: boolean;
+		claimedBy: string;
+		revealed: boolean;
+		retired: boolean;
+	}> = {}
+): string {
+	const id = `code-${++seq}`;
+	sqlite
+		.prepare(
+			`insert into lock_fallback_code
+			 (id, code, lock_access_id, synced_at, pooled, claimed_by_reservation_id, claimed_at, revealed_at, retired_at, created_at)
+			 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			id,
-			cols.code ?? `code-${id}`,
-			cols.lockAccessId === undefined ? '1' : cols.lockAccessId,
-			cols.syncedAt ?? null,
-			cols.retiredAt ?? null,
-			cols.createdAt ?? T0 - DAY
+			String(10_000_000 + seq),
+			fields.lockAccessId === undefined ? String(500 + seq) : fields.lockAccessId,
+			fields.synced === false ? null : s(hours(-48)) + seq,
+			fields.pooled === false ? 0 : 1,
+			fields.claimedBy ?? null,
+			fields.claimedBy ? s(hours(-3)) : null,
+			fields.revealed ? s(hours(-3)) : null,
+			fields.retired ? s(hours(-100)) : null,
+			s(hours(-72)) + seq
 		);
+	return id;
 }
 
-const fallbacks = () =>
-	sqlite
-		.prepare(
-			`select id, code, lock_access_id, synced_at, retired_at from lock_fallback_code order by created_at, id`
-		)
-		.all() as Record<string, unknown>[];
+const row = (id: string) =>
+	sqlite.prepare('select * from lock_fallback_code where id = ?').get(id) as Record<
+		string,
+		unknown
+	>;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	vi.useFakeTimers({ toFake: ['Date'] });
-	vi.setSystemTime(NOW);
-	mockAddLockUser.mockResolvedValue(9001);
+	sqlite.exec('delete from lock_fallback_code');
+	sqlite.exec('delete from reservation');
+	kv.clear();
+	seq = 0;
+	let nextId = 9000;
+	mockAddLockUser.mockImplementation(async () => ++nextId);
 	mockGetLockUser.mockResolvedValue(null);
+	mockListLockUsers.mockResolvedValue([]);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
 	sqlite.exec(`delete from lock_fallback_code`);
 	sqlite.exec(`delete from reservation`);
 });
 
-afterEach(() => {
-	vi.useRealTimers();
-});
+// ---------------------------------------------------------------------------
+// Claims
+// ---------------------------------------------------------------------------
 
-describe('maintainFallbackCode', () => {
-	it('mints a break-glass code when there is none at all', async () => {
-		const errors: string[] = [];
-		const result = await maintainFallbackCode(errors);
+describe('claimPoolCode', () => {
+	it('claims the longest-synced available code, and keeps it for the booking', async () => {
+		booking('r-1', hours(0), hours(2));
+		const oldest = code();
+		code();
 
-		expect(mockAddLockUser).toHaveBeenCalledWith({
-			name: 'CMC Fallback 2025-06-15',
-			type: 0,
-			password: 42424242
-		});
-		expect(fallbacks()).toEqual([
-			expect.objectContaining({
-				code: '42424242',
-				lock_access_id: '9001',
-				synced_at: null,
-				retired_at: null
-			})
-		]);
-		// Not usable until the lock confirms it.
-		expect(result).toEqual({ active: null, rotated: false });
-		expect(errors).toEqual([]);
+		const first = await claimPoolCode('r-1', NOW);
+		const again = await claimPoolCode('r-1', NOW);
+
+		expect(first?.id).toBe(oldest);
+		expect(again?.id).toBe(oldest);
+		expect(row(oldest).claimed_by_reservation_id).toBe('r-1');
 	});
 
-	it('leaves a current confirmed code alone', async () => {
-		fallback('f1', { code: '87654321', syncedAt: T0 - 2 * DAY });
+	it('gives another booking a different code', async () => {
+		booking('r-1', hours(0), hours(2));
+		booking('r-2', hours(0), hours(2));
+		code();
+		code();
 
-		const result = await maintainFallbackCode([]);
+		const a = await claimPoolCode('r-1', NOW);
+		const b = await claimPoolCode('r-2', NOW);
 
-		expect(mockAddLockUser).not.toHaveBeenCalled();
-		expect(result).toEqual({ active: '87654321', rotated: false });
+		expect(a?.id).not.toBe(b?.id);
 	});
 
-	it('ignores a retired code when deciding whether one is in service', async () => {
-		fallback('f0', { code: '00000000', syncedAt: T0 - 2 * DAY, retiredAt: T0 - DAY });
+	it('skips unsynced, revealed and legacy codes', async () => {
+		booking('r-1', hours(0), hours(2));
+		code({ synced: false });
+		code({ pooled: false });
+		code({ revealed: true });
 
-		const result = await maintainFallbackCode([]);
-
-		expect(mockAddLockUser).toHaveBeenCalledOnce();
-		expect(result.active).toBeNull();
+		expect(await claimPoolCode('r-1', NOW)).toBeNull();
 	});
 
-	it('mints a successor once the incumbent is past the rotation period', async () => {
-		fallback('f1', { code: '11112222', syncedAt: T0 - (FALLBACK_ROTATION_DAYS + 1) * DAY });
+	it('alerts staff once a day when the pool is empty', async () => {
+		booking('r-1', hours(0), hours(2));
 
-		const result = await maintainFallbackCode([]);
+		await claimPoolCode('r-1', NOW);
+		await claimPoolCode('r-1', NOW);
 
-		expect(mockAddLockUser).toHaveBeenCalledOnce();
-		// The incumbent stays live until the successor confirms.
-		expect(result.active).toBe('11112222');
-		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
-		expect(fallbacks()[0]).toMatchObject({ id: 'f1', retired_at: null });
+		expect(mockDispatchEmailOnly).toHaveBeenCalledTimes(1);
+		expect(mockDispatchEmailOnly.mock.calls[0][0]).toMatchObject({ type: 'lock_pool_empty' });
 	});
 
-	// The whole point of the design: never a gap with no working code.
-	it('promotes a synced successor and only then retires the code it replaces', async () => {
-		fallback('f1', { code: '11112222', lockAccessId: '111', syncedAt: T0 - 40 * DAY });
-		fallback('f2', { code: '33334444', lockAccessId: '222', createdAt: T0 - 100 });
-		mockGetLockUser.mockResolvedValue({ id: 222, type: 0, syncStatus: 1 });
-
-		const result = await maintainFallbackCode([]);
-
-		expect(mockGetLockUser).toHaveBeenCalledWith(222);
-		expect(result).toEqual({ active: '33334444', rotated: true });
-		expect(fallbacks().map((f) => [f.id, f.synced_at, f.retired_at])).toEqual([
-			['f1', T0 - 40 * DAY, T0],
-			['f2', T0, null]
-		]);
-		expect(mockRemoveTemporaryUser).toHaveBeenCalledExactlyOnceWith(111);
-		expect(mockAddLockUser).not.toHaveBeenCalled();
-	});
-
-	it('does not promote a successor the lock has not confirmed', async () => {
-		fallback('f1', { code: '1111', lockAccessId: '111', syncedAt: T0 - 2 * DAY });
-		fallback('f2', { code: '3333', lockAccessId: '222', createdAt: T0 - 100 });
-		mockGetLockUser.mockResolvedValue({ id: 222, type: 0, syncStatus: 0 });
-
-		const result = await maintainFallbackCode([]);
-
-		expect(result).toEqual({ active: '1111', rotated: false });
-		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
-		expect(fallbacks().map((f) => [f.id, f.synced_at, f.retired_at])).toEqual([
-			['f1', T0 - 2 * DAY, null],
-			['f2', null, null]
-		]);
-	});
-
-	// Otherwise every daily run during an outage adds another dead lock user.
-	it('does not mint a second successor while one is already in flight', async () => {
-		fallback('f2', { lockAccessId: '222' });
-		mockGetLockUser.mockResolvedValue({ id: 222, type: 0, syncStatus: 0 });
-
-		await maintainFallbackCode([]);
-
-		expect(mockAddLockUser).not.toHaveBeenCalled();
-		expect(fallbacks()).toHaveLength(1);
-	});
-
-	it('drops a pending row with no lock id and mints again', async () => {
-		fallback('f-lost', { lockAccessId: null });
-
-		await maintainFallbackCode([]);
-
-		expect(mockGetLockUser).not.toHaveBeenCalled();
-		expect(fallbacks()).toEqual([expect.objectContaining({ lock_access_id: '9001' })]);
-	});
-
-	it('records a failed mint without throwing', async () => {
-		mockAddLockUser.mockRejectedValue(new Error('lock offline'));
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const errors: string[] = [];
-
-		expect(await maintainFallbackCode(errors)).toEqual({ active: null, rotated: false });
-
-		expect(errors).toEqual([expect.stringContaining('lock offline')]);
-		expect(fallbacks()).toEqual([]);
-		consoleSpy.mockRestore();
+	it('refuses a second live code for one booking at the database', () => {
+		booking('r-1', hours(0), hours(2));
+		code({ claimedBy: 'r-1' });
+		expect(() => code({ claimedBy: 'r-1' })).toThrow(/UNIQUE/);
 	});
 });
 
-describe('rotateFallbackCodeNow', () => {
-	it('mints a successor while the incumbent stays live', async () => {
-		fallback('f1', { code: '11112222', syncedAt: T0 - 2 * DAY });
+describe('revealPoolCode', () => {
+	it('stamps the reveal once', async () => {
+		booking('r-1', hours(0), hours(2));
+		const id = code();
 
-		expect(await rotateFallbackCodeNow()).toEqual({ ok: true });
-		expect(fallbacks()).toEqual([
-			expect.objectContaining({ id: 'f1', retired_at: null }),
-			expect.objectContaining({ code: '42424242', synced_at: null })
-		]);
-	});
+		await revealPoolCode('r-1', NOW);
+		const later = new Date(NOW.getTime() + 60_000);
+		await revealPoolCode('r-1', later);
 
-	it('refuses while a successor is already waiting on the lock', async () => {
-		fallback('f2');
-
-		expect(await rotateFallbackCodeNow()).toMatchObject({ ok: false });
-		expect(mockAddLockUser).not.toHaveBeenCalled();
+		expect(row(id).revealed_at).toBe(s(NOW));
 	});
 });
 
-function booking(id: string) {
-	sqlite
-		.prepare(
-			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
-			 values (?, 'user', 'u1', 'u1', 'confirmed', ?, ?)`
-		)
-		.run(id, T0 - 600, T0 + 3600);
+// ---------------------------------------------------------------------------
+// The job stage
+// ---------------------------------------------------------------------------
+
+/** Fill the pool to depth so a test's refill mints nothing it did not ask for. */
+function fillPool(n = DOOR_CODE_POOL_SIZE) {
+	for (let i = 0; i < n; i++) code();
 }
 
-const revealedAt = (id: string) =>
-	(
-		sqlite
-			.prepare(`select lock_fallback_revealed_at as v from reservation where id = ?`)
-			.get(id) as {
-			v: number | null;
-		}
-	).v;
+describe('maintainCodePool', () => {
+	it('confirms a minted code once the lock reports it synced', async () => {
+		fillPool(DOOR_CODE_POOL_SIZE - 1);
+		const pending = code({ synced: false });
+		mockGetLockUser.mockResolvedValue({ id: 1, syncStatus: 1 });
 
-describe('revealFallbackCodeFor', () => {
-	const inWindow = {
-		id: 'res-1',
-		status: 'confirmed',
-		startsAt: at(-600),
-		endsAt: at(3600),
-		lockSyncedAt: null
-	};
+		const result = await maintainCodePool([], NOW);
 
-	beforeEach(() => {
-		booking('res-1');
-		booking('res-2');
+		expect(result.confirmed).toBe(1);
+		expect(row(pending).synced_at).not.toBeNull();
 	});
 
-	it('hands over the active code and stamps only this booking', async () => {
-		fallback('f1', { code: '87654321', syncedAt: T0 - DAY });
-		fallback('f2', { code: 'pending-one' });
+	it('drops a minted code whose lock id was never recovered, and mints a replacement', async () => {
+		fillPool(DOOR_CODE_POOL_SIZE - 1);
+		const orphan = code({ synced: false, lockAccessId: null });
 
-		expect(await revealFallbackCodeFor(inWindow)).toBe('87654321');
-		expect(revealedAt('res-1')).toBe(T0);
-		expect(revealedAt('res-2')).toBeNull();
+		const result = await maintainCodePool([], NOW);
+
+		expect(row(orphan)).toBeUndefined();
+		expect(result.minted).toBe(1);
 	});
 
-	it('does not reveal it to a member whose own code is known good', async () => {
-		fallback('f1', { syncedAt: T0 - DAY });
+	it('returns an unrevealed claim to the pool once the booking is over', async () => {
+		fillPool();
+		booking('over', hours(-4), hours(-2));
+		booking('live', hours(-1), hours(1));
+		const overCode = code({ claimedBy: 'over' });
+		const liveCode = code({ claimedBy: 'live' });
 
-		expect(await revealFallbackCodeFor({ ...inWindow, lockSyncedAt: NOW })).toBeNull();
-		expect(revealedAt('res-1')).toBeNull();
+		const result = await maintainCodePool([], NOW);
+
+		expect(result.released).toBe(1);
+		expect(row(overCode).claimed_by_reservation_id).toBeNull();
+		expect(row(liveCode).claimed_by_reservation_id).toBe('live');
 	});
 
-	it('does not reveal it outside the access window', async () => {
-		fallback('f1', { syncedAt: T0 - DAY });
+	it('releases the claim of a cancelled booking straight away', async () => {
+		fillPool();
+		booking('gone', hours(2), hours(4), 'cancelled');
+		const id = code({ claimedBy: 'gone' });
 
-		expect(
-			await revealFallbackCodeFor({
-				...inWindow,
-				startsAt: at(7 * DAY),
-				endsAt: at(7 * DAY + 3600)
-			})
-		).toBeNull();
+		await maintainCodePool([], NOW);
+
+		expect(row(id).claimed_by_reservation_id).toBeNull();
 	});
 
-	it('does not reveal it for an unconfirmed reservation', async () => {
-		fallback('f1', { syncedAt: T0 - DAY });
+	it('keeps a revealed code through the grace after the booking ends', async () => {
+		fillPool();
+		booking('just-ended', hours(-2), new Date(NOW.getTime() - 10 * 60_000));
+		const id = code({ claimedBy: 'just-ended', revealed: true });
+		mockListLockUsers.mockResolvedValue([{ id: Number(row(id).lock_access_id), syncStatus: 1 }]);
 
-		expect(await revealFallbackCodeFor({ ...inWindow, status: 'waitlisted' })).toBeNull();
+		await maintainCodePool([], NOW);
+
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(row(id).removed_at).toBeNull();
 	});
 
-	it('returns null rather than inventing one when no code is active', async () => {
-		fallback('f0', { syncedAt: T0 - 2 * DAY, retiredAt: T0 - DAY });
-		fallback('f1');
+	it('sends a delete for a revealed code whose booking is over, and waits for the lock', async () => {
+		fillPool();
+		booking('over', hours(-4), hours(-2));
+		const id = code({ claimedBy: 'over', revealed: true });
+		const lockId = Number(row(id).lock_access_id);
+		mockListLockUsers.mockResolvedValue([{ id: lockId, syncStatus: 1 }]);
 
-		expect(await revealFallbackCodeFor(inWindow)).toBeNull();
-		expect(revealedAt('res-1')).toBeNull();
+		const result = await maintainCodePool([], NOW);
+
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(lockId);
+		expect(result.awaitingRemoval).toBe(1);
+		expect(row(id).removed_at).toBeNull();
+		expect(row(id).claimed_by_reservation_id).toBe('over');
+	});
+
+	it('does not resend a delete while the lock still has one pending', async () => {
+		fillPool();
+		booking('over', hours(-4), hours(-2));
+		const id = code({ claimedBy: 'over', revealed: true });
+		mockListLockUsers.mockResolvedValue([{ id: Number(row(id).lock_access_id), syncStatus: 0 }]);
+
+		await maintainCodePool([], NOW);
+
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+	});
+
+	it('marks a burned code removed once it is gone from the lock', async () => {
+		fillPool();
+		booking('over', hours(-4), hours(-2));
+		const id = code({ claimedBy: 'over', revealed: true });
+
+		const result = await maintainCodePool([], NOW);
+
+		expect(result.burned).toBe(1);
+		expect(row(id).removed_at).toBe(s(NOW));
+	});
+
+	it('burns the pre-pool break-glass code only once the pool has a code to offer', async () => {
+		const legacy = code({ pooled: false });
+		mockListLockUsers.mockResolvedValue([
+			{ id: Number(row(legacy).lock_access_id), syncStatus: 1 }
+		]);
+		mockAddLockUser.mockRejectedValue(new Error('offline'));
+
+		await maintainCodePool([], NOW);
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+
+		code();
+		await maintainCodePool([], NOW);
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(Number(row(legacy).lock_access_id));
+	});
+
+	it('leaves a break-glass code a successor already retired alone', async () => {
+		fillPool();
+		code({ pooled: false, retired: true });
+
+		await maintainCodePool([], NOW);
+
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+	});
+
+	it('mints up to depth, counting codes still on their way', async () => {
+		code();
+		code({ synced: false });
+
+		const result = await maintainCodePool([], NOW);
+
+		expect(result.minted).toBe(DOOR_CODE_POOL_SIZE - 2);
+		expect(mockAddLockUser).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 0, password: 42_424_242 })
+		);
+		const minted = sqlite
+			.prepare('select count(*) as n from lock_fallback_code where pooled = 1')
+			.get() as { n: number };
+		expect(minted.n).toBe(DOOR_CODE_POOL_SIZE);
+	});
+
+	it('stops minting at the first refusal and records it', async () => {
+		mockAddLockUser.mockRejectedValue(new Error('BAD-REQUEST'));
+		const errors: string[] = [];
+
+		const result = await maintainCodePool(errors, NOW);
+
+		expect(mockAddLockUser).toHaveBeenCalledTimes(1);
+		expect(result.minted).toBe(0);
+		expect(errors[0]).toMatch(/could not mint/);
+	});
+
+	it('is a no-op on a full pool', async () => {
+		fillPool();
+
+		const result = await maintainCodePool([], NOW);
+
+		expect(result).toEqual({
+			confirmed: 0,
+			released: 0,
+			burned: 0,
+			awaitingRemoval: 0,
+			minted: 0,
+			available: DOOR_CODE_POOL_SIZE
+		});
+		expect(await poolDepth()).toBe(DOOR_CODE_POOL_SIZE);
 	});
 });
 
-// The staff read of the same rule (#1814).
-describe('fallbackShownFor', () => {
-	const inWindow = {
-		status: 'confirmed',
-		startsAt: at(-600),
-		endsAt: at(3600),
-		lockSyncedAt: null
-	};
+describe('listPoolCodes', () => {
+	it('names each code’s state for Key Holders', async () => {
+		booking('over', hours(-4), hours(-2));
+		booking('live', hours(-1), hours(1));
+		const ready = code();
+		const pending = code({ synced: false });
+		const claimed = code({ claimedBy: 'live' });
+		const awaiting = code({ claimedBy: 'over', revealed: true });
+		const legacy = code({ pooled: false });
 
-	beforeEach(() => {
-		booking('res-1');
-	});
+		const states = Object.fromEntries(
+			(await listPoolCodes(NOW)).map((c) => [c.id, c.state] as const)
+		);
 
-	it('shows staff the code the member is shown, without recording a reveal', async () => {
-		fallback('f1', { code: '87654321', syncedAt: T0 - DAY });
-
-		expect(await fallbackShownFor(inWindow)).toEqual({ code: '87654321', showsFrom: null });
-		expect(revealedAt('res-1')).toBeNull();
-	});
-
-	it('says when it will be shown for a booking whose window has not opened', async () => {
-		const later = { ...inWindow, startsAt: at(7 * DAY), endsAt: at(7 * DAY + 3600) };
-
-		expect(await fallbackShownFor(later)).toEqual({
-			code: null,
-			showsFrom: at(7 * DAY - 30 * 60)
+		expect(states).toEqual({
+			[ready]: 'available',
+			[pending]: 'pending',
+			[claimed]: 'claimed',
+			[awaiting]: 'awaiting_removal',
+			[legacy]: 'awaiting_removal'
 		});
-	});
-
-	it('is null when the member is shown their own code', async () => {
-		expect(await fallbackShownFor({ ...inWindow, lockSyncedAt: NOW })).toBeNull();
-	});
-
-	it('is null once the window has closed', async () => {
-		expect(
-			await fallbackShownFor({ ...inWindow, startsAt: at(-5 * 3600), endsAt: at(-4 * 3600) })
-		).toBeNull();
-	});
-
-	it('is null for a booking that is not confirmed', async () => {
-		expect(await fallbackShownFor({ ...inWindow, status: 'waitlisted' })).toBeNull();
 	});
 });

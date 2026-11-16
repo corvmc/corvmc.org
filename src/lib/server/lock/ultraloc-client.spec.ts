@@ -43,6 +43,7 @@ const {
 	listLockUsers,
 	getLockUser,
 	queryDeviceHealth,
+	sendLockCommand,
 	LOCK_GRACE_MINUTES,
 	testConnection,
 	buildAuthorizeUrl,
@@ -272,6 +273,7 @@ describe('queryDeviceHealth', () => {
 					states: [
 						{ capability: 'st.healthCheck', name: 'status', value: 'Online' },
 						{ capability: 'st.lock', name: 'lockState', value: 'Locked' },
+						{ capability: 'st.lock', name: 'lockMode', value: 1 },
 						{ capability: 'st.batteryLevel', name: 'level', value: 4 }
 					]
 				}
@@ -281,6 +283,7 @@ describe('queryDeviceHealth', () => {
 		expect(await queryDeviceHealth()).toEqual({
 			online: true,
 			lockState: 'Locked',
+			lockMode: 1,
 			batteryLevel: 4
 		});
 		expect(lastBody.header.name).toBe('Query');
@@ -294,6 +297,32 @@ describe('queryDeviceHealth', () => {
 		const health = await queryDeviceHealth();
 		expect(health.online).toBe(false);
 		expect(health.batteryLevel).toBeNull();
+	});
+});
+
+describe('sendLockCommand', () => {
+	it('sends st.lock unlock on the Command envelope and reads the deferral', async () => {
+		mockFetch({
+			devices: [
+				{
+					id: 'DEV-1',
+					states: [{ capability: 'st.deferredResponse', name: 'seconds', value: 20 }]
+				}
+			]
+		});
+
+		expect(await sendLockCommand('unlock')).toEqual({ deferredSeconds: 20 });
+		expect(lastBody.header).toMatchObject({ namespace: 'Uhome.Device', name: 'Command' });
+		expect(lastBody.payload.devices[0]).toEqual({
+			id: 'DEV-1',
+			command: { capability: 'st.lock', name: 'unlock' }
+		});
+	});
+
+	it('reports no deferral when the ack carries none', async () => {
+		mockFetch({ devices: [{ id: 'DEV-1' }] });
+		expect(await sendLockCommand('lock')).toEqual({ deferredSeconds: null });
+		expect(lastBody.payload.devices[0].command.name).toBe('lock');
 	});
 });
 

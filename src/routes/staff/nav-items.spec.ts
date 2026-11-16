@@ -323,6 +323,7 @@ describe('route coverage', () => {
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/recurring', // a Practice space view (#2766)
 		'/staff/building-access', // a Practice space view (#2766)
+		'/staff/building-access/door-poster', // a print page from Booking codes (#2120)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)
 		'/staff/inventory/settings', // reached from Gear's header (#2756)
 		'/staff/contacts/settings', // reached from Contacts' header (#2940)

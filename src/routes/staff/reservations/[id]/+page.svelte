@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { isEventHold } from '#lib/config.js';
+	import { doorKindLabels, doorOutcomeLabels, isEventHold } from '#lib/config.js';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -41,7 +40,7 @@
 	} from '#lib/utils/reservation-actions.js';
 	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
 	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
-	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
+	import { readOutDoorCode } from '#lib/remote/lock.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
@@ -58,23 +57,22 @@
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
 
-	// Retry door codes without waiting for tomorrow's cron: this booking's, then
-	// every code the daily job would handle (#1813).
-	let retrying = $state(false);
-	let retryResult = $state<Awaited<ReturnType<typeof retryDoorCodes>> | null>(null);
-	let retryError = $state<string | null>(null);
+	// Staff reading a code over the phone claim the booking's own pool code,
+	// and the read is a reveal: the code comes off the lock afterwards (#2120).
+	let readingOut = $state(false);
+	let readOut = $state<string | null>(null);
+	let readOutError = $state<string | null>(null);
 
-	async function handleRetry() {
-		retrying = true;
-		retryResult = null;
-		retryError = null;
+	async function handleReadOut() {
+		readingOut = true;
+		readOutError = null;
 		try {
-			retryResult = await retryDoorCodes(r.id);
+			readOut = (await readOutDoorCode(r.id)).code;
 			await getStaffReservationDetail(r.id).refresh();
 		} catch (err) {
-			retryError = (err as Error).message;
+			readOutError = (err as Error).message;
 		} finally {
-			retrying = false;
+			readingOut = false;
 		}
 	}
 	const actions = $derived(
@@ -346,81 +344,57 @@
 		{/if}
 	</div>
 
-	<!-- Door access -->
-	{#if !isEventHold(r.bookerType)}
+	<!-- Door access (#2120): the /door record, read by `lock.manage` only. -->
+	{#if !isEventHold(r.bookerType) && data.door}
+		{@const door = data.door}
 		<InfoCard title={m.staff_reservations_id_door_access_title()}>
-			{#if r.lockCode}
-				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
-				{#if r.lockSyncedAt}
-					<p class="text-muted">
-						{m.staff_reservations_id_confirmed_lock_text({ fullDate: fullDate(r.lockSyncedAt) })}
-					</p>
-				{:else}
-					<!-- U-tec acks a queued write the same as an applied one, so an
-					     issued code is not a working code until the lock says so. -->
-					<p class="text-warning">{m.staff_reservations_id_issued_but_not_confirmed_at_text()}</p>
-				{/if}
-			{:else}
-				<p class="text-muted">{m.staff_reservations_id_not_provisioned_yet_text()}</p>
-			{/if}
-
-			<!-- What the member's own page shows instead, by the same rule (#1814). -->
-			{#if data.doorFallback}
-				<p class="mt-2">
-					{#if data.doorFallback.showsFrom}
-						{m.staff_reservations_id_member_will_shown_break_glass_text({
-							fullDate: fullDate(data.doorFallback.showsFrom),
-							formatTime: formatTime(data.doorFallback.showsFrom)
-						})}
-					{:else if data.doorFallback.code}
-						<ParaglideMessage
-							message={m.staff_reservations_id_member_sees_break_glass_text}
-							inputs={{ code: data.doorFallback.code }}
-							>{#snippet span({ children })}<span class="font-mono font-bold tracking-[0.2em]"
-									>{@render children?.()}</span
-								>{/snippet}</ParaglideMessage
-						>
+			<DefinitionList>
+				<Fact label={m.staff_reservations_id_checked_in_label()}>
+					{door.checkedInAt ? formatTime(door.checkedInAt) : m.staff_reservations_id_not_yet_text()}
+				</Fact>
+				<Fact label={m.staff_reservations_id_checked_out_label()}>
+					{door.checkedOutAt
+						? formatTime(door.checkedOutAt)
+						: m.staff_reservations_id_not_yet_text()}
+				</Fact>
+				<Fact label={m.staff_reservations_id_code_label()}>
+					{#if door.code}
+						<span class="font-mono font-bold tracking-[0.2em]">{readOut ?? door.code.code}</span>
+						{#if door.code.revealedAt}
+							· {m.staff_reservations_id_sent_at_text({ time: formatTime(door.code.revealedAt) })}
+						{/if}
 					{:else}
-						<span class="text-warning">
-							{m.staff_reservations_id_no_break_glass_code_confirmed_text()}
-						</span>
+						{m.staff_reservations_id_no_code_text()}
 					{/if}
-				</p>
+				</Fact>
+			</DefinitionList>
+
+			{#if door.attempts.length > 0}
+				<ul class="mt-2 text-subtle">
+					{#each door.attempts as a, i (i)}
+						<li>
+							{formatTime(a.at)} · {doorKindLabels[a.kind]} · {doorOutcomeLabels[a.outcome]}
+							{#if a.by}· {a.by}{/if}
+						</li>
+					{/each}
+				</ul>
 			{/if}
 
-			{#if r.status === 'confirmed'}
-				<Button variant="ghost" size="sm" class="mt-3" disabled={retrying} onclick={handleRetry}>
-					{retrying
+			{#if r.status === 'confirmed' && !door.code}
+				<Button
+					variant="ghost"
+					size="sm"
+					class="mt-3"
+					disabled={readingOut}
+					onclick={handleReadOut}
+				>
+					{readingOut
 						? m.staff_reservations_id_working_label()
-						: m.staff_reservations_id_retry_pending_door_codes_label()}
+						: m.staff_reservations_id_read_out_code_label()}
 				</Button>
-				{#if retryError}
-					<Alert type="error" class="mt-2">{retryError}</Alert>
-				{:else if retryResult}
-					{@const { booking, job } = retryResult}
-					<Alert type={booking.ok && job.errors.length === 0 ? 'success' : 'warning'} class="mt-2">
-						<div>
-							<p>
-								{booking.ok
-									? m.staff_reservations_id_booking_sent_lock_code_text({
-											code: booking.code ?? ''
-										})
-									: m.staff_reservations_id_booking_text({ error: booking.error ?? '' })}
-							</p>
-							<p>
-								{m.staff_reservations_id_all_bookings_provisioned_confirmed_loc_text({
-									provisioned: job.provisioned,
-									confirmed: job.confirmed
-								})}
-							</p>
-							{#if job.errors.length > 0}
-								<ul class="list-disc pl-5">
-									{#each job.errors as e, i (i)}<li>{e}</li>{/each}
-								</ul>
-							{/if}
-						</div>
-					</Alert>
-				{/if}
+			{/if}
+			{#if readOutError}
+				<Alert type="error" class="mt-2">{readOutError}</Alert>
 			{/if}
 		</InfoCard>
 	{/if}

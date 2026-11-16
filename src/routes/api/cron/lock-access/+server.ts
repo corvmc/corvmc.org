@@ -24,7 +24,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const result = await runDailyLockJob();
 
 	const body = {
-		provisioned: result.provisioned,
+		pool: result.pool,
 		cleaned: result.cleaned,
 		confirmed: result.confirmed,
 		online: result.online,

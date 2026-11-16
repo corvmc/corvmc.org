@@ -5,13 +5,18 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
 	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
-	import { getAccessRegister, issueAccessForm, returnAccessForm } from '#lib/remote/lock.remote.js';
+	import {
+		getAccessRegister,
+		grantCodeForm,
+		issueAccessForm,
+		returnAccessForm,
+		revokeCodeForm
+	} from '#lib/remote/lock.remote.js';
+	import { toast } from 'svelte-sonner';
 	import { accessHoldingKindLabels, accessHoldingKinds, clubToday } from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
-	import { resolve } from '$app/paths';
 
 	/**
 	 * Who can get into the building without a booking. Keys and alarm codes are
@@ -21,6 +26,8 @@
 	let view = $state<'held' | 'history'>('held');
 	let holderUserId = $state('');
 	let holderPicked = $state('');
+	let grantUserId = $state('');
+	let grantPicked = $state('');
 	const { fields } = issueAccessForm;
 
 	const kindLabels = { ...accessHoldingKindLabels, lock_code: 'Door code' } as const;
@@ -44,6 +51,30 @@
 				active={view}
 				onchange={(key) => (view = key as 'held' | 'history')}
 			/>
+			<Action
+				action={grantCodeForm}
+				label={m.staff_keys_grant_door_code_label()}
+				modalTitle={m.staff_keys_grant_door_code_title()}
+				submitLabel={m.staff_keys_grant_label()}
+				variant="ghost"
+				canSubmit={grantUserId !== ''}
+				onsuccess={(result) => {
+					toast.success(
+						m.staff_keys_door_code_sent_toast({ code: (result as { code: string }).code })
+					);
+					grantUserId = '';
+					grantPicked = '';
+				}}
+			>
+				{#snippet form()}
+					<MemberPicker
+						field={grantCodeForm.fields.holderUserId}
+						label={m.staff_keys_member_label()}
+						bind:value={grantUserId}
+						bind:name={grantPicked}
+					/>
+				{/snippet}
+			</Action>
 			<Action
 				action={issueAccessForm}
 				label={m.staff_keys_record_key_code_label()}
@@ -115,6 +146,7 @@
 					<td>
 						<Badge variant="outline" size="sm">{kindLabels[row.kind]}</Badge>
 						{row.label}
+						{#if row.code}<span class="font-mono">{row.code}</span>{/if}
 					</td>
 					<td>
 						{formatDateShort(row.issuedAt)}
@@ -122,18 +154,32 @@
 								{m.staff_keys_by_text({ issuedByName: row.issuedByName })}
 							</div>{/if}
 					</td>
-					<td class="text-right">
+					<td class="w-px text-right">
 						{#if row.returnedAt}
 							{formatDateShort(row.returnedAt)}
 							{#if row.returnNotes}<div class="text-subtle">{row.returnNotes}</div>{/if}
 						{:else if row.source === 'lock'}
-							<Button
-								href="{resolve('staff/building-access')}#active-codes"
+							{@const revoke = revokeCodeForm.for(row.id)}
+							<Action
+								action={revoke}
 								variant="ghost"
 								size="sm"
+								label={m.staff_keys_revoke_label()}
+								modalTitle={m.staff_keys_revoke_door_code_title()}
+								submitLabel={m.staff_keys_revoke_label()}
+								submitVariant="error"
+								successToast={m.staff_keys_revoked_toast()}
 							>
-								{m.staff_keys_door_access_label()}
-							</Button>
+								{#snippet form()}
+									<input {...revoke.fields.id.as('hidden', row.id)} />
+									<p>{m.staff_keys_code_comes_off_lock_text({ holderName: row.holderName })}</p>
+									<Field
+										field={revoke.fields.reason}
+										type="text"
+										label={m.staff_keys_why_label()}
+									/>
+								{/snippet}
+							</Action>
 						{:else}
 							{@const ret = returnAccessForm.for(row.id)}
 							<Action

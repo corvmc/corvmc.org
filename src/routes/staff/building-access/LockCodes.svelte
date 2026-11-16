@@ -72,7 +72,11 @@
 					c.name,
 					c.tail,
 					c.onLock,
-					`${formatDateShort(c.startsAt)}, ${formatTimeRange(c.startsAt, c.endsAt)}`
+					c.ended
+						? m.staff_reservations_awaiting_removal_text({
+								when: `${formatDateShort(c.startsAt)}, ${formatTimeRange(c.startsAt, c.endsAt)}`
+							})
+						: `${formatDateShort(c.startsAt)}, ${formatTimeRange(c.startsAt, c.endsAt)}`
 				)}
 			{:else}
 				<li class="py-2 text-subtle">{m.staff_reservations_no_codes_text()}</li>
@@ -90,24 +94,6 @@
 					c.tail,
 					c.onLock,
 					c.adopted ? m.staff_reservations_unassigned_text() : undefined
-				)}
-			{:else}
-				<li class="py-2 text-subtle">{m.staff_reservations_no_codes_text()}</li>
-			{/each}
-		</ul>
-
-		<h3 class="mt-3 text-muted text-sm font-medium">
-			{m.staff_reservations_break_glass_codes_title()}
-		</h3>
-		<ul class="divide-y divide-base-200">
-			{#each codes.breakGlass as c (c.id)}
-				{@render codeRow(
-					m.staff_reservations_break_glass_code_text(),
-					c.tail,
-					c.onLock,
-					c.rotatesAt
-						? m.staff_reservations_rotates_text({ date: formatDateShort(c.rotatesAt) })
-						: undefined
 				)}
 			{:else}
 				<li class="py-2 text-subtle">{m.staff_reservations_no_codes_text()}</li>

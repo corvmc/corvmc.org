@@ -22,7 +22,8 @@ import type { LockMemberCode } from '#lib/server/db/schema/reservation.js';
 
 /** The self-test's own user, which is not a member code. */
 const SELF_TEST_NAME = 'CMC Self-Test';
-const FALLBACK_NAME_PREFIX = 'CMC Fallback';
+/** Break-glass codes from before the pool, and pool codes (#2120). */
+const SERVICE_NAME_PREFIXES = ['CMC Fallback', 'CMC Door'];
 
 export interface UnmanagedLockUser {
 	lockAccessId: number;
@@ -34,8 +35,8 @@ export interface UnmanagedLockUser {
 /**
  * Type-0 lock users that no `lockMemberCode` row claims.
  *
- * The app's own service users are filtered out by name — the break-glass code
- * and the self-test are both type 0 and neither is somebody's door code.
+ * The app's own service users are filtered out by name — pool codes and the
+ * self-test are all type 0 and neither is somebody's door code.
  */
 export async function listUnmanagedLockUsers(): Promise<UnmanagedLockUser[]> {
 	const [users, claimed, fallbacks] = await Promise.all([
@@ -52,7 +53,9 @@ export async function listUnmanagedLockUsers(): Promise<UnmanagedLockUser[]> {
 	return users
 		.filter((u) => u.type === 0)
 		.filter((u) => !known.has(String(u.id)))
-		.filter((u) => u.name !== SELF_TEST_NAME && !u.name.startsWith(FALLBACK_NAME_PREFIX))
+		.filter(
+			(u) => u.name !== SELF_TEST_NAME && !SERVICE_NAME_PREFIXES.some((p) => u.name.startsWith(p))
+		)
 		.map((u) => ({ lockAccessId: u.id, label: u.name, synced: u.syncStatus === 1 }));
 }
 
@@ -146,23 +149,6 @@ export async function listMemberCodes(): Promise<
 		.where(isNull(lockMemberCode.revokedAt));
 
 	return rows.map((row) => ({ ...row.code, memberName: row.memberName }));
-}
-
-/**
- * Whether this member already holds a standing code.
- *
- * Provisioning skips them: a member who can already open the door does not need
- * a second code per booking, and every code not issued is one less user on the
- * lock's finite table.
- */
-export async function hasActiveMemberCode(userId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: lockMemberCode.id })
-		.from(lockMemberCode)
-		.where(and(eq(lockMemberCode.userId, userId), isNull(lockMemberCode.revokedAt)))
-		.limit(1);
-
-	return Boolean(row);
 }
 
 /**

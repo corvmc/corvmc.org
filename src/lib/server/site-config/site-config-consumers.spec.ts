@@ -50,6 +50,7 @@ const READERS: Record<string, string> = {
 	'finance.doorPaymentPositionId': 'src/lib/server/task/sourced-tasks.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
+	'venue.checkoutTasks': 'src/lib/server/lock/door-service.ts',
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
 

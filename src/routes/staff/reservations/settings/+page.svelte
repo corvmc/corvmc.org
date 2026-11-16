@@ -375,6 +375,13 @@
 								placeholder="16"
 							/>
 						</div>
+						<FormField
+							field={updateVenueSettings.fields.checkoutTasks}
+							label={m.staff_settings_leaving_checklist_label()}
+							type="textarea"
+							description={m.staff_settings_leaving_checklist_body()}
+							value={venue.checkoutTasks.join('\n')}
+						/>
 					</CardBody>
 				</Card>
 			</Form>

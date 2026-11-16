@@ -59,8 +59,7 @@ describe('door code readers', () => {
 			expect.arrayContaining([
 				'reservations.remote.ts:getReservationDetail',
 				'reservations.remote.ts:getBandReservationDetail',
-				'reservations.remote.ts:getReservations',
-				'lock.remote.ts:getLockHealth'
+				'reservations.remote.ts:getReservations'
 			])
 		);
 	});

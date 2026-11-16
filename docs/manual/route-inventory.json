@@ -140,6 +140,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/door",
+		"panel": "public"
+	},
+	{
 		"route": "/events",
 		"panel": "public"
 	},
@@ -429,6 +433,10 @@
 	},
 	{
 		"route": "/staff/building-access",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/building-access/door-poster",
 		"panel": "staff"
 	},
 	{

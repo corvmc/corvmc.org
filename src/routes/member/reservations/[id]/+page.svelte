@@ -1,16 +1,14 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatDollars } from '#lib/utils/format.js';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '#lib/remote/reservations.remote.js';
-	import { resolve } from '$app/paths';
+	import DoorCheckIn from '#lib/components/reservations/DoorCheckIn.svelte';
 	import { EntityIdentity, EntityChip } from '#lib/components/ui/entity/index.js';
 	import {
 		CancelReservationAction,
@@ -67,47 +65,11 @@
 	{/if}
 
 	{#if res.status === 'confirmed'}
-		<!-- A card only when there is a code to frame. Four of the five branches
-		     were a single paragraph inside an `InfoCard` titled "Door Code",
-		     which is a box around one sentence (#1061). -->
+		<!-- Held for a fee owed (#2874); otherwise the door page opens it (#2120). -->
 		{#if res.codeWithheld}
 			<DoorCodeHeld dueOn={data.paymentDueOn} />
-		{:else if res.lockCode && res.lockSyncedAt}
-			<InfoCard title={m.member_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-muted">
-					{m.member_reservations_id_enter_code_door_keypad_get_text()}
-				</p>
-			</InfoCard>
-		{:else if data.fallbackCode}
-			<!-- Their own code has not reached the lock, and they are due in now.
-			     The break-glass code was synced long ago, so it opens the door
-			     even while the lock is offline. -->
-			<InfoCard title={m.member_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
-				<p class="text-muted">
-					{m.member_reservations_id_we_couldn_t_confirm_usual_text()}
-				</p>
-			</InfoCard>
-		{:else if data.inAccessWindow}
-			<!-- Their session is running and nothing here opens the door: no
-			     break-glass code is confirmed on the lock right now, which happens
-			     mid-rotation. Standing outside is the failure mode. -->
-			<Alert type="error">
-				<ParaglideMessage
-					message={m.member_reservations_id_code_hasn_t_reached_door_body}
-					inputs={{}}
-					>{#snippet a({ children })}<a class="link" href={resolve('contact')}
-							>{@render children?.()}</a
-						>{/snippet}</ParaglideMessage
-				>
-			</Alert>
-		{:else if res.lockCode}
-			<p class="text-muted">
-				{m.member_reservations_id_door_code_issued_but_door_text()}
-			</p>
 		{:else}
-			<p class="text-muted">{m.member_reservations_id_door_code_will_appear_here_text()}</p>
+			<DoorCheckIn now={data.inAccessWindow} />
 		{/if}
 	{/if}
 

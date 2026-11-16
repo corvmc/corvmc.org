@@ -1,6 +1,6 @@
 import { getJson, putJson } from '#lib/server/kv.js';
 import { DomainError } from '#lib/server/domain-error.js';
-import { ORIENTATION_DEFAULT_TASKS } from '#lib/config.js';
+import { DOOR_CHECKOUT_DEFAULT_TASKS, ORIENTATION_DEFAULT_TASKS } from '#lib/config.js';
 
 /** The caller asked for a config key that is not in the registry. */
 export class UnknownSiteConfigKeyError extends DomainError {
@@ -97,6 +97,8 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// correct is one that will quietly go wrong the first time the console does.
 	// Zero disables the check rather than failing every rider.
 	'venue.consoleChannels': 16,
+	// What `/door` asks a member to check before locking up (#2120), one per line.
+	'venue.checkoutTasks': DOOR_CHECKOUT_DEFAULT_TASKS.join('\n'),
 
 	// Days an account must exist before a member-wide ballot opens for it to be
 	// on the roll (#1451). Membership is free, so this is what stops a vote

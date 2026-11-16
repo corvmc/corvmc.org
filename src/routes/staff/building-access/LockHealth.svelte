@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	// Whether the door is actually reachable, and the break-glass code.
+	// Whether the door is actually reachable, and the last daily run.
 	//
 	// Its own component so the settings page keeps one load-bearing query: this
 	// one talks to U-tec over the network and nothing above the fold needs it,
@@ -10,29 +10,13 @@
 	// this says whether a door code will actually work.
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '#lib/remote/lock.remote.js';
+	import { getLockHealth, runLockJobNow } from '#lib/remote/lock.remote.js';
 	import { timeAgo } from '#lib/utils/format.js';
 
 	const health = $derived(await getLockHealth());
 
-	let rotating = $state(false);
-	let rotateResult = $state<{ ok: boolean; error?: string } | null>(null);
-
 	let running = $state(false);
 	let runError = $state<string | null>(null);
-
-	async function handleRotate() {
-		rotating = true;
-		rotateResult = null;
-		try {
-			rotateResult = await rotateFallbackCode();
-			await getLockHealth().refresh();
-		} catch (err) {
-			rotateResult = { ok: false, error: (err as Error).message };
-		} finally {
-			rotating = false;
-		}
-	}
 
 	// Safe to press twice: every stage of the job is filtered on work still
 	// outstanding, so a repeat run reports zeros rather than issuing a code again.
@@ -64,6 +48,10 @@
 					value: health.batteryLevel ?? '?'
 				})}
 			</span>
+			{#if health.passageMode}
+				<Badge variant="warning">{m.staff_settings_lock_health_passage_mode_label()}</Badge>
+				<span class="text-subtle">{m.staff_settings_lock_health_passage_mode_text()}</span>
+			{/if}
 		{:else}
 			<Badge variant="warning">{m.staff_settings_lock_health_offline_label()}</Badge>
 			<span class="text-subtle">
@@ -89,13 +77,17 @@
 				<Badge variant="success">{m.staff_settings_lock_health_clean_label()}</Badge>
 			{/if}
 			<span class="text-subtle">
-				{m.staff_settings_lock_health_provisioned_cleaned_confirmed_text({
+				{m.staff_settings_lock_health_cleaned_confirmed_text({
 					timeAgo: timeAgo(new Date(health.lastRun.at)),
 					triggeredBy: health.lastRun.triggeredBy ?? m.staff_settings_lock_health_scheduled_text(),
-					provisioned: health.lastRun.provisioned,
 					cleaned: health.lastRun.cleaned,
 					confirmed: health.lastRun.confirmed
 				})}
+				{#if health.lastRun.pool}
+					· {m.staff_settings_lock_health_codes_ready_text({
+						count: health.lastRun.pool.available
+					})}
+				{/if}
 			</span>
 		{:else}
 			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was_text()}</span>
@@ -117,28 +109,5 @@
 
 	{#if runError}
 		<p class="mt-1 text-error">{runError}</p>
-	{/if}
-
-	{#if health.ok}
-		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="text-subtle">{m.staff_settings_lock_health_break_glass_code_text()}</span>
-			{#if health.fallbackCode}
-				<span class="font-mono font-bold tracking-[0.2em]">{health.fallbackCode}</span>
-				<Button type="button" variant="ghost" size="sm" onclick={handleRotate} disabled={rotating}>
-					{m.staff_settings_lock_health_rotate_label()}
-				</Button>
-			{:else}
-				<span class="text-subtle">
-					{m.staff_settings_lock_health_none_confirmed_lock_yet_one_text()}
-				</span>
-			{/if}
-		</div>
-		{#if rotateResult}
-			<p class="mt-1 text-subtle">
-				{rotateResult.ok
-					? m.staff_settings_lock_health_replacement_its_way_lock_current_text()
-					: rotateResult.error}
-			</p>
-		{/if}
 	{/if}
 </div>
