@@ -46,13 +46,14 @@ bookings up to 14 days ahead.
 **New-member notice (#2565).** A member's own booking (`CLEARANCE_BOOKER`, `bookerType: 'user'`) needs
 `reservation.newMemberMinAdvanceMinutes` of notice (default 4320, 3 days) while they hold no
 current **Practice space** clearance, so someone can be found to show them around. With the
-clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
+clearance, or while no orientation role (`volunteer.orientationRoleId`) is set and so nobody runs
+a tour (#2752), it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
 `validateBooking()` (given the member's `userId` by `create()` and `createWaitlisted()`) and the
 picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it, so the picker
 never offers a start the server refuses. The picker says why in one line. Above the picker, the member
-reservations page lists the first-booking rules to a member without the clearance: the notice
-and, while an orientation role is set, the tour length and that it is free (`firstBooking` on
-`getMemberReservationsPage`, #2747); a cleared member sees nothing. Band, teaching and
+reservations page lists the first-booking rules to a member without the clearance while an
+orientation role is set: the notice, and the tour length and that it is free (`firstBooking` on
+`getMemberReservationsPage`, #2747); a cleared member, or anyone while no role is set, sees nothing. Band, teaching and
 event bookings keep the room minimum, and `staffCreate()` checks neither. Teaching bookings need
 neither the clearance nor the tour, and raise no orientation shift (#2808): the notice, the tour,
 the orientation listener and the first-visit and orientation reminders all key on
