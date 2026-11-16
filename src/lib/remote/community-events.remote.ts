@@ -30,9 +30,10 @@ import {
 	approveSubmission,
 	rejectSubmission
 } from '#lib/server/event/community-event-service.js';
-import { getById, getEventLineup } from '#lib/server/event/event-service.js';
+import { getById, getEventLineup, listBandEvents } from '#lib/server/event/event-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
-import { searchBandsByName } from '#lib/server/band/band-service.js';
+import { listForUser, searchBandsByName } from '#lib/server/band/band-service.js';
+import { splitUpcoming } from '#lib/utils/upcoming.js';
 import {
 	communityEventSchema,
 	eventVisibilities,
@@ -61,10 +62,11 @@ import { getStaffLayout } from './layout.remote';
 /** The caller's own listings, drafts included. Never anybody else's. */
 export const getMyListings = query(async () => {
 	const user = requireUser();
-	const [listings, rejected, standing] = await Promise.all([
+	const [listings, rejected, standing, bandEvents] = await Promise.all([
 		listCommunityEventsForUser(user.id),
 		listRejectedForUser(user.id),
-		getStanding(user.id, 'community_event')
+		getStanding(user.id, 'community_event'),
+		upcomingBandEvents(user.id)
 	]);
 
 	const shape = (e: Awaited<ReturnType<typeof listCommunityEventsForUser>>[number]) => ({
@@ -80,9 +82,37 @@ export const getMyListings = query(async () => {
 	return {
 		listings: listings.map(shape),
 		rejected: rejected.map(shape),
+		bandEvents,
 		standing
 	};
 });
+
+/**
+ * The upcoming events of every band the member is active in, each marked with its band (#3132).
+ * The same rows the band's own events page lists; an event on two of their bands' bills is
+ * listed once, under the first band by name.
+ */
+async function upcomingBandEvents(userId: string) {
+	const bands = (await listForUser(userId, ['band'])).filter((b) => b.status === 'active');
+	const perBand = await Promise.all(
+		bands.map(async (band) => ({ band, events: await listBandEvents(band.id) }))
+	);
+	const seen = new Set<string>();
+	const rows = perBand.flatMap(({ band, events }) =>
+		events
+			.filter((e) => !seen.has(e.id) && seen.add(e.id))
+			.map((e) => ({
+				id: e.id,
+				title: e.title,
+				status: e.status,
+				startsAt: e.startsAt,
+				endsAt: e.endsAt,
+				location: e.location,
+				band: { name: band.name, slug: band.slug }
+			}))
+	);
+	return splitUpcoming(rows, new Date()).upcoming;
+}
 
 /** One of the caller's listings, for the manage page. */
 export const getMyListing = query(z.string(), async (eventId) => {

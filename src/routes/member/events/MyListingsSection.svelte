@@ -18,13 +18,33 @@
 	 * here leaves every one of those refreshes working untouched and the page holding one query.
 	 */
 	const mine = $derived(await getMyListings());
+
+	type Row = {
+		id: string;
+		title: string;
+		status: string;
+		startsAt: Date;
+		location: string | null;
+		band?: { name: string; slug: string };
+	};
+	// The member's own listings and their bands' events as one list by date (#3132);
+	// returned listings still lead, since they wait on the member.
+	const rows: Row[] = $derived([
+		...mine.rejected,
+		...[...mine.listings, ...mine.bandEvents].toSorted(
+			(a, b) => a.startsAt.getTime() - b.startsAt.getTime()
+		)
+	]);
+
+	function hrefOf(row: Row) {
+		return row.band
+			? resolve('/band/[slug]/events/[eventId]', { slug: row.band.slug, eventId: row.id })
+			: resolve('/member/events/[id]/manage', { id: row.id });
+	}
 </script>
 
 <section>
-	<SectionLabel
-		label={m.member_events_my_listings_section_label()}
-		count={mine.listings.length + mine.rejected.length}
-	/>
+	<SectionLabel label={m.member_events_my_listings_section_label()} count={rows.length} />
 
 	{#if mine.standing.status !== 'none'}
 		<Alert type="info" class="mb-4">
@@ -33,19 +53,21 @@
 		</Alert>
 	{/if}
 
-	{#if mine.listings.length === 0 && mine.rejected.length === 0}
+	{#if rows.length === 0}
 		<EmptyState
 			title={m.member_events_my_listings_section_title()}
 			description={m.member_events_my_listings_section_description_body()}
 		/>
 	{:else}
 		<ul class="mlist">
-			<!-- Returned listings lead: they're the ones waiting on the member. -->
-			{#each [...mine.rejected, ...mine.listings] as row (row.id)}
+			{#each rows as row (row.id)}
 				<li>
-					<a href={resolve(`member/events/${row.id}/manage`)} class="mlist__row">
+					<a href={hrefOf(row)} class="mlist__row" data-band-event={row.band ? '' : undefined}>
 						<StatusBadge status={row.status} />
 						<span class="mlist__title">{row.title}</span>
+						{#if row.band}
+							<span class="badge badge-sm">{row.band.name}</span>
+						{/if}
 						<span class="mlist__meta">
 							{formatDateShort(row.startsAt)}{row.location ? ` \u00b7 ${row.location}` : ''}
 						</span>

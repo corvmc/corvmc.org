@@ -310,7 +310,12 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		band: { ...band, avatarUrl: resolveImageUrl(band.avatarKey) },
 		userRole: role ?? 'staff',
 		isStaff,
-		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
+		userBands: activeOnly(userBands).map((b) => ({
+			id: b.id,
+			name: b.name,
+			slug: b.slug,
+			role: b.role
+		})),
 		user: { id: locals.user.id, name: locals.user.name, email: locals.user.email },
 		// See `appChrome`.
 		chrome,

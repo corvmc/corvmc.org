@@ -174,16 +174,18 @@ function buildGigRange(date: string, startTime: string, endTime: string | undefi
 }
 
 /**
- * Only what the row needs (#1822's rule). Everything else — end and doors
- * times, location, the bill, poster, tickets — is `updateBandEventForm`'s, on
- * the event's own page, which this hands off to.
+ * Only what the row needs (#1822's rule), and the venue the member's create form
+ * also asks. Everything else — end and doors times, the bill, poster, tickets —
+ * is `updateBandEventForm`'s, on the event's own page, which this hands off to.
  */
 export const createBandEventForm = form(
 	z.object({
 		slug: z.string().min(1),
 		title: z.string().min(1, 'Title is required').max(200),
 		eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
-		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time')
+		eventStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time'),
+		// Asked here as the member's own create form asks it, so one form serves both (#3132).
+		location: z.string().trim().min(1, 'Venue is required').max(500)
 	}),
 	async (data, issue) => {
 		const { user, group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
@@ -202,7 +204,8 @@ export const createBandEventForm = form(
 				createdByUserId: user.id,
 				title: data.title,
 				startsAt,
-				endsAt: null
+				endsAt: null,
+				location: data.location
 			});
 		} catch (err) {
 			mapDomainError(err);

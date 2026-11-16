@@ -59,14 +59,18 @@ vi.mock('#lib/server/moderation/standing-service.js', () => standingSvc);
 
 const getById = vi.fn(async () => null as unknown);
 const getEventLineup = vi.fn(async () => []);
+const listBandEvents = vi.fn(async (_bandId: string) => [] as unknown[]);
 vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (...a: unknown[]) => getById(...(a as [])),
-	getEventLineup: (...a: unknown[]) => getEventLineup(...(a as []))
+	getEventLineup: (...a: unknown[]) => getEventLineup(...(a as [])),
+	listBandEvents: (...a: unknown[]) => listBandEvents(...(a as [string]))
 }));
 
 const searchBandsByName = vi.fn(async () => []);
+const listForUser = vi.fn(async () => [] as unknown[]);
 vi.mock('#lib/server/band/band-service.js', () => ({
-	searchBandsByName: (...a: unknown[]) => searchBandsByName(...(a as []))
+	searchBandsByName: (...a: unknown[]) => searchBandsByName(...(a as [])),
+	listForUser: (...a: unknown[]) => listForUser(...(a as []))
 }));
 
 vi.mock('#lib/server/errors.js', () => ({
@@ -247,5 +251,50 @@ describe('ownership', () => {
 
 		await expect(remote.findDuplicateListing('evt-1')).resolves.toBeNull();
 		expect(svc.checkForDuplicate).not.toHaveBeenCalled();
+	});
+});
+
+// #3132: a member's band events sit among their own on /member/events.
+describe('getMyListings, band events', () => {
+	const DAY = 86_400_000;
+	const event = (id: string, offsetDays: number) => ({
+		id,
+		title: `Show ${id}`,
+		status: 'published',
+		startsAt: new Date(Date.now() + offsetDays * DAY),
+		endsAt: null,
+		location: 'The Whiteside'
+	});
+
+	beforeEach(() => {
+		currentUser = { id: 'member-1', name: 'Ada', email: 'ada@example.com' };
+		listForUser.mockResolvedValue([
+			{ id: 'band-a', name: 'Alpha', slug: 'alpha', status: 'active' },
+			{ id: 'band-b', name: 'Beta', slug: 'beta', status: 'active' },
+			{ id: 'band-c', name: 'Gamma', slug: 'gamma', status: 'invited' }
+		]);
+		listBandEvents.mockImplementation(async (bandId: string) =>
+			bandId === 'band-a'
+				? [event('shared', 3), event('past', -3)]
+				: bandId === 'band-b'
+					? [event('shared', 3), event('beta-only', 1)]
+					: [event('invited-only', 2)]
+		);
+	});
+
+	it('lists the upcoming events of active bands once each, soonest first, with their band', async () => {
+		const { bandEvents } = await remote.getMyListings();
+
+		expect(bandEvents.map((e: { id: string }) => e.id)).toEqual(['beta-only', 'shared']);
+		expect(bandEvents.map((e: { band: { slug: string } }) => e.band.slug)).toEqual([
+			'beta',
+			'alpha'
+		]);
+	});
+
+	it('reads the bands of the session user only', async () => {
+		await remote.getMyListings();
+		expect(listForUser).toHaveBeenCalledWith('member-1', ['band']);
+		expect(listBandEvents).not.toHaveBeenCalledWith('band-c');
 	});
 });
