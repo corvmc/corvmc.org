@@ -21,8 +21,7 @@
 	import { createContractorForm } from '#lib/remote/contractors.remote.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { withQuery } from '#lib/utils/with-query.js';
-	import { contractorTradeLabels, contractorTrades, hasCapability } from '#lib/config.js';
-	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import { contractorTradeLabels, contractorTrades } from '#lib/config.js';
 	import {
 		contactListSorts,
 		contactListTypes,
@@ -87,7 +86,6 @@
 		})
 	);
 	const only = $derived(roles.length === 1 ? roles[0] : null);
-	const caps = $derived((await getStaffLayout()).capabilities);
 	const href = (row: { type: ContactListType; id: string }) =>
 		row.type === 'person'
 			? resolve('/staff/contacts/people/[id]', { id: row.id })
@@ -152,7 +150,7 @@
 			{m.staff_contacts_duplicates_label()}
 		</Button>
 	{/if}
-	{#if hasCapability(caps, 'settings.read')}
+	{#if data.canSettings}
 		<Button variant="ghost" href={resolve('staff/contacts/settings')}>
 			{m.staff_contacts_settings_label()}
 		</Button>
