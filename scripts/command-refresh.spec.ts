@@ -26,8 +26,6 @@ const REFRESHES_NOTHING = new Set([
 	'event-poster.remote.ts:printEventPoster',
 	'inbox.remote.ts:testMetaConnection',
 	'lock.remote.ts:runLockJobNow',
-	// Reports what the page showed offline; nothing a page holds changes.
-	'back-door.remote.ts:reportOfflineReveal',
 	// Create a record no query holds yet, then navigate to it.
 	'marketing.remote.ts:createDraft',
 	'marketing.remote.ts:createAndSend',

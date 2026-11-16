@@ -21,6 +21,17 @@ vi.mock('#lib/server/notification/index.js', () => ({
 }));
 vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
+// Stored settings; anything unset reads its registered default.
+const settings = new Map<string, number>();
+vi.mock('#lib/server/site-config/site-config-service.js', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('#lib/server/site-config/site-config-service.js')>();
+	return {
+		...actual,
+		config: async (key: string) => settings.get(key) ?? actual.DEFAULTS[key]
+	};
+});
+
 const mockAddLockUser = vi.fn();
 const mockGetLockUser = vi.fn();
 const mockListLockUsers = vi.fn();
@@ -35,9 +46,10 @@ vi.mock('./ultraloc-client', () => ({
 	LOCK_GRACE_MINUTES: 30
 }));
 
-const { claimPoolCode, revealPoolCode, maintainCodePool, listPoolCodes, poolDepth } =
+const { claimPoolCode, maintainCodePool, listPoolCodes, poolDepth, poolSize } =
 	await import('./fallback-code-service');
-const { DOOR_CODE_POOL_SIZE } = await import('#lib/config.js');
+const { DEFAULTS } = await import('#lib/server/site-config/site-config-service.js');
+const POOL_SIZE = Number(DEFAULTS['lock.poolSize']);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -100,6 +112,7 @@ beforeEach(() => {
 	sqlite.exec('delete from lock_fallback_code');
 	sqlite.exec('delete from reservation');
 	kv.clear();
+	settings.clear();
 	seq = 0;
 	let nextId = 9000;
 	mockAddLockUser.mockImplementation(async () => ++nextId);
@@ -126,6 +139,18 @@ describe('claimPoolCode', () => {
 		expect(first?.id).toBe(oldest);
 		expect(again?.id).toBe(oldest);
 		expect(row(oldest).claimed_by_reservation_id).toBe('r-1');
+	});
+
+	// The member is sent it, so a claimed code is never handed out again.
+	it('counts the claim as the reveal', async () => {
+		booking('r-1', hours(0), hours(2));
+		const id = code();
+
+		await claimPoolCode('r-1', NOW);
+		await claimPoolCode('r-1', new Date(NOW.getTime() + 60_000));
+
+		expect(row(id).revealed_at).toBe(s(NOW));
+		expect(await poolDepth()).toBe(0);
 	});
 
 	it('gives another booking a different code', async () => {
@@ -166,31 +191,18 @@ describe('claimPoolCode', () => {
 	});
 });
 
-describe('revealPoolCode', () => {
-	it('stamps the reveal once', async () => {
-		booking('r-1', hours(0), hours(2));
-		const id = code();
-
-		await revealPoolCode('r-1', NOW);
-		const later = new Date(NOW.getTime() + 60_000);
-		await revealPoolCode('r-1', later);
-
-		expect(row(id).revealed_at).toBe(s(NOW));
-	});
-});
-
 // ---------------------------------------------------------------------------
 // The job stage
 // ---------------------------------------------------------------------------
 
 /** Fill the pool to depth so a test's refill mints nothing it did not ask for. */
-function fillPool(n = DOOR_CODE_POOL_SIZE) {
+function fillPool(n = POOL_SIZE) {
 	for (let i = 0; i < n; i++) code();
 }
 
 describe('maintainCodePool', () => {
 	it('confirms a minted code once the lock reports it synced', async () => {
-		fillPool(DOOR_CODE_POOL_SIZE - 1);
+		fillPool(POOL_SIZE - 1);
 		const pending = code({ synced: false });
 		mockGetLockUser.mockResolvedValue({ id: 1, syncStatus: 1 });
 
@@ -201,7 +213,7 @@ describe('maintainCodePool', () => {
 	});
 
 	it('drops a minted code whose lock id was never recovered, and mints a replacement', async () => {
-		fillPool(DOOR_CODE_POOL_SIZE - 1);
+		fillPool(POOL_SIZE - 1);
 		const orphan = code({ synced: false, lockAccessId: null });
 
 		const result = await maintainCodePool([], NOW);
@@ -210,28 +222,29 @@ describe('maintainCodePool', () => {
 		expect(result.minted).toBe(1);
 	});
 
-	it('returns an unrevealed claim to the pool once the booking is over', async () => {
+	it('keeps a live booking’s code on the lock, and never returns it to the pool', async () => {
 		fillPool();
-		booking('over', hours(-4), hours(-2));
 		booking('live', hours(-1), hours(1));
-		const overCode = code({ claimedBy: 'over' });
-		const liveCode = code({ claimedBy: 'live' });
-
-		const result = await maintainCodePool([], NOW);
-
-		expect(result.released).toBe(1);
-		expect(row(overCode).claimed_by_reservation_id).toBeNull();
-		expect(row(liveCode).claimed_by_reservation_id).toBe('live');
-	});
-
-	it('releases the claim of a cancelled booking straight away', async () => {
-		fillPool();
-		booking('gone', hours(2), hours(4), 'cancelled');
-		const id = code({ claimedBy: 'gone' });
+		const id = code({ claimedBy: 'live', revealed: true });
 
 		await maintainCodePool([], NOW);
 
-		expect(row(id).claimed_by_reservation_id).toBeNull();
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(row(id).claimed_by_reservation_id).toBe('live');
+		expect(row(id).removed_at).toBeNull();
+	});
+
+	it('burns the code of a booking cancelled after its notice, before it starts', async () => {
+		fillPool();
+		booking('gone', hours(20), hours(22), 'cancelled');
+		const id = code({ claimedBy: 'gone', revealed: true });
+		const lockId = Number(row(id).lock_access_id);
+		mockListLockUsers.mockResolvedValue([{ id: lockId, syncStatus: 1 }]);
+
+		await maintainCodePool([], NOW);
+
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(lockId);
+		expect(row(id).claimed_by_reservation_id).toBe('gone');
 	});
 
 	it('keeps a revealed code through the grace after the booking ends', async () => {
@@ -313,14 +326,28 @@ describe('maintainCodePool', () => {
 
 		const result = await maintainCodePool([], NOW);
 
-		expect(result.minted).toBe(DOOR_CODE_POOL_SIZE - 2);
+		expect(result.minted).toBe(POOL_SIZE - 2);
 		expect(mockAddLockUser).toHaveBeenCalledWith(
 			expect.objectContaining({ type: 0, password: 42_424_242 })
 		);
 		const minted = sqlite
 			.prepare('select count(*) as n from lock_fallback_code where pooled = 1')
 			.get() as { n: number };
-		expect(minted.n).toBe(DOOR_CODE_POOL_SIZE);
+		expect(minted.n).toBe(POOL_SIZE);
+	});
+
+	it('mints to the pool size setting', async () => {
+		settings.set('lock.poolSize', 3);
+		code();
+
+		const result = await maintainCodePool([], NOW);
+
+		expect(await poolSize()).toBe(3);
+		expect(result.minted).toBe(2);
+	});
+
+	it('defaults to a pool of 20', async () => {
+		expect(await poolSize()).toBe(20);
 	});
 
 	it('stops minting at the first refusal and records it', async () => {
@@ -341,13 +368,12 @@ describe('maintainCodePool', () => {
 
 		expect(result).toEqual({
 			confirmed: 0,
-			released: 0,
 			burned: 0,
 			awaitingRemoval: 0,
 			minted: 0,
-			available: DOOR_CODE_POOL_SIZE
+			available: POOL_SIZE
 		});
-		expect(await poolDepth()).toBe(DOOR_CODE_POOL_SIZE);
+		expect(await poolDepth()).toBe(POOL_SIZE);
 	});
 });
 
@@ -357,7 +383,7 @@ describe('listPoolCodes', () => {
 		booking('live', hours(-1), hours(1));
 		const ready = code();
 		const pending = code({ synced: false });
-		const claimed = code({ claimedBy: 'live' });
+		const claimed = code({ claimedBy: 'live', revealed: true });
 		const awaiting = code({ claimedBy: 'over', revealed: true });
 		const legacy = code({ pooled: false });
 

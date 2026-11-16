@@ -122,6 +122,10 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'integration.utec.clientSecret': '',
 	'integration.utec.deviceId': '',
 	'integration.utec.refreshToken': '',
+	// Unclaimed door codes the daily lock job keeps on the lock (#2120). Each
+	// booking claims one when its door-code notice goes out, and replacing one
+	// needs the lock online, so this covers a day's bookings during an outage.
+	'lock.poolSize': 20,
 
 	// Flags gate the member, band and public surfaces only — the staff panel
 	// always shows every feature — so they all start off.

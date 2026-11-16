@@ -9,6 +9,7 @@
 	import {
 		getIntegrationSettings,
 		updateIntegrationSettings,
+		updateLockPoolSize,
 		testUtecConnection,
 		runLockSelfTest,
 		revokeLockTest
@@ -110,6 +111,23 @@
 		{/snippet}
 	</svelte:boundary>
 {/if}
+
+<Form remote={updateLockPoolSize} class="mt-3 flex flex-wrap items-end gap-2">
+	<FormField
+		field={updateLockPoolSize.fields.poolSize}
+		submitAs="text"
+		type="number"
+		label={m.staff_settings_lock_pool_size_label()}
+		description={m.staff_settings_lock_pool_size_body()}
+		value={String(integration.poolSize)}
+	/>
+	<SubmitButton
+		label={m.staff_settings_save_label()}
+		successLabel={m.staff_settings_saved_label()}
+		errorLabel={m.staff_settings_error_label()}
+		size="sm"
+	/>
+</Form>
 
 <div class="mt-3 flex flex-wrap gap-2">
 	{#if connected}

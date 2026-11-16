@@ -1,7 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { lockMemberCode, lockFallbackCode } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
 	addLockUser,
 	getLockUser,
@@ -149,6 +149,20 @@ export async function listMemberCodes(): Promise<
 		.where(isNull(lockMemberCode.revokedAt));
 
 	return rows.map((row) => ({ ...row.code, memberName: row.memberName }));
+}
+
+/**
+ * Which of these members hold a live standing code. Their bookings claim no
+ * pool code: a member who can already open the door does not need a second
+ * one, and the pool is finite.
+ */
+export async function membersWithStandingCodes(userIds: string[]): Promise<Set<string>> {
+	if (userIds.length === 0) return new Set();
+	const rows = await db
+		.selectDistinct({ userId: lockMemberCode.userId })
+		.from(lockMemberCode)
+		.where(and(inArray(lockMemberCode.userId, userIds), isNull(lockMemberCode.revokedAt)));
+	return new Set(rows.map((r) => r.userId).filter((id): id is string => id !== null));
 }
 
 /**

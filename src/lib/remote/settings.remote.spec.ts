@@ -51,7 +51,8 @@ const updateSiteConfig = vi.fn(async () => undefined);
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
-	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
+	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as [])),
+	config: async () => 20
 }));
 // The audit row is `save-settings.spec.ts`'s; here only the write is asserted.
 vi.mock('#lib/server/site-config/save-settings.js', () => ({
@@ -254,6 +255,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
 	},
 	{ name: 'updateVenueSettings', cap: 'settings.update', args: [{ consoleChannels: 16 }] },
+	{ name: 'updateLockPoolSize', cap: 'settings.update', args: [{ poolSize: '20' }] },
 	{ name: 'updateFeeGateSettings', cap: 'settings.update', args: [{ feeGateFrom: '2026-12-01' }] },
 	{
 		name: 'updateIntegrationSettings',
@@ -443,7 +445,8 @@ describe('settings.remote staff guards', () => {
 			deviceId: 'device-1',
 			// Presence alone: there is no refresh-token field, and "Connected" is
 			// the only thing the page does with it.
-			connected: true
+			connected: true,
+			poolSize: 20
 		});
 	});
 

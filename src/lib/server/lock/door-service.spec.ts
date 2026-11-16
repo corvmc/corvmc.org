@@ -35,7 +35,6 @@ const {
 	getDoorState,
 	openDoor,
 	checkOut,
-	recordOfflineReveal,
 	doorRecordFor,
 	readOutCodeFor,
 	DoorBookingClosedError,
@@ -68,14 +67,20 @@ function booking(
 		);
 }
 
-function poolCode(id: string) {
+/** A pool code; `claimedBy` is a booking whose door-code notice already went out. */
+function poolCode(id: string, claimedBy: string | null = null) {
+	const at = claimedBy ? s(minutes(-600)) : null;
 	sqlite
 		.prepare(
-			`insert into lock_fallback_code (id, code, lock_access_id, synced_at, pooled)
-			 values (?, ?, ?, ?, 1)`
+			`insert into lock_fallback_code
+			 (id, code, lock_access_id, synced_at, pooled, claimed_by_reservation_id, claimed_at, revealed_at)
+			 values (?, ?, ?, ?, 1, ?, ?, ?)`
 		)
-		.run(id, `1234567${id.slice(-1)}`, `70${id.slice(-1)}`, s(minutes(-600)));
+		.run(id, `1234567${id.slice(-1)}`, `70${id.slice(-1)}`, s(minutes(-600)), claimedBy, at, at);
 }
+
+const claimedCount = () =>
+	sqlite.prepare('select count(*) n from lock_fallback_code where claimed_at is not null').get();
 
 const attempts = () =>
 	sqlite
@@ -133,27 +138,26 @@ describe('findOpenBooking', () => {
 });
 
 describe('getDoorState', () => {
-	it('claims one code on load and sends it with the page, unrevealed', async () => {
+	it('sends the code the booking already holds with the page', async () => {
 		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
+		poolCode('c-1', 'r-1');
 		poolCode('c-2');
 
-		const first = await getDoorState('booker', NOW);
-		const again = await getDoorState('booker', NOW);
+		const state = await getDoorState('booker', NOW);
 
-		expect(first.code).toBe(again.code);
-		expect(first.codeRevealed).toBe(false);
-		expect(first.checkoutTasks).toEqual(['Lights off', 'Amps off']);
-		expect(
-			sqlite.prepare('select count(*) n from lock_fallback_code where claimed_at is not null').get()
-		).toEqual({ n: 1 });
+		expect(state.code).toBe(codeRow('c-1').code);
+		expect(state.checkoutTasks).toEqual(['Lights off', 'Amps off']);
+		expect(claimedCount()).toEqual({ n: 1 });
 	});
 
-	it('says the pool is empty rather than failing', async () => {
+	it('claims no code for a booking that holds none', async () => {
 		booking('r-1', minutes(-10), minutes(60));
+		poolCode('c-1');
+
 		const state = await getDoorState('booker', NOW);
+
 		expect(state.code).toBeNull();
-		expect(state.poolEmpty).toBe(true);
+		expect(claimedCount()).toEqual({ n: 0 });
 	});
 
 	it('names when the next booking opens when none is open yet', async () => {
@@ -181,18 +185,28 @@ describe('openDoor', () => {
 		]);
 	});
 
-	it('reveals the booking’s code when the unlock does not confirm', async () => {
+	it('shows the booking’s code when the unlock does not confirm', async () => {
 		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
+		poolCode('c-1', 'r-1');
 		mockOperateDoor.mockResolvedValue({ outcome: 'lock_offline', lockState: null });
 
 		const result = await openDoor('booker', 'r-1', { now: NOW });
 
 		expect(result.code).toBe(codeRow('c-1').code);
-		expect(codeRow('c-1').revealed_at).toBe(s(NOW));
 		expect(attempts()).toEqual([
 			{ kind: 'check_in', outcome: 'lock_offline', code_revealed: 1, user_id: 'booker' }
 		]);
+	});
+
+	it('claims nothing when the unlock fails and the booking holds no code', async () => {
+		booking('r-1', minutes(-10), minutes(60));
+		poolCode('c-1');
+		mockOperateDoor.mockResolvedValue({ outcome: 'timed_out', lockState: 'Locked' });
+
+		const result = await openDoor('booker', 'r-1', { now: NOW });
+
+		expect(result.code).toBeNull();
+		expect(claimedCount()).toEqual({ n: 0 });
 	});
 
 	it('refuses a booking that is not this member’s open one, before touching the lock', async () => {
@@ -206,63 +220,28 @@ describe('openDoor', () => {
 });
 
 describe('checkOut', () => {
-	it('locks, records it, returns an unrevealed code to the pool, and closes the page', async () => {
+	it('locks, records it, sends the booking’s code its delete, and closes the page', async () => {
 		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
-		await getDoorState('booker', NOW);
+		poolCode('c-1', 'r-1');
 		mockOperateDoor.mockResolvedValue({ outcome: 'locked', lockState: 'Locked' });
 
 		const result = await checkOut('booker', 'r-1', { now: NOW });
 
 		expect(result.outcome).toBe('locked');
 		expect(mockOperateDoor).toHaveBeenCalledWith('lock', expect.anything());
-		expect(codeRow('c-1').claimed_by_reservation_id).toBeNull();
-		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
+		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(701);
+		// Removed only once the daily job sees it gone from the lock.
+		expect(codeRow('c-1').removed_at).toBeNull();
 		await expect(openDoor('booker', 'r-1', { now: NOW })).rejects.toBeInstanceOf(
 			DoorCheckedOutError
 		);
-	});
-
-	it('sends a revealed code its delete', async () => {
-		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
-		mockOperateDoor.mockResolvedValueOnce({ outcome: 'timed_out', lockState: 'Locked' });
-		await openDoor('booker', 'r-1', { now: NOW });
-
-		await checkOut('booker', 'r-1', { now: NOW });
-
-		expect(mockRemoveTemporaryUser).toHaveBeenCalledWith(701);
-		expect(codeRow('c-1').claimed_by_reservation_id).toBe('r-1');
-	});
-});
-
-describe('recordOfflineReveal', () => {
-	it('marks the booking’s code revealed for a member of it, and ignores anyone else', async () => {
-		booking('r-1', minutes(-10), minutes(60), { by: 'leader', band: 'band-1' });
-		poolCode('c-1');
-		await getDoorState('bandmate', NOW);
-
-		await recordOfflineReveal('stranger', 'r-1', NOW);
-		expect(codeRow('c-1').revealed_at).toBeNull();
-
-		await recordOfflineReveal('bandmate', 'r-1', NOW);
-		expect(codeRow('c-1').revealed_at).toBe(s(NOW));
-	});
-
-	it('claims nothing for a booking that never held a code', async () => {
-		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
-
-		await recordOfflineReveal('booker', 'r-1', NOW);
-
-		expect(codeRow('c-1').claimed_by_reservation_id).toBeNull();
 	});
 });
 
 describe('staff', () => {
 	it('reads a booking’s door record: check-in, check-out, attempts and its code', async () => {
 		booking('r-1', minutes(-10), minutes(60));
-		poolCode('c-1');
+		poolCode('c-1', 'r-1');
 		mockOperateDoor.mockResolvedValueOnce({ outcome: 'timed_out', lockState: 'Locked' });
 		await openDoor('booker', 'r-1', { now: NOW });
 
@@ -276,12 +255,21 @@ describe('staff', () => {
 		expect(record.code).toEqual({ code: codeRow('c-1').code, revealedAt: expect.any(Date) });
 	});
 
-	it('reads out the booking’s own code and marks it revealed', async () => {
+	it('reads out the code the booking holds', async () => {
 		booking('r-1', minutes(60), minutes(120));
+		poolCode('c-1', 'r-1');
+		poolCode('c-2');
+
+		expect(await readOutCodeFor('r-1')).toBe(codeRow('c-1').code);
+		expect(claimedCount()).toEqual({ n: 1 });
+	});
+
+	it('claims one for a booking whose notice has not gone out', async () => {
+		booking('r-1', minutes(60 * 30), minutes(60 * 32));
 		poolCode('c-1');
 
 		expect(await readOutCodeFor('r-1')).toBe(codeRow('c-1').code);
-		expect(codeRow('c-1').revealed_at).not.toBeNull();
 		expect(codeRow('c-1').claimed_by_reservation_id).toBe('r-1');
+		expect(codeRow('c-1').revealed_at).not.toBeNull();
 	});
 });

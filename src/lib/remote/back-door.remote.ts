@@ -2,17 +2,12 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { command } from './_remote';
 import { requireUser } from '#lib/server/authorization.js';
-import {
-	checkOut,
-	getDoorState,
-	openDoor,
-	recordOfflineReveal
-} from '#lib/server/lock/door-service.js';
+import { checkOut, getDoorState, openDoor } from '#lib/server/lock/door-service.js';
 
 // The back-door page (#2120). Each mutation re-checks that the booking is the
 // member's and open now: the id comes from the client.
 
-/** The member's open booking, its check-in state, and its pre-loaded code. */
+/** The member's open booking, its check-in state, and the code it already holds. */
 export const getBackDoor = query(async () => {
 	const user = requireUser();
 	return getDoorState(user.id);
@@ -32,11 +27,4 @@ export const checkOutBackDoor = command(z.string().min(1), async (reservationId)
 	const result = await checkOut(user.id, reservationId);
 	void getBackDoor().refresh();
 	return result;
-});
-
-/** The page showed its code while it could not reach us. */
-export const reportOfflineReveal = command(z.string().min(1), async (reservationId) => {
-	const user = requireUser();
-	await recordOfflineReveal(user.id, reservationId);
-	return { recorded: true };
 });

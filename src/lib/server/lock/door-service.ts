@@ -11,18 +11,13 @@ import {
 	type DoorAccessOutcome
 } from '#lib/config.js';
 import { operateDoor, type OperateOptions } from './door-command-service';
-import {
-	claimPoolCode,
-	poolCodeFor,
-	revealPoolCode,
-	settleBookingCode
-} from './fallback-code-service';
+import { claimPoolCode, poolCodeFor, settleBookingCode } from './fallback-code-service';
 
 // The back-door page (#2120). Who: the booker, or any active member of the
 // band it was booked for — the same rule as paying for it (#2095). When: from
-// `DOOR_WINDOW_LEAD_MINUTES` before the start until the end. The pool code is
-// claimed on load and sent with the page, so a phone that loses signal at the
-// door can still show it (#2157).
+// `DOOR_WINDOW_LEAD_MINUTES` before the start until the end. The page never
+// claims: it carries the code the booking's door-code notice already claimed,
+// so a phone that loses signal at the door can still show it (#2157).
 
 export class DoorBookingClosedError extends DomainError {
 	readonly httpStatus = 409;
@@ -118,14 +113,12 @@ export interface DoorState {
 	next: { startsAt: Date; opensAt: Date } | null;
 	checkedInAt: Date | null;
 	checkedOutAt: Date | null;
-	/** Pre-loaded; the page shows it only once an unlock fails. */
+	/** The code the booking holds, pre-loaded; the page shows it once an unlock fails. */
 	code: string | null;
-	codeRevealed: boolean;
-	poolEmpty: boolean;
 	checkoutTasks: string[];
 }
 
-/** What `/door` renders. Claims the booking's pool code the first time. */
+/** What `/door` renders, with the code the booking already holds. */
 export async function getDoorState(userId: string, now: Date = new Date()): Promise<DoorState> {
 	const booking = await findOpenBooking(userId, now);
 	const checkoutTasks = String(await config('venue.checkoutTasks'))
@@ -137,8 +130,6 @@ export async function getDoorState(userId: string, now: Date = new Date()): Prom
 		checkedInAt: null,
 		checkedOutAt: null,
 		code: null,
-		codeRevealed: false,
-		poolEmpty: false,
 		checkoutTasks
 	};
 
@@ -153,16 +144,14 @@ export async function getDoorState(userId: string, now: Date = new Date()): Prom
 
 	const attempts = await attemptsFor(booking.id);
 	const checkedOutAt = firstOf(attempts, 'check_out');
-	const code = checkedOutAt ? await poolCodeFor(booking.id) : await claimPoolCode(booking.id, now);
+	const held = checkedOutAt ? null : await poolCodeFor(booking.id);
 
 	return {
 		booking,
 		next: null,
 		checkedInAt: firstOf(attempts, 'check_in'),
 		checkedOutAt,
-		code: checkedOutAt ? null : (code?.code ?? null),
-		codeRevealed: Boolean(code?.revealedAt),
-		poolEmpty: !checkedOutAt && !code,
+		code: held?.code ?? null,
 		checkoutTasks
 	};
 }
@@ -194,8 +183,8 @@ export interface DoorAttempt {
 }
 
 /**
- * Check in, or re-enter once checked in: unlock, and reveal the booking's code
- * when the lock does not confirm. Recorded whatever the lock did.
+ * Check in, or re-enter once checked in: unlock, and show the code the booking
+ * holds when the lock does not confirm. Recorded whatever the lock did.
  */
 export async function openDoor(
 	userId: string,
@@ -207,13 +196,13 @@ export async function openDoor(
 	const kind: DoorAccessKind = firstOf(attempts, 'check_in') ? 're_entry' : 'check_in';
 
 	const { outcome } = await operateDoor('unlock', opts);
-	const code = outcome === 'unlocked' ? null : await revealPoolCode(reservationId, now);
+	const code = outcome === 'unlocked' ? null : await poolCodeFor(reservationId);
 
 	await log(reservationId, userId, kind, outcome, Boolean(code));
 	return { kind, outcome, code: code?.code ?? null };
 }
 
-/** Lock up and record it, then return or burn the booking's code. */
+/** Lock up and record it, then send the booking's code its delete. */
 export async function checkOut(
 	userId: string,
 	reservationId: string,
@@ -226,25 +215,6 @@ export async function checkOut(
 	await log(reservationId, userId, 'check_out', outcome, false);
 	await settleBookingCode(reservationId, []);
 	return { kind: 'check_out', outcome, code: null };
-}
-
-/**
- * The page showed the pre-loaded code without reaching us — no signal at the
- * door — and says so once it can. Late is fine: a revealed code is burned,
- * not reused, whether or not the window is still open.
- */
-export async function recordOfflineReveal(
-	userId: string,
-	reservationId: string,
-	now: Date = new Date()
-): Promise<void> {
-	const [owned] = await db
-		.select({ id: reservation.id })
-		.from(reservation)
-		.where(and(eq(reservation.id, reservationId), await bookedBy(userId)))
-		.limit(1);
-	if (!owned || !(await poolCodeFor(reservationId))) return;
-	await revealPoolCode(reservationId, now);
 }
 
 export interface DoorRecord {
@@ -287,10 +257,9 @@ export async function doorRecordFor(reservationId: string): Promise<DoorRecord> 
 }
 
 /**
- * Staff reading a code over the phone (#2120): the booking's code from the
- * same pool, marked revealed so it is burned after the booking. Null when the
- * pool is empty.
+ * Staff reading a code over the phone (#2120): the booking's code, claimed
+ * from the pool if its notice has not gone out. Null when the pool is empty.
  */
 export async function readOutCodeFor(reservationId: string): Promise<string | null> {
-	return (await revealPoolCode(reservationId))?.code ?? null;
+	return (await claimPoolCode(reservationId))?.code ?? null;
 }

@@ -11,6 +11,7 @@ import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.
 import { saveSettings } from '#lib/server/site-config/save-settings.js';
 import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
 import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
+import { poolSize } from '#lib/server/lock/fallback-code-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
 import { requireCapability } from '#lib/server/authorization.js';
 import {
@@ -136,9 +137,10 @@ export const getIntegrationSettings = query(async () => {
 	// stored now (#745 reversed), and everything this query returns is
 	// serialised to the browser. `clientId` and `deviceId` are not credentials
 	// and stay verbatim: see `CREDENTIALS` in `ultraloc-client.ts`.
-	const [clientSecret, refreshToken] = await Promise.all([
+	const [clientSecret, refreshToken, codes] = await Promise.all([
 		credentialStatus('clientSecret'),
-		credentialStatus('refreshToken')
+		credentialStatus('refreshToken'),
+		poolSize()
 	]);
 
 	return {
@@ -147,7 +149,8 @@ export const getIntegrationSettings = query(async () => {
 		deviceId: raw.deviceId ? String(raw.deviceId) : '',
 		// Presence alone, and only because it is what "Connected" means. There is
 		// no field for it: the Connect flow writes it and nothing else reads it.
-		connected: refreshToken.configured
+		connected: refreshToken.configured,
+		poolSize: codes
 	};
 });
 
@@ -477,6 +480,22 @@ export const updateVenueSettings = form(
 
 		void getPracticeSpaceSettingsPage().refresh();
 
+		return { success: true };
+	})
+);
+
+// Unclaimed door codes the daily lock job keeps on the lock (#2120).
+const lockPoolSchema = z.object({
+	poolSize: z.string().regex(/^\d{1,2}$/, 'Whole codes, 0 to 99')
+});
+
+export const updateLockPoolSize = form(
+	lockPoolSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof lockPoolSchema>;
+		await saveSettings([{ key: 'lock.poolSize', value: Number(data.poolSize) }]);
+		void getIntegrationSettings().refresh();
 		return { success: true };
 	})
 );

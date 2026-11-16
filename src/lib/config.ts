@@ -136,13 +136,6 @@ export const creditCompCeiling: Record<CreditType, number> = {
 export const BOOKING_LEAD_DAYS = 3;
 
 /**
- * Unclaimed door codes the daily lock job keeps confirmed on the lock (#2120).
- * Each burned code needs the lock online to replace, so this is how many
- * fallbacks an outage can spend before members are told to call staff.
- */
-export const DOOR_CODE_POOL_SIZE = 10;
-
-/**
  * How long an unreferenced `media` row is left alone before the sweep reaps it
  * and deletes its R2 object.
  *

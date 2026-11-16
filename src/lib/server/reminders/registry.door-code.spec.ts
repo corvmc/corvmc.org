@@ -3,9 +3,9 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
 /**
- * The "door code ready" notice: owed once the lock has reported a booking's
- * code as synced, and never before. The sent-mark makes it once; this pins
- * what makes it owed.
+ * The "door code ready" notice (#2120): owed a day before a confirmed booking
+ * starts, and sending it claims the booking's pool code. The sent-mark makes
+ * it once; this pins what makes it owed and what holds it back.
  */
 
 let rows: unknown[] = [];
@@ -42,6 +42,13 @@ vi.mock('#lib/server/reservation/outstanding-fees.js', () => ({
 	})
 }));
 
+const standing = vi.hoisted(() => ({ ids: new Set<string>() }));
+vi.mock('#lib/server/lock/member-code-service.js', () => ({
+	membersWithStandingCodes: vi.fn(async (userIds: string[]) => {
+		return new Set(userIds.filter((id) => standing.ids.has(id)));
+	})
+}));
+
 const { reminders } = await import('./registry');
 
 const NOW = new Date('2026-06-15T12:00:00Z');
@@ -51,11 +58,11 @@ beforeEach(() => {
 	rows = [];
 	whereArg = undefined;
 	owing.ids = new Set();
+	standing.ids = new Set();
 });
 
-const synced = (id: string, userId: string) => ({
+const booking = (id: string, userId: string) => ({
 	id,
-	lockCode: '482913',
 	startsAt: new Date('2026-06-15T18:00:00Z'),
 	endsAt: new Date('2026-06-15T20:00:00Z'),
 	userId,
@@ -64,25 +71,16 @@ const synced = (id: string, userId: string) => ({
 });
 
 describe('door_code_ready', () => {
-	it('is keyed per reservation, so a re-sync after a moved window does not send again', () => {
+	it('is keyed per reservation, so a moved booking is not sent a second code', () => {
 		expect(definition()).toMatchObject({
 			subjectType: 'reservation',
 			event: 'reservation.door_code_ready'
 		});
 	});
 
-	it('carries the code and the booking window to the member who made it', async () => {
-		rows = [
-			{
-				id: 'res-1',
-				lockCode: '482913',
-				startsAt: new Date('2026-06-15T02:00:00Z'),
-				endsAt: new Date('2026-06-15T04:00:00Z'),
-				userId: 'u-1',
-				userName: 'Robin',
-				userEmail: 'robin@example.com'
-			}
-		];
+	// The code is claimed by the listener when the notice goes out, not here.
+	it('carries the booking window to the member who made it, and no code', async () => {
+		rows = [booking('res-1', 'u-1')];
 
 		const due = await definition().due(NOW);
 
@@ -90,28 +88,28 @@ describe('door_code_ready', () => {
 		expect(due[0].subjectId).toBe('res-1');
 		expect(due[0].payload).toMatchObject({
 			reservationId: 'res-1',
-			code: '482913',
 			userId: 'u-1',
-			userEmail: 'robin@example.com'
+			userEmail: 'u-1@example.com'
 		});
+		expect(due[0].payload).not.toHaveProperty('code');
 	});
 
-	it('asks only for confirmed codes the lock has synced, recently, for bookings not yet over', async () => {
+	it('asks for confirmed bookings starting within a day that are not over', async () => {
 		await definition().due(NOW);
 
 		const { sql, params } = new SQLiteSyncDialect().sqlToQuery(whereArg!);
-		expect(sql).toContain('"lock_synced_at" is not null');
-		expect(sql).toContain('"lock_code" is not null');
 		expect(sql).toContain('"status" = ?');
 		expect(params).toContain('confirmed');
+		expect(sql).toContain('"starts_at" < ?');
+		expect(params).toContain(Math.floor((NOW.getTime() + 86_400_000) / 1000));
 		expect(sql).toContain('"ends_at" > ?');
-		// Bounded, so the first drain after deploy does not mail every code
-		// already on the lock.
-		expect(sql).toContain('"lock_synced_at" >= ?');
+		// A per-booking code is not what makes it owed any more.
+		expect(sql).not.toContain('lock_synced_at');
+		expect(sql).not.toContain('lock_code');
 	});
 
 	it('is withheld while the member owes a fee, and owed again once it is paid (#2859)', async () => {
-		rows = [synced('res-owing', 'u-owing'), synced('res-clear', 'u-clear')];
+		rows = [booking('res-owing', 'u-owing'), booking('res-clear', 'u-clear')];
 		owing.ids = new Set(['u-owing']);
 		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-clear']);
 
@@ -122,11 +120,10 @@ describe('door_code_ready', () => {
 		]);
 	});
 
-	it('stays owed for a booking starting within a day, however long ago the code synced', async () => {
-		await definition().due(NOW);
-		const { sql } = new SQLiteSyncDialect().sqlToQuery(whereArg!);
-		expect(sql).toContain(
-			'("reservation"."lock_synced_at" >= ?) or ("reservation"."starts_at" < ?)'
-		);
+	it('is not sent to a member who already holds a standing code', async () => {
+		rows = [booking('res-keyholder', 'u-key'), booking('res-member', 'u-member')];
+		standing.ids = new Set(['u-key']);
+
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-member']);
 	});
 });

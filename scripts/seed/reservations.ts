@@ -13,7 +13,7 @@ import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types'
 import { claimRoomNear, holdRoom } from './room';
 import { pick, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
-import { DOOR_CODE_POOL_SIZE } from '../../src/lib/config';
+import { DEFAULTS } from '../../src/lib/server/site-config/site-config-service';
 
 /** A slot for a row of this status: cancelled ones take the time they asked for. */
 function bookRoom(startsAt: Date, durationHours: number, status: string) {
@@ -337,7 +337,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 
 	await batchInsert(lockFallbackCode, [
 		// Ready on the lock: one short of depth, so a local job run mints one.
-		...Array.from({ length: DOOR_CODE_POOL_SIZE - 1 }, (_, i) => ({
+		...Array.from({ length: Number(DEFAULTS['lock.poolSize']) - 1 }, (_, i) => ({
 			code: code(),
 			pooled: true,
 			lockAccessId: lockId(),
@@ -347,7 +347,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 		{ code: code(), pooled: true, lockAccessId: lockId() },
 		// The break-glass code from before the pool: burned once the pool has stock.
 		{ code: code(), lockAccessId: lockId(), syncedAt: ptDate(-40, 9) },
-		// Shown at the door for a booking that is over: awaiting removal.
+		// Claimed by a booking that is over: awaiting removal.
 		...(past
 			? [
 					{
@@ -361,7 +361,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 					}
 				]
 			: []),
-		// Claimed by an upcoming booking whose page has been opened, not revealed.
+		// Claimed by an upcoming booking when its door-code notice went out.
 		...(upcoming
 			? [
 					{
@@ -370,7 +370,8 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 						lockAccessId: lockId(),
 						syncedAt: ptDate(-20, 9),
 						claimedByReservationId: upcoming.id,
-						claimedAt: ptDate(0, 9)
+						claimedAt: ptDate(0, 9),
+						revealedAt: ptDate(0, 9)
 					}
 				]
 			: [])

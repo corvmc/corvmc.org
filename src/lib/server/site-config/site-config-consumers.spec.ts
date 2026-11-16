@@ -51,6 +51,7 @@ const READERS: Record<string, string> = {
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 	'venue.checkoutTasks': 'src/lib/server/lock/door-service.ts',
+	'lock.poolSize': 'src/lib/server/lock/fallback-code-service.ts',
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
 

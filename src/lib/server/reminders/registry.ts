@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
-import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { eq, and, gt, gte, lt, ne, or, sql } from 'drizzle-orm';
 import {
 	formatDateFull,
 	formatDateInTz,
@@ -40,6 +40,8 @@ import {
 } from '#lib/server/reservation/outstanding-fees.js';
 import { PAYMENT_DUE_BANDS, paymentDueKey } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { membersWithStandingCodes } from '#lib/server/lock/member-code-service.js';
+import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
 import { taskAudiences } from '#lib/server/task/task-audience.js';
 import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
@@ -285,6 +287,25 @@ const when = (row: { startsAt: Date; endsAt: Date }) => ({
 });
 
 /**
+ * The bookings whose door-code notice waits, so they claim no pool code yet:
+ * the booker owes a fee (#2859), or holds a standing code and needs none.
+ * Unpaid teaching bookings join here (#3025).
+ */
+async function doorCodeHolds(
+	rows: { id: string; userId: string }[],
+	now: Date
+): Promise<Set<string>> {
+	const userIds = [...new Set(rows.map((r) => r.userId))];
+	const [owing, standing] = await Promise.all([
+		membersOwingFees(userIds, now),
+		membersWithStandingCodes(userIds)
+	]);
+	return new Set(
+		rows.filter((r) => owing.has(r.userId) || standing.has(r.userId)).map((r) => r.id)
+	);
+}
+
+/**
  * Every reminder the app sends, as anchor plus offset.
  *
  * Adding one is an entry here. It used to be a route file, a `schedule.ts`
@@ -377,11 +398,9 @@ export const reminders: ReminderDefinition[] = [
 		}
 	}),
 
-	// Owed once `reconcileSyncState` stamps lockSyncedAt: a code U-tec only
-	// queued may not open the door yet. The one-day floor keeps the first drain
-	// from mailing every code already on the lock; a booking starting within a
-	// day stays owed past it. Withheld while the member owes a fee (#2859): no
-	// sent-mark, so the first drain after payment sends it.
+	// Owed a day before a booking starts. Sending it claims the booking's pool
+	// code (#2120), so the drain is what spends the pool. `doorCodeHolds` says
+	// which bookings wait; no sent-mark, so a held one goes out once released.
 	defineReminder({
 		key: 'door_code_ready',
 		subjectType: 'reservation',
@@ -390,7 +409,6 @@ export const reminders: ReminderDefinition[] = [
 			const rows = await db
 				.select({
 					id: reservation.id,
-					lockCode: reservation.lockCode,
 					startsAt: reservation.startsAt,
 					endsAt: reservation.endsAt,
 					userId: reservation.createdByUserId,
@@ -402,27 +420,19 @@ export const reminders: ReminderDefinition[] = [
 				.where(
 					and(
 						eq(reservation.status, 'confirmed'),
-						isNotNull(reservation.lockCode),
-						isNotNull(reservation.lockSyncedAt),
-						or(
-							gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
-							lt(reservation.startsAt, new Date(now.getTime() + DAY))
-						),
+						notAProgramHold(),
+						lt(reservation.startsAt, new Date(now.getTime() + DAY)),
 						gt(reservation.endsAt, now)
 					)
 				)
 				.limit(500);
-			const owing = await membersOwingFees(
-				rows.map((r) => r.userId),
-				now
-			);
+			const held = await doorCodeHolds(rows, now);
 			return rows
-				.filter((row) => !owing.has(row.userId))
+				.filter((row) => !held.has(row.id))
 				.map((row) => ({
 					subjectId: row.id,
 					payload: {
 						reservationId: row.id,
-						code: row.lockCode!,
 						userId: row.userId,
 						userName: row.userName,
 						userEmail: row.userEmail,
