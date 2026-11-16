@@ -47,8 +47,14 @@ export const PROPER_NOUNS = [
 	'Corvallis Music Collective',
 	'Real Book Club',
 	'CMC Radio',
+	'Great American Songbook',
+	'Google Calendar',
+	'Real Book',
 	'Corvallis',
 	'CorvMC',
+	'Collective',
+	...['SoundCloud', 'YouTube', 'Spotify', 'Instagram', 'Messenger', 'Zeffy', 'U-tec'],
+	...['Apple', 'Outlook', 'Word', 'Excel'],
 	'Stripe',
 	'Postmark',
 	'Markdown',
@@ -69,12 +75,43 @@ const NOUN_PATTERN = new RegExp(
  * nouns and placeholders pass; a colon, separator or end mark starts a new one.
  */
 export function titleCased(text: string): boolean {
-	const plain = text.replace(/\{[^}]*\}/g, ' ').replace(NOUN_PATTERN, ' ');
-	return plain.split(/[:.?!|·—–]\s/).some((sentence) => {
-		const words = sentence.split(/[\s-]+/).filter((w) => /[A-Za-z]/.test(w));
-		return words.slice(1).some((w) => /^\W*[A-Z][a-z]/.test(w));
+	return sentences(text).some((words) => words.slice(1).some(capitalised));
+}
+
+const capitalised = (w: string) => /^\W*[A-Z][a-z]/.test(w);
+const CONNECTOR = /^(a|an|the|of|to|in|on|at|for|and|or|&)$/;
+
+/** Each sentence's words, with placeholders, proper nouns and quoted examples gone. */
+function sentences(text: string): string[][] {
+	const plain = text
+		.replace(/\{[^}]*\}/g, ' ')
+		.replace(/[“"][^”"]*[”"]/g, ' ')
+		.replace(NOUN_PATTERN, ' ');
+	return plain
+		.split(/[:.?!|·—–→]\s/)
+		.map((s) => s.split(/[\s\-/]+/).filter((w) => /[A-Za-z]/.test(w)));
+}
+
+/**
+ * Title Case inside prose: two capitalised words in a row after a sentence's
+ * first word, with "a", "of", "the" and the like allowed between them. Running
+ * text may capitalise one word to name a button or tab ("Use Edit"); a Title
+ * Case run ("Use Message a Member") is a label written in the wrong case.
+ */
+export function titleCaseRun(text: string): boolean {
+	return sentences(text).some((words) => {
+		let run = 0;
+		for (const w of words.slice(1)) {
+			if (capitalised(w)) run++;
+			else if (!CONNECTOR.test(w)) run = 0;
+			if (run >= 2) return true;
+		}
+		return false;
 	});
 }
+
+/** A string with no sentence in it — a heading, badge or tile caption whatever its key says. */
+const fragment = (text: string) => !/[.?!…]$/.test(text) && wordCount(text) <= 6;
 
 /** The checks one wording fails for the role its key ends in. */
 export function failures(role: (typeof ROLES)[number] | null, text: string): Check[] {
@@ -87,8 +124,12 @@ export function failures(role: (typeof ROLES)[number] | null, text: string): Che
 	}
 	if (role === 'label' && /\?$/.test(trimmed)) out.push('L1');
 	if (role === 'checkbox' && wordCount(trimmed) > 8) out.push('L3');
-	if ((role === 'title' || role === 'label' || role === 'checkbox') && titleCased(trimmed))
-		out.push('SC');
+	if (role === 'title' || role === 'label' || role === 'checkbox') {
+		if (titleCased(trimmed)) out.push('SC');
+	} else if (role !== 'placeholder') {
+		// A placeholder is an example value, and an example is often a name.
+		if (fragment(trimmed) ? titleCased(trimmed) : titleCaseRun(trimmed)) out.push('SC');
+	}
 	return out;
 }
 
@@ -97,7 +138,8 @@ export function violations(list: Catalog[] = catalogs()): Record<string, Check[]
 	const out: Record<string, Check[]> = {};
 	for (const { messages } of list)
 		for (const [key, value] of Object.entries(messages)) {
-			if (key.startsWith('term_')) continue;
+			// Illustrations draw a ticket, a setlist and a keyfob, printed as the real ones are.
+			if (key.startsWith('term_') || key.startsWith('illustrations_')) continue;
 			const found = new Set(variants(value).flatMap((text) => failures(keyRole(key), text)));
 			if (found.size) out[key] = [...found].sort();
 		}

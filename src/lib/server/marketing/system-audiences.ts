@@ -51,7 +51,7 @@ export async function ensureSystemAudiences(): Promise<void> {
 		.insert(audience)
 		.values(
 			missing.map((key) => ({
-				name: SYSTEM_AUDIENCES[key].name,
+				name: SYSTEM_AUDIENCES[key].label,
 				slug: key,
 				description: SYSTEM_AUDIENCES[key].description,
 				// A system audience is defined by member attributes, so there is

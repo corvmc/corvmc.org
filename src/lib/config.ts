@@ -1845,10 +1845,10 @@ export const SUGGESTION_NOTE_MAX = 500;
 export const SUGGESTION_FLAGS_TO_WITHHOLD = 1;
 
 export const suggestionCategoryLabels: Record<(typeof suggestionCategories)[number], string> = {
-	website_tools: 'Website & Tools',
-	gear_equipment: 'Gear & Equipment',
-	events_programming: 'Events & Programming',
-	the_space: 'The Space',
+	website_tools: 'Website & tools',
+	gear_equipment: 'Gear & equipment',
+	events_programming: 'Events & programming',
+	the_space: 'The space',
 	policy: 'Policy',
 	other: 'Other'
 };

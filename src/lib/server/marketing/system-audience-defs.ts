@@ -32,7 +32,7 @@ import { leadsGroup } from '#lib/server/group/chair.js';
 // ---------------------------------------------------------------------------
 
 type SystemAudienceDef = {
-	name: string;
+	label: string;
 	description: string;
 	/**
 	 * Predicate over the `user` table. Must qualify outer references.
@@ -107,22 +107,22 @@ function caresAbout(eventId: string): SQL {
 
 export const SYSTEM_AUDIENCES = {
 	'all-members': {
-		name: 'All Members',
+		label: 'All members',
 		description: 'Every active member account. Updates automatically as people join and leave.',
 		predicate: () => ACTIVE_MEMBER
 	},
 	'sustaining-members': {
-		name: 'Sustaining Members',
+		label: 'Sustaining members',
 		description: 'Members with an active sustaining membership subscription.',
 		predicate: () => sql`${ACTIVE_MEMBER} and ${SUSTAINING}`
 	},
 	'non-sustaining-members': {
-		name: 'Non-Sustaining Members',
+		label: 'Non-sustaining members',
 		description: 'Active members without a sustaining membership — the audience for upgrade asks.',
 		predicate: () => sql`${ACTIVE_MEMBER} and not ${SUSTAINING}`
 	},
 	'band-leaders': {
-		name: 'Band Leaders',
+		label: 'Band leaders',
 		description: 'Members who own or administer an active band.',
 		predicate: () => sql`${ACTIVE_MEMBER} and ${LEADS_A_BAND}`
 	},
@@ -136,7 +136,7 @@ export const SYSTEM_AUDIENCES = {
 	 * whole list.
 	 */
 	'event-interest': {
-		name: 'Event audience',
+		label: 'Event audience',
 		description:
 			'Everyone holding a ticket to the event a campaign is about, plus everyone who RSVP’d. Empty unless the campaign names an event.',
 		predicate: (eventId?: string | null) =>

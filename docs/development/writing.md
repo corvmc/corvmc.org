@@ -50,7 +50,11 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
   [conventions.md#interface-copy](conventions.md#interface-copy)).
 - **Mechanical checks** — T4, T5, T6, L1's trailing "?", L3's word cap and sentence case on
   titles, labels and checkboxes — run over the message catalog in `scripts/message-copy.spec.ts`;
-  the bare-pronoun half of T7 is not yet checked. T9's retired words are listed in `retiredTerms` in
+  the bare-pronoun half of T7 is not yet checked. Every other role except placeholders is held
+  to sentence case too: a string with no sentence in it (six words or fewer, no end mark) like a
+  title, and prose to no Title Case run ("Use Message a Member"), so one capitalised button name
+  ("Use Edit") still passes. Outside the catalog, `scripts/label-literal-case.spec.ts` checks
+  `label` literals and every `*Labels` / `*_LABELS` map in source. T9's retired words are listed in `retiredTerms` in
   `src/lib/config.ts`: instructor (teacher), work order (task), free hours (credits),
   certification (clearance), turned down (decline), signing up for a task (shift), and, under
   their own keys, session for a reservation, listing for an event, and reject or unpublish for a

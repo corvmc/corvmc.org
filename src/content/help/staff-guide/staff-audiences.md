@@ -17,10 +17,10 @@ are two kinds, and the difference is who decides who's on them.
 
 Five audiences ship with the site and are marked **Built-in**:
 
-- **All Members** — every active member account
-- **Sustaining Members** — members with an active sustaining membership
-- **Non-Sustaining Members** — active members without one
-- **Band Leaders** — members who own or administer an active band
+- **All members** — every active member account
+- **Sustaining members** — members with an active sustaining membership
+- **Non-sustaining members** — active members without one
+- **Band leaders** — members who own or administer an active band
 - **Event audience** — ticket holders and RSVPs for the show a campaign is about;
   empty when the campaign names no show
 

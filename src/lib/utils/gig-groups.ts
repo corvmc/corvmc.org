@@ -22,8 +22,8 @@ function parseYmd(key: string): Date {
 }
 
 /**
- * Coarse relative sections for the gig list: "This Week" (today..+6 days),
- * "This Month" (rest of the current calendar month), "Looking Ahead" (later).
+ * Coarse relative sections for the gig list: "This week" (today..+6 days),
+ * "This month" (rest of the current calendar month), "Looking ahead" (later).
  * Entries before `today` (a past ?from anchor) group under their month name.
  * Input is sorted by startsAt, so a run-length pass preserves chronological
  * section order.
@@ -40,9 +40,9 @@ export function groupGigs(entries: CalendarEntry[], today: string): [string, Cal
 			label = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 		} else {
 			const diffDays = Math.round((parseYmd(key).getTime() - todayDate.getTime()) / 86_400_000);
-			if (diffDays <= 6) label = 'This Week';
-			else if (key.slice(0, 7) === today.slice(0, 7)) label = 'This Month';
-			else label = 'Looking Ahead';
+			if (diffDays <= 6) label = 'This week';
+			else if (key.slice(0, 7) === today.slice(0, 7)) label = 'This month';
+			else label = 'Looking ahead';
 		}
 
 		const last = groups[groups.length - 1];

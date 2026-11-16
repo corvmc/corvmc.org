@@ -53,7 +53,7 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 		audience,
 		(Object.keys(SYSTEM_AUDIENCES) as (keyof typeof SYSTEM_AUDIENCES)[]).map((key) => ({
 			id: randomUUID(),
-			name: SYSTEM_AUDIENCES[key].name,
+			name: SYSTEM_AUDIENCES[key].label,
 			slug: key,
 			description: SYSTEM_AUDIENCES[key].description,
 			allowOptIn: false,
