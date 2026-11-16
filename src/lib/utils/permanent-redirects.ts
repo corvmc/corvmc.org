@@ -18,6 +18,7 @@ export const permanentRedirectSources: readonly string[] = [
 	'/staff/bands',
 	'/staff/bands/[id]',
 	'/staff/bands/acts',
+	'/staff/building-access',
 	'/staff/calendar',
 	'/staff/closures',
 	'/staff/clubs',

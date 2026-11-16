@@ -8,6 +8,8 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { settingsViews } from './views';
 	import { formatDollars } from '#lib/utils/format.js';
 	import {
 		getPracticeSpaceSettingsPage,
@@ -26,7 +28,9 @@
 	const { fields: reservationFields } = updateReservationSettings;
 </script>
 
-<PageHeader width="2xl" title={m.staff_reservations_settings_title()} />
+<PageHeader width="2xl" title={m.staff_reservations_settings_title()}>
+	<StaffViews views={settingsViews} active="booking" />
+</PageHeader>
 
 <PageContent width="2xl">
 	<div class="space-y-4">

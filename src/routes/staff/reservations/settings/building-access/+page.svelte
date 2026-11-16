@@ -11,8 +11,8 @@
 	import { getIntegrationSettings } from '#lib/remote/settings.remote.js';
 	import { errorMessage } from '#lib/error-message.js';
 	import { retryQuery } from '#lib/utils/retry-query.js';
-	import StaffViews from '../StaffViews.svelte';
-	import { spaceViews } from '../reservations/views';
+	import StaffViews from '../../../StaffViews.svelte';
+	import { settingsViews } from '../views';
 	import LockCodes from './LockCodes.svelte';
 	import KeyRegister from './KeyRegister.svelte';
 	import LockSettings from './LockSettings.svelte';
@@ -41,8 +41,8 @@
 	const canReadSettings = $derived(hasCapability(caps, 'settings.read'));
 </script>
 
-<PageHeader title={m.staff_reservations_practice_space_title()}>
-	<StaffViews views={spaceViews} active="building-access" />
+<PageHeader title={m.staff_reservations_settings_title()}>
+	<StaffViews views={settingsViews} active="building-access" />
 </PageHeader>
 
 <PageContent>

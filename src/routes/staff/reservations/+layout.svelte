@@ -17,7 +17,7 @@
 	const openId = $derived(
 		page.route.id === '/staff/reservations/[id]' ? (page.params.id ?? null) : null
 	);
-	const settings = $derived(page.route.id === '/staff/reservations/settings');
+	const settings = $derived(page.route.id?.startsWith('/staff/reservations/settings') ?? false);
 </script>
 
 {#if settings}

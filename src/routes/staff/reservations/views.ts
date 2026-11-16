@@ -2,11 +2,11 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-export type SpaceViewKey = 'reservations' | 'recurring' | 'building-access';
+export type SpaceViewKey = 'reservations' | 'recurring';
 
 /**
- * The Practice space row's views (#2766): the bookings and closures, the series
- * that make bookings, and who can get into the building.
+ * The Practice space row's views (#2766): the bookings and closures, and the
+ * series that make bookings. Building access is a settings tab (#3102).
  */
 export const spaceViews: readonly StaffView<SpaceViewKey>[] = [
 	{
@@ -20,11 +20,5 @@ export const spaceViews: readonly StaffView<SpaceViewKey>[] = [
 		label: () => m.staff_recurring_series_label(),
 		href: resolve('staff/recurring'),
 		cap: 'reservation.read'
-	},
-	{
-		key: 'building-access',
-		label: () => m.staff_reservations_building_access_label(),
-		href: resolve('staff/building-access'),
-		cap: 'lock.manage'
 	}
 ];

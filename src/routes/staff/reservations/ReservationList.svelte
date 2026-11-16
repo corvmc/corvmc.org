@@ -185,15 +185,24 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				href={resolve('staff/building-access')}
+				href={resolve('staff/reservations/settings/building-access')}
 				data-testid="lock-offline-dot"
 			>
 				<span class="status status-error"></span>
 				{m.staff_reservations_lock_offline_link_label()}
 			</Button>
 		{/if}
+		<!-- Building access is the one tab a `lock.manage` holder without `settings.read` sees. -->
 		{#if settled?.canSettings}
 			<Button variant="ghost" size="sm" href={resolve('staff/reservations/settings')}>
+				{m.staff_reservations_settings_label()}
+			</Button>
+		{:else if settled?.lock}
+			<Button
+				variant="ghost"
+				size="sm"
+				href={resolve('staff/reservations/settings/building-access')}
+			>
 				{m.staff_reservations_settings_label()}
 			</Button>
 		{/if}

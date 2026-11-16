@@ -43,8 +43,9 @@ carries these actions, payment handling and a day-timeline view of the slot.
 
 ## Building access
 
-**Staff → Practice space → Building access** is about the door. When the last reading found
-the lock offline, **Lock offline** shows in the Reservations header and opens it.
+**Building access** is a tab of **Settings** in the **Staff → Practice space** header, and is
+about the door. When the last reading found the lock offline, **Lock offline** shows in the
+Reservations header and opens it.
 
 - **Lock status**: online or offline, and when the lock was last seen.
 - **Active codes**: per-booking codes, key holders' standing codes and the break-glass

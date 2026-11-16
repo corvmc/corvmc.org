@@ -76,7 +76,7 @@ test.describe('staff system panel', () => {
 	}) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/settings?tab=integrations');
-		await page.waitForURL(/\/staff\/building-access$/);
+		await page.waitForURL(/\/staff\/reservations\/settings\/building-access$/);
 		await expect(page.getByTestId('lock-status')).toBeVisible();
 		await expect(page.getByTestId('active-codes')).toBeVisible();
 		await expect(page.getByTestId('lock-settings')).toBeVisible();
