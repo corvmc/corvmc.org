@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Campaigns against a real SQLite with the real built-in resolver: who gets a
-// blast is a set of joins. Postmark, the token signer and sponsor credits stay
-// mocked; the renderer is spied on for the markdown it is handed.
+// blast is a set of joins. The outbox is real too, so a send is queued and
+// delivered the way it is in production (#2971). Postmark, the token signer and
+// sponsor credits stay mocked; the renderer is spied on for the markdown it is
+// handed.
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
@@ -26,9 +28,11 @@ vi.mock('#lib/server/notification/email/index.js', () => ({
 		messages.map((m) => ({ ok: true, messageId: `pm-${m.to}` }))
 	)
 }));
-vi.mock('#lib/server/outbox/outbox-service.js', () => ({
+vi.mock('#lib/server/outbox/outbox-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/outbox/outbox-service.js')>()),
 	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null }))
 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('$app/env/public', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.com' })
 );
@@ -51,6 +55,7 @@ const {
 	CampaignValidationError,
 	CampaignStateError
 } = await import('./campaign-service');
+const { deliverOutbox } = await import('#lib/server/outbox/outbox-service.js');
 
 const NOW = new Date('2026-06-15T12:00:00Z');
 const NOW_S = NOW.getTime() / 1000;
@@ -129,10 +134,19 @@ const links = (campaignId: string) =>
 			)
 			.all(campaignId) as { audience_id: string }[]
 	).map((r) => r.audience_id);
+/** Each recipient's row, a queued one read through its outbox row as the campaign page does. */
 const sends = (campaignId: string) =>
 	sqlite
 		.prepare(
-			'select email, audience_id, status, provider_message_id, error from campaign_send where campaign_id = ? order by email'
+			`select cs.email, cs.audience_id,
+				case when cs.status = 'pending'
+					then coalesce(case o.status when 'sent' then 'sent' when 'failed' then 'failed' end, 'pending')
+					else cs.status end as status,
+				coalesce(cs.provider_message_id, o.provider_message_id) as provider_message_id,
+				coalesce(cs.error, o.last_error) as error
+			 from campaign_send cs
+			 left join outbox_message o on o.subject_type = 'campaign_send' and o.subject_id = cs.id
+			 where cs.campaign_id = ? order by cs.email`
 		)
 		.all(campaignId);
 const sentTo = () => vi.mocked(sendBroadcastBatch).mock.calls.flatMap(([m]) => m.map((x) => x.to));
@@ -142,6 +156,7 @@ beforeEach(() => {
 	vi.useFakeTimers({ toFake: ['Date'] });
 	vi.setSystemTime(NOW);
 	for (const t of [
+		'outbox_message',
 		'campaign_send',
 		'campaign_audience',
 		'campaign',
@@ -546,25 +561,126 @@ describe('executeSend', () => {
 
 	// #988: a mid-batch Postmark failure had left the row matching
 	// processDueCampaigns' predicate, so the cron re-sent to the whole list.
-	it('marks the campaign sent before the batch, so a failed send is never re-queued', async () => {
+	it('marks the campaign sent before queuing, so a failed send is never re-queued', async () => {
 		camp('camp-1', { scheduledFor: NOW_S - 60 });
 		target('camp-1', 'aud-1');
 		sub('sub-1', 'member@example.com');
 		member('aud-1', 'sub-1');
 		vi.mocked(sendBroadcastBatch).mockRejectedValueOnce(new Error('Postmark 500'));
 
-		await expect(executeSend('camp-1')).rejects.toThrow('Postmark 500');
+		expect(await executeSend('camp-1')).toBe(1);
 
 		expect(campRow('camp-1')).toMatchObject({ sent_at: NOW_S, recipient_count: 1 });
 		expect(await processDueCampaigns()).toBe(0);
 		expect(sends('camp-1')).toEqual([
 			expect.objectContaining({
 				email: 'member@example.com',
-				status: 'failed',
+				status: 'pending',
 				error: 'Postmark 500'
 			})
 		]);
 	});
+
+	// #2971: a refused copy is retried on its own, not lost and not re-sent to everyone.
+	it('retries a refused copy alone on a later run, and sends it', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'a@example.com');
+		sub('sub-2', 'b@example.com');
+		member('aud-1', 'sub-1');
+		member('aud-1', 'sub-2');
+		vi.mocked(sendBroadcastBatch).mockImplementationOnce(async (messages) =>
+			messages.map((m) =>
+				m.to === 'b@example.com'
+					? { ok: false as const, error: '406: Inactive recipient' }
+					: { ok: true as const, messageId: `pm-${m.to}` }
+			)
+		);
+
+		await executeSend('camp-1');
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({ email: 'a@example.com', status: 'sent' }),
+			expect.objectContaining({ email: 'b@example.com', status: 'pending' })
+		]);
+
+		const later = new Date(NOW.getTime() + 2 * 60_000);
+		expect(await deliverOutbox({ now: later })).toEqual([
+			expect.objectContaining({ status: 'sent' })
+		]);
+		expect(vi.mocked(sendBroadcastBatch).mock.calls[1][0].map((m) => m.to)).toEqual([
+			'b@example.com'
+		]);
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({ email: 'a@example.com', status: 'sent' }),
+			expect.objectContaining({ email: 'b@example.com', status: 'sent', error: null })
+		]);
+	});
+
+	it('does not mail an address suppressed while its copy waited', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+		vi.mocked(sendBroadcastBatch).mockImplementationOnce(async (messages) =>
+			messages.map(() => ({ ok: false as const, error: '500: Try again' }))
+		);
+		await executeSend('camp-1');
+		sqlite.prepare(`update subscriber set suppressed_at = ? where id = 'sub-1'`).run(NOW_S);
+
+		await deliverOutbox({ now: new Date(NOW.getTime() + 2 * 60_000) });
+
+		expect(sendBroadcastBatch).toHaveBeenCalledTimes(1);
+		expect(sends('camp-1')).toEqual([
+			expect.objectContaining({
+				status: 'pending',
+				error: 'Suppressed since the campaign was sent'
+			})
+		]);
+	});
+
+	it("writes each recipient's send and outbox rows in the same batch", async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+		const batch = vi.spyOn(testDb, 'batch');
+
+		await executeSend('camp-1');
+
+		const tablesPerBatch = batch.mock.calls.map(([statements]) =>
+			(statements as unknown as { toSQL(): { sql: string } }[]).map(
+				(st) => st.toSQL().sql.match(/^insert into "(\w+)"/)?.[1] ?? 'other'
+			)
+		);
+		expect(tablesPerBatch).toContainEqual(['campaign_send', 'outbox_message']);
+		batch.mockRestore();
+	});
+
+	// A Worker run has a CPU and subrequest budget: no run renders or sends the whole list.
+	it('sends the first 500 at once and leaves the rest to the cron', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		const insertSub = sqlite.prepare(`insert into subscriber (id, email, name) values (?, ?, ?)`);
+		const insertMember = sqlite.prepare(
+			`insert into audience_member (audience_id, subscriber_id) values ('aud-1', ?)`
+		);
+		for (let i = 0; i < 600; i++) {
+			insertSub.run(`s-${i}`, `m${i}@example.com`, `M ${i}`);
+			insertMember.run(`s-${i}`);
+		}
+
+		expect(await executeSend('camp-1')).toBe(600);
+
+		expect(sentTo()).toHaveLength(500);
+		const pending = () =>
+			(sends('camp-1') as { status: string }[]).filter((r) => r.status === 'pending');
+		expect(pending()).toHaveLength(100);
+
+		await deliverOutbox();
+		expect(sentTo()).toHaveLength(600);
+		expect(pending()).toHaveLength(0);
+		// ~0.5s alone; 1,200 rows written and claimed. The bound is for a loaded machine.
+	}, 30_000);
 
 	// #2777: a sent campaign showed only a count.
 	it('records each recipient with its audience and what Postmark answered', async () => {
@@ -590,7 +706,11 @@ describe('executeSend', () => {
 			status: 'sent',
 			provider_message_id: 'pm-a'
 		});
-		expect(byEmail[order[1]]).toMatchObject({ status: 'failed', error: '406: Inactive recipient' });
+		// Refused once: pending with the reason, and retried by the outbox.
+		expect(byEmail[order[1]]).toMatchObject({
+			status: 'pending',
+			error: '406: Inactive recipient'
+		});
 	});
 
 	it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {

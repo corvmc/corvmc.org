@@ -63,6 +63,15 @@ export function deliverSoon(ids: string[]): Promise<void> {
 	return afterResponse(() => deliverOutbox({ ids }), { channel: 'outbox', count: ids.length });
 }
 
+/**
+ * Send the oldest due rows, up to `limit`, off the request path: a cron run
+ * started now. For a writer of more rows than one run should send, such as a
+ * campaign, which leaves the rest to `/api/cron/send-outbox`.
+ */
+export function deliverDueSoon(limit: number): Promise<void> {
+	return afterResponse(() => deliverOutbox({ limit }), { channel: 'outbox', limit });
+}
+
 function due(now: Date) {
 	return and(
 		eq(outboxMessage.status, 'pending'),
@@ -98,6 +107,21 @@ async function send(rows: OutboxMessage[]): Promise<Map<string, SendResult>> {
 	const rendered = rows.filter((r) => r.kind === 'html_email');
 	const sentHtml = await sendHtmlEmails(rendered.map((r) => r.payload as unknown as HtmlEmail));
 	rendered.forEach((r, i) => results.set(r.id, sentHtml[i]));
+
+	const broadcasts = rows.filter((r) => r.kind === 'campaign_email');
+	if (broadcasts.length > 0) {
+		// Loaded on demand, as the inbox below is: only a campaign send needs it.
+		const { deliverCampaignEmails } = await import('#lib/server/marketing/campaign-delivery.js');
+		try {
+			const sentBroadcasts = await deliverCampaignEmails(
+				broadcasts.map((r) => String(r.payload.campaignSendId))
+			);
+			broadcasts.forEach((r, i) => results.set(r.id, sentBroadcasts[i]));
+		} catch (err) {
+			const error = err instanceof Error ? err.message : String(err);
+			for (const r of broadcasts) results.set(r.id, { ok: false, error });
+		}
+	}
 
 	const replies = rows.filter((row) => row.kind === 'inbox_reply');
 	if (replies.length === 0) return results;

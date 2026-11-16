@@ -63,7 +63,15 @@ describe('POST /api/webhooks/postmark/events', () => {
 	])('moves the campaign send a %s is about', async (recordType, status) => {
 		await POST(req({ RecordType: recordType, MessageID: 'pm-1', Recipient: 'a@b.com' }));
 
-		expect(mockRecordSendEvent).toHaveBeenCalledWith('pm-1', status);
+		expect(mockRecordSendEvent).toHaveBeenCalledWith('pm-1', status, undefined);
+	});
+
+	it('names a queued campaign send by the id in the metadata (#2971)', async () => {
+		await POST(
+			req({ RecordType: 'Delivery', MessageID: 'pm-1', Metadata: { campaignSendId: 'cs-1' } })
+		);
+
+		expect(mockRecordSendEvent).toHaveBeenCalledWith('pm-1', 'delivered', 'cs-1');
 	});
 
 	it('suppresses nobody on a delivery', async () => {

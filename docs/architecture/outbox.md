@@ -34,9 +34,19 @@ delivery at-least-once.
   enquiries, a staff reply sent by email) and is sent at once, so the author sees the result.
   A reply that has not gone shows as not sent on the thread, with the error, and
   `retryReply` sends it again. `reply-delivery.ts` is the only caller of `dispatchReply`.
+- **`campaign_email`**: one recipient's copy of a campaign, named by its `campaign_send` id
+  and filed under it. `campaign-delivery.ts` renders it when it is sent and sends it on the
+  broadcast stream through Postmark's batch endpoint, which the log driver also answers.
+  `executeSend` claims the campaign, then writes each recipient's `campaign_send` row and
+  outbox row in the same batch, 250 recipients to a batch. The first 500 go at once
+  (`deliverDueSoon`); the cron sends the rest, 200 a run, so no one invocation renders or
+  sends a whole audience. The `campaign_send` row stays `pending`, and the campaign page reads
+  its outbox row for sent or failed and the error; Postmark's events move it on from there,
+  matched by the `campaignSendId` in the message's metadata. An address suppressed while its
+  copy waits is not sent to.
 
 `subject_type` and `subject_id` name the record a message belongs to (`market_vendor`,
-`directory_entry_link`, `inbox_message`), so that record's page can read the newest row with
+`directory_entry_link`, `inbox_message`, `campaign_send`), so that record's page can read the newest row with
 `latestDelivery`.
 
 ## Writing one
@@ -58,12 +68,10 @@ answers as Postmark would. Local runs and e2e therefore exercise the whole send 
 token and without reaching a real inbox. See
 [local-dev-quickstart.md](../development/local-dev-quickstart.md#7-email-locally).
 
-## Senders not yet on the outbox
+## Senders
 
-`scripts/mail-outbox-guard.spec.ts` lists the modules still allowed to import the Postmark
-client directly. The list only shrinks. Each entry is a sender whose failure is still thrown
-or lost rather than recorded:
-
-| Module                                         | Sends                                                                                                                                                                           |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/lib/server/marketing/campaign-service.ts` | Campaign broadcasts. Each recipient's result, and each audience member skipped as unsubscribed or suppressed, is recorded in `campaign_send` (#2777, #2914); nothing is retried |
+`scripts/mail-outbox-guard.spec.ts` refuses a direct import of the Postmark SDK, of any send
+function from the client, or of `dispatchReply`, outside the client, the outbox and its
+transports (`channel-dispatcher.ts`, `reply-delivery.ts`, `campaign-delivery.ts`). Its list of
+senders not yet on the outbox has been empty since #2971; adding to it needs a reason in
+review.

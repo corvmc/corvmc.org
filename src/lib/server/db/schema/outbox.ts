@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
-export const outboxKinds = ['email', 'html_email', 'inbox_reply'] as const;
+export const outboxKinds = ['email', 'html_email', 'inbox_reply', 'campaign_email'] as const;
 export type OutboxKind = (typeof outboxKinds)[number];
 
 export const outboxStatuses = ['pending', 'sent', 'failed'] as const;
@@ -22,7 +22,8 @@ export const outboxMessage = sqliteTable(
 		kind: text('kind', { enum: outboxKinds }).notNull(),
 		/**
 		 * `email`: recipient, template alias, model, reply-to, tag. `html_email`: recipient,
-		 * subject, rendered HTML, tag. `inbox_reply`: the message id.
+		 * subject, rendered HTML, tag. `inbox_reply`: the message id. `campaign_email`: the
+		 * `campaign_send` id, rendered when sent.
 		 */
 		payload: text('payload', { mode: 'json' }).notNull().$type<Record<string, unknown>>(),
 		/** The record this message belongs to, so its page can show whether it went. Polymorphic. */
