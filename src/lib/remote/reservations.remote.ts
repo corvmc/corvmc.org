@@ -106,6 +106,7 @@ import {
 	getFeeGate,
 	withholdDoorCode
 } from '#lib/server/reservation/outstanding-fees.js';
+import { doorCodeWithheld } from '#lib/server/reservation/door-code-gate.js';
 import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
 import {
@@ -262,12 +263,14 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	// and only pushes them down when the lock is reachable. `lockSyncedAt` is the
 	// lock's own confirmation. Until it is set, the member gets the break-glass
 	// code instead — but only inside their window, and the reveal is recorded.
-	// Neither while they owe a fee (#2874), and a held code is not a reveal.
+	// Neither while they owe a fee (#2874) nor on unpaid teaching time (#3025),
+	// and a held code is not a reveal.
 	const paymentDueOn = await doorCodeHeldSince(row.createdByUserId);
-	const fallbackCode = paymentDueOn ? null : await revealFallbackCodeFor(row);
+	const held = paymentDueOn !== null || doorCodeWithheld(row);
+	const fallbackCode = held ? null : await revealFallbackCodeFor(row);
 
 	return {
-		reservation: withholdDoorCode(row, paymentDueOn !== null),
+		reservation: withholdDoorCode(row, held),
 		/** The oldest fee's start while the door code is held for one. */
 		paymentDueOn,
 		/** The booking as a record, for the detail page's identity (#1061). */
@@ -477,8 +480,9 @@ export const getBandReservationDetail = query(
 		// of them can already read (#780). Held from the whole act while the booker
 		// owes a fee (#2874); staff keep it to let them in.
 		const heldSince = role === 'staff' ? null : await doorCodeHeldSince(res.createdByUserId);
-		const door = withholdDoorCode(res, heldSince !== null);
-		const fallbackCode = heldSince ? null : await revealFallbackCodeFor(res);
+		const held = heldSince !== null || doorCodeWithheld(res);
+		const door = withholdDoorCode(res, held);
+		const fallbackCode = held ? null : await revealFallbackCodeFor(res);
 
 		return {
 			id: res.id,
@@ -1577,7 +1581,10 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 const instructorBookingSchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
-	recurringUntil: z.string().optional()
+	recurringUntil: z.string().optional(),
+	coverFees: z.boolean().default(false),
+	// Set only by the pay step's submit, so a plain booking never charges.
+	payNow: z.enum(['', 'on']).optional()
 });
 
 /**
@@ -1660,6 +1667,29 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 			monthlyMode: data.monthlyMode,
 			endsAt: seriesEndsAt
 		});
+	}
+
+	// Pay ahead is optional (#3025): unpaid teaching time just gets no door code.
+	if (data.payNow === 'on' && !waitlisted) {
+		const back = `${getRequestEvent().url.origin}/member/reservations`;
+		const result = await payReservationRemainder({
+			row: {
+				id: res.id,
+				startsAt: res.startsAt,
+				endsAt: res.endsAt,
+				tourMinutes: res.tourMinutes,
+				bookerType: 'instructor'
+			},
+			booker: currentUser,
+			payer: currentUser,
+			coverFees: data.coverFees,
+			successUrl: back,
+			cancelUrl: back
+		});
+		if ('checkoutUrl' in result) {
+			return { reservationId: res.id, waitlisted, redirectUrl: result.checkoutUrl };
+		}
+		return { reservationId: res.id, waitlisted, paid: true as const };
 	}
 
 	return { reservationId: res.id, waitlisted };
@@ -2316,7 +2346,7 @@ export const getReservations = query(
 				}).remainingCents <= 0;
 
 			return {
-				...withholdDoorCode(value, held, now),
+				...withholdDoorCode(value, held || (forSelf && doorCodeWithheld(value)), now),
 				price: netCents / 100,
 				creditsAvailable,
 				payableWithCredits,

@@ -27,7 +27,6 @@
 		fields = {},
 		band = false,
 		bookerType = undefined,
-		payAhead = true,
 		submitLabel = m.reservations_booking_confirm_step_submit_label()
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
@@ -42,12 +41,6 @@
 		 * terms, which is what every existing caller wants.
 		 */
 		bookerType?: BookerType;
-		/**
-		 * Whether a balance owed can be paid up front. False for a booking whose
-		 * remote takes no payment — offering Pay Ahead there advances the wizard to
-		 * a payment step that does not exist.
-		 */
-		payAhead?: boolean;
 		/**
 		 * What the primary action is called. It names the dialog it finishes, so
 		 * each caller passes its own — "Book teaching time" is not a session
@@ -85,8 +78,10 @@
 	const isRecurring = $derived(recurringFrequency !== '');
 
 	// Booking already spends the free hours, so Pay Ahead is offered only for a
-	// balance, or for a band, whose booking leaves everything owed (#2095).
-	const showPayAhead = $derived(payAhead && !!pricing && (pricing.remainingCents > 0 || band));
+	// balance, or for a band or teaching, whose booking leaves everything owed
+	// (#2095, #3025).
+	const leavesOwed = $derived(band || bookerType === 'instructor');
+	const showPayAhead = $derived(!!pricing && (pricing.remainingCents > 0 || leavesOwed));
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));

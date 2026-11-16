@@ -39,8 +39,8 @@ const values = {
 
 const pricing = vi.mocked(getReservationPricing);
 
-async function continueToConfirm() {
-	await render(Harness, { remote: remote as never, values });
+async function continueToConfirm(props: Record<string, unknown> = {}) {
+	await render(Harness, { remote: remote as never, values, ...props });
 	await page.getByCss('[data-step="0"] button').click();
 }
 
@@ -72,5 +72,25 @@ describe('ConfirmStep', () => {
 		await continueToConfirm();
 
 		await expect.element(page.getByTestId('confirm-pricing-error')).toBeVisible();
+	});
+
+	// #3025: booking teaching time spends no free hours, so a covered slot is
+	// still owed and Pay ahead stays on offer. A member's booking spends them.
+	it.each([
+		[undefined, 1],
+		['instructor', 2]
+	])('with free hours covering it, %s booking offers %i step buttons', async (bookerType, n) => {
+		pricing.mockResolvedValue({
+			durationHours: 1,
+			hourlyRateCents: 500,
+			totalCents: 500,
+			creditsApplicable: 2,
+			remainingCents: 0
+		} as never);
+		await continueToConfirm({ bookerType });
+
+		await expect.element(page.getByTestId('confirm-pricing')).toBeVisible();
+		// Back, and Pay ahead when it is offered; the submit is not a step button.
+		expect(page.getByCss('[data-step="1"] button[type="button"]').all()).toHaveLength(n);
 	});
 });

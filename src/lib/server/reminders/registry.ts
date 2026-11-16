@@ -38,6 +38,7 @@ import {
 	listFeesEndedBetween,
 	membersOwingFees
 } from '#lib/server/reservation/outstanding-fees.js';
+import { doorCodeWithheld } from '#lib/server/reservation/door-code-gate.js';
 import { PAYMENT_DUE_BANDS, paymentDueKey } from '#lib/server/reservation/payment-reminder.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { taskAudiences } from '#lib/server/task/task-audience.js';
@@ -380,8 +381,9 @@ export const reminders: ReminderDefinition[] = [
 	// Owed once `reconcileSyncState` stamps lockSyncedAt: a code U-tec only
 	// queued may not open the door yet. The one-day floor keeps the first drain
 	// from mailing every code already on the lock; a booking starting within a
-	// day stays owed past it. Withheld while the member owes a fee (#2859): no
-	// sent-mark, so the first drain after payment sends it.
+	// day stays owed past it. Withheld while the member owes a fee (#2859) and on
+	// unpaid teaching time (#3025): no sent-mark, so the first drain after payment
+	// sends it.
 	defineReminder({
 		key: 'door_code_ready',
 		subjectType: 'reservation',
@@ -393,6 +395,11 @@ export const reminders: ReminderDefinition[] = [
 					lockCode: reservation.lockCode,
 					startsAt: reservation.startsAt,
 					endsAt: reservation.endsAt,
+					status: reservation.status,
+					bookerType: reservation.bookerType,
+					paidAt: reservation.paidAt,
+					refundedAt: reservation.refundedAt,
+					cashDueCents: reservation.cashDueCents,
 					userId: reservation.createdByUserId,
 					userName: user.name,
 					userEmail: user.email
@@ -417,7 +424,7 @@ export const reminders: ReminderDefinition[] = [
 				now
 			);
 			return rows
-				.filter((row) => !owing.has(row.userId))
+				.filter((row) => !owing.has(row.userId) && !doorCodeWithheld(row))
 				.map((row) => ({
 					subjectId: row.id,
 					payload: {
