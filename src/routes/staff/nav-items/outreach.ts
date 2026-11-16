@@ -1,8 +1,7 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type OutreachNavKey =
-	'inbox' | 'contacts' | 'funding' | 'outreach' | 'content' | 'local-resources';
+export type OutreachNavKey = 'inbox' | 'contacts' | 'funding' | 'outreach' | 'content';
 
 /** Outward: the public and outside parties (#3112). */
 export const outreach: StaffNavSection = {
@@ -46,23 +45,14 @@ export const outreach: StaffNavSection = {
 			label: 'Marketing',
 			href: resolve('staff/marketing')
 		},
-		// Help articles and Local resources are its views, each with its own gate
-		// (#2765). Local resources is its sub-row too (#3112).
+		// Opens the Content panel (#3119); its rows are `contentNavItems`.
 		{
 			key: 'content',
 			capability: 'help.read',
 			alsoFor: ['localResource.manage'],
 			label: 'Content',
 			href: resolve('staff/content'),
-			also: [resolve('staff/help')],
-			children: [
-				{
-					key: 'local-resources',
-					capability: 'localResource.manage',
-					label: 'Local resources',
-					href: resolve('staff/local-resources')
-				}
-			]
+			also: [resolve('staff/help'), resolve('staff/local-resources')]
 		}
 	]
 };

@@ -54,8 +54,8 @@ Everything else is in four groups, each answering one question:
 - **Outreach**, outward to the public and outside parties — **Inbox** (contact-form and channel
   messages; the badge counts unresolved threads), **Contacts** (outside organizations, with
   funders, sponsors and contractors among them), **Funding** (grant applications and
-  sponsorships), **Marketing** (**Campaigns** and **Audiences**) and **Content** (**Help
-  articles**, with **Local resources** beneath it).
+  sponsorships), **Marketing** (**Campaigns** and **Audiences**) and **Content** (opens its own
+  sidebar: **Help articles** and **Local resources**).
 - **Community**, members and what they post — **Members** (member accounts, roles, and credits;
   volunteers and teachers are role filters), **Bands**, **Events** (creating and running events,
   ticketing and check-in, with productions, venues and vendor applications as views, and

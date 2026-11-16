@@ -135,7 +135,8 @@ the queue of work, and each item on it links to the page where the work is done.
   module joins the section whose question it answers by adding its row and key to that file.
 - **A module's settings live on its row**, behind a Settings button in its header, or a view such
   as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
-  spans modules: organization, features, access, transactions and the audit log.
+  spans modules: organization, features, access, transactions and the audit log. The Content
+  panel (`/staff/help`, `/staff/local-resources`) works the same way, with one row per page.
 - **A moved page keeps its old URL as a redirect**, with a spec that names it.
 
 ### Consoles

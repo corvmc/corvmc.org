@@ -42,6 +42,7 @@
 		IconToggleRight,
 		IconKey,
 		IconAlertTriangle,
+		IconHelp,
 		IconMapPin
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
@@ -50,8 +51,10 @@
 	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import {
 		activeNavKey,
+		activeContentKey,
 		activeSystemKey,
 		childHrefsFor,
+		inContentPanel,
 		inSystemPanel,
 		filterNavItems,
 		filterNavSections,
@@ -60,6 +63,7 @@
 		staffNavSections,
 		staffNavTop,
 		systemNavItems,
+		contentNavItems,
 		type StaffNavBadgeKey,
 		type StaffNavItem,
 		type StaffNavKey
@@ -97,8 +101,10 @@
 	const navSections = $derived(filterNavSections(staffNavSections, layout.capabilities));
 	const navBottom = $derived(filterNavItems(staffNavBottom, layout.capabilities));
 	const navSystem = $derived(filterNavItems(systemNavItems, layout.capabilities));
-	// The System panel swaps this sidebar for its own (#2763).
+	const navContent = $derived(filterNavItems(contentNavItems, layout.capabilities));
+	// The System and Content panels swap this sidebar for their own (#2763, #3119).
 	const system = $derived(inSystemPanel(page.url.pathname));
+	const content = $derived(inContentPanel(page.url.pathname));
 	// Resolved against the filtered tree, so a star on a row this viewer cannot
 	// see, or on a key that no longer exists, simply does not render.
 	const navStarred = $derived(
@@ -143,7 +149,8 @@
 		organization: IconBuilding,
 		features: IconToggleRight,
 		access: IconKey,
-		audit: IconHistory
+		audit: IconHistory,
+		help: IconHelp
 	};
 
 	let badges = $derived({
@@ -153,7 +160,11 @@
 	} satisfies Record<StaffNavBadgeKey, number>);
 
 	let activeKey = $derived(
-		system ? activeSystemKey(page.url.pathname) : activeNavKey(page.url.pathname)
+		system
+			? activeSystemKey(page.url.pathname)
+			: content
+				? activeContentKey(page.url.pathname)
+				: activeNavKey(page.url.pathname)
 	);
 
 	function badgeFor(item: StaffNavItem): number | undefined {
@@ -229,21 +240,27 @@
 	{/each}
 {/snippet}
 
+<!-- A panel's own sidebar. Not starrable: a star shows in the staff sidebar, which these rows are not in. -->
+{#snippet panelNav(title: string, items: StaffNavItem[])}
+	<Nav.Item href={resolve('staff')} label={m.staff_system_back_label()} active={false}>
+		{#snippet icon()}<IconArrowLeft />{/snippet}
+	</Nav.Item>
+	<Nav.Group {title}>
+		{#each items as item (item.key)}
+			{@const Icon = icons[item.key]}
+			<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
+				{#snippet icon()}<Icon />{/snippet}
+			</Nav.Item>
+		{/each}
+	</Nav.Group>
+{/snippet}
+
 <AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#if system}
-			<Nav.Item href={resolve('staff')} label={m.staff_system_back_label()} active={false}>
-				{#snippet icon()}<IconArrowLeft />{/snippet}
-			</Nav.Item>
-			<Nav.Group title={m.staff_system_title()}>
-				<!-- Not starrable: a star shows in the staff sidebar, which these rows are not in. -->
-				{#each navSystem as item (item.key)}
-					{@const Icon = icons[item.key]}
-					<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
-						{#snippet icon()}<Icon />{/snippet}
-					</Nav.Item>
-				{/each}
-			</Nav.Group>
+			{@render panelNav(m.staff_system_title(), navSystem)}
+		{:else if content}
+			{@render panelNav(m.staff_content_title(), navContent)}
 		{:else}
 			{@render staffNav()}
 		{/if}

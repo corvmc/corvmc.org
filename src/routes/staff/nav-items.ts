@@ -33,6 +33,7 @@ import { programs } from './nav-items/programs';
 import { governance } from './nav-items/governance';
 import { staffNavBottom } from './nav-items/bottom';
 import { systemNavItems } from './nav-items/system';
+import { contentNavItems } from './nav-items/content';
 
 export type {
 	StaffNavBadgeKey,
@@ -42,7 +43,8 @@ export type {
 	StaffNavSectionKey
 } from './nav-items/types';
 export type { SystemNavKey } from './nav-items/system';
-export { staffNavTop, staffNavBottom, systemNavItems };
+export type { ContentNavKey } from './nav-items/content';
+export { staffNavTop, staffNavBottom, systemNavItems, contentNavItems };
 
 /**
  * The four sections (#3112), each one question: outward to the public and
@@ -56,6 +58,18 @@ export const staffNavSections: StaffNavSection[] = [outreach, community, program
 export function inSystemPanel(pathname: string): boolean {
 	const root = resolve('staff/system');
 	return pathname === root || pathname.startsWith(root + '/');
+}
+
+const contentRoots = [resolve('staff/content'), ...contentNavItems.map((i) => i.href)];
+
+/** Whether a path is in the Content panel (#3119), which has its own sidebar. */
+export function inContentPanel(pathname: string): boolean {
+	return contentRoots.some((root) => pathname === root || pathname.startsWith(root + '/'));
+}
+
+/** Which Content row to light for a pathname. */
+export function activeContentKey(pathname: string): StaffNavKey | null {
+	return resolveActiveNavKey<StaffNavKey>(contentNavItems, pathname);
 }
 
 /** Which System row to light for a pathname. */

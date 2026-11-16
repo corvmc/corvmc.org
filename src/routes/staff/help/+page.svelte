@@ -28,8 +28,6 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
-	import StaffViews from '../StaffViews.svelte';
-	import { contentViews } from '../content/views';
 
 	const data = $derived(await getStaffHelpPage());
 	const articles = $derived(data.articles);
@@ -83,8 +81,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_content_title()} documentTitle={m.staff_help_title()}>
-	<StaffViews views={contentViews} active="help" />
+<PageHeader title={m.staff_help_title()}>
 	<Button href="/staff/help/create" variant="default" size="sm">
 		<IconPlus size={16} />
 		{m.staff_new_article_label()}
