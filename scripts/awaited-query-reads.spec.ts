@@ -18,8 +18,8 @@ const GLOBS = ['src/routes/**/*.svelte', 'src/lib/components/**/*.svelte'];
  */
 const READ_ONCE = new Set([
 	// Totals strips with no form on their pages.
-	'src/routes/staff/groups/ClubTotals.svelte',
-	'src/routes/staff/groups/BandTotals.svelte',
+	'src/routes/staff/clubs/ClubTotals.svelte',
+	'src/routes/staff/bands/BandTotals.svelte',
 	'src/routes/staff/members/UserTotals.svelte',
 	'src/routes/staff/events/CalendarTotals.svelte'
 ]);

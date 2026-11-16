@@ -51,7 +51,7 @@
 		<BandAddressSection slug={band.slug} readonly={!isOwner} />
 		<div class="h-8"></div>
 	{:else}
-		<Alert type="info" href={`/staff/groups/${band.id}`}>
+		<Alert type="info" href={`/staff/bands/${band.id}`}>
 			{m.band_slug_settings_re_viewing_band_as_staff_body()}
 		</Alert>
 	{/if}

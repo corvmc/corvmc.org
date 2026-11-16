@@ -332,6 +332,7 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 				.select({
 					id: groupApplicationChoice.id,
 					refId: group.id,
+					groupKind: group.kind,
 					at: groupApplication.createdAt,
 					summary: group.name,
 					...actor
@@ -347,6 +348,7 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 			type: 'group_application',
 			id: r.id,
 			groupId: r.refId ?? null,
+			groupKind: r.groupKind ?? null,
 			title: r.summary ?? ''
 		})
 	}),

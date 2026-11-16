@@ -894,7 +894,7 @@ Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags a
 
 Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
 that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
-`actions` (`/staff/groups/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
+`actions` (`/staff/moderation/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
 An action that is the same on every tab stays in the header (`/staff/reservations`).
 
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
@@ -1388,7 +1388,7 @@ Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge
 `menuCount`; reach for it when a page's filters would fill more than a couple of rows
 on a phone, not to hide the primary ones.
 `actions` sits at the row's end, for what belongs to the current view rather than
-the page — a tabbed page's per-tab create button (`/staff/groups/*`).
+the page — a tabbed page's per-tab create button (`/staff/moderation/incidents`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

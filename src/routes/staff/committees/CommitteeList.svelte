@@ -7,8 +7,7 @@
 	import CreateGroupAction from '#lib/components/groups/CreateGroupAction.svelte';
 	import { getStaffCommittees } from '#lib/remote/groups.remote.js';
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
-	import GroupKindFilter from './GroupKindFilter.svelte';
-	import GroupRecordPanel from './[id]/GroupRecordPanel.svelte';
+	import GroupRecordPanel from '#lib/components/groups/GroupRecordPanel.svelte';
 
 	// Declared above the await so they are not async-gated.
 	let selected = $state<{ id: string; name: string } | null>(null);
@@ -24,7 +23,6 @@
 </script>
 
 <FilterBar>
-	<GroupKindFilter view="committee" />
 	{#snippet actions()}
 		{#if data.canManage}
 			<CreateGroupAction kind="committee" />

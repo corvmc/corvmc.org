@@ -6,7 +6,7 @@
 	import { searchMembers } from '#lib/remote/reservations.remote.js';
 	import { createStaffGroup } from '#lib/remote/groups.remote.js';
 	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { staffGroupHref } from '#lib/utils/group-href.js';
 
 	/**
 	 * The only door a club or committee comes through.
@@ -66,8 +66,8 @@
 	size="sm"
 	data-testid="create-group"
 	onsuccess={(result) => {
-		const made = result as { id?: string } | undefined;
-		if (made?.id) goto(resolve(`staff/groups/${made.id}`));
+		const made = result as { id?: string; kind?: 'club' | 'committee' } | undefined;
+		if (made?.id) goto(staffGroupHref(made.kind ?? kind, made.id));
 	}}
 >
 	{#snippet form()}

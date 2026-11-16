@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import { groupViewRedirect } from '../views';
+import { groupListRedirect } from '../views';
 
-/** Clubs are a kind filter on the Groups list (#2765); old links land there. */
+/** An address from before the Groups list (#2765); clubs are listed on their own (#3027). */
 export const load: PageLoad = ({ url }) => {
-	redirect(308, groupViewRedirect('club', url.search));
+	redirect(308, groupListRedirect('club', url.search));
 };

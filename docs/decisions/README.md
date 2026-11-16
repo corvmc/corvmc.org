@@ -117,3 +117,4 @@ A page or less. Link the issue and the PRs.
 | 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                               | 2026-11-13 | Accepted              |
 | 0085 | [Committees are departments, and a duty grants the duty](0085-committees-are-departments.md)                                   | 2026-11-14 | Amended by 0086       |
 | 0086 | [Production capabilities are cut by consequence](0086-production-capabilities-by-consequence.md)                               | 2026-11-15 | Accepted              |
+| 0087 | [Bands, clubs and committees are listed apart](0087-bands-clubs-and-committees-are-listed-apart.md)                            | 2026-11-15 | Accepted              |

@@ -89,7 +89,7 @@ describe('applicationNotice', () => {
 				id: 'usr-coord',
 				name: 'Coordinator',
 				email: 'coord@example.com',
-				href: '/staff/groups?kind=committee'
+				href: '/staff/committees'
 			}
 		]);
 	});

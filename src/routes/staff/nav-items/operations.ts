@@ -1,7 +1,8 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type OperationsNavKey = 'projects' | 'volunteer-schedule' | 'gear' | 'supplies' | 'payments';
+export type OperationsNavKey =
+	'projects' | 'committees' | 'volunteer-schedule' | 'gear' | 'supplies' | 'payments';
 
 export const operations: StaffNavSection = {
 	key: 'operations',
@@ -15,6 +16,14 @@ export const operations: StaffNavSection = {
 			capability: 'project.read',
 			label: 'Tasks',
 			href: resolve('staff/tasks')
+		},
+		// Committees work as departments (decision 0085), listed apart (#3027).
+		{
+			key: 'committees',
+			capability: 'committee.manage',
+			alsoFor: ['committee.reviewApplications'],
+			label: 'Committees',
+			href: resolve('staff/committees')
 		},
 		// Volunteer shifts (#2625): signing people up and closing shifts out.
 		// It keeps the rest of `/staff/volunteer` (roles, clearances) and the

@@ -1,5 +1,5 @@
 # Bands
 
-Status: ✅ /staff/groups
+Status: ✅ /staff/bands
 
 List, detail, create, edit, remove members, transfer ownership, soft-delete deactivation/reactivation
