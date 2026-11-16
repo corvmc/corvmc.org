@@ -1,5 +1,7 @@
 <script>
-	import { m } from '#lib/paraglide/messages.js';
+	// One message, not `m`: this file compiles in legacy mode, where reading `m`
+	// in the template deep-reads the namespace and bundles every message.
+	import { layout_page_title } from '#lib/paraglide/messages.js';
 	/** @type {string} */
 	export let title = '';
 	/** @type {string} */
@@ -7,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.layout_page_title({ title })}</title>
+	<title>{layout_page_title({ title })}</title>
 	{#if description}
 		<meta name="description" content={description} />
 	{/if}
