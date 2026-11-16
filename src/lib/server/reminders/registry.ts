@@ -289,10 +289,11 @@ const when = (row: { startsAt: Date; endsAt: Date }) => ({
 /**
  * The bookings whose door-code notice waits, so they claim no pool code yet:
  * the booker owes a fee (#2859), or holds a standing code and needs none.
+ * A band booking claims one anyway, for a bandmate who arrives first (#2120).
  * Unpaid teaching bookings join here (#3025).
  */
 async function doorCodeHolds(
-	rows: { id: string; userId: string }[],
+	rows: { id: string; userId: string; bookerType: string }[],
 	now: Date
 ): Promise<Set<string>> {
 	const userIds = [...new Set(rows.map((r) => r.userId))];
@@ -300,9 +301,9 @@ async function doorCodeHolds(
 		membersOwingFees(userIds, now),
 		membersWithStandingCodes(userIds)
 	]);
-	return new Set(
-		rows.filter((r) => owing.has(r.userId) || standing.has(r.userId)).map((r) => r.id)
-	);
+	const needsNoCode = (r: (typeof rows)[number]) =>
+		standing.has(r.userId) && r.bookerType !== 'group';
+	return new Set(rows.filter((r) => owing.has(r.userId) || needsNoCode(r)).map((r) => r.id));
 }
 
 /**
@@ -409,6 +410,7 @@ export const reminders: ReminderDefinition[] = [
 			const rows = await db
 				.select({
 					id: reservation.id,
+					bookerType: reservation.bookerType,
 					startsAt: reservation.startsAt,
 					endsAt: reservation.endsAt,
 					userId: reservation.createdByUserId,
