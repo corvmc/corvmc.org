@@ -148,7 +148,7 @@ import {
 	listActive as listActiveSeries
 } from '#lib/server/reservation/recurring-series-service.js';
 import { getMembers } from '#lib/server/band/band-service.js';
-import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { requireBandRole, requireGroupRole } from '#lib/server/group/group-context.js';
 import { listBookableBands } from '#lib/server/reservation/bookable-bands.js';
 import { paginate } from '#lib/server/db/paginate.js';
 import { ensureContactPhone } from '#lib/server/user/user-service.js';
@@ -1710,7 +1710,7 @@ const bandBookingSchema = createReservationSchema.extend({
 });
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
-	const { user: currentUser, group: band } = await requireGroupRole({ slug: data.slug }, 'member');
+	const { user: currentUser, group: band } = await requireBandRole({ slug: data.slug }, 'member');
 	// The booking member's own fees, not the band's: a person is on the hook.
 	await refuseOnOutstandingFees(currentUser.id);
 

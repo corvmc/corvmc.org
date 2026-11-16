@@ -13,12 +13,13 @@ vi.mock('#lib/server/authorization.js', () => ({
 vi.mock('#lib/server/instructor/instructor-context.js', () => ({
 	requireInstructor: vi.fn(async () => ({ id: 'instr-1', userId: 'user-1', status: 'active' }))
 }));
-vi.mock('#lib/server/group/group-context.js', () => ({
-	requireGroupRole: vi.fn(async () => ({
+vi.mock('#lib/server/group/group-context.js', () => {
+	const asMember = vi.fn(async () => ({
 		user: { id: 'user-1', email: 'u@example.com', name: 'U' },
-		group: { id: 'band-1', slug: 'the-velvets' }
-	}))
-}));
+		group: { id: 'band-1', slug: 'the-velvets', kind: 'band' }
+	}));
+	return { requireGroupRole: asMember, requireBandRole: asMember };
+});
 
 const create = vi.fn(async () => ({ id: 'res-1' }));
 const staffCreate = vi.fn(async () => ({ id: 'res-2' }));
