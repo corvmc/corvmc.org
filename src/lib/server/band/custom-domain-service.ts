@@ -11,16 +11,19 @@
  * gets a certificate issued *before* cutting DNS over, so there is never a
  * window where their live site is down waiting on us.
  */
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { DomainError } from '../domain-error';
-import { env as publicEnv } from '$env/dynamic/public';
+import * as publicEnv from '$app/env/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 import { forgetCustomDomain } from './band-host-service';
-import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/band-site';
+import type {
+	CustomDomainStatus,
+	CustomDomainVerification
+} from '#lib/server/db/schema/band-site.js';
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 

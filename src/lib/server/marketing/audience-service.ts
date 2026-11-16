@@ -1,7 +1,8 @@
-import { db } from '$lib/server/db';
-import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
-import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, sql, isNull, asc } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import { audience, audienceMember, subscriber } from '#lib/server/db/schema/marketing.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eq, and, sql, isNull, isNotNull, asc } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { findOrCreateByEmail } from './subscriber-service';
 import {
 	countSystemAudience,
@@ -10,7 +11,7 @@ import {
 	isSystemAudienceKey,
 	previewSystemAudience
 } from './system-audiences';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -219,27 +220,15 @@ export async function getAudienceBySlug(slug: string) {
 export async function addSubscriber(audienceId: string, subscriberId: string) {
 	await assertNotSystem(audienceId, 'add a subscriber to');
 
-	const [existing] = await db
-		.select({ id: audienceMember.id, unsubscribedAt: audienceMember.unsubscribedAt })
-		.from(audienceMember)
-		.where(
-			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
-		)
-		.limit(1);
-
-	if (existing) {
-		if (existing.unsubscribedAt) {
-			// Re-subscribe
-			await db
-				.update(audienceMember)
-				.set({ unsubscribedAt: null })
-				.where(eq(audienceMember.id, existing.id));
-		}
-		// Already active — no-op
-		return;
-	}
-
-	await db.insert(audienceMember).values({ audienceId, subscriberId });
+	// One upsert on `uq_audience_member`, so a concurrent add cannot throw.
+	await db
+		.insert(audienceMember)
+		.values({ audienceId, subscriberId })
+		.onConflictDoUpdate({
+			target: [audienceMember.subscriberId, audienceMember.audienceId],
+			set: { unsubscribedAt: null },
+			setWhere: isNotNull(audienceMember.unsubscribedAt)
+		});
 }
 
 /**
@@ -248,11 +237,30 @@ export async function addSubscriber(audienceId: string, subscriberId: string) {
 export async function removeSubscriber(audienceId: string, subscriberId: string) {
 	await assertNotSystem(audienceId, 'remove a subscriber from');
 
-	await db
+	const removed = await db
 		.delete(audienceMember)
 		.where(
 			and(eq(audienceMember.audienceId, audienceId), eq(audienceMember.subscriberId, subscriberId))
-		);
+		)
+		.returning({ id: audienceMember.subscriberId });
+	if (removed.length === 0) return;
+
+	const [who] = await db
+		.select({
+			userId: subscriber.userId,
+			name: subscriber.name,
+			email: subscriber.email,
+			audienceName: audience.name
+		})
+		.from(subscriber)
+		.innerJoin(audience, eq(audience.id, audienceId))
+		.where(eq(subscriber.id, subscriberId))
+		.limit(1);
+	await recordAuditEntry({
+		action: 'audience.subscriber_removed',
+		subject: { type: 'user', id: who?.userId ?? subscriberId, label: who?.name ?? who?.email },
+		details: { audienceId, audienceName: who?.audienceName ?? '' }
+	});
 }
 
 /**
@@ -307,8 +315,13 @@ export async function bulkAddMembers(audienceId: string): Promise<number> {
 			.limit(1);
 
 		if (!existing) {
-			await db.insert(audienceMember).values({ audienceId, subscriberId: sub.id });
-			added++;
+			// `uq_audience_member`: a concurrent add of the same person is a no-op.
+			const [row] = await db
+				.insert(audienceMember)
+				.values({ audienceId, subscriberId: sub.id })
+				.onConflictDoNothing()
+				.returning({ id: audienceMember.id });
+			if (row) added++;
 		} else if (existing.unsubscribedAt) {
 			await db
 				.update(audienceMember)

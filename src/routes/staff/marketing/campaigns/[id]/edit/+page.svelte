@@ -1,44 +1,59 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../../AudiencePicker.svelte';
-	import EventScopePicker from '../../EventScopePicker.svelte';
+	import EventScopePicker, { type EventOption } from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { errorMessage } from '$lib/error-message';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import FormGuard from '#lib/components/ui/Form/FormGuard.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import {
 		getCampaignDetail,
 		saveDraft,
 		sendCampaignNow,
 		scheduleCampaign,
-		deleteCampaign
-	} from '$lib/remote/marketing.remote';
+		deleteCampaign,
+		sendTestCampaign
+	} from '#lib/remote/marketing.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let campaignData = $derived(await getCampaignDetail(id));
 
 	// Initialize editable state from loaded campaign
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
-	let eventId = $state('');
+	let event = $state<EventOption | null>(null);
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 	let initialized = $state(false);
 	let confirmingSend = $state(false);
 	let confirmingDelete = $state(false);
 
+	// What the server holds, to tell an unsaved edit from a saved one.
+	let saved = $state('');
+	const snapshot = () =>
+		JSON.stringify([subject, markdownBody, selectedAudienceIds, event?.id ?? '']);
+	// Set once the campaign is sent, scheduled or deleted: nothing is left to lose.
+	let leaving = false;
+	const isDirty = () => initialized && !leaving && (snapshot() !== saved || !!scheduledFor);
+
 	$effect(() => {
 		if (campaignData && !initialized) {
 			subject = campaignData.subject;
 			markdownBody = campaignData.markdownBody;
 			selectedAudienceIds = campaignData.audiences.map((a) => a.id);
-			eventId = campaignData.eventId ?? '';
+			event = campaignData.event;
+			saved = snapshot();
 			initialized = true;
 		}
 	});
@@ -46,7 +61,8 @@
 	// Redirect if not a draft
 	$effect(() => {
 		if (campaignData && campaignData.status !== 'draft') {
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			leaving = true;
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		}
 	});
 
@@ -63,19 +79,49 @@
 		return !!scheduledFor && new Date(scheduledFor).getTime() > Date.now();
 	}
 
+	// Every action that reads the stored campaign saves first, so unsaved edits are what it reads.
+	function save() {
+		return saveDraft({
+			campaignId: id,
+			subject: subject.trim(),
+			markdownBody,
+			audienceIds: selectedAudienceIds,
+			eventId: event?.id ?? ''
+		});
+	}
+
+	async function handleSendTest() {
+		if (!isValid()) return;
+		submitting = true;
+		try {
+			await save();
+			saved = snapshot();
+			const result = await sendTestCampaign({ campaignId: id });
+			if (result?.sent) {
+				toast.success(m.staff_marketing_campaigns_test_sent_toast({ email: result.to }));
+			} else {
+				toast.error(
+					m.staff_marketing_campaigns_test_not_sent_toast({ error: result?.error ?? '' })
+				);
+			}
+		} catch (err) {
+			toast.error(errorMessage(err));
+		} finally {
+			submitting = false;
+		}
+	}
+
 	async function handleSave() {
 		if (!isValid()) return;
 		submitting = true;
 		try {
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
-			});
-			toast.success('Draft saved');
+			await save();
+			saved = snapshot();
+			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved_toast());
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to save');
+			toast.error(
+				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_save_toast()
+			);
 		} finally {
 			submitting = false;
 		}
@@ -97,13 +143,9 @@
 		try {
 			// Save first: `sendCampaignNow` sends what is stored, so unsaved edits
 			// would otherwise go out with the old copy.
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
-			});
-			await sendCampaignNow({});
+			await save();
+			saved = snapshot();
+			await sendCampaignNow({ campaignId: id });
 		} catch (err) {
 			// The try covers the calls and nothing else, and a remote rejection is
 			// not an `Error` — reading `.message` off one always fell through to
@@ -112,8 +154,9 @@
 			submitting = false;
 			return;
 		}
-		toast.success('Campaign sent');
-		goto(resolve(`/staff/marketing/campaigns/${id}`));
+		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent_toast());
+		leaving = true;
+		goto(resolve(`staff/marketing/campaigns/${id}`));
 	}
 
 	async function handleSchedule() {
@@ -122,17 +165,21 @@
 		try {
 			// Save first: `scheduleCampaign` only sets the date, so unsaved edits
 			// would otherwise go out with the old copy.
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
+			await save();
+			saved = snapshot();
+			await scheduleCampaign({
+				campaignId: id,
+				scheduledFor: new Date(scheduledFor).toISOString()
 			});
-			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
-			toast.success('Campaign scheduled');
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled_toast());
+			leaving = true;
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
+			toast.error(
+				err instanceof Error
+					? err.message
+					: m.staff_marketing_campaigns_id_edit_failed_schedule_toast()
+			);
 		} finally {
 			submitting = false;
 		}
@@ -145,59 +192,78 @@
 	async function deleteNow() {
 		confirmingDelete = false;
 		try {
-			await deleteCampaign({});
-			toast.success('Campaign deleted');
-			goto(resolve('/staff/marketing/campaigns'));
+			await deleteCampaign({ campaignId: id });
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted_toast());
+			leaving = true;
+			goto(resolve('staff/marketing/campaigns'));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete');
+			toast.error(
+				err instanceof Error
+					? err.message
+					: m.staff_marketing_campaigns_id_edit_failed_delete_toast()
+			);
 		}
 	}
 </script>
 
-<PageHeader title="Edit Campaign" subtitle="Marketing">
-	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
+<FormGuard dirty={isDirty} />
+
+<PageHeader
+	title={m.staff_marketing_campaigns_id_edit_edit_campaign_title()}
+	subtitle={m.staff_marketing_body()}
+>
+	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}
+		>{m.staff_delete_label()}</Button
+	>
 </PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
-				<label for="campaign-subject" class="label text-sm font-medium">Subject</label>
+				<label for="campaign-subject" class="label text-sm font-medium"
+					>{m.staff_subject_label()}</label
+				>
 				<input
 					id="campaign-subject"
 					type="text"
 					bind:value={subject}
-					placeholder="Email subject line..."
+					placeholder={m.staff_email_subject_line_placeholder()}
 					class="input w-full"
 				/>
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">Audiences</p>
-				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
+				<p class="label text-sm font-medium">{m.staff_audiences_text()}</p>
+				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} {event} />
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">About a show</p>
-				<EventScopePicker initial={campaignData.event} onchange={(id) => (eventId = id)} />
+				<p class="label text-sm font-medium">{m.staff_about_show_text()}</p>
+				<EventScopePicker initial={campaignData.event} onchange={(e) => (event = e)} />
 			</div>
 
 			<div>
-				<label for="campaign-body" class="label text-sm font-medium">Body (Markdown)</label>
+				<label for="campaign-body" class="label text-sm font-medium"
+					>{m.staff_body_markdown_label()}</label
+				>
 				<textarea
 					id="campaign-body"
 					bind:value={markdownBody}
-					placeholder="Write your email in markdown..."
+					placeholder={m.staff_write_email_markdown_placeholder()}
 					class="textarea w-full font-mono text-sm"
 					rows="20"></textarea>
 				<p class="mt-1 text-subtle">
-					Available variables: {'{{subscriber_name}}'}, {'{{unsubscribe_url}}'}
+					{m.staff_marketing_campaigns_available_variables_text({
+						first: '{{subscriber_name}}',
+						second: '{{unsubscribe_url}}'
+					})}
 				</p>
 			</div>
 
 			<div>
 				<label for="campaign-schedule" class="label text-sm font-medium">
-					Schedule for later (optional)
+					{m.staff_schedule_later_optional_label()}
 				</label>
 				<input
 					id="campaign-schedule"
@@ -206,7 +272,7 @@
 					class="input w-full"
 				/>
 				{#if scheduledFor && !isFutureSchedule()}
-					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>
+					<p class="mt-1 text-xs text-error">{m.staff_pick_time_future_text()}</p>
 				{/if}
 			</div>
 
@@ -218,7 +284,16 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSave}
 				>
-					Save Draft
+					{m.staff_save_draft_label()}
+				</Button>
+				<Button
+					variant="default"
+					size="sm"
+					outline
+					disabled={!isValid() || submitting}
+					onclick={handleSendTest}
+				>
+					{m.staff_marketing_campaigns_send_test_label()}
 				</Button>
 				<Button
 					variant="secondary"
@@ -226,7 +301,7 @@
 					disabled={!isValid() || !isFutureSchedule() || submitting}
 					onclick={handleSchedule}
 				>
-					Schedule
+					{m.staff_schedule_label()}
 				</Button>
 				<Button
 					variant="primary"
@@ -234,52 +309,71 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSendNow}
 				>
-					Send Now
+					{m.staff_send_now_label()}
 				</Button>
 			</div>
 
 			{#if submitting}
 				<div class="flex items-center gap-2 text-muted">
-					<span class="loading loading-sm loading-spinner"></span>
-					Working...
+					<ParaglideMessage message={m.staff_working_text} inputs={{}}
+						>{#snippet span({ children })}<span class="loading loading-sm loading-spinner"
+								>{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</div>
 			{/if}
 		</div>
 
 		<!-- Preview pane -->
 		<div>
-			<p class="label text-sm font-medium">Preview</p>
+			<p class="label text-sm font-medium">{m.staff_preview_text()}</p>
 			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>
 
-<Modal bind:open={confirmingSend} title="Send this campaign now?">
+<Modal bind:open={confirmingSend} title={m.staff_send_campaign_now_title()}>
 	<p>
-		This goes to <strong>{totalSubscribers}</strong>
-		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
-		<em>{subject.trim() || 'an untitled campaign'}</em>.
+		<ParaglideMessage
+			message={m.staff_goes_people_immediately_as_text}
+			inputs={{
+				totalSubscribers,
+				trim: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign_text()
+			}}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}{#snippet em({ children })}<em>{@render children?.()}</em
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
-	<p class="mt-2 text-muted">There is no recall.</p>
+	<p class="mt-2 text-muted">{m.staff_marketing_campaigns_id_edit_there_no_recall_text()}</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
-			Not yet
+			{m.staff_not_yet_label()}
 		</Button>
 		<Button variant="primary" size="sm" onclick={sendNow}>
-			Send to {totalSubscribers}
-			{totalSubscribers === 1 ? 'person' : 'people'}
+			{m.staff_send_people_label({ totalSubscribers })}
 		</Button>
 	</div>
 </Modal>
 
-<Modal bind:open={confirmingDelete} title="Delete this draft?">
+<Modal
+	bind:open={confirmingDelete}
+	title={m.staff_marketing_campaigns_id_edit_delete_draft_title()}
+>
 	<p>
-		<em>{subject.trim() || 'This untitled campaign'}</em> and its audience selection go with it.
+		<ParaglideMessage
+			message={m.staff_marketing_campaigns_id_edit_delete_goes_text}
+			inputs={{
+				subject: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign_2_text()
+			}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
+		>
 	</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingDelete = false)}>
-			Keep it
+			{m.staff_marketing_campaigns_id_edit_keep_label()}
 		</Button>
-		<Button variant="error" size="sm" onclick={deleteNow}>Delete the draft</Button>
+		<Button variant="error" size="sm" onclick={deleteNow}
+			>{m.staff_marketing_campaigns_id_edit_delete_draft_2_label()}</Button
+		>
 	</div>
 </Modal>

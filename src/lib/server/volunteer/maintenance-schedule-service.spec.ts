@@ -19,7 +19,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
@@ -29,13 +29,15 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import type { SQL } from 'drizzle-orm';
+import { getTableColumns, type SQL } from 'drizzle-orm';
+import { maintenanceSchedule, workOrder } from '#lib/server/db/schema/volunteer.js';
 import {
 	createMaintenanceSchedule,
 	getScheduleGroupId,
 	listMaintenanceSchedules,
 	nextDueAt,
-	nextOccurrenceInsert,
+	nextOccurrenceInserts,
+	occurrenceValues,
 	retireMaintenanceSchedule,
 	updateMaintenanceSchedule,
 	MaintenanceScheduleError,
@@ -54,6 +56,7 @@ const schedule = {
 	volunteerRoleId: 'role-1',
 	projectId: 'proj-1',
 	assetId: null as string | null,
+	groupId: 'committee-1' as string | null,
 	notes: 'Mop under the stage',
 	capacity: 2,
 	intervalDays: 30,
@@ -73,10 +76,10 @@ describe('nextDueAt', () => {
 	});
 });
 
-describe('nextOccurrenceInsert', () => {
-	it('writes an unscheduled work order carrying the schedule, due one interval after close', () => {
+describe('nextOccurrenceInserts', () => {
+	it('writes a task with no shift carrying the schedule, due one interval after close', () => {
 		const closed = new Date('2026-09-10T12:00:00Z');
-		nextOccurrenceInsert(schedule, closed);
+		nextOccurrenceInserts(schedule, closed);
 
 		const [values] = valuesCalls();
 		expect(values).toMatchObject({
@@ -84,23 +87,44 @@ describe('nextOccurrenceInsert', () => {
 			title: 'Monthly deep clean',
 			volunteerRoleId: 'role-1',
 			projectId: 'proj-1',
-			capacity: 2,
-			startsAt: null,
-			endsAt: null,
+			groupId: 'committee-1',
+			// The places wait on the task for a shift opened on it (#2518).
+			pendingCapacity: 2,
 			dueAt: new Date(closed.getTime() + 30 * DAY)
 		});
 	});
 
-	it("carries the schedule's asset onto every occurrence (#1423)", () => {
-		nextOccurrenceInsert({ ...schedule, assetId: 'asset-pa' }, new Date());
-		expect(valuesCalls()[0]).toMatchObject({ assetId: 'asset-pa' });
+	it("links every occurrence to the schedule's asset (#1423)", () => {
+		expect(nextOccurrenceInserts({ ...schedule, assetId: 'asset-pa' }, new Date())).toHaveLength(2);
+		expect(nextOccurrenceInserts(schedule, new Date())).toHaveLength(1);
 	});
 
 	// The partial unique index is what refuses a second open occurrence; this is
 	// what turns that refusal into a no-op rather than a failed close.
 	it('does nothing when an open occurrence already exists', () => {
-		nextOccurrenceInsert(schedule, new Date());
+		nextOccurrenceInserts(schedule, new Date());
 		expect(chainCalls.some((c) => c.method === 'onConflictDoNothing')).toBe(true);
+	});
+});
+
+// A column both tables carry means the same thing on each, so an occurrence
+// that drops one silently loses it (#2987). Each exclusion says why.
+const NOT_COPIED: Record<string, string> = {
+	id: 'each row has its own',
+	createdByUserId: 'set by the caller: the first occurrence has a creator, later ones none',
+	createdAt: 'the row default',
+	updatedAt: 'the row default'
+};
+
+describe('occurrenceValues', () => {
+	it('copies every column the schedule and the work order share', () => {
+		const taskColumns = Object.keys(getTableColumns(workOrder));
+		const shared = Object.keys(getTableColumns(maintenanceSchedule)).filter((k) =>
+			taskColumns.includes(k)
+		);
+		const values = occurrenceValues(schedule, new Date()) as Record<string, unknown>;
+		const missing = shared.filter((k) => !(k in NOT_COPIED) && !(k in values));
+		expect(missing).toEqual([]);
 	});
 });
 
@@ -130,9 +154,9 @@ describe('createMaintenanceSchedule', () => {
 
 		await createMaintenanceSchedule({ ...input, assetId: 'asset-pa' });
 
-		const [scheduleValues, occurrence] = valuesCalls();
+		const [scheduleValues, occurrence, link] = valuesCalls();
 		expect(scheduleValues.assetId).toBe('asset-pa');
-		expect(occurrence.assetId).toBe('asset-pa');
+		expect(link).toEqual({ workOrderId: occurrence.id, assetId: 'asset-pa' });
 	});
 
 	it('stores no asset when none was picked', async () => {
@@ -243,13 +267,15 @@ describe('listMaintenanceSchedules', () => {
 		expect(rows.map((r) => r.assignees)).toEqual([['Ada Lovelace', 'Bo Diddley'], []]);
 	});
 
-	it('counts only places still held, and only on the open occurrence', async () => {
+	it('names the open occurrence’s assignees', async () => {
 		selectQueue = [[]];
 		await listMaintenanceSchedules();
-		const select = vi.mocked((await import('$lib/server/db')).db.select).mock.calls[0][0] as any;
+		const select = vi.mocked((await import('#lib/server/db/index.js')).db.select).mock
+			.calls[0][0] as any;
 		const rendered = new SQLiteSyncDialect().sqlToQuery(select.assignees as SQL).sql;
-		expect(rendered).toContain('"volunteer_signup"');
-		expect(rendered).toContain("'claimed', 'confirmed', 'completed'");
+		// Assignment, not sign-ups: an occurrence is a task (#2518).
+		expect(rendered).toContain('"work_order_assignee"');
+		expect(rendered).not.toContain('"volunteer_signup"');
 	});
 });
 

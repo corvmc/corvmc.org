@@ -1,30 +1,33 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
+import { afterStockChange } from './restock-tasks';
 import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
+	inventoryKitLoan,
 	inventoryLoan
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, or, desc, count, inArray, isNull, isNotNull, gte, lt } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { getBalance, deductCredits, addCredits } from '$lib/server/finance/credit-service';
-import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { isSustainingMember } from '$lib/server/finance/subscription-service';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toGenericRef, toMemberRef } from '#lib/server/entity/refs.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { getBalance, deductCredits, addCredits } from '#lib/server/finance/credit-service.js';
+import { InsufficientCreditsError } from '#lib/server/finance/credit-service.js';
+import { recordCashPayment } from '#lib/server/finance/payment-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { isSustainingMember } from '#lib/server/finance/subscription-service.js';
 import { getAvailableQuantity } from './stock-service';
-import { setAssetStatus } from './asset-service';
+import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
-import type { EquipmentCondition } from '$lib/config';
+import type { EquipmentCondition } from '#lib/config.js';
 import { movementStatement, recordMovement } from './stock-service';
-import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
-import { captureException } from '$lib/server/sentry';
-import type { PricingTier, LoanStatus } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '#lib/config.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { PricingTier, LoanStatus } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -347,13 +350,28 @@ export interface CheckoutLoanData {
 	/** Which physical unit is being handed over. Required for serialized items. */
 	assetId?: string;
 	actorId?: string;
+	/** Checking out a loan that was never scheduled: the override's reason, for the audit log. */
+	reason?: string | null;
 }
+
+/** Why a requested loan needs a reason to check out (docs/development/conventions.md#workflow-gates). */
+export const UNSCHEDULED_LOAN_WARNING = 'This loan was never scheduled.';
 
 export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const loan = await getLoanRaw(loanId);
 	if (!loan) throw new LoanNotFoundError();
-	if (loan.status !== 'scheduled') throw new InvalidLoanTransitionError(loan.status, 'checked_out');
+	const reason = data.reason?.trim() || null;
+	// A requested loan skips scheduling over a reason; anything else is not ours to hand over.
+	const overSchedule = loan.status === 'requested' && !!reason;
+	if (loan.status !== 'scheduled' && !overSchedule) {
+		throw new InvalidLoanTransitionError(loan.status, 'checked_out');
+	}
 	if (!loan.itemId) throw new Error('Loan must have an item assigned before checkout');
+	// Scheduling is what reserves the stock, so a skipped one checks it here.
+	if (overSchedule) {
+		const available = await getAvailableQuantity(loan.itemId);
+		if (available < loan.quantity) throw new InsufficientQuantityError(available, loan.quantity);
+	}
 
 	const [item] = await db
 		.select({
@@ -427,6 +445,20 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const [[updated]] = custodyUpdate
 		? await db.batch([loanUpdate, custodyUpdate, ledgerEntry])
 		: await db.batch([loanUpdate, ledgerEntry]);
+	await afterStockChange([loan.itemId]);
+
+	if (overSchedule) {
+		await recordAuditEntry({
+			action: 'equipment_loan.checked_out_unscheduled',
+			subject: { type: 'user', id: loan.userId, label: member?.name ?? null },
+			details: {
+				loanId,
+				equipmentName: item?.name ?? null,
+				warnings: [UNSCHEDULED_LOAN_WARNING],
+				reason: reason!
+			}
+		});
+	}
 
 	Promise.resolve().then(async () => {
 		try {
@@ -462,9 +494,8 @@ export async function returnLoan(
 	if (loan.status !== 'checked_out') throw new InvalidLoanTransitionError(loan.status, 'returned');
 
 	// The inspection happens before anything else is decided, because it is the
-	// *input* to the decision. `committees-and-roles-spec.md:522` marks "condition
-	// at both ends" as covered; only the checkout end existed, so a unit could
-	// come back visibly worse and the only record was free text on the loan.
+	// *input* to the decision. Condition is recorded at both ends of a loan, so a
+	// unit that comes back worse has a record beyond free text on the loan.
 	//
 	// Flags are raised first so `hasBlockingFlag` below can see them: the whole
 	// point is that something noticed on the counter keeps the unit off the shelf.
@@ -519,6 +550,8 @@ export async function returnLoan(
 		.where(eq(inventoryLoan.id, loanId))
 		.returning();
 
+	if (loan.kitLoanId) await closeKitIfComplete(loan.kitLoanId);
+
 	// Custody comes back here, so this is where availability is decided. The unit
 	// stayed `on_loan` the whole time it was out, even if somebody flagged it
 	// mid-loan -- noticing a crackle does not hand the amp back to the collective.
@@ -558,6 +591,8 @@ export async function returnLoan(
 				condition: opts.condition,
 				notes: assetNeedsService ? 'Open report on return' : undefined
 			});
+		} else {
+			await settleTerminalUnit(loan.assetId, opts.actorId ?? null);
 		}
 	}
 
@@ -595,6 +630,22 @@ export async function returnLoan(
 	});
 
 	return updated;
+}
+
+/** Close a kit once none of its loans is still out. Safe to call after any return. */
+export async function closeKitIfComplete(kitLoanId: string) {
+	const out = await db
+		.select({ id: inventoryLoan.id })
+		.from(inventoryLoan)
+		.where(and(eq(inventoryLoan.kitLoanId, kitLoanId), eq(inventoryLoan.status, 'checked_out')))
+		.limit(1);
+	if (out.length > 0) return false;
+	const now = new Date();
+	await db
+		.update(inventoryKitLoan)
+		.set({ returnedAt: now, updatedAt: now })
+		.where(and(eq(inventoryKitLoan.id, kitLoanId), isNull(inventoryKitLoan.returnedAt)));
+	return true;
 }
 
 export async function cancelLoan(loanId: string) {
@@ -692,7 +743,8 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		.innerJoin(user, eq(inventoryLoan.userId, user.id))
 		.leftJoin(inventoryItem, eq(inventoryLoan.itemId, inventoryItem.id))
 		.where(where)
-		.orderBy(desc(inventoryLoan.createdAt), desc(inventoryLoan.id))
+		// `created_at` is whole seconds and `id` random: rowid keeps two same-second loans in write order.
+		.orderBy(desc(inventoryLoan.createdAt), desc(sql`${inventoryLoan}.rowid`))
 		.$dynamic();
 
 	const countQ = db
@@ -740,11 +792,6 @@ export async function listUserLoans(
 	return listLoans({ userId, statuses }, pagination);
 }
 
-export async function getLoanHistory(itemId: string) {
-	const { rows } = await listLoans({ itemId });
-	return rows;
-}
-
 export interface LoanDueRow {
 	loanId: string;
 	userId: string;
@@ -779,6 +826,8 @@ export async function listLoansDueBetween(from: Date, to: Date): Promise<LoanDue
 			and(
 				eq(inventoryLoan.status, 'checked_out'),
 				isNull(inventoryLoan.returnedAt),
+				// A kit's units share one due date; a reminder per cable would be noise.
+				isNull(inventoryLoan.kitLoanId),
 				isNotNull(inventoryLoan.dueDate),
 				gte(inventoryLoan.dueDate, from),
 				lt(inventoryLoan.dueDate, to)

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const handlers: Record<string, (arg: { data: unknown }) => Promise<void>> = {};
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		on: (name: string, fn: (arg: { data: unknown }) => Promise<void>) => {
 			handlers[name] = fn;
@@ -21,9 +21,9 @@ const cancellation = {
 	userId: 'member-1',
 	userName: 'Jordan',
 	userEmail: 'jordan@example.com',
-	date: 'Thu, May 21',
-	startTime: '10:00 AM',
-	endTime: '11:00 AM',
+	date: '2026-05-21',
+	startTime: '10:00',
+	endTime: '11:00',
 	cancelledBy: 'staff' as const,
 	reason: 'Room flooded'
 };
@@ -43,9 +43,9 @@ describe('reservation.cancelled', () => {
 			details: {
 				reservationId: 'res-1',
 				reason: 'Room flooded',
-				date: 'Thu, May 21',
-				startTime: '10:00 AM',
-				endTime: '11:00 AM'
+				date: '2026-05-21',
+				startTime: '10:00',
+				endTime: '11:00'
 			}
 		});
 	});

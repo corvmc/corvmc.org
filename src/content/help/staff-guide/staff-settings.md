@@ -1,9 +1,10 @@
 ---
-title: System Settings Reference
+title: System settings reference
 slug: staff-settings
 category: staff-guide
 summary: A tour of the configuration tabs in Staff Settings.
 minRole: staff
+capabilities: settings.read
 sortOrder: 17
 ---
 
@@ -14,16 +15,16 @@ changes are validated and saved per tab. Some settings are admin-only.
 
 ## The tabs
 
-- **Products** — Hourly practice rate, free-tier allocation, and sustaining-member
-  rates.
-- **Reservations** — Slot duration, min/max booking length, the booking window, and
-  the confirmation deadline.
-- **Organization** — Organization name, timezone, and feature flags.
-- **Integrations** — Stripe keys, email service, SMS gateway, the smart-lock /
-  equipment integration, and social integrations. Some have a **Test connection**
-  action.
-- **Inbox Channels** — Configuration for the email, SMS, web, Instagram, and
+- **Organization** — Location, contact email, social links and the volunteer hour value.
+- Pricing, booking rules, operating hours, the room and orientation are on
+  **Practice space settings**: **Settings** in the **Staff → Practice space** header.
+- The smart-lock (U-tec) settings are under **Lock settings** in the **Building access**
+  sidebar on **Staff → Practice space**.
+- **Inbox channels** — Configuration for the email, SMS, web, Instagram, and
   Messenger channels that feed the [inbox](/member/help/staff-inbox).
+- **Access** — Admins only. Who holds which position, committee grant and clearance.
+  **By person** shows one member's access; **By permission** lists everyone holding a
+  position, capability or clearance. Positions are assigned and removed here.
 
 ## Maintenance actions
 

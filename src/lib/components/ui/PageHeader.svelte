@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
-	import { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
+	import { setDefaultButtonSize } from '#lib/components/ui/Button.svelte';
 	import Breadcrumbs from './Breadcrumbs.svelte';
 	import { getBreadcrumbTrail, pageCrumbs, type Crumb } from './breadcrumbs';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { PAGE_WIDTH, type PageWidth } from './page-width';
 	import { MediaQuery } from 'svelte/reactivity';
 	import OverflowMenu from './OverflowMenu.svelte';
@@ -18,6 +18,7 @@
 		flush = false,
 		sticky = true,
 		leading,
+		badge,
 		primary,
 		menu,
 		menuLabel,
@@ -58,6 +59,8 @@
 		 * does not have to restate the name below the header to get one on screen.
 		 */
 		leading?: Snippet;
+		/** Rendered after the title: the record's status badge. */
+		badge?: Snippet;
 		/**
 		 * Overrides the browser tab title when the on-screen heading would make a
 		 * poor one (too long, or missing context outside the page). Defaults to
@@ -133,6 +136,7 @@
 						<span class="text-sm font-bold text-primary uppercase">{subtitle}</span>
 					{/if}
 				</hgroup>
+				{@render badge?.()}
 			</div>
 		</div>
 		<!--

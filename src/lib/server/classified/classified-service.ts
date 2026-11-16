@@ -1,12 +1,16 @@
-import { db } from '$lib/server/db';
-import { classifiedPost, classifiedPostTag } from '$lib/server/db/schema/classified';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { and, count, desc, eq, gt, inArray, or, type SQL } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { db } from '#lib/server/db/index.js';
+import { classifiedPost, classifiedPostTag } from '#lib/server/db/schema/classified.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { and, count, desc, eq, gt, inArray, lte, ne, or, type SQL } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { domainEvents, type ClassifiedModeratedEvent } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import {
 	CLASSIFIED_BODY_MAX,
 	CLASSIFIED_LIFETIME_DAYS,
@@ -19,7 +23,8 @@ import {
 	type ClassifiedKind,
 	type ClassifiedTagKind,
 	type ClassifiedVisibility
-} from '$lib/config';
+} from '#lib/config.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 const DAY_MS = 86_400_000;
 
@@ -94,6 +99,9 @@ function onBoard(now: Date): SQL {
 	)!;
 }
 
+/** A post held for a moderator before it shows: the review feed's predicate. */
+export const pendingPost = () => eq(classifiedPost.visibility, 'pending_review');
+
 /** On the board to everyone; in any state to its author and to staff. */
 export function canView(
 	post: { authorUserId: string; status: string; visibility: string; expiresAt: Date },
@@ -126,7 +134,7 @@ async function assertRunsGroup(userId: string, groupId: string) {
 				eq(groupMember.groupId, groupId),
 				eq(groupMember.userId, userId),
 				eq(groupMember.status, 'active'),
-				inArray(groupMember.role, ['owner', 'admin'])
+				leadsGroup()
 			)
 		)
 		.limit(1);
@@ -287,23 +295,60 @@ export async function setVisibility(
 	params: { visibility: ClassifiedVisibility; note?: string | null; staffId: string | null }
 ) {
 	const [existing] = await db
-		.select({ visibility: classifiedPost.visibility })
+		.select({
+			visibility: classifiedPost.visibility,
+			title: classifiedPost.title,
+			authorUserId: classifiedPost.authorUserId,
+			authorName: user.name,
+			authorEmail: user.email
+		})
 		.from(classifiedPost)
+		.leftJoin(user, eq(user.id, classifiedPost.authorUserId))
 		.where(eq(classifiedPost.id, postId))
 		.limit(1);
 	if (!existing) throw new ClassifiedNotFoundError();
 	if (existing.visibility === params.visibility) return;
 
+	const note = params.note ? params.note.trim().slice(0, CLASSIFIED_NOTE_MAX) : null;
 	await db
 		.update(classifiedPost)
 		.set({
 			visibility: params.visibility,
-			visibilityNote: params.note ? params.note.trim().slice(0, CLASSIFIED_NOTE_MAX) : null,
+			visibilityNote: note,
 			visibilityChangedAt: new Date(),
 			visibilityChangedByUserId: params.staffId,
 			updatedAt: new Date()
 		})
 		.where(eq(classifiedPost.id, postId));
+	await recordAuditEntry({
+		action: 'classified.visibility_changed',
+		subject: { type: 'classified', id: postId, label: existing.title },
+		details: { from: existing.visibility, to: params.visibility }
+	});
+
+	const { visibility } = params;
+	if (visibility !== 'visible' && visibility !== 'hidden') return;
+	if (!existing.authorEmail || existing.authorUserId === params.staffId) return;
+	notifyModerated({
+		postId,
+		title: existing.title,
+		visibility,
+		note,
+		authorUserId: existing.authorUserId,
+		authorName: existing.authorName ?? 'there',
+		authorEmail: existing.authorEmail
+	});
+}
+
+/** Fire-and-forget: a failed notification never fails the staff decision. */
+function notifyModerated(payload: ClassifiedModeratedEvent): void {
+	Promise.resolve().then(async () => {
+		try {
+			await domainEvents.emit('classified.moderated', payload);
+		} catch (err) {
+			captureException(err, { event: 'classified.moderated', postId: payload.postId });
+		}
+	});
 }
 
 /** Called by flag-service on each report. Only `visible` rows move, so repeats are no-ops. */
@@ -336,6 +381,27 @@ export async function getPostForModeration(id: string) {
 		.where(eq(classifiedPost.id, id))
 		.limit(1);
 	return row ?? null;
+}
+
+/**
+ * Posts on the board at `from` that leave it by `to`, with their authors: the
+ * expiry reminder's query. A post made as a band still reaches its author, the
+ * only person who can renew it.
+ */
+export async function listPostsExpiringBetween(from: Date, to: Date) {
+	return db
+		.select({
+			id: classifiedPost.id,
+			title: classifiedPost.title,
+			expiresAt: classifiedPost.expiresAt,
+			userId: user.id,
+			userName: user.name,
+			userEmail: user.email
+		})
+		.from(classifiedPost)
+		.innerJoin(user, eq(user.id, classifiedPost.authorUserId))
+		.where(and(onBoard(from), lte(classifiedPost.expiresAt, to)))
+		.limit(500);
 }
 
 const rowSelection = {
@@ -456,3 +522,54 @@ export async function getPost(id: string, now: Date = new Date()) {
 }
 
 export type ClassifiedDetail = Awaited<ReturnType<typeof getPost>>;
+
+/**
+ * Posts on the board that share a tag with the viewer's own profile, newest
+ * first, with the shared tags. Genre and skill match their own kind; a post's
+ * instrument matches one the viewer plays, or, on an offered post, one their
+ * project is seeking. The viewer's own posts are left out.
+ */
+export async function listPostsMatching(userId: string, limit = 6, now: Date = new Date()) {
+	// Joined rather than passed as values: a long profile would pass D1's 100
+	// bound-parameter cap.
+	const tagMatches = and(
+		eq(directoryTag.value, classifiedPostTag.value),
+		or(
+			eq(directoryTag.kind, classifiedPostTag.kind),
+			and(
+				eq(directoryTag.kind, 'seeking_instrument'),
+				eq(classifiedPostTag.kind, 'instrument'),
+				eq(classifiedPost.kind, 'offered')
+			)
+		)
+	);
+	const rows = await db
+		.select({ ...rowSelection, tagKind: classifiedPostTag.kind, tagValue: classifiedPostTag.value })
+		.from(classifiedPostTag)
+		.innerJoin(classifiedPost, eq(classifiedPost.id, classifiedPostTag.postId))
+		.innerJoin(directoryTag, tagMatches)
+		.innerJoin(
+			directoryEntry,
+			and(eq(directoryEntry.id, directoryTag.entryId), eq(directoryEntry.userId, userId))
+		)
+		.leftJoin(user, eq(user.id, classifiedPost.authorUserId))
+		.leftJoin(group, eq(group.id, classifiedPost.groupId))
+		.where(and(onBoard(now), ne(classifiedPost.authorUserId, userId)))
+		.orderBy(desc(classifiedPost.createdAt), desc(classifiedPost.id))
+		.limit(limit * CLASSIFIED_TAGS_MAX * 2);
+
+	// A post tag can match two profile tags (played and sought), so at most
+	// twice CLASSIFIED_TAGS_MAX rows per post: the limit covers `limit` posts.
+	type Match = Omit<(typeof rows)[number], 'tagKind' | 'tagValue'> & {
+		sharedTags: ClassifiedTagInput[];
+	};
+	const byPost = new Map<string, Match>();
+	for (const { tagKind, tagValue, ...post } of rows) {
+		let entry = byPost.get(post.id);
+		if (!entry) byPost.set(post.id, (entry = { ...post, sharedTags: [] }));
+		if (!entry.sharedTags.some((t) => t.kind === tagKind && t.value === tagValue)) {
+			entry.sharedTags.push({ kind: tagKind, value: tagValue });
+		}
+	}
+	return [...byPost.values()].slice(0, limit);
+}

@@ -1,5 +1,5 @@
 ---
-title: Buy a Ticket
+title: Buy a ticket
 slug: buy-a-ticket
 category: events-tickets
 summary: Purchase tickets to a ticketed event.

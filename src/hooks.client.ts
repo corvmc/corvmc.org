@@ -1,10 +1,12 @@
 import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
-import { dev } from '$app/environment';
-import { env } from '$env/dynamic/public';
-import { SENTRY_DSN } from '$lib/sentry-dsn';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
-import { isStaleRemoteResponse } from '$lib/stale-remote-response';
+import { dev } from '$app/env';
+import * as env from '$app/env/public';
+import { SENTRY_DSN } from '#lib/sentry-dsn.js';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
+import { isStaleRemoteResponse } from '#lib/stale-remote-response.js';
+import { reloadIfStaleBuild } from '#lib/stale-deploy-recovery.js';
+import { updated } from '$app/state';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load
@@ -100,6 +102,8 @@ Sentry.init({
 		if (isStaleRemoteResponse(hint?.originalException)) return null;
 		if (isWebviewBridgeError(event, hint?.originalException)) return null;
 		if (isFrameworkControlFlow(hint?.originalException)) return null;
+		// Code the running deploy no longer serves; handleError reloads the tab.
+		if (updated.current) return null;
 		return event;
 	},
 
@@ -119,9 +123,6 @@ Sentry.init({
 
 	tracesSampleRate: 1.0,
 
-	// Enable logs to be sent to Sentry
-	enableLogs: true,
-
 	// This sets the sample rate to be 10%. You may want this to be 100% while
 	// in development and sample at a lower rate in production
 	replaysSessionSampleRate: 0.1,
@@ -131,11 +132,10 @@ Sentry.init({
 	replaysOnErrorSampleRate: 1.0,
 
 	// If you don't want to use Session Replay, just remove the line below:
-	integrations: [replayIntegration()],
+	integrations: [replayIntegration()]
 
-	// Enable sending user PII (Personally Identifiable Information)
-	// https://docs.sentry.io/platforms/javascript/guides/sveltekit/configuration/options/#sendDefaultPii
-	sendDefaultPii: true
+	// No `enableLogs` / `sendDefaultPii`: SDK 11 removed both. Logs ship by
+	// default, and `dataCollection`'s defaults collect what sendDefaultPii did.
 });
 
 // A new deploy replaces the immutable chunk files, so a tab opened before the
@@ -153,5 +153,6 @@ if (typeof window !== 'undefined') {
 	});
 }
 
-// If you have a custom error handler, pass it to `handleErrorWithSentry`
-export const handleError = handleErrorWithSentry();
+export const handleError = handleErrorWithSentry(() => {
+	reloadIfStaleBuild();
+});

@@ -24,7 +24,7 @@
  */
 
 import { fromDate, toCalendarDate } from '@internationalized/date';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 /** Three years, the window in which a disposal is reportable. */
 export const FORM_8282_LOOKBACK_YEARS = 3;

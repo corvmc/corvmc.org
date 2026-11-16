@@ -3,16 +3,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** The event's list, against a real SQLite: the filter and order are the point. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { createRsvp, cancelRsvp, listRsvpsForEvent, countRsvps } = await import('./rsvp-service');
-const { eventListing } = await import('$lib/server/db/schema/event');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { eventRsvp } = await import('$lib/server/db/schema/event-rsvp');
+const { createRsvp, cancelRsvp, listRsvpsForEvent, listRsvpRoster, countRsvps } =
+	await import('./rsvp-service');
+const { eventListing } = await import('#lib/server/db/schema/event.js');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { eventRsvp } = await import('#lib/server/db/schema/event-rsvp.js');
 
 const START = new Date('2026-11-10T20:00:00Z');
 
@@ -63,10 +64,27 @@ describe('listRsvpsForEvent', () => {
 			email: 'u-ada@rsvp.test',
 			createdAt: new Date(1000 * 1000)
 		});
+		// The account, for the roster's avatar and member status.
+		expect(rows[0].member).toMatchObject({ id: 'u-ada', name: 'ADA', email: 'ada@example.com' });
 	});
 
 	it('is empty for an event nobody RSVPd to', async () => {
 		expect(await listRsvpsForEvent('workshop')).toEqual([]);
+	});
+});
+
+describe('listRsvpRoster', () => {
+	it('is one roster row per RSVP, named and addressed as given', async () => {
+		await rsvpAt('workshop', 'u-ada', 1000);
+		expect(await listRsvpRoster('workshop')).toEqual([
+			{
+				personId: 'u-ada',
+				member: expect.objectContaining({ id: 'u-ada', title: 'Name u-ada' }),
+				email: 'u-ada@rsvp.test',
+				memberStatus: 'member',
+				rsvpedAt: new Date(1000 * 1000)
+			}
+		]);
 	});
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 import { sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ const bandServiceMock = {
 	])
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const conflictServiceMock = {
 	getAvailableSlots: vi.fn(async () => [
@@ -38,14 +38,14 @@ const conflictServiceMock = {
 	])
 };
 
-vi.mock('$lib/server/reservation/conflict-service', () => conflictServiceMock);
+vi.mock('#lib/server/reservation/conflict-service.js', () => conflictServiceMock);
 
 const reservationServiceMock = {
 	create: vi.fn(async () => ({
 		id: 'res-new',
 		bookerType: 'group',
 		bookerId: 'band-1',
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt: new Date(),
 		endsAt: new Date()
 	})),
@@ -59,17 +59,17 @@ const reservationServiceMock = {
 	)
 };
 
-vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+vi.mock('#lib/server/reservation/reservation-service.js', () => reservationServiceMock);
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
 
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/reservation/config')>();
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/reservation/config.js')>();
 	const cfg = {
 		timeSlotMinutes: 30,
 		minDurationHours: 1,
@@ -93,22 +93,22 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/server/db/schema/recurring', () => ({
+vi.mock('#lib/server/db/schema/recurring.js', () => ({
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
 	hasAnyRole: vi.fn(async () => false),
-	// `requireGroupRole`'s `allowStaff` branch asks this one. Absent from the
+	// `requireGroupRole`'s `staff` branch asks this one. Absent from the
 	// factory, it throws "No export is defined" and the 403 test reads as a crash.
-	isElevated: vi.fn(async () => false),
+	can: vi.fn(async () => false),
 	// `memberRefColumns()` selects this as a correlated subquery. The value is
 	// never asserted here — only that building the projection doesn't throw.
 	topPositionFor: vi.fn(() => sql`null`)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
@@ -118,13 +118,13 @@ const subscriptionServiceMock = {
 	isSustainingMemberSql: vi.fn(() => sql`0`)
 };
 
-vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);
+vi.mock('#lib/server/finance/subscription-service.js', () => subscriptionServiceMock);
 
 const recurringSeriesServiceMock = {
 	create: vi.fn(async () => ({ id: 'series-1' }))
 };
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => recurringSeriesServiceMock);
 
 // The door window, mocked at the service boundary; the db mock below only
 // answers `select`.
@@ -132,8 +132,8 @@ const fallbackCodeServiceMock = {
 	isInAccessWindow: vi.fn(() => false)
 };
 
-vi.mock('$lib/server/lock/fallback-code-service', () => fallbackCodeServiceMock);
-vi.mock('$lib/server/lock/door-service', () => ({ doorRecordFor: vi.fn(async () => null) }));
+vi.mock('#lib/server/lock/fallback-code-service.js', () => fallbackCodeServiceMock);
+vi.mock('#lib/server/lock/door-service.js', () => ({ doorRecordFor: vi.fn(async () => null) }));
 
 // Mock DB for page load
 let selectResult: unknown[] = [];
@@ -150,7 +150,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable()
 	}
@@ -158,7 +158,7 @@ vi.mock('$lib/server/db', () => ({
 
 // Contact-phone gate. Mocked at the service boundary, like reservation-service.
 const ensureContactPhone = vi.fn(async () => true);
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
 /** Stands in for the `issue` helper SvelteKit hands the form handler. */
 const issueProxy = new Proxy(
@@ -217,11 +217,11 @@ const {
 	getBandMembershipStatus,
 	getBandReservations,
 	getBandReservationDetail
-} = (await import('$lib/remote/reservations.remote')) as any;
+} = (await import('#lib/remote/reservations.remote.js')) as any;
 
-const { hasAnyRole, isElevated } = (await import('$lib/server/authorization')) as unknown as {
+const { hasAnyRole, can } = (await import('#lib/server/authorization.js')) as unknown as {
 	hasAnyRole: ReturnType<typeof vi.fn>;
-	isElevated: ReturnType<typeof vi.fn>;
+	can: ReturnType<typeof vi.fn>;
 };
 
 beforeEach(() => {
@@ -229,7 +229,7 @@ beforeEach(() => {
 	bandServiceMock.getUserRole.mockResolvedValue('member');
 	ensureContactPhone.mockResolvedValue(true);
 	hasAnyRole.mockResolvedValue(false);
-	isElevated.mockResolvedValue(false);
+	can.mockResolvedValue(false);
 	selectResult = [];
 	fallbackCodeServiceMock.isInAccessWindow.mockReturnValue(false);
 });
@@ -240,7 +240,7 @@ beforeEach(() => {
  * once a session has started, because `cancel()` refuses it — and `new Date()`
  * is already in the past by the time the handler reads its own clock.
  */
-function reservationRow(createdByUserId: string, status = 'scheduled', hoursFromNow = 24) {
+function reservationRow(createdByUserId: string, status = 'confirmed', hoursFromNow = 24) {
 	const startsAt = new Date(Date.now() + hoursFromNow * 3600_000);
 	const endsAt = new Date(startsAt.getTime() + 3600_000);
 	return {
@@ -248,6 +248,7 @@ function reservationRow(createdByUserId: string, status = 'scheduled', hoursFrom
 		status,
 		startsAt,
 		endsAt,
+		tourMinutes: 0,
 		notes: null,
 		createdByUserId,
 		ref: { id: 'res-1', startsAt, endsAt, status },
@@ -406,7 +407,7 @@ describe('getBandReservations', () => {
 
 	it('allows staff who are not band members', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(true);
+		can.mockImplementation(async (cap: unknown) => cap === 'band.read');
 
 		await expect(getBandReservations({ slug: 'the-velvet-underground' })).resolves.toBeDefined();
 	});
@@ -493,6 +494,7 @@ function detailRow(overrides: Record<string, unknown> = {}, createdByUserId = 'u
 		status: 'confirmed',
 		startsAt,
 		endsAt,
+		tourMinutes: 0,
 		notes: 'Load in through the back',
 		cancellationReason: null,
 		paidAt: null,

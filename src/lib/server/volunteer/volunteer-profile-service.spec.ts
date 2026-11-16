@@ -43,7 +43,7 @@ function chainableSelect() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn((selection?: Record<string, unknown>) => {
 			selections.push(selection);
@@ -75,7 +75,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => null) }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
@@ -93,7 +93,7 @@ import {
 	VolunteerProfileValidationError,
 	VolunteerAlreadyApprovedError
 } from './volunteer-profile-service';
-import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
+import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '#lib/config.js';
 
 function profile(over: Record<string, unknown> = {}) {
 	return {
@@ -455,6 +455,19 @@ describe('listVolunteers', () => {
 		expect(selectionWith('count')).not.toBe(selectionWith('roleNames'));
 		// Both queries call `.from`, but only the data query joins the interests.
 		expect(chainCalls.filter((c) => c.method === 'leftJoin')).toHaveLength(2);
+	});
+
+	// The Schedule's lapsing link lands on this filter (#2379).
+	it('narrows to the named people, and an empty list to nobody', async () => {
+		await listVolunteers({ userIds: ['usr-a', 'usr-b'] });
+		const where = chainCalls.find((c) => c.method === 'where');
+		expect(render(where!.args[0]).params).toEqual(expect.arrayContaining(['usr-a', 'usr-b']));
+
+		chainCalls = [];
+		await listVolunteers({ userIds: [] });
+		const none = chainCalls.find((c) => c.method === 'where');
+		expect(render(none!.args[0]).sql).toContain('0');
+		expect(render(none!.args[0]).sql).not.toContain(' in (');
 	});
 
 	it('narrows to one profile status when asked', async () => {

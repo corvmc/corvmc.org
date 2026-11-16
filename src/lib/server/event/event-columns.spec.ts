@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { drizzle } from 'drizzle-orm/d1';
-import { eventListing } from '$lib/server/db/schema/event';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { eventPosterKeySql, eventListingColumns, shortOfActsSql } from './event-columns';
 
 /**

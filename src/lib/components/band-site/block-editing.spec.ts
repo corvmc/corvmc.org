@@ -5,8 +5,8 @@ import {
 	BLOCK_SOURCES,
 	type BlockContentContext
 } from './block-editing';
-import { PRESET_ORDER } from '$lib/utils/band-site-preset';
-import type { Block } from '$lib/types/band-page';
+import { PRESET_ORDER } from '#lib/utils/band-site-preset.js';
+import type { Block } from '#lib/types/band-page.js';
 
 /** A band with nothing filled in anywhere. */
 const BARE: BlockContentContext = {

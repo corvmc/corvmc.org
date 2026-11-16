@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { reportBuildingProblemForm } from '$lib/remote/work-requests.remote';
+	import { reportBuildingProblemForm } from '#lib/remote/work-requests.remote.js';
 	import { Field } from '../ui/Form';
 
 	/**
@@ -21,10 +22,10 @@
 
 <Action
 	action={reportBuildingProblemForm}
-	label="Report a building problem"
-	modalTitle="Report a building problem"
-	submitLabel="Send report"
-	successToast="Thanks — staff have been told"
+	label={m.actions_report_building_problem_report_building_problem_label()}
+	modalTitle={m.actions_report_building_problem_report_building_problem_title()}
+	submitLabel={m.actions_report_building_problem_submit_label()}
+	successToast={m.actions_thanks_staff_have_been_told_toast()}
 	{variant}
 	{size}
 >
@@ -32,14 +33,14 @@
 		<Field
 			field={fields.location}
 			type="text"
-			label="Where?"
-			description="Which room or area — “downstairs bathroom”, “Room B”, “the back door”."
+			label={m.actions_report_building_problem_where_label()}
+			description={m.actions_report_building_problem_which_room_area_downstairs_b_body()}
 		/>
 		<Field
 			field={fields.note}
 			type="textarea"
-			label="What's wrong?"
-			description="Whatever you noticed is enough. For a broken amp or mic, report it from the equipment's own page instead."
+			label={m.actions_what_s_wrong_label()}
+			description={m.actions_report_building_problem_whatever_noticed_enough_brok_body()}
 		/>
 	{/snippet}
 </Action>

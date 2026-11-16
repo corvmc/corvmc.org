@@ -9,11 +9,11 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!allowed) throw new Error(`403: ${cap}`);
 	return { id: 'staff-1' };
 });
-vi.mock('$lib/server/authorization', () => ({ requireCapability }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability }));
 
 const createService = vi.fn(async () => ({ id: 'ms-1' }));
 const updateService = vi.fn(async () => undefined);
-vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
+vi.mock('#lib/server/volunteer/maintenance-schedule-service.js', () => ({
 	createMaintenanceSchedule: createService,
 	listMaintenanceSchedules: vi.fn(async () => []),
 	retireMaintenanceSchedule: vi.fn(),
@@ -21,14 +21,10 @@ vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
 }));
 
 const searchAssetOptions = vi.fn(async () => [{ id: 'as-1', name: 'PA speaker', detail: null }]);
-vi.mock('$lib/server/inventory/asset-service', () => ({ searchAssetOptions }));
+vi.mock('#lib/server/inventory/asset-service.js', () => ({ searchAssetOptions }));
 
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
-vi.mock('./volunteer.remote', () => ({
-	getVolunteerWorklist: () => ({ refresh: async () => undefined })
-}));
-
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({ listVolunteerRoles: vi.fn() }));
+vi.mock('#lib/server/project/project-service.js', () => ({ listProjects: vi.fn() }));
 vi.mock('$app/server', () => {
 	// The last argument is the handler, called directly; `__` is what SvelteKit
 	// checks to accept the export as a remote function.
@@ -102,7 +98,9 @@ describe('createRecurringWork', () => {
 	it('guards on volunteer.manageRecurring, not work orders, before writing (#1642)', async () => {
 		allowed = false;
 		await expect(createRecurringWork(base)).rejects.toThrow(/403/);
-		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring', {
+			projectId: null
+		});
 		expect(createService).not.toHaveBeenCalled();
 	});
 });
@@ -112,7 +110,10 @@ describe('retireRecurringWork', () => {
 		allowed = false;
 		const retire = remote.retireRecurringWork as unknown as (d: unknown) => Promise<unknown>;
 		await expect(retire({ id: 'ms-1' })).rejects.toThrow(/403/);
-		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+		expect(requireCapability).toHaveBeenCalledWith(
+			'volunteer.manageRecurring',
+			expect.any(Function)
+		);
 	});
 });
 
@@ -123,7 +124,10 @@ describe('updateRecurringWork (#2087)', () => {
 	it('guards on volunteer.manageRecurring before writing', async () => {
 		allowed = false;
 		await expect(edit(data)).rejects.toThrow(/403/);
-		expect(requireCapability).toHaveBeenCalledWith('volunteer.manageRecurring');
+		expect(requireCapability).toHaveBeenCalledWith(
+			'volunteer.manageRecurring',
+			expect.any(Function)
+		);
 		expect(updateService).not.toHaveBeenCalled();
 	});
 

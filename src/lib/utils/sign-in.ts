@@ -53,7 +53,7 @@ export function signInHref({ returnTo, register, intent }: SignInOptions = {}): 
 }
 
 /** The current page as a return path, for an interrupt raised from it. */
-export function here(url: URL): string {
+export function here(url: Pick<URL, 'pathname' | 'search' | 'hash'>): string {
 	return `${url.pathname}${url.search}${url.hash}`;
 }
 
@@ -62,7 +62,10 @@ export function here(url: URL): string {
  * to the sign-in href with this page as the return. Anything else is null and
  * stays an error. Duck-typed, since a client-side `HttpError` crosses realms.
  */
-export function signInInterruptFor(err: unknown, current: URL): ResolvedPathname | null {
+export function signInInterruptFor(
+	err: unknown,
+	current: Pick<URL, 'pathname' | 'search' | 'hash'>
+): ResolvedPathname | null {
 	const status = (err as { status?: unknown } | null)?.status;
 	if (status !== 401) return null;
 	return signInHref({ returnTo: here(current) });

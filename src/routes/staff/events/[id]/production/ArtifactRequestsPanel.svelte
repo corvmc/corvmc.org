@@ -6,23 +6,24 @@
 	for the same thing again is a reminder, not a second row.
 -->
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { requestableArtifacts, requestableArtifactLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { requestableArtifacts, requestableArtifactLabels } from '#lib/config.js';
 	import {
 		askForArtifact,
 		dropArtifactRequest,
 		usePosterArt,
 		usePosterArtWithFooter
-	} from '$lib/remote/productions.remote';
-	import { searchAskableListings } from '$lib/remote/external-acts.remote';
-	import type { OutstandingRequest } from '$lib/types/artifact-request';
+	} from '#lib/remote/productions.remote.js';
+	import { searchAskableListings } from '#lib/remote/external-acts.remote.js';
+	import type { OutstandingRequest } from '#lib/types/artifact-request.js';
+	import { requestsState } from './section-state';
 
 	// The picker writes a plain hidden input; the Action's form is not a `<Form>`.
 	const artistField = {
@@ -42,117 +43,119 @@
 		acts: { entryId: string; name: string }[];
 		onchange: () => void;
 	} = $props();
-
-	const outstanding = $derived(requests.filter((r) => !r.fulfilled));
-	const overdue = $derived(outstanding.filter((r) => r.overdue).length);
 </script>
 
-<InfoCard title="Asked for">
-	{#snippet header(title)}
-		<div class="flex items-center justify-between gap-2">
-			<CardTitle>{title}</CardTitle>
-			<div class="flex items-center gap-1">
-				{#if overdue > 0}
-					<Badge variant="error">{overdue} overdue</Badge>
-				{:else if outstanding.length > 0}
-					<Badge variant="warning">{outstanding.length} outstanding</Badge>
-				{/if}
-				{#if acts.length > 0}
-					<Action
-						action={askForArtifact}
-						label="Ask a band"
-						variant="ghost"
-						size="sm"
-						modalTitle="Ask a band for {eventTitle}"
-						submitLabel="Ask"
-						successToast="Asked"
-						onsuccess={onchange}
-					>
-						{#snippet form()}
-							<input type="hidden" name="eventId" value={eventId} />
-							<FormField
-								name="entryId"
-								label="Band"
-								type="select"
-								options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
-							/>
-							<FormField
-								name="artifact"
-								label="What"
-								type="select"
-								options={requestableArtifacts.map((a) => ({
-									value: a,
-									label: requestableArtifactLabels[a]
-								}))}
-							/>
-							<FormField
-								name="dueDate"
-								label="Due"
-								type="date"
-								description="Optional. A request with no date is open-ended and never reads as overdue."
-							/>
-						{/snippet}
-					</Action>
-				{/if}
-				<!-- An artist is never on the bill, so this searches every listing. -->
+<InfoCard
+	title={m.staff_events_id_production_artifact_requests_panel_asked_title()}
+	state={requestsState(requests)}
+>
+	{#snippet action()}
+		<div class="flex items-center gap-1">
+			{#if acts.length > 0}
 				<Action
 					action={askForArtifact}
-					label="Commission poster art"
+					label={m.staff_events_id_production_artifact_requests_panel_ask_band_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Commission poster art for {eventTitle}"
-					submitLabel="Ask"
-					successToast="Asked"
+					modalTitle={m.staff_events_id_production_artifact_requests_panel_ask_band_2_title({
+						eventTitle
+					})}
+					submitLabel={m.staff_events_id_production_artifact_requests_panel_ask_label()}
+					successToast={m.staff_events_id_production_artifact_requests_panel_asked_2_toast()}
 					onsuccess={onchange}
 				>
 					{#snippet form()}
-						<input type="hidden" name="eventId" value={eventId} />
-						<input type="hidden" name="artifact" value="poster_art" />
-						<MemberPicker
-							field={artistField}
-							label="Artist"
-							placeholder="Search listings by name..."
-							search={(q) => searchAskableListings(q)}
+						<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
+						<FormField
+							field={askForArtifact.fields.entryId}
+							label={m.staff_band_label()}
+							type="select"
+							options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
 						/>
 						<FormField
-							name="dueDate"
-							label="Due"
-							type="date"
-							description="When the art has to be in. Past it, the request reads overdue and the template flyer is the fallback."
+							field={askForArtifact.fields.artifact}
+							label={m.staff_what_label()}
+							type="select"
+							options={requestableArtifacts.map((a) => ({
+								value: a,
+								label: requestableArtifactLabels[a]
+							}))}
 						/>
-						<p class="text-subtle text-sm">
-							The artist uploads on their contact-sheet page. Send them its link from the listing if
-							they do not have it.
-						</p>
+						<FormField
+							field={askForArtifact.fields.dueDate}
+							label={m.staff_due_label()}
+							type="date"
+							description={m.staff_events_id_production_artifact_requests_panel_optional_body()}
+						/>
 					{/snippet}
 				</Action>
-			</div>
+			{/if}
+			<!-- An artist is never on the bill, so this searches every listing. -->
+			<Action
+				action={askForArtifact}
+				label={m.staff_events_id_production_artifact_requests_panel_commissio_label()}
+				variant="ghost"
+				size="sm"
+				modalTitle={m.staff_events_id_production_artifact_requests_panel_commissio_2_title({
+					eventTitle
+				})}
+				submitLabel={m.staff_events_id_production_artifact_requests_panel_ask_label()}
+				successToast={m.staff_events_id_production_artifact_requests_panel_asked_2_toast()}
+				onsuccess={onchange}
+			>
+				{#snippet form()}
+					<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
+					<input {...askForArtifact.fields.artifact.as('hidden', 'poster_art')} />
+					<MemberPicker
+						field={artistField}
+						label={m.staff_events_id_production_artifact_requests_panel_artist_label()}
+						placeholder={m.staff_events_id_production_artifact_requests_panel_placehold_placeholder()}
+						search={(q) => searchAskableListings(q)}
+					/>
+					<FormField
+						field={askForArtifact.fields.dueDate}
+						label={m.staff_due_label()}
+						type="date"
+						description={m.staff_events_id_production_artifact_requests_panel_when_art_body()}
+					/>
+					<p class="text-subtle text-sm">
+						{m.staff_events_id_production_artifact_requests_panel_artist_up_text()}
+					</p>
+				{/snippet}
+			</Action>
 		</div>
 	{/snippet}
 
 	{#if requests.length === 0}
 		<EmptyState
-			title="Nothing asked for"
-			description="Nobody has been asked for a rider, a press kit or poster art yet."
+			title={m.staff_events_id_production_artifact_requests_panel_nothing_a_title()}
+			description={m.staff_events_id_production_artifact_requests_panel_nobody_ha_body()}
 		/>
 	{:else}
 		<ul class="divide-y divide-base-300">
 			{#each requests as req (req.id)}
 				<li class="flex flex-wrap items-center gap-2 py-2">
-					<span class="font-medium">{req.actName ?? 'Unknown band'}</span>
+					<span class="font-medium"
+						>{req.actName ??
+							m.staff_events_id_production_artifact_requests_panel_unknown_b_text()}</span
+					>
 					<span class="text-sm">{requestableArtifactLabels[req.artifact]}</span>
 					{#if req.fulfilled}
-						<Badge variant="success">In</Badge>
+						<Badge variant="success"
+							>{m.staff_events_id_production_artifact_requests_panel_text_label()}</Badge
+						>
 					{:else if req.overdue}
-						<Badge variant="error">Overdue</Badge>
+						<Badge variant="error">{m.staff_overdue_label()}</Badge>
 					{:else}
-						<Badge variant="warning">Waiting</Badge>
+						<Badge variant="warning"
+							>{m.staff_events_id_production_artifact_requests_panel_waiting_label()}</Badge
+						>
 					{/if}
 					<span class="text-subtle text-sm whitespace-nowrap">
 						{#if req.dueAt}
-							due {formatDateShort(req.dueAt)}
+							{m.staff_due_2_text({ formatDateShort: formatDateShort(req.dueAt) })}
 						{:else}
-							no deadline
+							{m.staff_no_deadline_text()}
 						{/if}
 					</span>
 					<div class="ml-auto flex items-center gap-1">
@@ -160,65 +163,73 @@
 							<a href={req.deliveredUrl} target="_blank" rel="external noreferrer">
 								<img
 									src={req.deliveredUrl}
-									alt="Poster art from {req.actName ?? 'the artist'}"
+									alt={m.staff_events_id_production_artifact_requests_panel_alt_text({
+										value: req.actName ?? 'the artist'
+									})}
 									class="h-12 w-auto rounded"
 								/>
 							</a>
 							<Action
 								action={usePosterArt}
-								label="Use as poster"
+								label={m.staff_events_id_production_artifact_requests_panel_use_as_po_label()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Make this the poster?"
-								submitLabel="Use as poster"
-								successToast="Poster updated"
+								modalTitle={m.staff_events_id_production_artifact_requests_panel_make_post_title()}
+								submitLabel={m.staff_events_id_production_artifact_requests_panel_use_as_po_label()}
+								successToast={m.staff_events_id_production_artifact_requests_panel_poster_up_toast()}
 								onsuccess={onchange}
 							>
 								{#snippet form()}
-									<input type="hidden" name="requestId" value={req.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input {...usePosterArt.fields.requestId.as('hidden', req.id)} />
+									<input {...usePosterArt.fields.eventId.as('hidden', eventId)} />
 									<p class="text-sm">
-										The art from {req.actName ?? 'the artist'} replaces the event's current poster.
+										{m.staff_events_id_production_artifact_requests_panel_art_from_text({
+											actName:
+												req.actName ??
+												m.staff_events_id_production_artifact_requests_panel_artist_2_text()
+										})}
 									</p>
 								{/snippet}
 							</Action>
 							<Action
 								action={usePosterArtWithFooter}
-								label="Use with a details footer"
+								label={m.staff_events_id_production_artifact_requests_panel_use_with_label()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Add the show details under this art?"
-								submitLabel="Make the poster"
-								successToast="Poster updated"
+								modalTitle={m.staff_events_id_production_artifact_requests_panel_add_show_title()}
+								submitLabel={m.staff_events_id_production_artifact_requests_panel_make_post_2_label()}
+								successToast={m.staff_events_id_production_artifact_requests_panel_poster_up_toast()}
 								onsuccess={onchange}
 							>
 								{#snippet form()}
-									<input type="hidden" name="requestId" value={req.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input {...usePosterArtWithFooter.fields.requestId.as('hidden', req.id)} />
+									<input {...usePosterArtWithFooter.fields.eventId.as('hidden', eventId)} />
 									<p class="text-sm">
-										The art sits above a footer with the date, doors, venue and price, and the
-										result replaces the current poster. It is a snapshot: after editing the event,
-										run this again.
+										{m.staff_events_id_production_artifact_requests_panel_art_sits_text()}
 									</p>
 								{/snippet}
 							</Action>
 						{/if}
 						<Action
 							action={dropArtifactRequest}
-							label="Cancel"
+							label={m.staff_cancel_label()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Stop waiting on this?"
-							submitLabel="Cancel request"
-							successToast="Request cancelled"
+							modalTitle={m.staff_events_id_production_artifact_requests_panel_stop_wait_title()}
+							submitLabel={m.staff_cancel_request_label()}
+							successToast={m.staff_request_cancelled_toast()}
 							onsuccess={onchange}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={req.id} />
-								<input type="hidden" name="eventId" value={eventId} />
+								<input {...dropArtifactRequest.fields.id.as('hidden', req.id)} />
+								<input {...dropArtifactRequest.fields.eventId.as('hidden', eventId)} />
 								<p class="text-sm">
-									{requestableArtifactLabels[req.artifact]} from {req.actName ?? 'this band'} stops counting
-									as outstanding. Asking again re-opens it.
+									{m.staff_events_id_production_artifact_requests_panel_from_stop_text({
+										value: requestableArtifactLabels[req.artifact],
+										actName:
+											req.actName ??
+											m.staff_events_id_production_artifact_requests_panel_band_text()
+									})}
 								</p>
 							{/snippet}
 						</Action>

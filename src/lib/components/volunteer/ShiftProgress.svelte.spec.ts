@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ShiftProgress from './ShiftProgress.svelte';
+import { m } from '#lib/paraglide/messages.js';
 
 /**
  * Extracted from MyShiftCard so the shift's own page can show the same thing:
@@ -42,5 +43,16 @@ describe('ShiftProgress', () => {
 		expect(text()).toContain('Reminder lands the day before.');
 		expect(text()).toContain('Bring a torch.');
 		expect(text()).not.toContain('Bring a torch. Reminder');
+	});
+
+	it('does not promise a reminder for a shift already running (#2803)', async () => {
+		const hour = 60 * 60 * 1000;
+		await render(ShiftProgress, {
+			status: 'confirmed',
+			startsAt: new Date(Date.now() - hour),
+			endsAt: new Date(Date.now() + hour)
+		});
+
+		expect(text()).not.toContain(m.volunteer_shift_progress_reminder_lands_day_before_text());
 	});
 });

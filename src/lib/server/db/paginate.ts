@@ -1,4 +1,4 @@
-import type { Pagination } from '$lib/types/pagination';
+import type { Pagination } from '#lib/types/pagination.js';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 
 export interface PaginationInput {

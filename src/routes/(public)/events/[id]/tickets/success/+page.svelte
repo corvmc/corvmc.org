@@ -1,18 +1,22 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { fullDate } from '$lib/utils/format';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { fullDate } from '#lib/utils/format.js';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
-	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';
+	import { getTicketPurchaseSuccess } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const purchaseId = page.url.searchParams.get('purchase_id') ?? '';
-	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
+	let data = $derived(await getTicketPurchaseSuccess({ eventId: params.id, purchaseId }));
 
 	const evt = $derived(data.event);
 	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
@@ -35,7 +39,7 @@
 
 		const timer = setTimeout(() => {
 			attempts += 1;
-			getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }).refresh();
+			getTicketPurchaseSuccess({ eventId: params.id, purchaseId }).refresh();
 		}, RETRY_MS);
 
 		return () => clearTimeout(timer);
@@ -44,10 +48,10 @@
 
 <div class="mx-auto max-w-lg space-y-6">
 	<PageHeader
-		title="Tickets Confirmed"
+		title={m.public_events_id_tickets_success_title()}
 		parent={[
-			{ label: 'Events', href: resolve('/events') },
-			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+			{ label: m.public_events_label(), href: resolve('events') },
+			{ label: evt.title, href: resolve(`events/${params.id}`) }
 		]}
 	/>
 
@@ -68,11 +72,13 @@
 			     Stripe webhook). Free claims send nothing, so don't promise one. -->
 			<p class="text-muted">
 				{#if isFreeClaim}
-					Save the {data.tickets.length > 1 ? 'codes' : 'code'} below — that's your confirmation. No email
-					is sent for free tickets.
+					{m.public_events_id_tickets_success_save_codes_below_s_confirma_text({
+						count: data.tickets.length
+					})}
 				{:else}
-					A confirmation email and receipt will be sent to {data.tickets[0]?.attendeeEmail ??
-						'your email'}.
+					{m.public_events_id_tickets_success_confirmation_email_receipt_text({
+						value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email_text()
+					})}
 				{/if}
 			</p>
 		</CardBody>
@@ -81,15 +87,15 @@
 	{#if pending}
 		<Alert type="info">
 			{attempts >= RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Your tickets are below and stay valid — if the confirmation email doesn't arrive shortly, get in touch."
-				: 'Confirming your payment…'}
+				? m.public_events_id_tickets_success_we_haven_t_had_confirmation_body()
+				: m.public_events_id_tickets_success_confirming_payment_body()}
 		</Alert>
 	{/if}
 
 	<!-- Ticket codes -->
 	<Card>
 		<CardBody>
-			<h3 class="mb-3 font-medium">Your Tickets</h3>
+			<h3 class="mb-3 font-medium">{m.public_events_id_tickets_success_tickets_title()}</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
 					<div class="flex items-center justify-between inset p-3">
@@ -98,8 +104,10 @@
 							<p class="text-muted">{ticket.attendeeEmail}</p>
 						</div>
 						<div class="text-right">
-							<p class="font-mono text-lg font-bold tracking-wider">{ticket.code}</p>
-							<p class="text-subtle">Ticket code</p>
+							<p class="font-mono text-lg font-bold tracking-wider" data-testid="ticket-code">
+								{ticket.code}
+							</p>
+							<p class="text-subtle">{m.public_events_id_tickets_success_ticket_code_text()}</p>
 						</div>
 					</div>
 				{/each}
@@ -108,6 +116,8 @@
 	</Card>
 
 	<div class="text-center">
-		<Button href="/events" variant="ghost">Back to Events</Button>
+		<Button href="/events" variant="ghost"
+			>{m.public_events_id_tickets_success_back_events_label()}</Button
+		>
 	</div>
 </div>

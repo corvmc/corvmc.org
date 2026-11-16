@@ -1,27 +1,39 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { CancelTicketAction } from '$lib/components/actions';
-	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
-	import { page } from '$app/state';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import DoorScanner from './DoorScanner.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { CancelTicketAction } from '#lib/components/actions/index.js';
+	import {
+		checkInTicket,
+		getStaffCheckIn,
+		identifyTicketCode,
+		scanTicketIn
+	} from '#lib/remote/events.remote.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 	const { fields } = checkInTicket;
 
-	let data = $derived(await getStaffCheckIn(page.params.id!));
+	let data = $derived(await getStaffCheckIn(params.id));
 
 	let search = $state('');
 
+	// Cancelled tickets show only to a search, which says why one will not go in (#2797).
 	const filteredTickets = $derived(
 		data.tickets.filter((t) => {
-			if (!search) return true;
+			if (!search) return t.status !== 'cancelled';
 			const q = search.toLowerCase();
 			return (
 				t.attendeeName.toLowerCase().includes(q) ||
@@ -34,26 +46,40 @@
 
 <PageHeader
 	width="3xl"
-	title="Check-in: {data.event.title}"
+	title={m.staff_events_id_check_in_check_title({ title: data.event.title })}
 	crumb="Check-in"
 	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 />
 <PageContent width="3xl">
 	<!-- Stats -->
 	<div class="flex gap-6">
-		<StatCard title="Checked In" value={data.stats.checkedIn} size="sm" class="p-4" />
-		<StatCard title="Tickets Sold" value={data.stats.sold} size="sm" class="p-4" />
+		<StatCard
+			title={m.staff_events_id_check_in_checked_title()}
+			value={data.stats.checkedIn}
+			size="sm"
+			class="p-4"
+		/>
+		<StatCard
+			title={m.staff_events_id_check_in_tickets_sold_title()}
+			value={data.stats.sold}
+			size="sm"
+			class="p-4"
+		/>
 	</div>
 
 	<!-- The scanner leads, and the list below is the fallback it degrades to.
 	     Searching per person is workable for fifty and not for two hundred. -->
-	<DoorScanner tickets={data.tickets} eventId={data.event.id} />
+	<DoorScanner
+		tickets={data.tickets}
+		checkIn={(ticketId) => scanTicketIn({ ticketId, eventId: data.event.id })}
+		identify={(code) => identifyTicketCode({ code, eventId: data.event.id })}
+	/>
 
 	<!-- Search -->
 	<input
 		type="text"
 		bind:value={search}
-		placeholder="Search by name, email, or code..."
+		placeholder={m.staff_events_id_check_in_placeholder()}
 		class="input w-full"
 	/>
 
@@ -61,41 +87,46 @@
 	<div class="space-y-2">
 		{#each filteredTickets as ticket (ticket.id)}
 			<Card>
-				<CardBody row padding="sm">
-					<div>
+				<CardBody padding="sm" class="gap-2">
+					<div class="flex items-center gap-2">
+						{#if ticket.status === 'checked_in' || ticket.status === 'cancelled'}
+							<StatusBadge status={ticket.status} />
+						{/if}
 						<p class="font-medium">{ticket.attendeeName}</p>
-						<p class="text-muted">{ticket.attendeeEmail}</p>
-						<p class="mt-1 font-mono text-subtle">{ticket.code}</p>
 					</div>
+					<DefinitionList layout="strip">
+						<Fact label={m.staff_email_label()} value={ticket.attendeeEmail} />
+						<Fact label={m.staff_events_id_check_in_code_label()} value={ticket.code} mono />
+					</DefinitionList>
 
-					<div class="flex items-center gap-3">
-						{#if ticket.status === 'checked_in'}
-							<StatusBadge status="checked_in" />
-						{:else if ticket.status === 'cancelled'}
-							<StatusBadge status="cancelled" />
-						{:else}
-							<!-- 44px on purpose: tapped a hundred times in a row at a
-							     door, one-handed. daisyUI's default `btn` is 40 (#971). -->
+					{#if ticket.status !== 'checked_in' && ticket.status !== 'cancelled'}
+						<!-- Tapped a hundred times in a row at a door, one-handed (#971). -->
+						<CardActions>
 							<Form
 								remote={checkInTicket.for(ticket.id)}
-								successToast="Checked in"
-								onsuccess={() => invalidateAll()}
-								class="inline"
+								successToast={m.staff_events_id_check_in_success_toast()}
+								onsuccess={() => refreshAll()}
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<input {...fields.eventId.as('hidden', page.params.id!)} />
-								<SubmitButton label="Check In" variant="primary" class="min-h-11" />
+								<input {...fields.eventId.as('hidden', params.id)} />
+								<SubmitButton label={m.staff_events_id_check_in_label()} variant="primary" />
 							</Form>
-							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />
-						{/if}
-					</div>
+							<CancelTicketAction
+								ticketId={ticket.id}
+								attendeeName={ticket.attendeeName}
+								size="md"
+							/>
+						</CardActions>
+					{/if}
 				</CardBody>
 			</Card>
 		{/each}
 
 		{#if filteredTickets.length === 0}
 			<p class="py-8 text-center opacity-50">
-				{search ? 'No tickets match your search' : 'No tickets to check in'}
+				{search
+					? m.staff_events_id_check_in_no_tickets_match_search_text()
+					: m.staff_events_id_check_in_no_tickets_check_text()}
 			</p>
 		{/if}
 	</div>

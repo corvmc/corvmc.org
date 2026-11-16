@@ -1,52 +1,42 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	workOrder,
+	volunteerShift,
 	volunteerSignup,
 	volunteerRole,
 	volunteerProfile,
-	volunteerHourLog,
 	volunteerShiftFeedback
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import {
-	and,
-	asc,
-	count,
-	countDistinct,
-	desc,
-	eq,
-	gte,
-	inArray,
-	isNull,
-	lt,
-	ne,
-	or,
-	sql
-} from 'drizzle-orm';
-import { workRequest } from '$lib/server/db/schema/inventory';
-import { containsLiteral } from '$lib/server/db/like';
-import { DomainError } from '$lib/server/errors';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	requireActiveVolunteer,
 	VolunteerProfileBlockedError,
 	VolunteerProfileNotFoundError
 } from './volunteer-profile-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
 import {
 	getShiftById,
+	liveShift,
 	notOnCancelledListing,
-	unscheduledWorkWhere,
-	workOrderAuditLabel
+	openTask,
+	listShifts,
+	workOrderAuditLabel,
+	type ShiftRecord
 } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
-import { isScheduled } from './scheduled';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import type { VolunteerSignup } from '$lib/server/db/schema/volunteer';
-import type { VolunteerSignupStatus } from '$lib/config';
+import { listTasksWithEndedShifts } from './ended-shifts';
+import { SHORT_STAFFED_BADGE_DAYS, isShortStaffed } from '#lib/utils/shift-staffing.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import type { VolunteerSignup } from '#lib/server/db/schema/volunteer.js';
+import type { VolunteerSignupStatus } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Signups
@@ -133,39 +123,30 @@ const NO_PROFILE_WARNING = 'No volunteer profile on file: never signed up to vol
  * pass a read-then-write check, and the unique index on (shiftId, userId) cannot
  * arbitrate that because they are different users.
  */
-function hasRoomSql(
-	shiftId: string,
-	capacity: number,
-	/** The claimant's own window, or the shift's when they did not name one. */
-	effStart: Date | null,
-	effEnd: Date | null
-) {
-	const start = effStart ? Math.floor(effStart.getTime() / 1000) : null;
-	const end = effEnd ? Math.floor(effEnd.getTime() / 1000) : null;
+function hasRoomSql(shift: Pick<ShiftRecord, 'id' | 'capacity' | 'startsAt' | 'endsAt'>) {
+	const start = Math.floor(shift.startsAt.getTime() / 1000);
+	const end = Math.floor(shift.endsAt.getTime() / 1000);
 
-	// Counts only signups whose window *overlaps* the claimant's, so a 6-10 shift
-	// with capacity 1 can hold somebody on 6-8 and somebody else on 8-10. Two
-	// degenerate cases must count rather than skip: with nobody naming a window
-	// every coalesce lands on the shift's own times, so everything overlaps
-	// everything and this is the plain headcount; and a work order has no times
-	// anywhere, where a plain overlap test would compare against NULL and let
-	// capacity stop binding altogether.
+	// Counts only sign-ups whose window *overlaps* the shift's, so a 6-10 shift
+	// with one place can hold somebody on 6-8 and somebody else on 8-10. With
+	// nobody naming a window every coalesce lands on the shift's own times, and
+	// this is the plain headcount.
 	return sql`(
 		select count(*) from "volunteer_signup" vs
-		join "work_order" vsh on vsh."id" = vs."shift_id"
-		where vs."shift_id" = ${shiftId}
+		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		where vs."shift_id" = ${shift.id}
 			and vs."status" in ('claimed', 'confirmed', 'completed')
-			and (
-				coalesce(vs."scheduled_starts_at", vsh."starts_at") is null
-				or coalesce(vs."scheduled_ends_at", vsh."ends_at") is null
-				or ${start} is null
-				or ${end} is null
-				or (
-					coalesce(vs."scheduled_starts_at", vsh."starts_at") < ${end}
-					and coalesce(vs."scheduled_ends_at", vsh."ends_at") > ${start}
-				)
-			)
-	) < ${capacity}`;
+			and coalesce(vs."scheduled_starts_at", vsh."starts_at") < ${end}
+			and coalesce(vs."scheduled_ends_at", vsh."ends_at") > ${start}
+	) < ${shift.capacity}`;
+}
+
+/** Why nobody can take a place on this shift now, or null when they can. */
+function closedReason(shift: ShiftRecord): string | null {
+	if (shift.cancelledAt || shift.taskCancelledAt) return 'That shift was called off.';
+	if (shift.taskResolvedAt) return 'That task is already done.';
+	if (shift.endsAt < new Date()) return 'That shift has already happened.';
+	return null;
 }
 
 const unixNow = () => Math.floor(Date.now() / 1000);
@@ -204,24 +185,16 @@ export async function claimShift(
 
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
-	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
-	if (shift.endsAt && shift.endsAt < new Date())
-		throw new ShiftClosedError('That shift has already happened.');
-	// A member can only take what is on the claim board. Staff assign onto
-	// unposted work, which is what a Members work order is.
-	if (!assigned && !shift.postedAt)
-		throw new ShiftClosedError("This shift isn't open for sign-up.");
+	// Staff too (docs/development/conventions.md#workflow-gates): past work is an
+	// hour log; a sign-up is a promise to turn up, for a night that is over. A
+	// shift is open by existing, so there is no "not posted" refusal (#2518).
+	const closed = closedReason(shift);
+	if (closed) throw new ShiftClosedError(closed);
 	const roleId = requireVolunteerRole(shift);
 
 	// Clearance is checked against the shift's date, not today: a card that
 	// lapses next week doesn't cover a shift the week after.
-	//
-	// An unscheduled work order has no date to check against, so the gate falls
-	// back to today. That is a gate, not a record: `scheduleWorkOrder` runs this
-	// again once a window exists, and the audit question -- was the card current
-	// on the night they worked -- is answered at hour-log review against
-	// `workedOn`, which is the only date that reflects reality.
-	const missing = await missingRequirements(userId, roleId, shift.startsAt ?? new Date());
+	const missing = await missingRequirements(userId, roleId, shift.startsAt);
 	if (missing.length > 0) {
 		if (!assigned) throw new NotClearedError(missing);
 		const names = missing.map((m) => m.name).join(' and ');
@@ -253,7 +226,7 @@ export async function claimShift(
 			set "status" = ${status}, "claimed_at" = ${now},
 				"confirmed_at" = ${assigned ? now : null},
 				"cancelled_at" = null, "declined_at" = null, "updated_at" = ${now}
-			where "id" = ${existing.id} and ${hasRoomSql(shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
+			where "id" = ${existing.id} and ${hasRoomSql(shift)}
 			returning "id"
 		`);
 
@@ -281,7 +254,7 @@ export async function claimShift(
 				 "created_at", "updated_at")
 			select ${id}, ${shiftId}, ${userId}, ${status}, ${now}, ${assigned ? now : null},
 				${now}, ${now}
-			where ${hasRoomSql(shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
+			where ${hasRoomSql(shift)}
 			returning "id"
 		`);
 
@@ -293,7 +266,7 @@ export async function claimShift(
 	} catch (err) {
 		if (err instanceof ShiftFullError) throw err;
 		// The unique index fired — two clicks, or two tabs, from the same member.
-		if (err instanceof Error && /UNIQUE constraint failed/i.test(err.message)) {
+		if (isUniqueConstraintError(err)) {
 			const [row] = await db
 				.select()
 				.from(volunteerSignup)
@@ -319,11 +292,12 @@ async function memberName(userId: string): Promise<string> {
  * picker. Over warnings, the warn-record-allow half is a second entry.
  */
 async function recordStaffAssignment(
-	shift: { id: string; title: string | null },
+	shift: { workOrderId: string; title: string | null },
 	userId: string,
 	warnings: string[]
 ): Promise<void> {
-	const subject = { type: 'work_order' as const, id: shift.id, label: workOrderAuditLabel(shift) };
+	const task = { id: shift.workOrderId, title: shift.title };
+	const subject = { type: 'work_order' as const, id: task.id, label: workOrderAuditLabel(task) };
 	const name = await memberName(userId);
 	await recordAuditEntry({
 		action: 'work_order.member_assigned',
@@ -345,9 +319,10 @@ async function recordRosterEntry(
 ): Promise<void> {
 	const shift = await getShiftById(signup.shiftId);
 	if (!shift) return;
+	const task = { id: shift.workOrderId, title: shift.title };
 	await recordAuditEntry({
 		action,
-		subject: { type: 'work_order', id: shift.id, label: workOrderAuditLabel(shift) },
+		subject: { type: 'work_order', id: task.id, label: workOrderAuditLabel(task) },
 		details: { userId: signup.userId, memberName: await memberName(signup.userId) }
 	});
 }
@@ -407,38 +382,13 @@ async function emitSignupEvent(
 	signupId: string
 ): Promise<void> {
 	try {
-		const [row] = await db
-			.select({
-				shiftId: workOrder.id,
-				userId: user.id,
-				userName: user.name,
-				userEmail: user.email,
-				roleName: volunteerRole.name,
-				title: workOrder.title,
-				eventTitle: eventTitleSql,
-				startsAt: workOrder.startsAt,
-				endsAt: workOrder.endsAt
-			})
-			.from(volunteerSignup)
-			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.innerJoin(user, eq(user.id, volunteerSignup.userId))
-			.where(eq(volunteerSignup.id, signupId))
-			.limit(1);
-
+		const [row] = await signupRows().where(eq(volunteerSignup.id, signupId)).limit(1);
 		if (!row) return;
 
 		await domainEvents.emit(event, {
-			signupId,
-			shiftId: row.shiftId,
-			userId: row.userId,
-			userName: row.userName,
-			userEmail: row.userEmail,
-			roleName: row.roleName,
-			title: row.title,
-			eventTitle: row.eventTitle,
-			startsAt: row.startsAt?.toISOString() ?? null,
-			endsAt: row.endsAt?.toISOString() ?? null
+			...row,
+			startsAt: row.startsAt.toISOString(),
+			endsAt: row.endsAt.toISOString()
 		});
 	} catch (err) {
 		captureException(err, { event, signupId });
@@ -506,6 +456,8 @@ export interface CompletedSignup {
 	userName: string;
 	userEmail: string;
 	shiftId: string;
+	/** The shift's task. */
+	workOrderId: string;
 	roleName: string;
 	/** For `shiftLabel()`: the cron emits these straight onto the event. */
 	title: string | null;
@@ -522,34 +474,14 @@ export interface CompletedSignup {
  * Marking a no-show afterwards is the correction.
  */
 export async function completeFinishedShifts(now = new Date()): Promise<CompletedSignup[]> {
-	const due = await db
-		.select({
-			signupId: volunteerSignup.id,
-			userId: volunteerSignup.userId,
-			userName: user.name,
-			userEmail: user.email,
-			shiftId: workOrder.id,
-			roleName: volunteerRole.name,
-			title: workOrder.title,
-			eventTitle: eventTitleSql,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
-		.where(
-			and(
-				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
-				lt(workOrder.endsAt, now),
-				isNull(workOrder.cancelledAt)
-			)
+	const due = await signupRows().where(
+		and(
+			inArray(volunteerSignup.status, ['claimed', 'confirmed']),
+			lt(volunteerShift.endsAt, now),
+			liveShift(),
+			isNull(workOrder.cancelledAt)
 		)
-		// `ends_at < now` already excludes unscheduled work orders — the cron
-		// cannot complete a row with no clock to run out. Restated so the types
-		// follow the filter.
-		.then((rows) => rows.filter(isScheduled));
+	);
 
 	if (due.length === 0) return [];
 
@@ -570,6 +502,33 @@ export async function completeFinishedShifts(now = new Date()): Promise<Complete
 // Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * A sign-up with its shift, task, role and member: what every shift event and
+ * cron carries. Inner joins: a sign-up always has a shift, and a shift's task
+ * has a role (`openShift` refuses one without).
+ */
+function signupRows() {
+	return db
+		.select({
+			signupId: volunteerSignup.id,
+			userId: volunteerSignup.userId,
+			userName: user.name,
+			userEmail: user.email,
+			shiftId: volunteerShift.id,
+			workOrderId: workOrder.id,
+			roleName: volunteerRole.name,
+			title: workOrder.title,
+			eventTitle: eventTitleSql,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.innerJoin(user, eq(user.id, volunteerSignup.userId));
+}
+
 async function reloadSignup(id: string): Promise<VolunteerSignup> {
 	const [row] = await db.select().from(volunteerSignup).where(eq(volunteerSignup.id, id)).limit(1);
 	if (!row) throw new SignupNotFoundError();
@@ -584,6 +543,8 @@ export interface ShiftClaimant {
 	claimedAt: Date;
 	/** Only meaningful on a cancelled shift, where the roster is the notify list. */
 	notifiedAt: Date | null;
+	/** The signup on this shift they trained under (#2720). */
+	supervisingSignupId: string | null;
 }
 
 export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
@@ -594,7 +555,8 @@ export async function listClaimants(shiftId: string): Promise<ShiftClaimant[]> {
 			member: memberRefColumns(),
 			status: volunteerSignup.status,
 			claimedAt: volunteerSignup.claimedAt,
-			notifiedAt: volunteerSignup.notifiedAt
+			notifiedAt: volunteerSignup.notifiedAt,
+			supervisingSignupId: volunteerSignup.supervisingSignupId
 		})
 		.from(volunteerSignup)
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
@@ -662,50 +624,18 @@ export async function markSignupNotified(signupId: string): Promise<void> {
 		.where(and(eq(volunteerSignup.id, signupId), isNull(volunteerSignup.notifiedAt)));
 }
 
-/** How many people on a called-off shift still have to be told. */
-export async function countUnnotified(shiftId: string): Promise<number> {
-	const [row] = await db
-		.select({ n: count() })
-		.from(volunteerSignup)
-		.where(
-			and(
-				eq(volunteerSignup.shiftId, shiftId),
-				ne(volunteerSignup.status, 'cancelled'),
-				isNull(volunteerSignup.notifiedAt)
-			)
-		);
-	return Number(row?.n ?? 0);
-}
-
 /** Confirmed signups for shifts starting inside a window — the reminder cron. */
 export async function listSignupsStartingBetween(from: Date, to: Date): Promise<CompletedSignup[]> {
-	return db
-		.select({
-			signupId: volunteerSignup.id,
-			userId: volunteerSignup.userId,
-			userName: user.name,
-			userEmail: user.email,
-			shiftId: workOrder.id,
-			roleName: volunteerRole.name,
-			title: workOrder.title,
-			eventTitle: eventTitleSql,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
-		.where(
-			and(
-				eq(volunteerSignup.status, 'confirmed'),
-				isNull(workOrder.cancelledAt),
-				notOnCancelledListing(),
-				sql`${workOrder.startsAt} >= ${Math.floor(from.getTime() / 1000)}`,
-				sql`${workOrder.startsAt} < ${Math.floor(to.getTime() / 1000)}`
-			)
+	return signupRows().where(
+		and(
+			eq(volunteerSignup.status, 'confirmed'),
+			liveShift(),
+			isNull(workOrder.cancelledAt),
+			notOnCancelledListing(),
+			gte(volunteerShift.startsAt, from),
+			lt(volunteerShift.startsAt, to)
 		)
-		.then((rows) => rows.filter(isScheduled));
+	);
 }
 
 /**
@@ -721,27 +651,28 @@ export async function listUnloggedCompletions(userId: string) {
 	return db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
 			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(
 			and(
 				eq(volunteerSignup.userId, userId),
 				eq(volunteerSignup.status, 'completed'),
-				gte(workOrder.endsAt, earliest),
+				gte(volunteerShift.endsAt, earliest),
 				sql`not exists (
 					select 1 from "volunteer_hour_log" vhl
-					where vhl."shift_id" = ${workOrder.id} and vhl."user_id" = ${userId}
+					where vhl."shift_id" = ${volunteerShift.id} and vhl."user_id" = ${userId}
 				)`
 			)
 		)
-		.orderBy(asc(workOrder.startsAt));
+		.orderBy(asc(volunteerShift.startsAt));
 }
 
 /**
@@ -756,44 +687,27 @@ export async function listCompletionsAwaitingFeedback(
 	from: Date,
 	to: Date
 ): Promise<CompletedSignup[]> {
-	return db
-		.select({
-			signupId: volunteerSignup.id,
-			userId: volunteerSignup.userId,
-			userName: user.name,
-			userEmail: user.email,
-			shiftId: workOrder.id,
-			roleName: volunteerRole.name,
-			title: workOrder.title,
-			eventTitle: eventTitleSql,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+	return signupRows()
 		.leftJoin(volunteerShiftFeedback, eq(volunteerShiftFeedback.signupId, volunteerSignup.id))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'completed'),
 				isNull(volunteerShiftFeedback.id),
-				sql`${workOrder.endsAt} >= ${Math.floor(from.getTime() / 1000)}`,
-				sql`${workOrder.endsAt} < ${Math.floor(to.getTime() / 1000)}`
+				gte(volunteerShift.endsAt, from),
+				lt(volunteerShift.endsAt, to)
 			)
-		)
-		.then((rows) => rows.filter(isScheduled));
+		);
 }
 
 export interface MemberSignup {
 	signupId: string;
 	shiftId: string;
+	workOrderId: string;
+	/** The task's own name; the card falls back to the show, then the role. */
+	title: string | null;
 	roleName: string;
-	// Null for a work order the member has taken on but nobody has scheduled.
-	// Deliberately not filtered out: this is their record of what they signed up
-	// for, and dropping the undated rows would hide work they are committed to.
-	startsAt: Date | null;
-	endsAt: Date | null;
+	startsAt: Date;
+	endsAt: Date;
 	status: VolunteerSignupStatus;
 	shiftCancelledAt: Date | null;
 	/** The briefing. Shown on the member's card once they are booked. */
@@ -815,23 +729,26 @@ export async function listSignupsForUser(
 	return db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
+			workOrderId: workOrder.id,
+			title: workOrder.title,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
 			status: volunteerSignup.status,
-			shiftCancelledAt: workOrder.cancelledAt,
+			shiftCancelledAt: shiftCancelledSql,
 			// The member's own card shows the briefing once they are booked — it is
 			// what they need on the night, and the claim modal quotes it before they
 			// commit. The event is what makes "Front Desk" mean a particular evening.
-			notes: workOrder.notes,
+			notes: briefingSql,
 			eventTitle: eventTitleSql
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(eq(volunteerSignup.userId, userId))
-		.orderBy(desc(workOrder.startsAt))
+		.orderBy(desc(volunteerShift.startsAt))
 		.limit(options.limit ?? 20);
 }
 
@@ -847,24 +764,84 @@ export async function getSignupForUser(signupId: string, userId: string) {
 	const [row] = await db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
+			workOrderId: workOrder.id,
 			status: volunteerSignup.status,
 			cancelledAt: volunteerSignup.cancelledAt,
+			title: workOrder.title,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
-			notes: workOrder.notes,
-			shiftCancelledAt: workOrder.cancelledAt,
+			briefingArticleId: volunteerRole.briefingArticleId,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
+			notes: briefingSql,
+			shiftCancelledAt: shiftCancelledSql,
 			eventId: workOrder.eventId,
 			eventTitle: eventTitleSql
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(and(eq(volunteerSignup.id, signupId), eq(volunteerSignup.userId, userId)))
 		.limit(1);
 
 	return row ?? null;
+}
+
+/**
+ * The briefing articles of the roles this member is on for these shows, for
+ * the door screen. A dropped signup or a called-off shift has no briefing.
+ */
+export async function listBriefingsForEvents(userId: string, eventIds: readonly string[]) {
+	if (eventIds.length === 0) return [];
+	return db
+		.selectDistinct({
+			eventId: sql<string>`${workOrder.eventId}`,
+			roleName: volunteerRole.name,
+			articleId: sql<string>`${volunteerRole.briefingArticleId}`
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.where(
+			and(
+				eq(volunteerSignup.userId, userId),
+				inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed']),
+				inArray(workOrder.eventId, [...eventIds]),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt),
+				sql`${volunteerRole.briefingArticleId} is not null`
+			)
+		)
+		.orderBy(asc(volunteerRole.name));
+}
+
+/**
+ * This member's confirmed signups on these shows, one per show, so the door
+ * screen can link each show to the member's own door list. A dropped signup or
+ * a called-off shift links nothing.
+ */
+export async function listConfirmedSignupsForEvents(userId: string, eventIds: readonly string[]) {
+	if (eventIds.length === 0) return [];
+	return db
+		.selectDistinct({
+			eventId: sql<string>`${workOrder.eventId}`,
+			signupId: volunteerSignup.id
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.where(
+			and(
+				eq(volunteerSignup.userId, userId),
+				eq(volunteerSignup.status, 'confirmed'),
+				inArray(workOrder.eventId, [...eventIds]),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt)
+			)
+		)
+		.orderBy(asc(volunteerShift.startsAt));
 }
 
 // ---------------------------------------------------------------------------
@@ -886,17 +863,32 @@ const eventTitleSql = sql<string | null>`(
 	select e."title" from "event_listing" e where e."id" = ${workOrder.eventId}
 )`;
 
+/** A shift reads as called off when it or its task was. */
+const shiftCancelledSql =
+	sql<Date | null>`coalesce(${volunteerShift.cancelledAt}, ${workOrder.cancelledAt})`.mapWith(
+		volunteerShift.cancelledAt
+	);
+
+/** The shift's own briefing, else the task's notes. */
+const briefingSql = sql<string | null>`coalesce(${volunteerShift.notes}, ${workOrder.notes})`;
+
 export interface OutstandingClaim {
 	signupId: string;
 	userId: string;
 	member: MemberRef;
 	shiftId: string;
+	workOrderId: string;
 	volunteerRoleId: string;
 	roleName: string;
 	startsAt: Date;
 	endsAt: Date;
 	eventTitle: string | null;
 	claimedAt: Date;
+}
+
+/** A claim still worth confirming: its shift and task are live and the shift is ahead. */
+export function outstandingClaimWhere(now: Date) {
+	return and(liveShift(), openTask(), gte(volunteerShift.startsAt, now));
 }
 
 /**
@@ -916,79 +908,46 @@ export async function listOutstandingClaims(
 			signupId: volunteerSignup.id,
 			userId: volunteerSignup.userId,
 			member: memberRefColumns(),
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
+			workOrderId: workOrder.id,
 			volunteerRoleId: volunteerRole.id,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
 			eventTitle: eventTitleSql,
 			claimedAt: volunteerSignup.claimedAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(user, eq(user.id, volunteerSignup.userId))
 		.where(
 			and(
 				eq(volunteerSignup.status, 'claimed'),
-				isNull(workOrder.cancelledAt),
-				gte(workOrder.startsAt, now),
-				before ? lt(workOrder.startsAt, before) : undefined
+				outstandingClaimWhere(now),
+				before ? lt(volunteerShift.startsAt, before) : undefined
 			)
 		)
-		.orderBy(asc(workOrder.startsAt), asc(volunteerSignup.claimedAt));
+		.orderBy(asc(volunteerShift.startsAt), asc(volunteerSignup.claimedAt));
 
-	return rows.filter(isScheduled).map((row) => ({ ...row, member: toMemberRef(row.member) }));
+	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
 }
 
 /**
- * How many things are waiting on a coordinator, as one number.
- *
- * The sidebar badge and the dashboard summary both read this, so nav and page
- * cannot disagree. It counts rather than lists: the badge runs on every staff
- * page load. Lapsing clearances and guardian sign-offs are deliberately absent:
- * neither is urgent, and a badge that never reaches zero stops being read.
+ * Volunteering's badge (#2625): shifts in the next week short of bookings, and
+ * tasks whose shifts have ended. Each is a chip on the page, by the same
+ * predicate. Unassigned tasks are Tasks' chip; submissions waiting on a decision
+ * (hour logs, claims) are the staff review feed's (#2623).
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
-	const [pendingHours, claims, unscheduled, toConfirm] = await Promise.all([
-		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
-		db
-			.select({ n: count() })
-			.from(volunteerSignup)
-			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-			.where(
-				and(
-					eq(volunteerSignup.status, 'claimed'),
-					isNull(workOrder.cancelledAt),
-					gte(workOrder.startsAt, now)
-				)
-			),
-		// Work with no time on it, by the predicate the Needs Scheduling card
-		// lists with. Committee-owned work is on its committee's queue instead.
-		db.select({ n: count() }).from(workOrder).where(unscheduledWorkWhere()),
-		// Finished work nobody confirmed fixed: the same predicate as
-		// `listFinishedWorkToConfirm`, counted per work order.
-		db
-			.select({ n: countDistinct(workOrder.id) })
-			.from(workOrder)
-			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
-			.where(
-				and(
-					eq(workOrder.closeReportsOnCompletion, false),
-					isNull(workOrder.resolvedAt),
-					isNull(workOrder.cancelledAt),
-					lt(workOrder.endsAt, now),
-					eq(workRequest.status, 'pending')
-				)
-			)
+	const to = new Date(now.getTime() + SHORT_STAFFED_BADGE_DAYS * 86_400_000);
+	const [shifts, ended] = await Promise.all([
+		listShifts({ from: now, to }),
+		// The list itself, which leaves out a task whose done condition holds.
+		listTasksWithEndedShifts(now)
 	]);
-
-	return (
-		Number(pendingHours[0]?.n ?? 0) +
-		Number(claims[0]?.n ?? 0) +
-		Number(unscheduled[0]?.n ?? 0) +
-		Number(toConfirm[0]?.n ?? 0)
-	);
+	return shifts.filter(isShortStaffed).length + ended.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -1062,17 +1021,21 @@ export function availabilityConflictsWithDay(
  * step and hiding them makes the list mysteriously short.
  */
 export async function listShiftCandidates(
-	shiftId: string,
+	on: { workOrderId: string; shiftId: string | null },
 	roleId: string,
 	scope: CandidateScope,
 	search?: string,
 	limit = 5
 ): Promise<ShiftCandidate[]> {
+	// Not already on the shift, and not already assigned the task.
 	const alreadyOn = sql`not exists (
 		select 1 from "volunteer_signup" vs
-		where vs."shift_id" = ${shiftId}
+		where vs."shift_id" = ${on.shiftId}
 			and vs."user_id" = ${user.id}
 			and vs."status" <> 'cancelled'
+	) and not exists (
+		select 1 from "work_order_assignee" a
+		where a."work_order_id" = ${on.workOrderId} and a."user_id" = ${user.id}
 	)`;
 
 	const isInterested = sql`exists (
@@ -1082,10 +1045,11 @@ export async function listShiftCandidates(
 
 	const workedThisRoleSql = sql<number>`(
 		select count(*) from "volunteer_signup" vs
-		join "work_order" vsh on vsh."id" = vs."shift_id"
+		join "volunteer_shift" vsh on vsh."id" = vs."shift_id"
+		join "work_order" wo on wo."id" = vsh."work_order_id"
 		where vs."user_id" = ${user.id}
 			and vs."status" = 'completed'
-			and vsh."volunteer_role_id" = ${roleId}
+			and wo."volunteer_role_id" = ${roleId}
 	)`;
 
 	// The candidate's skill tags that appear on the role's own list (#1445).
@@ -1194,14 +1158,13 @@ export async function inviteToShift(
 
 	const shift = await getShiftById(shiftId);
 	if (!shift) throw new SignupNotFoundError();
-	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
-	if (shift.endsAt && shift.endsAt < new Date())
-		throw new ShiftClosedError('That shift has already happened.');
+	const closed = closedReason(shift);
+	if (closed) throw new ShiftClosedError(closed);
 	const roleId = requireVolunteerRole(shift);
 
 	// No room check. Chasing four people for two places is the normal case, and
 	// capacity gates claiming rather than asking.
-	const missing = await missingRequirements(userId, roleId, shift.startsAt ?? new Date());
+	const missing = await missingRequirements(userId, roleId, shift.startsAt);
 
 	const [existing] = await db
 		.select({ id: volunteerSignup.id, status: volunteerSignup.status })
@@ -1237,6 +1200,7 @@ export async function inviteToShift(
 		return { signupId: existing.id, missingCertifications: missing };
 	}
 
+	// `uq_volunteer_signup`: a concurrent invite of the same person returns nothing.
 	const [row] = await db
 		.insert(volunteerSignup)
 		.values({
@@ -1246,7 +1210,9 @@ export async function inviteToShift(
 			invitedAt: now,
 			invitedByUserId
 		})
+		.onConflictDoNothing()
 		.returning({ id: volunteerSignup.id });
+	if (!row) throw new AlreadyOnShiftError('invited');
 
 	void emitSignupEvent('volunteer.signup_invited', row.id);
 	await recordRosterEntry('work_order.member_invited', { shiftId, userId });
@@ -1261,13 +1227,15 @@ export async function inviteToShift(
  * somebody else fills the last place. All three are already columns.
  */
 const invitationIsLive = sql`(
-	${workOrder.cancelledAt} is null
-	and (${workOrder.startsAt} is null or ${workOrder.startsAt} > unixepoch())
+	${volunteerShift.cancelledAt} is null
+	and ${workOrder.cancelledAt} is null
+	and ${workOrder.resolvedAt} is null
+	and ${volunteerShift.startsAt} > unixepoch()
 	and (
 		select count(*) from "volunteer_signup" held
-		where held."shift_id" = ${workOrder.id}
+		where held."shift_id" = ${volunteerShift.id}
 			and held."status" in ('claimed', 'confirmed', 'completed')
-	) < ${workOrder.capacity}
+	) < ${volunteerShift.capacity}
 )`;
 
 /** The invitations a member should see: theirs, unanswered, still worth answering. */
@@ -1275,10 +1243,11 @@ export async function listInvitationsForUser(userId: string) {
 	const rows = await db
 		.select({
 			signupId: volunteerSignup.id,
-			shiftId: workOrder.id,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
-			notes: workOrder.notes,
+			shiftId: volunteerShift.id,
+			workOrderId: workOrder.id,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
+			notes: briefingSql,
 			invitedAt: volunteerSignup.invitedAt,
 			roleName: volunteerRole.name,
 			eventTitle: eventTitleSql,
@@ -1287,7 +1256,8 @@ export async function listInvitationsForUser(userId: string) {
 			>`(select name from "user" where "user".id = ${volunteerSignup.invitedByUserId})`
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(
 			and(
@@ -1296,7 +1266,7 @@ export async function listInvitationsForUser(userId: string) {
 				invitationIsLive
 			)
 		)
-		.orderBy(asc(workOrder.startsAt));
+		.orderBy(asc(volunteerShift.startsAt));
 
 	return rows;
 }
@@ -1350,9 +1320,8 @@ export async function acceptInvitation(signupId: string, userId: string): Promis
 
 	const shift = await getShiftById(invitation.shiftId);
 	if (!shift) throw new SignupNotFoundError();
-	if (shift.cancelledAt) throw new ShiftClosedError('That shift was called off.');
-	if (shift.endsAt && shift.endsAt < new Date())
-		throw new ShiftClosedError('That shift has already happened.');
+	const closed = closedReason(shift);
+	if (closed) throw new ShiftClosedError(closed);
 
 	const now = unixNow();
 	// The room check runs here and not at invite time: four people can be asked
@@ -1361,7 +1330,7 @@ export async function acceptInvitation(signupId: string, userId: string): Promis
 		update "volunteer_signup"
 		set "status" = 'claimed', "claimed_at" = ${now}, "declined_at" = null, "updated_at" = ${now}
 		where "id" = ${signupId} and "status" = 'invited'
-			and ${hasRoomSql(invitation.shiftId, shift.capacity, shift.startsAt, shift.endsAt)}
+			and ${hasRoomSql(shift)}
 		returning "id"
 	`);
 

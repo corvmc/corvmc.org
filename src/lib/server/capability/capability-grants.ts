@@ -1,23 +1,28 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group, groupCapability, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { projectCommittee } from '$lib/server/db/schema/project';
-import { eventListing } from '$lib/server/db/schema/event';
+import { and, eq, inArray, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { TERMINAL_PRODUCTION_STATUSES } from '#lib/production/status.js';
 import {
+	volunteerRole,
 	volunteerRoleCapability,
+	volunteerShift,
 	volunteerSignup,
-	workOrder
-} from '$lib/server/db/schema/volunteer';
-import { grantRuleFor, type Capability } from '$lib/config';
-import { allowlisted, type CommitteeGrant } from '$lib/server/capability/grant-rules';
+	workOrder,
+	workOrderAssignee
+} from '#lib/server/db/schema/volunteer.js';
+import { grantRuleFor, type Capability } from '#lib/config.js';
+import { allowlisted, type CommitteeGrant } from '#lib/server/capability/grant-rules.js';
 
 export {
 	allowlisted,
 	committeeAllows,
 	type CapabilityScope,
 	type CommitteeGrant
-} from '$lib/server/capability/grant-rules';
+} from '#lib/server/capability/grant-rules.js';
 
 const DAY_MS = 86_400_000;
 
@@ -93,6 +98,34 @@ export function orgWideCapabilities(seats: readonly CommitteeGrant[]): Capabilit
 	return [...new Set(caps)].filter((c) => grantRuleFor(c)?.committee === 'org') as Capability[];
 }
 
+/** What naming a person a show's event lead gives them on that show's project (#2726). */
+export const SHOW_LEAD_CAPABILITY = 'production.run' satisfies Capability;
+
+/** Is `userId` the event lead on the production that specialises `projectId`? */
+export async function leadsProject(userId: string, projectId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: production.id })
+		.from(production)
+		.where(and(eq(production.projectId, projectId), eq(production.producerUserId, userId)))
+		.limit(1);
+	return row != null;
+}
+
+/** Does `userId` lead any show that is not closed or cancelled? Opens the staff panel to them. */
+export async function leadsOpenShow(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: production.id })
+		.from(production)
+		.where(
+			and(
+				eq(production.producerUserId, userId),
+				notInArray(production.status, [...TERMINAL_PRODUCTION_STATUSES])
+			)
+		)
+		.limit(1);
+	return row != null;
+}
+
 /** Active members of every live committee that grants `cap` org-wide, for fan-out. */
 export async function listCommitteeHolders(
 	cap: Capability
@@ -120,22 +153,99 @@ type ShiftWindowRow = {
 	endsAt: Date | null;
 	eventStartsAt: Date;
 	eventEndsAt: Date | null;
+	/** The role's `grantLeadDays`; absent or zero opens the window at the shift's start. */
+	leadDays?: number | null;
 };
 
 /**
- * When a role grant from this shift is live: from the shift's start until
- * `graceDays` after it ends. An unscheduled work order borrows its event's times.
+ * When a role grant is live: from the shift's start, or `leadDays` before the
+ * event when the role sets a lead time, until `graceDays` after it ends. An
+ * assignment has no shift, so it borrows its task's event's times.
  */
 export function grantWindow(row: ShiftWindowRow, graceDays: number): { from: Date; until: Date } {
-	const from = row.startsAt ?? row.eventStartsAt;
+	const start = row.startsAt ?? row.eventStartsAt;
+	const lead = row.leadDays ?? 0;
+	const early = new Date(row.eventStartsAt.getTime() - lead * DAY_MS);
+	const from = lead > 0 && early < start ? early : start;
 	const end = row.endsAt ?? row.eventEndsAt ?? row.eventStartsAt;
 	return { from, until: new Date(end.getTime() + graceDays * DAY_MS) };
 }
 
+/** One way a person holds a role grant: a confirmed sign-up, or an assignment. */
+type RoleGrantRow = ShiftWindowRow & {
+	capability: string;
+	eventId: string;
+	eventTitle: string;
+	roleName: string;
+};
+
+/**
+ * Every role grant `userId` could hold, whatever the time: on a live task in a
+ * role carrying a capability, a confirmed or completed sign-up on a live shift
+ * (its window) or an assignment (the event's window). `where` narrows it.
+ */
+async function roleGrantRows(userId: string, where?: SQL): Promise<RoleGrantRow[]> {
+	const onTask = and(where, isNull(workOrder.cancelledAt));
+	const common = {
+		capability: volunteerRoleCapability.capability,
+		eventId: eventListing.id,
+		eventTitle: eventListing.title,
+		roleName: volunteerRole.name,
+		eventStartsAt: eventListing.startsAt,
+		eventEndsAt: eventListing.endsAt,
+		leadDays: volunteerRole.grantLeadDays
+	};
+	const [signedUp, assigned] = await Promise.all([
+		db
+			.select({ ...common, startsAt: volunteerShift.startsAt, endsAt: volunteerShift.endsAt })
+			.from(volunteerSignup)
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+			.innerJoin(
+				volunteerRoleCapability,
+				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
+			)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.where(
+				and(
+					onTask,
+					eq(volunteerSignup.userId, userId),
+					inArray(volunteerSignup.status, [...GRANTING_SIGNUP_STATUSES]),
+					isNull(volunteerShift.cancelledAt)
+				)
+			),
+		db
+			.select({
+				...common,
+				startsAt: sql<Date | null>`null`,
+				endsAt: sql<Date | null>`null`
+			})
+			.from(workOrderAssignee)
+			.innerJoin(workOrder, eq(workOrder.id, workOrderAssignee.workOrderId))
+			.innerJoin(
+				volunteerRoleCapability,
+				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
+			)
+			.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.where(and(onTask, eq(workOrderAssignee.userId, userId)))
+	]);
+	return [...signedUp, ...assigned];
+}
+
+/** Is `now` inside this row's grant window for `cap`, under the allowlist rule for it? */
+function roleRowLive(row: ShiftWindowRow, cap: string, now: Date): boolean {
+	const rule = grantRuleFor(cap)?.role;
+	if (!rule) return false;
+	const { from, until } = grantWindow(row, rule.graceDays);
+	return now >= from && now <= until;
+}
+
 /**
  * Does `userId` hold `cap` for `eventId` through a volunteer role? Needs a
- * confirmed or completed signup on a live work order for that event, in a role
- * that grants `cap`, with `now` inside the grant window.
+ * grant row (see `roleGrantRows`) with `now` inside its window (#2518), which
+ * opens early when the role sets a lead time (#2993).
  */
 export async function roleGrantAllows(
 	userId: string,
@@ -143,35 +253,42 @@ export async function roleGrantAllows(
 	eventId: string,
 	now: Date = new Date()
 ): Promise<boolean> {
-	const rule = grantRuleFor(cap)?.role;
-	if (!rule) return false;
+	if (!grantRuleFor(cap)?.role) return false;
+	const rows = await roleGrantRows(
+		userId,
+		and(eq(volunteerRoleCapability.capability, cap), eq(workOrder.eventId, eventId))
+	);
+	return rows.some((r) => roleRowLive(r, cap, now));
+}
 
-	const rows = await db
-		.select({
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
-			eventStartsAt: eventListing.startsAt,
-			eventEndsAt: eventListing.endsAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(
-			volunteerRoleCapability,
-			eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
-		)
-		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-		.where(
-			and(
-				eq(volunteerRoleCapability.capability, cap),
-				eq(volunteerSignup.userId, userId),
-				eq(workOrder.eventId, eventId),
-				inArray(volunteerSignup.status, [...GRANTING_SIGNUP_STATUSES]),
-				isNull(workOrder.cancelledAt)
-			)
-		);
+export interface LiveRoleGrant {
+	roleName: string;
+	eventId: string;
+	eventTitle: string;
+	capabilities: Capability[];
+}
 
-	return rows.some((r) => {
-		const { from, until } = grantWindow(r, rule.graceDays);
-		return now >= from && now <= until;
-	});
+/**
+ * The role grants live for `userId` at `now`, one per role and event: what
+ * `roleGrantAllows` would admit, read from the same rows and windows (#2994).
+ */
+export async function liveRoleGrantsFor(
+	userId: string,
+	now: Date = new Date()
+): Promise<LiveRoleGrant[]> {
+	const byKey = new Map<string, LiveRoleGrant>();
+	for (const r of await roleGrantRows(userId)) {
+		if (!roleRowLive(r, r.capability, now)) continue;
+		const key = JSON.stringify([r.roleName, r.eventId]);
+		const grant = byKey.get(key) ?? {
+			roleName: r.roleName,
+			eventId: r.eventId,
+			eventTitle: r.eventTitle,
+			capabilities: []
+		};
+		const cap = r.capability as Capability;
+		if (!grant.capabilities.includes(cap)) grant.capabilities.push(cap);
+		byKey.set(key, grant);
+	}
+	return [...byKey.values()];
 }

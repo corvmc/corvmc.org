@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { addCalendarDays, forEachClockEdge } from '#lib/test/clock-edges.js';
 
 // Every field the form spreads: `as()` for the hidden inputs, `issues()` for the rest.
 const fields = new Proxy(
@@ -13,7 +14,7 @@ const fields = new Proxy(
 	}
 );
 
-vi.mock('$lib/remote/maintenance-schedules.remote', () => ({
+vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
 	createCommitteeRecurringWork: {
 		enhance: () => ({ method: 'POST', action: '?/createCommitteeRecurringWork' }),
 		fields,
@@ -27,7 +28,7 @@ vi.mock('$lib/remote/maintenance-schedules.remote', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -35,20 +36,22 @@ vi.mock('$app/navigation', () => ({
 const CommitteeRecurringWork = (await import('./CommitteeRecurringWork.svelte')).default;
 
 describe('CommitteeRecurringWork', () => {
-	afterEach(() => vi.useRealTimers());
+	// #1984: 6pm PDT on Oct 26 was already Oct 27 in UTC, so a week out read Nov 3.
+	forEachClockEdge(
+		'defaults the first due date to a week from the club day',
+		async ({ clubDate }) => {
+			await render(CommitteeRecurringWork, {
+				groupId: 'group-1',
+				schedules: [],
+				roles: [{ value: 'role-1', label: 'Booking Lead' }],
+				canEdit: true
+			});
+			await page.getByRole('button').click();
 
-	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC, so a week out is Nov 2.
-	it('defaults the first due date to a week from the club day', async () => {
-		vi.useFakeTimers({ toFake: ['Date'] });
-		vi.setSystemTime(new Date('2026-10-27T01:00:00Z'));
-		await render(CommitteeRecurringWork, {
-			groupId: 'group-1',
-			schedules: [],
-			roles: [{ value: 'role-1', label: 'Booking Lead' }],
-			canEdit: true
-		});
-		await page.getByRole('button', { name: 'Add' }).click();
-
-		await expect.element(page.getByLabelText('First one due')).toHaveValue('2026-11-02');
-	});
+			await expect
+				.element(page.getByLabelText('First one due'))
+				.toHaveValue(addCalendarDays(clubDate, 7));
+		},
+		{ fakeTimers: true }
+	);
 });

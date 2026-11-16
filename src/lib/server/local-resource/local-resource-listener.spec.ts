@@ -8,19 +8,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 type Handler = (e: { data: unknown }) => Promise<void>;
 const handlers = new Map<string, Handler>();
 
-vi.mock('$lib/server/event-bus', () => ({
+vi.mock('#lib/server/event-bus/index.js', () => ({
 	domainEvents: { on: (name: string, fn: Handler) => handlers.set(name, fn) }
 }));
 const dispatch = vi.fn(async (..._a: unknown[]) => undefined);
 const dispatchEmailOnly = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/notification/dispatcher', () => ({ dispatch, dispatchEmailOnly }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/notification/dispatcher.js', () => ({ dispatch, dispatchEmailOnly }));
+vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: vi.fn(async () => [
 		{ id: 's-1', name: 'Sam', email: 'sam@x.example' },
 		{ id: 's-2', name: 'Ria', email: 'ria@x.example' }
 	])
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { registerLocalResourceListeners } = await import('./local-resource-listener');
 registerLocalResourceListeners();

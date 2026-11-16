@@ -33,8 +33,8 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -58,13 +58,13 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 
 const hasConflict = vi.fn(async () => conflict);
 const cancelReservation = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	hasConflict: (...a: unknown[]) => hasConflict(...(a as []))
 }));
 const staffCreate = vi.fn(async () => ({ id: 'res-new' }));
-vi.mock('$lib/server/reservation/reservation-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-service.js')>();
 	return {
 		...actual,
 		cancel: (...a: unknown[]) => cancelReservation(...(a as [])),
@@ -73,17 +73,17 @@ vi.mock('$lib/server/reservation/reservation-service', async (importOriginal) =>
 });
 
 const detachSlot = vi.fn(async () => undefined);
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	attachToSlot: vi.fn(),
 	replaceSlot: vi.fn(),
 	detachSlot: (...a: unknown[]) => detachSlot(...(a as []))
 }));
-vi.mock('$lib/server/storage', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { updateGroupSession, cancelGroupSession } = await import('./event-service');
-const { ReservationConflictError } = await import('$lib/server/reservation/reservation-service');
+const { ReservationConflictError } = await import('#lib/server/reservation/reservation-service.js');
 
 const STARTS = new Date('2026-09-17T02:00:00Z');
 const ENDS = new Date('2026-09-17T05:00:00Z');

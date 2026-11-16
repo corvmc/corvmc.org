@@ -1,14 +1,17 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import BandReservationCard from '$lib/components/reservations/BandReservationCard.svelte';
-	import { getBandReservationsPage } from '$lib/remote/reservations.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import BandReservationCard from '#lib/components/reservations/BandReservationCard.svelte';
+	import { getBandReservationsPage } from '#lib/remote/reservations.remote.js';
 	import CreateModal from './CreateModal.svelte';
 	import { getBandLayoutContext } from '../layout-context';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -17,7 +20,7 @@
 	// One query. Membership and contact are still resolved before render and handed down, so
 	// the step components stay synchronous — they just arrive on the same request now.
 	let pastPage = $state(1);
-	const page_ = $derived(await getBandReservationsPage({ slug: page.params.slug!, pastPage }));
+	const page_ = $derived(await getBandReservationsPage({ slug: params.slug, pastPage }));
 	const data = $derived(page_.reservations);
 	const membership = $derived(page_.membership);
 	const contact = $derived(page_.contact);
@@ -44,20 +47,24 @@
 	 */
 </script>
 
-<PageHeader width="2xl" title="Reservations" subtitle={band.name}>
+<PageHeader width="2xl" title={m.band_slug_reservations_reservations_title()} subtitle={band.name}>
 	<CreateModal
 		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}
 		needsPhone={contact.needsPhone}
+		feeGate={page_.feeGate}
 	/>
 </PageHeader>
 <PageContent width="2xl">
 	<TabBar
 		tabs={[
-			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
+			{
+				key: 'upcoming',
+				label: m.band_slug_reservations_upcoming_label({ length: upcoming.length })
+			},
 			// Counted too. One tab counted and the other did not, and the
 			// uncounted one was the truncated one (#1040).
-			{ key: 'past', label: `Past (${past.pagination.total})` }
+			{ key: 'past', label: m.band_slug_reservations_past_label({ total: past.pagination.total }) }
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
@@ -66,8 +73,8 @@
 	{#if activeTab === 'upcoming'}
 		{#if upcoming.length === 0}
 			<EmptyState
-				title="No upcoming sessions"
-				description="Book the practice space and it'll show up here for the whole band."
+				title={m.band_slug_reservations_no_upcoming_sessions_title()}
+				description={m.band_slug_reservations_description_body()}
 			/>
 		{:else}
 			<div class="flex flex-col gap-2">
@@ -80,7 +87,7 @@
 
 	{#if activeTab === 'past'}
 		{#if past.rows.length === 0}
-			<EmptyState message="No past reservations." />
+			<EmptyState message={m.band_slug_reservations_message_body()} />
 		{:else}
 			<div class="flex flex-col gap-2">
 				{#each past.rows as res (res.id)}

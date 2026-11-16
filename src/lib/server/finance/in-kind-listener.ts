@@ -1,5 +1,5 @@
-import { getHourLog } from '$lib/server/volunteer/hour-log-service';
-import { getActiveVolunteerRoleById } from '$lib/server/volunteer/volunteer-role-service';
+import { getHourLog } from '#lib/server/volunteer/hour-log-service.js';
+import { getActiveVolunteerRoleById } from '#lib/server/volunteer/volunteer-role-service.js';
 import { recordEntry, reverseEntriesForSubject } from './financial-entry-service';
 
 /**

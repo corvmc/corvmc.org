@@ -7,26 +7,19 @@ guards, the event bus, `db.batch`, site config).
 
 Each section follows the same shape: **the story** (what happens, in plain English), **the
 code path** (file → function for every step), **data touched**, and **where it breaks**
-(what to check when this workflow misbehaves). The matching design spec in `docs/specs/` is
-linked as the statement of intent — when code and spec disagree, treat the spec as intent
-and reconcile deliberately.
+(what to check when this workflow misbehaves). A section links the decision records that explain
+why it works the way it does.
 
 ---
 
 ## 1. Reservation booking, confirmation, and payment
 
-Spec: [specs/reservation-system-spec.md](../specs/shipped/reservation-system-spec.md) ·
-[specs/reservation-confirmation-window.md](../specs/shipped/reservation-confirmation-window.md) ·
-[specs/staff-reservations-spec.md](../specs/shipped/staff-reservations-spec.md)
-
 ### The story
 
-A member books a practice-room slot. Booking alone doesn't commit them — the reservation
-sits in `scheduled` status until they **confirm** it (which spends any free-hour credits
-and leaves cash due at the door) or **pay online** via Stripe. Members can only confirm
-within the **confirmation window — 3 days before the start time** — but paying with a real
-Stripe charge commits it any time. Anything still `scheduled` when its start time arrives
-was never committed, so a cron job cancels it and frees the slot.
+A member books a practice-room slot, and the booking is `confirmed` the moment it exists —
+however far ahead it is. Booking spends any credits that cover it and leaves the
+rest as cash due at the door, or the member **pays ahead** online via Stripe. There is no
+later confirmation step and no sweep that releases unconfirmed bookings (#2502).
 
 ### Code path
 
@@ -37,23 +30,69 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 1. Validates the time range against operating hours and advance-booking limits —
    `validateBooking()` in `conflict-service.ts`, driven by KV site config
    (`reservation.operatingHoursStart`, `reservation.maxAdvanceDaysOneoff`, ...).
-2. Checks for overlapping reservations, inserts the row with `status: 'scheduled'`, then
+2. Checks for overlapping reservations, inserts the row with `status: 'confirmed'`, then
    **re-checks** for a race and deletes its own row if another booking landed concurrently
    (D1 has no transactions — this compensating-delete pattern is commented in the source at
    `reservation-service.ts:110`).
 
-**Confirm (no online payment).** Submitting with `skipPayment` on: the remote checks
-`withinConfirmationWindow(startsAt)` from `src/lib/config.ts`
-(`CONFIRMATION_WINDOW_DAYS = 3`), then calls `commitCreditsAndSettleIfCovered()` (a helper
-inside `reservations.remote.ts`). That commits free-hour credits via
-`commitReservationCredits()` in `reservation-credit-service.ts`; if credits fully cover the
-price, the reservation is settled and confirmed with `cashDueCents: 0`; otherwise it's
-confirmed with the cash remainder recorded in `cashDueCents` for staff to collect at the
-door.
+3. Announces it: `reservation.created`, then `reservation.confirmed` from
+   `announceConfirmed()`. That is the only announcement the booking gets.
+
+**Booking rules.** The room's facts are `ReservationConfig` in
+`src/lib/server/reservation/config.ts`, each a `reservation.*` site-config key with a default:
+30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
+bookings up to 14 days ahead.
+
+**New-member notice (#2565).** A member's own booking (`CLEARANCE_BOOKER`, `bookerType: 'user'`) needs
+`reservation.newMemberMinAdvanceMinutes` of notice (default 4320, 3 days) while they hold no
+current **Practice space** clearance, so someone can be found to show them around. With the
+clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
+`validateBooking()` (given the member's `userId` by `create()` and `createWaitlisted()`) and the
+picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it, so the picker
+never offers a start the server refuses. The picker says why in one line. Above the picker, the member
+reservations page lists the first-booking rules to a member without the clearance: the notice
+and, while an orientation role is set, the tour length and that it is free (`firstBooking` on
+`getMemberReservationsPage`, #2747); a cleared member sees nothing. Band, teaching and
+event bookings keep the room minimum, and `staffCreate()` checks neither. Teaching bookings need
+neither the clearance nor the tour, and raise no orientation shift (#2808): the notice, the tour,
+the orientation listener and the first-visit and orientation reminders all key on
+`CLEARANCE_BOOKER` in `config.ts`, and `clearance-booker.spec.ts` fails a clearance reader that
+names a booker type of its own. A teacher sees two strips on the reservations page, practice
+terms and teaching terms (`getReservationPolicy('instructor')`), and teaching bookings carry a
+Teaching badge in the list. The clearance is
+granted when an orientation is completed or waived — see
+[Rehearsal orientation](#rehearsal-orientation).
+
+**Tour time (#2568).** While an orientation role is set, the same member's booking also holds
+the room for `volunteer.orientationMinutes` before the start they asked for. `noticeFor()`
+returns the length as `tourMinutes`; `validateBooking()` checks opening hours and notice
+against the earlier arrival time; `create()` and `createWaitlisted()` move `startsAt` earlier and
+store `reservation.tour_minutes`. The stored value keeps a later change to the setting from
+moving or repricing a booking. The tour is not charged: every price and credits figure reads
+`billableHours(row)` in `reservation-credit-service.ts`, which subtracts it, and
+`billable-hours.spec.ts` fails on a stored window turned into hours without it. The picker offers
+a start only when the tour's slots before it are free too (`isBookableStart()`), and
+`DateTimeStep` shows the arrival time in one line. A recurring series repeats the session, not
+the tour. `staffCreate()` adds none. Every booking made before the clearance gets the tour time;
+only the first raises an orientation shift. The rate, minimum duration and advance windows depend on who is
+booking, so callers read them through `getBookingTerms(bookerType)` (see
+[Teaching bookings](#teaching-bookings)). `hasConflict()` in `conflict-service.ts` counts any
+reservation that is not `cancelled` or `waitlisted`, widened by `bufferMinutes` (default 0),
+and any `closure`. A closure is a reason and a time range with no booker, and takes no buffer.
+`reservation.bookerType` names the table `bookerId` points into; `createdByUserId` is always
+the member who owns, pays for and may cancel the booking.
+
+**Book (no online payment).** Submitting with `skipPayment` on calls
+`commitCreditsAndSettleIfCovered()` (a helper inside `reservations.remote.ts`). That commits
+credits via `commitReservationCredits()` in `reservation-credit-service.ts`; if
+credits fully cover the price, the reservation is settled with `cashDueCents: 0`; otherwise
+the cash remainder is recorded in `cashDueCents` for staff to collect at the door. Settling
+changes payment fields only — never the status, and it never announces again.
 
 **Pay online.** The remote commits credits the same way, then creates a Stripe Checkout
 Session via `checkout()` in `src/lib/server/finance/payment-service.ts` with
-`metadata: { reservation_id: res.id }`, and redirects the member to Stripe. Payment
+`metadata: { reservation_id: res.id }`, and sends the member to the in-app
+`/checkout/<session>` page, where they pay on a Stripe Payment Element. Payment
 completion comes back asynchronously:
 
 ```
@@ -61,33 +100,49 @@ Stripe → POST /api/stripe/webhook            src/routes/api/stripe/webhook/+se
        → handleCheckoutCompleted()           src/lib/server/finance/webhook-handlers.ts
        → domainEvents.emit('checkout.completed', ...)
        → handleReservationCheckout(session)  src/lib/server/reservation/checkout-listener.ts
-       → reservation status → 'confirmed', paidAt set, cashDueCents 0
+       → paidAt set, cashDueCents 0 on the confirmed row
 ```
 
-The listener is idempotent (only transitions `scheduled`/`confirmed` rows), and the webhook
-route returns 500 on handler failure so Stripe re-delivers.
+The listener is idempotent (it only writes a `confirmed` row's payment fields), and the
+webhook route returns 500 on handler failure so Stripe re-delivers.
 
-**Door code.** Every confirm path above ends in `announceConfirmed()`, which emits
+**Pay at the reader (#1659).** A member's own booking that still owes money can be paid on the
+practice room's Stripe smart reader, from two hours before it starts until it ends
+(`readerPayable()` in `src/lib/server/reservation/reader-payment.ts`). The `payAtReader`
+command commits credits first, as booking does, and touches the reader only for a remainder.
+`startReaderPayment()` creates a `card_present` PaymentIntent with
+`metadata.type: 'reader_reservation'` under an idempotency key, and puts it on the reader through
+the server-driven Terminal API with tipping off. `payment_intent.succeeded` dispatches on
+`metadata.type`; `settleReservationAtReader()` is the only writer, and its conditional update on
+a `confirmed`, unpaid row makes a redelivered event a no-op. The member's phone polls
+`getReaderPayment` and never reports a payment itself. The action is hidden until
+`STRIPE_TERMINAL_READER_ID` is set in `wrangler.toml`; the fake driver has its own reader.
+
+**Door code.** `announceConfirmed()` is called only where a row becomes confirmed — `create()`,
+`staffCreate()`, recurring generation and waitlist confirmation — never from a settle path,
+which is what sent members up to five "Reservation confirmed" emails before #2502. It emits
 `reservation.confirmed`; a listener registered in
 `src/lib/server/event-bus/register-listeners.ts` calls `provisionOnConfirm()` in
 `src/lib/server/lock/lock-service.ts`. That mints the code on the lock straight away if the
-booking starts inside the confirmation window, has no code yet, and its member holds no standing
-code. It is best-effort and never throws — a U-tec failure must not fail a confirm — and
+booking starts within `BOOKING_LEAD_DAYS` (3), has no code yet, and its member holds no
+standing code. It is best-effort and never throws — a U-tec failure must not fail a confirm — and
 the daily lock job (`runDailyLockJob()`, which provisions across the same window) picks up
-anything it missed. A booking confirmed further ahead by a Stripe charge gets its code from the
-daily job once the window reaches it.
+anything it missed. A booking made further ahead gets its code from the daily job once it
+comes inside that lead.
 
-**The other half of the lifecycle — cron.** Four endpoints under `src/routes/api/cron/`
+**The other half of the lifecycle — cron.** Endpoints under `src/routes/api/cron/`
 (all `POST` with `Authorization: Bearer <CRON_SECRET>`, invoked by the Worker's own
 `scheduled` handler on native Cloudflare cron triggers — see the operations manual):
 
-- `cancel-unconfirmed` → `cancelUnconfirmedReservations()` in `reservation-service.ts` —
-  cancels every reservation still `scheduled` at its start time.
 - `auto-complete` → `autoCompleteExpired()` — marks confirmed, fully-paid reservations
   past their end time as `completed` (cash-owed ones are left for staff).
 - `reminders` — drains the registry in `src/lib/server/reminders/registry.ts` every 15
   minutes and emits the reminder events for anything owed one (notification listeners
-  send the emails). `reminder_sent` is what makes each fire once.
+  send the emails). `reminder_sent` is what makes each fire once. A definition marked
+  `digest` (today only the two committee show-work stages) is folded with every other one
+  sharing its event into one emit per recipient per pass, so a person owed four items gets
+  one mail; each item is still stamped under its own stage, and only once its recipients'
+  sends went through (#2507).
 
 **Cancellation.** `cancel()` in `reservation-service.ts`: authorization (owner or staff
 override), atomic conditional status update, Stripe refund if a payment record exists
@@ -95,62 +150,157 @@ override), atomic conditional status update, Stripe refund if a payment record e
 (`reverseReservationCredits()`), and finally emits `reservation.cancelled` — which the
 waitlist listener uses to promote the next person (workflow 2).
 
-**Staff resolution.** Unresolved reservations (past end, still `scheduled` or cash owed)
-surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resolve with the
+**Staff resolution.** Unresolved reservations (past end with cash owed)
+surface under the `payment_due` status on the staff reservations page (`getStaffReservationsPage`
+in `reservations.remote.ts`, counted by `countOwedAfterSession`); staff resolve with the
 `completeReservation` / `noShowReservation` / `cashReceivedReservation` /
 `compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
 file. The two refund forms are the staff member's intent made explicit: the first delegates to
 `cancel()` above; the second leaves the booking standing (a comp after a session that ran) and
-only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt`.
+only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 
 ### Data touched
 
-`reservation` table (status machine: `scheduled → confirmed → completed`, or `cancelled` /
-`no_show` / `waitlisted`), `creditTransaction` ledger (free-hour commits and reversals),
+`reservation` table (status machine: `confirmed → completed`, or `cancelled` / `no_show`;
+`waitlisted → confirmed` when an offered slot is taken), `creditTransaction` ledger (free-hour commits and reversals),
 `paymentCache`, plus Stripe objects (Checkout Session, PaymentIntent, Refund).
 
 ### Where it breaks
 
-- **Member paid but reservation still `scheduled`** → the webhook didn't arrive or the
+- **Member paid but `paidAt` still null** → the webhook didn't arrive or the
   listener failed. Check Stripe dashboard → webhook delivery attempts, and Sentry for
   `stage: 'handler'` captures from the webhook route.
 - **"Time slot is not available" that looks wrong** → check the `waitlisted`/`cancelled`
   exclusions in the conflict query, and whether a `bookerType: 'event_listing'` reservation
   (created by an event) is holding the slot.
-- **Confirm button rejected with the window message** → expected outside 3 days before
-  start; only a Stripe charge (or staff) commits earlier.
-- **Confirmed inside the window but no door code** → the confirm-time mint failed; look for
+- **Member got two "Reservation confirmed" emails** → something other than a transition
+  into `confirmed` called `announceConfirmed()`; the settle paths must not (#2502).
+- **Booked inside the lead days but no door code** → the confirm-time mint failed; look for
   `Failed to provision lock access on confirm` in the logs. The next daily lock job (or Run now
   in Staff Settings, or re-issue on the staff reservation page) mints it.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
   (keyed on the reservation). If suspected, read the `creditTransaction` ledger for the
   reservation id.
 
+### The status track
+
+A reservation is shown with one status, its track (#2861,
+[decision 0082](../decisions/0082-a-reservation-shows-one-status-track.md)). It is derived from
+`status` and the payment columns and never stored. Staff and members read the same words.
+
+| Track       | Rule, first match wins                                                          |
+| ----------- | ------------------------------------------------------------------------------- |
+| Waitlisted  | `status = waitlisted`                                                           |
+| No-show     | `status = no_show`                                                              |
+| Refunded    | `refundedAt` set                                                                |
+| Cancelled   | `status = cancelled`                                                            |
+| Paid        | `paidAt` set                                                                    |
+| Payment due | confirmed, ended, owes money (`confirmedUnpaidSql`)                             |
+| Booked      | confirmed and owes money but has not ended, or an event hold that has not ended |
+| Covered     | everything else: credits or a comp settled it, or an event hold ended           |
+
+- `reservationTrack` in `src/lib/utils/reservation-actions.ts` and `reservationTrackSql` in
+  `src/lib/server/reservation/payment-due.ts` are the same rule in JS and SQL.
+  `reservation-track.spec.ts` runs every combination of the columns through both.
+- Payment due is `paymentDueSql`: the staff filter, the dot, the member's Payment due list and
+  the fee gate read it. An upcoming booking that owes cash at the session reads Booked.
+- `completed` is stored and not shown. A completed booking reads Paid or Covered.
+- Covered does not say whether credits or a comp settled it. `trackDetail` does, on the staff
+  reservation page; a comp is also a `reservation.comped` audit row.
+- A reservation ref (`toReservationRef`) carries the track as its status.
+- `scripts/reservation-track-only.spec.ts` fails a reservation component that decides on
+  `paidAt`, `refundedAt` or `cashDueCents` itself, or hands a stored status to `StatusBadge`.
+
 ### The staff side
 
-Staff work the same table from `/staff/reservations` (filterable list, with a resolve modal
-and a create-on-behalf modal) and `/staff/reservations/[id]` (detail plus every action).
-Three things differ from the member path:
+Staff work the same table from `/staff/reservations` (the Practice space list, filtered by
+booker type, date and track, with a create-on-behalf modal; a `status=confirmed` link from
+before the track opens Booked) and `/staff/reservations/[id]`
+(detail plus every action).
+Two things differ from the member path:
 
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
   booking" with "outside operating hours" into one flag — see #563; a double-booking
   deserves louder treatment than a late night.
-- **Staff confirm at any time.** The 3-day confirmation window is a member gate;
-  `visibleActions` is staff-only and unchanged by it.
-- **The resolve modal only surfaces unpaid reservations.** Paid ones auto-complete after
-  their end time via the `auto-complete` cron, so they never reach the queue — which is why
-  the queue is short enough to be worth working.
+- **Payment due is the settling queue.** A session that ended owing money shows Cash
+  received and No-show on its row, and a dot on the Status filter while any is left. Paid
+  ones auto-complete after their end time via the `auto-complete` cron, so they never reach
+  it, which is why the queue is short enough to be worth working.
+
+- **An outstanding fee stops booking and door code messages** (#2748, #2859). A session that
+  ended still payment due and started on or after the **Count from** date in Practice space
+  settings is an outstanding fee for the member who booked it. One refuses the member's own
+  booking at the remote (`refuseOnOutstandingFees`), band and teaching bookings included, counted
+  on the booking member's own fees. The booking button opens **Payment due** instead of the form,
+  naming the reservation date, with **Message staff** prefilled with that date. Staff booking on a
+  member's behalf see the fees and are never refused. While a fee is owed, the `door_code_ready`
+  reminder skips the member's upcoming reservations; the code is still minted and shown to staff,
+  and the first reminder drain after the fee is paid sends it (`membersOwingFees`). Member-facing
+  reads hold the code too (#2874): the member's detail and list, and the band detail for every
+  bandmate, return no door code and no break-glass code (`doorCodeHeldSince`), and the page shows
+  the payment-due notice with **Message staff** where the code would be. Staff pages keep it. With no date
+  set the check is off; rows before it keep their status and are never counted
+  (`src/lib/server/reservation/outstanding-fees.ts`).
+
+- **An outstanding fee is reminded by email at 1, 7 and 21 days** after the session ended
+  (#2876). Three reminder registry stages (`PAYMENT_DUE_BANDS` in
+  `src/lib/server/reservation/payment-reminder.ts`) read the same rows the fee gate counts
+  (`listFeesEndedBetween`: `confirmedUnpaidSql`, started on or after **Count from**). Each band
+  runs to the next stage, and the last ends at 35 days, so a drain sends one stage and fees older
+  than five weeks get none. Each stage sends once per reservation; a session paid, comped or
+  refunded drops out before its next stage. With no **Count from** set none are sent. The email
+  names the date and amount, links to the reservation's pay page, and says new reservations and
+  door codes are held. It is mandatory: no notification preference turns it off (#2981). It does
+  not copy staff. Every attempt writes a `reservation.payment_reminder` audit row on the member,
+  with its outcome: `sent` (with the outbox row), `skipped` (account removed)
+  or `failed` (the outbox refused it; the stage stays owed for the next pass). The staff
+  reservation's Payment card lists the stages sent.
 
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
 shared action component under `$lib/components/actions/`, so the member and staff
 surfaces cannot drift in what they do — only in who may do it.
 
+### Teaching bookings
+
+An **instructor** is a member staff have granted teaching terms in the practice room
+(`instructor` table, one row per user). CMC rents the room to the teacher and records nothing
+about students. Decision: [Instructors rent the room](../decisions/0015-instructors-rent-the-room.md).
+
+- **Status:** `requested` and `rejected` are the application, `active`, `paused` and `retired`
+  the grant (`instructorStatuses` in `src/lib/config.ts`). A member applies from
+  `/member/profile` with the draft listing; staff approve, send back with `reviewNotes`, grant
+  directly, pause, resume, retire or reinstate from the Teachers view or the member's record
+  panel (`instructor-service.ts`). `STAFF_TRANSITIONS` in `instructor-transitions.ts` scopes
+  each write, and `staff-actions.ts` gives each status its controls. Pause and retire need a
+  `statusNote` and leave future teaching bookings in place; their modals show how many, linked
+  to the reservations list. Resume and reinstate are `grant()`. The approve modal and the record
+  panel show the listing as it would publish.
+- **Notices:** an application emails every holder of `instructor.review`. Every staff transition
+  tells the member: approve, send back and grant through `instructor.application_reviewed`, pause
+  and retire through `instructor.status_ended`. The staff note is never sent to the teacher.
+- **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
+  `requireInstructor()`, which matches `status = 'active'` only, and books with
+  `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
+  `reservation/config.ts` gives that booker type `reservation.teaching*` terms: $5/hr (the rate a
+  sustaining contribution buys), 30-minute minimum, 60 days one-off and 90 recurring by default.
+  Staff with `settings.update` change them with Edit teaching terms on the Teachers view
+  (`updateTeachingTerms` in `settings.remote.ts`); the recurring window must exceed the member
+  one-off window, checked from both forms. Credits apply. A teaching series needs no sustaining membership, and `cancelAllForUser()` cancels only
+  `bookerType: 'user'` series when a subscription ends.
+- **Listing:** `/directory/instructors` (public) and `/member/directory/instructors` list active
+  instructors who are accepting students and have not hidden their directory listing, through
+  `instructor-directory-service.ts`. Approval creates no directory entry, so a teacher who never
+  saved a profile is not listed. `directoryReach()` reads the same predicate and tells the
+  teacher on their card, and staff in the approve modal, when the directory will not list them. The
+  contact shown is `teachingContact`, falling back to the member's directory contact, and both
+  pass `contactForView('public', …)`.
+
 ---
 
 ## 2. Recurring reservations and the waitlist
 
-Spec: [specs/recurring-reservations-spec.md](../specs/shipped/recurring-reservations-spec.md)
+Decision: [Recurring reservations clone a prototype](../decisions/0014-recurring-reservations-clone-a-prototype.md)
 
 ### The story
 
@@ -173,7 +323,34 @@ one is offered the slot with a 24-hour window to confirm.
   pass must treat as hard blocks — see the doc comment in that file). Occurrences that
   can't be booked emit `reservation.recurring_skipped` / `reservation.recurring_waitlisted`
   events so the member hears about it. The generation window is ~2.5 weeks
-  (`reservation.maxAdvanceDaysRecurring` config, default 17.5).
+  (`reservation.maxAdvanceDaysRecurring` config, default 17.5). It is longer than the 14-day
+  one-off window on purpose: an occurrence is already booked before any one-off booking can
+  reach its day. An instance already generated for a day, cancelled ones included, is never
+  generated again, so cancelling one occurrence leaves the series running.
+- **Schedules:** `buildRRule()` writes weekly, biweekly or monthly rules in club time. A
+  monthly room booking repeats on the nth weekday of the month, so it stays on the weekday
+  the member chose; only a recurring event may pick a fixed day of the month. A series may carry
+  an end date (`recurring_series.endsAt`, from `recurringSeriesEnd()` in `series-until.ts`).
+  A series is active while `cancelledAt` and `supersededBy` are both null.
+- **Changing the schedule:** `reschedule()` in `recurring-series-reschedule.ts`, from
+  **Edit schedule** on the member's recurring list or the staff series page. It writes a new
+  series whose prototype is the first session of the new schedule (waitlisted if that slot is
+  booked; refused if it falls on a closure or show), sets `cancelledAt` and `supersededBy` on
+  the old one, and generates the new window at once. Old bookings before the change day stand.
+  From that day an untouched one is deleted (the old prototype is cancelled instead); one that
+  is paid, has a door code or is referenced is kept and listed for the booker to keep or
+  cancel, so nothing is refunded in bulk. A staff edit emits
+  `reservation.recurring_rescheduled` to the booker. `previewReschedule()` shows the new
+  sessions with the conflict generation would meet, and what is removed or kept.
+- **Changing an event series' schedule:** `rescheduleEventSeries()` in
+  `event-series-reschedule.ts`, from the same **Edit schedule** on a program's session row or
+  the staff event page's series bar. Guarded by `requireSeriesWriter()`: `event.manage`, a
+  leader of the program for a program's series, else the listing's writer. It follows the
+  booking rules above with listings for bookings. The new first session copies the prototype
+  and holds the room for the same setup and teardown, waitlisted behind a booking and refused
+  on a closure or another show. From the change day an occurrence no record touches is deleted
+  and its hold cancelled; one with an RSVP, attendance, ticket, production or other record
+  (`LISTING_RECORDS`) is kept with its hold. Nobody is notified.
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
   `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets
@@ -181,7 +358,7 @@ one is offered the slot with a 24-hour window to confirm.
   notification with a confirm link.
 - **Member confirms the offered slot:** `confirmWaitlisted` form in
   `reservations.remote.ts` — checks the offer hasn't expired, re-checks the slot is free,
-  flips to `scheduled`, then re-checks again and backs out if a competing booking raced in.
+  flips to `confirmed`, then re-checks again and backs out if a competing booking raced in.
 - **Expiry:** cron `expire-waitlisted` → `expireWaitlisted()` in `waitlist-service.ts` —
   cancels offers past their 24h window and promotes the next in line. It emits both
   `reservation.waitlist_expired` (the member's own notification) and
@@ -192,7 +369,8 @@ one is offered the slot with a 24-hour window to confirm.
 
 ### Data touched
 
-`recurringSeries` (RRULE, prototype pointer, `supersededBy` chain), `reservation` rows
+`recurringSeries` (RRULE, prototype pointer, end date; `supersededBy` points at the series
+that replaced it), `reservation` rows
 (status `waitlisted`, `waitlistNotifiedAt`, `waitlistExpiresAt`).
 
 ### Where it breaks
@@ -209,8 +387,7 @@ one is offered the slot with a 24-hour window to confirm.
 
 ## 3. Membership: signup, subscription, monthly credits
 
-Spec: [specs/membership-page-spec.md](../specs/shipped/membership-page-spec.md) ·
-[specs/finance-spec.md](../specs/shipped/finance-spec.md)
+Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment-ledger.md)
 
 ### The story
 
@@ -233,20 +410,33 @@ when the member signs up.
    - finds the **contribution line** on the invoice (`findContributionLine()` — carefully
      excludes the fee-coverage line and prorations; read its doc comment before touching);
    - allocates credits via `allocateCreditsFromInvoice()` → `credit-service.ts`
-     `allocateMonthlyCredits()` (free hours) and `allocateEquipmentCredits()` — **idempotent
+     `allocateMonthlyCredits()` (practice credits) and `allocateEquipmentCredits()` — **idempotent
      by invoice id**, so webhook re-delivery can't double-grant;
    - snapshots the subscription state onto the `user.subscription` JSON column
      (`hoursPerReset`, `creditsResetAt`, `coveringFees`, `cancelAtPeriodEnd`).
 3. **Changes:** `updateAmount` / `resumeSubscription` forms in `membership.remote.ts` call
    `updateQuantity()` / `resume()` in `subscription-service.ts` and write-through to
-   `user.subscription` so the page updates before the webhook lands. Cancel goes through
-   the Stripe **billing portal** (`createBillingPortalUrl()`).
+   `user.subscription` so the page updates before the webhook lands. `cancelSubscription`
+   calls `cancel()`, which sets `cancel_at_period_end`: the member keeps the month they paid
+   for, and `resumeSubscription` undoes it until then. The card on file and invoice history
+   are `getBilling` and the card commands in `src/lib/remote/billing.remote.ts`, over
+   `finance/billing-service.ts`, loaded in their own boundary so a Stripe failure leaves the
+   rest of the page standing. The page's community figures come from `getCommunityStats()` in
+   `finance/community-stats.ts`, cached in KV for 24 hours.
 4. **Cancellation lands:** `customer.subscription.deleted` → `handleSubscriptionDeleted()`
    — zeroes both credit balances, cancels the member's recurring series, and clears
    `user.subscription`.
 
 Note: "is this member sustaining?" is answered by `user.subscription != null` (see
 `isSustainingMember` in `subscription-service.ts`), not by the `sustaining` role.
+
+**Staff credit adjustments.** `adjustCredits` in `src/lib/remote/users.remote.ts` takes two
+authorities. A holder of `credit.adjust` (admin only) adds or deducts any amount, written as
+`admin_adjustment`. A holder of `credit.comp` alone (staff) may only add, up to
+`creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 credits (2 hours), and no
+equipment credits. A comp is written as `staff_comp`, so the ledger shows it apart. A refused
+amount comes back as a field issue on `amount`, not a 403. Decision:
+[Staff comp credits up to a ceiling](../decisions/0020-staff-comp-credits-up-to-a-ceiling.md).
 
 ### Data touched
 
@@ -268,8 +458,11 @@ Subscription/Invoice objects.
 
 ## 4. Bands: creation, invitations, premium pages
 
-Spec: [specs/bands-spec.md](../specs/shipped/bands-spec.md) ·
-[specs/staff-bands-spec.md](../specs/shipped/staff-bands-spec.md)
+Records: [groups split the band table](../decisions/0024-groups-split-the-band-table-by-purpose.md) ·
+[band addresses](../decisions/0025-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
+[a club gets a page](../decisions/0021-a-club-gets-a-page-not-a-panel.md) ·
+[announcements](../decisions/0023-group-announcements-are-transactional-and-batched.md) ·
+[an act is a performer organization](../decisions/0074-an-act-is-a-performer-organization.md)
 
 ### The story
 
@@ -283,9 +476,9 @@ premium subscription that unlocks a public band microsite.
 
 - **Create:** `member/bands` UI → `bands.remote.ts` / `band-page-editor` remotes →
   `create()` in `src/lib/server/band/band-service.ts` — a `db.batch` inserts the `band` row
-  and the owner's `bandMember` row atomically; the slug is uniquified by
+  and the owner's `groupMember` row atomically; the slug is uniquified by
   `ensureUniqueSlug()`.
-- **Invite:** `invite()` in `band-service.ts`. Existing users get a pending `bandMember`
+- **Invite:** `invite()` in `band-service.ts`. Existing users get a pending `groupMember`
   row + a `band.invitation_sent` event (email/in-app notification). Unknown emails go
   through `createInvite()` in `group-invite-service.ts` (a `groupInvite` row with a token)
   and a `group_invite.created` event that emails a signup link.
@@ -305,14 +498,23 @@ premium subscription that unlocks a public band microsite.
   `customer.subscription.updated/deleted` webhooks via `syncFromWebhook()` (dispatched by
   `metadata.subscription_type === 'band_premium'`). The public microsite lives under
   `src/routes/band-site/[slug]/`, gated on the band's tier alone since the launch, with
-  member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
+  member-editable page config on `bandSite` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
   (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
+- **Addresses:** every band answers at `{slug}.corvmc.org`. `handleBandSubdomain` in
+  `src/hooks.server.ts` lets a premium band through to its microsite and 302s anything else to the
+  group's public page. A premium owner can attach a custom domain (`band-custom-domain.remote.ts` →
+  `custom-domain-service.ts`, a Cloudflare for SaaS hostname with TXT validation); `reroute` in
+  `src/hooks.ts` resolves such hosts through `/api/host-route`, KV-cached for five minutes. A rename
+  does not move the address: the owner changes it with `changeBandAddress` →
+  `changeBandSlug()` in `band-address-service.ts`, three times per 30 days. The released slug goes
+  into `group_slug_history`, and `resolveBandSlug()` 302s it to the new address until another group
+  claims it.
 
 ### Data touched
 
-`group`, `groupMember`, `groupInvite`, `bandPageConfig`, `bandMedia`, Stripe subscription
-(band premium).
+`group`, `groupMember`, `groupInvite`, `groupSlugHistory`, `bandSite`,
+`directoryEntry`, Stripe subscription (band premium).
 
 ### Where it breaks
 
@@ -322,12 +524,83 @@ premium subscription that unlocks a public band microsite.
 - **Premium page not appearing** → the band's `band_site.tier` is not `premium`, so
   subscription state didn't sync — check the `customer.subscription.*` webhook deliveries
   and `syncFromWebhook`.
+- **Custom domain section says it is unavailable** → `CLOUDFLARE_API_TOKEN` or
+  `CLOUDFLARE_ZONE_ID` is unset (`isCustomDomainConfigured()`).
+
+### Clubs and committees
+
+Staff create clubs and committees from `/staff/groups` (`createStaffGroup`, `group.manage`), and
+appoint their chairs; a program has admins and no owner. Staff alone set a program's `joinPolicy` and
+listing visibility (`updateStaffGroup`). Members find programs on `/member/groups` and use one
+tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `open` programs take
+`joinGroupForm`; `by_application` programs take applications (§24).
+
+- **Sessions:** `group-events.remote.ts` → `createGroupEvent()` in `event-service.ts`.
+  `requireProgramGroup()` (`src/lib/server/group/group-kind.ts`) refuses a band, so only a program
+  holds the room free: a `confirmed` reservation with `bookerType: 'group'`, after a `hasConflict`
+  check. The recurring generator re-checks the kind.
+- **Attendance:** `session-attendance.remote.ts` → `attendance-service.ts`. A lead marks who came to
+  a past session (`requireProgramRole(…, 'admin')`, then the event re-scoped to the group; a
+  cancelled session refuses). The list is the active roster, the RSVPs and anyone already marked;
+  an id outside it is dropped. Saving writes the difference to `event_attendance` in one
+  `db.batch`. The Roster tab shows each member's count over the group's sessions.
+- **Announcements** (bands too): an announcement is a `group_announcement` row, a draft until
+  published (`announcement-service.ts`). Publishing posts it as one message in the group's single
+  Announcements thread (`channel: 'group'`, `post_policy: 'leadership'`), title first, and emits an
+  event. The listener in `announcement-fanout.ts` latches on the row's `notified_at`, reads
+  recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
+  thread, not the author), inserts in-app rows in chunks, and emails through `sendTemplateBatch()`
+  on the transactional stream. See
+  [0064](../decisions/0064-a-group-has-one-announcements-thread.md).
+- **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
+  `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against
+  the file's own group with `requireGroupRole(…, 'member', { staff: groupRead })` and answers
+  `private, no-store`, `Vary: Cookie`, as an attachment. Removing a document sets `deletedAt`;
+  `sweepGroupFiles()` in the media sweep reclaims the object.
+
+### Outside acts
+
+"Outside act" is the one UI name for this record: the Contacts role (`performer`), a bill chip
+and the console action. The acts list is Contacts with that role (`/staff/contacts?role=performer`,
+where **Add act** creates one); `/staff/bands/acts` is a 308 to it (#2765). An act CMC books that has no account is a `directory_entry`
+with no user and no group, forced hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
+`external-acts.remote.ts` under `event.manage`). Its private side is an `organization` with the
+`performer` role and `directory_entry_id` set (`performerFor()` in `organization-service.ts`,
+made with the entry). Its people are `contact` rows on that organization, read and written only
+through `contact-service.ts`. Staff can send a contact-sheet link (`issueContactSheetLink()` in
+`contact-sheet-service.ts`, `directory.shareContactSheet`): the act edits its own details at
+`/act/[token]` for 30 days, with no session, and cannot change its name. The person it types is
+written by `writeActContactUnguarded()`: an email already on file updates that contact, and
+without an email the act's own earlier entry is updated. A show's contact is
+`production_slot.contact_id`, picked on the Run of show tab from that act's people
+(`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
+The same page lists the act's own booked shows from `offered` on, upcoming and the last 90 days
+(`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
+call times, `describeTerms()`, the show's contact by name (`actContactNamesUnguarded()`, people at
+that act's own organization only) and, once settled, what it was paid. Never another act's slot.
+The staff bill's search (`searchBillActs` in `external-acts.remote.ts`, under the listing's
+writer guard) offers member bands and outside acts; a picked act is saved as the credit's
+`directory_entry_id` (`actId` on the lineup entry). A credit already naming an outside act keeps
+that link when any editor saves the bill by name. **Record as outside act** on the console
+(`listCreditInDirectory()`) links the outside act already on file under the credit's name, and
+creates one only when none matches.
+`claimExternalAct()` turns the entry into a band, sets `group.from_organization_id`, archives the
+organization and gives its people a retention horizon a year out. The band's staff page links to
+that organization, which keeps the act's gigs, payments and people.
+
+The act's organization page in Contacts (`/staff/contacts/[id]`, linked from each row of the acts
+list) has a Booked events section: every bill crediting the act's entry, newest first, with the
+slot's terms (`describeTerms()`) and payment (`organizationRecords().shows`). The section's rows
+need `event.read`. Its actions are Send contact sheet (`directory.shareContactSheet`) and Claim
+(`event.manage`).
 
 ---
 
 ## 5. Events and tickets
 
-Spec: [specs/tickets-spec.md](../specs/shipped/tickets-spec.md)
+Decisions: [a ticket row is one entry pass](../decisions/0002-a-ticket-row-is-one-entry-pass.md) ·
+[a ticket price is a sliding scale](../decisions/0008-ticket-price-is-a-sliding-scale.md) ·
+[the canonical event URL holds the general view](../decisions/0007-the-canonical-event-url-holds-the-general-view.md)
 
 ### The story
 
@@ -339,13 +612,14 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is the **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
-  statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
-  where listings are moderated. `/staff/projects/productions` is the CMC work index, `source='cmc'` at
-  every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
-  published CMC show is on both. The date floor applies only to rows actually on the calendar,
-  so a `pending_review` listing whose date passed stays reachable and keeps agreeing with the
-  sidebar badge (`countPendingSubmissions`, which has no date filter).
+  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
+  (a community draft is its author's alone), filtered by source, search, date range and status
+  with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
+  soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
+  badge; the dashboard feed collects the ones waiting for review. Its Productions view
+  (`/staff/events?view=productions`) is the CMC work index, `source='cmc'` at every status via
+  `getStaffEvents` → `listAll()`, filterable by production status. A published CMC show is on
+  both. Venues and every market's vendor applications are the list's other views (#2766).
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
   every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
   else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
@@ -371,12 +645,21 @@ events use RSVP instead.
   `checkout.completed` bus event → `handleTicketCheckout()` in
   `ticket/checkout-listener.ts` → `fulfillPurchase(purchaseId)` flips the purchase's
   tickets `pending → valid` and emits `ticket.purchased` (confirmation email with codes).
-- **What the buyer chooses, and what the row remembers.** The 50% sustaining-member rate is a
-  default, not a rule: `waiveDiscount` on the form charges full price for that purchase, and the
-  ticket records `discountWaived` so a waiver stays legible after the fact (a non-member checking
-  the box waives nothing — `discountWaived` is derived from whether a discount actually applied).
-  An optional `contribution` becomes a second line item under the `ticket_contribution` product,
-  never a bigger ticket price. Both purchase surfaces — the public `/events/[id]/tickets` page and
+- **Who sells.** `sellerFor` in `ticket/ticket-seller.ts` answers per listing. A `ticket_sale` with
+  no `group_id` is the collective's, and the collective sells only `source = 'cmc'` shows. A band
+  sells its own gig into its Connect account by destination charge (#1471), only while its site is
+  premium and Stripe takes charges for it. No seller means no checkout.
+- **What the buyer chooses, and what the row remembers.** `ticket_sale.priceCents` is the
+  suggested price, where the sliding scale opens, and `priceFloorCents` (default 0) is the least a
+  buyer may pay; a floor equal to the price is a fixed-price show. The buyer also drags a split bar
+  between the acts and the collective, with card processing a locked third slice.
+  `src/lib/finance/ticket-split.ts` does the arithmetic for both the preview and the server, and
+  `purchaseTickets` re-derives it with `validateTicketSplit` from the listing's own price and floor.
+  The purchase's first ticket records `actsCents`, `collectiveCents` and `feeCoveredCents`; for a
+  collective sale the money all lands in CMC's account and staff settle the acts from those rows.
+  Paying above the suggestion is a contribution, sent as a second line item under the
+  `ticket_contribution` product, never a bigger ticket price. There is no member discount;
+  `discountWaived` survives on older rows and is no longer written. Both purchase surfaces — the public `/events/[id]/tickets` page and
   the member event page's `<Action>` modal — render the same `TicketPurchaseFields` component, so
   the total they preview is the total Stripe charges; fee coverage is computed on the ticket
   subtotal _plus_ the gift, because that is what Stripe takes its cut of.
@@ -391,7 +674,11 @@ events use RSVP instead.
   lower than that floor, and on those the purchase page points at the door and staff
   `compTickets` remains the mechanism for a free ticket.
 - **Check-in:** `staff/events/[id]/check-in` → `checkInTicket` form → `checkIn()` in
-  `ticket-service.ts` (records who checked in and when; rejects reused codes).
+  `ticket-service.ts` (records who checked in and when; rejects reused codes). Both door lists
+  (staff and the volunteer's shift) mount `DoorScanner`, which keeps the camera open between
+  tickets and takes the page's own check-in call (`scanTicketIn`, `scanTicketInAsVolunteer`).
+  The lists carry cancelled tickets through `doorListTickets`, off the default list, so a scan or
+  search says the ticket was cancelled; a code from another show names that show (#2795–#2797).
 - **Cancellation:** `cancelEvent` → `event-service.cancel()` — collects ticket holders and
   emits `event.cancelled` so every holder is notified with the refund note.
 - **RSVP / comps:** `event/rsvp-service.ts`; staff `compTickets` form creates valid
@@ -399,31 +686,64 @@ events use RSVP instead.
 
 ### Door sales
 
-A card payment taken at the door on the CMC phone, which runs the `door-app/` shell over
-`/member/volunteer/door` ([door-app.md](door-app.md);
-design in [specs/shipped/tap-to-pay-spec.md](../specs/shipped/tap-to-pay-spec.md)).
+A card or cash payment taken at the door. Cards are taken on the CMC phone, which runs the
+`door-app/` shell over `/member/volunteer/door` ([door-app.md](door-app.md); decisions:
+[Door sales on one Tap to Pay phone](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md),
+[Door cash is a ticket sale](../decisions/0083-door-cash-is-a-ticket-sale.md)). Cash is
+recorded from any browser.
 
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
   shift. Only collective-sold shows are offered (#1629).
+- **Lead time (#2993):** a role grant opens at the shift's start unless the role sets
+  `grant_lead_days`, which opens it that many days before the event (`grantWindow`).
+- **Door list:** the shift page's Check people in list and `checkInAsVolunteer` take
+  `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
+  on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
 - **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
-  $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. Anything
-  else opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
+  $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. A card
+  sale opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
   id. Capacity only warns, and the door can still sell past it.
+- **Cash (#2800):** a cash sale of any amount above zero mints `checked_in` tickets under a
+  `cash-…` purchase id, with no intent. `doorTicketSplit` divides it as it divides a card, with no
+  fee and no charge minimum. `recordDoorTicketSale` writes `ticket_sales` and `act_payout` rows
+  with `settlement: 'cash'`, and the sale writes an `event.door_cash_sale` audit row.
+- **How it was paid:** `src/lib/door/takings.ts` maps each method to its purchase-id prefix
+  (`pi_`, `cash-`, `door-`). `getEventDoorTakings` builds one line per method from that table,
+  and the Door sales card, the settlement and the check-in count read those lines.
 - **Fulfilment:** the `payment_intent.succeeded` webhook → `fulfillDoorSale` flips the purchase's
-  `pending` rows to `checked_in` and writes the ledger rows. A redelivered event matches no
+  `pending` rows to `checked_in` and writes the ledger rows: `ticket_sales` earns the charge less
+  the acts' share, `act_payout` holds the acts' share, and `card_fees` spends the fee once, so a
+  sale nets to the charge less the fee (#2731). A redelivered event matches no
   `pending` row and writes nothing. The door screen polls `getDoorSale` and never reports a
   payment itself.
-- **Where it breaks:** a sale that stays `pending` after a successful tap means the webhook did not
-  arrive. Nothing sweeps card-present intents yet, so it is found by hand in Stripe. A sale
+- **Refunds:** on the staff site, under `finance.refund`, never on the phone. `refund()` in
+  `payment-service.ts` refunds a `pi_…` record directly. Taking door payments does not grant it.
+- **Missed webhook:** `/api/cron/sweep-door-sales` runs every 15 minutes (#2547). It lists the
+  last 48 hours of succeeded `door_ticket` intents and runs `fulfillDoorSale` on any with `pending`
+  rows, so it writes what the webhook would have, once.
+- **Where it breaks:** a succeeded intent with no `pending` or `checked_in` rows is reported to
+  Sentry as `door-sale.unmatched`, usually rows `cancelStalePendingTickets` cancelled, and opens
+  one task at its show (#2757, `openUnmatchedPaymentTask`). A staffer attaches the payment or
+  refunds it in Stripe, which the app cannot see, then marks the task done; it is never opened
+  again for that payment. Opening it writes nothing to the money. A sale
   abandoned before the tap is released by `cancelDoorSale`, or later by
   `cancelStalePendingTickets`.
+- **Donations (#2548):** `startDoorDonation` → `finance/door-donation.ts` opens a `card_present`
+  intent (`type: door_donation`) for one amount and holds a `pending` `donation` row under the
+  intent's id. The same webhook flips it to `paid` and writes an `earned`/`donation` row and the
+  card fee. `getDoorSale`, `cancelDoorSale` and `simulateDoorTap` serve both kinds; the show comes
+  from the ticket rows or the donation row. The sweep covers donations too, and reports a charged
+  gift with no pending row as `door-donation.unmatched`, with the same task. No acknowledgment is
+  sent from the app.
 
 ### Data touched
 
-`event_listing`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
-purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's first row only, and
-`discountWaived`), `eventRsvp`, linked `reservation` rows for space-holding events.
+`event_listing`, `ticket_sale` (the sale terms and the seller), `ticket` (status:
+`pending → valid → checked_in`, or `cancelled`; plus the money the purchase settled at —
+`unitPriceCents` on every row, and `contributionCents`, `actsCents`, `collectiveCents` and
+`feeCoveredCents` on the purchase's first row only), `eventRsvp`, linked `reservation` rows for
+space-holding events.
 
 ### Where it breaks
 
@@ -438,7 +758,10 @@ purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's 
 
 ## 6. Inventory, gear and consumables
 
-Spec: [specs/inventory-spec.md](../specs/inventory-spec.md)
+Decisions: [stock is a ledger](../decisions/0045-inventory-stock-is-a-ledger.md),
+[asset tags are bound](../decisions/0043-asset-tags-are-bound-not-generated.md),
+[no capitalization threshold](../decisions/0046-serialization-is-not-a-capitalization-threshold.md),
+[Form 8282 is the only tax check](../decisions/0044-form-8282-is-the-only-inventory-tax-check.md)
 
 ### The story
 
@@ -449,10 +772,10 @@ sticks, batteries — leave and do not.
 Members browse the catalog, request an item for a weekend, and staff schedule a
 pickup, hand it over and take it back. Charges are computed at return from days
 borrowed × a per-tier daily rate, discounted for sustaining members, payable from
-equipment credits first and cash for the rest. Both surfaces are always on — the
-`equipment` flag was cut in #286, since a flag whose only job was hiding a module
-nobody had entered data into stopped being useful the moment the data model was
-worth using.
+equipment credits first and cash for the rest. No feature flag gates either
+surface. The member nav shows Equipment once the catalog holds a loanable item
+(`hasLoanableItems()` in `item-service.ts`, read by `layout.remote.ts`), even when
+every unit is out on loan. If that query fails, the row stays hidden.
 
 ### The rule everything rests on
 
@@ -474,6 +797,27 @@ Two axes, deliberately separate:
 A **consumable is a bulk item that is not loanable**, derived and never stored.
 Twelve XLR cables are bulk _and_ returnable, which is why one enum could not
 carry both.
+
+### Gear and Supplies
+
+Staff see the catalog as two lists, two sidebar rows under Space (#2573):
+
+- **Gear**, `/staff/inventory`: `kind = 'serialized' OR is_loanable`. The room's
+  PA is serialized and never lent, and it is Gear. Its lists are Items, Loans
+  (`/staff/inventory/loans`, with kit loans as `?kind=kits`), Reported problems
+  (`/staff/inventory/problems`), Orders (`/staff/inventory/orders`) and
+  Acquisitions (`/staff/inventory/acquisitions`, with the Form 8282 queue as
+  `?show=form-8282`), each behind its own capability (#2767). Locations and
+  categories are its settings, opened from the item list's toolbar.
+- **Supplies**, `/staff/inventory/supplies`: `kind = 'bulk' AND NOT is_loanable`,
+  the consumable definition, with stock levels, restocking and orders.
+
+The two are disjoint and cover every item. The predicate lives once, in
+`src/lib/server/inventory/sections.ts`: `inSection()` is the `WHERE` term every
+list filters with (`listItems`, `listLowStock`), and `sectionOf()` labels a row.
+`sections.spec.ts` runs both against a real SQLite. One intake,
+`/staff/inventory/intake`, serves both lists, and each line files under its
+item's section. Item pages stay at `/staff/inventory/[id]` for either.
 
 ### Code path
 
@@ -502,33 +846,65 @@ requestLoan()  member asks; emits equipment.loan_requested (staff notified)
 ```
 
 Pricing helpers `calculateDailyRate()` / `calculateLoanCharge()` are pure
-functions; rates come from `$lib/config.ts` (`DAILY_RATE_MAJOR`,
+functions; rates come from `#lib/config.js` (`DAILY_RATE_MAJOR`,
 `DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`;
 checking out a serialized item without naming a unit throws
 `AssetRequiredError` — the checkout form asks which unit is being handed over,
-and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as free hours
+and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as practice credits
 (`credit-service.ts`, type `equipment_credits`).
+
+### Kit loans
+
+A location can go out as one set: the offsite kit case and everything in it (#2725).
+`kit-loan-service.ts` drives it from **Check out kit** on the Loans tab.
+
+- `checkoutKit()` walks the location and every location nested in it, and writes one
+  `inventory_kit_loan` row plus one ordinary `inventory_loan` per `in_service` unit,
+  each linked by `kit_loan_id`, already `checked_out`, with `loan_out` movements and
+  the units set `on_loan` — one `db.batch`. Those loan rows are the snapshot: moving
+  a unit afterwards does not change what was lent.
+- A unit on another loan or in the shop is left behind, not refused, and recorded as
+  `kit_loan.checked_out_incomplete`. A location with nothing to lend is refused.
+- Kit loans are the collective's own use, so the rate is zero and nothing is charged.
+- `returnKit()` on `/staff/inventory/kits/[id]` takes the ticked units back the way a
+  single return does (an open blocking report sends a unit to the shop). Unticked
+  units stay on loan to the same member, the kit stays open, and the return is
+  recorded as `kit_loan.returned_incomplete`. The kit closes (`returned_at`) once
+  every unit is back, including a unit returned on its own from its loan page.
+- Loan-due reminders skip kit units; the kit's due date shows on the Loans tab.
 
 ### Replenishment and spend
 
 A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`
 returns everything at or below it, emptiest first, with a `suggestedOrder` (the
 reorder quantity where one is set, otherwise enough to reach the point) and an
-`isOut` flag. It surfaces twice: the top five on the staff dashboard, and the
-whole list as the Inventory list's `?show=restock` view, grouped by category with
+`isOut` flag. It surfaces as the `?show=restock` view on Supplies (and on Gear, for a returnable
+bulk item with a reorder point), grouped by category with
 a Receive action per row and a bulk **Mark as ordered**, which writes one `placed`
-purchase order with a line per ticked item. The list's other cross-item views
-(`?show=on-order`, `late`, `on-loan`, `overdue`, `problems`) replaced the Orders
-list; an order's own page stays, reached from the items on it.
+purchase order with a line per ticked item. Its supplier is an organization holding the
+`supplier` role: the field suggests the suppliers in Contacts, and a name not on file, compared
+trimmed and case-insensitively, becomes a new one. The lists' other cross-item views
+(`?show=on-order` and `late` on both; `on-loan`, `overdue` and `problems` on Gear)
+stay as filters; `/staff/inventory/restock` redirects to Supplies. Every purchase order,
+open ones first, is listed on Gear's Orders list (#2767), and each has its own page.
+
+An item at or below its point with nothing on a placed order has one open **restock task**
+(#2756), linked to the item (`work_order_link.item_id`) and titled "Restock {item}".
+`syncRestockTasks()` in `restock-tasks.ts` opens and closes it after every ledger write and
+every order status change: a placed order or stock back above the point closes it, and a
+cancelled order on a still-low item opens a new one. A placed order past its expected date and not fully received
+opens a **late order task** (#2757, `syncLateOrderTasks`), linked to its supplier, closed when it
+is received, closed short or cancelled. The restock view links each row to its
+task. The dashboard's low-stock list is gone; the task is the reminder.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
 current calendar year), per category via `spendByCategory()` and per supplier via
 `spendBySource()`. **Donations and
 grants are excluded** — a gift is not spend, and counting one would overstate the
-budget by exactly what was given. `inKindContributions()` exists for the
-gifts-in-kind disclosure and still has no screen: ASU 2020-07 binds the financial
-statements rather than the organisation, and CMC has never been asked for a GAAP
-statement.
+budget by exactly what was given. The gifts-in-kind disclosure has no query or
+screen: ASU 2020-07 binds the financial statements rather than the organisation,
+and CMC has never been asked for a GAAP statement. The fields it needs
+(`acquisition.monetized`, line values, category) are captured.
 
 ### Acquisitions
 
@@ -581,15 +957,58 @@ whether the unit is still usable, and takes an in-service unit out of service on
 the reporter says it is not. A second report on the same unit is a second row — three
 people noticing one crackle is the signal.
 
-Staff triage them in Inventory's Reported Problems queue, `/staff/inventory/problems` (#1840), behind
-`inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
-or a new one — and every other untriaged report on that unit goes with it
-(`sendToWorkOrder`). Resolving the work order closes every report attached to it
-(`resolveWorkOrder` → `resolveFlagsForWorkOrder`).
+A new report goes straight to a task (#2756, `sendToRepair`): the open task already linked to
+its unit, else a new **repair task** linked to the unit. A building problem opens its own
+task with no unit. Every untriaged report on the unit goes with it.
+
+Staff see them in Gear's Reported problems tab, `/staff/inventory/problems` (#1840), behind
+`inventory.manageAssets`, open reports first: dismiss, or move to another work order — an open
+one on the same unit or a new one — and every other untriaged report on that unit goes with it
+(`sendToWorkOrder`). Dismissing a report leaves its task to staff. Marking the task done closes every report attached to it
+(`resolveWorkOrder` → `resolveFlagsForWorkOrder`), and nothing else does: a shift on the task
+ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
+(#2518). The "close reports on completion" option and its listener are gone.
+
+Repair, restock, late order and Form 8282 tasks take the role set per kind on
+`/staff/inventory/settings` (`inventory.*RoleId`); with none, a task waits unassigned on
+the Tasks page. `work_order.source` and `source_id` record which record opened a task, and
+`uq_work_order_open_source` keeps one open per record. The daily `/api/cron/open-tasks` sweep
+runs the same rules over every record, which also covered records that predate #2756 and #2757.
+Insurance and unmatched door payment tasks have no role setting and wait unassigned.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
 and a remote `form()` that fails validation runs no handler at all.
+
+### Contractors: paid repairs and building work
+
+Decision: [Contractor work has its own tables](../decisions/0051-contractor-work-has-its-own-tables.md)
+
+A contractor is somebody the collective pays: an `organization` holding the `contractor` role
+(#2622), with a `contractor_detail` row for trade, licence and `insurance_expires_at`, a bare date
+where null means no certificate is on file (`listLapsingInsurance` leaves those out). The person to
+call is a `contact` at the organization. A contractor is archived, never deleted. A
+`contractor_job` is one contractor's engagement on a work order, which holds the title, the unit
+and the project. `createJob` refuses an organization that does not hold the role. Staff work them in Contacts with the contractor role (`/staff/contacts?role=contractor`, which
+also shows lapsing insurance and overdue jobs and adds a contractor with its trade) and on each
+contractor's Contacts page (#2764); jobs are the Tasks table's contractor filter. A certificate
+lapsing within 30 days opens one task linked to the contractor and due on the expiry
+(`syncInsuranceTasks`, #2757); saving a later date closes it.
+
+`contractor/contractor-job-service.ts` moves an engagement `asked → booked → completed`, or ends
+it `declined`, `no_show` or `cancelled`. Custody goes through `setAssetStatus`, the one writer of
+the stock ledger:
+
+- `scheduleJob` takes the work order's unit to `maintenance` only when it is `in_service`, so a
+  unit on loan or already out is not touched twice.
+- `completeJob` brings the unit back only while it is still in `maintenance` and
+  `returnToService` is not false. It writes the cost to the ledger, resolves the work order and
+  updates the unit in one `db.batch`. A donated job carries `fair_value_cents` and no cost.
+- `cancelJob`, `declineJob` and `markJobNoShow` leave the unit where it is, because it is still
+  broken. `reopenJob` is admin-only (`contractor.reopen`) and takes a reason.
+
+Late is derived: `booked` with `expected_back_at` in the past. `contractorSpend` counts completed
+jobs by `completed_at`, apart from equipment spend. The invoice is a reference string, not a file.
 
 ### The donation wishlist
 
@@ -624,10 +1043,14 @@ collective to file IRS Form 8282 within 125 days, with a copy to the donor.
 disposed, unresolved) and applies the window in JS so the rule lives in one
 place.
 
-It surfaces on the unit's page when it is retired and on
-`/staff/inventory/compliance` thereafter. Resolving it writes
+It surfaces on the unit's page when it is retired and on the Acquisitions list's
+Form 8282 filter (`/staff/inventory/acquisitions?show=form-8282`) thereafter. Resolving it writes
 `form8282ResolvedAt` plus a free-text `form8282Note`, which covers both "filed"
 and "no filing was due, because…".
+
+Each obligation also opens one task linked to the unit and due with the form (#2757,
+`syncForm8282Tasks`), after a retirement, a reopen, a signed 8283 and the daily sweep.
+`resolveForm8282` closes it; closing the task by hand records nothing.
 
 **Where it breaks** — nothing appears when expected, in order of likelihood:
 
@@ -666,7 +1089,8 @@ number.
 ### Data touched
 
 `inventory_item`, `inventory_asset`, `stock_movement`, `inventory_loan`,
-`acquisition`, `acquisition_line`, `inventory_location`, `equipment_category`
+`acquisition`, `acquisition_line`, `inventory_location` (a tree through
+`parentId`), `equipment_category`
 (unchanged), `media` + `media_attachment` (manuals, damage photos, receipts),
 `creditTransaction` (equipment credit spends).
 
@@ -695,8 +1119,6 @@ number.
 
 ## 7. Marketing campaigns
 
-Spec: [specs/email-marketing-spec.md](../specs/shipped/email-marketing-spec.md)
-
 ### The story
 
 Staff compose email campaigns, pick audiences (rule-based or manual lists of subscribers),
@@ -705,6 +1127,19 @@ them through Postmark's **broadcast** message stream (separate from transactiona
 newsletter complaints can't hurt receipt deliverability). Every recipient gets a signed
 unsubscribe link.
 
+A `subscriber` is an email address, not an account. `subscriber.userId` links it to a member
+when one matches. An audience is either a staff-kept static list or a built-in: a row whose
+`systemKey` names a code-defined predicate in `marketing/system-audience-defs.ts`, resolved
+against member accounts at send time. Staff cannot create or edit built-ins. An audience with
+`allowOptIn` appears on the public `/subscribe` pages and in the member's account
+subscriptions.
+
+Opting out works at two levels. The unsubscribe link sets `audience_member.unsubscribedAt` for
+the one audience its token names. The page then offers "unsubscribe from all", which sets
+`subscriber.suppressedAt` with reason `unsubscribe` and excludes the address from every
+campaign. Opting in again clears that reason; `bounce` and `complaint` suppressions stay. The
+RFC 8058 one-click POST to the same URL only ever leaves the named audience.
+
 ### Code path
 
 - **Compose/schedule:** `staff/marketing` UI → `marketing.remote.ts` →
@@ -712,7 +1147,9 @@ unsubscribe link.
   Status is derived, not stored: `deriveCampaignStatus()` maps
   (`scheduledFor`, `sentAt`) → `draft | scheduled | sending | sent`.
 - **Audiences:** `audience-service.ts` + `subscriber-service.ts`;
-  `getRecipientsForCampaign()` resolves and dedupes recipients at send time.
+  `getRecipientsForCampaign()` resolves and dedupes recipients at send time. A recipient in
+  several targeted audiences keeps the lowest-sorted audience id, so the audience their
+  unsubscribe token names does not depend on row order.
 - **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`) →
   `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML into the
   campaign layout, a hand-maintained TS constant in `marketing/campaign-layout.ts` kept
@@ -751,10 +1188,12 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 - **Inbound email:** Postmark inbound webhook → `src/routes/api/inbox/postmark/+server.ts`
   (authenticated with `POSTMARK_INBOUND_TOKEN`) → `handlePostmarkInbound()` in
   `src/lib/server/inbox/inbound-handlers.ts`.
-- **Inbound SMS:** Twilio webhook → `src/routes/api/inbox/twilio/+server.ts` →
-  `handleTwilioInbound()`.
+- **Inbound SMS:** Twilio webhook → `worker.js` (`admitTwilioInbound`, past Kit's CSRF check) →
+  `src/routes/api/inbox/twilio/+server.ts` (verifies the signature) → `handleTwilioInbound()`.
 - **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`,
-  which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`.
+  which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`,
+  or to `BOOKING_CONTACT_EMAIL` when the subject is "Performance Inquiry". Both carry the
+  thread's signed `Reply-To`, so a reply from either inbox is relayed and recorded.
 - All three thread the message via `thread-service.ts` / `message-service.ts` (match on
   sender address/number, else create a thread) and emit `inbox.message_received` — the
   listener in `events/register-listeners.ts` notifies every staff user, linking to
@@ -772,7 +1211,8 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 ### Where it breaks
 
 - **Inbound mail not appearing** → check the Postmark server's inbound webhook URL and
-  token, then Sentry. Same for Twilio's messaging webhook config.
+  token, then Sentry. Same for Twilio's messaging webhook config. With no `TWILIO_AUTH_TOKEN`
+  set, a signed Twilio post is refused with a 403, the same answer as a wrong signature.
 - **Staff not notified** → the notification dispatcher respects per-user preferences
   (`notification/preference-service.ts`); check the staff user's settings before suspecting
   the listener.
@@ -790,10 +1230,9 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 
 ## 9. The gig guide and community listings
 
-Spec: [specs/community-calendar-spec.md](../specs/shipped/community-calendar-spec.md) ·
-[specs/community-events-spec.md](../specs/shipped/community-events-spec.md) ·
-[specs/event-lineup-spec.md](../specs/shipped/event-lineup-spec.md) ·
-[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
+[lineup credits need the band's consent](../decisions/0005-lineup-credits-need-the-bands-consent.md) ·
+[partner feeds import as community listings](../decisions/0012-partner-feeds-import-as-community-listings.md)
 
 ### The story
 
@@ -812,7 +1251,22 @@ So the three surfaces that mean shows rather than listings — `listUpcoming()` 
 homepage posters, `getShowTonight()`, and `listPast()` — filter on `kind` as well. The
 public guide deliberately does not, which is what keeps the work party advertised. A
 recurring series inherits `kind` from its prototype, so a monthly deep clean does not
-generate twelve shows.
+generate twelve shows. A club's or committee's session (`source = 'group'`) is always a
+`meeting`; `createGroupEvent` writes it, and `scripts/group-listing-kind.spec.ts` fails any
+other `source = 'group'` insert that leaves `kind` to the column default.
+
+`event.visibility` says who may see a published listing: `public` (everyone), `members` (any
+signed-in member) or `group` (the owning group's members). A new listing starts at
+`defaultVisibility`: a meeting owned by a committee or band is `group`, any other meeting is
+`members`, and everything else is `public`. Staff, band admins, the member who posted a listing
+and a session's group admins change it on the edit form. Every public read — the guide, the
+calendar feed, RSS, the sitemap, the homepage posters, profiles' upcoming and past shows, the
+recaps and the month poster — applies `visibleTo` from `src/lib/server/event/visibility.ts`.
+The member events page's guide passes the signed-in member, so it adds members listings and
+their own groups'. The event page, its ticket and RSVP actions, and `/e/<code>` 404 for a viewer
+who may not see the listing. The month poster also prints a club's meeting at `members`, which
+keeps club sessions on it (decision 0061). `scripts/event-visibility.spec.ts` fails a read of
+published listings that skips the predicate.
 
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
 staff work; band events are gated to band admins; community listings publish **directly**,
@@ -831,7 +1285,7 @@ on a bill and have it appear on that band's own profile without their say-so.
   for the poster-forward list and `getPublicCalendar({month})` for the mini-calendar
   date-jumper. Both read across all three sources; `idx_event_source` on
   (`source`, `status`, `startsAt`) is the index they are written for.
-- **Member authoring:** `/member/events/submit` and `/member/events/[id]/manage` →
+- **Member authoring:** the Add a show modal on `/member/events`, then `/member/events/[id]/manage` →
   `community-events.remote.ts` → `event/community-event-service.ts`:
   `createCommunityEvent()` (always a draft), `updateCommunityEvent()`, then either
   `publishCommunityEvent()` — which checks standing and routes to `visible` or a pending
@@ -846,15 +1300,48 @@ on a bill and have it appear on that band's own profile without their say-so.
   `getEventLineup()` / `getEventLineups()` read them (the plural batches, for lists),
   `listBandLineupInvites()` is the band panel's invite inbox, and
   `confirmLineupSlot()` / `declineLineupSlot()` are the band's only two answers.
-  `linkLineupSlot()` attaches a previously text-only credit to a real band.
 - **Moderation:** `flags.remote.ts`: `submitEventReport()` files against `entityType:
 'event'`; upholding in `/staff/flags/[id]` can `unpublishWithNotice()` in the same step,
   which notifies every band on the bill rather than only the owner.
+- **Cancelled stays listed:** the guide and the feeds read `publicEventStatuses`
+  (`published`, `cancelled`), so a cancelled show stays on `/events`, marked, until its date
+  passes. The homepage posters and the mini-calendar dots read published only.
+- **Deleting:** `remove()` in `event-service.ts`, from `/staff/events/[id]`, is for a row that
+  should never have existed. It refuses once the event has any ticket, in any status, with
+  `EventHasTicketsError`. It cancels the linked reservation rather than orphaning it, detaches the
+  poster and deletes the event's `content_flag` rows; `event_band` and `event_rsvp` cascade.
+- **Syndication:** `/events/calendar.ics` is the guide as an iCalendar subscription, from 30 days
+  back to a year ahead so a client keeps last week's show, and `/events/feed.xml` is RSS over the
+  next 100 listings. Both read the public statuses above.
+- **Partner imports:** `calendar_source` is one partner venue's iCalendar feed, added, paused or
+  fetched now from `/staff/venues/[id]`. The daily `/api/cron/import-partner-calendars` runs
+  `runPartnerImports` in `event/partner-import-service.ts`: a 15-second fetch capped at 2 MB, then
+  `parseFeed` (`ical.js`) keeps timed events from today to a year ahead and expands recurrences.
+  Rows are upserted on `(importSourceId, importUid)` as `source = 'community'` listings at the
+  feed's venue, authored by the staffer who added the feed. A run overwrites an imported row only
+  while it is `published` or `cancelled`, skips a new show already listed at that venue on that
+  local day, and leaves a show that left the feed alone. A fetch failure is written to
+  `lastError`.
+- **Access answers:** `venue` carries `stepFreeEntry`, `accessibleRestroom` and `seating`, each
+  `yes`, `no` or `unknown` (the default), set in the venue's edit form on `/staff/venues/[id]`.
+  `getVenueAccess()` in `venue/venue-service.ts` drops the unknown ones, and the public and member
+  event pages show what is left as one line in the event facts. A listing at a venue nobody has
+  checked, or with no venue, shows no access line.
+- **Recaps:** once an event has started and is not cancelled, `uploadEventPhotos`
+  (`event-photos.remote.ts`) attaches photos to the listing's `gallery` slot through
+  `event/event-photo-service.ts`, at most 10 per upload and 60 per event. The uploader holds
+  `event.uploadRecap` everywhere, or for that one show through a volunteer-role grant
+  (`recapUploadAccess` in `event/recap-access.ts`). `saveEventRecapText` writes `recapText` for
+  `event.manage`, or for that show's photographer, who gets the field beside the uploader on the
+  public event page. Captions, alt text and removal need `event.manage`. Removing a photo detaches it, and the media sweep reclaims the
+  object. `/events/[id]#photos` shows the gallery, and `listRecentRecaps` feeds the Recent recaps
+  strip on `/events`.
 
 ### Data touched
 
-`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
-`content_flag`, `member_standing` (scope `community_event`).
+`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`, `importSourceId`,
+`importUid`, `recapText`), `event_band`, `content_flag`, `member_standing` (scope
+`community_event`), `calendar_source`, `media_attachment` (slot `gallery`).
 
 ### Where it breaks
 
@@ -870,10 +1357,11 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ---
 
-## 10. Messaging: portal threads and direct messages
+## 10. Messaging: portal threads, direct messages and band enquiries
 
-Spec: [specs/member-portal-chat-spec.md](../specs/shipped/member-portal-chat-spec.md) ·
-[specs/direct-messages-spec.md](../specs/shipped/direct-messages-spec.md)
+Decisions: [Member conversations share the staff inbox](../decisions/0034-member-conversations-share-the-staff-inbox.md) ·
+[Direct message refusals look alike](../decisions/0035-direct-message-refusals-look-alike.md) ·
+[Band enquiries are threads the band owns](../decisions/0041-band-enquiries-are-threads-the-band-owns.md)
 
 ### The story
 
@@ -890,6 +1378,10 @@ about what happened to it. A decline, a block, messaging switched off, and simpl
 opening it are all indistinguishable from the outside — which is the point, because a
 visible decline is one people hesitate to make.
 
+A band's booking enquiries run on the same tables. The contact form on a band's public profile
+opens a `channel: 'band'` thread owned by `inbox_thread.group_id`, and the band's owner and
+admins answer it at `/band/[slug]/messages`. Neither side sees the other's address.
+
 ### Code path
 
 - **The list:** `/member/messages` → `direct-messages.remote.ts`: `getMyMessages()` →
@@ -897,7 +1389,12 @@ visible decline is one people hesitate to make.
   single query.
 - **Portal threads:** `inbox.remote.ts`: `startConversation()` → `inbox/portal-service.ts`:
   `startPortalConversation()`, `replyToPortalThread()`, `markPortalThreadRead()`. Staff
-  answer from `/staff/inbox` exactly as in §8.
+  answer from `/staff/inbox` exactly as in §8. A member holds at most
+  `MAX_OPEN_PORTAL_THREADS` open or snoozed threads. A resolved thread is read-only to the
+  member, and a member reply to a snoozed one reopens it. `portal-service.ts` never reads
+  `inbox_note`, which is why it exists instead of reusing `getThread()`.
+- **Portal delivery:** `dispatchReply()` sends nothing for `portal`; the stored message is the
+  delivery. The `inbox.message_sent` listener sends `portal_message_reply` to the participant.
 - **Starting a DM:** `startDirectConversation()` → `direct-service.ts:startDirectThread()`.
   Every rejection except one comes back as a plain success — the exception is a member whose
   own standing forbids it, who is entitled to know and to read the staff reason.
@@ -912,11 +1409,34 @@ visible decline is one people hesitate to make.
   on `/member/account`. This is the member's own preference and is not `member_standing`.
 - **Reporting:** `reportDirectThread()` verifies participation before filing, because filing
   the flag is what makes a private conversation readable by staff.
+- **Limits:** `MAX_PENDING_SENT_REQUESTS` caps unanswered requests a member has sent, and
+  `MAX_UNRESOLVED_REPORTS` caps their reports waiting in the staff queue. Both are counted
+  in the database and fall as the other side acts.
+- **Staff visibility:** `staffVisibleThread` in `inbox/thread-service.ts` hides every
+  channel in `PRIVATE_CHANNELS` (`direct`, `band`, `group`) from staff lists, counts and
+  search unless the thread has a pending flag. `getThread()` refuses those channels outright.
+- **DM email:** a notification type with `emailOmitsUserContent` has its quote and preview
+  stripped in `notification/email/normalize-model.ts`, so DM emails never carry the
+  message. `handlePostmarkInbound()` drops any inbound email aimed at a `direct` thread.
+  DM rows use `inbox_message.direction = 'peer'`, so the email reply chain, built from
+  `inbound` rows, skips them.
+- **Band enquiries:** `band-contact.remote.ts:submitBandContactForm()` →
+  `inbox/band-service.ts:handleBandEnquiry()`, which always opens a new thread. A band
+  thread has no `inbox_participant` rows; readers come from the roster at read time, and
+  `inbox_group_read` holds each reader's cursor. `band-messages.remote.ts` guards with
+  `requireGroupRole(…, 'admin')`, and its mutations resolve the band from the thread
+  (`bandOfThread()`), never from the slug. Replies go out through `dispatchBandReply()` in
+  `inbox/channel-dispatcher.ts` as "<Band> via CorvMC". The Postmark relay that turns a
+  staffer's emailed reply into an outbound message skips band threads.
+- **Enquiry notifications:** `band_enquiry_received` goes to the band's owner and admins.
+  The old `band_site_contact` email goes only to a press-kit or profile booking address
+  that matches no owner or admin.
 
 ### Data touched
 
-`inbox_thread`, `inbox_message`, `inbox_participant`, `user_block`,
-`user.acceptsDirectMessages`, `member_standing` (scope `messaging`), `content_flag`.
+`inbox_thread` (including `group_id`), `inbox_message`, `inbox_participant`,
+`inbox_group_read`, `user_block`, `user.acceptsDirectMessages`, `member_standing` (scope
+`messaging`), `content_flag`.
 
 ### Where it breaks
 
@@ -927,16 +1447,20 @@ visible decline is one people hesitate to make.
   follow anyone around the site; the count renders on the Messages page only.
 - **A staff reply reads as anonymous** → the staff inbox orients bubbles by `outbound`
   rather than by author, so a colleague's reply reads as the organisation's. That is
-  deliberate (see `member-portal-chat-spec.md`) and pinned from both sides by
-  `ThreadTimeline.svelte.spec.ts` — do not flip the axis to "fix" it.
+  deliberate and pinned from both sides by `ThreadTimeline.svelte.spec.ts` — do not flip
+  the axis to "fix" it. The member inbox passes `viewerUserId` and orients by author.
+  `EnquiryThread.svelte` omits it, so a bandmate's reply to a booker reads as the band's.
 
 ---
 
 ## 11. Moderation: reports, standing, and the suggestion board
 
-Spec: [specs/member-standing-spec.md](../specs/shipped/member-standing-spec.md) ·
-[specs/member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md) ·
-[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
+[member standing is one table keyed by scope](../decisions/0038-member-standing-is-one-table-keyed-by-scope.md) ·
+[one report takes a suggestion off the board](../decisions/0036-one-report-takes-a-suggestion-off-the-board.md) ·
+[suggestion edits lock at the first outside vote](../decisions/0037-suggestion-edits-lock-at-the-first-outside-vote.md) ·
+[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md) ·
+[a removal is a record of an upheld report](../decisions/0077-a-removal-is-a-record-of-an-upheld-report.md)
 
 ### The story
 
@@ -957,6 +1481,29 @@ The suggestion board is the same machinery applied to a different surface: repor
 suggestion pulls it off the board pending review, and an upheld report puts the author's
 later suggestions through review first.
 
+A suggestion carries two independent fields. `status` is what staff decided about the idea.
+`visibility` is whether it is on the board: `visible`, `pending_review` (posted by a member on
+review, never yet public), `under_review` (pulled by a report) or `hidden`. The board shows
+`visible` only. One pending report is enough to pull a post (`SUGGESTION_FLAGS_TO_WITHHOLD`),
+and dismissing the report puts it back.
+
+Every moderation action is an upheld report. A staffer acting on their own files a
+`staff_action` report (`content_flag.origin`), resolved as they file it, so the member can
+appeal it like any other. An appeal makes two separate decisions, one about the content and
+one about the standing. Nothing changes while an appeal waits.
+
+Removing a member's access is a suspension, which has a term, or a ban, which lasts until staff
+lift it. `user.deletedAt` enforces both, and an `account_removal` row records each: who, why,
+the upheld report it rests on, and what the deactivation cancelled. A suspension cancels only
+bookings that start in its term, pauses billing instead of cancelling it, and lifts itself when
+the term ends. A ban also puts the member's address on the email blocklist, which refuses it at
+sign-up. The blocklist is never read at sign-in, so it cannot lock out an existing member.
+
+The removal email carries a signed link to `/removed/[token]`, which works without a session.
+The page shows the notice, never the staff reason, and takes one appeal against the removal's
+report. Granting it on `/staff/flags/[id]` lifts the removal; a suspension that lapsed while the
+appeal waited can still be granted.
+
 ### Code path
 
 - **Filing:** `flags.remote.ts`: `submitFlag()` for profiles and listings (narrowed to
@@ -973,7 +1520,42 @@ later suggestions through review first.
   an entity type to the standing scope it can affect.
 - **Standing:** `standing-service.ts`: `getStanding()` / `getStandings()`,
   `restrictStanding()`, `restoreStanding()`, with `setStanding()` underneath. Surfaced on
-  the member record via `standing.remote.ts`.
+  the member record via `standing.remote.ts`. Every scope shares the ladder `none` /
+  `restricted` / `disabled`; `standingScopeConfig` in `src/lib/config.ts` lists the rungs
+  each scope may hold, and `setStanding()` throws on any other, or on a call without a
+  `flagId`. Only `messaging` may be `disabled`. `restoreStanding()` only updates an existing
+  row, keeping its `reason` and `triggeringFlagId`.
+- **Messaging reachability:** `moderation-service.ts:messagingIsDisabled()` returns one
+  boolean from the member's own `acceptsDirectMessages`, the age rule and `messaging`
+  standing, so a sender cannot tell which one applied.
+- **Appeals:** `appeals.remote.ts` → `moderation/appeal-service.ts`. `fileAppeal()` finds the
+  member's upheld flag from what they are looking at (a suggestion, a listing, a standing),
+  never from a flag id, and is rate-limited per member. `uq_moderation_appeal_flag` allows one
+  appeal per report. `decideAppeal()` applies the restores first and stamps `decidedAt` last;
+  `decidedAt IS NULL` means pending. A restored listing is published directly, not through
+  the standing-aware submit. The staffer who resolved the report may grant but not deny
+  (`SelfReviewError`). `reopenAppeal()` returns a decided appeal to the queue without undoing
+  its effects. The member's notification states the verdict only.
+- **Removals:** `user/user-service.ts:banUser()` deactivates, files a `staff_action` report
+  against the member's profile when none is given, then `moderation/removal-service.ts:recordRemoval()`
+  stamps the row and `blocklist-service.ts:blockEmail()` lists the address. The partial unique
+  index `uq_account_removal_open` allows one open removal per member. `unbanUser()` lifts the
+  open row and unblocks only the address that ban added. The member record's Account tab lists
+  removals (`getUserRemovals`).
+- **Suspensions:** `user-service.ts:suspendUser()` runs `deactivateUser()` with `until` (the
+  term end) and `billing: 'pause'`, then records the removal. `liftSuspension()` restores the
+  account, unpauses billing and stamps the lift. `/api/cron/lift-lapsed-removals` runs
+  `liftLapsedSuspensions()` every 15 minutes. The term is capped by `moderation.suspensionMaxDays`.
+  `reactivateUser()` refuses an open suspension, as it refuses a ban.
+- **Removal appeals:** `moderation/removal-link.ts` signs the link (60 days, `BETTER_AUTH_SECRET`).
+  `removal-notice.remote.ts` is public; the token is the bearer. `appeal-service.ts:fileRemovalAppeal()`
+  inserts against the removal's `flagId`. `decideAppeal()` records `accountOutcome`, and
+  restoring an account needs `user.ban` as well as `moderation.reviewFlags`. Staff resend the
+  notice from the member's Account tab.
+- **Blocklist:** `/staff/moderation/blocklist` → `blocklist.remote.ts`, behind `user.ban`.
+  `auth.ts:beforeAuth()` refuses a listed address on `/sign-up/email`, after Turnstile, and
+  counts the attempt on the entry. Blocking suppresses a deliverable `subscriber` with reason
+  `blocked`; unblocking clears only that reason.
 - **Suggestions:** `suggestion/suggestion-service.ts` — the board
   (`getSuggestionBoard`, votes deduped per member), the staff queue
   (`getSuggestionsQueue`, `respondToSuggestion`, `setSuggestionVisibility`),
@@ -984,7 +1566,8 @@ later suggestions through review first.
 ### Data touched
 
 `content_flag`, `member_standing`, `suggestion`, `suggestion_vote`, `suggestion_edit`,
-`user_block`, and `event.status` when an upheld report unpublishes a listing.
+`user_block`, `account_removal`, `email_blocklist`, `subscriber.suppressionReason`, and
+`event.status` when an upheld report unpublishes a listing.
 
 ### Where it breaks
 
@@ -997,7 +1580,11 @@ later suggestions through review first.
   was deleted (#1528); `fileStaffAction` files the `staff_action` report such a form would need.
 - **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
   but not deny (`SelfReviewError`). A second staffer answers it. See
-  [specs/shipped/moderation-appeals-spec.md](../specs/shipped/moderation-appeals-spec.md).
+  [Moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md).
+- **A suspended member still signed in** → the session cookie cache answers for up to 60
+  seconds after the removal purges the session rows (`hooks.server.ts`).
+- **A removed member says the appeal link fails** → links expire after 60 days. Resend the
+  notice from the Account tab, which signs a new one.
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
   (`/staff/members/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,
@@ -1007,23 +1594,124 @@ later suggestions through review first.
 
 ## 12. Volunteering
 
-Spec: [specs/volunteering-spec.md](../specs/shipped/volunteering-spec.md)
+Decisions: [Volunteer hours are a record](../decisions/0048-volunteer-hours-are-a-record.md),
+[Certifications are an append-only catalog](../decisions/0047-certifications-are-an-append-only-catalog.md)
 
 ### The story
 
 Staff define **roles** — job types with markdown descriptions. Members say which roles
-interest them (a standing note, not a commitment to a date), claim dated **shifts**, and log
-**hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
+interest them (a standing note, not a commitment to a date), sign up for dated **shifts**, work
+the **tasks** assigned to them, and log **hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
 member, role and month — which is the number the board and grant applications ask for.
 
-Approved hours are a record, not a currency: they never become practice-room credits and
-never touch the finance ledger, and there is a test that enforces it.
+Approved hours are a record, not a currency: they never become practice-room credits, and
+`hour-log-service.spec.ts` enforces it. The one ledger write is contributed services: an approved
+log under a specialized-skill role with a market rate writes an `in_kind` financial entry
+(`finance/in-kind-listener.ts`), and returning the log reverses it.
+
+**A log counts on entry unless something needs a look.** `submitHours` lands a member's log
+`approved`, or `pending` when `flagHourLogExceptions` names a reason: the member was not cleared
+for the role on the date worked, the role is a specialized skill, or the log is over eight hours.
+Only pending logs notify staff. Hours are integer minutes, at most twelve hours a log, and a
+member may backdate 90 days. A member edits or withdraws their own log until a staffer approves
+it, and withdrawing deletes it. Staff return a log with a required reason, which the member sees as
+**Returned**, including one already approved. Approving a returned log takes a reason, audited as
+`volunteer_hours.approved_over_return`.
+
+**Roles and clearances keep their history.** A role with logs is archived, not deleted
+(`VolunteerRoleInUseError`), and archiving hides it only from the log form. A clearance that was
+ever true is revoked with a reason.
+
+**The under-18 block is enforced in the service.** `completeVolunteerOnboarding` maps an under-18
+answer to a `blocked` profile, `updateVolunteerProfile` accepts neither `isAdult` nor `status`,
+and `requireActiveVolunteer` refuses a blocked member in `claimShift`, `submitHours` and
+`updateHourLog`. Approving a minor moves `status` and leaves `isAdult` set.
+
+### Tasks and shifts (#2518)
+
+A **task** (`work_order`) is the work; a **shift** (`volunteer_shift`) is a time volunteers
+sign up for it. A task has zero or more shifts. Deliverables and repairs usually have none.
+
+- **Assigning and signing up are two acts.** Staff and committees assign a task to people
+  (`work_order_assignee`, `assignee-service.ts`). Volunteers sign up for a shift
+  (`volunteer_signup.shift_id` → `volunteer_shift`). A sign-up never stands for an assignment.
+- **Being assigned is announced.** `assignToTask` emits `volunteer.task_assigned` when somebody
+  else assigns the member, and the `task_assigned` notification (email and in-app by default)
+  links their task page. Taking a task yourself sends nothing. `assignToTask` is the only writer
+  of `work_order_assignee`; `assigned-tasks.spec.ts` holds it there.
+- **A shift is open by existing.** There is no posting step. **Open shift**
+  (`openShift(taskId, times)`) needs the task to have a role and be open; the shift is then on
+  the member board. It is offered on the task page, on Today's ended-shift rows, on the
+  Schedule's rows with no shift, and as the project assign picker's "Open shift" tab. Every
+  call adds a shift; a task can be assigned and have shifts at once.
+- **The clock never closes a task.** When a shift ends, the completion cron completes its
+  sign-ups. The task stays open, and an open task whose last live shift has ended is on the
+  Schedule's **Tasks with ended shifts** list (`listTasksWithEndedShifts`) until someone marks
+  it done or opens another shift; each row offers both. The sidebar badge counts that list.
+- **Marking a task done** (`resolveWorkOrder`) resolves its equipment reports, stamps
+  `completed_at` on its assignees and writes the next recurring occurrence. It does not touch
+  sign-ups, which the clock completes.
+- **Hours** name a shift, a task (`volunteer_hour_log.work_order_id`), or neither.
+- **Capability grants** from a role last for a confirmed sign-up's shift window, and for an
+  assignment the task's event window, each plus the role's grace days.
+- **The task page lists every shift** (`/staff/tasks/[id]`, in a project or
+  not, #2625), each with its own roster, invitations and edit, copy and cancel. Cancelling
+  a shift (`cancelOneShift`) leaves the task and its other shifts live; **Cancel task** calls off
+  the task and all of them. **Copy forward** adds a shift to the same task, so a standing weekly
+  slot is one task with a shift a week. Assignees are listed apart, each with Unassign. "Who to
+  ask" adds people to a chosen shift, or assigns the whole task.
+- **Engaging a contractor** from the task page or the project picker warns when people are on
+  the task, then removes its assignees and calls off its shifts still to come
+  (`engageContractorOnTask`, `task-people.ts`).
+- On a project, Reschedule moves the task's due date only; a shift's time is the shift's own.
+  The task list shows the latest live shift's time and how many more there are; the side panel
+  lists every live shift.
+- **The member's page** (`/member/volunteer`) lists shifts, never tasks, on the board: each
+  shift is its own row with **Sign up**, so a task with two shifts shows both, and signing up for
+  one leaves the other there. **My shifts** lists the member's sign-ups, one row per shift,
+  named by the task. **Your tasks** lists the open tasks waiting on them
+  (`listAssignedTasksForUser`, filtered by `waitingOn`): assigned to them, or unassigned and
+  either tagged for a position they hold or in a committee they sit on whose tagged position, if
+  any, is vacant. **Mark done** (`markMyTaskDone`) closes any of them; a task with a done
+  condition asks for a reason first. A task marked done moves to **Unlogged work** beside
+  the shifts that owe hours, until an hour log names the task (`workOrderId`).
+- **Open task** goes to `/member/volunteer/tasks/[workOrderId]` (#2582): the task's due date,
+  notes and checklist, with **Assign to me** (`takeTask`) and **Hand back** (`handBackTask`).
+  Items are ticked there (`setMyTaskItemDone`), writing through `setWorkTaskDone` as staff's and
+  a committee's ticks do.
+- **Who may act on a task** is one rule, `canActOnTask` (#2989): its assignee, a holder of the
+  position it is tagged for, an active seat on the committee that owns it, or a holder of
+  `volunteer.manageShifts` scoped to the task's committee and project. The reason is returned in
+  that order.
+- **A task may be tagged for a position** of its own committee (`work_order.position_id`, #2990),
+  set from **Set position** on the staff task page (`setTaskPosition`, the same guard as any task
+  edit). The tagged task waits on that position's holders; a vacant position leaves it waiting
+  on the whole committee. A position of another committee admits nobody, and handing the item to
+  another committee drops the tag (`reassignDeliverable`).
+- **A task's notices go to the task first** (`task/task-audience.ts`): the holders of its
+  position, else its committee's active seats, else every holder of the capability. A decline, a
+  dropped place and an unstaffed orientation route this way; a committee seat is offered those
+  switches on its preferences (`forSeats`). A claim still goes to every holder of
+  `volunteer.manageShifts`, because confirming it needs `volunteer.manageRoster`, which no
+  committee carries. It guards take, tick, mark done and hand back on every surface (the task
+  page, a committee's Open items, the staff task page); `scripts/task-duty-guard.spec.ts` fails on
+  a duty write that skips it. A sign-up for one of the task's shifts is not enough, and an item
+  must belong to the named, live task. Editing, assigning others and calling off still need the
+  grant.
 
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate
 asymmetry — a clearance pulled on the day was not in force, but a card is valid through its
 expiry date. Held certifications append and are never overwritten, which is the only way to
 answer "was their First Aid current on the night of the incident?"
+
+**Training happens on a shift** (#2720). A signup's `supervising_signup_id` names the signup it
+trained under. Staff set it from the shift roster, and the supervisor marks trainees on their own
+shift page; a member cannot name someone else as supervisor or undo another supervisor's mark.
+The supervisor must be on the same shift and be a different member — `training-service.ts`
+refuses anything else, since this is integrity, not a workflow gate. When staff grant a
+clearance, the member's completed supervised shifts whose role requires it are offered as
+evidence, and the one chosen is stored on the grant (`member_certification.training_signup_id`).
 
 ### The coordinator's half
 
@@ -1036,26 +1724,39 @@ were bound to the session.
 
 So:
 
-- **`/staff/volunteer` is Today, a worklist rather than a table.** Cards for the things
-  waiting on a person — claims to confirm, shifts that are short, hours to review, under-18
-  approvals, shifts that finished without being closed out, clearances lapsing before a shift
-  somebody is already on — each with its action on the row, each hidden when its queue is
-  empty. See [ui-patterns.md#section-dashboards](./ui-patterns.md#section-dashboards).
-- **Four screens, not seven.** Today, Schedule, People, Setup, plus a read-only Report.
-  Schedule absorbed the shift catalog (its "Everything" window is what the old Include-past
-  checkbox was); People absorbed the volunteers index, the under-18 queue and the clearances
-  table; Setup absorbed roles and certifications. The retired routes are 308s, and role
-  detail, the full hour queue and the richer report survive as unlisted pages reached from
-  the screens that replaced them. See
-  [specs/shipped/volunteering-redesign-spec.md](../specs/shipped/volunteering-redesign-spec.md).
-- **A called-off shift is a notify list.** `cancelShift` has always left its signups in
-  place; now `notifySignupsOfCancellation` is the button that tells them, and
+- **Volunteering is the shift worklist (#2379, #2625).** `/staff/volunteering` lists volunteer
+  shifts by date, 14 days ahead by default. Claims to confirm, short-staffed shifts and tasks
+  whose shifts have ended are count chips that filter it (`?needs=`); clearances lapsing before a
+  booked shift link to the Members volunteer filter (`/staff/members?role=volunteer&lapsing=1`). Each is hidden at zero. A
+  short-staffed shift opens the people interested in its role beneath it, to invite. Hours to
+  review are in the staff review feed (#2623). `/staff/volunteer`, `/staff/volunteer/shifts`
+  and `/staff/volunteer/schedule` 308 here; the Schedule's untimed, contractor and unassigned
+  queues 308 to Tasks.
+- **A record's shifts are on the record (#2630).** The staff event, production, project, group and
+  role pages show `RelatedShifts`: the shifts of the record's related tasks that have not ended,
+  booked places against capacity, and Add shift, which opens a shift on one of the record's tasks
+  or on a new task with the record's links. `?about=<type>:<id>` narrows Volunteering to the same
+  shifts. It replaces the production page's shift card and the role page's shift list.
+- **Members see them too.** The member group page (Projects tab, or Overview without one) and the
+  member event page show the record's open shifts with Sign up, and the tasks that are the
+  member's: assigned to them, or owned by a club or committee they sit on.
+- **Three homes.** Volunteering (`/staff/volunteering`) holds the shifts; Tasks
+  (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members, filtered to volunteers (`/staff/members?role=volunteer`), holds the
+  people, the under-18 queue (`&status=blocked`) and clearances; Volunteering's **Hour logs**
+  (`/staff/volunteering/hours`) is the review queue. `/staff/members/volunteers` and its `/hours`
+  are 308s (#2765). Roles
+  (`/staff/volunteer/roles`) holds roles and certifications, and the report is
+  `/staff/reports/volunteering`. The retired routes (`shifts`, `people`, `setup`,
+  `clearances`, `certifications`, `interest`, `hours`, `report`) are 308s.
+- **A called-off shift is a notify list.** Cancelling a shift or a task has always left its
+  sign-ups in place; now `notifySignupsOfCancellation` is the button that tells them, and
   `volunteer_signup.notified_at` records how far down the list staff have got. Cancelling
   deliberately notifies nobody on its own — calling a shift off and telling six people about
   it are two decisions, and the first is sometimes reversed.
-- **Staff can assign, release and confirm.** `assignShiftToMember` lands the signup
-  `confirmed` — a coordinator typing the name in _is_ the decision, and leaving it `claimed`
-  would cost the member their reminder. For staff the clearance and onboarding gates warn,
+- **Staff can assign, release and confirm.** On a task with a shift, `assignShiftToMember`
+  lands a sign-up `confirmed` — a coordinator typing the name in _is_ the decision, and leaving
+  it `claimed` would cost the member their reminder. On a task with no shift it assigns the
+  task instead. For staff the clearance and onboarding gates warn,
   record and allow: an uncleared member, or one with no volunteer profile, is added, the
   gaps come back as warnings, and `work_order.assigned_over_warnings` is written to the
   audit log. A profile awaiting under-18 review is still refused.
@@ -1070,7 +1771,7 @@ So:
   auto-complete and the hour log — had nothing prompting it.
 - **Every list splits `confirmed` from `claimed`.** One conflated number made a shift with
   three unconfirmed claims read as fully staffed. The member's half now draws the same
-  distinction as a two-step **Claimed → Booked** rail, because a claim nobody confirms earns
+  distinction as a two-step **Signed up → Booked** rail, because a claim nobody confirms earns
   no reminder and never auto-completes — and the person who made it could not previously tell
   that from a booking.
 - **"Who to ask" sits beside the shift**, not on the role's page, and is judged as of the
@@ -1087,11 +1788,16 @@ So:
 - **Roles and interest:** `volunteer/volunteer-role-service.ts`,
   `volunteer-interest-service.ts` (`listInterestedMembers()` filters by role with an EXISTS,
   so a filtered member still comes back with all their roles).
+- **Role briefing:** `volunteer_role.briefing_article_id` names a help article, picked on
+  `/staff/volunteer/roles/[id]`. The member's shift page (`getMyShift`) and the door screen
+  (`getDoorEvents`, through `listBriefingsForEvents`) link it. Both go through
+  `listReadableArticles`, so a draft or an article above the member's tier is not shown (#2728).
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
-- **Shifts:** `work-order-service.ts` + `volunteer-signup-service.ts`. A shift may name
-  the event it staffs. Only _confirmed_ signups get the reminder; claimed and confirmed
-  both auto-complete as worked once the shift ends (#1943).
+- **Tasks and shifts:** `work-order-service.ts` (tasks, shifts, the queues) +
+  `volunteer-signup-service.ts` + `assignee-service.ts`. A task may name the event it staffs.
+  Only _confirmed_ sign-ups get the reminder; claimed and confirmed both auto-complete as
+  worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
 - **The dashboard:** `listOutstandingClaims` and
@@ -1105,8 +1811,9 @@ So:
 - **Hours and review:** `hour-log-service.ts`; the report is `volunteer-report-service.ts`.
 - **Feedback:** `volunteer-feedback-service.ts` — the day-after two-question survey, rolled
   up per role anonymously.
-- **Crons:** `complete-shifts` (every 15 minutes) under `src/routes/api/cron/`. The shift
-  reminder and the feedback ask are entries in the reminder registry, drained by
+- **Crons:** `complete-shifts` (every 15 minutes) under `src/routes/api/cron/` completes
+  sign-ups on ended shifts and closes nothing else. The shift reminder and the feedback ask are
+  entries in the reminder registry keyed on `volunteer_shift` times, drained by
   `/api/cron/reminders` on the same tick.
 - **Surfaces:** `volunteer.remote.ts` for the member
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
@@ -1114,17 +1821,40 @@ So:
 
 ### Duty lists (Project Templates)
 
-> **Since #2034** these are **Project Templates** (`/staff/project-templates`, under Planning,
+> **Since #2034** these are **Project Templates** (`/staff/tasks/templates`, under Projects,
 > edited with `project.manage`). The tables keep the `duty_list` names. A template is stamped
 > into a **project**, and the `event` and `reservation` subjects are retired. `doors`, `start`
 > and `end` read the project's earliest live event, or the show it is applied from, and the
 > production anchors read that event's production. Each stamped row copies its `anchor`
 > (#2033). A missing anchor time stamps the items unscheduled with a warning and
-> `pending_offset_minutes`, and `placePendingWorkOrders` places them once the time is set.
+> `pending_offset_minutes` (and, for a window, `pending_duration_minutes` and
+> `pending_capacity`), and `placePendingWorkOrders` places them once the time is set: a
+> window gets its shift then, a deadline its `due_at`.
 > Re-applying by hand needs an audited reason. A template is stamped **once per project**, not
 > once per show (#2152): a second night in the same project gets it by a reasoned re-apply from
 > that show's console, timed from that show. The rest of this section is the history and the
 > item model, which is unchanged.
+
+**Starting from a template (#2387).** New project on `/staff/tasks` and its Projects view has a Template select over
+active templates with items. `startProject` reads the template first, creates the project, then
+applies it through `applyDutyList`, so the once-per-project rule and the audit entry are the usual
+ones.
+
+One template may carry `duty_list.project_kind = 'production'`, a checkbox on its edit form, and
+marking another moves it. Picking that one starts a show in one action: `createShowProject` writes
+the project (`kind = 'production'`), the `production` row (`draft`) and the show's committees in one
+`db.batch`, then the checklist is applied. The listing attaches when it exists, and event-timed
+items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on the Projects
+view, since the Productions view lists listings. Turning an existing general project into a show
+is not offered.
+
+The other ways of opening a show have nobody to ask, so they stamp that same template with
+`stampProductionTemplate` once the listing names the project: the New Production modal and the
+event console (`createProduction`), and `event-service.create`, which a recurring series also goes
+through. No active template means no checklist, and the show still opens.
+
+This replaced the `production.created` auto-apply and its listener. The direction for what
+remains of `auto_apply_on` is a rules system (#2389), not new trigger values.
 
 A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's
 rehearsal booking. Staffing a show is six of them, and every one used to be entered by hand on
@@ -1137,11 +1867,11 @@ minutes against it. `volunteer_signup` is unique per (shift, member) and
 orders — it sits a level below one, as `work_task`. That table is four columns and stops:
 `doneByUserId` is attribution, never credit, and nothing in it touches hours.
 
-`duty_list_item`'s time columns mirror the work order's own nullability, which is what lets one
-row type produce both halves of a show. An item with `offsetMinutes` + `durationMinutes`
-becomes a scheduled shift (Door, at doors); an item with only `dueOffsetMinutes` becomes an
-unscheduled work order with a `dueAt` (Booking Lead, a week out, whose tasks are the advance
-checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
+One `duty_list_item` row type produces both halves of a show. An item with `offsetMinutes` +
+`durationMinutes` stamps a task and one shift (Door, at doors): the task takes the role,
+title, committee, `done_when`, section and checklist; the shift takes the times and places.
+Both carry the anchor. An item with only `dueOffsetMinutes` stamps a task with a `dueAt`
+(Booking Lead, a week out, whose tasks are the advance checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
 work belongs to is which role's work order its tasks are on, and the offset says when.
 
 Applying is `applyDutyList(id, subject, createdByUserId)` in
@@ -1170,10 +1900,41 @@ from April's.
 
 ### Rehearsal orientation
 
+> **Since #2565** finishing an orientation is what clears a member to book at short notice.
+> `completeOrientation` and `waiveOrientation` grant the **Practice space** clearance
+> (`PRACTICE_SPACE_CLEARANCE_ID`, catalog id `practice-space`, never expires) through
+> `grantPracticeSpaceClearance` in `volunteer/practice-space-clearance.ts`: an append-only
+> `member_certification` row, skipped when a current one exists, carrying the waive reason as
+> its note. Until a member holds it, their own booking needs 3 days' notice, which is the time
+> the orientation shift has to find a volunteer.
+> **Since #2568** that booking starts `volunteer.orientationMinutes` earlier for the tour, at no
+> charge, so the shift raised at its start covers the tour without cutting into the session. The migration that added it backfilled every
+> member with a `completed` booking of their own (not a staff hold) and every completed or
+> waived orientation. Staff switch the shift on by picking a role under Orientation on Practice space settings
+> (`/staff/reservations/settings`); `pnpm db:seed` sets it locally.
+
+> **Since #2567 and #2569** two reminders in `reminders/registry.ts` cover the day before, both
+> read from `volunteer/orientation-reminders.ts`:
+>
+> - `orientation_unclaimed` — a live orientation shift starting within 24 hours with no claimed,
+>   confirmed or completed sign-up. A digest to the task's position holders, else its committee,
+>   else every holder of `volunteer.manageShifts` (#2990), in-app
+>   and email, linking to the shift (or to the short-staffed schedule for several). Keyed by
+>   shift and start, so a moved shift is owed the alert again.
+> - `first_visit` — a member's own confirmed booking starting within 24 hours while they hold
+>   no Practice space clearance. It says when to arrive (the orientation shift's start), the
+>   address (`org.addressStreet`, `org.addressCity`), that the door code arrives separately and
+>   opens at the reservation's start, and staff's plain-text notes
+>   (`volunteer.firstVisitNotes`, Volunteering → Settings → Orientation; empty leaves them out). It replaces
+>   `reservation_reminder` for that booking: the reservation reminder skips uncleared members'
+>   own bookings and any booking already sent `first_visit`.
+
 > **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
-> `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means
-> off. `raiseOrientationShift` inserts one work order at the booking's start, with no project,
-> marked `work_order.is_orientation`, or reuses the live one already on the booking. That marker
+> `volunteer.orientationMinutes` are set from Orientation on Practice space settings, and an empty role means
+> off. `raiseOrientationShift` inserts one task, marked `work_order.is_orientation`, with one
+> shift at the booking's start and no project, or reuses the live one already on the booking.
+> Retiming or cancelling the booking moves or calls off the shift; `member_orientation`
+> points at the task. That marker
 > is what `orientationOwnerOf` and `orientationForReservation` read. The trigger and re-apply
 > guard described below are retired.
 
@@ -1189,7 +1950,7 @@ is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), t
 
 A booking that came off the **waitlist** announces itself too, from
 `announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race
-re-check. The emit hangs off the `waitlisted → scheduled` transition and nothing else:
+re-check. The emit hangs off the `waitlisted → confirmed` transition and nothing else:
 `createWaitlisted()` stays quiet because a queue position is not a visit, and
 `promoteNextWaitlisted()` stays quiet because it only _offers_ the slot — it stamps the 24h
 window and leaves the row `waitlisted`, where `expireWaitlisted()` can still cancel it without
@@ -1231,7 +1992,33 @@ would sit at `scheduled` for ever with its time in the past and need a cron to u
 
 Who may run one is the ordinary clearance gate: `volunteer_role_certification` links the
 Rehearsal Orientation role to the Space Orientation Trained certification, and `claimShift`
-already enforces it. Nothing new claims, assigns, or notifies.
+already enforces it. Nothing new claims or assigns; the two notices are the reminders above.
+
+### Committee deliverables
+
+Decision: [A committee owns show work](../decisions/0053-committees-own-deliverables-not-permissions.md)
+
+A work order can name the committee that answers for it (`work_order.group_id`) and a fact that
+marks it done (`done_when`, one of `workDoneConditions`). Both are copied from the template item
+when a template is stamped. `evaluateDone` in `volunteer/done-conditions.ts` reads an item as done
+when it is resolved by hand, or when its condition holds and its tasks are ticked; nothing is
+stored, so an item reopens if the fact goes away. The conditions share their predicates with the
+publish and close-out gates (`event/show-readiness.ts`), and a deliverable never gates anything.
+
+- **Reads:** `deliverables-service.ts` — `listCommitteeOpenItems` for a committee's Open items
+  tab on `/member/groups/[slug]`, `listShowDeliverables` for a show's Deliverables card,
+  `reassignDeliverable` to hand an item to another committee. The remote is
+  `deliverables.remote.ts`, guarded by `requireCommitteeMember(groupId, 'volunteer.manageShifts')`.
+- **Cancellation:** cancelling a show reads its committees' open items first, cancels them, and
+  notifies each committee that had one (`production/cancellation-notice.ts`).
+- **Reminders:** `deliverable_due_3d` and `deliverable_overdue` in the reminders registry, over
+  open, committee-owned items with a due date. Items finished early or overdue by more than 14
+  days are not chased. Items on a grant or sponsorship project also get `deliverable_due_14d`,
+  4 to 14 days out, because a report needs more lead time (#2622). An item with no show is
+  named by its project in the mail. An unassigned item goes to its position's holders before its whole
+  committee (#2990). The show's event lead gets each item on the show as well, under a subject of
+  their own, linking to the show's production page.
+- The coordinator's unscheduled-work queue leaves out committee-owned items.
 
 ### Data touched
 
@@ -1258,7 +2045,7 @@ already enforces it. Nothing new claims, assigns, or notifies.
   orientation once it drove this.
 - **A member whose first booking was waitlisted got no orientation** → they get one when they
   confirm the slot, not when they join the queue and not when it is offered to them. Check the
-  row actually reached `scheduled`: `confirmWaitlisted` rolls a confirmation back to
+  row actually reached `confirmed`: `confirmWaitlisted` rolls a confirmation back to
   `waitlisted` if a competing booking landed mid-write, and `announceWaitlistConfirmed()`
   deliberately says nothing for a row still in the queue. A booking that is only _offered_ —
   `waitlist_notified_at` set, status still `waitlisted` — has not been confirmed yet and is
@@ -1274,8 +2061,8 @@ already enforces it. Nothing new claims, assigns, or notifies.
 
 ## 13. Music and CMC Radio
 
-Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Design
-rationale in [band-audio-spec.md](../specs/shipped/band-audio-spec.md).
+Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Record:
+[band music sells files](../decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md).
 
 ### The story
 
@@ -1314,8 +2101,7 @@ entry, the next three, and the **server's clock**; the widget in the root layout
 seeks to `serverNow − startsAt`. A release plays only while its attestation is
 current: given to today's wording of `RADIO_PRO_ATTESTATION` (originals only, by
 band members who belong to no PRO) and under a year old. The reminder registry
-tells the band's admins 30 and 7 days before it lapses; see
-[band-audio-spec.md](../specs/shipped/band-audio-spec.md#the-radio-plays-only-what-costs-nothing-to-license).
+tells the band's admins 30 and 7 days before it lapses.
 
 ### Data touched
 
@@ -1331,7 +2117,7 @@ tells the band's admins 30 and 7 days before it lapses; see
   `beginPurchase` re-checks `destinationFor` rather than trusting publish-time
   state, and the release page hides the Buy control instead of offering one that
   409s.
-- **An empty rotation.** The scheduler writes nothing and `nowPlaying` is null;
+- **An empty rotation.** The scheduler writes nothing and `getRadioState` returns no `current`;
   the widget renders nothing at all. This is the expected pre-launch state, not a
   fault.
 - **A track outside the duration bounds** is opted in and still never heard.
@@ -1341,8 +2127,10 @@ tells the band's admins 30 and 7 days before it lapses; see
 
 ## 14. Producing a show: the production record
 
-Design spec: [production-workflow-spec.md](../specs/production-workflow-spec.md) —
-**read its 2026-09-04 amendment first**; most of the body is superseded.
+Decisions: [a production is a child of its listing](../decisions/0003-a-production-is-a-child-of-its-listing.md) ·
+[set times are derived and running order is fractional](../decisions/0004-set-times-are-derived-and-running-order-is-fractional.md) ·
+[productions are projects](../decisions/0011-productions-are-projects.md) ·
+[poster art is an artifact request](../decisions/0010-poster-art-is-an-artifact-request.md)
 
 ### The story
 
@@ -1372,20 +2160,31 @@ restore crew shifts or retract a cancellation notice.
 ### Code path
 
 1. `/staff/events/[id]` → **Add production** → `createProduction`
-   (`lib/remote/productions.remote.ts`, guard `event.manage`) →
+   (`lib/remote/productions.remote.ts`, guard `production.create`, org-wide) →
    `production-service.createProduction()`. The service reads the listing's `source`
    first and refuses anything but `'cmc'` (422) — a production is the ops record for a
    show CMC puts on, and about nine listings in ten are somebody else's gig at somebody
-   else's venue. The button is hidden for those too, but the service is the guard. The
-   1:1 is a different shape: it is held by `uq_production_event`, so the insert reads
-   the violation rather than selecting first — _that_ select-then-insert would be a
-   race.
-2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+   else's venue. The button is hidden for those too, but the service is the guard.
+   `createShowProject` writes the project (`kind = 'production'`), the production and the
+   show's `project_committee` rows (Booking as `booking`, Production as `production`) in one
+   `db.batch`. Moving the listing onto that project is the claim: a conditional update that
+   matches nothing when the listing is already on a show's project, in which case the new
+   rows are deleted and the call answers `ProductionExistsError`. There is no
+   `production.event_id`; `announcedBy(eventId)` finds a listing's production through
+   `event_listing.project_id`.
+2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`: a member
+   of a committee taking part in the show whose grants carry the capability, or staff.
+   `production.book` covers the bill, the deal, billing and poster art; `production.run`
+   covers times, run of show, the door take, expenses and the advance. `advanceProduction`
+   asks for `book` to move to `draft`, `offered`, `confirmed` or `cancelled` and `run` for
+   the rest. `updateProduction` compares each field with the stored row and asks only for
+   the capability whose fields changed.
+3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
-3. **Overview** tab → `updateProduction` (times and notes) and
-   `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
-   client never names a user id).
-4. `ProductionStatusAction` → `advanceProduction` →
+4. **Overview** tab → `updateProduction` (times and notes) and
+   `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
+   then holds `production.run` on that show and opens the staff panel while it is open).
+5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless
    acknowledged with a reason. The move itself is `UPDATE … WHERE id = ? AND status = ?`
@@ -1396,27 +2195,99 @@ restore crew shifts or retract a cancellation notice.
    `done` from `completed` on, `declined` when cancelled, and `open` again if walked
    back. `reopenProduction` (guard `production.reopen`) is the only way out of a
    terminal state.
-5. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
+6. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
    A payout is never edited: undo writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
    recorded again. Both are audited.
-6. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
+7. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-7. `/staff/projects/productions` reads everything through the one `getStaffEvents` query:
+8. The Productions view (`/staff/events?view=productions`) reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
+9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
+   `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
+   `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
+   never stored by hand: `computeSetTimes` in `production/run-of-show.ts` walks the slots
+   from `firstSetAt`, and the service rewrites them on every slot change and when the
+   downbeat moves. `sortOrder` is a `real` placed at the midpoint of its neighbours and
+   renumbered only when two converge past `SORT_EPSILON`. `runOfShowWarnings` flags a curfew
+   overrun, a first set before doors, an odd set length or a late soundcheck, and refuses
+   nothing. `setRunOfShowTerms` (`production.book`) writes the deal: `guaranteeCents`,
+   `percentageBps`, `versus`, `againstNet` and `contributed`.
+10. **Settlement** reads through `getSettlement` in `production/settlement-service.ts`, with
+    no settlement table. The acts' pool is the `pass_through` ledger rows in the show's
+    settlement group plus the acts' share of the door cash; the collective's revenue is the
+    show's tickets' `ticket_sales`, `fee_coverage` and `card_fees` rows, found through
+    `ticket.purchaseId` because no ticket row carries the group (#2733), plus its share of the
+    door. Cash sales recorded at the door are ticket rows like any other, so they reach both
+    sides through the ledger. `recordDoorTake`
+    (`production.run`) records the drawer and count, and stamps whoever changed the figure as
+    the counter. `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
+    `doorSplitActsPercent` or the house `DOOR_SPLIT_ACTS_PERCENT`; a short drawer splits nothing.
+    A drawer that differs from the recorded cash sales warns on the console, and never blocks
+    (#2800).
+    `recordDoorRecount` records a second count by somebody else; the first counter is
+    refused. One count, or two that differ, warns on the console and on a move to `settled`
+    or `closed`, and never blocks (#2722). Expenses come from `production_expense`. Each act's
+    suggested payout comes from its deal, and a guarantee above what buyers sent the acts is
+    a collective top-up. Door cash never goes to Stripe.
+11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
+    `poster_art`, and the artist uploads on `/act/{token}` through
+    `/api/acts/{token}/poster-art` → `deliverPosterArt`, which attaches the file to the
+    **request**, slot `poster`. `usePosterArt` (`production.book`) → `promotePosterArt`
+    points the listing's poster slot at the same media row. `usePosterArtWithFooter` and
+    `useTemplateFlyerAsPoster` render a 1080×1350 PNG with `renderFlyer`
+    (`src/lib/server/poster/flyer.ts`, on `@cf-wasm/og`) and replace the slot; a flyer is a
+    snapshot and is not re-rendered when the event changes. Its footer draws the sponsors
+    `creditsForEvent(eventId, 'eventPage')` returns. `sponsorLogos` reads each logo through
+    the R2 binding, and a logo that is not PNG, JPEG or SVG is drawn as the sponsor's name.
+12. **Crew follows the clock.** When a production time, or the listing's doors, start or
+    end, moves, `shiftAnchoredWorkOrders` in `volunteer/retime-work-orders.ts` moves every
+    live work order anchored to it by the same delta, in the same batch.
+13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
+    revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
+    and top-ups count as spend; the pool passes through and never does.
+14. **Festivals and runs** ([0079](../decisions/0079-a-festival-is-a-parent-project.md)). A
+    project, usually a show's, can name another project as its parent (`parent_project_id`),
+    set from Edit project on `/staff/tasks/projects/[id]` with `project.manage`. Each night
+    keeps its own production, run of show, door take and settlement. `getProjectBurn` on the
+    parent sums each child's own burn with the parent's, against the parent's budget, and
+    lists each one's cash spend in `parts`, which the budget page shows. Parents are one
+    level deep: `updateProject` refuses a project as its own parent, a parent that has a
+    parent, and a parent as a child (`ProjectParentError`, 400).
+15. **Rider against stock** (#2724). The Advance tab's Requested gear card reads
+    `getEventRiderStock` in `production/rider-stock-service.ts`, inside
+    `getStaffEventProduction`. It takes each `venue` rider element of the acts on the bill and
+    matches it to the catalog. A staff link (`rider_element.inventory_item_id`, set by
+    `setRiderStock`, `production.run`) wins. Without one, a category whose name has a word
+    starting with one of the kind's `KIND_CATEGORY_HINTS` is a suggestion: rider kinds are a
+    fixed list and category names are free text, so the link is the primary path. An element
+    with neither is listed as not in stock. Availability is `getAvailableQuantityMany`
+    (in-service units, or the ledger for bulk, less scheduled loans). Demand is counted per
+    act, because acts on one night share the backline between sets. A link survives the
+    band's re-save by label, as stage placement does.
 
 ### Data touched
 
-- `production` — the record. Cascades from `event_listing`; `producerUserId` and
-  `createdByUserId` are both set-null, because purging a staff account must not
-  delete the collective's production records.
+- `production` — the record. It specialises one `project` (`project_id`, restrict, required
+  by the `production_project_required` triggers); the listing reaches it through
+  `event_listing.project_id`. `producerUserId` and `createdByUserId` are both set-null,
+  because purging a staff account must not delete the collective's production records.
+- `project` (`kind = 'production'`) and `project_committee` — the show's budget, dates and
+  committees.
+- `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
+  cost sheet.
+- `financial_entry` — ticket rows read through the show's tickets, payout and expense rows by
+  settlement group. Door cash stays
+  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`, and the counter and
+  second count beside them).
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
   re-declares.
+- `rider_element.inventory_item_id` — the staff match from a rider request to a catalog item.
 
 ### Where it breaks
 
@@ -1434,7 +2305,7 @@ restore crew shifts or retract a cancellation notice.
 
 ## 15. The packing list: what goes in the van, and who is bringing it
 
-Spec: [specs/shipped/packing-list-spec.md](../specs/shipped/packing-list-spec.md)
+Record: [one durable packing list per band](../decisions/0029-one-durable-packing-list-per-band.md)
 
 ### The story
 
@@ -1454,7 +2325,7 @@ between the two features: walking through the easy door furnishes the rider on t
 ### Code path
 
 - **Read:** `getBandPackingPage` in `packing.remote.ts` — one load-bearing query, guarded at
-  `member` with `allowStaff` so a staffer advancing a show can read but not tick.
+  `member` with `staff: 'band.read'` so a staffer can read but not tick.
 - **Edit:** `saveOwnItems` (no owner argument) and `saveItemsFor` (admin, names a target) in
   `src/lib/server/band/packing-service.ts`. The save is a **diff, not a replacement**:
   drafts carry ids scoped by `(listId, ownerUserId)`, so `packed`, `assignedUserId` and
@@ -1491,11 +2362,11 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Spec: [specs/audit-log-spec.md](../specs/shipped/audit-log-spec.md)
+Decision record: [the audit log records intent](../decisions/0031-audit-log-records-intent.md)
 
 ### The story
 
-Several people share staff access, so a member asking "who took my free hours?" or "who
+Several people share staff access, so a member asking "who took my credits?" or "who
 closed my account?" needs an answer that the current value of a row cannot give. Each
 change to a member's authority, money or account existence appends one row naming the
 action, the actor and a small payload. Staff read the latest twenty on the member's
@@ -1513,6 +2384,10 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   deactivation writes one row per member sharing `details.batchId`.
 - **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
   `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
+- **Global log:** `/staff/system/audit` → `getAuditLog` (`audit.read`, which `user.read` does not
+  grant) in `src/lib/remote/audit.remote.ts` → `listAuditEntries`, 50 rows a page, filtered by
+  action, actor (matched against the stored name and email, so a purged staffer is still
+  findable) and a from–to range in whole days.
 
 ### Data touched
 
@@ -1526,17 +2401,28 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 ### Projects and work orders
 
-Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-as-tasks-spec.md)
+Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
 
-- **Write:** work order changes are recorded in the shared services both the shift page and
-  the project page call (`updateShift`, `cancelShift`, `resolveWorkOrder`, `claimShift` for a
-  staff assignment, `releaseSignup`, `inviteToShift`), engagement steps in
+- **Write:** task changes are recorded in the shared services the task page and the
+  Tasks table call (`editTask`, `editShift`, `openShift`, `cancelOneShift`, `cancelShift`
+  for the whole task, `resolveWorkOrder`,
+  `assignToTask` and `unassignFromTask`, `claimShift` for a staff place on a shift,
+  `releaseSignup`, `inviteToShift`), engagement steps in
   contractor-job-service.ts against the engagement's work order, and project edits, status
   moves, duty lists and sections in the project and section services.
 - **Read:** `listActivity` in `src/lib/server/project/project-activity.ts` merges a project's
   entries, its work orders' entries, duty ticks (from `work_task`, never audited) and the
   origin chain (suggestion, ballots, project start, from their own rows). The project page's
-  Activity tab, the task page and the shift page render it, each loaded lazily.
+  Activity sidebar and the task page render it, each loaded lazily.
+- **Dependencies** ([0068](../decisions/0068-a-task-can-wait-on-other-tasks.md)): a task waits
+  on others in its project through `work_order_dependency`, added and removed on the task page
+  (`task-dependencies.ts`), and audited as `work_order.dependency_added` / `_removed`.
+  `addDependency` refuses a loop with a recursive query. Blocked is the count of open blockers,
+  read with the row (`openBlockersSql`); marking a blocked task done records `openBlockers` on
+  `work_order.resolved`. Marking a task done or calling it off on its own runs
+  `announceTasksReady`, which emits `volunteer.task_ready` for each assignee of a task that now
+  waits on nothing open. Templates keep their own edges in `duty_list_item_dependency`, and
+  `applyDutyList` copies them onto the tasks it stamps.
 
 ### Where it breaks
 
@@ -1549,7 +2435,7 @@ Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-
 
 ## 17. The local resources directory
 
-Spec: [specs/local-resources-spec.md](../specs/shipped/local-resources-spec.md)
+Record: [local resources are their own table](../decisions/0028-local-resources-are-their-own-table.md)
 
 ### The story
 
@@ -1583,7 +2469,7 @@ the row.
 
 ## 18. Staff email change
 
-Spec: [specs/shipped/staff-email-change-spec.md](../specs/shipped/staff-email-change-spec.md)
+Decision record: [staff propose, the mailbox confirms](../decisions/0033-staff-propose-email-changes.md)
 
 ### The story
 
@@ -1642,15 +2528,16 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decision: #1504 (what the public sees).
+Decision: [a market vendor is an organization](../decisions/0073-a-market-vendor-is-an-organization.md)
+(#2622), superseding 0009 (#609). Open decision: #1504 (what the public sees).
 
 ### The story
 
 Staff make a listing a market day on `/staff/events/[id]/vendors`, setting when applications
 close and how many tables there are. The public event page then shows **Apply for a table**.
 A vendor with no account fills in `/events/[id]/vendors/apply`, and staff accept each vendor
-with a table label, or decline. Either way a message goes to the vendor by email. Accepted
-vendors are listed on the event page.
+with a table label, waitlist or decline. Each way a message goes to the vendor by email.
+Accepted vendors are listed on the event page.
 
 ### Code path
 
@@ -1658,14 +2545,39 @@ vendors are listed on the event page.
   `kind` to `market`.
 - **Apply:** `submitVendorApplicationForm` checks Turnstile, then `submitApplication` refuses
   with `MarketClosedError` unless the listing is published, not started and before
-  `applications_close_at`. It opens a `web` inbox thread, posts the application as its first
-  message, and inserts `market_vendor`.
-- **Decide:** `decideVendorForm` → `decideApplication` moves the status and sends the written
-  message through `addOutboundMessage`. `withdrawn` is final. The guard is
-  `requireCommitteeMember` on the committee that owns the listing's project
-  (`getMarketOwnerGroupId`, read off the vendor's row), with `event.manage` as staff cover
-  (#1503). Committee members decide from `/member/groups/[slug]/markets/[eventId]`, reached from
-  the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
+  `applications_close_at`. It opens a `web` inbox thread and posts the application as its first
+  message. `recordApplicantUnguarded` in `contact-service.ts` finds the vendor's organization
+  through a contact already holding the email, or creates one named for the business with the
+  person as its first contact, and gives it the `vendor` role. The thread is filed to that
+  organization. A first application writes `vendor_detail`; a later one leaves it alone and takes
+  its blank setup notes and website from it and the organization. The public form shows none of
+  it. Then `market_vendor` is inserted with its own copy of what was asked.
+- **Decide:** `decideVendorForm` → `decideApplication` moves the status and queues the written
+  message as an inbox reply in the outbox, in the same batch (#2819). A refused send leaves the
+  decision standing. The staff vendors page marks a row whose message has not gone ("Message not
+  sent", from `latestDeliveries`), and `resendVendorDecisionForm` sends it again now with fresh
+  attempts (`retryNow`). `withdrawn` is final.
+- **Recipient (#2830):** every message to a vendor goes to the vendor organization's primary
+  contact in Contacts (the first kept person with an email), read when the message is queued or
+  resent. `addressVendorThread` in `vendor-recipient.ts` points the thread at that address in
+  the same batch, so replies from it land on the same thread. Only an organization with no such
+  contact falls back to the address typed on the application, and the staff vendors page says so
+  under the contact. `vendor-recipient.spec.ts` fails a market sender that skips the resolver or
+  reads an address off the thread. `waitlisted` (#2832) is reachable
+  from `applied` and moves on to `accepted`, `declined` or `withdrawn`. While the market has
+  free tables, both applications views name the first waitlisted vendor (`WaitlistPrompt`).
+- **Guard:** `requireMarketDecider` in `market.remote.ts` takes the market's event id; a form
+  acting on one vendor reads it off the vendor's row with `getVendorEventId`. It passes the
+  market's vendor host (`can('market.host', { eventId })`), then a committee on the market's
+  project (`requireProjectCommittee` on `getMarketProjectId`), with `event.manage` as staff cover
+  (#1503). A market on no project is decided by its host and staff. Committee members decide
+  from `/member/groups/[slug]/markets/[eventId]`, reached from the group's Projects tab; that view (`getCommitteeMarketVendors`) carries no contact details.
+- **Vendor host (#2993):** a market's vendor host passes the same guard (`requireMarketDecider`)
+  through `market.host`, a volunteer-role grant scoped to the vendor's own market, read off the
+  vendor's row. The role's `grant_lead_days` opens it that many days before the market; it closes
+  7 days after the shift. The host decides, seats, withdraws, checks in and takes table fees from
+  `/member/volunteer/markets/[eventId]`, linked from their shift page. Setup and vendor contacts
+  stay with `event.manage`. Staff set the lead time beside the role's grants.
 - **Public list:** `getPublicMarket` → `listPublicVendors`, which names its columns and
   returns accepted rows only.
 - **Table fee (#1502):** the market's setup carries a per-table fee and an opt-in sliding scale
@@ -1677,24 +2589,32 @@ vendors are listed on the event page.
 - **Refunds:** CMC cancelling refunds through `refund()` — declining an accepted vendor who
   paid, or `event.cancelled` for the market (`refundMarketFees`). A vendor who withdraws is
   not refunded.
-- **Market day (#1505):** `/staff/events/[id]/vendors/check-in` and
-  `/member/groups/[slug]/markets/[eventId]/check-in` both render
+- **Market day (#1505):** `/staff/events/[id]/vendors/check-in`,
+  `/member/groups/[slug]/markets/[eventId]/check-in` and
+  `/member/volunteer/markets/[eventId]/check-in` all render
   `src/lib/components/market/VendorCheckIn.svelte` over `getMarketDayCheckIn`, which lists
   accepted vendors and no-shows with no contact detail. `checkInVendorForm` stamps
   `checked_in_at` on an accepted vendor, or clears it. `markNoShowForm` moves `accepted` to
   `no_show` for a vendor not checked in, or back. No decision or withdrawal moves a no-show, and
   its fee is kept. `inviteBackForm` records `invite_back` and a note on an accepted vendor or a
-  no-show. All three use the committee guard above, with staff as cover. Tables still move on
-  the staff vendors page (`setTableLabelForm`).
+  no-show. Its form starts with no answer chosen and a blank answer is refused. All three use
+  `requireMarketDecider`. Tables still move on the staff vendors page (`setTableLabelForm`).
 - **Invite back on the next application:** `listApplications` attaches `previous`: the newest
-  invite-back record from a market that started earlier, matched on the thread's contact email,
-  ignoring case. Both applications views show it under the vendor.
+  invite-back record from a market that started earlier, matched on `organization_id`. Both
+  applications views show it under the vendor.
+- **Vendor setup:** the organization page (`/staff/contacts/[id]`) shows `vendor_detail` and
+  the vendor's applications, and `saveVendorDetail` edits it under `contact.manage`.
+  `event.manage` opens vendor organizations.
 
 ### Data touched
 
 - `market_day`: one row per market listing, with the fee setup.
-- `market_vendor`: one row per application. It has no contact columns. The name, email and
-  phone live on the linked `inbox_thread`. Fee columns: `fee_cents`, `fee_floor_cents`,
+- `organization`, `party_role` (`vendor`), `contact` and `vendor_detail`: the vendor, its people
+  and its standing setup (offering, tables, power, own table, tent, setup notes).
+- `market_vendor`: one row per application, with `organization_id`, its own copy of what was
+  asked (`tables_requested`, `needs_power`, `brings_own_table`, `brings_tent`, `notes`) and no
+  contact columns. The linked `inbox_thread` is the conversation; its address follows the
+  organization's primary contact each time a message is sent. Fee columns: `fee_cents`, `fee_floor_cents`,
   `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`. Day-of columns:
   `checked_in_at`, `invite_back` (null until someone says), `invite_back_note`.
 - `financial_entry`: `market_fees` earned and `card_fees` spent, subject `market_vendor`.
@@ -1703,70 +2623,182 @@ vendors are listed on the event page.
 
 - **A vendor was never told.** The decision is recorded even if the thread was deleted
   (`thread_id` set null). In that case no message is sent.
-- **A returning vendor shows no invite-back record.** The match is on email. A vendor who
-  applied from a different address looks new.
+- **A returning vendor shows no invite-back record.** The match is on the organization. A
+  vendor who applied from an address not on file became a second organization of the same name.
+  Possible duplicates offers the two for merge, and merging joins their history.
 - **Applications are open but nobody can apply.** Check that the listing is `published`. A
   draft market returns 404 on the apply page.
 
 ## 20. The incident & safety log
 
-Spec: [specs/shipped/incident-log-spec.md](../specs/shipped/incident-log-spec.md)
-
 ### The story
 
 Whoever ran the night tells staff something went wrong — a neighbour called, a drummer fell on
-the stairs, the lobby window was found cracked. A staffer records it at `/staff/incidents`: when,
-where, what kind, a one-line summary and the account, optionally linking a member who was
-involved. Follow-ups are notes under it. Staff resolve it with a resolution, and reopen it if it
-comes back. Reading back is the list's status, kind and text filters.
+the stairs, the lobby window was found cracked. A staffer records it from the Incidents view of
+Moderation, `/staff/moderation/incidents` (`/staff/incidents` redirects there; a record stays at
+`/staff/incidents/[id]`): when, where, what kind, a one-line summary and the account, optionally
+linking a member who was involved. Follow-ups are notes under it. Staff resolve it with a
+resolution, and reopen it if it comes back. Reading back is the list's status, kind and text
+filters; the status filter starts at "Not resolved", which includes crew filings.
+
+Crew of a show can file for it themselves from `/member/volunteer/shifts/[signupId]`. A filing
+lands `reported`; staff accept it onto the log as `open`, or resolve it directly. The shift page
+lists only what that member filed for that show, without staff notes.
+
+The account is written once and later facts are notes, so the record reads the way it happened.
+Recording an incident changes nothing on the linked member's account, and that member cannot see
+it.
 
 ### Code path
 
 - **Read:** `getIncidentLog` and `getIncidentDetail` in `incidents.remote.ts`, behind
-  `incident.read`.
+  `incident.read`. Admin, staff, the site moderator and the volunteer coordinator hold it.
 - **Write:** `recordIncidentForm`, `addIncidentNoteForm`, `resolveIncidentForm`,
-  `reopenIncidentForm`, behind `incident.record`, over `src/lib/server/incident/incident-service.ts`.
-- **Resolve** is a conditional update on `status = 'open'`; **reopen** writes the old resolution
-  as a note before clearing it.
+  `reopenIncidentForm`, `acceptIncidentForm` and `setIncidentRetainForm`, behind
+  `incident.record` (admin and staff), over `src/lib/server/incident/incident-service.ts`.
+- **File:** `fileShowIncidentForm`, behind `requireCapability('incident.file', { eventId })`.
+  `incident.file` is a volunteer-role grant: a `confirmed` or `completed` signup, on a shift of
+  that event that was not called off, in a role carrying the grant, from the shift's start until
+  7 days after it ends. `listIncidentsFiledBy` feeds the filer's own list.
+- **Resolve** is a conditional update on `status != 'resolved'`; **reopen** clears the old
+  resolution and writes it to an `incident.reopened` audit entry.
+- **Retention:** `/api/cron/sweep-incidents` runs `sweepExpiredIncidents()` in
+  `incident-retention.ts` daily. It deletes every incident that happened more than seven years ago
+  and is not marked `retain`, and writes an `incident.deleted` audit entry for each, actor System.
+  Marking or releasing `retain` takes a reason, kept as an `incident.retention_changed` audit
+  entry. `audit-retention.ts` keeps `incident.reopened` and `incident.retention_changed` past the
+  audit log's 24 months while the incident exists.
 
 ### Data touched
 
 - `incident` — the account, written once. Author and resolver FKs are `set null`; the reporter's
-  name is copied beside the FK.
-- `incident_note` — append-only follow-ups, each with the author's name as written.
+  name is copied beside the FK, so purging an account does not anonymise a report. `eventId`
+  names the show a crew member filed at; `retain` exempts the row from the sweep.
+- `incident_note` — append-only follow-ups, each with the author's name as written. They cascade
+  with their incident.
+- `audit_log` — reopenings, retention changes and sweep deletions only. The incident tables are
+  their own trail for everything else.
 
 ### Where it breaks
 
 - Nothing acts on the member linked. Enforcement is the moderation surfaces' job.
-- There is no delete path in the application, by design.
+- Staff cannot delete an incident. Only the retention sweep does, and the `incident.deleted`
+  audit entry is then the only trace of it.
+- A crew member sees no filing form → their signup is `claimed` rather than `confirmed`, the role
+  lacks the `incident.file` grant, or the window closed 7 days after the shift ended.
 
 ## 21. Sponsors and grants: what comes due next
 
-Spec: [specs/shipped/development-agreements-spec.md](../specs/shipped/development-agreements-spec.md)
+Decisions: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-grants-are-two-modules.md),
+[A grant application or sponsorship is a project](../decisions/0067-a-grant-is-a-project.md)
 
 ### The story
 
-The Development committee signs sponsors and applies for grants. They are two modules. A sponsor
-is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
-is an application to a funder that, once awarded, owes reports; staff read `/staff/grants`
-soonest-deadline first. Status moves by hand through each edit form, with no side effects.
+The Development committee signs sponsors and applies for grants. They are two modules over one
+set of parties: a sponsor or a funder is an `organization` holding that role (#2622), and the
+person there is a `contact`. A sponsor is a business with a history of terms; a grant is an application to a funder. Staff
+read both on `/staff/funding`, by stage, whatever needs something soonest first. Status moves by
+hand through each edit form, with no side effects.
+
+Each grant application and sponsorship is a project of kind `grant` or `sponsorship`, made with it
+and owned by the Development committee. The work (the application's steps, the reports an award
+owes, follow-ups) is that project's tasks, with due dates, assignees and committee reminders.
 
 ### Code path
 
-- **Sponsors:** `getSponsors` / `getSponsorDetail` in `sponsors.remote.ts`, guarded by
-  `sponsor.read`, call `listSponsors` / `getSponsor` in `sponsor-service.ts` with `clubToday()`.
+- **Funding (`/staff/funding`):** `getFunding` in `funding.remote.ts` reads grants for a viewer
+  holding `grant.read` and sponsorships for one holding `sponsor.read`, and refuses a viewer with
+  neither. `listFunding` in `development/funding-service.ts` maps each status onto a stage
+  (prospect, applied, active, closed) and orders a stage by `nextOn`, the sooner of its next open
+  task and its deadline. A closed row with open work stays listed. `/staff/grants`,
+  `/staff/sponsors` and `/staff/agreements` redirect here.
+
+- **Sponsors:** `getSponsorDetail` in `sponsors.remote.ts`, guarded by `sponsor.read`, calls
+  `getSponsor` in `sponsor-service.ts` with `clubToday()`.
   `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
-  `sponsor.manage`; a sponsor with sponsorships cannot be deleted.
-- **Grants:** `getGrants` / `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
-  `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect, the
-  earliest unsubmitted report or the award's end once awarded, and an unsubmitted report still
-  counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
-  applications cannot be deleted, and an application's reports cascade with it.
+  `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
+  an organization without the `sponsor` role.
+- **Grants:** `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
+  `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect and the
+  award's end once awarded. Writes are guarded by `grant.manage`; a funder with applications
+  cannot be deleted, and `createGrant` refuses an organization without the `funder` role.
+- **The project (#2622):** `createGrant` and `createSponsorship` write the project, its `owner`
+  row and the side-table row in one batch, through `funding-project.ts` in
+  `src/lib/server/development/`. The owner is the live committee holding `grant.manage` or
+  `sponsor.manage`, `development-committee` first; with none, the project has no committee.
+  `createGrant` then stamps the template whose `duty_list.grant_stage` is `application`, timed
+  from the apply-by date (the `apply_by`, `award_start` and `award_end` anchors read the grant's
+  dates). Without that date its tasks wait, and `updateGrant` places them once it is set. Editing
+  the title renames the project; deleting the row deletes the project and its tasks. The three
+  stage templates come from a migration and carry their help text in each item's notes.
+- **Tasks and the next step:** a task added by hand to a grant or sponsorship project carries
+  the owning committee (`createTask`), so its reminders reach the committee while nobody holds
+  it. `nextOpenTasks` names each project's earliest open task, soonest due first; the grant page
+  and each sponsorship row show it.
+- **Stage offers:** `grantStageOffers` offers the `award` template once a grant is Awarded and
+  the `close_out` template from 30 days before its award end, each until it is on the project.
+  The grant page shows each offer with one button (`applyGrantStage`); nothing applies them
+  unasked.
+- **Funded project:** `funds_project_id` on a grant or sponsorship names what the money pays
+  for, never another grant or sponsorship project (`assertFundable`). `getProjectBurn` returns
+  `funding`: awarded or closed grants and active or ended sponsorships naming the project, each
+  listed, beside the spend and never subtracted from it. The project's budget report shows them.
+- **People:** each form's contact name, email and phone is the organization's first `contact`,
+  written and read through `primary-contact.ts`, which calls `contact-service.ts`. Seeing them needs
+  `contact.read` and changing them `contact.manage`, which staff and the Development committee
+  hold. A new person whose normalized email is already on file attaches to that contact rather
+  than making a second one (`createContact`, `setPrimaryContact`).
+- **Contacts (`/staff/contacts`):** one table of every organization and every person with no
+  organization (#2760), filtered by role (several at once), type, search (name, main person,
+  website) and archived, and sorted by name, last activity or next task due. Filters and sort live
+  in the URL; `listContacts` (`party/contact-list.ts`) filters, sorts and pages on the server. An
+  organization's row and page open to `contact.read`, or to one of its roles' own capability
+  (`grant.read`, `sponsor.read`, `contractor.read`), which sees only those roles' rows and role
+  options, without the people. Person rows need `contact.read`. Every write needs `contact.manage`. A
+  contractor is added from the contractor view (`?role=contractor`), which asks for the trade.
+  `/staff/contractors`, `/staff/contractors/[id]`, `/staff/grants/funders` and
+  `/staff/sponsors/[id]` redirect into Contacts (#2764). An organization page shows each role's
+  section only to that role's capability: grant applications to `grant.read`; contractor details
+  and jobs to `contractor.read`; a sponsor's logo, sponsorships (anchored `#sponsorships`, where
+  Funding links) and event placements to `sponsor.read`. An organization with no role, person or
+  record can be deleted (`deleteOrganization`, `contact.manage`). Possible duplicates
+  (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
+  the same website domain or the same name (case, punctuation and a trailing "Co.", "Inc." or
+  "LLC" ignored); merging moves roles, records, people, notes and task links to the one
+  kept, deletes the other, and writes `contact.merged` or `organization.merged` to the audit log.
+  The list shows each organization's last activity (its latest note, `contact.read`) and next
+  open task (`project.read`): the soonest-due open task linked to it, on its contractor jobs, or on
+  its grants' and sponsorships' projects.
+- **Timeline (#2622):** an organization's page and a person's page
+  (`/staff/contacts/people/[id]`) show one timeline, newest first, read by `getPartyTimeline`
+  under `contact.read`: notes staff log (`activity`: call, meeting, email or note, on a day, added,
+  edited and deleted under `contact.manage`), Inbox conversations filed to it, the audit entries for the organization and for its
+  grant and sponsorship projects and contractor jobs, and the tasks linked to it through
+  `work_order_link` that were marked done, in-kind gifts from it, and the campaigns sent or delivered to its people (a `campaign_send` row matched through `contact.subscriber_id`; for an organization, every person kept there). Follow-ups are tasks: Related tasks on the same pages
+  adds one linked to the record. A staff Inbox conversation is filed from its Details panel
+  (`fileThreadForm`, `inbox.reply` and `contact.manage`) to an organization or person; one from an
+  address on file is offered for filing to that person. See
+  `docs/decisions/0069-a-party-has-one-timeline.md`.
+- **In-kind gifts (#2727):** a gift of goods or services that is neither stock nor volunteer
+  time (printing, food, a free night at a venue) is recorded from the giver's timeline under
+  `finance.refund` (`recordGiftForm`, `finance/in-kind-gift.ts`). It writes one `in_kind`
+  `donation` entry with the fair value, the day, an optional project, and the organization or
+  person as its subject; `metadata.giftId` lets one gift be reversed without the giver's others.
+  Gifts are not moved by a merge: the ledger is append-only, so the rows stay under the merged-away
+  party. Donated stock is still recorded as an acquisition, and specialized volunteer time
+  through hour logs.
+- **Retention:** a contact with a `retain_until` stays visible until that date, and
+  `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
+  is given a horizon a year out when the act becomes a member band.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
+- **Archive:** a sponsor or funder with history is archived (`archivedAt`) rather than deleted
+  (#1577). It leaves the list until "Show archived", keeps its history, and can be restored. An
+  archived funder stays pickable on an application that already names it.
 - **Reminders (#1477):** `development_deadline_14d` and `development_deadline_3d` in
   `src/lib/server/reminders/registry.ts` read `listDevelopmentDeadlinesBetween` (in
   `src/lib/server/development/deadline-service.ts`) over every open deadline: a prospect's
-  apply-by, each unsubmitted report, an award's end, and an active sponsorship's end. The first
+  apply-by, an award's end, and an active sponsorship's end. Reports are tasks, reminded as
+  tasks. The first
   stage covers 4 to 14 days out and the second 0 to 3, so one drain sends one stage and a
   past deadline gets none. The subject is `<module>:<deadline>:<date>`, so a moved date is
   reminded again. `development.deadline_due` fans out to holders of `grant.manage` or
@@ -1783,7 +2815,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 
 ### Data touched
 
-- `sponsor`, `sponsorship`, `sponsor_placement`, `funder`, `grant_application`, `grant_report`. Dates are
+- `organization`, `sponsorship`, `sponsor_placement`, `grant_application`, and the `project`,
+  `project_committee` and `work_order` rows each one's work lives in. Dates are
   `YYYY-MM-DD` text, compared as strings. The amount columns are `notAccounting` in
   `money-map.ts`; an award arrives outside the app, as a manual `grant` entry.
 
@@ -1792,8 +2825,9 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **A deadline shows a day early or late.** Something parsed a date column as a `Date`.
   `new Date('2026-10-01')` is UTC midnight, the day before in Corvallis. Display goes through
   `formatIsoDay`, and comparisons stay on the strings.
-- **An award reads as done while a report is owed.** The report has no `submittedOn`; the list
-  keeps a closed grant visible for exactly this.
+- **A grant has no tasks.** The `application` template was inactive or missing when it was
+  created, or the stamp failed (reported to Sentry as `grant.template`). Apply it from the
+  project page.
 - **Nobody was reminded.** Nobody holds `grant.manage` or `sponsor.manage` through a position.
   The fan-out goes to capability holders, not to the Development committee (#607).
 - **A placed sponsor does not show.** Its sponsorship is still Pitched. Pitches and declined terms
@@ -1801,52 +2835,32 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 
 ## 22. Renewals: CMC's own permits, licenses and insurance
 
-Decision: [#1597](https://github.com/corvmc/corvmc.org/issues/1597). Issue: #1478.
+Decision: [Renewals are recurring work](../decisions/0063-renewals-are-recurring-work.md). Issue:
+#2611.
 
 ### The story
 
-The collective holds things that expire: a liability policy, a sound permit, an OLCC license.
-Staff keep one row per obligation at `/staff/renewals` (under System), sorted by next expiry,
-with the issuer, the reference number, the person responsible and the certificate. Renewing
-moves `expiresOn` forward on the same row; there is no row per term. Reminders go out sixty and
-fourteen days ahead.
+The collective holds things that expire: a liability policy, a business license, a sound permit.
+Each one is a `maintenance_schedule` named "Renew <name>", on a yearly interval, shown in the
+Schedule's Recurring view. Its notes carry the issuer and the reference number. The open work
+order is due about a month before the expiry date, and its assignee is the person who renews it.
+Resolving it writes next year's.
 
 ### Code path
 
-- **Reads:** `getRenewals` / `getRenewalDetail` in `renewals.remote.ts`, guarded by
-  `renewal.read`, call `listRenewals` / `getRenewal` in `src/lib/server/renewal/renewal-service.ts`
-  with `clubToday()`. The deadline and sort reuse `due` and `byDeadline` from
-  `src/lib/utils/deadline.ts`. Both queries also return the assignee list: holders of
-  `renewal.manage`, names only.
-- **Writes:** `createRenewal` / `updateRenewal` / `deleteRenewal` and the two document forms, all
-  guarded by `renewal.manage`.
-- **Documents:** `uploadRenewalDocument` writes to the private bucket under `renewals/<id>/`
-  (`renewalDocumentKey`) and records a `media` row plus a `media_attachment`
-  (`attachableType: 'renewal'`, slot `certificate`). `GET /api/renewals/documents/[id]` streams it
-  back by attachment id behind `renewal.read`; the key never reaches the browser. Removing a
-  document or deleting the renewal only drops attachments; `sweepMedia` reaps the object, from
-  the private bucket because `isRenewalDocumentKey` says so.
-- **Reminders:** `renewal_expiry_60d` (15 to 60 days out) and `renewal_expiry_14d` (0 to 14) in
-  `src/lib/server/reminders/registry.ts` read `listRenewalsExpiringBetween`. The subject is
-  `<id>:<expiresOn>`, so moving the date forward re-arms both. `renewal.expiry_due` goes to the
-  responsible staffer alone, or to every `renewal.manage` holder when nobody is named, as
-  `renewal_expiry`.
-
-### Data touched
-
-- `renewal` (`expires_on` is `YYYY-MM-DD` text; `responsible_user_id` is set null when the user
-  goes), `media`, `media_attachment`, `reminder_sent`.
+The recurring-work path in full: `maintenance-schedules.remote.ts` and
+`src/lib/server/volunteer/maintenance-schedule-service.ts`. Nothing is specific to renewals.
 
 ### Where it breaks
 
-- **Nobody was reminded.** Nobody is named and nobody holds `renewal.manage` through a position
-  other than `admin` / `staff`.
-- **A reminder went to someone who left.** The named staffer still has an account but no
-  position; the reminder does not check that they can open the page.
+- **The next one is due on the wrong day.** Generate-on-close dates the next occurrence from the
+  close, not from the certificate. A renewal resolved late or early moves next year's due date
+  with it; fix the open work order's date by hand.
+- **The certificate is not in the app.** Recurring work holds no documents.
 
 ## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
 
-Spec: [specs/shipped/formal-balloting-spec.md](../specs/shipped/formal-balloting-spec.md)
+Decision: [Secret ballots keep a counter](../decisions/0052-secret-ballots-count-without-a-vote-row.md)
 
 ### The story
 
@@ -1859,6 +2873,13 @@ Electors vote from `/member/ballots/[id]`:
 
 - a committee vote is recorded and can be changed until the close;
 - a member-wide vote is secret and final.
+
+A **member of record** is an account that is neither deleted nor banned, was created at least
+`ballot.memberOfRecordDays` before the ballot opens, and has completed or been waived through
+orientation. Holders of `ballot.manage` include or exclude a member by hand on a member-wide
+ballot, with a reason, audited as `ballot.elector_overridden`. On a draft an override applies at
+open; on an open ballot it changes the roll at once, and an exclude is refused for anyone who
+has already voted.
 
 Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
 is told. Certifying includes the certifier's call on whether the result **passed**: the app never
@@ -1905,7 +2926,7 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 ### Where it breaks
 
 - Secrecy is from the app, not from Cloudflare account holders. D1 Time Travel can diff the database
-  between two votes. The spec states this limit.
+  between two votes. The decision record states this limit.
 - A member purged before certification drops out of the participation count but not the counter.
   The certified snapshot is taken from the live tables at that moment.
 - The member-of-record age is `ballot.memberOfRecordDays` in site config (default 60). It is read at
@@ -1913,8 +2934,8 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 
 ## 24. Group applications: applying to a club or a committee
 
-Spec: [specs/group-applications-spec.md](../specs/shipped/group-applications-spec.md) (#1700; decisions
-#1727–#1730)
+Record: [one application mechanism](../decisions/0030-one-application-mechanism-for-clubs-and-committees.md) (#1700;
+decisions #1727–#1730)
 
 ### The story
 
@@ -1928,7 +2949,7 @@ several committees and answers the board's two questions.
 A reviewer answers for each group separately. They can mark the applicant contacted, accept, or
 decline with a reason the applicant sees. The reviewers are the group's owner and admins, of any
 kind. For committees only, holders of `committee.reviewApplications` (the volunteer coordinator)
-can also review, from `/staff/committees`. Accepting **invites** the applicant, who then accepts
+can also review, from the Committees view of `/staff/groups`. Accepting **invites** the applicant, who then accepts
 the invitation like any other. The applicant sees each decision and its reason on
 `/member/groups`. They can withdraw while a choice is still open, and can apply again once
 nothing is open for that group.
@@ -1951,8 +2972,8 @@ nothing is open for that group.
   - `getMemberGroup` and `getStaffGroupPage` return `applications` to a viewer the guard would
     admit, and `ApplicationsCard` renders them.
   - `getMemberGroups` returns `applied`, the applicant's latest choice per group.
-  - `getStaffCommittees` counts open applications per committee on `/staff/committees`, and
-    `getStaffCommitteePage` lists them on `/staff/committees/[id]` for a capability holder.
+  - `getStaffCommittees` counts open applications per committee on the Committees view, and
+    `getStaffCommitteePage` lists them on `/staff/groups/[id]` for a capability holder.
 - `joinGroupForm` / `joinGroup()` serve `open` groups only, and throw `ApplyInsteadError` for a
   `by_application` group.
 
@@ -1973,6 +2994,133 @@ nothing is open for that group.
   and `submitApplication` refuses it. Open choices stay answerable.
 - **`group.manage` alone cannot decide an application.** A staffer who is not the group's owner or
   admin sees no card. On a committee they need `committee.reviewApplications`.
+
+## 25. Classifieds: wanted and offered posts
+
+Switched off: `surfaces.classifieds` in `src/lib/config.ts` is `false` (#2116), so every route and
+remote 404s through `requireSurface('classifieds')` until a deploy turns it on.
+
+### The story
+
+A member posts a short wanted or offered notice in a category, optionally tagged and optionally
+posted as a band they run. It stays on `/member/classifieds` for 30 days unless the author renews
+it, and the author closes it once it is filled. Others answer by direct message, or through the
+author's or band's profile when direct messages are off. A report withholds the post until staff
+decide.
+
+### Code path
+
+- **Post:** `createClassified` → `createPost()` in
+  `src/lib/server/classified/classified-service.ts`. At most `MAX_OPEN_CLASSIFIEDS` (5) open,
+  unexpired posts per member. An author whose `classified` standing is restricted posts into
+  `pending_review`.
+- **On the board:** `status = 'open'`, `visibility = 'visible'` and `expires_at` in the future,
+  computed at read time (`onBoard`); no cron job expires anything. The author and staff see a post
+  in every state; anyone else gets a 404.
+- **Edit, renew, close:** author only. An edit to a hidden post, or by a restricted author, returns
+  it to `pending_review`. A renewal resets `expires_at` and refuses a closed or hidden post.
+- **Expiry reminder:** the `classified_expiring` entry in `src/lib/server/reminders/registry.ts`
+  emails the author `CLASSIFIED_EXPIRY_REMINDER_DAYS` (3) before a post on the board expires, via
+  `listPostsExpiringBetween`. The subject carries `expires_at`, so a renewed post is reminded again.
+  The entry returns nothing while the surface is off.
+- **Report:** `reportClassified` files a `content_flag` (`classified_post`), and `createFlag` moves
+  the post to `under_review`. Resolving the flag in `flag-service.ts` hides an upheld post with the
+  staff note and restores a dismissed one; an upheld report also restricts the author's
+  `classified` standing.
+- **Staff:** `/staff/classifieds` under `listing.review`; `moderateClassified` hides (a note is
+  required) or restores.
+- **Author notice:** `setVisibility` emits `classified.moderated` when staff move a post to
+  `visible` (approve or restore) or `hidden` (take down, with the note), and the
+  `classified_moderated` notification tells the author. A report's `under_review` and an author's
+  own `pending_review` send nothing, and neither does a staffer moderating their own post.
+- **Matching posts:** `getMemberDashboard` adds up to six posts on the board that share a tag with
+  the member's directory profile (`listPostsMatching`), shown by `ClassifiedMatchesCard` on
+  `/member`. Genre and skill match the same kind; a post's instrument matches one the member plays
+  or, on an offered post, one their project is seeking. Empty while the surface is off.
+
+### Data touched
+
+`classified_post`, `classified_post_tag` (instrument, genre and skill values normalised like
+`directory_tag`), `content_flag`, `member_standing`.
+
+---
+
+## 26. The staff member record
+
+### The story
+
+A member calls about a cancelled booking, missing credits or a band. Staff open
+`/staff/members/[id]`, or the side panel on the Members lists, and read the answer from one
+record: an identity header and scoreboard above nine tabs — Overview, Space, Bands, Volunteer,
+Instructor, Money, Comms, Moderation and Account. A tab's badge counts only things that want a
+staff member. The Overview badge counts every attention item, such as a deactivated account, an
+open report, an overdue loan or an unpaid booking.
+
+### Code path
+
+- Page: `src/routes/staff/members/[id]/+page.svelte` mirrors the tab into `?tab=` with a
+  shallow update, so a tab change is not a navigation. `tabs.ts` holds the tab keys.
+- Record: `MemberRecord.svelte`, shared by the page and `MemberRecordPanel.svelte`. A tab mounts
+  on first visit and is hidden, not unmounted, after that. Its queries run once, and a half-typed
+  Account edit survives a tab change.
+- First paint is one query, `getUserPage` (`user.read`). It returns `getUser` and
+  `getUserOverview`, which back the header, scoreboard, every tab badge and the Overview tab.
+  Every other tab fetches its own data (`getUserReservations`, `getUserMembership`,
+  `getUserCreditHistory`, `getUserHistory`, …) when first opened.
+- Service: `getUserOverview` in `src/lib/server/user/user-overview-service.ts`.
+- No tab is gated on a feature flag. A switched-off program shows its empty state.
+
+### Where it breaks
+
+- **A tab key in the URL that does not exist** falls back to Overview (`parseTab`).
+
+## 27. View as member
+
+### The story
+
+An admin supporting a member opens the member's record, chooses **View as member** on the
+Account tab, and lands on `/member` signed in as that member. A banner on every page names the
+member and offers **Stop**, which returns the admin to the record (#2847). While viewing, the
+admin may act for the member, such as fixing a booking. Payments, password changes and email
+changes are refused.
+
+### Code path
+
+- **Who:** `assertMayImpersonate` in `src/lib/server/impersonation/impersonation-service.ts`.
+  The viewer must hold the `admin` role (`positionsFor`), not a capability, so no position
+  matrix or committee grant can give it. An admin is never viewed as, nor oneself, nor a closed
+  account. `canImpersonate` decides whether the button shows.
+- **Start and stop:** `startImpersonation` / `stopImpersonation` in `impersonation.remote.ts`
+  call the `impersonation` better-auth plugin (`impersonation-plugin.ts`, `SERVER_ONLY`). It
+  creates a session for the member with `session.impersonated_by` set and keeps the admin's
+  session token in the signed `admin_session` cookie until Stop. The view-as session lasts an
+  hour. better-auth's admin plugin is not used: its other endpoints gate on a `user.role`
+  column this app does not have.
+- **Request:** `handleBetterAuth` in `hooks.server.ts` sets `locals.impersonator` to the
+  admin, refuses better-auth's own credential endpoints (`refusedWhileImpersonating`), and after
+  the response writes `user.impersonated_write` for every request that could write
+  (`auditImpersonatedRequest`): method, path and status.
+- **Refusals:** `refuseWhileImpersonating` (`impersonation-guard.ts`) in `checkout()`, the
+  password, account-deletion and email-change remotes, and in the `stripe` gateway proxy, which
+  turns every call but `retrieve` and `list` into a 403 while viewing.
+- **Audit:** `user.impersonation_started` and `user.impersonation_stopped`, and any other entry
+  written meanwhile, name the admin as actor (`currentActor` reads `locals.impersonator`) and the
+  member as subject. They show in the member's History card.
+- **Banner:** `ImpersonationBanner.svelte` in the root layout, over `getImpersonation`.
+
+### Data touched
+
+- `session.impersonated_by`: the admin's user id on a view-as session.
+- `audit_log`: the three actions above.
+
+### Where it breaks
+
+- **Stop signs the admin out.** The admin's own session ended while they were viewing; sign in
+  again.
+- **A payment button returns 403 while viewing.** By design; the member pays for themselves.
+- **Specs:** `impersonation-service.spec.ts` (who may, the audit rows) and
+  `impersonation-refusals.spec.ts` (the gateway refuses writes; every remote that changes a
+  password or email calls `refuseWhileImpersonating`).
 
 ## Cross-cutting patterns worth internalizing
 

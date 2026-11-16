@@ -67,11 +67,15 @@ long way round when the annotations block came back empty.
 
 3. Classify honestly. It failed on the queue ref, tested against the queue head, so "green on the
    PR's own head" is not evidence of anything.
-   - **A known CI-only flake** — `volunteering.e2e.ts` is the documented one — re-queue with
-     `gh pr merge --auto`. The guard's `enqueued` job clears the label.
-   - **Anything else, including a flake that has now failed three or more times** — leave it
-     labelled, report the diagnosis to the user, and do not re-queue. A test that fails on the
-     queue head and nowhere else is a real ordering bug more often than it is bad luck.
+   - **Never re-run or re-queue unchanged to get green.** No flaky tests in main: a flake is
+     grounds for rejection, and CI fails E2E on any test that passed only on a retry.
+   - **A flake** (fails without the PR's diff being the cause) — diagnose it from the log and
+     traces, file it with the `flaky` label (search `gh issue list --state open --label flaky`
+     first), fix it in its own PR, and re-queue the blocked PR with `gh pr merge --auto` only once
+     that fix has merged. The guard's `enqueued` job clears the label.
+   - **A real failure in the PR** — leave it labelled and report the diagnosis, or fix it on the
+     branch. A test that fails on the queue head and nowhere else is an ordering bug more often
+     than it is bad luck.
    - **No failed run at all** (manual removal, conflict, or the queue's one-hour check timeout) —
      say which, and ask before re-queueing.
 
@@ -79,9 +83,46 @@ A **stuck** PR is not a queue rejection: its own checks failed before it could e
 failing job the sweep links, fix a real failure on the branch, and push; a conflict is a rebase
 onto `main` and a force-push. Either way, wait for the new head's checks to start before re-arming
 — arming straight after a force-push queues on the old head's checks and gets the PR ejected.
-**Unarmed**: arm it if it is finished, or ask.
+**Unarmed**: arm it if it is finished, or ask. Every arm and re-arm runs the pre-arm check first.
+
+A job that **never started** is not a red check. Its signature: conclusion `cancelled`, an
+annotation that it exceeded `timeout-minutes`, a reported duration about five minutes past that
+limit, no log (`BlobNotFound`), and no steps at all:
+
+```bash
+gh api repos/corvmc/corvmc.org/actions/jobs/<job-id> --jq '.steps | length'   # 0
+```
+
+The runner took the job and never ran "Set up job", so no code was checked and there is no result
+to overturn. Re-run that one job (`gh run rerun <run-id> --job <job-id>`); that is not re-running to
+get green. A timeout with steps is the job itself and gets diagnosed (#2877).
 
 Never `--admin` and never `gh pr update-branch` — both defeat the queue. See `CLAUDE.md`.
+
+## Before arming, and after every ejection
+
+```bash
+node scripts/claude/pre-arm-check.mjs <N>
+```
+
+It merges the PR's pushed head, in memory (`git merge-tree --write-tree`), against `main` and
+against every PR in the merge queue or armed for auto-merge. The queue drops a PR that conflicts
+with one merged ahead of it as UNMERGEABLE, with no run and no guard comment, so this is the only
+place that conflict shows before it costs a queue slot. Its exit code is the policy:
+
+| Exit | Means                                                                                 | Do                                                                                       |
+| ---- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 0    | clear                                                                                 | arm                                                                                      |
+| 1    | conflicts with `main`                                                                 | rebase onto `main`, push, wait for the new checks to start, check again                  |
+| 2    | conflicts with one queued or armed PR                                                 | rebase onto that PR's head (stack), push, wait for checks, arm; keep the unstack command |
+| 2    | conflicts with several, or with one that `main` has since moved past in the same file | wait for them to merge, then rebase onto `main`                                          |
+| 3    | stacked on a PR that left the queue without merging                                   | `git rebase --onto origin/main <its head>`, push, check again                            |
+| 4    | usage, `git` or `gh` error                                                            | read the message                                                                         |
+
+A stacked PR keeps `main` as its base, so the queue still takes it. If its base PR leaves the queue
+unmerged, arming the stack would carry the base's commits into `main`, which is why every re-arm
+after an ejection runs the check first. An armed PR that itself conflicts with `main` cannot enter
+the queue; the check skips it rather than offer it as a base.
 
 ## Watch mode
 

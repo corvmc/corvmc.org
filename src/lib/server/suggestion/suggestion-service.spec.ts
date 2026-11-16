@@ -32,7 +32,7 @@ const batchCalled = vi.fn();
 const onConflictDoNothing = vi.fn();
 const onConflictDoUpdate = vi.fn();
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -74,10 +74,10 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 // Posting standing is one shared service now; here it is a mock, so the queue
 // positions below are about suggestions and nothing else.
@@ -85,12 +85,15 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 // `const` would still be in its temporal dead zone when the mock factory runs.
 const { getStandingMock } = vi.hoisted(() => ({ getStandingMock: vi.fn() }));
 const GOOD_STANDING = { status: 'none', reason: null, triggeringFlagId: null, updatedAt: null };
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 const { fileStaffActionMock } = vi.hoisted(() => ({ fileStaffActionMock: vi.fn() }));
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	fileStaffAction: (...a: unknown[]) => fileStaffActionMock(...(a as []))
 }));
 
@@ -113,7 +116,7 @@ import {
 	SuggestionMergeError,
 	SuggestionValidationError
 } from './suggestion-service';
-import { SUGGESTION_TITLE_MAX, SUGGESTION_BODY_MAX } from '$lib/config';
+import { SUGGESTION_TITLE_MAX, SUGGESTION_BODY_MAX } from '#lib/config.js';
 
 beforeEach(() => {
 	selectResultQueue = [];
@@ -262,6 +265,23 @@ describe('setVisibility as a direct staff action', () => {
 		expect(fileStaffActionMock).not.toHaveBeenCalled();
 	});
 
+	// #2891: the audit log says who took a suggestion off the board, or put it back.
+	it('records the visibility move in the audit log', async () => {
+		selectResultQueue = [[memberRow]];
+		await setVisibility('s1', { visibility: 'hidden', note: 'x', staffId: 'staff-1' });
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'suggestion.visibility_changed',
+			subject: { type: 'suggestion', id: 's1', label: 'T' },
+			details: { from: 'visible', to: 'hidden' }
+		});
+	});
+
+	it('records nothing when the visibility stays', async () => {
+		selectResultQueue = [[memberRow]];
+		await setVisibility('s1', { visibility: 'visible', staffId: 'staff-1' });
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
 	it('files nothing for a suggestion with no author left to appeal', async () => {
 		selectResultQueue = [[{ ...memberRow, authorUserId: null }]];
 		await setVisibility('s1', {
@@ -364,6 +384,13 @@ describe('mergeSuggestions', () => {
 			[{ userId: 'u1' }, { userId: 'u2' }]
 		];
 		await mergeSuggestions({ sourceId: 's1', targetId: 's2', staffId });
+
+		// #2891: the surviving suggestion's audit log keeps the merged one's title.
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'suggestion.merged',
+			subject: { type: 'suggestion', id: 's2', label: 'B' },
+			details: { mergedId: 's1', mergedTitle: 'A', votesMoved: 2 }
+		});
 
 		// A crash between the two steps must leave both on the board with no vote
 		// lost — which is only true in this order.

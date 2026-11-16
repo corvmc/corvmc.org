@@ -1,45 +1,51 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import TicketStub from '$lib/components/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
-	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
-	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import EventFacts from '#lib/components/events/EventFacts.svelte';
+	import TicketStub from '#lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
+	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { ticketingMode, isFreeEvent as isFree } from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { placeLine } from '#lib/utils/place.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
 		getMemberEventDetailPage
-	} from '$lib/remote/events.remote';
+	} from '#lib/remote/events.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = purchaseTickets;
 	const rsvpFields = claimFreeTicket.fields;
 	const rsvpToEventFields = rsvpToEvent.fields;
 	const cancelRsvpFields = cancelRsvp.fields;
 
-	const detail = $derived(await getMemberEventDetailPage(page.params.id!));
+	const detail = $derived(await getMemberEventDetailPage(params.id));
 	const eventData = $derived(detail.event);
 	const allTickets = $derived(detail.tickets);
 	let myTickets = $derived(
-		allTickets.filter((t) => t.eventId === page.params.id && t.status !== 'cancelled')
+		allTickets.filter((t) => t.eventId === params.id && t.status !== 'cancelled')
 	);
 	let myTicket = $derived(myTickets[0] ?? null);
 	let data = $derived({ ...eventData, myTicket });
@@ -52,8 +58,6 @@
 	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
-
-	const price = $derived(priceDisplay(evt));
 
 	// Read back out of TicketPurchaseFields: only it knows what the card will be
 	// charged, and the Action modal's own button needs both the number and
@@ -81,7 +85,7 @@
 		id: evt.id,
 		title: evt.title,
 		description: evt.description,
-		location: evt.location,
+		location: placeLine(evt),
 		startsAt: evt.startsAt,
 		endsAt: evt.endsAt
 	});
@@ -104,10 +108,12 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
+	// The poster's tape already shows the primary tag.
+	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
 
 	function refreshDetail() {
 		// The wrapper this page reads, not the two it is assembled from.
-		void getMemberEventDetailPage(page.params.id!).refresh();
+		void getMemberEventDetailPage(params.id).refresh();
 	}
 
 	async function handlePurchaseSuccess(result?: unknown) {
@@ -121,31 +127,33 @@
 		<details class="dropdown dropdown-end">
 			<summary class="btn gap-1 btn-ghost btn-sm">
 				<IconCalendarPlus size={18} />
-				Add to calendar
+				{m.member_events_id_add_calendar_label()}
 			</summary>
 			<ul class="menu dropdown-content dropdown-panel w-48">
 				<li>
 					<a
 						href={googleCalendarUrl(calendarEvt)}
 						target="_blank"
-						rel="external noopener noreferrer">Google Calendar</a
+						rel="external noopener noreferrer">{m.member_events_id_google_calendar_text()}</a
 					>
 				</li>
 				<li>
 					<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-						>Apple / Outlook (.ics)</a
+						>{m.member_events_id_apple_outlook_ics_text()}</a
 					>
 				</li>
 			</ul>
 		</details>
-		<ShareButton title="Copy link to this event" />
+		<ShareButton title={m.member_events_id_title()} />
 	</div>
 </PageHeader>
 <PageContent>
 	{#if myTickets.length > 0}
 		<section>
 			<SectionLabel
-				label={myTickets.length === 1 ? 'Your ticket' : 'Your tickets'}
+				label={myTickets.length === 1
+					? m.member_events_id_ticket_label()
+					: m.member_events_id_tickets_label()}
 				count={myTickets.length}
 			/>
 			<div class="edet__stubs">
@@ -167,7 +175,7 @@
 	<div class="edet">
 		<div class="edet__poster">
 			<PosterCard
-				href={resolve(`/member/events/${evt.id}`)}
+				href={resolve(`member/events/${evt.id}`)}
 				title={evt.title}
 				posterUrl={evt.posterUrl}
 				startsAt={evt.startsAt}
@@ -183,9 +191,9 @@
 		</div>
 
 		<div class="edet__main">
-			{#if tagList.length > 0}
+			{#if stickerTags.length > 0}
 				<div class="edet__tags">
-					{#each tagList as tag (tag)}
+					{#each stickerTags as tag (tag)}
 						<span class="sticker {tagToStickerColor(tag)}">{tag}</span>
 					{/each}
 				</div>
@@ -193,109 +201,38 @@
 
 			<p class="edet__title">{evt.title}</p>
 
-			<div class="edet__facts">
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><rect x="3" y="5" width="18" height="16" rx="2" /><path
-								d="M3 9h18M8 3v4M16 3v4"
-							/></svg
-						>
-						Date
-					</span>
-					<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
-				</div>
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
-						>
-						Time
-					</span>
-					<span class="edet__fact-value">
-						{formatEventTimeRange(evt.startsAt, evt.endsAt)}
-						{#if evt.doorsAt}
-							<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span>
-						{/if}
-					</span>
-				</div>
-				{#if evt.location}
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><path d="M12 21s-7-5.686-7-11a7 7 0 0 1 14 0c0 5.314-7 11-7 11Z" /><circle
-									cx="12"
-									cy="10"
-									r="2.5"
-								/></svg
-							>
-							Location
-						</span>
-						<span class="edet__fact-value">{evt.location}</span>
-					</div>
-				{/if}
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><path
-								d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
-							/><path d="M13 6v12" /></svg
-						>
-						Price
-					</span>
-					<span class="edet__fact-value">
-						{price.label}
-						{#if price.suggested}
-							<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
-						{/if}
-					</span>
-				</div>
-			</div>
+			<EventFacts {evt} />
 
 			{#if descriptionHtml}
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized rich text (sanitizeHtml) -->
 				<p class="edet__desc">{@html descriptionHtml}</p>
 			{/if}
 
-			{#if evt.ticketingEnabled}
+			{#if evt.status === 'cancelled' || data.isPast}
+				<!-- The server refuses both; the page must not offer them (#2219). -->
+				<div class="edet__ctas">
+					<span class="text-base font-medium text-fg-2">
+						{evt.status === 'cancelled'
+							? m.member_events_id_tickets_rsvps_closed_text()
+							: m.member_events_id_event_has_ended_text()}
+					</span>
+				</div>
+			{:else if evt.ticketingEnabled}
 				{#if capacityKnown}
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
-							<span>{data.sold} of {evt.ticketQuantity} claimed</span>
+							<span
+								>{m.member_events_id_claimed_text({
+									sold: data.sold ?? '',
+									ticketQuantity: evt.ticketQuantity ?? ''
+								})}</span
+							>
 							{#if lowAvailability}
-								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
+								<Badge variant="warning"
+									>{isFreeEvent
+										? m.member_events_id_almost_full_label()
+										: m.member_events_id_selling_fast_label()}</Badge
+								>
 							{/if}
 						</div>
 						<progress
@@ -308,15 +245,20 @@
 
 				<div class="edet__ctas">
 					{#if soldOut}
-						<Button variant="default" size="lg" disabled>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+						<Button variant="default" size="lg" disabled
+							>{isFreeEvent
+								? m.member_events_id_full_label()
+								: m.member_events_id_sold_out_label()}</Button
 						>
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
 							<Action
 								action={claimFreeTicket}
-								label="Get free ticket"
-								modalTitle="Get free ticket"
-								submitLabel="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
+								label={m.member_events_id_get_free_ticket_label()}
+								modalTitle={m.member_events_id_get_free_ticket_title()}
+								submitLabel={m.member_events_id_get_label({
+									value: quantity > 1 ? `${quantity} tickets` : 'ticket'
+								})}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 								variant="primary"
 								size="lg"
@@ -326,18 +268,23 @@
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
 									<Field
-										label="Number of spots"
-										name="quantity"
+										label={m.member_events_id_number_spots_label()}
+										field={claimFreeTicket.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
-									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
 									<Field
-										name="attendeeEmail"
+										field={claimFreeTicket.fields.attendeeName}
+										type="text"
+										label={m.member_name_label()}
+										bind:value={attendeeName}
+									/>
+									<Field
+										field={claimFreeTicket.fields.attendeeEmail}
 										type="email"
-										label="Email"
+										label={m.member_email_label()}
 										bind:value={attendeeEmail}
 									/>
 								{/snippet}
@@ -345,11 +292,13 @@
 						{:else}
 							<Action
 								action={purchaseTickets}
-								label="Get Tickets"
-								modalTitle="Get Tickets"
+								label={m.member_events_id_get_tickets_label()}
+								modalTitle={m.member_events_id_get_tickets_title()}
 								submitLabel={chargeCents === 0
-									? `Get ${quantity === 1 ? 'ticket' : `${quantity} tickets`}`
-									: `Pay ${formatCents(chargeCents)}`}
+									? m.member_events_id_get_label({
+											value: quantity === 1 ? 'ticket' : `${quantity} tickets`
+										})
+									: m.member_events_id_pay_label({ formatCents: formatCents(chargeCents) })}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim() && !amountBlocked}
 								variant="primary"
 								size="lg"
@@ -360,22 +309,27 @@
 
 									<div class="flex items-baseline gap-2">
 										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
-										<span class="text-muted">suggested, per ticket</span>
+										<span class="text-muted">{m.member_events_id_suggested_per_ticket_text()}</span>
 									</div>
 
 									<Field
-										label="Number of tickets"
-										name="quantity"
+										label={m.member_events_id_number_tickets_label()}
+										field={purchaseTickets.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
-									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
 									<Field
-										name="attendeeEmail"
+										field={purchaseTickets.fields.attendeeName}
+										type="text"
+										label={m.member_name_label()}
+										bind:value={attendeeName}
+									/>
+									<Field
+										field={purchaseTickets.fields.attendeeEmail}
 										type="email"
-										label="Email"
+										label={m.member_email_label()}
 										bind:value={attendeeEmail}
 									/>
 									<TicketPurchaseFields
@@ -398,7 +352,9 @@
 
 					{#if data.remaining !== null && !soldOut}
 						<span class="text-muted"
-							>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
+							>{(isFreeEvent
+								? m.member_events_id_spots_remaining_text
+								: m.member_events_id_tickets_remaining_text)({ remaining: data.remaining })}</span
 						>
 					{/if}
 				</div>
@@ -412,7 +368,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 							variant="primary"
-							size="lg">Get Tickets ↗</Button
+							size="lg">{m.member_events_id_get_tickets_2_label()}</Button
 						>
 					{/if}
 					{#if data.myRsvp}
@@ -430,20 +386,20 @@
 								>
 							</div>
 							<div class="tixbanner__text">
-								<strong>You're going!</strong>
+								<strong>{m.member_events_id_re_going_text()}</strong>
 								<small>
 									{mode === 'external'
-										? 'Tickets are sold separately — grab yours above'
-										: "We'll see you there"}
+										? m.member_events_id_tickets_sold_separately_grab_yours_text()
+										: m.member_events_id_we_ll_see_there_text()}
 								</small>
 							</div>
 						</div>
 						<Action
 							action={cancelRsvp}
-							label="Can't make it?"
-							confirm="Cancel your RSVP for this event?"
-							modalTitle="Cancel RSVP"
-							submitLabel="Yes, cancel my RSVP"
+							label={m.member_events_id_can_t_make_label()}
+							confirm={m.member_events_id_confirm_body()}
+							modalTitle={m.member_events_id_cancel_rsvp_title()}
+							submitLabel={m.member_events_id_yes_cancel_my_rsvp_label()}
 							submitVariant="error"
 							variant="ghost"
 							size="sm"
@@ -456,37 +412,59 @@
 					{:else}
 						<Action
 							action={rsvpToEvent}
-							label={mode === 'external' ? "I'm going" : 'RSVP'}
-							modalTitle={mode === 'external' ? "I'm going" : 'RSVP'}
-							submitLabel={mode === 'external' ? "I'm going" : 'RSVP'}
+							label={mode === 'external'
+								? m.member_events_id_i_m_going_label()
+								: m.member_events_id_rsvp_label()}
+							modalTitle={mode === 'external'
+								? m.member_events_id_i_m_going_title()
+								: m.member_events_id_rsvp_title()}
+							submitLabel={mode === 'external'
+								? m.member_events_id_i_m_going_label()
+								: m.member_events_id_rsvp_label()}
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 							class="btn-lg {mode === 'external' ? 'btn-outline' : 'btn-primary'}"
 							onsuccess={refreshDetail}
 						>
 							{#snippet form()}
 								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
-								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
-								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+								<Field
+									field={rsvpToEvent.fields.attendeeName}
+									type="text"
+									label={m.member_name_label()}
+									bind:value={attendeeName}
+								/>
+								<Field
+									field={rsvpToEvent.fields.attendeeEmail}
+									type="email"
+									label={m.member_email_label()}
+									bind:value={attendeeEmail}
+								/>
 							{/snippet}
 						</Action>
 					{/if}
 
 					{#if data.rsvpCount > 0}
-						<span class="text-muted">{data.rsvpCount} going</span>
+						<span class="text-muted"
+							>{m.member_events_id_going_text({ rsvpCount: data.rsvpCount })}</span
+						>
 					{/if}
 				</div>
 			{/if}
 		</div>
 	</div>
 
+	<!-- Each is left off when it has nothing for this member. -->
+	<RelatedShifts subject={{ type: 'event', id: evt.id }} member />
+	<RelatedTasks subject={{ type: 'event', id: evt.id }} member />
+
 	{#if data.upcoming.length > 0}
 		<section class="edet__more">
-			<SectionLabel label="More shows" />
+			<SectionLabel label={m.member_events_id_more_shows_label()} />
 			<div class="edet__more-grid">
 				{#each data.upcoming as e (e.id)}
 					{@const eTags = parseTags(e.tags)}
 					<PosterCard
-						href={resolve(`/member/events/${e.id}`)}
+						href={resolve(`member/events/${e.id}`)}
 						title={e.title}
 						posterUrl={e.posterUrl}
 						startsAt={e.startsAt}

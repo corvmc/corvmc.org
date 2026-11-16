@@ -1,4 +1,4 @@
-import { calculateProcessingFee } from '$lib/finance/fees';
+import { calculateProcessingFee } from '#lib/finance/fees.js';
 import { listForSubject, recordEntries, type RecordEntryInput } from './financial-entry-service';
 
 /**

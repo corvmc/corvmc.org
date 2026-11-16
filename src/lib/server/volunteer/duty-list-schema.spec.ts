@@ -82,8 +82,8 @@ describe('duty_list_item shape constraints', () => {
 
 describe('work_task', () => {
 	beforeAll(() => {
-		db.exec(`INSERT INTO work_order (id, volunteer_role_id, capacity)
-		         VALUES ('wo-1', 'role-1', 1)`);
+		db.exec(`INSERT INTO work_order (id, volunteer_role_id)
+		         VALUES ('wo-1', 'role-1')`);
 	});
 
 	it('accepts an unticked task with no done_at', () => {

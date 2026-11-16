@@ -32,7 +32,7 @@ function chain(queue: () => unknown[]): unknown {
 
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn(() => ({
@@ -59,19 +59,19 @@ const resolveWorkOrder = vi.fn(async (..._a: unknown[]) => ({
 	statements: [],
 	afterCommit: async () => undefined
 }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	prepareResolveWorkOrder: (...args: unknown[]) => resolveWorkOrder(...args)
 }));
 
 // Either writer of a unit's status: scheduling runs it, completion batches it.
 const setAssetStatus = vi.fn(async (..._a: unknown[]) => ({ statements: [] }));
-vi.mock('$lib/server/inventory/asset-service', () => ({
+vi.mock('#lib/server/inventory/asset-service.js', () => ({
 	setAssetStatus: (...args: unknown[]) => setAssetStatus(...args),
 	assetStatusChange: (...args: unknown[]) => setAssetStatus(...args)
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 
@@ -83,6 +83,7 @@ const {
 	cancelJob,
 	declineJob,
 	markJobNoShow,
+	reopenJob,
 	ContractorJobStateError,
 	ContractorJobNotFoundError
 } = await import('./contractor-job-service');
@@ -145,11 +146,10 @@ describe('createJob', () => {
 		expect(insertValues[0]).toMatchObject({
 			title: 'Replace the panel',
 			volunteerRoleId: null,
-			postedAt: null,
 			createdByUserId: ACTOR
 		});
 		const wo = insertValues[0] as { id: string };
-		expect(insertValues[1]).toMatchObject({ contractorId: 'c-1', workOrderId: wo.id });
+		expect(insertValues[1]).toMatchObject({ organizationId: 'c-1', workOrderId: wo.id });
 	});
 
 	it('refuses a new work order with no title', async () => {
@@ -172,7 +172,7 @@ describe('createJob', () => {
 
 		expect(batches).toHaveLength(0);
 		expect(insertValues).toHaveLength(1);
-		expect(insertValues[0]).toMatchObject({ contractorId: 'c-1', workOrderId: WO });
+		expect(insertValues[0]).toMatchObject({ organizationId: 'c-1', workOrderId: WO });
 	});
 
 	it('refuses a work order that was called off', async () => {
@@ -265,7 +265,10 @@ describe('completeJob', () => {
 
 		await completeJob(JOB, { actorId: ACTOR });
 
-		expect(resolveWorkOrder).toHaveBeenCalledWith(WO, { resolvedByUserId: ACTOR });
+		expect(resolveWorkOrder).toHaveBeenCalledWith(
+			WO,
+			expect.objectContaining({ resolvedByUserId: ACTOR })
+		);
 	});
 
 	it('leaves a work order staff already ticked alone', async () => {
@@ -477,5 +480,87 @@ describe("the work order's log", () => {
 			contractorName: 'Valve Doctor',
 			invoiceRef: 'INV-7'
 		});
+	});
+});
+
+describe('reopenJob (#2259)', () => {
+	it.each(['completed', 'cancelled', 'declined', 'no_show'])(
+		'takes a %s job back, and records why on the work order',
+		async (status) => {
+			selectResults = [[engagement({ status, scheduledFor: new Date('2026-10-01') })]];
+
+			await reopenJob(JOB, '  Marked by mistake ');
+
+			expect(updateValues[0]).toMatchObject({ status: 'booked', completedAt: null });
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'contractor_job.reopened',
+				subject: { type: 'work_order', id: WO, label: 'Retube' },
+				details: {
+					engagementId: JOB,
+					contractorName: 'Valve Doctor',
+					from: status,
+					to: 'booked',
+					reason: 'Marked by mistake'
+				}
+			});
+		}
+	);
+
+	it('goes back to asked when it was never booked', async () => {
+		selectResults = [[engagement({ status: 'declined', scheduledFor: null })]];
+
+		await reopenJob(JOB, 'They said yes after all');
+
+		expect(updateValues[0]).toMatchObject({ status: 'asked' });
+	});
+
+	it('touches neither the unit nor the ledger', async () => {
+		selectResults = [[engagement({ status: 'completed', assetId: ASSET })]];
+
+		await reopenJob(JOB, 'Not finished');
+
+		expect(setAssetStatus).not.toHaveBeenCalled();
+		expect(insertValues).toEqual([]);
+		expect(batches).toEqual([]);
+	});
+
+	it('refuses a job that is still open', async () => {
+		selectResults = [[engagement({ status: 'booked' })]];
+
+		await expect(reopenJob(JOB, 'x')).rejects.toThrow(ContractorJobStateError);
+		expect(updateValues).toEqual([]);
+	});
+
+	it('refuses a blank reason', async () => {
+		selectResults = [[engagement({ status: 'completed' })]];
+
+		await expect(reopenJob(JOB, '   ')).rejects.toThrow(ContractorJobStateError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+});
+
+describe('completing a reopened job', () => {
+	it('books only the difference from what the ledger already holds', async () => {
+		selectResults = [
+			[engagement({ status: 'booked', costCents: 18000 })],
+			[{ kind: 'spent', amountCents: -18000 }]
+		];
+
+		await completeJob(JOB, { costCents: 20000, actorId: ACTOR });
+
+		expect(insertValues).toEqual([
+			[expect.objectContaining({ amountCents: -2000, kind: 'spent' })]
+		]);
+	});
+
+	it('books nothing when the cost has not changed', async () => {
+		selectResults = [
+			[engagement({ status: 'booked', costCents: 18000 })],
+			[{ kind: 'spent', amountCents: -18000 }]
+		];
+
+		await completeJob(JOB, { actorId: ACTOR });
+
+		expect(insertValues).toEqual([]);
 	});
 });

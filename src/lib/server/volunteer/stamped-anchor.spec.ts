@@ -8,30 +8,17 @@ import { sql } from 'drizzle-orm';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			sqlite.exec('begin');
-			try {
-				const out = [];
-				for (const s of stmts) out.push(await s);
-				sqlite.exec('commit');
-				return out;
-			} catch (e) {
-				sqlite.exec('rollback');
-				throw e;
-			}
-		}
-	})
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb
 }));
 
 const { applyDutyList } = await import('./duty-list-service');
 const { shiftAnchoredWorkOrders } = await import('./retime-work-orders');
-const { outstandingCloseOutTasks } = await import('$lib/server/production/production-service');
+const { outstandingCloseOutTasks } = await import('#lib/server/production/production-service.js');
 const { orientationOwnerOf, orientationForReservation } = await import('./orientation-service');
 
 const all = (q: string) => sqlite.prepare(q).all() as Record<string, unknown>[];
@@ -40,6 +27,8 @@ const START = Date.UTC(2026, 10, 7, 3, 0) / 1000;
 beforeEach(() => {
 	for (const t of [
 		'work_task',
+		'volunteer_shift',
+		'work_order_link',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -76,14 +65,15 @@ function list(id: string, anchor: string) {
 }
 
 describe('stamping', () => {
-	it('copies the list anchor onto each work order', async () => {
+	it('copies the list anchor onto each task and its shift', async () => {
 		list('show', 'start');
 		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 
 		// Offset 0 lands on the anchor instant exactly.
-		expect(all(`select anchor, is_orientation, starts_at from work_order`)).toEqual([
-			{ anchor: 'start', is_orientation: 0, starts_at: START }
-		]);
+		expect(
+			all(`select wo.anchor, wo.is_orientation, s.starts_at, s.anchor shift_anchor
+				from work_order wo join volunteer_shift s on s.work_order_id = wo.id`)
+		).toEqual([{ anchor: 'start', is_orientation: 0, starts_at: START, shift_anchor: 'start' }]);
 	});
 });
 
@@ -93,9 +83,9 @@ describe('retime reads the stamped anchor', () => {
 		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'doors'`);
 
-		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`);
+		await Promise.all(shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`));
 
-		expect(all(`select starts_at from work_order`)).toEqual([{ starts_at: START + 1800 }]);
+		expect(all(`select starts_at from volunteer_shift`)).toEqual([{ starts_at: START + 1800 }]);
 	});
 
 	it('moves it after the list is deleted', async () => {
@@ -103,9 +93,9 @@ describe('retime reads the stamped anchor', () => {
 		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`delete from duty_list`);
 
-		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${-600}`);
+		await Promise.all(shiftAnchoredWorkOrders('ev-1', ['start'], sql`${-600}`));
 
-		expect(all(`select starts_at from work_order`)).toEqual([{ starts_at: START - 600 }]);
+		expect(all(`select starts_at from volunteer_shift`)).toEqual([{ starts_at: START - 600 }]);
 	});
 
 	it('leaves a shift stamped at another anchor alone', async () => {
@@ -113,9 +103,9 @@ describe('retime reads the stamped anchor', () => {
 		await applyDutyList('show', { kind: 'project', id: 'proj-1' }, 'u-1');
 		sqlite.exec(`update duty_list set anchor = 'start'`);
 
-		await shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`);
+		await Promise.all(shiftAnchoredWorkOrders('ev-1', ['start'], sql`${1800}`));
 
-		expect(all(`select starts_at from work_order`)).toEqual([{ starts_at: START }]);
+		expect(all(`select starts_at from volunteer_shift`)).toEqual([{ starts_at: START }]);
 	});
 });
 
@@ -142,8 +132,12 @@ describe('close-out reads the stamped anchor', () => {
 describe('orientation reads the stamped marker', () => {
 	// Raised from the orientation setting, so there is no list behind it at all.
 	beforeEach(() => {
-		sqlite.exec(`insert into work_order (id, reservation_id, starts_at, ends_at, is_orientation)
-			values ('wo-orient', 'res-1', ${START}, ${START + 1800}, 1)`);
+		sqlite.exec(`
+			insert into work_order (id, is_orientation) values ('wo-orient', 1);
+			insert into work_order_link (id, work_order_id, reservation_id) values ('l-orient', 'wo-orient', 'res-1');
+			insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
+				values ('wo-orient-shift', 'wo-orient', ${START}, ${START + 1800});
+		`);
 	});
 
 	const shiftId = () => 'wo-orient';

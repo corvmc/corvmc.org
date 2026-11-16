@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
 import { reservation } from '../src/lib/server/db/schema/reservation';
@@ -40,13 +41,15 @@ import {
 /** See `.claude/rules/testing.md` — a bare read of a row just written can be stale. */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
-async function login(page: import('@playwright/test').Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_MEMBER_EMAIL, password: SEED_MEMBER_PASSWORD });
 }
+
+// The seeded hour at the default rate, and that grossed up for 2.9% + 30¢
+// (`calculateTotalWithFeeCoverage(1500)` is 1576). Amounts, not copy.
+const BALANCE_CENTS = 1500;
+const WITH_FEES_CENTS = 1576;
+const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 test('a member covers the processing fee and the reservation settles', async ({ page }) => {
 	// Every 5xx this flow provokes, so the assertion at the end can insist there
@@ -66,21 +69,19 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await page.goto(`/member/reservations/${SEED_RESERVATION_ID}/pay`);
 
 	// The pay form for a balance-due ($15.00) reservation.
-	await expect(page.getByText('$15.00').first()).toBeVisible();
+	await expect(page.getByText(dollars(BALANCE_CENTS)).first()).toBeVisible();
 
 	// The boolean field rendered with SvelteKit's `b:` prefix — the exact
 	// mechanism the original bug lived in.
-	const checkbox = page.locator('input[name="b:coverFees"]');
+	const checkbox = page.locator('input:is([name="b:coverFees"], [name^="b:coverFees/"])');
 	await expect(checkbox).toBeVisible();
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
 
-	await page.getByRole('button', { name: /^Pay \$/ }).click();
+	await page.locator('form').filter({ has: checkbox }).locator('button[type="submit"]').click();
 
 	// The in-app checkout page, reached by the same 303 the live integration
-	// issues. Reservations create an `elements` session now, so `checkout()`
-	// returns this route directly rather than the fake standing in for a
-	// checkout.stripe.com URL — the page is the same either way.
+	// issues.
 	await expect(page).toHaveURL(/\/checkout\//);
 	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
 	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves
@@ -89,10 +90,11 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	// `exact`: the submit button beside it is labelled "Pay $15.76", so a
 	// substring match resolves to both and fails on strict mode. It passed at all
 	// only while the button had yet to render its label — a race, not a pass.
-	await expect(page.getByText('$15.76', { exact: true })).toBeVisible();
+	await expect(page.getByText(dollars(WITH_FEES_CENTS), { exact: true })).toBeVisible();
 
-	await page.locator('input[name$="cardNumber"]').fill('4242424242424242');
-	await page.getByRole('button', { name: /^Pay / }).click();
+	const card = page.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])');
+	await card.fill('4242424242424242');
+	await page.locator('form').filter({ has: card }).locator('button[type="submit"]').click();
 
 	// `?paid=` is the session's `return_url`, which only `elements` mode sets —
 	// landing on it proves `checkout()` mapped `successUrl` rather than dropping

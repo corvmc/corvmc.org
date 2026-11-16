@@ -14,7 +14,7 @@ export async function seedCreditTransactions(users: SeedUser[]) {
 			amount: hours,
 			balanceAfter: hours,
 			source: 'monthly_allocation',
-			description: 'Monthly free hours allocation',
+			description: 'Monthly credit allocation',
 			metadata: { period: 'May 2026' }
 		});
 

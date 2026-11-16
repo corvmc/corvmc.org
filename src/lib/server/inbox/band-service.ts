@@ -1,9 +1,9 @@
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxGroupRead } from '#lib/server/db/schema/inbox.js';
 import { and, count, desc, eq, gt, inArray, isNull, or, sql, asc } from 'drizzle-orm';
-import type { PaginationInput } from '$lib/server/db/paginate';
-import { paginate } from '$lib/server/db/paginate';
-import { BAND_ENQUIRY_SUBJECT } from '$lib/config';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import { BAND_ENQUIRY_SUBJECT } from '#lib/config.js';
 import { findOrCreateThread, reopenThread } from './thread-service';
 import { addInboundMessage, addOutboundMessage } from './message-service';
 
@@ -290,16 +290,6 @@ export async function markBandThreadRead(
 			target: [inboxGroupRead.threadId, inboxGroupRead.userId],
 			set: { lastReadAt: new Date() }
 		});
-}
-
-/** Drives the "Messages" badge in the band nav. */
-export async function countBandUnread(groupId: string, userId: string): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(inboxThread)
-		.leftJoin(inboxGroupRead, readCursorOf(userId))
-		.where(and(ownedBy(groupId), eq(inboxThread.status, 'open'), isUnread));
-	return row?.count ?? 0;
 }
 
 /**

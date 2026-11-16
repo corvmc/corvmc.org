@@ -1,4 +1,4 @@
-import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
+import { groupAnnouncement, inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import {
 	groupApplication,
@@ -9,6 +9,9 @@ import { db } from './db';
 import { GROUP_INVITEE_PERSONA, GROUP_LEADER_PERSONAS } from './group-leaders';
 import { type SeedUser } from './types';
 import { pick, pickN } from './util';
+
+/** As `announcementMessageBody` in announcement-service writes it. */
+const announcementMessageBody = (title: string, body: string) => `${title}\n\n${body}`;
 
 /**
  * Clubs and committees — the staff-run half of the groups module.
@@ -21,7 +24,7 @@ import { pick, pickN } from './util';
  * Each of the three join policies gets a group, because the roster tab and the
  * member index lead with a different action under each and none of that can be
  * looked at locally without one of each. The Real Book Club is `open` because it
- * is the spec's driving case: a drop-in jazz jam anyone may join unaided. The
+ * is the groups module's driving case: a drop-in jazz jam anyone may join unaided. The
  * Songwriters Circle is the one `by_application` club, so a club application
  * and its `note` answer render somewhere.
  *
@@ -74,7 +77,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinPolicy: 'by_application' as const,
 			joinInstructions:
 				'Tell us what you want to see programmed and roughly how much time you can give.',
-			positions: ['Chair', 'Secretary', 'Member'],
+			positions: [],
 			memberCount: 3,
 			// Every committee's baseline (project status and duty lists, its own
 			// numbers), plus #1564's publish and its weekly holds as recurring work.
@@ -105,7 +108,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Keeps the room standing: repairs, gear, and the long list of things nobody notices until they break.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			// The baseline only: under #1564 opening work orders is Production's.
 			capabilityGrants: ['finance.read', 'project.manage'],
@@ -120,9 +123,9 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Runs the shows Booking books: crew, sound, the run of show, the door and settling up.',
 			joinPolicy: 'by_application' as const,
 			joinInstructions: null as string | null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
-			// The show's running half (production-projects-spec.md), and #1564's work orders.
+			// The show's running half (#1673), and #1564's work orders.
 			capabilityGrants: [
 				'finance.read',
 				'production.run',
@@ -142,7 +145,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Coordinate show posters, announce on social media and with local press. Write and deliver the newsletter.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
 			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
 			announcements: [],
@@ -155,11 +158,17 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			bio: 'Create and manage CMC merch, and work with local artists for poster art.',
 			joinPolicy: 'invite_only' as const,
 			joinInstructions: null,
-			positions: ['Chair', 'Member'],
+			positions: [],
 			memberCount: 2,
-			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
+			// `event.manage` decides and seats vendors for the market its project owns (#2834).
+			capabilityGrants: [
+				'finance.read',
+				'project.manage',
+				'volunteer.manageShifts',
+				'event.manage'
+			],
 			announcements: [],
-			leaderFromPool: true
+			leaderPersonaId: 'seed-group-leader-market'
 		},
 		{
 			kind: 'club' as const,
@@ -204,7 +213,8 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				capabilityGrants: d.capabilityGrants
 			},
 			leader.id,
-			d.positions[0]
+			// A committee's seats are `group_position` rows (committee-positions.ts).
+			d.kind === 'committee' ? undefined : d.positions[0]
 		);
 		groups.push(g);
 
@@ -224,7 +234,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				groupId: g.id,
 				userId: m.id,
 				role: 'member',
-				position: pick(d.positions.slice(1)),
+				position: d.kind === 'committee' ? null : pick(d.positions.slice(1)),
 				status: 'active'
 			});
 		}
@@ -306,41 +316,55 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			}
 		}
 
-		// An announcement is a thread now (#1304): `leadership` + `email` is what
-		// separates one from the group's chat topics, and the body is its first
-		// message.
-		//
-		// `notifiedAt` stays null on every one of these. It is the fan-out latch,
-		// written only by the notification listener — seeding it would claim these
-		// posts were sent, and seeding it *unset* is what leaves the listener a
-		// backlog to work through locally.
-		for (let j = 0; j < d.announcements.length; j++) {
-			const a = d.announcements[j];
-			const publishedAt = a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null;
-			const [thread] = await db
-				.insert(inboxThread)
-				.values({
-					channel: 'group',
-					groupId: g.id,
-					status: 'open',
-					subject: a.title,
-					preview: a.body.slice(0, 120),
-					pinned: a.pinned,
-					publishedAt,
-					postPolicy: 'leadership',
-					notifyPolicy: 'email',
-					messageCount: 1,
-					// Drives the list order; a draft falls back to now.
-					lastMessageAt: publishedAt ?? new Date()
-				})
-				.returning({ id: inboxThread.id });
-
-			await db.insert(inboxMessage).values({
-				threadId: thread.id,
-				direction: 'peer',
+		// An announcement is a `group_announcement` row; a published one is also a
+		// message in the group's one Announcements thread (#2618), oldest first,
+		// title on its first line. `notifiedAt` stays null: it is the fan-out
+		// latch, and only the notification listener writes it.
+		const posts = d.announcements
+			.map((a, j) => ({
+				...a,
+				publishedAt: a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null
+			}))
+			.sort((x, y) => (x.publishedAt?.getTime() ?? 0) - (y.publishedAt?.getTime() ?? 0));
+		const published = posts.filter((a) => a.publishedAt);
+		const threadId = published.length > 0 ? crypto.randomUUID() : null;
+		if (threadId) {
+			const last = published[published.length - 1];
+			await db.insert(inboxThread).values({
+				id: threadId,
+				channel: 'group',
+				groupId: g.id,
+				status: 'open',
+				subject: 'Announcements',
+				preview: announcementMessageBody(last.title, last.body).slice(0, 120),
+				postPolicy: 'leadership',
+				notifyPolicy: 'email',
+				messageCount: published.length,
+				lastMessageAt: last.publishedAt
+			});
+		}
+		for (const a of posts) {
+			const messageId = a.publishedAt ? crypto.randomUUID() : null;
+			if (messageId && threadId) {
+				await db.insert(inboxMessage).values({
+					id: messageId,
+					threadId,
+					direction: 'peer',
+					body: announcementMessageBody(a.title, a.body),
+					authorName: leader.name,
+					authorUserId: leader.id,
+					createdAt: a.publishedAt!
+				});
+			}
+			await db.insert(groupAnnouncement).values({
+				groupId: g.id,
+				title: a.title,
 				body: a.body,
+				authorUserId: leader.id,
 				authorName: leader.name,
-				authorUserId: leader.id
+				pinned: a.pinned,
+				publishedAt: a.publishedAt,
+				messageId
 			});
 		}
 	}
@@ -352,7 +376,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 /**
  * The Development Committee, carrying the grants the owner gave it (#1578,
  * #1602). Staff can re-point any of them on the group page. The open club's host
- * sits on it with no position, so a login exists for the seat-only staff panel.
+ * sits on it, so a login exists for the seat-only staff panel.
  */
 async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) {
 	const leaderIds = new Set(leaders.map((l) => l.id));
@@ -370,18 +394,17 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 			// `invite_only` above so that policy has a committee to show it.
 			joinPolicy: 'by_application',
 			capabilityGrants: [
+				'contact.manage',
+				'contact.read',
 				'finance.read',
 				'grant.manage',
 				'grant.read',
 				'project.manage',
-				'renewal.manage',
-				'renewal.read',
 				'sponsor.manage',
 				'sponsor.read'
 			]
 		},
-		chair.id,
-		'Chair'
+		chair.id
 	);
 	const host = leaders.find((l) => l.id === 'seed-group-leader-open');
 	for (const u of [member, host].filter((x): x is SeedUser => !!x)) {
@@ -389,7 +412,6 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 			groupId: dev.id,
 			userId: u.id,
 			role: 'member',
-			position: 'Member',
 			status: 'active'
 		});
 	}

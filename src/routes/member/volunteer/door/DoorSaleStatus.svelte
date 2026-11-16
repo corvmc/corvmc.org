@@ -1,6 +1,8 @@
 <script lang="ts">
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getDoorSale } from '$lib/remote/door.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getDoorSale } from '#lib/remote/door.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	/**
 	 * After the tap: the webhook is what checks the order in, so poll for it,
@@ -24,18 +26,28 @@
 	});
 </script>
 
-{#if sale.status === 'paid'}
+{#if sale.status === 'paid' && sale.donationCents !== undefined}
 	<Alert type="success">
-		Paid. {sale.quantity}
-		{sale.quantity === 1 ? 'ticket' : 'tickets'} checked in. Let them in.
+		{m.member_volunteer_door_door_sale_status_donation_recorded_body({
+			amount: formatCents(sale.donationCents)
+		})}
+	</Alert>
+{:else if sale.status === 'paid'}
+	<Alert type="success">
+		{m.member_volunteer_door_door_sale_status_paid_tickets_checked_body({
+			quantity: sale.quantity
+		})}
 	</Alert>
 {:else if sale.status === 'cancelled'}
-	<Alert type="warning">This sale was cancelled. Nothing was charged.</Alert>
+	<Alert type="warning"
+		>{m.member_volunteer_door_door_sale_status_sale_was_cancelled_no_body()}</Alert
+	>
 {:else if attempts >= RETRY_LIMIT}
 	<Alert type="warning">
-		The card was accepted, but Stripe has not confirmed it yet. Let them in; the tickets will be
-		checked in when it does.
+		{sale.donationCents !== undefined
+			? m.member_volunteer_door_door_sale_status_donation_unconfirmed_body()
+			: m.member_volunteer_door_door_sale_status_card_was_accepted_but_body()}
 	</Alert>
 {:else}
-	<Alert>Card accepted. Recording the sale…</Alert>
+	<Alert>{m.member_volunteer_door_door_sale_status_card_accepted_recordi_body()}</Alert>
 {/if}

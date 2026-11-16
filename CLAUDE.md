@@ -7,6 +7,7 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 
 - `docs/development/conventions.md` — feature checklist, layering rules, custom lint rules, scripts
 - `docs/development/ui-patterns.md` — **before touching any page**; shared components + composition
+- `docs/development/writing.md` — pass/fail rubric for every title, label and line of UI text
 - `docs/architecture/overview.md` — how the system is wired
 - `docs/architecture/domain-model.md` — what the tables mean: three verticals, three horizontals,
   and the shapes that recur
@@ -82,8 +83,12 @@ Say in the PR that the full suite was deferred to CI.
 
 Anything that adds schema or spans several files follows the nine phases in
 `docs/development/conventions.md#the-feature-checklist`; its easily skipped finish is seed data
-(`scripts/seed-dev.ts`), the feature catalog row, and `pnpm docs:routes && pnpm docs:check` if a
+(`scripts/seed-dev.ts`), the feature's file in `docs/reports/features/`, and `pnpm docs:routes && pnpm docs:check` if a
 route moved.
+
+**Proposals live on the issue, never in the repo.** Each build PR updates the living docs for the
+behaviour it changes, and a feature's last PR adds a record to `docs/decisions/`. Do not add files
+to `docs/specs/`; #2525 retires it.
 
 **Where it lands is the first decision.** A member-facing or public feature needing more than one
 PR goes on a long-lived `feature/<slug>` branch; staff-only surfaces, schema and refactors go to
@@ -103,7 +108,8 @@ lowest-ranked Up next or Todo item with no open PR. Add an issue you file with
 to place; move an item to In progress or In review as its PR opens. `gh` needs the `project`
 scope (`gh auth refresh -s project`).
 
-**Finish in the same turn:** commit, push, open the PR, arm `gh pr merge --auto` (no merge method,
+**Finish in the same turn:** commit, push, open the PR, run `node scripts/claude/pre-arm-check.mjs <n>`
+and follow its `Next:` line (stack, rebase, or arm; `/queue-triage` has the policy), arm `gh pr merge --auto` (no merge method,
 no `--admin`, no `--delete-branch`, no `gh pr update-branch`), then start `gh queue await <n>` with
 `run_in_background`. A PR that genuinely needs a human first is opened as a draft. A queue
 rejection disarms the PR and labels it `queue-rejected`; `/queue-triage` and the `qc` agent own

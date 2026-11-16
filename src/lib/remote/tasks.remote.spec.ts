@@ -2,23 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
 /**
- * Both ids a task remote takes come from the client, so each one that names a
- * work order must refuse (404) a work order on a different project, before it
- * touches anything: otherwise a project the caller manages is a window onto
- * work in one they do not. Real services, real SQLite; only the guard is faked.
+ * New task writes to a project only as that project's committee or staff, and a
+ * task's history refuses (404) a task named with a project it is not on.
+ * Real services, real SQLite; only the guard is faked.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb,
 	getRowCount: () => 0
 }));
 
@@ -44,7 +37,7 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/authorization', async (original) => ({
+vi.mock('#lib/server/authorization.js', async (original) => ({
 	...(await original<object>()),
 	requireUser: () => ({ id: 'usr-staff' }),
 	can: async () => true,
@@ -53,8 +46,8 @@ vi.mock('$lib/server/authorization', async (original) => ({
 const requireProjectCommittee = vi.hoisted(() =>
 	vi.fn(async () => ({ user: { id: 'usr-staff' }, groups: [], via: 'staff' }))
 );
-vi.mock('$lib/server/group/group-context', () => ({ requireProjectCommittee }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireProjectCommittee }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const remotes = (await import('./tasks.remote')) as unknown as Record<
 	string,
@@ -66,6 +59,12 @@ const { getProjectActivity } = (await import('./projects.remote')) as unknown as
 	(raw: unknown) => Promise<unknown>
 >;
 
+const { setTaskSection, setTaskPosition } =
+	(await import('./volunteer.remote')) as unknown as Record<
+		string,
+		(raw: unknown) => Promise<unknown>
+	>;
+
 const MINE = '00000000-0000-4000-8000-000000000001';
 const THEIRS = '00000000-0000-4000-8000-000000000002';
 const pair = { projectId: MINE, workOrderId: 'wo-theirs' };
@@ -73,98 +72,66 @@ const pair = { projectId: MINE, workOrderId: 'wo-theirs' };
 beforeEach(() => {
 	requireProjectCommittee.mockClear();
 	sqlite.exec('delete from volunteer_signup');
+	sqlite.exec('delete from volunteer_shift');
 	sqlite.exec('delete from work_order');
+	sqlite.exec('delete from project_section');
 	sqlite.exec('delete from volunteer_role');
 	sqlite.exec('delete from project');
 	sqlite.exec(`insert into project (id, name) values ('${MINE}', 'Mine'), ('${THEIRS}', 'Theirs')`);
 	sqlite.exec(`insert into volunteer_role (id, name, is_active) values ('role-1', 'Door', 1)`);
 	sqlite.exec(
-		`insert into work_order (id, project_id, title, volunteer_role_id, capacity, sort_order)
-			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 1, 5),
-				('wo-first', '${THEIRS}', 'First', 'role-1', 1, 0)`
+		`insert into work_order (id, project_id, title, volunteer_role_id, sort_order)
+			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 5),
+				('wo-first', '${THEIRS}', 'First', 'role-1', 0)`
 	);
 });
 
-const untouched = () =>
-	sqlite
-		.prepare(
-			`select project_id, posted_at, resolved_at, cancelled_at, section_id, sort_order, starts_at
-				from work_order where id = 'wo-theirs'`
-		)
-		.get();
-
-const cases: [string, Record<string, unknown>][] = [
-	['getProjectTaskPage', pair],
-	['getTaskAssignees', pair],
-	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
-	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
-	['unassignMemberForm', { ...pair, userId: 'usr-staff' }],
-	['openTaskForm', { ...pair, capacity: 2 }],
-	['engageContractorForm', { ...pair, contractorId: 'ctr-1', confirm: true }],
-	['unassignTaskForm', { ...pair, confirm: true }],
-	['resolveTaskForm', pair],
-	['reopenTaskForm', pair],
-	['rescheduleTaskForm', { ...pair, startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' }],
-	['cancelTaskForm', pair],
-	['addDutyForm', { ...pair, label: 'Sweep' }],
-	['setDutyDoneForm', { ...pair, dutyId: 'duty-1', done: true }],
-	['setTaskEquipmentForm', { ...pair, assetId: '' }]
-];
-
-const before = {
-	project_id: THEIRS,
-	section_id: null,
-	sort_order: 5,
-	posted_at: null,
-	resolved_at: null,
-	cancelled_at: null,
-	starts_at: null
-};
-
-describe('a work order named with a project it is not on', () => {
-	it.each(cases)('%s refuses it with a 404 and changes nothing', async (name, input) => {
-		await expect(remotes[name](input)).rejects.toMatchObject({ status: 404 });
-		expect(untouched()).toMatchObject(before);
+describe('New task', () => {
+	it("in a project, is that project's write and keeps its due date", async () => {
+		const { id } = (await remotes.createCatalogueTaskForm({
+			title: 'Paint the hall',
+			projectId: THEIRS,
+			dueAt: '2030-01-04'
+		})) as { id: string };
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
+		expect(
+			sqlite
+				.prepare(`select project_id, title, due_at is not null as due from work_order where id = ?`)
+				.get(id)
+		).toEqual({ project_id: THEIRS, title: 'Paint the hall', due: 1 });
 	});
 
-	it('is still reachable through its own project', async () => {
-		await remotes.moveTaskCommand({
-			projectId: THEIRS,
-			workOrderId: 'wo-theirs',
-			sectionId: null,
-			index: 0
+	it('in no project, asks no committee', async () => {
+		const { id } = (await remotes.createCatalogueTaskForm({ title: 'Fix the amp' })) as {
+			id: string;
+		};
+		expect(requireProjectCommittee).not.toHaveBeenCalled();
+		expect(sqlite.prepare(`select project_id from work_order where id = ?`).get(id)).toEqual({
+			project_id: null
 		});
-		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
-		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
-		expect(untouched()).toMatchObject({ posted_at: expect.any(Number) });
 	});
-});
 
-describe('the task page', () => {
-	it('serves the work order view under its own project', async () => {
-		const page = (await remotes.getProjectTaskPage({
-			projectId: THEIRS,
-			workOrderId: 'wo-theirs'
-		})) as { project: { name: string }; shift: { id: string }; engagements: unknown[] };
-		expect(page.project.name).toBe('Theirs');
-		expect(page.shift.id).toBe('wo-theirs');
-		expect(page.engagements).toEqual([]);
+	it('links the task to the record it was made from (#2622)', async () => {
+		sqlite.exec(`insert into organization (id, name) values ('org-arts', 'Arts Council')`);
+		const { id } = (await remotes.createCatalogueTaskForm({
+			title: 'Call about the spring cycle',
+			aboutType: 'organization',
+			aboutId: 'org-arts'
+		})) as { id: string };
+		expect(
+			sqlite.prepare(`select organization_id from work_order_link where work_order_id = ?`).all(id)
+		).toEqual([{ organization_id: 'org-arts' }]);
+		sqlite.exec(`delete from work_order_link; delete from organization`);
 	});
-});
 
-describe('the guard', () => {
-	it('runs on the project named, before the task is loaded', async () => {
+	it('refuses a project the caller does not manage, and writes nothing', async () => {
 		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
 		await expect(
-			remotes.moveTaskCommand({
-				projectId: THEIRS,
-				workOrderId: 'wo-theirs',
-				sectionId: null,
-				index: 0
-			})
+			remotes.createCatalogueTaskForm({ title: 'Sneak in', projectId: MINE })
 		).rejects.toMatchObject({ status: 403 });
-		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
-		expect(untouched()).toMatchObject(before);
+		expect(
+			sqlite.prepare(`select count(*) n from work_order where project_id = ?`).get(MINE)
+		).toEqual({ n: 0 });
 	});
 });
 
@@ -186,5 +153,116 @@ describe('the activity', () => {
 			items: expect.arrayContaining([expect.objectContaining({ summary: 'Reopened it' })])
 		});
 		sqlite.exec(`delete from audit_log`);
+	});
+});
+
+describe('sections (#2653)', () => {
+	const sectionsOf = (projectId: string) =>
+		sqlite
+			.prepare(`select id, name from project_section where project_id = ? order by sort_order`)
+			.all(projectId) as { id: string; name: string }[];
+
+	beforeEach(() => {
+		sqlite.exec(
+			`insert into project_section (id, project_id, name, sort_order)
+				values ('sec-prep', '${THEIRS}', 'Prep', 0), ('sec-strike', '${THEIRS}', 'Strike', 1),
+					('sec-mine', '${MINE}', 'Mine', 0)`
+		);
+	});
+
+	it("are the project's to add, rename, reorder and delete, as its committee's write", async () => {
+		await remotes.createSectionForm({ projectId: THEIRS, name: 'Load-in' });
+		await remotes.renameSectionForm({ projectId: THEIRS, sectionId: 'sec-prep', name: 'Setup' });
+		const ids = sectionsOf(THEIRS).map((s) => s.id);
+		await remotes.reorderSectionsCommand({ projectId: THEIRS, sectionIds: [...ids].reverse() });
+		expect(sectionsOf(THEIRS).map((s) => s.name)).toEqual(['Load-in', 'Strike', 'Setup']);
+
+		sqlite.exec(`update work_order set section_id = 'sec-strike' where id = 'wo-first'`);
+		await expect(
+			remotes.deleteSectionForm({ projectId: THEIRS, sectionId: 'sec-strike' })
+		).resolves.toEqual({ moved: 1 });
+		expect(sqlite.prepare(`select section_id from work_order where id = 'wo-first'`).get()).toEqual(
+			{ section_id: null }
+		);
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
+		expect(requireProjectCommittee).not.toHaveBeenCalledWith(MINE, expect.anything());
+	});
+
+	it('refuses a section named with a project it is not on', async () => {
+		await expect(
+			remotes.renameSectionForm({ projectId: THEIRS, sectionId: 'sec-mine', name: 'Taken' })
+		).rejects.toMatchObject({ status: 404 });
+		await expect(
+			remotes.createCatalogueTaskForm({ title: 'Wire', projectId: THEIRS, sectionId: 'sec-mine' })
+		).rejects.toMatchObject({ status: 404 });
+		expect(sectionsOf(MINE)).toEqual([{ id: 'sec-mine', name: 'Mine' }]);
+	});
+
+	it('puts a new task in the section it names', async () => {
+		const { id } = (await remotes.createCatalogueTaskForm({
+			title: 'Sweep',
+			projectId: THEIRS,
+			sectionId: 'sec-strike'
+		})) as { id: string };
+		expect(sqlite.prepare(`select section_id from work_order where id = ?`).get(id)).toEqual({
+			section_id: 'sec-strike'
+		});
+	});
+
+	it("reads one project's sections in order with its tasks, and none across projects", async () => {
+		sqlite.exec(`update project_section set sort_order = 5 where id = 'sec-prep'`);
+		sqlite.exec(`update work_order set section_id = 'sec-prep' where id = 'wo-first'`);
+		const page = (await remotes.getTasksPage({ projectId: THEIRS })) as {
+			sections: { id: string }[];
+			tasks: { id: string; sectionId: string | null }[];
+		};
+		expect(page.sections.map((s) => s.id)).toEqual(['sec-strike', 'sec-prep']);
+		expect(page.tasks.find((t) => t.id === 'wo-first')?.sectionId).toBe('sec-prep');
+		const all = (await remotes.getTasksPage({})) as { sections: unknown[] };
+		expect(all.sections).toEqual([]);
+	});
+
+	it("moves a task to a section of its own project, or to none, from the task's page", async () => {
+		const sectionOf = () =>
+			sqlite.prepare(`select section_id from work_order where id = 'wo-theirs'`).get();
+
+		await setTaskSection({ id: 'wo-theirs', sectionId: 'sec-prep' });
+		expect(sectionOf()).toEqual({ section_id: 'sec-prep' });
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
+
+		await expect(setTaskSection({ id: 'wo-theirs', sectionId: 'sec-mine' })).rejects.toMatchObject({
+			status: 404
+		});
+		expect(sectionOf()).toEqual({ section_id: 'sec-prep' });
+
+		await setTaskSection({ id: 'wo-theirs', sectionId: '' });
+		expect(sectionOf()).toEqual({ section_id: null });
+	});
+
+	// #2990: the same guard as any task edit, and only the task's own committee's positions.
+	it("tags a task for its committee's position as the project's committee", async () => {
+		sqlite.exec(`
+			delete from group_position; delete from "group";
+			insert into "group" (id, kind, name, slug, join_policy) values
+				('g-art', 'committee', 'Art', 'art', 'invite_only'),
+				('g-sound', 'committee', 'Sound', 'sound', 'invite_only');
+			insert into group_position (id, group_id, name) values
+				('p-designer', 'g-art', 'Designer'), ('p-engineer', 'g-sound', 'Engineer');
+			update work_order set group_id = 'g-art' where id = 'wo-theirs';
+		`);
+		const tag = () =>
+			sqlite.prepare(`select position_id as p from work_order where id = 'wo-theirs'`).get();
+
+		await setTaskPosition({ id: 'wo-theirs', positionId: 'p-designer' });
+		expect(tag()).toEqual({ p: 'p-designer' });
+		expect(requireProjectCommittee).toHaveBeenCalledWith(THEIRS, 'project.manage');
+
+		await expect(
+			setTaskPosition({ id: 'wo-theirs', positionId: 'p-engineer' })
+		).rejects.toMatchObject({ status: 400 });
+		expect(tag()).toEqual({ p: 'p-designer' });
+
+		await setTaskPosition({ id: 'wo-theirs', positionId: '' });
+		expect(tag()).toEqual({ p: null });
 	});
 });

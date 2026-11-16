@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonShape, ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { updateClosure } from '$lib/remote/closures.remote';
+	import { refreshAll } from '$app/navigation';
+	import { updateClosure } from '#lib/remote/closures.remote.js';
 	import { Field } from '../ui/Form';
-	import { toLocalDateTime } from '$lib/utils/format';
+	import { toLocalDateTime } from '#lib/utils/format.js';
 
 	/** Edits a closure in a modal, prefilled. The list row is all it needs. */
 	let {
@@ -31,31 +32,36 @@
 
 <Action
 	action={edit}
-	label="Edit closure"
-	modalTitle="Edit Closure"
-	submitLabel="Save"
-	successToast="Closure updated"
+	label={m.actions_update_closure_edit_closure_label()}
+	modalTitle={m.actions_update_closure_modal_title()}
+	submitLabel={m.actions_update_closure_submit_label()}
+	successToast={m.actions_update_closure_success_toast()}
 	{variant}
 	{size}
 	{shape}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closure.id)} />
-		<Field field={fields.reason} type="text" label="Reason" value={closure.reason} />
+		<Field
+			field={fields.reason}
+			type="text"
+			label={m.actions_reason_label()}
+			value={closure.reason}
+		/>
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.startsAt}
 				type="datetime-local"
-				label="Start"
+				label={m.actions_start_label()}
 				value={toLocalDateTime(closure.startsAt)}
 			/>
 			<Field
 				field={fields.endsAt}
 				type="datetime-local"
-				label="End"
+				label={m.actions_end_label()}
 				value={toLocalDateTime(closure.endsAt)}
 			/>
 		</div>

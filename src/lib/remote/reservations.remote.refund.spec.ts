@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // #669: a staff refund used to write `refundedAt` and nothing else, so the row
 // kept its `paidAt` and went on reading as Paid. The one action is now two —
@@ -23,7 +23,7 @@ function chain() {
 /** Payloads passed to `db.update(...).set(...)`, in call order. */
 const updateSets: Record<string, unknown>[] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({
@@ -36,7 +36,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const requireCapability = vi.fn(async () => undefined);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => staffUser,
 	requireCapability,
 	can: vi.fn(async () => true),
@@ -45,14 +45,14 @@ vi.mock('$lib/server/authorization', () => ({
 }));
 
 const refundPayment = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	refund: refundPayment,
 	checkout: vi.fn(),
 	recordCashPayment: vi.fn()
 }));
 
 const reverseReservationCredits = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reservation-credit-service', () => ({
+vi.mock('#lib/server/reservation/reservation-credit-service.js', () => ({
 	commitReservationCredits: vi.fn(),
 	computeReservationCredit: vi.fn(),
 	commitCreditsAndSettleIfCovered: vi.fn(),
@@ -69,11 +69,13 @@ const cancel = vi.fn(
 		_options?: { staffOverride?: boolean; authorizedActor?: boolean }
 	) => undefined
 );
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+const recordReservationAudit = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn(),
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
 	cancel,
+	recordReservationAudit,
 	confirm: vi.fn(),
 	markComplete: vi.fn(),
 	markNoShow: vi.fn(),
@@ -86,7 +88,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationValidationError: class extends Error {}
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -114,7 +116,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { refundOnlyReservation, refundAndCancelReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 const paidRow = {
 	createdByUserId: ownerId,
@@ -149,6 +151,17 @@ describe('refundOnlyReservation', () => {
 		// display reads "refunded" off the column rather than off the status.
 		expect(updateSets[0]).not.toHaveProperty('status');
 		expect(cancel).not.toHaveBeenCalled();
+	});
+
+	// Who refunded is on the audit row, not the reservation (#2817).
+	it('records the refund against the booking', async () => {
+		selectResults.push([paidRow]);
+		await refundOnlyReservation({ id: 'res-1' }, undefined);
+		const [id, build] = recordReservationAudit.mock.calls.at(-1)!;
+		expect(id).toBe('res-1');
+		expect(
+			build({ reservationId: 'res-1', date: 'd', startTime: 's', endTime: 'e' })
+		).toMatchObject({ action: 'reservation.refunded', details: { cancelled: false } });
 	});
 
 	it('requires the finance.refund capability', async () => {
@@ -191,6 +204,10 @@ describe('refundAndCancelReservation', () => {
 		// here as well would refund twice.
 		expect(refundPayment).not.toHaveBeenCalled();
 		expect(updateSets).toHaveLength(0);
+		const [, build] = recordReservationAudit.mock.calls.at(-1)!;
+		expect(
+			build({ reservationId: 'res-1', date: 'd', startTime: 's', endTime: 'e' })
+		).toMatchObject({ action: 'reservation.refunded', details: { cancelled: true } });
 	});
 
 	it('requires the finance.refund capability', async () => {

@@ -1,16 +1,17 @@
 <script lang="ts">
-	import { getUserThreads } from '$lib/remote/inbox.remote';
-	import { getUserNotifications } from '$lib/remote/notifications.remote';
-	import { getUserMarketing } from '$lib/remote/marketing.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserThreads } from '#lib/remote/inbox.remote.js';
+	import { getUserNotifications } from '#lib/remote/notifications.remote.js';
+	import { getUserMarketing } from '#lib/remote/marketing.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear, relativeDay } from '$lib/utils/format';
+	import { formatDateShortYear, relativeDay } from '#lib/utils/format.js';
 
 	let { id, email }: { id: string; email: string } = $props();
 </script>
@@ -21,36 +22,43 @@
 	the panel answered that question and "what has this member done" at the same
 	time; they are the Moderation tab now.
 -->
-<RelatedList title="Conversations" result={getUserThreads({ userId: id, email })}>
+<RelatedList
+	title={m.staff_members_id_panels_comms_panel_conversations_title()}
+	result={getUserThreads({ userId: id, email })}
+>
 	{#snippet children(data)}
 		{@const groups = [
-			{ label: 'Portal', rows: data.portal },
-			{ label: 'By email address', rows: data.byEmail }
+			{ label: m.staff_members_id_panels_comms_panel_portal_label(), rows: data.portal },
+			{ label: m.staff_members_id_panels_comms_panel_by_email_address_label(), rows: data.byEmail }
 		]}
 		{#if data.portal.length === 0 && data.byEmail.length === 0}
 			<EmptyState
-				title="No conversations"
-				description="Nothing in the inbox from this member, by portal or by email."
+				title={m.staff_members_id_panels_comms_panel_no_conversations_title()}
+				description={m.staff_members_id_panels_comms_panel_nothing_inbox_from_membe_body()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{data.open} open · {data.unread} unread by them
+				{m.staff_members_id_panels_comms_panel_open_unread_by_them_text({
+					open: data.open,
+					unread: data.unread
+				})}
 			</p>
 			{#each groups as group (group.label)}
 				{#if group.rows.length > 0}
 					<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">{group.label}</h4>
 					<Table>
 						{#snippet head()}
-							<th class="w-px"><span class="sr-only">Status</span></th>
-							<th>Subject</th>
-							<th class="col-extra">Last message</th>
+							<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+							<th>{m.staff_members_id_panels_comms_panel_subject_label()}</th>
+							<th class="col-extra">{m.staff_members_id_panels_comms_panel_last_message_label()}</th
+							>
 						{/snippet}
 						{#each group.rows as t (t.id)}
-							<tr class="hover" use:rowLink={resolve(`/staff/inbox/${t.id}`)}>
+							<tr class="hover" use:rowLink={resolve(`staff/inbox/${t.id}`)}>
 								<td class="w-px"><StatusBadge status={t.status} /></td>
 								<td class="cell-primary">
-									<a class="font-medium" href={resolve(`/staff/inbox/${t.id}`)}>
-										{t.subject ?? '(no subject)'}
+									<a class="font-medium" href={resolve(`staff/inbox/${t.id}`)}>
+										{t.subject ?? m.staff_members_id_panels_comms_panel_no_subject_text()}
 									</a>
 									<div class="text-muted">{t.preview ?? ''}</div>
 								</td>
@@ -70,12 +78,17 @@
 	Preferences alongside the sends, because the question they answer together is
 	"why didn't they get the email?" — which is unanswerable from either half.
 -->
-<RelatedList title="Notifications" result={getUserNotifications(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_comms_panel_notifications_title()}
+	result={getUserNotifications(id)}
+>
 	{#snippet children(data)}
-		<h4 class="mb-1 text-subtle font-semibold uppercase">Channels</h4>
+		<h4 class="mb-1 text-subtle font-semibold uppercase">{m.staff_channels_title()}</h4>
 		{@const overrides = Object.entries(data.preferences)}
 		{#if overrides.length === 0}
-			<p class="mb-4 text-muted">All defaults — nothing has been turned off for this member.</p>
+			<p class="mb-4 text-muted">
+				{m.staff_members_id_panels_comms_panel_all_defaults_nothing_has_text()}
+			</p>
 		{:else}
 			<!-- Only types they have changed are stored, so this list is the set of
 			     deliberate overrides rather than the whole catalogue. Everything
@@ -86,17 +99,17 @@
 						{type.replace(/_/g, ' ')}
 						{[pref.email && 'email', pref.inApp && 'in-app', pref.sms && 'SMS']
 							.filter(Boolean)
-							.join(' · ') || 'off'}
+							.join(' · ') || m.staff_members_id_panels_comms_panel_off_label()}
 					</Badge>
 				{/each}
 			</div>
 		{/if}
 
 		<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">
-			Recent ({data.unread} unread)
+			{m.staff_members_id_panels_comms_panel_recent_unread_title({ unread: data.unread })}
 		</h4>
 		{#if data.items.length === 0}
-			<p class="text-muted">Nothing sent yet.</p>
+			<p class="text-muted">{m.staff_members_id_panels_comms_panel_nothing_sent_yet_text()}</p>
 		{:else}
 			<ul class="flex flex-col gap-2">
 				{#each data.items as n (n.id)}
@@ -104,7 +117,9 @@
 						<span class="font-medium">{n.title}</span>
 						<span class="opacity-60"> · {relativeDay(n.createdAt)}</span>
 						{#if !n.readAt}
-							<Badge size="sm" variant="info">Unread</Badge>
+							<Badge size="sm" variant="info"
+								>{m.staff_members_id_panels_comms_panel_unread_label()}</Badge
+							>
 						{/if}
 					</li>
 				{/each}
@@ -113,28 +128,35 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Email lists" result={getUserMarketing(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_comms_panel_email_lists_title()}
+	result={getUserMarketing(id)}
+>
 	{#snippet children(data)}
 		{#if !data.subscriber}
 			<EmptyState
-				title="Not a subscriber"
-				description="No marketing subscriber record is linked to this account."
+				title={m.staff_members_id_panels_comms_panel_not_subscriber_title()}
+				description={m.staff_members_id_panels_comms_panel_no_marketing_subscriber_body()}
 			/>
 		{:else}
 			{#if data.subscriber.suppressedAt}
 				<Alert type="warning" class="mb-3">
-					Suppressed{data.subscriber.suppressionReason
-						? ` (${data.subscriber.suppressionReason})`
-						: ''} since {formatDateShortYear(data.subscriber.suppressedAt)} — club mail is not being delivered.
+					{m.staff_members_id_panels_comms_panel_suppressed_since_club_ma_body({
+						value: data.subscriber.suppressionReason
+							? ` (${data.subscriber.suppressionReason})`
+							: '',
+						formatDateShortYear: formatDateShortYear(data.subscriber.suppressedAt)
+					})}
 				</Alert>
 			{/if}
 			<div class="flex flex-wrap gap-1">
 				{#each data.audiences as a (a.audienceId)}
-					<a href={resolve(`/staff/marketing/audiences/${a.audienceId}`)}>
+					<a href={resolve(`staff/marketing/audiences/${a.audienceId}`)}>
 						<Badge size="sm">{a.audienceName}</Badge>
 					</a>
 				{:else}
-					<span class="text-muted">Not on any list.</span>
+					<span class="text-muted">{m.staff_members_id_panels_comms_panel_not_any_list_text()}</span
+					>
 				{/each}
 			</div>
 		{/if}

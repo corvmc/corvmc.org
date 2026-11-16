@@ -68,7 +68,17 @@ describe('renderFlyer', () => {
 			),
 			(c) => c.charCodeAt(0)
 		);
-		const png = await renderFlyer(flyerLines(SHOW), { bytes: pixel, contentType: 'image/png' });
-		expect(pngSize(png)).toEqual({ width: FLYER_WIDTH, height: FLYER_HEIGHT });
+		const sponsors = [
+			{ name: 'Acme Audio', src: `data:image/png;base64,${btoa(String.fromCharCode(...pixel))}` },
+			{ name: 'Bean Cafe', src: null }
+		];
+		for (const opts of [
+			{ art: { bytes: pixel, contentType: 'image/png' } },
+			{ art: { bytes: pixel, contentType: 'image/png' }, sponsors },
+			{ sponsors }
+		]) {
+			const png = await renderFlyer(flyerLines(SHOW), opts);
+			expect(pngSize(png)).toEqual({ width: FLYER_WIDTH, height: FLYER_HEIGHT });
+		}
 	});
 });

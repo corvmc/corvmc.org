@@ -1,10 +1,11 @@
 <script lang="ts" module>
-	import type { getGroupChatTopic as topicQuery } from '$lib/remote/group-chat.remote';
+	import type { getGroupChatTopic as topicQuery } from '#lib/remote/group-chat.remote.js';
 
 	export type GroupChatTopic = Awaited<ReturnType<typeof topicQuery>>;
 </script>
 
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One topic of a group's chat, whichever panel it is mounted in.
 	 *
@@ -17,12 +18,23 @@
 	import MuteRoomAction from './MuteRoomAction.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import { untrack } from 'svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { markGroupChatSeen, postGroupChatMessage } from '$lib/remote/group-chat.remote';
+	import { IconArrowLeft } from '@tabler/icons-svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { markGroupChatSeen, postGroupChatMessage } from '#lib/remote/group-chat.remote.js';
 
 	// Handed in, never awaited here: on Messages the page's own query already
 	// carries the topic.
-	let { chat, viewerUserId }: { chat: GroupChatTopic; viewerUserId: string } = $props();
+	let {
+		chat,
+		viewerUserId,
+		backHref
+	}: {
+		chat: GroupChatTopic;
+		viewerUserId: string;
+		/** In a `ListDetailShell` the list pane is hidden below `lg`: this is the way out. */
+		backHref?: string;
+	} = $props();
 
 	// The id alone, so a refreshed topic (a new object) does not re-mark it.
 	const threadId = $derived(chat.id);
@@ -39,21 +51,42 @@
 
 <div class="flex h-full min-h-0 flex-col gap-4">
 	<div class="flex items-center justify-end">
+		{#if backHref}
+			<Button
+				href={backHref}
+				variant="ghost"
+				size="sm"
+				shape="square"
+				class="mr-auto lg:hidden"
+				aria-label={m.ui_back_label()}
+			>
+				<IconArrowLeft size={18} />
+			</Button>
+		{/if}
 		<MuteRoomAction threadId={chat.id} roomName={chat.topicName} muted={chat.muted} />
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#if chat.messages.length === 0}
 			<EmptyState
-				title="Nothing here yet"
+				title={m.inbox_group_chat_title()}
 				description={chat.isGeneral
-					? `This is ${chat.groupName}'s own thread — everyone in the group reads it. Say something.`
-					: `${chat.topicName} is empty. Everyone in ${chat.groupName} reads it.`}
+					? m.inbox_group_chat_s_own_thread_everyone_group_body({ groupName: chat.groupName })
+					: m.inbox_group_chat_empty_everyone_reads_body({
+							topicName: chat.topicName,
+							groupName: chat.groupName
+						})}
 			/>
 		{:else}
-			<ThreadTimeline messages={chat.messages} {viewerUserId} />
+			<ThreadTimeline messages={chat.messages} channel="group" {viewerUserId} />
 		{/if}
 	</div>
 
-	<ThreadComposer threadId={chat.id} replyForm={postGroupChatMessage} sendLabel="Send" />
+	{#if !chat.readOnly}
+		<ThreadComposer
+			threadId={chat.id}
+			replyForm={postGroupChatMessage}
+			sendLabel={m.inbox_group_chat_send_label()}
+		/>
+	{/if}
 </div>

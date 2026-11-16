@@ -1,22 +1,22 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	volunteerProfile,
 	volunteerRole,
 	volunteerRoleInterest
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, isNull, or, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { DomainError } from '$lib/server/errors';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { and, asc, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { DomainError } from '#lib/server/errors.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
 import { ROLE_NAME_SEPARATOR } from './volunteer-interest-service';
 import { holdsCertificationSql } from './member-certification-service';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
-import type { MemberRef } from '$lib/types/entity';
-import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
-import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/schema/volunteer';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '#lib/config.js';
+import type { VolunteerProfile, VolunteerProfileStatus } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Volunteer profiles
@@ -341,6 +341,9 @@ export interface BlockedVolunteer {
  * Projects the same member ref the hour-log queue does, so the two queues draw
  * the person identically.
  */
+/** An under-18 profile nobody has signed off: the review feed's predicate. */
+export const minorAwaitingSignOff = () => eq(volunteerProfile.status, 'blocked');
+
 export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 	const rows = await db
 		.select({
@@ -354,7 +357,7 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 		})
 		.from(volunteerProfile)
 		.innerJoin(user, eq(user.id, volunteerProfile.userId))
-		.where(eq(volunteerProfile.status, 'blocked'))
+		.where(minorAwaitingSignOff())
 		.orderBy(asc(volunteerProfile.createdAt), asc(volunteerProfile.id));
 
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));
@@ -406,6 +409,8 @@ export async function listVolunteers(
 		status?: VolunteerProfileStatus;
 		/** Only people holding this clearance today. */
 		certificationId?: string;
+		/** Only these people; an empty list matches nobody. */
+		userIds?: string[];
 	} = {},
 	pagination: PaginationInput = {}
 ): Promise<PaginatedResult<VolunteerListRow>> {
@@ -432,12 +437,19 @@ export async function listVolunteers(
 		? holdsCertificationSql(filters.certificationId)
 		: undefined;
 
+	const onlyThese = filters.userIds
+		? filters.userIds.length > 0
+			? inArray(user.id, filters.userIds)
+			: sql`0`
+		: undefined;
+
 	const where = and(
 		isNull(user.deletedAt),
 		matchesRole,
 		matchesSearch,
 		matchesStatus,
-		holdsClearance
+		holdsClearance,
+		onlyThese
 	);
 
 	// A correlated subquery, deliberately not a join. Joining the hour log

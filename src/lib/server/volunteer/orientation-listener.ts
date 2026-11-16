@@ -1,5 +1,6 @@
-import { domainEvents } from '$lib/server/event-bus';
-import { priorBookingCount } from '$lib/server/reservation/reservation-service';
+import { domainEvents } from '#lib/server/event-bus/index.js';
+import { CLEARANCE_BOOKER } from '#lib/config.js';
+import { priorBookingCount } from '#lib/server/reservation/reservation-service.js';
 import {
 	cancelOrientationFor,
 	completeOrientation,
@@ -24,7 +25,7 @@ export function registerOrientationListeners(): void {
 			// A band's rehearsal hold or a staff-created event hold is not somebody's
 			// first visit — the same rule `isFirstReservationSql` states, checked
 			// first because it is the cheapest and rules out most bookings.
-			if (event.bookerType !== 'user') return;
+			if (event.bookerType !== CLEARANCE_BOOKER) return;
 
 			const prior = await priorBookingCount(
 				event.userId,
@@ -80,7 +81,7 @@ export function registerOrientationListeners(): void {
 	// stored.
 	domainEvents.on('volunteer.shift_completed', async ({ data: event }) => {
 		try {
-			const member = await orientationOwnerOf(event.shiftId);
+			const member = await orientationOwnerOf(event.workOrderId);
 			if (!member) return;
 
 			// The member is the one who was shown around; `event.userId` is the

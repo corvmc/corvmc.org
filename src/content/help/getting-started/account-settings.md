@@ -1,5 +1,5 @@
 ---
-title: Set Up Your Account
+title: Set up your account
 slug: account-settings
 category: getting-started
 summary: Update your name, pronouns, and contact details.

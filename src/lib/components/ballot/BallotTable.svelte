@@ -1,16 +1,17 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/** Ballots as a list, for the member and staff index pages. */
 	import { resolve } from '$app/paths';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import {
 		ballotKindLabels,
 		ballotStatusLabels,
 		type BallotKind,
 		type BallotStatus
-	} from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	type Row = {
 		id: string;
@@ -27,7 +28,7 @@
 	let { rows, panel }: { rows: Row[]; panel: 'member' | 'staff' } = $props();
 
 	function href(id: string) {
-		return panel === 'staff' ? resolve(`/staff/ballots/${id}`) : resolve(`/member/ballots/${id}`);
+		return panel === 'staff' ? resolve(`staff/ballots/${id}`) : resolve(`member/ballots/${id}`);
 	}
 
 	/** What the list owes this member, if anything. */
@@ -41,11 +42,11 @@
 
 <Table>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">Status</span></th>
-		<th>Ballot</th>
-		<th>Closes</th>
+		<th class="w-px"><span class="sr-only">{m.ballot_ballot_table_status_label()}</span></th>
+		<th>{m.ballot_ballot_table_ballot_label()}</th>
+		<th>{m.ballot_ballot_table_closes_label()}</th>
 		{#if panel === 'member'}
-			<th class="col-support">Your part</th>
+			<th class="col-support">{m.ballot_ballot_table_part_label()}</th>
 		{/if}
 	{/snippet}
 	{#each rows as r (r.id)}

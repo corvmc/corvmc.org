@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import { getPublicEvents } from '$lib/remote/events.remote';
-	import { signInHref } from '$lib/utils/sign-in';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import { getPublicEvents } from '#lib/remote/events.remote.js';
+	import { signInHref } from '#lib/utils/sign-in.js';
 
 	const JOIN_HREF = signInHref({ register: true, returnTo: '/member' });
 
@@ -15,42 +16,45 @@
 	const features = [
 		{
 			icon: IconMusic,
-			title: 'Practice Space',
-			desc: 'Affordable hourly rehearsal space with professional equipment for bands and musicians.'
+			title: m.public_practice_space_title(),
+			desc: m.public_affordable_hourly_rehearsal_space_with_body()
 		},
 		{
 			icon: IconMicrophone,
-			title: 'Live Events',
-			desc: 'Regular concerts and showcases featuring local and touring musicians.'
+			title: m.public_live_events_title(),
+			desc: m.public_regular_concerts_showcases_featuring_local_body()
 		},
 		{
 			icon: IconHeartHandshake,
-			title: 'Community',
-			desc: 'Connecting musicians for collaboration, education, and mutual support.'
+			title: m.public_community_title(),
+			desc: m.public_connecting_musicians_collaboration_education_mutual_body()
 		},
 		{
 			icon: IconSchool,
-			title: 'Education',
-			desc: 'Workshops, masterclasses, and mentorship programs for musicians of all levels.'
+			title: m.public_education_title(),
+			desc: m.public_workshops_masterclasses_mentorship_programs_musicians_body()
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>Corvallis Music Collective</title>
+	<title>{m.public_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="Shared music resources, affordable practice space, and a supportive community for musicians in Corvallis, Oregon."
 	/>
 </svelte:head>
 
-<Hero title="Building and Connecting Music Communities in Corvallis" tone="teal">
-	We provide shared music resources, affordable practice space, and a supportive community for local
-	musicians to grow, collaborate, and thrive together.
+<Hero title={m.public_building_connecting_music_communities_corvallis_title()} tone="teal">
+	{m.public_we_provide_shared_music_resources_text()}
 
 	{#snippet actions()}
-		<Button href={JOIN_HREF} variant="primary" shape="wide">Join Our Community!</Button>
-		<Button href="/about" variant="ghost" shape="wide">Learn More About Us</Button>
+		<Button href={JOIN_HREF} variant="primary" shape="wide"
+			>{m.public_join_our_community_label()}</Button
+		>
+		<Button href="/about" variant="ghost" shape="wide"
+			>{m.public_learn_more_about_us_label()}</Button
+		>
 		<div class="mt-1 flex flex-wrap justify-center gap-2">
 			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
 				<span class="sticker-badge sticker-badge--sm">{tag}</span>
@@ -62,7 +66,9 @@
 <!-- Upcoming Events -->
 <Section>
 	<div class="mb-12 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">Upcoming Events</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">
+			{m.public_upcoming_events_title()}
+		</h2>
 	</div>
 	{#if upcoming.length > 0}
 		<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -80,19 +86,21 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="text-center opacity-60">No upcoming events right now. Check back soon!</p>
+		<p class="text-center opacity-60">{m.public_no_upcoming_events_right_now_text()}</p>
 	{/if}
 	<div class="mt-8 text-center">
-		<Button href="/events" variant="ghost">View All Events &rarr;</Button>
+		<Button href="/events" variant="ghost">{m.public_view_all_events_label()}</Button>
 	</div>
 </Section>
 
 <!-- What We Do -->
 <Section tint="secondary">
 	<div class="mb-12 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">What We Do</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">
+			{m.public_what_we_do_title()}
+		</h2>
 		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
-			Supporting musicians and building community through various programs
+			{m.public_supporting_musicians_building_community_through_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -107,40 +115,47 @@
 		{/each}
 	</div>
 	<div class="mt-10 text-center">
-		<Button href="/programs" variant="ghost">View All Programs &rarr;</Button>
+		<Button href="/programs" variant="ghost">{m.public_view_all_programs_label()}</Button>
 	</div>
 </Section>
 
 <!-- Get Involved -->
 <Section>
 	<div class="mb-12 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">Get Involved</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight text-cmc-teal">
+			{m.public_get_involved_title()}
+		</h2>
 		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
-			Join our mission to support the local music community
+			{m.public_join_our_mission_support_local_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 		<Tile fill="orange">
-			<h3 class="text-xl font-bold">Become a Member</h3>
+			<h3 class="text-xl font-bold">{m.public_become_member_title()}</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
-				Join our community of musicians and gain access to practice space, events, and networking
-				opportunities.
+				{m.public_join_our_community_musicians_gain_text()}
 			</p>
-			<Button href={JOIN_HREF} variant="cmc-navy" size="sm" class="mt-2">Join Now</Button>
+			<Button href={JOIN_HREF} variant="cmc-navy" size="sm" class="mt-2"
+				>{m.public_join_now_label()}</Button
+			>
 		</Tile>
 		<Tile fill="navy">
-			<h3 class="text-xl font-bold">Volunteer</h3>
+			<h3 class="text-xl font-bold">{m.public_volunteer_title()}</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
-				Help us organize events, maintain our space, and support fellow musicians in our community.
+				{m.public_help_us_organize_events_maintain_text()}
 			</p>
-			<Button href="/contribute" variant="cmc-orange" size="sm" class="mt-2">Learn More</Button>
+			<Button href="/contribute" variant="cmc-orange" size="sm" class="mt-2"
+				>{m.public_learn_more_label()}</Button
+			>
 		</Tile>
 		<Tile fill="light-blue">
-			<h3 class="text-xl font-bold">Support Us</h3>
+			<h3 class="text-xl font-bold">{m.public_support_us_title()}</h3>
 			<p class="text-sm leading-relaxed" style="opacity: 0.85">
-				Your donation helps us provide affordable space and programs for the local music community.
+				{m.public_donation_helps_us_provide_affordable_text()}
 			</p>
-			<Button href="/contribute" variant="cmc-navy" size="sm" class="mt-2">Contribute</Button>
+			<Button href="/contribute" variant="cmc-navy" size="sm" class="mt-2"
+				>{m.public_contribute_2_label()}</Button
+			>
 		</Tile>
 	</div>
 </Section>

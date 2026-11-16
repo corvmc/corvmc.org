@@ -39,6 +39,18 @@ describe('transitionWarnings', () => {
 			'Load-out is not finished: Task 1, Task 2, Task 3, Task 4, Task 5 and 2 more.'
 		]);
 	});
+
+	// Warn, record, allow: a door counted once or counted two ways never blocks.
+	it('warns on settling or closing over one door count or two that differ', () => {
+		for (const to of ['settled', 'closed'] as const) {
+			const from = to === 'settled' ? 'completed' : 'settled';
+			expect(transitionWarnings(from, to, { door: 'single' })).toHaveLength(1);
+			expect(transitionWarnings(from, to, { door: 'mismatch' })).toHaveLength(1);
+			expect(transitionWarnings(from, to, { door: 'agreed' })).toEqual([]);
+			expect(transitionWarnings(from, to, { door: 'none' })).toEqual([]);
+		}
+		expect(transitionWarnings('confirmed', 'completed', { door: 'mismatch' })).toEqual([]);
+	});
 });
 
 describe('isTerminalProduction', () => {

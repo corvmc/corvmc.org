@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Messages and internal notes on one chronological spine.
 	 *
@@ -8,7 +9,9 @@
 	 * margin scribble on the conversation, not a turn in it.
 	 */
 	import { IconNote } from '@tabler/icons-svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import type { inboxChannels } from '#lib/config.js';
+	import MessageBody from './MessageBody.svelte';
 
 	type Message = {
 		id: string;
@@ -28,11 +31,14 @@
 
 	let {
 		messages,
+		channel,
 		notes = [],
 		contactName,
 		viewerUserId
 	}: {
 		messages: Message[];
+		/** The thread's channel, which decides whether bodies are markdown. */
+		channel: (typeof inboxChannels)[number];
 		/** Staff-only annotations. Omitted entirely on member-facing timelines. */
 		notes?: Note[];
 		contactName?: string | null;
@@ -59,8 +65,15 @@
 	// Only used when a message has no stored author name. The member-facing
 	// timeline passes no contactName — naming the other side after the thread's
 	// contact would have staff replies signed with the member's own name.
-	const ownName = $derived(viewerUserId ? 'You' : 'Staff');
-	const otherName = $derived(contactName ?? (viewerUserId ? 'CorvMC' : 'Contact'));
+	const ownName = $derived(
+		viewerUserId ? m.inbox_thread_timeline_text() : m.inbox_thread_timeline_staff_text()
+	);
+	const otherName = $derived(
+		contactName ??
+			(viewerUserId
+				? m.inbox_thread_timeline_corvmc_text()
+				: m.inbox_thread_timeline_contact_text())
+	);
 
 	type Entry =
 		{ kind: 'message'; at: number; message: Message } | { kind: 'note'; at: number; note: Note };
@@ -95,10 +108,8 @@
 					{msg.authorName ?? (own ? ownName : otherName)}
 					<time class="ml-2 text-xs opacity-50">{formatDateTime(msg.createdAt)}</time>
 				</div>
-				<!-- Bodies arrive as plain text; without this every multi-paragraph
-				     email collapsed into one run-on block. -->
-				<div class="chat-bubble whitespace-pre-wrap {own ? 'chat-bubble-primary' : ''}">
-					{msg.body}
+				<div class="chat-bubble {own ? 'chat-bubble-primary' : ''}">
+					<MessageBody body={msg.body} {channel} />
 				</div>
 			</div>
 		{:else}
@@ -106,12 +117,16 @@
 			<div class="mx-6 border-l-2 border-dashed border-base-content/20 py-1 pl-3">
 				<div class="flex items-center gap-1.5 text-xs opacity-50">
 					<IconNote size={13} />
-					{note.authorName ?? 'Staff'} · {formatDateTime(note.createdAt)}
+					{note.authorName ?? m.inbox_thread_timeline_staff_text()} · {formatDateTime(
+						note.createdAt
+					)}
 				</div>
 				<div class="text-muted whitespace-pre-wrap">{note.body}</div>
 			</div>
 		{/if}
 	{:else}
-		<p class="py-8 text-center text-muted">No messages in this conversation yet.</p>
+		<p class="py-8 text-center text-muted">
+			{m.inbox_thread_timeline_no_messages_conversation_yet_text()}
+		</p>
 	{/each}
 </div>

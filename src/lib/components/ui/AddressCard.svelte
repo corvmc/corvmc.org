@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import QRCode from 'qrcode-svg';
 	import type { Snippet } from 'svelte';
 	import Card from './Card/Card.svelte';
@@ -20,8 +21,8 @@
 	 */
 	let {
 		url,
-		title = 'Your address',
-		qrLabel = 'QR code for this address',
+		title = m.ui_address_card_title(),
+		qrLabel = m.ui_address_card_qr_label(),
 		children
 	}: {
 		/** The absolute address, from `canonicalAddress`. */
@@ -54,8 +55,8 @@
 				<div class="mt-2">
 					<ShareButton
 						{url}
-						label="Copy address"
-						title="Copy this address"
+						label={m.ui_address_copy_label()}
+						title={m.ui_address_copy_hint_title()}
 						class="btn gap-2 btn-outline btn-sm"
 					/>
 				</div>

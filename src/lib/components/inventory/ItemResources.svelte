@@ -1,14 +1,15 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { Select } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { FileUpload, Select } from '#lib/components/ui/Form/index.js';
 	import {
 		getItemResources,
 		linkItemArticle,
 		unlinkItemArticle
-	} from '$lib/remote/inventory.remote';
+	} from '#lib/remote/inventory.remote.js';
 	import { IconFileText, IconBook, IconTrash, IconUpload } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -24,40 +25,27 @@
 
 	const data = $derived(await getItemResources(itemId));
 
-	let uploading = $state(false);
-	let chosenArticle = $state('');
+	const chosenArticle = $derived(linkItemArticle.fields.articleId.value() ?? '');
 
-	async function upload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
+		const body = new FormData();
+		body.append('file', file);
+		body.append('slot', 'manual');
+		body.append('attachableId', itemId);
 
-		uploading = true;
-		try {
-			const body = new FormData();
-			body.append('file', file);
-			body.append('slot', 'manual');
-			body.append('attachableId', itemId);
-
-			const res = await fetch('/api/inventory/media', { method: 'POST', body });
-			if (!res.ok) {
-				const detail = (await res.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(detail?.message ?? 'Upload failed');
-			}
-			await getItemResources(itemId).refresh();
-			toast.success('Manual uploaded');
-		} catch (err) {
-			toast.error((err as Error).message);
-		} finally {
-			uploading = false;
-			input.value = '';
+		const res = await fetch('/api/inventory/media', { method: 'POST', body });
+		if (!res.ok) {
+			const detail = (await res.json().catch(() => null)) as { message?: string } | null;
+			throw new Error(detail?.message ?? 'Upload failed');
 		}
+		await getItemResources(itemId).refresh();
+		toast.success(m.inventory_item_resources_toast());
 	}
 </script>
 
-<InfoCard title="Documentation">
+<InfoCard title={m.inventory_item_resources_title()}>
 	{#if data.articles.length === 0 && data.manuals.length === 0}
-		<EmptyState description="No manual or how-to attached yet" />
+		<EmptyState description={m.inventory_item_resources_description_body()} />
 	{/if}
 
 	{#if data.manuals.length > 0}
@@ -66,7 +54,7 @@
 				<li class="flex items-center gap-2">
 					<IconFileText size={18} class="shrink-0 opacity-60" />
 					<a class="grow link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
-						{manual.filename ?? 'Manual'}
+						{manual.filename ?? m.inventory_item_resources_manual_text()}
 					</a>
 				</li>
 			{/each}
@@ -83,7 +71,9 @@
 						{#if !article.published}
 							<!-- Drafts stay off the member-facing page; saying so here stops a
 							     staffer wondering why it never appeared. -->
-							<Badge variant="outline" size="xs">Draft — members can't see this</Badge>
+							<Badge variant="outline" size="xs"
+								>{m.inventory_item_resources_draft_members_can_t_see_label()}</Badge
+							>
 						{/if}
 					</span>
 					<form
@@ -93,7 +83,12 @@
 					>
 						<input {...unlinkItemArticle.fields.itemId.as('hidden', itemId)} />
 						<input {...unlinkItemArticle.fields.linkId.as('hidden', article.linkId)} />
-						<Button type="submit" variant="ghost" size="xs" aria-label="Unlink {article.title}">
+						<Button
+							type="submit"
+							variant="ghost"
+							size="xs"
+							aria-label={m.inventory_item_resources_unlink_label({ title: article.title })}
+						>
 							<IconTrash size={16} />
 						</Button>
 					</form>
@@ -103,34 +98,37 @@
 	{/if}
 
 	<div class="mt-4 flex flex-wrap items-center gap-3">
-		<label class="btn btn-ghost btn-sm">
+		<FileUpload {upload} accept=".pdf,image/*" showPreview={false} variant="ghost">
 			<IconUpload size={16} />
-			{uploading ? 'Uploading…' : 'Add a manual'}
-			<input
-				type="file"
-				class="hidden"
-				accept=".pdf,image/*"
-				onchange={upload}
-				disabled={uploading}
-			/>
-		</label>
+			{m.inventory_item_resources_add_manual_text()}
+		</FileUpload>
 
 		{#if data.linkable.length > 0}
 			<form
 				class="flex items-center gap-2"
 				{...linkItemArticle.enhance(async ({ submit }) => {
 					await submit();
-					chosenArticle = '';
+					linkItemArticle.fields.articleId.set('');
 				})}
 			>
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
-				<Select size="sm" aria-label="Help article" bind:value={chosenArticle} name="articleId">
-					<option value="">Link a how-to…</option>
+				<Select
+					size="sm"
+					aria-label={m.inventory_item_resources_help_article_label()}
+					{...linkItemArticle.fields.articleId.as('select')}
+				>
+					<option value="">{m.inventory_item_resources_link_how_label()}</option>
 					{#each data.linkable as article (article.id)}
-						<option value={article.id}>{article.title}{article.published ? '' : ' (draft)'}</option>
+						<option value={article.id}
+							>{article.title}{article.published
+								? ''
+								: m.inventory_item_resources_draft_label()}</option
+						>
 					{/each}
 				</Select>
-				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}>Link</Button>
+				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}
+					>{m.inventory_item_resources_link_label()}</Button
+				>
 			</form>
 		{/if}
 	</div>

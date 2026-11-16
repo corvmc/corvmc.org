@@ -29,7 +29,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
@@ -39,11 +39,17 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+// Dependencies have their own SQLite spec; here they only answer "none" (#2625).
+vi.mock('./task-dependencies', () => ({
+	countOpenBlockers: async () => 0,
+	announceTasksReady: async () => {}
+}));
 vi.mock('../inventory/work-request-service', () => ({
 	resolveFlagsForWorkOrder: vi.fn().mockResolvedValue([])
 }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { db } from '#lib/server/db/index.js';
 import { resolveFlagsForWorkOrder } from '../inventory/work-request-service';
 import type { SQL } from 'drizzle-orm';
 import {
@@ -53,9 +59,9 @@ import {
 	createWorkOrder,
 	listShifts,
 	listWorkOrders,
-	resolveWorkOrder,
-	scheduleWorkOrder,
-	updateShift
+	openShift,
+	editTask,
+	resolveWorkOrder
 } from './work-order-service';
 
 /** The rendered WHERE clause of the query that ran. */
@@ -82,6 +88,7 @@ function shiftRow(overrides: Record<string, unknown> = {}) {
 		capacity: 2,
 		notes: null,
 		cancelledAt: null,
+		doneWhen: null,
 		...overrides
 	};
 }
@@ -185,13 +192,13 @@ describe('listShifts', () => {
 	});
 });
 
-describe('updateShift and the event link', () => {
+describe('editTask and the event link', () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
 	it('attaches an event', async () => {
-		await updateShift('shift-1', { eventId: 'event-2' });
+		await editTask('shift-1', { eventId: 'event-2' });
 
 		expect(updatedColumns().eventId).toBe('event-2');
 	});
@@ -203,7 +210,7 @@ describe('updateShift and the event link', () => {
 	 * `eventId` (the role page's create modal, say) must not wipe the link.
 	 */
 	it('detaches the event when the field arrives empty', async () => {
-		await updateShift('shift-1', { eventId: '' });
+		await editTask('shift-1', { eventId: '' });
 
 		const set = updatedColumns();
 		expect('eventId' in set).toBe(true);
@@ -211,7 +218,7 @@ describe('updateShift and the event link', () => {
 	});
 
 	it('leaves the event alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
+		await editTask('shift-1', { notes: 'Bring gloves' });
 
 		expect('eventId' in updatedColumns()).toBe(false);
 	});
@@ -231,48 +238,61 @@ describe('createShift and the asset link', () => {
 		await createShift({ ...base, assetId: 'asset-pa' });
 		await createShift({ ...base, assetId: '' });
 
-		const values = chainCalls.filter((c) => c.method === 'values').map((c) => c.args[0] as any);
-		expect(values[0].assetId).toBe('asset-pa');
-		expect(values[1].assetId).toBeNull();
+		// The asset is a `work_order_link` row; a blank pick writes none.
+		const links = chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as any)
+			.filter((v) => 'assetId' in v);
+		expect(links).toEqual([{ workOrderId: expect.any(String), assetId: 'asset-pa' }]);
 	});
 });
 
-describe('updateShift and the asset link', () => {
+describe('editTask and the asset link', () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
+	const linkWrites = () => ({
+		deletes: vi.mocked(db.delete).mock.calls.length,
+		inserts: chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as Record<string, unknown>)
+			.filter((v) => 'workOrderId' in v && 'assetId' in v)
+	});
+
 	it('attaches an asset', async () => {
-		await updateShift('shift-1', { assetId: 'asset-pa' });
-		expect(updatedColumns().assetId).toBe('asset-pa');
+		await editTask('shift-1', { assetId: 'asset-pa' });
+		expect(linkWrites()).toEqual({
+			deletes: 1,
+			inserts: [{ workOrderId: 'shift-1', assetId: 'asset-pa' }]
+		});
 	});
 
 	it('detaches the asset when the field arrives empty', async () => {
-		await updateShift('shift-1', { assetId: '' });
-		const set = updatedColumns();
-		expect('assetId' in set).toBe(true);
-		expect(set.assetId).toBeNull();
+		selectQueue = [[shiftRow()], [{ workOrderId: 'shift-1', assetId: 'asset-pa' }]];
+		await editTask('shift-1', { assetId: '' });
+		expect(linkWrites()).toEqual({ deletes: 1, inserts: [] });
 	});
 
 	it('leaves the asset alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
-		expect('assetId' in updatedColumns()).toBe(false);
+		await editTask('shift-1', { notes: 'Bring gloves' });
+		expect(linkWrites()).toEqual({ deletes: 0, inserts: [] });
 	});
 });
 
-describe("a shift's own name", () => {
+describe("a task's own name", () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
 	it('trims it, because a heading with trailing space is a heading', async () => {
-		await updateShift('shift-1', { title: '  Spring Deep Clean  ' });
+		await editTask('shift-1', { title: '  Spring Deep Clean  ' });
 		expect(updatedColumns().title).toBe('Spring Deep Clean');
 	});
 
 	/** Same contract as `eventId`: empty means clear, absent means leave alone. */
 	it('clears the name when the field arrives empty', async () => {
-		await updateShift('shift-1', { title: '' });
+		await editTask('shift-1', { title: '' });
 
 		const set = updatedColumns();
 		expect('title' in set).toBe(true);
@@ -280,12 +300,12 @@ describe("a shift's own name", () => {
 	});
 
 	it('leaves the name alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
+		await editTask('shift-1', { notes: 'Bring gloves' });
 		expect('title' in updatedColumns()).toBe(false);
 	});
 
 	it('refuses one longer than the cap rather than truncating it', async () => {
-		await expect(updateShift('shift-1', { title: 'x'.repeat(101) })).rejects.toThrow(
+		await expect(editTask('shift-1', { title: 'x'.repeat(101) })).rejects.toThrow(
 			/under 100 characters/i
 		);
 	});
@@ -317,12 +337,8 @@ describe('cancelShift', () => {
 });
 
 describe('work orders', () => {
-	/**
-	 * The CHECK is both-or-neither, so a work order is the "neither" case. Writing
-	 * one end and not the other is the shape that used to slip through, because
-	 * `false OR NULL` is NULL and SQLite passes a CHECK returning NULL.
-	 */
-	it('creates a row with no window at all', async () => {
+	/** A task's times are its shifts (#2518): creating one writes the task alone. */
+	it('creates a task and no shift', async () => {
 		selectResult = [{ id: 'role-1', isActive: true }];
 
 		await createWorkOrder({
@@ -332,11 +348,10 @@ describe('work orders', () => {
 			createdByUserId: 'staff-1'
 		});
 
-		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
-			string,
-			unknown
-		>;
-		expect(values).toMatchObject({ startsAt: null, endsAt: null, assetId: 'as-1' });
+		// The task, then its asset link; no shift.
+		const values = chainCalls.filter((c) => c.method === 'values');
+		expect(values).toHaveLength(2);
+		expect(values[1].args[0]).toEqual({ workOrderId: expect.any(String), assetId: 'as-1' });
 	});
 
 	it('anchors a work order to a project when given one, and to none otherwise', async () => {
@@ -363,7 +378,7 @@ describe('work orders', () => {
 		).rejects.toThrow();
 	});
 
-	it('creates a task with only a title: no role, not posted', async () => {
+	it('creates a task with only a title and no role', async () => {
 		await createWorkOrder({
 			title: ' Buy paint ',
 			projectId: 'proj-1',
@@ -376,19 +391,18 @@ describe('work orders', () => {
 		expect(values).toMatchObject({
 			title: 'Buy paint',
 			volunteerRoleId: null,
-			postedAt: null,
 			projectId: 'proj-1'
 		});
 	});
 
-	it('posts volunteer work, which has a role', async () => {
+	it('keeps the places it asks for until a shift is opened on it', async () => {
 		selectResult = [{ id: 'role-1', isActive: true }];
-		await createWorkOrder({ volunteerRoleId: 'role-1', createdByUserId: 'staff-1' });
+		await createWorkOrder({ volunteerRoleId: 'role-1', capacity: 3, createdByUserId: 'staff-1' });
 		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
 			string,
 			unknown
 		>;
-		expect(values.postedAt).toBeInstanceOf(Date);
+		expect(values.pendingCapacity).toBe(3);
 	});
 
 	it('refuses a task with neither a role nor a title', async () => {
@@ -397,14 +411,14 @@ describe('work orders', () => {
 		);
 	});
 
-	it('queues only work that is unscheduled, unresolved and live', async () => {
+	it('queues only open tasks with no live shift', async () => {
 		selectResult = [];
 		await listWorkOrders();
 
 		const sql = renderedWhere().sql;
-		expect(sql).toContain('"starts_at" is null');
+		expect(sql).toMatch(/not exists \(\s*select 1 from "volunteer_shift" s/);
+		expect(sql).toContain('s."cancelled_at" is null');
 		expect(sql).toContain('"resolved_at" is null');
-		expect(sql).toContain('"cancelled_at" is null');
 	});
 
 	/**
@@ -443,17 +457,17 @@ describe('work orders', () => {
 	});
 
 	/**
-	 * `completeFinishedShifts` keys on `ends_at`, so it can never reach a row that
-	 * never had one. Without this the signups on an unscheduled work order sit at
-	 * `confirmed` forever — including after the work is done.
+	 * Marking a task done stamps its assignees, which prompts them to log hours.
+	 * Sign-ups are the completion cron's, by their shift's end (#2518).
 	 */
-	it('completes the signups itself, because the clock never will', async () => {
-		selectResult = [shiftRow({ startsAt: null, endsAt: null, resolvedAt: null })];
+	it('stamps its assignees and leaves sign-ups to the clock', async () => {
+		selectResult = [shiftRow({ resolvedAt: null })];
 
 		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1', notes: 'New jack fitted' });
 
 		const sets = chainCalls.filter((c) => c.method === 'set').map((c) => c.args[0]);
-		expect(sets.some((v: any) => v.status === 'completed')).toBe(true);
+		expect(sets.some((v: any) => v.completedAt instanceof Date)).toBe(true);
+		expect(sets.some((v: any) => v.status === 'completed')).toBe(false);
 		expect(sets.some((v: any) => v.resolvedAt instanceof Date)).toBe(true);
 	});
 
@@ -471,32 +485,41 @@ describe('work orders', () => {
 		await expect(resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' })).rejects.toThrow();
 	});
 
-	it('records whether finishing should close its reports, off unless staff say so', async () => {
-		selectResult = [shiftRow({ startsAt: null, endsAt: null })];
-		await scheduleWorkOrder('shift-1', {
-			startsAt: '2026-06-02T18:00',
-			endsAt: '2026-06-02T20:00'
-		});
-		expect(updatedColumns().closeReportsOnCompletion).toBe(false);
+	// `scheduleWorkOrder` and its close-reports flag are gone (#2518): a task gets a
+	// time by opening a shift on it, and the clock never closes its reports.
+	it('opens a shift on a task with a role, carrying its anchor', async () => {
+		selectQueue = [[shiftRow({ anchor: 'doors' })], [{ id: 'role-1', isActive: true }]];
+		selectResult = [{ id: 'shift-9', startsAt: new Date(), endsAt: new Date() }];
 
-		chainCalls = [];
-		await scheduleWorkOrder('shift-1', {
+		await openShift('shift-1', {
 			startsAt: '2026-06-02T18:00',
 			endsAt: '2026-06-02T20:00',
-			closeReportsOnCompletion: true
+			capacity: 2,
+			createdByUserId: 'staff-1'
 		});
-		expect(updatedColumns().closeReportsOnCompletion).toBe(true);
+
+		const shift = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<string, unknown>;
+		expect(shift).toMatchObject({ workOrderId: 'shift-1', capacity: 2, anchor: 'doors' });
 	});
 
-	it('refuses to schedule something that already has a window', async () => {
-		selectResult = [shiftRow()];
-
+	it('refuses to open a shift on a task with no role, or one already done', async () => {
+		selectResult = [shiftRow({ volunteerRoleId: null })];
 		await expect(
-			scheduleWorkOrder('shift-1', {
+			openShift('shift-1', {
 				startsAt: '2026-06-02T18:00',
-				endsAt: '2026-06-02T22:00'
+				endsAt: '2026-06-02T20:00',
+				createdByUserId: 'staff-1'
 			})
-		).rejects.toThrow();
+		).rejects.toThrow(/volunteer role/);
+
+		selectResult = [shiftRow({ resolvedAt: new Date() })];
+		await expect(
+			openShift('shift-1', {
+				startsAt: '2026-06-02T18:00',
+				endsAt: '2026-06-02T20:00',
+				createdByUserId: 'staff-1'
+			})
+		).rejects.toThrow(/already done/);
 	});
 });
 
@@ -560,13 +583,14 @@ describe('closing a recurring occurrence', () => {
 		expect(nextOccurrence()).toMatchObject({ maintenanceScheduleId: 'ms-1' });
 	});
 
-	it('leaves an ordinary shift out of it', async () => {
+	it('leaves an ordinary task out of it, calling off only the task and its shifts', async () => {
 		selectQueue = [[shiftRow()]];
 		selectResult = [{ id: 'shift-1' }];
 
 		await cancelShift('shift-1', 'staff-1');
 
-		expect(batch).not.toHaveBeenCalled();
+		expect(batch).toHaveBeenCalledTimes(1);
+		expect(batch.mock.calls[0][0]).toHaveLength(2);
 		expect(nextOccurrence()).toBeUndefined();
 	});
 });

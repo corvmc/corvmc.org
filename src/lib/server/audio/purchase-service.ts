@@ -11,18 +11,19 @@
  * module already knows: a `pending` row exists before the redirect, the webhook's
  * domain event flips it to `paid`, and a cron sweep clears what was abandoned.
  */
-import { db } from '$lib/server/db';
-import { audioRelease, audioTrack, releasePurchase } from '$lib/server/db/schema/audio';
-import { group } from '$lib/server/db/schema/group';
-import { and, count, eq, lt, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { checkout } from '$lib/server/finance/payment-service';
-import { getStripeProductId } from '$lib/server/finance/product-config-service';
+import { db } from '#lib/server/db/index.js';
+import { audioRelease, audioTrack, releasePurchase } from '#lib/server/db/schema/audio.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { and, eq, lt, sql } from 'drizzle-orm';
+import { DomainError } from '#lib/server/domain-error.js';
+import { checkout } from '#lib/server/finance/payment-service.js';
+import { getStripeProductId } from '#lib/server/finance/product-config-service.js';
 import { destinationFor } from './connect-service';
-import { recordAudioRefund } from '$lib/server/finance/audio-entries';
-import { validateSplit } from '$lib/finance/audio-split';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { stripe } from '$lib/server/stripe';
+import { recordAudioRefund } from '#lib/server/finance/audio-entries.js';
+import { validateSplit } from '#lib/finance/audio-split.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { stripe } from '#lib/server/stripe.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 export class ReleaseNotForSaleError extends DomainError {
 	readonly httpStatus = 404;
@@ -226,13 +227,7 @@ export async function beginPurchase(input: BeginPurchaseInput): Promise<BeginPur
 			row_id: row.id
 		},
 		successUrl: input.successUrl,
-		cancelUrl: input.cancelUrl,
-		// Paid on our own page. `elements` places no restriction on
-		// `payment_intent_data`, so the destination charge that pays the band —
-		// `transfer_data` plus `application_fee_amount` — carries across unchanged;
-		// only `success_url`, `cancel_url` and `branding_settings` are disallowed,
-		// and `checkout()` already maps the first two.
-		uiMode: 'elements'
+		cancelUrl: input.cancelUrl
 	});
 
 	return {
@@ -340,9 +335,14 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 			id: releasePurchase.id,
 			status: releasePurchase.status,
 			amountPaidCents: releasePurchase.amountPaidCents,
-			paymentIntentId: releasePurchase.stripePaymentIntentId
+			paymentIntentId: releasePurchase.stripePaymentIntentId,
+			releaseTitle: audioRelease.title,
+			bandId: group.id,
+			bandName: group.name
 		})
 		.from(releasePurchase)
+		.leftJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
+		.leftJoin(group, eq(group.id, audioRelease.groupId))
 		.where(eq(releasePurchase.purchaseId, purchaseId))
 		.limit(1);
 
@@ -378,6 +378,11 @@ export async function refundPurchase(purchaseId: string): Promise<void> {
 	// After the status flip, so the `status === 'refunded'` return above keeps a
 	// second call from writing a second reversal. The writer is idempotent too.
 	await recordAudioRefund(purchaseId);
+	await recordAuditEntry({
+		action: 'music_purchase.refunded',
+		subject: { type: 'band', id: row.bandId ?? purchaseId, label: row.bandName },
+		details: { purchaseId, releaseTitle: row.releaseTitle ?? '', amountCents: row.amountPaidCents }
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -473,25 +478,4 @@ export async function sweepAbandonedPurchases(now = new Date()): Promise<number>
 		.where(and(eq(releasePurchase.status, 'pending'), lt(releasePurchase.createdAt, cutoff)))
 		.returning({ id: releasePurchase.id });
 	return removed.length;
-}
-
-/** Sales for a band, for its payouts page. */
-export async function salesSummaryForBand(groupId: string) {
-	const [row] = await db
-		.select({
-			sales: count(),
-			gross: sql<number>`COALESCE(SUM(${releasePurchase.amountPaidCents}), 0)`,
-			toBand: sql<number>`COALESCE(SUM(${releasePurchase.bandNetCents}), 0)`,
-			toCollective: sql<number>`COALESCE(SUM(${releasePurchase.platformFeeCents}), 0)`
-		})
-		.from(releasePurchase)
-		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
-		.where(and(eq(audioRelease.groupId, groupId), eq(releasePurchase.status, 'paid')));
-
-	return {
-		sales: Number(row?.sales ?? 0),
-		grossCents: Number(row?.gross ?? 0),
-		toBandCents: Number(row?.toBand ?? 0),
-		toCollectiveCents: Number(row?.toCollective ?? 0)
-	};
 }

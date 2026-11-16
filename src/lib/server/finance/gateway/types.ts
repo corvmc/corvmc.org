@@ -6,7 +6,7 @@ import type Stripe from 'stripe';
  * Every member is `Pick`ed off Stripe's own resource types, so the compiler is
  * the contract: a fake cannot drift into a shape the live API would reject.
  * `webhooks` is absent on purpose — verifying a signature needs no API call, so
- * it stays on the real SDK whichever driver is live (`$lib/server/stripe`).
+ * it stays on the real SDK whichever driver is live (`#lib/server/stripe.js`).
  */
 export interface PaymentGateway {
 	/**
@@ -31,7 +31,11 @@ export interface PaymentGateway {
 	readonly coupons: Pick<Stripe['coupons'], 'create' | 'del'>;
 	readonly customers: Pick<Stripe['customers'], 'create' | 'update'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
-	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve' | 'create' | 'cancel'>;
+	/** `list` is the door sale sweep (#2547), finding taps whose webhook never came. */
+	readonly paymentIntents: Pick<
+		Stripe['paymentIntents'],
+		'retrieve' | 'create' | 'cancel' | 'list'
+	>;
 	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach' | 'update'>;
 	readonly paymentRecords: Pick<
 		Stripe['paymentRecords'],

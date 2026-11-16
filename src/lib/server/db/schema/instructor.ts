@@ -13,7 +13,7 @@ import {
 
 /**
  * A person CMC has granted the right to rent the practice room on teaching
- * terms. See `docs/specs/shipped/instructors-spec.md`.
+ * terms. See `docs/decisions/0015-instructors-rent-the-room.md`.
  *
  * **CMC's relationship is with the teacher, not the student.** CMC rents
  * teachers the space; the teacher bills their own students. That is why there is
@@ -85,8 +85,8 @@ export const instructor = sqliteTable(
 		 * renders no contact on the public card rather than having their choice
 		 * overridden by this module.
 		 *
-		 * Named `teachingContact`, not `contact`, on purpose. groups-spec phase
-		 * 10 adds a `contact` *table* holding private third-party booking
+		 * Named `teachingContact`, not `contact`, on purpose. The `contact`
+		 * *table* holds private third-party booking
 		 * details behind its own ESLint rule — the opposite privacy posture from
 		 * this column, which is published by definition.
 		 */

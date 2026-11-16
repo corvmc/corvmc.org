@@ -1,17 +1,21 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import QRCode from 'qrcode-svg';
 	import { page } from '$app/state';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	let {
 		eventId,
+		shortCode = null,
 		title,
 		published,
 		origin = page.url.origin
 	}: {
 		eventId: string;
+		/** The `/e/<code>` short link, which the code encodes when the event has one. */
+		shortCode?: string | null;
 		title: string;
 		published: boolean;
 		/** The site origin the code points at; the page's own unless a spec pins it. */
@@ -20,7 +24,11 @@
 
 	// Built by hand rather than with `resolve()`: the code must hold an absolute
 	// URL, and a printed poster outlives any base path the app might gain.
-	const href = $derived(`${origin}/events/${eventId}`);
+	const href = $derived(
+		shortCode
+			? m.events_listing_qr_card_short_href_text({ origin, shortCode })
+			: m.events_listing_qr_card_href_text({ origin, eventId })
+	);
 	const slug = $derived(
 		title
 			.toLowerCase()
@@ -62,10 +70,10 @@
 	}
 </script>
 
-<InfoCard title="QR code">
+<InfoCard title={m.events_listing_qr_card_title()}>
 	{#if !published}
 		<Alert type="warning" class="mb-3">
-			This listing is not published yet, so the link shows nothing until it is.
+			{m.events_listing_qr_card_listing_not_published_yet_so_body()}
 		</Alert>
 	{/if}
 
@@ -80,11 +88,19 @@
 		<div class="min-w-0 space-y-2">
 			<p class="text-sm break-all">{href}</p>
 			<div class="flex flex-wrap gap-2">
-				<Button size="sm" onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
-				<Button size="sm" href={svgHref} download="{slug}-qr.svg">Download SVG</Button>
-				<Button size="sm" onclick={downloadPng}>Download PNG</Button>
+				<Button size="sm" onclick={copyLink}
+					>{copied
+						? m.events_listing_qr_card_copied_label()
+						: m.events_listing_qr_card_copy_link_label()}</Button
+				>
+				<Button size="sm" href={svgHref} download="{slug}-qr.svg"
+					>{m.events_listing_qr_card_download_svg_label()}</Button
+				>
+				<Button size="sm" onclick={downloadPng}
+					>{m.events_listing_qr_card_download_png_label()}</Button
+				>
 			</div>
-			<p class="text-muted text-xs">SVG scales to any print size; PNG is 1200px.</p>
+			<p class="text-muted text-xs">{m.events_listing_qr_card_svg_scales_any_print_size_text()}</p>
 		</div>
 	</div>
 </InfoCard>

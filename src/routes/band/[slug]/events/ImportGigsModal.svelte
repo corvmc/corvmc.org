@@ -1,11 +1,13 @@
 <script lang="ts">
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { importGigsForm } from '$lib/remote/band-events.remote';
-	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '$lib/utils/gig-import';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { importGigsForm } from '#lib/remote/band-events.remote.js';
+	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '#lib/utils/gig-import.js';
+	import { refreshAll } from '$app/navigation';
 
 	// The `slug` is back to being read. It used to ride the form and be ignored,
 	// because the guard resolved the band from the route instead; now it is the
@@ -21,42 +23,54 @@
 	const preview = $derived(text.trim() ? parseGigImport(text) : { rows: [], errors: [] });
 </script>
 
-<Modal bind:open title="Import past gigs" maxWidth="max-w-2xl">
+<Modal bind:open title={m.band_import_past_gigs_title()} maxWidth="max-w-2xl">
 	<Form
 		remote={importGigsForm}
-		successToast="Gigs imported"
+		successToast={m.band_slug_events_import_gigs_modal_success_toast()}
 		onsuccess={() => {
 			open = false;
 			text = '';
-			invalidateAll();
+			refreshAll();
 		}}
 		class="space-y-4"
 	>
 		<input {...fields.slug.as('hidden', slug)} />
 
-		<FormField name="text" label="One gig per line">
+		<FormField
+			field={importGigsForm.fields.text}
+			label={m.band_slug_events_import_gigs_modal_one_gig_per_line_label()}
+			description={m.band_slug_events_import_gigs_modal_one_per_line_body()}
+		>
 			<textarea
 				{...fields.text.as('text')}
 				bind:value={text}
 				class="textarea w-full font-mono text-xs"
 				rows="10"
-				placeholder="2024-03-14 | Bombs Away Cafe | w/ Paper Wolves&#10;2023-11-02 | The Majestic Theatre"
-			></textarea>
+				placeholder={m.band_slug_events_import_gigs_modal_placeholder()}></textarea>
 		</FormField>
 
 		<p class="text-subtle">
-			<code>date | venue | title | ticket link</code> — only the date is required. Start a title
-			with
-			<code>w/</code> to list the other bands. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
-			Imported gigs are published with no end time.
+			<ParaglideMessage
+				message={m.band_slug_events_import_gigs_modal_date_venue_title_ticket_l_text}
+				inputs={{ GIG_IMPORT_MAX_LINES }}
+				>{#snippet code({ children })}<code>{@render children?.()}</code
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 
 		{#if preview.errors.length > 0}
 			<div class="rounded border border-error/40 bg-error/10 p-3">
-				<p class="text-sm font-medium">These lines will be skipped:</p>
+				<p class="text-sm font-medium">
+					{m.band_slug_events_import_gigs_modal_these_lines_will_skipped_text()}
+				</p>
 				<ul class="mt-1 space-y-0.5 text-xs">
 					{#each preview.errors as err (err.line)}
-						<li>Line {err.line}: {err.message}</li>
+						<li>
+							{m.band_slug_events_import_gigs_modal_line_text({
+								line: err.line,
+								message: err.message
+							})}
+						</li>
 					{/each}
 				</ul>
 			</div>
@@ -66,7 +80,11 @@
 			<div class="overflow-x-auto rounded border border-base-300">
 				<table class="table table-xs">
 					<thead>
-						<tr><th>Date</th><th>Title</th><th>Venue</th><th>With</th></tr>
+						<tr
+							><th>{m.band_date_label()}</th><th>{m.band_title_label()}</th><th
+								>{m.band_venue_label()}</th
+							><th>{m.band_slug_events_import_gigs_modal_with_label()}</th></tr
+						>
 					</thead>
 					<tbody>
 						{#each preview.rows as row (row.line)}
@@ -84,7 +102,9 @@
 
 		<div class="flex justify-end gap-2">
 			<SubmitButton
-				label={preview.rows.length > 0 ? `Import ${preview.rows.length} gigs` : 'Import'}
+				label={preview.rows.length > 0
+					? m.band_slug_events_import_gigs_modal_import_gigs_label({ length: preview.rows.length })
+					: m.band_slug_events_import_gigs_modal_import_label()}
 				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>

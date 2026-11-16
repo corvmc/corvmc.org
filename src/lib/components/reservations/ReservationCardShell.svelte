@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import {
 		formatWeekdayShortCased,
@@ -7,13 +8,14 @@
 		isVenueToday,
 		isVenueTomorrow,
 		isVenueThisWeek
-	} from '$lib/utils/format';
-	import { isTerminalStatus } from '$lib/utils/reservation-actions';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	} from '#lib/utils/format.js';
+	import { isClosedTrack, type ReservationTrack } from '#lib/utils/reservation-actions.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 
 	/**
-	 * A booking as a card: a date block tinted by status, the status, and a body
-	 * the panel supplies. The block is shared with the band panel (#566); the
+	 * A booking as a card: a date block tinted by its track, the track, and a body
+	 * the panel supplies. Members read the same track staff do (#2861). The block is shared with the band panel (#566); the
 	 * action row is not.
 	 *
 	 * Two status channels on purpose — the tint glances, `StatusBadge` names.
@@ -21,18 +23,21 @@
 	 */
 	let {
 		startsAt,
-		status,
+		ended = false,
+		track,
 		children,
 		actions
 	}: {
 		startsAt: Date;
-		status: string;
+		/** The session is over, so it is not flagged as coming up. */
+		ended?: boolean;
+		track: ReservationTrack;
 		children: Snippet;
-		/** A right-aligned footer, pinned to the bottom of the card. Omit for a card with no controls. */
+		/** Labelled buttons, full width at the card's foot. Omit for a card with no controls. */
 		actions?: Snippet;
 	} = $props();
 
-	const terminal = $derived(isTerminalStatus(status));
+	const terminal = $derived(ended || isClosedTrack(track));
 </script>
 
 <!-- `reservation-card` is the handle the e2e locates a booking by; it replaced
@@ -42,18 +47,12 @@
      `my-2` inside a `gap-2` grid made a 24px one and stopped the card filling
      its stretched cell, so borders did not line up across a row (#1043). -->
 <div
-	class="reservation-card relative flex h-full rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100 {status}"
+	class="reservation-card relative flex h-full rounded-md border-[2.5px] border-(--cmc-brown) bg-base-100 {track}"
 >
 	<div class="date-block">
 		{#if !terminal && isVenueThisWeek(startsAt)}
 			<span class="upcoming-tag">
-				{#if isVenueToday(startsAt)}
-					Today
-				{:else if isVenueTomorrow(startsAt)}
-					Tomorrow
-				{:else}
-					This Week
-				{/if}
+				{#if isVenueToday(startsAt)}{m.reservations_reservation_card_shell_today_text()}{:else if isVenueTomorrow(startsAt)}{m.reservations_reservation_card_shell_tomorrow_text()}{:else}{m.reservations_reservation_card_shell_week_text()}{/if}
 			</span>
 		{/if}
 		<span>{formatWeekdayShortCased(startsAt)}</span>
@@ -66,18 +65,16 @@
 		     and an in-flow column wrapped every line short (#1043, #1782). -->
 		<div class="flow-root min-w-0">
 			<span class="float-right pt-2 pr-2 pl-2">
-				<StatusBadge {status} label size={14} />
+				<StatusBadge status={track} label size={14} />
 			</span>
 			{@render children()}
 		</div>
 		{#if actions}
 			<!-- `mt-auto` pins it to the card's foot, so footers share a baseline
 			     across a grid row however tall each body is (#2109). -->
-			<div
-				class="reservation-card-actions mt-auto flex flex-wrap items-center justify-end gap-2 p-2 px-3"
-			>
+			<CardActions class="reservation-card-actions mt-auto p-2 px-3">
 				{@render actions()}
-			</div>
+			</CardActions>
 		{/if}
 	</div>
 </div>
@@ -93,24 +90,26 @@
 		@apply relative flex w-20 shrink-0 flex-col items-center justify-center rounded-l-sm border-r-2 border-(--cmc-brown) py-3 text-xs leading-tight font-bold;
 	}
 
-	.confirmed .date-block {
+	.booked .date-block {
 		@apply bg-secondary text-secondary-content;
 	}
 
-	.scheduled .date-block {
-		@apply bg-warning text-warning-content;
-	}
-
-	.completed .date-block {
+	.paid .date-block,
+	.covered .date-block {
 		@apply bg-success text-success-content;
 	}
 
-	/* Class comes from the raw status value, so underscore — not hyphen. */
+	/* Class comes from the raw track value, so underscore — not hyphen. */
+	.payment_due .date-block {
+		@apply bg-warning text-warning-content;
+	}
+
 	.no_show .date-block {
 		@apply bg-base-300 text-error;
 	}
 
-	.cancelled .date-block {
+	.cancelled .date-block,
+	.refunded .date-block {
 		@apply bg-base-300 text-base-content/50;
 	}
 </style>

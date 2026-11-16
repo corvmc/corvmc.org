@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import { eventBand } from './event';
 import { user } from './authentication';
 import { project } from './project';
+import { contact } from './contact';
 import { productionExpenseCategories } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -36,7 +37,7 @@ import { productionExpenseCategories } from '../../../config';
 // `production_slot` below; adding columns nothing reads is how a table starts
 // lying about what it holds.
 //
-// See `docs/specs/production-workflow-spec.md#production`.
+// See `docs/decisions/0003-a-production-is-a-child-of-its-listing.md`.
 // ---------------------------------------------------------------------------
 
 /**
@@ -88,7 +89,10 @@ export const production = sqliteTable(
 		 */
 		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
 
-		/** Who is running the night. Not a capability — the matrix names no such position. */
+		/**
+		 * The show's event lead (#2726). Booking names them; naming them grants
+		 * `production.run` on this project (`leadsProject`), not a position.
+		 */
 		producerUserId: text('producer_user_id').references(() => user.id, { onDelete: 'set null' }),
 
 		loadInAt: integer('load_in_at', { mode: 'timestamp' }),
@@ -108,6 +112,20 @@ export const production = sqliteTable(
 		 */
 		doorCashCents: integer('door_cash_cents'),
 		doorCount: integer('door_count'),
+		/** Who entered `door_cash_cents`, restamped whenever the figure changes. */
+		doorCashCountedByUserId: text('door_cash_counted_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		doorCashCountedAt: integer('door_cash_counted_at', { mode: 'timestamp' }),
+		/**
+		 * A second, independent count of the same drawer by somebody else (#2722).
+		 * A difference from `door_cash_cents` warns; it never replaces the first.
+		 */
+		doorCashRecountCents: integer('door_cash_recount_cents'),
+		doorCashRecountedByUserId: text('door_cash_recounted_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		doorCashRecountedAt: integer('door_cash_recounted_at', { mode: 'timestamp' }),
 
 		/**
 		 * What share of undesignated door cash goes to the acts, when this night
@@ -207,7 +225,7 @@ export type NewProduction = typeof production.$inferInsert;
  * find or delete. `productionId` is the row's home and the predicate every
  * ordered read filters on.
  *
- * See `docs/specs/production-workflow-spec.md` — the 2026-09-07 amendment.
+ * See `docs/decisions/0003-a-production-is-a-child-of-its-listing.md`.
  */
 export const productionSlot = sqliteTable(
 	'production_slot',
@@ -272,10 +290,11 @@ export const productionSlot = sqliteTable(
 		backlineNeeds: text('backline_needs'),
 		hospitalityNotes: text('hospitality_notes'),
 
-		/** Per-show override of the act's stored contact — a tour manager, a fill-in. */
-		contactName: text('contact_name'),
-		contactEmail: text('contact_email'),
-		contactPhone: text('contact_phone'),
+		/**
+		 * Who to call for this show: one of the act's contacts, such as a tour
+		 * manager or a fill-in. Read only through `contact-service.ts`.
+		 */
+		contactId: text('contact_id').references(() => contact.id, { onDelete: 'set null' }),
 
 		/**
 		 * The deal, per act. `{ guaranteeCents, percentageBps, versus, againstNet }`

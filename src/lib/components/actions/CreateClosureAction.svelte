@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { createClosure } from '$lib/remote/closures.remote';
+	import { refreshAll } from '$app/navigation';
+	import { createClosure } from '#lib/remote/closures.remote.js';
 	import { Field } from '../ui/Form';
 
 	let {
@@ -24,21 +25,21 @@
 
 <Action
 	action={createClosure}
-	label="New Closure"
-	modalTitle="New Closure"
-	submitLabel="Add Closure"
-	successToast="Closure added"
+	label={m.actions_create_closure_new_closure_label()}
+	modalTitle={m.actions_create_closure_new_closure_title()}
+	submitLabel={m.actions_create_closure_submit_label()}
+	successToast={m.actions_create_closure_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
-		<Field field={fields.reason} type="text" label="Reason" />
+		<Field field={fields.reason} type="text" label={m.actions_reason_label()} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.startsAt} type="datetime-local" label="Start" />
-			<Field field={fields.endsAt} type="datetime-local" label="End" />
+			<Field field={fields.startsAt} type="datetime-local" label={m.actions_start_label()} />
+			<Field field={fields.endsAt} type="datetime-local" label={m.actions_end_label()} />
 		</div>
 	{/snippet}
 </Action>

@@ -4,31 +4,26 @@ import type Stripe from 'stripe';
 /** Paying for a booking at the smart reader, against a real SQLite and the fake gateway. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
-
-const announceConfirmed = vi.fn(async () => undefined);
-vi.mock('./reservation-service', () => ({
-	announceConfirmed: (...a: unknown[]) => announceConfirmed(...(a as []))
-}));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const recordReservationCardPresent = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCardPresent: (...a: unknown[]) => recordReservationCardPresent(...(a as []))
 }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...a: unknown[]) => captureException(...a)
 }));
 
-const { initStripe, stripe } = await import('$lib/server/stripe');
+const { initStripe, stripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, FAKE_TERMINAL_READER_ID } =
-	await import('$lib/server/finance/gateway/fake-gateway');
+	await import('#lib/server/finance/gateway/fake-gateway.js');
 const {
 	readerPayable,
 	startReaderPayment,
@@ -55,7 +50,7 @@ function booking(over: { id?: string; status?: string; paidAt?: number | null } 
 		)
 		.run(
 			id,
-			over.status ?? 'scheduled',
+			over.status ?? 'confirmed',
 			secs(new Date(NOW.getTime() + 30 * 60_000)),
 			secs(new Date(NOW.getTime() + 2.5 * HOUR)),
 			over.paidAt ?? null
@@ -106,7 +101,7 @@ beforeEach(() => {
 
 describe('when a booking can be paid at the reader', () => {
 	const base = {
-		status: 'scheduled' as const,
+		status: 'confirmed' as const,
 		paidAt: null,
 		cashDueCents: null,
 		startsAt: new Date(NOW.getTime() + HOUR),
@@ -228,7 +223,7 @@ describe('settling at the reader', () => {
 		return stripe.paymentIntents.retrieve(paymentIntentId);
 	}
 
-	it('confirms and marks the booking paid, then records it and announces it', async () => {
+	it('marks the booking paid and records it', async () => {
 		booking();
 		const intent = await tap();
 		await settleReservationAtReader(intent);
@@ -248,7 +243,6 @@ describe('settling at the reader', () => {
 			})
 		);
 		expect(cacheRows()).toEqual([{ id: intent.id, reservation_id: 'res-1', amount_cents: 1500 }]);
-		expect(announceConfirmed).toHaveBeenCalledWith('res-1');
 	});
 
 	it('settles once and records once when Stripe delivers the event twice', async () => {
@@ -257,15 +251,28 @@ describe('settling at the reader', () => {
 		await settleReservationAtReader(intent);
 		await settleReservationAtReader(intent);
 		expect(recordReservationCardPresent).toHaveBeenCalledTimes(1);
-		expect(announceConfirmed).toHaveBeenCalledTimes(1);
 		expect(cacheRows()).toHaveLength(1);
+	});
+
+	it('does not report a payment that is already cached', async () => {
+		booking();
+		const intent = await tap();
+		sqlite
+			.prepare(
+				`insert into payment_cache (id, user_id, amount_cents, currency, payment_method, status, paid_at)
+				 values (?, 'user-1', 1500, 'usd', 'Card', 'completed', unixepoch())`
+			)
+			.run(intent.id);
+		await settleReservationAtReader(intent);
+		expect(row().paid_at).not.toBeNull();
+		expect(captureException).not.toHaveBeenCalled();
 	});
 
 	it('ignores a door sale', async () => {
 		booking();
 		const intent = await tap();
 		await settleReservationAtReader({ ...intent, metadata: { type: 'door_ticket' } });
-		expect(row().status).toBe('scheduled');
+		expect(row().paid_at).toBeNull();
 		expect(recordReservationCardPresent).not.toHaveBeenCalled();
 	});
 
@@ -282,7 +289,7 @@ describe('settling at the reader', () => {
 		booking();
 		const { paymentIntentId } = await start();
 		await simulateReaderTap(paymentIntentId, 'res-1', 'succeed');
-		expect(row().status).toBe('confirmed');
+		expect(row().paid_at).not.toBeNull();
 		expect(await readerPaymentStatus(paymentIntentId, 'res-1')).toMatchObject({ status: 'paid' });
 	});
 });
@@ -298,7 +305,7 @@ describe('what the phone reads', () => {
 		expect(await readerPaymentStatus(paymentIntentId, 'res-1')).toMatchObject({
 			status: 'declined'
 		});
-		expect(row().status).toBe('scheduled');
+		expect(row().paid_at).toBeNull();
 	});
 
 	it('refuses an intent that belongs to another booking', async () => {

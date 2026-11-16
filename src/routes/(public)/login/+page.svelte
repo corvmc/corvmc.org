@@ -1,21 +1,23 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { page } from '$app/state';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { getMe } from '$lib/remote/layout.remote';
-	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { safeReturnPath, verificationCallbackURL } from '$lib/utils/sign-in';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { getMe } from '#lib/remote/layout.remote.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { safeReturnPath, verificationCallbackURL } from '#lib/utils/sign-in.js';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the
@@ -25,7 +27,7 @@
 	const me = getMe();
 
 	// `handleSubmit` owns the navigation for a sign-in performed *here*. Without
-	// this flag its `invalidateAll` refreshes `getMe()`, `me.current` flips, and
+	// this flag its `refreshAll` refreshes `getMe()`, `me.current` flips, and
 	// this effect fires a SECOND `goto` a few hundred ms behind the first one.
 	// SvelteKit treats the later navigation as superseding, so it aborts whatever
 	// navigation is in flight at that moment — including the first link the member
@@ -36,7 +38,7 @@
 	// What the visitor was doing when the interrupt sent them here.
 	const intent = $derived(page.url.searchParams.get('intent')?.trim().slice(0, 120) || null);
 	$effect(() => {
-		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('/member'));
+		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -61,20 +63,19 @@
 
 	/** Same-page href for the other mode, preserving `redirect` and `invite`. */
 	function modeHref(target: 'login' | 'register') {
-		const params = new SvelteURLSearchParams(page.url.searchParams);
+		const params = new SvelteURLSearchParams(page.url.search);
 		params.delete('register');
 		const rest = params.toString();
 		const query =
 			target === 'register' ? (rest ? `?register&${rest}` : '?register') : rest ? `?${rest}` : '';
-		return withQuery(resolve('/login'), query);
+		return withQuery(resolve('login'), query);
 	}
 
 	function toggleMode() {
 		error = '';
 		goto(modeHref(mode === 'login' ? 'register' : 'login'), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 
@@ -132,7 +133,7 @@
 
 		const redirectTo = returnTo ?? '/member';
 		navigatingAfterSignIn = true;
-		await goto(redirectTo, { invalidateAll: true });
+		await goto(redirectTo, { refreshAll: true });
 	}
 </script>
 
@@ -164,8 +165,12 @@
 					{#if inviteMeta}
 						<Alert type="info" class="text-sm">
 							<span
-								><strong>{inviteMeta.inviterName}</strong> invited you to join
-								<strong>{inviteMeta.groupName}</strong>. Create an account to get started.</span
+								><ParaglideMessage
+									message={m.public_login_invited_join_create_account_get_body}
+									inputs={{ inviterName: inviteMeta.inviterName, groupName: inviteMeta.groupName }}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								></span
 							>
 						</Alert>
 					{/if}
@@ -173,14 +178,20 @@
 					{#if intent && !inviteMeta}
 						<Alert type="info" class="text-sm">
 							<span
-								>Sign in or create a free account to <strong>{intent}</strong>. You'll come straight
-								back to finish.</span
+								><ParaglideMessage
+									message={m.public_login_sign_create_free_account_ll_body}
+									inputs={{ intent }}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								></span
 							>
 						</Alert>
 					{/if}
 
 					<CardTitle size="lg" level={2} class="justify-center">
-						{mode === 'login' ? 'Sign in to your account' : 'Create your account'}
+						{mode === 'login'
+							? m.public_login_sign_account_title()
+							: m.public_login_create_account_2_title()}
 					</CardTitle>
 
 					{#if error}
@@ -189,15 +200,20 @@
 						</Alert>
 					{/if}
 
-					<Form action={handleSubmit} class="flex flex-col gap-3">
+					<Form action={handleSubmit} guard={false} class="flex flex-col gap-3">
 						{#if mode === 'register'}
-							<Field name="name" type="text" label="Name" />
+							<Field name="name" type="text" label={m.public_name_label()} />
 						{/if}
-						<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
+						<Field
+							name="email"
+							type="email"
+							label={m.public_email_label()}
+							value={inviteMeta?.email ?? ''}
+						/>
 						<Field
 							name="password"
 							type={showPassword ? 'text' : 'password'}
-							label="Password"
+							label={m.public_login_password_label()}
 							minlength={mode === 'register' ? 8 : undefined}
 						>
 							{#snippet input(id)}
@@ -237,7 +253,9 @@
 							/>
 						{/if}
 						<SubmitButton
-							label={mode === 'login' ? 'Sign in' : 'Create account'}
+							label={mode === 'login'
+								? m.public_sign_label()
+								: m.public_login_create_account_label()}
 							variant="primary"
 							class="mt-1 w-full"
 						/>
@@ -245,16 +263,18 @@
 
 					{#if mode === 'login'}
 						<div class="text-center text-sm">
-							<a class="link" href={resolve('/forgot-password')}>Forgot your password?</a>
+							<a class="link" href={resolve('forgot-password')}
+								>{m.public_login_forgot_password_text()}</a
+							>
 						</div>
 					{/if}
 
-					<div class="divider my-0 text-xs">OR</div>
+					<div class="divider my-0 text-xs">{m.public_login_text()}</div>
 
 					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'
-							? "Don't have an account? Sign up"
-							: 'Already have an account? Sign in'}
+							? m.public_login_don_t_have_account_sign_label()
+							: m.public_login_already_have_account_sign_label()}
 					</Button>
 				</CardBody>
 			</div>

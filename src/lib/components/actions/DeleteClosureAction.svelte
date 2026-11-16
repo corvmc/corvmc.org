@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { deleteClosure } from '$lib/remote/closures.remote';
+	import { refreshAll } from '$app/navigation';
+	import { deleteClosure } from '#lib/remote/closures.remote.js';
 
 	let {
 		closureId,
@@ -25,17 +26,17 @@
 
 <Action
 	action={deleteClosure}
-	label="Delete"
-	modalTitle="Confirm"
-	successToast="Closure deleted"
+	label={m.actions_delete_label()}
+	modalTitle={m.actions_confirm_title()}
+	successToast={m.actions_delete_closure_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closureId)} />
-		<p class="py-4">Delete this closure?</p>
+		<p class="py-4">{m.actions_delete_closure_delete_closure_text()}</p>
 	{/snippet}
 </Action>

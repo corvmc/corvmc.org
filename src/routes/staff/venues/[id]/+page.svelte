@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One venue.
 	 *
@@ -6,16 +8,17 @@
 	 * branches on. Everything below it is what a producer looks up on the day:
 	 * the address, who to ring, and where the van goes.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { page } from '$app/state';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import VenueFeeds from './VenueFeeds.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import {
 		getVenueDetail,
 		updateVenue,
@@ -23,9 +26,14 @@
 		archiveVenue,
 		restoreVenue,
 		deleteVenue
-	} from '$lib/remote/venues.remote';
+	} from '#lib/remote/venues.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+	import { venueAccessFields } from '#lib/config.js';
+	import type { AccessAnswer, VenueAccessField } from '#lib/config.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const venue = $derived(await getVenueDetail(id));
 
 	const editForm = $derived(updateVenue.for(id));
@@ -36,61 +44,122 @@
 			.filter(Boolean)
 			.join(' · ')
 	);
+	const answerLabel: Record<AccessAnswer, () => string> = {
+		yes: m.staff_yes_label,
+		no: m.staff_no_label,
+		unknown: m.staff_unknown_label
+	};
+	const answerOptions = (['unknown', 'yes', 'no'] as const).map((value) => ({
+		value,
+		label: answerLabel[value]()
+	}));
+	const accessLabel: Record<VenueAccessField, () => string> = {
+		stepFreeEntry: m.staff_step_free_entry_label,
+		accessibleRestroom: m.staff_accessible_restroom_label,
+		seating: m.staff_seating_label
+	};
+
 	const contact = $derived(
 		[venue.contactName, venue.contactEmail, venue.contactPhone].filter(Boolean).join(' · ')
 	);
 </script>
 
-<PageHeader width="3xl" title={venue.name} subtitle="Venue">
+<PageHeader width="3xl" title={venue.name} subtitle={m.staff_venue_body()}>
 	<Action
 		action={editForm}
-		label="Edit"
+		label={m.staff_edit_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {venue.name}"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.staff_edit_2_title({ name: venue.name })}
+		submitLabel={m.staff_save_label()}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={venue.id} />
-			<Field field={fields.name} type="text" label="Name" value={venue.name} />
-			<Field field={fields.address1} type="text" label="Address" value={venue.address1 ?? ''} />
-			<Field field={fields.city} type="text" label="City" value={venue.city ?? ''} />
-			<Field field={fields.state} type="text" label="State" value={venue.state ?? ''} />
-			<Field field={fields.postalCode} type="text" label="ZIP" value={venue.postalCode ?? ''} />
+			<input {...editForm.fields.id.as('hidden', venue.id)} />
+			<Field field={fields.name} type="text" label={m.staff_name_label()} value={venue.name} />
+			<Field
+				field={fields.address1}
+				type="text"
+				label={m.staff_address_label()}
+				value={venue.address1 ?? ''}
+			/>
+			<Field
+				field={fields.city}
+				type="text"
+				label={m.staff_city_label()}
+				value={venue.city ?? ''}
+			/>
+			<Field
+				field={fields.state}
+				type="text"
+				label={m.staff_state_label()}
+				value={venue.state ?? ''}
+			/>
+			<Field
+				field={fields.postalCode}
+				type="text"
+				label={m.staff_zip_label()}
+				value={venue.postalCode ?? ''}
+			/>
 			<Field
 				field={fields.capacity}
 				type="number"
-				label="Capacity"
+				label={m.staff_capacity_label()}
 				min="1"
 				value={venue.capacity != null ? String(venue.capacity) : ''}
 			/>
 			<Field
 				field={fields.contactName}
 				type="text"
-				label="Contact"
+				label={m.staff_contact_label()}
 				value={venue.contactName ?? ''}
 			/>
 			<Field
 				field={fields.contactEmail}
 				type="email"
-				label="Contact email"
+				label={m.staff_contact_email_label()}
 				value={venue.contactEmail ?? ''}
 			/>
 			<Field
 				field={fields.contactPhone}
 				type="tel"
-				label="Contact phone"
+				label={m.staff_contact_phone_label()}
 				value={venue.contactPhone ?? ''}
 			/>
 			<Field
 				field={fields.loadInNotes}
 				type="text"
-				label="Load-in"
+				label={m.staff_load_label()}
 				value={venue.loadInNotes ?? ''}
-				description="Where the van goes, which door is unlocked, who has the key."
+				description={m.staff_where_van_goes_which_door_body()}
 			/>
-			<Field field={fields.notes} type="textarea" label="Notes" value={venue.notes ?? ''} />
+			<Field
+				field={fields.notes}
+				type="textarea"
+				label={m.staff_notes_label()}
+				value={venue.notes ?? ''}
+			/>
+			<Field
+				field={fields.stepFreeEntry}
+				type="select"
+				label={accessLabel.stepFreeEntry()}
+				options={answerOptions}
+				value={venue.stepFreeEntry}
+			/>
+			<Field
+				field={fields.accessibleRestroom}
+				type="select"
+				label={accessLabel.accessibleRestroom()}
+				options={answerOptions}
+				value={venue.accessibleRestroom}
+			/>
+			<Field
+				field={fields.seating}
+				type="select"
+				label={accessLabel.seating()}
+				options={answerOptions}
+				value={venue.seating}
+			/>
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -100,52 +169,58 @@
 		<Alert type="warning">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
-					<span class="font-medium">Archived.</span> It stays on every event that named it, and is off
-					the picker for new ones.
+					<ParaglideMessage
+						message={m.staff_venues_id_stays_every_event_named_off_text}
+						inputs={{ staff_archived_2: m.staff_archived_2_text() }}
+						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 				<Action
 					action={restoreVenue.for(venue.id)}
-					label="Restore"
+					label={m.staff_restore_label()}
 					variant="ghost"
 					size="xs"
-					successToast="Restored"
+					successToast={m.staff_restored_toast()}
 					noFooter
 				>
 					{#snippet form()}
-						<input type="hidden" name="id" value={venue.id} />
+						<input {...restoreVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					{/snippet}
 				</Action>
 			</div>
 		</Alert>
 	{/if}
 
-	<InfoCard title="Where">
+	<InfoCard title={m.staff_where_title()}>
 		{#if venue.isPrimary}
 			<p>
-				<Badge variant="primary" size="sm">Our room</Badge>
-				<span class="ml-2 text-muted">A show here holds the practice space.</span>
+				<Badge variant="primary" size="sm">{m.staff_our_room_label()}</Badge>
+				<span class="ml-2 text-muted"
+					>{m.staff_venues_id_show_here_holds_practice_space_text()}</span
+				>
 			</p>
 		{:else}
 			<p class="text-muted">
-				A show here holds nothing — the practice space stays bookable while it runs.
+				{m.staff_venues_id_show_here_holds_nothing_practice_text()}
 			</p>
 		{/if}
 
 		<dl class="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
 			<div>
-				<dt class="text-subtle text-sm">Address</dt>
+				<dt class="text-subtle text-sm">{m.staff_address_label()}</dt>
 				<dd>{address || '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">Capacity</dt>
+				<dt class="text-subtle text-sm">{m.staff_capacity_label()}</dt>
 				<dd>{venue.capacity ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">Contact</dt>
+				<dt class="text-subtle text-sm">{m.staff_contact_label()}</dt>
 				<dd>{contact || '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">Load-in</dt>
+				<dt class="text-subtle text-sm">{m.staff_load_label()}</dt>
 				<dd>{venue.loadInNotes ?? '—'}</dd>
 			</div>
 		</dl>
@@ -155,22 +230,36 @@
 		{/if}
 	</InfoCard>
 
+	<InfoCard title={m.staff_access_title()}>
+		<dl class="grid gap-x-6 gap-y-2 sm:grid-cols-3">
+			{#each venueAccessFields as key (key)}
+				<div>
+					<dt class="text-subtle text-sm">{accessLabel[key]()}</dt>
+					<dd>{answerLabel[venue[key]]()}</dd>
+				</div>
+			{/each}
+		</dl>
+	</InfoCard>
+
+	{#if !venue.isPrimary}
+		<VenueFeeds venueId={venue.id} />
+	{/if}
+
 	<div class="flex flex-wrap gap-2">
 		{#if !venue.isPrimary && !venue.deletedAt}
 			<Action
 				action={setPrimaryVenue.for(venue.id)}
-				label="Make this the room"
+				label={m.staff_make_room_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Make {venue.name} the practice room?"
-				submitLabel="Make it the room"
-				successToast="Done"
+				modalTitle={m.staff_venues_id_make_practice_room_title({ name: venue.name })}
+				submitLabel={m.staff_venues_id_make_room_label()}
+				successToast={m.staff_done_toast()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...setPrimaryVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						Exactly one venue is ours, so whichever holds it now gives it up. From then on a show
-						here holds the practice space and a show anywhere else does not.
+						{m.staff_venues_id_exactly_one_venue_ours_so_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -179,17 +268,17 @@
 		{#if !venue.isPrimary && !venue.deletedAt}
 			<Action
 				action={archiveVenue.for(venue.id)}
-				label="Archive"
+				label={m.staff_archive_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Archive {venue.name}?"
-				submitLabel="Archive"
-				successToast="Archived"
+				modalTitle={m.staff_archive_2_title({ name: venue.name })}
+				submitLabel={m.staff_archive_label()}
+				successToast={m.staff_archived_toast()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...archiveVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						It comes off the picker for new events and stays on every event that already names it.
+						{m.staff_venues_id_comes_off_picker_new_events_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -198,21 +287,20 @@
 		{#if !venue.isPrimary}
 			<Action
 				action={deleteVenue.for(venue.id)}
-				label="Delete"
+				label={m.staff_delete_label()}
 				variant="ghost"
 				size="sm"
 				class="text-error"
-				modalTitle="Delete {venue.name}?"
-				submitLabel="Delete"
+				modalTitle={m.staff_delete_2_title({ name: venue.name })}
+				submitLabel={m.staff_delete_label()}
 				submitVariant="error"
-				successToast="Deleted"
-				onsuccess={() => goto(resolve('/staff/venues'))}
+				successToast={m.staff_deleted_toast()}
+				onsuccess={() => goto(withQuery(resolve('staff/events'), 'view=venues'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...deleteVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						For a row that should never have existed. Refused once any event names it — archive
-						those instead.
+						{m.staff_venues_id_row_should_never_have_existed_text()}
 					</p>
 				{/snippet}
 			</Action>

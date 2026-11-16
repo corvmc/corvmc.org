@@ -1,10 +1,11 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconCheck, IconCircle, IconLock } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import type { EpkSection } from '$lib/server/band/epk-completeness';
+	import type { EpkSection } from '#lib/server/band/epk-completeness.js';
 
 	/**
 	 * The ladder, as a named destination rather than a percentage.
@@ -40,20 +41,26 @@
 	<CardBody>
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<h2 class="font-semibold">Press kit</h2>
+				<h2 class="font-semibold">{m.band_press_kit_progress_press_kit_title()}</h2>
 				<p class="text-muted text-sm">
-					{done} of {total} pieces
-					{#if next}&middot; next: {next.label}{:else}&middot; ready to send{/if}
+					{m.band_press_kit_progress_pieces_text({ done, total })}
+					{#if next}{m.band_press_kit_progress_next_text({
+							label: next.label
+						})}{:else}{m.band_press_kit_progress_ready_send_text()}{/if}
 				</p>
 			</div>
 			{#if compact}
 				<Button href={href(next ?? sections[0])} variant="default" size="sm" outline>
-					{next ? 'Finish it' : 'View'}
+					{next ? m.band_press_kit_progress_finish_label() : m.band_press_kit_progress_view_label()}
 				</Button>
 			{/if}
 		</div>
 
-		<progress class="progress w-full" value={done} max={total} aria-label="Press kit progress"
+		<progress
+			class="progress w-full"
+			value={done}
+			max={total}
+			aria-label={m.band_press_kit_progress_aria_label()}
 		></progress>
 
 		{#if !compact}
@@ -78,7 +85,7 @@
 			     none, because a ladder that simply ends reads better than a teaser. -->
 			{#if premiumSections.length > 0}
 				<div class="mt-3 border-t pt-3">
-					<p class="mb-1 text-muted text-xs">With a band site</p>
+					<p class="mb-1 text-muted text-xs">{m.band_press_kit_progress_with_band_site_text()}</p>
 					<ul class="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
 						{#each premiumSections as section (section.key)}
 							<li class="flex items-start gap-2 py-1 text-sm">

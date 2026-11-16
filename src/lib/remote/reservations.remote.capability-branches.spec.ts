@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // The member-facing handlers in reservations.remote.ts that branch on who the
@@ -22,7 +22,7 @@ function chain(): Record<string, unknown> {
 	};
 	return c;
 }
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
@@ -31,8 +31,8 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 let heldPositions: Position[] = [];
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	return {
 		can: vi.fn(async (cap: Capability) =>
 			heldPositions.some((p) => config.grantsCapability(config.positions[p], cap))
@@ -44,19 +44,21 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
 // A big balance, but the rows below carry no subscription, so no reset date and
 // no free hours apply (#2060): the window alone decides a no-charge confirm.
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance: vi.fn(async () => 100) }));
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone: vi.fn(async () => true) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance: vi.fn(async () => 100) }));
+vi.mock('#lib/server/user/user-service.js', () => ({
+	ensureContactPhone: vi.fn(async () => true)
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 const cancel = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(async () => ({ id: 'res-new' })),
 	createWaitlisted: vi.fn(),
 	confirm: vi.fn(),
@@ -94,7 +96,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const remote = (await import('$lib/remote/reservations.remote')) as any;
+const remote = (await import('#lib/remote/reservations.remote.js')) as any;
 
 // Every combination of the six positions, including none.
 const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
@@ -102,26 +104,15 @@ const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
 );
 const holdsAny = (held: Position[], who: Position[]) => held.some((p) => who.includes(p));
 
-// Years out, so always outside the confirmation window.
 const farStart = new Date('2031-06-15T17:00:00Z');
 const ownBooking = {
 	id: 'res-1',
 	createdByUserId: actingUser.id,
-	status: 'scheduled',
+	status: 'confirmed',
 	bookerType: 'user',
 	startsAt: farStart,
 	endsAt: new Date(farStart.getTime() + 3600_000)
 };
-
-/** Did the confirmation window stop this call? Anything past it counts as "no". */
-async function stoppedByWindow(run: () => Promise<unknown>) {
-	try {
-		const result = (await run()) as { scheduled?: boolean } | undefined;
-		return result?.scheduled === true;
-	} catch (e) {
-		return /Confirmation opens/.test((e as { body?: { message?: string } }).body?.message ?? '');
-	}
-}
 
 beforeEach(() => {
 	heldPositions = [];
@@ -181,41 +172,6 @@ describe('cancelReservation', () => {
 			expect(cancel.mock.calls[0][3], held.join('+') || '(none)').toEqual({
 				staffOverride: holdsAny(held, ['admin', 'staff'])
 			});
-		}
-	});
-});
-
-// Before: any position committed their own booking outside the window without a
-// charge. After: `reservation.comp` (admin, staff, treasurer); see #1434.
-// `payReservation` has no window gate since #2060: it settles or charges.
-describe.each([
-	['payForReservation', () => remote.payForReservation({ id: 'res-1', skipPayment: 'on' })],
-	[
-		'bookAndPayReservation',
-		() =>
-			remote.bookAndPayReservation(
-				{
-					date: '2031-06-15',
-					startTime: '17:00',
-					endTime: '18:00',
-					phone: '5415550100',
-					skipPayment: 'on'
-				},
-				{}
-			)
-	]
-])('%s outside the confirmation window', (_name, run) => {
-	it('holds a site moderator to the window', async () => {
-		heldPositions = ['site_moderator'];
-		expect(await stoppedByWindow(run)).toBe(true);
-	});
-
-	it('waives it for exactly the reservation.comp holders', async () => {
-		for (const held of subsets) {
-			heldPositions = held;
-			expect(await stoppedByWindow(run), held.join('+') || '(none)').toBe(
-				!holdsAny(held, ['admin', 'staff', 'treasurer'])
-			);
 		}
 	});
 });

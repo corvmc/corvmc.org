@@ -1,6 +1,9 @@
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import { captureException } from '$lib/server/sentry';
-import type { NotificationEmailModel } from '$lib/types/notification-email';
+import { formatDateYear } from '#lib/utils/format.js';
+import { REMOVAL_LINK_TTL_DAYS } from '#lib/server/moderation/removal-link.js';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
+import { captureException } from '#lib/server/sentry.js';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
+import type { NotificationEmailModel } from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // The emails better-auth's own flows send
@@ -81,6 +84,7 @@ export function buildResetPasswordModel(params: {
 /** The model for the password-changed notice, on the generic `notification` alias. */
 export function buildPasswordChangedModel(params: {
 	name?: string | null;
+	contactEmail: string;
 }): NotificationEmailModel & { transactional_only: true } {
 	return {
 		subject: 'Your CorvMC password was changed',
@@ -95,8 +99,7 @@ export function buildPasswordChangedModel(params: {
 				text: 'The password on your Corvallis Music Collective account was just reset, and any other sessions you had open were signed out.'
 			}
 		],
-		footnote:
-			'If you did not do this, reset your password again straight away and email contact@corvmc.org so we can help.',
+		footnote: `If you did not do this, reset your password again straight away and email ${params.contactEmail} so we can help.`,
 		transactional_only: true
 	};
 }
@@ -199,7 +202,10 @@ export async function sendPasswordChangedEmail(params: {
 			type: 'password_changed',
 			toEmail: params.toEmail,
 			templateAlias: 'notification',
-			model: buildPasswordChangedModel(params) as unknown as Record<string, unknown>
+			model: buildPasswordChangedModel({
+				name: params.name,
+				contactEmail: await contactEmail()
+			}) as unknown as Record<string, unknown>
 		});
 	} catch (err) {
 		captureException(err, { event: 'auth.password_changed', stage: 'send' });
@@ -210,26 +216,41 @@ export async function sendPasswordChangedEmail(params: {
 export const STAFF_CONTACT_EMAIL = 'staff@corvmc.org';
 
 /** What a banned member sees at sign-in, once their password has matched. */
-export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
+export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. The email we sent you has a link to appeal. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
 
 /**
- * The ban notice. It states the fact and who to contact, never the reason:
- * that is a staff record.
+ * The ban or suspension notice. It states the fact, the end date of a
+ * suspension, and who to contact, never the reason: that is a staff record.
  */
 export function buildAccountSuspendedModel(params: {
 	name?: string | null;
+	endsAt?: Date | null;
+	appealUrl?: string | null;
 }): NotificationEmailModel & { transactional_only: true } {
+	const until = params.endsAt ? formatDateYear(params.endsAt) : null;
 	return {
 		subject: 'Your CorvMC account has been suspended',
-		preview_text: 'You can no longer sign in to your CorvMC account.',
+		preview_text: until
+			? `You can't sign in to your CorvMC account until ${until}.`
+			: 'You can no longer sign in to your CorvMC account.',
 		heading: 'Your account has been suspended',
 		greeting: greeting(params.name),
-		paragraphs: [
-			{
-				text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
-			}
-		],
-		footnote: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
+		paragraphs: until
+			? [
+					{
+						text: `Staff have suspended your Corvallis Music Collective account until ${until}. You have been signed out, and your reservations before that date have been cancelled. Membership billing is paused until then.`
+					},
+					{ text: `You can sign in again from ${until}.` }
+				]
+			: [
+					{
+						text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
+					}
+				],
+		...(params.appealUrl ? { cta: { url: params.appealUrl, label: 'Appeal this decision' } } : {}),
+		footnote: params.appealUrl
+			? `The appeal link works for ${REMOVAL_LINK_TTL_DAYS} days. If you have questions, email ${STAFF_CONTACT_EMAIL}.`
+			: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
 		transactional_only: true
 	};
 }
@@ -257,6 +278,8 @@ export function buildAccountRestoredModel(params: {
 export async function sendAccountSuspendedEmail(params: {
 	toEmail: string;
 	name?: string | null;
+	endsAt?: Date | null;
+	appealUrl?: string | null;
 }): Promise<void> {
 	try {
 		await dispatchEmailOnly({

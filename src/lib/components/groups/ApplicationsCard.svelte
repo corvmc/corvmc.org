@@ -1,23 +1,24 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { MemberRef } from '$lib/types/entity';
-	import { formatDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { MemberRef } from '#lib/types/entity.js';
+	import { formatDate } from '#lib/utils/format.js';
 	import {
 		groupApplicationQuestions,
 		groupApplicationStatusLabels,
 		APPLICATION_ANSWER_MAX,
 		type ApplicationGroupKind,
 		type GroupApplicationStatus
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		acceptGroupApplication,
 		declineGroupApplication,
 		markApplicantContacted
-	} from '$lib/remote/group-applications.remote';
+	} from '#lib/remote/group-applications.remote.js';
 
 	/**
 	 * A reviewer working through one group's applications, whatever its kind.
@@ -28,7 +29,7 @@
 	let {
 		slug,
 		kind,
-		title = 'Applications',
+		title = m.groups_applications_card_title(),
 		applications
 	}: {
 		slug: string;
@@ -81,11 +82,13 @@
 					{#if application.status === 'submitted'}
 						<Action
 							action={markApplicantContacted.for(application.choiceId)}
-							label="Mark contacted"
-							aria-label={`Mark ${application.applicant.title} as contacted`}
+							label={m.groups_applications_card_mark_contacted_label()}
+							aria-label={m.groups_applications_card_mark_as_contacted_label({
+								title: application.applicant.title
+							})}
 							variant="ghost"
 							size="xs"
-							successToast="Marked contacted"
+							successToast={m.groups_applications_card_marked_contacted_toast()}
 						>
 							{#snippet form()}
 								<input {...contactFields.slug.as('hidden', slug)} />
@@ -95,15 +98,20 @@
 					{/if}
 					<Action
 						action={acceptGroupApplication.for(application.choiceId)}
-						label="Accept"
-						aria-label={`Accept ${application.applicant.title}`}
+						label={m.groups_accept_label()}
+						aria-label={m.groups_applications_card_accept_label({
+							title: application.applicant.title
+						})}
 						variant="primary"
 						size="xs"
-						modalTitle="Accept {application.applicant.title}"
-						submitLabel="Accept and invite"
-						confirm="Accepting invites {application.applicant
-							.title} to join. They still have to accept the invitation."
-						successToast="Accepted — invitation sent"
+						modalTitle={m.groups_applications_card_accept_title({
+							title: application.applicant.title
+						})}
+						submitLabel={m.groups_applications_card_accept_invite_label()}
+						confirm={m.groups_applications_card_confirm_body({
+							title: application.applicant.title
+						})}
+						successToast={m.groups_applications_card_accepted_invitation_sent_toast()}
 					>
 						{#snippet form()}
 							<input {...acceptFields.slug.as('hidden', slug)} />
@@ -112,13 +120,17 @@
 					</Action>
 					<Action
 						action={declineGroupApplication.for(application.choiceId)}
-						label="Decline"
-						aria-label={`Decline ${application.applicant.title}`}
+						label={m.groups_decline_label()}
+						aria-label={m.groups_applications_card_decline_label({
+							title: application.applicant.title
+						})}
 						variant="ghost"
 						size="xs"
-						modalTitle="Decline {application.applicant.title}"
-						submitLabel="Decline"
-						successToast="Declined"
+						modalTitle={m.groups_applications_card_decline_title({
+							title: application.applicant.title
+						})}
+						submitLabel={m.groups_decline_label()}
+						successToast={m.groups_applications_card_declined_toast()}
 					>
 						{#snippet form()}
 							<input {...declineFields.slug.as('hidden', slug)} />
@@ -126,9 +138,9 @@
 							<FormField
 								field={declineFields.reviewNotes}
 								type="textarea"
-								label="Why (optional)"
+								label={m.groups_applications_card_why_optional_label()}
 								maxlength={String(APPLICATION_ANSWER_MAX)}
-								description="The applicant sees this. A decision they cannot see is one nobody can answer a question about later."
+								description={m.groups_applications_card_description_body()}
 							/>
 						{/snippet}
 					</Action>

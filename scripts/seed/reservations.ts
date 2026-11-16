@@ -7,7 +7,7 @@ import {
 	accessHolding,
 	doorAccess
 } from '../../src/lib/server/db/schema/reservation';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { CLOSURE_REASONS } from './pools';
 import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types';
 import { claimRoomNear, holdRoom } from './room';
@@ -120,7 +120,10 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			hour += duration + 0.5;
 			if (hour > 21) break;
 
-			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
+			// A booking is confirmed when it exists (#2502). The draw stays so every
+			// value seeded after it is unchanged.
+			if (day !== 0) pick([0, 1]);
+			const status = 'confirmed';
 			const slot = bookRoom(ptDate(day, hour - duration - 0.5), duration, status);
 			if (!slot) continue;
 			const { startsAt, endsAt } = slot;
@@ -130,7 +133,7 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			// mirroring the daily lock job. Both sync states must be reachable
 			// locally: `lockSyncedAt` set is the code the member sees, null is the
 			// one queued in U-tec's cloud that shows as pending, with the break-glass
-			// code standing in. Today's first booking is left unconfirmed so that
+			// code standing in. Today's first booking is left unsynced so that
 			// path is not visible only in production.
 			const withinWindow = day >= 0 && day <= 2 && status === 'confirmed';
 			const lockCode = withinWindow ? String(randomInt(1000, 9999)) : null;
@@ -192,7 +195,7 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			bookerType: 'user',
 			bookerId: newcomer.id,
 			createdByUserId: newcomer.id,
-			status: 'scheduled',
+			status: 'confirmed',
 			...newcomerSlot,
 			notes: 'First time here — is there somewhere to park a van?'
 		})
@@ -200,8 +203,66 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 	rows.push(firstEver);
 
 	rows.push(...(await seedCancellationKinds(users)));
+	await seedTrackKinds();
 
 	return rows;
+}
+
+/**
+ * One booking on each reservation track (#2861), two for Covered, so every
+ * status the staff filter offers lists something. Fixed rather than rolled, and
+ * a member of their own, so no other persona's fee gate or history moves. Not
+ * returned: the payment seeders draw per returned row.
+ */
+async function seedTrackKinds() {
+	const [member] = await db
+		.insert(user)
+		.values({
+			id: randomUUID(),
+			name: 'Odile Marsh',
+			email: 'odile.marsh@example.com',
+			emailVerified: true,
+			memberNumber: 998,
+			createdAt: new Date(Date.now() - 60 * 86400000),
+			updatedAt: new Date()
+		})
+		.returning();
+	const cents = 2 * HOURLY_RATE_CENTS;
+	const kinds = [
+		{ day: 9, status: 'confirmed', cashDueCents: cents, notes: 'Booked' },
+		{ day: 10, status: 'waitlisted', notes: 'Waitlisted' },
+		{ day: -16, status: 'confirmed', cashDueCents: cents, notes: 'Payment due' },
+		{ day: -17, status: 'completed', cashDueCents: 0, paid: true, notes: 'Paid' },
+		{ day: -18, status: 'completed', cashDueCents: 0, creditsUsed: 2, notes: 'Covered by credits' },
+		{ day: -19, status: 'completed', cashDueCents: 0, notes: 'Covered by a comp' },
+		{ day: -20, status: 'no_show', notes: 'No-show' },
+		{ day: -21, status: 'cancelled', notes: 'Cancelled' },
+		{
+			day: -22,
+			status: 'confirmed',
+			cashDueCents: 0,
+			paid: true,
+			refunded: true,
+			notes: 'Refunded'
+		}
+	] as const;
+	const values = kinds.flatMap((k) => {
+		const slot = bookRoom(ptDate(k.day, 9), 2, k.status);
+		if (!slot) return [];
+		return {
+			bookerType: 'user' as const,
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: k.status,
+			...slot,
+			notes: k.notes,
+			cashDueCents: 'cashDueCents' in k ? k.cashDueCents : null,
+			creditsUsed: 'creditsUsed' in k ? k.creditsUsed : null,
+			paidAt: 'paid' in k ? slot.startsAt : null,
+			refundedAt: 'refunded' in k ? slot.endsAt : null
+		};
+	});
+	await batchInsert(reservation, values);
 }
 
 /**
@@ -221,35 +282,37 @@ async function seedCancellationKinds(users: SeedUser[]): Promise<SeedReservation
 		// A row from before anyone recorded who cancelled.
 		{ cancelledBy: null, byUserId: null, reason: null }
 	] as const;
-	return db
-		.insert(reservation)
-		.values(
-			kinds.map((k, i) => ({
-				bookerType: 'user' as const,
-				bookerId: member.id,
-				createdByUserId: member.id,
-				status: 'cancelled' as const,
-				startsAt: ptDate(-3 + i, 10),
-				endsAt: ptDate(-3 + i, 12),
-				cancellationReason: k.reason,
-				cancelledBy: k.cancelledBy,
-				cancelledByUserId: k.byUserId,
-				cancelledAt: k.cancelledBy ? ptDate(-5 + i, 16) : null
-			}))
-		)
-		.returning();
+	return batchInsert(
+		reservation,
+		kinds.map((k, i) => ({
+			bookerType: 'user' as const,
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: 'cancelled' as const,
+			startsAt: ptDate(-3 + i, 10),
+			endsAt: ptDate(-3 + i, 12),
+			cancellationReason: k.reason,
+			cancelledBy: k.cancelledBy,
+			cancelledByUserId: k.byUserId,
+			cancelledAt: k.cancelledBy ? ptDate(-5 + i, 16) : null
+		}))
+	);
 }
 
 export async function seedClosures() {
 	console.log('Seeding closures...');
-	await db.insert(closure).values([
+	await batchInsert(closure, [
 		{ reason: 'Holiday closure — New Year', startsAt: ptDate(-30, 0), endsAt: ptDate(-29, 23, 59) },
 		{
 			reason: 'Building maintenance — HVAC replacement',
 			startsAt: ptDate(21, 8),
 			endsAt: ptDate(22, 18)
 		},
-		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) }
+		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) },
+		// The staff dashboard's day cards. Overnight, so it leaves the bookable day
+		// open, and offset 0 because `ptDate` lands on the UTC date, which in the
+		// Pacific evening is already the club's tomorrow.
+		{ reason: 'Overnight floor refinishing', startsAt: ptDate(0, 22), endsAt: ptDate(1, 6) }
 	]);
 }
 
@@ -349,7 +412,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 	const [holder, lapsed, pending] = users;
 	if (!holder) return;
 
-	await db.insert(lockMemberCode).values([
+	await batchInsert(lockMemberCode, [
 		// A member with a standing code: provisioning skips them entirely.
 		{
 			userId: holder.id,
@@ -397,7 +460,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 	// The key holder register: two keys out, an alarm code held by somebody with
 	// no account, and one key back — so both tabs have rows.
 	const [, , , keyHolder, keyReturner] = users;
-	await db.insert(accessHolding).values([
+	await batchInsert(accessHolding, [
 		{
 			kind: 'key',
 			label: 'Front door key 1',

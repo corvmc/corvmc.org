@@ -14,15 +14,17 @@ import {
 	incidentStatuses,
 	ballotStatuses,
 	contractorJobStatuses
-} from '$lib/config';
-import { ticketStatuses } from '$lib/server/db/schema/ticket';
-import { reservationStatuses } from '$lib/server/db/schema/reservation';
-import { eventStatuses } from '$lib/server/db/schema/event';
-import { productionStatuses } from '$lib/server/db/schema/production';
-import { flagStatuses } from '$lib/server/db/schema/flag';
-import { groupMemberStatuses } from '$lib/server/db/schema/group';
-import { bandTiers } from '$lib/server/db/schema/band-site';
-import { inviteStatuses } from '$lib/server/db/schema/group-invite';
+} from '#lib/config.js';
+import { ticketStatuses } from '#lib/server/db/schema/ticket.js';
+import { reservationStatuses } from '#lib/server/db/schema/reservation.js';
+import { reservationTracks } from '#lib/utils/reservation-actions.js';
+import { eventStatuses } from '#lib/server/db/schema/event.js';
+import { productionStatuses } from '#lib/server/db/schema/production.js';
+import { flagStatuses } from '#lib/server/db/schema/flag.js';
+import { groupMemberStatuses } from '#lib/server/db/schema/group.js';
+import { bandTiers } from '#lib/server/db/schema/band-site.js';
+import { inviteStatuses } from '#lib/server/db/schema/group-invite.js';
+import { campaignSendStatuses } from '#lib/types/marketing.js';
 
 /**
  * An unmapped status falls back to a neutral dot that says nothing. Before this
@@ -62,12 +64,15 @@ const derivedStatuses = {
 
 const vocabularies: Record<string, readonly string[]> = {
 	reservation: reservationStatuses,
+	// `reservationTrack` — derived from status and the payment columns, never stored.
+	reservationTrack: reservationTracks,
 	event: eventStatuses,
 	flag: flagStatuses,
 	groupMember: groupMemberStatuses,
 	bandTier: bandTiers,
 	groupInvite: inviteStatuses,
 	ticket: ticketStatuses,
+	campaignSend: campaignSendStatuses,
 	// `assetStatuses`, not the pre-#286 `equipmentStatuses`. Guarding the dead
 	// vocabulary is why `in_service`, `on_loan` and `lost` went unmapped: three of
 	// the five statuses a unit can hold rendered the neutral fallback dot, which

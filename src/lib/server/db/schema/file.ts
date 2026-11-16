@@ -4,8 +4,8 @@ import { user } from './authentication';
 import { group } from './group';
 
 /**
- * A document a group holds for its own members. Phase 8 of
- * `docs/specs/shipped/groups-spec.md`.
+ * A document a group holds for its own members. See
+ * `docs/decisions/0026-uploads-are-detached-and-swept.md`.
  *
  * **A file store, not a document tool.** Members upload files produced
  * elsewhere — minutes from whatever word processor the committee already uses,

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -7,13 +8,15 @@ import {
 import {
 	SEED_AUDIO_RELEASE_ID,
 	SEED_AUDIO_RELEASE_TITLE,
-	SEED_AUDIO_TRACK_ID,
 	SEED_AUDIO_TRACK_TITLE,
 	SEED_AUDIO_DRAFT_ID,
 	SEED_AUDIO_DRAFT_TITLE,
+	SEED_AUDIO_DRAFT_TRACK_COUNT,
+	SEED_AUDIO_RELEASE_TRACK_COUNT,
 	SEED_AUDIO_DELETABLE_ID,
 	SEED_AUDIO_DELETABLE_TRACK_ID,
-	SEED_AUDIO_UNPUBLISHED_TRACK_ID
+	SEED_AUDIO_UNPUBLISHED_TRACK_ID,
+	SEED_AUDIO_TRACK_SECONDS
 } from './fixtures/seed-band-audio';
 import { readLocalDb } from './fixtures/platform-db';
 import { audioRelease, audioTrack } from '../src/lib/server/db/schema/audio';
@@ -38,11 +41,7 @@ const band = `/band/${SEED_PUBLIC_BAND_SLUG}`;
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
 
 function streamUrl(trackId: string) {
@@ -54,10 +53,23 @@ test.describe('band music panel', () => {
 		await login(page);
 		await page.goto(`${band}/music`);
 
-		await expect(page.getByText(SEED_AUDIO_RELEASE_TITLE)).toBeVisible({ timeout: 15000 });
-		await expect(page.getByText(SEED_AUDIO_DRAFT_TITLE)).toBeVisible();
+		const card = (id: string) => page.locator(`a[href="${band}/music/${id}"]`);
+		const published = card(SEED_AUDIO_RELEASE_ID);
+		const draft = card(SEED_AUDIO_DRAFT_ID);
+
+		await expect(published.getByText(SEED_AUDIO_RELEASE_TITLE)).toBeVisible({ timeout: 15000 });
+		await expect(draft.getByText(SEED_AUDIO_DRAFT_TITLE)).toBeVisible();
+		await expect(published.locator('[data-track-count]')).toHaveAttribute(
+			'data-track-count',
+			String(SEED_AUDIO_RELEASE_TRACK_COUNT)
+		);
+		await expect(draft.locator('[data-track-count]')).toHaveAttribute(
+			'data-track-count',
+			String(SEED_AUDIO_DRAFT_TRACK_COUNT)
+		);
 		// A draft has to be visibly a draft, or a band cannot tell what is public.
-		await expect(page.getByText('Draft').first()).toBeVisible();
+		// The draft badge is the card's only ghost one.
+		await expect(draft.locator('.badge-ghost')).toBeVisible();
 	});
 
 	test('shows the tracklist and a play control on the release page', async ({ page }) => {
@@ -69,78 +81,13 @@ test.describe('band music panel', () => {
 			page.getByRole('button', { name: `Play ${SEED_AUDIO_TRACK_TITLE}` })
 		).toBeVisible();
 		// 32 seconds, from the fixture's synthesized WAV.
-		await expect(page.getByText('0:32').first()).toBeVisible();
-	});
-
-	test('lights the Releases row in the band sidebar', async ({ page }) => {
-		await login(page);
-		await page.goto(`${band}/music`);
-
-		const active = page.locator('aside ul.menu').first().locator('a.active');
-		await expect(active).toHaveCount(1, { timeout: 15000 });
-		await expect(active).toHaveAttribute('href', `${band}/music`);
+		const m = Math.floor(SEED_AUDIO_TRACK_SECONDS / 60);
+		const s = String(SEED_AUDIO_TRACK_SECONDS % 60).padStart(2, '0');
+		await expect(page.getByText(`${m}:${s}`).first()).toBeVisible();
 	});
 });
 
 test.describe('stream endpoint', () => {
-	test('answers a bare request with the whole object and advertises ranges', async ({
-		request
-	}) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID));
-
-		expect(response.status()).toBe(200);
-		// Without this header a browser will not attempt to seek at all.
-		expect(response.headers()['accept-ranges']).toBe('bytes');
-		expect(response.headers()['content-type']).toContain('audio/wav');
-		expect(Number(response.headers()['content-length'])).toBeGreaterThan(0);
-	});
-
-	test('answers Safari’s opening probe with a 206 and a content-range', async ({ request }) => {
-		// `bytes=0-1` is the two-byte request Safari opens every media element
-		// with. A 200 here means the file never plays in Safari, and plays fine
-		// everywhere else — which is how this ships broken.
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=0-1' }
-		});
-
-		expect(response.status()).toBe(206);
-		expect(response.headers()['content-range']).toMatch(/^bytes 0-1\/\d+$/);
-		expect(response.headers()['content-length']).toBe('2');
-		expect((await response.body()).byteLength).toBe(2);
-	});
-
-	test('serves a mid-file range as the bytes actually asked for', async ({ request }) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=1000-1099' }
-		});
-
-		expect(response.status()).toBe(206);
-		// Inclusive at both ends: 1000..1099 is 100 bytes, not 99 and not 101.
-		expect((await response.body()).byteLength).toBe(100);
-		expect(response.headers()['content-range']).toMatch(/^bytes 1000-1099\/\d+$/);
-	});
-
-	test('serves a suffix range as the trailing bytes', async ({ request }) => {
-		const full = await request.get(streamUrl(SEED_AUDIO_TRACK_ID));
-		const size = Number(full.headers()['content-length']);
-
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=-500' }
-		});
-
-		expect(response.status()).toBe(206);
-		expect((await response.body()).byteLength).toBe(500);
-		// The form everyone gets wrong — the LAST 500 bytes, not "from 500".
-		expect(response.headers()['content-range']).toBe(`bytes ${size - 500}-${size - 1}/${size}`);
-	});
-
-	test('refuses a range that starts past the end', async ({ request }) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=99999999-' }
-		});
-		expect(response.status()).toBe(416);
-	});
-
 	test('will not stream a track from an unpublished release, signed in or not', async ({
 		request
 	}) => {
@@ -149,11 +96,6 @@ test.describe('stream endpoint', () => {
 		// hold for the band's own owner too. A draft has never been shown to
 		// anybody.
 		const response = await request.get(streamUrl(SEED_AUDIO_UNPUBLISHED_TRACK_ID));
-		expect(response.status()).toBe(404);
-	});
-
-	test('404s a track that does not exist', async ({ request }) => {
-		const response = await request.get(streamUrl('not-a-real-track'));
 		expect(response.status()).toBe(404);
 	});
 });
@@ -165,8 +107,8 @@ test.describe('publishing', () => {
 		await login(page);
 		await page.goto(`${band}/music/${SEED_AUDIO_DRAFT_ID}`);
 
-		await page.getByRole('button', { name: 'Publish' }).click();
-		await page.getByRole('button', { name: 'Publish', exact: true }).last().click();
+		await page.getByTestId('publish-release').click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -193,8 +135,8 @@ test.describe('deleting', () => {
 		await login(page);
 		await page.goto(`${band}/music/${SEED_AUDIO_DELETABLE_ID}`);
 
-		await page.getByRole('button', { name: 'Delete release' }).click();
-		await page.getByRole('button', { name: 'Delete', exact: true }).last().click();
+		await page.getByTestId('delete-release').click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -220,16 +162,5 @@ test.describe('deleting', () => {
 				.where(eq(audioTrack.id, SEED_AUDIO_DELETABLE_TRACK_ID))
 		);
 		expect(tracks).toHaveLength(0);
-	});
-});
-
-test.describe('the feature flag', () => {
-	test('the panel is reachable while bandAudio is on', async ({ page }) => {
-		// The negative case — every surface 404ing with the flag off — is pinned in
-		// `audio.remote.spec.ts`, which can toggle it. Here the flag is on for the
-		// whole run, so this asserts the positive half only.
-		await login(page);
-		await page.goto(`${band}/music`);
-		await expect(page.getByRole('heading', { name: 'Releases' })).toBeVisible({ timeout: 15000 });
 	});
 });

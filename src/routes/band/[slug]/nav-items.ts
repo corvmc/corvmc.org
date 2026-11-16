@@ -16,7 +16,7 @@
  * were sitting at the end of a sixteen-row list where the useful ones are.
  */
 import { resolve } from '$app/paths';
-import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
+import { activeNavKey, type NavNode } from '#lib/components/layout/Nav/active-nav.js';
 
 export type BandNavKey =
 	| 'dashboard'
@@ -120,7 +120,7 @@ export function bandNavMain(input: BandNavInput): BandNavItem[] {
 	if (isOwnerOrAdmin) {
 		items.push({
 			key: 'edit',
-			label: 'Edit Profile',
+			label: 'Edit profile',
 			href: resolve('/band/[slug]/edit', { slug })
 		});
 		// Deliberately not premium-gated, and deliberately not folded into Edit
@@ -130,7 +130,7 @@ export function bandNavMain(input: BandNavInput): BandNavItem[] {
 		// from drifting onto the wrong one.
 		items.push({
 			key: 'press-kit',
-			label: 'Press Kit',
+			label: 'Press kit',
 			href: resolve('/band/[slug]/press-kit', { slug })
 		});
 	}
@@ -141,7 +141,7 @@ export function bandNavMain(input: BandNavInput): BandNavItem[] {
 		// custom domain is resolved there, not here.
 		items.push({
 			key: 'page-editor',
-			label: 'Page Editor',
+			label: 'Page editor',
 			href: resolve('/band/[slug]/page-editor', { slug })
 		});
 	}
@@ -183,7 +183,7 @@ export function bandNavFooter(input: BandNavInput): BandNavItem[] {
 		items.push({
 			key: 'staff-tools',
 			label: 'Staff tools',
-			href: resolve('/staff/bands/[id]', { id: input.bandId })
+			href: resolve('/staff/groups/[id]', { id: input.bandId })
 		});
 	}
 

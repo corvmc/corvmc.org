@@ -1,8 +1,8 @@
-import { error, text } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { handleTwilioInbound } from '$lib/server/inbox/inbound-handlers';
-import { validateTwilioSignature } from '$lib/server/inbox/twilio-client';
-import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
+import { handleTwilioInbound } from '#lib/server/inbox/inbound-handlers.js';
+import { validateTwilioSignature } from '#lib/server/inbox/twilio-client.js';
+import { isChannelEnabled } from '#lib/server/inbox/channel-config-service.js';
 
 const EMPTY_TWIML = '<Response></Response>';
 
@@ -11,7 +11,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	// channel toggle below is what decides whether we accept inbound texts.
 	const enabled = await isChannelEnabled('sms');
 	if (!enabled) {
-		return text(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });
+		return new Response(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });
 	}
 
 	const body = await request.text();
@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		if (import.meta.env.DEV) throw err;
 	}
 
-	return text('<Response></Response>', {
+	return new Response('<Response></Response>', {
 		headers: { 'Content-Type': 'text/xml' }
 	});
 };

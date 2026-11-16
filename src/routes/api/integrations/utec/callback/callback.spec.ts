@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks (the authorize module is imported transitively for STATE_COOKIE, so
@@ -10,9 +10,9 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
 // positions actually grant.
 let heldPositions: Position[] = ['staff'];
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -26,14 +26,14 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const mockExchange = vi.fn();
-vi.mock('$lib/server/lock/ultraloc-client', () => ({
+vi.mock('#lib/server/lock/ultraloc-client.js', () => ({
 	exchangeAuthorizationCode: (...args: unknown[]) => mockExchange(...args),
 	buildAuthorizeUrl: vi.fn(() => 'https://oauth.u-tec.com/authorize'),
 	getUtecClientId: vi.fn().mockResolvedValue('cid')
 }));
 
 const mockUpdateSiteConfig = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	updateSiteConfig: (...args: unknown[]) => mockUpdateSiteConfig(...args)
 }));
 
@@ -68,7 +68,7 @@ describe('U-tec OAuth callback', () => {
 		const redirect = await callGET('?code=abc&state=WRONG', 'RIGHT');
 
 		expect(redirect?.status).toBe(303);
-		expect(redirect?.location).toBe('/staff/settings?utec=state_error');
+		expect(redirect?.location).toBe('/staff/building-access?utec=state_error');
 		expect(mockExchange).not.toHaveBeenCalled();
 		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
 	});
@@ -76,7 +76,7 @@ describe('U-tec OAuth callback', () => {
 	it('redirects on a provider error', async () => {
 		const redirect = await callGET('?error=access_denied&state=RIGHT', 'RIGHT');
 
-		expect(redirect?.location).toBe('/staff/settings?utec=denied');
+		expect(redirect?.location).toBe('/staff/building-access?utec=denied');
 		expect(mockExchange).not.toHaveBeenCalled();
 	});
 
@@ -90,7 +90,7 @@ describe('U-tec OAuth callback', () => {
 			'http://localhost/api/integrations/utec/callback'
 		);
 		expect(mockUpdateSiteConfig).toHaveBeenCalledWith('integration.utec.refreshToken', 'rt');
-		expect(redirect?.location).toBe('/staff/settings?utec=connected');
+		expect(redirect?.location).toBe('/staff/building-access?utec=connected');
 	});
 
 	it('redirects on an exchange failure', async () => {
@@ -99,7 +99,7 @@ describe('U-tec OAuth callback', () => {
 
 		const redirect = await callGET('?code=abc&state=RIGHT', 'RIGHT');
 
-		expect(redirect?.location).toBe('/staff/settings?utec=exchange_failed');
+		expect(redirect?.location).toBe('/staff/building-access?utec=exchange_failed');
 		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
 
 		consoleSpy.mockRestore();

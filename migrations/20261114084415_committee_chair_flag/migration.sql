@@ -1,0 +1,2 @@
+ALTER TABLE `group_position` ADD `is_chair` integer DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_group_position_chair` ON `group_position` (`group_id`) WHERE "group_position"."is_chair" = 1;

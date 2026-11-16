@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	listNonEmptyCategories,
 	listArticlesByCategory,
 	resolveHelpReader
-} from '$lib/server/help/help-service';
+} from '#lib/server/help/help-service.js';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');
@@ -20,5 +20,5 @@ export const GET: RequestHandler = async ({ locals }) => {
 		}))
 	);
 
-	return json({ categories: categoriesWithArticles });
+	return Response.json({ categories: categoriesWithArticles });
 };

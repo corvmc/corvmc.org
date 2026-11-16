@@ -1,17 +1,23 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatCents, formatDateShort, formatDateTime, formatTime } from '#lib/utils/format.js';
+	import { describeTerms } from '#lib/production/terms.js';
 	import { toast } from 'svelte-sonner';
-	import { getContactSheet, saveContactSheetForm } from '$lib/remote/contact-sheet.remote';
+	import { getContactSheet, saveContactSheetForm } from '#lib/remote/contact-sheet.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('token');
 
 	/**
 	 * An act's own contact sheet.
@@ -27,7 +33,7 @@
 	 */
 	const fields = saveContactSheetForm.fields;
 
-	let token = $derived(page.params.token!);
+	let token = $derived(params.token);
 	const sheet = $derived(await getContactSheet(token));
 
 	let busy = $state(false);
@@ -44,30 +50,27 @@
 				return;
 			}
 			await getContactSheet(token).refresh();
-			toast.success(method === 'POST' ? 'Rider received — thank you' : 'Rider removed');
+			toast.success(
+				method === 'POST'
+					? m.public_act_token_rider_received_thank_toast()
+					: m.public_act_token_rider_removed_toast()
+			);
 		} finally {
 			busy = false;
 		}
 	}
 
-	async function upload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
 		const body = new FormData();
 		body.set('file', file);
 		await send('POST', body);
-		input.value = '';
 	}
 
 	const remove = () => send('DELETE');
 
 	let artError = $state<string | null>(null);
 
-	async function sendArt(event: Event, requestId: string) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function sendArt(file: File, requestId: string) {
 		busy = true;
 		artError = null;
 		try {
@@ -81,16 +84,15 @@
 				return;
 			}
 			await getContactSheet(token).refresh();
-			toast.success('Art received — thank you');
+			toast.success(m.public_act_token_art_received_thank_toast());
 		} finally {
 			busy = false;
-			input.value = '';
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>{sheet.name} — contact sheet</title>
+	<title>{m.public_act_token_contact_sheet_title({ name: sheet.name })}</title>
 	<!-- Not a page of the site, and not one search engines should hold. -->
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
@@ -99,49 +101,98 @@
 	<h1 class="text-2xl font-semibold">{sheet.name}</h1>
 
 	<Alert type="info" class="text-sm">
-		This is everything the Corvallis Music Collective holds about you. Fill in what you would like
-		us to have; leave the rest blank. Your name is set by CMC because it appears on posters and in
-		our records — email us if it is wrong.
+		{m.public_act_token_everything_corvallis_music_collective_holds_body()}
 	</Alert>
 
-	<Form remote={saveContactSheetForm} successToast="Saved — thank you">
+	<!-- Read-only, and only this act's own slots: never another act's terms or a show total. -->
+	{#if sheet.bookings.length > 0}
+		<h2 class="text-muted font-semibold uppercase">{m.public_act_token_booked_shows_title()}</h2>
+		{#each sheet.bookings as booking (booking.eventId)}
+			<InfoCard title={booking.eventTitle}>
+				<DefinitionList>
+					<Fact label={m.public_act_token_when_label()}>{formatDateTime(booking.startsAt)}</Fact>
+					{#if booking.location}
+						<Fact label={m.public_act_token_where_label()}>{booking.location}</Fact>
+					{/if}
+					<Fact label={m.public_act_token_set_label()}>
+						{booking.scheduledStartAt
+							? m.public_act_token_set_text({
+									time: formatTime(booking.scheduledStartAt),
+									minutes: booking.setLengthMinutes
+								})
+							: m.public_act_token_set_length_text({ minutes: booking.setLengthMinutes })}
+					</Fact>
+					{#if booking.loadInAt}
+						<Fact label={m.public_act_token_load_in_label()}>{formatTime(booking.loadInAt)}</Fact>
+					{/if}
+					{#if booking.soundcheckAt}
+						<Fact label={m.public_act_token_soundcheck_label()}>
+							{formatTime(booking.soundcheckAt)}
+						</Fact>
+					{/if}
+					{#if booking.curfewAt}
+						<Fact label={m.public_act_token_curfew_label()}>{formatTime(booking.curfewAt)}</Fact>
+					{/if}
+					<Fact label={m.public_act_token_terms_label()}>{describeTerms(booking.terms)}</Fact>
+					{#if booking.contactName}
+						<Fact label={m.public_act_token_show_contact_label()}>{booking.contactName}</Fact>
+					{/if}
+					{#if booking.paidCents !== null}
+						<Fact label={m.public_act_token_paid_label()}>
+							{booking.paidAt
+								? m.public_act_token_paid_text({
+										amount: formatCents(booking.paidCents),
+										date: formatDateShort(booking.paidAt)
+									})
+								: formatCents(booking.paidCents)}
+						</Fact>
+					{/if}
+				</DefinitionList>
+			</InfoCard>
+		{/each}
+	{/if}
+
+	<Form remote={saveContactSheetForm} successToast={m.public_act_token_success_toast()}>
 		<input {...fields.token.as('hidden', token)} />
 
-		<InfoCard title="About you">
+		<InfoCard title={m.public_act_token_about_title()}>
 			<FormField
 				field={fields.bio}
 				type="textarea"
-				label="Bio"
+				label={m.public_bio_label()}
 				value={sheet.bio ?? ''}
-				description="Used on event pages when you play here."
+				description={m.public_act_token_used_event_pages_when_play_body()}
 			/>
 			<FormField
 				field={fields.hometown}
 				type="text"
-				label="Where you're from"
+				label={m.public_act_token_where_re_from_label()}
 				value={sheet.hometown ?? ''}
 			/>
 			<FormField
 				field={fields.url}
 				type="text"
-				label="Your site"
+				label={m.public_act_token_site_label()}
 				value={sheet.url ?? ''}
-				placeholder="https://…"
-				description="Where your name should link to on a bill. We don't host a page for you — this is where people go instead."
+				placeholder={m.public_act_token_placeholder()}
+				description={m.public_act_token_where_name_should_link_bill_body()}
 			/>
 		</InfoCard>
 
-		<InfoCard title="How we reach you">
+		<InfoCard title={m.public_act_token_how_we_reach_title()}>
 			<p class="text-sm">
-				Kept private. Used for booking and for sorting out anything that goes wrong — never shown
-				publicly and never added to a mailing list.
+				{m.public_act_token_kept_private_used_booking_sorting_text()}
 			</p>
-			<FormField field={fields.bookingName} type="text" label="Who to contact" />
-			<FormField field={fields.bookingEmail} type="email" label="Email" />
-			<FormField field={fields.bookingPhone} type="tel" label="Phone" />
+			<FormField
+				field={fields.bookingName}
+				type="text"
+				label={m.public_act_token_who_contact_label()}
+			/>
+			<FormField field={fields.bookingEmail} type="email" label={m.public_email_label()} />
+			<FormField field={fields.bookingPhone} type="tel" label={m.public_phone_label()} />
 		</InfoCard>
 
-		<SubmitButton>Save</SubmitButton>
+		<SubmitButton>{m.public_act_token_save_label()}</SubmitButton>
 	</Form>
 
 	<!--
@@ -150,19 +201,25 @@
 		act that attaches a rider and then leaves without pressing Save has still
 		sent us the rider.
 	-->
-	<InfoCard title="Tech rider">
+	<InfoCard title={m.public_act_token_tech_rider_title()}>
 		<p class="text-sm">
-			What you need on stage — inputs, backline, anything we have to know before the day. A PDF is
-			ideal; a photo of a hand-drawn plot is fine.
+			{m.public_act_token_what_need_stage_inputs_backline_text()}
 		</p>
 
 		{#if sheet.rider}
+			{@const rider = sheet.rider}
 			<p class="mt-3 text-sm">
 				<!-- `rel="external"` because the object is served from R2, not routed. -->
-				We have
-				<a href={sheet.rider.url} class="link" target="_blank" rel="external noreferrer"
-					>{sheet.rider.filename ?? 'your rider'}</a
-				>. Uploading another replaces it.
+				<ParaglideMessage
+					message={m.public_act_token_we_have_uploading_another_replaces_2_text}
+					inputs={{ filename: rider.filename ?? m.public_act_token_rider_text() }}
+					>{#snippet a({ children })}<a
+							href={rider.url}
+							class="link"
+							target="_blank"
+							rel="external noreferrer">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		{/if}
 
@@ -171,47 +228,56 @@
 		{/if}
 
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<input
-				type="file"
+			<FileUpload
+				{upload}
 				accept="application/pdf,image/jpeg,image/png,image/webp"
-				class="file-input"
+				showPreview={false}
 				disabled={busy}
-				onchange={upload}
+				emptyLabel={sheet.rider
+					? m.public_act_token_replace_rider_title()
+					: m.public_act_token_upload_rider_title()}
 			/>
 			{#if sheet.rider}
 				<Button type="button" variant="ghost" size="sm" disabled={busy} onclick={remove}>
-					Remove
+					{m.public_act_token_remove_label()}
 				</Button>
 			{/if}
 		</div>
 	</InfoCard>
 
 	{#each sheet.posterAsks as ask (ask.id)}
-		<InfoCard title="Poster art — {ask.eventTitle}">
+		<InfoCard title={m.public_act_token_poster_art_title({ eventTitle: ask.eventTitle })}>
 			<DefinitionList>
-				<Fact label="When">{formatDateTime(ask.startsAt)}</Fact>
+				<Fact label={m.public_act_token_when_label()}>{formatDateTime(ask.startsAt)}</Fact>
 				{#if ask.venue}
-					<Fact label="Where">{ask.venue}</Fact>
+					<Fact label={m.public_act_token_where_label()}>{ask.venue}</Fact>
 				{/if}
 				{#if ask.bill.length > 0}
-					<Fact label="Playing">{ask.bill.join(', ')}</Fact>
+					<Fact label={m.public_act_token_playing_label()}>{ask.bill.join(', ')}</Fact>
 				{/if}
-				<Fact label="Art due">
-					{ask.dueAt ? formatDateShort(ask.dueAt) : 'No date set — sooner is better'}
+				<Fact label={m.public_act_token_art_due_label()}>
+					{ask.dueAt
+						? formatDateShort(ask.dueAt)
+						: m.public_act_token_no_date_set_sooner_better_text()}
 				</Fact>
 			</DefinitionList>
 
 			<p class="mt-3 text-sm">
-				A JPEG or PNG, portrait, at least 1080 pixels wide. CMC adds the show details if the art
-				leaves them off.
+				{m.public_act_token_jpeg_png_portrait_at_least_text()}
 			</p>
 
 			{#if ask.deliveredUrl}
 				<p class="mt-3 text-sm">
-					We have
-					<a href={ask.deliveredUrl} class="link" target="_blank" rel="external noreferrer"
-						>your art</a
-					>. Uploading another replaces it.
+					<ParaglideMessage
+						message={m.public_act_token_we_have_uploading_another_replaces_text}
+						inputs={{}}
+						>{#snippet a({ children })}<a
+								href={ask.deliveredUrl}
+								class="link"
+								target="_blank"
+								rel="external noreferrer">{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 
@@ -220,12 +286,14 @@
 			{/if}
 
 			<div class="mt-3">
-				<input
-					type="file"
+				<FileUpload
+					upload={(file) => sendArt(file, ask.id)}
 					accept="image/jpeg,image/png"
-					class="file-input"
+					showPreview={false}
 					disabled={busy}
-					onchange={(e) => sendArt(e, ask.id)}
+					emptyLabel={ask.deliveredUrl
+						? m.public_act_token_replace_art_title()
+						: m.public_act_token_upload_art_title()}
 				/>
 			</div>
 		</InfoCard>

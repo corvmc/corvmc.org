@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getPublicCommittees } from '$lib/remote/committees.remote';
+	import { getPublicCommittees } from '#lib/remote/committees.remote.js';
 
 	/**
 	 * The committees and their remits, read from the `group` rows staff edit.

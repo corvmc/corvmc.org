@@ -12,8 +12,8 @@ import {
 	or,
 	sql
 } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { DomainError } from '$lib/server/domain-error';
+import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	ballot,
 	ballotChoice,
@@ -24,16 +24,19 @@ import {
 	ballotRecordedVote,
 	type Ballot,
 	type BallotCertifiedResult
-} from '$lib/server/db/schema/ballot';
-import { user } from '$lib/server/db/schema/authentication';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { project } from '$lib/server/db/schema/project';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { memberOrientation } from '$lib/server/db/schema/volunteer';
-import { config } from '$lib/server/site-config/site-config-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { getSuggestionBrief, respondToSuggestion } from '$lib/server/suggestion/suggestion-service';
+} from '#lib/server/db/schema/ballot.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import {
+	getSuggestionBrief,
+	respondToSuggestion
+} from '#lib/server/suggestion/suggestion-service.js';
 import {
 	BALLOT_DESCRIPTION_MAX,
 	BALLOT_OPTION_LABEL_MAX,
@@ -43,7 +46,8 @@ import {
 	BALLOT_TITLE_MAX,
 	type BallotKind,
 	type BallotStatus
-} from '$lib/config';
+} from '#lib/config.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -315,8 +319,10 @@ export async function listBallotsForMember(
 		.select({
 			ballot,
 			groupName: group.name,
-			isElector: sql<number>`exists (${elector})`,
-			hasVoted: sql<number>`(exists (${participated}) or exists (${recorded}))`
+			// `exists()`, not `exists (${subquery})`: drizzle parenthesises an embedded
+			// query, and SQLite refuses `exists ((select …))`.
+			isElector: sql<number>`${exists(elector)}`,
+			hasVoted: sql<number>`${or(exists(participated), exists(recorded))}`
 		})
 		.from(ballot)
 		.leftJoin(group, eq(group.id, ballot.groupId))
@@ -383,7 +389,7 @@ export async function listCommitteeRosters(
 							eq(groupMember.groupId, group.id),
 							eq(groupMember.userId, opts.adminUserId),
 							eq(groupMember.status, 'active'),
-							inArray(groupMember.role, ['owner', 'admin'])
+							leadsGroup()
 						)
 					)
 			)
@@ -663,6 +669,9 @@ export async function openBallot(ballotId: string, ctx: { now?: Date } = {}): Pr
 	if (b.closesAt.getTime() <= now.getTime()) {
 		throw new BallotStateError('The close date has passed; set a new one first');
 	}
+	// Integrity, not order (docs/development/conventions.md#workflow-gates): a
+	// draft always names a certifier, so a null one means that account was
+	// purged. The draft edit is the fix.
 	if (!b.certifierId) throw new BallotStateError('Name a certifier first');
 
 	const options = await db

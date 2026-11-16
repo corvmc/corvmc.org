@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { user } from './authentication';
 import { flagStatuses } from './flag';
 import { project } from './project';
+import { organization } from './party';
 import {
 	acquisitionKinds,
 	assetStatuses,
@@ -28,7 +29,7 @@ import {
 // The rule the whole module rests on: **stock is a ledger, not a number.**
 // On-hand is the sum of movements and is never stored as an authoritative
 // figure — a stocktake correction is itself a movement, with reason `adjust`.
-// See `docs/specs/inventory-spec.md`.
+// See `docs/decisions/0045-inventory-stock-is-a-ledger.md`.
 // ---------------------------------------------------------------------------
 
 export type ItemKind = (typeof itemKinds)[number];
@@ -110,12 +111,15 @@ export const updateCategorySchema = createCategorySchema.partial();
 
 export const scheduleLoanSchema = z.object({
 	itemId: z.uuid(),
-	scheduledPickupDate: z.coerce.date()
+	/** A date input's `YYYY-MM-DD`; the remote stores it as noon club time. */
+	scheduledPickupDate: z.iso.date()
 });
 
 export const checkoutLoanSchema = z.object({
-	dueDate: z.coerce.date(),
-	assetId: z.uuid().optional()
+	dueDate: z.iso.date(),
+	assetId: z.uuid().optional(),
+	/** Checking out a requested loan without scheduling it: the override's reason. */
+	reason: z.string().trim().max(1000).optional()
 });
 
 // ---------------------------------------------------------------------------
@@ -457,9 +461,8 @@ export const acquisitionLine = sqliteTable(
  * means *something was promised*. Keeping them apart is what lets every money
  * report stay exactly as it is.
  *
- * `supplierName` is free text, matching `acquisition.sourceName`. A `supplier`
- * table was argued out and declined in the spec; the multi-line receipt is what
- * actually fixes the `GROUP BY sourceName` fragmentation.
+ * The supplier is an organization holding the `supplier` role (#2622), so an
+ * order lands on that organization's page beside its other records.
  */
 export const purchaseOrder = sqliteTable(
 	'purchase_order',
@@ -468,7 +471,10 @@ export const purchaseOrder = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 		status: text('status', { enum: orderStatuses }).notNull().default('draft'),
-		supplierName: text('supplier_name'),
+		/** Holds the `supplier` role; `order-service.ts` checks it on write. */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
 		reference: text('reference'),
 		/** When it was sent to the supplier. Null while it is still a draft. */
 		placedAt: integer('placed_at', { mode: 'timestamp' }),
@@ -490,7 +496,8 @@ export const purchaseOrder = sqliteTable(
 	(t) => [
 		index('idx_purchase_order_status').on(t.status),
 		index('idx_purchase_order_expected').on(t.expectedAt),
-		index('idx_purchase_order_project').on(t.projectId)
+		index('idx_purchase_order_project').on(t.projectId),
+		index('idx_purchase_order_organization').on(t.organizationId)
 	]
 );
 
@@ -534,6 +541,44 @@ export const purchaseOrderLine = sqliteTable(
 );
 
 /**
+ * A location lent as one set: the offsite kit case and everything in it.
+ *
+ * The lent units are the `inventory_loan` rows carrying this id, written at
+ * checkout, so the list is a snapshot: moving a unit later changes nothing
+ * here. `returnedAt` is set once every one of those rows has come back.
+ */
+export const inventoryKitLoan = sqliteTable(
+	'inventory_kit_loan',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		locationId: text('location_id').references(() => inventoryLocation.id, {
+			onDelete: 'set null'
+		}),
+		/** The location's name at checkout; a renamed or deleted case keeps its label. */
+		locationName: text('location_name').notNull(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		checkedOutById: text('checked_out_by_id').references(() => user.id, { onDelete: 'set null' }),
+		checkedOutAt: integer('checked_out_at', { mode: 'timestamp' }).notNull(),
+		dueDate: integer('due_date', { mode: 'timestamp' }),
+		returnedAt: integer('returned_at', { mode: 'timestamp' }),
+		notes: text('notes'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_kit_loan_location').on(t.locationId), index('idx_kit_loan_user').on(t.userId)]
+);
+
+export type InventoryKitLoan = typeof inventoryKitLoan.$inferSelect;
+
+/**
  * The loan, rebuilt from `equipment_loan`.
  *
  * Same five states, same money columns, same charge rules — what changes is
@@ -552,6 +597,10 @@ export const inventoryLoan = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
+		/** Set when this unit went out as part of a kit; see `inventoryKitLoan`. */
+		kitLoanId: text('kit_loan_id').references(() => inventoryKitLoan.id, {
+			onDelete: 'set null'
+		}),
 		quantity: integer('quantity').notNull().default(1),
 		requestedPickupDate: integer('requested_pickup_date', { mode: 'timestamp' }).notNull(),
 		estimatedReturnDate: integer('estimated_return_date', { mode: 'timestamp' }),
@@ -579,6 +628,7 @@ export const inventoryLoan = sqliteTable(
 		index('idx_loan_asset').on(t.assetId),
 		index('idx_loan_user').on(t.userId),
 		index('idx_loan_status').on(t.status),
+		index('idx_loan_kit').on(t.kitLoanId),
 		check('loan_qty_positive', sql`quantity > 0`)
 	]
 );
@@ -621,7 +671,7 @@ export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
 
 /**
  * A **work request**: something a person noticed about one unit, not yet
- * authorized — the CMMS term (docs/specs/project-spec.md#vocabulary). Triage
+ * authorized — the CMMS term (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md). Triage
  * turns it into a `work_order`, and N requests may collapse onto one.
  *
  * Shaped after `content_flag` and sharing its `flagStatuses` verbatim — one

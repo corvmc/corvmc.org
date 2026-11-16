@@ -1,23 +1,27 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getStaffArticlePage, updateArticle, deleteArticle } from '$lib/remote/help.remote';
+	import { getStaffArticlePage, updateArticle, deleteArticle } from '#lib/remote/help.remote.js';
 	const { fields: deleteFields } = deleteArticle;
 	const { fields: updateFields } = updateArticle;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
-	import { helpAudiences, helpAudienceLabels } from '$lib/config';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import MarkdownEditor from '#lib/components/help/MarkdownEditor.svelte';
+	import ArticleCapabilitiesField from '#lib/components/help/ArticleCapabilitiesField.svelte';
+	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	const data = $derived(await getStaffArticlePage(id));
 	const article = $derived(data.article);
 	const categories = $derived(data.categories);
@@ -29,81 +33,105 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Edit Article" subtitle="Help">
+<PageHeader width="3xl" title={m.staff_help_id_title()} subtitle={m.staff_help_body()}>
 	<Action
 		action={deleteArticle}
-		modalTitle="Confirm"
-		successToast="Article deleted"
-		onsuccess={() => goto(resolve('/staff/help'))}
+		modalTitle={m.staff_confirm_title()}
+		successToast={m.staff_help_id_article_deleted_toast()}
+		onsuccess={() => goto(resolve('staff/help'))}
 		variant="error"
 		size="sm"
 		outline
 	>
 		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
-			<p class="py-4">Permanently delete "{article?.title}"?</p>
+			<p class="py-4">{m.staff_help_id_permanently_delete_text({ value: article?.title })}</p>
 		{/snippet}
-		<IconTrash size={16} /> Delete
+		<IconTrash size={16} />
+		{m.staff_delete_text()}
 	</Action>
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
-		<Form remote={updateArticle} guard successToast="Article updated">
+		<Form remote={updateArticle} guard successToast={m.staff_help_id_article_updated_toast()}>
 			<input {...updateFields.id.as('hidden', article.id)} />
 
 			<div class="space-y-4">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormField name="title" type="text" label="Title" value={article.title} />
-					<FormField name="slug" type="text" label="Slug" value={article.slug} />
+					<FormField
+						field={updateArticle.fields.title}
+						type="text"
+						label={m.staff_title_label()}
+						value={article.title}
+					/>
+					<FormField
+						field={updateArticle.fields.slug}
+						type="text"
+						label={m.staff_slug_label()}
+						value={article.slug}
+					/>
 				</div>
 
-				<div class="grid gap-4 sm:grid-cols-3">
+				<div class="grid gap-4 sm:grid-cols-4">
 					<FormField
-						name="categoryId"
+						field={updateArticle.fields.categoryId}
 						type="select"
-						label="Category"
+						label={m.staff_category_label()}
 						value={article.categoryId}
 						options={categories.map((c) => ({ value: c.id, label: c.name }))}
 					/>
 					<FormField
-						name="minRole"
+						field={updateArticle.fields.minRole}
 						type="select"
-						label="Audience"
+						label={m.staff_audience_label()}
 						value={article.minRole}
 						options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 					/>
 					<FormField
-						name="published"
+						field={updateArticle.fields.published}
 						type="toggle"
-						label="Status"
+						label={m.staff_status_label()}
 						value={article.published}
-						checkboxLabel="Published"
+						checkboxLabel={m.staff_published_checkbox()}
+					/>
+					<FormField
+						field={updateArticle.fields.sortOrder}
+						submitAs="text"
+						type="number"
+						label={m.staff_order_2_label()}
+						value={article.sortOrder}
+						min="0"
 					/>
 				</div>
 
-				<FormField
-					name="summary"
-					type="text"
-					label="Summary"
-					value={article.summary ?? ''}
-					placeholder="Brief description"
+				<ArticleCapabilitiesField
+					field={updateArticle.fields.capabilities}
+					audience={updateArticle.fields.minRole.value() ?? article.minRole}
+					value={article.capabilities}
 				/>
 
-				<FormField name="content" label="Content">
+				<FormField
+					field={updateArticle.fields.summary}
+					type="text"
+					label={m.staff_summary_label()}
+					value={article.summary ?? ''}
+					placeholder={m.staff_help_id_placeholder()}
+				/>
+
+				<FormField field={updateArticle.fields.content} label={m.staff_content_label()}>
 					<input {...updateFields.content.as('hidden', contentValue)} />
 					<MarkdownEditor bind:value={contentValue} />
 				</FormField>
 
 				{#if article.source === 'static'}
 					<Alert type="info" class="text-sm">
-						This article is synced from a markdown file. Edits here will be overwritten on the next
-						sync.
+						{m.staff_help_id_article_synced_from_markdown_file_body()}
 					</Alert>
 				{/if}
 
 				<div class="flex justify-end gap-2">
-					<Button href="/staff/help" variant="ghost">Cancel</Button>
-					<SubmitButton label="Save Changes" />
+					<Button href="/staff/help" variant="ghost">{m.staff_cancel_label()}</Button>
+					<SubmitButton label={m.staff_help_id_save_changes_label()} />
 				</div>
 			</div>
 		</Form>

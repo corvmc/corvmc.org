@@ -1,21 +1,24 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getInterestedVolunteers } from '$lib/remote/volunteer.remote';
+	import { errorMessage } from '#lib/error-message.js';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getInterestedVolunteers } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * The members who said they would help with this role, owning the query behind them.
 	 *
-	 * Paginated, so it is keyed by a page number the page's role-id-keyed query cannot carry — see
-	 * RoleShiftsCard for the same reasoning.
+	 * Paginated, so it is keyed by a page number the page's role-id-keyed query cannot carry: the
+	 * role mutations refresh that query by the role id alone.
 	 */
 	let { role }: { role: { id: string; name: string } } = $props();
 
@@ -25,9 +28,14 @@
 	async function copyEmails(emails: string[]) {
 		try {
 			await navigator.clipboard.writeText(emails.join(', '));
-			toast.success(`Copied ${emails.length} ${emails.length === 1 ? 'address' : 'addresses'}`);
+			toast.success(
+				msg.staff_volunteer_roles_id_role_interested_card_copied_toast({
+					length: emails.length,
+					value: emails.length === 1 ? 'address' : 'addresses'
+				})
+			);
 		} catch {
-			toast.error("Couldn't copy — your browser blocked clipboard access");
+			toast.error(msg.staff_volunteer_roles_id_role_interested_card_couldn_t_copy_toast());
 		}
 	}
 
@@ -38,36 +46,43 @@
 	);
 </script>
 
-<InfoCard title="Interested Members">
+<InfoCard title={msg.staff_volunteer_roles_id_role_interested_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
-			{#await interested then r}
-				<CardTitle>
-					{title}
-					<!--
-						The count that matters when the role is gated is how many could actually
-						take a shift, not how many said yes.
+			<CardTitle>
+				{title}
+				<!--
+					The count that matters when the role is gated is how many could actually
+					take a shift, not how many said yes.
 
-						"today" is load-bearing. This page has no one shift in mind, so the gate
-						can only be evaluated against now — while the gate that actually refuses a
-						claim is evaluated as of the shift's date, and a card expiring next week
-						does not cover a shift the week after
-						(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
-						of this list lives in AddVolunteerAction, which passes the date.
-					-->
+					"today" is load-bearing. This page has no one shift in mind, so the gate
+					can only be evaluated against now — while the gate that actually refuses a
+					claim is evaluated as of the shift's date, and a card expiring next week
+					does not cover a shift the week after
+					(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
+					of this list lives in AddVolunteerAction, which passes the date.
+				-->
+				{#await interested then r}
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
-							· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} cleared today
+							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today_title({
+								length: r.rows.filter((m) => m.missing.length === 0).length,
+								length2: r.rows.length
+							})}
 						</span>
 					{/if}
-				</CardTitle>
-			{/await}
+				{:catch}
+					<!-- The card body says the query failed. -->
+				{/await}
+			</CardTitle>
 			{#await interested then r}
 				{#if r.rows.length > 0}
 					<Button variant="ghost" size="sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
-						Copy emails on this page
+						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa_label()}
 					</Button>
 				{/if}
+			{:catch}
+				<!-- The card body says the query failed. -->
 			{/await}
 		</div>
 	{/snippet}
@@ -76,18 +91,18 @@
 		{@const gated = r.gated}
 		<DataList
 			result={interested}
-			empty="No one has picked this role yet."
+			empty={msg.staff_volunteer_roles_id_role_interested_card_empty_body()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
 						{#if gated}
-							<th class="w-px"><span class="sr-only">Cleared</span></th>
+							<th class="w-px"><span class="sr-only">{msg.staff_cleared_label()}</span></th>
 						{/if}
-						<th>Member</th>
-						<th class="col-support">When they can help</th>
-						<th class="col-extra whitespace-nowrap">Since</th>
+						<th>{msg.staff_member_label()}</th>
+						<th class="col-support">{msg.staff_when_they_can_help_label()}</th>
+						<th class="col-extra whitespace-nowrap">{msg.staff_since_label()}</th>
 					{/snippet}
 
 					{#each members as member (member.userId)}
@@ -102,7 +117,9 @@
 								<EntityIdentity ref={member.member} />
 								{#if gated && member.missing.length > 0}
 									<div class="text-xs text-warning">
-										needs {member.missing.map((c) => c.name).join(', ')}
+										{msg.staff_volunteer_roles_id_role_interested_card_needs_text({
+											join: member.missing.map((c) => c.name).join(', ')
+										})}
 									</div>
 								{/if}
 							</td>
@@ -123,5 +140,7 @@
 				</Table>
 			{/snippet}
 		</DataList>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 </InfoCard>

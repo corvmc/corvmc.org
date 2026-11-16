@@ -6,15 +6,18 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRole,
-	volunteerSignup,
+	workOrderAssignee,
+	workOrderDependency,
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts } from './shifts';
+import { ptDate } from './util';
 import { randomUUID } from 'crypto';
-import { and, asc, eq, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { SeedEvent } from './types';
 
 /**
@@ -32,6 +35,7 @@ import type { SeedEvent } from './types';
  *   the only project a member can see.
  * - **A festival** — one project, two nights, no budget. Proves the
  *   many-events case and the "no budget set" rendering, which is not zero.
+ *   Two upcoming shows are its child projects (#2543), so its burn is a sum.
  *
  * Rows are attached by looking them up rather than being threaded through from
  * the seeders that made them, the same shortcut `seedContractors` takes: one
@@ -66,55 +70,51 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	const ids = { facility: randomUUID(), suggested: randomUUID(), festival: randomUUID() };
 
-	const rows = await batchInsert(
-		project,
-		[
-			{
-				id: ids.facility,
-				name: 'Live room refresh',
-				description:
-					'Repaint, rewire the stage subpanel, and replace the worst of the cabling. Runs through the autumn.',
-				status: 'in_progress' as const,
-				// Set just under what the attached ledgers come to, so the over-budget
-				// rendering is reachable locally without editing anything — and only
-				// just under, because a burn bar at 400% tests nothing a bar at 110%
-				// does not.
-				budgetCents: 100_000,
-				startsAt: new Date(now.getTime() - 30 * day),
-				endsAt: new Date(now.getTime() + 60 * day),
-				createdByUserId: staffId
-			},
-			{
-				id: ids.suggested,
-				name: 'Soundproofing for room B',
-				description:
-					'Acoustic panels on the shared wall, plus a door sweep. Came off the suggestion board.',
-				status: 'planned' as const,
-				suggestionId: soundproofing?.id ?? null,
-				budgetCents: 120_000,
-				createdByUserId: staffId
-			},
-			{
-				id: ids.festival,
-				name: 'Winter showcase',
-				description: 'Two nights in December. One budget, one backlog, two shows.',
-				status: 'open' as const,
-				// Deliberately null: "no budget set" is a different rendering from
-				// zero, and nothing else in the seed exercises it.
-				budgetCents: null,
-				startsAt: new Date(now.getTime() + 80 * day),
-				createdByUserId: staffId
-			}
-		],
-		10
-	);
+	const rows = await batchInsert(project, [
+		{
+			id: ids.facility,
+			name: 'Live room refresh',
+			description:
+				'Repaint, rewire the stage subpanel, and replace the worst of the cabling. Runs through the autumn.',
+			status: 'in_progress' as const,
+			// Set just under what the attached ledgers come to, so the over-budget
+			// rendering is reachable locally without editing anything — and only
+			// just under, because a burn bar at 400% tests nothing a bar at 110%
+			// does not.
+			budgetCents: 100_000,
+			startsAt: new Date(now.getTime() - 30 * day),
+			endsAt: new Date(now.getTime() + 60 * day),
+			createdByUserId: staffId
+		},
+		{
+			id: ids.suggested,
+			name: 'Soundproofing for room B',
+			description:
+				'Acoustic panels on the shared wall, plus a door sweep. Came off the suggestion board.',
+			status: 'planned' as const,
+			suggestionId: soundproofing?.id ?? null,
+			budgetCents: 120_000,
+			createdByUserId: staffId
+		},
+		{
+			id: ids.festival,
+			name: 'Winter showcase',
+			description: 'Two nights in December. One budget, one backlog, two shows.',
+			status: 'open' as const,
+			// Deliberately null: "no budget set" is a different rendering from
+			// zero, and nothing else in the seed exercises it.
+			budgetCents: null,
+			startsAt: new Date(now.getTime() + 80 * day),
+			createdByUserId: staffId
+		}
+	]);
 
 	const owners = [
 		{ projectId: ids.facility, groupId: facilities?.id },
 		{ projectId: ids.suggested, groupId: facilities?.id },
 		{ projectId: ids.festival, groupId: programming?.id }
 	].flatMap((o) => (o.groupId ? [{ ...o, groupId: o.groupId, role: 'owner' as const }] : []));
-	if (owners.length) await db.insert(projectCommittee).values(owners);
+	if (owners.length) await batchInsert(projectCommittee, owners);
 
 	// --- Attach real rows to the facility project, one per burn line ----------
 
@@ -126,16 +126,12 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		finish: randomUUID(),
 		closeOut: randomUUID()
 	};
-	await batchInsert(
-		projectSection,
-		[
-			{ id: section.prep, projectId: ids.facility, name: 'Prep', sortOrder: 0 },
-			{ id: section.electrical, projectId: ids.facility, name: 'Electrical', sortOrder: 1 },
-			{ id: section.finish, projectId: ids.facility, name: 'Finish', sortOrder: 2 },
-			{ id: section.closeOut, projectId: ids.facility, name: 'Close-out', sortOrder: 3 }
-		],
-		10
-	);
+	await batchInsert(projectSection, [
+		{ id: section.prep, projectId: ids.facility, name: 'Prep', sortOrder: 0 },
+		{ id: section.electrical, projectId: ids.facility, name: 'Electrical', sortOrder: 1 },
+		{ id: section.finish, projectId: ids.facility, name: 'Finish', sortOrder: 2 },
+		{ id: section.closeOut, projectId: ids.facility, name: 'Close-out', sortOrder: 3 }
+	]);
 
 	// The electrician's subpanel job — the building work whose orphan status is
 	// the reason this table exists. `seedContractors` made its work order (no
@@ -156,7 +152,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	// Unassigned: no role, no posting, nobody on it — a task just typed into the
 	// list, with only a deadline set.
+	const xlrRuns = randomUUID();
 	await db.insert(workOrder).values({
+		id: xlrRuns,
 		title: 'Replace the worst of the XLR runs',
 		projectId: ids.facility,
 		sectionId: section.finish,
@@ -176,14 +174,14 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		doneWhen: 'tasks_ticked',
 		createdByUserId: staffId
 	});
-	await batchInsert(
-		workTask,
-		[
-			{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
-			{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
-		],
-		10
-	);
+	await batchInsert(workTask, [
+		{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
+		{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
+	]);
+	// Blocked (#2625): the walk-through waits on the cable runs being done.
+	await db
+		.insert(workOrderDependency)
+		.values({ workOrderId: punchList, dependsOnId: xlrRuns, createdByUserId: staffId });
 
 	// The project's own work orders, and its own hour log against one of them.
 	//
@@ -201,10 +199,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		.where(eq(volunteerRole.name, 'Facilities & Maintenance'))
 		.limit(1);
 
-	// Members mode: a role, not posted, and the people staff put on it.
-	let membersTaskId: string | null = null;
+	// Members mode: a role, no shift, and the people staff assigned it (#2518).
 	if (facilityRole) {
-		const backlog = [
+		const [membersTask] = await batchInsert(workOrder, [
 			{
 				id: randomUUID(),
 				title: 'Mask and prime the live room walls',
@@ -212,12 +209,13 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				projectId: ids.facility,
 				sectionId: section.prep,
 				sortOrder: 0,
-				capacity: 2,
 				notes: 'Mask and prime the live room walls.',
 				createdByUserId: staffId
-			},
-			// Open: posted to the claim board, so it sets `posted_at` itself — the
-			// backfill ran before the seed did.
+			}
+		]);
+		// Open: a shift on it is what puts it on the volunteer board.
+		const openStart = ptDate(5, 10);
+		const [openTask] = await insertTasksWithShifts([
 			{
 				id: randomUUID(),
 				title: 'Pull the old cable runs',
@@ -225,15 +223,14 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				projectId: ids.facility,
 				sectionId: section.prep,
 				sortOrder: 1,
-				capacity: 1,
 				notes: 'Pull the old cable runs before the electrician comes back.',
-				postedAt: now,
-				postedByUserId: staffId,
+				startsAt: openStart,
+				endsAt: new Date(openStart.getTime() + 4 * 3_600_000),
+				capacity: 1,
 				createdByUserId: staffId
 			}
-		];
-		await batchInsert(workOrder, backlog, 10);
-		membersTaskId = backlog[0].id;
+		]);
+		const backlog = [membersTask, openTask];
 
 		// Duties on the open task, one ticked, so the list has a row to unfold.
 		await batchInsert(
@@ -249,8 +246,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				done: done as boolean,
 				doneAt: done ? now : null,
 				doneByUserId: done ? staffId : null
-			})),
-			10
+			}))
 		);
 
 		// Ordered so the same two volunteers are assigned on every seed.
@@ -261,21 +257,22 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 			.orderBy(asc(volunteerProfile.userId))
 			.limit(2);
 		if (assignees.length) {
-			await db.insert(volunteerSignup).values(
+			await batchInsert(
+				workOrderAssignee,
 				assignees.map((a) => ({
-					shiftId: backlog[0].id,
+					workOrderId: backlog[0].id,
 					userId: a.userId,
-					status: 'confirmed' as const,
-					claimedAt: now,
-					confirmedAt: now
+					assignedByUserId: staffId,
+					assignedAt: now
 				}))
 			);
 		}
 
+		// Hours that name the task rather than a shift: committee work logged after the fact.
 		await db.insert(volunteerHourLog).values({
 			userId: staffId,
 			volunteerRoleId: facilityRole.id,
-			shiftId: backlog[0].id,
+			workOrderId: backlog[0].id,
 			workedOn: new Date(now.getTime() - 14 * day),
 			minutes: 240,
 			description: 'Masking and priming, live room refresh.',
@@ -323,7 +320,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	// --- The festival's two nights -------------------------------------------
 
 	// Only listings with no production: a show's listing names its own project
-	// (production-projects-spec.md), and a festival over shows is deferred.
+	// (#1673). Shows join the festival as child projects, below.
 	const free = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
@@ -344,6 +341,20 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		await db.update(eventListing).set({ projectId: ids.festival }).where(eq(eventListing.id, id));
 	}
 
+	// Two upcoming shows as the festival's children (#2543): each keeps its own
+	// production, and their show costs sum into the festival's burn.
+	const nights = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(
+			sql`${project.kind} = 'production' and ${project.startsAt} >= ${Math.floor(now.getTime() / 1000)}`
+		)
+		.orderBy(asc(project.startsAt), asc(project.id))
+		.limit(2);
+	for (const night of nights) {
+		await db.update(project).set({ parentProjectId: ids.festival }).where(eq(project.id, night.id));
+	}
+
 	const [{ attached } = { attached: 0 }] = await db
 		.select({ attached: sql<number>`count(*)` })
 		.from(workOrder)
@@ -352,29 +363,8 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	return {
 		projects: rows.length,
 		events: upcoming.length,
+		childShows: nights.length,
 		workOrders: Number(attached ?? 0),
-		sections: 4,
-		unpostedWorkOrderIds: membersTaskId ? [membersTaskId] : []
+		sections: 4
 	};
-}
-
-/**
- * What the posted-at backfill migration did to production, done to the seed's
- * own rows: every work order with a role is on the claim board. The migration
- * ran before the seed wrote anything, so without this none of it would be.
- * `keepUnposted` is the work deliberately staffed by assignment instead.
- */
-export async function postSeededWorkOrders(keepUnposted: string[]) {
-	const posted = await db
-		.update(workOrder)
-		.set({ postedAt: sql`${workOrder.createdAt}` })
-		.where(
-			and(
-				isNull(workOrder.postedAt),
-				isNotNull(workOrder.volunteerRoleId),
-				keepUnposted.length ? notInArray(workOrder.id, keepUnposted) : undefined
-			)
-		)
-		.returning({ id: workOrder.id });
-	return posted.length;
 }

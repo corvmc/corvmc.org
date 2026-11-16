@@ -1,33 +1,36 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import { browser } from '$app/env';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { pageTitle, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { formatCents, formatTime } from '$lib/utils/format';
+	import { pageTitle, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { formatCents, formatTime } from '#lib/utils/format.js';
 	import {
 		cancelDoorSale,
 		getDoorEvents,
 		getTerminalConnection,
 		simulateDoorTap,
+		startDoorDonation,
 		startDoorSale
-	} from '$lib/remote/door.remote';
+	} from '#lib/remote/door.remote.js';
 	import {
 		connectDoorReader,
 		describeTapError,
 		takeTap,
 		tapToPayBridge,
 		type TapToPayBridge
-	} from '$lib/door/tap-to-pay';
-	import { capacityNote } from '$lib/door/capacity';
+	} from '#lib/door/tap-to-pay.js';
+	import { capacityNote } from '#lib/door/capacity.js';
 	import DoorSaleStatus from './DoorSaleStatus.svelte';
 
 	/**
@@ -36,6 +39,7 @@
 	 * the reader; in a browser there is no reader, and the other path is shown.
 	 */
 	const fields = startDoorSale.fields;
+	const giftFields = startDoorDonation.fields;
 	// The server has no bridge. Everything that reads it sits under `sale`,
 	// which is null at hydration, so the two renders cannot disagree.
 	const bridge: TapToPayBridge | null = $derived(browser ? tapToPayBridge() : null);
@@ -51,6 +55,12 @@
 	let busy = $state(false);
 	let tapError = $state<string | null>(null);
 	let freeLetIn = $state<number | null>(null);
+	let cashSale = $state<{ quantity: number; chargeCents: number } | null>(null);
+	let payment = $state<'card' | 'cash'>('card');
+	const paymentOptions = [
+		{ value: 'card', label: m.member_volunteer_door_payment_card_label() },
+		{ value: 'cash', label: m.member_volunteer_door_payment_cash_label() }
+	];
 	// A show's staff page opens the till on that show (#1809).
 	let chosenEventId = $state<string | undefined>(page.url.searchParams.get('event') ?? undefined);
 	let quantity = $state<number | undefined>(1);
@@ -60,15 +70,25 @@
 		tapped = false;
 		tapError = null;
 		freeLetIn = null;
+		cashSale = null;
 	}
 
+	// A donation (#2548) opens the same card sale a ticket does, and shares its tap.
 	async function onsuccess(
-		result?: { kind: 'free'; purchaseId: string; quantity: number } | ({ kind: 'card' } & CardSale)
+		result?:
+			| { kind: 'free'; purchaseId: string; quantity: number }
+			| { kind: 'cash'; purchaseId: string; quantity: number; chargeCents: number }
+			| ({ kind: 'card' } & CardSale)
 	) {
 		reset();
 		if (!result) return;
 		if (result.kind === 'free') {
 			freeLetIn = result.quantity;
+			return;
+		}
+		// Cash is in the drawer already: checked in, nothing to tap (#2800).
+		if (result.kind === 'cash') {
+			cashSale = result;
 			return;
 		}
 		sale = result;
@@ -121,23 +141,40 @@
 	// Capacity only warns (#1631): past zero the person at the door decides.
 	const chosen = $derived(door.events.find((e) => e.id === chosenEventId) ?? door.events[0]);
 	const capacity = $derived(chosen ? capacityNote(chosen.remaining, quantity || 1) : null);
+	// The chosen show's door list, staff's or the caller's own shift's (#2798).
+	const doorList = $derived(door.doorLists.find((d) => d.eventId === chosen?.id) ?? null);
 </script>
 
 <svelte:head>
 	<title>{pageTitle('Door sales')}</title>
 </svelte:head>
 
-<PageHeader width="2xl" title="Door sales" />
+<PageHeader width="2xl" title={m.member_volunteer_door_door_sales_title()}>
+	{#snippet primary()}
+		{#if doorList}
+			<Button
+				href={doorList.signupId
+					? resolve('/member/volunteer/shifts/[signupId]/check-in', {
+							signupId: doorList.signupId
+						})
+					: resolve('/staff/events/[id]/check-in', { id: doorList.eventId })}
+				size="sm"
+			>
+				{m.member_volunteer_shifts_signup_id_check_people_label()}
+			</Button>
+		{/if}
+	{/snippet}
+</PageHeader>
 <PageContent width="2xl">
 	{#if door.events.length === 0}
 		<EmptyState
-			title="No show at the door"
-			description="Collective shows starting within a day appear here. A band's own gig is sold by the band."
+			title={m.member_volunteer_door_no_show_at_door_title()}
+			description={m.member_volunteer_door_collective_shows_starting_within_day_body()}
 		/>
 	{:else if sale}
 		<Alert>
-			Charging {formatCents(sale.chargeCents)}.
-			{#if !tapped && bridge}Hand the phone over and have them tap their card.{/if}
+			{m.member_volunteer_door_charging_body({ formatCents: formatCents(sale.chargeCents) })}
+			{#if !tapped && bridge}{m.member_volunteer_door_hand_phone_over_have_them_body()}{/if}
 		</Alert>
 
 		{#if tapError}
@@ -146,39 +183,50 @@
 
 		{#if tapped}
 			<DoorSaleStatus paymentIntentId={sale.paymentIntentId} />
-			<Button variant="primary" class="min-h-11" onclick={reset}>Next sale</Button>
+			<Button variant="primary" class="min-h-11" onclick={reset}
+				>{m.member_volunteer_door_next_sale_label()}</Button
+			>
 		{:else}
 			<div class="flex flex-wrap gap-3">
 				{#if bridge}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={tap}>
-						{tapError ? 'Try the tap again' : 'Tap to pay'}
+						{tapError
+							? m.member_volunteer_door_try_tap_again_label()
+							: m.member_volunteer_door_tap_pay_label()}
 					</Button>
 				{:else if door.canSimulate}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={simulate}>
-						Simulate a tap
+						{m.member_simulate_tap_label()}
 					</Button>
 				{:else}
 					<Alert type="warning">
-						No card reader here. Door sales take cards only in the door phone's app.
+						{m.member_volunteer_door_no_card_reader_here_door_body()}
 					</Alert>
 				{/if}
 				<Button variant="ghost" class="min-h-11" disabled={busy} onclick={cancel}
-					>Cancel sale</Button
+					>{m.member_volunteer_door_cancel_sale_label()}</Button
 				>
 			</div>
 		{/if}
 	{:else}
 		{#if freeLetIn !== null}
 			<Alert type="success">
-				Free. {freeLetIn}
-				{freeLetIn === 1 ? 'ticket' : 'tickets'} checked in. Let them in.
+				{m.member_volunteer_door_free_tickets_checked_let_them_body({ freeLetIn })}
+			</Alert>
+		{/if}
+		{#if cashSale}
+			<Alert type="success">
+				{m.member_volunteer_door_cash_sale_body({
+					count: cashSale.quantity,
+					amount: formatCents(cashSale.chargeCents)
+				})}
 			</Alert>
 		{/if}
 
 		<Form remote={startDoorSale} {onsuccess} class="space-y-4">
 			<FormField
 				field={fields.eventId}
-				label="Show"
+				label={m.member_show_label()}
 				type="select"
 				options={eventOptions}
 				bind:value={chosenEventId}
@@ -186,7 +234,7 @@
 			/>
 			<FormField
 				field={fields.quantity}
-				label="How many"
+				label={m.member_volunteer_door_how_many_label()}
 				type="number"
 				bind:value={quantity}
 				required
@@ -196,33 +244,87 @@
 			{/if}
 			<MoneyField
 				field={fields.unitPriceCents}
-				label="Each ticket"
+				label={m.member_volunteer_door_each_ticket_label()}
 				value={door.events[0].suggestedCents}
-				description="Whatever they can pay, at or above the floor. Under {formatCents(
-					TICKET_MIN_CHARGE_CENTS
-				)} in total is free."
+				description={m.member_volunteer_door_whatever_they_can_pay_at_body({
+					formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+				})}
 			/>
-			<SubmitButton label="Take payment" class="min-h-11" />
+			<FormField
+				field={fields.payment}
+				label={m.member_volunteer_door_payment_label()}
+				type="select"
+				options={paymentOptions}
+				bind:value={payment}
+			/>
+			<SubmitButton label={m.member_volunteer_door_take_payment_label()} class="min-h-11" />
 		</Form>
+
+		{#if chosen}
+			<section class="space-y-4">
+				<h2 class="font-semibold">{m.member_volunteer_door_donation_title()}</h2>
+				<Form remote={startDoorDonation} {onsuccess} class="space-y-4">
+					<input {...giftFields.eventId.as('hidden', chosen.id)} />
+					<MoneyField
+						field={giftFields.amountCents}
+						label={m.member_volunteer_door_donation_amount_label()}
+						required
+						description={m.member_volunteer_door_donation_minimum_body({
+							formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+						})}
+					/>
+					<SubmitButton label={m.member_volunteer_door_take_donation_label()} class="min-h-11" />
+				</Form>
+			</section>
+		{/if}
+
+		{#if door.briefings.length > 0}
+			<section class="space-y-2">
+				<h2 class="font-semibold">{m.member_volunteer_door_briefings_title()}</h2>
+				<ul class="space-y-2">
+					{#each door.briefings as briefing (briefing.id)}
+						<li>
+							<a class="link font-medium" href={resolve(`member/help/${briefing.slug}`)}
+								>{briefing.title}</a
+							>
+							<span class="text-subtle">· {briefing.roleName}</span>
+							{#if briefing.summary}
+								<p class="text-muted">{briefing.summary}</p>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
 
 		<!-- Always here, not only after a failure: a card that cannot tap, and a
 		     staffer whose screen reader blocks PIN entry, never see an error. -->
 		<section class="space-y-2">
-			<h2 class="font-semibold">Card will not tap?</h2>
+			<h2 class="font-semibold">{m.member_volunteer_door_card_will_not_tap_title()}</h2>
 			{#each door.events as event (event.id)}
 				<p class="text-muted">
-					{event.title}: suggested {formatCents(event.suggestedCents)}{event.floorCents
-						? `, floor ${formatCents(event.floorCents)}`
-						: ''}{event.remaining !== null && event.remaining >= 0
-						? `, ${event.remaining} left`
-						: ''}{event.remaining !== null && event.remaining < 0
-						? `, over capacity by ${-event.remaining}`
-						: ''}.
+					{m.member_volunteer_door_event_suggested_text({
+						title: event.title,
+						price: formatCents(event.suggestedCents)
+					})}{#if event.floorCents}{m.member_volunteer_door_event_floor_text({
+							floor: formatCents(event.floorCents)
+						})}{/if}{#if event.remaining !== null && event.remaining >= 0}{m.member_volunteer_door_event_left_text(
+							{ count: event.remaining }
+						)}{:else if event.remaining !== null}{m.member_volunteer_door_event_over_text({
+							count: -event.remaining
+						})}{/if}.
 					{#if event.onlineSales}
-						They can buy on their own phone at
-						<a class="link" href={resolve(`/events/${event.id}`)}>corvmc.org/events/{event.id}</a>.
+						<ParaglideMessage
+							message={m.member_volunteer_door_they_can_buy_their_own_text}
+							inputs={{
+								id: event.id
+							}}
+							>{#snippet a({ children })}<a class="link" href={resolve(`events/${event.id}`)}
+									>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					{:else}
-						Online sales are closed for this show.
+						{m.member_volunteer_door_online_sales_closed_show_text()}
 					{/if}
 				</p>
 			{/each}

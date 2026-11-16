@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Button from '../ui/Button.svelte';
 	import { IconUser, IconSettings, IconStar, IconReceipt, IconLogout } from '@tabler/icons-svelte';
 	import Avatar from '../ui/Avatar.svelte';
@@ -9,7 +10,7 @@
 	// A prop, not a query of its own. `AppTopbar` mounts this on every
 	// authenticated page, so a `getMe()` here was a third remote query racing the
 	// layout's and the page's (#569). The layout query already had the user — see
-	// `appChrome` in `$lib/remote/layout.remote`.
+	// `appChrome` in `#lib/remote/layout.remote.js`.
 	let { me }: { me: AppChrome['me'] } = $props();
 
 	let open = $state(false);
@@ -47,7 +48,7 @@
 		shape="circle"
 		class="overflow-hidden border-0 p-0"
 		onclick={() => (open = !open)}
-		aria-label="Account menu"
+		aria-label={m.layout_account_menu_label()}
 	>
 		<Avatar
 			class="size-full text-xs"
@@ -94,7 +95,7 @@
 					onclick={signOut}
 				>
 					<IconLogout size={16} />
-					Sign Out
+					{m.layout_sign_out_label()}
 				</Button>
 			</div>
 		</div>

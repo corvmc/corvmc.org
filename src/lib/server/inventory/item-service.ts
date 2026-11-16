@@ -1,17 +1,24 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
 	inventoryLocation
-} from '$lib/server/db/schema/inventory';
+} from '#lib/server/db/schema/inventory.js';
 import { and, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { getAvailableQuantity, getOnHandMany } from './stock-service';
-import type { InventoryListView, ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
+import type {
+	InventoryListView,
+	InventorySection,
+	ItemKind,
+	PricingTier,
+	UnitOfMeasure
+} from '#lib/config.js';
 import { itemIdsInView } from './list-views';
-import { DomainError } from '$lib/server/domain-error';
+import { inSection, sectionOf } from './sections';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -108,15 +115,6 @@ export async function listCategories() {
 		.select()
 		.from(equipmentCategory)
 		.orderBy(equipmentCategory.displayOrder, equipmentCategory.name);
-}
-
-export async function getCategoryById(id: string) {
-	const [row] = await db
-		.select()
-		.from(equipmentCategory)
-		.where(eq(equipmentCategory.id, id))
-		.limit(1);
-	return row ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -337,8 +335,9 @@ export async function getItemById(id: string, opts: { includeDeleted?: boolean }
 		onHand,
 		availableQuantity: available,
 		assetCount,
-		/** Both derived, never stored — see the `kind` note in the schema. */
-		isConsumable: row.item.kind === 'bulk' && !row.item.isLoanable,
+		/** All three derived, never stored — see the `kind` note in the schema. */
+		section: sectionOf(row.item),
+		isConsumable: sectionOf(row.item) === 'supplies',
 		isLowStock: row.item.reorderPoint != null && onHand <= row.item.reorderPoint
 	};
 }
@@ -348,6 +347,7 @@ export interface ListItemsOptions {
 	categoryId?: string;
 	kind?: ItemKind;
 	loanableOnly?: boolean;
+	section?: InventorySection;
 	includeDeleted?: boolean;
 	view?: Exclude<InventoryListView, 'restock'>;
 	now?: Date;
@@ -360,6 +360,7 @@ export async function listItems(opts: ListItemsOptions = {}, pagination: Paginat
 	if (opts.categoryId) conditions.push(eq(inventoryItem.categoryId, opts.categoryId));
 	if (opts.kind) conditions.push(eq(inventoryItem.kind, opts.kind));
 	if (opts.loanableOnly) conditions.push(eq(inventoryItem.isLoanable, true));
+	if (opts.section) conditions.push(inSection(opts.section));
 	if (opts.view) {
 		conditions.push(inArray(inventoryItem.id, itemIdsInView(opts.view, opts.now ?? new Date())));
 	}
@@ -415,7 +416,8 @@ export async function listItems(opts: ListItemsOptions = {}, pagination: Paginat
 				row.item.kind === 'serialized'
 					? (inService.get(row.item.id) ?? 0)
 					: (onHand.get(row.item.id) ?? 0),
-			isConsumable: row.item.kind === 'bulk' && !row.item.isLoanable,
+			section: sectionOf(row.item),
+			isConsumable: sectionOf(row.item) === 'supplies',
 			isLowStock:
 				row.item.reorderPoint != null && (onHand.get(row.item.id) ?? 0) <= row.item.reorderPoint
 		}))

@@ -1,5 +1,5 @@
 ---
-title: Become a Sustaining Member
+title: Become a sustaining member
 slug: become-a-sustaining-member
 category: membership
 summary: Start a recurring contribution and unlock member benefits.
@@ -10,11 +10,11 @@ sortOrder: 1
 ## Becoming a sustaining member
 
 1. Open **Membership** from the sidebar.
-2. Choose **Become a Sustaining Member**.
+2. Choose **Become a sustaining member**.
 3. Pick a contribution amount on the sliding scale.
 4. Complete the secure card checkout.
 
-Your benefits — including [free practice hours](/member/help/practice-credits) and
+Your benefits — including [practice credits](/member/help/practice-credits) and
 [recurring reservations](/member/help/recurring-reservations) — activate as soon as
 the subscription is set up.
 

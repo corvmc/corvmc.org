@@ -1,26 +1,27 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
 	import {
 		suggestionCategoryLabels,
 		suggestionStatuses,
 		suggestionStatusLabels,
 		surfaces
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffSuggestionDetailPage,
 		respondToSuggestion,
@@ -28,14 +29,17 @@
 		setSuggestionVisibility,
 		mergeSuggestion,
 		reviewSuggestionEdit
-	} from '$lib/remote/suggestions.remote';
+	} from '#lib/remote/suggestions.remote.js';
 	import MergeCandidateOptions from './MergeCandidateOptions.svelte';
-	import { startProjectFromSuggestionForm } from '$lib/remote/projects.remote';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
-	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
+	import { startProjectFromSuggestionForm } from '#lib/remote/projects.remote.js';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 
 	// The merge candidates used to live here, declared above the awaits so they would not be
 	// compiled as "blocked" — the JAVASCRIPT-SVELTEKIT-25 shape. They load in
@@ -64,27 +68,33 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={s.title} subtitle="Suggestion">
+<PageHeader width="3xl" title={s.title} subtitle={m.staff_suggestion_body()}>
 	<StatusBadge status={isMerged ? 'merged' : s.status} label />
 </PageHeader>
 
 <PageContent width="3xl">
 	{#if isMerged}
-		<Alert type="info" href={resolve(`/staff/suggestions/${s.mergedIntoId}`)}>
-			Merged into <span class="font-medium">{s.mergedIntoTitle ?? 'another suggestion'}</span>. Its
-			votes moved across; this one stays off the board.
+		<Alert type="info" href={resolve(`staff/suggestions/${s.mergedIntoId}`)}>
+			<ParaglideMessage
+				message={m.staff_suggestions_id_merged_into_its_votes_moved_body}
+				inputs={{
+					mergedIntoTitle: s.mergedIntoTitle ?? m.staff_suggestions_id_another_suggestion_title()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{:else if s.visibility === 'under_review'}
 		<!-- One report, one place to decide. Resolving here as well as in the flag
 		     queue would let two staff reach opposite conclusions on one report. -->
-		<Alert type="warning" href={resolve('/staff/flags')}>
-			A member reported this, so it came off the board automatically. Resolve or dismiss the report
-			in Content Flags — upholding it also puts the author on review, dismissing puts the suggestion
-			straight back up.
+		<Alert type="warning" href={resolve('staff/moderation/flags')}>
+			{m.staff_suggestions_id_member_reported_so_came_off_body()}
 		</Alert>
 	{:else if s.visibility === 'hidden'}
 		<Alert type="error">
-			Hidden from the board.{s.visibilityNote ? ` Note: ${s.visibilityNote}` : ''}
+			{s.visibilityNote
+				? m.staff_suggestions_id_hidden_note_body({ note: s.visibilityNote })
+				: m.staff_suggestions_id_hidden_body()}
 		</Alert>
 	{/if}
 
@@ -92,23 +102,26 @@
 	     at Planned after the amp was on the shelf, because the acquisition and
 	     the suggestion had no relationship at all (#603). -->
 	{#if fulfilledBy}
-		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
-			Arrived {formatDateTime(fulfilledBy.occurredAt)}{fulfilledBy.sourceName
-				? ` from ${fulfilledBy.sourceName}`
-				: ''}.
+		<Alert type="success" href={resolve(`staff/inventory/acquisitions/${fulfilledBy.id}`)}>
+			{fulfilledBy.sourceName
+				? m.staff_suggestions_id_arrived_from_body({
+						date: formatDateTime(fulfilledBy.occurredAt),
+						source: fulfilledBy.sourceName
+					})
+				: m.staff_suggestions_id_arrived_body({ date: formatDateTime(fulfilledBy.occurredAt) })}
 		</Alert>
 	{:else if isGear && !isMerged && (s.status === 'planned' || s.status === 'in_progress')}
 		<Alert type="info">
-			Got it in? Record the arrival and this closes itself — the member who asked hears about it.
+			{m.staff_suggestions_id_got_record_arrival_closes_itself_body()}
 			<!-- The action, not the alert's own `href`: that prop is a
 			     `ResolvedPathname` and a query string is not one. -->
 			{#snippet action()}
 				<Button
-					href="{resolve('/staff/inventory/intake')}?suggestion={s.id}"
+					href="{resolve('staff/inventory/intake')}?suggestion={s.id}"
 					variant="ghost"
 					size="sm"
 				>
-					Record the arrival
+					{m.staff_suggestions_id_record_arrival_label()}
 				</Button>
 			{/snippet}
 		</Alert>
@@ -122,30 +135,34 @@
 		project here is that link, and the votes above are its mandate.
 	-->
 	{#if project}
-		<Alert type="success" href={resolve(`/staff/projects/${project.id}`)}>
-			Answered by <span class="font-medium">{project.name}</span>. Its status drives this
-			suggestion's from now on.
+		<Alert type="success" href={resolve(`staff/tasks/projects/${project.id}`)}>
+			<ParaglideMessage
+				message={m.staff_suggestions_id_answered_by_its_status_drives_body}
+				inputs={{ name: project.name }}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
 	{#if ballots.length > 0}
-		<InfoCard title={ballots.length === 1 ? 'Ballot' : 'Ballots'}>
+		<InfoCard
+			title={ballots.length === 1 ? m.staff_suggestions_id_ballot_title() : m.staff_ballots_title()}
+		>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
-					<li><BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} /></li>
+					<li><BallotLine ballot={b} href={resolve(`staff/ballots/${b.id}`)} /></li>
 				{/each}
 			</ul>
 		</InfoCard>
 	{/if}
 
 	{#if !project && !isMerged && s.status !== 'declined'}
-		<InfoCard title="Decide" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_suggestions_id_decide_title()} class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
-				Commit to this idea directly: the project groups the work that answers it, and this
-				suggestion follows its status from now on. Both move to Planned.
+				{m.staff_suggestions_id_commit_idea_directly_project_groups_text()}
 				{#if surfaces.ballots}
-					If it needs a vote first, put it to a ballot: it reads In ballot while voting is open, and
-					a passing result offers Start project on the ballot's page.
+					{m.staff_suggestions_id_if_needs_vote_first_put_text()}
 				{/if}
 			</p>
 			{#if ballotCommittees && !liveBallot}
@@ -167,59 +184,68 @@
 			{/if}
 			<Action
 				action={startProjectFromSuggestionForm}
-				label="Start a project"
-				modalTitle="Start a project"
-				submitLabel="Start"
-				successToast="Project started"
+				label={m.staff_suggestions_id_start_project_label()}
+				modalTitle={m.staff_suggestions_id_start_project_title()}
+				submitLabel={m.staff_start_label()}
+				successToast={m.staff_suggestions_id_project_started_toast()}
 				variant="primary"
 				size="sm"
 				onsuccess={refresh}
 			>
 				{#snippet form()}
 					<input {...projectFields.suggestionId.as('hidden', id)} />
-					<Field field={projectFields.name} type="text" label="Project name" value={s.title} />
+					<Field
+						field={projectFields.name}
+						type="text"
+						label={m.staff_suggestions_id_project_name_label()}
+						value={s.title}
+					/>
 					<Field
 						field={projectFields.groupId}
 						type="select"
-						label="Owning committee"
+						label={m.staff_suggestions_id_owning_committee_label()}
+						placeholder={m.ui_none_placeholder()}
 						options={committeeOptions}
-						description="Only a committee can own a project. Leave blank to decide later."
+						description={m.staff_suggestions_id_description_body()}
 					/>
-					<MoneyField field={projectFields.budgetCents} label="Budget" />
+					<MoneyField
+						field={projectFields.budgetCents}
+						label={m.staff_suggestions_id_budget_label()}
+					/>
 				{/snippet}
 			</Action>
 		</InfoCard>
 	{/if}
 
-	<InfoCard title="Suggestion">
+	<InfoCard title={m.staff_suggestion_title()}>
 		<DefinitionList>
-			<Fact label="Category">
+			<Fact label={m.staff_category_label()}>
 				<Badge size="sm" variant="outline">
 					{suggestionCategoryLabels[s.category as keyof typeof suggestionCategoryLabels] ??
 						s.category}
 				</Badge>
 			</Fact>
 
-			<Fact label="Suggested by"><EntityChip ref={s.author} /></Fact>
+			<Fact label={m.staff_suggested_by_label()}><EntityChip ref={s.author} /></Fact>
 
-			<Fact label="Posted">{formatDateTime(s.createdAt)}</Fact>
-			<Fact label="Votes" class="font-medium">{s.voteCount}</Fact>
+			<Fact label={m.staff_posted_label()}>{formatDateTime(s.createdAt)}</Fact>
+			<Fact label={m.staff_votes_label()} class="font-medium">{s.voteCount}</Fact>
 		</DefinitionList>
 		<p class="mt-3 whitespace-pre-wrap">{s.body}</p>
 	</InfoCard>
 
 	{#if s.visibility === 'pending_review'}
-		<InfoCard title="Review" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_review_title()} class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
-				This member posts under review, so nobody can see this yet. Approving puts it on the board;
-				rejecting hides it. Either way they're told.
+				{m.staff_suggestions_id_member_posts_under_review_so_text()}
 			</p>
 			<Action
 				action={reviewSuggestion}
-				label="Approve or reject"
-				modalTitle="Review suggestion"
-				submitLabel="Save"
-				successToast="Reviewed"
+				data-testid="review-suggestion"
+				label={m.staff_suggestions_id_approve_reject_label()}
+				modalTitle={m.staff_suggestions_id_review_suggestion_title()}
+				submitLabel={m.staff_save_label()}
+				successToast={m.staff_suggestions_id_reviewed_toast()}
 				variant="primary"
 				size="sm"
 				onsuccess={refresh}
@@ -228,14 +254,16 @@
 					<input {...reviewSuggestion.fields.suggestionId.as('hidden', id)} />
 					<div class="space-y-3">
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Decision</span>
+							<span class="fieldset-legend">{m.staff_suggestions_id_decision_label()}</span>
 							<Select class="w-full" {...reviewSuggestion.fields.decision.as('select')}>
-								<option value="approve">Approve — put it on the board</option>
-								<option value="reject">Reject — hide it</option>
+								<option value="approve">{m.staff_suggestions_id_approve_put_board_label()}</option>
+								<option value="reject">{m.staff_suggestions_id_reject_hide_label()}</option>
 							</Select>
 						</label>
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Note to the member (optional)</span>
+							<span class="fieldset-legend"
+								>{m.staff_suggestions_id_note_member_optional_label()}</span
+							>
 							<textarea
 								class="textarea w-full"
 								rows="3"
@@ -248,18 +276,21 @@
 	{/if}
 
 	{#if pendingEdit}
-		<InfoCard title="Proposed edit" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_suggestions_id_proposed_edit_title()} class="bg-base-200 shadow-none">
 			<p class="mb-3 text-muted">
-				{pendingEdit.requestedByName ?? 'The author'} wants to change this after
-				{s.voteCount} member{s.voteCount === 1 ? '' : 's'} already voted for it. Approving replaces the
-				text below; the votes stay either way.
+				{m.staff_suggestions_id_wants_change_after_members_already_text({
+					requestedByName: pendingEdit.requestedByName ?? m.staff_suggestions_id_author_text(),
+					voteCount: s.voteCount
+				})}
 			</p>
 
 			<!-- Before and after, side by side. Approving a change you can't see is
 			     the failure this whole flow exists to prevent. -->
 			<div class="grid gap-4 md:grid-cols-2">
 				<div>
-					<h3 class="mb-1 text-muted font-medium">What members voted for</h3>
+					<h3 class="mb-1 text-muted font-medium">
+						{m.staff_suggestions_id_what_members_voted_title()}
+					</h3>
 					<div class="rounded border border-base-300 p-3">
 						<p class="font-medium">{pendingEdit.originalTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.originalBody}</p>
@@ -271,7 +302,7 @@
 					</div>
 				</div>
 				<div>
-					<h3 class="mb-1 text-muted font-medium">Proposed</h3>
+					<h3 class="mb-1 text-muted font-medium">{m.staff_suggestions_id_proposed_title()}</h3>
 					<div class="rounded border border-primary/40 p-3">
 						<p class="font-medium">{pendingEdit.proposedTitle}</p>
 						<p class="mt-1 text-sm whitespace-pre-wrap">{pendingEdit.proposedBody}</p>
@@ -287,10 +318,11 @@
 			<div class="mt-3">
 				<Action
 					action={reviewSuggestionEdit}
-					label="Approve or reject"
-					modalTitle="Review the proposed edit"
-					submitLabel="Save"
-					successToast="Edit reviewed"
+					data-testid="review-suggestion-edit"
+					label={m.staff_suggestions_id_approve_reject_label()}
+					modalTitle={m.staff_suggestions_id_review_proposed_edit_title()}
+					submitLabel={m.staff_save_label()}
+					successToast={m.staff_suggestions_id_edit_reviewed_toast()}
 					variant="primary"
 					size="sm"
 					onsuccess={refresh}
@@ -300,15 +332,21 @@
 						<input {...reviewSuggestionEdit.fields.editId.as('hidden', pendingEdit?.id ?? '')} />
 						<div class="space-y-3">
 							<label class="fieldset w-full">
-								<span class="fieldset-legend">Decision</span>
+								<span class="fieldset-legend">{m.staff_suggestions_id_decision_label()}</span>
 								<Select class="w-full" {...reviewSuggestionEdit.fields.decision.as('select')}>
-									<option value="approve">Approve — replace the text</option>
-									<option value="reject">Reject — keep what members voted for</option>
+									<option value="approve"
+										>{m.staff_suggestions_id_approve_replace_text_label()}</option
+									>
+									<option value="reject"
+										>{m.staff_suggestions_id_reject_keep_what_members_voted_label()}</option
+									>
 								</Select>
 							</label>
 							<label class="fieldset w-full">
 								<div class="label">
-									<span class="fieldset-legend">Note to the member (optional)</span>
+									<span class="fieldset-legend"
+										>{m.staff_suggestions_id_note_member_optional_text()}</span
+									>
 								</div>
 								<textarea
 									class="textarea w-full"
@@ -322,23 +360,27 @@
 		</InfoCard>
 	{/if}
 
-	<InfoCard title="Response">
+	<InfoCard title={m.staff_suggestions_id_response_title()}>
 		{#if s.responseBody}
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
-				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
+				{s.responderName ?? m.staff_staff_text()}{s.responseAt
+					? ` · ${formatDateTime(s.responseAt)}`
+					: ''}
 			</p>
 		{:else}
-			<p class="text-muted">Nobody has written back yet.</p>
+			<p class="text-muted">{m.staff_suggestions_id_nobody_has_written_back_yet_text()}</p>
 		{/if}
 
 		<div class="mt-3">
 			<Action
 				action={respondToSuggestion}
-				label={s.responseBody ? 'Edit response' : 'Respond'}
-				modalTitle="Respond to suggestion"
-				submitLabel="Save"
-				successToast="Response saved"
+				label={s.responseBody
+					? m.staff_suggestions_id_edit_response_label()
+					: m.staff_suggestions_id_respond_label()}
+				modalTitle={m.staff_suggestions_id_respond_suggestion_title()}
+				submitLabel={m.staff_save_label()}
+				successToast={m.staff_suggestions_id_response_saved_toast()}
 				variant="primary"
 				size="sm"
 				onsuccess={refresh}
@@ -347,7 +389,7 @@
 					<input {...respondToSuggestion.fields.suggestionId.as('hidden', id)} />
 					<div class="space-y-3">
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Status</span>
+							<span class="fieldset-legend">{m.staff_status_label()}</span>
 							<Select class="w-full" {...respondToSuggestion.fields.status.as('select', s.status)}>
 								{#each suggestionStatuses as st (st)}
 									<option value={st}>{suggestionStatusLabels[st]}</option>
@@ -355,7 +397,7 @@
 							</Select>
 						</label>
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Public reply</span>
+							<span class="fieldset-legend">{m.staff_suggestions_id_public_reply_label()}</span>
 							<textarea
 								class="textarea w-full"
 								rows="4"
@@ -365,8 +407,7 @@
 						<!-- Status and reply are one form on purpose: split, the normal
 						     workflow would send the member two notifications for one act. -->
 						<p class="text-muted">
-							This is shown on the suggestion for everyone to read, and the member who posted it
-							gets one notification.
+							{m.staff_suggestions_id_shown_suggestion_everyone_read_member_text()}
 						</p>
 					</div>
 				{/snippet}
@@ -376,22 +417,29 @@
 
 	{#if !isMerged}
 		<div class="grid gap-6 lg:grid-cols-2">
-			<InfoCard title="Moderation" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_suggestions_id_moderation_title()} class="bg-base-200 shadow-none">
 				<p class="mb-3 text-muted">
 					{#if s.visibility === 'hidden'}
-						Put this back on the board if it was taken down by mistake.
+						{m.staff_suggestions_id_put_back_board_if_was_text()}
 					{:else}
-						Take this off the board. Use <span class="font-medium">Declined</span> above instead if it's
-						a real suggestion you're saying no to — a decline is public and explained, a hide just makes
-						it vanish.
+						<ParaglideMessage
+							message={m.staff_suggestions_id_take_off_board_use_above_text}
+							inputs={{ staff_suggestions_id_declined: m.staff_suggestions_id_declined_text() }}
+							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+								>{/snippet}</ParaglideMessage
+						>
 					{/if}
 				</p>
 				<Action
 					action={setSuggestionVisibility}
-					label={s.visibility === 'hidden' ? 'Put back on the board' : 'Hide from the board'}
-					modalTitle={s.visibility === 'hidden' ? 'Restore suggestion' : 'Hide suggestion'}
-					submitLabel="Save"
-					successToast="Updated"
+					label={s.visibility === 'hidden'
+						? m.staff_suggestions_id_put_back_board_label()
+						: m.staff_suggestions_id_hide_from_board_label()}
+					modalTitle={s.visibility === 'hidden'
+						? m.staff_suggestions_id_restore_suggestion_title()
+						: m.staff_suggestions_id_hide_suggestion_title()}
+					submitLabel={m.staff_save_label()}
+					successToast={m.staff_updated_toast()}
 					class={s.visibility === 'hidden' ? 'btn-outline btn-sm' : 'btn-error btn-sm'}
 					onsuccess={refresh}
 				>
@@ -406,8 +454,8 @@
 						<label class="fieldset w-full">
 							<span class="fieldset-legend">
 								{s.visibility === 'hidden'
-									? 'Reason (shown to the member)'
-									: 'Reason (required: the member is shown it and can appeal)'}
+									? m.staff_suggestions_id_reason_shown_member_label()
+									: m.staff_suggestions_id_reason_required_member_shown_can_label()}
 							</span>
 							<textarea
 								class="textarea w-full"
@@ -418,36 +466,36 @@
 				</Action>
 			</InfoCard>
 
-			<InfoCard title="Merge" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_suggestions_id_merge_title()} class="bg-base-200 shadow-none">
 				<p class="mb-3 text-muted">
-					Fold this into the suggestion it duplicates. Its votes move across, and anyone who voted
-					for both is only counted once.
+					{m.staff_suggestions_id_fold_into_suggestion_duplicates_its_text()}
 				</p>
 				<Action
 					action={mergeSuggestion}
-					label="Merge into another"
-					modalTitle="Merge suggestion"
-					submitLabel="Merge"
-					successToast="Merged"
+					data-testid="merge-suggestion"
+					label={m.staff_suggestions_id_merge_into_another_label()}
+					modalTitle={m.staff_suggestions_id_merge_suggestion_title()}
+					submitLabel={m.staff_suggestions_id_merge_label()}
+					successToast={m.staff_suggestions_id_merged_toast()}
 					variant="default"
 					size="sm"
 					outline
 					onsuccess={(r) => {
 						if (r && typeof r === 'object' && 'targetId' in r) {
-							void goto(resolve(`/staff/suggestions/${r.targetId as string}`));
+							void goto(resolve(`staff/suggestions/${r.targetId as string}`));
 						}
 					}}
 				>
 					{#snippet form()}
 						<input {...mergeSuggestion.fields.sourceId.as('hidden', id)} />
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Merge into</span>
+							<span class="fieldset-legend">{m.staff_suggestions_id_merge_into_label()}</span>
 							<Select class="w-full" {...mergeSuggestion.fields.targetId.as('select')}>
 								<MergeCandidateOptions {id} />
 							</Select>
 						</label>
 						<p class="mt-3 text-muted">
-							This suggestion comes off the board and points at the one you pick. There's no undo.
+							{m.staff_suggestions_id_suggestion_comes_off_board_points_text()}
 						</p>
 					{/snippet}
 				</Action>

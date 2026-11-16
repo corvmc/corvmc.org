@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { error, invalid } from '@sveltejs/kit';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // The stubs return the handler they are given, so a call in this file runs the
 // wrapper's own try/catch — which is the thing under test.

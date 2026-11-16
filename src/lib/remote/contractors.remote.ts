@@ -1,34 +1,34 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { getStaffAssetDetail } from './inventory.remote';
-import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
-import { getProjectTaskPage } from './tasks.remote';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getAssetHistory, getStaffAssetDetail } from './inventory.remote';
+import { getTaskPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectActivity } from './projects.remote';
-import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { engageContractorOnTask } from '#lib/server/volunteer/task-people.js';
 import {
-	archiveContractor,
 	createContractor,
 	getContractorById,
 	listContractors,
 	listLapsingInsurance,
 	updateContractor
-} from '$lib/server/contractor/contractor-service';
+} from '#lib/server/contractor/contractor-service.js';
+import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
 import {
 	cancelJob,
 	completeJob,
-	createJob,
 	declineJob,
 	listJobs,
 	listOverdueJobs,
 	markJobNoShow,
 	recordInvoice,
+	reopenJob,
 	scheduleJob,
 	type Engagement
-} from '$lib/server/contractor/contractor-job-service';
+} from '#lib/server/contractor/contractor-job-service.js';
 
 /**
  * Contractor work — every surface staff-only.
@@ -75,8 +75,41 @@ const contractorFields = {
 	notes: z.string().max(2000).optional()
 };
 
+type ContractorFormData = z.infer<z.ZodObject<typeof contractorFields>>;
+
+/** The contractor's own columns; the person goes through `savePrimaryContact`. */
+function contractorInput(data: ContractorFormData) {
+	return {
+		name: data.name,
+		trade: data.trade,
+		website: data.website || null,
+		licenseNumber: data.licenseNumber || null,
+		insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null,
+		notes: data.notes || null
+	};
+}
+
+function contractorContact(data: ContractorFormData) {
+	return {
+		contactName: data.contactName || null,
+		contactPhone: data.phone || null,
+		contactEmail: data.email || null
+	};
+}
+
+/** Contractors with their main person, in the fields the pages read. */
+async function withContacts<T extends { id: string }>(rows: T[]) {
+	const withPeople = await withPrimaryContact(rows);
+	return withPeople.map(({ contactName, contactEmail, contactPhone, ...rest }) => ({
+		...rest,
+		contactName,
+		phone: contactPhone,
+		email: contactEmail
+	}));
+}
+
 const jobFields = {
-	contractorId: z.uuid(),
+	contractorId: z.string().min(1),
 	/** Engaged on existing work: what the work is, and its unit, are the work order's. */
 	workOrderId: z.uuid(),
 	scheduledFor: optionalDate,
@@ -98,13 +131,13 @@ const contractorFilters = z
 
 export const getContractors = query(contractorFilters, async (filters) => {
 	await requireCapability('contractor.read');
-	return listContractors(filters ?? {});
+	return withContacts(await listContractors(filters ?? {}));
 });
 
 const jobFilters = z
 	.object({
 		status: z.enum(contractorJobStatuses).optional(),
-		contractorId: z.uuid().optional()
+		contractorId: z.string().min(1).optional()
 	})
 	.optional();
 
@@ -130,18 +163,15 @@ export const getContractorsPage = query(contractorFilters, async (filters) => {
 		listLapsingInsurance(),
 		listOverdueJobs()
 	]);
-	return { contractors, lapsing, overdue };
+	return { contractors: await withContacts(contractors), lapsing, overdue };
 });
 
 /** One contractor, with everything they have ever done for us. */
 export const getContractorDetail = query(z.string(), async (id) => {
 	await requireCapability('contractor.read');
 	try {
-		const [record, jobs] = await Promise.all([
-			getContractorById(id),
-			listJobs({ contractorId: id })
-		]);
-		return { contractor: record, jobs };
+		const [withContact] = await withContacts([await getContractorById(id)]);
+		return { contractor: withContact };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -152,12 +182,12 @@ async function refreshWorkOrderPage(job: { workOrderId: string; projectId: strin
 	const workOrderId = job.workOrderId;
 	if (!job.projectId) {
 		void getWorkOrderActivity({ workOrderId }).refresh();
-		return getStaffShiftPage(workOrderId).refresh();
+		return getTaskPage(workOrderId).refresh();
 	}
 	// The task page's guard is the project's; a caller without it is not looking at it.
 	if (await can('project.read')) {
 		void getProjectActivity({ projectId: job.projectId, workOrderId }).refresh();
-		return getProjectTaskPage({ projectId: job.projectId, workOrderId }).refresh();
+		return getTaskPage(workOrderId).refresh();
 	}
 }
 
@@ -167,13 +197,10 @@ async function refreshWorkOrderPage(job: { workOrderId: string; projectId: strin
 
 export const createContractorForm = form(z.object(contractorFields), async (raw) => {
 	await requireCapability('contractor.manage');
-	const data = raw as z.infer<z.ZodObject<typeof contractorFields>>;
+	const data = raw as ContractorFormData;
 	try {
-		const record = await createContractor({
-			...data,
-			email: data.email || null,
-			insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null
-		});
+		const record = await createContractor(contractorInput(data));
+		await savePrimaryContact(record.id, contractorContact(data));
 		void getContractorsPage().refresh();
 		return { success: true, id: record.id };
 	} catch (err) {
@@ -182,32 +209,13 @@ export const createContractorForm = form(z.object(contractorFields), async (raw)
 });
 
 export const updateContractorForm = form(
-	z.object({ id: z.uuid(), ...contractorFields }),
+	z.object({ id: z.string().min(1), ...contractorFields }),
 	async (raw) => {
 		await requireCapability('contractor.manage');
-		const { id, ...data } = raw as { id: string } & z.infer<z.ZodObject<typeof contractorFields>>;
+		const { id, ...data } = raw as { id: string } & ContractorFormData;
 		try {
-			await updateContractor(id, {
-				...data,
-				email: data.email || null,
-				insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null
-			});
-			void getContractorDetail(id).refresh();
-			void getContractorsPage().refresh();
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-export const archiveContractorForm = form(
-	z.object({ id: z.uuid(), archived: z.boolean().optional().default(false) }),
-	async (raw) => {
-		await requireCapability('contractor.manage');
-		const { id, archived } = raw as { id: string; archived: boolean };
-		try {
-			await archiveContractor(id, archived);
+			await updateContractor(id, contractorInput(data));
+			await savePrimaryContact(id, contractorContact(data));
 			void getContractorDetail(id).refresh();
 			void getContractorsPage().refresh();
 			return { success: true };
@@ -221,26 +229,43 @@ export const archiveContractorForm = form(
 // Job mutations
 // ---------------------------------------------------------------------------
 
-export const createJobForm = form(z.object(jobFields), async (raw) => {
-	const actor = await requireCapability('contractor.manage');
-	const data = raw as z.infer<z.ZodObject<typeof jobFields>>;
-	try {
-		const job = await createJob({
-			contractorId: data.contractorId,
-			workOrderId: data.workOrderId,
-			scheduledFor: calendarDate(data.scheduledFor) ?? null,
-			expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
-			quotedCents: data.quotedCents ?? null,
-			notes: data.notes ?? null,
-			requestedByUserId: actor.id
-		});
-		await refreshWorkOrderPage(job);
-		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
-		return { success: true, id: job.id };
-	} catch (err) {
-		mapDomainError(err);
+/**
+ * Engage a contractor on a task. With people assigned or signed up for its
+ * shifts still to come, the first submit only says how many; resubmitting with
+ * `confirm` takes them off and calls those shifts off (#2518).
+ */
+export const createJobForm = form(
+	z.object({ ...jobFields, confirm: z.boolean().optional() }),
+	async (raw) => {
+		const actor = await requireCapability('contractor.manage');
+		const data = raw as z.infer<z.ZodObject<typeof jobFields>> & { confirm?: boolean };
+		try {
+			const result = await engageContractorOnTask(
+				{
+					contractorId: data.contractorId,
+					workOrderId: data.workOrderId,
+					scheduledFor: calendarDate(data.scheduledFor) ?? null,
+					expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
+					quotedCents: data.quotedCents ?? null,
+					notes: data.notes ?? null,
+					requestedByUserId: actor.id
+				},
+				data.confirm === true
+			);
+			// `conflict` keeps the modal open, so the warning shows above the resubmit.
+			if (result.status === 'needs_confirmation') return { ...result, conflict: true };
+			const { job } = result;
+			await refreshWorkOrderPage(job);
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
+			return { status: 'done' as const, id: job.id };
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
-});
+);
 
 export const scheduleJobForm = form(
 	z.object({
@@ -258,7 +283,10 @@ export const scheduleJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -306,7 +334,10 @@ export const completeJobForm = form(
 				actorId: actor.id
 			});
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -320,7 +351,10 @@ export const cancelJobForm = form(z.object({ id: z.uuid() }), async (raw) => {
 	try {
 		const job = await cancelJob(id);
 		await refreshWorkOrderPage(job);
-		if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+		if (job.assetId) {
+			void getStaffAssetDetail(job.assetId).refresh();
+			void getAssetHistory({ id: job.assetId }).refresh();
+		}
 		return { success: true };
 	} catch (err) {
 		mapDomainError(err);
@@ -335,7 +369,10 @@ function closeJobForm(close: (id: string) => Promise<Engagement>) {
 		try {
 			const job = await close(id);
 			await refreshWorkOrderPage(job);
-			if (job.assetId) void getStaffAssetDetail(job.assetId).refresh();
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -345,6 +382,22 @@ function closeJobForm(close: (id: string) => Promise<Engagement>) {
 
 export const declineJobForm = closeJobForm(declineJob);
 export const noShowJobForm = closeJobForm(markJobNoShow);
+
+/** Out of a terminal status. Admin-only: a terminal state is the past (#2259). */
+export const reopenJobForm = form(
+	z.object({ id: z.uuid(), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		await requireCapability('contractor.reopen');
+		const { id, reason } = raw as { id: string; reason: string };
+		try {
+			const job = await reopenJob(id, reason);
+			await refreshWorkOrderPage(job);
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
 
 export const recordInvoiceForm = form(
 	z.object({

@@ -1,29 +1,34 @@
 <script lang="ts">
-	import { formatDollars } from '$lib/utils/format';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getReservationDetail } from '$lib/remote/reservations.remote';
-	import { page } from '$app/state';
-	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
-	import DoorCheckIn from '$lib/components/reservations/DoorCheckIn.svelte';
-	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
-	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDollars } from '#lib/utils/format.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getReservationDetail } from '#lib/remote/reservations.remote.js';
+	import DoorCheckIn from '#lib/components/reservations/DoorCheckIn.svelte';
+	import { EntityIdentity, EntityChip } from '#lib/components/ui/entity/index.js';
+	import {
+		CancelReservationAction,
+		ConfirmWaitlistedAction
+	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
+	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
+	import { memberPayAction, trackDetail } from '#lib/utils/reservation-actions.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	let paidAtReader = $state(false);
-	let data = $derived(await getReservationDetail(page.params.id!));
+	let data = $derived(await getReservationDetail(params.id));
 
 	const res = $derived(data.reservation);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
 	const owesBalance = $derived(memberPayAction(res) === 'balance');
 
-	const refresh = () => getReservationDetail(page.params.id!).refresh();
+	const refresh = () => getReservationDetail(params.id).refresh();
 
 	function readerPaid() {
 		paidAtReader = true;
@@ -31,7 +36,7 @@
 	}
 </script>
 
-<PageHeader width="md" title="Your Reservation" />
+<PageHeader width="md" title={m.member_reservations_id_reservation_title()} />
 <PageContent width="md">
 	<!--
 		The detail-page shape ui-patterns names: `EntityIdentity size="lg"` over a
@@ -48,36 +53,24 @@
 		{#if data.band}
 			<!-- Whose booking this is, when it is not simply the member's own. A
 			     band booking looked identical to a personal one on this page. -->
-			<Fact label="Booked for"><EntityChip ref={data.band} /></Fact>
+			<Fact label={m.member_reservations_id_booked_label()}><EntityChip ref={data.band} /></Fact>
 		{/if}
 		{#if res.notes}
-			<Fact label="Notes" wrap>{res.notes}</Fact>
+			<Fact label={m.member_reservations_id_notes_label()} wrap>{res.notes}</Fact>
 		{/if}
 	</DefinitionList>
 
 	{#if paidAtReader && res.status === 'confirmed'}
-		<Alert type="success">Paid. Your booking is confirmed.</Alert>
+		<Alert type="success">{m.member_reservations_id_paid_booking_confirmed_body()}</Alert>
 	{/if}
 
 	{#if res.status === 'confirmed'}
-		<DoorCheckIn now={data.inAccessWindow} />
-	{/if}
-
-	{#if res.status === 'scheduled'}
-		<!-- The card carries the amount, the due date and the confirmation window;
-		     without them here, opening a booking to check what is outstanding
-		     tells a member less than the list they came from (#895). -->
-		<InfoCard title="Not confirmed yet">
-			<p>
-				<span class="font-medium">${formatDollars(data.totalCents)}</span>
-				due — cash at the door, or card online.
-			</p>
-			<UnconfirmedNotice startsAt={res.startsAt} class="space-y-1 text-muted" />
-		</InfoCard>
-
-		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
-			Pay for this session
-		</Button>
+		<!-- Held for a fee owed (#2874); otherwise the door page opens it (#2120). -->
+		{#if res.codeWithheld}
+			<DoorCodeHeld dueOn={data.paymentDueOn} />
+		{:else}
+			<DoorCheckIn now={data.inAccessWindow} />
+		{/if}
 	{/if}
 
 	<!-- On the day, with a reader configured: the amount goes to the reader by
@@ -96,20 +89,24 @@
 		do: cancelling was absent for every status, and a confirmed-but-unpaid
 		booking offered no way to pay (#1062).
 	-->
-	{#if owesBalance || (!isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(res.status))}
+	{#if owesBalance || (!isPast && ['waitlisted', 'confirmed'].includes(res.status))}
 		<div class="flex flex-wrap items-center gap-2">
 			{#if !isPast && res.status === 'waitlisted' && res.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction reservation={res} onsuccess={refresh} variant="success" />
 			{/if}
 			<!-- Not behind !isPast: a balance is still owed after the session (#1952). -->
 			{#if owesBalance}
-				{#if (res.cashDueCents ?? 0) > 0}
+				{#if trackDetail(res) === 'cash_due'}
 					<span class="text-sm font-medium">
-						${formatDollars(res.cashDueCents ?? 0)} due{isPast ? '' : ' at door'}
+						{(isPast
+							? m.member_reservations_id_due_text
+							: m.member_reservations_id_due_at_door_text)({
+							formatDollars: formatDollars(res.cashDueCents ?? 0)
+						})}
 					</span>
 				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
-					Pay online
+					{m.member_pay_online_label()}
 				</Button>
 			{/if}
 			{#if !isPast}
@@ -118,5 +115,7 @@
 		</div>
 	{/if}
 
-	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
+	<Button href="/member/reservations" variant="ghost" class="w-full"
+		>{m.member_back_reservations_label()}</Button
+	>
 </PageContent>

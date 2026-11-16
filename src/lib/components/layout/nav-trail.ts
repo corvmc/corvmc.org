@@ -1,4 +1,4 @@
-import type { Crumb, NavTrail } from '$lib/components/ui/breadcrumbs';
+import type { Crumb, NavTrail } from '#lib/components/ui/breadcrumbs.js';
 import { activeNavPath, type NavNode } from './Nav/active-nav';
 
 type LabelledNode = NavNode & { label: string };

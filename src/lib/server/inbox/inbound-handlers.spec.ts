@@ -59,11 +59,11 @@ vi.mock('./meta-client', () => ({
 const mockFindStaffUserByEmail = vi.fn(
 	async (_email: string): Promise<{ id: string; name: string; email: string } | null> => null
 );
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	findStaffUserByEmail: (email: string) => mockFindStaffUserByEmail(email)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const mockParseReplyMailboxHash = vi.fn((): string | null => null);
 vi.mock('./reply-address', () => ({
@@ -76,7 +76,7 @@ vi.mock('./channel-config-service', () => ({
 }));
 
 const mockEmit = vi.fn();
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...(args as [])) }
 }));
 

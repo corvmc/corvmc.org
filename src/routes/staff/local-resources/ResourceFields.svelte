@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Field } from '$lib/components/ui/Form';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	/**
 	 * The listing fields, shared by create and edit so the two forms cannot drift.
@@ -10,7 +11,8 @@
 	let {
 		fields,
 		categories,
-		values = {}
+		values = {},
+		published = false
 	}: {
 		fields: {
 			categoryId: F;
@@ -20,6 +22,7 @@
 			phone: F;
 			// Spelled out so form-coverage.spec can see the control; an alias hides it.
 			addressLine: RemoteFormField<RemoteFormFieldValue>;
+			displayOrder: RemoteFormField<RemoteFormFieldValue>;
 		};
 		categories: { id: string; name: string }[];
 		values?: {
@@ -29,7 +32,10 @@
 			website?: string | null;
 			phone?: string | null;
 			addressLine?: string | null;
+			displayOrder?: number;
 		};
+		/** Staff-created listings publish on save; a pending tip is not public. */
+		published?: boolean;
 	} = $props();
 
 	const options = $derived(categories.map((c) => ({ value: c.id, label: c.name })));
@@ -38,19 +44,40 @@
 <Field
 	field={fields.categoryId}
 	type="select"
-	label="Category"
+	label={m.staff_category_label()}
 	{options}
 	value={values.categoryId ?? ''}
 />
-<Field field={fields.name} type="text" label="Name" value={values.name ?? ''} />
+<Field field={fields.name} type="text" label={m.staff_name_label()} value={values.name ?? ''} />
 <Field
 	field={fields.description}
 	type="textarea"
-	label="Description"
-	description="A sentence or two — what they are and why they are worth knowing."
+	label={m.staff_description_label()}
+	description={m.staff_local_resources_resource_fields_description_body()}
 	value={values.description ?? ''}
 />
-<Field field={fields.website} type="text" label="Website" value={values.website ?? ''} />
-<Field field={fields.phone} type="tel" label="Phone" value={values.phone ?? ''} />
-<Field field={fields.addressLine} type="text" label="Address" value={values.addressLine ?? ''} />
-<p class="text-muted text-wrap">Everything here is shown publicly on /local-resources.</p>
+<Field
+	field={fields.website}
+	type="text"
+	label={m.staff_website_label()}
+	value={values.website ?? ''}
+/>
+<Field field={fields.phone} type="tel" label={m.staff_phone_label()} value={values.phone ?? ''} />
+<Field
+	field={fields.addressLine}
+	type="text"
+	label={m.staff_address_label()}
+	value={values.addressLine ?? ''}
+/>
+<Field
+	field={fields.displayOrder}
+	type="number"
+	label={m.staff_order_2_label()}
+	value={values.displayOrder ?? 0}
+	min="0"
+/>
+{#if published}
+	<p class="text-muted text-wrap">
+		{m.staff_local_resources_resource_fields_everything_here_shown_text()}
+	</p>
+{/if}

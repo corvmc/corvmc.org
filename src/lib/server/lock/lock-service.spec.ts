@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -28,7 +28,7 @@ function buildChain() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => buildChain(),
 		update: () => {
@@ -48,7 +48,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/reservation', () => ({
+vi.mock('#lib/server/db/schema/reservation.js', () => ({
 	reservation: {
 		id: 'id',
 		status: 'status',
@@ -62,7 +62,7 @@ vi.mock('$lib/server/db/schema/reservation', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/authentication', () => ({
+vi.mock('#lib/server/db/schema/authentication.js', () => ({
 	user: { id: 'id', name: 'name', email: 'email' }
 }));
 
@@ -78,25 +78,25 @@ vi.mock('drizzle-orm', () => ({
 	asc: vi.fn()
 }));
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
 
 const mockGetJson = vi.fn().mockResolvedValue(true);
 const mockPutJson = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: (...args: unknown[]) => mockGetJson(...args),
 	putJson: (...args: unknown[]) => mockPutJson(...args)
 }));
 
 const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('$lib/server/notification', () => ({
+vi.mock('#lib/server/notification/index.js', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const mockMaintainCodePool = vi.fn().mockResolvedValue(null);
 
@@ -123,7 +123,16 @@ const mockQueryDeviceHealth = vi
 	.mockResolvedValue({ online: true, lockState: 'Locked', batteryLevel: 4 });
 const mockGenerateLockCode = vi.fn().mockReturnValue(4242);
 
+const { UtecRateLimitedError } = vi.hoisted(() => ({
+	UtecRateLimitedError: class extends Error {
+		constructor(readonly until: Date) {
+			super('U-tec is rate limiting this client');
+		}
+	}
+}));
+
 vi.mock('./ultraloc-client', () => ({
+	UtecRateLimitedError,
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
 	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
@@ -145,8 +154,7 @@ const {
 	revokeLockSelfTest,
 	syncAccessWindow,
 	revokeAccessFor,
-	reconcileUpcomingSync,
-	UPCOMING_SYNC_CAP
+	reconcileUpcomingSync
 } = await import('./lock-service');
 const { lt, gt } = await import('drizzle-orm');
 
@@ -316,17 +324,10 @@ describe('revokeLockSelfTest', () => {
 
 describe('syncAccessWindow', () => {
 	/**
-	 * "Today" as the service computes it — the calendar day in the app's own
-	 * timezone, not in UTC.
-	 *
-	 * Those are different dates for the seven or eight hours a day when UTC has
-	 * rolled over and Los Angeles has not, and building these timestamps off the
-	 * UTC day put them outside the window the service was checking. It passed
-	 * every daytime run and failed at 00:04 UTC.
-	 *
-	 * `buildDateInTz` is mocked to `${date}T${time}:00Z`, so the boundaries the
-	 * service compares against are that day string at 00:00Z and 23:59Z — which
-	 * is what these have to be built on.
+	 * "Today" as the service computes it: the club's calendar day, not UTC's,
+	 * which differ for hours each evening. `buildDateInTz` is mocked to
+	 * `${date}T${time}:00Z`, so the window bounds are this day at 00:00Z and
+	 * 23:59Z.
 	 */
 	function appDay(offsetDays = 0) {
 		const d = new Date(Date.now() + offsetDays * 86_400_000);
@@ -589,9 +590,10 @@ describe('sync reconciliation', () => {
 			{ id: 'res-synced', lockAccessId: '111' },
 			{ id: 'res-queued', lockAccessId: '222' }
 		]);
-		mockGetLockUser.mockImplementation(async (id: number) =>
-			id === 111 ? { id: 111, type: 2, syncStatus: 1 } : { id: 222, type: 2, syncStatus: 0 }
-		);
+		mockListLockUsers.mockResolvedValue([
+			{ id: 111, type: 2, syncStatus: 1 },
+			{ id: 222, type: 2, syncStatus: 0 }
+		]);
 
 		const result = await runDailyLockJob();
 
@@ -619,39 +621,58 @@ describe('reconcileUpcomingSync', () => {
 			{ id: 'res-synced', lockAccessId: '111' },
 			{ id: 'res-queued', lockAccessId: '222' }
 		]);
-		mockGetLockUser.mockImplementation(async (id: number) =>
-			id === 111 ? { id: 111, type: 2, syncStatus: 1 } : { id: 222, type: 2, syncStatus: 0 }
-		);
+		mockListLockUsers.mockResolvedValue([
+			{ id: 111, type: 2, syncStatus: 1 },
+			{ id: 222, type: 2, syncStatus: 0 }
+		]);
 
 		const result = await reconcileUpcomingSync();
 
 		expect(result).toEqual({ confirmed: 1, errors: [] });
 		expect(updateCalls).toEqual([expect.objectContaining({ lockSyncedAt: expect.any(Date) })]);
-		expect(mockQueryDeviceHealth).not.toHaveBeenCalled();
-		expect(mockListLockUsers).not.toHaveBeenCalled();
+		expect(mockQueryDeviceHealth).toHaveBeenCalledTimes(1);
+		expect(mockListLockUsers).toHaveBeenCalledTimes(1);
+		expect(mockGetLockUser).not.toHaveBeenCalled();
 		expect(mockMaintainCodePool).not.toHaveBeenCalled();
 		expect(mockReconcileMemberCodeSync).not.toHaveBeenCalled();
 	});
 
-	it('reads only bookings inside the confirmation window that have not ended, soonest first, capped', async () => {
+	it('reads only bookings inside the confirmation window that have not ended', async () => {
 		await reconcileUpcomingSync();
 
 		expect(vi.mocked(lt)).toHaveBeenCalledWith('starts_at', expect.any(Date));
 		expect(vi.mocked(gt)).toHaveBeenCalledWith('ends_at', expect.any(Date));
-		expect(chainCalls).toContainEqual(['orderBy', [undefined]]);
-		expect(chainCalls).toContainEqual(['limit', [UPCOMING_SYNC_CAP]]);
-		expect(UPCOMING_SYNC_CAP).toBeGreaterThan(0);
-		expect(UPCOMING_SYNC_CAP).toBeLessThanOrEqual(50);
+	});
+
+	it('makes no lock-user reads while the lock is offline, and does not fail', async () => {
+		selectResults.push([{ id: 'res-1', lockAccessId: '111' }]);
+		mockQueryDeviceHealth.mockResolvedValue({ online: false, lockState: null, batteryLevel: 3 });
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result).toEqual({ confirmed: 0, errors: [], skipped: 'lock-offline' });
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+	});
+
+	it('skips quietly during a U-tec cooldown', async () => {
+		mockQueryDeviceHealth.mockRejectedValue(new UtecRateLimitedError(new Date()));
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result).toEqual({ confirmed: 0, errors: [], skipped: 'rate-limited' });
+		expect(mockListLockUsers).not.toHaveBeenCalled();
 	});
 
 	it('reports a failed read instead of throwing', async () => {
-		mockGetLockUser.mockRejectedValue(new Error('rate limited'));
+		mockListLockUsers.mockRejectedValue(new Error('Ultraloc API error: 500'));
 		selectResults.push([{ id: 'res-1', lockAccessId: '111' }]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		const result = await reconcileUpcomingSync();
 
 		expect(result.confirmed).toBe(0);
-		expect(result.errors).toEqual([expect.stringContaining('rate limited')]);
+		expect(result.errors).toEqual([expect.stringContaining('500')]);
+		consoleSpy.mockRestore();
 	});
 
 	it('leaves the daily backstop unbounded', async () => {

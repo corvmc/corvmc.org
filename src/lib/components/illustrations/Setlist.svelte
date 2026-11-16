@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	let { class: className = '' }: { class?: string } = $props();
 </script>
 
@@ -41,7 +42,7 @@
 			font-size="18"
 			fill="#16140f"
 			style="font-family: var(--font-chalk);"
-			transform="rotate(-1, 18, 52)">This Week</text
+			transform="rotate(-1, 18, 52)">{m.illustrations_setlist_week_text()}</text
 		>
 		<text
 			x="18"
@@ -49,7 +50,8 @@
 			font-size="11"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">Recurring schedule</text
+			style="font-family: var(--font-script);"
+			>{m.illustrations_setlist_recurring_schedule_text()}</text
 		>
 
 		<!-- Items -->
@@ -68,7 +70,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">Real Book Club</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_real_book_club_text()}</text
 		>
 		<text
 			x="202"
@@ -77,7 +79,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">1st Thu</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_1st_thu_text()}</text
 		>
 		<line
 			x1="18"
@@ -104,7 +106,8 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">Songwriter Circle</text
+			style="font-family: var(--font-script);"
+			>{m.illustrations_setlist_songwriter_circle_text()}</text
 		>
 		<text
 			x="202"
@@ -113,7 +116,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">2nd Sat</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_2nd_sat_text()}</text
 		>
 		<line
 			x1="18"
@@ -140,7 +143,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">Open Practice</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_open_practice_text()}</text
 		>
 		<text
 			x="202"
@@ -149,7 +152,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">Weekly</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_weekly_text()}</text
 		>
 		<line
 			x1="18"
@@ -176,7 +179,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">Monthly Meetup</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_monthly_meetup_text()}</text
 		>
 		<text
 			x="202"
@@ -185,7 +188,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">Last Thu</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_last_thu_text()}</text
 		>
 		<line
 			x1="18"
@@ -205,7 +208,8 @@
 			font-size="15"
 			fill="#c63015"
 			style="font-family: var(--font-chalk);"
-			transform="rotate(-1.4, 18, 212)">Open Jam after every meetup!</text
+			transform="rotate(-1.4, 18, 212)"
+			>{m.illustrations_setlist_open_jam_after_every_meetup_text()}</text
 		>
 	</g>
 </svg>

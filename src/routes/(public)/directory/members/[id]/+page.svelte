@@ -1,25 +1,28 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import { getPublicMemberProfilePage, getMemberPastShows } from '$lib/remote/directory.remote';
+	import { getPublicMemberProfilePage, getMemberPastShows } from '#lib/remote/directory.remote.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const BANDS_BASE = '/directory/bands';
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getPublicMemberProfilePage(id));
 	const shows = $derived(data.shows);
 	const member = $derived(data.member);
@@ -28,17 +31,21 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [];
-		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
-		if (member.availableForHire) p.push({ label: 'Available for hire' });
-		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
-		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
+		if (member.lookingForBand)
+			p.push({ label: m.public_directory_members_id_looking_band_label(), variant: 'warm' });
+		if (member.availableForHire)
+			p.push({ label: m.public_directory_members_id_available_hire_label() });
+		if (member.teachesLessons)
+			p.push({ label: m.public_directory_members_id_teaches_privately_label() });
+		if (member.openToCollaboration)
+			p.push({ label: m.public_directory_members_id_open_collaboration_label() });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: 'Pronouns', value: member.pronouns },
-		{ label: 'Based in', value: member.hometown },
-		{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+		{ label: m.public_directory_members_id_pronouns_label(), value: member.pronouns },
+		{ label: m.public_based_label(), value: member.hometown },
+		{ label: m.public_looking_label(), value: member.lookingForBand ? 'A band' : null }
 	]);
 
 	let bandRefs = $derived<CrossRef[]>(
@@ -56,7 +63,7 @@
 </script>
 
 <svelte:head>
-	<title>{member.name} | Corvallis Music Collective</title>
+	<title>{m.public_corvallis_music_collective_2_title({ name: member.name })}</title>
 	<meta
 		name="description"
 		content={member.tagline || `${member.name} on Corvallis Music Collective`}
@@ -71,8 +78,8 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
-		>&larr; Back to Directory</a
+	<a href="{resolve('directory')}?tab=musicians" class="link text-muted"
+		>{m.public_back_directory_text()}</a
 	>
 
 	<!-- No `shareUrl`: `toPublicMemberProfile` whitelists the columns it emits and
@@ -85,7 +92,7 @@
 
 	<ProfileGrid>
 		{#snippet main()}
-			<ProseBlock label="Bio" markdown={member.bio} />
+			<ProseBlock kind="bio" markdown={member.bio} />
 			<ListenStrip links={member.links} />
 			<ShowsBox
 				upcoming={shows.upcoming}
@@ -96,16 +103,20 @@
 			/>
 		{/snippet}
 		{#snippet side()}
-			<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
-			<TagCloud label="Plays · Genres" {tags} />
-			<TagCloud label="Skills" tags={member.skills ?? []} />
+			<CrossRefList
+				kind="bands"
+				items={bandRefs}
+				note={m.public_directory_members_id_note_body({ length: bandRefs.length })}
+			/>
+			<TagCloud label={m.public_directory_members_id_plays_genres_label()} {tags} />
+			<TagCloud label={m.public_directory_members_id_skills_label()} tags={member.skills ?? []} />
 			<LinksBox links={member.links} />
-			<ContactBox label="Contact" {contact} />
+			<ContactBox kind="contact" {contact} />
 		{/snippet}
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>Corvallis Music Collective</a>
+		<a href={resolve('')}>{m.public_corvallis_music_collective_text()}</a>
 	</footer>
 </div>
 

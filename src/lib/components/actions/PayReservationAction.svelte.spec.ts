@@ -1,19 +1,20 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 import { createAttachmentKey } from 'svelte/attachments';
-import type { Reservation } from '$lib/server/reservation';
+import type { Reservation } from '#lib/server/reservation/index.js';
 
 /**
  * Where the member goes after paying. `payForReservation` answers one of two
  * ways — a Stripe URL to leave for, or a booking already settled from credits
  * — and this component is the only thing that tells them apart. Sending a
- * paying member to `invalidateAll` leaves them on an unpaid booking with no
+ * paying member to `refreshAll` leaves them on an unpaid booking with no
  * error, which is the failure nothing else here can catch.
  */
 
 const goToCheckout = vi.fn();
-const invalidateAll = vi.fn();
+const refreshAll = vi.fn();
 
 let submitResult: unknown;
 
@@ -47,7 +48,7 @@ function fakeRemoteForm(fields: Record<string, unknown>) {
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { ...fields, allIssues: () => null } },
+		fields: { value: { ...fields, allIssues: () => null, set: () => {} } },
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (instance: { submit: () => Promise<boolean> }) => unknown) => {
@@ -60,7 +61,7 @@ function fakeRemoteForm(fields: Record<string, unknown>) {
 	return instance;
 }
 
-vi.mock('$lib/remote/reservations.remote', () => ({
+vi.mock('#lib/remote/reservations.remote.js', () => ({
 	payForReservation: fakeRemoteForm({ id: field('id'), coverFees: field('coverFees') }),
 	getReservationPricing: vi.fn(async () => ({
 		durationHours: 2,
@@ -72,12 +73,12 @@ vi.mock('$lib/remote/reservations.remote', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll,
+	refreshAll,
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
 
-vi.mock('$lib/utils/checkout-navigation', () => ({ goToCheckout }));
+vi.mock('#lib/utils/checkout-navigation.js', () => ({ goToCheckout }));
 
 const PayReservationAction = (await import('./PayReservationAction.svelte')).default;
 
@@ -91,27 +92,25 @@ const reservation = {
 
 async function payWith(result: unknown) {
 	submitResult = result;
-	await render(PayReservationAction, { reservation });
-	await page.getByRole('button', { name: 'Pay Now' }).first().click();
+	const { locator } = await render(PayReservationAction, { reservation });
+	await locator.getByRole('button').click();
 	await expect.element(page.getByRole('dialog')).toBeVisible();
-	// PaymentStep owns the submit — the action passes `noFooter`. Its label
-	// carries the amount, so it is matched on the prefix.
-	await page.getByRole('button', { name: /^Pay \$/ }).click();
+	// PaymentStep owns the submit — the action passes `noFooter` — and it is
+	// the dialog's only one.
+	await page.getByRole('dialog').getByCss('button[type="submit"]').click();
 }
 
 describe('PayReservationAction', () => {
 	beforeEach(() => {
 		goToCheckout.mockClear();
-		invalidateAll.mockClear();
+		refreshAll.mockClear();
 	});
 
-	it('leaves for Stripe when the server hands back a checkout URL', async () => {
-		await payWith({ redirectUrl: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+	it('goes to checkout when the server hands back a checkout URL', async () => {
+		await payWith({ redirectUrl: '/checkout/cs_test_1' });
 
-		await vi.waitFor(() =>
-			expect(goToCheckout).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1')
-		);
-		expect(invalidateAll).not.toHaveBeenCalled();
+		await vi.waitFor(() => expect(goToCheckout).toHaveBeenCalledWith('/checkout/cs_test_1'));
+		expect(refreshAll).not.toHaveBeenCalled();
 	});
 
 	// Credits covered it, so there is nothing to pay and nowhere to go — the
@@ -119,7 +118,7 @@ describe('PayReservationAction', () => {
 	it('refreshes in place when the booking was settled without a charge', async () => {
 		await payWith({ paid: true });
 
-		await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+		await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
 		expect(goToCheckout).not.toHaveBeenCalled();
 	});
 });

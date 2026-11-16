@@ -8,68 +8,62 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const positionsFor = vi.fn(async (_id: string) => [] as string[]);
 const committeeCapabilitiesFor = vi.fn(async (_id: string) => [] as string[]);
+const leadsOpenShow = vi.fn(async (_id: string) => false);
 
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getBySlug: vi.fn(async () => null),
 	getUserRole: vi.fn(async () => null),
 	listForUser: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/band/band-address-service', () => ({
+vi.mock('#lib/server/band/band-address-service.js', () => ({
 	resolveBandSlug: vi.fn(async () => null)
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	capabilitySet: (held: string[]) => (held.includes('treasurer') ? ['sponsor.read'] : []),
-	isElevated: vi.fn(async () => false),
+	can: vi.fn(async () => false),
 	positionsFor: (id: string) => positionsFor(id),
 	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
 }));
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/capability/capability-grants.js', () => ({
+	leadsOpenShow: (id: string) => leadsOpenShow(id)
+}));
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	hasLoanableItems: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/feature-flags', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
-vi.mock('$lib/server/inbox/thread-service', () => ({ getUnresolvedCount: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/band-service', () => ({ countBandUnread: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/group-chat-service', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
+vi.mock('#lib/server/inbox/thread-service.js', () => ({
+	getUnresolvedCount: vi.fn(async () => 0)
+}));
+vi.mock('#lib/server/inbox/band-service.js', () => ({ countBandUnread: vi.fn(async () => 0) }));
+vi.mock('#lib/server/inbox/group-chat-service.js', () => ({
 	countGroupChatUnread: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/inbox/unified-service', () => ({
+vi.mock('#lib/server/inbox/unified-service.js', () => ({
 	countUnifiedUnread: vi.fn(async () => 0),
 	countUnifiedUnreadFor: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/inbox/direct-service', () => ({
+vi.mock('#lib/server/inbox/direct-service.js', () => ({
 	countPendingRequests: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	countVolunteerWorkWaiting: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/event/community-event-service', () => ({
-	countPendingSubmissions: vi.fn(async () => 0)
+vi.mock('#lib/server/review/review-registry.js', () => ({
+	countReviewFeed: vi.fn(async () => ({ total: 0, byKind: {} }))
 }));
-vi.mock('$lib/server/local-resource/local-resource-service', () => ({
-	countPendingTips: vi.fn(async () => 0)
-}));
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
-	countAwaitingModeration: vi.fn(async () => 0),
-	countAwaitingResponse: vi.fn(async () => 0),
-	countPendingEdits: vi.fn(async () => 0)
-}));
-vi.mock('$lib/server/moderation/appeal-service', () => ({
-	countPendingAppeals: vi.fn(async () => 0)
-}));
-vi.mock('$lib/server/moderation/moderation-service', () => ({
+vi.mock('#lib/server/moderation/moderation-service.js', () => ({
 	acceptsDirectMessages: vi.fn(async () => true)
 }));
-vi.mock('$lib/server/notification/in-app-service', () => ({
+vi.mock('#lib/server/notification/in-app-service.js', () => ({
 	getForUser: vi.fn(async () => []),
 	getUnreadCount: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
-		locals: { user: { id: 'user-1', name: 'Dev', email: 'dev@example.com' } },
-		url: new URL('http://localhost/staff/sponsors')
+		locals: { user: { id: 'user-1', name: 'Dev', email: 'dev@example.com' } }
 	}),
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
@@ -92,6 +86,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	positionsFor.mockResolvedValue([]);
 	committeeCapabilitiesFor.mockResolvedValue([]);
+	leadsOpenShow.mockResolvedValue(false);
 });
 
 describe('getStaffLayout', () => {
@@ -103,6 +98,13 @@ describe('getStaffLayout', () => {
 
 	it('still turns away someone with neither a position nor a seat', async () => {
 		await expect(layout.getStaffLayout()).rejects.toMatchObject({ status: 302, location: '/' });
+	});
+
+	it('opens the panel to the event lead of an open show', async () => {
+		leadsOpenShow.mockResolvedValue(true);
+		const out = await layout.getStaffLayout();
+		expect(out.capabilities).toEqual([]);
+		expect(leadsOpenShow).toHaveBeenCalledWith('user-1');
 	});
 
 	it("adds the seat's capabilities to a position's without duplicating them", async () => {

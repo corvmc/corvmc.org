@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Theme and CSS, as one control.
 	 *
@@ -14,11 +16,11 @@
 	 * `theme-fork.ts` for the state rules, which are pinned by a spec.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { BAND_THEMES, type BandThemeValue } from '$lib/types/band-page';
-	import themeSheet from '$lib/themes/band-site/index.css?raw';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { BAND_THEMES, type BandThemeValue } from '#lib/types/band-page.js';
+	import themeSheet from '#lib/themes/band-site/index.css?raw';
 	import {
 		fork,
 		needsConfirm,
@@ -66,20 +68,22 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="flex items-center justify-between gap-2 border-b border-base-300 px-4 py-3">
-		<h2 class="text-sm font-bold uppercase">Style</h2>
+		<h2 class="text-sm font-bold uppercase">{m.band_style_title()}</h2>
 		<Button type="button" variant="ghost" size="sm" shape="square" onclick={onclose}>
 			<IconX size={16} />
-			<span class="sr-only">Close the style panel</span>
+			<span class="sr-only">{m.band_slug_page_editor_style_panel_close_style_panel_label()}</span>
 		</Button>
 	</div>
 
 	<div class="flex min-h-0 flex-1 flex-col gap-3 p-4">
 		<label class="fieldset">
-			<span class="fieldset-legend text-xs font-medium">Theme</span>
+			<span class="fieldset-legend text-xs font-medium"
+				>{m.band_slug_page_editor_style_panel_theme_label()}</span
+			>
 			<Select
 				size="sm"
 				class="mt-1 w-full"
-				aria-label="Theme"
+				aria-label={m.band_slug_page_editor_style_panel_theme_label()}
 				value={state.theme}
 				onchange={(e: Event) =>
 					selectTheme((e.currentTarget as HTMLSelectElement).value as BandThemeValue)}
@@ -101,15 +105,16 @@
 			     identical either way: the theme's rules were folded in ahead of
 			     their overrides, which is the order that was already resolving. -->
 			<Alert type="info" class="text-xs">
-				This page's theme rules have been folded into your CSS, so you can see all of them. Nothing
-				has changed about how it looks.
+				{m.band_slug_page_editor_style_panel_page_s_theme_rules_have_body()}
 			</Alert>
 		{/if}
 
 		<div class="flex min-h-0 flex-1 flex-col">
 			<div class="flex flex-wrap items-center justify-between gap-2 pb-1">
 				<span class="fieldset-legend text-xs font-medium">
-					{forked ? 'Your CSS' : 'What this theme does'}
+					{forked
+						? m.band_slug_page_editor_style_panel_css_text()
+						: m.band_slug_page_editor_style_panel_what_theme_does_text()}
 				</span>
 				{#if !forked}
 					<Button
@@ -117,9 +122,10 @@
 						variant="default"
 						outline
 						size="xs"
+						data-testid="fork-theme"
 						onclick={() => onchange(fork(state, themeSheet))}
 					>
-						Customize
+						{m.band_slug_page_editor_style_panel_customize_label()}
 					</Button>
 				{/if}
 			</div>
@@ -130,18 +136,23 @@
 			<textarea
 				class="textarea min-h-64 w-full flex-1 font-mono text-xs"
 				readonly={!forked}
-				aria-label={forked ? 'Your custom CSS' : 'Theme CSS (read-only)'}
+				aria-label={forked
+					? m.band_slug_page_editor_style_panel_custom_css_label()
+					: m.band_slug_page_editor_style_panel_theme_css_read_only_label()}
 				placeholder={`h1 {\n  /* your styles here */\n}`}
 				value={css}
 				oninput={(e) => onchange({ theme: 'custom', customCss: e.currentTarget.value })}></textarea>
 
 			<p class="mt-1 text-xs opacity-60">
 				{#if forked}
-					Wrapped in <code>.band-site-container</code>, so a bare selector like <code>h1</code> only ever
-					affects your page. Max 50KB; external stylesheets and scripts are stripped.
+					<ParaglideMessage
+						message={m.band_slug_page_editor_style_panel_wrapped_band_site_containe_text}
+						inputs={{}}
+						>{#snippet code({ children })}<code>{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				{:else}
-					Read-only. Customize to take these rules over — the theme stops applying and this becomes
-					your whole page.
+					{m.band_slug_page_editor_style_panel_read_only_customize_take_t_text()}
 				{/if}
 			</p>
 		</div>

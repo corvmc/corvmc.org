@@ -27,7 +27,7 @@ const updateSet = vi.fn(() => ({
 	}))
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainableSelect(),
 		update: vi.fn(() => ({ set: updateSet })),
@@ -36,40 +36,69 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const cancelMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	cancel: (...args: unknown[]) => cancelMock(...args)
 }));
 
 const subCancelMock = vi.fn().mockResolvedValue(undefined);
 const countPublishedListingsBy = vi.fn(async () => 0);
-vi.mock('$lib/server/event/community-event-service', () => ({
+vi.mock('#lib/server/event/community-event-service.js', () => ({
 	countPublishedListingsBy: (...a: unknown[]) => countPublishedListingsBy(...(a as []))
 }));
 
 const subResumeMock = vi.fn().mockResolvedValue(undefined);
 const getSubscriptionMock = vi.fn(async () => null as { cancelAtPeriodEnd: boolean } | null);
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	cancel: (...args: unknown[]) => subCancelMock(...args),
 	resume: (...args: unknown[]) => subResumeMock(...args),
+	pause: vi.fn(),
+	unpause: vi.fn(),
 	getSubscription: (...args: unknown[]) => getSubscriptionMock(...(args as []))
 }));
 
 const revokeMemberCodeMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/lock/member-code-service', () => ({
+vi.mock('#lib/server/lock/member-code-service.js', () => ({
 	revokeMemberCode: (...args: unknown[]) => revokeMemberCodeMock(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/moderation/removal-link.js', () => ({
+	removalLink: (id: string) => `https://corvmc.test/removed/${id}`,
+	REMOVAL_LINK_TTL_DAYS: 60
+}));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
 }));
 const sendSuspendedMock = vi.fn().mockResolvedValue(undefined);
 const sendRestoredMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/auth-emails', () => ({
+vi.mock('#lib/server/auth-emails.js', () => ({
 	sendAccountSuspendedEmail: (...args: unknown[]) => sendSuspendedMock(...args),
 	sendAccountRestoredEmail: (...args: unknown[]) => sendRestoredMock(...args)
+}));
+
+const fileStaffActionMock = vi.fn(async (_p: unknown) => ({ id: 'flag-1' }));
+vi.mock('#lib/server/flag/flag-service.js', () => ({
+	fileStaffAction: (p: unknown) => fileStaffActionMock(p)
+}));
+const recordRemovalMock = vi.fn(async (_p: unknown) => ({ id: 'removal-1' }));
+const liftOpenRemovalMock = vi.fn(async (..._a: unknown[]) => ({ id: 'removal-1' }) as unknown);
+const getOpenRemovalMock = vi.fn(async (_id: string) => null as unknown);
+vi.mock('#lib/server/moderation/removal-service.js', () => ({
+	recordRemoval: (p: unknown) => recordRemovalMock(p),
+	liftOpenRemoval: (...a: unknown[]) => liftOpenRemovalMock(...a),
+	getOpenRemoval: (id: string) => getOpenRemovalMock(id),
+	listLapsedSuspensions: vi.fn(async () => [])
+}));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: vi.fn(async () => 90)
+}));
+const blockEmailMock = vi.fn(async (_p: unknown) => undefined);
+const unblockForRemovalMock = vi.fn(async (_id: string) => undefined);
+vi.mock('#lib/server/moderation/blocklist-service.js', () => ({
+	blockEmail: (p: unknown) => blockEmailMock(p),
+	unblockForRemoval: (id: string) => unblockForRemovalMock(id)
 }));
 
 import {
@@ -104,6 +133,11 @@ beforeEach(() => {
 	recordAuditEntry.mockClear();
 	sendSuspendedMock.mockClear();
 	sendRestoredMock.mockClear();
+	fileStaffActionMock.mockClear();
+	recordRemovalMock.mockClear();
+	liftOpenRemovalMock.mockClear();
+	blockEmailMock.mockClear();
+	unblockForRemovalMock.mockClear();
 });
 
 // ---------------------------------------------------------------------------
@@ -338,7 +372,11 @@ describe('banUser', () => {
 
 		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
 
-		expect(sendSuspendedMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+		expect(sendSuspendedMock).toHaveBeenCalledWith({
+			toEmail: 'maya@example.com',
+			name: 'Maya',
+			appealUrl: 'https://corvmc.test/removed/removal-1'
+		});
 		expect(JSON.stringify(sendSuspendedMock.mock.calls)).not.toContain('Threatened');
 	});
 
@@ -354,6 +392,29 @@ describe('banUser', () => {
 			subject: { type: 'user', id: 'u1', label: 'Jordan' },
 			details: { reason: 'Threatened another member' }
 		});
+	});
+
+	// Every removal rests on an upheld report; a staffer acting alone files one.
+	it('records the removal against a staff-action report, with what it undid', async () => {
+		updateResult = [{ id: 'u1', email: 'Maya@Example.com', deletedAt: null, stripeId: null }];
+		selectResultQueue = [[], [{ id: 'r1' }]];
+
+		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
+
+		expect(fileStaffActionMock).toHaveBeenCalledWith(
+			expect.objectContaining({ entityType: 'member_profile', entityId: 'u1', staffId: 'staff-1' })
+		);
+		expect(recordRemovalMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'u1',
+				kind: 'ban',
+				flagId: 'flag-1',
+				ledger: { reservationIds: ['r1'], doorCodeIds: [], billing: 'none' }
+			})
+		);
+		expect(blockEmailMock).toHaveBeenCalledWith(
+			expect.objectContaining({ email: 'Maya@Example.com', source: 'ban', removalId: 'removal-1' })
+		);
 	});
 
 	it('refuses to let staff ban themselves', async () => {
@@ -384,7 +445,7 @@ describe('unbanUser', () => {
 		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
 		getSubscriptionMock.mockResolvedValueOnce({ cancelAtPeriodEnd: true });
 
-		const row = await unbanUser('u1');
+		const row = await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(updateSet).toHaveBeenCalledWith(
 			expect.objectContaining({ bannedAt: null, bannedById: null, banReason: null })
@@ -393,10 +454,22 @@ describe('unbanUser', () => {
 		expect(row.subscription).toBe('resumed');
 	});
 
+	it('closes the open removal and unblocks the address that ban added', async () => {
+		updateResult = [{ id: 'u1', stripeId: null, deletedAt: null }];
+
+		await unbanUser('u1', { actorId: 'staff-2' });
+
+		expect(liftOpenRemovalMock).toHaveBeenCalledWith('u1', {
+			liftedByUserId: 'staff-2',
+			liftReason: 'staff_lifted'
+		});
+		expect(unblockForRemovalMock).toHaveBeenCalledWith('removal-1');
+	});
+
 	it('emails the member that the account is restored', async () => {
 		updateResult = [{ id: 'u1', email: 'maya@example.com', name: 'Maya', stripeId: null }];
 
-		await unbanUser('u1');
+		await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(sendRestoredMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
 	});
@@ -404,7 +477,7 @@ describe('unbanUser', () => {
 	it('writes a user.unbanned entry before restoring the account', async () => {
 		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: null, deletedAt: null }];
 
-		await unbanUser('u1');
+		await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(recordAuditEntry.mock.calls.map(([e]) => (e as { action: string }).action)).toEqual([
 			'user.unbanned',
@@ -419,7 +492,7 @@ describe('unbanUser', () => {
 
 	it('throws UserNotFoundError when the account is not banned', async () => {
 		updateResult = [];
-		await expect(unbanUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+		await expect(unbanUser('u1', { actorId: 'staff-2' })).rejects.toBeInstanceOf(UserNotFoundError);
 		expect(sendRestoredMock).not.toHaveBeenCalled();
 	});
 });

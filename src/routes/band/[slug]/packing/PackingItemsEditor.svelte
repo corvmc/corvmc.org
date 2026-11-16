@@ -1,6 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		packingCategoryOptions,
 		riderElementKindOptions,
@@ -9,9 +10,9 @@
 		PACKING_MAX_ITEMS,
 		PACKING_MAX_QUANTITY,
 		PACKING_ITEM_NOTES_MAX
-	} from '$lib/config';
-	import type { PackingItemRowState } from '$lib/types/packing';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	} from '#lib/config.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';
 
@@ -96,7 +97,10 @@
 		)
 	);
 
-	const kindOptions = [{ value: '', label: 'Never goes on a stage' }, ...riderElementKindOptions];
+	const kindOptions = [
+		{ value: '', label: m.band_slug_packing_packing_items_editor_never_goes_stage_label() },
+		...riderElementKindOptions
+	];
 	const atLimit = $derived(items.length >= PACKING_MAX_ITEMS);
 </script>
 
@@ -114,25 +118,25 @@
 		<div class="rounded-box border border-base-300 p-3">
 			<div class="grid gap-3 md:grid-cols-[1fr_8rem_1fr]">
 				<Field
-					name="{idPrefix}_{i}_label"
-					label="What"
+					id="{idPrefix}_{i}_label"
+					label={m.band_slug_packing_packing_items_editor_what_label()}
 					bind:value={items[i].label}
 					{readonly}
-					placeholder="Bass rig"
+					placeholder={m.band_slug_packing_packing_items_editor_bass_rig_placeholder()}
 				/>
 				<Field
-					name="{idPrefix}_{i}_qty"
+					id="{idPrefix}_{i}_qty"
 					type="number"
-					label="How many"
+					label={m.band_slug_packing_packing_items_editor_how_many_label()}
 					bind:value={items[i].quantity}
 					min={1}
 					max={PACKING_MAX_QUANTITY}
 					{readonly}
 				/>
 				<Field
-					name="{idPrefix}_{i}_cat"
+					id="{idPrefix}_{i}_cat"
 					type="select"
-					label="Where it lives"
+					label={m.band_slug_packing_packing_items_editor_where_lives_label()}
 					options={packingCategoryOptions}
 					bind:value={items[i].category}
 					{readonly}
@@ -142,24 +146,24 @@
 
 			<div class="mt-3 grid gap-3 md:grid-cols-2">
 				<Field
-					name="{idPrefix}_{i}_kind"
+					id="{idPrefix}_{i}_kind"
 					type="select"
-					label="On the stage plot as"
+					label={m.band_slug_packing_packing_items_editor_stage_plot_as_label()}
 					options={kindOptions}
 					bind:value={items[i].riderKind}
 					{readonly}
 					display={item.riderKind
 						? riderElementKindLabels[item.riderKind]
 						: 'Never goes on a stage'}
-					description="Only for things that stand on a stage. A first-aid kit is not one."
+					description={m.band_slug_packing_packing_items_editor_description_body()}
 				/>
 				<Field
-					name="{idPrefix}_{i}_notes"
-					label="Notes"
+					id="{idPrefix}_{i}_notes"
+					label={m.band_notes_label()}
 					bind:value={items[i].notes}
 					maxlength={PACKING_ITEM_NOTES_MAX}
 					{readonly}
-					placeholder="Lives in the blue crate"
+					placeholder={m.band_slug_packing_packing_items_editor_lives_blue_crate_placeholder()}
 				/>
 			</div>
 
@@ -171,7 +175,7 @@
 						size="xs"
 						onclick={() => moveItem(i, -1)}
 						disabled={i === 0}
-						aria-label="Move up"
+						aria-label={m.band_slug_packing_packing_items_editor_move_up_label()}
 					>
 						<IconChevronUp size={16} />
 					</Button>
@@ -181,7 +185,7 @@
 						size="xs"
 						onclick={() => moveItem(i, 1)}
 						disabled={i === items.length - 1}
-						aria-label="Move down"
+						aria-label={m.band_slug_packing_packing_items_editor_move_down_label()}
 					>
 						<IconChevronDown size={16} />
 					</Button>
@@ -190,7 +194,7 @@
 						variant="ghost"
 						size="xs"
 						onclick={() => removeItem(i)}
-						aria-label="Remove"
+						aria-label={m.band_remove_label()}
 					>
 						<IconTrash size={16} />
 					</Button>
@@ -198,7 +202,9 @@
 			{/if}
 		</div>
 	{:else}
-		<p class="text-sm text-base-content/60">Nothing here yet.</p>
+		<p class="text-sm text-base-content/60">
+			{m.band_slug_packing_packing_items_editor_nothing_here_yet_text()}
+		</p>
 	{/each}
 
 	<!-- The crate's count is the badge in the card header. A running total here
@@ -207,11 +213,12 @@
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
 				<Button type="button" variant="ghost" size="sm" onclick={addItem} disabled={atLimit}>
-					<IconPlus size={16} /> Add something
+					<IconPlus size={16} />
+					{m.band_slug_packing_packing_items_editor_add_something_label()}
 				</Button>
 				{#if atLimit}
 					<span class="text-xs text-base-content/60">
-						{PACKING_MAX_ITEMS} is the limit for one crate.
+						{m.band_slug_packing_packing_items_editor_limit_one_crate_text({ PACKING_MAX_ITEMS })}
 					</span>
 				{/if}
 			</div>

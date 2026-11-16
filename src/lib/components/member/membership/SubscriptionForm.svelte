@@ -1,13 +1,14 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import { formatDollars } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import { formatDollars } from '#lib/utils/format.js';
 	import { untrack } from 'svelte';
-	import { DOLLARS_PER_UNIT } from '$lib/config';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
-	import type { RemoteFormInput } from '@sveltejs/kit';
+	import { DOLLARS_PER_UNIT } from '#lib/config.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Field from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
+	import type { RemoteFormInput } from '$app/server';
 
 	const STEP = DOLLARS_PER_UNIT;
 	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 → 2 free hours
@@ -46,20 +47,22 @@
 <Form {remote} {onsuccess} class="space-y-6">
 	<div>
 		<div class="flex items-baseline justify-between">
-			<span class="fieldset-legend font-medium">Monthly contribution</span>
+			<span class="fieldset-legend font-medium"
+				>{m.member_membership_subscription_form_monthly_contribution_text()}</span
+			>
 			<span class="text-3xl font-bold text-primary">${amount}</span>
 		</div>
 
 		<input
 			id="amount"
-			name="amount"
+			{...remote.fields.amount.as('text')}
 			type="range"
 			min={MIN_AMOUNT}
 			max={MAX_AMOUNT}
 			step={STEP}
 			bind:value={amount}
 			class="range mt-3 w-full range-primary"
-			aria-label="Monthly contribution amount"
+			aria-label={m.member_membership_subscription_form_aria_label()}
 		/>
 		<div class="mt-1 flex w-full justify-between px-1 text-xs opacity-50">
 			{#each ticks as tick (tick)}
@@ -73,36 +76,43 @@
 		</div>
 
 		<p class="mt-4 text-sm font-medium text-primary">
-			= {freeHours} free practice hour{freeHours === 1 ? '' : 's'} every month
+			{m.member_membership_subscription_form_free_practice_hours_ever_text({ freeHours })}
 		</p>
 	</div>
 
 	<div>
 		<Field
-			name="coverFees"
+			field={remote.fields.coverFees}
 			type="toggle"
 			label=""
 			bind:value={coverFees}
-			checkboxLabel="Cover processing fees so the Collective receives 100% of your contribution"
+			checkboxLabel={m.member_membership_subscription_form_checkbox_label_checkbox()}
+			description={m.member_membership_subscription_form_collective_receives_full_body()}
 		/>
 		{#if coverFees}
 			<p class="ml-12 text-muted">
-				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)
+				{m.member_membership_subscription_form_adds_cover_processing_fe_text({ feeDisplay })}
 			</p>
 		{/if}
 	</div>
 
 	<div class="rounded-lg bg-base-200/50 p-4">
-		<p class="text-muted">New monthly total</p>
+		<p class="text-muted">{m.member_membership_subscription_form_new_monthly_total_text()}</p>
 		<p class="mt-1 font-semibold text-primary">
-			${amount}.00 membership{#if coverFees}
-				+ ${feeDisplay} processing fees{/if} = ${totalDisplay} total per month
+			{m.member_membership_subscription_form_00_membership_text({
+				amount
+			})}{#if coverFees}{m.member_membership_subscription_form_processing_fees_text({
+					feeDisplay
+				})}{/if}
+			{m.member_membership_subscription_form_total_per_month_text({ totalDisplay })}
 		</p>
 	</div>
 
 	<SubmitButton
 		variant="primary"
 		class="w-full"
-		label={mode === 'create' ? 'Become a Sustaining Member' : 'Update Contribution'}
+		label={mode === 'create'
+			? m.member_membership_subscription_form_become_sustaining_member_label()
+			: m.member_update_contribution_label()}
 	/>
 </Form>

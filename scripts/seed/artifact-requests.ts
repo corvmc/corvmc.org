@@ -56,23 +56,20 @@ async function seedPosterCommissions(eventIds: string[]): Promise<number> {
 		.returning({ id: directoryEntry.id });
 
 	const day = 24 * 60 * 60 * 1000;
-	const [, delivered] = await db
-		.insert(artifactRequest)
-		.values([
-			{
-				eventId: overdueFor,
-				entryId: artist.id,
-				artifact: 'poster_art',
-				dueAt: new Date(Date.now() - 3 * day)
-			},
-			{
-				eventId: deliveredFor,
-				entryId: artist.id,
-				artifact: 'poster_art',
-				dueAt: new Date(Date.now() + 7 * day)
-			}
-		])
-		.returning({ id: artifactRequest.id });
+	const [, delivered] = await batchInsert(artifactRequest, [
+		{
+			eventId: overdueFor,
+			entryId: artist.id,
+			artifact: 'poster_art',
+			dueAt: new Date(Date.now() - 3 * day)
+		},
+		{
+			eventId: deliveredFor,
+			entryId: artist.id,
+			artifact: 'poster_art',
+			dueAt: new Date(Date.now() + 7 * day)
+		}
+	]);
 
 	const [art] = await db
 		.insert(media)

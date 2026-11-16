@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { expireWaitlisted } from '$lib/server/reservation/waitlist-service';
+import * as env from '$app/env/private';
+import { expireWaitlisted } from '#lib/server/reservation/waitlist-service.js';
 
 /**
  * Cron endpoint for expiring waitlisted reservations past their 24h window.
@@ -24,5 +24,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const result = await expireWaitlisted();
 
-	return json(result);
+	return Response.json(result);
 };

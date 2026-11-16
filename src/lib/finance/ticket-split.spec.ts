@@ -7,7 +7,7 @@ import {
 	validateTicketSplit
 } from './ticket-split';
 import { calculateCardPresentFee, calculateTotalWithFeeCoverage } from './fees';
-import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 
 /**
  * The commercial model of a ticket, to the cent. What the buyer is shown, what
@@ -367,5 +367,23 @@ describe('doorTicketSplit', () => {
 			suggestedUnitCents: 0
 		});
 		expect(split).toMatchObject({ chargeCents: 0, feeCents: 0, actsCents: 0, collectiveCents: 0 });
+	});
+
+	// Cash (#2800): the same guarantee, no fee, and no minimum.
+	it('splits cash the way it splits a card, without the fee', () => {
+		const cash = doorTicketSplit({
+			unitPriceCents: 1000,
+			quantity: 2,
+			suggestedUnitCents: 1000,
+			payment: 'cash'
+		});
+		expect(cash).toMatchObject({ chargeCents: 2000, feeCents: 0, actsCents: 1400 });
+		expect(cash.actsCents + cash.collectiveCents).toBe(2000);
+	});
+
+	it('takes cash under the card minimum, and is free only at zero', () => {
+		const small = { quantity: 1, suggestedUnitCents: 0, payment: 'cash' as const };
+		expect(doorTicketSplit({ ...small, unitPriceCents: 100 }).chargeCents).toBe(100);
+		expect(doorTicketSplit({ ...small, unitPriceCents: 0 }).chargeCents).toBe(0);
 	});
 });

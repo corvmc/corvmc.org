@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import FormField from '../ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import {
 		refundAndCancelReservation,
 		refundOnlyReservation
-	} from '$lib/remote/reservations.remote';
+	} from '#lib/remote/reservations.remote.js';
 
 	let {
 		reservation,
@@ -39,16 +40,20 @@
 
 <Action
 	{action}
-	label="Refund"
-	modalTitle="Refund Payment"
-	submitLabel={cancelling ? 'Refund and cancel' : 'Refund'}
+	label={m.actions_refund_reservation_refund_label()}
+	modalTitle={m.actions_refund_reservation_modal_title()}
+	submitLabel={cancelling
+		? m.actions_refund_reservation_refund_cancel_label()
+		: m.actions_refund_reservation_refund_label()}
 	submitVariant="error"
-	successToast={cancelling ? 'Payment refunded and reservation cancelled' : 'Payment refunded'}
+	successToast={cancelling
+		? m.actions_refund_reservation_payment_refunded_reservation_canc_toast()
+		: m.actions_refund_reservation_payment_refunded_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -57,15 +62,15 @@
 		{#if canCancel}
 			<FormField
 				type="checkbox"
-				name="alsoCancel"
-				label="Cancellation"
-				checkboxLabel="Also cancel this reservation (releases the slot to the waitlist and notifies the member)"
+				label={m.actions_refund_reservation_cancellation_label()}
+				checkboxLabel={m.actions_refund_reservation_checkbox_label_checkbox()}
+				description={m.actions_refund_reservation_releases_slot_waitlist_body()}
 				bind:value={alsoCancel}
 			/>
 		{/if}
 		{#if !cancelling}
-			<p class="text-sm">
-				The payment is refunded and the booking is not cancelled, for a session that went ahead.
+			<p class="text-sm" data-testid="refund-only-note">
+				{m.actions_refund_reservation_payment_refunded_booking_not_canc_text()}
 			</p>
 		{/if}
 	{/snippet}

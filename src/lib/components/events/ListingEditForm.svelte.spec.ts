@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-vi.mock('$lib/remote/events.remote', () => {
+vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -23,7 +23,7 @@ vi.mock('$lib/remote/events.remote', () => {
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -37,8 +37,11 @@ function listing(source: string, ticketingEnabled: boolean) {
 		description: null,
 		tags: null,
 		kind: 'show',
+		visibility: 'public',
+		bandId: null,
 		source,
 		location: null,
+		address: null,
 		venueId: null,
 		externalTicketUrl: null,
 		startsAt: new Date('2026-11-14T03:00:00Z'),
@@ -64,19 +67,27 @@ describe('ListingEditForm ticketing', () => {
 	// edit that posted `ticketingEnabled=false` closed that sale and dropped its
 	// capacity, so the flag is not posted at all for a listing CMC doesn't sell.
 	it("leaves a band's own sale alone", async () => {
-		const { container } = await render(ListingEditForm, props('band', true));
+		const { container, locator } = await render(ListingEditForm, props('band', true));
 
-		await expect.element(page.getByText('Edit listing')).toBeVisible();
-		expect(container.querySelector('input[name="ticketingEnabled"]')).toBeNull();
-		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
-		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		expect(
+			container.querySelector('input:is([name="ticketingEnabled"], [name^="ticketingEnabled/"])')
+		).toBeNull();
+		expect(
+			container.querySelector('input:is([name="ticketQuantity"], [name^="ticketQuantity/"])')
+		).toBeNull();
+		await expect
+			.element(page.getByLabelText('Sell tickets through the site'))
+			.not.toBeInTheDocument();
 	});
 
 	it('offers a CMC listing the toggle, and posts it', async () => {
 		const { container } = await render(ListingEditForm, props('cmc', true));
 
-		await expect.element(page.getByText('Sell tickets through the site')).toBeVisible();
-		const flag = container.querySelector<HTMLInputElement>('input[name="ticketingEnabled"]');
+		await expect.element(page.getByLabelText('Sell tickets through the site')).toBeVisible();
+		const flag = container.querySelector<HTMLInputElement>(
+			'input:is([name="ticketingEnabled"], [name^="ticketingEnabled/"])'
+		);
 		expect(flag).not.toBeNull();
 		expect(container.querySelector<HTMLInputElement>('#editTicketQuantity')?.value).toBe('80');
 	});
@@ -85,16 +96,38 @@ describe('ListingEditForm ticketing', () => {
 // #2126: the record is editable once cancelled; the sale and the room are not.
 describe('ListingEditForm on a cancelled listing', () => {
 	it('offers no ticket terms and no space hold', async () => {
-		const { container } = await render(ListingEditForm, {
+		const { container, locator } = await render(ListingEditForm, {
 			...props('cmc', true),
 			cancelled: true
 		});
 
-		await expect.element(page.getByText('Edit listing')).toBeVisible();
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		expect(container.querySelector('#editTitle')).not.toBeNull();
 		expect(container.querySelector('#editTicketPrice')).toBeNull();
-		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
-		await expect.element(page.getByText('Sell tickets through the site')).not.toBeInTheDocument();
-		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
+		expect(
+			container.querySelector('input:is([name="ticketQuantity"], [name^="ticketQuantity/"])')
+		).toBeNull();
+		await expect
+			.element(page.getByLabelText('Sell tickets through the site'))
+			.not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Reserve practice space')).not.toBeInTheDocument();
+	});
+});
+
+// #2133: venue name and street address are two inputs, each seeded from its own column.
+describe('ListingEditForm place fields', () => {
+	it('posts the venue as location and the street address as address', async () => {
+		const base = props('band', false);
+		const { container, locator } = await render(ListingEditForm, {
+			...base,
+			event: { ...base.event, location: 'Bombs Away Cafe', address: '2527 NW Monroe Ave' }
+		});
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		const value = (name: string) =>
+			container.querySelector<HTMLInputElement>(`input:is([name="${name}"], [name^="${name}/"])`)
+				?.value;
+		expect(value('location')).toBe('Bombs Away Cafe');
+		expect(value('address')).toBe('2527 NW Monroe Ave');
 	});
 });

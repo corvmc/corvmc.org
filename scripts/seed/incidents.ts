@@ -1,14 +1,15 @@
 import { incident, incidentNote } from '../../src/lib/server/db/schema/incident';
+import { auditLog } from '../../src/lib/server/db/schema/audit';
 import { batchInsert } from './db';
 import { randomUUID } from 'crypto';
 
 /**
  * The incident log. Every category, both statuses, one incident with a member
- * linked, and one that was reopened — whose old resolution survives as a note,
- * which is the case the detail page renders differently.
+ * linked, and one that was reopened and one held — each with the audit entry
+ * the detail page's History card renders.
  */
 export async function seedIncidents(
-	staff: { id: string; name: string },
+	staff: { id: string; name: string; email: string },
 	member: { id: string; name: string }
 ) {
 	const day = 24 * 3600_000;
@@ -25,7 +26,12 @@ export async function seedIncidents(
 		resolvedAt: ago(d, 12)
 	});
 
-	const ids = { noise: randomUUID(), reopened: randomUUID(), conduct: randomUUID() };
+	const ids = {
+		noise: randomUUID(),
+		reopened: randomUUID(),
+		conduct: randomUUID(),
+		retained: randomUUID()
+	};
 
 	const incidents = await batchInsert(incident, [
 		{
@@ -86,6 +92,7 @@ export async function seedIncidents(
 			...resolved(25, 'Pane replaced; insurance claim filed.')
 		},
 		{
+			id: ids.retained,
 			occurredAt: ago(50),
 			category: 'theft',
 			location: 'Merch table',
@@ -115,18 +122,33 @@ export async function seedIncidents(
 			createdAt: new Date(Date.now() - 2 * day)
 		},
 		{
-			incidentId: ids.reopened,
-			authorUserId: staff.id,
-			authorName: staff.name,
-			body: 'Reopened. Previous resolution: Asked bands to keep the alley door shut after 11.',
-			createdAt: new Date(Date.now() - 3 * day)
-		},
-		{
 			incidentId: ids.conduct,
 			authorUserId: staff.id,
 			authorName: staff.name,
 			body: 'Spoke with them the next day; they apologised to the volunteer.',
 			createdAt: new Date(Date.now() - 5 * day)
+		}
+	]);
+
+	const actor = { actorUserId: staff.id, actorName: staff.name, actorEmail: staff.email };
+	await batchInsert(auditLog, [
+		{
+			...actor,
+			action: 'incident.reopened',
+			subjectType: 'incident',
+			subjectId: ids.reopened,
+			subjectLabel: 'Same neighbour — load-out noise after midnight',
+			details: { previousResolution: 'Asked bands to keep the alley door shut after 11.' },
+			createdAt: new Date(Date.now() - 3 * day)
+		},
+		{
+			...actor,
+			action: 'incident.retention_changed',
+			subjectType: 'incident',
+			subjectId: ids.retained,
+			subjectLabel: 'Cash box short $40 after close',
+			details: { retain: true, reason: 'Open insurance claim.' },
+			createdAt: new Date(Date.now() - 45 * day)
 		}
 	]);
 

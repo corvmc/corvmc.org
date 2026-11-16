@@ -25,8 +25,8 @@
 			"declarations": ["input count", "local countPlural = count: plural"],
 			"selectors": ["countPlural"],
 			"match": {
-				"countPlural=one": "external act",
-				"countPlural=*": "external acts"
+				"countPlural=one": "outside act",
+				"countPlural=*": "outside acts"
 			}
 		}
 	],
@@ -85,8 +85,8 @@
 			"declarations": ["input count", "local countPlural = count: plural"],
 			"selectors": ["countPlural"],
 			"match": {
-				"countPlural=one": "instructor",
-				"countPlural=*": "instructors"
+				"countPlural=one": "teacher",
+				"countPlural=*": "teachers"
 			}
 		}
 	],
@@ -220,6 +220,36 @@
 			}
 		}
 	],
+	"term_organization": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "organization",
+				"countPlural=*": "organizations"
+			}
+		}
+	],
+	"term_contact": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "contact",
+				"countPlural=*": "contacts"
+			}
+		}
+	],
+	"term_setting": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "setting",
+				"countPlural=*": "settings"
+			}
+		}
+	],
 	"term_incident": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],
@@ -227,6 +257,56 @@
 			"match": {
 				"countPlural=one": "incident",
 				"countPlural=*": "incidents"
+			}
+		}
+	],
+	"term_resource_tip": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "resource tip",
+				"countPlural=*": "resource tips"
+			}
+		}
+	],
+	"term_hour_log": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "hour log",
+				"countPlural=*": "hour logs"
+			}
+		}
+	],
+	"term_work_request": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "problem",
+				"countPlural=*": "problems"
+			}
+		}
+	],
+	"term_group_application": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "application",
+				"countPlural=*": "applications"
+			}
+		}
+	],
+	"term_market_vendor": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "vendor",
+				"countPlural=*": "vendors"
 			}
 		}
 	],

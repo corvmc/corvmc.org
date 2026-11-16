@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	inboxThread,
 	inboxMessage,
 	inboxNote,
 	inboxParticipant,
 	inboxThreadTag
-} from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { alias } from 'drizzle-orm/sqlite-core';
 import {
 	eq,
@@ -23,14 +23,15 @@ import {
 	notInArray,
 	sql
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import type { SQL } from 'drizzle-orm';
-import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
-import type { PaginationInput } from '$lib/server/db/paginate';
-import { paginate } from '$lib/server/db/paginate';
+import type { InboxChannel, InboxThreadStatus } from '#lib/server/db/schema/inbox.js';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
+import { paginate } from '#lib/server/db/paginate.js';
 import { z } from 'zod';
-import { contactSubjects, inboxThreadStatuses } from '$lib/config';
-import type { InboxView } from '$lib/config';
+import { contactSubjects, inboxThreadStatuses } from '#lib/config.js';
+import type { InboxView } from '#lib/config.js';
+import { markdownExcerpt, messageBodyIsMarkdown } from '#lib/utils/markdown.js';
 
 /**
  * The one expression that keeps conversations the collective is not party to out
@@ -127,6 +128,15 @@ export function truncatePreview(text: string): string {
 	return text.slice(0, PREVIEW_LENGTH) + '…';
 }
 
+/**
+ * A thread's preview line for a new message. A markdown body loses its syntax
+ * here, since the preview lands in lists and notification emails as text.
+ */
+export function messagePreview(body: string, channel: InboxChannel): string {
+	if (!messageBodyIsMarkdown(channel)) return truncatePreview(body);
+	return markdownExcerpt(body, PREVIEW_LENGTH + 1) ?? truncatePreview(body);
+}
+
 export interface FindOrCreateThreadParams {
 	channel: InboxChannel;
 	/** Whose inbox the thread belongs in. Omitted (or null) means CorvMC's. */
@@ -138,65 +148,49 @@ export interface FindOrCreateThreadParams {
 	subject?: string | null;
 }
 
+/**
+ * The open thread an inbound message from this contact joins, if its channel
+ * folds messages together. 'web', 'portal' and 'band' always open a new thread:
+ * each addresses a conversation explicitly, so folding a second one into an
+ * open thread would discard its subject, and for 'band' would let a stranger
+ * append to a negotiation the act had closed. Each branch is pinned to its own
+ * channel, so no inbound email, SMS or Meta message can land in a band's thread.
+ */
+function openThreadOf(params: FindOrCreateThreadParams): SQL | undefined {
+	const { channel, contactEmail, contactPhone, contactExternalId } = params;
+	const open = inArray(inboxThread.status, ['open', 'snoozed']);
+	if (channel === 'email' && contactEmail) {
+		return and(eq(inboxThread.channel, 'email'), eq(inboxThread.contactEmail, contactEmail), open);
+	}
+	if (channel === 'sms' && contactPhone) {
+		return and(eq(inboxThread.channel, 'sms'), eq(inboxThread.contactPhone, contactPhone), open);
+	}
+	if ((channel === 'instagram' || channel === 'messenger') && contactExternalId) {
+		return and(
+			eq(inboxThread.channel, channel),
+			eq(inboxThread.contactExternalId, contactExternalId),
+			open
+		);
+	}
+	return undefined;
+}
+
 export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 	const { channel, groupId, contactName, contactEmail, contactPhone, contactExternalId, subject } =
 		params;
+	const match = openThreadOf(params);
 
-	let existing: typeof inboxThread.$inferSelect | undefined;
-
-	if (channel === 'email' && contactEmail) {
-		[existing] = await db
+	if (match) {
+		const [existing] = await db
 			.select()
 			.from(inboxThread)
-			.where(
-				and(
-					eq(inboxThread.channel, 'email'),
-					eq(inboxThread.contactEmail, contactEmail),
-					inArray(inboxThread.status, ['open', 'snoozed'])
-				)
-			)
+			.where(match)
 			.orderBy(desc(inboxThread.lastMessageAt))
 			.limit(1);
-	} else if (channel === 'sms' && contactPhone) {
-		[existing] = await db
-			.select()
-			.from(inboxThread)
-			.where(
-				and(
-					eq(inboxThread.channel, 'sms'),
-					eq(inboxThread.contactPhone, contactPhone),
-					inArray(inboxThread.status, ['open', 'snoozed'])
-				)
-			)
-			.orderBy(desc(inboxThread.lastMessageAt))
-			.limit(1);
-	} else if ((channel === 'instagram' || channel === 'messenger') && contactExternalId) {
-		[existing] = await db
-			.select()
-			.from(inboxThread)
-			.where(
-				and(
-					eq(inboxThread.channel, channel),
-					eq(inboxThread.contactExternalId, contactExternalId),
-					inArray(inboxThread.status, ['open', 'snoozed'])
-				)
-			)
-			.orderBy(desc(inboxThread.lastMessageAt))
-			.limit(1);
+		if (existing) return existing;
 	}
-	// 'web', 'portal' and 'band' always create a new thread. All three address a
-	// conversation explicitly — the contact form is one-shot, and a portal member
-	// or a band admin replies into a thread by id — so folding a second one into
-	// an open thread would silently discard its subject. For 'band' it would do
-	// worse than that: a stranger could append to a negotiation the act had
-	// already closed.
-	//
-	// The dedupe branches above are each pinned to their own channel, so no
-	// inbound email, SMS or Meta message can ever land in a band's thread by
-	// matching its contact details.
 
-	if (existing) return existing;
-
+	// eslint-disable-next-line custom/no-check-then-insert -- collapsed below, by rowid
 	const [thread] = await db
 		.insert(inboxThread)
 		.values({
@@ -209,7 +203,22 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 			subject: subject ?? null
 		})
 		.returning();
+	if (!match) return thread;
 
+	// No unique index: a resolved thread reopens by id while another is open.
+	// So two first messages that both read nothing collapse after inserting:
+	// the earliest-inserted open thread wins, by rowid, and the later deletes
+	// its own row before any message hangs off it.
+	const [first] = await db
+		.select()
+		.from(inboxThread)
+		.where(match)
+		.orderBy(sql`rowid`)
+		.limit(1);
+	if (first && first.id !== thread.id) {
+		await db.delete(inboxThread).where(eq(inboxThread.id, thread.id));
+		return first;
+	}
 	return thread;
 }
 

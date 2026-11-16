@@ -1,13 +1,16 @@
 <script lang="ts">
-	import type { BookerType } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { BookerType } from '#lib/config.js';
 	import {
 		getReservationPricing,
 		previewRecurringInstances
-	} from '$lib/remote/reservations.remote';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import * as Form from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/remote/reservations.remote.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import { formValue } from '#lib/components/ui/Form/form-value.js';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
+		clubInstant,
 		formatDate,
 		formatDollars,
 		formatScheduleLabel,
@@ -15,24 +18,20 @@
 		fullDate,
 		toLocalDate,
 		toLocalTime
-	} from '$lib/utils/format';
-	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '$lib/config';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	} from '#lib/utils/format.js';
+	import { creditsToHours } from '#lib/config.js';
+	import type { RemoteFormField } from '$app/server';
 
 	let {
 		reservation,
 		fields = {},
-		staff = false,
 		band = false,
 		bookerType = undefined,
 		payAhead = true,
-		submitLabel = 'Confirm'
+		submitLabel = m.reservations_booking_confirm_step_submit_label()
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
-		// Staff confirming on the owner's behalf: render a single Confirm action
-		// (no Pay Ahead / online checkout) and key pricing to the reservation owner.
-		staff?: boolean;
 		/**
 		 * A band booking its practice space. Book leaves it owed; Pay Ahead goes
 		 * to the payment step, whose submit sets `payNow` (#2095).
@@ -75,7 +74,8 @@
 		remainingCents: number;
 	} | null>(null);
 
-	let startsAt = $state<Date | null>(null);
+	// A failed quote shows an error line, not a skeleton that never resolves.
+	let pricingFailed = $state(false);
 	let dateLabel = $state('');
 	let timeLabel = $state('');
 	let recurringFrequency = $state('');
@@ -84,22 +84,9 @@
 
 	const isRecurring = $derived(recurringFrequency !== '');
 
-	// The confirmation window is enforced by `bookAndPayReservation`, so it
-	// applies to exactly the flow that goes through it: not a staff confirm, not
-	// a band session, and not teaching time (`payAhead={false}`, and
-	// `bookInstructorReservation` has no window at all). Before it opens, booking
-	// only holds the room, even when free hours would cover it (#2108).
-	const beforeConfirmWindow = $derived(
-		payAhead && !staff && !band && !!startsAt && !withinConfirmationWindow(startsAt)
-	);
-
-	// Paying is the only way to confirm a held booking, so Pay Ahead is offered
-	// whenever booking would not confirm it, even at $0. Inside the window,
-	// Confirm already spends the free hours, so it is offered only for a balance.
-	const showPayAhead = $derived(
-		payAhead && !!pricing && (pricing.remainingCents > 0 || beforeConfirmWindow || band)
-	);
-	const confirmOpensLabel = $derived(startsAt ? formatDate(confirmWindowOpensAt(startsAt)) : '');
+	// Booking already spends the free hours, so Pay Ahead is offered only for a
+	// balance, or for a band, whose booking leaves everything owed (#2095).
+	const showPayAhead = $derived(payAhead && !!pricing && (pricing.remainingCents > 0 || band));
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));
@@ -117,23 +104,22 @@
 				date = start.date;
 				startTime = start.time;
 				endTime = end.time;
-				startsAt = reservation.startsAt;
 				dateLabel = fullDate(reservation.startsAt);
 				timeLabel = formatTimeRange(reservation.startsAt, reservation.endsAt);
 				recurringFrequency = '';
 			} else {
 				const form = el.closest('form');
 				if (form) {
-					const fd = new FormData(form);
-					date = fd.get('date') as string;
-					startTime = fd.get('startTime') as string;
-					endTime = fd.get('endTime') as string;
-					recurringFrequency = (fd.get('recurring') as string) || '';
-					const monthlyMode = (fd.get('monthlyMode') as 'weekday' | 'monthday') || 'weekday';
+					date = formValue(form, 'date');
+					startTime = formValue(form, 'startTime');
+					endTime = formValue(form, 'endTime');
+					recurringFrequency = formValue(form, 'recurring') || '';
+					const monthlyMode =
+						(formValue(form, 'monthlyMode') as 'weekday' | 'monthday' | null) || 'weekday';
+					const until = formValue(form, 'recurringUntil') || undefined;
 					if (date && startTime) {
-						const startIso = new Date(`${date}T${startTime}:00`);
-						const endIso = endTime ? new Date(`${date}T${endTime}:00`) : startIso;
-						startsAt = startIso;
+						const startIso = clubInstant(date, startTime);
+						const endIso = endTime ? clubInstant(date, endTime) : startIso;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
 					}
@@ -149,7 +135,7 @@
 									: 'Monthly';
 						scheduleLabel = formatScheduleLabel(
 							freqLabel,
-							new Date(`${date}T${startTime}:00`),
+							clubInstant(date, startTime),
 							monthlyMode
 						);
 						recurringPreview = null;
@@ -157,7 +143,8 @@
 							date,
 							startTime,
 							frequency: recurringFrequency as 'weekly' | 'biweekly' | 'monthly',
-							monthlyMode
+							monthlyMode,
+							until
 						}).then((result) => {
 							recurringPreview = result;
 						});
@@ -167,15 +154,21 @@
 
 			if (date && startTime && endTime) {
 				pricing = null;
+				pricingFailed = false;
 				getReservationPricing({
 					date,
 					startTime,
 					endTime,
 					bookerType,
 					reservationId: reservation?.id
-				}).then((result) => {
-					pricing = result;
-				});
+				}).then(
+					(result) => {
+						pricing = result;
+					},
+					() => {
+						pricingFailed = true;
+					}
+				);
 			}
 		}
 	});
@@ -189,14 +182,18 @@
 
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
-				<p class="font-medium">{dateLabel}</p>
+				<p class="font-medium" data-testid="confirm-slot">{dateLabel}</p>
 				<p class="text-muted">{timeLabel}</p>
 			{:else}
 				<div class="h-5 w-48 skeleton"></div>
 			{/if}
 		</div>
 
-		{#if !pricing}
+		{#if pricingFailed}
+			<p class="py-2 text-sm text-error" data-testid="confirm-pricing-error">
+				{m.reservations_booking_confirm_step_pricing_failed_text()}
+			</p>
+		{:else if !pricing}
 			<div class="flex justify-between py-2">
 				<div class="h-5 w-32 skeleton"></div>
 				<div class="h-5 w-16 skeleton"></div>
@@ -209,17 +206,25 @@
 				alone — a non-visual reader heard "$15.00 $0.00". The labels are
 				`sr-only` because the strike-through already says it visually.
 			-->
-			{@const creditsCommitNow = pricing.creditsApplicable > 0 && !beforeConfirmWindow}
-			<dl class="space-y-2 py-4 text-sm">
+			{@const creditsCommitNow = pricing.creditsApplicable > 0}
+			<dl class="space-y-2 py-4 text-sm" data-testid="confirm-pricing">
 				<div class="flex justify-between">
-					<dt>{pricing.durationHours} hr × ${formatDollars(pricing.hourlyRateCents)}/hr</dt>
+					<dt>
+						{m.reservations_booking_confirm_step_hr_hr_label({
+							durationHours: pricing.durationHours,
+							formatDollars: formatDollars(pricing.hourlyRateCents)
+						})}
+					</dt>
 					{#if creditsCommitNow}
 						<dd>
 							<span class="line-through opacity-60">
-								<span class="sr-only">Before free hours:</span>${formatDollars(pricing.totalCents)}
+								<span class="sr-only"
+									>{m.reservations_booking_confirm_step_before_free_hours_text()}</span
+								>${formatDollars(pricing.totalCents)}
 							</span>
 							<span class="ml-1 font-medium text-success">
-								<span class="sr-only">You pay:</span>${formatDollars(pricing.remainingCents)}
+								<span class="sr-only">{m.reservations_booking_confirm_step_pay_text()}</span
+								>${formatDollars(pricing.remainingCents)}
 							</span>
 						</dd>
 					{:else}
@@ -229,21 +234,16 @@
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					<div class="flex justify-between text-success">
-						<!-- Free hours are spent at confirmation, so before the window opens
-						     they are a promise rather than a discount. Saying "applied" there
-						     was a number the booking would not get. -->
-						<dt>{creditsCommitNow ? 'Free hours applied' : 'Free hours will apply'}</dt>
-						<dd>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</dd>
+						<dt>{m.reservations_booking_confirm_step_free_hours_applied_label()}</dt>
+						<dd>
+							−{freeHours}
+							{freeHours === 1
+								? m.reservations_booking_confirm_step_hr_text()
+								: m.reservations_booking_confirm_step_hrs_text()}
+						</dd>
 					</div>
 				{/if}
 			</dl>
-
-			{#if beforeConfirmWindow}
-				<p class="text-subtle">
-					Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay now to
-					lock it in{pricing.remainingCents <= 0 ? ' with your free hours' : ''}.
-				</p>
-			{/if}
 		{/if}
 
 		{#if isRecurring}
@@ -252,7 +252,9 @@
 					<p class="text-sm font-medium">{scheduleLabel}</p>
 				{/if}
 				<div class="mt-2">
-					<p class="mb-1 text-subtle font-medium">Upcoming instances</p>
+					<p class="mb-1 text-subtle font-medium">
+						{m.reservations_booking_confirm_step_upcoming_instances_text()}
+					</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
 							{#each Array(3), i (i)}
@@ -260,7 +262,9 @@
 							{/each}
 						</div>
 					{:else if recurringPreview.dates.length === 0}
-						<p class="text-subtle">No upcoming instances in the next 60 days.</p>
+						<p class="text-subtle">
+							{m.reservations_booking_confirm_step_no_upcoming_instances_next_text()}
+						</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
 							{#each recurringPreview.dates as iso (iso)}
@@ -269,13 +273,15 @@
 						</ul>
 						{#if recurringPreview.totalInWindow > recurringPreview.dates.length}
 							<p class="mt-1 text-xs opacity-50">
-								and {recurringPreview.totalInWindow - recurringPreview.dates.length} more...
+								{m.reservations_booking_confirm_step_more_text({
+									value: recurringPreview.totalInWindow - recurringPreview.dates.length
+								})}
 							</p>
 						{/if}
 					{/if}
 				</div>
 				<p class="mt-2 text-xs opacity-50">
-					Future instances are generated automatically. You'll confirm each one individually.
+					{m.reservations_booking_confirm_step_future_instances_generated_text()}
 				</p>
 			</div>
 		{/if}
@@ -285,55 +291,42 @@
 			     same slot can see different prices, because credits are keyed to
 			     `createdByUserId` and a band has no balance of its own. Unexplained
 			     that reads as a bug. -->
-			<p class="text-subtle">
-				Bands don't have their own free hours.
+			<p class="text-subtle" data-testid="band-credit-note">
+				{m.reservations_booking_confirm_step_bands_don_t_have_their_text()}
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
-					{freeHours}
-					{freeHours === 1 ? 'hr' : 'hrs'} of your own free hours apply.
-				{:else}
-					It's booked in your name, and you have no free hours left this month.
-				{/if}
-			</p>
-		{:else if staff}
-			<p class="text-subtle">
-				Comp makes this reservation fully free without using the member's free hours.
-				{#if pricing && pricing.creditsApplicable > 0}
-					Apply Credits commits their free hours; any remainder is due at the door.
-				{:else}
-					Confirm leaves the full amount due at the door.
-				{/if}
+					{m.reservations_booking_confirm_step_hrs_own_free_hours_apply_text({ freeHours })}
+				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no_text()}{/if}
 			</p>
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
-				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
+				<Button type="button" variant="ghost" onclick={() => formCtx.back()}
+					>{m.reservations_booking_confirm_step_back_label()}</Button
+				>
 			{/if}
 			{#if band}
-				<Button type="submit" variant="primary">Book Session</Button>
+				<Button type="submit" variant="primary"
+					>{m.reservations_booking_confirm_step_book_session_label()}</Button
+				>
 				{#if showPayAhead}
-					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
+						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button
+					>
 				{/if}
-			{:else if staff}
-				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
-				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>
-				<Button type="submit" variant="primary">
-					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
-				</Button>
 			{:else}
 				<!-- Native submit: the button's name/value sets skipPayment only when
 				     it's the submitter. Named for the dialog it finishes, and primary
 				     even beside Pay Ahead — booking is the action, paying early is the
-				     option (#1027). "Hold this slot" stays where it is true: before the
-				     confirmation window that is the outcome, and calling it booking
-				     would promise free hours the booking cannot spend yet. -->
-				<Button type="submit" name="skipPayment" value="on" variant="primary"
-					>{beforeConfirmWindow ? 'Hold this slot' : submitLabel}</Button
+				     option (#1027). -->
+				<Button {...formCtx.fields.skipPayment.as('submit', 'on')} variant="primary"
+					>{submitLabel}</Button
 				>
 				{#if showPayAhead}
-					<Button type="button" variant="ghost" onclick={() => formCtx.next()}>Pay Ahead</Button>
+					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
+						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button
+					>
 				{/if}
 			{/if}
 		</div>

@@ -1,12 +1,13 @@
 import { z } from 'zod';
-import { mapDomainError } from '$lib/server/errors';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { getById as getEventById } from '$lib/server/event/event-service';
-import { memberReportableEntityTypes, flagStatuses } from '$lib/server/db/schema/flag';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { getById as getEventById } from '#lib/server/event/event-service.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
+import { memberReportableEntityTypes, flagStatuses } from '#lib/server/db/schema/flag.js';
 import {
 	listFlags,
 	getFlag,
@@ -14,8 +15,8 @@ import {
 	resolveFlag as resolveFlagSvc,
 	FLAG_REASON_MAX,
 	FLAG_DESCRIPTION_MAX
-} from '$lib/server/flag/flag-service';
-import { getAppealForFlag } from '$lib/server/moderation/appeal-service';
+} from '#lib/server/flag/flag-service.js';
+import { getAppealForFlag } from '#lib/server/moderation/appeal-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries (staff)
@@ -142,6 +143,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	// so draft/cancelled events can't be probed by id.
 	const evt = await getEventById(data.eventId);
 	if (!evt || evt.status !== 'published') error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 
 	try {
 		await createFlag({

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Same shape as the volunteering specs: a chainable proxy that records the
 // calls, so the assertions can be about the predicate a query built rather than
 // about whatever a stub was told to return. `better-sqlite3` is not built in
-// CI, so only `$lib/server/db` is mocked.
+// CI, so only `#lib/server/db/index.js` is mocked.
 // ---------------------------------------------------------------------------
 
 let selectResult: unknown[] = [];
@@ -28,7 +28,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
@@ -41,10 +41,13 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/utils/slug', () => ({
+vi.mock('#lib/server/utils/slug.js', () => ({
 	generateSlug: (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
 	ensureUniqueSlug: vi.fn(async (base: string) => base)
 }));
+
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 
 import {
 	archiveVenue,
@@ -55,7 +58,7 @@ import {
 	VenueInUseError,
 	PrimaryVenueError
 } from './venue-service';
-import { ensureUniqueSlug } from '$lib/server/utils/slug';
+import { ensureUniqueSlug } from '#lib/server/utils/slug.js';
 
 function venueRow(overrides: Record<string, unknown> = {}) {
 	return {
@@ -182,6 +185,19 @@ describe('deleteVenue', () => {
 		selectResult = [venueRow({ isPrimary: true })];
 
 		await expect(deleteVenue('venue-1')).rejects.toThrow(PrimaryVenueError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+
+	// #2891: the audit log keeps the name of a venue that was deleted.
+	it('records the deletion in the audit log', async () => {
+		selectResult = [{ ...venueRow(), n: 0 }];
+
+		await deleteVenue('venue-1');
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'venue.deleted',
+			subject: { type: 'venue', id: 'venue-1', label: 'The Practice Room' },
+			details: {}
+		});
 	});
 });
 

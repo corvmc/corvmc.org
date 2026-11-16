@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { LONG_TEXT_MAX } from '$lib/config';
+import { listPositionsHeld } from '#lib/server/group/position-service.js';
+import { LONG_TEXT_MAX } from '#lib/config.js';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
-import { requireBandRole } from '$lib/server/group/group-context';
+import { getBandLayout } from '#lib/remote/layout.remote.js';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireFeature, getAllFeatureFlags } from '#lib/server/feature-flags.js';
+import { requireBandRole } from '#lib/server/group/group-context.js';
 import {
 	listMembers,
 	searchDirectoryMembers,
@@ -16,13 +18,13 @@ import {
 	suggestGenres,
 	suggestSkills,
 	isProfileComplete
-} from '$lib/server/directory/directory-service';
+} from '#lib/server/directory/directory-service.js';
 import {
 	getMemberProfileForEdit,
 	updateMemberProfile,
 	getBandProfileForEdit,
 	updateBandProfile
-} from '$lib/server/directory/profile-service';
+} from '#lib/server/directory/profile-service.js';
 import {
 	listBandEventsUpcoming,
 	listBandEventsPast,
@@ -30,36 +32,41 @@ import {
 	listMemberUpcomingShows,
 	listMemberPastShows,
 	countMemberPastShows
-} from '$lib/server/event/event-service';
-import { toCalendarEntry } from '$lib/server/event/calendar-entry';
-import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
-import { update as updateBandBasics } from '$lib/server/band/band-service';
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { listInstructors } from '$lib/server/instructor/instructor-directory-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
-import { listPublishedReleasesForBand } from '$lib/server/audio/audio-service';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { listFor as listMediaFor } from '$lib/server/media/media-service';
-import { publicPressKit } from '$lib/server/band/press-kit';
-import { captureException } from '$lib/server/sentry';
+} from '#lib/server/event/event-service.js';
+import { toCalendarEntry } from '#lib/server/event/calendar-entry.js';
+import { PAST_SHOWS_PAGE_SIZE } from '#lib/types/calendar.js';
+import { update as updateBandBasics } from '#lib/server/band/band-service.js';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { listInstructors } from '#lib/server/instructor/instructor-directory-service.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
+import { listPublishedReleasesForBand } from '#lib/server/audio/audio-service.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
+import { publicPressKit } from '#lib/server/band/press-kit.js';
+import { captureException } from '#lib/server/sentry.js';
 import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	toPublicMemberProfile
-} from '$lib/utils/directory-display';
-import { db } from '$lib/server/db';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/utils/directory-display.js';
+import { db } from '#lib/server/db/index.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
-import { profileLinkSchema } from '$lib/server/db/schema/authentication';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { publicContactStatus } from '$lib/server/instructor/instructor-directory-service';
+import { profileLinkSchema } from '#lib/server/db/schema/authentication.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { directorySorts } from '#lib/utils/directory-browse.js';
+import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
+import {
+	directoryReach,
+	publicContactStatus
+} from '#lib/server/instructor/instructor-directory-service.js';
+import { leadersFirst } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // JSON-encoded form/filter fields
@@ -91,6 +98,7 @@ const tagsField = (message: string) => jsonArrayField(z.string(), message);
 
 const filtersSchema = z.object({
 	search: z.string().optional(),
+	sort: z.enum(directorySorts).optional(),
 	instruments: arrayFilter,
 	genres: arrayFilter,
 	skills: arrayFilter,
@@ -132,29 +140,39 @@ const filtersSchema = z.object({
  * of folding them in. It buys nothing to split them back out: the request happens anyway.
  */
 export const getMemberDirectory = query(filtersSchema, async (filters) => {
-	requireUser();
+	const viewer = requireUser();
 
 	// The services rather than `getDirectoryMembers`: `filtersSchema` has `.transform()` steps,
 	// so a query's parsed output is not its own input type and cannot be handed straight on.
-	const [members, instructors, instrumentSuggestions, genreSuggestions, skillSuggestions] =
-		await Promise.all([
-			listMembers({
-				search: filters.search,
-				instruments: filters.instruments,
-				genres: filters.genres,
-				skills: filters.skills,
-				lookingForBand: filters.lookingForBand,
-				availableForHire: filters.availableForHire,
-				teachesLessons: filters.teachesLessons,
-				openToCollaboration: filters.openToCollaboration
-			}),
-			// The instructor record, not the self-declared `teachesLessons` flag: the
-			// listing's own gates (active, accepting students, visible) decide who counts.
-			filters.teachesAtCollective ? listInstructors('members') : null,
-			getInstrumentSuggestions(),
-			getGenreSuggestions(),
-			getSkillSuggestions()
-		]);
+	const [
+		members,
+		instructors,
+		instrumentSuggestions,
+		genreSuggestions,
+		skillSuggestions,
+		viewerComplete,
+		viewerVisibility
+	] = await Promise.all([
+		listMembers({
+			sort: filters.sort,
+			search: filters.search,
+			instruments: filters.instruments,
+			genres: filters.genres,
+			skills: filters.skills,
+			lookingForBand: filters.lookingForBand,
+			availableForHire: filters.availableForHire,
+			teachesLessons: filters.teachesLessons,
+			openToCollaboration: filters.openToCollaboration
+		}),
+		// The instructor record, not the self-declared `teachesLessons` flag: the
+		// listing's own gates (active, accepting students, visible) decide who counts.
+		filters.teachesAtCollective ? listInstructors('members') : null,
+		getInstrumentSuggestions(),
+		getGenreSuggestions(),
+		getSkillSuggestions(),
+		isProfileComplete(viewer.id),
+		getMyDirectoryVisibility()
+	]);
 
 	const teacherIds = instructors ? new Set(instructors.map((i) => i.userId)) : null;
 
@@ -162,13 +180,29 @@ export const getMemberDirectory = query(filtersSchema, async (filters) => {
 		members: teacherIds ? members.filter((m) => teacherIds.has(m.id)) : members,
 		instrumentSuggestions,
 		genreSuggestions,
-		skillSuggestions
+		skillSuggestions,
+		// Why the viewer is missing from this list, if they are; drives the prompt.
+		viewerHiddenBecause: hiddenBecause(viewerVisibility, viewerComplete)
 	};
 });
+
+/**
+ * A member is left out for opting out, or for having nothing on their profile.
+ * No entry at all (`visibility` null, e.g. a staff account) is not a member to prompt.
+ */
+function hiddenBecause(
+	visibility: string | null,
+	complete: boolean
+): 'hidden' | 'incomplete' | null {
+	if (visibility === null) return null;
+	if (visibility === 'hidden') return 'hidden';
+	return complete ? null : 'incomplete';
+}
 
 export const getDirectoryMembers = query(filtersSchema, async (filters) => {
 	requireUser();
 	return listMembers({
+		sort: filters.sort,
 		search: filters.search,
 		instruments: filters.instruments,
 		genres: filters.genres,
@@ -185,6 +219,7 @@ export const getMemberBandDirectory = query(filtersSchema, async (filters) => {
 	requireUser();
 	const [bands, genreSuggestions] = await Promise.all([
 		listBands({
+			sort: filters.sort,
 			search: filters.search,
 			genres: filters.genres,
 			lookingForMembers: filters.lookingForMembers
@@ -230,15 +265,20 @@ export const searchMessageRecipients = query(
 export const getDirectoryMember = query(z.string(), async (userId) => {
 	const viewer = requireUser();
 
-	const [profile, shows, features] = await Promise.all([
+	const [profile, shows, features, positions] = await Promise.all([
 		getMemberProfileService(userId, 'members'),
 		getMemberShows(userId),
-		getAllFeatureFlags()
+		getAllFeatureFlags(),
+		listPositionsHeld(userId)
 	]);
 
 	return {
 		profile,
 		shows,
+		// Committee positions (#2988). Withheld with a hidden profile.
+		positions: profile
+			? positions.map((p) => ({ id: p.positionId, name: p.name, committee: p.groupName }))
+			: [],
 		viewer: {
 			canReport: viewer.id !== userId,
 			// No "message yourself" button. Whether they will actually receive it depends on
@@ -274,6 +314,7 @@ export const getDirectoryBand = query(z.string(), async (slug) => {
 
 const publicFiltersSchema = z.object({
 	search: z.string().optional(),
+	sort: z.enum(directorySorts).optional(),
 	instruments: arrayFilter,
 	genres: arrayFilter,
 	lookingForBand: z
@@ -406,10 +447,7 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.leftJoin(directoryEntry, eq(directoryEntry.userId, user.id))
 		.where(and(eq(groupMember.groupId, row.id), eq(groupMember.status, 'active')))
-		.orderBy(
-			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
-			user.name
-		);
+		.orderBy(leadersFirst(), user.name);
 
 	/**
 	 * The band's published records, folded into this query rather than fetched
@@ -670,14 +708,16 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 		genreSuggestions,
 		skillSuggestions,
 		instructor,
-		contactStatus
+		contactStatus,
+		reach
 	] = await Promise.all([
 		getMemberProfile(),
 		getInstrumentSuggestions(),
 		getGenreSuggestions(),
 		getSkillSuggestions(),
 		getInstructorByUserId(currentUser.id),
-		publicContactStatus(currentUser.id)
+		publicContactStatus(currentUser.id),
+		directoryReach([currentUser.id])
 	]);
 
 	return {
@@ -688,7 +728,8 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 		teaching: {
 			instructor,
 			hasPublicContact: contactStatus.hasPublicContact,
-			hasAnyContact: contactStatus.hasAnyContact
+			hasAnyContact: contactStatus.hasAnyContact,
+			directoryReach: reach.get(currentUser.id) ?? 'missing'
 		}
 	};
 });
@@ -749,6 +790,8 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	// band-service `update`). Only the explicit address change moves a slug, and
 	// that one deliberately refreshes nothing.
 	void getBandProfileEditor(data.slug).refresh();
+	// The panel header and every page under it read the band's name from here.
+	void getBandLayout(data.slug).refresh();
 
 	return { success: true };
 });
@@ -793,13 +836,15 @@ export const getUserDirectoryProfile = query(z.string(), async (userId) => {
  * one read — and it keeps the layout free to pass `user` to the header as a plain prop.
  */
 export const getPublicDirectoryPage = query(z.void(), async () => {
-	const [directory, viewer, visibility] = await Promise.all([
+	const { locals } = getRequestEvent();
+	const [directory, viewer, visibility, complete] = await Promise.all([
 		getPublicDirectory({}),
 		getMe(),
-		getMyDirectoryVisibility()
+		getMyDirectoryVisibility(),
+		locals.user ? isProfileComplete(locals.user.id) : false
 	]);
 
-	return { directory, viewer, visibility };
+	return { directory, viewer, visibility, complete };
 });
 
 /**

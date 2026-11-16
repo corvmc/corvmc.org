@@ -8,7 +8,7 @@
 
 /**
  * The credentials the preview server is pinned to. They must stay *set* rather
- * than deleted: SvelteKit's preview server resolves `$env/dynamic/private`
+ * than deleted: SvelteKit's preview server resolves `$app/env/private`
  * through vite's `loadEnv`, which layers `process.env` over the `.env` file, so
  * an unset variable falls through to `.env` — which carries a live `rk_live`
  * key in this repo.

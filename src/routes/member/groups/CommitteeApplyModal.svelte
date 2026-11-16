@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { applyToGroups } from '$lib/remote/group-applications.remote';
-	import { groupApplicationQuestions, APPLICATION_ANSWER_MAX } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { applyToGroups } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationQuestions, APPLICATION_ANSWER_MAX } from '#lib/config.js';
 
 	/**
 	 * One application can name several committees, so this is one dialog for
@@ -30,10 +31,10 @@
 		groupApplicationQuestions.committee.find((q) => q.id === id)?.prompt ?? id;
 </script>
 
-<Modal title="Apply to committees" bind:open {onclose}>
+<Modal title={m.member_groups_committee_apply_modal_title()} bind:open {onclose}>
 	<Form
 		remote={applyToGroups}
-		successToast="Application sent"
+		successToast={m.member_application_sent_toast()}
 		onsuccess={() => (open = false)}
 		class="space-y-6"
 	>
@@ -41,7 +42,7 @@
 		{#key selectedId}
 			<CheckboxGroup
 				field={fields.groupIds}
-				legend="Committees"
+				legend={m.member_groups_committee_apply_modal_legend_title()}
 				options={committees.map((c) => ({ value: c.id, label: c.name, description: c.bio }))}
 				selected={selectedId ? [selectedId] : []}
 			/>
@@ -62,10 +63,12 @@
 			maxlength={String(APPLICATION_ANSWER_MAX)}
 		/>
 
-		<Alert type="info">A chair will contact you. Your account already has your details.</Alert>
+		<Alert type="info"
+			>{m.member_groups_committee_apply_modal_chair_will_contact_accou_body()}</Alert
+		>
 
 		<div class="flex justify-end">
-			<SubmitButton label="Send application" />
+			<SubmitButton label={m.member_send_application_label()} />
 		</div>
 	</Form>
 </Modal>

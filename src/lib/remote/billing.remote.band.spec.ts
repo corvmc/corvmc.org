@@ -12,23 +12,31 @@ const mockRequireGroupRole = vi.fn(async (ref: { slug: string }, min: string) =>
 	if (role === 'member' && min !== 'member') throw Object.assign(new Error('403'), { status: 403 });
 	return { group: { id: 'band-1', slug: ref.slug }, role };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => mockRequireGroupRole(...(a as [{ slug: string }, string]))
 }));
 
-let customerRow: unknown[] = [{ stripeCustomerId: 'cus_band' }];
-vi.mock('$lib/server/db', () => ({
-	db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => customerRow }) }) }) }
-}));
-vi.mock('$lib/server/db/schema/band-site', () => ({
-	bandSite: { groupId: 'groupId', stripeCustomerId: 'stripeCustomerId' }
-}));
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
+// The band's customer is read from its site row, for real.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite();
+});
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+const setCustomer = (stripeCustomerId: string | null) => {
+	sqlite.exec('delete from band_site');
+	sqlite
+		.prepare(`insert into band_site (id, group_id, stripe_customer_id) values (?, ?, ?)`)
+		.run('site-1', 'band-1', stripeCustomerId);
+	// Another band's site, so a read that ignored the group would find it.
+	sqlite
+		.prepare(`insert into band_site (id, group_id, stripe_customer_id) values (?, ?, ?)`)
+		.run('site-2', 'band-2', 'cus_other_band');
+};
 
 const mockListCards = vi.fn(async () => [{ id: 'pm_1', brand: 'visa', last4: '4242' }]);
 const mockRememberCard = vi.fn(async () => undefined);
 const mockRemoveCard = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/billing-service', () => ({
+vi.mock('#lib/server/finance/billing-service.js', () => ({
 	createSetupIntent: vi.fn(async () => 'seti_1_secret_x'),
 	listCards: (...a: unknown[]) => mockListCards(...(a as [])),
 	listInvoices: vi.fn(async () => []),
@@ -38,18 +46,20 @@ vi.mock('$lib/server/finance/billing-service', () => ({
 }));
 
 const mockRetrieve = vi.fn();
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	paymentDriver: () => 'stripe',
 	stripe: { setupIntents: { retrieve: (...a: unknown[]) => mockRetrieve(...(a as [])) } }
 }));
-vi.mock('$lib/server/authorization', () => ({ requireMember: vi.fn() }));
-vi.mock('$lib/server/finance/gateway/fake-gateway', () => ({ completeFakeSetupIntent: vi.fn() }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/authorization.js', () => ({ requireMember: vi.fn() }));
+vi.mock('#lib/server/finance/gateway/fake-gateway.js', () => ({
+	completeFakeSetupIntent: vi.fn()
+}));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (e: unknown) => {
 		throw e;
 	}
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 // SvelteKit validates every export of a .remote.ts at import time, so the stubs
 // carry the same marker the real helpers attach. Same shape as
@@ -93,7 +103,7 @@ const { getBandBilling, finishBandAddCard, forgetBandCard } = await import('./bi
 beforeEach(() => {
 	vi.clearAllMocks();
 	role = 'admin';
-	customerRow = [{ stripeCustomerId: 'cus_band' }];
+	setCustomer('cus_band');
 });
 
 describe('band billing', () => {
@@ -117,7 +127,7 @@ describe('band billing', () => {
 	});
 
 	it('400s an act with no billing account rather than guessing one', async () => {
-		customerRow = [{ stripeCustomerId: null }];
+		setCustomer(null);
 
 		await expect(getBandBilling('ninety-proof')).rejects.toMatchObject({ status: 400 });
 	});

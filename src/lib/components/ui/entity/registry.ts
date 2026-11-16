@@ -2,10 +2,10 @@
  * How each entity type is *drawn*: its glyph, and whether its avatar is round
  * or square.
  *
- * Split from the vocabulary in `$lib/config` and `$lib/terms` on purpose. These
+ * Split from the vocabulary in `#lib/config.js` and `#lib/terms.js` on purpose. These
  * values carry Svelte icon components, so server code cannot import this file —
  * while `entityTypes` and `entityLabels` are read by both. The routing half lives in
- * `$lib/utils/entity-href`, which is pure so the policy can be unit-tested.
+ * `#lib/utils/entity-href.js`, which is pure so the policy can be unit-tested.
  *
  * A plain `.ts` rather than a `<script module>` on a component (the
  * `StatusBadge` precedent) because four components and a spec consume it, and a
@@ -41,11 +41,20 @@ import {
 	IconBuildingCommunity,
 	IconSpeakerphone,
 	IconAlertTriangle,
-	IconClipboardList
+	IconClipboardList,
+	IconMapPin,
+	IconHourglass,
+	IconHammer,
+	IconFileText,
+	IconBuildingStore,
+	IconUserCheck,
+	IconBuilding,
+	IconId,
+	IconSettings
 } from '@tabler/icons-svelte';
-import { entityTypes, type EntityType, type EntitySubtypeKey } from '$lib/config';
-import { entityLabels } from '$lib/terms';
-import type { EntityRef } from '$lib/types/entity';
+import { entityTypes, type EntityType, type EntitySubtypeKey } from '#lib/config.js';
+import { entityLabels } from '#lib/terms.js';
+import type { EntityRef } from '#lib/types/entity.js';
 import { variants } from '../StatusBadge.svelte';
 
 /** Every tabler icon shares one props shape; borrow it from a concrete icon
@@ -150,10 +159,19 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	help: { icon: IconHelp, shape: 'none' },
 	classified: { icon: IconSpeakerphone, shape: 'none' },
 	incident: { icon: IconAlertTriangle, shape: 'none' },
-	project: { icon: IconClipboardList, shape: 'none' }
+	project: { icon: IconClipboardList, shape: 'none' },
+	local_resource: { icon: IconMapPin, shape: 'none' },
+	hour_log: { icon: IconHourglass, shape: 'none' },
+	work_request: { icon: IconHammer, shape: 'none' },
+	group_application: { icon: IconFileText, shape: 'none' },
+	market_vendor: { icon: IconBuildingStore, shape: 'none' },
+	volunteer: { icon: IconUserCheck, shape: 'none' },
+	organization: { icon: IconBuilding, shape: 'none' },
+	contact: { icon: IconId, shape: 'none' },
+	setting: { icon: IconSettings, shape: 'none' }
 };
 
-/** Declaration order, for gallery stories and exhaustiveness checks. */
+/** Declaration order, for exhaustiveness checks. */
 export const allEntityTypes = entityTypes;
 
 /**
@@ -291,6 +309,8 @@ export function toneFor(status: string | null | undefined): StatusTone | null {
 export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	// StatusBadge's success tone, in full.
 	'completed',
+	'paid',
+	'covered',
 	'published',
 	'resolved',
 	'available',
@@ -298,6 +318,7 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	'returned',
 	'checked_in',
 	'sent',
+	'delivered',
 	'accepted',
 	'current',
 	'approved',
@@ -314,6 +335,8 @@ export const ordinaryStatuses: ReadonlySet<string> = new Set([
 	// loan — being borrowed is what a loanable unit is *for*, and marking it
 	// would call out the healthy majority of a working catalogue.
 	'confirmed',
+	// So is a reservation on the Booked track, and a contractor who is booked.
+	'booked',
 	'valid',
 	'on_loan',
 	// The default band role and tier.

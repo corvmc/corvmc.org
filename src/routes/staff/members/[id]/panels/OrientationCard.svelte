@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { getMemberOrientation, waiveMemberOrientation } from '$lib/remote/orientation.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberOrientation, waiveMemberOrientation } from '#lib/remote/orientation.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	/**
 	 * Whether this member has been shown around, and the one thing staff can do
@@ -18,40 +19,47 @@
 	let { id }: { id: string } = $props();
 </script>
 
-<RelatedList title="Orientation" result={getMemberOrientation(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_orientation_card_title()}
+	result={getMemberOrientation(id)}
+>
 	{#snippet children(data)}
 		<div class="flex flex-wrap items-center gap-3">
 			<StatusBadge status={data.state} label />
 
 			<p class="text-muted">
 				{#if data.state === 'scheduled' && data.scheduledFor}
-					Booked for {formatDateTimeShort(data.scheduledFor)}.
+					{m.staff_members_id_panels_orientation_card_booked_text({
+						formatDateTimeShort: formatDateTimeShort(data.scheduledFor)
+					})}
 				{:else if data.state === 'completed' && data.detail?.completedAt}
-					Shown around {formatDateTimeShort(data.detail.completedAt)}.
+					{m.staff_members_id_panels_orientation_card_shown_around_text({
+						formatDateTimeShort: formatDateTimeShort(data.detail.completedAt)
+					})}
 				{:else if data.state === 'waived' && data.detail?.waivedReason}
 					{data.detail.waivedReason}
 				{:else}
-					Their first booking will raise a shift for someone to meet them.
+					{m.staff_members_id_panels_orientation_card_their_first_booking_text()}
 				{/if}
 			</p>
 
 			{#if data.state === 'pending' || data.state === 'scheduled'}
 				<Action
 					action={waiveMemberOrientation}
-					label="Waive"
+					label={m.staff_members_id_panels_orientation_card_waive_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Waive orientation"
-					submitLabel="Waive"
-					successToast="Orientation waived"
+					modalTitle={m.staff_members_id_panels_orientation_card_modal_title()}
+					submitLabel={m.staff_members_id_panels_orientation_card_waive_label()}
+					successToast={m.staff_members_id_panels_orientation_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="userId" value={id} />
+						<input {...waiveMemberOrientation.fields.userId.as('hidden', id)} />
 						<FormField
-							name="reason"
-							label="Why is it not needed?"
+							field={waiveMemberOrientation.fields.reason}
+							label={m.staff_members_id_panels_orientation_card_why_not_needed_label()}
 							type="textarea"
-							description="The next staffer reading the list needs to know why this member is not on it."
+							description={m.staff_members_id_panels_orientation_card_description_body()}
 						/>
 					{/snippet}
 				</Action>

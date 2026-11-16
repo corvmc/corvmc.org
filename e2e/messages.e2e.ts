@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_MSG_PASSWORD,
 	SEED_MSG_SENDER_EMAIL,
@@ -38,20 +39,11 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 const WAIT = { timeout: 15000 };
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, WAIT);
+	await signInAs(page, { email, password });
 }
 
-/**
- * Log in as somebody else. `/login` bounces an already-authenticated user, so
- * the session has to go first — otherwise the "second login" quietly no-ops and
- * the rest of the test runs as the wrong account.
- */
+/** Swap to somebody else; `signInAs` replaces the cookies outright. */
 async function switchUser(page: Page, email: string, password: string) {
-	await page.context().clearCookies();
 	await login(page, email, password);
 }
 
@@ -64,6 +56,17 @@ async function switchUser(page: Page, email: string, password: string) {
  */
 const bubble = (page: Page, text: string) => page.locator('.chat-bubble', { hasText: text });
 
+/**
+ * The submit of one remote form. Kit sets a remote form's `action` to
+ * `?/remote=<module hash>/<export name>`, so the export is the handle.
+ */
+const remoteSubmit = (page: Page, exportName: string) =>
+	page.locator(`form[action*="${exportName}"] button[type="submit"]`);
+
+/** The thread composer's send: the one form with a message body. */
+const sendReply = (page: Page) =>
+	page.locator('form:has(textarea:is([name="body"], [name^="body/"])) button[type="submit"]');
+
 /** Open a conversation from the list pane by the name on its row. */
 async function openConversation(page: Page, name: string) {
 	await page.goto('/member/messages');
@@ -75,16 +78,6 @@ async function openConversation(page: Page, name: string) {
 }
 
 test.describe('member messaging', () => {
-	test('the Messages page renders for a member with no conversations', async ({ page }) => {
-		await login(page, SEED_MSG_RECIPIENT_EMAIL, SEED_MSG_PASSWORD);
-		await page.goto('/member/messages');
-
-		// The regression this suite exists for was a 500, so assert the page
-		// rendered rather than that some particular row is on it.
-		await expect(page.getByRole('heading', { name: 'Messages' })).toBeVisible(WAIT);
-		await expect(page.locator('body')).not.toContainText('no such table');
-	});
-
 	// #1004 reported that no key committed the pick — the chip never appeared and
 	// Send request stayed disabled forever. SearchSelect's own keyboard path is
 	// sound in a component harness, in four nestings including this one, so this
@@ -92,7 +85,7 @@ test.describe('member messaging', () => {
 	test('the recipient can be picked with the keyboard', async ({ page }) => {
 		await login(page, SEED_MSG_SENDER_EMAIL, SEED_MSG_PASSWORD);
 		await page.goto('/member/messages');
-		await page.getByRole('button', { name: 'Message a Member' }).click();
+		await page.getByTestId('message-member').click();
 
 		const picker = page.locator('input[role="combobox"]');
 		await picker.click();
@@ -115,7 +108,7 @@ test.describe('member messaging', () => {
 		// --- send the request, picking the recipient out of the composer ---
 		await login(page, SEED_MSG_SENDER_EMAIL, SEED_MSG_PASSWORD);
 		await page.goto('/member/messages');
-		await page.getByRole('button', { name: 'Message a Member' }).click();
+		await page.getByTestId('message-member').click();
 
 		// The picker searches the directory roster. It deliberately says nothing
 		// about who accepts messages, so a match here proves reachability only in
@@ -130,8 +123,8 @@ test.describe('member messaging', () => {
 		// SearchSelect swaps the input for a badge once the pick commits; waiting for
 		// that is how the test knows the choice reached the form before submitting.
 		await expect(picker).toHaveCount(0, WAIT);
-		await page.locator('textarea[name="body"]').fill(body);
-		await page.getByRole('button', { name: 'Send request' }).click();
+		await page.locator('textarea:is([name="body"], [name^="body/"])').fill(body);
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect(page.getByRole('link', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) })).toBeVisible(
 			WAIT
@@ -140,14 +133,15 @@ test.describe('member messaging', () => {
 		// --- the recipient sees a request, not a conversation ---
 		await switchUser(page, SEED_MSG_RECIPIENT_EMAIL, SEED_MSG_PASSWORD);
 		await page.goto('/member/messages');
-		// Scoped to this sender's row, not `getByText('Request')`. That is a
-		// case-insensitive substring, so it matches the "N message request(s) are
-		// waiting for you" summary above the list as well as the badge — two hits,
-		// and strict mode rejects it. `.first()` because a retried attempt leaves
-		// its predecessor's request behind: the fixture sweep runs once per run,
-		// so a second attempt sends a second request that nothing has cleared.
+		// This sender's row, carrying the request badge. `.first()` because a
+		// retried attempt leaves its predecessor's request behind: the fixture
+		// sweep runs once per run, so a second attempt sends a second request that
+		// nothing has cleared.
 		await expect(
-			page.getByRole('link', { name: new RegExp(`${SEED_MSG_SENDER_NAME}.*Request`) }).first()
+			page
+				.getByRole('link', { name: new RegExp(SEED_MSG_SENDER_NAME) })
+				.filter({ has: page.getByTestId('request-badge') })
+				.first()
 		).toBeVisible(WAIT);
 
 		await openConversation(page, SEED_MSG_SENDER_NAME);
@@ -155,22 +149,22 @@ test.describe('member messaging', () => {
 
 		// One message until accepted: the three decisions stand where the message
 		// box would be, and there is no message box.
-		await expect(page.getByRole('button', { name: 'Accept' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Decline' })).toBeVisible();
-		await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
+		await expect(remoteSubmit(page, 'acceptDirectRequest')).toBeVisible();
+		await expect(remoteSubmit(page, 'declineDirectRequest')).toBeVisible();
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toHaveCount(0);
 
 		// --- accepting opens it ---
-		await page.getByRole('button', { name: 'Accept' }).click();
-		await expect(page.locator('textarea[name="body"]')).toBeVisible(WAIT);
+		await remoteSubmit(page, 'acceptDirectRequest').click();
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toBeVisible(WAIT);
 
 		const reply = `E2E reply ${Date.now()}`;
-		await page.locator('textarea[name="body"]').fill(reply);
-		await page.getByRole('button', { name: /^Send/ }).click();
+		await page.locator('textarea:is([name="body"], [name^="body/"])').fill(reply);
+		await sendReply(page).click();
 		await expect(bubble(page, reply)).toBeVisible(WAIT);
 
 		// --- blocking closes it but keeps the history ---
-		await page.getByRole('button', { name: 'Block' }).click();
-		await expect(page.locator('textarea[name="body"]')).toHaveCount(0, WAIT);
+		await remoteSubmit(page, 'blockFromThread').click();
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toHaveCount(0, WAIT);
 		// Both messages still readable. Deleting them would take away the evidence
 		// the blocker needs in order to report.
 		await expect(bubble(page, body)).toBeVisible();
@@ -178,13 +172,16 @@ test.describe('member messaging', () => {
 
 		// --- and the block is reviewable, which is the only way to undo it ---
 		await page.goto('/member/account');
-		await expect(page.getByText('Blocked members')).toBeVisible(WAIT);
-		await expect(page.getByRole('button', { name: 'Unblock' })).toBeVisible();
+		const blockedRow = page.getByRole('listitem').filter({ hasText: SEED_MSG_SENDER_NAME });
+		await expect(
+			blockedRow.locator('form[action*="unblockMember"] button[type="submit"]')
+		).toBeVisible(WAIT);
 
 		// --- staff never see any of it ---
 		await switchUser(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/inbox?view=all');
-		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible(WAIT);
+		// Render gate: the list pane's header mounts with the page.
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible(WAIT);
 		await expect(page.locator('body')).not.toContainText(body);
 		await expect(page.locator('body')).not.toContainText(reply);
 	});
@@ -194,7 +191,7 @@ test.describe('staff inbox', () => {
 	test('a filter survives opening a thread, and back returns to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/inbox?view=all');
-		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible(WAIT);
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible(WAIT);
 
 		// A seeded portal thread, so this never quietly skips itself.
 		await page

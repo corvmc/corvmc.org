@@ -1,12 +1,12 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq } from 'drizzle-orm';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, validateUpload } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, validateUpload } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
 
 // ---------------------------------------------------------------------------
 // POST — upload avatar
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	await uploadFile(buffer, key, file.type);
 
 	// Records the object and releases the old one. Nothing here deletes: see
-	// docs/specs/shipped/media-spec.md.
+	// docs/decisions/0026-uploads-are-detached-and-swept.md.
 	await replaceSlot({
 		attachableType: 'group',
 		attachableId: bandId,
@@ -50,7 +50,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 
-	return json({ success: true, avatarKey: key });
+	return Response.json({ success: true, avatarKey: key });
 };
 
 // ---------------------------------------------------------------------------
@@ -68,5 +68,5 @@ export const DELETE: RequestHandler = async ({ params }) => {
 		.set({ avatarKey: null, updatedAt: new Date() })
 		.where(eq(group.id, bandId));
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

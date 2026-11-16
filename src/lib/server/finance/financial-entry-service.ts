@@ -1,19 +1,19 @@
-import { db } from '$lib/server/db';
-import { financialEntry, type FinancialEntry } from '$lib/server/db/schema/financial';
+import { db } from '#lib/server/db/index.js';
+import { financialEntry, type FinancialEntry } from '#lib/server/db/schema/financial.js';
 import { and, asc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 import type {
 	FinancialCategory,
 	FinancialEntryKind,
 	FinancialSettlement,
 	FinancialSubject
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * Writing and reading the financial record.
  *
  * Append-only: there is no update and no delete here, and a correction is a
- * reversing entry. See `docs/specs/financial-record-spec.md`.
+ * reversing entry. See `docs/decisions/0016-a-local-financial-record.md`.
  */
 
 export interface RecordEntryInput {
@@ -202,15 +202,6 @@ function readMetadata(raw: unknown): Record<string, unknown> | null {
 	} catch {
 		return null;
 	}
-}
-
-/** What the collective kept over a window. Excludes in-kind and pass-through by construction. */
-export async function totalEarnedCents(range: RangeFilter): Promise<number> {
-	const [row] = await db
-		.select({ total: sum(financialEntry.amountCents) })
-		.from(financialEntry)
-		.where(and(inRange(range), eq(financialEntry.kind, 'earned')));
-	return asCents(row?.total ?? null);
 }
 
 /** Totals by category for one kind — the shape every report line is built from. */

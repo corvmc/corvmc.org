@@ -1,5 +1,5 @@
 ---
-title: Book a Practice Session
+title: Book a practice session
 slug: booking-a-session
 category: reservations
 summary: How to reserve practice time at the studio.
@@ -19,10 +19,10 @@ sortOrder: 1
 If the time you want is on a waitlist, you'll be able to reserve a spot and
 [confirm it later](/member/help/confirm-waitlisted) when it opens.
 
-## Cost & free hours
+## Cost & credits
 
 The price is shown before you confirm. If you're a sustaining member with
-[free practice hours](/member/help/practice-credits) remaining, those are applied
+[practice credits](/member/help/practice-credits) remaining, those are applied
 automatically.
 
 ## After you book

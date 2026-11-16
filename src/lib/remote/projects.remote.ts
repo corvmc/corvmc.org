@@ -2,49 +2,49 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
-import { getMemberGroup } from '$lib/remote/groups.remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireSurface } from '$lib/surfaces';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { getMemberGroup } from '#lib/remote/groups.remote.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireSurface } from '#lib/surfaces.js';
 import {
 	projectStatuses,
 	projectViews,
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	surfaces
-} from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { db } from '$lib/server/db';
-import { suggestion } from '$lib/server/db/schema/suggestion';
+} from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { db } from '#lib/server/db/index.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
 import { asc, eq } from 'drizzle-orm';
 import {
 	attachToProject,
-	createProject,
 	detachFromProject,
 	getEventProject,
 	getProjectBurn,
 	getProjectById,
+	getProjectFamily,
 	getProjectShowId,
 	listProjectAttachments,
 	listCommittees,
 	listProjectCommittees,
 	listProjects,
 	setProjectStatus,
+	startProject,
 	startProjectFromSuggestion,
 	updateProject
-} from '$lib/server/project/project-service';
+} from '#lib/server/project/project-service.js';
 import {
+	getProjectProgress,
 	listProjectProgress,
-	listProjectTasks,
-	scopeContractorMoney,
 	requireTaskInProject
-} from '$lib/server/project/project-task-service';
-import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
-import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
-import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
-import { publish as publishEvent } from '$lib/server/event/event-service';
+} from '#lib/server/project/project-task-service.js';
+import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
+import { getProjectOrigin, startProjectFromBallot } from '#lib/server/project/decision-chain.js';
+import { applyDutyList, listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { publish as publishEvent } from '#lib/server/event/event-service.js';
 
 /**
  * Projects — staff surfaces, plus one committee write.
@@ -80,6 +80,7 @@ const projectFields = {
 	groupId: optionalId,
 	suggestionId: optionalId,
 	budgetCents: optionalMoney,
+	parentProjectId: optionalId,
 	startsAt: optionalDate,
 	endsAt: optionalDate
 };
@@ -94,6 +95,7 @@ function toServiceInput(data: ProjectFields) {
 		groupId: data.groupId || null,
 		suggestionId: data.suggestionId || null,
 		budgetCents: data.budgetCents ?? null,
+		parentProjectId: data.parentProjectId || null,
 		startsAt: calendarDate(data.startsAt) ?? null,
 		endsAt: calendarDate(data.endsAt) ?? null
 	};
@@ -133,14 +135,15 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 	await requireCapability('project.read');
 
 	const view = filters?.view ?? 'active';
-	// Productions are the Productions view, which lists the shows themselves.
-	const [projects, committees] = await Promise.all([
+	// A show with a listing is on the Productions view, which lists listings.
+	const [projects, committees, templates] = await Promise.all([
 		listProjects({
 			groupId: filters?.groupId,
-			kind: 'general',
+			exceptListedShows: true,
 			archived: view === 'all' ? undefined : view === 'archived'
 		}),
-		listCommittees()
+		listCommittees(),
+		listDutyLists()
 	]);
 
 	const ids = projects.map((p) => p.id);
@@ -152,6 +155,9 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 
 	return {
 		committees,
+		templates: templates
+			.filter((t) => t.itemCount > 0 && !t.grantStage)
+			.map((t) => ({ id: t.id, name: t.name })),
 		projects: projects.map((project, i) => ({
 			project,
 			burn: burns[i],
@@ -162,9 +168,9 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 });
 
 /**
- * One project: its burn, its task list, everything attached to it, and the
+ * One project: its burn, its progress, everything attached to it, and the
  * pickers to change any of it. The page's one load-bearing query, so task
- * writes in `tasks.remote.ts` refresh this.
+ * writes in `tasks.remote.ts` refresh this. Task rows are `TaskCatalogue`'s.
  */
 export const getProjectDetail = query(z.string(), async (id) => {
 	const viewer = await requireCapability('project.read');
@@ -179,9 +185,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			origin,
 			ballotManager,
 			taking,
-			tasks,
-			contractorMoney,
-			showId
+			progress,
+			showId,
+			family
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -192,16 +198,15 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			getProjectOrigin(id),
 			can('ballot.manage'),
 			listProjectCommittees([id]),
-			listProjectTasks(id),
-			can('contractor.read'),
-			getProjectShowId(id)
+			getProjectProgress(id),
+			getProjectShowId(id),
+			getProjectFamily(id)
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
 			project,
 			burn,
-			// Engagement rows carry quote, cost and invoice: `contractor.read`'s (#2071).
-			attachments: contractorMoney ? attachments : { ...attachments, jobs: [] },
+			attachments,
 			committees,
 			suggestions,
 			dutyLists,
@@ -209,10 +214,13 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			canCreateBallot: surfaces.ballots && ballotManager,
 			/** Every committee taking part, owner first. */
 			projectCommittees: taking,
-			taskList: scopeContractorMoney(tasks, contractorMoney),
+			/** Done over live tasks, for the progress bar. */
+			progress,
 			viewerId: viewer.id,
 			/** A production's listing: the page links to its console. */
-			showId
+			showId,
+			/** The festival or run this is part of, its parts, and what it could join. */
+			family
 		};
 	} catch (err) {
 		mapDomainError(err);
@@ -221,8 +229,8 @@ export const getProjectDetail = query(z.string(), async (id) => {
 
 /**
  * The Activity tab, or with `workOrderId` one task's history. Lazy, beside the
- * page's load-bearing query. Access is the project's, as `getProjectTasks`
- * reads it; a task is refused (404) unless it is on that project.
+ * page's load-bearing query. Access is the project's: `project.read`, or the
+ * committee that owns it. A task is refused (404) unless it is on that project.
  */
 export const getProjectActivity = query(
 	z.object({
@@ -253,23 +261,30 @@ function refreshDetail(id: string) {
 // Mutations
 // ---------------------------------------------------------------------------
 
-export const createProjectForm = form(z.object(projectFields), async (raw) => {
-	// `requireCapability` returns the caller, so the guard and the author are one call.
-	const user = await requireCapability('project.manage');
-	try {
-		const row = await createProject({
-			...toServiceInput(raw as ProjectFields),
-			createdByUserId: user.id
-		});
-		void getProjectsPage().refresh();
-		return { success: true, id: row.id };
-	} catch (err) {
-		mapDomainError(err);
+/** A template's id is whatever the migration that made it wrote, not always a uuid. */
+const optionalTemplateId = z.union([z.literal(''), z.string().min(1)]).optional();
+
+export const createProjectForm = form(
+	z.object({ ...projectFields, templateId: optionalTemplateId }),
+	async (raw) => {
+		// `requireCapability` returns the caller, so the guard and the author are one call.
+		const user = await requireCapability('project.manage');
+		const { templateId, ...fields } = raw as ProjectFields & { templateId?: string };
+		try {
+			const row = await startProject(
+				{ ...toServiceInput(fields), createdByUserId: user.id },
+				templateId || null
+			);
+			void getProjectsPage().refresh();
+			return { success: true, id: row.id };
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
-});
+);
 
 export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields }), async (raw) => {
-	await requireCapability('project.manage');
+	await requireCapability('project.manage', { projectId: (raw as { id: string }).id });
 	const { id, ...data } = raw as { id: string } & ProjectFields;
 	try {
 		await updateProject(id, toServiceInput(data));
@@ -291,7 +306,7 @@ export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields 
 export const setProjectStatusForm = form(
 	z.object({ id: z.uuid(), status: z.enum(projectStatuses) }),
 	async (raw) => {
-		await requireCapability('project.manage');
+		await requireCapability('project.manage', { projectId: (raw as { id: string }).id });
 		const { id, status } = raw as { id: string; status: (typeof projectStatuses)[number] };
 		try {
 			await setProjectStatus(id, status);

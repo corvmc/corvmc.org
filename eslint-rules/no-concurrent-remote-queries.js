@@ -97,7 +97,7 @@ export default {
 
 				walk(program, (/** @type {RuleNode} */ n) => {
 					if (n.type !== 'ImportDeclaration') return;
-					if (!/\.remote$/.test(n.source.value ?? '')) return;
+					if (!/\.remote(\.js)?$/.test(n.source.value ?? '')) return;
 					for (const spec of n.specifiers) {
 						if (spec.type === 'ImportSpecifier') remoteNames.add(spec.local.name);
 					}

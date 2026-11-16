@@ -1,21 +1,20 @@
-import { sentrySvelteKit } from '@sentry/sveltekit';
+import { sentrySvelteKit } from '@sentry/sveltekit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 // `loadEnv` from vite itself: `vitest/config` does not re-export it.
 import { loadEnv } from 'vite';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
+import kitConfig from './kit.config.js';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
-import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
+import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard.ts';
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { browserPort, devPort, previewPort, storybookPort } from './scripts/lib/checkout-ports';
-const dirname =
-	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+import { browserPort, devOrigin, devPort, previewPort } from './scripts/lib/checkout-ports.ts';
+import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers.ts';
+const dirname = import.meta.dirname;
 
 // The Sentry vite plugin names its release after the checked-out commit and
 // injects that string into the browser bundle, which is why browser events
@@ -38,9 +37,33 @@ function resolveSentryRelease(): string | undefined {
 
 const sentryRelease = resolveSentryRelease();
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
+// Browser projects only. Vitest 5 sets `resolve.noExternal = true` on every
+// non-client environment, and Kit's remote plugin evaluates each `.remote.ts` a
+// component imports through the `ssr` runner, which then inlines CJS deps
+// (`@opentelemetry/semantic-conventions`: "exports is not defined"). Tests here
+// run in the browser, so `ssr` serves only that evaluation; Vite's own
+// externalization is what it needs. A `configEnvironment` hook loses to
+// vitest's post-order one, so this resets it once the config is resolved.
+const ssrExternalsForBrowserTests = {
+	name: 'corvmc:ssr-externals-for-browser-tests',
+	configResolved(config: { environments: Record<string, { resolve: { noExternal: unknown } }> }) {
+		const ssr = config.environments.ssr;
+		if (ssr) ssr.resolve.noExternal = [];
+	}
+};
+
 export default defineConfig({
 	plugins: [
+		// Before Kit's env plugin reads `.env` at configResolved: vite's loadEnv
+		// lets process.env win, so this is what `$app/env` sees in `vite dev`.
+		{
+			name: 'corvmc:checkout-dev-origin',
+			config(_, { command, isPreview }) {
+				if (command !== 'serve' || isPreview || process.env.VITEST) return;
+				const origin = devOrigin(dirname, loadEnv('development', dirname, '').ORIGIN);
+				if (origin) process.env.ORIGIN = origin;
+			}
+		},
 		// Not in the e2e build. `playwright.config.ts` puts SENTRY_ENVIRONMENT=ci in
 		// the webServer env, which the build inherits, and `hooks.server.ts` already
 		// runs the SDK `enabled: false` under it — so none of this is under test.
@@ -66,10 +89,18 @@ export default defineConfig({
 					})
 				]),
 		tailwindcss(),
-		// The message catalog (messages/en.json). Its options live in
+		// The message catalog (messages/en.json). Its other options live in
 		// project.inlang/paraglide.config.ts, shared with `pnpm messages:compile`.
-		paraglideVitePlugin({ project: './project.inlang' }),
-		sveltekit(),
+		// The layout is set here because Paraglide's own default, `virtual-modules`,
+		// leaves a `messages.js` only this plugin can resolve, which breaks anything
+		// `tsx` runs outside Vite. One module per message tree-shakes the build;
+		// dev and vitest would otherwise load all ~6,800 of them.
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outputStructure: process.env.NODE_ENV === 'production' ? 'message-modules' : 'locale-modules'
+		}),
+		sveltekit(kitConfig),
+		previewCloudflareWorkers(),
 		/**
 		 * No `vite preview` in this repo may serve the app with a Stripe credential
 		 * that can move real money (#667).
@@ -103,6 +134,10 @@ export default defineConfig({
 		// Never silently move up a port: landing on the next one up is how you end
 		// up reading a sibling worktree's app and wondering where your change went.
 		strictPort: true,
+		// The local D1/KV SQLite files (and the e2e state dir) live under
+		// `.wrangler/` and change on every write. Watched, each write is an HMR
+		// event, and one a plugin maps to a module reloads the page (#1920).
+		watch: { ignored: ['**/.wrangler/**'] },
 		fs: {
 			// Worktrees under .claude/worktrees/ symlink node_modules to the main
 			// checkout. Vite's allow-list is rooted at the worktree, so requests that
@@ -139,9 +174,18 @@ export default defineConfig({
 		projects: [
 			{
 				extends: './vite.config.ts',
+				plugins: [ssrExternalsForBrowserTests],
 				test: {
 					name: 'client',
+					// Per-checkout, because vitest's default (63315) is a fixed
+					// constant every worktree would ask for at once — and unlike the
+					// dev server this binds during `pnpm test:unit`, so two suites
+					// collide without anyone starting a server. strictPort makes that
+					// loud rather than letting one suite adopt another's browser.
+					api: { port: browserPort(dirname), strictPort: true },
 					browser: {
+						// Substring, case-insensitive text matching, as vitest 4 did.
+						locators: { exact: false },
 						enabled: true,
 						// Out of `src/`. The default is
 						// `<test dir>/__screenshots__/<file>.svelte.spec.ts/`, whose last
@@ -153,12 +197,6 @@ export default defineConfig({
 						// `browser.ui` is on by default outside CI. `test-results/` is
 						// already gitignored.
 						screenshotDirectory: 'test-results/screenshots',
-						// Per-checkout, because vitest's default (63315) is a fixed
-						// constant every worktree would ask for at once — and unlike the
-						// dev server this binds during `pnpm test:unit`, so two suites
-						// collide without anyone starting a server. strictPort makes that
-						// loud rather than letting one suite adopt another's browser.
-						api: { port: browserPort(dirname), strictPort: true },
 						provider: playwright(),
 						instances: [
 							{
@@ -173,6 +211,14 @@ export default defineConfig({
 			},
 			{
 				extends: './vite.config.ts',
+				resolve: {
+					alias: {
+						'cloudflare:workers': path.resolve(
+							dirname,
+							'src/lib/server/testing/cloudflare-workers.ts'
+						)
+					}
+				},
 				test: {
 					name: 'server',
 					environment: 'node',
@@ -181,6 +227,9 @@ export default defineConfig({
 					// file. `drizzle-orm/sqlite-core` alone costs ~400ms to evaluate in a
 					// cold process, which the default `forks` pool re-paid 136 times.
 					pool: 'vmForks',
+					// The VM context is per file but `process.env` is per process.
+					setupFiles: ['./src/vitest-restore-tz.ts'],
+					globalSetup: ['./src/lib/server/testing/vitest-global-setup.ts'],
 					include: [
 						'src/**/*.spec.{js,ts}',
 						'scripts/**/*.spec.{js,ts}',
@@ -196,35 +245,6 @@ export default defineConfig({
 						deps: {
 							inline: ['bits-ui']
 						}
-					}
-				}
-			},
-			{
-				extends: true,
-				plugins: [
-					// The plugin will run tests for the stories defined in your Storybook config
-					// See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
-					storybookTest({
-						configDir: path.join(dirname, '.storybook')
-					})
-				],
-				test: {
-					name: 'storybook',
-					browser: {
-						enabled: true,
-						headless: true,
-						// Same reasoning as `client` above: out of the trees the gates grep.
-						screenshotDirectory: 'test-results/screenshots',
-						// Its own port. Without one this project takes vitest's default,
-						// which is the number `client` already binds — two browser servers
-						// starting together in the same run, racing for one port.
-						api: { port: storybookPort(dirname), strictPort: true },
-						provider: playwright({}),
-						instances: [
-							{
-								browser: 'chromium'
-							}
-						]
 					}
 				}
 			}

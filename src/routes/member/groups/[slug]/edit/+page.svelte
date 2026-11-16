@@ -1,21 +1,27 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getGroupEditor } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getGroupEditor } from '#lib/remote/groups.remote.js';
 	import GroupProfileForm from './GroupProfileForm.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// Resolved here and handed to the form as plain props. A top-level await
 	// marks every later declaration async-gated, which would compile each
 	// `fields.X.as()` in the form's template into an async derived — the churn
 	// behind JAVASCRIPT-SVELTEKIT-W. Pinned by `src/async-effect-shape.spec.ts`.
-	const slug = page.params.slug!;
-	const group = await getGroupEditor(slug);
+	const slug = params.slug;
+	// Derived so the header follows a rename once Kit refreshes the query.
+	const group = $derived(await getGroupEditor(slug));
 </script>
 
 <PageHeader
 	width="3xl"
-	title="Edit {group.kind === 'committee' ? 'committee' : 'club'}"
+	title={m.member_groups_slug_edit_title({
+		value: group.kind === 'committee' ? 'committee' : 'club'
+	})}
 	subtitle={group.name}
 />
 <PageContent width="3xl">

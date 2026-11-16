@@ -45,7 +45,7 @@ const fields = new Proxy({ allIssues: () => null } as Record<string, unknown>, {
 	}
 });
 
-vi.mock('$lib/remote/inbox.remote', () => ({
+vi.mock('#lib/remote/inbox.remote.js', () => ({
 	submitContactForm: {
 		fields,
 		result: undefined,
@@ -53,12 +53,17 @@ vi.mock('$lib/remote/inbox.remote', () => ({
 	}
 }));
 
-vi.mock('$lib/remote/settings.remote', () => ({
-	getOrgAddress: () =>
-		Promise.resolve({ street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' })
+vi.mock('#lib/remote/settings.remote.js', () => ({
+	getContactDetails: () =>
+		Promise.resolve({
+			address: { street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' },
+			email: 'desk@example.org'
+		})
 }));
 
-vi.mock('$app/paths', () => ({ resolve: (p: string) => p }));
+vi.mock('$app/paths', () => ({
+	resolve: (p: string) => (p.startsWith('/') ? p : `/${p}`)
+}));
 vi.mock('svelte-turnstile', () => ({ Turnstile: () => {} }));
 
 // Hoisted: an in-test `await import()` pays the module-graph cost inside the
@@ -69,7 +74,7 @@ describe('/contact server rendering', () => {
 	it('renders without throwing on the subject select', async () => {
 		const { body } = await render(Page);
 
-		expect(body).toContain('Contact Us');
+		expect(body).toMatch(/<h1[\s>]/);
 	});
 
 	it('server-renders the subject options', async () => {
@@ -77,5 +82,11 @@ describe('/contact server rendering', () => {
 
 		expect(body).toContain('General Inquiry');
 		expect(body).toContain('Practice Space');
+	});
+
+	it('server-renders the contact email from the setting', async () => {
+		const { body } = await render(Page);
+
+		expect(body).toContain('href="mailto:desk@example.org"');
 	});
 });

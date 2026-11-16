@@ -3,8 +3,8 @@
 	// needs a provider above it to render anything but public links.
 	import EntityChip from './EntityChip.svelte';
 	import EntityViewer from './EntityViewer.svelte';
-	import { capabilities as CAPS } from '$lib/config';
-	import type { EntityRef, Panel } from '$lib/types/entity';
+	import { capabilities as CAPS } from '#lib/config.js';
+	import type { EntityRef, Panel } from '#lib/types/entity.js';
 
 	let {
 		ref,

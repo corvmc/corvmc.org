@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { createShow } from '$lib/remote/productions.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { createShow } from '#lib/remote/productions.remote.js';
 
 	/**
 	 * Open a show, then land on its console. Creating it attaches this committee
@@ -14,26 +15,34 @@
 
 <Action
 	action={createShow}
-	label="New show"
-	modalTitle="Open a new show"
-	submitLabel="Open"
-	successToast="Show opened"
+	label={m.member_groups_slug_new_show_new_show_label()}
+	modalTitle={m.member_groups_slug_new_show_modal_title()}
+	submitLabel={m.member_open_label()}
+	successToast={m.member_groups_slug_new_show_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/staff/events/${eventId}/production`));
+		if (eventId) goto(resolve(`staff/events/${eventId}/production`));
 	}}
 >
 	{#snippet form()}
 		<Field
 			field={fields.title}
-			label="Name"
-			description="A working title is fine. It stays a draft until someone publishes it."
+			label={m.member_name_label()}
+			description={m.member_groups_slug_new_show_description_body()}
 		/>
-		<Field field={fields.eventDate} type="date" label="Date" />
+		<Field field={fields.eventDate} type="date" label={m.member_date_label()} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.eventStartTime} type="time" label="Starts" />
-			<Field field={fields.eventEndTime} type="time" label="Ends" />
+			<Field
+				field={fields.eventStartTime}
+				type="time"
+				label={m.member_groups_slug_new_show_starts_label()}
+			/>
+			<Field
+				field={fields.eventEndTime}
+				type="time"
+				label={m.member_groups_slug_new_show_ends_label()}
+			/>
 		</div>
 	{/snippet}
 </Action>

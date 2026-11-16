@@ -7,30 +7,24 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * `'production'`. Against a real SQLite replayed from the migrations.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 vi.mock('./run-of-show-service', () => ({ recomputeSetTimes: async () => undefined }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: async () => undefined
 }));
 const emit = vi.fn(async (_name: string, _payload: unknown) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (name: string, payload: unknown) => emit(name, payload) }
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	notifySignupsOfCancellation: async () => undefined
 }));
 

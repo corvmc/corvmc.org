@@ -1,9 +1,10 @@
 ---
-title: Edit a User, Roles & Credits
+title: Edit a user, roles & credits
 slug: staff-edit-user
 category: staff-guide
 summary: Update a member's details, assign roles, and adjust their credits.
 minRole: staff
+capabilities: user.read
 sortOrder: 2
 ---
 
@@ -16,7 +17,7 @@ Open a member from **Staff → Members** to see and manage their account.
 - **Edit details** — Name, pronouns, and phone. The sign-in email is not typed over here;
   see below.
 - **Manage roles** — Assign or remove roles via the role selector.
-- **Adjust credits** — Change a member's free practice hours or equipment credits
+- **Adjust credits** — Change a member's practice or equipment credits
   with the _Adjust credits_ action.
 - **Review payments** — A table of their payment records, with amounts, methods,
   status, and Stripe references to copy.

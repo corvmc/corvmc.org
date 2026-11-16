@@ -1,19 +1,22 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import { creditsToHours } from '$lib/config';
-	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import { creditsToHours } from '#lib/config.js';
+	import { formatDateLong, formatDollars, formatTime } from '#lib/utils/format.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Field from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { payReservation, getReservationPayment } from '#lib/remote/reservations.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getReservationPayment(page.params.id!));
+	const params = routeParams('id');
+
+	let data = $derived(await getReservationPayment(params.id));
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);
@@ -45,16 +48,17 @@
 	const chargeTotal = $derived(remainingCents + feeCents);
 </script>
 
-<PageHeader width="md" title="Pay for Your Session" />
+<PageHeader width="md" title={m.member_reservations_id_pay_title()} />
 <PageContent width="md">
 	<Card>
 		<CardBody>
 			<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 			<p>
-				{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours ===
-				1
-					? ''
-					: 's'})
+				{m.member_reservations_id_pay_hours_text({
+					formatTime: formatTime(res.startsAt),
+					formatTime2: formatTime(res.endsAt),
+					durationHours
+				})}
 			</p>
 			{#if res.notes}
 				<p class="text-muted">{res.notes}</p>
@@ -66,7 +70,10 @@
 		<CardBody class="space-y-2">
 			<div class="flex justify-between">
 				<span
-					>Room rental ({durationHours}hr × ${formatDollars(totalCents / durationHours)}/hr)</span
+					>{m.member_reservations_id_pay_room_rental_hr_hr_text({
+						durationHours,
+						formatDollars: formatDollars(totalCents / durationHours)
+					})}</span
 				>
 				<span>${formatDollars(totalCents)}</span>
 			</div>
@@ -75,9 +82,12 @@
 				<div class="flex justify-between text-success">
 					<span>
 						{#if committed}
-							Free hours applied ({creditsApplicable} hr)
+							{m.member_reservations_id_pay_free_hours_applied_hr_text({ creditsApplicable })}
 						{:else}
-							Free hours ({creditsApplicable} of {availableHours} available)
+							{m.member_reservations_id_pay_free_hours_available_text({
+								creditsApplicable,
+								availableHours
+							})}
 						{/if}
 					</span>
 					<span>−${formatDollars(creditDiscountCents)}</span>
@@ -86,7 +96,7 @@
 
 			{#if remainingCents > 0 && coverFees}
 				<div class="flex justify-between text-muted">
-					<span>Processing fee coverage</span>
+					<span>{m.member_reservations_id_pay_processing_fee_coverage_text()}</span>
 					<span>+${formatDollars(feeCents)}</span>
 				</div>
 			{/if}
@@ -94,10 +104,10 @@
 			<div class="divider my-1"></div>
 
 			<div class="flex justify-between font-bold">
-				<span>Total</span>
+				<span>{m.member_reservations_id_pay_total_text()}</span>
 				<span>
 					{#if remainingCents <= 0}
-						$0.00 (covered by free hours)
+						{m.member_reservations_id_pay_0_00_covered_by_free_text()}
 					{:else}
 						${formatDollars(chargeTotal)}
 					{/if}
@@ -107,13 +117,15 @@
 	</Card>
 
 	<Form remote={payReservation}>
+		<input {...payReservation.fields.reservationId.as('hidden', res.id)} />
 		{#if remainingCents > 0}
 			<Field
-				name="coverFees"
+				field={payReservation.fields.coverFees}
 				type="checkbox"
 				label=""
 				bind:value={coverFees}
-				checkboxLabel="Cover processing fees so the Collective receives 100%"
+				checkboxLabel={m.member_reservations_id_pay_checkbox_label_checkbox()}
+				description={m.member_reservations_id_pay_collective_receives_100_body()}
 			/>
 		{/if}
 
@@ -121,9 +133,13 @@
 		<SubmitButton
 			variant="primary"
 			class="mt-4 w-full"
-			label={remainingCents <= 0 ? 'Pay with free hours' : `Pay $${formatDollars(chargeTotal)}`}
+			label={remainingCents <= 0
+				? m.member_reservations_id_pay_pay_with_free_hours_label()
+				: m.member_reservations_id_pay_pay_label({ formatDollars: formatDollars(chargeTotal) })}
 		/>
 	</Form>
 
-	<Button href={data.backPath} variant="ghost" class="w-full">Back to Reservations</Button>
+	<Button href={data.backPath} variant="ghost" class="w-full"
+		>{m.member_back_reservations_label()}</Button
+	>
 </PageContent>

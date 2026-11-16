@@ -1,5 +1,5 @@
-import { m } from '$lib/paraglide/messages.js';
-import type { EntityType, GroupKind } from '$lib/config';
+import { m } from '#lib/paraglide/messages.js';
+import type { EntityType, GroupKind } from '#lib/config.js';
 
 /**
  * The interface's nouns, from `messages/en.json`: a relabel is an edit there
@@ -35,7 +35,16 @@ export const entityTerms: Record<EntityType, Term> = {
 	help: m.term_help,
 	classified: m.term_classified,
 	incident: m.term_incident,
-	project: m.term_project
+	project: m.term_project,
+	local_resource: m.term_resource_tip,
+	hour_log: m.term_hour_log,
+	work_request: m.term_work_request,
+	group_application: m.term_group_application,
+	market_vendor: m.term_market_vendor,
+	volunteer: m.term_volunteer,
+	organization: m.term_organization,
+	contact: m.term_contact,
+	setting: m.term_setting
 };
 
 /**

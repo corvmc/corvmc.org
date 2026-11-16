@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { surfaces } from '$lib/config';
+import { surfaces } from '#lib/config.js';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -161,7 +161,6 @@ describe('activeMemberNavKey', () => {
 		['/member/reservations/abc/pay', 'reservations'],
 		['/member/events/abc', 'events'],
 		['/member/events/abc/manage', 'events'],
-		['/member/events/submit', 'events-submit'],
 		['/member/directory/members/abc', 'directory'],
 		// Bands browse under My Bands, not Directory (#2115).
 		['/member/directory/bands', 'bands-browse'],

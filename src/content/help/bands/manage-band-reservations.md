@@ -1,5 +1,5 @@
 ---
-title: Manage Band Reservations
+title: Manage band reservations
 slug: manage-band-reservations
 category: bands
 summary: View and cancel your band's practice sessions.
@@ -17,7 +17,7 @@ its status.
 
 - Review what's coming up and who booked it.
 - **Cancel** an upcoming or confirmed session (owners and admins).
-- Check status badges to see what's scheduled, confirmed, completed, or cancelled.
+- Check status badges to see what's confirmed, completed, or cancelled.
 
 ## Related
 

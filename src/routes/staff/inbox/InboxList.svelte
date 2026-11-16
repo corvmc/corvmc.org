@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import InboxViews from './InboxViews.svelte';
 	import InboxChannelFilter from './InboxChannelFilter.svelte';
 	/**
@@ -13,24 +14,24 @@
 	 * siblings rather than parent and child.
 	 */
 	import { untrack } from 'svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import { IconFilter, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
-	import { getInboxThreads } from '$lib/remote/inbox.remote';
-	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { getInboxThreads } from '#lib/remote/inbox.remote.js';
+	import { channelIcon, channelLabel } from '#lib/components/inbox/channels.js';
 	import {
 		openReason,
 		threadDisplayStatus,
 		waitingDays
-	} from '$lib/components/inbox/thread-status';
-	import { queueVersion } from '$lib/components/inbox/queue.svelte';
+	} from '#lib/components/inbox/thread-status.js';
+	import { queueVersion } from '#lib/components/inbox/queue.svelte.js';
 	import {
 		filters,
 		filterPanel,
@@ -49,7 +50,7 @@
 	let searchText = $state(filters.search);
 
 	// Writes the URL, never state — the filters stay the source of truth.
-	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
+	// `goto(..., { replace: true })` rather than a shallow `goto`: the latter only
 	// rewrites the address bar, and the router then overwrites that entry with
 	// its own record on the next navigation, so back from a thread landed on the
 	// unfiltered list.
@@ -59,12 +60,16 @@
 	// pinned to the index path it would `goto` straight back to the list the
 	// moment you opened anything. Carrying the query onto the thread URL is also
 	// what makes back return to the same filtered view.
+	//
+	// `$state.eager`: while hydration's batch is open, the seed above is undone for
+	// an effect running in a later batch, and a field the seed created reads
+	// undefined. The goto that normalises `?view=awaiting` is such a run.
 	$effect(() => {
-		const search = toSearch();
+		const search = $state.eager(toSearch());
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -106,7 +111,7 @@
 		<div class="min-w-32 flex-1">
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search conversations…"
+				placeholder={m.staff_inbox_inbox_list_placeholder()}
 				onsearch={(q) => {
 					filters.search = q;
 					filters.page = 1;
@@ -126,14 +131,22 @@
 		<Button
 			variant={filterPanel.open ? 'primary' : 'default'}
 			size="sm"
-			aria-label={activeCount() ? `Filters, ${activeCount()} active` : 'Filters'}
+			aria-label={activeCount()
+				? m.staff_inbox_inbox_list_filters_active_label({ activeCount: activeCount() })
+				: m.staff_inbox_inbox_list_filters_label()}
 			onclick={() => (filterPanel.open = !filterPanel.open)}
 		>
-			<IconFilter size={16} /> <span class="hidden @md:inline">Filters</span>
+			<IconFilter size={16} />
+			<span class="hidden @md:inline">{m.staff_inbox_inbox_list_filters_label()}</span>
 			{#if activeCount()}<Badge class="ml-1">{activeCount()}</Badge>{/if}
 		</Button>
 		{#if activeCount()}
-			<Button variant="ghost" size="sm" onclick={reset} aria-label="Clear filters">
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={reset}
+				aria-label={m.staff_inbox_inbox_list_clear_filters_label()}
+			>
 				<IconX size={16} />
 			</Button>
 		{/if}
@@ -142,23 +155,23 @@
 	{#if sortedByWaiting}
 		<!-- The order is not obvious from the rows, and an unexplained order reads
 		     as an arbitrary one. -->
-		<p class="text-subtle text-xs">Sorted by longest waiting</p>
+		<p class="text-subtle text-xs">{m.staff_inbox_inbox_list_sorted_by_longest_waiting_text()}</p>
 	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
 			empty={filters.view === 'open'
-				? 'Nothing open — the queue is clear.'
+				? m.staff_inbox_inbox_list_nothing_open_queue_clear_body()
 				: filters.view === 'snoozed'
-					? 'Nothing is waiting on a date or a reply.'
-					: 'No conversations found'}
+					? m.staff_inbox_inbox_list_nothing_waiting_date_reply_body()
+					: m.staff_inbox_inbox_list_no_conversations_found_body()}
 			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}
 				<ul class="flex flex-col divide-y divide-base-300">
 					{#each threads as t (t.id)}
-						{@const href = resolve(`/staff/inbox/${t.id}`)}
+						{@const href = resolve(`staff/inbox/${t.id}`)}
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
 						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}

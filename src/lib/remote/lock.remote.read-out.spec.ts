@@ -14,18 +14,18 @@ function chain() {
 	};
 	return c;
 }
-vi.mock('$lib/server/db', () => ({ db: { select: () => chain() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chain() } }));
 
 const requireCapability = vi.fn(async (_cap: string) => ({ id: 'staff-1', name: 'Staff Person' }));
-vi.mock('$lib/server/authorization', () => ({ requireCapability, requireUser: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability, requireUser: vi.fn() }));
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	getLastLockJobRun: vi.fn(),
 	runDailyLockJob: vi.fn()
 }));
 
 const readOutCodeFor = vi.fn(async (_id: string): Promise<string | null> => '12345678');
-vi.mock('$lib/server/lock/door-service', () => ({ readOutCodeFor }));
+vi.mock('#lib/server/lock/door-service.js', () => ({ readOutCodeFor }));
 
 // Kit refuses a `.remote.ts` export without the `__` marker, mock or not.
 const remote =

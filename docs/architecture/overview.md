@@ -29,26 +29,31 @@ server build. There is no separate API server, no queue worker, no VM.
   (POST /api/cron/*)└──────────────────────────────────────────────┘    (bcrypt verify only)
 ```
 
-The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`) are declared in `wrangler.toml` and arrive
-on every request as `event.platform.env.*`. The first thing the server hook does is hand
-them to the module-level singletons:
+The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`, and `BROWSER` for Browser Rendering, which only
+the calendar and print posters use) are declared in `wrangler.toml` and read from
+`env` in `cloudflare:workers` (typed by `Cloudflare.Env` in `src/app.d.ts`; kit 3 has no
+`event.platform`). The first thing the server hook does is hand them to the module-level
+singletons:
 
 ```ts
 // src/hooks.server.ts
+import { env as bindings, waitUntil } from 'cloudflare:workers';
+
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
-	if (event.platform?.env?.DB) {
-		initDb(event.platform.env.DB);
-	}
-	if (event.platform?.env?.R2_BUCKET) {
-		initStorage(event.platform.env.R2_BUCKET);
-	}
-	if (event.platform?.env?.KV) {
-		initKv(event.platform.env.KV);
-	}
+	if (bindings.DB) initDb(bindings.DB);
+	if (bindings.R2_BUCKET) initStorage(bindings.R2_BUCKET);
+	if (bindings.R2_PRIVATE) initPrivateStorage(bindings.R2_PRIVATE);
+	if (bindings.KV) initKv(bindings.KV);
+	registerWaitUntil(waitUntil);
 ```
 
+Only the Worker may import `cloudflare:workers`: services reach `waitUntil` through
+`registerWaitUntil` in `src/lib/server/after-response.ts`, because seeds and scripts load them
+under tsx. Environment variables read through `$app/env/*` must be declared in
+`src/env.ts`, which kit 3 treats as the full list.
+
 Everywhere else in server code, `db`, storage, and KV are imported directly (e.g.
-`import { db } from '$lib/server/db'`). Those imports are lazy proxies — if you use them
+`import { db } from '#lib/server/db/index.js'`). Those imports are lazy proxies — if you use them
 before `hooks.server.ts` ran (say, in a standalone script), you get an explicit error from
 `src/lib/server/db/index.ts`: `Database not initialized — call initDb(d1) in hooks.server.ts first`.
 
@@ -74,7 +79,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-	if (row.status !== 'scheduled') throw error(400, 'This reservation is not awaiting payment');
+	if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
 
 	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
 	// ... compute duration, total, credit balance ...
@@ -93,7 +98,7 @@ directly in `$derived`:
 
 ```ts
 // src/routes/member/reservations/[id]/pay/+page.svelte (inside <script lang="ts">)
-import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
+import { payReservation, getReservationPayment } from '#lib/remote/reservations.remote.js';
 import { page } from '$app/state';
 
 let data = $derived(await getReservationPayment(page.params.id!));
@@ -108,10 +113,15 @@ enforced by a custom ESLint rule):
 ```svelte
 <!-- src/routes/member/reservations/[id]/pay/+page.svelte -->
 <Form remote={payReservation}>
+	<input {...payReservation.fields.reservationId.as('hidden', res.id)} />
 	<Field name="coverFees" type="checkbox" ... />
 	<SubmitButton class="mt-4 w-full btn-primary">Pay</SubmitButton>
 </Form>
 ```
+
+The record id travels as a schema field. A form or command never reads it from
+`getRequestEvent().params`, which on a remote call comes from a client header;
+`scripts/remote-query-request-scope.spec.ts` enforces this.
 
 ```ts
 // src/lib/remote/reservations.remote.ts — a short staff mutation
@@ -166,6 +176,11 @@ Auth is [better-auth](https://better-auth.com) configured in `src/lib/server/aut
   request — the session row stays in the DB but is inert (see the comment at
   `src/hooks.server.ts:46`). Sign-in for deactivated accounts is also rejected with the same
   generic message as a wrong password, to avoid account enumeration.
+- **Banned users**: `banUser` in `src/lib/server/user/user-service.ts` writes `user.bannedAt`,
+  `bannedById` and `banReason`, then deactivates the account, so the `deletedAt` gate above
+  does the enforcing. `reactivateUser` refuses a banned account; `unbanUser` is the only way
+  back. Sign-in names the suspension only after the password matches. A ban is indefinite and
+  is not routed through a report, so it cannot be appealed in the app.
 - **`ORIGIN` is required**: better-auth uses it as its `baseURL` and `createAuth()` throws at
   startup if it's unset.
 
@@ -195,15 +210,27 @@ production rejects submissions instead of accepting everyone.
 ### Roles
 
 Site-wide roles live in the `roles` / `model_has_roles` tables (names inherited from the
-Laravel app). Priority order, from `primaryRoleFor()` in `src/lib/server/authorization.ts`:
+Laravel app), except the positions below `admin`: each of those is a seat in the Operations
+committee (#2992), a `group_position` row whose `job` names the position. Priority order, from `primaryRoleFor()` in `src/lib/server/authorization.ts`:
 
 ```
 admin > staff > sustaining > member
 ```
 
 - `admin`, `staff` and the named positions — each grants a set of capabilities from the
-  matrix in `src/lib/config.ts`; guards name the capability, never the role. See
-  [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md).
+  matrix in `src/lib/config.ts`; guards name the capability, never the role. `admin` alone
+  holds `adminOnlyCapabilities` (granting roles, purging, adjusting credit, reopening a terminal
+  record). `staff` holds every other capability, derived, so a new capability reaches `staff`
+  unless it is named admin-only. A named position is one job, grantable alone (outreach,
+  content editing, teacher review, the audit log, and the older four); `config.spec.ts` fails
+  on a capability outside the admin-only set that no job position or org-wide committee grant
+  carries, apart from a named list still waiting for a position. See
+  [the decision record](../decisions/0032-guards-name-capabilities.md).
+- A committee grant with `'owned'` reach counts only when the guard names the record: a guard
+  on a task, shift, sign-up, schedule, project or event passes
+  `requireCapability(cap, () => taskScope(id))` (the resolvers are in
+  `src/lib/server/capability/record-scope.ts`), which reads the committee and project off the
+  row. `scripts/owned-grant-scope.spec.ts` fails on an owned capability guarded without one.
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
@@ -217,14 +244,15 @@ stored on the `bandMember` table.
 There are **no `+layout.server.ts` guards and no route middleware**. Every protected remote
 function starts with a guard call. The guards:
 
-| Guard                                    | Defined in                              | What it does                                                                                                                                                                                                                                                           |
-| ---------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `requireUser()`                          | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
-| `requireCapability(cap)`                 | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`; returns the user                                                                                                                                                                                            |
-| `requireCapabilityOrOwner(cap, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or a holder of `cap`; returns which one matched                                                                                                                                                                                              |
-| `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                          |
-| `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
-| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
+| Guard                                    | Defined in                              | What it does                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requireUser()`                          | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                                                                                                         |
+| `requireCapability(cap, scope?)`         | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`, or a committee or volunteer-role grant does (an optional `{ eventId, groupId, projectId }` scope); returns the user                                                                                                                                                                                 |
+| `requireCapabilityOrOwner(cap, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or a holder of `cap`; returns which one matched                                                                                                                                                                                                                                                                                      |
+| `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                                                                                                                  |
+| `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ staff: cap }` admits a non-member holding that capability as `role: 'staff'`; holding a position is never enough (`scripts/guards-name-capabilities.spec.ts`) |
+| `requireCommitteeMember(groupId, cap)`   | `src/lib/server/group/group-context.ts` | For a record a committee owns: an active member of that committee whose grants carry `cap`, or any holder of `cap`. `groupId` is read off the record, never the request                                                                                                                                                                                        |
+| `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                                                                                                               |
 
 Each of the three logged-in areas also has a **layout guard remote** in
 `src/lib/remote/layout.remote.ts` that the layout component awaits: `getMemberLayout()`
@@ -268,7 +296,7 @@ export const domainEvents = new Emittery<DomainEvents>();
 Listeners are registered once per Worker isolate by `registerListeners()` in
 `src/lib/server/event-bus/register-listeners.ts`, which is called from `hooks.server.ts`
 inside the request handler (it must run there, not at module load, because
-`$env/dynamic/private` isn't available earlier on Cloudflare). The registrations:
+`$app/env/private` isn't available earlier on Cloudflare). The registrations:
 
 | Event                    | Listener(s)                                                                                         | Effect                                                                                     |
 | ------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -348,20 +376,25 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | Endpoint                                    | Purpose                                                                                | Cron (UTC)     |
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
 | `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                  | `*/5 * * * *`  |
+| `/api/cron/send-outbox`                     | Send outbox messages that are due, retrying failed sends with backoff                  | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
-| `/api/cron/complete-shifts`                 | Complete confirmed volunteer signups for shifts that have ended                        | `*/15 * * * *` |
-| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot  | `*/15 * * * *` |
+| `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                   | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
 | `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                 | `*/15 * * * *` |
+| `/api/cron/lift-lapsed-removals`            | Lift suspensions whose term has ended                                                  | `*/15 * * * *` |
 | `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run   | `*/15 * * * *` |
 | `/api/cron/reminders`                       | Send every reminder the registry says is owed (`src/lib/server/reminders/`)            | `*/15 * * * *` |
 | `/api/cron/schedule-radio`                  | Fill the CMC Radio timetable 45 minutes ahead; no-op while `cmcRadio` is off           | `*/15 * * * *` |
+| `/api/cron/sweep-door-sales`                | Check in door card sales the webhook missed; report charged intents with no tickets    | `*/15 * * * *` |
 | `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)  | `0 16 * * *`   |
 | `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                   | `0 16 * * *`   |
 | `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                           | `0 16 * * *`   |
 | `/api/cron/sweep-audio-purchases`           | Clear `pending` music purchases whose checkout was never completed                     | `0 16 * * *`   |
 | `/api/cron/sweep-incidents`                 | Delete incidents over seven years old not marked `retain`; audit each deletion         | `0 16 * * *`   |
+| `/api/cron/sweep-contacts`                  | Delete contacts whose `retain_until` has passed                                        | `0 16 * * *`   |
+| `/api/cron/open-tasks`                      | Open and close the tasks records call for (repair, restock, orders, 8282, insurance)   | `0 16 * * *`   |
 | `/api/cron/sweep-audit-log`                 | Delete audit rows over 24 months old; strip name and email from old `user.purged` rows | `0 16 * * *`   |
+| `/api/cron/import-partner-calendars`        | Copy partner venues' iCalendar feeds onto the gig guide (`calendar_source`)            | `0 16 * * *`   |
 | `/api/cron/sweep-media`                     | Reclaim R2 objects nothing points at any more                                          | `0 16 * * *`   |
 | `/api/cron/reconcile-ledger`                | Compare last week's ledger against the Stripe balance                                  | `0 17 * * MON` |
 
@@ -411,7 +444,7 @@ the race costs nothing.
 2. **Worker secrets** — everything sensitive (Stripe keys, Postmark tokens, `CRON_SECRET`,
    `BETTER_AUTH_SECRET`, ...). Managed with `wrangler secret`; the full inventory is
    `secrets.template.json` and the table in the [operations manual](operations-manual.md).
-   Read in code via `$env/dynamic/private`.
+   Read in code via `$app/env/private`.
 3. **Runtime site config in KV** — settings staff can change without a deploy, via
    `src/lib/server/site-config/site-config-service.ts`. Keys are namespaced strings with
    code-side defaults:
@@ -432,9 +465,9 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 `config('reservation.hourlyRateCents')` returns the KV value if staff have set one,
 otherwise the default. **A key belongs here only if something reads it** — the org's name,
 short name, contact email and timezone lived here for a long time while the app read
-`SITE_NAME` and `DEFAULT_TIMEZONE` from `$lib/config`, so staff had four settings fields
+`SITE_NAME` and `DEFAULT_TIMEZONE` from `#lib/config.js`, so staff had four settings fields
 that saved into a void. `site-config-consumers.spec.ts` now fails on a key with no declared
-reader; settings that never change without someone editing text belong in `$lib/config`. **Feature flags** are just `feature.*` config keys, wrapped by
+reader; settings that never change without someone editing text belong in `#lib/config.js`. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
 missing page). Current flags: `directMessages`, `bandAudio` and `cmcRadio` — and the whole mechanism is being
@@ -457,15 +490,61 @@ All payments run through Stripe; the app never touches card data. The moving par
 - `subscription-service.ts` — the sustaining-membership subscription (checkout, billing
   portal, quantity updates, cancel/resume).
 - `credit-service.ts` — the internal credit ledger (`creditTransaction` table). Sustaining
-  members get monthly "free hours" credits; reservations and equipment loans spend them.
+  members get monthly credits; reservations and equipment loans spend them.
 - `webhook-handlers.ts` — the single Stripe webhook entry point
   (`src/routes/api/stripe/webhook/+server.ts`) dispatches by event type:
   `checkout.session.completed` (emits `checkout.completed` on the event bus),
   `invoice.paid` (allocates monthly credits), `customer.subscription.updated/deleted`
   (syncs subscription state).
 
-The full money flows, including the reservation confirmation window and credit settlement,
+**Stripe is the payment ledger.** There are no local order, transaction or line-item tables.
+Card payments are Checkout Sessions; cash and $0 credit-covered payments are reported to Stripe
+as Payment Records (`stripe.paymentRecords.reportPayment`), so each purchasable row
+(`reservation`, `ticket`, …) stores a `stripePaymentRecordId` as its proof of payment. What the
+collective earned and spent, for accounting, is the separate `financial_entry` ledger
+([domain model](domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money)).
+Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment-ledger.md).
+
+- **Products and prices.** `product-config-service.ts` finds or creates each Stripe Product by
+  `metadata.corvmc_key`; unit amounts come from site config and go to Stripe as inline
+  `price_data`, never stored Price ids.
+- **Checkout is in-app.** `checkout()` creates sessions with `ui_mode: 'elements'`, so the buyer
+  pays on `/checkout/[id]` and the card fields stay in Stripe's iframe. A landing page can load
+  before the webhook lands, so each one polls its own query on a bounded retry
+  (`RETRY_LIMIT` / `RETRY_MS`) keyed on the fact the webhook writes.
+- **Credit balances** are two integer columns on `user`: `credit_free_hours` (30-minute
+  blocks) and `credit_equipment` (cents). D1 has no transactions, so `credit-service.ts` deducts
+  with a guarded relative decrement (`WHERE col >= amount`) and adds with a bounded
+  compare-and-swap retry. `credit_transaction` records every change.
+- **The gateway seam.** `src/lib/server/stripe.ts` returns a `PaymentGateway`
+  (`finance/gateway/types.ts`): the real Stripe client when `PAYMENTS_DRIVER` is `stripe`, and
+  otherwise the in-memory `fake-gateway.ts`. Production opts in through `wrangler.toml`; dev, e2e
+  and specs get the fake, because a developer `.env` here has carried a live key.
+  `gateway.contract.spec.ts` runs one suite against both drivers. Under the fake, the checkout
+  page renders a card-number form and Stripe.js never loads, so the real browser half of a
+  payment is checked by hand against a sandbox key.
+
+The full money flows, including reservation pricing and credit settlement,
 are traced step-by-step in [business-workflows.md](../development/business-workflows.md).
+
+## Reports
+
+`/staff/reports` holds four views, each behind its own capability (`views.ts` beside the
+route): Annual (`finance.read`), Volunteering (`volunteer.report`), Inventory spend
+(`inventory.report`) and Acquisitions (`inventory.manageAcquisitions`).
+
+Each module computes its own figures in its own `*-report-service.ts`. The shared kit is
+`src/lib/server/report/`: `range.ts` (`rangeCondition`, whole days in the collective's time
+zone), `bucket.ts` (`monthBucket`, `dayBucket`) and `csv.ts`, plus
+`src/lib/components/ui/DateRangeFilter.svelte` with This year, Last year and All time presets.
+`annual-report-service.ts` writes no queries of its own. It calls the module services, and its
+money lines come from the `financial_entry` ledger.
+
+A CSV download is a `+server.ts` route (`/staff/reports/export`,
+`/staff/reports/volunteering/export`) whose first statement is `requireCapability`. `toCsv`
+forces `escape_formulas` on, so a member-written cell beginning `=`, `+`, `-` or `@` is not run
+as a formula. `csvResponse` adds a UTF-8 BOM and `cache-control: no-store`. Why reports are
+shaped this way: [the decision record](../decisions/0040-reports-are-module-owned.md).
 
 ## Observability
 

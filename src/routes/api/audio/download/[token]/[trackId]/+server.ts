@@ -4,9 +4,9 @@ import {
 	trackForToken,
 	recordDownload,
 	findPaidPurchaseByToken
-} from '$lib/server/audio/purchase-service';
-import { streamAudioObject } from '$lib/server/audio/audio-storage';
-import { requireFeature } from '$lib/server/feature-flags';
+} from '#lib/server/audio/purchase-service.js';
+import { streamAudioObject } from '#lib/server/audio/audio-storage.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
 
 /**
  * The file itself — the thing that was actually bought.

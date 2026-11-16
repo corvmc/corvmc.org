@@ -1,13 +1,15 @@
 <script lang="ts">
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Form from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Form from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ReservationCardShell from './ReservationCardShell.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { cancelBandReservation } from '$lib/remote/reservations.remote';
+	import { cancelBandReservation } from '#lib/remote/reservations.remote.js';
 	import { toast } from 'svelte-sonner';
-	import type { MemberRef, ReservationRef } from '$lib/types/entity';
+	import type { MemberRef, ReservationRef } from '#lib/types/entity.js';
+	import type { ReservationTrack } from '#lib/utils/reservation-actions.js';
 
 	/**
 	 * One of the act's own bookings, on the same card the member panel uses.
@@ -23,7 +25,10 @@
 		reservation: {
 			id: string;
 			status: string;
+			/** What the card shows; `status` only decides whether Cancel is offered. */
+			track: ReservationTrack;
 			startsAt: Date;
+			endsAt: Date;
 			notes: string | null;
 			ref: ReservationRef;
 			bookedBy: MemberRef;
@@ -43,45 +48,46 @@
 	// `canCancel` comes from the server — `cancelBandReservation` authorizes on
 	// `createdByUserId`, so rendering it for every bandmate offered a button that
 	// answered with an error toast. Nothing is shown to someone who can't.
-	const showCancel = $derived(
-		reservation.canCancel &&
-			(reservation.status === 'scheduled' || reservation.status === 'confirmed')
-	);
+	const showCancel = $derived(reservation.canCancel && reservation.status === 'confirmed');
 </script>
 
 <!-- Passed only when it has something in it: an empty footer is padding under
      every past session and every card on the dashboard. -->
 {#snippet rowActions()}
 	{#if showCancel}
-		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
+		<Form
+			remote={cancel}
+			onsuccess={() => toast.success(m.reservations_band_reservation_card_toast())}
+		>
 			<input {...cancelFields.slug.as('hidden', slug)} />
 			<input {...cancelFields.reservationId.as('hidden', reservation.id)} />
-			<SubmitButton label="Cancel" variant="error" size="xs" outline />
+			<SubmitButton label={m.reservations_band_reservation_card_label()} variant="error" outline />
 		</Form>
 	{/if}
 	{#if reservation.canPay}
 		<Button
 			href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 			variant="primary"
-			size="xs"
 			outline
 		>
-			Pay online
+			{m.reservations_band_reservation_card_pay_online_label()}
 		</Button>
 	{/if}
 {/snippet}
 
 <ReservationCardShell
 	startsAt={reservation.startsAt}
-	status={reservation.status}
+	ended={reservation.endsAt.getTime() < Date.now()}
+	track={reservation.track}
 	actions={showCancel || reservation.canPay ? rowActions : undefined}
 >
 	<div class="p-2 px-3">
 		<EntityIdentity ref={reservation.ref} size="md">
 			{#snippet subtitle()}
 				{reservation.ref.subtitle}
-				{#if reservation.bookedBy.id}
-					&middot; Booked by {reservation.bookedBy.title}
+				{#if reservation.bookedBy.id}{m.reservations_band_reservation_card_booked_by_body({
+						title: reservation.bookedBy.title
+					})}
 				{/if}
 			{/snippet}
 		</EntityIdentity>

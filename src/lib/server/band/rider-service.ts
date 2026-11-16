@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { rider, riderElement, riderInput } from '$lib/server/db/schema/rider';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { eventBand } from '$lib/server/db/schema/event';
-import { mediaAttachment } from '$lib/server/db/schema/media';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { rider, riderElement, riderInput } from '#lib/server/db/schema/rider.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { eventBand } from '#lib/server/db/schema/event.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	riderElementKinds,
 	RIDER_ELEMENT_LABEL_MAX,
@@ -21,7 +21,7 @@ import {
 	type RiderMonitorFormat,
 	type RiderProvidedBy,
 	type RiderStandType
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * A band's tech rider — the input list, the gear, and who answers for each bit.
@@ -332,7 +332,8 @@ async function replaceElementsForOwner(
 			id: riderElement.id,
 			label: riderElement.label,
 			x: riderElement.x,
-			y: riderElement.y
+			y: riderElement.y,
+			inventoryItemId: riderElement.inventoryItemId
 		})
 		.from(riderElement)
 		.where(ownerFilter);
@@ -341,6 +342,10 @@ async function replaceElementsForOwner(
 		doomed
 			.filter((d) => d.x !== null && d.y !== null)
 			.map((d) => [d.label, { x: d.x, y: d.y }] as const)
+	);
+	// Production's stock match rides along the same way: the band never sets it.
+	const stockByLabel = new Map(
+		doomed.filter((d) => d.inventoryItemId).map((d) => [d.label, d.inventoryItemId] as const)
 	);
 
 	if (doomed.length) {
@@ -367,7 +372,8 @@ async function replaceElementsForOwner(
 			notes: trim(el.notes, RIDER_ITEM_NOTES_MAX),
 			sortOrder: i,
 			x: placed?.x ?? null,
-			y: placed?.y ?? null
+			y: placed?.y ?? null,
+			inventoryItemId: stockByLabel.get(label) ?? null
 		};
 	});
 
@@ -385,7 +391,7 @@ async function replaceElementsForOwner(
 		}))
 	);
 
-	// Nine columns an element, ten an input — eight rows a statement keeps both
+	// Ten columns an element, ten an input — eight rows a statement keeps both
 	// under D1's 100-parameter ceiling with room to spare.
 	for (let i = 0; i < elementRows.length; i += 8) {
 		await db.insert(riderElement).values(elementRows.slice(i, i + 8));

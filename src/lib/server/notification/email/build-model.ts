@@ -1,8 +1,8 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/public';
 import type {
 	NotificationEmailContent,
 	NotificationEmailModel
-} from '$lib/types/notification-email';
+} from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // Notification model construction

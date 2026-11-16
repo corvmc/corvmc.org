@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -43,12 +43,12 @@ const bandServiceMock = {
 	declineInvitation: vi.fn().mockResolvedValue(true)
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 // Mock getRequestEvent for remote functions
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => mockLocals.user,
 	requireStaff: vi.fn()
 }));
@@ -74,7 +74,7 @@ vi.mock('$app/server', () => {
 });
 
 const { createBand, acceptInvite, declineInvite } =
-	(await import('$lib/remote/bands.remote')) as any;
+	(await import('#lib/remote/bands.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

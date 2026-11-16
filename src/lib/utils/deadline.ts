@@ -5,7 +5,7 @@
  * days compare correctly as strings, so nothing here parses one into a `Date`
  * except for display. Client-safe: no server imports.
  */
-import { formatDateShortYear } from './format';
+import { formatDateShortYear, utcCalendarDate } from './format';
 
 export interface Deadline<K extends string = string> {
 	kind: K;
@@ -23,7 +23,7 @@ export function due<K extends string>(kind: K, on: string, today: string): Deadl
 export function addIsoDays(iso: string, n: number): string {
 	const d = new Date(`${iso}T00:00:00Z`);
 	d.setUTCDate(d.getUTCDate() + n);
-	return d.toISOString().slice(0, 10);
+	return utcCalendarDate(d);
 }
 
 /** The soonest of the given deadlines, skipping missing ones. */
@@ -47,7 +47,10 @@ export function byDeadline<T extends { deadline: Deadline | null }>(name: (row: 
 	};
 }
 
-/** A `YYYY-MM-DD` read as that calendar day, not as UTC midnight. */
+/**
+ * A `YYYY-MM-DD` read as that calendar day. Noon UTC is the same day in club
+ * time; a viewer-local parse is not, from UTC+12 on.
+ */
 export function formatIsoDay(iso: string | null): string {
-	return iso ? formatDateShortYear(new Date(`${iso}T12:00:00`)) : '—';
+	return iso ? formatDateShortYear(new Date(`${iso}T12:00:00Z`)) : '—';
 }

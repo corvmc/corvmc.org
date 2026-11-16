@@ -1,4 +1,4 @@
-import { formatMonthYear } from '$lib/utils/format';
+import { formatMonthYear } from '#lib/utils/format.js';
 
 /**
  * A reservation history cut into month sections (#904).

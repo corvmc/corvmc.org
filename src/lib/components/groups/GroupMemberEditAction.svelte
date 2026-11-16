@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { updateGroupMember } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { updateGroupMember } from '#lib/remote/groups.remote.js';
 
 	/**
 	 * A chair editing another member's role and what they do here.
@@ -29,20 +30,24 @@
 
 	const { fields } = updateGroupMember;
 
-	const roleOptions = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
-	];
+	// A committee's `admin` tier is its chair position, which this fills or vacates.
+	const roleOptions = $derived([
+		{ value: 'member', label: m.groups_member_label() },
+		{
+			value: 'admin',
+			label: kindLabel === 'committee' ? m.groups_chair_label() : m.groups_admin_label()
+		}
+	]);
 </script>
 
 <Action
 	action={updateGroupMember.for(memberId)}
-	label="Edit"
-	aria-label={`Edit ${memberName}`}
-	modalTitle="Edit {memberName}"
+	label={m.groups_edit_label()}
+	aria-label={m.groups_group_member_edit_aria_label({ memberName })}
+	modalTitle={m.groups_group_member_edit_aria_title({ memberName })}
 	variant="ghost"
 	size="xs"
-	successToast="Member updated"
+	successToast={m.groups_group_member_edit_success_toast()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -52,19 +57,22 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label="Role"
+				label={m.groups_role_label()}
 				value={role}
 				options={roleOptions}
-				description="Admins post announcements, upload documents, run sessions and manage the roster."
+				description={m.groups_group_member_edit_description_body()}
 			/>
-			<FormField
-				field={fields.position}
-				type="text"
-				label="Position"
-				value={position ?? ''}
-				maxlength="100"
-				placeholder="e.g. {kindLabel === 'committee' ? 'Secretary' : 'Chart librarian'}"
-			/>
+			<!-- A committee's seats are defined positions, edited on its Positions card. -->
+			{#if kindLabel !== 'committee'}
+				<FormField
+					field={fields.position}
+					type="text"
+					label={m.groups_position_label()}
+					value={position ?? ''}
+					maxlength="100"
+					placeholder={m.groups_group_member_edit_placeholder({ value: 'Chart librarian' })}
+				/>
+			{/if}
 		</div>
 	{/snippet}
 </Action>

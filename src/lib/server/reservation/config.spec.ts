@@ -18,8 +18,8 @@ import {
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_ONEOFF,
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
 } from './config';
-import { bookerTypes } from '$lib/config';
-import { MINUTES_PER_CREDIT, creditValueCents } from '$lib/config';
+import { bookerTypes } from '#lib/config.js';
+import { MINUTES_PER_CREDIT, creditValueCents } from '#lib/config.js';
 
 const cfg: ReservationConfig = {
 	timeSlotMinutes: 30,
@@ -29,13 +29,15 @@ const cfg: ReservationConfig = {
 	operatingHoursEnd: '22:00',
 	bufferMinutes: 0,
 	minAdvanceMinutes: 60,
+	newMemberMinAdvanceMinutes: 4320,
 	maxAdvanceDaysOneoff: DEFAULT_MAX_ADVANCE_DAYS_ONEOFF,
 	maxAdvanceDaysRecurring: DEFAULT_MAX_ADVANCE_DAYS_RECURRING,
 	hourlyRateCents: 1500,
 	teachingRateCents: DEFAULT_TEACHING_RATE_CENTS,
 	teachingMinDurationHours: DEFAULT_TEACHING_MIN_DURATION_HOURS,
 	teachingMaxAdvanceDaysOneoff: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_ONEOFF,
-	teachingMaxAdvanceDaysRecurring: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
+	teachingMaxAdvanceDaysRecurring: DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING,
+	feeGateFrom: ''
 };
 
 describe('termsFor', () => {

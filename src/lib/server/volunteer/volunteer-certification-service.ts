@@ -1,13 +1,15 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	volunteerCertification,
 	memberCertification,
 	volunteerRoleCertification
-} from '$lib/server/db/schema/volunteer';
+} from '#lib/server/db/schema/volunteer.js';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
-import { CERT_DESCRIPTION_MAX, CERT_NAME_MAX } from '$lib/config';
-import type { VolunteerCertification } from '$lib/server/db/schema/volunteer';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/errors.js';
+import { CERT_DESCRIPTION_MAX, CERT_NAME_MAX } from '#lib/config.js';
+import type { VolunteerCertification } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // The certification catalog
@@ -108,10 +110,6 @@ function normalize(data: CertificationInput) {
 	return normalized;
 }
 
-function isUniqueViolation(err: unknown): boolean {
-	return err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
-}
-
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -140,7 +138,7 @@ export async function createCertification(data: {
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new CertificationNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new CertificationNameTakenError(values.name!);
 		throw err;
 	}
 }
@@ -166,7 +164,7 @@ export async function updateCertification(
 		if (!row) throw new CertificationNotFoundError();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new CertificationNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new CertificationNameTakenError(values.name!);
 		throw err;
 	}
 }
@@ -210,6 +208,11 @@ export async function deleteCertification(id: string): Promise<VolunteerCertific
 		.returning();
 
 	if (!row) throw new CertificationNotFoundError();
+	await recordAuditEntry({
+		action: 'clearance.deleted',
+		subject: { type: 'clearance', id, label: row.name },
+		details: {}
+	});
 	return row;
 }
 
@@ -260,15 +263,6 @@ export async function listCertifications(
 		holderCount: holderBy.get(row.id) ?? 0,
 		roleCount: roleBy.get(row.id) ?? 0
 	}));
-}
-
-export async function getCertificationById(id: string): Promise<VolunteerCertification | null> {
-	const [row] = await db
-		.select()
-		.from(volunteerCertification)
-		.where(eq(volunteerCertification.id, id))
-		.limit(1);
-	return row ?? null;
 }
 
 // ---------------------------------------------------------------------------

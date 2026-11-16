@@ -1,14 +1,15 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatBytes, formatDateShort } from '$lib/utils/format';
-	import { deleteDocument } from '$lib/remote/files.remote';
+	import { formatBytes, formatDateShort } from '#lib/utils/format.js';
+	import { deleteDocument } from '#lib/remote/files.remote.js';
 	import DocumentUploadAction from './DocumentUploadAction.svelte';
-	import type { DocumentUsage, FileView } from '$lib/server/group/file-service';
+	import type { DocumentUsage, FileView } from '#lib/server/group/file-service.js';
 
 	/**
 	 * A group's shared documents, wherever they are shown.
@@ -47,8 +48,12 @@
 		<!-- Managers only. A member who cannot upload has no use for a number
 		     describing a limit they will never meet. -->
 		<span class="text-subtle">
-			{formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)} · {usage.fileCount} of {usage.quotaFiles}
-			documents
+			{m.groups_document_list_documents_text({
+				formatBytes: formatBytes(usage.usedBytes),
+				formatBytes2: formatBytes(usage.quotaBytes),
+				fileCount: usage.fileCount,
+				quotaFiles: usage.quotaFiles
+			})}
 		</span>
 		<DocumentUploadAction {groupId} {atQuota} />
 	</div>
@@ -57,18 +62,18 @@
 {#if files.length === 0}
 	<EmptyState
 		description={canManage
-			? 'Nothing here yet. Upload minutes, charts, or anything the group shares.'
-			: 'Nothing here yet.'}
+			? m.groups_document_list_nothing_here_yet_upload_minutes_body()
+			: m.groups_document_list_nothing_here_yet_body()}
 	/>
 {:else}
 	<Table>
 		{#snippet head()}
-			<th>File</th>
-			<th class="col-support">Added by</th>
-			<th class="col-support w-px whitespace-nowrap">Size</th>
-			<th class="col-extra w-px whitespace-nowrap">Added</th>
+			<th>{m.groups_file_label()}</th>
+			<th class="col-support">{m.groups_document_list_added_by_label()}</th>
+			<th class="col-support w-px whitespace-nowrap">{m.groups_document_list_size_label()}</th>
+			<th class="col-extra w-px whitespace-nowrap">{m.groups_added_label()}</th>
 			{#if canManage}
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.groups_document_list_actions_label()}</span></th>
 			{/if}
 		{/snippet}
 		{#each files as doc (doc.id)}
@@ -92,7 +97,7 @@
 					{#if doc.uploadedBy}
 						<EntityIdentity ref={doc.uploadedBy} size="sm" />
 					{:else}
-						<span class="text-subtle">Former member</span>
+						<span class="text-subtle">{m.groups_former_member_text()}</span>
 					{/if}
 				</td>
 				<td class="col-support w-px whitespace-nowrap">{formatBytes(doc.sizeBytes)}</td>
@@ -101,15 +106,15 @@
 					<td class="w-px">
 						<Action
 							action={deleteDocument.for(doc.id)}
-							label="Delete"
-							modalTitle="Delete document"
-							submitLabel="Delete"
-							confirm="Delete “{doc.filename}”? It comes off the list for everyone."
-							successToast="Deleted"
+							label={m.groups_delete_label()}
+							modalTitle={m.groups_document_list_modal_title()}
+							submitLabel={m.groups_delete_label()}
+							confirm={m.groups_document_list_confirm_body({ filename: doc.filename })}
+							successToast={m.groups_deleted_toast()}
 							variant="error"
 							size="xs"
 							outline
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => refreshAll()}
 						>
 							{#snippet form()}
 								<input {...deleteFields.groupId.as('hidden', groupId)} />

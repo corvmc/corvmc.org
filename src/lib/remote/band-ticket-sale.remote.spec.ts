@@ -17,28 +17,28 @@ const requireGroupRole = vi.fn(async (ref: { slug?: string }, _minRole: string) 
 		throw Object.assign(new Error('Not a member of this group'), { status: 403 });
 	return { user: { id: 'user-1' }, group: { id: 'band-1', slug: ref.slug }, role: 'admin' };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => requireGroupRole(...(a as [{ slug?: string }, string]))
 }));
 
 const getById = vi.fn();
 const openBandTicketSale = vi.fn();
 const closeBandTicketSale = vi.fn();
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (...a: unknown[]) => getById(...(a as [])),
 	openBandTicketSale: (...a: unknown[]) => openBandTicketSale(...(a as [])),
 	closeBandTicketSale: (...a: unknown[]) => closeBandTicketSale(...(a as []))
 }));
 
 const bandSaleBlocker = vi.fn();
-vi.mock('$lib/server/ticket/ticket-seller', () => ({
+vi.mock('#lib/server/ticket/ticket-seller.js', () => ({
 	bandSaleBlocker: (...a: unknown[]) => bandSaleBlocker(...(a as []))
 }));
 const getTicketsSold = vi.fn();
 const getEventTickets = vi.fn();
 const getTicketById = vi.fn();
 const checkIn = vi.fn();
-vi.mock('$lib/server/ticket/ticket-service', () => ({
+vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsSold: (...a: unknown[]) => getTicketsSold(...(a as [])),
 	getEventTickets: (...a: unknown[]) => getEventTickets(...(a as [])),
 	getTicketById: (...a: unknown[]) => getTicketById(...(a as [])),

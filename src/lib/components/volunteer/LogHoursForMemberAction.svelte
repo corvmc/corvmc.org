@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Record hours for somebody who is not going to log them themselves.
 	 *
@@ -11,14 +12,14 @@
 	 * the log that fell outside the member's 90-day window, and the service still refuses a
 	 * date in the future for everybody.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { IconClockPlus } from '@tabler/icons-svelte';
-	import { clubToday, VOLUNTEER_HOUR_STEP } from '$lib/config';
-	import { logHoursForMember } from '$lib/remote/volunteer.remote';
+	import { clubToday, VOLUNTEER_HOUR_STEP } from '#lib/config.js';
+	import { logHoursForMember } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		/**
@@ -29,7 +30,7 @@
 		 * case.
 		 */
 		presetUser = null,
-		label = 'Log Hours',
+		label = m.volunteer_log_hours_for_member_log_hours_label(),
 		size = 'sm'
 	}: {
 		presetUser?: { id: string; name: string } | null;
@@ -49,9 +50,11 @@
 	icon={clockIcon}
 	variant="ghost"
 	{size}
-	modalTitle={presetUser ? `Log hours for ${presetUser.name}` : 'Log hours for a member'}
-	submitLabel="Log Hours"
-	successToast="Hours logged"
+	modalTitle={presetUser
+		? m.volunteer_log_hours_for_member_log_hours_2_title({ name: presetUser.name })
+		: m.volunteer_log_hours_for_member_log_hours_member_title()}
+	submitLabel={m.volunteer_log_hours_for_member_log_hours_label()}
+	successToast={m.volunteer_hours_logged_toast()}
 	onsuccess={() => {
 		userId = '';
 		userName = '';
@@ -59,7 +62,7 @@
 >
 	{#snippet form()}
 		{#if presetUser}
-			<input type="hidden" name="userId" value={presetUser.id} />
+			<input {...logHoursForMember.fields.userId.as('hidden', presetUser.id)} />
 		{:else}
 			<MemberPicker field={fields.userId} bind:value={userId} bind:name={userName} />
 		{/if}
@@ -70,30 +73,37 @@
 			mean this component holding that query open just to pass it down.
 		-->
 		<label class="fieldset w-full">
-			<span class="fieldset-legend">What did they help with?</span>
-			<Select name="volunteerRoleId">
+			<span class="fieldset-legend"
+				>{m.volunteer_log_hours_for_member_what_did_they_help_with_label()}</span
+			>
+			<Select {...fields.volunteerRoleId.as('select')}>
 				<RoleOptions activeOnly />
 			</Select>
 		</label>
 
-		<FormField name="workedOn" label="Date" type="date" value={clubToday()} />
 		<FormField
-			name="hours"
-			label="Hours"
+			field={logHoursForMember.fields.workedOn}
+			label={m.volunteer_date_label()}
+			type="date"
+			value={clubToday()}
+		/>
+		<FormField
+			field={logHoursForMember.fields.hours}
+			submitAs="text"
+			label={m.volunteer_hours_label()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
-			description="To the nearest quarter hour."
+			description={m.volunteer_log_hours_for_member_nearest_quarter_hour_body()}
 		/>
 		<FormField
-			name="description"
-			label="What they did"
+			field={logHoursForMember.fields.description}
+			label={m.volunteer_log_hours_for_member_what_they_did_label()}
 			type="textarea"
-			description="This is the record — it's what a funder's auditor would read."
+			description={m.volunteer_log_hours_for_member_record_s_what_funder_s_body()}
 		/>
 		<p class="text-muted">
-			No backdate limit. Lands approved, stamped with your name — there is no second review, because
-			you typing it in is the review.
+			{m.volunteer_log_hours_for_member_no_backdate_limit_lands_appro_text()}
 		</p>
 	{/snippet}
 </Action>

@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack, type Snippet } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
-	import { getUserPage } from '$lib/remote/users.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import { getUserPage } from '#lib/remote/users.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
 	import { TAB_LABELS, type TabKey } from './tabs';
 	import UserScoreboard from './panels/UserScoreboard.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
@@ -106,10 +107,10 @@
 
 {#snippet identityBadges()}
 	{#if member.deletedAt}
-		<Badge variant="error" size="md">Deactivated</Badge>
+		<Badge variant="error" size="md">{m.staff_deactivated_label()}</Badge>
 	{/if}
 	{#if overview.membership.sustaining}
-		<Badge variant="success" size="md">Sustaining</Badge>
+		<Badge variant="success" size="md">{m.staff_sustaining_label()}</Badge>
 	{/if}
 	{#each member.roles as role (role)}
 		<Badge variant="info" size="md">{role}</Badge>
@@ -133,15 +134,15 @@
 	{#if overview.bands.length > 0}
 		<div class="flex flex-wrap items-center gap-1">
 			{#each activeBands as b (b.id)}
-				<a href={resolve(`/staff/bands/${b.id}`)}>
+				<a href={resolve(`staff/groups/${b.id}`)}>
 					<Badge size="sm">{b.name}</Badge>
 				</a>
 			{/each}
 			{#if overview.counts.pendingBandInvites > 0}
 				<Badge size="sm" variant="warning">
-					{overview.counts.pendingBandInvites} invite{overview.counts.pendingBandInvites === 1
-						? ''
-						: 's'} pending
+					{m.staff_members_id_member_record_invites_pending_label({
+						pendingBandInvites: overview.counts.pendingBandInvites
+					})}
 				</Badge>
 			{/if}
 		</div>
@@ -183,7 +184,7 @@
 {/snippet}
 
 {#if variant === 'page'}
-	<PageHeader subtitle="Member" title={member.name}>
+	<PageHeader subtitle={m.staff_member_body()} title={member.name}>
 		{#snippet leading()}
 			<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-12" />
 		{/snippet}

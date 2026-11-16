@@ -17,12 +17,12 @@ vi.mock('./financial-entry-service', () => ({
 }));
 
 let hourLog: Record<string, unknown> | null = null;
-vi.mock('$lib/server/volunteer/hour-log-service', () => ({
+vi.mock('#lib/server/volunteer/hour-log-service.js', () => ({
 	getHourLog: async () => hourLog
 }));
 
 let role: Record<string, unknown> | null = null;
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	getActiveVolunteerRoleById: async () => role
 }));
 

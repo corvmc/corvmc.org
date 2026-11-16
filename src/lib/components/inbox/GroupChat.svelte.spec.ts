@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { fakeCommand } from '$lib/test/fake-command.svelte';
+import { fakeCommand } from '#lib/test/fake-command.svelte.js';
 
 // GroupChat renders the topic it is handed — on Messages the page's own query
 // already carries it — and marks it seen exactly once.
@@ -28,7 +28,7 @@ const getGroupChatTopic = vi.fn();
 // write is what turned an untracked mark-seen effect into a loop (#1956).
 const markGroupChatSeen = fakeCommand(async (_id: string) => ({ success: true }));
 
-vi.mock('$lib/remote/group-chat.remote', () => ({
+vi.mock('#lib/remote/group-chat.remote.js', () => ({
 	getGroupChatTopic: (...a: unknown[]) => getGroupChatTopic(...a),
 	markGroupChatSeen: (id: string) => markGroupChatSeen(id),
 	postGroupChatMessage: fakeRemoteForm(),
@@ -37,16 +37,18 @@ vi.mock('$lib/remote/group-chat.remote', () => ({
 
 const GroupChat = (await import('./GroupChat.test.svelte')).default;
 
+const TOPIC = 'Autumn Leaves in G?';
 const chat = {
 	id: 'topic-7',
 	groupName: 'Real Book Club',
 	topicName: 'Setlists',
 	isGeneral: false,
+	readOnly: false,
 	muted: false,
 	messages: [
 		{
 			id: 'm1',
-			body: 'Autumn Leaves in G?',
+			body: TOPIC,
 			direction: 'inbound',
 			authorName: 'Sam',
 			authorUserId: 'member-2',
@@ -64,8 +66,16 @@ describe('GroupChat', () => {
 	it('renders the topic it is given without querying for it', async () => {
 		await render(GroupChat, { chat, viewerUserId: 'member-1' });
 
-		await expect.element(page.getByText('Autumn Leaves in G?')).toBeInTheDocument();
+		await expect.element(page.getByText(TOPIC)).toBeInTheDocument();
 		expect(getGroupChatTopic).not.toHaveBeenCalled();
+	});
+
+	it('links back only when a list pane stands behind it', async () => {
+		const { container, rerender } = await render(GroupChat, { chat, viewerUserId: 'member-1' });
+		expect(container.querySelector('a[href="/inbox"]')).toBeNull();
+
+		await rerender({ chat, viewerUserId: 'member-1', backHref: '/inbox' });
+		await expect.poll(() => container.querySelector('a[href="/inbox"]')).not.toBeNull();
 	});
 
 	it('marks the topic it was given as seen, once', async () => {

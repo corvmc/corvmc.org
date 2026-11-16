@@ -12,7 +12,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chainable() } }));
 
 const { isDeliverable } = await import('./recipient');
 

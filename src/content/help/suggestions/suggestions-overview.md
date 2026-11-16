@@ -1,5 +1,5 @@
 ---
-title: The Suggestion Board
+title: The suggestion board
 slug: suggestions-overview
 category: suggestions
 summary: Post an idea for the collective, upvote what you agree with, and follow what staff decide.

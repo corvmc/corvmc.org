@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Position } from '$lib/config';
+import { positionOrder, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Regression #1395: "staff accounts cannot be self-deleted" asked
@@ -12,8 +12,8 @@ import { positionOrder, type Position } from '$lib/config';
 const me = { id: 'user-1', email: 'me@example.com', name: 'Me' };
 let heldRoles: string[] = [];
 
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	return {
 		requireUser: () => me,
 		hasAnyRole: vi.fn(async (_id: string, names: string[]) =>
@@ -25,7 +25,7 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			const c: Record<string, unknown> = {
@@ -39,21 +39,21 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const signInEmail = vi.fn(async () => ({}));
-vi.mock('$lib/server/auth', () => ({
+vi.mock('#lib/server/auth.js', () => ({
 	auth: { api: { signInEmail: (...a: unknown[]) => signInEmail(...(a as [])), signOut: vi.fn() } }
 }));
 const deactivateUser = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/user/user-service', () => ({
+vi.mock('#lib/server/user/user-service.js', () => ({
 	deactivateUser: (...a: unknown[]) => deactivateUser(...a)
 }));
-vi.mock('$lib/server/marketing/audience-service', () => ({
+vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	getSubscriptionsForUser: vi.fn(),
 	getOptInAudiencesForUser: vi.fn(),
 	addSubscriber: vi.fn(),
 	unsubscribe: vi.fn()
 }));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({}));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({}));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}

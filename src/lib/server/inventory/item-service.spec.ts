@@ -28,7 +28,7 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({

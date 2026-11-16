@@ -1,18 +1,20 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteFormField } from '$app/server';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
+	import { searchBandsForLineup } from '#lib/remote/band-events.remote.js';
 	import {
 		formatDate,
 		formatDollars,
 		formatTime,
 		toLocalDate,
 		toLocalTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	/**
 	 * Every field of a band event, in one place.
@@ -39,10 +41,12 @@
 		endsAt: Date | null;
 		doorsAt: Date | null;
 		location: string | null;
+		address: string | null;
 		tags: string | null;
 		externalTicketUrl: string | null;
 		ticketPrice: number | null;
 		posterUrl: string | null;
+		visibility: string;
 	};
 
 	let {
@@ -68,10 +72,13 @@
 			eventEndTime: RemoteFormField<string>;
 			doorsTime: RemoteFormField<string>;
 			location: RemoteFormField<string>;
+			address: RemoteFormField<string>;
 			tags: RemoteFormField<string>;
 			posterFile: RemoteFormField<File>;
 			externalTicketUrl: RemoteFormField<string>;
 			ticketPriceDollars: RemoteFormField<string>;
+			lineup: RemoteFormField<string>;
+			visibility: RemoteFormField<'public' | 'members' | 'group'>;
 		};
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
@@ -88,31 +95,36 @@
 <FormField
 	field={fields.title}
 	type="text"
-	label={readonly ? 'Title' : 'Title *'}
+	label={readonly ? m.band_title_label() : m.band_slug_events_event_fields_title_label()}
 	value={evt?.title ?? ''}
-	placeholder="e.g. Live at The Venue"
+	placeholder={m.band_e_g_live_at_venue_placeholder()}
 	maxlength="200"
 	{readonly}
 	display={evt?.title}
 />
 
 <!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
-     maxlength and placeholder would be lost. Issues still resolve by name.
+     maxlength and placeholder would be lost.
      `readonly` now wins over this child rather than being ignored by it. -->
-<FormField name="description" label="Description" {readonly} display={evt?.description ?? '—'}>
+<FormField
+	field={fields.description}
+	label={m.band_slug_events_event_fields_description_label()}
+	{readonly}
+	display={evt?.description ?? '—'}
+>
 	<textarea
 		{...fields.description.as('text', evt?.description ?? '')}
 		class="textarea w-full"
 		rows="4"
 		maxlength="5000"
-		placeholder="Tell people what to expect..."></textarea>
+		placeholder={m.band_slug_events_event_fields_tell_people_what_expect_placeholder()}></textarea>
 </FormField>
 
 {#if readonly}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<FormField label="Date" readonly display={evt ? formatDate(evt.startsAt) : ''} />
+		<FormField label={m.band_date_label()} readonly display={evt ? formatDate(evt.startsAt) : ''} />
 		<FormField
-			label="Time"
+			label={m.band_slug_events_event_fields_time_label()}
 			readonly
 			display={evt ? formatEventTimeRange(evt.startsAt, evt.endsAt) : ''}
 		/>
@@ -122,23 +134,23 @@
 		<FormField
 			field={fields.eventDate}
 			type="date"
-			label="Date"
+			label={m.band_date_label()}
 			value={evt ? toLocalDate(evt.startsAt) : ''}
 			required
 		/>
 		<FormField
 			field={fields.eventStartTime}
 			type="time"
-			label="Start Time"
+			label={m.band_start_time_label()}
 			value={evt ? toLocalTime(evt.startsAt) : ''}
 			required
 		/>
 		<FormField
 			field={fields.eventEndTime}
 			type="time"
-			label="End Time"
+			label={m.band_slug_events_event_fields_end_time_label()}
 			value={evt?.endsAt ? toLocalTime(evt.endsAt) : ''}
-			description="Optional — clear it if you don't know."
+			description={m.band_slug_events_event_fields_optional_clear_if_don_t_body()}
 		/>
 	</div>
 {/if}
@@ -149,7 +161,7 @@
 		<FormField
 			field={fields.doorsTime}
 			type="time"
-			label="Doors Open"
+			label={m.band_slug_events_event_fields_doors_open_label()}
 			value={evt?.doorsAt ? toLocalTime(evt.doorsAt) : ''}
 			{readonly}
 			display={evt?.doorsAt ? formatTime(evt.doorsAt) : undefined}
@@ -159,12 +171,22 @@
 		<FormField
 			field={fields.location}
 			type="text"
-			label="Location"
+			label={m.band_venue_label()}
 			value={evt?.location ?? ''}
-			placeholder="Venue name & address"
 			maxlength="500"
 			{readonly}
 			display={evt?.location ?? undefined}
+		/>
+	{/if}
+	{#if !readonly || evt?.address}
+		<FormField
+			field={fields.address}
+			type="text"
+			label={m.band_slug_events_event_fields_address_label()}
+			value={evt?.address ?? ''}
+			maxlength="500"
+			{readonly}
+			display={evt?.address ?? undefined}
 		/>
 	{/if}
 </div>
@@ -176,17 +198,22 @@
 	<FormField
 		field={fields.tags}
 		type="text"
-		label="Tags"
+		label={m.band_slug_events_event_fields_tags_label()}
 		value={evt?.tags ?? ''}
-		placeholder="Comma-separated tags"
+		placeholder={m.band_slug_events_event_fields_comma_separated_tags_placeholder()}
 		maxlength="500"
 		{readonly}
 		display={evt?.tags ?? undefined}
 	/>
 {/if}
 
-<FormField name="lineup" label="Who's playing">
+{#if !readonly && evt}
+	<VisibilityField field={fields.visibility} value={evt.visibility} hasGroup />
+{/if}
+
+<FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing_label()}>
 	<LineupEditor
+		field={fields.lineup}
 		bind:value={lineup}
 		ownerBandId={bandId}
 		{readonly}
@@ -208,21 +235,21 @@
 	<FormField
 		field={fields.posterFile}
 		type="file"
-		label="Poster"
+		label={m.band_slug_events_event_fields_poster_label()}
 		accept="image/jpeg,image/png,image/webp"
 		src={poster?.src}
 		previewClass="h-40 w-32"
-		emptyLabel="Add a poster"
-		replaceLabel="Replace poster"
-		description="Shown on your events list, your band's page, and the community calendar."
+		emptyLabel={m.band_slug_events_event_fields_empty_label_title()}
+		replaceLabel={m.band_slug_events_event_fields_replace_label()}
+		description={m.band_slug_events_event_fields_shown_events_list_band_s_body()}
 	/>
 {:else if poster}
-	<FormField label="Poster" readonly>
+	<FormField label={m.band_slug_events_event_fields_poster_label()} readonly>
 		{#snippet display()}
 			<img
 				src={poster.src}
 				srcset={poster.srcset}
-				alt="Event poster"
+				alt={m.band_slug_events_event_fields_alt_text()}
 				class="h-40 w-32 rounded object-cover"
 			/>
 		{/snippet}
@@ -234,9 +261,9 @@
 		<FormField
 			field={fields.externalTicketUrl}
 			type="text"
-			label="Ticket Link"
+			label={m.band_slug_events_event_fields_ticket_link_label()}
 			value={evt?.externalTicketUrl ?? ''}
-			placeholder="https://eventbrite.com/..."
+			placeholder={m.band_slug_events_event_fields_https_eventbrite_com_placeholder()}
 			{readonly}
 		>
 			{#snippet display()}
@@ -260,11 +287,11 @@
 	<FormField
 		field={fields.ticketPriceDollars}
 		type="text"
-		label="Ticket price ($)"
+		label={m.band_slug_events_event_fields_ticket_price_label()}
 		value={evt?.ticketPrice ? formatDollars(evt.ticketPrice) : ''}
 		placeholder="10.00"
 		inputmode="decimal"
-		description="What people pay, at the door or through the link. Leave blank if it's free."
+		description={m.band_slug_events_event_fields_what_people_pay_at_door_body()}
 		{readonly}
 		display={evt ? priceDisplay({ ...evt, ticketingEnabled: false }).label : undefined}
 	/>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseScan } from './scan';
+import { parseScan, repeatGate } from './scan';
 
 /**
  * The camera is not tested here — a decode loop needs a real device and a real
@@ -81,5 +81,34 @@ describe('parseScan', () => {
 
 	it('reports an empty scan rather than throwing', () => {
 		expect(parseScan('   ')).toEqual({ kind: 'unknown', value: '' });
+	});
+});
+
+/**
+ * A camera left open reads the same code many times a second. The door keeps the
+ * camera open between tickets (#2796), so a repeat inside the window is dropped
+ * and a different code always passes.
+ */
+describe('repeatGate', () => {
+	it('passes the first read, drops repeats inside the window, passes after it', () => {
+		let now = 0;
+		const pass = repeatGate(3000, () => now);
+		expect(pass('TIX-1')).toBe(true);
+		now = 1000;
+		expect(pass('TIX-1')).toBe(false);
+		now = 2500;
+		expect(pass('TIX-1')).toBe(false);
+		now = 5600;
+		expect(pass('TIX-1')).toBe(true);
+	});
+
+	it('passes a different code at once', () => {
+		let now = 0;
+		const pass = repeatGate(3000, () => now);
+		expect(pass('TIX-1')).toBe(true);
+		now = 10;
+		expect(pass('TIX-2')).toBe(true);
+		now = 20;
+		expect(pass('TIX-1')).toBe(true);
 	});
 });

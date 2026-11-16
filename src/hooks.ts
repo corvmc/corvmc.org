@@ -1,6 +1,6 @@
-import type { Reroute } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
-import { bandSlugFromHost, isAppDomain } from '$lib/utils/band-site-url';
+import type { Reroute } from '@sveltejs/kit/hooks';
+import * as env from '$app/env/public';
+import { bandSlugFromHost, isAppDomain } from '#lib/utils/band-site-url.js';
 
 /** Resolves a custom domain to the band whose site it serves. See src/routes/api/host-route. */
 const HOST_ROUTE_ENDPOINT = '/api/host-route';

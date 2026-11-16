@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cancelTicket } from '$lib/remote/events.remote';
+	import { refreshAll } from '$app/navigation';
+	import { cancelTicket } from '#lib/remote/events.remote.js';
 
 	const { fields } = cancelTicket;
 
@@ -27,17 +28,17 @@
 
 <Action
 	action={cancelTicket}
-	label="Cancel"
-	modalTitle="Cancel Ticket"
-	successToast="Ticket cancelled"
+	label={m.actions_cancel_ticket_label()}
+	modalTitle={m.actions_cancel_ticket_modal_title()}
+	successToast={m.actions_cancel_ticket_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.ticketId.as('hidden', ticketId)} />
-		<p class="py-2">Cancel ticket for {attendeeName}?</p>
+		<p class="py-2">{m.actions_cancel_ticket_cancel_ticket_text({ attendeeName })}</p>
 	{/snippet}
 </Action>

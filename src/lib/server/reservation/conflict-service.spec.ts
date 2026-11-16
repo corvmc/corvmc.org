@@ -4,46 +4,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-let selectResultQueue: unknown[][] = [];
-
-function chainable() {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => {
-					if (selectResultQueue.length > 0) return resolve(selectResultQueue.shift()!);
-					return resolve([]);
-				};
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: vi.fn(() => chainable())
-	}
-}));
-
-vi.mock('drizzle-orm', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('drizzle-orm')>();
-	return {
-		...actual,
-		and: (...args: unknown[]) => args,
-		ne: () => 'ne',
-		eq: () => 'eq',
-		lt: () => 'lt',
-		gt: () => 'gt'
-	};
+// The overlap and status predicates are SQL, so they run against real rows.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite();
 });
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 // The `teaching*` keys are fixtures, not decoration: without them `termsFor`
 // falls through to the DEFAULT_TEACHING_* constants and an instructor case
 // would be asserting against the module's own defaults rather than against
 // anything this mock controls.
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -68,8 +40,8 @@ import {
 	getConflictDetails,
 	getValidationWarnings
 } from './conflict-service';
-import { db } from '$lib/server/db';
 import { buildDateInTz } from './timezone';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -83,8 +55,31 @@ function makeDate(dateStr: string, timeStr: string): Date {
 
 const date = '2025-07-15'; // A Tuesday in PDT
 
+const secs = (d: Date) => Math.floor(d.getTime() / 1000);
+let seq = 0;
+function booking(startsAt: Date, endsAt: Date, opts: { status?: string; id?: string } = {}) {
+	const id = opts.id ?? `res-${++seq}`;
+	sqlite
+		.prepare(
+			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+			 values (?, 'user', 'u-alice', 'u-alice', ?, ?, ?)`
+		)
+		.run(id, opts.status ?? 'confirmed', secs(startsAt), secs(endsAt));
+	return id;
+}
+function closed(startsAt: Date, endsAt: Date, reason = 'Maintenance') {
+	sqlite
+		.prepare(`insert into closure (id, reason, starts_at, ends_at) values (?, ?, ?, ?)`)
+		.run(`closure-${++seq}`, reason, secs(startsAt), secs(endsAt));
+}
+
 beforeEach(() => {
-	selectResultQueue = [];
+	sqlite.exec('delete from reservation');
+	sqlite.exec('delete from closure');
+	sqlite.exec('delete from user');
+	sqlite.exec(
+		`insert into user (id, name, email) values ('u-alice', 'Alice', 'alice@example.com'), ('u-bob', 'Bob', 'bob@example.com')`
+	);
 });
 
 // ---------------------------------------------------------------------------
@@ -238,41 +233,45 @@ describe('validateBooking', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hasConflict — async, uses mocked DB
+// hasConflict — against real rows
 // ---------------------------------------------------------------------------
 
 describe('hasConflict', () => {
+	const at = (start: string, end: string) =>
+		hasConflict(makeDate(date, start), makeDate(date, end));
+
 	it('returns false when no reservations or closures conflict', async () => {
-		selectResultQueue = [[], []]; // reservations query, closures query
-		const result = await hasConflict(makeDate(date, '10:00'), makeDate(date, '11:00'));
-		expect(result).toBe(false);
+		// Touching end to start is not an overlap.
+		booking(makeDate(date, '09:00'), makeDate(date, '10:00'));
+		booking(makeDate(date, '11:00'), makeDate(date, '12:00'));
+		expect(await at('10:00', '11:00')).toBe(false);
 	});
 
-	it('returns true when a reservation conflicts', async () => {
-		selectResultQueue = [[{ id: 'res-1' }]]; // reservation found
-		const result = await hasConflict(makeDate(date, '10:00'), makeDate(date, '11:00'));
-		expect(result).toBe(true);
+	it('returns true when a reservation overlaps', async () => {
+		booking(makeDate(date, '10:30'), makeDate(date, '11:30'));
+		expect(await at('10:00', '11:00')).toBe(true);
 	});
 
-	it('returns true when a closure conflicts', async () => {
-		selectResultQueue = [[], [{ id: 'closure-1' }]];
-		const result = await hasConflict(makeDate(date, '10:00'), makeDate(date, '11:00'));
-		expect(result).toBe(true);
+	it.each(['cancelled', 'waitlisted'])('ignores a %s reservation', async (status) => {
+		booking(makeDate(date, '10:00'), makeDate(date, '11:00'), { status });
+		expect(await at('10:00', '11:00')).toBe(false);
 	});
 
-	it('accepts excludeReservationId parameter', async () => {
-		selectResultQueue = [[], []];
-		const result = await hasConflict(
-			makeDate(date, '10:00'),
-			makeDate(date, '11:00'),
-			'exclude-id'
-		);
-		expect(result).toBe(false);
+	it('returns true when a closure overlaps', async () => {
+		closed(makeDate(date, '10:45'), makeDate(date, '13:00'));
+		expect(await at('10:00', '11:00')).toBe(true);
+	});
+
+	it('does not count the excluded reservation against itself', async () => {
+		const id = booking(makeDate(date, '10:00'), makeDate(date, '11:00'));
+		expect(await hasConflict(makeDate(date, '10:00'), makeDate(date, '11:00'), id)).toBe(false);
+		booking(makeDate(date, '10:00'), makeDate(date, '11:00'));
+		expect(await hasConflict(makeDate(date, '10:00'), makeDate(date, '11:00'), id)).toBe(true);
 	});
 });
 
 // ---------------------------------------------------------------------------
-// getAvailableSlots — async, uses mocked DB
+// getAvailableSlots — against real rows
 // ---------------------------------------------------------------------------
 
 describe('getAvailableSlots', () => {
@@ -282,38 +281,28 @@ describe('getAvailableSlots', () => {
 		timeZone: 'America/Los_Angeles'
 	});
 
-	// Regression: the day must be anchored to the literal date string, independent of
-	// the runtime timezone. Previously the remote layer passed a `Date` parsed at
-	// midnight in the runtime TZ (UTC on Cloudflare Workers); getAvailableSlots then
-	// re-derived the day in America/Los_Angeles, shifting it to the *previous* day.
-	// That made displayed availability belong to the wrong day (open slots rejected on
-	// submit) and made today's staff view show every slot as blocked (all in the past).
-	it('keeps future slots available for the current day regardless of runtime TZ', async () => {
-		// 09:30 LA on 2026-06-29 (= 16:30 UTC). If the day were shifted back to 06-28,
-		// every slot would be in the past and marked unavailable — the staff "all
-		// blocked" bug.
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date('2026-06-29T16:30:00Z'));
-		try {
-			selectResultQueue = [[], []]; // day reservations, day closures
-			const slots = await getAvailableSlots('2026-06-29');
+	// Regression: the day is anchored to the literal date string, whatever the
+	// process zone. A `Date` parsed at runtime-zone midnight (UTC on Workers) put
+	// the slots on the previous club day, so today's staff view showed every slot
+	// as already past ("all blocked") and open slots were refused on submit.
+	forEachClockEdge(
+		'marks a slot open exactly when it clears the notice, today and tomorrow',
+		async ({ at, clubDate }) => {
+			const earliest = at.getTime() + 60 * 60_000; // minAdvanceMinutes
+			for (const day of [clubDate, addCalendarDays(clubDate, 1)]) {
+				const slots = await getAvailableSlots(day);
 
-			expect(slots).toHaveLength(26);
-			expect(slots[0].startTime).toBe('09:00');
-			// Cutoff is 09:30 + 60min advance = 10:30 LA; afternoon slots stay open.
-			expect(slots.find((s) => s.startTime === '14:00')?.available).toBe(true);
-			expect(slots.some((s) => s.available)).toBe(true);
-
-			// And the window opens at 09:00 *on 2026-06-29* in LA, not the prior day.
-			const firstAvailable = slots.find((s) => s.available);
-			expect(firstAvailable).toBeDefined();
-		} finally {
-			vi.useRealTimers();
-		}
-	});
+				expect(slots).toHaveLength(26);
+				expect(slots[0].startTime).toBe('09:00');
+				expect(slots.map((s) => s.available)).toEqual(
+					slots.map((s) => makeDate(day, s.startTime).getTime() >= earliest)
+				);
+			}
+		},
+		{ fakeTimers: true, zones: viewerTimeZones }
+	);
 
 	it('returns slots within operating hours when no reservations or closures', async () => {
-		selectResultQueue = [[], []]; // day reservations, day closures
 		const slots = await getAvailableSlots(futureDate);
 		// Operating hours 09:00 - 22:00 = 13 hours = 26 half-hour slots
 		expect(slots).toHaveLength(26);
@@ -326,10 +315,7 @@ describe('getAvailableSlots', () => {
 	it('marks slots overlapping a reservation as unavailable', async () => {
 		const resStart = makeDate(futureDate, '10:00');
 		const resEnd = makeDate(futureDate, '11:00');
-		selectResultQueue = [
-			[{ startsAt: resStart, endsAt: resEnd }], // reservations
-			[] // closures
-		];
+		booking(resStart, resEnd);
 		const slots = await getAvailableSlots(futureDate);
 		// Slots at 10:00 and 10:30 should be blocked
 		const slot1000 = slots.find((s) => s.startTime === '10:00');
@@ -344,10 +330,7 @@ describe('getAvailableSlots', () => {
 	it('marks slots overlapping a closure as unavailable', async () => {
 		const closureStart = makeDate(futureDate, '14:00');
 		const closureEnd = makeDate(futureDate, '15:30');
-		selectResultQueue = [
-			[], // reservations
-			[{ startsAt: closureStart, endsAt: closureEnd }] // closures
-		];
+		closed(closureStart, closureEnd);
 		const slots = await getAvailableSlots(futureDate);
 		const slot1400 = slots.find((s) => s.startTime === '14:00');
 		const slot1430 = slots.find((s) => s.startTime === '14:30');
@@ -369,26 +352,24 @@ describe('getAvailableSlotsForDates', () => {
 	const day2 = new Date(Date.parse(`${day1}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 	it('reads the range once and applies each row only to its own day', async () => {
-		vi.mocked(db.select).mockClear();
-		selectResultQueue = [
-			[{ startsAt: makeDate(day2, '10:00'), endsAt: makeDate(day2, '11:00') }],
-			[]
-		];
+		booking(makeDate(day2, '10:00'), makeDate(day2, '11:00'));
+		const select = vi.spyOn(testDb, 'select');
 		const byDate = await getAvailableSlotsForDates([day1, day2]);
 
-		expect(db.select).toHaveBeenCalledTimes(2);
+		expect(select).toHaveBeenCalledTimes(2);
+		select.mockRestore();
 		expect(byDate.get(day1)?.find((s) => s.startTime === '10:00')?.available).toBe(true);
 		expect(byDate.get(day2)?.find((s) => s.startTime === '10:00')?.available).toBe(false);
 	});
 });
 
 // ---------------------------------------------------------------------------
-// getConflictDetails — async, uses mocked DB
+// getConflictDetails — against real rows
 // ---------------------------------------------------------------------------
 
 describe('getConflictDetails', () => {
 	it('returns empty array when no conflicts exist', async () => {
-		selectResultQueue = [[], []];
+		booking(makeDate(date, '11:00'), makeDate(date, '12:00'));
 		const details = await getConflictDetails(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(details).toEqual([]);
 	});
@@ -396,11 +377,13 @@ describe('getConflictDetails', () => {
 	it('returns reservation conflict details', async () => {
 		const resStart = makeDate(date, '10:00');
 		const resEnd = makeDate(date, '11:00');
-		selectResultQueue = [[{ startsAt: resStart, endsAt: resEnd, userName: 'Alice' }], []];
+		const id = booking(resStart, resEnd);
+		booking(resStart, resEnd, { status: 'cancelled' });
 		const details = await getConflictDetails(makeDate(date, '10:00'), makeDate(date, '11:00'));
 		expect(details).toHaveLength(1);
 		expect(details[0]).toEqual({
 			type: 'reservation',
+			id,
 			startsAt: resStart,
 			endsAt: resEnd,
 			label: 'Alice'
@@ -410,10 +393,7 @@ describe('getConflictDetails', () => {
 	it('returns closure conflict details', async () => {
 		const closureStart = makeDate(date, '14:00');
 		const closureEnd = makeDate(date, '16:00');
-		selectResultQueue = [
-			[],
-			[{ startsAt: closureStart, endsAt: closureEnd, reason: 'Maintenance' }]
-		];
+		closed(closureStart, closureEnd, 'Maintenance');
 		const details = await getConflictDetails(makeDate(date, '14:00'), makeDate(date, '16:00'));
 		expect(details).toHaveLength(1);
 		expect(details[0]).toEqual({
@@ -429,14 +409,18 @@ describe('getConflictDetails', () => {
 		const resEnd = makeDate(date, '11:00');
 		const closureStart = makeDate(date, '10:30');
 		const closureEnd = makeDate(date, '11:30');
-		selectResultQueue = [
-			[{ startsAt: resStart, endsAt: resEnd, userName: 'Bob' }],
-			[{ startsAt: closureStart, endsAt: closureEnd, reason: 'Emergency' }]
-		];
+		sqlite
+			.prepare(
+				`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+				 values ('res-bob', 'user', 'u-bob', 'u-bob', 'confirmed', ?, ?)`
+			)
+			.run(secs(resStart), secs(resEnd));
+		closed(closureStart, closureEnd, 'Emergency');
 		const details = await getConflictDetails(makeDate(date, '10:00'), makeDate(date, '12:00'));
-		expect(details).toHaveLength(2);
-		expect(details[0].type).toBe('reservation');
-		expect(details[1].type).toBe('closure');
+		expect(details.map((d) => [d.type, d.label])).toEqual([
+			['reservation', 'Bob'],
+			['closure', 'Emergency']
+		]);
 	});
 });
 

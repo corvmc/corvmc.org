@@ -75,7 +75,7 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		insert: vi.fn((table: unknown) => ({
@@ -118,40 +118,53 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/utils/slug', () => ({
+// chair.ts builds its subqueries on the real `db`; its own spec runs them on SQLite.
+vi.mock('#lib/server/group/chair.js', async () => {
+	const { sql } = await import('drizzle-orm');
+	return {
+		CHAIR_POSITION_NAME: 'Chair',
+		isCommitteeChair: vi.fn(async () => false),
+		leadsGroup: () => sql`leads_group`,
+		leadersFirst: () => sql`leaders_first`,
+		rosterRole: () => sql`roster_role`,
+		setChairHolder: vi.fn()
+	};
+});
+
+vi.mock('#lib/server/utils/slug.js', () => ({
 	generateSlug: vi.fn((name: string) => name.toLowerCase().replace(/[^a-z0-9-]+/g, '')),
 	ensureUniqueSlug: vi.fn(async (slug: string) => slug)
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	cancel: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	deleteObject: vi.fn().mockResolvedValue(undefined),
 	uploadFile: vi.fn(async (_buffer: ArrayBuffer, key: string) => key)
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
 	detachSlot: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	deletePrivateObject: vi.fn().mockResolvedValue(undefined)
 }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
 }));
 
 /** Keys `deleteBand` finds for the group it is about to cascade away. */
 let documentKeys: { id: string; key: string }[] = [];
 
-vi.mock('$lib/server/group/file-service', async () => {
-	const actual = await vi.importActual<typeof import('$lib/server/group/file-service')>(
-		'$lib/server/group/file-service'
+vi.mock('#lib/server/group/file-service.js', async () => {
+	const actual = await vi.importActual<typeof import('#lib/server/group/file-service.js')>(
+		'#lib/server/group/file-service.js'
 	);
 	return {
 		DocumentPurgeFailedError: actual.DocumentPurgeFailedError,
@@ -187,17 +200,18 @@ import {
 	listAll,
 	listBandAdmins,
 	getMembers,
+	getRosterMembers,
 	listForUser as listForUserExport,
 	partitionByStatus,
 	searchBandsByName
 } from './band-service';
-import { db } from '$lib/server/db';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { deleteObject } from '$lib/server/storage';
-import { detachSlot } from '$lib/server/media/media-service';
-import { deletePrivateObject } from '$lib/server/private-storage';
-import { DocumentPurgeFailedError } from '$lib/server/group/file-service';
+import { db } from '#lib/server/db/index.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
+import { deleteObject } from '#lib/server/storage.js';
+import { detachSlot } from '#lib/server/media/media-service.js';
+import { deletePrivateObject } from '#lib/server/private-storage.js';
+import { DocumentPurgeFailedError } from '#lib/server/group/file-service.js';
 
 // Walk a drizzle SQL condition (real `and`/`eq` operators — only `db` is
 // mocked) and collect the column names it references, so tests can assert a
@@ -309,6 +323,12 @@ describe('BandService', () => {
 			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
 		});
 
+		it("leaves a removed member off the staff roster's list too", async () => {
+			await getRosterMembers('band-1');
+
+			expect(renderedWheres().at(-1)).toContain('"user"."deleted_at" is null');
+		});
+
 		it('does not count a removed member toward the band', async () => {
 			await listForUserExport('user-1', ['band']);
 
@@ -371,7 +391,7 @@ describe('BandService', () => {
 	describe('create', () => {
 		it('creates a band and owner membership via batch', async () => {
 			selectResult = [{ ...mockBand }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			const result = await create('user-owner', {
 				name: 'The Velvet Underground',
 				bio: 'NYC band'
@@ -438,19 +458,32 @@ describe('BandService', () => {
 			expect(ownerRows[0].values.groupId).toBe(bandRows[0].values.id);
 		});
 
-		// A club or committee has chairs (admins), never an owner (#1760).
-		it.each(['club', 'committee'] as const)(
-			'writes a %s’s first member as an admin, not an owner',
-			async (kind) => {
-				selectResult = [{ ...mockBand, kind }];
+		// A club has chairs (admins), never an owner (#1760).
+		it('writes a club’s first member as an admin, not an owner', async () => {
+			selectResult = [{ ...mockBand, kind: 'club' }];
 
-				await create('user-chair', { name: 'Real Book Club', kind });
+			await create('user-chair', { name: 'Real Book Club', kind: 'club' });
 
-				const rows = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
-				expect(rows).toHaveLength(1);
-				expect(rows[0].values).toMatchObject({ userId: 'user-chair', role: 'admin' });
-			}
-		);
+			const rows = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
+			expect(rows).toHaveLength(1);
+			expect(rows[0].values).toMatchObject({ userId: 'user-chair', role: 'admin' });
+		});
+
+		// A committee's chair is its chair position (#3009).
+		it('gives a committee a chair position held by its first member', async () => {
+			selectResult = [{ ...mockBand, kind: 'committee' }];
+
+			await create('user-chair', { name: 'Booking', kind: 'committee' });
+
+			const [member] = writes.filter((w) => w.table === 'group_member' && w.op === 'insert');
+			const [position] = writes.filter((w) => w.table === 'group_position' && w.op === 'insert');
+			const [holder] = writes.filter(
+				(w) => w.table === 'group_position_holder' && w.op === 'insert'
+			);
+			expect(member.values).toMatchObject({ userId: 'user-chair', role: 'member' });
+			expect(position.values).toMatchObject({ name: 'Chair', isChair: true });
+			expect(holder.values).toEqual({ positionId: position.values.id, memberId: member.values.id });
+		});
 	});
 
 	// -----------------------------------------------------------------------
@@ -462,7 +495,7 @@ describe('BandService', () => {
 		// profile, every bookmark. Deriving it from the name meant a rename moved
 		// all of it silently. Only `changeBandSlug` moves an address now.
 		it('never touches the slug when the name changes', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1', name: 'New Name' }], []] as any);
 
 			await update('band-1', { name: 'New Name' });
@@ -479,7 +512,7 @@ describe('BandService', () => {
 		// directory — which orders and searches on the entry's copy — showing the
 		// old name until something else happened to touch the row.
 		it('writes the new name to the listing as well as the band', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1', name: 'New Name' }], []] as any);
 
 			await update('band-1', { name: 'New Name', bio: 'Fresh bio' });
@@ -491,7 +524,7 @@ describe('BandService', () => {
 		});
 
 		it('leaves the listing alone for a field the band did not send', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.batch).mockResolvedValueOnce([[{ id: 'band-1' }], []] as any);
 
 			await update('band-1', { name: 'Only A Rename' });
@@ -501,7 +534,7 @@ describe('BandService', () => {
 		});
 
 		it('throws when band not found', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.batch).mockResolvedValueOnce([[], []] as any);
 
 			await expect(update('band-999', { bio: 'test' })).rejects.toThrow(BandNotFoundError);
@@ -633,8 +666,7 @@ describe('BandService', () => {
 		});
 
 		/**
-		 * The one place the role table differs by kind
-		 * (`docs/specs/shipped/groups-spec.md:818`): an appointed leader runs a program,
+		 * The one place the role table differs by kind: an appointed leader runs a program,
 		 * they do not own it, and ending one is a staff decision. The guard on the
 		 * remote is `requireGroupRole(…, 'owner')`, which a club owner satisfies —
 		 * so the check has to be here, where the cascade is.
@@ -746,7 +778,7 @@ describe('BandService', () => {
 		}
 
 		it('activates the pending row for a band id', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.update).mockReturnValueOnce(
 				mockUpdateReturning([{ ...mockMember, status: 'active', groupId: 'band-1' }])
 			);
@@ -757,7 +789,7 @@ describe('BandService', () => {
 		});
 
 		it('is idempotent when the invite was already accepted', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.update).mockReturnValueOnce(mockUpdateReturning([]));
 			selectResultQueue = [[{ status: 'active' }]];
 
@@ -767,7 +799,7 @@ describe('BandService', () => {
 		});
 
 		it('reports not_found when there is no membership row at all', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			vi.mocked(db.update).mockReturnValueOnce(mockUpdateReturning([]));
 			selectResultQueue = [[]];
 
@@ -783,7 +815,7 @@ describe('BandService', () => {
 
 	describe('declineInvitation', () => {
 		it('reports true when a pending row was removed', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			deleteReturning = [{ id: 'member-1' }];
 
 			await expect(declineInvitation('band-1', 'user-2')).resolves.toBe(true);
@@ -801,13 +833,13 @@ describe('BandService', () => {
 
 	describe('revokeInvitation', () => {
 		it('deletes the pending member row', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			await revokeInvitation('member-1');
 			expect(db.delete).toHaveBeenCalled();
 		});
 
 		it('scopes the delete to the given band', async () => {
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			await revokeInvitation('member-1', 'band-1');
 			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
 			expect(collectColumnNames(condition)).toContain('group_id');
@@ -821,7 +853,7 @@ describe('BandService', () => {
 	describe('removeMember', () => {
 		it('deletes an active member row', async () => {
 			selectResult = [{ role: 'member' }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await removeMember('member-1');
 			expect(db.delete).toHaveBeenCalled();
@@ -844,7 +876,7 @@ describe('BandService', () => {
 		// invisible when it belongs to another band.
 		it('treats a memberId from another band as not found when scoped', async () => {
 			selectResult = []; // the band-scoped lookup finds nothing
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await expect(removeMember('other-bands-member', 'band-1')).rejects.toThrow(
 				BandMemberNotFoundError
@@ -854,7 +886,7 @@ describe('BandService', () => {
 
 		it('scopes the delete to the given band', async () => {
 			selectResult = [{ role: 'member' }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await removeMember('member-1', 'band-1');
 			const condition = (db.delete as any).mock.results[0].value.where.mock.calls[0][0];
@@ -886,7 +918,7 @@ describe('BandService', () => {
 		// Regression (cross-band IDOR): see removeMember above.
 		it('treats a memberId from another band as not found when scoped', async () => {
 			selectResult = [];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await expect(updateMember('other-bands-member', { role: 'admin' }, 'band-1')).rejects.toThrow(
 				BandMemberNotFoundError
@@ -896,7 +928,7 @@ describe('BandService', () => {
 
 		it('scopes the update to the given band', async () => {
 			selectResult = [{ role: 'member' }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await updateMember('member-1', { role: 'admin' }, 'band-1');
 			const setResult = (db.update as any).mock.results[0].value.set.mock.results[0].value;
@@ -912,7 +944,7 @@ describe('BandService', () => {
 	describe('transferOwnership', () => {
 		it('demotes old owner and promotes new one via batch', async () => {
 			selectResult = [{ status: 'active' }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 			await transferOwnership('band-1', 'user-2', 'user-owner');
 
 			expect(db.batch).toHaveBeenCalled();
@@ -961,7 +993,7 @@ describe('BandService', () => {
 	describe('leaveBand', () => {
 		it('deletes the member row', async () => {
 			selectResult = [{ role: 'member' }];
-			const { db } = await import('$lib/server/db');
+			const { db } = await import('#lib/server/db/index.js');
 
 			await leaveBand('band-1', 'user-2');
 			expect(db.delete).toHaveBeenCalled();

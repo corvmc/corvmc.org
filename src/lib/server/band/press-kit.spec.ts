@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fullPressKit, hasBookingContact, publicPressKit } from './press-kit';
-import type { BandEpk } from '$lib/types/band-page';
+import type { BandEpk } from '#lib/types/band-page.js';
 
 /**
  * A band that filled in everything. Every private field carries a string that

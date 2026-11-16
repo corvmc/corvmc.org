@@ -14,7 +14,7 @@
  * These are projections, not guards — they decide *what* a caller may show, not
  * *whether* they may. Authorization stays in the remote function above them.
  */
-import type { BandEpk, FullPressKit, PublicPressKit } from '$lib/types/band-page';
+import type { BandEpk, FullPressKit, PublicPressKit } from '#lib/types/band-page.js';
 
 /**
  * What `/directory/bands/{slug}` and its print stylesheet render.

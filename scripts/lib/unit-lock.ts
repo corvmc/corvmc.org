@@ -5,7 +5,7 @@
  * developer machine, and the comment there names this exact hazard. But that is a
  * per-process guess with nothing coordinating the processes: on eight cores one
  * suite takes four workers as intended, and **two suites take all eight**, plus a
- * headless-chromium pool each for the `client` and `storybook` projects. Measured
+ * headless-chromium pool each for the `client` project. Measured
  * on 2026-08-30: two suites from sibling worktrees, 29 chromium shells, load
  * average 52, and a `vite dev` on the same box that could not answer a request
  * inside sixty seconds.
@@ -22,7 +22,7 @@
  * legitimate and queueing it is lossless. Refusing it would turn "your colleague
  * is testing" into a red suite, which is a worse failure than waiting.
  *
- * Per-checkout ports (`browserPort`/`storybookPort` with `strictPort`) already
+ * Per-checkout ports (`browserPort` with `strictPort`) already
  * stop the two runs colliding on a socket. That is what made this worth
  * building: the collision that used to be loud is now silent, so the only
  * remaining symptom is that everything on the machine gets slow, which is the

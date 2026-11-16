@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { and, count, eq, gte, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 
 /** Every row of the staff band list; clubs and committees share the table. */

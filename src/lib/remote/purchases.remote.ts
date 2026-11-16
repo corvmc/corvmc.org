@@ -6,8 +6,8 @@
  * kit 2.64.
  */
 import { query } from '$app/server';
-import { requireUser } from '$lib/server/authorization';
-import { listPurchasesForUser } from '$lib/server/purchase/purchase-service';
+import { requireUser } from '#lib/server/authorization.js';
+import { listPurchasesForUser } from '#lib/server/purchase/purchase-service.js';
 
 export const getMyPurchases = query(async () => {
 	const user = requireUser();

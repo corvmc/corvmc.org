@@ -5,31 +5,32 @@ import {
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
-} from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	instructorRosterFilters,
 	listAllInstructors,
 	toServiceFilters
-} from '$lib/server/instructor/instructor-roster';
-import { rosterEmails } from '$lib/server/roster/roster';
-import * as instructorService from '$lib/server/instructor/instructor-service';
+} from '#lib/server/instructor/instructor-roster.js';
+import { rosterEmails } from '#lib/server/roster/roster.js';
+import * as instructorService from '#lib/server/instructor/instructor-service.js';
 import {
 	INSTRUCTOR_REVIEW_NOTES_MAX,
 	INSTRUCTOR_HEADLINE_MAX,
 	INSTRUCTOR_BLURB_MAX,
 	INSTRUCTOR_RATES_NOTE_MAX,
 	INSTRUCTOR_APPLICATION_NOTE_MAX
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	listInstructors,
 	type InstructorFilters,
-	listInstructorInstruments
-} from '$lib/server/instructor/instructor-directory-service';
+	listInstructorInstruments,
+	directoryReach
+} from '#lib/server/instructor/instructor-directory-service.js';
 
 // NOTE: a `.remote.ts` module may export **only** remote functions — SvelteKit
 // refuses to initialise the file otherwise, at import time rather than at type
-// check. So shared schemas live in `$lib/server/db/schema/instructor.ts` and are
+// check. So shared schemas live in `#lib/server/db/schema/instructor.js` and are
 // imported by whoever needs them, never re-exported through here.
 
 /**
@@ -42,6 +43,12 @@ import {
  * advertises works. Until then the module runs staff-curated, which is a real
  * operating mode rather than a gap.
  */
+
+/** The grant picker. Under `instructor.review`, so a teacher reviewer needs no booking access. */
+export const searchMembersToGrant = query(z.string().max(200), async (q) => {
+	await requireCapability('instructor.review');
+	return instructorService.searchMembersToGrant(q);
+});
 
 /** The Members "Instructors" view, under the keys its page writes to the URL. */
 export const getStaffInstructors = query(
@@ -68,7 +75,19 @@ export const getStaffInstructorEmails = query(instructorRosterFilters, async (f)
  */
 export const getUserInstructor = query(z.string().min(1), async (userId) => {
 	await requireCapabilityOrOwner('instructor.read', userId);
-	return instructorService.getByUserId(userId);
+	const row = await instructorService.getByUserId(userId);
+	if (!row) return null;
+	const [reach, bookings, email] = await Promise.all([
+		directoryReach([userId]),
+		instructorService.futureTeachingBookings([row.id]),
+		instructorService.emailOf(userId)
+	]);
+	return {
+		...row,
+		directoryReach: reach.get(userId) ?? 'missing',
+		futureBookings: bookings.get(row.id) ?? 0,
+		email
+	};
 });
 
 const idSchema = z.object({ id: z.string().min(1) });

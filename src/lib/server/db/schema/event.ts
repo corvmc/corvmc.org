@@ -7,8 +7,10 @@ import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries } from './recurring';
 import { project } from './project';
-import { eventSources } from '../../../config';
+import { eventSources, type GroupKind } from '../../../config';
 import { venue } from './venue';
+import { calendarSource } from './calendar-source';
+import { newShortCode } from '../../../event-short-code';
 
 /**
  * Where a listing sits between "nobody has seen it" and "it is on the guide".
@@ -53,6 +55,26 @@ export const publicEventStatuses = ['published', 'cancelled'] as const;
 export const eventKinds = ['show', 'work_party', 'meeting', 'class', 'market'] as const;
 export type EventKind = (typeof eventKinds)[number];
 
+/** A club's or committee's session: it is the group meeting, not a show (#2607). */
+export const programSessionKind = 'meeting' satisfies EventKind;
+
+/**
+ * Who may see a published listing (#2662): everyone, any signed-in member, or
+ * the owning group's members. Every read outside the owner's own panels goes
+ * through `visibleTo` in `src/lib/server/event/visibility.ts`.
+ */
+export const eventVisibilities = ['public', 'members', 'group'] as const;
+export type EventVisibility = (typeof eventVisibilities)[number];
+
+/**
+ * What a new listing starts as: a meeting is its group's business, and a
+ * club's meeting is open to members. Everything else is advertised.
+ */
+export function defaultVisibility(kind: EventKind, ownerKind?: GroupKind | null): EventVisibility {
+	if (kind !== 'meeting') return 'public';
+	return ownerKind === 'club' || !ownerKind ? 'members' : 'group';
+}
+
 export const eventListing = sqliteTable(
 	'event_listing',
 	{
@@ -60,6 +82,10 @@ export const eventListing = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 		title: text('title').notNull(),
+		// The `/e/<code>` printed on posters; set on insert and never changed.
+		// Nullable only because SQLite cannot add a NOT NULL column without a
+		// constant default; the migration backfills every existing row.
+		shortCode: text('short_code').$defaultFn(newShortCode),
 		description: text('description'),
 		// Markdown: staff's paragraph about the night, shown above the recap photos.
 		recapText: text('recap_text'),
@@ -101,7 +127,15 @@ export const eventListing = sqliteTable(
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
+		// The default is for the rows that predate the column; a meeting's insert
+		// names its own, from `defaultVisibility`.
+		visibility: text('visibility', { enum: eventVisibilities }).notNull().default('public'),
+		// The venue's name as the poster typed it; on rows older than `address`
+		// it may hold an address too, and is shown as it was written.
 		location: text('location'),
+		// Street address, optional. Never backfilled out of `location`: those
+		// rows are the members' own words (#2133).
+		address: text('address'),
 		/**
 		 * The structured half of `location`, which stays exactly as it is.
 		 *
@@ -124,6 +158,13 @@ export const eventListing = sqliteTable(
 		// volunteer_hour_log.reviewNotes. Null on everything staff produce
 		// themselves; nothing outside the community review flow writes it.
 		reviewNotes: text('review_notes'),
+		// Set only on a listing the partner-feed importer wrote: which feed, and
+		// the VEVENT UID it came from. The pair is the dedupe key, so a re-run
+		// updates the row rather than adding a second one.
+		importSourceId: text('import_source_id').references(() => calendarSource.id, {
+			onDelete: 'set null'
+		}),
+		importUid: text('import_uid'),
 		createdByUserId: text('created_by_user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -142,6 +183,10 @@ export const eventListing = sqliteTable(
 		index('idx_event_recurring_series').on(t.recurringSeriesId),
 		index('idx_event_project').on(t.projectId),
 		index('idx_event_venue').on(t.venueId),
+		uniqueIndex('uq_event_short_code').on(t.shortCode),
+		uniqueIndex('uq_event_import_uid')
+			.on(t.importSourceId, t.importUid)
+			.where(sql`import_source_id IS NOT NULL AND import_uid IS NOT NULL`),
 		uniqueIndex('uq_event_recurring_instance')
 			.on(t.recurringSeriesId, t.startsAt)
 			.where(sql`recurring_series_id IS NOT NULL AND status != 'cancelled'`),
@@ -314,6 +359,8 @@ export type EventGroup = typeof eventGroup.$inferSelect;
 export const lineupEntrySchema = z.object({
 	name: z.string().trim().min(1, 'Name is required').max(200),
 	bandId: z.string().optional(),
+	/** An outside act's `directory_entry` id, picked from the staff bill's search (#2782). */
+	actId: z.string().optional(),
 	billingOrder: z.number().int().min(0).max(11),
 	note: z.string().max(100).optional()
 });
@@ -372,6 +419,7 @@ export const communityEventSchema = z.object({
 		.regex(/^$|^\d{2}:\d{2}$/, 'Invalid time')
 		.optional(),
 	location: z.string().max(500).optional(),
+	address: z.string().max(500).optional(),
 	tags: z.string().max(500).optional(),
 	externalTicketUrl: z.string().url('Enter a full URL').optional().or(z.literal('')),
 	ticketPriceDollars: z.string().max(12).optional(),

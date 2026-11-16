@@ -1,9 +1,12 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { CancelSeriesAction } from '$lib/components/actions';
-	import { getLocalUser } from '$lib/remote/users.remote';
-	import { getRecurringReservations } from '$lib/remote/reservations.remote';
-	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { CancelSeriesAction, EditScheduleAction } from '#lib/components/actions/index.js';
+	import { refreshAll } from '$app/navigation';
+	import { getLocalUser } from '#lib/remote/users.remote.js';
+	import { getRecurringReservations } from '#lib/remote/reservations.remote.js';
+	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '#lib/utils/format.js';
 	// A strict distance between two instants has no timezone to get wrong, so
 	// this one stays date-fns; the formatting around it does not.
 	import { formatDistanceStrict } from 'date-fns';
@@ -11,19 +14,22 @@
 
 {#if !(await getLocalUser()).subscription}
 	<div class="rounded-lg border border-base-300 px-4 pb-3 text-sm">
-		<h2 class="pt-4 text-lg font-semibold">Recurring Reservations</h2>
+		<h2 class="pt-4 text-lg font-semibold">
+			{m.member_reservations_manage_recurring_reservations_recurring_title()}
+		</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-			<span>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span
-			>
+			<span>{m.member_reservations_manage_recurring_reservations_sustaining_text()}</span>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>Learn More</Button
+				>{m.member_learn_more_label()}</Button
 			>
 		</div>
 	</div>
 {:else}
 	<div class="flex items-center justify-between pt-4">
-		<h2 class="text-lg font-semibold">My Recurring Reservations</h2>
+		<h2 class="text-lg font-semibold">
+			{m.member_reservations_manage_recurring_reservations_my_recurri_title()}
+		</h2>
 	</div>
 
 	{#each await getRecurringReservations() as series (series.id)}
@@ -42,14 +48,25 @@
 					)}
 				</p>
 				{#if series.seriesEndsAt}
-					<p class="text-xs opacity-50">Ends {formatDateShortYear(series.seriesEndsAt)}</p>
+					<p class="text-xs opacity-50">
+						{m.member_reservations_manage_recurring_reservations_ends_text({
+							formatDateShortYear: formatDateShortYear(series.seriesEndsAt)
+						})}
+					</p>
 				{/if}
 			</div>
-			<CancelSeriesAction
-				seriesId={series.id}
-				size="xs"
-				onsuccess={() => getRecurringReservations().refresh()}
-			/>
+			<div class="flex shrink-0 gap-1">
+				<EditScheduleAction
+					series={{ ...series, until: series.seriesEndsAt }}
+					size="xs"
+					onsuccess={() => refreshAll()}
+				/>
+				<CancelSeriesAction
+					seriesId={series.id}
+					size="xs"
+					onsuccess={() => getRecurringReservations().refresh()}
+				/>
+			</div>
 		</div>
 	{:else}
 		<!-- The control is a Frequency selector on step one of the Reserve Space
@@ -57,8 +74,12 @@
 		     thing. An empty list with nothing else in it read as a feature with
 		     no way in, and a walk reached exactly that conclusion (#1001). -->
 		<p class="text-muted">
-			No active recurring reservations. Use <strong>Reserve Space</strong> at the top of this page and
-			pick a frequency on the first step to start a series.
+			<ParaglideMessage
+				message={m.member_reservations_manage_recurring_reservations_no_active_text}
+				inputs={{}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/each}
 {/if}

@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { toLocalDateTime } from '$lib/utils/format';
+import { toLocalDateTime } from '#lib/utils/format.js';
 
 /**
  * The editor for a closure row on the reservations list (#1833). The closures
@@ -9,7 +9,7 @@ import { toLocalDateTime } from '$lib/utils/format';
  * has to arrive filled with the closure it edits, in club time.
  */
 
-vi.mock('$lib/remote/closures.remote', () => {
+vi.mock('#lib/remote/closures.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -30,7 +30,7 @@ vi.mock('$lib/remote/closures.remote', () => {
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -45,11 +45,13 @@ const closure = {
 };
 
 const named = (name: string) =>
-	document.querySelector(`[role="dialog"] [name="${name}"]`) as HTMLInputElement | null;
+	document.querySelector(
+		`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`
+	) as HTMLInputElement | null;
 
 const open = async () => {
-	await render(UpdateClosureAction, { closure });
-	await page.getByRole('button', { name: 'Edit closure' }).first().click();
+	const { locator } = await render(UpdateClosureAction, { closure });
+	await locator.getByRole('button').click();
 	await expect.element(page.getByRole('dialog')).toBeVisible();
 };
 

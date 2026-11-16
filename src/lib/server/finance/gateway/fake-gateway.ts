@@ -21,7 +21,7 @@ import {
 /**
  * An in-memory stand-in for Stripe, because Stripe's own guidance rules out
  * driving the real thing from a suite and `stripe-mock` is stateless — see
- * `docs/specs/shipped/finance-spec.md#testing`. State lives for the life of the
+ * `docs/decisions/0017-payments-run-against-a-fake-gateway.md`. State lives for the life of the
  * worker isolate, which is what makes an end-to-end run possible: create a
  * session on one request, complete it on another, read the row on a third.
  */
@@ -104,8 +104,8 @@ interface FakeStore {
 	paymentMethods: Map<string, Stripe.PaymentMethod>;
 	setupIntents: Map<string, Stripe.SetupIntent>;
 	readers: Map<string, Stripe.Terminal.Reader>;
-	/** Idempotency key → the intent it first created, as Stripe replays a repeated key. */
-	intentKeys: Map<string, string>;
+	/** Idempotency key → the object it first created, as Stripe replays a repeated key. */
+	idempotencyKeys: Map<string, string>;
 }
 
 const store: FakeStore = {
@@ -123,7 +123,7 @@ const store: FakeStore = {
 	paymentMethods: new Map(),
 	setupIntents: new Map(),
 	readers: new Map(),
-	intentKeys: new Map()
+	idempotencyKeys: new Map()
 };
 
 /** Customers whose seeded card and history have already been materialised. */
@@ -172,6 +172,26 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
 // ---------------------------------------------------------------------------
 // Seeded customers
 // ---------------------------------------------------------------------------
+
+/**
+ * A `pi_seed_…` or `pr_seed_…` id is a payment the seed wrote onto a row, so a
+ * seeded payment can be refunded locally (#2835). The seed's amount is not
+ * known here; zero means a refund reports nothing back to the store.
+ */
+function materialiseSeedPayment(id: string): void {
+	if (id.startsWith('pi_seed_') && !store.paymentIntents.has(id)) {
+		store.paymentIntents.set(id, fakePaymentIntent({ id }));
+	}
+	if (id.startsWith('pr_seed_') && !store.paymentRecords.has(id)) {
+		store.paymentRecords.set(
+			id,
+			fakePaymentRecord({
+				id,
+				amount: { value: 0, currency: 'usd' } as Stripe.PaymentRecord.Amount
+			})
+		);
+	}
+}
 
 /**
  * A `cus_seed_…` customer has a card and a billing history; it just does not
@@ -311,6 +331,16 @@ function presentCard(readerId: string, number: string | undefined): Stripe.Termi
 // The gateway
 // ---------------------------------------------------------------------------
 
+/** What a repeated idempotency key first created, which Stripe returns again. */
+function replayed<T>(key: string | undefined, objects: Map<string, T>): T | undefined {
+	const id = key ? store.idempotencyKeys.get(key) : undefined;
+	return id ? objects.get(id) : undefined;
+}
+
+function remember(key: string | undefined, id: string): void {
+	if (key) store.idempotencyKeys.set(key, id);
+}
+
 export function createFakeGateway(): PaymentGateway {
 	return {
 		/**
@@ -322,7 +352,9 @@ export function createFakeGateway(): PaymentGateway {
 		 * hosted onboarding, so the link here goes nowhere and is never followed.
 		 */
 		accounts: {
-			create: async (params) => {
+			create: async (params, options) => {
+				const replay = replayed(options?.idempotencyKey, store.accounts);
+				if (replay) return respond(replay);
 				const account = {
 					id: fakeId('acct'),
 					object: 'account',
@@ -336,6 +368,7 @@ export function createFakeGateway(): PaymentGateway {
 					metadata: (params?.metadata as Record<string, string>) ?? {}
 				} as Stripe.Account;
 				store.accounts.set(account.id, account);
+				remember(options?.idempotencyKey, account.id);
 				return respond(account);
 			},
 			retrieve: (async (id?: string) => {
@@ -424,13 +457,16 @@ export function createFakeGateway(): PaymentGateway {
 		},
 
 		customers: {
-			create: async (params) => {
+			create: async (params, options) => {
+				const replay = replayed(options?.idempotencyKey, store.customers);
+				if (replay) return respond(replay);
 				const customer = fakeCustomer({
 					email: params?.email ?? null,
 					name: params?.name ?? null,
 					metadata: (params?.metadata as Record<string, string>) ?? {}
 				});
 				store.customers.set(customer.id, customer);
+				remember(options?.idempotencyKey, customer.id);
 				return respond(customer);
 			},
 			// A `cus_seed_…` id is a customer the seed says exists, so it updates
@@ -471,6 +507,7 @@ export function createFakeGateway(): PaymentGateway {
 
 		paymentIntents: {
 			retrieve: async (id: string) => {
+				materialiseSeedPayment(id);
 				const intent = store.paymentIntents.get(id);
 				return intent ? respond(intent) : notFound('payment_intent', id);
 			},
@@ -479,10 +516,10 @@ export function createFakeGateway(): PaymentGateway {
 			// one does, and a repeated idempotency key returns the first intent.
 			create: async (params, options) => {
 				const key = options?.idempotencyKey;
-				const replay = key ? store.intentKeys.get(key) : undefined;
+				const replay = key ? store.idempotencyKeys.get(key) : undefined;
 				if (replay) return respond(store.paymentIntents.get(replay)!);
 				const id = fakeId('pi');
-				if (key) store.intentKeys.set(key, id);
+				if (key) store.idempotencyKeys.set(key, id);
 				const intent = fakePaymentIntent({
 					id,
 					amount: params.amount,
@@ -502,7 +539,13 @@ export function createFakeGateway(): PaymentGateway {
 				const cancelled: Stripe.PaymentIntent = { ...intent, status: 'canceled' };
 				store.paymentIntents.set(id, cancelled);
 				return respond(cancelled);
-			}) as PaymentGateway['paymentIntents']['cancel']
+			}) as PaymentGateway['paymentIntents']['cancel'],
+			list: (params) => {
+				const created = params?.created;
+				const gte = typeof created === 'object' ? (created.gte ?? 0) : (created ?? 0);
+				const matched = [...store.paymentIntents.values()].filter((i) => i.created >= gte);
+				return listOf(matched.slice(0, params?.limit ?? matched.length));
+			}
 		},
 
 		paymentMethods: {
@@ -551,6 +594,7 @@ export function createFakeGateway(): PaymentGateway {
 				return respond(record);
 			},
 			reportRefund: async (id) => {
+				materialiseSeedPayment(id);
 				const record = store.paymentRecords.get(id);
 				if (!record) return notFound('payment_record', id);
 				const refunded = {
@@ -561,6 +605,7 @@ export function createFakeGateway(): PaymentGateway {
 				return respond(refunded);
 			},
 			retrieve: async (id: string) => {
+				materialiseSeedPayment(id);
 				const record = store.paymentRecords.get(id);
 				return record ? respond(record) : notFound('payment_record', id);
 			}

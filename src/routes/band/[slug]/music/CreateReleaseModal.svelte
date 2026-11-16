@@ -1,8 +1,9 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { createReleaseForm } from '$lib/remote/audio.remote';
-	import { releaseKinds, releaseKindLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { createReleaseForm } from '#lib/remote/audio.remote.js';
+	import { releaseKinds, releaseKindLabels } from '#lib/config.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -28,14 +29,14 @@
 -->
 <Action
 	action={createReleaseForm}
-	label="New release"
-	modalTitle="New release"
-	submitLabel="Create"
-	successToast="Release created"
+	label={m.band_slug_music_create_release_modal_new_release_label()}
+	modalTitle={m.band_slug_music_create_release_modal_new_release_title()}
+	submitLabel={m.band_slug_music_create_release_modal_submit_label()}
+	successToast={m.band_slug_music_create_release_modal_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		const releaseId = (result as { releaseId?: string } | undefined)?.releaseId;
-		if (releaseId) goto(resolve(`/band/${bandSlug}/music/${releaseId}`));
+		if (releaseId) goto(resolve(`band/${bandSlug}/music/${releaseId}`));
 	}}
 >
 	{#snippet form()}
@@ -45,13 +46,19 @@
 			     takes from a client-supplied header. -->
 			<input {...fields.slug.as('hidden', bandSlug)} />
 
-			<FormField field={fields.title} label="Title" required />
-			<FormField field={fields.kind} label="Type" type="select" options={kindOptions} required />
+			<FormField field={fields.title} label={m.band_title_label()} required />
+			<FormField
+				field={fields.kind}
+				label={m.band_type_label()}
+				type="select"
+				options={kindOptions}
+				required
+			/>
 			<FormField
 				field={fields.releasedAt}
-				label="Release date"
+				label={m.band_release_date_label()}
 				type="date"
-				description="When it came out — leave blank if you'd rather not say. This is what orders your discography, so an old record can keep its real date."
+				description={m.band_slug_music_create_release_modal_description_body()}
 			/>
 		</div>
 	{/snippet}

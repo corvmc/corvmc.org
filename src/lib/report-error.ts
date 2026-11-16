@@ -20,7 +20,7 @@ function isExpected(err: unknown): boolean {
  * Central client-side error sink. Logs everything to the console and forwards
  * genuine errors to Sentry. Call this from anywhere in the browser when you've
  * caught an error you want visibility on. On the server, use
- * `$lib/server/sentry`'s `captureException` instead.
+ * `#lib/server/sentry.js`'s `captureException` instead.
  */
 export function reportError(err: unknown, context?: Record<string, unknown>): void {
 	console.error(err);

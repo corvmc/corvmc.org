@@ -1,16 +1,18 @@
 import Emittery from 'emittery';
+import type { ClubDate, ClubTime } from '#lib/server/reservation/timezone.js';
 import type {
 	BookerType,
 	GroupKind,
 	HourLogException,
-	RenewalKind,
 	ReservationCanceller,
 	ThreadNotifyPolicy
-} from '$lib/config';
+} from '#lib/config.js';
 
 export interface VolunteerShiftEvent {
 	signupId: string;
 	shiftId: string;
+	/** The shift's task (#2518): what an orientation or the checklist hangs off. */
+	workOrderId: string;
 	userId: string;
 	userName: string;
 	userEmail: string;
@@ -22,13 +24,9 @@ export interface VolunteerShiftEvent {
 	 */
 	title: string | null;
 	eventTitle: string | null;
-	/**
-	 * ISO strings, like every other date on this bus — and null when the shift is
-	 * an unscheduled work order, which has no window until somebody books one.
-	 * Copy that reads a date must say so rather than rendering "null".
-	 */
-	startsAt: string | null;
-	endsAt: string | null;
+	/** ISO strings, like every other date on this bus. A shift always has both. */
+	startsAt: string;
+	endsAt: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -55,9 +53,9 @@ export interface CheckoutCompletedEvent {
 /**
  * A booking is confirmed and the room is committed.
  *
- * Emitted from `reservation-service.announceConfirmed`, for the same reason
- * `reservation.created` is emitted from the service: a reservation reaches
- * `confirmed` six ways, and a seventh would be forgotten.
+ * Emitted once per booking from `reservation-service.announceConfirmed`, at
+ * the moment the row becomes confirmed. Paying or settling it later does not
+ * re-emit (#2502).
  */
 export interface ReservationConfirmedEvent {
 	reservationId: string;
@@ -65,9 +63,9 @@ export interface ReservationConfirmedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 }
 
 /**
@@ -91,9 +89,9 @@ export interface ReservationCreatedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	bookerType: BookerType;
 	startsAt: string;
 	endsAt: string;
@@ -124,9 +122,9 @@ export interface ReservationCancelledEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	cancelledBy: ReservationCanceller;
 	/** The free-text reason `cancel()` was given, when there was one. */
 	reason?: string;
@@ -147,30 +145,45 @@ export interface ReservationReminderDueEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
+}
+
+/** A session that ended still payment due, `daysAfter` days on (#2876). */
+export interface ReservationPaymentDueEvent extends ReservationReminderDueEvent {
+	daysAfter: number;
+	/** Null when the booking was never priced; it is owed in full. */
+	amountCents: number | null;
+}
+
+/** A member's booking before they hold the Practice space clearance (#2569). */
+export interface FirstVisitDueEvent extends ReservationReminderDueEvent {
+	/** When the orientation shift starts, club time; null with no live shift. */
+	tourTime: string | null;
+	/** The club's street address, from site config. */
+	address: string;
+	/** Staff-written arrival notes: parking, house rules. Plain text, may be empty. */
+	notes: string;
+}
+
+/** One orientation shift a day out with nobody signed up for it (#2567). */
+export interface OrientationUnclaimedItem {
+	workOrderId: string;
+	memberName: string;
+	startsAt: string;
+	endsAt: string;
+}
+
+/** One coordinator's digest of unclaimed orientations for a reminder pass. */
+export interface OrientationUnclaimedEvent {
+	recipient: { userId: string; userName: string; userEmail: string };
+	items: OrientationUnclaimedItem[];
 }
 
 /** The lock has reported a booking's code as synced, so the member may be told it. */
 export interface DoorCodeReadyEvent extends ReservationReminderDueEvent {
 	code: string;
-}
-
-export interface ConfirmationReminderDueEvent {
-	/**
-	 * Which reminder this is. `window_open` is the day confirming becomes
-	 * possible, `final` the day before the session — the same event twice, and
-	 * the copy differs because "please confirm" three days out reads as noise.
-	 */
-	stage: 'window_open' | 'final';
-	reservationId: string;
-	userId: string;
-	userName: string;
-	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
 }
 
 /**
@@ -268,9 +281,9 @@ export interface RecurringSkippedEvent {
 	userName: string;
 	userEmail: string;
 	/** The date that was skipped (YYYY-MM-DD in America/Los_Angeles) */
-	skippedDate: string;
-	startTime: string;
-	endTime: string;
+	skippedDate: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	/** Why it was skipped */
 	reason: string;
 }
@@ -284,9 +297,9 @@ export interface EventRecurringReservationSkippedEvent {
 	userName: string;
 	userEmail: string;
 	/** The date that could not be reserved (YYYY-MM-DD in America/Los_Angeles) */
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	reason: string;
 }
 
@@ -317,14 +330,37 @@ export interface EquipmentLoanDueEvent {
 	dueDate: string;
 }
 
+/** An author's post leaves the board soon unless renewed (#2549). */
+export interface ClassifiedExpiringEvent {
+	postId: string;
+	title: string;
+	/** Formatted in club time. */
+	expiresOn: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+}
+
+/** Staff put a classified post back on the board, or took it down (#2549). */
+export interface ClassifiedModeratedEvent {
+	postId: string;
+	title: string;
+	visibility: 'visible' | 'hidden';
+	/** Staff's reason; set on a takedown. */
+	note: string | null;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+}
+
 /** A grant or sponsorship deadline coming up (#1477), for whoever manages that module. */
 export interface DevelopmentDeadlineDueEvent {
 	stage: '14d' | '3d';
 	module: 'grant' | 'sponsor';
-	kind: 'apply' | 'report' | 'end';
+	kind: 'apply' | 'end';
 	/** `YYYY-MM-DD` */
 	on: string;
-	/** What is due: "Interim report", "Apply by", "Sponsorship ends". */
+	/** What is due: "Apply by", "Award ends", "Sponsorship ends". */
 	title: string;
 	/** The grant application or the sponsor, which is where the link goes. */
 	parentId: string;
@@ -439,10 +475,24 @@ export interface RecurringWaitlistedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	reason: string;
+}
+
+export interface RecurringRescheduledEvent {
+	/** The replacement series. */
+	seriesId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** The first session of the new schedule, in club time. */
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
+	/** Old-schedule bookings left in place for the booker to keep or cancel. */
+	keptCount: number;
 }
 
 export interface WaitlistSlotAvailableEvent {
@@ -450,9 +500,9 @@ export interface WaitlistSlotAvailableEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	expiresAt: string;
 	confirmUrl: string;
 }
@@ -462,9 +512,9 @@ export interface WaitlistExpiredEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 }
 
 /**
@@ -616,14 +666,6 @@ export interface EventLineupInvitedEvent {
 	}>;
 }
 
-/** A show was opened: its production, project and listing are all written (#1701). */
-export interface ProductionCreatedEvent {
-	productionId: string;
-	eventId: string;
-	/** Null when nobody pressed a button, as for a recurring series' occurrence. */
-	createdByUserId: string | null;
-}
-
 /** A show was cancelled, for the Production committee taking part in it (#1675). */
 export interface ProductionCancelledEvent {
 	productionId: string;
@@ -646,18 +688,68 @@ export interface ProductionCancelledEvent {
 	}>;
 }
 
+/** Somebody else named this person a show's event lead (#2726). */
+export interface ShowLeadAssignedEvent {
+	productionId: string;
+	eventId: string;
+	eventTitle: string;
+	/** ISO string — payload dates cross the bus serialized. */
+	startsAt: string;
+	leadUserId: string;
+	leadName: string;
+	leadEmail: string;
+	/** Null when the account that did it is gone. */
+	assignedByName: string | null;
+}
+
 /** A committee deliverable is due soon, or late (#1709). */
-export interface DeliverableDueEvent {
-	stage: 'due_3d' | 'overdue';
+export interface DeliverableDueItem {
+	/** `due_14d` is sent only for grant and sponsorship work. */
+	stage: 'due_14d' | 'due_3d' | 'overdue';
 	workOrderId: string;
 	title: string;
 	eventTitle: string | null;
+	eventId?: string | null;
+	/** The item's project: the show's, or the grant or sponsorship it is for. */
+	projectName: string | null;
 	/** ISO string — payload dates cross the bus serialized. */
 	dueAt: string;
 	groupName: string;
 	groupSlug: string;
-	/** Its live assignees, or the owning committee's active members when nobody has it. */
-	recipients: Array<{ userId: string; userName: string; userEmail: string }>;
+	/** Sent to the show's event lead rather than the committee (#2990). */
+	forLead?: boolean;
+}
+
+/**
+ * Every show item newly owed to one person in one reminder pass, both stages
+ * together (#2507). Recipients are an item's live assignees, or the owning
+ * committee's active members when nobody has it.
+ */
+export interface DeliverableDueEvent {
+	recipient: { userId: string; userName: string; userEmail: string };
+	items: DeliverableDueItem[];
+}
+
+/**
+ * The last open task a task waits on was closed (#2625): one per assignee of
+ * the task that is now ready to start.
+ */
+export interface TaskReadyEvent {
+	workOrderId: string;
+	title: string;
+	/** The task whose closing freed it. */
+	closedTitle: string;
+	recipient: { userId: string; userName: string; userEmail: string };
+}
+
+export interface TaskAssignedEvent {
+	workOrderId: string;
+	title: string;
+	/** ISO string, or null for a task with no deadline. */
+	dueAt: string | null;
+	recipient: { userId: string; userName: string; userEmail: string };
+	/** Null when the account that did it is gone. */
+	assignedByName: string | null;
 }
 
 export interface EventUnpublishedByStaffEvent {
@@ -702,6 +794,15 @@ export interface InstructorApplicationSubmittedEvent {
 export interface GroupApplicationSubmittedEvent {
 	groupId: string;
 	applicantUserId: string;
+}
+
+/** Staff paused or retired a teacher. The staff note is not carried: it is staff-only. */
+export interface InstructorStatusEndedEvent {
+	instructorId: string;
+	userId: string;
+	name: string;
+	email: string;
+	status: 'paused' | 'retired';
 }
 
 export interface InstructorApplicationReviewedEvent {
@@ -871,20 +972,6 @@ export interface MembershipLifecycleEvent {
 	endsAt: string | null;
 }
 
-/** A permit, license or policy of CMC's own is about to expire (#1478). */
-export interface RenewalExpiryDueEvent {
-	stage: '60d' | '14d';
-	renewalId: string;
-	name: string;
-	kind: RenewalKind;
-	issuer: string | null;
-	reference: string | null;
-	/** `YYYY-MM-DD` */
-	expiresOn: string;
-	/** Told alone when named; otherwise every holder of `renewal.manage` is. */
-	responsible: { id: string; name: string; email: string } | null;
-}
-
 /** A release's yearly radio attestation is about to lapse (#1516). */
 export interface RadioAttestationDueEvent {
 	stage: '30d' | '7d';
@@ -904,8 +991,9 @@ export type DomainEvents = {
 	'reservation.confirmed': ReservationConfirmedEvent;
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;
-	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
 	'reservation.door_code_ready': DoorCodeReadyEvent;
+	'reservation.payment_due': ReservationPaymentDueEvent;
+	'reservation.first_visit_due': FirstVisitDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;
 	'audio.radio_attestation_due': RadioAttestationDueEvent;
@@ -923,11 +1011,13 @@ export type DomainEvents = {
 	'contact.form_submitted': ContactFormSubmittedEvent;
 	'reservation.recurring_skipped': RecurringSkippedEvent;
 	'reservation.recurring_waitlisted': RecurringWaitlistedEvent;
+	'reservation.recurring_rescheduled': RecurringRescheduledEvent;
 	'reservation.waitlist_slot_available': WaitlistSlotAvailableEvent;
 	'reservation.waitlist_expired': WaitlistExpiredEvent;
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;
 	'equipment.loan_scheduled': EquipmentLoanScheduledEvent;
 	'equipment.loan_due': EquipmentLoanDueEvent;
+	'classified.expiring': ClassifiedExpiringEvent;
 	'development.deadline_due': DevelopmentDeadlineDueEvent;
 	'equipment.checked_out': EquipmentCheckedOutEvent;
 	'equipment.returned': EquipmentReturnedEvent;
@@ -944,6 +1034,7 @@ export type DomainEvents = {
 	'content.flagged': ContentFlaggedEvent;
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;
+	'classified.moderated': ClassifiedModeratedEvent;
 	'suggestion.edit_reviewed': SuggestionEditReviewedEvent;
 	'moderation.appeal_filed': ModerationAppealFiledEvent;
 	'moderation.appeal_decided': ModerationAppealDecidedEvent;
@@ -954,12 +1045,16 @@ export type DomainEvents = {
 	'local_resource.reviewed': LocalResourceReviewedEvent;
 	'instructor.application_submitted': InstructorApplicationSubmittedEvent;
 	'instructor.application_reviewed': InstructorApplicationReviewedEvent;
+	'instructor.status_ended': InstructorStatusEndedEvent;
 	'group.application_submitted': GroupApplicationSubmittedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
-	'production.created': ProductionCreatedEvent;
 	'production.cancelled': ProductionCancelledEvent;
+	'production.lead_assigned': ShowLeadAssignedEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
+	'volunteer.task_ready': TaskReadyEvent;
+	'volunteer.task_assigned': TaskAssignedEvent;
+	'volunteer.orientation_unclaimed': OrientationUnclaimedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
@@ -983,7 +1078,6 @@ export type DomainEvents = {
 	'volunteer.shift_reminder_due': VolunteerShiftEvent;
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;
-	'renewal.expiry_due': RenewalExpiryDueEvent;
 	'ballot.opened': BallotEvent;
 	'ballot.certified': BallotEvent;
 };

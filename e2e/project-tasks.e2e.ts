@@ -1,8 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
+import { expect, test } from './fixtures/auth';
+import { readLocalDb } from './fixtures/platform-db';
+import { auditLog } from '../src/lib/server/db/schema/audit';
+import { workOrder } from '../src/lib/server/db/schema/volunteer';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
-	SEED_TASK_DONE,
-	SEED_TASK_EMPTY_SECTION,
+	SEED_TASK_DUTY,
 	SEED_TASK_PROJECT_ID,
 	SEED_TASK_PROJECT_NAME,
 	SEED_TASK_UNASSIGNED,
@@ -10,24 +13,20 @@ import {
 } from './fixtures/seed-project-tasks';
 
 /**
- * A project's task list: sections, filters that live in the URL, duties that
- * unfold, a panel with its own URL, and adding and ticking in place. Only the
- * last test writes, and to a title of its own, so a retry finds nothing it left.
+ * A project's tasks are the Tasks table, filtered to it (#2625): rows open each
+ * task's own page, old panel and shift addresses land there, and New task
+ * makes one in this project. Only the last test writes, to a title of its own.
  */
 
-async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
-}
+test.use({ persona: { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD } });
 
-const projectUrl = `/staff/projects/${SEED_TASK_PROJECT_ID}`;
+const projectUrl = `/staff/tasks/projects/${SEED_TASK_PROJECT_ID}`;
+const taskUrl = /\/staff\/tasks\/([^/?#]+)$/;
+// Check quickly once, then back off: `readLocalDb` shares the preview's file.
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
-test.describe('project task list', () => {
+test.describe('project tasks', () => {
 	test.beforeEach(async ({ page }) => {
-		await loginAsStaff(page);
 		await page.goto(projectUrl);
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_PROJECT_NAME })
@@ -37,80 +36,26 @@ test.describe('project task list', () => {
 		).toBeVisible();
 	});
 
-	test('draws every section, the empty one included, and unfolds duties', async ({ page }) => {
-		await expect(page.getByText(SEED_TASK_EMPTY_SECTION, { exact: true })).toBeVisible();
-		await expect(page.getByText('No tasks yet.')).toBeVisible();
-
-		await page
-			.getByRole('button', { name: `Unfold the duties of ${SEED_TASK_WITH_DUTIES}` })
-			.click();
-		await expect(page.getByText('Stretch the new set')).toBeVisible();
+	test("lists only this project's tasks, without a project to group or filter by", async ({
+		page
+	}) => {
+		const table = page.getByRole('table');
+		// Every task link is a task page; none points at another project.
+		const projectLinks = table.locator('a[href^="/staff/tasks/projects/"]');
+		await expect(projectLinks).toHaveCount(0);
+		// Group by offers Section here (#2653), never Project.
+		await expect(page.locator('[data-testid="task-group"] option[value="project"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="task-group"] option[value="section"]')).toHaveCount(1);
+		await expect(page.locator('[data-chip="unassigned"]')).toBeVisible();
 	});
 
-	test('filters live in the URL', async ({ page }) => {
-		// The filter is a disclosure whose trigger names the active filter; "All" reads as "Filter".
-		const menu = page.locator('details', {
-			has: page.locator('summary', { hasText: /^\s*Filter/ })
-		});
-		const pick = async (from: string, to: string) => {
-			const trigger = menu.locator('summary');
-			await expect(trigger).toHaveText(from === 'All' ? 'Filter' : `Filter: ${from}`);
-			await trigger.click();
-			await menu.getByRole('button', { name: to, exact: true }).click();
-		};
-		// Every seeded task is unassigned, so Contractors is the filter that hides them all.
-		await pick('All', 'Contractors');
-		await expect(page).toHaveURL(/show=contractors/);
-		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
-		).toBeHidden();
-		await expect(page.getByText('Nothing here matches the filter.')).toBeVisible();
-
-		await pick('Contractors', 'Unassigned');
-		await expect(page).toHaveURL(/show=unassigned/);
-		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_WITH_DUTIES, exact: true })
-		).toBeVisible();
-
-		await pick('Unassigned', 'All');
-		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
-		).toBeVisible();
-		await page.getByRole('button', { name: 'Hide done' }).click();
-		await expect(page).toHaveURL(/done=hide/);
-		await expect(
-			page.getByRole('table').getByRole('link', { name: SEED_TASK_DONE, exact: true })
-		).toBeHidden();
-	});
-
-	test('a row opens its panel at its own URL, and Escape closes it', async ({ page }) => {
-		await page
-			.getByRole('table')
-			.getByRole('link', { name: SEED_TASK_UNASSIGNED, exact: true })
-			.click();
-		await expect(page).toHaveURL(/[?&]task=/);
-		const panel = page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED });
-		await expect(panel).toBeVisible();
-		await expect(panel.getByText('Unassigned')).toBeVisible();
-		await expect(panel.getByRole('link', { name: 'Details' })).toBeVisible();
-
-		await page.reload();
-		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeVisible();
-
-		await page.keyboard.press('Escape');
-		await expect(page).not.toHaveURL(/[?&]task=/);
-		await expect(page.getByRole('complementary', { name: SEED_TASK_UNASSIGNED })).toBeHidden();
-	});
-
-	test('Details opens the task page, which the old shift URL redirects to', async ({ page }) => {
+	test('a row opens its task page, which names the project and lists its duties', async ({
+		page
+	}) => {
 		await page
 			.getByRole('table')
 			.getByRole('link', { name: SEED_TASK_WITH_DUTIES, exact: true })
 			.click();
-		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
-		await panel.getByRole('link', { name: 'Details' }).click();
-
-		const taskUrl = new RegExp(`/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/([^/?#]+)$`);
 		await expect(page).toHaveURL(taskUrl);
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
@@ -119,35 +64,52 @@ test.describe('project task list', () => {
 		await expect(
 			page.getByRole('paragraph').getByRole('link', { name: SEED_TASK_PROJECT_NAME })
 		).toBeVisible();
-		await expect(page.getByText('Stretch the new set')).toBeVisible();
+		await expect(page.getByLabel(SEED_TASK_DUTY, { exact: true })).toBeVisible();
 
+		// The old panel and shift addresses land on the same page.
 		const taskId = taskUrl.exec(page.url())![1];
+		await page.goto(`${projectUrl}?task=${taskId}`);
+		await expect(page).toHaveURL(new RegExp(`/staff/tasks/${taskId}$`));
 		await page.goto(`/staff/volunteer/shifts/${taskId}`);
-		await expect(page).toHaveURL(taskUrl);
-		await expect(
-			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
-		).toBeVisible();
+		await expect(page).toHaveURL(new RegExp(`/staff/tasks/${taskId}$`));
 	});
 
-	test('a typed line becomes a task, and its checkbox ticks and unticks it', async ({ page }) => {
+	test('New task makes a task in this project and opens its page', async ({ page }) => {
 		const title = `E2E fetch the ladder ${Date.now()}`;
-		const line = page.getByRole('textbox', { name: 'Add a task to Prep' });
-		await line.fill(title);
-		await line.press('Enter');
-		await expect(
-			page.getByRole('table').getByRole('link', { name: title, exact: true })
-		).toBeVisible();
-		await expect(line).toHaveValue('');
+		await page.getByTestId('new-task').click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('input:is([name="title"], [name^="title/"])').fill(title);
+		await dialog.locator('button[type="submit"]').click();
 
-		await page.getByRole('button', { name: `Mark ${title} done` }).click();
-		await expect(page.getByRole('button', { name: `Mark ${title} not done` })).toBeVisible();
-		await page.getByRole('button', { name: `Mark ${title} not done` }).click();
-		await expect(page.getByRole('button', { name: `Mark ${title} done` })).toBeVisible();
+		await expect(page).toHaveURL(taskUrl);
+		const taskId = taskUrl.exec(page.url())![1];
+		await expect
+			.poll(
+				() =>
+					readLocalDb((db) =>
+						db
+							.select({ projectId: workOrder.projectId })
+							.from(workOrder)
+							.where(eq(workOrder.id, taskId))
+					),
+				DB_POLL
+			)
+			.toEqual([{ projectId: SEED_TASK_PROJECT_ID }]);
+		await expect
+			.poll(
+				() =>
+					readLocalDb((db) =>
+						db
+							.select({ action: auditLog.action })
+							.from(auditLog)
+							.where(eq(auditLog.subjectId, taskId))
+					).then((rows) => rows.map((r) => r.action)),
+				DB_POLL
+			)
+			.toContain('work_order.created');
 
-		// With no task open, the sidebar is the activity: newest first, linked to the task.
-		const activity = page.getByRole('list', { name: 'Activity' });
-		await expect(activity.getByText(`Added the task “${title}”`)).toBeVisible();
-		await expect(activity.getByRole('listitem').first()).toContainText('Reopened it');
-		await expect(activity.getByRole('link', { name: title }).first()).toBeVisible();
+		// Back on the project, the new task is a row of its table.
+		await page.goto(projectUrl);
+		await expect(page.getByRole('table').locator(`tr[data-task="${taskId}"]`)).toBeVisible();
 	});
 });

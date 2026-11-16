@@ -1,7 +1,7 @@
 # Security headers for responses the static-assets binding answers before the
 # worker runs (favicon, /_app/immutable/**). Everything the worker itself
 # renders is covered by handleSecurityHeaders in src/hooks.server.ts, and the
-# CSP by kit.csp in svelte.config.js.
+# CSP by csp in kit.config.js.
 #
 # This file must live at the repo root, not in static/ — adapter-cloudflare
 # copies it from here and appends its own cache rules below.

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({
-	env: {
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({
 		INBOX_REPLY_ADDRESS: 'reply@replies.test',
 		INBOX_REPLY_SECRET: 'test-signing-secret'
-	}
-}));
+	})
+);
 
 const { buildReplyToAddress, parseReplyMailboxHash } = await import('./reply-address');
 
@@ -59,14 +59,16 @@ describe('parseReplyMailboxHash', () => {
 describe('buildReplyToAddress without configuration', () => {
 	it('returns null when INBOX_REPLY_ADDRESS is unset', async () => {
 		vi.resetModules();
-		vi.doMock('$env/dynamic/private', () => ({
-			env: { INBOX_REPLY_SECRET: 'test-signing-secret' }
-		}));
+		vi.doMock('$app/env/private', async () =>
+			(await import('#lib/testing/env-mock.js')).envMock({
+				INBOX_REPLY_SECRET: 'test-signing-secret'
+			})
+		);
 
 		const mod = await import('./reply-address');
 		expect(mod.buildReplyToAddress('thread-123')).toBeNull();
 
-		vi.doUnmock('$env/dynamic/private');
+		vi.doUnmock('$app/env/private');
 		vi.resetModules();
 	});
 });

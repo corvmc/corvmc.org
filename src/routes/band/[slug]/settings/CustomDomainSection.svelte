@@ -1,20 +1,22 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import {
 		setCustomDomain,
 		refreshCustomDomain,
 		removeCustomDomain
-	} from '$lib/remote/band-custom-domain.remote';
-	import type { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
-	import type { CustomDomainStatus } from '$lib/server/db/schema/band-site';
-	import { bandSiteUrl } from '$lib/utils/band-site-url';
-	import { env } from '$env/dynamic/public';
+	} from '#lib/remote/band-custom-domain.remote.js';
+	import type { getCustomDomain } from '#lib/remote/band-custom-domain.remote.js';
+	import type { CustomDomainStatus } from '#lib/server/db/schema/band-site.js';
+	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
+	import * as env from '$app/env/public';
 
 	// Resolved prop, not an awaited query — a top-level await here would mark the
 	// fields.X.as() expressions below as async deriveds (see BandProfileForm).
@@ -43,7 +45,9 @@
 
 <section class="space-y-4">
 	<div class="flex items-center gap-3">
-		<h2 class="text-lg font-semibold">Custom Domain</h2>
+		<h2 class="text-lg font-semibold">
+			{m.band_slug_settings_custom_domain_section_custom_domain_title()}
+		</h2>
 		<!-- Only meaningful once a domain is actually connected — a stored status
 		     with the feature switched off would read as a live domain. -->
 		{#if domain.configured && domain.domain && domain.status}
@@ -54,25 +58,34 @@
 	{#if !domain.configured}
 		<div class="alert">
 			<p class="text-sm">
-				Custom domains aren't set up on this site yet. Your band's site is always available at
-				<strong>{freeAddress}</strong>.
+				<ParaglideMessage
+					message={m.band_slug_settings_custom_domain_section_custom_domains_aren_text}
+					inputs={{ freeAddress }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		</div>
 	{:else if domain.domain}
 		<InfoCard title={domain.domain}>
 			{#if domain.status === 'active'}
 				<p class="text-sm">
-					Your site is live at <strong>{domain.domain}</strong>. Point the domain at
-					<code class="text-xs">{domain.cnameTarget}</code> with a CNAME record if you haven't already.
+					<ParaglideMessage
+						message={m.band_slug_settings_custom_domain_section_site_live_at_point_text}
+						inputs={{ domain: domain.domain, cnameTarget: domain.cnameTarget }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}{#snippet code({ children })}<code class="text-xs"
+								>{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{:else if domain.status === 'failed'}
 				<p class="text-sm">
-					We couldn't verify this domain. Check the records below, or remove it and try again.
+					{m.band_slug_settings_custom_domain_section_we_couldn_t_verify_text()}
 				</p>
 			{:else}
 				<p class="text-sm">
-					Add these records at your domain registrar, then check the status. Verification usually
-					takes a few minutes once the records are live.
+					{m.band_slug_settings_custom_domain_section_add_these_records_a_text()}
 				</p>
 			{/if}
 
@@ -80,25 +93,29 @@
 				<div class="mt-3 overflow-x-auto">
 					<table class="table table-sm">
 						<thead>
-							<tr><th>Type</th><th>Name</th><th>Value</th></tr>
+							<tr
+								><th>{m.band_type_label()}</th><th>{m.band_name_label()}</th><th
+									>{m.band_slug_settings_custom_domain_section_value_label()}</th
+								></tr
+							>
 						</thead>
 						<tbody>
 							{#if domain.verification.ownership}
 								<tr>
-									<td>TXT</td>
+									<td>{m.band_slug_settings_custom_domain_section_txt_text()}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ownership.name}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ownership.value}</td>
 								</tr>
 							{/if}
 							{#if domain.verification.ssl}
 								<tr>
-									<td>TXT</td>
+									<td>{m.band_slug_settings_custom_domain_section_txt_text()}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ssl.name}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ssl.value}</td>
 								</tr>
 							{/if}
 							<tr>
-								<td>CNAME</td>
+								<td>{m.band_slug_settings_custom_domain_section_cname_text()}</td>
 								<td class="font-mono text-xs break-all">{domain.domain}</td>
 								<td class="font-mono text-xs break-all">{domain.verification.cnameTarget}</td>
 							</tr>
@@ -112,14 +129,14 @@
 					<Form
 						remote={refreshCustomDomain}
 						onsuccess={() => {
-							toast.success('Status updated');
-							invalidateAll();
+							toast.success(m.band_slug_settings_custom_domain_section_status_updated_toast());
+							refreshAll();
 						}}
 					>
 						<input {...refreshFields.slug.as('hidden', slug)} />
 						<SubmitButton
-							label="Check status"
-							successLabel="Checked"
+							label={m.band_slug_settings_custom_domain_section_check_status_label()}
+							successLabel={m.band_slug_settings_custom_domain_section_checked_label()}
 							variant="default"
 							size="sm"
 							outline
@@ -129,14 +146,14 @@
 				<Form
 					remote={removeCustomDomain}
 					onsuccess={() => {
-						toast.success('Custom domain removed');
-						invalidateAll();
+						toast.success(m.band_slug_settings_custom_domain_section_custom_domain_remov_toast());
+						refreshAll();
 					}}
 				>
 					<input {...removeFields.slug.as('hidden', slug)} />
 					<SubmitButton
-						label="Remove"
-						successLabel="Removed"
+						label={m.band_remove_label()}
+						successLabel={m.band_removed_label()}
 						variant="ghost"
 						size="sm"
 						class="text-error"
@@ -145,16 +162,20 @@
 			</div>
 		</InfoCard>
 	{:else}
-		<InfoCard title="Use your own domain">
+		<InfoCard title={m.band_slug_settings_custom_domain_section_title()}>
 			<p class="text-sm">
-				Serve your band's site from a domain you own. Your free address,
-				<strong>{freeAddress}</strong>, keeps working either way.
+				<ParaglideMessage
+					message={m.band_slug_settings_custom_domain_section_serve_band_s_site_f_text}
+					inputs={{ freeAddress }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 			<Form
 				remote={setCustomDomain}
 				onsuccess={() => {
-					toast.success('Domain added — add the DNS records to finish');
-					invalidateAll();
+					toast.success(m.band_slug_settings_custom_domain_section_domain_added_add_dn_toast());
+					refreshAll();
 				}}
 			>
 				<input {...setFields.slug.as('hidden', slug)} />
@@ -162,13 +183,18 @@
 					<FormField
 						field={setFields.domain}
 						type="text"
-						label="Domain"
-						placeholder="theband.com"
-						description="Enter it without http:// — we'll give you the DNS records to add."
+						label={m.band_slug_settings_custom_domain_section_domain_label()}
+						placeholder={m.band_slug_settings_custom_domain_section_placeholder()}
+						description={m.band_slug_settings_custom_domain_section_description_body()}
 						required
 					/>
 					<div class="flex justify-end">
-						<SubmitButton label="Add domain" successLabel="Added" variant="primary" size="sm" />
+						<SubmitButton
+							label={m.band_slug_settings_custom_domain_section_add_domain_label()}
+							successLabel={m.band_slug_settings_custom_domain_section_added_label()}
+							variant="primary"
+							size="sm"
+						/>
 					</div>
 				</div>
 			</Form>

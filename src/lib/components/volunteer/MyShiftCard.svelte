@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One shift the member is on, with the two-step rail that is the whole point.
 	 *
@@ -8,25 +9,26 @@
 	 * that from a booking. Claimed → Booked, with only the reached step lit,
 	 * says it without needing a sentence.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 	import ShiftProgress from './ShiftProgress.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { cancelMySignup } from '$lib/remote/volunteer.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { cancelMySignup } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		shift
 	}: {
 		shift: {
 			signupId: string;
+			shiftId: string;
 			roleName: string;
 			title?: string | null;
-			/** Null for an unscheduled work order — work with no window booked yet. */
-			startsAt: Date | null;
-			endsAt: Date | null;
+			startsAt: Date;
+			endsAt: Date;
 			status: string;
 			notes: string | null;
 			eventTitle: string | null;
@@ -38,7 +40,6 @@
 	const calledOff = $derived(!!shift.shiftCancelledAt);
 
 	const timeRange = $derived.by(() => {
-		if (!shift.startsAt || !shift.endsAt) return 'a time to be arranged';
 		const fmt = new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
@@ -47,10 +48,7 @@
 		return `${fmt.format(shift.startsAt)}–${fmt.format(shift.endsAt)}`;
 	});
 
-	// Null for an unscheduled work order, which the date block reads as "TBD"
-	// rather than inventing a day for.
 	const dayParts = $derived.by(() => {
-		if (!shift.startsAt) return null;
 		const tz = DEFAULT_TIMEZONE;
 		return {
 			month: new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: tz }).format(
@@ -63,15 +61,10 @@
 
 <!-- No border of its own: the list divides, and PageContent → InfoCard → this
      was three padded containers for one row (#1044). -->
-<div class="flex gap-3 py-3">
+<div class="flex gap-3 py-3" data-signup-status={shift.status} data-shift-id={shift.shiftId}>
 	<div class="text-center leading-tight">
-		{#if dayParts}
-			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
-			<div class="text-xl font-bold">{dayParts.day}</div>
-		{:else}
-			<div class="text-subtle text-xs uppercase">when</div>
-			<div class="text-subtle text-sm font-bold">TBD</div>
-		{/if}
+		<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
+		<div class="text-xl font-bold">{dayParts.day}</div>
 	</div>
 
 	<div class="min-w-0 flex-1">
@@ -82,55 +75,57 @@
 		</div>
 
 		{#if calledOff}
-			<p class="mt-2 text-sm text-error">This was called off. There's nothing to turn up for.</p>
+			<p class="mt-2 text-sm text-error">
+				{m.volunteer_my_shift_card_was_called_off_there_s_text()}
+			</p>
 		{:else}
 			<div class="mt-2">
-				<ShiftProgress status={shift.status} notes={shift.notes} />
+				<ShiftProgress
+					status={shift.status}
+					notes={shift.notes}
+					startsAt={shift.startsAt}
+					endsAt={shift.endsAt}
+				/>
 			</div>
 		{/if}
 
-		<div class="mt-2 flex flex-wrap gap-2">
+		<CardActions class="mt-2">
 			{#if !calledOff}
 				<!-- The checklist and, on a ticketed show, the door list. Both were
 				     staff-only until #934 and #931. -->
-				<Button
-					href={resolve(`/member/volunteer/shifts/${shift.signupId}`)}
-					variant="ghost"
-					size="xs"
-				>
-					Open shift
+				<Button href={resolve(`member/volunteer/shifts/${shift.signupId}`)} variant="ghost">
+					{m.volunteer_my_shift_card_open_shift_label()}
 				</Button>
 			{/if}
 			{#if worked}
-				<Button
-					href={resolve(`/member/volunteer/feedback/${shift.signupId}`)}
-					variant="ghost"
-					size="xs"
-				>
-					How did it go?
+				<Button href={resolve(`member/volunteer/feedback/${shift.signupId}`)} variant="ghost">
+					{m.volunteer_my_shift_card_how_did_go_label()}
 				</Button>
 			{:else if !calledOff}
 				<Action
 					action={cancelMySignup.for(shift.signupId)}
-					label="Drop out"
+					label={m.volunteer_my_shift_card_label()}
 					variant="ghost"
-					size="xs"
-					modalTitle="Drop out of this shift?"
-					submitLabel="Drop out"
-					successToast="Dropped. The place is back on the board."
+					modalTitle={m.volunteer_my_shift_card_modal_title()}
+					submitLabel={m.volunteer_my_shift_card_label()}
+					successToast={m.volunteer_my_shift_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="signupId" value={shift.signupId} />
+						<input
+							{...cancelMySignup.for(shift.signupId).fields.signupId.as('hidden', shift.signupId)}
+						/>
 						<p class="text-sm">
-							{shift.roleName}{shift.startsAt ? ` on ${formatDateShort(shift.startsAt)}` : ''}, {timeRange}.
+							{shiftLabel(shift)}
+							{m.volunteer_my_shift_card_text({
+								formatDateShort: formatDateShort(shift.startsAt)
+							})}, {timeRange}.
 						</p>
 						<p class="text-sm">
-							Notice isn't a no-show. The place goes back on the board for someone else, and nothing
-							is held against you for telling us.
+							{m.volunteer_my_shift_card_notice_isn_t_no_show_text()}
 						</p>
 					{/snippet}
 				</Action>
 			{/if}
-		</div>
+		</CardActions>
 	</div>
 </div>

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import type { RemoteFormField } from '$app/server';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	/**
 	 * One box for both outbound replies and internal notes.
 	 *
@@ -20,13 +22,13 @@
 	 * keeps the draft handling, the `mod+enter` shortcut and the
 	 * disabled-until-non-empty rule in one place.
 	 */
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import { IconNote, IconSend } from '@tabler/icons-svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import AssigneeSelect from './AssigneeSelect.svelte';
 	import SendOption from './SendOption.svelte';
 
 	let {
@@ -37,7 +39,7 @@
 		replyBlockedReason,
 		assignees,
 		onsent,
-		sendLabel = 'Send Reply'
+		sendLabel = m.inbox_thread_composer_send_label()
 	}: {
 		threadId: string;
 		replyForm: Omit<RemoteForm<{ threadId: string; body: string }, unknown>, 'for'>;
@@ -84,6 +86,10 @@
 	const isNote = $derived(!!noteForm && (requestedMode === 'note' || !!replyBlockedReason));
 	const mode = $derived(isNote ? 'note' : 'reply');
 	const activeForm = $derived(isNote && noteForm ? noteForm : replyForm);
+	// Only the staff reply form has it, which is why the prop's type leaves it out.
+	const dispositionField = $derived(
+		(replyForm.fields as unknown as { disposition: RemoteFormField<string> }).disposition
+	);
 
 	// Sending sets a disposition only on the staff side. A member replying in
 	// the portal has no queue to move the thread out of, and offering them
@@ -101,8 +107,8 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<TabBar
 					tabs={[
-						{ key: 'reply', label: 'Reply' },
-						{ key: 'note', label: 'Internal note' }
+						{ key: 'reply', label: m.inbox_reply_label() },
+						{ key: 'note', label: m.inbox_thread_composer_internal_note_label() }
 					]}
 					active={mode}
 					onchange={(key) => {
@@ -112,14 +118,15 @@
 				/>
 				{#if isNote}
 					<span class="flex items-center gap-1 text-subtle">
-						<IconNote size={14} /> Staff only — the contact never sees this
+						<IconNote size={14} />
+						{m.inbox_thread_composer_staff_only_contact_never_sees_text()}
 					</span>
 				{/if}
 			</div>
 		{/if}
 
 		{#if replyBlockedReason}
-			<p class="text-xs text-warning">{replyBlockedReason}</p>
+			<p class="text-xs text-warning" data-testid="reply-blocked">{replyBlockedReason}</p>
 		{/if}
 
 		<!-- `guard` because every other abandonable form here has one — the profile,
@@ -129,7 +136,9 @@
 		<Form
 			guard
 			remote={activeForm}
-			successToast={isNote ? 'Note added' : 'Reply sent'}
+			successToast={isNote
+				? m.inbox_thread_composer_note_added_toast()
+				: m.inbox_thread_composer_reply_sent_toast()}
 			onsuccess={() => {
 				draft = '';
 				assignTo = '';
@@ -149,14 +158,16 @@
 			     only `inputProps`, so `rows` and `placeholder` were silently dropped.
 			     Two lines that grow with the draft (`field-sizing`), capped so the
 			     timeline above keeps the pane. -->
-			<FormField name="body" label="">
+			<FormField field={activeForm.fields.body} label="">
 				{#snippet input(id)}
 					<textarea
 						{id}
-						name="body"
+						{...activeForm.fields.body.as('text')}
 						class="textarea field-sizing-content max-h-64 min-h-16 w-full"
 						rows={2}
-						placeholder={isNote ? 'Add an internal note…' : 'Type your reply…'}
+						placeholder={isNote
+							? m.inbox_thread_composer_add_internal_note_placeholder()
+							: m.inbox_thread_composer_type_reply_placeholder()}
 						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
@@ -178,52 +189,38 @@
 					     top-down. -->
 					<SendOption
 						value="resolve"
-						label="Send + resolve"
+						label={m.inbox_thread_composer_send_resolve_label()}
 						disabled={!draft.trim()}
 						class="order-2 sm:order-none"
 					/>
 					<SendOption
 						value="keep_open"
-						label="Send + keep open"
+						label={m.inbox_thread_composer_send_keep_open_label()}
 						disabled={!draft.trim()}
 						class="order-3 sm:order-none"
 					/>
 				{:else if assignees}
-					<!-- Its own data, awaited here: the composer is below the fold and
-					     the staff list is a whole extra round trip. -->
-					{#await assignees() then staffUsers}
-						<label class="flex items-center gap-2 text-sm">
-							<span class="text-subtle">Assign to</span>
-							<Select
-								size="sm"
-								value={assignTo}
-								aria-label="Assign to"
-								onchange={(e: Event) => (assignTo = (e.currentTarget as HTMLSelectElement).value)}
-							>
-								<option value="">Nobody</option>
-								{#each staffUsers as s (s.id)}
-									<option value={s.id}>{s.name}</option>
-								{/each}
-							</Select>
-						</label>
-					{/await}
+					<!-- Its own data: the composer is below the fold and the staff list
+					     is a whole extra round trip. -->
+					<AssigneeSelect {assignees} bind:value={assignTo} />
 				{/if}
 				<SubmitButton
 					label={isNote
 						? assignTo
-							? 'Post note + assign'
-							: 'Add note'
+							? m.inbox_thread_composer_post_note_assign_label()
+							: m.inbox_thread_composer_add_note_label()
 						: staffSend
-							? 'Send + wait for reply'
+							? m.inbox_thread_composer_send_wait_reply_label()
 							: sendLabel}
-					successLabel={isNote ? (assignTo ? 'Assigned' : 'Added') : 'Sent'}
+					successLabel={isNote
+						? assignTo
+							? m.inbox_thread_composer_assigned_label()
+							: m.inbox_thread_composer_added_label()
+						: m.inbox_thread_composer_sent_label()}
 					shortcut="mod+enter"
-					title={staffSend
-						? 'Leaves the queue now and returns the moment they reply, or nudges you in 7 days if nothing comes back.'
-						: undefined}
+					title={staffSend ? m.inbox_thread_composer_title() : undefined}
 					disabled={!draft.trim()}
-					name={staffSend ? 'disposition' : undefined}
-					value={staffSend ? 'wait' : undefined}
+					{...staffSend ? dispositionField.as('submit', 'wait') : {}}
 					class="{isNote ? 'btn-neutral' : 'btn-primary'} order-1 w-full sm:order-none sm:w-auto"
 				>
 					{#snippet icon()}

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { PAGE_GAP, pageRange, pageWindow } from '$lib/utils/pagination';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { PAGE_GAP, pageRange, pageWindow } from '#lib/utils/pagination.js';
 
 	let {
 		page = 1,
@@ -45,7 +46,7 @@
 						onclick={() => onpage?.(page - 1)}
 						variant="default"
 						class="join-item"
-						aria-label="Previous page"
+						aria-label={m.ui_previous_page_label()}
 					>
 						«
 					</Button>
@@ -71,7 +72,7 @@
 						onclick={() => onpage?.(page + 1)}
 						variant="default"
 						class="join-item"
-						aria-label="Next page"
+						aria-label={m.ui_next_page_label()}
 					>
 						»
 					</Button>
@@ -85,7 +86,7 @@
 					{total}
 					{unit}
 				{:else}
-					Showing {range.from}–{range.to} of {total}
+					{m.ui_pagination_range_text({ from: range.from, to: range.to, total: total ?? 0 })}
 				{/if}
 			</p>
 		{/if}

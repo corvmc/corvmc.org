@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import CompTicketsAction from '$lib/components/actions/CompTicketsAction.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import CompTicketsAction from '#lib/components/actions/CompTicketsAction.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
 
 	/**
 	 * A listing's sale as staff monitor it: price, capacity, sold and remaining,
@@ -69,44 +70,50 @@
 </script>
 
 {#if event.ticketingEnabled || event.ticketPrice}
-	<InfoCard title="Ticketing">
+	<InfoCard title={m.events_listing_ticketing_ticketing_title()}>
 		<div class="flex flex-wrap gap-6">
 			<div>
-				<p class="text-muted">Price</p>
+				<p class="text-muted">{m.events_listing_ticketing_price_text()}</p>
 				<p class="text-lg font-medium">{priceDisplay(event).label}</p>
 			</div>
 			<div>
-				<p class="text-muted">Sold by</p>
+				<p class="text-muted">{m.events_listing_ticketing_sold_by_text()}</p>
 				<p class="text-lg font-medium">
-					{event.ticketingEnabled ? 'Us' : event.externalTicketUrl ? 'Off-site' : 'At the door'}
+					{event.ticketingEnabled
+						? m.events_listing_ticketing_us_text()
+						: event.externalTicketUrl
+							? m.events_listing_ticketing_off_site_text()
+							: m.events_listing_ticketing_at_door_text()}
 				</p>
 			</div>
 			{#if event.ticketingEnabled}
 				<div>
-					<p class="text-muted">Capacity</p>
-					<p class="text-lg font-medium">{event.ticketQuantity ?? 'Unlimited'}</p>
+					<p class="text-muted">{m.events_capacity_text()}</p>
+					<p class="text-lg font-medium">
+						{event.ticketQuantity ?? m.events_listing_ticketing_unlimited_text()}
+					</p>
 				</div>
 			{/if}
 			{#if ticketStats}
 				<div>
-					<p class="text-muted">Sold</p>
+					<p class="text-muted">{m.events_listing_ticketing_sold_text()}</p>
 					<p class="text-lg font-medium">{ticketStats.sold}</p>
 				</div>
 				<div>
-					<p class="text-muted">Remaining</p>
+					<p class="text-muted">{m.events_listing_ticketing_remaining_text()}</p>
 					<p class="text-lg font-medium">{ticketStats.remaining ?? '∞'}</p>
 				</div>
 			{/if}
 			{#if money && money.contributionsCents > 0}
 				<div>
-					<p class="text-muted">Contributions</p>
+					<p class="text-muted">{m.events_listing_ticketing_contributions_text()}</p>
 					<p class="text-lg font-medium">{formatCents(money.contributionsCents)}</p>
 				</div>
 			{/if}
 			{#if money && money.freeCount > 0}
 				<!-- A $0-floor show can sell out on tickets nobody paid for. -->
 				<div>
-					<p class="text-muted">Free / paid</p>
+					<p class="text-muted">{m.events_listing_ticketing_free_paid_text()}</p>
 					<p class="text-lg font-medium">{money.freeCount} / {money.paidCount}</p>
 				</div>
 			{/if}
@@ -114,24 +121,24 @@
 
 		{#if money && (money.actsCents > 0 || money.collectiveCents > 0)}
 			<div class="mt-4 border-t border-base-200 pt-4">
-				<p class="text-muted">Where buyers sent it</p>
+				<p class="text-muted">{m.events_listing_ticketing_where_buyers_sent_text()}</p>
 				<div class="mt-2 flex flex-wrap gap-6">
 					<div>
-						<p class="text-muted">To the bands</p>
+						<p class="text-muted">{m.events_listing_ticketing_bands_text()}</p>
 						<p class="text-lg font-medium">{formatCents(money.actsCents)}</p>
 					</div>
 					<div>
-						<p class="text-muted">To the Collective</p>
+						<p class="text-muted">{m.events_listing_ticketing_collective_text()}</p>
 						<p class="text-lg font-medium">{formatCents(money.collectiveCents)}</p>
 					</div>
 					<div>
-						<p class="text-muted">Card processing</p>
+						<p class="text-muted">{m.events_card_processing_text()}</p>
 						<p class="text-lg font-medium">{formatCents(cardCents)}</p>
 					</div>
 				</div>
 				<!-- Refunds are a human in the Stripe dashboard, which nothing here sees. -->
 				<p class="mt-2 text-muted text-sm">
-					As sold. Refunds are handled in Stripe and are not reflected here.
+					{m.events_as_sold_refunds_handled_stripe_text()}
 				</p>
 			</div>
 		{/if}
@@ -139,11 +146,11 @@
 		{#if event.status === 'published' && event.ticketingEnabled}
 			<div class="mt-3">
 				<a
-					href={resolve(`/events/${event.id}/tickets`)}
+					href={resolve(`events/${event.id}/tickets`)}
 					class="link text-sm link-primary"
 					target="_blank"
 				>
-					View purchase page →
+					{m.events_listing_ticketing_view_purchase_page_text()}
 				</a>
 			</div>
 		{/if}
@@ -156,13 +163,15 @@
 	</InfoCard>
 
 	{#if tickets.length > 0}
-		<InfoCard title="Tickets ({tickets.length})">
+		<InfoCard title={m.events_listing_ticketing_tickets_title({ length: tickets.length })}>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Attendee</th>
-					<th class="w-px text-right">Paid</th>
-					<th class="w-px">Code</th>
+					<th class="w-px"
+						><span class="sr-only">{m.events_listing_ticketing_status_label()}</span></th
+					>
+					<th>{m.events_listing_ticketing_attendee_label()}</th>
+					<th class="w-px text-right">{m.events_listing_ticketing_paid_label()}</th>
+					<th class="w-px">{m.events_listing_ticketing_code_label()}</th>
 				{/snippet}
 				{#each tickets as t (t.id)}
 					<tr class="hover">
@@ -177,19 +186,22 @@
 							</div>
 							{#if t.contributionCents > 0}
 								<div class="text-sm text-success">
-									+{formatCents(t.contributionCents)} contributed
+									{m.events_listing_ticketing_contributed_text({
+										formatCents: formatCents(t.contributionCents)
+									})}
 								</div>
 							{/if}
 							{#if t.actsCents > 0 || t.collectiveCents > 0}
 								<!-- Order-level: on the purchase's first row only, and labelled so. -->
 								<div class="text-muted text-sm">
-									order → bands {formatCents(t.actsCents)} · collective {formatCents(
-										t.collectiveCents
-									)}
+									{m.events_listing_ticketing_order_bands_collective_text({
+										formatCents: formatCents(t.actsCents),
+										formatCents2: formatCents(t.collectiveCents)
+									})}
 								</div>
 							{/if}
 							{#if t.discountWaived}
-								<div class="text-muted">Waived discount</div>
+								<div class="text-muted">{m.events_listing_ticketing_waived_discount_text()}</div>
 							{/if}
 						</td>
 						<td class="w-px"><span class="font-mono text-sm">{t.code}</span></td>

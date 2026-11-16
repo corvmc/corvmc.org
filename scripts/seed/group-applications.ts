@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import {
 	groupApplication,
@@ -108,7 +108,8 @@ export async function seedGroupApplications(
 	];
 
 	const now = new Date();
-	await db.insert(groupApplication).values(
+	await batchInsert(
+		groupApplication,
 		rows.map((row, i) => ({
 			id: row.id,
 			userId: row.userId,
@@ -119,7 +120,8 @@ export async function seedGroupApplications(
 		}))
 	);
 
-	await db.insert(groupApplicationChoice).values(
+	await batchInsert(
+		groupApplicationChoice,
 		rows.flatMap((row) =>
 			row.choices.map((c, j) => ({
 				id: `${row.id}-choice-${j}`,

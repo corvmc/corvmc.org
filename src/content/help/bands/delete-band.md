@@ -1,5 +1,5 @@
 ---
-title: Delete a Band
+title: Delete a band
 slug: delete-band
 category: bands
 summary: Permanently remove a band you own.

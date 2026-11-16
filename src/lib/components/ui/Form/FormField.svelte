@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
-	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '$app/server';
 	import TagSelect from './TagSelect.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import Select from './Select.svelte';
@@ -41,6 +41,7 @@
 		upload,
 		accept,
 		src,
+		submitAs,
 		value = $bindable(),
 		...rest
 	}: {
@@ -76,6 +77,13 @@
 		 */
 		display?: string | Snippet;
 		issues?: RemoteFormIssue[] | null;
+		/**
+		 * Register a `number` input with the field as text, for a schema that
+		 * parses the string itself. A number registration drops a cleared box from
+		 * the payload, so an update form could no longer tell "cleared" from
+		 * "untouched".
+		 */
+		submitAs?: 'text';
 		upload?: (file: File) => Promise<string>;
 		accept?: string;
 		src?: string;
@@ -140,13 +148,15 @@
 		// file input, and `.as('text')` would register the field as a string and
 		// hand the handler the filename instead. The other three are text under
 		// the hood — a textarea, a JSON blob, a date string.
-		const asType = isBooleanInput
-			? 'checkbox'
-			: type === 'file'
-				? 'file'
-				: type === 'textarea' || type === 'tags' || type === 'calendar'
-					? 'text'
-					: (type ?? 'text');
+		const asType = submitAs
+			? submitAs
+			: isBooleanInput
+				? 'checkbox'
+				: type === 'file'
+					? 'file'
+					: type === 'textarea' || type === 'tags' || type === 'calendar'
+						? 'text'
+						: (type ?? 'text');
 		// Forward the supplied value so plain inputs render pre-filled from existing
 		// data (edit forms). `.as(type, value)` controls the rendered value.
 		// A file field has no renderable value to forward — the browser owns it.
@@ -164,30 +174,38 @@
 				field.as(asType as any, value);
 	});
 
-	// Hydration would assign the spread's `value` to an input a visitor already
-	// typed into, so it and `defaultValue` are held back until mount. Typed text
-	// then differs from the server-rendered default, and an `input` event hands it
-	// to the remote form.
+	// Hydration would overwrite text typed before it, so `value` and `defaultValue`
+	// are held back until mount; the `input` event then hands typed text to the form.
+	// Not a `$derived`, and keyed on a plain flag: an input event handled while a
+	// query refresh is pending re-ran the spread with the cached pre-mount result,
+	// dropping `value` and emptying the input before submit (#2664). `hydrated`
+	// only re-runs the spread.
 	let hydrated = $state(false);
+	let mounted = false;
 	let fieldInput = $state<HTMLInputElement>();
-	let spreadAttrs = $derived.by(() => {
-		if (!fieldAttrs || hydrated) return fieldAttrs;
+	function spreadOf(attrs: NonNullable<typeof fieldAttrs>) {
+		void hydrated;
+		if (mounted) return attrs;
 		// Annotated wider so members without the keys (file, select) destructure too.
-		const wide: typeof fieldAttrs & { value?: unknown; defaultValue?: unknown } = fieldAttrs;
-		const { value: _value, defaultValue: _default, ...attrs } = wide;
-		return attrs;
-	});
+		const wide: typeof attrs & { value?: unknown; defaultValue?: unknown } = attrs;
+		const { value: _value, defaultValue: _default, ...held } = wide;
+		return held;
+	}
 	onMount(() => {
 		if (fieldInput && fieldInput.value !== fieldInput.defaultValue) {
 			fieldInput.dispatchEvent(new Event('input', { bubbles: true }));
 		}
+		mounted = true;
 		hydrated = true;
 	});
 
 	// When field is provided, `fieldAttrs.name` already carries the `b:` prefix. For
 	// name-only boolean inputs (no `field`), apply the prefix manually so SvelteKit
-	// still coerces the value to a boolean.
-	let resolvedName = $derived(fieldAttrs?.name ?? (isBooleanInput ? `b:${_name}` : _name));
+	// still coerces the value to a boolean. An `id` alone names nothing: the input
+	// is editor state, and a remote form rejects a name it did not hand out.
+	let resolvedName = $derived(
+		fieldAttrs?.name ?? (name ? (isBooleanInput ? `b:${name}` : name) : undefined)
+	);
 	let resolvedId = $derived(
 		propId ?? (fieldAttrs?.name ? `form-field-${fieldAttrs.name}-${uid}` : _id)
 	);
@@ -241,16 +259,8 @@
 	});
 </script>
 
-<!-- `<div class="fieldset">` for a single control: daisyUI 5 styles `.fieldset`
-     and `.fieldset-legend` by class with an explicit `display`, so the element
-     swap is invisible, and a one-control `<fieldset>` announces a group that
-     isn't one. -->
-<svelte:element
-	this={labelsOneControl ? 'div' : 'fieldset'}
-	class="fieldset {className}"
-	oninput={() => form?.changed()}
-	onchange={() => form?.changed()}
->
+{#snippet body()}
+	<!-- eslint-disable-next-line custom/no-svelte-element -- holds only text, so a re-insert has no focus to drop -->
 	<svelte:element
 		this={labelsOneControl ? 'label' : 'legend'}
 		class="fieldset-legend"
@@ -351,9 +361,16 @@
 	{:else if type === 'tags'}
 		<!-- `value` is its own prop, so it is not in `...rest` and must be forwarded
 		     explicitly — without it TagSelect starts empty and submits `[]`. -->
-		<TagSelect {...rest} options={tagOptions} {...inputProps} {value} disabled={pending} />
+		<TagSelect
+			{...rest}
+			options={tagOptions}
+			{...inputProps}
+			name={resolvedName ?? ''}
+			{value}
+			disabled={pending}
+		/>
 	{:else if type === 'calendar'}
-		<CalendarSelect {...rest} name={resolvedName} bind:value disabled={pending || readonly} />
+		<CalendarSelect {...rest} name={resolvedName ?? ''} bind:value disabled={pending || readonly} />
 	{:else if type === 'checkbox'}
 		<label class="label cursor-pointer items-center gap-2">
 			<input
@@ -396,17 +413,49 @@
 			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
-	{:else if field && spreadAttrs}
+	{:else if field && fieldAttrs}
 		<input
 			bind:this={fieldInput}
 			class="input w-full"
 			class:ghost={readonly}
 			{...rest}
-			{...spreadAttrs}
+			{...spreadOf(fieldAttrs)}
+			{type}
 			id={resolvedId}
 			disabled={pending || readonly}
+			oninput={(e) => {
+				// The field owns the input, so `bind:value` is kept current by hand,
+				// typed as Svelte's own binding types it: a number input gives a number.
+				const el = e.currentTarget;
+				value = type === 'number' ? (el.value === '' ? null : el.valueAsNumber) : el.value;
+				(rest.oninput as ((e: Event) => void) | undefined)?.(e);
+			}}
 		/>
 	{:else}
 		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
-</svelte:element>
+{/snippet}
+
+<!-- `<div class="fieldset">` for a single control: daisyUI 5 styles `.fieldset`
+     and `.fieldset-legend` by class with an explicit `display`, so the element
+     swap is invisible, and a one-control `<fieldset>` announces a group that
+     isn't one. Two literal branches, not `<svelte:element>`: hydrating that inside
+     an async-gated block re-inserts the server-rendered node, which blurs a
+     focused input, so the visitor's next keystrokes land nowhere (#2224). -->
+{#if labelsOneControl}
+	<div
+		class="fieldset {className}"
+		oninput={() => form?.changed()}
+		onchange={() => form?.changed()}
+	>
+		{@render body()}
+	</div>
+{:else}
+	<fieldset
+		class="fieldset {className}"
+		oninput={() => form?.changed()}
+		onchange={() => form?.changed()}
+	>
+		{@render body()}
+	</fieldset>
+{/if}

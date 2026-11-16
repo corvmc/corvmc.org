@@ -142,8 +142,8 @@ Counts are non-spec call sites in `src/`, taken at `63e5890`.
 ### The two that gate nothing
 
 `staffInbox` has no guard anywhere — the inbox is staff-only and the staff panel never consulted
-flags. `groupFiles` was registered for groups-spec phase 8 (Documents), which is deferred pending a
-second R2 bucket. Both are pure registration: delete the union member, the `ALL_FLAGS` entry, the
+flags. `groupFiles` was registered for group documents, which were deferred pending a second R2
+bucket. Both are pure registration: delete the union member, the `ALL_FLAGS` entry, the
 `DEFAULTS` key, and for `staffInbox` the `featureMeta` entry. When Documents is built it gets a
 feature branch, not a flag.
 
@@ -160,10 +160,9 @@ feature branch, not a flag.
 | `groupEvents`    | Group-authored events reaching the gig guide                                                           | `group-events.remote.ts`, `groups.remote.ts`                                 |
 | `announcements`  | Band and group announcements, incl. the band nav entry                                                 | `announcements.remote.ts`, `groups.remote.ts`                                |
 
-Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all have
-specs in `docs/specs/shipped/`. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
-`docs/specs/shipped/groups-spec.md`, whose phase table shows 0–10 complete and only phase 8 deferred.
-`helpArticles` has no spec.
+Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all had
+specs, since retired into `docs/decisions/` under #2525. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
+the groups module, all of whose phases had shipped except documents. `helpArticles` has no spec.
 
 ### If a feature is not ready to launch
 
@@ -183,7 +182,7 @@ guards interleave in `groups.remote.ts`.
 Per flag: delete its `requireFeature`/`isFeatureEnabled` calls and fold the derived booleans
 (`canReport`, `canMessage`, `announcementsEnabled`, `sessionsEnabled`) to their true value; drop the
 entry from `FeatureFlag`, `ALL_FLAGS`, `DEFAULTS` and `featureMeta`; drop it from `ENABLED_FLAGS` in
-`e2e/fixtures/seed-feature-flags.ts`; strip the `vi.mock('$lib/server/feature-flags', …)` stub from
+`e2e/fixtures/seed-feature-flags.ts`; strip the `vi.mock('#lib/server/feature-flags.js', …)` stub from
 specs that mocked it only for that module.
 
 Then one final PR deletes the machinery: `src/lib/server/feature-flags.ts` and its spec,
@@ -193,7 +192,7 @@ Then one final PR deletes the machinery: `src/lib/server/feature-flags.ts` and i
 `e2e/prepare.ts`, the `feature.volunteering` write in `seed-volunteering.ts`, the `feature.*` block
 in `DEFAULTS`, and the docs that describe the system —
 `docs/reports/feature-catalog.md` §Feature flags, `docs/architecture/overview.md`,
-`docs/specs/shipped/groups-spec.md` §Feature flags and rollout, `docs/development/business-workflows.md`,
+`docs/development/business-workflows.md`,
 `docs/architecture/operations-manual.md`, `docs/development/local-dev-quickstart.md`, `CLAUDE.md`
 and `.claude/rules/remote-functions.md`. Run `pnpm docs:check`.
 

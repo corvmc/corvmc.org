@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { setAnnouncementMute } from '$lib/remote/announcements.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { setAnnouncementMute } from '#lib/remote/announcements.remote.js';
 
 	/**
 	 * Silence one group without silencing the rest.
@@ -31,19 +32,24 @@
 
 <Action
 	action={setAnnouncementMute}
-	label={muted ? 'Unmute announcements' : 'Mute announcements'}
-	successToast={muted ? 'Announcements on' : 'Announcements muted'}
+	data-testid="mute-announcements"
+	label={muted
+		? m.groups_mute_announcements_unmute_announcements_label()
+		: m.groups_mute_announcements_mute_announcements_label()}
+	successToast={muted
+		? m.groups_mute_announcements_announcements_toast()
+		: m.groups_mute_announcements_announcements_muted_toast()}
 	variant="ghost"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<input {...fields.groupId.as('hidden', groupId)} />
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? `Start getting announcements from ${groupName} again?`
-				: `Stop getting emails and notifications from ${groupName}? Posts still appear on its page.`}
+				? m.groups_mute_announcements_start_getting_announcements_from_a_text({ groupName })
+				: m.groups_mute_announcements_stop_getting_emails_notifications_text({ groupName })}
 		</p>
 	{/snippet}
 </Action>

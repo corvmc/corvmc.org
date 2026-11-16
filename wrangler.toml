@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 # worker and adds the `scheduled` handler for the [triggers] below. The adapter
 # writes its output to .svelte-kit/cloudflare/_worker.js per wrangler.adapter.toml
 # (it rimrafs whatever `main` points at in the config it reads, so it must not
-# read this file — see svelte.config.js).
+# read this file — see kit.config.js).
 main = "worker.js"
 
 [assets]
@@ -19,13 +19,13 @@ binding = "ASSETS"
 # an hour twice a year.
 [triggers]
 crons = [
-  "*/5 * * * *",  # send-campaigns
-  "*/15 * * * *", # auto-complete, complete-shifts, cancel-unconfirmed, expire-waitlisted,
-                  #   wake-snoozed, reminders, schedule-radio
+  "*/5 * * * *",  # send-campaigns, send-outbox
+  "*/15 * * * *", # auto-complete, complete-shifts, expire-waitlisted, wake-snoozed, lift-lapsed-removals,
+                  #   lock-sync, reminders, schedule-radio, sweep-door-sales
   "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
                   #   generate-recurring-reservations, lock-access,
                   #   cancel-stale-tickets, sweep-audio-purchases, sweep-incidents,
-                  #   sweep-audit-log, sweep-media
+                  #   sweep-audit-log, import-partner-calendars, sweep-media
   "0 17 * * MON", # reconcile-ledger, Mondays 9am PST / 10am PDT. Name weekdays:
                   #   Cloudflare numbers them 1 = Sunday, Sentry 1 = Monday.
 ]
@@ -81,9 +81,12 @@ PUBLIC_SITE_URL = "https://corvmc.org"
 # treats every other value (and an unset one) as the in-memory fake, so the
 # opt-in lives here rather than the opt-out living in every dev checkout.
 PAYMENTS_DRIVER = "stripe"
+# The same opt-in for mail: anything but "postmark" logs each message instead of
+# sending it (`mailDriver()` in postmark-client.ts), so a dev checkout never mails.
+MAIL_DRIVER = "postmark"
 # The practice room's Stripe smart reader (`tmr_…`, #1659). Not a secret. Empty
 # until the S700 is registered to the Terminal Location; while empty, "Pay at
-# the reader" does not appear. See docs/specs/smart-reader-spec.md#owner-setup.
+# the reader" does not appear. Owner setup: #1722.
 STRIPE_TERMINAL_READER_ID = ""
 EMAIL_FROM_NAME = "CorvMC"
 # Mirrors the Workers Builds build variable that `pnpm ci:migrate` reads (#1358,
@@ -92,6 +95,8 @@ EMAIL_FROM_NAME = "CorvMC"
 CMC_MIGRATE_AFTER_PUBLISH = "1"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
+# Recipient of contact-form alerts with the subject "Performance Inquiry".
+BOOKING_CONTACT_EMAIL = "booking@corvmc.org"
 # Postmark message streams. Custom streams, not Postmark's defaults
 # (`outbound`/`broadcast`) — both must exist with these exact ids on the server
 # POSTMARK_SERVER_TOKEN belongs to. Required: sends throw when either is unset.
@@ -162,6 +167,11 @@ bucket_name = "corvmc-private"
 [[kv_namespaces]]
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
+
+# Browser Rendering: lays out the month calendar poster and prints it to PDF
+# (src/lib/server/poster/browser.ts).
+[browser]
+binding = "BROWSER"
 
 # The deploy version id. NOT how Sentry gets its release tag, despite what this
 # comment used to claim: @sentry/cloudflare reads this binding only in

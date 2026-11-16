@@ -1,22 +1,22 @@
-import { db } from '$lib/server/db';
-import { toBandRef, toFlagTargetRef } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { toBandRef, toFlagTargetRef } from '#lib/server/entity/refs.js';
 import { DomainError } from '../domain-error';
-import { contentFlag } from '$lib/server/db/schema/flag';
-import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
-import { surfaces, type StandingScope } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { eventListing } from '$lib/server/db/schema/event';
-import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
-import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { moderationAppeal } from '$lib/server/db/schema/moderation';
-import { classifiedPost } from '$lib/server/db/schema/classified';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import type { FlagEntityType, FlagStatus } from '#lib/server/db/schema/flag.js';
+import { surfaces, type StandingScope } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { inboxThread, inboxMessage, inboxParticipant } from '#lib/server/db/schema/inbox.js';
+import type { InboxMessageDirection } from '#lib/server/db/schema/inbox.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
+import { classifiedPost } from '#lib/server/db/schema/classified.js';
 import { eq, ne, and, desc, count, inArray, isNull, getTableColumns, asc } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -79,11 +79,11 @@ export const DIRECT_CONVERSATION_LABEL = 'Direct conversation';
 function entityHref(entityType: FlagEntityType, entityId: string, flagId?: string): string {
 	switch (entityType) {
 		case 'band_profile':
-			return `/staff/bands/${entityId}`;
+			return `/staff/groups/${entityId}`;
 		// A private conversation has no staff page of its own — by design, see
 		// getThread(). The report *is* the only way in, so link to the report.
 		case 'inbox_thread':
-			return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
+			return flagId ? `/staff/flags/${flagId}` : '/staff/moderation/flags';
 		// Events have no staff record page for band events; the public listing is
 		// the canonical URL for both sources.
 		case 'event':
@@ -91,7 +91,8 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 		case 'suggestion':
 			return `/staff/suggestions/${entityId}`;
 		case 'classified_post':
-			if (!surfaces.classifieds) return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
+			if (!surfaces.classifieds)
+				return flagId ? `/staff/flags/${flagId}` : '/staff/moderation/flags';
 			return `/staff/classifieds/${entityId}`;
 		default:
 			return `/staff/members/${entityId}`;
@@ -205,11 +206,11 @@ export async function createFlag(params: CreateFlagParams) {
 	// uses one below: it keeps the two domains from importing each other.
 	// withholdForReview only moves `visible` rows, so repeat reports are no-ops.
 	if (params.entityType === 'suggestion') {
-		const { withholdForReview } = await import('$lib/server/suggestion/suggestion-service');
+		const { withholdForReview } = await import('#lib/server/suggestion/suggestion-service.js');
 		await withholdForReview(params.entityId, { flagId: flag.id });
 	}
 	if (params.entityType === 'classified_post') {
-		const { withholdForReview } = await import('$lib/server/classified/classified-service');
+		const { withholdForReview } = await import('#lib/server/classified/classified-service.js');
 		await withholdForReview(params.entityId);
 	}
 
@@ -326,13 +327,13 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 
 	if (params.resolution === 'resolved' && existing.entityType === 'event') {
 		if (params.unpublishEvent) {
-			const { unpublishWithNotice } = await import('$lib/server/event/event-service');
+			const { unpublishWithNotice } = await import('#lib/server/event/event-service.js');
 			await unpublishWithNotice(existing.entityId, { notes: params.notes });
 		}
 	}
 
 	if (existing.entityType === 'suggestion') {
-		const svc = await import('$lib/server/suggestion/suggestion-service');
+		const svc = await import('#lib/server/suggestion/suggestion-service.js');
 
 		if (params.resolution === 'resolved') {
 			// Upheld: off the board for good. The author's standing is handled above,
@@ -361,7 +362,7 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 
 	// Same rule as suggestions: the report already withheld the post, so dismissal restores it.
 	if (existing.entityType === 'classified_post') {
-		const { setVisibility } = await import('$lib/server/classified/classified-service');
+		const { setVisibility } = await import('#lib/server/classified/classified-service.js');
 		const upheld = params.resolution === 'resolved';
 		await setVisibility(existing.entityId, {
 			visibility: upheld ? 'hidden' : 'visible',
@@ -386,7 +387,7 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		});
 
 		if (subject) {
-			const { restrictStanding } = await import('$lib/server/moderation/standing-service');
+			const { restrictStanding } = await import('#lib/server/moderation/standing-service.js');
 			await restrictStanding({
 				userId: subject.userId,
 				scope: subject.scope,
@@ -417,6 +418,13 @@ export interface FlagFilters {
 	appealPending?: boolean;
 }
 
+// Classifieds are off in code (#2116); their reports leave the queue with them.
+const surfaceOpen = () =>
+	surfaces.classifieds ? undefined : ne(contentFlag.entityType, 'classified_post');
+
+/** A report still waiting on a moderator: the review feed's predicate. */
+export const pendingFlag = () => and(eq(contentFlag.status, 'pending'), surfaceOpen());
+
 export async function listFlags(filters: FlagFilters, pagination: PaginationInput) {
 	const conditions = [];
 	if (filters.status) conditions.push(eq(contentFlag.status, filters.status));
@@ -425,8 +433,8 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 	if (filters.entityType) conditions.push(eq(contentFlag.entityType, filters.entityType));
 	if (filters.entityId) conditions.push(eq(contentFlag.entityId, filters.entityId));
-	// Classifieds are off in code (#2116); their reports leave the queue with them.
-	if (!surfaces.classifieds) conditions.push(ne(contentFlag.entityType, 'classified_post'));
+	const open = surfaceOpen();
+	if (open) conditions.push(open);
 	if (filters.reportedByUserId) {
 		conditions.push(eq(contentFlag.reportedByUserId, filters.reportedByUserId));
 	}
@@ -563,18 +571,21 @@ async function standingSubjectOf(
 	entityId: string,
 	context: { reporterUserId: string | null }
 ): Promise<StandingSubject | null> {
-	const { scopeForFlag } = await import('$lib/server/moderation/standing-service');
+	const { scopeForFlag } = await import('#lib/server/moderation/standing-service.js');
 
 	switch (entityType) {
 		case 'event': {
-			const { getById } = await import('$lib/server/event/event-service');
+			const { getById } = await import('#lib/server/event/event-service.js');
 			const evt = await getById(entityId);
-			const scope = scopeForFlag('event', { eventSource: evt?.source });
+			const scope = scopeForFlag('event', {
+				eventSource: evt?.source,
+				imported: evt?.importSourceId != null
+			});
 			return scope && evt ? { userId: evt.createdByUserId, scope } : null;
 		}
 		case 'suggestion': {
 			const { getSuggestionForModeration } =
-				await import('$lib/server/suggestion/suggestion-service');
+				await import('#lib/server/suggestion/suggestion-service.js');
 			const target = await getSuggestionForModeration(entityId);
 			const scope = scopeForFlag('suggestion');
 			// Null when the author has deleted their account: there is nobody left
@@ -582,7 +593,7 @@ async function standingSubjectOf(
 			return target?.authorUserId && scope ? { userId: target.authorUserId, scope } : null;
 		}
 		case 'classified_post': {
-			const { getPostForModeration } = await import('$lib/server/classified/classified-service');
+			const { getPostForModeration } = await import('#lib/server/classified/classified-service.js');
 			const target = await getPostForModeration(entityId);
 			const scope = scopeForFlag('classified_post');
 			return target && scope ? { userId: target.authorUserId, scope } : null;

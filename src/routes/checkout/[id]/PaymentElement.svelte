@@ -1,14 +1,20 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import type {
 		StripeCheckoutElementsSdk,
 		StripeCheckoutSavedPaymentMethod,
 		Appearance
 	} from '@stripe/stripe-js';
-	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '$lib/stripe';
-	import { reportError } from '$lib/report-error';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import {
+		loadStripeOrReport,
+		PAYMENTS_UNAVAILABLE,
+		STRIPE_CONFIRM_TIMED_OUT,
+		withStripeDeadline
+	} from '#lib/stripe.js';
+	import { reportError } from '#lib/report-error.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * Stripe's Payment Element, mounted on our own page.
@@ -152,10 +158,13 @@
 			// On success Stripe navigates to the session's `return_url`, so there is
 			// no success branch to write here — only the error one, which keeps the
 			// buyer on this page with Stripe's own copy for the decline.
-			const result = await loaded.actions.confirm(
-				chosenCard ? { paymentMethod: chosenCard } : undefined
+			const result = await withStripeDeadline(
+				loaded.actions.confirm(chosenCard ? { paymentMethod: chosenCard } : undefined),
+				'checkout'
 			);
-			if (result.type === 'error') errorMessage = result.error.message;
+			if (result === STRIPE_CONFIRM_TIMED_OUT) {
+				errorMessage = m.public_checkout_id_payment_element_timed_out_body();
+			} else if (result.type === 'error') errorMessage = result.error.message;
 		} finally {
 			confirming = false;
 		}
@@ -170,7 +179,8 @@
 
 {#if savedCards.length > 0}
 	<fieldset class="mb-4 space-y-2">
-		<legend class="mb-2 font-medium">Pay with</legend>
+		<legend class="mb-2 font-medium">{m.public_checkout_id_payment_element_pay_with_title()}</legend
+		>
 		{#each savedCards as saved (saved.id)}
 			<label class="flex cursor-pointer items-center gap-3 rounded-box border border-base-300 p-3">
 				<input
@@ -183,9 +193,10 @@
 				/>
 				<span>{describe(saved)}</span>
 				<span class="text-muted text-sm tabular-nums">
-					Expires {String(saved.card.expMonth).padStart(2, '0')}/{String(saved.card.expYear).slice(
-						-2
-					)}
+					{m.public_checkout_id_payment_element_expires_label({
+						padStart: String(saved.card.expMonth).padStart(2, '0'),
+						slice: String(saved.card.expYear).slice(-2)
+					})}
 				</span>
 			</label>
 		{/each}
@@ -197,7 +208,7 @@
 				checked={chosenCard === null}
 				onchange={() => (chosenCard = null)}
 			/>
-			<span>Use a different payment method</span>
+			<span>{m.public_checkout_id_payment_element_use_different_payment_met_label()}</span>
 		</label>
 	</fieldset>
 {/if}
@@ -211,8 +222,10 @@
 		shape="block"
 		disabled={!payable}
 		onclick={pay}
-		title={ready ? undefined : 'Waiting for the payment form to load'}
+		title={ready ? undefined : m.public_checkout_id_payment_element_title()}
 	>
-		{confirming ? 'Paying…' : `Pay ${total}`}
+		{confirming
+			? m.public_checkout_id_payment_element_paying_label()
+			: m.public_checkout_id_payment_element_pay_label({ total })}
 	</Button>
 </div>

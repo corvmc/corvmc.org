@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { formatDate } from '$lib/utils/format';
-	import { creditsToHours } from '$lib/config';
-	import { getMembershipStatus } from '$lib/remote/reservations.remote';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import { formatDate } from '#lib/utils/format.js';
+	import { creditsToHours } from '#lib/config.js';
+	import { getMembershipStatus } from '#lib/remote/reservations.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconClock } from '@tabler/icons-svelte';
 </script>
 
@@ -12,7 +15,9 @@
 	{#await getMembershipStatus()}
 		<div class="flex items-center gap-2">
 			<IconClock size={18} class="text-gray-400" />
-			<span class="text-gray-400">Loading free hours...</span>
+			<span class="text-gray-400"
+				>{m.member_membership_free_hours_remaining_loading_free_hours_text()}</span
+			>
 		</div>
 	{:then membership}
 		{#if membership.isSustainingMember}
@@ -20,26 +25,35 @@
 			{@const hoursRemaining = creditsToHours(membership.freeHoursBalance)}
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
-				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}>{hoursRemaining}</span>
-				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}"
-					>free {hoursRemaining === 1 ? 'hour' : 'hours'} remaining</span
+				<ParaglideMessage
+					message={m.member_membership_free_hours_remaining_free_hours_remaining_text}
+					inputs={{ hoursRemaining }}
+					>{#snippet span({ children })}<span
+							class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
+							>{@render children?.()}</span
+						>{/snippet}{#snippet span2({ children })}<span
+							class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
 				>
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
-					Resets to {creditsToHours(membership.hoursPerReset)} on {formatDate(
-						new Date(membership.creditsResetAt)
-					)}
+					{m.member_membership_free_hours_remaining_resets_text({
+						creditsToHours: creditsToHours(membership.hoursPerReset),
+						formatDate: formatDate(new Date(membership.creditsResetAt))
+					})}
 				</span>
 			{/if}
 		{:else}
 			<div class="flex items-center gap-3">
 				<IconClock size={18} class="shrink-0 opacity-40" />
-				<span>Get free practice hours each month with a sustaining membership.</span>
+				<span>{m.member_membership_free_hours_remaining_get_free_practice_hou_text()}</span>
 			</div>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>Learn More</Button
+				>{m.member_membership_free_hours_remaining_learn_more_label()}</Button
 			>
 		{/if}
+	{:catch error}
+		<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(error) })}</span>
 	{/await}
 </div>

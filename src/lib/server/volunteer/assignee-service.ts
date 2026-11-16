@@ -1,0 +1,321 @@
+import { and, asc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import {
+	volunteerRole,
+	workOrder,
+	workOrderAssignee,
+	workTask
+} from '#lib/server/db/schema/volunteer.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
+import {
+	requireActiveVolunteer,
+	VolunteerProfileBlockedError,
+	VolunteerProfileNotFoundError
+} from './volunteer-profile-service';
+import { missingRequirements } from './member-certification-service';
+import { VolunteerUnderReviewError } from './volunteer-signup-service';
+import { resolveWorkOrder, workOrderAuditLabel } from './work-order-service';
+import { waitingOn } from '#lib/server/task/can-act.js';
+import { listWorkTasks, setWorkTaskDone, WorkTaskNotFoundError } from './duty-list-service';
+
+// ---------------------------------------------------------------------------
+// Assignment (#2518): staff or a committee name who is doing a task. Not a
+// sign-up — no places, reminder, feedback or clock. Warn, record, allow
+// (conventions.md#workflow-gates): no volunteer profile and a missing clearance
+// are recorded warnings; a profile under review refuses.
+// ---------------------------------------------------------------------------
+
+const NO_PROFILE_WARNING = 'No volunteer profile on file: never signed up to volunteer.';
+
+type TaskRef = { id: string; title: string | null; volunteerRoleId: string | null };
+
+async function memberName(userId: string): Promise<string> {
+	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
+	return row?.name ?? 'Unknown member';
+}
+
+/**
+ * Put somebody on a task. Returns the warnings staff went over; already being
+ * on it is a no-op with none. Clearances are checked as of today: a task has
+ * no time of its own.
+ */
+export async function assignToTask(
+	task: TaskRef,
+	userId: string,
+	assignedByUserId: string | null
+): Promise<{ warnings: string[]; added: boolean }> {
+	const warnings: string[] = [];
+	try {
+		await requireActiveVolunteer(userId);
+	} catch (err) {
+		// Putting an unreviewed minor on work is the integrity case: refused.
+		if (err instanceof VolunteerProfileBlockedError) throw new VolunteerUnderReviewError();
+		if (!(err instanceof VolunteerProfileNotFoundError)) throw err;
+		warnings.push(NO_PROFILE_WARNING);
+	}
+	if (task.volunteerRoleId) {
+		const missing = await missingRequirements(userId, task.volunteerRoleId, new Date());
+		if (missing.length > 0) {
+			warnings.push(`Not cleared: no ${missing.map((m) => m.name).join(' and ')} as of today.`);
+		}
+	}
+
+	const added = await db
+		.insert(workOrderAssignee)
+		.values({ workOrderId: task.id, userId, assignedByUserId, assignedAt: new Date() })
+		.onConflictDoNothing()
+		.returning({ userId: workOrderAssignee.userId });
+	if (added.length === 0) return { warnings: [], added: false };
+
+	const subject = { type: 'work_order' as const, id: task.id, label: workOrderAuditLabel(task) };
+	const name = await memberName(userId);
+	await recordAuditEntry({
+		action: 'work_order.member_assigned',
+		subject,
+		details: { userId, memberName: name }
+	});
+	if (warnings.length > 0) {
+		await recordAuditEntry({
+			action: 'work_order.assigned_over_warnings',
+			subject,
+			details: { userId, memberName: name, warnings }
+		});
+	}
+	// Taking a task yourself is not news to you.
+	if (assignedByUserId !== userId) await announceAssignment(task.id, userId, assignedByUserId);
+	return { warnings, added: true };
+}
+
+/** Captured rather than thrown: the assignment is already saved. */
+async function announceAssignment(
+	workOrderId: string,
+	userId: string,
+	assignedByUserId: string | null
+): Promise<void> {
+	try {
+		const people = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(user)
+			.where(inArray(user.id, assignedByUserId ? [userId, assignedByUserId] : [userId]));
+		const assignee = people.find((p) => p.id === userId);
+		const [task] = await db
+			.select({
+				title: workOrder.title,
+				eventTitle: eventListing.title,
+				roleName: volunteerRole.name,
+				dueAt: workOrder.dueAt
+			})
+			.from(workOrder)
+			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+			.where(eq(workOrder.id, workOrderId))
+			.limit(1);
+		if (!assignee || !task) return;
+		await domainEvents.emit('volunteer.task_assigned', {
+			workOrderId,
+			title: task.title ?? task.eventTitle ?? task.roleName ?? 'Task',
+			dueAt: task.dueAt?.toISOString() ?? null,
+			recipient: { userId, userName: assignee.name, userEmail: assignee.email },
+			assignedByName: people.find((p) => p.id === assignedByUserId)?.name ?? null
+		});
+	} catch (err) {
+		captureException(err, { event: 'volunteer.task_assigned', workOrderId });
+	}
+}
+
+/** Take somebody off a task. False when they were not on it. */
+export async function unassignFromTask(
+	task: Pick<TaskRef, 'id' | 'title'>,
+	userId: string
+): Promise<boolean> {
+	const removed = await db
+		.delete(workOrderAssignee)
+		.where(and(eq(workOrderAssignee.workOrderId, task.id), eq(workOrderAssignee.userId, userId)))
+		.returning({ userId: workOrderAssignee.userId });
+	if (removed.length === 0) return false;
+	await recordAuditEntry({
+		action: 'work_order.member_unassigned',
+		subject: { type: 'work_order', id: task.id, label: workOrderAuditLabel(task) },
+		details: { userId, memberName: await memberName(userId) }
+	});
+	return true;
+}
+
+/** Everybody assigned the task, as a statement for the caller's batch. */
+export function removeAllAssignees(workOrderId: string) {
+	return db.delete(workOrderAssignee).where(eq(workOrderAssignee.workOrderId, workOrderId));
+}
+
+// ---------------------------------------------------------------------------
+// The assignee's own list (#2518): the tasks staff or a committee gave them,
+// and the done ones whose hours they have not logged.
+// ---------------------------------------------------------------------------
+
+export interface AssignedTask {
+	workOrderId: string;
+	title: string | null;
+	eventTitle: string | null;
+	volunteerRoleId: string | null;
+	roleName: string | null;
+	dueAt: Date | null;
+	/** The task has a done condition: the app closes it, not the assignee. */
+	closesItself: boolean;
+	resolvedAt: Date | null;
+	/** When the task was marked done, which is what prompts the hours. */
+	completedAt: Date | null;
+	checklist: { done: number; total: number };
+}
+
+/**
+ * The tasks `waitingOn` the user (#2989), then done ones they were assigned
+ * with no hour log naming the task, inside the backdate window `submitHours`
+ * accepts.
+ */
+export async function listAssignedTasksForUser(userId: string): Promise<AssignedTask[]> {
+	const earliest = new Date(Date.now() - VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000);
+	const rows = await db
+		.select({
+			workOrderId: workOrder.id,
+			title: workOrder.title,
+			eventTitle: eventListing.title,
+			volunteerRoleId: workOrder.volunteerRoleId,
+			roleName: volunteerRole.name,
+			dueAt: workOrder.dueAt,
+			doneWhen: workOrder.doneWhen,
+			resolvedAt: workOrder.resolvedAt,
+			completedAt: workOrderAssignee.completedAt,
+			checklistTotal: sql<number>`(
+				select count(*) from "work_task" wt where wt."work_order_id" = ${workOrder.id}
+			)`,
+			checklistDone: sql<number>`(
+				select count(*) from "work_task" wt
+				where wt."work_order_id" = ${workOrder.id} and wt."done" = 1
+			)`
+		})
+		.from(workOrder)
+		.leftJoin(
+			workOrderAssignee,
+			and(eq(workOrderAssignee.workOrderId, workOrder.id), eq(workOrderAssignee.userId, userId))
+		)
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.where(
+			or(
+				waitingOn(userId),
+				and(
+					isNull(workOrder.cancelledAt),
+					isNotNull(workOrder.resolvedAt),
+					isNotNull(workOrderAssignee.completedAt),
+					gte(workOrderAssignee.completedAt, earliest),
+					sql`not exists (
+						select 1 from "volunteer_hour_log" vhl
+						where vhl."work_order_id" = ${workOrder.id} and vhl."user_id" = ${userId}
+					)`
+				)
+			)
+		)
+		.orderBy(
+			sql`${workOrder.dueAt} is null`,
+			asc(workOrder.dueAt),
+			asc(workOrderAssignee.assignedAt),
+			asc(workOrder.createdAt),
+			asc(workOrder.id)
+		);
+
+	return rows.map(({ doneWhen, checklistTotal, checklistDone, ...row }) => ({
+		...row,
+		closesItself: doneWhen !== null,
+		checklist: { done: Number(checklistDone), total: Number(checklistTotal) }
+	}));
+}
+
+/**
+ * Mark a task done. Who may is `canActOnTask`, asked by the remote. A task with
+ * a done condition closes by hand too, with a reason (`resolveWorkOrder`).
+ */
+export async function markTaskDone(workOrderId: string, userId: string, notes?: string) {
+	await resolveWorkOrder(workOrderId, { resolvedByUserId: userId, notes });
+}
+
+/** Take a task yourself. Who may is `canActOnTask`, asked by the remote. */
+export async function takeTask(task: TaskRef, userId: string) {
+	return assignToTask(task, userId, userId);
+}
+
+/** Hand a task back: the caller comes off it. False when they were not on it. */
+export async function handBackTask(task: Pick<TaskRef, 'id' | 'title'>, userId: string) {
+	return unassignFromTask(task, userId);
+}
+
+// ---------------------------------------------------------------------------
+// A task's page (#2582): its notes, due date and checklist.
+// Who may read or tick is the remote's guard; these only load and write.
+// ---------------------------------------------------------------------------
+
+export interface AssignedTaskDetail {
+	workOrderId: string;
+	title: string | null;
+	eventTitle: string | null;
+	roleName: string | null;
+	notes: string | null;
+	dueAt: Date | null;
+	closesItself: boolean;
+	resolvedAt: Date | null;
+	items: { id: string; label: string; done: boolean }[];
+}
+
+/** A live task with its checklist, or null when it does not exist or was called off. */
+export async function getTaskChecklist(workOrderId: string): Promise<AssignedTaskDetail | null> {
+	const [row] = await db
+		.select({
+			workOrderId: workOrder.id,
+			title: workOrder.title,
+			eventTitle: eventListing.title,
+			roleName: volunteerRole.name,
+			notes: workOrder.notes,
+			dueAt: workOrder.dueAt,
+			doneWhen: workOrder.doneWhen,
+			resolvedAt: workOrder.resolvedAt
+		})
+		.from(workOrder)
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.where(and(eq(workOrder.id, workOrderId), isNull(workOrder.cancelledAt)))
+		.limit(1);
+	if (!row) return null;
+	const { doneWhen, ...task } = row;
+	const items = await listWorkTasks(workOrderId);
+	return {
+		...task,
+		closesItself: doneWhen !== null,
+		items: items.map((t) => ({ id: t.id, label: t.label, done: t.done }))
+	};
+}
+
+/**
+ * Tick or untick one checklist item on a live task. The item must hang off
+ * that task, so a caller cleared for one task cannot reach another's items.
+ * Writes through `setWorkTaskDone`, as staff's and a committee's ticks do.
+ */
+export async function setTaskChecklistItemDone(
+	workOrderId: string,
+	itemId: string,
+	done: boolean,
+	userId: string
+) {
+	const [item] = await db
+		.select({ id: workTask.id })
+		.from(workTask)
+		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
+		.where(
+			and(eq(workTask.id, itemId), eq(workOrder.id, workOrderId), isNull(workOrder.cancelledAt))
+		)
+		.limit(1);
+	if (!item) throw new WorkTaskNotFoundError();
+	return setWorkTaskDone(item.id, done, userId);
+}

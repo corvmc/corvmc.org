@@ -6,14 +6,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetProductConfig = vi.fn();
 
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: (...args: unknown[]) => mockGetProductConfig(...(args as [])),
 	buildSubscriptionLineItem: vi.fn(),
 	getStripeProductId: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/stripe-checkout', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 import { getBandPremiumPricing } from './band-subscription-service';
 

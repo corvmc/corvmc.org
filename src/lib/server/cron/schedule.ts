@@ -13,13 +13,16 @@ import type { CronCheckIn } from './sentry-check-in';
  * here: they are a registry drained every 15 minutes (#1186).
  */
 export const CRON_SCHEDULE: Record<string, string[]> = {
-	'*/5 * * * *': ['/api/cron/send-campaigns'],
+	// The outbox retries on a 1-minute-and-up backoff, so a 5-minute tick is its floor.
+	'*/5 * * * *': ['/api/cron/send-campaigns', '/api/cron/send-outbox'],
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
 		'/api/cron/complete-shifts',
-		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed',
+		// Suspensions whose term ended. Every 15 minutes so a member is back
+		// within the quarter hour, not the next day (#2552).
+		'/api/cron/lift-lapsed-removals',
 		// Before reminders: door_code_ready keys on the lockSyncedAt this stamps,
 		// so a same-day booking hears on the tick its code lands. Capped per run.
 		'/api/cron/lock-sync',
@@ -30,7 +33,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		// Fills the radio timetable 45 minutes ahead — three passes of slack, so
 		// one missed run is inaudible rather than dead air. No-ops while the
 		// `cmcRadio` flag is off.
-		'/api/cron/schedule-radio'
+		'/api/cron/schedule-radio',
+		// Well inside the 24 hours before cancel-stale-tickets cancels a door
+		// sale's pending rows, so a missed webhook is checked in, not lost.
+		'/api/cron/sweep-door-sales'
 	],
 	'0 16 * * *': [
 		'/api/cron/generate-recurring-reservations',
@@ -41,8 +47,14 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/sweep-audio-purchases',
 		// Seven-year incident retention (#1468). Owns no media.
 		'/api/cron/sweep-incidents',
+		// Contacts past their retain_until (#2622). Owns no media.
+		'/api/cron/sweep-contacts',
+		// Tasks that records call for (#2756), for any a write's own sync missed.
+		'/api/cron/open-tasks',
 		// 24-month audit retention (#1376), after the sweep that writes audit rows.
 		'/api/cron/sweep-audit-log',
+		// Partner venues' feeds onto the gig guide (#1459). Owns no media.
+		'/api/cron/import-partner-calendars',
 		// Last in the batch: it reads what every job above may have deleted, and
 		// nothing downstream depends on its result.
 		'/api/cron/sweep-media'
@@ -70,26 +82,32 @@ export type RetiredMonitor = { retired: string; ref: string };
  */
 export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'send-campaigns': 'live',
+	'send-outbox': 'live',
 	'auto-complete': 'live',
 	'complete-shifts': 'live',
-	'cancel-unconfirmed': 'live',
 	'expire-waitlisted': 'live',
 	'wake-snoozed': 'live',
+	'lift-lapsed-removals': 'live',
 	'lock-sync': 'live',
 	reminders: 'live',
 	'schedule-radio': 'live',
+	'sweep-door-sales': 'live',
 	'generate-recurring-reservations': 'live',
 	'lock-access': 'live',
 	'cancel-stale-tickets': 'live',
 	'sweep-audio-purchases': 'live',
 	'sweep-incidents': 'live',
+	'sweep-contacts': 'live',
+	'open-tasks': 'live',
 	'sweep-audit-log': 'live',
+	'import-partner-calendars': 'live',
 	'sweep-media': 'live',
 	'reconcile-ledger': 'live',
 	'shift-feedback': { retired: '2026-09-17', ref: '#1198' },
 	'reservation-reminders': { retired: '2026-09-17', ref: '#1198' },
 	'shift-reminders': { retired: '2026-09-17', ref: '#1198' },
-	'confirmation-reminders': { retired: '2026-09-17', ref: '#1198' }
+	'confirmation-reminders': { retired: '2026-09-17', ref: '#1198' },
+	'cancel-unconfirmed': { retired: '2026-11-09', ref: '#2502' }
 };
 
 export interface CronEnv {
@@ -148,7 +166,12 @@ export async function runScheduledJobs(
 			const response = await fetcher(
 				new Request(`${env.ORIGIN}${path}`, {
 					method: 'POST',
-					headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` },
+					// The content type is not for the handler, which reads no body. Kit 3
+					// refuses a POST with no Origin and no content type as cross-site.
+					headers: {
+						authorization: `Bearer ${env.CRON_SECRET ?? ''}`,
+						'content-type': 'application/json'
+					},
 					// The jobs share one 15-minute wall clock. Unbounded, a single
 					// hung job starves every job after it AND their check-ins, which
 					// then time out as phantom outages.

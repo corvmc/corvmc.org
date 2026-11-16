@@ -1,15 +1,21 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
+import { afterOrderChange } from './restock-tasks';
+import { afterSourceChange, reconcileSourcedTasks } from '#lib/server/task/sourced-tasks.js';
 import {
 	acquisition,
 	equipmentCategory,
 	inventoryItem,
 	purchaseOrder,
 	purchaseOrderLine
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import type { OrderStatus } from '$lib/config';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { listOrganizations, requireRole } from '#lib/server/party/organization-service.js';
+import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { OrderStatus } from '#lib/config.js';
 
 /**
  * Purchase orders — what the collective has decided to buy, before it exists.
@@ -45,8 +51,13 @@ export interface OrderLineInput {
 	unitCostCents?: number;
 }
 
+/** An order's columns plus its supplier's name, for every read that shows one. */
+const orderColumns = { ...getTableColumns(purchaseOrder), supplierName: organization.name };
+const supplierJoin = eq(organization.id, purchaseOrder.organizationId);
+
 export interface CreateOrderData {
-	supplierName?: string;
+	/** An organization holding the `supplier` role. */
+	organizationId?: string;
 	reference?: string;
 	expectedAt?: Date;
 	notes?: string;
@@ -61,6 +72,7 @@ export async function createOrder(data: CreateOrderData) {
 		throw new OrderStateError('An order needs at least one line');
 	}
 
+	if (data.organizationId) await requireRole(data.organizationId, 'supplier');
 	const orderId = crypto.randomUUID();
 
 	// `db.batch`, never `db.transaction()` — broken on D1. The header has to be
@@ -70,7 +82,7 @@ export async function createOrder(data: CreateOrderData) {
 			id: orderId,
 			status: data.placedAt ? 'placed' : 'draft',
 			placedAt: data.placedAt ?? null,
-			supplierName: data.supplierName ?? null,
+			organizationId: data.organizationId ?? null,
 			reference: data.reference ?? null,
 			expectedAt: data.expectedAt ?? null,
 			notes: data.notes ?? null,
@@ -87,6 +99,7 @@ export async function createOrder(data: CreateOrderData) {
 		)
 	] as unknown as Parameters<typeof db.batch>[0]);
 
+	if (data.placedAt) await afterOrderWrite(orderId);
 	return orderId;
 }
 
@@ -101,6 +114,7 @@ export async function placeOrder(id: string, when: Date = new Date()) {
 		.update(purchaseOrder)
 		.set({ status: 'placed', placedAt: when, updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderWrite(id);
 }
 
 /**
@@ -119,33 +133,85 @@ export async function cancelOrder(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderWrite(id);
+}
+
+/**
+ * Take a received or cancelled order back, behind the admin-only
+ * `inventory.reopen`: a terminal state is the past. It goes to `placed` when it
+ * was ever placed, else `draft`. Received quantities and the acquisitions that
+ * carried them stay — the goods arrived, and their cost is on the acquisition.
+ */
+export async function reopenOrder(id: string, reason: string) {
+	const why = reason.trim();
+	if (!why) throw new OrderStateError('Say why it is being reopened');
+	const order = await requireOrder(id);
+	if (order.status !== 'received' && order.status !== 'cancelled') {
+		throw new OrderStateError(`This order is ${order.status}, not closed`);
+	}
+	const to: OrderStatus = order.placedAt ? 'placed' : 'draft';
+
+	const [row] = await db
+		.update(purchaseOrder)
+		.set({ status: to, updatedAt: new Date() })
+		.where(and(eq(purchaseOrder.id, id), eq(purchaseOrder.status, order.status)))
+		.returning();
+	if (!row) throw new OrderStateError('This order changed while you were looking at it');
+	await afterOrderWrite(id);
+
+	await recordAuditEntry({
+		action: 'purchase_order.reopened',
+		subject: {
+			type: 'purchase_order',
+			id,
+			label: order.supplierName ?? order.reference ?? 'Order'
+		},
+		details: { from: order.status, to, reason: why }
+	});
+	return row;
 }
 
 async function requireOrder(id: string) {
-	const [row] = await db.select().from(purchaseOrder).where(eq(purchaseOrder.id, id)).limit(1);
+	const [row] = await db
+		.select(orderColumns)
+		.from(purchaseOrder)
+		.leftJoin(organization, supplierJoin)
+		.where(eq(purchaseOrder.id, id))
+		.limit(1);
 	if (!row) throw new OrderNotFoundError();
 	return row;
 }
 
-export async function listOrders(opts: { status?: OrderStatus } = {}) {
-	const conditions = [];
-	if (opts.status) conditions.push(eq(purchaseOrder.status, opts.status));
+/** Live suppliers' names, for the order forms' suggestions. */
+export async function listSupplierNames(): Promise<string[]> {
+	const rows = await listOrganizations({ role: 'supplier' });
+	return [...new Set(rows.map((r) => r.name))];
+}
 
-	const orders = await db
-		.select({ order: purchaseOrder, createdBy: user })
+/** Open ones first, then most recent: the list is a worklist, not an archive. */
+const worklistOrder = [
+	sql`CASE ${purchaseOrder.status} WHEN 'placed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END`,
+	desc(purchaseOrder.createdAt),
+	desc(purchaseOrder.id)
+];
+
+function ordersQuery(status?: OrderStatus) {
+	return db
+		.select({ order: orderColumns, createdBy: user })
 		.from(purchaseOrder)
 		.leftJoin(user, eq(purchaseOrder.createdByUserId, user.id))
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		// Open ones first, then most recent — the list is a worklist, not an archive.
-		.orderBy(
-			sql`CASE ${purchaseOrder.status} WHEN 'placed' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END`,
-			desc(purchaseOrder.createdAt),
-			desc(purchaseOrder.id)
-		);
+		.leftJoin(organization, supplierJoin)
+		.where(status ? eq(purchaseOrder.status, status) : undefined)
+		.orderBy(...worklistOrder)
+		.$dynamic();
+}
 
+type OrderHeaderRow = Awaited<ReturnType<typeof ordersQuery>>[number];
+
+/** Each order with its lines and their totals: one query for every line, grouped in memory. */
+async function withLines(orders: OrderHeaderRow[]) {
 	if (orders.length === 0) return [];
 
-	// One query for every line, then grouped in memory — not one query per order.
 	const lines = await db
 		.select({ line: purchaseOrderLine, item: inventoryItem })
 		.from(purchaseOrderLine)
@@ -184,11 +250,29 @@ export async function listOrders(opts: { status?: OrderStatus } = {}) {
 	});
 }
 
+export async function listOrders(opts: { status?: OrderStatus } = {}) {
+	return withLines(await ordersQuery(opts.status));
+}
+
+/** One page of the Orders list. A page's ids stay inside D1's bound-parameter cap. */
+export async function listOrdersPage(
+	opts: { status?: OrderStatus } = {},
+	pagination: PaginationInput = {}
+) {
+	const countQ = db
+		.select({ count: count() })
+		.from(purchaseOrder)
+		.where(opts.status ? eq(purchaseOrder.status, opts.status) : undefined);
+	const page = await paginate(ordersQuery(opts.status), countQ, pagination);
+	return { rows: await withLines(page.rows), pagination: page.pagination };
+}
+
 export async function getOrderById(id: string) {
 	const [row] = await db
-		.select({ order: purchaseOrder, createdBy: user })
+		.select({ order: orderColumns, createdBy: user })
 		.from(purchaseOrder)
 		.leftJoin(user, eq(purchaseOrder.createdByUserId, user.id))
+		.leftJoin(organization, supplierJoin)
 		.where(eq(purchaseOrder.id, id))
 		.limit(1);
 
@@ -329,6 +413,7 @@ export async function applyReceipt(input: {
 			.set({ status: 'received', updatedAt: new Date() })
 			.where(eq(purchaseOrder.id, input.orderId));
 	}
+	await afterOrderWrite(input.orderId);
 
 	return { complete };
 }
@@ -343,10 +428,35 @@ export async function closeOrderShort(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'received', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+	await afterOrderWrite(id);
 }
 
 /** Items on a placed order that is past its expected date. */
 export async function listLateOrders(now: Date = new Date()) {
 	const rows = await listOrders({ status: 'placed' });
 	return rows.filter((o) => o.expectedAt && o.expectedAt < now && !o.isComplete);
+}
+
+/**
+ * A late order has one open task (#2757), linked to its supplier, until it is
+ * received or cancelled. Run after every status change and daily, since an
+ * order turns late with the clock rather than with a write.
+ */
+export async function syncLateOrderTasks(now: Date = new Date()) {
+	const late = await listLateOrders(now);
+	return reconcileSourcedTasks(
+		'late_order',
+		late.map((o) => ({
+			sourceId: o.id,
+			title: `Chase late order${o.supplierName ? ` from ${o.supplierName}` : ''}${o.reference ? ` (${o.reference})` : ''}`,
+			links: o.organizationId ? { organizationId: o.organizationId } : undefined
+		})),
+		'Closed: the order is no longer late.'
+	);
+}
+
+/** What follows any change to an order's status: its items' restock tasks, then late orders. */
+async function afterOrderWrite(orderId: string) {
+	await afterOrderChange(orderId);
+	await afterSourceChange('late_order', () => syncLateOrderTasks());
 }

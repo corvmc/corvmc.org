@@ -9,7 +9,7 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { groupKinds, groupJoinPolicies } from '../../../config';
+import { groupKinds, groupJoinPolicies, jobs } from '../../../config';
 
 /**
  * A set of CMC members who organise together — a band, a club, or a committee.
@@ -24,7 +24,7 @@ import { groupKinds, groupJoinPolicies } from '../../../config';
  * (`tagline`, `hometown`, `links`, `directoryVisibility`, …) live on
  * `directory_entry` and the premium ones (`tier`, `subscription`, the
  * `customDomain*` set) on `band_site`. What is left is what a group *is* — an
- * identity, a roster policy, and a slug. See docs/specs/shipped/groups-spec.md.
+ * identity, a roster policy, and a slug. See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 export const group = sqliteTable(
 	'group',
@@ -54,6 +54,13 @@ export const group = sqliteTable(
 		joinPolicy: text('join_policy', { enum: groupJoinPolicies }).notNull().default('invite_only'),
 		/** Prose shown beside the Join button: "third Thursday, bring a horn, charts provided". */
 		joinInstructions: text('join_instructions'),
+		/**
+		 * The outside act this band was before it joined (#2622). Its history
+		 * stays there. No FK: `organization` reaches `group` through
+		 * `directory_entry`, and scripts/d1-table-order.mjs cannot order a cycle.
+		 * Organization merge and role removal account for it by name.
+		 */
+		fromOrganizationId: text('from_organization_id'),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -67,7 +74,10 @@ export const group = sqliteTable(
 	// through a table rename untouched, so renaming them here would turn a free
 	// rename into a drop-and-recreate for no behavioural gain. They can be
 	// renamed later in a migration that has a reason to touch them.
-	(t) => [index('idx_band_slug').on(t.slug)]
+	(t) => [
+		index('idx_band_slug').on(t.slug),
+		index('idx_group_from_organization').on(t.fromOrganizationId)
+	]
 );
 
 export type Group = typeof group.$inferSelect;
@@ -229,3 +239,71 @@ export const groupCapability = sqliteTable(
 	},
 	(t) => [primaryKey({ columns: [t.groupId, t.capability] })]
 );
+
+/**
+ * A named standing role inside a committee, such as Treasurer or Booker
+ * (#2988). A committee acts as a department and this is a seat in it; a band's
+ * or club's `group_member.position` stays free text.
+ *
+ * `isChair` marks the committee's chair (#3009): holding it is what makes
+ * someone chair, read through `isCommitteeChair`. At most one per committee.
+ *
+ * `job` names the staff position a seat in Operations grants (#2992). It is
+ * read only for the Operations group and written only by the migration, the
+ * seed and `operations-service.ts`; one position per job.
+ */
+export const groupPosition = sqliteTable(
+	'group_position',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		isChair: integer('is_chair', { mode: 'boolean' }).notNull().default(false),
+		job: text('job', { enum: jobs }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('idx_group_position_name').on(t.groupId, t.name),
+		uniqueIndex('idx_group_position_chair')
+			.on(t.groupId)
+			.where(sql`${t.isChair} = 1`),
+		uniqueIndex('idx_group_position_job')
+			.on(t.job)
+			.where(sql`${t.job} is not null`)
+	]
+);
+
+/**
+ * Who holds a position. Keyed on the roster row, so leaving the committee
+ * vacates every position held in it. A position may have several holders.
+ */
+export const groupPositionHolder = sqliteTable(
+	'group_position_holder',
+	{
+		positionId: text('position_id')
+			.notNull()
+			.references(() => groupPosition.id, { onDelete: 'cascade' }),
+		memberId: text('member_id')
+			.notNull()
+			.references(() => groupMember.id, { onDelete: 'cascade' }),
+		assignedById: text('assigned_by_id').references(() => user.id, { onDelete: 'set null' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		primaryKey({ columns: [t.positionId, t.memberId] }),
+		index('idx_group_position_holder_member').on(t.memberId)
+	]
+);
+
+export type GroupPosition = typeof groupPosition.$inferSelect;

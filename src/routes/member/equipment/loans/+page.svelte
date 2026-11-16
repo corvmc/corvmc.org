@@ -1,16 +1,17 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDate, formatCents } from '$lib/utils/format';
-	import { CancelLoanAction } from '$lib/components/actions';
-	import Button from '$lib/components/ui/Button.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import { getMemberEquipmentLoans } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
+	import { CancelLoanAction } from '#lib/components/actions/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import { getMemberEquipmentLoans } from '#lib/remote/inventory.remote.js';
 
 	let pastPage = $state(1);
 	// The active set comes back whole; history pages, because history is the
@@ -20,18 +21,24 @@
 	let activeTab = $state<'active' | 'past'>('active');
 </script>
 
-<PageHeader title="My Equipment Loans">
-	<Button href="/member/equipment" variant="ghost" size="sm">Browse Catalog</Button>
+<PageHeader title={m.member_equipment_loans_title()}>
+	<Button href="/member/equipment" variant="ghost" size="sm"
+		>{m.member_equipment_loans_browse_catalog_label()}</Button
+	>
 </PageHeader>
 <PageContent>
 	<TabBar
 		tabs={[
 			// Not "Active": the set includes loans still `requested`, which staff
 			// have not approved yet (#896).
-			{ key: 'active', label: 'Current', badge: data.active.length },
+			{ key: 'active', label: m.member_equipment_loans_current_label(), badge: data.active.length },
 			// The real total, not the length of the page in hand — the badge used to
 			// read 50 forever.
-			{ key: 'past', label: 'Past', badge: data.past.pagination.total }
+			{
+				key: 'past',
+				label: m.member_equipment_loans_past_label(),
+				badge: data.past.pagination.total
+			}
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'active' | 'past')}
@@ -47,19 +54,21 @@
 	{#if activeTab === 'active'}
 		{#if data.active.length === 0}
 			<EmptyState
-				message="No loans on the go."
-				actionLabel="Browse the catalog"
+				message={m.member_equipment_loans_message_body()}
+				actionLabel={m.member_equipment_loans_action_label()}
 				actionHref="/member/equipment"
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th class="cell-primary">Item</th>
-					<th class="col-support whitespace-nowrap">Pickup</th>
-					<th class="whitespace-nowrap">Due</th>
-					<th class="col-extra cell-num whitespace-nowrap">Cost</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+					<th class="cell-primary">{m.member_item_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.member_equipment_loans_pickup_label()}</th>
+					<th class="whitespace-nowrap">{m.member_due_label()}</th>
+					<th class="col-extra cell-num whitespace-nowrap"
+						>{m.member_equipment_loans_cost_label()}</th
+					>
+					<th class="w-px"><span class="sr-only">{m.member_actions_label()}</span></th>
 				{/snippet}
 
 				{#each data.active as loan (loan.id)}
@@ -80,7 +89,7 @@
 						<td class="col-support whitespace-nowrap">
 							{formatDate(loan.scheduledPickupDate ?? loan.requestedPickupDate)}
 							{#if !loan.scheduledPickupDate}
-								<div class="text-subtle">requested</div>
+								<div class="text-subtle">{m.member_equipment_loans_requested_text()}</div>
 							{/if}
 						</td>
 						<!-- The one fact with a deadline on it, so it keeps a full column
@@ -89,7 +98,7 @@
 							{#if loan.dueDate}
 								<span class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</span>
 								{#if loan.isOverdue}
-									<Badge variant="error" size="xs">Overdue</Badge>
+									<Badge variant="error" size="xs">{m.member_overdue_label()}</Badge>
 								{/if}
 							{:else if loan.estimatedReturnDate}
 								<span class="text-subtle">~{formatDate(loan.estimatedReturnDate)}</span>
@@ -99,9 +108,13 @@
 						</td>
 						<td class="col-extra cell-num whitespace-nowrap">
 							{#if loan.estimatedCostCents != null}
-								{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}
+								{loan.estimatedCostCents === 0
+									? m.member_free_text()
+									: formatCents(loan.estimatedCostCents)}
 							{:else if loan.dailyRateCents != null}
-								{formatCents(loan.dailyRateCents)}/day
+								{m.member_equipment_loans_day_text({
+									formatCents: formatCents(loan.dailyRateCents)
+								})}
 							{:else}
 								<span class="text-subtle">—</span>
 							{/if}
@@ -111,8 +124,8 @@
 								<div class="flex w-max">
 									<CancelLoanAction
 										loanId={loan.id}
-										label="Cancel"
-										confirm="Cancel this loan request?"
+										label={m.member_cancel_label()}
+										confirm={m.member_equipment_loans_confirm_body()}
 									/>
 								</div>
 							{/if}
@@ -122,14 +135,14 @@
 			</Table>
 		{/if}
 	{:else if data.past.rows.length === 0}
-		<p class="py-8 text-center opacity-60">No past loans.</p>
+		<p class="py-8 text-center opacity-60">{m.member_equipment_loans_no_past_loans_text()}</p>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th class="cell-primary">Item</th>
-				<th class="col-support whitespace-nowrap">Returned</th>
-				<th class="cell-num whitespace-nowrap">Charged</th>
+				<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+				<th class="cell-primary">{m.member_item_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.member_equipment_loans_returned_label()}</th>
+				<th class="cell-num whitespace-nowrap">{m.member_equipment_loans_charged_label()}</th>
 			{/snippet}
 
 			{#each data.past.rows as loan (loan.id)}
@@ -143,7 +156,11 @@
 						{#if loan.totalChargeCents != null}
 							{formatCents(loan.totalChargeCents)}
 							{#if loan.creditsCents && loan.creditsCents > 0}
-								<div class="text-subtle">{formatCents(loan.creditsCents)} credits</div>
+								<div class="text-subtle">
+									{m.member_equipment_loans_credits_text({
+										formatCents: formatCents(loan.creditsCents)
+									})}
+								</div>
 							{/if}
 						{:else}
 							<span class="text-subtle">—</span>

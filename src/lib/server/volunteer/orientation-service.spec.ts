@@ -5,10 +5,10 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
 
 import { stateOf } from './orientation-service';
-import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
+import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
 
 const NOW = new Date('2026-09-04T12:00:00Z');
 const SOON = new Date('2026-09-06T18:00:00Z');

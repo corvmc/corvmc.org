@@ -25,7 +25,7 @@
 			<td class="cell-primary" data-testid="primary">The Long-Named Collective of Corvallis</td>
 			<td class="cell-num" data-testid="count">12</td>
 			{#each extras as i (i)}<td class="whitespace-nowrap">1 of 4 · 1 unfilled</td>{/each}
-			<td class="w-px" data-testid="actions"><button>Edit</button></td>
+			<td class="w-px" data-testid="actions"><button type="button">Edit</button></td>
 		</tr>
 	</Table>
 </div>

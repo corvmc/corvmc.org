@@ -1,9 +1,11 @@
 <script lang="ts">
-	import type { RemoteForm } from '@sveltejs/kit';
-	import { getAssignableStaff } from '$lib/remote/inbox.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteForm } from '$app/server';
+	import { getAssignableStaff } from '#lib/remote/inbox.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	/**
 	 * The "Assigned to" control, with its own data.
@@ -39,27 +41,44 @@
 		threadId: string;
 		assignedToUserId: string | null;
 	} = $props();
+
+	// Not `{#await}`: a refresh would re-pend it and remount the form (#2357).
+	const staff = new Latest(() => getAssignableStaff());
+	$effect(() => {
+		if (staff.error) throw staff.error.e;
+	});
 </script>
 
-{#await getAssignableStaff()}
+{#if !staff.current}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>
-		<span class="text-subtle text-sm">Loading assignees…</span>
+		<span class="text-subtle text-sm"
+			>{m.staff_inbox_id_assign_control_loading_assignees_text()}</span
+		>
 	</div>
-{:then staffUsers}
-	<Form remote={action} successToast="Assignment updated" class="flex items-end gap-2">
+{:else}
+	{@const staffUsers = staff.current}
+	<Form
+		remote={action}
+		successToast={m.staff_inbox_id_assign_control_success_toast()}
+		class="flex items-end gap-2"
+	>
 		<input {...action.fields.threadId.as('hidden', threadId)} />
 		<FormField
-			name="userId"
-			label="Assigned to"
+			field={action.fields.userId}
+			label={m.staff_assigned_2_label()}
 			type="select"
 			options={[
-				{ value: '', label: 'Unassigned' },
+				{ value: '', label: m.staff_unassigned_label() },
 				...staffUsers.map((s) => ({ value: s.id, label: s.name }))
 			]}
 			value={assignedToUserId ?? ''}
 			class="flex-1"
 		/>
-		<SubmitButton label="Update" variant="default" size="sm" />
+		<SubmitButton
+			label={m.staff_inbox_id_assign_control_update_label()}
+			variant="default"
+			size="sm"
+		/>
 	</Form>
-{/await}
+{/if}

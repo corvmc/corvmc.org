@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	const faqs = [
 		{
-			question: 'How do free practice hours work?',
+			question: 'How do practice credits work?',
 			answer:
-				"For every $5 you contribute, you get one free hour each month. They show up automatically when your billing cycle renews and refresh monthly. Heads up — unused hours don't roll over, so use them while you've got them."
+				"For every $5 you contribute, you get one hour of credits each month. They show up automatically when your billing cycle renews and refresh monthly. Heads up — unused hours don't roll over, so use them while you've got them."
 		},
 		{
 			question: 'Can I change my contribution amount?',
@@ -35,7 +36,9 @@
 
 <div>
 	<div class="mb-6 text-center">
-		<h2 class="text-3xl font-bold">Frequently Asked Questions</h2>
+		<h2 class="text-3xl font-bold">
+			{m.member_membership_membership_faq_frequently_asked_questions_title()}
+		</h2>
 	</div>
 
 	<div class="mx-auto max-w-3xl space-y-2">

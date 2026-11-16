@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { createCommitteeProjectWorkOrderForm } from '$lib/remote/projects.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { createCommitteeProjectWorkOrderForm } from '#lib/remote/projects.remote.js';
 
 	/** Open unscheduled work on one of the committee's own projects. */
 	let {
@@ -17,23 +18,32 @@
 
 <Action
 	{action}
-	label="Work order"
-	aria-label={`Open a work order on ${project.name}`}
-	modalTitle="Open a work order on {project.name}"
-	submitLabel="Open"
-	successToast="Work order opened"
+	label={m.member_groups_slug_project_work_order_add_task_label()}
+	aria-label={m.member_groups_slug_project_work_order_aria_label({ name: project.name })}
+	modalTitle={m.member_groups_slug_project_work_order_aria_title({ name: project.name })}
+	submitLabel={m.member_open_label()}
+	successToast={m.member_groups_slug_project_work_order_success_toast()}
 	variant="ghost"
 	size="xs"
 >
 	{#snippet form()}
 		<input {...action.fields.projectId.as('hidden', project.id)} />
-		<Field field={action.fields.volunteerRoleId} type="select" label="Role" options={roles} />
+		<Field
+			field={action.fields.volunteerRoleId}
+			type="select"
+			label={m.member_role_label()}
+			options={roles}
+		/>
 		<Field
 			field={action.fields.notes}
 			type="textarea"
-			label="What needs doing"
-			description="It opens unscheduled. A volunteer coordinator finds it a time."
+			label={m.member_what_needs_doing_label()}
+			description={m.member_groups_slug_project_work_order_description_body()}
 		/>
-		<Field field={action.fields.dueAt} type="date" label="Due by" />
+		<Field
+			field={action.fields.dueAt}
+			type="date"
+			label={m.member_groups_slug_project_work_order_due_by_label()}
+		/>
 	{/snippet}
 </Action>

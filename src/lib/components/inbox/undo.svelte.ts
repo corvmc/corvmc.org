@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner';
-import { undoThreadDisposition } from '$lib/remote/inbox.remote';
+import { undoThreadDisposition } from '#lib/remote/inbox.remote.js';
 import { invalidateQueue } from './queue.svelte';
 
 /**

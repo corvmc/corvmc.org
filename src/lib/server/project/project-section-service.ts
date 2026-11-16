@@ -1,10 +1,10 @@
 import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { project, projectSection, type ProjectSection } from '$lib/server/db/schema/project';
-import { workOrder } from '$lib/server/db/schema/volunteer';
-import { DomainError } from '$lib/server/domain-error';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
+import { project, projectSection, type ProjectSection } from '#lib/server/db/schema/project.js';
+import { workOrder } from '#lib/server/db/schema/volunteer.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Sections: the headings on a project's task list. Deleting one moves its

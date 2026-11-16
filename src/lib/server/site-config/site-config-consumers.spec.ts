@@ -26,11 +26,13 @@ const READERS: Record<string, string> = {
 	'reservation.maxAdvanceDaysOneoff': 'src/lib/server/reservation/config.ts',
 	'reservation.maxAdvanceDaysRecurring': 'src/lib/server/reservation/config.ts',
 	'reservation.minAdvanceMinutes': 'src/lib/server/reservation/config.ts',
+	'reservation.newMemberMinAdvanceMinutes': 'src/lib/server/reservation/config.ts',
 	'reservation.hourlyRateCents': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingRateCents': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMinDurationHours': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMaxAdvanceDaysOneoff': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMaxAdvanceDaysRecurring': 'src/lib/server/reservation/config.ts',
+	'reservation.feeGateFrom': 'src/lib/server/reservation/config.ts',
 
 	'volunteer.hourValueCents': 'src/lib/server/volunteer/hour-value.ts',
 	'volunteer.hourValueSource': 'src/lib/server/volunteer/hour-value.ts',
@@ -38,17 +40,27 @@ const READERS: Record<string, string> = {
 	'volunteer.orientationMinutes': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.orientationLeadMinutes': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.orientationTasks': 'src/lib/server/volunteer/orientation-service.ts',
+	'volunteer.firstVisitNotes': 'src/lib/server/reminders/registry.ts',
+
+	'inventory.repairRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.restockRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.lateOrderRoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.form8282RoleId': 'src/lib/server/task/sourced-tasks.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 	'venue.checkoutTasks': 'src/lib/server/lock/door-service.ts',
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
 
-	// The footer and /contact, via `getConfigsByPrefix('org')`.
+	'moderation.suspensionDefaultDays': 'src/lib/remote/users.remote.ts',
+	'moderation.suspensionMaxDays': 'src/lib/server/user/user-service.ts',
+
+	// The footer and the public pages, via `getConfigsByPrefix('org')`.
 	'org.addressStreet': 'src/lib/remote/settings.remote.ts',
 	'org.addressCity': 'src/lib/remote/settings.remote.ts',
 	'org.addressState': 'src/lib/remote/settings.remote.ts',
 	'org.addressZip': 'src/lib/remote/settings.remote.ts',
+	'org.contactEmail': 'src/lib/remote/settings.remote.ts',
 	'org.socialFacebook': 'src/lib/remote/settings.remote.ts',
 	'org.socialInstagram': 'src/lib/remote/settings.remote.ts',
 

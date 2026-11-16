@@ -1,22 +1,27 @@
-import { db, getRowCount } from '$lib/server/db';
+import { db, getRowCount } from '#lib/server/db/index.js';
 import { announcedBy } from './production-service';
-import { financialEntry } from '$lib/server/db/schema/financial';
-import { production, productionSlot } from '$lib/server/db/schema/production';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { and, asc, eq, isNotNull, isNull, sum } from 'drizzle-orm';
-import { DOOR_SPLIT_ACTS_PERCENT } from '$lib/config';
+import { financialEntry } from '#lib/server/db/schema/financial.js';
+import { production, productionSlot } from '#lib/server/db/schema/production.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { and, asc, eq, inArray, isNotNull, isNull, sum } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { DOOR_SPLIT_ACTS_PERCENT } from '#lib/config.js';
+import { doorCheck, type DoorCheck } from '#lib/production/door-check.js';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
-import { recordActPayout, reverseActPayout } from '$lib/server/finance/payout-entries';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { isTerminalProduction } from '$lib/production/status';
+import { recordActPayout, reverseActPayout } from '#lib/server/finance/payout-entries.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { isTerminalProduction } from '#lib/production/status.js';
 import { ProductionTerminalError } from './production-scope';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
+import { getEventDoorTakings, type DoorTakings } from '#lib/server/ticket/door-sale.js';
 
 /**
  * What a show took, what it cost, and what each act is owed.
  *
  * A worksheet, not a disbursement system — it suggests, staff decide, and no
- * money moves from here. `docs/specs/production-workflow-spec.md` § Settlement.
+ * money moves from here. `docs/development/business-workflows.md` §14.
  */
 
 export interface ActSettlement {
@@ -41,6 +46,16 @@ export interface ActSettlement {
 /** The drawer count, and the split applied to it. */
 export interface DoorTake {
 	cashCents: number;
+	/**
+	 * Cash the door recorded as ticket sales (#2800). Those are in the ledger's
+	 * pool and revenue already, split as card sales are, so the drawer's split
+	 * covers only what was counted beyond them.
+	 */
+	recordedCents: number;
+	/** Counted less recorded. Negative is a short drawer; either way it warns, never refuses. */
+	gapCents: number;
+	/** What the door rule splits: counted cash no ticket accounts for. */
+	unrecordedCents: number;
 	count: number | null;
 	/** The percentage actually used — this show's override, or the house rule. */
 	actsPercent: number;
@@ -50,13 +65,20 @@ export interface DoorTake {
 	overridden: boolean;
 }
 
+/** Who counted the drawer, and whether a second person agreed (#2722). */
+export interface DoorCounts {
+	check: DoorCheck;
+	first: { byName: string | null; at: Date | null };
+	second: { cashCents: number; byName: string | null; at: Date | null } | null;
+}
+
 export interface Settlement {
 	productionId: string;
 	eventId: string;
 	status: string;
 	/**
-	 * Earned by the collective — its share of tickets, already net of the acts',
-	 * plus its share of the door (#929).
+	 * Earned by the collective — its share of tickets, net of the acts' and of
+	 * the card fee, plus its share of the door (#929).
 	 */
 	collectiveRevenueCents: number;
 	/**
@@ -69,6 +91,14 @@ export interface Settlement {
 	 * drawer — a show with no door take is not a show with a zero (#929).
 	 */
 	door: DoorTake | null;
+	/** Null exactly when `door` is. */
+	doorCounts: DoorCounts | null;
+	/**
+	 * What the door phone took and the check-in list let in. Its donations sit
+	 * beside the night, outside the pool and the net (#2799); `checkedIn` is
+	 * what the typed headcount is read against (#2801).
+	 */
+	doorTakings: DoorTakings;
 	expensesCents: number;
 	deductibleExpensesCents: number;
 	/** The cost sheet behind those two totals, so the worksheet can show it. */
@@ -108,29 +138,38 @@ export function payoutForDeal(input: {
 /**
  * How one night's door cash divides.
  *
- * Null when nobody has counted — which is not the same as a zero, and the
- * worksheet says so. Rounding favours the acts: the collective keeps the
- * remainder, because a cent lost to rounding is the house's to absorb.
+ * Null when nobody has counted, which is not a zero. Recorded cash sales are
+ * left out: the ledger has split them, and splitting them again pays the acts
+ * twice (#2800). A short drawer splits nothing. Rounding favours the acts.
  */
 export function splitDoorTake(input: {
 	doorCashCents: number | null;
 	doorCount: number | null;
 	doorSplitActsPercent: number | null;
+	recordedCashCents?: number;
 }): DoorTake | null {
 	if (input.doorCashCents === null) return null;
 
+	const recordedCents = input.recordedCashCents ?? 0;
+	const unrecordedCents = Math.max(0, input.doorCashCents - recordedCents);
 	const actsPercent = input.doorSplitActsPercent ?? DOOR_SPLIT_ACTS_PERCENT;
-	const actsCents = Math.round((input.doorCashCents * actsPercent) / 100);
+	const actsCents = Math.round((unrecordedCents * actsPercent) / 100);
 
 	return {
 		cashCents: input.doorCashCents,
+		recordedCents,
+		gapCents: input.doorCashCents - recordedCents,
+		unrecordedCents,
 		count: input.doorCount,
 		actsPercent,
 		actsCents,
-		collectiveCents: input.doorCashCents - actsCents,
+		collectiveCents: unrecordedCents - actsCents,
 		overridden: input.doorSplitActsPercent !== null
 	};
 }
+
+const firstCounter = alias(user, 'door_first_counter');
+const secondCounter = alias(user, 'door_second_counter');
 
 export async function getSettlement(eventId: string): Promise<Settlement | null> {
 	const [prod] = await db
@@ -139,25 +178,46 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			status: production.status,
 			doorCashCents: production.doorCashCents,
 			doorCount: production.doorCount,
-			doorSplitActsPercent: production.doorSplitActsPercent
+			doorSplitActsPercent: production.doorSplitActsPercent,
+			countedAt: production.doorCashCountedAt,
+			countedBy: firstCounter.name,
+			recountCents: production.doorCashRecountCents,
+			recountedAt: production.doorCashRecountedAt,
+			recountedBy: secondCounter.name
 		})
 		.from(production)
+		.leftJoin(firstCounter, eq(firstCounter.id, production.doorCashCountedByUserId))
+		.leftJoin(secondCounter, eq(secondCounter.id, production.doorCashRecountedByUserId))
 		.where(announcedBy(eventId))
 		.limit(1);
 	if (!prod) return null;
 
-	const door = splitDoorTake(prod);
+	const doorTakings = await getEventDoorTakings(eventId);
+	const door = splitDoorTake({ ...prod, recordedCashCents: doorTakings.cash.grossCents });
+	const doorCounts: DoorCounts | null = door && {
+		check: doorCheck(prod.doorCashCents, prod.recountCents),
+		first: { byName: prod.countedBy, at: prod.countedAt },
+		second:
+			prod.recountCents === null
+				? null
+				: { cashCents: prod.recountCents, byName: prod.recountedBy, at: prod.recountedAt }
+	};
 
 	// Revenue and pool come from the financial record rather than `payment_cache`,
-	// which holds no card revenue for anything written before #837.
+	// which holds no card revenue for anything written before #837. A ticket's
+	// rows are keyed on its purchase, so the show's are found through `ticket`;
+	// the card fee and any covered part net in, as Stripe deposited them (#2733).
 	const [earned] = await db
 		.select({ total: sum(financialEntry.amountCents) })
 		.from(financialEntry)
 		.where(
 			and(
-				eq(financialEntry.kind, 'earned'),
-				eq(financialEntry.settlementGroup, eventId),
-				eq(financialEntry.category, 'ticket_sales')
+				eq(financialEntry.subjectType, 'ticket'),
+				inArray(financialEntry.category, ['ticket_sales', 'fee_coverage', 'card_fees']),
+				inArray(
+					financialEntry.subjectId,
+					db.select({ id: ticket.purchaseId }).from(ticket).where(eq(ticket.eventId, eventId))
+				)
 			)
 		);
 
@@ -168,8 +228,6 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 			and(eq(financialEntry.kind, 'pass_through'), eq(financialEntry.settlementGroup, eventId))
 		);
 
-	// Tickets record the collective's share against the ticket, not the show, so
-	// the earned figure is read by category over the same group.
 	// Door cash joins both sides rather than sitting beside them: the acts are
 	// owed from the whole pool, and a deal against net is measured against it.
 	// The `door` breakdown is what lets the worksheet show where it came from.
@@ -252,6 +310,8 @@ export async function getSettlement(eventId: string): Promise<Settlement | null>
 		collectiveRevenueCents,
 		actsPoolCents,
 		door,
+		doorCounts,
+		doorTakings,
 		expensesCents,
 		deductibleExpensesCents,
 		expenses,

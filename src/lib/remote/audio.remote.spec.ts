@@ -16,20 +16,23 @@ let featureOn = true;
 /** The band the caller passed a slug for. */
 const BAND = { id: 'band-1', slug: 'sour-cherry', name: 'Sour Cherry' };
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: async () => {
 		if (!featureOn) throw new Error('404: Not found');
 	}
 }));
 
-vi.mock('$lib/server/group/group-context', () => ({
+// Staff here hold every capability the guards name.
+vi.mock('#lib/server/authorization.js', () => ({ can: async () => true }));
+
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: async (
 		ref: { slug?: string },
 		minRole: 'owner' | 'admin' | 'member',
-		opts?: { allowStaff?: boolean }
+		opts?: { staff?: unknown }
 	) => {
 		if (!currentRole) throw new Error('401: Not authenticated');
-		if (currentRole === 'staff' && !opts?.allowStaff) throw new Error('403: Not a member');
+		if (currentRole === 'staff' && !opts?.staff) throw new Error('403: Not a member');
 
 		const rank = { owner: 0, admin: 1, member: 2, staff: 1 } as const;
 		if (rank[currentRole] > rank[minRole]) throw new Error('403: Insufficient role');
@@ -65,7 +68,7 @@ const svc = {
 	coverUrlsFor: vi.fn(async () => new Map<string, string>()),
 	salesCountFor: vi.fn(async () => 0)
 };
-vi.mock('$lib/server/audio/audio-service', () => svc);
+vi.mock('#lib/server/audio/audio-service.js', () => svc);
 
 // Connect is money setup, so its endpoints get the same treatment: a call on a
 // rejected request is itself the failure.
@@ -81,7 +84,7 @@ const connect = {
 	createOnboardingLink: vi.fn(async () => 'https://connect.stripe.test/onboard'),
 	createDashboardLink: vi.fn(async () => 'https://connect.stripe.test/dashboard')
 };
-vi.mock('$lib/server/audio/connect-service', () => connect);
+vi.mock('#lib/server/audio/connect-service.js', () => connect);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -346,7 +349,7 @@ describe('audio remote — payouts', () => {
 
 	it('refuses staff on the write paths even though they can read the status', async () => {
 		currentRole = 'staff';
-		// Reading is `allowStaff` so support can see why a band cannot sell...
+		// Reading is open to `finance.read` so support can see why a band cannot sell...
 		await expect(remote.getBandPayouts(BAND.slug)).resolves.toBeDefined();
 		// ...but nobody outside the band starts its onboarding or opens its
 		// dashboard, which is a live session into the band's own Stripe account.

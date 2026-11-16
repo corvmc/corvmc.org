@@ -27,7 +27,7 @@ function makeChainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => makeChainable(),
 		insert: () => ({
@@ -149,9 +149,11 @@ describe('predicates', () => {
 		);
 	});
 
-	it('band-leaders matches only owners and admins of live bands', () => {
+	// A committee's chair is its chair position, read through `leadsGroup` (#3009).
+	it('band-leaders matches group leaders of live groups', () => {
 		const sql = predicateSql('band-leaders');
-		expect(sql).toContain('"group_member"."role" in (\'owner\', \'admin\')');
+		expect(sql).toContain('"group_member"."role" in (');
+		expect(sql).toContain('"group_position"."is_chair" = 1');
 		expect(sql).toContain('"group_member"."status" = \'active\'');
 		expect(sql).toContain('"group"."deleted_at" is null');
 	});
@@ -357,7 +359,13 @@ describe('resolveSystemAudienceRecipients', () => {
 		const rows = await resolveSystemAudienceRecipients('aud-sys', 'all-members');
 
 		expect(rows).toEqual([
-			{ subscriberId: 'sub-1', email: 'a@example.com', name: 'A', audienceId: 'aud-sys' }
+			{
+				subscriberId: 'sub-1',
+				email: 'a@example.com',
+				name: 'A',
+				audienceId: 'aud-sys',
+				skip: null
+			}
 		]);
 	});
 

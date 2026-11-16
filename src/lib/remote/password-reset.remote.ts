@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { invalid } from '@sveltejs/kit';
-import { auth } from '$lib/server/auth';
-import { allowRateLimited } from '$lib/server/rate-limit';
+import { auth } from '#lib/server/auth.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 
 // ---------------------------------------------------------------------------
 // Password reset

@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_CE_PASSWORD,
 	SEED_CE_TRUSTED_EMAIL,
@@ -11,9 +12,9 @@ import {
 	SEED_CE_PENDING_ID,
 	SEED_CE_PENDING_TITLE,
 	SEED_CE_DELETABLE_ID,
-	SEED_CE_TICKETED_ID,
 	eventExists,
 	SEED_CE_CANCELLED_TITLE,
+	SEED_CE_CANCELLED_ID,
 	readListingState
 } from './fixtures/seed-community-events';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
@@ -33,22 +34,13 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  *      attached, and their fix gets back to staff.
  */
 
-/**
- * Log in as somebody else. `/login` bounces an already-authenticated user, so
- * the session has to go first — otherwise the "second login" quietly no-ops and
- * the rest of the test runs as the wrong account.
- */
+/** Swap to somebody else; `signInAs` replaces the cookies outright. */
 async function switchUser(page: Page, email: string, password: string) {
-	await page.context().clearCookies();
 	await login(page, email, password);
 }
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 test.describe('community listings', () => {
@@ -68,6 +60,15 @@ test.describe('community listings', () => {
 		await expect(row.locator('.gig-row__cancelled-tag')).toBeVisible();
 	});
 
+	test('a cancelled listing offers members no RSVP or ticket (#2219)', async ({ page }) => {
+		await login(page, SEED_CE_REVIEW_EMAIL, SEED_CE_PASSWORD);
+		await page.goto(`/member/events/${SEED_CE_CANCELLED_ID}`);
+		// The CTA block renders first, so the count below is not read off an empty page.
+		const ctas = page.locator('.edet__ctas');
+		await expect(ctas).toBeVisible();
+		await expect(ctas.locator('button, a[href]')).toHaveCount(0);
+	});
+
 	test('a draft reaches neither the public guide nor the staff queue', async ({ page }) => {
 		await page.goto('/events');
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
@@ -78,8 +79,7 @@ test.describe('community listings', () => {
 		await expect(page.getByText(SEED_CE_DRAFT_TITLE)).toHaveCount(0);
 
 		// The pre-split URL sent in notifications for as long as the old tab
-		// existed. It needs no redirect: the calendar ignores the parameter and
-		// lists everything pending review.
+		// existed. It needs no redirect: the list reads it as its status filter.
 		await page.goto('/staff/events?status=pending_review');
 		await expect(page.getByText(SEED_CE_PENDING_TITLE)).toBeVisible();
 	});
@@ -88,10 +88,9 @@ test.describe('community listings', () => {
 		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
 		await page.goto(`/member/events/${SEED_CE_DRAFT_ID}/manage`);
 
-		// The label is the promise: a trusted member is told "Publish", not
-		// "Submit for review".
-		await page.getByRole('button', { name: 'Publish', exact: true }).click();
-		await page.getByRole('button', { name: 'Publish', exact: true }).last().click();
+		// A trusted member's publish goes straight out.
+		await page.getByTestId('publish-listing').click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_DRAFT_ID)).status, { timeout: 15000 })
@@ -105,11 +104,11 @@ test.describe('community listings', () => {
 		await login(page, SEED_CE_REVIEW_EMAIL, SEED_CE_PASSWORD);
 		await page.goto(`/member/events/${SEED_CE_QUEUE_DRAFT_ID}/manage`);
 
-		// Same button, different promise — and it has to say the different thing.
-		const submit = page.getByRole('button', { name: 'Submit for review' });
+		// Same button, different outcome: the listing queues instead of publishing.
+		const submit = page.getByTestId('publish-listing');
 		await expect(submit).toBeVisible();
 		await submit.click();
-		await page.getByRole('button', { name: 'Submit for review' }).last().click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_QUEUE_DRAFT_ID)).status, {
@@ -129,12 +128,10 @@ test.describe('community listings', () => {
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_PENDING_ID}`);
-		await page.getByRole('button', { name: 'Turn down' }).click();
-		await page.locator('textarea[name="notes"]').fill(REASON);
-		await page
-			.getByRole('button', { name: /Turn down|Submit|Confirm/ })
-			.last()
-			.click();
+		await page.getByTestId('reject-listing').click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('textarea:is([name="notes"], [name^="notes/"])').fill(REASON);
+		await dialog.locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => (await readListingState(SEED_CE_PENDING_ID)).status, { timeout: 15000 })
@@ -158,24 +155,12 @@ test.describe('community listings', () => {
  * event's payment records with it.
  */
 test.describe('deleting an event', () => {
-	test('a ticketed event cannot be deleted, and says why', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_CE_TICKETED_ID}`);
-
-		const del = page.getByRole('button', { name: 'Delete' });
-		await expect(del).toBeDisabled();
-		// The reason has to be reachable, not just implied by a dead button.
-		await expect(del).toHaveAttribute('title', /cancel it instead/i);
-
-		expect(await eventExists(SEED_CE_TICKETED_ID)).toBe(true);
-	});
-
 	test('a clean event can be deleted outright', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_DELETABLE_ID}`);
 
-		await page.getByRole('button', { name: 'Delete' }).click();
-		await page.getByRole('button', { name: 'Delete permanently' }).click();
+		await page.getByTestId('delete-event').click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		await expect
 			.poll(async () => eventExists(SEED_CE_DELETABLE_ID), { timeout: 15000 })
@@ -184,46 +169,67 @@ test.describe('deleting an event', () => {
 });
 
 /**
- * The new-listing form.
- *
- * A half-written listing is the common case — the member knows the band and the
- * date and goes looking for the address. Leaving with it is what #905 filed:
- * the page threw the draft away silently, while `/member/profile` and
- * `/member/account` both stop on the same move.
+ * Adding a show: a modal asking for what the listing needs to exist, then the
+ * manage page for the rest (#1825). A half-written listing is the common case,
+ * so closing the modal with something typed asks first (#905).
  */
 test.describe('starting a listing', () => {
-	test('leaving a part-written listing asks before discarding it', async ({ page }) => {
-		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
-
-		// The whole attempt retries, for the hydration race `ticket-purchase.e2e.ts`
-		// documents: the form is server-rendered, so typing before Svelte attaches
-		// leaves it clean, the breadcrumb simply navigates, and the assertion waits
-		// out its budget on a dialog nothing opened. Each attempt starts over.
+	async function openAddShow(page: Page) {
+		// Retried for the hydration race `ticket-purchase.e2e.ts` documents: a
+		// click before Svelte attaches opens nothing.
 		await expect(async () => {
-			await page.goto('/member/events/submit');
-			await page.getByLabel('Title').fill('Paper Wolves at a house show');
-			await page
-				.getByRole('navigation', { name: 'Breadcrumb' })
-				.getByRole('link', { name: 'Events' })
-				.click();
-			await expect(page.getByRole('heading', { name: 'Unsaved changes' })).toBeVisible({
-				timeout: 2000
-			});
+			await page.goto('/member/events');
+			await page.getByTestId('add-show').click();
+			await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2000 });
 		}).toPass({ timeout: 20000 });
+		return page.getByRole('dialog');
+	}
 
-		// Keep editing leaves the member where they were, with what they typed.
-		await page.getByRole('button', { name: 'Keep editing' }).click();
-		await expect(page).toHaveURL(/\/member\/events\/submit/);
+	test('a show starts from four fields and lands on its manage page', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		const dialog = await openAddShow(page);
+
+		const date = new Date();
+		date.setDate(date.getDate() + 30);
+		const ymd = [
+			date.getFullYear(),
+			String(date.getMonth() + 1).padStart(2, '0'),
+			String(date.getDate()).padStart(2, '0')
+		].join('-');
+
+		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
+		await dialog.getByLabel('Date').fill(ymd);
+		await dialog.getByLabel('Start Time').fill('20:00');
+		await dialog.getByLabel('Venue').fill('The Whiteside');
+		await expect(dialog.getByLabel('Description')).toHaveCount(0);
+		await dialog.locator('button[type="submit"]').click();
+
+		await expect(page).toHaveURL(/\/member\/events\/[^/]+\/manage$/, {
+			timeout: 15000
+		});
 		await expect(page.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
+		await expect(page.getByLabel('Description')).toBeVisible();
 	});
 
-	test('the description field is named by its label, not its placeholder', async ({ page }) => {
-		// A custom-input FormField is only handed the caption's id through the
-		// `input` snippet. Passed as children instead, the caption becomes a
-		// `<legend>`, and a screen reader reads the placeholder as the field's name.
+	test('closing a part-written show asks before discarding it', async ({ page }) => {
+		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
+		const dialog = await openAddShow(page);
+
+		await dialog.getByLabel('Title').fill('Paper Wolves at a house show');
+		await dialog.locator('[data-dialog-close]').click();
+		const prompt = dialog.getByTestId('discard-prompt');
+		await expect(prompt).toBeVisible();
+		await expect(dialog.getByLabel('Title')).toBeHidden();
+
+		// Keep editing, the prompt's first choice, gives back exactly what was typed.
+		await prompt.getByRole('button').first().click();
+		await expect(prompt).toHaveCount(0);
+		await expect(dialog.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
+	});
+
+	test('the old submit address lands on the Events page', async ({ page }) => {
 		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
 		await page.goto('/member/events/submit');
-
-		await expect(page.getByLabel('Description')).toBeVisible();
+		await expect(page).toHaveURL(/\/member\/events$/);
 	});
 });

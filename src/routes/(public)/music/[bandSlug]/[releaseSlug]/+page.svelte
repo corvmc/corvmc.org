@@ -1,22 +1,25 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import TrackList from '$lib/components/audio/TrackList.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import TrackList from '#lib/components/audio/TrackList.svelte';
 	import BuyPanel from './BuyPanel.svelte';
-	import { getPublicRelease } from '$lib/remote/music.remote';
-	import { releaseKindLabels } from '$lib/config';
-	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear } from '$lib/utils/format';
+	import { getPublicRelease } from '#lib/remote/music.remote.js';
+	import { releaseKindLabels } from '#lib/config.js';
+	import { formatTrackSummary } from '#lib/utils/audio.js';
+	import { formatDateYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import { IconDisc } from '@tabler/icons-svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('bandSlug', 'releaseSlug');
 
 	const { release, band, tracks, purchasable, viewerEmail } = $derived(
 		await getPublicRelease({
-			bandSlug: page.params.bandSlug!,
-			releaseSlug: page.params.releaseSlug!
+			bandSlug: params.bandSlug,
+			releaseSlug: params.releaseSlug
 		})
 	);
 
@@ -44,7 +47,7 @@
 		<div class="min-w-0 flex-1">
 			<h1 class="text-3xl font-semibold">{release.title}</h1>
 			<p class="text-lg">
-				<a class="link" href={resolve(`/directory/bands/${band.slug}`)}>{band.name}</a>
+				<a class="link" href={resolve(`directory/bands/${band.slug}`)}>{band.name}</a>
 			</p>
 			<p class="text-muted">
 				<Badge size="sm">{releaseKindLabels[release.kind]}</Badge>
@@ -81,8 +84,7 @@
 		<!-- A priced release whose band has not finished Stripe. Saying so beats
 		     a Buy button that 409s. -->
 		<Alert type="info">
-			{band.name} hasn't finished setting up payouts, so this release can't be bought yet. You can still
-			listen to all of it here.
+			{m.public_music_band_slug_release_slug_hasn_t_finished_setting_body({ name: band.name })}
 		</Alert>
 	{/if}
 </div>

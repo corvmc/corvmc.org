@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: async () => isStaff,
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
@@ -48,7 +48,7 @@ const svc = {
 	listPendingEdits: vi.fn(async () => []),
 	SuggestionNotFoundError: class extends Error {}
 };
-vi.mock('$lib/server/suggestion/suggestion-service', () => svc);
+vi.mock('#lib/server/suggestion/suggestion-service.js', () => svc);
 
 // The suggestion detail pages read the project answering the suggestion, and the
 // staff one also reads the committees for its "start a project" picker. Unmocked,
@@ -59,20 +59,20 @@ const projectSvc = {
 	getProjectForSuggestion: vi.fn(async () => null),
 	listCommittees: vi.fn(async () => [])
 };
-vi.mock('$lib/server/project/project-service', () => projectSvc);
+vi.mock('#lib/server/project/project-service.js', () => projectSvc);
 
 // Same trap, one module over: the staff detail page also reads the arrival
 // that answered a gear request (#603).
 const acquisitionSvc = { getAcquisitionForSuggestion: vi.fn(async () => null) };
-vi.mock('$lib/server/inventory/acquisition-service', () => acquisitionSvc);
+vi.mock('#lib/server/inventory/acquisition-service.js', () => acquisitionSvc);
 
 // And again for the decision chain: both detail pages read the ballots a
 // suggestion went to, and the staff one reads committee rosters when the viewer
 // may open a ballot.
 const chainSvc = { getSuggestionChain: vi.fn(async () => ({ ballots: [] })) };
-vi.mock('$lib/server/project/decision-chain', () => chainSvc);
+vi.mock('#lib/server/project/decision-chain.js', () => chainSvc);
 const ballotSvc = { listCommitteeRosters: vi.fn(async () => []) };
-vi.mock('$lib/server/ballot/ballot-service', () => ballotSvc);
+vi.mock('#lib/server/ballot/ballot-service.js', () => ballotSvc);
 
 // Standing moved out of the domain services into one shared one. It stays a
 // spy here for the same reason the others are: a guard that runs late would
@@ -85,21 +85,21 @@ const standingSvc = {
 		updatedAt: null
 	}))
 };
-vi.mock('$lib/server/moderation/standing-service', () => standingSvc);
+vi.mock('#lib/server/moderation/standing-service.js', () => standingSvc);
 
 const createFlag = vi.fn(async () => ({ id: 'f1' }));
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	createFlag: (...a: unknown[]) => createFlag(...(a as [])),
 	FLAG_REASON_MAX: 100,
 	FLAG_DESCRIPTION_MAX: 1000
 }));
 
 let rateLimitAllows = true;
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: async () => rateLimitAllows
 }));
 
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (e: unknown) => {
 		throw e;
 	}

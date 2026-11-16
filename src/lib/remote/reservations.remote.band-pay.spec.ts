@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error, isHttpError, isRedirect } from '@sveltejs/kit';
-import { mockUser } from '$lib/server/db/test-factory';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import type { SQL } from 'drizzle-orm';
 
 // #2095: any active member of the booking band may pay a band session; the
 // booker's free hours settle it first, and the payer is charged the rest.
@@ -25,9 +27,10 @@ const bandRow = () => ({
 	bookerType: 'group',
 	bookerId: band.id,
 	createdByUserId: booker.id,
-	status: 'scheduled',
+	status: 'confirmed',
 	startsAt,
 	endsAt,
+	tourMinutes: 0,
 	notes: null,
 	paidAt: null,
 	cashDueCents: null,
@@ -36,13 +39,14 @@ const bandRow = () => ({
 
 // Rows served per table, so the reservation read and the booker lookup differ.
 const rows = new Map<unknown, unknown[]>();
-vi.mock('$lib/server/db', () => ({
+const wheres: { table: unknown; where: unknown }[] = [];
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			let table: unknown;
 			const c: Record<string, unknown> = {
 				from: (t: unknown) => ((table = t), c),
-				where: () => c,
+				where: (w: unknown) => (wheres.push({ table, where: w }), c),
 				limit: () => Promise.resolve(rows.get(table) ?? [])
 			};
 			return c;
@@ -51,7 +55,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
 	requireCapability: vi.fn(),
 	requireCapabilityOrOwner: vi.fn(),
@@ -64,17 +68,17 @@ const requireGroupRole = vi.fn(async (ref: { id?: string; slug?: string }) => {
 	if (!bandMemberIds.has(currentUser.id)) throw error(403, 'Not a member of this group');
 	return { user: currentUser, group: band, role: 'member' };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => requireGroupRole(...(a as [{ id?: string }]))
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 })),
 	getBookingTerms: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn(() => startsAt)
 }));
@@ -86,9 +90,9 @@ const getFreeHoursWallet = vi.fn(async (id: string) => ({
 	resetAt: new Date(startsAt.getTime() + 7 * DAY)
 }));
 const commitReservationCredits = vi.fn();
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	commitReservationCredits.mockImplementation(
 		async (p: {
 			userId: string;
@@ -108,7 +112,7 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 	};
 });
 
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCredit: vi.fn(async () => undefined),
 	recordReservationCash: vi.fn(),
 	recordReservationCardPresent: vi.fn()
@@ -117,20 +121,20 @@ vi.mock('$lib/server/finance/reservation-entries', () => ({
 // Stripe is never reached for real.
 const checkout = vi.fn(async (_o: Record<string, unknown>) => ({
 	paid: false,
-	checkoutUrl: 'https://checkout.test/session'
+	checkoutUrl: '/checkout/cs_test_session'
 }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (o: Record<string, unknown>) => checkout(o),
 	recordCashPayment: vi.fn(async () => ({ paymentRecordId: 'rec-0' })),
 	refund: vi.fn()
 }));
 const ensureStripeCustomer = vi.fn(async (..._a: unknown[]) => 'cus_test');
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: (...a: unknown[]) => ensureStripeCustomer(...a)
 }));
 
 const create = vi.fn(async () => bandRow());
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: () => create(),
 	createWaitlisted: vi.fn(),
 	announceConfirmed: vi.fn(async () => undefined),
@@ -144,13 +148,16 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationValidationError: class extends Error {}
 }));
 
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone: vi.fn(async () => true) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/user/user-service.js', () => ({
+	ensureContactPhone: vi.fn(async () => true)
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		locals: { user: currentUser },
-		params: { id: 'res-1' },
+		// Not the reservation: the id must come from the form's input (#2870).
+		params: { id: 'route-id' },
 		url: new URL('http://localhost/member/reservations/res-1/pay'),
 		request: { headers: new Headers() }
 	}),
@@ -172,7 +179,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { payReservation, getReservationPayment, bookBandReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 async function settle(p: Promise<unknown>): Promise<unknown> {
 	try {
@@ -185,6 +192,7 @@ async function settle(p: Promise<unknown>): Promise<unknown> {
 beforeEach(() => {
 	vi.clearAllMocks();
 	rows.clear();
+	wheres.length = 0;
 	rows.set(reservation, [bandRow()]);
 	rows.set(user, [{ email: booker.email, name: booker.name }]);
 	currentUser = bandmate;
@@ -196,7 +204,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 		const e = await settle(getReservationPayment('res-1'));
 		expect(isHttpError(e) && e.status).toBe(403);
 
-		const p = await settle(payReservation({ coverFees: false }));
+		const p = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
 		expect(isHttpError(p) && p.status).toBe(403);
 		expect(commitReservationCredits).not.toHaveBeenCalled();
 		expect(checkout).not.toHaveBeenCalled();
@@ -204,7 +212,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 
 	it("refuses a stranger to someone else's solo booking without a band lookup", async () => {
 		rows.set(reservation, [{ ...bandRow(), bookerType: 'user', bookerId: booker.id }]);
-		const p = await settle(payReservation({ coverFees: false }));
+		const p = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
 		expect(isHttpError(p) && p.status).toBe(403);
 		expect(requireGroupRole).not.toHaveBeenCalled();
 		expect(checkout).not.toHaveBeenCalled();
@@ -219,8 +227,8 @@ describe('a band booking, paid by someone who did not book it', () => {
 	});
 
 	it("admits a bandmate: the booker's free hours settle first, the payer is charged the rest", async () => {
-		const r = await settle(payReservation({ coverFees: false }));
-		expect(isRedirect(r) && r.location).toBe('https://checkout.test/session');
+		const r = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
+		expect(isRedirect(r) && r.location).toBe('/checkout/cs_test_session');
 
 		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
 		expect(commitReservationCredits).toHaveBeenCalledWith(
@@ -259,7 +267,7 @@ describe('bookBandReservation with a pay step', () => {
 		const r = await bookBandReservation(booking);
 		expect(r).toMatchObject({
 			reservationId: 'res-1',
-			redirectUrl: 'https://checkout.test/session'
+			redirectUrl: '/checkout/cs_test_session'
 		});
 		expect(commitReservationCredits).toHaveBeenCalledWith(
 			expect.objectContaining({ userId: booker.id })
@@ -272,6 +280,23 @@ describe('bookBandReservation with a pay step', () => {
 		const r = await bookBandReservation({ ...booking, payNow: undefined });
 		expect(r).toMatchObject({ reservationId: 'res-1', waitlisted: false });
 		expect(commitReservationCredits).not.toHaveBeenCalled();
+		expect(checkout).not.toHaveBeenCalled();
+	});
+});
+
+describe('payReservation', () => {
+	it('reads the reservation named by its input, not the route', async () => {
+		await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
+
+		const read = wheres.find((w) => w.table === reservation);
+		const { params } = new SQLiteSyncDialect().sqlToQuery(read!.where as SQL);
+		expect(params).toEqual(['res-1']);
+	});
+
+	it('refuses a reservation id that matches no row', async () => {
+		rows.set(reservation, []);
+		const p = await settle(payReservation({ reservationId: 'res-missing', coverFees: false }));
+		expect(isHttpError(p) && p.status).toBe(404);
 		expect(checkout).not.toHaveBeenCalled();
 	});
 });

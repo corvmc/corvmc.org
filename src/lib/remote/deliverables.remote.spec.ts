@@ -2,17 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
 /**
- * Who may keep a committee's items (#1708), through the real guard against a
- * migrated SQLite: for each of the four owning committees, its members may
- * take, tick, resolve and hand on its own items and nobody else's; a committee
- * without `volunteer.manageShifts`, a non-member and a signed-out caller may
- * not; staff may. The owner is read off the work order, never the request.
+ * Who may keep a committee's items (#1708, #2989), through the real guards
+ * against a migrated SQLite: for each of the four owning committees, its
+ * members may take, tick, resolve and hand on its own items and nobody else's;
+ * a non-member and a signed-out caller may not; staff may. Taking, ticking and
+ * resolving are the duty, so a seat needs no grant for them; handing an item
+ * to another committee does. The owner is read off the work order.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb, getRowCount: () => 0 }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: null }, url: new URL('http://x/') }),
@@ -34,7 +35,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const who = vi.hoisted(() => ({ userId: null as string | null, staff: false }));
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => {
@@ -42,29 +43,31 @@ vi.mock('$lib/server/authorization', async () => {
 			return { id: who.userId };
 		},
 		can: async () => who.staff,
+		userHasCapability: async () => who.staff,
 		isElevated: async () => who.staff,
 		requireCapability: vi.fn()
 	};
 });
 
 const writes = vi.hoisted(() => ({
-	claimShift: vi.fn(async () => ({})),
-	resolveWorkOrder: vi.fn(async () => ({})),
+	takeTask: vi.fn(async () => ({})),
+	markTaskDone: vi.fn(async () => ({})),
 	setWorkTaskDone: vi.fn(async () => ({})),
 	reassign: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
-	claimShift: writes.claimShift
+vi.mock('#lib/server/volunteer/assignee-service.js', () => ({
+	takeTask: writes.takeTask,
+	markTaskDone: writes.markTaskDone
 }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
-	resolveWorkOrder: writes.resolveWorkOrder
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
+	getWorkOrderById: async (id: string) => ({ id, title: id, volunteerRoleId: null })
 }));
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({
 	setWorkTaskDone: writes.setWorkTaskDone,
 	assertOwningCommittee: async (id: string | null) => id
 }));
-vi.mock('$lib/server/volunteer/deliverables-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/volunteer/deliverables-service')>()),
+vi.mock('#lib/server/volunteer/deliverables-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/volunteer/deliverables-service.js')>()),
 	reassignDeliverable: writes.reassign
 }));
 vi.mock('./events.remote', () => ({
@@ -127,8 +130,8 @@ const run = (action: string, g: string) => {
 	return remote[name](input);
 };
 const wrote = () =>
-	writes.claimShift.mock.calls.length +
-	writes.resolveWorkOrder.mock.calls.length +
+	writes.takeTask.mock.calls.length +
+	writes.markTaskDone.mock.calls.length +
 	writes.setWorkTaskDone.mock.calls.length +
 	writes.reassign.mock.calls.length;
 
@@ -163,10 +166,14 @@ describe.each(Object.keys(ACTIONS))('%s', (action) => {
 		});
 	});
 
-	it('is refused on a committee that does not keep its work orders, even to its members', async () => {
+	// #2983 case 1: a seat was listed its committee's items and refused them.
+	const duty = action !== 'handOn';
+	it(`is ${duty ? 'allowed' : 'refused'} to a seat on a committee without the grant`, async () => {
 		who.userId = 'u-fac';
-		await expect(run(action, 'fac')).rejects.toMatchObject({ status: 403 });
-		expect(wrote()).toBe(0);
+		const result = run(action, 'fac');
+		if (duty) await expect(result).resolves.toEqual({ success: true });
+		else await expect(result).rejects.toMatchObject({ status: 403 });
+		expect(wrote()).toBe(duty ? 1 : 0);
 	});
 });
 

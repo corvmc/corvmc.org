@@ -1,5 +1,5 @@
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import { refundMarketFees } from './vendor-fee-service';
 
 /**

@@ -1,37 +1,43 @@
 import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { createAccessControl, role as buildRole } from 'better-auth/plugins/access';
-import { db } from '$lib/server/db';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
+import { db } from '#lib/server/db/index.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { eq, and, getColumnTable, getTableName, sql, inArray, type AnyColumn } from 'drizzle-orm';
-import { user } from '$lib/server/db/schema/authentication';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { groupMember, groupPosition, groupPositionHolder } from '#lib/server/db/schema/group.js';
 import {
 	capabilities,
 	positions,
 	positionOrder,
 	positionsGranting,
 	grantRuleFor,
+	isJob,
+	OPERATIONS_GROUP_ID,
 	type Capability,
+	type Job,
 	type Position
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	committeeAllows,
 	committeeGrantsFor,
+	leadsProject,
 	listCommitteeHolders,
 	orgWideCapabilities,
 	projectCommitteeGrantsFor,
 	roleGrantAllows,
+	SHOW_LEAD_CAPABILITY,
 	type CapabilityScope,
 	type CommitteeGrant
-} from '$lib/server/capability/capability-grants';
+} from '#lib/server/capability/capability-grants.js';
 
-export type { CapabilityScope } from '$lib/server/capability/capability-grants';
+export type { CapabilityScope } from '#lib/server/capability/capability-grants.js';
 
 // ---------------------------------------------------------------------------
 // Capabilities
 //
-// Guards name a capability; the matrix in `$lib/config` says who holds it.
-// See docs/specs/shipped/admin-vs-staff-spec.md.
+// Guards name a capability; the matrix in `#lib/config.js` says who holds it.
+// See docs/decisions/0032-guards-name-capabilities.md.
 //
 // The access controller is built HERE rather than in config.ts because
 // `createAccessControl` is a better-auth import and config.ts is imported by
@@ -92,20 +98,65 @@ export function capabilitySet(held: readonly Position[]): Capability[] {
 }
 
 /**
- * The positions a user holds.
+ * The positions a user holds: `admin` from `model_has_roles`, every other one
+ * from a seat in Operations (#2992).
  *
  * `roles` still carries legacy rows — `member`, `sustaining`, `volunteer` —
- * that are not positions and grant nothing. They are filtered here rather than
- * in SQL so the matrix stays the only place the list of real positions is
- * written down.
+ * that grant nothing, and a job name there grants nothing either: the seat is
+ * the assignment. Filtered here rather than in SQL so the matrix stays the
+ * only place the list of real positions is written down.
  */
 export async function positionsFor(userId: string): Promise<Position[]> {
+	const [rows, seats] = await Promise.all([
+		db
+			.select({ name: role.name })
+			.from(role)
+			.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
+			.where(eq(modelHasRole.userId, userId)),
+		jobsFor(userId)
+	]);
+	const held = new Set<string>([...rows.map((r) => r.name).filter(isAdmin), ...seats]);
+	return positionOrder.filter((p) => held.has(p));
+}
+
+const isAdmin = (name: string) => name === 'admin';
+
+/**
+ * The jobs a user holds through Operations seats. An inactive roster row holds
+ * nothing. The group row is not joined: archiving Operations must not strip
+ * every staff member at once.
+ */
+export async function jobsFor(userId: string): Promise<Job[]> {
 	const rows = await db
-		.select({ name: role.name })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(eq(modelHasRole.userId, userId));
-	return rows.map((r) => r.name).filter(isPosition);
+		.select({ job: groupPosition.job })
+		.from(groupPositionHolder)
+		.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+		.innerJoin(groupMember, eq(groupMember.id, groupPositionHolder.memberId))
+		.where(
+			and(
+				eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
+			)
+		);
+	return rows.flatMap((r) => (r.job && isJob(r.job) ? [r.job] : []));
+}
+
+/** Operations seat holders of these jobs, as live user rows. */
+function seatHolders(names: readonly Job[]) {
+	return db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.innerJoin(groupMember, eq(groupMember.userId, user.id))
+		.innerJoin(groupPositionHolder, eq(groupPositionHolder.memberId, groupMember.id))
+		.innerJoin(groupPosition, eq(groupPosition.id, groupPositionHolder.positionId))
+		.where(
+			and(
+				eq(groupPosition.groupId, OPERATIONS_GROUP_ID),
+				eq(groupMember.status, 'active'),
+				inArray(groupPosition.job, [...names])
+			)
+		);
 }
 
 /**
@@ -142,9 +193,10 @@ function currentCommitteeGrants(userId: string): Promise<CommitteeGrant[]> {
 }
 
 /**
- * Grants beyond the position matrix: an event-scoped volunteer-role grant when
- * `scope.eventId` is given, then committee seats. A capability off the allowlist
- * returns before any read, so only allowlisted checks pay for one.
+ * Grants beyond the position matrix: a show's event lead on its project, an
+ * event-scoped volunteer-role grant when `scope.eventId` is given, then
+ * committee seats. A capability off the allowlist returns before any read, so
+ * only allowlisted checks pay for one.
  */
 async function grantedBeyondPositions(
 	userId: string,
@@ -152,6 +204,9 @@ async function grantedBeyondPositions(
 	scope: CapabilityScope | undefined,
 	seats: () => Promise<CommitteeGrant[]>
 ): Promise<boolean> {
+	if (cap === SHOW_LEAD_CAPABILITY && scope?.projectId) {
+		if (await leadsProject(userId, scope.projectId)) return true;
+	}
 	const rule = grantRuleFor(cap);
 	if (!rule) return false;
 	if (rule.role && scope?.eventId && (await roleGrantAllows(userId, cap, scope.eventId))) {
@@ -165,24 +220,32 @@ async function grantedBeyondPositions(
 }
 
 /**
+ * A scope, or a function that reads it off the row. The function runs only
+ * when no position grants `cap` and `cap` is grantable, so staff pay no read.
+ */
+export type ScopeArg = CapabilityScope | (() => Promise<CapabilityScope>);
+
+/**
  * Does the caller hold this capability? Never throws — for UI gating and branches.
  *
  * Positions first, then grants (see `grantedBeyondPositions`). With no scope only
  * `'org'` committee grants can add to the matrix.
  */
-export async function can(cap: Capability, scope?: CapabilityScope): Promise<boolean> {
+export async function can(cap: Capability, scope?: ScopeArg): Promise<boolean> {
 	const { locals } = getRequestEvent();
 	if (!locals.user) return false;
 	if (authorizerFor(await currentPositions()).authorize(requestFor(cap)).success) return true;
+	if (!grantRuleFor(cap)) return false;
 	const userId = locals.user.id;
-	return grantedBeyondPositions(userId, cap, scope, () => currentCommitteeGrants(userId));
+	const resolved = typeof scope === 'function' ? await scope() : scope;
+	return grantedBeyondPositions(userId, cap, resolved, () => currentCommitteeGrants(userId));
 }
 
 /**
  * Assert the caller holds `cap`. The first statement of a remote function.
  * Returns the authenticated user.
  */
-export async function requireCapability(cap: Capability, scope?: CapabilityScope) {
+export async function requireCapability(cap: Capability, scope?: ScopeArg) {
 	const { locals } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
 	if (!(await can(cap, scope))) throw error(403, 'Not permitted');
@@ -230,7 +293,11 @@ export async function requireCapabilityOrOwner(
 	throw error(403, 'Not authorized');
 }
 
-/** Holds at least one position — what "is staff" now means. */
+/**
+ * Holds at least one position. Never an admission: a guard names a capability
+ * (#2985). `scripts/guards-name-capabilities.spec.ts` lists the one refusal
+ * that asks it.
+ */
 export async function isElevated(userId: string): Promise<boolean> {
 	return (await positionsFor(userId)).length > 0;
 }
@@ -244,19 +311,21 @@ export async function listUsersWithCapability(
 	cap: Capability
 ): Promise<Array<{ id: string; name: string; email: string }>> {
 	const names = positionsGranting(cap);
-	const [byPosition, bySeat] = await Promise.all([
-		names.length === 0
-			? []
-			: db
+	const jobNames = names.filter(isJob);
+	const [byAdmin, byJob, bySeat] = await Promise.all([
+		names.includes('admin')
+			? db
 					.select({ id: user.id, name: user.name, email: user.email })
 					.from(user)
 					.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
 					.innerJoin(role, eq(role.id, modelHasRole.roleId))
-					.where(inArray(role.name, names)),
+					.where(eq(role.name, 'admin'))
+			: [],
+		jobNames.length === 0 ? [] : seatHolders(jobNames),
 		// An org-wide committee grant makes its members holders too (#1578, #1602).
 		listCommitteeHolders(cap)
 	]);
-	const rows = [...byPosition, ...bySeat];
+	const rows = [...byAdmin, ...byJob, ...bySeat];
 
 	// De-duplicated in JS rather than with groupBy: the specs in this directory
 	// mock `drizzle-orm` export by export, so importing one more operator here
@@ -295,12 +364,20 @@ export function topPositionFor(userIdCol: AnyColumn) {
 	const outerRef = sql.raw(`"${getTableName(getColumnTable(userIdCol))}"."${userIdCol.name}"`);
 	const names = sql.raw(positionOrder.map((p) => `'${p}'`).join(', '));
 	const ladder = sql.raw(positionOrder.map((p, i) => `when '${p}' then ${i}`).join(' '));
-	return sql<string | null>`(
-		select r.name from roles r
+	// `admin` heads `positionOrder`, so its role row is consulted first and a
+	// seat in Operations (#2992) only when there is none.
+	return sql<string | null>`coalesce(
+		(select r.name from roles r
 		inner join model_has_roles mhr on mhr.role_id = r.id
-		where mhr.user_id = ${outerRef} and r.name in (${names})
-		order by case r.name ${ladder} else ${sql.raw(String(positionOrder.length))} end
-		limit 1
+		where mhr.user_id = ${outerRef} and r.name = 'admin'
+		limit 1),
+		(select gp.job from group_position_holder gph
+		inner join group_position gp on gp.id = gph.position_id
+		inner join group_member gm on gm.id = gph.member_id
+		where gm.user_id = ${outerRef} and gm.status = 'active'
+			and gp.group_id = ${sql.raw(`'${OPERATIONS_GROUP_ID}'`)} and gp.job in (${names})
+		order by case gp.job ${ladder} else ${sql.raw(String(positionOrder.length))} end
+		limit 1)
 	)`;
 }
 
@@ -319,16 +396,19 @@ export function requireUser() {
 export const requireMember = requireUser;
 
 /**
- * Get all role names for a user.
+ * Every role row name a user carries, plus the jobs their Operations seats
+ * hold. A job name left in `model_has_roles` grants nothing and is dropped.
  */
 export async function getUserRoles(userId: string): Promise<string[]> {
-	const rows = await db
-		.select({ name: role.name })
-		.from(role)
-		.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
-		.where(eq(modelHasRole.userId, userId));
-
-	return rows.map((r) => r.name);
+	const [rows, seats] = await Promise.all([
+		db
+			.select({ name: role.name })
+			.from(role)
+			.innerJoin(modelHasRole, eq(modelHasRole.roleId, role.id))
+			.where(eq(modelHasRole.userId, userId)),
+		jobsFor(userId)
+	]);
+	return [...rows.map((r) => r.name).filter((n) => !isJob(n)), ...seats];
 }
 
 /**
@@ -368,9 +448,8 @@ export async function removeRole(userId: string, roleName: string): Promise<void
  *
  * Used to tell a staff member's emailed reply apart from a contact's, so the
  * inbox can relay theirs instead of filing it as inbound. Deliberately not a
- * capability check — the question is "does this person work here", which is
- * `isElevated` expressed in SQL, and a volunteer coordinator replying to a
- * thread is still not the contact. Matched
+ * capability check — the question is "does this person hold a position", and
+ * a volunteer coordinator replying to a thread is still not the contact. Matched
  * case-insensitively: SQLite compares TEXT with `=` case-sensitively, and no
  * mail client normalises the envelope From, so a plain `eq` would silently
  * treat `Ada@corvmc.org` as a stranger.
@@ -381,13 +460,12 @@ export async function findStaffUserByEmail(
 	const normalized = email.trim().toLowerCase();
 	if (!normalized) return null;
 
-	const [row] = await db
+	const found = await db
 		.select({ id: user.id, name: user.name, email: user.email })
 		.from(user)
-		.innerJoin(modelHasRole, eq(modelHasRole.userId, user.id))
-		.innerJoin(role, eq(role.id, modelHasRole.roleId))
-		.where(and(eq(sql`lower(${user.email})`, normalized), inArray(role.name, positionOrder)))
-		.limit(1);
-
-	return row ?? null;
+		.where(eq(sql`lower(${user.email})`, normalized));
+	for (const row of found) {
+		if ((await positionsFor(row.id)).length > 0) return row;
+	}
+	return null;
 }

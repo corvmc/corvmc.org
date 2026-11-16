@@ -6,10 +6,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const requireCommitteeMember = vi.fn();
 const getCommitteeReport = vi.fn(async () => ({ projects: [] }));
 
-vi.mock('$lib/server/authorization', () => ({ requireCapability: vi.fn() }));
-vi.mock('$lib/server/group/group-context', () => ({ requireCommitteeMember }));
-vi.mock('$lib/server/report/annual-report-service', () => ({ getAnnualReport: vi.fn() }));
-vi.mock('$lib/server/report/committee-report-service', () => ({ getCommitteeReport }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability: vi.fn() }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireCommitteeMember }));
+vi.mock('#lib/server/report/annual-report-service.js', () => ({ getAnnualReport: vi.fn() }));
+vi.mock('#lib/server/report/committee-report-service.js', () => ({ getCommitteeReport }));
 vi.mock('$app/server', () => ({
 	query: (_schema: unknown, handler: Record<string, unknown>) =>
 		Object.assign(handler, { __: { type: 'query' } })

@@ -22,7 +22,7 @@ events.
 - **Borrow equipment** — The Collective keeps a library of gear members can borrow.
   Lending is arranged in person for now, so ask a staff member or
   [get in touch](/contact) and we'll sort you out.
-- **Become a sustaining member** — Support the space and unlock free practice hours.
+- **Become a sustaining member** — Support the space and unlock practice credits.
 
 ## Finding your way around
 

@@ -1,18 +1,19 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { payForReservation } from '$lib/remote/reservations.remote';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import { refreshAll } from '$app/navigation';
+	import { payForReservation } from '#lib/remote/reservations.remote.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
-	import type { Reservation } from '$lib/server/reservation';
+	import type { Reservation } from '#lib/server/reservation/index.js';
 
 	const { fields } = payForReservation;
 
 	let {
 		reservation,
-		label = 'Pay Now',
+		label = m.actions_pay_reservation_label(),
 		variant = 'primary',
 		size = 'sm',
 		class: className = '',
@@ -30,7 +31,7 @@
 <Action
 	action={payForReservation}
 	{label}
-	modalTitle="Pay for Your Session"
+	modalTitle={m.actions_pay_reservation_modal_title()}
 	noFooter
 	maxWidth="max-w-md"
 	{variant}
@@ -41,7 +42,7 @@
 		if (r?.redirectUrl) {
 			await goToCheckout(r.redirectUrl);
 		} else {
-			await invalidateAll();
+			await refreshAll();
 		}
 	}}
 	{...rest}

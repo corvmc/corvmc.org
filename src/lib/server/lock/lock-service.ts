@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull, isNotNull, gt, lt, or } from 'drizzle-orm';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { and, eq, isNull, isNotNull, gt, lt, or } from 'drizzle-orm';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	createTemporaryUser,
 	removeTemporaryUser,
@@ -10,6 +10,7 @@ import {
 	listLockUsers,
 	getLockUser,
 	queryDeviceHealth,
+	UtecRateLimitedError,
 	generateLockCode,
 	lockDateTime,
 	LOCK_GRACE_MINUTES,
@@ -17,10 +18,10 @@ import {
 } from './ultraloc-client';
 import { maintainCodePool, type PoolSummary } from './fallback-code-service';
 import { reconcileMemberCodeSync } from './member-code-service';
-import { getJson, putJson } from '$lib/server/kv';
-import { dispatchEmailOnly } from '$lib/server/notification';
-import { env } from '$env/dynamic/private';
-import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { dispatchEmailOnly } from '#lib/server/notification/index.js';
+import * as env from '$app/env/private';
+import { DEFAULT_TIMEZONE, BOOKING_LEAD_DAYS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // LockService — the daily lock job, and what is left of per-booking codes
@@ -40,6 +41,21 @@ const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
  * worked without a shell. Sits beside the other `ultraloc:` keys.
  */
 const LAST_RUN_KEY = 'ultraloc:lastJobRun';
+
+/** KV key holding when a reading last found the lock online: the sidebar's "last seen". */
+const LAST_ONLINE_AT_KEY = 'ultraloc:lastOnlineAt';
+
+/** The last health reading, from KV: no call to U-tec. `online` is null before the first. */
+export async function getLockStatus(): Promise<{
+	online: boolean | null;
+	lastOnlineAt: string | null;
+}> {
+	const [online, lastOnlineAt] = await Promise.all([
+		getJson<boolean>(LAST_ONLINE_KEY),
+		getJson<string>(LAST_ONLINE_AT_KEY)
+	]);
+	return { online: online ?? null, lastOnlineAt: lastOnlineAt ?? null };
+}
 
 /** What one run of the daily job did. */
 export interface LockJobSummary {
@@ -142,6 +158,7 @@ async function checkDeviceHealth(errors: string[]): Promise<boolean | null> {
 	// run during an outage still alerts.
 	const previous = (await getJson<boolean>(LAST_ONLINE_KEY)) ?? true;
 	await putJson(LAST_ONLINE_KEY, health.online);
+	if (health.online) await putJson(LAST_ONLINE_AT_KEY, new Date().toISOString());
 
 	if (!health.online) {
 		errors.push(
@@ -174,7 +191,7 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
 						value: health.batteryLevel === null ? 'unknown' : `${health.batteryLevel} of 5`
 					}
 				],
-				cta: { url: '/staff/settings', label: 'Open lock settings' }
+				cta: { url: '/staff/building-access', label: 'Open building access' }
 			}
 		});
 	} catch (err) {
@@ -190,11 +207,9 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
  * the lock is reachable or not, so an `add` succeeding says nothing. Only
  * `sync_status` on the user itself says the code is on the device — that is
  * what `lockSyncedAt` records, and what the member-facing surfaces key on.
+ * `list` carries it on every row, so one call answers for every booking.
  */
-async function reconcileSyncState(
-	errors: string[],
-	upcoming?: { now: Date; limit: number }
-): Promise<number> {
+async function reconcileSyncState(errors: string[], upcoming?: { now: Date }): Promise<number> {
 	let count = 0;
 
 	const outstanding = and(
@@ -202,27 +217,27 @@ async function reconcileSyncState(
 		isNotNull(reservation.lockAccessId),
 		isNull(reservation.lockSyncedAt)
 	);
-	const select = db
+	const rows = await db
 		.select({ id: reservation.id, lockAccessId: reservation.lockAccessId })
-		.from(reservation);
-	const rows = upcoming
-		? await select
-				.where(
-					and(
+		.from(reservation)
+		.where(
+			upcoming
+				? and(
 						outstanding,
 						lt(reservation.startsAt, provisioningWindow(upcoming.now).end),
 						gt(reservation.endsAt, upcoming.now)
 					)
-				)
-				.orderBy(asc(reservation.startsAt))
-				.limit(upcoming.limit)
-		: await select.where(outstanding);
+				: outstanding
+		);
+	if (rows.length === 0) return 0;
+
+	const synced = new Set(
+		(await listLockUsers()).filter((u) => u.syncStatus === 1).map((u) => String(u.id))
+	);
 
 	for (const row of rows) {
+		if (!synced.has(String(row.lockAccessId))) continue;
 		try {
-			const detail = await getLockUser(Number(row.lockAccessId));
-			if (detail?.syncStatus !== 1) continue;
-
 			await db
 				.update(reservation)
 				.set({ lockSyncedAt: new Date(), updatedAt: new Date() })
@@ -238,25 +253,33 @@ async function reconcileSyncState(
 	return count;
 }
 
-/**
- * U-tec reads per 15-minute pass. Soonest-first, so a cap that bites defers the
- * bookings with the most time to spare; the daily pass stays unbounded.
- */
-export const UPCOMING_SYNC_CAP = 25;
+/** What one 15-minute pass did, and why it made no U-tec reads if it did not. */
+export interface UpcomingSyncResult {
+	confirmed: number;
+	errors: string[];
+	skipped?: 'lock-offline' | 'rate-limited';
+}
 
 /**
  * The 15-minute pass of `reconcileSyncState`: only bookings inside the
- * confirmation window that have not ended. `door_code_ready` keys on the
+ * booking lead window that have not ended. `door_code_ready` keys on the
  * `lockSyncedAt` this stamps. Never throws, so it cannot fail its batch.
+ *
+ * An offline lock or a U-tec cooldown is a skip, not an error: nothing can
+ * sync, and the daily lock-access run is the one that alerts on an outage.
  */
-export async function reconcileUpcomingSync(
-	now = new Date()
-): Promise<{ confirmed: number; errors: string[] }> {
+export async function reconcileUpcomingSync(now = new Date()): Promise<UpcomingSyncResult> {
 	const errors: string[] = [];
 	try {
-		const confirmed = await reconcileSyncState(errors, { now, limit: UPCOMING_SYNC_CAP });
+		if (!(await queryDeviceHealth()).online) {
+			return { confirmed: 0, errors, skipped: 'lock-offline' };
+		}
+		const confirmed = await reconcileSyncState(errors, { now });
 		return { confirmed, errors };
 	} catch (err) {
+		if (err instanceof UtecRateLimitedError) {
+			return { confirmed: 0, errors, skipped: 'rate-limited' };
+		}
 		const msg = `Sync reconciliation failed: ${(err as Error).message}`;
 		console.error(msg);
 		return { confirmed: 0, errors: [...errors, msg] };
@@ -264,7 +287,7 @@ export async function reconcileUpcomingSync(
 }
 
 /**
- * Today in club time through `CONFIRMATION_WINDOW_DAYS` past it: the bookings
+ * Today in club time through `BOOKING_LEAD_DAYS` past it: the bookings
  * whose legacy per-booking codes the upcoming-sync cron still confirms.
  */
 function provisioningWindow(now = new Date()): { start: Date; end: Date } {
@@ -273,7 +296,7 @@ function provisioningWindow(now = new Date()): { start: Date; end: Date } {
 	return {
 		start: buildDateInTz(todayStr, '00:00', tz),
 		end: new Date(
-			buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60_000
+			buildDateInTz(todayStr, '23:59', tz).getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60_000
 		)
 	};
 }

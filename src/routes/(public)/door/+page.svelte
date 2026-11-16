@@ -1,20 +1,21 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import {
 		getBackDoor,
 		openBackDoor,
 		checkOutBackDoor,
 		reportOfflineReveal
-	} from '$lib/remote/back-door.remote';
-	import { errorMessage } from '$lib/error-message';
-	import { formatTime, relativeDay } from '$lib/utils/format';
+	} from '#lib/remote/back-door.remote.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { formatTime, relativeDay } from '#lib/utils/format.js';
 
 	// Everything a timed-out unlock needs is already in this page's data, so a
 	// phone with no signal at the door can still show the code (#2157). A reveal
@@ -115,22 +116,25 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Back door</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center">{m.public_door_title()}</CardTitle>
 
 					{#if failure}
 						<Alert type="error">{failure}</Alert>
 					{/if}
 
 					{#if !door.booking}
-						<p class="text-center">No booking open right now.</p>
+						<p class="text-center">{m.public_door_no_booking_text()}</p>
 						{#if door.next}
 							<p class="text-center text-subtle">
-								Your next one opens here {relativeDay(door.next.opensAt)} at
-								{formatTime(door.next.opensAt)}.
+								{m.public_door_next_opens_text({
+									day: relativeDay(door.next.opensAt),
+									time: formatTime(door.next.opensAt)
+								})}
 							</p>
 						{:else}
-							<Button variant="primary" href={resolve('/member/reservations')}>Book the room</Button
-							>
+							<Button variant="primary" href={resolve('/member/reservations')}>
+								{m.public_door_book_label()}
+							</Button>
 						{/if}
 					{:else}
 						{@const booking = door.booking}
@@ -141,43 +145,41 @@
 
 						{#if closed || door.checkedOutAt}
 							{#if closed === 'locked'}
-								<Alert type="success">Locked. Thanks.</Alert>
+								<Alert type="success">{m.public_door_locked_body()}</Alert>
 							{:else if closed}
 								<Alert type="warning">
-									The lock didn't confirm. Press the lock key on the keypad.
+									{m.public_door_lock_unconfirmed_body()}
 								</Alert>
 							{/if}
-							<p class="text-center text-subtle">Checked out.</p>
+							<p class="text-center text-subtle">{m.public_door_checked_out_text()}</p>
 						{:else}
 							{#if opened === 'unlocked'}
-								<Alert type="success">Door's open.</Alert>
+								<Alert type="success">{m.public_door_open_body()}</Alert>
 							{/if}
 
 							{#if code}
 								<div class="text-center">
 									{#if opened === 'lock_offline'}
-										<p>The lock is offline. Use the keypad.</p>
+										<p>{m.public_door_lock_offline_text()}</p>
 									{:else if opened === 'timed_out'}
-										<p>The door didn't answer. Use the keypad.</p>
+										<p>{m.public_door_timed_out_text()}</p>
 									{/if}
 									<p class="font-mono text-4xl font-bold tracking-[0.3em]">{code}</p>
 									<p class="text-subtle">
-										Touch the keypad to wake it, enter the code, then press the check key.
+										{m.public_door_keypad_text()}
 									</p>
 								</div>
 							{:else if failedToOpen}
-								<Alert type="warning"
-									>The door didn't open and no backup code is left. Call staff.</Alert
-								>
+								<Alert type="warning">{m.public_door_no_code_call_staff_body()}</Alert>
 							{:else if door.poolEmpty}
 								<p class="text-center text-subtle">
-									No backup code is available. If the door doesn't open, call staff.
+									{m.public_door_no_backup_text()}
 								</p>
 							{/if}
 
 							{#if leaving}
 								<div>
-									<p class="font-medium">Before you go</p>
+									<p class="font-medium">{m.public_door_before_you_go_text()}</p>
 									<ul class="list-disc pl-5">
 										{#each door.checkoutTasks as task (task)}
 											<li>{task}</li>
@@ -189,16 +191,24 @@
 									disabled={busy !== null}
 									onclick={() => close(booking.id)}
 								>
-									{busy === 'close' ? 'Locking…' : 'Lock up and check out'}
+									{busy === 'close'
+										? m.public_door_locking_label()
+										: m.public_door_check_out_submit_label()}
 								</Button>
-								<Button variant="ghost" onclick={() => (leaving = false)}>Not yet</Button>
+								<Button variant="ghost" onclick={() => (leaving = false)}>
+									{m.public_door_not_yet_label()}
+								</Button>
 							{:else}
 								<Button variant="primary" disabled={busy !== null} onclick={() => open(booking.id)}>
-									{busy === 'open' ? 'Opening…' : door.checkedInAt ? 'Open door' : 'Check in'}
+									{busy === 'open'
+										? m.public_door_opening_label()
+										: door.checkedInAt
+											? m.public_door_open_door_label()
+											: m.public_door_check_in_label()}
 								</Button>
 								{#if door.checkedInAt}
 									<Button variant="ghost" disabled={busy !== null} onclick={() => (leaving = true)}>
-										Check out
+										{m.public_door_check_out_label()}
 									</Button>
 								{/if}
 							{/if}

@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { adjustCredits } from '$lib/remote/users.remote';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { adjustCredits } from '#lib/remote/users.remote.js';
 
 	let {
 		userId,
@@ -36,15 +37,15 @@
 
 <Action
 	action={adjustCredits}
-	label="Adjust"
-	modalTitle="Adjust Credits"
-	successToast="Credits adjusted"
+	label={m.actions_adjust_credits_adjust_label()}
+	modalTitle={m.actions_adjust_credits_modal_title()}
+	successToast={m.actions_adjust_credits_success_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
 	canSubmit={amount !== 0 && description.trim().length > 0}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -55,15 +56,19 @@
 			     the wrapper supplies the error slot. Without it, a field issue from
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
-			<FormField field={fields.creditType} label="Credit Type">
+			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type_label()}>
 				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
-					<option value="free_hours">Free Hours</option>
-					<option value="equipment_credits">Equipment Credits</option>
+					<option value="free_hours">{m.actions_adjust_credits_free_hours_label()}</option>
+					<option value="equipment_credits"
+						>{m.actions_adjust_credits_equipment_credits_label()}</option
+					>
 				</Select>
 			</FormField>
 			<FormField
 				field={fields.amount}
-				label={creditType === 'free_hours' ? 'Hours' : 'Credits'}
+				label={creditType === 'free_hours'
+					? m.actions_adjust_credits_hours_label()
+					: m.actions_adjust_credits_credits_label()}
 				description={amountHint}
 			>
 				<input
@@ -72,15 +77,15 @@
 					step={creditType === 'free_hours' ? 0.5 : 1}
 					class="input w-full"
 					bind:value={amount}
-					placeholder="Positive to add, negative to deduct"
+					placeholder={m.actions_adjust_credits_positive_add_negative_deduct_placeholder()}
 				/>
 			</FormField>
-			<FormField field={fields.description} label="Reason">
+			<FormField field={fields.description} label={m.actions_reason_label()}>
 				<input
 					{...fields.description.as('text')}
 					class="input w-full"
 					bind:value={description}
-					placeholder="Why is this adjustment being made?"
+					placeholder={m.actions_adjust_credits_why_adjustment_being_made_placeholder()}
 				/>
 			</FormField>
 		</div>

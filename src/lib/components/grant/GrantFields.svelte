@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import type { createGrant } from '$lib/remote/grants.remote';
-	import { grantStatuses, grantStatusLabels, type GrantStatus } from '$lib/config';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import type { createGrant } from '#lib/remote/grants.remote.js';
+	import { grantStatuses, grantStatusLabels, type GrantStatus } from '#lib/config.js';
 
 	interface Value {
 		funderId: string;
@@ -14,55 +15,91 @@
 		startsOn: string | null;
 		endsOn: string | null;
 		notes: string | null;
+		fundsProjectId: string | null;
 	}
 
 	let {
 		fields,
 		funders,
+		projects,
 		value
 	}: {
 		fields: (typeof createGrant)['fields'];
 		funders: { id: string; name: string }[];
+		/** What the award can pay for; blank is general operating support. */
+		projects: { id: string; name: string }[];
 		value?: Value;
 	} = $props();
 
 	const funderOptions = $derived(funders.map((f) => ({ value: f.id, label: f.name })));
+	const projectOptions = $derived([
+		{ value: '', label: m.grant_grant_fields_general_support_label() },
+		...projects.map((p) => ({ value: p.id, label: p.name }))
+	]);
 	const statusOptions = grantStatuses.map((s) => ({ value: s, label: grantStatusLabels[s] }));
 </script>
 
 <Field
 	field={fields.funderId}
 	type="select"
-	label="Funder"
+	label={m.grant_grant_fields_funder_label()}
 	options={funderOptions}
 	value={value?.funderId ?? funders[0]?.id ?? ''}
 />
 <Field
 	field={fields.title}
 	type="text"
-	label="Title"
-	description="“2027 operating support”, “Youth workshops”."
+	label={m.grant_grant_fields_title_label()}
+	description={m.grant_grant_fields_2027_operating_support_youth_workshops_body()}
 	value={value?.title ?? ''}
 />
 <Field
 	field={fields.status}
 	type="select"
-	label="Status"
+	label={m.grant_grant_fields_status_label()}
 	options={statusOptions}
 	value={value?.status ?? 'prospect'}
 />
 <MoneyField
 	field={fields.amountRequestedCents}
-	label="Requested"
+	label={m.grant_grant_fields_requested_label()}
 	value={value?.amountRequestedCents ?? undefined}
 />
 <MoneyField
 	field={fields.amountAwardedCents}
-	label="Awarded"
-	description="Blank until the funder decides."
+	label={m.grant_grant_fields_awarded_label()}
+	description={m.grant_grant_fields_blank_until_funder_decides_body()}
 	value={value?.amountAwardedCents ?? undefined}
 />
-<Field field={fields.applyBy} type="date" label="Apply by" value={value?.applyBy ?? ''} />
-<Field field={fields.startsOn} type="date" label="Award starts" value={value?.startsOn ?? ''} />
-<Field field={fields.endsOn} type="date" label="Award ends" value={value?.endsOn ?? ''} />
-<Field field={fields.notes} type="textarea" label="Notes" value={value?.notes ?? ''} />
+<Field
+	field={fields.applyBy}
+	type="date"
+	label={m.grant_grant_fields_apply_by_label()}
+	value={value?.applyBy ?? ''}
+/>
+<Field
+	field={fields.startsOn}
+	type="date"
+	label={m.grant_grant_fields_award_starts_label()}
+	value={value?.startsOn ?? ''}
+/>
+<Field
+	field={fields.endsOn}
+	type="date"
+	label={m.grant_grant_fields_award_ends_label()}
+	value={value?.endsOn ?? ''}
+/>
+<Field
+	field={fields.fundsProjectId}
+	type="select"
+	label={m.grant_grant_fields_funded_project_label()}
+	description={m.grant_grant_fields_funded_project_body()}
+	options={projectOptions}
+	value={value?.fundsProjectId ?? ''}
+/>
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.grant_grant_fields_notes_label()}
+	value={value?.notes ?? ''}
+/>

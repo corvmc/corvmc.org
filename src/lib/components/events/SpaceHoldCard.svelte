@@ -1,7 +1,8 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { ReservationRef } from '$lib/types/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { ReservationRef } from '#lib/types/entity.js';
 	import EditHoldAction from './EditHoldAction.svelte';
 
 	/**
@@ -21,7 +22,7 @@
 	let { venueName, venueIsPrimary, reservation, editableEventId }: Props = $props();
 </script>
 
-<InfoCard title="Space Reservation">
+<InfoCard title={m.events_space_hold_card_title()} testid="space-hold">
 	{#snippet action()}
 		{#if reservation && editableEventId}
 			<EditHoldAction
@@ -33,11 +34,11 @@
 	{/snippet}
 	{#if venueName && !venueIsPrimary}
 		<p class="text-muted">
-			Off-site — {venueName}. The practice space stays bookable while this runs.
+			{m.events_space_hold_card_off_site_practice_space_stays_text({ venueName })}
 		</p>
 	{:else if reservation}
 		<EntityIdentity ref={reservation.ref} size="md" status />
 	{:else}
-		<p class="text-muted">No space held for this event. Use Edit to reserve the practice space.</p>
+		<p class="text-muted">{m.events_space_hold_card_no_space_held_event_use_text()}</p>
 	{/if}
 </InfoCard>

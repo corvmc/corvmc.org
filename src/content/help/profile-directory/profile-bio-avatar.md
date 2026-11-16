@@ -1,5 +1,5 @@
 ---
-title: Write Your Bio & Add an Avatar
+title: Write your bio & add an avatar
 slug: profile-bio-avatar
 category: profile-directory
 summary: Set your photo, tagline, and bio so your directory card stands out.

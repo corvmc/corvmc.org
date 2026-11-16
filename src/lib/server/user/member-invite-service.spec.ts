@@ -3,22 +3,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Against a real SQLite: "has an account" and "is an open group" are WHERE clauses. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	})
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb
 }));
 
 const emit = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
 }));
 
@@ -32,7 +25,7 @@ const {
 	MemberInviteLimitError,
 	MemberInviteNotPendingError
 } = await import('./member-invite-service');
-const { resolvePendingInvites } = await import('$lib/server/group/group-invite-service');
+const { resolvePendingInvites } = await import('#lib/server/group/group-invite-service.js');
 
 const STAFF = { id: 'usr-staff', name: 'Sam Staff' };
 

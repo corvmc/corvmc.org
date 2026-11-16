@@ -12,6 +12,6 @@
 	});
 </script>
 
-<div class:hidden={form.currentStep !== index}>
+<div class:hidden={form.currentStep !== index} data-step={index}>
 	{@render children()}
 </div>

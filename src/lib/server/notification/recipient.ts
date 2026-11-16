@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { getNotificationType, notificationPreference } from '$lib/server/db/schema/notification';
+import { getNotificationType, notificationPreference } from '#lib/server/db/schema/notification.js';
 
 // ---------------------------------------------------------------------------
 // Who a notification may be delivered to

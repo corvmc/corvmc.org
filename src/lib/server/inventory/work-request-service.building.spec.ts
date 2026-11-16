@@ -22,7 +22,7 @@ function chain(queue: () => unknown[]): unknown {
 
 const nextSelect = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(nextSelect)),
 		selectDistinct: vi.fn(() => chain(nextSelect)),
@@ -39,6 +39,11 @@ vi.mock('$lib/server/db', () => ({
 			}
 		}))
 	}
+}));
+
+// Opening the report's task is `repair-tasks.spec.ts`'s subject.
+vi.mock('#lib/server/task/sourced-tasks.js', () => ({
+	openSourcedTask: vi.fn().mockResolvedValue({ id: 'task-1', opened: true })
 }));
 
 vi.mock('./asset-service', () => ({

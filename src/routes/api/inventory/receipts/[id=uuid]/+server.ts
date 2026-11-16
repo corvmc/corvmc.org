@@ -1,10 +1,10 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { eq } from 'drizzle-orm';
-import { requireCapability } from '$lib/server/authorization';
-import { getPrivateObject } from '$lib/server/private-storage';
-import { contentDispositionAttachment, isReceiptKey } from '$lib/server/storage-keys';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getPrivateObject } from '#lib/server/private-storage.js';
+import { contentDispositionAttachment, isReceiptKey } from '#lib/server/storage-keys.js';
 
 /**
  * Read a receipt back out of the private bucket.

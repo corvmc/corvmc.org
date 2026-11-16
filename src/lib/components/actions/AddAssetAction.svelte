@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { createAsset } from '$lib/remote/inventory.remote';
-	import LocationField from '$lib/components/inventory/LocationField.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { createAsset } from '#lib/remote/inventory.remote.js';
+	import LocationField from '#lib/components/inventory/LocationField.svelte';
 	import { Field } from '../ui/Form';
-	import { equipmentConditions } from '$lib/config';
+	import { equipmentConditions } from '#lib/config.js';
 
 	const { fields } = createAsset;
 
@@ -28,13 +29,13 @@
 
 <Action
 	action={createAsset}
-	label="Add Unit"
-	modalTitle="Add a unit"
-	successToast="Unit added"
+	label={m.actions_add_asset_add_unit_label()}
+	modalTitle={m.actions_add_asset_modal_title()}
+	successToast={m.actions_add_asset_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -43,19 +44,23 @@
 			<Field
 				field={fields.assetTag}
 				type="text"
-				label="Tag"
-				description="Scan or type the printed tag. Can be left blank and bound later."
+				label={m.actions_tag_label()}
+				description={m.actions_add_asset_description_body()}
 			/>
-			<Field field={fields.serialNumber} type="text" label="Serial number" />
+			<Field
+				field={fields.serialNumber}
+				type="text"
+				label={m.actions_add_asset_serial_number_label()}
+			/>
 		</div>
 		<Field
 			field={fields.condition}
 			type="select"
-			label="Condition"
+			label={m.actions_condition_label()}
 			value="good"
 			options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 		/>
 		<LocationField field={fields.locationId} />
-		<Field field={fields.notes} type="textarea" label="Notes" />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes_label()} />
 	{/snippet}
 </Action>

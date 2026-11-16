@@ -1,0 +1,317 @@
+<script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { resolve } from '$app/paths';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CommitteeGrantsAction from '#lib/components/groups/CommitteeGrantsAction.svelte';
+	import GrantCertificationAction from '../../members/[id]/panels/GrantCertificationAction.svelte';
+	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
+	import {
+		getAccessPage,
+		getPersonAccessView,
+		searchAccessPeople,
+		setPosition
+	} from '#lib/remote/access.remote.js';
+	import { grantRuleFor, positionLabels, positionOrder } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { actionLabel, capabilityLabel, groupByResource } from '#lib/capability-label.js';
+	import { Latest } from '#lib/latest.svelte.js';
+
+	type Person = { id: string; name: string; email: string };
+	let { person = $bindable(null) }: { person?: Person | null } = $props();
+
+	function refresh() {
+		if (person) void getPersonAccessView(person.id).refresh();
+		void getAccessPage().refresh();
+	}
+
+	// Not `{#await}`: a refresh would re-pend it and unmount an open grant dialog.
+	// Tagged with its person so a switch never shows one member's access as another's.
+	const view = new Latest(() => {
+		const id = person?.id;
+		return id ? getPersonAccessView(id).then((access) => ({ id, access })) : Promise.resolve(null);
+	});
+	$effect(() => {
+		if (view.error) throw view.error.e;
+	});
+</script>
+
+<FilterBar activeCount={person ? 1 : 0} onclear={() => (person = null)}>
+	{#snippet search()}
+		<SearchSelect
+			search={searchAccessPeople}
+			bind:value={person}
+			placeholder={m.staff_access_person_access_placeholder()}
+		/>
+	{/snippet}
+</FilterBar>
+
+{#if !person}
+	<EmptyState
+		title={m.staff_access_person_access_pick_person_title()}
+		description={m.staff_access_person_access_description_body()}
+	/>
+{:else}
+	{@const userId = person.id}
+	{#if view.current?.id === userId}
+		{@const access = view.current.access}
+		{@const unheld = positionOrder.filter((p) => !access.positions.some((h) => h.position === p))}
+		{@const sources = [
+			...access.positions.map((p) => ({
+				from: positionLabels[p.position],
+				caps: p.capabilities as string[]
+			})),
+			...access.departments.map((d) => ({
+				from: d.name,
+				caps: d.grants.filter((g) => g.reach === 'org').map((g) => g.capability as string)
+			}))
+		]}
+		{@const held = [...new Set(sources.flatMap((s) => s.caps))]}
+
+		<InfoCard
+			title={m.staff_access_person_access_positions_title()}
+			state={access.positions.length}
+		>
+			{#snippet action()}
+				{#if unheld.length > 0}
+					<Action
+						action={setPosition.for(`add-${userId}`)}
+						label={m.staff_access_person_access_assign_position_label()}
+						size="sm"
+						modalTitle={m.staff_access_person_access_assign_position_2_title({
+							value: person?.name ?? ''
+						})}
+						submitLabel={m.staff_access_person_access_assign_label()}
+						successToast={m.staff_access_person_access_position_assigned_toast()}
+						onsuccess={refresh}
+					>
+						{#snippet form()}
+							<input {...setPosition.for(`add-${userId}`).fields.userId.as('hidden', userId)} />
+							<input {...setPosition.for(`add-${userId}`).fields.change.as('hidden', 'add')} />
+							<FormField
+								field={setPosition.for(`add-${userId}`).fields.position}
+								label={m.staff_position_label()}
+								type="select"
+								options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
+							/>
+						{/snippet}
+					</Action>
+				{/if}
+			{/snippet}
+			{#if access.positions.length === 0}
+				<p class="text-muted">
+					{m.staff_access_person_access_no_position_they_hold_only_text()}
+				</p>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_position_label()}</th>
+						<th class="col-support cell-num">{m.staff_access_person_access_capabilities_label()}</th
+						>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
+					{/snippet}
+					{#each access.positions as { position: p, capabilities } (p)}
+						<tr>
+							<td class="cell-primary">{positionLabels[p]}</td>
+							<td class="col-support cell-num">{capabilities.length}</td>
+							<td class="w-px">
+								<Action
+									action={setPosition.for(`remove-${userId}-${p}`)}
+									label={m.staff_remove_label()}
+									variant="ghost"
+									size="xs"
+									class="text-error"
+									modalTitle={m.staff_access_person_access_remove_from_title({
+										value: positionLabels[p],
+										value2: person?.name
+									})}
+									submitLabel={m.staff_remove_label()}
+									submitVariant="error"
+									successToast={m.staff_access_person_access_position_removed_toast()}
+									onsuccess={refresh}
+								>
+									{#snippet form()}
+										<input
+											{...setPosition
+												.for(`remove-${userId}-${p}`)
+												.fields.userId.as('hidden', userId)}
+										/>
+										<input
+											{...setPosition.for(`remove-${userId}-${p}`).fields.position.as('hidden', p)}
+										/>
+										<input
+											{...setPosition
+												.for(`remove-${userId}-${p}`)
+												.fields.change.as('hidden', 'remove')}
+										/>
+										<p class="text-sm">
+											{m.staff_access_person_access_takes_effect_their_next_request_text()}
+										</p>
+									{/snippet}
+								</Action>
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+
+		<InfoCard title={m.staff_access_person_access_capabilities_title()} state={held.length}>
+			{#if held.length === 0}
+				<p class="text-muted">{m.staff_access_person_access_nothing_beyond_member_s_own_text()}</p>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_access_person_access_area_label()}</th>
+						<th>{m.staff_access_person_access_may_label()}</th>
+						<th class="col-support">{m.staff_through_label()}</th>
+					{/snippet}
+					{#each groupByResource(held) as g (g.resource)}
+						{@const from = sources
+							.filter((s) => g.caps.some((c) => s.caps.includes(c)))
+							.map((s) => s.from)}
+						<tr>
+							<td class="font-medium whitespace-nowrap">{g.label}</td>
+							<td class="cell-primary">
+								<div class="whitespace-normal">{g.caps.map(actionLabel).join(', ')}</div>
+							</td>
+							<td class="col-support cell-text">{from.join(', ')}</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+
+		<InfoCard
+			title={m.staff_access_person_access_committee_seats_title()}
+			state={access.departments.length}
+		>
+			{#if access.departments.length === 0}
+				<p class="text-muted">{m.staff_access_person_access_no_active_committee_seat_text()}</p>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_committee_label()}</th>
+						<th>{m.staff_access_person_access_grants_its_members_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
+					{/snippet}
+					{#each access.departments as seat (seat.groupId)}
+						<tr>
+							<td class="cell-primary">
+								<a
+									class="font-medium link-hover"
+									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
+								>
+								<div class="text-muted">
+									{seat.positions.length > 0 ? seat.positions.join(', ') : m.staff_member_text()}
+								</div>
+							</td>
+							<td class="cell-text whitespace-normal">
+								{#if seat.grants.length === 0}
+									<span class="text-muted"
+										>{m.staff_access_person_access_nothing_beyond_seat_text()}</span
+									>
+								{:else}
+									{seat.grants
+										.map(
+											(g) =>
+												`${grantRuleFor(g.capability)?.label ?? g.capability}${g.reach === 'owned' ? ' (its records)' : ''}`
+										)
+										.join('; ')}
+								{/if}
+							</td>
+							<td class="w-px">
+								<CommitteeGrantsAction
+									groupId={seat.groupId}
+									name={seat.name}
+									held={seat.grants.map((g) => g.capability)}
+									label={m.staff_edit_grants_label()}
+									onsuccess={refresh}
+								/>
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+
+		{#if access.shiftRoles.length > 0}
+			<InfoCard title={m.access_why_shift_roles_title()} state={access.shiftRoles.length}>
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_role_label()}</th>
+						<th>{m.staff_access_person_access_may_label()}</th>
+					{/snippet}
+					{#each access.shiftRoles as r (`${r.roleName}:${r.eventId}`)}
+						<tr>
+							<td class="cell-primary">
+								<div class="font-medium">{r.roleName}</div>
+								<div class="text-muted">{r.eventTitle}</div>
+							</td>
+							<td class="cell-text whitespace-normal">
+								{r.capabilities.map(capabilityLabel).join('; ')}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			</InfoCard>
+		{/if}
+
+		<InfoCard
+			title={m.staff_access_person_access_clearances_title()}
+			state={access.clearances.length}
+		>
+			{#snippet action()}
+				<GrantCertificationAction {userId} onsuccess={refresh} />
+			{/snippet}
+			{#if access.clearances.length === 0}
+				<p class="text-muted">{m.staff_access_person_access_no_clearance_record_text()}</p>
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_clearance_label()}</th>
+						<th class="col-support">{m.staff_expires_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
+					{/snippet}
+					{#each access.clearances as c (c.id)}
+						<tr>
+							<td class="w-px"><StatusBadge status={c.state} /></td>
+							<td class="cell-primary">
+								<div class="truncate font-medium">{c.certificationName}</div>
+								<div class="truncate text-muted">
+									{m.staff_clearance_granted_text({
+										date: formatDateShortYear(c.grantedAt)
+									})}{#if c.grantedByName}{m.staff_clearance_granted_by_text({
+											name: c.grantedByName
+										})}{/if}{#if c.revokedReason}{m.staff_clearance_revoked_text({
+											reason: c.revokedReason
+										})}{/if}
+								</div>
+							</td>
+							<td class="col-support whitespace-nowrap">
+								{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry_text()}
+							</td>
+							<td class="w-px">
+								{#if !c.revokedAt}
+									<RevokeClearanceAction
+										id={c.id}
+										{userId}
+										name={c.certificationName}
+										onsuccess={refresh}
+									/>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+	{/if}
+{/if}

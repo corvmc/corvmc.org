@@ -1,20 +1,22 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { deleteBand as deleteBandForm } from '$lib/remote/bands.remote';
+	import { deleteBand as deleteBandForm } from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
-	import { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
+	import { getCustomDomain } from '#lib/remote/band-custom-domain.remote.js';
 	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -38,7 +40,7 @@
 	let showDeleteModal = $state(false);
 </script>
 
-<PageHeader width="md" title="Settings" subtitle={band.name} />
+<PageHeader width="md" title={m.band_slug_settings_settings_title()} subtitle={band.name} />
 <PageContent width="md">
 	<!-- The free subdomain is the band's primary address; the custom domain below
 	     is the upsell on top of it. -->
@@ -49,9 +51,8 @@
 		<BandAddressSection slug={band.slug} readonly={!isOwner} />
 		<div class="h-8"></div>
 	{:else}
-		<Alert type="info" href={`/staff/bands/${band.id}`}>
-			You're viewing this band as staff. The band's address and deletion are owner-only — staff
-			tools for this band are on the staff band page.
+		<Alert type="info" href={`/staff/groups/${band.id}`}>
+			{m.band_slug_settings_re_viewing_band_as_staff_body()}
 		</Alert>
 	{/if}
 
@@ -62,16 +63,15 @@
 
 	{#if isOwner}
 		<section class="space-y-4">
-			<h2 class="text-lg font-semibold text-error">Danger Zone</h2>
+			<h2 class="text-lg font-semibold text-error">{m.band_slug_settings_danger_zone_title()}</h2>
 			<div class="card border border-error/30 bg-base-100">
 				<CardBody>
 					<p class="text-sm">
-						Deleting this band will cancel all future reservations and remove all members. This
-						action cannot be undone.
+						{m.band_slug_settings_deleting_band_will_cancel_all_text()}
 					</p>
 					<div class="mt-2 card-actions justify-end">
 						<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
-							Delete Band
+							{m.band_slug_settings_delete_band_label()}
 						</Button>
 					</div>
 				</CardBody>
@@ -80,22 +80,30 @@
 	{/if}
 </PageContent>
 
-<Modal title="Delete Band" bind:open={showDeleteModal}>
+<Modal title={m.band_slug_settings_delete_band_title()} bind:open={showDeleteModal}>
 	<Form
 		remote={deleteBandForm}
 		onsuccess={() => {
-			toast.success('Band deleted');
-			goto(resolve('/member/bands'));
+			toast.success(m.band_slug_settings_toast());
+			goto(resolve('member/bands'));
 		}}
 	>
 		<div class="space-y-4">
 			<input {...deleteFields.bandId.as('hidden', band.id)} />
 			<Alert type="error">
-				Are you sure you want to permanently delete <strong>{band.name}</strong>? All future
-				reservations will be cancelled and all members will be removed.
+				<ParaglideMessage
+					message={m.band_slug_settings_sure_want_permanently_delete_all_body}
+					inputs={{ name: band.name }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Delete Band" successLabel="Deleted" variant="error" />
+				<SubmitButton
+					label={m.band_slug_settings_delete_band_label()}
+					successLabel={m.band_slug_settings_success_label()}
+					variant="error"
+				/>
 			</div>
 		</div>
 	</Form>

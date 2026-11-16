@@ -18,7 +18,7 @@
  * **Why this matches the symbol and not just the module path.** The table has to
  * be re-exported from `schema/index.ts` or `drizzle-kit` cannot see it and
  * generates no migration for it. So banning the path alone would leave
- * `import { contact } from '$lib/server/db/schema'` wide open. The check is on
+ * `import { contact } from '#lib/server/db/schema.js'` wide open. The check is on
  * the imported *name*, from any schema module.
  */
 
@@ -26,13 +26,17 @@
 const ALLOWED = [
 	'src/lib/server/directory/contact-service.ts',
 	'src/lib/server/db/schema/contact.ts',
+	'src/lib/server/db/schema/work-order-link.ts',
+	'src/lib/server/db/schema/activity.ts',
+	'src/lib/server/db/schema/inbox.ts',
+	'src/lib/server/db/schema/production.ts',
 	'src/lib/server/db/schema/index.ts'
 ];
 
 /** Symbols that are the table or describe its shape. */
 const GUARDED = new Set(['contact', 'contactSources', 'Contact', 'ContactSource']);
 
-const SCHEMA_SOURCE = /^[$.].*\/db\/schema(\/|$)|^\.\.?\/schema(\/|$)|\/schema\/contact$/;
+const SCHEMA_SOURCE = /^[$#.].*\/db\/schema(\/|$)|^\.\.?\/schema(\/|$)|\/schema\/contact(\.js)?$/;
 
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
@@ -44,7 +48,7 @@ export default {
 		},
 		messages: {
 			contactImport:
-				"'{{name}}' is the private contact table. Import from '$lib/server/directory/contact-service' instead — it is the one access path, and it guards itself so the guard travels with the data."
+				"'{{name}}' is the private contact table. Import from '#lib/server/directory/contact-service.js' instead — it is the one access path, and it guards itself so the guard travels with the data."
 		}
 	},
 	create(context) {

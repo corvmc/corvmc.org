@@ -1,17 +1,21 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import DateTimeField from '#lib/components/ui/Form/DateTimeField.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import {
 		getMyListingPage,
 		searchBandsForListing,
@@ -20,18 +24,30 @@
 		unpublishListing,
 		withdrawListing,
 		deleteListing
-	} from '$lib/remote/community-events.remote';
-	import { formatDateShort, formatDollars } from '$lib/utils/format';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/remote/community-events.remote.js';
+	import {
+		formatDateShort,
+		formatDollars,
+		venueDateInput,
+		venueTimeInput
+	} from '#lib/utils/format.js';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	// Declared before the awaited query below — see the note on the create page.
+	const params = routeParams('id');
+
+	// Declared before the awaited query: a declaration after one is async-gated,
+	// which would compile every `fields.X.as()` into an async derived.
 	const fields = updateListing.fields;
 	const publishFields = publishListing.fields;
 	const unpublishFields = unpublishListing.fields;
 	const withdrawFields = withdrawListing.fields;
 	const deleteFields = deleteListing.fields;
 
-	const eventId = $derived(page.params.id!);
+	// Save takes Publish's place while there is anything to save.
+	let dirty = $state(false);
+
+	const eventId = $derived(params.id);
 	// One query. The duplicate check is advisory copy next to Publish and only means anything for
 	// a draft, so that condition moved server-side with it.
 	const pageData = $derived(await getMyListingPage(eventId));
@@ -42,7 +58,9 @@
 
 	// A button that silently does something other than what it says is worse
 	// than the delay itself.
-	const publishLabel = $derived(requiresReview ? 'Submit for review' : 'Publish');
+	const publishLabel = $derived(
+		requiresReview ? m.member_events_id_manage_submit_review_label() : m.member_publish_label()
+	);
 
 	let lineup = $state<LineupChip[]>([]);
 	let lineupLoaded = $state(false);
@@ -58,11 +76,7 @@
 	});
 
 	function toTimeValue(d: Date | null): string {
-		if (!d) return '';
-		return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-	}
-	function toDateValue(d: Date): string {
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+		return d ? venueTimeInput(d) : '';
 	}
 	function toDollars(cents: number | null): string {
 		return cents == null ? '' : formatDollars(cents);
@@ -70,268 +84,328 @@
 </script>
 
 {#if !listing}
-	<PageHeader width="2xl" title="Listing not found" />
+	<PageHeader width="2xl" title={m.member_events_id_manage_title()} />
 	<PageContent width="2xl">
 		<Alert type="warning">
-			This listing doesn't exist, or it isn't yours.
-			<a href={resolve('/member/events')} class="link">Back to your events</a>
+			<ParaglideMessage
+				message={m.member_events_id_manage_listing_doesn_t_exist_isn_body}
+				inputs={{}}
+				>{#snippet a({ children })}<a href={resolve('member/events')} class="link"
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	</PageContent>
 {:else}
-	<PageHeader title={listing.title}>
-		<StatusBadge status={listing.status} label />
+	<PageHeader title={listing.title} width="3xl">
+		{#snippet badge()}
+			<StatusBadge status={listing.status} label />
+		{/snippet}
+		{#if dirty}
+			<span class="text-muted text-sm" data-testid="unsaved-changes"
+				>{m.member_events_id_manage_unsaved_changes_text()}</span
+			>
+		{/if}
+		{#if listing.status === 'draft' || listing.status === 'rejected'}
+			<Action
+				action={deleteListing}
+				label={m.member_events_id_manage_delete_label()}
+				successToast={m.member_events_id_manage_listing_deleted_toast()}
+				variant="default"
+				onsuccess={() => goto(resolve('member/events'))}
+			>
+				{#snippet form()}
+					<input {...deleteFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						{m.member_events_id_manage_delete_listing_was_never_public_text()}
+					</p>
+				{/snippet}
+			</Action>
+		{:else if listing.status === 'published'}
+			<Action
+				action={unpublishListing}
+				label={m.member_events_id_manage_take_down_label()}
+				successToast={m.member_events_id_manage_back_drafts_toast()}
+				variant="ghost"
+				onsuccess={() => refreshAll()}
+			>
+				{#snippet form()}
+					<input {...unpublishFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						{m.member_events_id_manage_move_back_drafts_comes_off_text()}
+					</p>
+				{/snippet}
+			</Action>
+
+			<Action
+				action={withdrawListing}
+				label={m.member_events_id_manage_cancel_show_label()}
+				successToast={m.member_events_id_manage_marked_as_cancelled_toast()}
+				variant="warning"
+				onsuccess={() => refreshAll()}
+			>
+				{#snippet form()}
+					<input {...withdrawFields.eventId.as('hidden', eventId)} />
+					<p class="py-2">
+						<ParaglideMessage
+							message={m.member_events_id_manage_show_not_happening_stays_calendar_text}
+							inputs={{}}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
+					</p>
+				{/snippet}
+			</Action>
+		{/if}
+		{#snippet primary()}
+			<!-- One place for the primary action: unsaved edits are saved before
+			     anything is published, so Publish only shows on a clean form. -->
+			{#if dirty}
+				<Button
+					type="submit"
+					form="listing-form"
+					variant="primary"
+					disabled={updateListing.pending > 0}
+					data-testid="save-listing"
+				>
+					{#if updateListing.pending > 0}
+						<span class="loading loading-sm loading-spinner"></span>
+					{/if}
+					{m.member_events_id_manage_save_changes_label()}
+				</Button>
+			{:else if listing.status === 'draft' || listing.status === 'rejected'}
+				<Action
+					action={publishListing}
+					label={publishLabel}
+					data-testid="publish-listing"
+					successToast={requiresReview ? m.member_sent_staff_toast() : m.member_published_toast()}
+					variant="primary"
+					onsuccess={() => refreshAll()}
+				>
+					{#snippet form()}
+						<input {...publishFields.eventId.as('hidden', eventId)} />
+						{#if requiresReview}
+							<p class="py-2">
+								{m.member_events_id_manage_staff_will_look_at_before_text()}
+							</p>
+						{:else}
+							<p class="py-2">{m.member_events_id_manage_put_show_public_calendar_text()}</p>
+						{/if}
+					{/snippet}
+				</Action>
+			{/if}
+		{/snippet}
 	</PageHeader>
 
-	<PageContent width="2xl">
+	<PageContent width="3xl">
 		{#if listing.status === 'rejected'}
 			<!-- The reason is the entire point of a rejection: a member who can't see
 			     what was wrong can't fix it, and `rejected` exists so they can. -->
 			<Alert type="warning">
-				<strong>Staff didn't publish this listing.</strong>
+				<strong>{m.member_events_id_manage_staff_didn_t_publish_listing_body()}</strong>
 				{#if listing.reviewNotes}
 					<p class="mt-1">"{listing.reviewNotes}"</p>
 				{/if}
-				<p class="mt-1">Fix it below and submit it again — everything you entered is still here.</p>
+				<p class="mt-1">{m.member_events_id_manage_fix_below_submit_again_everything_text()}</p>
 			</Alert>
 		{:else if listing.status === 'pending_review'}
 			<Alert type="info">
-				This listing is with staff for review. You'll hear back once they've looked at it.
+				{m.member_events_id_manage_listing_with_staff_review_ll_body()}
 			</Alert>
 		{:else if listing.status === 'draft' && listing.reviewNotes}
 			<!-- Staff pulled this off the guide. Ordered ahead of the standing
 			     explainer below: a takedown is specific news about THIS listing,
 			     and the standing note is background the member has already seen. -->
 			<Alert type="warning">
-				<strong>Staff took this listing off the calendar.</strong>
+				<strong>{m.member_events_id_manage_staff_took_listing_off_calendar_body()}</strong>
 				<p class="mt-1">"{listing.reviewNotes}"</p>
-				<p class="mt-1">Fix it and publish again when you're ready.</p>
+				<p class="mt-1">{m.member_events_id_manage_fix_publish_again_when_re_text()}</p>
 				<AppealPanel target={{ kind: 'listing', eventId: listing.id }} />
 			</Alert>
 		{:else if requiresReview && listing.status === 'draft'}
 			<Alert type="info">
 				{#if listing.standing.reason}
-					After a report was upheld against one of your listings, staff check your listings before
-					they go on the calendar. Their note: "{listing.standing.reason}"
+					{m.member_events_id_manage_after_report_was_upheld_against_body({
+						reason: listing.standing.reason
+					})}
 				{:else}
-					Staff check your listings before they go on the calendar.
+					{m.member_events_id_manage_staff_check_listings_before_they_body()}
 				{/if}
 				<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 			</Alert>
 		{:else if listing.status === 'cancelled'}
 			<Alert type="info">
-				You've marked this show as cancelled. It stays on the public calendar, marked, until its
-				date passes — so anyone who had the date finds out.
+				{m.member_events_id_manage_ve_marked_show_as_cancelled_body()}
 			</Alert>
 		{/if}
 
-		<div class="flex flex-wrap items-center gap-2">
-			{#if listing.status === 'draft' || listing.status === 'rejected'}
-				<Action
-					action={publishListing}
-					label={publishLabel}
-					successToast={requiresReview ? 'Sent to staff' : 'Published'}
-					variant="primary"
-					size="sm"
-					onsuccess={() => invalidateAll()}
-				>
-					{#snippet form()}
-						<input {...publishFields.eventId.as('hidden', eventId)} />
-						{#if requiresReview}
-							<p class="py-2">
-								Staff will look at this before it goes on the calendar. You'll get a note either
-								way.
-							</p>
-						{:else}
-							<p class="py-2">Put this show on the public calendar?</p>
-						{/if}
-					{/snippet}
-				</Action>
-
-				<Action
-					action={deleteListing}
-					label="Delete"
-					successToast="Listing deleted"
-					variant="ghost"
-					size="sm"
-					onsuccess={() => goto(resolve('/member/events'))}
-				>
-					{#snippet form()}
-						<input {...deleteFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							Delete this listing? It was never public, so nothing is lost but this.
-						</p>
-					{/snippet}
-				</Action>
-			{:else if listing.status === 'published'}
-				<Action
-					action={unpublishListing}
-					label="Take it down"
-					successToast="Back in your drafts"
-					variant="ghost"
-					size="sm"
-					onsuccess={() => invalidateAll()}
-				>
-					{#snippet form()}
-						<input {...unpublishFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							Move this back to your drafts? It comes off the public calendar straight away.
-						</p>
-					{/snippet}
-				</Action>
-
-				<Action
-					action={withdrawListing}
-					label="Cancel the show"
-					successToast="Marked as cancelled"
-					variant="warning"
-					size="sm"
-					onsuccess={() => invalidateAll()}
-				>
-					{#snippet form()}
-						<input {...withdrawFields.eventId.as('hidden', eventId)} />
-						<p class="py-2">
-							Is this show not happening? It stays on the calendar marked <strong>cancelled</strong>
-							until its date passes, so anyone who had the date finds out. If you just want it gone, take
-							it down instead.
-						</p>
-					{/snippet}
-				</Action>
-			{/if}
-		</div>
-
 		{#if duplicate}
 			<Alert type="warning">
-				<strong>This might already be listed.</strong>
+				<strong>{m.member_events_id_manage_might_already_listed_body()}</strong>
 				<p class="mt-1">
-					<a href={resolve(`/events/${duplicate.id}`)} class="link">{duplicate.title}</a>
-					is already on the calendar for {formatDateShort(duplicate.startsAt)}. Publish anyway if
-					it's a different show.
+					<ParaglideMessage
+						message={m.member_events_id_manage_already_calendar_publish_anyway_if_text}
+						inputs={{
+							title: duplicate.title,
+							formatDateShort: formatDateShort(duplicate.startsAt)
+						}}
+						>{#snippet a({ children })}<a href={resolve(`events/${duplicate.id}`)} class="link"
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			</Alert>
 		{/if}
 
 		<Form
+			id="listing-form"
 			remote={updateListing}
-			successToast="Listing saved"
-			onsuccess={() => invalidateAll()}
-			class="space-y-4"
+			guard
+			successToast={m.member_events_id_manage_listing_saved_toast()}
+			onsuccess={() => refreshAll()}
+			ondirtychange={(d) => (dirty = d)}
+			class="flex flex-col gap-4"
 		>
 			<input {...fields.eventId.as('hidden', eventId)} />
 
-			<FormField
-				field={fields.title}
-				type="text"
-				label="Title"
-				value={listing.title}
-				maxlength="200"
-				required
-			/>
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-6">
+				<!-- Caller markup, so the caption is a legend and the drop zone's
+				     own text names the picker. -->
+				<FormField
+					field={fields.posterFile}
+					label={m.member_events_id_manage_poster_label()}
+					class="grid-rows-[auto_1fr]"
+				>
+					<FileUpload
+						inputProps={fields.posterFile.as('file')}
+						orientation="zone"
+						accept="image/jpeg,image/png,image/webp"
+						src={listing.posterUrl ? imageSrc(listing.posterUrl, 'thumb').src : undefined}
+						emptyLabel={m.member_events_id_manage_empty_label_title()}
+						replaceLabel={m.member_events_id_manage_replace_label()}
+						hint={m.member_events_id_manage_jpeg_png_webp_up_10_body()}
+					/>
+				</FormField>
 
-			<FormField name="description" label="Description">
-				<textarea
-					{...fields.description.as('text', listing.description ?? '')}
-					class="textarea w-full"
-					rows="4"
-					maxlength="5000"></textarea>
-			</FormField>
+				<div class="flex min-w-0 flex-col gap-4">
+					<FormField
+						field={fields.title}
+						type="text"
+						label={m.member_title_label()}
+						value={listing.title}
+						maxlength="200"
+						required
+					/>
 
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<FormField
-					field={fields.eventDate}
-					type="date"
-					label="Date"
-					value={toDateValue(listing.startsAt)}
-					required
-				/>
-				<FormField
-					field={fields.eventStartTime}
-					type="time"
-					label="Start Time"
-					value={toTimeValue(listing.startsAt)}
-					required
-				/>
-				<FormField
-					field={fields.eventEndTime}
-					type="time"
-					label="End Time"
-					value={toTimeValue(listing.endsAt)}
-					description="Optional — leave blank if you don't know."
-				/>
+					<!-- The `input` snippet, not children: only it is handed the id the
+					     caption points at, so children would leave the field unnamed. -->
+					<FormField
+						field={updateListing.fields.description}
+						label={m.member_events_id_manage_description_label()}
+						class="grow grid-rows-[auto_1fr]"
+					>
+						{#snippet input(id)}
+							<textarea
+								{...fields.description.as('text', listing.description ?? '')}
+								{id}
+								class="textarea h-full w-full"
+								rows="5"
+								maxlength="5000"></textarea>
+						{/snippet}
+					</FormField>
+
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<FormField
+							field={fields.eventDate}
+							label={m.member_events_id_manage_date_start_time_label()}
+							required
+						>
+							{#snippet input(id)}
+								<DateTimeField
+									{id}
+									date={fields.eventDate}
+									time={fields.eventStartTime}
+									dateValue={venueDateInput(listing.startsAt)}
+									timeValue={toTimeValue(listing.startsAt)}
+									timeLabel={m.member_start_time_label()}
+								/>
+							{/snippet}
+						</FormField>
+						<FormField
+							field={fields.location}
+							type="text"
+							label={m.member_venue_label()}
+							value={listing.location ?? ''}
+							maxlength="500"
+							required
+						/>
+					</div>
+				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormField
+						field={fields.doorsTime}
+						type="time"
+						label={m.member_events_id_manage_doors_open_label()}
+						value={toTimeValue(listing.doorsAt)}
+					/>
+					<FormField
+						field={fields.eventEndTime}
+						type="time"
+						label={m.member_events_id_manage_end_time_label()}
+						value={toTimeValue(listing.endsAt)}
+					/>
+				</div>
 				<FormField
-					field={fields.doorsTime}
-					type="time"
-					label="Doors Open"
-					value={toTimeValue(listing.doorsAt)}
-				/>
-				<FormField
-					field={fields.location}
+					field={fields.address}
 					type="text"
-					label="Venue"
-					value={listing.location ?? ''}
+					label={m.member_address_label()}
+					value={listing.address ?? ''}
 					maxlength="500"
-					required
 				/>
 			</div>
+
+			<FormField
+				field={updateListing.fields.lineup}
+				label={m.member_events_id_manage_who_s_playing_label()}
+			>
+				<LineupEditor
+					field={updateListing.fields.lineup}
+					bind:value={lineup}
+					search={searchBandsForListing}
+					hint={false}
+				/>
+			</FormField>
 
 			<FormField
 				field={fields.tags}
 				type="text"
-				label="Tags"
+				label={m.member_tags_label()}
 				value={listing.tags ?? ''}
 				maxlength="500"
 			/>
 
-			<FormField
-				name="lineup"
-				label="Who's playing"
-				description="Naming a band that's on the site asks them to confirm — they'll appear as a plain credit until they do."
-			>
-				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
-			</FormField>
+			<VisibilityField field={fields.visibility} value={listing.visibility} hasGroup={false} />
 
-			<FormField
-				name="posterFile"
-				label="Replace poster"
-				description="JPEG, PNG or WebP, up to 10 MB."
-			>
-				{#if listing.posterUrl}
-					{@const current = imageSrc(listing.posterUrl, 'thumb')}
-					<img
-						src={current.src}
-						srcset={current.srcset}
-						alt=""
-						class="mb-2 h-32 w-auto rounded border-surface"
-					/>
-				{/if}
-				<input
-					{...fields.posterFile.as('file')}
-					accept="image/jpeg,image/png,image/webp"
-					class="file-input w-full"
-				/>
-			</FormField>
-
-			<div class="grid gap-4 md:grid-cols-2">
-				<FormField
-					field={fields.externalTicketUrl}
-					type="text"
-					label="Ticket Link"
-					value={listing.externalTicketUrl ?? ''}
-				/>
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label="Ticket price ($)"
+					label={m.member_events_id_manage_ticket_price_label()}
 					value={toDollars(listing.ticketPrice)}
 					inputmode="decimal"
-					description="What people pay, at the door or through the link. Leave blank if it's free."
+					placeholder={m.member_events_id_manage_free_placeholder()}
 				/>
-			</div>
-
-			<div class="flex justify-end pt-4">
-				<SubmitButton label="Save changes" variant="primary" />
+				<FormField
+					field={fields.externalTicketUrl}
+					type="text"
+					label={m.member_events_id_manage_ticket_link_label()}
+					value={listing.externalTicketUrl ?? ''}
+					placeholder={m.member_events_id_manage_ticket_link_placeholder()}
+					class="sm:col-span-2"
+				/>
 			</div>
 		</Form>
 	</PageContent>

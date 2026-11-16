@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Silence one room without silencing the group.
 	 *
@@ -8,8 +9,8 @@
 	 * (#1309).
 	 */
 	import { IconBell, IconBellOff } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { setRoomMute } from '$lib/remote/group-chat.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { setRoomMute } from '#lib/remote/group-chat.remote.js';
 
 	let {
 		threadId,
@@ -26,11 +27,15 @@
 
 <Action
 	action={setRoomMute}
-	label={muted ? 'Unmute' : 'Mute'}
+	label={muted ? m.inbox_mute_room_unmute_label() : m.inbox_mute_room_mute_label()}
 	iconOnly
-	modalTitle={muted ? `Unmute ${roomName}` : `Mute ${roomName}`}
-	submitLabel={muted ? 'Unmute' : 'Mute'}
-	successToast={muted ? 'Room unmuted' : 'Room muted'}
+	modalTitle={muted
+		? m.inbox_mute_room_unmute_2_title({ roomName })
+		: m.inbox_mute_room_mute_2_title({ roomName })}
+	submitLabel={muted ? m.inbox_mute_room_unmute_label() : m.inbox_mute_room_mute_label()}
+	successToast={muted
+		? m.inbox_mute_room_room_unmuted_toast()
+		: m.inbox_mute_room_room_muted_toast()}
 	variant="ghost"
 	size="sm"
 >
@@ -41,8 +46,8 @@
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? `Start hearing about ${roomName} again?`
-				: `Stop being notified about ${roomName}? Posts still appear here, and the room stops counting as unread.`}
+				? m.inbox_mute_room_start_hearing_about_again_text({ roomName })
+				: m.inbox_mute_room_stop_being_notified_about_posts_text({ roomName })}
 		</p>
 	{/snippet}
 </Action>

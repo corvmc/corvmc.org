@@ -1,9 +1,10 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { formatCents } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import type { ProjectBurn } from '$lib/server/project/project-service';
+	import type { ProjectBurn } from '#lib/server/project/project-service.js';
 
 	/**
 	 * The show's budget against what it has spent, from its project's burn.
@@ -18,57 +19,63 @@
 	);
 	const state = $derived(
 		burn.budgetCents === null
-			? 'No budget set'
-			: `${formatCents(burn.cash.totalCents)} of ${formatCents(burn.budgetCents)}`
+			? m.staff_production_state_no_budget_label()
+			: m.staff_production_state_spent_of_label({
+					spent: formatCents(burn.cash.totalCents),
+					budget: formatCents(burn.budgetCents)
+				})
 	);
 </script>
 
-<InfoCard title="Budget" {state}>
+<InfoCard title={m.staff_budget_title()} {state}>
 	{#snippet action()}
-		<a class="link text-sm" href={resolve(`/staff/projects/${projectId}`)}>
-			{burn.budgetCents === null ? 'Set a budget' : 'Open the project'}
+		<a class="link text-sm" href={resolve(`staff/tasks/projects/${projectId}`)}>
+			{burn.budgetCents === null
+				? m.staff_events_id_production_show_budget_card_set_budget_text()
+				: m.staff_events_id_production_show_budget_card_open_project_text()}
 		</a>
 	{/snippet}
 	<Table>
 		{#snippet head()}
-			<th>Spend</th>
-			<th class="cell-num">Amount</th>
+			<th>{m.staff_spend_label()}</th>
+			<th class="cell-num">{m.staff_amount_label()}</th>
 		{/snippet}
 		<tr>
-			<td>Show expenses</td>
+			<td>{m.staff_events_id_production_show_budget_card_show_expenses_text()}</td>
 			<td class="cell-num">{formatCents(burn.show.expensesCents)}</td>
 		</tr>
 		<tr>
-			<td>Guarantee top-ups</td>
+			<td>{m.staff_events_id_production_show_budget_card_guarantee_top_up_text()}</td>
 			<td class="cell-num">{formatCents(burn.show.guaranteeTopUpCents)}</td>
 		</tr>
 		{#if otherCents > 0}
 			<tr>
-				<td>Orders, contractors and acquisitions</td>
+				<td>{m.staff_events_id_production_show_budget_card_orders_contracto_text()}</td>
 				<td class="cell-num">{formatCents(otherCents)}</td>
 			</tr>
 		{/if}
 		<tr class="font-medium">
-			<td>Spent</td>
+			<td>{m.staff_spent_text()}</td>
 			<td class="cell-num">{formatCents(burn.cash.totalCents)}</td>
 		</tr>
 		<tr>
-			<td>Budget</td>
+			<td>{m.staff_budget_text()}</td>
 			<td class="cell-num">
-				{burn.budgetCents === null ? 'None set' : formatCents(burn.budgetCents)}
+				{burn.budgetCents === null ? m.staff_none_set_text() : formatCents(burn.budgetCents)}
 			</td>
 		</tr>
 		<tr class="font-medium">
-			<td>Remaining</td>
+			<td>{m.staff_remaining_text()}</td>
 			<td class="cell-num" class:text-error={over}>
 				{burn.remainingCents === null ? '—' : formatCents(burn.remainingCents)}
 			</td>
 		</tr>
 	</Table>
 	<p class="mt-3 text-muted text-sm">
-		Ticket revenue {formatCents(burn.show.ticketRevenueCents)}. Passing through to the bands, and
-		not counted as spend: {formatCents(burn.show.actsPoolInCents)} in, {formatCents(
-			burn.show.actPayoutsCents
-		)} paid out.
+		{m.staff_events_id_production_show_budget_card_ticket_revenue_p_text({
+			formatCents: formatCents(burn.show.ticketRevenueCents),
+			formatCents2: formatCents(burn.show.actsPoolInCents),
+			formatCents3: formatCents(burn.show.actPayoutsCents)
+		})}
 	</p>
 </InfoCard>

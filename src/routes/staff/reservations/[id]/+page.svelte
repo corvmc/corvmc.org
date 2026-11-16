@@ -1,48 +1,58 @@
 <script lang="ts">
-	import { doorKindLabels, doorOutcomeLabels, isEventHold } from '$lib/config';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { doorKindLabels, doorOutcomeLabels, isEventHold } from '#lib/config.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
 	import {
-		ConfirmReservationAction,
 		CompleteReservationAction,
 		NoShowReservationAction,
 		CancelReservationAction,
 		CashReceivedAction,
 		CompReservationAction,
 		RefundReservationAction
-	} from '$lib/components/actions';
-	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
-	import RecordNav from '$lib/components/ui/RecordNav.svelte';
-	import CopyableId from '$lib/components/ui/CopyableId.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { IconUserPlus } from '@tabler/icons-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	} from '#lib/components/actions/index.js';
+	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
+	import RecordNav from '#lib/components/ui/RecordNav.svelte';
+	import CopyableId from '#lib/components/ui/CopyableId.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { IconUserPlus, IconX } from '@tabler/icons-svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import {
 		fullDate,
 		formatTime,
 		durationHours as calcDurationHours,
 		formatCents
-	} from '$lib/utils/format';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/utils/format.js';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		visibleActions,
-		reservationPaymentState,
+		reservationTrack,
+		trackDetail,
 		overlappingReservations
-	} from '$lib/utils/reservation-actions';
-	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
-	import { describeCancellation } from '$lib/utils/reservation-cancellation';
-	import { readOutDoorCode } from '$lib/remote/lock.remote';
-	import { page } from '$app/state';
+	} from '#lib/utils/reservation-actions.js';
+	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
+	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
+	import { readOutDoorCode } from '#lib/remote/lock.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import { resolve } from '$app/paths';
+	import { getReservationFilters } from '../filters.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
 
-	let data = $derived(await getStaffReservationDetail(page.params.id!));
+	const params = routeParams('id');
+	// Read before the await: context is only available during synchronous init.
+	const filters = getReservationFilters();
+
+	let data = $derived(await getStaffReservationDetail(params.id));
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);
@@ -66,11 +76,7 @@
 		}
 	}
 	const actions = $derived(
-		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), {
-			cashDueCents: r.cashDueCents,
-			paidAt: r.paidAt,
-			refundedAt: r.refundedAt
-		})
+		visibleActions(status, r.startsAt, r.endsAt, r.stripePaymentRecordId, new Date(), r)
 	);
 
 	// Double-bookings for this slot — surfaced so staff see the collision before
@@ -78,42 +84,42 @@
 	const conflicts = $derived(overlappingReservations(r, data.sameDayReservations));
 
 	// Derived formatting
-	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
-	const durationLabel = $derived(hours === 1 ? '1 hour' : `${hours} hours`);
+	// Charged hours: a new member's tour at the start is held but not billed.
+	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt) - r.tourMinutes / 60);
+	const durationLabel = $derived(
+		hours === 1
+			? m.staff_reservations_id_1_hour_label()
+			: m.staff_reservations_id_hours_label({ hours })
+	);
 	const amountFormatted = $derived(formatCents(Math.round(hours * data.hourlyRateCents)));
 	const rateFormatted = $derived(formatCents(data.hourlyRateCents));
 	const creditsDiscountFormatted = $derived(
 		formatCents(Math.round((r.creditsUsed ?? 0) * data.hourlyRateCents))
 	);
 
-	const paymentStatus = $derived.by((): { label: string; class: string } => {
-		switch (reservationPaymentState(r)) {
-			case 'no_show':
-				return { label: 'No-show', class: 'badge-error' };
-			case 'refunded':
-				return { label: 'Refunded', class: 'badge-error' };
-			case 'cancelled':
-				return { label: 'Cancelled', class: 'badge-ghost' };
-			case 'paid':
-				return { label: 'Paid', class: 'badge-success' };
+	const track = $derived(reservationTrack(r));
+	// The header carries the track; this card says what the track leaves out.
+	const paymentDetail = $derived.by((): string | null => {
+		switch (trackDetail(r)) {
 			case 'cash_due':
-				return { label: `Cash due ${formatCents(r.cashDueCents ?? 0)}`, class: 'badge-warning' };
-			case 'unpaid':
-				return { label: 'Unpaid', class: 'badge-warning' };
+				return m.staff_reservations_id_cash_due_label({
+					formatCents: formatCents(r.cashDueCents ?? 0)
+				});
+			case 'unpriced':
+				return m.staff_unpaid_label();
 			case 'credits':
-				return { label: 'Paid with credits', class: 'badge-info' };
-			case 'comped':
-				return { label: 'Comped', class: 'badge-info' };
+				return m.staff_paid_with_credits_label();
+			case 'comp':
+				return m.staff_comped_label();
+			case null:
+				return null;
 		}
 	});
 </script>
 
 <!-- The booking's own workflow sits in the header, visible from anywhere on
      the page; money actions stay on the Payment card. -->
-<PageHeader width="3xl" title="Reservation">
-	{#if actions.has('confirm')}
-		<ConfirmReservationAction reservation={r} staff />
-	{/if}
+<PageHeader width="3xl" title={m.staff_reservation_title()}>
 	{#if actions.has('complete')}
 		<CompleteReservationAction reservation={r} />
 	{/if}
@@ -123,6 +129,17 @@
 	{#if actions.has('cancel')}
 		<CancelReservationAction reservation={r} showReasonInput />
 	{/if}
+	<!-- Beside the list only; on a phone this is a page of its own with a back crumb. -->
+	<Button
+		href={withQuery(resolve('staff/reservations'), filters.urlQuery)}
+		variant="ghost"
+		shape="square"
+		class="hidden lg:inline-flex"
+		aria-label={m.ui_close_label()}
+		data-testid="close-detail"
+	>
+		<IconX size={16} />
+	</Button>
 </PageHeader>
 <PageContent width="3xl">
 	<!-- Hero card -->
@@ -132,21 +149,23 @@
 				<hgroup>
 					<p class="flex items-center gap-2 text-xl font-medium">
 						{fullDate(r.startsAt)}
-						<StatusBadge status={r.status} />
+						<StatusBadge status={track} label />
 						{#if data.isFirstReservation}
 							<!-- Spelled out rather than icon-only: the list has a flag cluster
 							     to read this out of, and this page has the room. -->
 							<Badge variant="success">
 								<IconUserPlus size={14} />
-								First reservation
+								{m.staff_first_reservation_label()}
 							</Badge>
 							<!-- And the question that raises. An orientation shift with nobody
 							     on it is the state worth seeing from here; the coordinator's
 							     own queue is where it gets filled. -->
 							{#if data.orientation && data.orientation.claimed === 0}
-								<Badge variant="warning">Orientation unclaimed</Badge>
+								<Badge variant="warning"
+									>{m.staff_reservations_id_orientation_unstaffed_label()}</Badge
+								>
 							{:else if data.orientation}
-								<Badge variant="info">Orientation covered</Badge>
+								<Badge variant="info">{m.staff_reservations_id_orientation_covered_label()}</Badge>
 							{/if}
 						{/if}
 					</p>
@@ -157,20 +176,22 @@
 				<RecordNav
 					prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
 					nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
-					endLabel="Last of the day"
+					endLabel={m.staff_reservations_id_end_label()}
 				/>
 			</header>
 
 			{#if conflicts.length > 0}
 				<Alert type="warning" class="py-2 text-sm">
 					<span>
-						Overlaps {conflicts.length} other {conflicts.length === 1 ? 'booking' : 'bookings'}:
-						{conflicts
-							.map(
-								(c) =>
-									`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : c.status})`
-							)
-							.join(', ')}
+						{m.staff_reservations_id_overlaps_other_bookings_body({
+							length: conflicts.length,
+							join: conflicts
+								.map(
+									(c) =>
+										`${formatTime(c.startsAt)} – ${formatTime(c.endsAt)} (${isEventHold(c.bookerType) ? 'show' : statusLabel(reservationTrack(c))})`
+								)
+								.join(', ')
+						})}
 					</span>
 				</Alert>
 			{/if}
@@ -191,25 +212,29 @@
 	</Card>
 
 	<!-- Member + Payment grid -->
-	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+	<div class="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
 			title={r.bookerType === 'group'
-				? 'Group booking'
+				? m.staff_reservations_id_group_booking_title()
 				: isEventHold(r.bookerType)
-					? 'Show'
-					: 'Member'}
+					? m.staff_show_title()
+					: m.staff_member_title()}
 		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
-						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
+						<Button href="/staff/groups/{r.bandId}" variant="default" size="sm"
+							>{m.staff_reservations_id_view_band_label()}</Button
+						>
 					{:else if isEventHold(r.bookerType) && r.eventId}
-						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
+						<Button href="/staff/events/{r.eventId}" variant="default" size="sm"
+							>{m.staff_reservations_id_view_event_label()}</Button
+						>
 					{:else if r.createdByUserId}
 						<Button href="/staff/members/{r.createdByUserId}" variant="default" size="sm"
-							>View Profile</Button
+							>{m.staff_reservations_id_view_profile_label()}</Button
 						>
 					{/if}
 				</header>
@@ -223,7 +248,7 @@
 						is the audit trail for it.
 					-->
 					<div class="mb-3"><EntityChip ref={r.booker} /></div>
-					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
+					<p class="mb-2 text-subtle tracking-wide uppercase">{m.staff_booked_by_text()}</p>
 				{/if}
 				<!-- `link`, unlike a detail page's own strip: the record here is the
 				     booking, and the member is a different record with its own page. -->
@@ -242,7 +267,7 @@
 
 		<!-- Payment card (not shown for event reservations) -->
 		{#if !isEventHold(r.bookerType)}
-			<InfoCard title="Payment">
+			<InfoCard title={m.staff_payment_title()}>
 				{#snippet action()}
 					<!-- `refundOnly` is the wider set: completed bookings refund but
 					     cannot cancel, so the box is offered only with `refundAndCancel`. -->
@@ -252,19 +277,44 @@
 				{/snippet}
 				<div class="mb-1 flex items-baseline justify-between">
 					<span class="text-2xl font-medium">{amountFormatted}</span>
-					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
+					{#if paymentDetail}
+						<Badge variant="ghost">{paymentDetail}</Badge>
+					{/if}
 				</div>
-				<p class="text-muted">{durationLabel} × {rateFormatted}/hr</p>
+				<p class="text-muted">
+					{m.staff_reservations_id_hr_text({ durationLabel, rateFormatted })}
+				</p>
 				{#if (r.creditsUsed ?? 0) > 0}
 					<p class="text-sm text-success">
-						Free hours applied: {r.creditsUsed}
-						{r.creditsUsed === 1 ? 'hr' : 'hrs'} (−{creditsDiscountFormatted})
+						{m.staff_reservations_id_free_hours_applied_hrs_text({
+							creditsUsed: r.creditsUsed ?? '',
+							creditsDiscountFormatted
+						})}
 					</p>
+				{/if}
+
+				{#if data.paymentReminders.length > 0}
+					<div class="mt-3 pt-3 rule-top" data-testid="payment-reminders">
+						<p class="text-sm font-medium">{m.staff_reservations_id_payment_reminders_text()}</p>
+						<ul class="text-muted text-sm">
+							{#each data.paymentReminders as sent (sent.daysAfter)}
+								<li>
+									{m.staff_reservations_id_payment_reminder_text({
+										days: sent.daysAfter,
+										date: fullDate(sent.sentAt)
+									})}
+								</li>
+							{/each}
+						</ul>
+					</div>
 				{/if}
 
 				{#if r.stripePaymentRecordId}
 					<div class="mt-3 border-t border-base-200 pt-3">
-						<CopyableId value={r.stripePaymentRecordId} label="Stripe record" />
+						<CopyableId
+							value={r.stripePaymentRecordId}
+							label={m.staff_reservations_id_stripe_record_label()}
+						/>
 					</div>
 				{/if}
 
@@ -297,22 +347,24 @@
 	<!-- Door access (#2120): the /door record, read by `lock.manage` only. -->
 	{#if !isEventHold(r.bookerType) && data.door}
 		{@const door = data.door}
-		<InfoCard title="Door Access">
+		<InfoCard title={m.staff_reservations_id_door_access_title()}>
 			<DefinitionList>
-				<Fact label="Checked in">
-					{door.checkedInAt ? formatTime(door.checkedInAt) : 'Not yet'}
+				<Fact label={m.staff_reservations_id_checked_in_label()}>
+					{door.checkedInAt ? formatTime(door.checkedInAt) : m.staff_reservations_id_not_yet_text()}
 				</Fact>
-				<Fact label="Checked out">
-					{door.checkedOutAt ? formatTime(door.checkedOutAt) : 'Not yet'}
+				<Fact label={m.staff_reservations_id_checked_out_label()}>
+					{door.checkedOutAt
+						? formatTime(door.checkedOutAt)
+						: m.staff_reservations_id_not_yet_text()}
 				</Fact>
-				<Fact label="Code">
-					{#if door.code?.revealedAt}
+				<Fact label={m.staff_reservations_id_code_label()}>
+					{#if door.code}
 						<span class="font-mono font-bold tracking-[0.2em]">{readOut ?? door.code.code}</span>
-						· shown {formatTime(door.code.revealedAt)}
-					{:else if door.code}
-						Held, not shown
+						{#if door.code.revealedAt}
+							· {m.staff_reservations_id_sent_at_text({ time: formatTime(door.code.revealedAt) })}
+						{/if}
 					{:else}
-						None
+						{m.staff_reservations_id_no_code_text()}
 					{/if}
 				</Fact>
 			</DefinitionList>
@@ -328,7 +380,7 @@
 				</ul>
 			{/if}
 
-			{#if r.status === 'confirmed' && !door.code?.revealedAt}
+			{#if r.status === 'confirmed' && !door.code}
 				<Button
 					variant="ghost"
 					size="sm"
@@ -336,7 +388,9 @@
 					disabled={readingOut}
 					onclick={handleReadOut}
 				>
-					{readingOut ? 'Working…' : 'Read out a code'}
+					{readingOut
+						? m.staff_reservations_id_working_label()
+						: m.staff_reservations_id_read_out_code_label()}
 				</Button>
 			{/if}
 			{#if readOutError}
@@ -345,17 +399,22 @@
 		</InfoCard>
 	{/if}
 
+	<RelatedTasks subject={{ type: 'reservation', id: r.id }} />
+	<RelatedShifts subject={{ type: 'reservation', id: r.id }} />
+
 	<!-- A labelled line, not a titled box around one paragraph (#1078). -->
 	{#if r.notes}
 		<DefinitionList>
-			<Fact label="Notes" wrap>{r.notes}</Fact>
+			<Fact label={m.staff_notes_label()} wrap>{r.notes}</Fact>
 		</DefinitionList>
 	{/if}
 
 	<!-- Audit -->
 	{#if data.reservation.createdByStaffName}
 		<p class="text-muted">
-			Booked by staff: {data.reservation.createdByStaffName}
+			{m.staff_reservations_id_booked_by_staff_text({
+				createdByStaffName: data.reservation.createdByStaffName
+			})}
 		</p>
 	{/if}
 
@@ -365,7 +424,7 @@
 		     to notice, and the body is one line either way. -->
 		<Alert type="error">
 			<strong>{describeCancellation(r)}</strong>
-			{r.cancellationReason ?? 'No reason given.'}
+			{r.cancellationReason ?? m.staff_reservations_id_no_reason_given_body()}
 		</Alert>
 	{/if}
 </PageContent>

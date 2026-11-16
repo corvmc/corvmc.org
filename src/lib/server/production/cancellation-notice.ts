@@ -1,11 +1,11 @@
 import { eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import type { OpenOwnedItem } from '#lib/server/volunteer/deliverables-service.js';
 
 /**
  * A cancelled show calls off its committees' open deliverables and tells every
@@ -28,7 +28,7 @@ export async function openDeliverablesOnProductions(
 			.from(eventListing)
 			.innerJoin(production, eq(production.projectId, eventListing.projectId))
 			.where(inArray(production.id, [...productionIds]));
-		const { listOpenOwnedOnShows } = await import('$lib/server/volunteer/deliverables-service');
+		const { listOpenOwnedOnShows } = await import('#lib/server/volunteer/deliverables-service.js');
 		return await listOpenOwnedOnShows(shows.map((s) => s.id));
 	} catch (err) {
 		captureException(err, { event: 'production.cancelled.read', productionIds });
@@ -66,7 +66,7 @@ export async function announceShowsCancelled(
 	if (productionIds.length === 0 || openBefore.length === 0) return;
 	try {
 		const { cancelDeliverables, committeeSeats } =
-			await import('$lib/server/volunteer/deliverables-service');
+			await import('#lib/server/volunteer/deliverables-service.js');
 		const [shows, actor, seats] = await Promise.all([
 			db
 				.select({

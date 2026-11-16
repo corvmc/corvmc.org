@@ -1,28 +1,32 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		recordActPayout,
 		undoActPayout,
 		recordDoorTake,
+		recordDoorRecount,
 		addProductionExpense,
+		createProduction,
 		removeProductionExpense
-	} from '$lib/remote/productions.remote';
-	import { productionExpenseCategoryLabels, productionExpenseCategories } from '$lib/config';
+	} from '#lib/remote/productions.remote.js';
+	import { productionExpenseCategoryLabels, productionExpenseCategories } from '#lib/config.js';
 	import { IconTrash } from '@tabler/icons-svelte';
-	import type { Settlement } from '$lib/server/production/settlement-service';
-	import { isTerminalProduction } from '$lib/production/status';
-	import type { ProductionStatus } from '$lib/server/db/schema/production';
+	import type { Settlement } from '#lib/server/production/settlement-service.js';
+	import { isTerminalProduction } from '#lib/production/status.js';
+	import { costsState, doorState, nightState, payoutsState } from './section-state';
+	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
 
@@ -36,7 +40,13 @@
 	/** What each act was designated versus what its deal produces. */
 	const acts = $derived(settlement?.acts ?? []);
 	const expenses = $derived(settlement?.expenses ?? []);
+	const counts = $derived(settlement?.doorCounts ?? null);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
+	const takings = $derived(settlement?.doorTakings ?? null);
+	// Warns, never refuses: a guest list or a re-entry can make the counts differ (#2801).
+	const countGap = $derived(
+		settlement?.door?.count != null && takings ? settlement.door.count - takings.checkedIn : 0
+	);
 	/** Closed or cancelled: the worksheet is the record now. The server refuses edits too. */
 	const locked = $derived(
 		settlement ? isTerminalProduction(settlement.status as ProductionStatus) : false
@@ -44,157 +54,294 @@
 </script>
 
 {#if !settlement}
-	<EmptyState title="No production" description="Open one from the event page first." />
+	<!-- The action itself, not a pointer to it (#2802, as #976 did for Overview). -->
+	<EmptyState
+		title={m.staff_no_production_title()}
+		description={m.staff_events_id_production_settlement_panel_open_one_body()}
+	/>
+	<Form remote={createProduction} class="-mt-8 flex justify-center">
+		<input {...createProduction.fields.eventId.as('hidden', eventId)} />
+		<SubmitButton
+			label={m.staff_events_id_production_open_production_label()}
+			variant="primary"
+			size="sm"
+		/>
+	</Form>
 {:else}
 	<Alert type="info">
-		What the night took, what it cost, and what each band is owed under its own deal. Recording a
-		payout writes it against the show's pool in the financial record — the app does not move the
-		money, it keeps the account of it.
+		{m.staff_events_id_production_settlement_panel_what_night_took_body()}
 	</Alert>
 
-	<InfoCard title="The night">
+	<InfoCard title={m.staff_night_title()} state={nightState(settlement)}>
 		<div class="grid gap-6 sm:grid-cols-4">
 			<div>
-				<p class="text-muted">Bands' pool</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_bands_pool_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.actsPoolCents)}</p>
 				<p class="text-xs text-fg-2">
-					What buyers designated{#if settlement.door}, plus
-						{formatCents(settlement.door.actsCents)} of the door{/if}
+					{m.staff_events_id_production_settlement_panel_what_buyers_desi_text()}{#if settlement.door}{m.staff_events_id_production_settlement_panel_plus_door_text(
+							{ formatCents: formatCents(settlement.door.actsCents) }
+						)}{/if}
 				</p>
 			</div>
 			<div>
-				<p class="text-muted">Collective</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_collective_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.collectiveRevenueCents)}</p>
 			</div>
 			<div>
-				<p class="text-muted">Expenses</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_expenses_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.expensesCents)}</p>
 				{#if settlement.deductibleExpensesCents !== settlement.expensesCents}
 					<p class="text-xs text-fg-2">
-						{formatCents(settlement.deductibleExpensesCents)} deductible
+						{m.staff_events_id_production_settlement_panel_deductible_text({
+							formatCents: formatCents(settlement.deductibleExpensesCents)
+						})}
 					</p>
 				{/if}
 			</div>
 			<div>
-				<p class="text-muted">Net</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_net_text()}</p>
 				<p class="text-lg font-medium" class:text-error={settlement.netCents < 0}>
 					{formatCents(settlement.netCents)}
 				</p>
 			</div>
 		</div>
+		{#if settlement.doorTakings.donations.count > 0}
+			<p class="mt-3 text-muted">
+				{m.staff_events_id_production_settlement_panel_door_donations_text({
+					amount: formatCents(settlement.doorTakings.donations.grossCents)
+				})}
+			</p>
+		{/if}
 	</InfoCard>
 
 	<!-- The drawer, and the split that follows from it. Its own card because
 	     counting the door is a thing somebody does at the end of the night,
 	     not a figure that arrives on its own like a ticket sale (#929). -->
-	<InfoCard title="The door">
-		<Form remote={recordDoorTake} successToast="Door recorded">
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_door_title()}
+		state={doorState(settlement)}
+	>
+		<Form
+			remote={recordDoorTake}
+			successToast={m.staff_events_id_production_settlement_panel_door_recorded_toast()}
+		>
 			<input {...recordDoorTake.fields.id.as('hidden', settlement.productionId)} />
 			<input {...recordDoorTake.fields.eventId.as('hidden', eventId)} />
 
 			<div class="grid gap-3 sm:grid-cols-4">
 				<MoneyField
 					field={recordDoorTake.fields.doorCashCents}
-					label="Cash counted"
+					label={m.staff_events_id_production_settlement_panel_cash_counted_label()}
 					value={settlement.door?.cashCents ?? null}
 				/>
 				<FormField
 					{...recordDoorTake.fields.doorCount.as('number')}
-					label="Through the door"
+					label={m.staff_events_id_production_settlement_panel_through_door_label()}
+					description={m.staff_events_id_production_settlement_panel_through_door_body({
+						checkedIn: settlement.doorTakings.checkedIn,
+						card: settlement.doorTakings.card.tickets,
+						cash: settlement.doorTakings.cash.tickets,
+						free: settlement.doorTakings.free.tickets
+					})}
 					value={settlement.door?.count ?? undefined}
 					min={0}
 				/>
 				<FormField
 					{...recordDoorTake.fields.splitActsPercent.as('number')}
-					label="Bands' share %"
-					description="Blank is the house rule"
+					label={m.staff_events_id_production_settlement_panel_bands_share_label()}
+					description={m.staff_events_id_production_settlement_panel_blank_house_rule_body()}
 					value={settlement.door?.overridden ? settlement.door.actsPercent : undefined}
 					min={0}
 					max={100}
 				/>
 				{#if !locked}
 					<div class="flex items-end">
-						<SubmitButton label="Record" size="sm" />
+						<SubmitButton label={m.staff_record_label()} size="sm" />
 					</div>
 				{/if}
 			</div>
 		</Form>
 
 		{#if settlement.door}
-			<p class="mt-3 text-muted">
-				{formatCents(settlement.door.cashCents)} splits
-				{settlement.door.actsPercent}/{100 - settlement.door.actsPercent} —
-				<strong>{formatCents(settlement.door.actsCents)}</strong> to the bands,
-				<strong>{formatCents(settlement.door.collectiveCents)}</strong> to the collective.
+			<!-- Recorded cash sales are split in the ledger already (#2800); the
+			     door rule splits only what was counted beyond them. -->
+			{#if settlement.door.recordedCents > 0}
+				<p class="mt-3 text-muted" data-testid="door-cash-recorded">
+					{m.staff_events_id_production_settlement_panel_cash_sales_recorded_text({
+						amount: formatCents(settlement.door.recordedCents)
+					})}
+				</p>
+			{/if}
+			{#if settlement.door.gapCents !== 0}
+				<div class="mt-3" data-testid="door-cash-gap">
+					<Alert type="warning">
+						{settlement.door.gapCents > 0
+							? m.staff_events_id_production_settlement_panel_cash_over_body({
+									amount: formatCents(settlement.door.gapCents)
+								})
+							: m.staff_events_id_production_settlement_panel_cash_short_body({
+									amount: formatCents(-settlement.door.gapCents)
+								})}
+					</Alert>
+				</div>
+			{/if}
+			<p
+				class="mt-3 text-muted"
+				hidden={settlement.door.recordedCents > 0 && !settlement.door.unrecordedCents}
+			>
+				<ParaglideMessage
+					message={m.staff_events_id_production_settlement_panel_splits_bands_col_text}
+					inputs={{
+						formatCents: formatCents(settlement.door.unrecordedCents),
+						actsPercent: settlement.door.actsPercent,
+						value: 100 - settlement.door.actsPercent,
+						formatCents2: formatCents(settlement.door.actsCents),
+						formatCents3: formatCents(settlement.door.collectiveCents)
+					}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 				{#if settlement.door.overridden}
-					<Badge size="sm" variant="warning">This show's own split</Badge>
+					<Badge size="sm" variant="warning"
+						>{m.staff_events_id_production_settlement_panel_show_s_own_split_label()}</Badge
+					>
 				{/if}
 			</p>
+
+			{#if countGap !== 0}
+				<div class="mt-3" data-testid="door-count-gap">
+					<Alert type="warning">
+						{m.staff_events_id_production_settlement_panel_count_off_check_ins_body({
+							count: Math.abs(countGap)
+						})}
+					</Alert>
+				</div>
+			{/if}
+
+			<!-- A second count by somebody else (#2722). A difference warns here
+			     and at close; the server refuses only the first counter. -->
+			{#if counts?.check === 'mismatch' && counts.second}
+				<Alert type="warning" class="mt-3">
+					{m.staff_events_id_production_settlement_panel_counts_differ_body({
+						amount: formatCents(Math.abs(counts.second.cashCents - settlement.door.cashCents))
+					})}
+				</Alert>
+			{:else if counts?.check === 'single'}
+				<p class="mt-3 text-muted">
+					{m.staff_events_id_production_settlement_panel_counted_once_text()}
+				</p>
+			{/if}
+			{#if counts && (counts.first.byName || counts.second?.byName)}
+				<ul class="mt-2 text-xs text-fg-2">
+					{#if counts.first.byName}
+						<li>
+							{m.staff_events_id_production_settlement_panel_first_counter_text({
+								name: counts.first.byName
+							})}
+						</li>
+					{/if}
+					{#if counts.second?.byName}
+						<li>
+							{m.staff_events_id_production_settlement_panel_second_counter_text({
+								name: counts.second.byName
+							})}
+						</li>
+					{/if}
+				</ul>
+			{/if}
+			<Form
+				remote={recordDoorRecount}
+				successToast={m.staff_events_id_production_settlement_panel_second_count_toast()}
+			>
+				<input {...recordDoorRecount.fields.id.as('hidden', settlement.productionId)} />
+				<input {...recordDoorRecount.fields.eventId.as('hidden', eventId)} />
+				<div class="mt-3 grid gap-3 sm:grid-cols-4">
+					<MoneyField
+						field={recordDoorRecount.fields.recountCents}
+						label={m.staff_events_id_production_settlement_panel_second_count_label()}
+						description={m.staff_events_id_production_settlement_panel_second_count_body()}
+						value={counts?.second?.cashCents ?? null}
+					/>
+					{#if !locked}
+						<div class="flex items-end">
+							<SubmitButton label={m.staff_record_label()} size="sm" />
+						</div>
+					{/if}
+				</div>
+			</Form>
 		{:else}
 			<!-- Absent, not zero. A night nobody counted is not a night that took
 			     nothing, and a settlement cannot be honest about the difference
 			     unless the page is. -->
-			<p class="mt-3 text-muted">Nobody has counted the drawer yet.</p>
+			<p class="mt-3 text-muted">
+				{m.staff_events_id_production_settlement_panel_nobody_has_count_text()}
+			</p>
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="What the night cost">
-		{#snippet header(title)}
-			<div class="flex flex-wrap items-center justify-between gap-2">
-				<CardTitle>{title}</CardTitle>
-				<Action
-					disabled={locked}
-					action={addProductionExpense}
-					label="Add a cost"
-					variant="ghost"
-					size="xs"
-					modalTitle="What did the show pay for?"
-					submitLabel="Add it"
-					successToast="Cost recorded"
-				>
-					{#snippet form()}
-						<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
-						<input
-							{...addProductionExpense.fields.productionId.as('hidden', settlement.productionId)}
-						/>
-						<FormField field={addProductionExpense.fields.label} label="What it was" required />
-						<FormField
-							field={addProductionExpense.fields.category}
-							type="select"
-							label="Category"
-							options={categoryOptions}
-							value="sound"
-						/>
-						<MoneyField field={addProductionExpense.fields.amountCents} label="Amount" />
-						<FormField
-							field={addProductionExpense.fields.paidTo}
-							label="Paid to"
-							description="Who was handed the money. Optional."
-						/>
-						<FormField
-							field={addProductionExpense.fields.deductible}
-							type="checkbox"
-							label="Deductible"
-							checkboxLabel="Comes off the door before a percentage-of-net deal is worked out"
-							value={true}
-						/>
-					{/snippet}
-				</Action>
-			</div>
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_what_night_cost_title()}
+		state={costsState(settlement)}
+	>
+		{#snippet action()}
+			<Action
+				disabled={locked}
+				action={addProductionExpense}
+				label={m.staff_events_id_production_settlement_panel_add_cost_label()}
+				variant="ghost"
+				size="xs"
+				modalTitle={m.staff_events_id_production_settlement_panel_what_did_show_pa_title()}
+				submitLabel={m.staff_events_id_production_settlement_panel_add_label()}
+				successToast={m.staff_events_id_production_settlement_panel_cost_recorded_toast()}
+			>
+				{#snippet form()}
+					<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
+					<input
+						{...addProductionExpense.fields.productionId.as('hidden', settlement.productionId)}
+					/>
+					<FormField
+						field={addProductionExpense.fields.label}
+						label={m.staff_description_label()}
+						required
+					/>
+					<FormField
+						field={addProductionExpense.fields.category}
+						type="select"
+						label={m.staff_category_label()}
+						options={categoryOptions}
+						value="sound"
+					/>
+					<MoneyField
+						field={addProductionExpense.fields.amountCents}
+						label={m.staff_amount_label()}
+					/>
+					<FormField
+						field={addProductionExpense.fields.paidTo}
+						label={m.staff_events_id_production_settlement_panel_paid_label()}
+						description={m.staff_events_id_production_settlement_panel_who_was_handed_m_body()}
+					/>
+					<FormField
+						field={addProductionExpense.fields.deductible}
+						type="checkbox"
+						label={m.staff_events_id_production_settlement_panel_deductible_2_label()}
+						checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label_checkbox()}
+						value={true}
+					/>
+				{/snippet}
+			</Action>
 		{/snippet}
 
 		{#if expenses.length === 0}
 			<p class="text-fg-2">
-				Nothing recorded. Until a cost is entered here the Expenses figure above is zero and an
-				against-net deal divides the whole pool.
+				{m.staff_events_id_production_settlement_panel_nothing_recorded_text()}
 			</p>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>What</th>
-					<th>Category</th>
-					<th>Paid to</th>
-					<th class="text-right">Amount</th>
+					<th>{m.staff_what_label()}</th>
+					<th>{m.staff_category_label()}</th>
+					<th>{m.staff_events_id_production_settlement_panel_paid_label()}</th>
+					<th class="text-right">{m.staff_amount_label()}</th>
 					<th></th>
 				{/snippet}
 				{#each expenses as expense (expense.id)}
@@ -206,7 +353,9 @@
 								<!-- A cost the collective carries whatever happens is real spend, but
 								     it is not the act's to share. That distinction is what
 								     `againstNet` means, so it has to be visible on the line. -->
-								<Badge variant="neutral" size="xs">Not deductible</Badge>
+								<Badge variant="neutral" size="xs"
+									>{m.staff_events_id_production_settlement_panel_not_deductible_label()}</Badge
+								>
 							{/if}
 						</td>
 						<td class="text-sm text-fg-2">{productionExpenseCategoryLabels[expense.category]}</td>
@@ -216,16 +365,16 @@
 							<Action
 								disabled={locked}
 								action={drop}
-								label="Remove"
+								label={m.staff_remove_label()}
 								iconOnly
 								icon={trashIcon}
 								variant="ghost"
 								size="xs"
 								class="text-error"
-								modalTitle="Remove this cost?"
-								submitLabel="Remove"
+								modalTitle={m.staff_events_id_production_settlement_panel_remove_cost_title()}
+								submitLabel={m.staff_remove_label()}
 								submitVariant="error"
-								successToast="Cost removed"
+								successToast={m.staff_events_id_production_settlement_panel_cost_removed_toast()}
 							>
 								{#snippet form()}
 									<input {...drop.fields.eventId.as('hidden', eventId)} />
@@ -239,40 +388,53 @@
 
 			{#if settlement.deductibleExpensesCents !== settlement.expensesCents}
 				<p class="mt-3 text-sm text-fg-2">
-					{formatCents(settlement.deductibleExpensesCents)} of {formatCents(
-						settlement.expensesCents
-					)} comes off the door before an against-net deal is worked out.
+					{m.staff_events_id_production_settlement_panel_comes_off_door_b_text({
+						formatCents: formatCents(settlement.deductibleExpensesCents),
+						formatCents2: formatCents(settlement.expensesCents)
+					})}
 				</p>
 			{/if}
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="What each band is owed">
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_what_each_band_o_title()}
+		state={payoutsState(settlement)}
+	>
 		{#if acts.length === 0}
-			<p class="text-fg-2">No bands on the running order yet.</p>
+			<p class="text-fg-2">
+				{m.staff_events_id_production_settlement_panel_no_bands_running_text()}
+			</p>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Band</th>
-					<th class="text-right">Designated</th>
-					<th>Deal</th>
-					<th class="text-right">Suggested</th>
-					<th class="text-right">Paid</th>
+					<th>{m.staff_band_label()}</th>
+					<th class="text-right"
+						>{m.staff_events_id_production_settlement_panel_designated_label()}</th
+					>
+					<th>{m.staff_events_id_production_settlement_panel_deal_label()}</th>
+					<th class="text-right">{m.staff_suggested_label()}</th>
+					<th class="text-right">{m.staff_paid_label()}</th>
 				{/snippet}
 				{#each acts as act (act.slotId)}
 					<tr>
-						<td>{act.actName ?? 'Not on the bill'}</td>
+						<td>{act.actName ?? m.staff_not_bill_text()}</td>
 						<td class="text-right">{formatCents(act.designatedCents)}</td>
 						<td class="text-sm text-fg-2">
 							{#if act.contributed}
-								Donated set
+								{m.staff_events_id_production_settlement_panel_donated_set_text()}
 							{:else}
 								{#if act.guaranteeCents}{formatCents(act.guaranteeCents)}{/if}
 								{#if act.guaranteeCents && act.percentageBps}
-									{act.versus ? ' versus ' : ' plus '}
+									{act.versus
+										? m.staff_events_id_production_settlement_panel_versus_text()
+										: m.staff_events_id_production_settlement_panel_plus_text()}
 								{/if}
-								{#if act.percentageBps}{(act.percentageBps / 100).toFixed(0)}% of the
-									{act.againstNet ? 'net' : 'pool'}{/if}
+								{#if act.percentageBps}{(act.againstNet
+										? m.staff_events_id_production_settlement_panel_net_2_text
+										: m.staff_events_id_production_settlement_panel_pool_text)({
+										toFixed: (act.percentageBps / 100).toFixed(0)
+									})}{/if}
 							{/if}
 						</td>
 						<td class="text-right font-medium">{formatCents(act.suggestedPayoutCents)}</td>
@@ -286,39 +448,48 @@
 										     this act alone, then it can be recorded again. -->
 										<Action
 											action={undo}
-											label="Undo"
+											label={m.staff_undo_label()}
 											variant="ghost"
 											size="xs"
-											modalTitle="Undo {act.actName ?? 'the band'}'s payout?"
-											submitLabel="Undo payout"
+											modalTitle={m.staff_events_id_production_settlement_panel_undo_s_payout_title(
+												{
+													value: act.actName ?? 'the band'
+												}
+											)}
+											submitLabel={m.staff_events_id_production_settlement_panel_undo_payout_label()}
 											submitVariant="warning"
-											successToast="Payout undone"
+											successToast={m.staff_events_id_production_settlement_panel_payout_undone_toast()}
 										>
 											{#snippet form()}
 												<input {...undo.fields.eventId.as('hidden', eventId)} />
 												<input {...undo.fields.slotId.as('hidden', act.slotId)} />
 												<p class="text-muted">
-													Writes reversing entries for the {formatCents(act.paidCents ?? 0)} in the financial
-													record and marks the band unpaid, so it can be recorded again.
+													{m.staff_events_id_production_settlement_panel_writes_reversing_text({
+														formatCents: formatCents(act.paidCents ?? 0)
+													})}
 												</p>
 											{/snippet}
 										</Action>
 									{/if}
 								</span>
 							{:else if locked}
-								<span class="text-sm text-fg-2">Unpaid</span>
+								<span class="text-sm text-fg-2"
+									>{m.staff_events_id_production_settlement_panel_unpaid_text()}</span
+								>
 							{:else}
 								<!-- The amount is staff's, not the worksheet's: a settlement is a
 								     conversation at the end of the night, and what changed hands is
 								     the number that matters afterwards. -->
 								<Action
 									action={recordActPayout.for(act.slotId)}
-									label="Record"
+									label={m.staff_record_label()}
 									variant="ghost"
 									size="xs"
-									modalTitle="What did {act.actName ?? 'the band'} take?"
-									submitLabel="Record it"
-									successToast="Recorded"
+									modalTitle={m.staff_events_id_production_settlement_panel_what_did_take_title({
+										value: act.actName ?? 'the band'
+									})}
+									submitLabel={m.staff_events_id_production_settlement_panel_record_label()}
+									successToast={m.staff_events_id_production_settlement_panel_recorded_toast()}
 								>
 									{#snippet form()}
 										<input {...fields.eventId.as('hidden', eventId)} />
@@ -326,13 +497,15 @@
 										<FormField
 											field={fields.amountCents}
 											type="number"
-											label="Paid"
+											label={m.staff_paid_label()}
 											step="1"
 											min="0"
 											value={String(act.suggestedPayoutCents)}
-											description="In cents. The deal suggests {formatCents(
-												act.suggestedPayoutCents
-											)} — change it if the night went differently. A donated set records zero."
+											description={m.staff_events_id_production_settlement_panel_cents_deal_sugge_body(
+												{
+													formatCents: formatCents(act.suggestedPayoutCents)
+												}
+											)}
 										/>
 									{/snippet}
 								</Action>
@@ -344,13 +517,15 @@
 
 			{#if settlement.unpaidActCount > 0}
 				<p class="mt-3 text-sm text-warning">
-					{settlement.unpaidActCount}
-					{settlement.unpaidActCount === 1 ? 'band has' : 'bands have'} no payout recorded. A donated
-					set still records zero — otherwise the night reads as permanently outstanding.
+					{m.staff_events_id_production_settlement_panel_bands_have_no_pa_text({
+						unpaidActCount: settlement.unpaidActCount
+					})}
 				</p>
 			{:else if acts.length > 0}
 				<p class="mt-3 text-sm text-success">
-					Everybody settled — {formatCents(settlement.paidTotalCents)} paid out.
+					{m.staff_events_id_production_settlement_panel_everybody_settle_text({
+						formatCents: formatCents(settlement.paidTotalCents)
+					})}
 				</p>
 			{/if}
 
@@ -358,8 +533,9 @@
 				<!-- The number a programming committee should see: what the guarantees
 				     cost beyond what the door designated. Never netted away. -->
 				<p class="mt-3 text-sm text-fg-2">
-					{formatCents(topUpTotal)} of this is the collective topping up guarantees above what buyers
-					designated.
+					{m.staff_events_id_production_settlement_panel_collective_toppi_text({
+						formatCents: formatCents(topUpTotal)
+					})}
 				</p>
 			{/if}
 		{/if}

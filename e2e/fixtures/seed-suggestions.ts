@@ -61,14 +61,6 @@ export const SEED_SG_UPHOLD_ID = 'e2e-sg-uphold';
 export const SEED_SG_UPHOLD_TITLE = 'E2E Keep Me Down After Upholding';
 
 /**
- * Nobody has voted for it, so the author can still rewrite it directly. Paired
- * with SEED_SG_VISIBLE_ID (which has votes) this makes the whole edit rule
- * assertable: same author, same action, two different outcomes.
- */
-export const SEED_SG_UNVOTED_ID = 'e2e-sg-unvoted';
-export const SEED_SG_UNVOTED_TITLE = 'E2E Unvoted And Still Editable';
-
-/**
  * Already has a pending edit request seeded against it, so the staff approval
  * test stands on its own rather than depending on the member-side test having
  * run first — same reason `seed-community-events.ts` seeds its own pending row.
@@ -82,30 +74,8 @@ export const SEED_SG_EDIT_REQUEST_ID = 'e2e-sg-edit-request';
 export const SEED_SG_VISIBLE_ID = 'e2e-sg-visible';
 export const SEED_SG_VISIBLE_TITLE = 'E2E Ordinary Visible Suggestion';
 
-/**
- * A merge pair with OVERLAPPING voters.
- *
- * Target: author, reporter, bystander (3). Source: reporter, staff (2). The
- * reporter voted for both, so a correct merge leaves the target holding the
- * union — 4 — while the tempting-but-wrong implementation double-counts them
- * and lands on 5. Without the deliberate overlap the two are indistinguishable.
- */
-export const SEED_SG_MERGE_TARGET_ID = 'e2e-sg-merge-target';
-export const SEED_SG_MERGE_TARGET_TITLE = 'E2E Merge Target Suggestion';
-export const SEED_SG_MERGE_SOURCE_ID = 'e2e-sg-merge-source';
-export const SEED_SG_MERGE_SOURCE_TITLE = 'E2E Merge Source Duplicate';
-export const SEED_SG_MERGE_UNION_VOTES = 4;
-
 const MEMBER_IDS = [SEED_SG_AUTHOR_ID, SEED_SG_REPORTER_ID, SEED_SG_BYSTANDER_ID];
-const SUGGESTION_IDS = [
-	SEED_SG_EDIT_ID,
-	SEED_SG_UNVOTED_ID,
-	SEED_SG_DISMISS_ID,
-	SEED_SG_UPHOLD_ID,
-	SEED_SG_VISIBLE_ID,
-	SEED_SG_MERGE_TARGET_ID,
-	SEED_SG_MERGE_SOURCE_ID
-];
+const SUGGESTION_IDS = [SEED_SG_EDIT_ID, SEED_SG_DISMISS_ID, SEED_SG_UPHOLD_ID, SEED_SG_VISIBLE_ID];
 
 export async function seedSuggestions(): Promise<void> {
 	await resetReportRateLimit();
@@ -150,10 +120,7 @@ export async function seedSuggestions(): Promise<void> {
 			[SEED_SG_DISMISS_ID, SEED_SG_DISMISS_TITLE],
 			[SEED_SG_UPHOLD_ID, SEED_SG_UPHOLD_TITLE],
 			[SEED_SG_VISIBLE_ID, SEED_SG_VISIBLE_TITLE],
-			[SEED_SG_UNVOTED_ID, SEED_SG_UNVOTED_TITLE],
-			[SEED_SG_EDIT_ID, SEED_SG_EDIT_TITLE],
-			[SEED_SG_MERGE_TARGET_ID, SEED_SG_MERGE_TARGET_TITLE],
-			[SEED_SG_MERGE_SOURCE_ID, SEED_SG_MERGE_SOURCE_TITLE]
+			[SEED_SG_EDIT_ID, SEED_SG_EDIT_TITLE]
 		] as const) {
 			await db.insert(suggestion).values({
 				id,
@@ -168,14 +135,7 @@ export async function seedSuggestions(): Promise<void> {
 			});
 		}
 
-		// Overlapping voter sets. The reporter votes on both, so the union is 4
-		// where the sum would be 5 — that gap is the whole point of the fixture.
 		const votes: Array<[string, string]> = [
-			[SEED_SG_MERGE_TARGET_ID, SEED_SG_AUTHOR_ID],
-			[SEED_SG_MERGE_TARGET_ID, SEED_SG_REPORTER_ID],
-			[SEED_SG_MERGE_TARGET_ID, SEED_SG_BYSTANDER_ID],
-			[SEED_SG_MERGE_SOURCE_ID, SEED_SG_REPORTER_ID],
-			[SEED_SG_MERGE_SOURCE_ID, 'e2e-staff-user'],
 			// Not the author: this is what locks direct editing on SEED_SG_VISIBLE_ID.
 			[SEED_SG_VISIBLE_ID, SEED_SG_BYSTANDER_ID],
 			// Same, and it gives the approval test a vote count to prove is preserved.
@@ -263,18 +223,17 @@ export async function readSuggestionStanding(userId: string): Promise<boolean> {
 	});
 }
 
-/** The words currently on the board, and whether it is marked edited. */
+/** The words currently on the board. */
 export async function readSuggestionText(suggestionId: string): Promise<{
 	title: string | null;
 	body: string | null;
-	edited: boolean;
 }> {
 	return readLocalDb(async (db) => {
 		const [row] = await db
-			.select({ title: suggestion.title, body: suggestion.body, editedAt: suggestion.editedAt })
+			.select({ title: suggestion.title, body: suggestion.body })
 			.from(suggestion)
 			.where(eq(suggestion.id, suggestionId))
 			.limit(1);
-		return { title: row?.title ?? null, body: row?.body ?? null, edited: !!row?.editedAt };
+		return { title: row?.title ?? null, body: row?.body ?? null };
 	});
 }

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import { getMySuggestionStanding } from '$lib/remote/suggestions.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import { getMySuggestionStanding } from '#lib/remote/suggestions.remote.js';
 
 	/**
 	 * The "your posts go to staff first" notice, owning its own query.
@@ -19,10 +21,14 @@
 	     reasonably conclude the site was broken, or that they'd been shadowbanned. -->
 	<Alert type="warning">
 		<p>
-			Your suggestions go to staff for a look before they appear on the board. This started after a
-			report was upheld against one of your posts.
+			{m.member_suggestions_standing_notice_suggestions_go_staff_look_text()}
 			{#if standing.reason}
-				Staff's note: <span class="italic">{standing.reason}</span>
+				<ParaglideMessage
+					message={m.member_suggestions_standing_notice_staff_s_note_text}
+					inputs={{ reason: standing.reason }}
+					>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
+				>
 			{/if}
 		</p>
 		<AppealPanel target={{ kind: 'standing', scope: 'suggestion' }} />

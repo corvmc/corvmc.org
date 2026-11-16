@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
-import { getAnnualReport, type AnnualReport } from '$lib/server/report/annual-report-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getAnnualReport, type AnnualReport } from '#lib/server/report/annual-report-service.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
 import {
 	financialCategoryLabels,
 	financialEntryKindLabels,
 	eventKindLabels,
 	financialEntryKinds
-} from '$lib/config';
+} from '#lib/config.js';
+import { toLocalDate } from '#lib/utils/format.js';
 
 const DATE = z
 	.string()
@@ -187,7 +188,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const notes = [
 		`# CorvMC report — ${range.from ?? 'start'} to ${range.to ?? 'today'}`,
 		report.coverage.startsAt
-			? `# Financial record begins ${report.coverage.startsAt.toISOString().slice(0, 10)}; earlier income was never recorded in the app.`
+			? `# Financial record begins ${toLocalDate(report.coverage.startsAt)}; earlier income was never recorded in the app.`
 			: '# The financial record is empty for every range.',
 		'# Impact value and contributed services overlap — do not add them.',
 		'# Membership figures are as of the download, not the range.'

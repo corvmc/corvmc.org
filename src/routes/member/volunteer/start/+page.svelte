@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Latest } from '#lib/latest.svelte.js';
+	import { isRedirect } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Step one of volunteer onboarding: who you are, and whether you're 18.
 	 *
@@ -9,28 +12,35 @@
 	 * Reaching this page with a profile already saved redirects back out; the
 	 * check lives in getVolunteerStartStep, not here.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
-	import { getVolunteerStartStep, startVolunteerOnboarding } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import ProfileFields from '#lib/components/volunteer/ProfileFields.svelte';
+	import { getVolunteerStartStep, startVolunteerOnboarding } from '#lib/remote/volunteer.remote.js';
 
-	let step = $derived(getVolunteerStartStep());
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-entry.
+	const step = new Latest(() => getVolunteerStartStep());
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (step.error && !isRedirect(step.error.e)) throw step.error.e;
+	});
 </script>
 
 <PageHeader
 	width="md"
-	title="Volunteer with CMC"
-	subtitle="Volunteering"
-	documentTitle="Volunteer sign-up"
+	title={m.member_volunteer_start_volunteer_with_cmc_title()}
+	subtitle={m.member_volunteering_body()}
+	documentTitle={m.member_volunteer_sign_up_title()}
 />
 
 <PageContent width="md">
-	{#await step then me}
-		<InfoCard title="About you">
-			<p class="text-sm text-base-content/70">Asked once.</p>
+	{#if step.current}
+		{@const me = step.current}
+		<InfoCard title={m.member_volunteer_start_about_title()}>
+			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once_text()}</p>
 
 			<Form remote={startVolunteerOnboarding}>
 				<ProfileFields
@@ -50,17 +60,17 @@
 				<FormField
 					field={startVolunteerOnboarding.fields.isAdult}
 					type="select"
-					label="Are you 18 or older?"
-					placeholder="Select one"
+					label={m.member_volunteer_start_18_older_label()}
+					placeholder={m.member_volunteer_start_placeholder()}
 					options={[
-						{ value: 'yes', label: 'Yes, I am 18 or older' },
-						{ value: 'no', label: 'No, I am under 18' }
+						{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older_label() },
+						{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18_label() }
 					]}
-					description="Under 18 requires a guardian sign-off. You're welcome either way — it just takes a conversation first."
+					description={m.member_volunteer_start_description_body()}
 				/>
 
-				<SubmitButton label="Continue" variant="primary" />
+				<SubmitButton label={m.member_volunteer_start_continue_label()} variant="primary" />
 			</Form>
 		</InfoCard>
-	{/await}
+	{/if}
 </PageContent>

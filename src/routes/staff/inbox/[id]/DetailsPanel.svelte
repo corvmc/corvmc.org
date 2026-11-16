@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Who this is, what we already know about them, and where the thread stands.
 	 *
@@ -13,17 +14,15 @@
 	 * should not wait on.
 	 */
 	import { resolve } from '$app/paths';
-	import { IconX } from '@tabler/icons-svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import type { RemoteForm } from '$app/server';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
-	import { channelLabel } from '$lib/components/inbox/channels';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
-	import {
-		getInboxThreadContext,
-		addInboxThreadTag,
-		removeInboxThreadTag
-	} from '$lib/remote/inbox.remote';
+	import ThreadTags from './ThreadTags.svelte';
+	import ThreadFiling from './ThreadFiling.svelte';
+	import { channelLabel } from '#lib/components/inbox/channels.js';
+	import { formatDate, formatDateTime } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { getInboxThreadContext } from '#lib/remote/inbox.remote.js';
 
 	type Thread = {
 		id: string;
@@ -78,8 +77,6 @@
 			// Same.
 		}
 	}
-
-	let newTag = $state('');
 </script>
 
 <details
@@ -88,13 +85,15 @@
 	ontoggle={(e) => remember((e.currentTarget as HTMLDetailsElement).open)}
 >
 	<summary class="collapse-title min-h-0 py-2 text-sm font-medium">
-		Details
+		{m.staff_inbox_id_details_panel_details_label()}
 		<span class="ml-2 text-subtle font-normal">
 			{thread.contactUserName ??
 				thread.contactName ??
 				thread.contactEmail ??
 				channelLabel(thread.channel)}
-			{#if thread.assignedToName}· assigned to {thread.assignedToName}{/if}
+			{#if thread.assignedToName}{m.staff_inbox_id_details_panel_assigned_label({
+					assignedToName: thread.assignedToName
+				})}{/if}
 		</span>
 	</summary>
 
@@ -102,9 +101,9 @@
 		{#if open}
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="Contact" />
+					<SectionLabel label={m.staff_contact_label()} />
 					{#if thread.contactUserId}
-						<a href={resolve(`/staff/members/${thread.contactUserId}`)} class="link link-primary">
+						<a href={resolve(`staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
 						</a>
 					{:else if thread.contactName}
@@ -119,68 +118,61 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="History" />
+					<SectionLabel label={m.staff_history_label()} />
 					{#await getInboxThreadContext(thread.id)}
 						<span class="loading loading-xs loading-spinner"></span>
 					{:then context}
 						<span>
 							{context.priorConversations === 0
-								? 'No other conversations'
-								: `${context.priorConversations} previous conversation${context.priorConversations === 1 ? '' : 's'}`}
+								? m.staff_inbox_id_details_panel_no_other_conversations_text()
+								: m.staff_inbox_id_details_panel_previous_conversations_text({
+										priorConversations: context.priorConversations
+									})}
 						</span>
-						<span class="text-subtle">First contact {formatDate(context.firstContactAt)}</span>
-						<span class="text-subtle">Source: {channelLabel(thread.channel)}</span>
+						<span class="text-subtle"
+							>{m.staff_inbox_id_details_panel_first_contact_text({
+								formatDate: formatDate(context.firstContactAt)
+							})}</span
+						>
+						<span class="text-subtle"
+							>{m.staff_inbox_id_details_panel_source_text({
+								channelLabel: channelLabel(thread.channel)
+							})}</span
+						>
+					{:catch error}
+						<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(error) })}</span>
 					{/await}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="This thread" />
-					<span>{thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}</span>
+					<SectionLabel label={m.staff_inbox_id_details_panel_thread_label()} />
+					<span
+						>{m.staff_inbox_id_details_panel_message_count_text({
+							count: thread.messageCount
+						})}</span
+					>
 					<span class="text-subtle">
 						{thread.lastOutboundAt
-							? `Last reply ${formatDateTime(thread.lastOutboundAt)}`
-							: 'Never answered'}
+							? m.staff_inbox_id_details_panel_last_reply_text({
+									formatDateTime: formatDateTime(thread.lastOutboundAt)
+								})
+							: m.staff_inbox_id_details_panel_never_answered_text()}
 					</span>
-					<span class="text-subtle">Opened {formatDate(thread.createdAt)}</span>
+					<span class="text-subtle"
+						>{m.staff_inbox_id_details_panel_opened_text({
+							formatDate: formatDate(thread.createdAt)
+						})}</span
+					>
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="Tags" />
+					<SectionLabel label={m.staff_inbox_id_details_panel_tags_label()} />
 					<!-- The same query as History; the remote layer dedupes it, and
 					     splitting the columns apart is what makes each one readable. -->
-					{#await getInboxThreadContext(thread.id) then context}
-						<div class="flex flex-wrap items-center gap-1">
-							{#each context.tags as tag (tag)}
-								<span class="badge gap-1 badge-ghost badge-sm">
-									{tag}
-									<button
-										type="button"
-										class="cursor-pointer opacity-50 hover:opacity-100"
-										aria-label="Remove tag {tag}"
-										onclick={() => removeInboxThreadTag({ threadId: thread.id, tag })}
-									>
-										<IconX size={11} />
-									</button>
-								</span>
-							{/each}
-							<!-- A bare input rather than FormField: this is not a form
-							     submission, it is a command fired on Enter, and there is no
-							     validation state to show. -->
-							<input
-								class="input w-24 input-xs"
-								placeholder="add"
-								aria-label="Add a tag"
-								bind:value={newTag}
-								onkeydown={(e) => {
-									if (e.key !== 'Enter' || !newTag.trim()) return;
-									e.preventDefault();
-									void addInboxThreadTag({ threadId: thread.id, tag: newTag.trim() });
-									newTag = '';
-								}}
-							/>
-						</div>
-					{/await}
+					<ThreadTags threadId={thread.id} />
 				</div>
+
+				<ThreadFiling threadId={thread.id} />
 			</div>
 
 			<AssignControl

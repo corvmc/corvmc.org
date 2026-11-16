@@ -1,5 +1,5 @@
 ---
-title: Reporting Something, and What Happens Next
+title: Reporting something, and what happens next
 slug: reporting-and-standing
 category: getting-started
 summary: How to report a profile, listing, suggestion or message — and what an upheld report means for the person reported.

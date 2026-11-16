@@ -1,15 +1,15 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { allowRateLimited } from '$lib/server/rate-limit';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 import {
 	MAX_BAND_SLUG_LENGTH,
 	SlugUnavailableError,
 	assertValidBandSlug,
 	changeBandSlug,
 	normalizeBandSlug
-} from '$lib/server/band/band-address-service';
+} from '#lib/server/band/band-address-service.js';
 
 /**
  * A band's free address — {slug}.corvmc.org and everything else keyed on the
@@ -64,10 +64,9 @@ export const changeBandAddress = form(
 
 		try {
 			const result = await changeBandSlug(band.id, next);
-			// Refresh nothing. Every band-scoped query is keyed on the OLD slug (the
-			// route param comes from the `x-sveltekit-pathname` header the client
-			// sent), so refreshing here would 404 and drop the page that just saved
-			// into an error state. The client navigates to the new address instead.
+			// Refresh nothing. Every band-scoped query is keyed on the OLD slug, so
+			// refreshing one here would forward or 404. The client opts out of kit's
+			// own refresh too (`refreshQueries`) and navigates to the new address.
 			return { success: true, slug: result.slug, changed: result.status === 'changed' };
 		} catch (err) {
 			if (err instanceof SlugUnavailableError) invalid(issue.newSlug(err.message));

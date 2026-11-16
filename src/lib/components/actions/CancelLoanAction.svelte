@@ -1,15 +1,16 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cancelLoan } from '$lib/remote/inventory.remote';
+	import { refreshAll } from '$app/navigation';
+	import { cancelLoan } from '#lib/remote/inventory.remote.js';
 
 	const { fields } = cancelLoan;
 
 	let {
 		loanId,
-		label = 'Cancel',
-		confirm: confirmText = 'Cancel this loan?',
+		label = m.actions_cancel_loan_label(),
+		confirm: confirmText = m.actions_cancel_loan_confirm_body(),
 		variant = 'ghost',
 		size = 'sm',
 		class: className = 'text-error',
@@ -30,12 +31,12 @@
 <Action
 	action={cancelLoan}
 	{label}
-	modalTitle="Confirm"
-	successToast="Loan cancelled"
+	modalTitle={m.actions_confirm_title()}
+	successToast={m.actions_cancel_loan_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

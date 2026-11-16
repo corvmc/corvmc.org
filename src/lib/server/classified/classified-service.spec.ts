@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { ClassifiedKind, ClassifiedCategory } from '$lib/config';
+import type { ClassifiedKind, ClassifiedCategory } from '#lib/config.js';
 
 /**
  * Classifieds, against a real SQLite. The rules worth pinning are `WHERE`
@@ -8,26 +8,27 @@ import type { ClassifiedKind, ClassifiedCategory } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
+const emit = vi.fn(async (_name: string, _payload: unknown) => {});
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
+
+const recordAuditEntry = vi.fn(async (_entry: unknown) => {});
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 const svc = await import('./classified-service');
-const { classifiedPost, classifiedPostTag } = await import('$lib/server/db/schema/classified');
-const { memberStanding } = await import('$lib/server/db/schema/standing');
-const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS } = await import('$lib/config');
+const { classifiedPost, classifiedPostTag } = await import('#lib/server/db/schema/classified.js');
+const { memberStanding } = await import('#lib/server/db/schema/standing.js');
+const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS, CLASSIFIED_EXPIRY_REMINDER_DAYS } =
+	await import('#lib/config.js');
+const { forEachClockEdge } = await import('#lib/test/clock-edges.js');
 const { eq } = await import('drizzle-orm');
 
 const AUTHOR = 'usr-author';
@@ -39,8 +40,8 @@ const DAY = 86_400_000;
 const NOW = new Date('2026-09-23T12:00:00Z');
 
 async function seed() {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { group, groupMember } = await import('$lib/server/db/schema/group');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { group, groupMember } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(user).values([
 		{ id: AUTHOR, name: 'Ada', email: 'ada@example.com', emailVerified: false },
 		{ id: OTHER, name: 'Bo', email: 'bo@example.com', emailVerified: false },
@@ -61,6 +62,8 @@ beforeEach(async () => {
 		'classified_post_tag',
 		'classified_post',
 		'member_standing',
+		'directory_tag',
+		'directory_entry',
 		'group_member',
 		'"group"',
 		'user'
@@ -252,11 +255,71 @@ describe('moderation', () => {
 		expect((await svc.getPostForModeration(row.id))?.visibility).toBe('hidden');
 	});
 
+	// #2891: the staff audit log says who took a post down, or put it back.
+	it('records each visibility move in the audit log, and no repeat', async () => {
+		const row = await post({ title: 'Drummer wanted' });
+		recordAuditEntry.mockClear();
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
+		expect(recordAuditEntry).toHaveBeenCalledOnce();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'classified.visibility_changed',
+			subject: { type: 'classified', id: row.id, label: 'Drummer wanted' },
+			details: { from: 'visible', to: 'hidden' }
+		});
+	});
+
 	it('hiding keeps the row: enforcement never deletes', async () => {
 		const row = await post({ tags: [{ kind: 'instrument', value: 'drums' }] });
 		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
 		await svc.setVisibility(row.id, { visibility: 'visible', note: null, staffId: STAFF });
 		expect(await board({ tag: { kind: 'instrument', value: 'drums' } })).toEqual([row.id]);
+	});
+});
+
+describe('telling the author about a staff decision', () => {
+	/** The notify is fire-and-forget; let its microtask run. */
+	const settled = () => new Promise((r) => setTimeout(r, 0));
+	const moderated = () => emit.mock.calls.filter(([name]) => name === 'classified.moderated');
+
+	beforeEach(() => emit.mockClear());
+
+	it('tells the author when staff take a post down, with the note', async () => {
+		const row = await post();
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'Say more', staffId: STAFF });
+		await settled();
+
+		expect(moderated()).toHaveLength(1);
+		expect(moderated()[0][1]).toMatchObject({
+			postId: row.id,
+			visibility: 'hidden',
+			note: 'Say more',
+			authorUserId: AUTHOR,
+			authorEmail: 'ada@example.com'
+		});
+	});
+
+	it('tells the author when staff approve a held post', async () => {
+		await testDb
+			.insert(memberStanding)
+			.values({ userId: AUTHOR, scope: 'classified', status: 'restricted' });
+		const row = await post();
+		await svc.setVisibility(row.id, { visibility: 'visible', note: null, staffId: STAFF });
+		await settled();
+
+		expect(moderated().map(([, p]) => (p as { visibility: string }).visibility)).toEqual([
+			'visible'
+		]);
+	});
+
+	it('says nothing for a report, a repeat decision, or a post sent back for review', async () => {
+		const row = await post();
+		await svc.withholdForReview(row.id);
+		await svc.setVisibility(row.id, { visibility: 'under_review', staffId: null });
+		await svc.setVisibility(row.id, { visibility: 'pending_review', staffId: STAFF });
+		await settled();
+
+		expect(moderated()).toEqual([]);
 	});
 });
 
@@ -272,5 +335,123 @@ describe('canView', () => {
 		expect(svc.canView({ ...live, expiresAt: NOW }, OTHER, false, NOW)).toBe(false);
 		expect(svc.canView({ ...live, visibility: 'hidden' }, AUTHOR, false, NOW)).toBe(true);
 		expect(svc.canView({ ...live, status: 'closed' }, OTHER, true, NOW)).toBe(true);
+	});
+});
+
+describe('listPostsExpiringBetween', () => {
+	/** A post that expires at `at`, made a lifetime earlier. */
+	function expiringAt(at: Date, overrides: Partial<typeof base> & { groupId?: string } = {}) {
+		return post(overrides, new Date(at.getTime() - CLASSIFIED_LIFETIME_DAYS * DAY));
+	}
+
+	// The window is (now, now + reminder days]: a post expiring at `now` has
+	// already left the board, and one at the far edge is still owed its reminder.
+	forEachClockEdge(
+		'asks only about posts on the board that leave it in the window',
+		async ({ at }) => {
+			const end = new Date(at.getTime() + CLASSIFIED_EXPIRY_REMINDER_DAYS * DAY);
+			const soon = await expiringAt(new Date(at.getTime() + DAY), { groupId: BAND });
+			const atEnd = await expiringAt(end, { authorUserId: OTHER });
+			await expiringAt(at, { authorUserId: OTHER });
+			await expiringAt(new Date(end.getTime() + 1000), { authorUserId: OTHER });
+			const hidden = await expiringAt(new Date(at.getTime() + DAY));
+			await svc.setVisibility(hidden.id, { visibility: 'hidden', note: null, staffId: STAFF });
+			const closed = await expiringAt(new Date(at.getTime() + DAY));
+			await svc.closePost(closed.id, AUTHOR, at);
+
+			const rows = await svc.listPostsExpiringBetween(at, end);
+
+			expect(rows.map((r) => r.id).sort()).toEqual([soon.id, atEnd.id].sort());
+			// A band's post reaches the member who made it.
+			expect(rows.find((r) => r.id === soon.id)?.userId).toBe(AUTHOR);
+		}
+	);
+});
+
+describe('listPostsMatching', () => {
+	type ProfileTag = {
+		kind: 'genre' | 'instrument' | 'seeking_instrument' | 'skill';
+		value: string;
+	};
+
+	/** OTHER's directory profile, with these tags. */
+	async function profile(tags: ProfileTag[]) {
+		const { directoryEntry, directoryTag } = await import('#lib/server/db/schema/directory.js');
+		const [entry] = await testDb
+			.insert(directoryEntry)
+			.values({ userId: OTHER, name: 'Bo' } as never)
+			.returning();
+		await testDb.insert(directoryTag).values(tags.map((t) => ({ entryId: entry.id, ...t })));
+	}
+
+	async function matched() {
+		return (await svc.listPostsMatching(OTHER, 6, NOW)).map((p) => p.id);
+	}
+
+	it('matches genre and skill tags of the same kind, on any post', async () => {
+		await profile([
+			{ kind: 'genre', value: 'surf' },
+			{ kind: 'skill', value: 'mixing' }
+		]);
+		const surf = await post({ tags: [{ kind: 'genre', value: 'Surf ' }] });
+		const mix = await post({ kind: 'offered', tags: [{ kind: 'skill', value: 'mixing' }] });
+		await post({ tags: [{ kind: 'instrument', value: 'surf' }] });
+
+		expect((await matched()).sort()).toEqual([surf.id, mix.id].sort());
+	});
+
+	// A wanted drummer post is for a drummer; an offered drummer is for a band
+	// that needs one.
+	it('matches an instrument played to any post, and one sought to offered posts', async () => {
+		await profile([
+			{ kind: 'instrument', value: 'drums' },
+			{ kind: 'seeking_instrument', value: 'bass' }
+		]);
+		const wantDrums = await post({ tags: [{ kind: 'instrument', value: 'drums' }] });
+		const offerBass = await post({
+			kind: 'offered',
+			tags: [{ kind: 'instrument', value: 'bass' }]
+		});
+		await post({ tags: [{ kind: 'instrument', value: 'bass' }] });
+
+		expect((await matched()).sort()).toEqual([wantDrums.id, offerBass.id].sort());
+	});
+
+	it('lists each shared tag once, even when it is both played and sought', async () => {
+		await profile([
+			{ kind: 'instrument', value: 'bass' },
+			{ kind: 'seeking_instrument', value: 'bass' },
+			{ kind: 'genre', value: 'funk' }
+		]);
+		await post({
+			kind: 'offered',
+			tags: [
+				{ kind: 'instrument', value: 'bass' },
+				{ kind: 'genre', value: 'funk' }
+			]
+		});
+
+		const [only] = await svc.listPostsMatching(OTHER, 6, NOW);
+		expect(only.sharedTags).toHaveLength(2);
+	});
+
+	it('leaves out posts off the board and the viewer’s own', async () => {
+		await profile([{ kind: 'genre', value: 'surf' }]);
+		const surf = [{ kind: 'genre' as const, value: 'surf' }];
+		const live = await post({ tags: surf });
+		await post({ authorUserId: OTHER, tags: surf });
+		const hidden = await post({ tags: surf });
+		await svc.setVisibility(hidden.id, { visibility: 'hidden', note: null, staffId: STAFF });
+		const closed = await post({ tags: surf });
+		await svc.closePost(closed.id, AUTHOR, NOW);
+		await post({ tags: surf }, new Date(NOW.getTime() - CLASSIFIED_LIFETIME_DAYS * DAY));
+
+		expect(await matched()).toEqual([live.id]);
+	});
+
+	it('matches nothing for a member with no profile tags', async () => {
+		await post({ tags: [{ kind: 'genre', value: 'surf' }] });
+
+		expect(await matched()).toEqual([]);
 	});
 });

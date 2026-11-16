@@ -1,15 +1,15 @@
 import { and, count, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { INVITE_EXPIRY_DAYS, MEMBER_INVITE_DAILY_LIMIT, type GroupKind } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { groupInvite } from '$lib/server/db/schema/group-invite';
-import { memberInvite } from '$lib/server/db/schema/member-invite';
-import { paginate } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/domain-error';
-import { STAFF_GROUP_KINDS } from '$lib/server/group/group-service';
-import { createInvite } from '$lib/server/group/group-invite-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { db } from '#lib/server/db/index.js';
+import { INVITE_EXPIRY_DAYS, MEMBER_INVITE_DAILY_LIMIT, type GroupKind } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { groupInvite } from '#lib/server/db/schema/group-invite.js';
+import { memberInvite } from '#lib/server/db/schema/member-invite.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { STAFF_GROUP_KINDS } from '#lib/server/group/group-service.js';
+import { createInvite } from '#lib/server/group/group-invite-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
 /** A chosen club or committee that is gone or was never one. */
 export class MemberInviteGroupError extends DomainError {

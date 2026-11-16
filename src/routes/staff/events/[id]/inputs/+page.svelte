@@ -1,9 +1,14 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import { fullDate } from '#lib/utils/format.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { getEventInputList } from '$lib/remote/events.remote';
-	import { riderInputSourceLabels, riderStandTypeLabels } from '$lib/config';
+	import { getEventInputList } from '#lib/remote/events.remote.js';
+	import { riderInputSourceLabels, riderStandTypeLabels } from '#lib/config.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * A print page, following `/band/[slug]/rider/list`, whose shape this copies:
@@ -13,7 +18,7 @@
 	 * Repeats are marked, not merged: whether three kicks are one kick is the
 	 * house engineer's call.
 	 */
-	const eventId = $derived(page.params.id!);
+	const eventId = $derived(params.id);
 	const data = $derived(await getEventInputList(eventId));
 
 	const banks = $derived(
@@ -34,18 +39,11 @@
 
 	const exportHref = $derived(resolve('/staff/events/[id]/inputs/export', { id: eventId }));
 	const backHref = $derived(resolve('/staff/events/[id]/production', { id: eventId }));
-	const dateLabel = $derived(
-		data.startsAt.toLocaleDateString('en-US', {
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const dateLabel = $derived(fullDate(data.startsAt));
 </script>
 
 <svelte:head>
-	<title>Input list — {data.title}</title>
+	<title>{m.staff_events_id_inputs_input_list_title({ title: data.title })}</title>
 	<style>
 		@media print {
 			.no-print {
@@ -74,30 +72,38 @@
 <!-- Below the app topbar, not over it: this page renders inside the staff panel
      and `top-4` would cover the account menu. -->
 <div class="no-print fixed top-16 right-4 z-50 flex gap-2">
-	<Button variant="primary" size="sm" onclick={() => window.print()}>Print</Button>
-	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload>Download CSV</Button>
-	<Button href={backHref} variant="ghost" size="sm">&larr; Production</Button>
+	<Button variant="primary" size="sm" onclick={() => window.print()}
+		>{m.staff_events_id_inputs_print_label()}</Button
+	>
+	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload
+		>{m.staff_events_id_inputs_download_csv_label()}</Button
+	>
+	<Button href={backHref} variant="ghost" size="sm"
+		>{m.staff_events_id_inputs_production_label()}</Button
+	>
 </div>
 
 <div class="bill-page mx-auto max-w-3xl">
 	<header class="mb-6 border-b-2 border-gray-200 pb-4">
 		<h1 class="text-3xl font-bold">{data.title}</h1>
-		<p class="text-sm text-gray-600">{dateLabel} · input list for the night</p>
+		<p class="text-sm text-gray-600">
+			{m.staff_events_id_inputs_input_list_night_text({ dateLabel })}
+		</p>
 		<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
 			<div>
-				<dt class="text-gray-500">Channels</dt>
+				<dt class="text-gray-500">{m.staff_channels_label()}</dt>
 				<dd class="font-semibold">{data.channelCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">If repeats shared</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_if_repeats_shared_label()}</dt>
 				<dd class="font-semibold">{data.distinctCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">Need +48V</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_need_48v_label()}</dt>
 				<dd class="font-semibold">{data.phantomCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">Desk takes</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_desk_takes_label()}</dt>
 				<dd class="font-semibold">{data.consoleChannels || '—'}</dd>
 			</div>
 		</dl>
@@ -108,39 +114,58 @@
 
 	{#if overCapacity}
 		<p class="over-capacity mb-6">
-			The bill asks for <strong>{data.channelCount}</strong> channels and the desk takes
-			<strong>{data.consoleChannels}</strong>.
+			<ParaglideMessage
+				message={m.staff_events_id_inputs_bill_asks_channels_desk_takes_text}
+				inputs={{ channelCount: data.channelCount, consoleChannels: data.consoleChannels }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 			{#if fitsIfShared}
-				It fits at <strong>{data.distinctCount}</strong> if every repeated source below is patched once
-				— which is a conversation to have at the advance, not at load-in.
+				<ParaglideMessage
+					message={m.staff_events_id_inputs_fits_at_if_every_repeated_text}
+					inputs={{ distinctCount: data.distinctCount }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			{:else}
-				Sharing every repeated source still leaves <strong>{data.distinctCount}</strong>, so
-				something is getting sub-mixed or dropped. Agree which before load-in.
+				<ParaglideMessage
+					message={m.staff_events_id_inputs_sharing_every_repeated_source_still_text}
+					inputs={{ distinctCount: data.distinctCount }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			{/if}
 		</p>
 	{/if}
 
 	{#if silent.length}
 		<p class="mb-6 text-sm text-gray-600">
-			Nothing listed by {silent.map((a) => a.name).join(', ')} — this sheet cannot speak for them.
+			{m.staff_events_id_inputs_nothing_listed_by_sheet_cannot_text({
+				join: silent.map((a) => a.name).join(', ')
+			})}
 		</p>
 	{/if}
 
 	{#each banks as bank, i (i)}
 		<section class="bank mb-6">
 			{#if banks.length > 1}
-				<h2 class="section-label">Channels {i * 8 + 1}–{i * 8 + bank.length}</h2>
+				<h2 class="section-label">
+					{m.staff_events_id_inputs_channels_title({
+						value: i * 8 + 1,
+						value2: i * 8 + bank.length
+					})}
+				</h2>
 			{/if}
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="head-row">
 						<th class="w-8 py-1">#</th>
-						<th class="py-1">Source</th>
-						<th class="py-1">Band</th>
-						<th class="py-1">Via</th>
-						<th class="py-1">Mic / DI</th>
-						<th class="py-1">Stand</th>
-						<th class="w-12 py-1">48V</th>
+						<th class="py-1">{m.staff_source_label()}</th>
+						<th class="py-1">{m.staff_band_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_via_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_mic_di_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_stand_label()}</th>
+						<th class="w-12 py-1">{m.staff_events_id_inputs_48v_label()}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -157,7 +182,7 @@
 								{channel.actName}
 								{#if channel.sharedWith.length}
 									<span class="block text-xs text-amber-700">
-										also {channel.sharedWith.join(', ')}
+										{m.staff_events_id_inputs_also_text({ join: channel.sharedWith.join(', ') })}
 									</span>
 								{/if}
 							</td>
@@ -174,8 +199,7 @@
 
 	{#if data.channels.length === 0}
 		<p class="text-sm text-gray-600">
-			No band on this bill has listed a channel yet. The Tech riders card on the production console
-			is where they get asked.
+			{m.staff_events_id_inputs_no_band_bill_has_listed_text()}
 		</p>
 	{/if}
 </div>

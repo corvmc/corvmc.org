@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { inviteFriendForm } from '$lib/remote/users.remote';
+	import { inviteFriendForm } from '#lib/remote/users.remote.js';
 	import { Field } from '../ui/Form';
 	import { toast } from 'svelte-sonner';
 
@@ -18,21 +19,21 @@
 
 	function onsuccess(result?: unknown) {
 		const r = result as { email: string } | undefined;
-		if (r) toast.success(`Invitation sent to ${r.email}`);
+		if (r) toast.success(m.actions_invite_friend_toast({ email: r.email }));
 	}
 </script>
 
 <Action
 	action={inviteFriendForm}
-	label="Invite a friend"
-	modalTitle="Invite a friend"
-	submitLabel="Send invitation"
+	label={m.actions_invite_friend_invite_friend_label()}
+	modalTitle={m.actions_invite_friend_invite_friend_title()}
+	submitLabel={m.actions_invite_friend_submit_label()}
 	{variant}
 	{size}
 	{onsuccess}
 >
 	{#snippet form()}
-		<Field field={fields.email} type="email" label="Email" required />
-		<Field field={fields.name} type="text" label="Name (optional)" />
+		<Field field={fields.email} type="email" label={m.actions_email_label()} required />
+		<Field field={fields.name} type="text" label={m.actions_name_optional_label()} />
 	{/snippet}
 </Action>

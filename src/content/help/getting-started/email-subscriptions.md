@@ -1,5 +1,5 @@
 ---
-title: Manage Email Subscriptions
+title: Manage email subscriptions
 slug: email-subscriptions
 category: getting-started
 summary: Subscribe to or unsubscribe from CorvMC mailing lists.

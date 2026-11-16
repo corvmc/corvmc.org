@@ -1,15 +1,16 @@
 <script lang="ts">
-	import { pageTitle } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import { pageTitle } from '#lib/config.js';
 	import { resolve } from '$app/paths';
-	import { requestPasswordReset } from '$lib/remote/password-reset.remote';
+	import { requestPasswordReset } from '#lib/remote/password-reset.remote.js';
 
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 
 	const fields = requestPasswordReset.fields;
 
@@ -26,7 +27,9 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Reset your password</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_forgot_password_reset_password_title()}</CardTitle
+					>
 
 					{#if submitted}
 						<!--
@@ -35,27 +38,35 @@
 							and for a throttled one.
 						-->
 						<Alert type="success" class="text-sm">
-							If that address has an account, a reset link is on its way. Check your spam folder if
-							it hasn't arrived in a few minutes.
+							{m.public_forgot_password_if_address_has_account_reset_body()}
 						</Alert>
 					{:else}
 						<p class="text-muted">
-							Enter the email address on your account and we'll send you a link to set a new
-							password.
+							{m.public_forgot_password_enter_email_address_account_we_text()}
 						</p>
 
 						<Form
 							remote={requestPasswordReset}
+							guard={false}
 							onsuccess={() => (submitted = true)}
 							class="flex flex-col gap-3"
 						>
-							<FormField field={fields.email} type="email" label="Email" required />
-							<SubmitButton label="Send reset link" variant="primary" class="mt-1 w-full" />
+							<FormField
+								field={fields.email}
+								type="email"
+								label={m.public_email_label()}
+								required
+							/>
+							<SubmitButton
+								label={m.public_forgot_password_send_reset_link_label()}
+								variant="primary"
+								class="mt-1 w-full"
+							/>
 						</Form>
 					{/if}
 
 					<div class="text-center text-sm">
-						<a class="link" href={resolve('/login')}>Back to sign in</a>
+						<a class="link" href={resolve('login')}>{m.public_forgot_password_back_sign_text()}</a>
 					</div>
 				</CardBody>
 			</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Option list in, ids out: the value can only ever be ids drawn from
 	 * `options`, so this cannot create a tag that did not already exist. Reached
@@ -7,13 +8,13 @@
 	 */
 	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let {
 		options,
 		value = [],
 		name,
-		placeholder = 'Type to search...',
+		placeholder = m.ui_search_prompt_placeholder(),
 		onchange,
 		disabled = false
 	}: {
@@ -88,7 +89,7 @@
 						{opt.label}
 					</Combobox.Item>
 				{:else}
-					<div class="px-3 py-2 opacity-60">No results</div>
+					<div class="px-3 py-2 opacity-60">{m.ui_search_no_results_text()}</div>
 				{/each}
 			</Combobox.Content>
 		</div>

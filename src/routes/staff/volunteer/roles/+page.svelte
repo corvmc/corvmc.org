@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What volunteering is made of: the roles members pick from, and the
 	 * clearances some of those roles require.
@@ -16,24 +17,25 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import {
 		VOLUNTEER_ROLE_DESCRIPTION_MAX,
 		CERT_DESCRIPTION_MAX,
 		CERT_NAME_MAX,
 		volunteerRoleGroups,
 		volunteerRoleGroupLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffVolunteerSetupPage,
 		createVolunteerRole,
@@ -42,30 +44,34 @@
 		archiveCertification,
 		restoreCertification,
 		deleteCertification
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
 
-	const data = $derived(getStaffVolunteerSetupPage());
+	// Not `{#await}`: a refresh would re-pend it and unmount an open New role or
+	// New clearance dialog with what was typed in it.
+	const data = new Latest(() => getStaffVolunteerSetupPage());
+	$effect(() => {
+		if (data.error) throw data.error.e;
+	});
 
 	const groupOptions = volunteerRoleGroups.map((g) => ({
 		value: g,
 		label: volunteerRoleGroupLabels[g]
 	}));
 
-	const descriptionHelp =
-		'Markdown. This is what members read on their volunteering page, so say what the job actually involves.';
+	const descriptionHelp = m.staff_volunteer_roles_description_help_body();
 
 	// Retired roles are off by default. They stay listed for staff — the work done
 	// under them still resolves everywhere — but a coordinator setting up next
 	// month is reading the live list, and last year's roles only pad it.
 	let showRetired = $state(page.url.searchParams.get('retired') === '1');
 
-	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
+	// `goto(..., { replace: true })`, not a shallow `goto`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
-		const href = withQuery(resolve('/staff/volunteer/roles'), showRetired ? 'retired=1' : '');
+		const href = withQuery(resolve('staff/volunteer/roles'), showRetired ? 'retired=1' : '');
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -98,19 +104,20 @@
 	}
 </script>
 
-<PageHeader title="Roles" subtitle="Volunteering" />
+<PageHeader title={m.staff_roles_title()} subtitle={m.staff_volunteering_body()} />
 
 <PageContent>
-	{#await data then { roles, certifications }}
+	{#if data.current}
+		{@const { roles, certifications } = data.current}
 		{@const groups = groupedRoles(roles)}
 		{@const live = roles.filter((r) => r.isActive).length}
 
 		<div class="grid gap-6 lg:grid-cols-2">
 			<div class="flex flex-col gap-4">
-				<InfoCard title="Roles">
+				<InfoCard title={m.staff_roles_title()}>
 					{#snippet header()}
 						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle>Roles · {live} live</CardTitle>
+							<CardTitle>{m.staff_volunteer_roles_roles_live_title({ live })}</CardTitle>
 							<div class="flex items-center gap-2">
 								<label class="label cursor-pointer gap-2 text-sm">
 									<input
@@ -119,32 +126,42 @@
 										checked={showRetired}
 										onchange={(e) => (showRetired = e.currentTarget.checked)}
 									/>
-									Retired
+									{m.staff_retired_label()}
 								</label>
 								<Action
 									action={createVolunteerRole}
-									label="New Role"
+									label={m.staff_volunteer_roles_new_role_label()}
 									size="sm"
-									modalTitle="New volunteer role"
-									submitLabel="Create"
-									successToast="Role created"
+									modalTitle={m.staff_volunteer_roles_new_volunteer_role_title()}
+									submitLabel={m.staff_create_label()}
+									successToast={m.staff_volunteer_roles_role_created_toast()}
 								>
 									{#snippet form()}
-										<FormField name="name" label="Name" type="text" />
 										<FormField
-											name="description"
-											label="Job description"
+											field={createVolunteerRole.fields.name}
+											label={m.staff_name_label()}
+											type="text"
+										/>
+										<FormField
+											field={createVolunteerRole.fields.description}
+											label={m.staff_job_description_label()}
 											type="textarea"
 											description={descriptionHelp}
 											maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
 										/>
-										<FormField name="group" label="Group" type="select" options={groupOptions} />
 										<FormField
-											name="displayOrder"
-											label="Display order"
+											field={createVolunteerRole.fields.group}
+											label={m.staff_group_label()}
+											type="select"
+											options={groupOptions}
+										/>
+										<FormField
+											field={createVolunteerRole.fields.displayOrder}
+											submitAs="text"
+											label={m.staff_display_order_label()}
 											type="number"
 											value="0"
-											description="Lower sorts first."
+											description={m.staff_volunteer_roles_lower_sorts_first_body()}
 										/>
 									{/snippet}
 								</Action>
@@ -154,8 +171,8 @@
 
 					{#if groups.length === 0}
 						<EmptyState
-							title="No roles yet"
-							description="A role is a name plus what the job involves. Members pick from this list."
+							title={m.staff_volunteer_roles_no_roles_yet_title()}
+							description={m.staff_volunteer_roles_role_name_plus_what_job_body()}
 						/>
 					{:else}
 						{#each groups as group (group.key)}
@@ -164,26 +181,34 @@
 								{#each group.roles as role (role.id)}
 									<li>
 										<a
-											href={resolve(`/staff/volunteer/roles/${role.id}`)}
+											href={resolve(`staff/volunteer/roles/${role.id}`)}
 											class="{CARD} block hover:border-primary"
 										>
 											<div class="flex flex-wrap items-center gap-2">
 												<span class="font-medium">{role.name}</span>
 												{#if !role.isActive}
-													<Badge variant="ghost" size="xs">retired</Badge>
+													<Badge variant="ghost" size="xs"
+														>{m.staff_volunteer_roles_retired_label()}</Badge
+													>
 												{/if}
 												{#each role.requiredCertifications as cert (cert.id)}
 													<!-- The gate, on the thing it gates. Reading a role
 													     without it is how somebody schedules a shift
 													     nobody on the list can take. -->
-													<Badge variant="info" size="xs">needs {cert.name}</Badge>
+													<Badge variant="info" size="xs"
+														>{m.staff_volunteer_roles_needs_label({ name: cert.name })}</Badge
+													>
 												{/each}
 												{#if role.unfilled > 0}
 													<!-- Short shifts are Today's and Schedule's job, but
 													     seeing which *role* keeps coming up short is what
 													     tells you to go and recruit for it rather than
 													     chase one more shift. -->
-													<Badge variant="warning" size="xs">{role.unfilled} short</Badge>
+													<Badge variant="warning" size="xs"
+														>{m.staff_volunteer_roles_short_label({
+															unfilled: role.unfilled
+														})}</Badge
+													>
 												{/if}
 											</div>
 											<div class="text-subtle text-xs">{usage(role)}</div>
@@ -200,37 +225,47 @@
 			</div>
 
 			<div class="flex flex-col gap-4">
-				<InfoCard title="Clearances">
+				<InfoCard title={m.staff_volunteer_roles_clearances_title()}>
 					{#snippet header()}
 						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle>Clearances · {certifications.length}</CardTitle>
+							<CardTitle
+								>{m.staff_volunteer_roles_clearances_2_title({
+									length: certifications.length
+								})}</CardTitle
+							>
 							<Action
 								action={createCertification}
-								label="New Clearance"
+								label={m.staff_volunteer_roles_new_clearance_label()}
 								size="sm"
-								modalTitle="New clearance"
-								submitLabel="Create"
-								successToast="Clearance created"
+								modalTitle={m.staff_volunteer_roles_new_clearance_2_title()}
+								submitLabel={m.staff_create_label()}
+								successToast={m.staff_volunteer_roles_clearance_created_toast()}
 							>
 								{#snippet form()}
-									<FormField name="name" label="Name" type="text" maxlength={CERT_NAME_MAX} />
 									<FormField
-										name="description"
-										label="What it covers"
+										field={createCertification.fields.name}
+										label={m.staff_name_label()}
+										type="text"
+										maxlength={CERT_NAME_MAX}
+									/>
+									<FormField
+										field={createCertification.fields.description}
+										label={m.staff_volunteer_roles_what_covers_label()}
 										type="textarea"
 										maxlength={CERT_DESCRIPTION_MAX}
 									/>
 									<FormField
-										name="issuedBy"
-										label="Issued by"
+										field={createCertification.fields.issuedBy}
+										label={m.staff_volunteer_roles_issued_by_label()}
 										type="text"
-										description="Leave blank for something CMC signs off itself."
+										description={m.staff_volunteer_roles_leave_blank_something_cmc_signs_body()}
 									/>
 									<FormField
-										name="validityMonths"
-										label="Valid for (months)"
+										field={createCertification.fields.validityMonths}
+										submitAs="text"
+										label={m.staff_volunteer_roles_valid_months_label()}
 										type="number"
-										description="Blank means it never lapses. Changing this affects future grants only — an existing grant keeps the expiry it was stamped with."
+										description={m.staff_volunteer_roles_blank_means_never_lapses_changing_body()}
 									/>
 								{/snippet}
 							</Action>
@@ -239,8 +274,8 @@
 
 					{#if certifications.length === 0}
 						<EmptyState
-							title="No clearances yet"
-							description="A clearance is something a volunteer must hold before they can take certain roles: a background check, a training, a sign-off. Create one with New Clearance, then open a role and mark that it requires it."
+							title={m.staff_volunteer_roles_no_clearances_yet_title()}
+							description={m.staff_volunteer_roles_clearance_something_volunteer_must_hol_body()}
 						/>
 					{:else}
 						<ul class="flex flex-col gap-2">
@@ -249,55 +284,72 @@
 									<div class="flex flex-wrap items-center gap-2">
 										<span class="font-medium">{cert.name}</span>
 										{#if !cert.isActive}
-											<Badge variant="ghost" size="xs">retired</Badge>
+											<Badge variant="ghost" size="xs"
+												>{m.staff_volunteer_roles_retired_label()}</Badge
+											>
 										{/if}
 									</div>
 									<div class="text-subtle text-xs">
-										{cert.issuedBy ?? 'CMC'} · {validityLabel(cert.validityMonths)}
+										{cert.issuedBy ?? m.staff_cmc_text()} · {validityLabel(cert.validityMonths)}
 									</div>
 									<div class="text-subtle text-xs">
-										{cert.holderCount} hold it · required by {cert.roleCount}
-										{cert.roleCount === 1 ? 'role' : 'roles'}
+										{m.staff_volunteer_roles_hold_required_by_roles_text({
+											holderCount: cert.holderCount,
+											roleCount: cert.roleCount
+										})}
 									</div>
 									<div class="mt-2 flex flex-wrap gap-1">
 										<Action
 											action={updateCertification.for(cert.id)}
-											label="Edit"
+											label={m.staff_edit_label()}
 											iconOnly
 											icon={pencilIcon}
 											variant="ghost"
 											size="xs"
-											modalTitle="Edit {cert.name}"
-											successToast="Clearance updated"
+											modalTitle={m.staff_edit_2_title({ name: cert.name })}
+											successToast={m.staff_volunteer_roles_clearance_updated_toast()}
 										>
 											{#snippet form()}
-												<input type="hidden" name="id" value={cert.id} />
-												<FormField name="name" label="Name" type="text" value={cert.name} />
+												<input
+													{...updateCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+												/>
 												<FormField
-													name="description"
-													label="What it covers"
+													field={updateCertification.for(cert.id).fields.name}
+													label={m.staff_name_label()}
+													type="text"
+													value={cert.name}
+												/>
+												<FormField
+													field={updateCertification.for(cert.id).fields.description}
+													label={m.staff_volunteer_roles_what_covers_label()}
 													type="textarea"
 													value={cert.description ?? ''}
 													maxlength={CERT_DESCRIPTION_MAX}
 												/>
 												<FormField
-													name="issuedBy"
-													label="Issued by"
+													field={updateCertification.for(cert.id).fields.issuedBy}
+													label={m.staff_volunteer_roles_issued_by_label()}
 													type="text"
 													value={cert.issuedBy ?? ''}
-													description="Leave blank for something CMC signs off itself."
+													description={m.staff_volunteer_roles_leave_blank_something_cmc_signs_body()}
 												/>
 												<FormField
-													name="validityMonths"
-													label="Valid for (months)"
+													field={updateCertification.for(cert.id).fields.validityMonths}
+													submitAs="text"
+													label={m.staff_volunteer_roles_valid_months_label()}
 													type="number"
 													min="1"
 													value={cert.validityMonths ? String(cert.validityMonths) : ''}
-													description="Blank means it never lapses. Changing this applies to future grants only — the {cert.holderCount} already issued keep the expiry they were stamped with."
+													description={m.staff_volunteer_roles_blank_means_never_lapses_changing_2_body(
+														{
+															holderCount: cert.holderCount
+														}
+													)}
 												/>
 												<FormField
-													name="displayOrder"
-													label="Display order"
+													field={updateCertification.for(cert.id).fields.displayOrder}
+													submitAs="text"
+													label={m.staff_display_order_label()}
 													type="number"
 													value={String(cert.displayOrder)}
 												/>
@@ -307,38 +359,43 @@
 										{#if cert.isActive}
 											<Action
 												action={archiveCertification.for(cert.id)}
-												label="Archive"
+												label={m.staff_archive_label()}
 												iconOnly
 												icon={archiveIcon}
 												variant="ghost"
 												size="xs"
-												modalTitle="Archive {cert.name}?"
-												submitLabel="Archive"
-												successToast="Clearance archived"
+												modalTitle={m.staff_archive_2_title({ name: cert.name })}
+												submitLabel={m.staff_archive_label()}
+												successToast={m.staff_volunteer_roles_clearance_archived_toast()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...archiveCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
-														It disappears from the grant form. Everyone who holds it keeps it, and
-														roles that require it still require it.
+														{m.staff_volunteer_roles_disappears_from_grant_form_everyone_text()}
 													</p>
 												{/snippet}
 											</Action>
 										{:else}
 											<Action
 												action={restoreCertification.for(cert.id)}
-												label="Restore"
+												label={m.staff_restore_label()}
 												iconOnly
 												icon={unarchiveIcon}
 												variant="ghost"
 												size="xs"
-												modalTitle="Restore {cert.name}?"
-												submitLabel="Restore"
-												successToast="Clearance restored"
+												modalTitle={m.staff_restore_2_title({ name: cert.name })}
+												submitLabel={m.staff_restore_label()}
+												successToast={m.staff_volunteer_roles_clearance_restored_toast()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
-													<p class="text-sm">Staff will be able to grant this again.</p>
+													<input
+														{...restoreCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
+													<p class="text-sm">
+														{m.staff_volunteer_roles_staff_will_able_grant_again_text()}
+													</p>
 												{/snippet}
 											</Action>
 										{/if}
@@ -351,20 +408,24 @@
 										{#if cert.holderCount === 0}
 											<Action
 												action={deleteCertification.for(cert.id)}
-												label="Delete"
+												label={m.staff_delete_label()}
 												iconOnly
 												icon={trashIcon}
 												variant="ghost"
 												size="xs"
 												class="text-error"
-												modalTitle="Delete {cert.name}?"
-												submitLabel="Delete"
+												modalTitle={m.staff_delete_2_title({ name: cert.name })}
+												submitLabel={m.staff_delete_label()}
 												submitVariant="error"
-												successToast="Clearance deleted"
+												successToast={m.staff_volunteer_roles_clearance_deleted_toast()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
-													<p class="text-sm">Nobody holds this, so it can be removed outright.</p>
+													<input
+														{...deleteCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
+													<p class="text-sm">
+														{m.staff_volunteer_roles_nobody_holds_so_can_removed_text()}
+													</p>
 												{/snippet}
 											</Action>
 										{/if}
@@ -374,29 +435,33 @@
 										<!-- The one thing on this screen that is a person rather
 										     than a definition, so it links to the people. -->
 										<a
-											href={resolve('/staff/volunteer')}
+											href={withQuery(resolve('staff/members'), 'role=volunteer&lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
-											{cert.lapsingBeforeShift}
-											{cert.lapsingBeforeShift === 1 ? 'lapses' : 'lapse'} before a booked shift →
+											{m.staff_volunteer_roles_lapse_before_booked_shift_text({
+												lapsingBeforeShift: cert.lapsingBeforeShift
+											})}
 										</a>
 									{/if}
 								</li>
 							{/each}
 						</ul>
 						<p class="mt-3 text-subtle text-xs">
-							Grants are made on a person's record. A renewal is a new row, never an edit — which is
-							what keeps "was their card current on the night?" answerable.
+							{m.staff_volunteer_roles_grants_made_person_s_record_text()}
 						</p>
 					{/if}
 				</InfoCard>
 
-				<Button href={resolve('/staff/members/volunteers')} variant="ghost" size="sm">
-					See who's cleared →
+				<Button
+					href={withQuery(resolve('staff/members'), 'role=volunteer')}
+					variant="ghost"
+					size="sm"
+				>
+					{m.staff_volunteer_roles_see_who_s_cleared_label()}
 				</Button>
 			</div>
 		</div>
-	{/await}
+	{/if}
 </PageContent>
 
 {#snippet pencilIcon()}

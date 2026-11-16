@@ -1,32 +1,35 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import { env } from '$env/dynamic/public';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import * as env from '$app/env/public';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import {
 		getPublicBandProfile,
 		getBandShows,
 		getBandPastShows
-	} from '$lib/remote/directory.remote';
+	} from '#lib/remote/directory.remote.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ReleasesBox from '$lib/components/directory/profile/ReleasesBox.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ReleasesBox from '#lib/components/directory/profile/ReleasesBox.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
-	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
-	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
-	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PressBox from '#lib/components/directory/profile/PressBox.svelte';
+	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
+	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	const MEMBERS_BASE = '/directory/members';
 
@@ -34,9 +37,9 @@
 	// sibling `$derived(await getBandShows(data.band.id))`: in prod builds, a
 	// sibling derived reading a rejected async derived surfaces a minified
 	// Svelte-internals TypeError to the boundary instead of the 404 message
-	// (e2e/directory-profile-404.e2e.ts).
+	// (e2e/j-public-visibility.e2e.ts).
 	let { data, shows } = $derived(
-		await getPublicBandProfile(page.params.slug!).then(async (profile) => ({
+		await getPublicBandProfile(params.slug).then(async (profile) => ({
 			data: profile,
 			shows: await getBandShows(profile.band.id)
 		}))
@@ -54,17 +57,23 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [
-			{ label: `${band.memberCount} member${band.memberCount === 1 ? '' : 's'}` }
+			{
+				label: msg.public_directory_bands_slug_member_label({
+					memberCount: band.memberCount,
+					value: band.memberCount === 1 ? '' : 's'
+				})
+			}
 		];
-		if (band.lookingForMembers) p.push({ label: 'Looking for members', variant: 'warm' });
+		if (band.lookingForMembers)
+			p.push({ label: msg.public_directory_bands_slug_looking_members_label(), variant: 'warm' });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: 'Formed', value: band.foundedYear },
-		{ label: 'Genre', value: band.genres.join(' · ') },
-		{ label: 'Based in', value: band.hometown },
-		{ label: 'Looking for', value: band.lookingForMembers ? 'Members' : null }
+		{ label: msg.public_directory_bands_slug_formed_label(), value: band.foundedYear },
+		{ label: msg.public_directory_bands_slug_genre_label(), value: band.genres.join(' · ') },
+		{ label: msg.public_based_label(), value: band.hometown },
+		{ label: msg.public_looking_label(), value: band.lookingForMembers ? 'Members' : null }
 	]);
 
 	let memberRefs = $derived<CrossRef[]>(
@@ -80,7 +89,7 @@
 </script>
 
 <svelte:head>
-	<title>{band.name} | Corvallis Music Collective</title>
+	<title>{msg.public_corvallis_music_collective_2_title({ name: band.name })}</title>
 	<meta name="description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
 	<meta property="og:title" content={band.name} />
 	<meta
@@ -94,8 +103,10 @@
 
 <div class="profile-page">
 	<div class="profile-page__bar no-print">
-		<a href={resolve('/directory')} class="link text-muted">&larr; Back to Directory</a>
-		<Button variant="ghost" size="sm" onclick={() => window.print()}>Print / save as PDF</Button>
+		<a href={resolve('directory')} class="link text-muted">{msg.public_back_directory_text()}</a>
+		<Button variant="ghost" size="sm" onclick={() => window.print()}
+			>{msg.public_directory_bands_slug_print_save_as_pdf_label()}</Button
+		>
 	</div>
 
 	<ProfileHeader
@@ -104,7 +115,10 @@
 		{subtitle}
 		image={band.avatarUrl}
 		{pills}
-		primaryAction={{ label: 'Contact for booking', href: '#booking' }}
+		primaryAction={{
+			label: msg.public_directory_bands_slug_contact_booking_label(),
+			href: '#booking'
+		}}
 		{shareUrl}
 	/>
 
@@ -112,7 +126,7 @@
 
 	<ProfileGrid>
 		{#snippet main()}
-			<ProseBlock label="About" markdown={band.bio} />
+			<ProseBlock kind="about" markdown={band.bio} />
 			<ListenStrip links={band.links} />
 			<ReleasesBox releases={band.releases} bandSlug={band.slug} />
 			<ShowsBox
@@ -127,8 +141,15 @@
 			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
-			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
-			<TagCloud label="Genres · Influences" tags={band.genres} />
+			<CrossRefList
+				kind="members"
+				items={memberRefs}
+				note={msg.public_directory_bands_slug_note_body({ memberCount: band.memberCount })}
+			/>
+			<TagCloud
+				label={msg.public_directory_bands_slug_genres_influences_label()}
+				tags={band.genres}
+			/>
 			<LinksBox links={band.links} />
 			<div id="booking">
 				<ContactForm slug={band.slug} bandName={band.name} />
@@ -137,7 +158,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>Corvallis Music Collective</a>
+		<a href={resolve('')}>{msg.public_corvallis_music_collective_text()}</a>
 	</footer>
 </div>
 

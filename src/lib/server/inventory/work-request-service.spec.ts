@@ -16,7 +16,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -29,6 +29,11 @@ vi.mock('$lib/server/db', () => ({
 			set: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve([])) })) }))
 		}))
 	}
+}));
+
+// Opening the report's task is `repair-tasks.spec.ts`'s subject.
+vi.mock('#lib/server/task/sourced-tasks.js', () => ({
+	openSourcedTask: vi.fn().mockResolvedValue({ id: 'task-1', opened: true })
 }));
 
 vi.mock('./asset-service', () => ({

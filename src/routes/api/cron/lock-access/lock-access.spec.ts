@@ -6,13 +6,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockRunDailyLockJob = vi.fn();
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	runDailyLockJob: (...args: unknown[]) => mockRunDailyLockJob(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -1,5 +1,5 @@
 ---
-title: Messaging Another Member
+title: Messaging another member
 slug: direct-messages
 category: messaging
 summary: Sending a first message, accepting or declining requests, blocking, and turning messages off.

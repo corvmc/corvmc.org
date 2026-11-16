@@ -183,7 +183,7 @@ export async function seedInstructors(users: any[], reviewer: any) {
 		}
 	];
 
-	await batchInsert(instructor, rows, 5);
+	await batchInsert(instructor, rows);
 
 	// Instruments come from the directory tags, not from the instructor row —
 	// "what I play" and "what I teach" are the same set until someone proves
@@ -221,7 +221,7 @@ export async function seedInstructors(users: any[], reviewer: any) {
 		).map((t) => `${t.entryId}:${t.value}`)
 	);
 	const tags = wanted.filter((t) => !existing.has(`${t.entryId}:${t.value}`));
-	if (tags.length) await batchInsert(directoryTag, tags, 10);
+	if (tags.length) await batchInsert(directoryTag, tags);
 
 	// Teaching bookings, so the member reservation list and the staff calendar
 	// both show a row priced at the teaching rate rather than the drop-in one.
@@ -247,7 +247,7 @@ export async function seedInstructors(users: any[], reviewer: any) {
 		createdAt: now,
 		updatedAt: now
 	}));
-	await batchInsert(reservation, lessons, 5);
+	await batchInsert(reservation, lessons);
 
 	return { rows: rows.length, lessons: lessons.length };
 }

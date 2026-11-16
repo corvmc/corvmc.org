@@ -1,15 +1,17 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { MemberRef } from '$lib/types/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { leave, updateMyBandMembership } from '$lib/remote/bands.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { MemberRef } from '#lib/types/entity.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { leave, updateMyBandMembership } from '#lib/remote/bands.remote.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -53,7 +55,7 @@
 </script>
 
 {#if me}
-	<InfoCard title="Your membership">
+	<InfoCard title={m.band_slug_members_your_membership_title()}>
 		<div class="space-y-4">
 			<div class="flex items-center gap-3">
 				<EntityIdentity ref={me.member} size="md" />
@@ -63,7 +65,7 @@
 			<Form
 				remote={updateMyBandMembership}
 				guard
-				successToast="Saved"
+				successToast={m.band_saved_toast()}
 				onsuccess={onchanged}
 				class="space-y-4"
 			>
@@ -73,24 +75,24 @@
 					<FormField
 						field={fields.alias}
 						type="text"
-						label="Stage name"
+						label={m.band_slug_members_your_membership_stage_name_label()}
 						value={me.alias ?? ''}
 						maxlength="100"
 						placeholder={me.member.title}
-						description="How you're credited on this band's roster and site. Leave blank to use your account name."
+						description={m.band_slug_members_your_membership_how_re_credited_band_s_body()}
 					/>
 					<FormField
 						field={fields.position}
 						type="text"
-						label="Instrument / role"
+						label={m.band_instrument_role_label()}
 						value={me.position ?? ''}
 						maxlength="100"
-						placeholder="e.g. Bass"
-						description="What you play in this band. Admins can change this too."
+						placeholder={m.band_e_g_bass_placeholder()}
+						description={m.band_slug_members_your_membership_what_play_band_admins_can_body()}
 					/>
 				</div>
 				<div class="flex justify-end">
-					<SubmitButton label="Save" />
+					<SubmitButton label={m.band_save_label()} />
 				</div>
 			</Form>
 
@@ -100,10 +102,16 @@
 					     way out, beats the old behaviour of hiding the button entirely
 					     and leaving them to guess. -->
 					<Alert type="info">
-						As the owner you can't leave <strong>{bandName}</strong> until you transfer ownership to
-						another active member.
+						<ParaglideMessage
+							message={m.band_slug_members_your_membership_as_owner_can_t_leave_body}
+							inputs={{ bandName }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 						{#snippet action()}
-							<Button variant="ghost" size="sm" onclick={ontransfer}>Transfer ownership</Button>
+							<Button variant="ghost" size="sm" onclick={ontransfer}
+								>{m.band_slug_members_your_membership_transfer_ownership_label()}</Button
+							>
 						{/snippet}
 					</Alert>
 				{:else}
@@ -112,15 +120,15 @@
 					     leaves can ride the submission without losing the prompt. -->
 					<Action
 						action={leave}
-						label="Leave band"
+						label={m.band_slug_members_your_membership_leave_band_label()}
 						variant="error"
 						size="sm"
 						outline
-						modalTitle="Leave band"
-						submitLabel="Leave band"
-						confirm="Leave {bandName}? You'll need to be re-invited to rejoin."
-						successToast="You have left the band"
-						onsuccess={() => goto(resolve('/member/bands'))}
+						modalTitle={m.band_slug_members_your_membership_leave_band_title()}
+						submitLabel={m.band_slug_members_your_membership_leave_band_label()}
+						confirm={m.band_slug_members_your_membership_confirm_body({ bandName })}
+						successToast={m.band_slug_members_your_membership_have_left_band_toast()}
+						onsuccess={() => goto(resolve('member/bands'))}
 					>
 						{#snippet form()}
 							<input {...leaveFields.bandId.as('hidden', bandId)} />

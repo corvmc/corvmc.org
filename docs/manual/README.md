@@ -7,7 +7,10 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
 
 - Member / band / staff articles are markdown files in [`src/content/help/<category>/<slug>.md`](../../src/content/help).
   Each has YAML frontmatter (`title`, `slug`, `category`, `summary`, `minRole`, `sortOrder`) + a
-  CommonMark body. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
+  CommonMark body. A `minRole: staff` article also names `capabilities:`, the capability of the
+  page it documents (comma-separated, any one admits); only their holders read it, and admin holds
+  all. One naming none is shown to every position holder, and
+  `scripts/sync-help-articles.spec.ts` lists those. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
   auto-creates categories; every production deploy does the same remotely. A new article lands
   as a draft, and appears at `/member/help` once staff publish it.
 - **Public-site** articles live under [`public/`](public) here — the in-app KB (`/member/help`) is
@@ -16,6 +19,9 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
   `[H]` = **task/how-to** article (a single workflow, step by step).
 - Editing a `static` article in the staff UI is overwritten on the next sync — edit the markdown
   file, not the web copy.
+- An article written at `/staff/help/create` (`source='dynamic'`) names its capabilities in the
+  editor's Capabilities field, shown when the audience is staff. It is the same
+  `help_articles.capabilities` column and the same rule.
 
 ## Categories
 
@@ -83,7 +89,7 @@ auto-creates any missing).
 - [x] `[H]` Set up a recurring booking _(expands seed `recurring-reservations`)_
 - [x] `[H]` Confirm a waitlisted reservation
 - [x] `[H]` Pay for a reservation (`/member/reservations/[id]/pay`)
-- [x] `[H]` Understand practice credits & free hours (sustaining benefit)
+- [x] `[H]` Understand practice credits (sustaining benefit)
 - [x] `[H]` Cancel or change a reservation
 
 ### equipment
@@ -153,26 +159,26 @@ auto-creates any missing).
 - [x] `[P]` Members & users overview (`/staff/members`, tiers, search)
 - [x] `[H]` Edit a user, manage roles & adjust credits (`/staff/members/[id]`)
 - [ ] `[H]` Impersonate a user for support — _blocked: the feature does not exist.
-      Impersonation is explicitly deferred (`docs/specs/shipped/staff-bands-spec.md`), and the
-      article that described it as working was removed._
+      Impersonation was deferred when staff band management was built, and the article that
+      described it as working was removed._
 - [x] `[H]` Manage reservations & resolve issues _(expands seed `staff-managing-reservations`)_
 - [x] `[H]` Take payment / comp / refund a reservation (`/staff/reservations/[id]`)
 - [x] `[H]` Manage recurring reservation series (Recurring, on `/staff/reservations`)
 - [x] `[H]` Set facility closures / blackout dates (rows of `/staff/reservations`)
 - [x] `[H]` Create & manage events; ticketing & check-in (`/staff/events`, `.../check-in`)
 - [x] `[H]` Run an off-site or multi-day event (venue, two day-events, one project, duty lists)
-- [x] `[H]` Manage bands (deactivate/reactivate, members) (`/staff/bands`)
-- [x] `[H]` Manage the inventory catalog, units & categories (`/staff/inventory`)
+- [x] `[H]` Manage bands (deactivate/reactivate, members) (`/staff/groups`)
+- [x] `[H]` Manage gear and supplies, units & categories (`/staff/inventory`, `/staff/inventory/supplies`)
 - [x] `[H]` Approve loans & record returns (`/staff/inventory/loans`)
 - [x] `[H]` Send an email campaign (`/staff/marketing/campaigns`)
 - [x] `[H]` Build & manage audiences (`/staff/marketing/audiences`)
 - [x] `[H]` Handle the contact inbox (`/staff/inbox`)
-- [x] `[H]` Reconcile payments & credits (`/staff/payments`, `/staff/credits`)
+- [x] `[H]` Reconcile payments & credits (`/staff/money/payments`, `/staff/money/credits`)
 - [x] `[H]` Track sponsors (`/staff/sponsors`) and grants (`/staff/grants`)
 - [x] `[H]` Author help articles (`/staff/help`, static-vs-dynamic, sync caveat)
-- [x] `[H]` Work the moderation queues (`/staff/flags`, `/staff/suggestions`) — upholding vs
+- [x] `[H]` Work the moderation queues (`/staff/moderation/flags`, `/staff/suggestions`) — upholding vs
       dismissing, scoping a restriction, running the idea board
-- [x] `[P]` System settings reference (`/staff/settings` — products, reservations, org, integrations, inbox channels)
+- [x] `[P]` System settings reference (`/staff/system` — organization, features, access, audit log)
 
 ---
 

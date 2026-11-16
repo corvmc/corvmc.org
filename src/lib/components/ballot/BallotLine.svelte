@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A ballot as one line on another page: its question, status and, once
 	 * certified, the published counts. Never a live tally.
 	 */
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { ballotStatusLabels, type BallotStatus } from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { ballotStatusLabels, type BallotStatus } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	type Line = {
 		title: string;
@@ -30,8 +31,16 @@
 {#if ballot.result}
 	<span class="block text-muted">
 		{ballot.result.options.map((o) => `${o.label} ${o.votes}`).join(' · ')}
-		— {ballot.passed === null ? 'outcome not recorded' : ballot.passed ? 'passed' : 'did not pass'}
+		— {ballot.passed === null
+			? m.ballot_ballot_line_outcome_not_recorded_text()
+			: ballot.passed
+				? m.ballot_ballot_line_passed_text()
+				: m.ballot_ballot_line_did_not_pass_text()}
 	</span>
 {:else if ballot.status === 'open'}
-	<span class="block text-muted">Voting closes {formatDateShortYear(ballot.closesAt)}</span>
+	<span class="block text-muted"
+		>{m.ballot_ballot_line_voting_closes_text({
+			formatDateShortYear: formatDateShortYear(ballot.closesAt)
+		})}</span
+	>
 {/if}

@@ -1,18 +1,20 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { env } from '$env/dynamic/public';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { changeBandAddress } from '$lib/remote/band-address.remote';
-	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
-	import { isReservedSlug } from '$lib/reserved-slugs';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import * as env from '$app/env/public';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import { changeBandAddress } from '#lib/remote/band-address.remote.js';
+	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
+	import { isReservedSlug } from '#lib/reserved-slugs.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).
@@ -38,44 +40,56 @@
 </script>
 
 <section class="space-y-4">
-	<h2 class="text-lg font-semibold">Band Address</h2>
+	<h2 class="text-lg font-semibold">
+		{m.band_slug_settings_band_address_section_band_address_title()}
+	</h2>
 
 	<InfoCard title={`${slug}.${baseDomain}`}>
 		<p class="text-sm">
-			This is your band's address. It's also your profile at
-			<code class="text-xs">/directory/bands/{slug}</code>
-			and your dashboard at <code class="text-xs">/band/{slug}</code>.
+			<ParaglideMessage
+				message={m.band_slug_settings_band_address_section_band_s_address_s_als_text}
+				inputs={{ slug }}
+				>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 		{#if readonly}
 			<!-- Admins can see the address; only the owner can move it, because
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
-			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
+			<p class="mt-2 text-subtle">
+				{m.band_slug_settings_band_address_section_only_band_s_owner_ca_text()}
+			</p>
 		{:else}
 			<div class="mt-2 card-actions justify-end">
-				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
-					>Change address</Button
+				<Button
+					variant="default"
+					size="sm"
+					outline
+					data-testid="change-address"
+					onclick={() => (showChange = true)}
+					>{m.band_slug_settings_band_address_section_change_address_label()}</Button
 				>
 			</div>
 		{/if}
 	</InfoCard>
 </section>
 
-<Modal title="Change band address" bind:open={showChange}>
+<Modal title={m.band_slug_settings_band_address_section_title()} bind:open={showChange}>
 	<Form
 		remote={changeBandAddress}
+		refreshQueries={false}
 		onsuccess={(result) => {
 			showChange = false;
 			if (!result?.changed) {
-				toast.info('That is already your address');
+				toast.info(m.band_slug_settings_band_address_section_already_address_toast());
 				return;
 			}
-			toast.success('Address updated');
-			// Straight to the new URL — no invalidateAll() first. Every query on this
-			// page is still keyed on the old slug, so re-running them here would
-			// bounce through the old-address redirect. Changing page.params.slug
-			// re-keys them instead.
-			goto(resolve(`/band/${result.slug}/settings`));
+			toast.success(m.band_slug_settings_band_address_section_address_updated_toast());
+			// Every query on this page is keyed on the old slug, and `getBandLayout`
+			// answers that with a forward to the bare address, which `refreshQueries`
+			// above keeps from racing this. Changing page.params.slug re-keys them.
+			goto(resolve(`band/${result.slug}/settings`));
 		}}
 	>
 		<div class="space-y-4">
@@ -89,32 +103,46 @@
 			<FormField
 				field={fields.newSlug}
 				type="text"
-				label="New address"
-				placeholder="your-band"
+				label={m.band_slug_settings_band_address_section_new_address_label()}
+				placeholder={m.band_slug_settings_band_address_section_placeholder()}
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
 					(draft = e.currentTarget.value)}
-				description="Letters, numbers and hyphens. Spaces and punctuation are dropped."
+				description={m.band_slug_settings_band_address_section_description_body()}
 				required
 			/>
 
 			{#if normalized}
 				<p class="text-sm">
-					Your band's site moves to <strong>{normalized}.{baseDomain}</strong>.
+					<ParaglideMessage
+						message={m.band_slug_settings_band_address_section_band_s_site_moves_text}
+						inputs={{ normalized, baseDomain }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 
 			{#if reserved}
-				<p class="text-sm text-error">That address is reserved — pick another.</p>
+				<p class="text-sm text-error">
+					{m.band_slug_settings_band_address_section_address_reserved_pic_text()}
+				</p>
 			{/if}
 
 			<Alert type="warning" class="text-sm">
-				Links to <strong>{slug}.{baseDomain}</strong> will forward to the new address — but only until
-				another band claims it, and then they stop. Update anywhere you've printed or posted the old one.
-				You can only change this a few times a year.
+				<ParaglideMessage
+					message={m.band_slug_settings_band_address_section_links_will_forward_n_body}
+					inputs={{ slug, baseDomain }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Change address" successLabel="Changed" variant="warning" />
+				<SubmitButton
+					label={m.band_slug_settings_band_address_section_change_address_label()}
+					successLabel={m.band_slug_settings_band_address_section_success_label()}
+					variant="warning"
+				/>
 			</div>
 		</div>
 	</Form>

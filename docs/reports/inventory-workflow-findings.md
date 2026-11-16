@@ -1,7 +1,7 @@
 # Inventory: what happens when someone actually uses it
 
 > A hands-on browser pass over the inventory module, driven as the operator, ahead of
-> a workflow redesign. Companion to `docs/specs/inventory-spec.md` (design rationale)
+> a workflow redesign. Companion to `docs/decisions/0045-inventory-stock-is-a-ledger.md` (design rationale)
 > and `docs/development/business-workflows.md#6` (shipped behaviour).
 >
 > **Status: in progress.**

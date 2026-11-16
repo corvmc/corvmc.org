@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // getAvailableDates must not offer a date the validator will reject.
@@ -12,12 +12,13 @@ import { mockUser } from '$lib/server/db/test-factory';
 // ---------------------------------------------------------------------------
 
 const MAX_ADVANCE_DAYS = 14;
+const TEACHING_MAX_ADVANCE_DAYS = 60;
 
 // Mutable so a test can exercise a fractional advance-day config.
 let maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
 
 // Deterministic, UTC-based tz helpers so day-stepping is exact in the test.
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn((d: Date) => d.toISOString().slice(0, 10)),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00Z`))
 }));
@@ -25,11 +26,13 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff,
 		minDurationHours: 1,
+		teachingMinDurationHours: 0.5,
+		teachingMaxAdvanceDaysOneoff: TEACHING_MAX_ADVANCE_DAYS,
 		timeSlotMinutes: 30
 	}))
 }));
@@ -42,13 +45,18 @@ const openDay = [
 	{ startTime: '10:00', available: true },
 	{ startTime: '10:30', available: true }
 ];
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
+	isBookableStart: (
+		await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()
+	).isBookableStart,
+	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => openDay),
 	getAvailableSlotsForDates: vi.fn(
 		async (dates: string[]) => new Map(dates.map((d) => [d, openDay]))
 	),
 	getConflictDetails: vi.fn(),
-	getValidationWarnings: vi.fn()
+	getValidationWarnings: vi.fn(),
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false, tourMinutes: 0 }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
@@ -77,11 +85,12 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getAvailableDates } = (await import('$lib/remote/reservations.remote')) as any;
+const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js')) as any;
+const { getAvailableSlotsForDates } = await import('#lib/server/reservation/conflict-service.js');
 
 describe('getAvailableDates window', () => {
 	it('offers exactly maxAdvanceDaysOneoff days starting today, and no farther', async () => {
-		const dates: string[] = await getAvailableDates();
+		const { dates }: { dates: string[] } = await getAvailableDates();
 
 		const today = new Date().toISOString().slice(0, 10);
 		expect(dates[0]).toBe(today);
@@ -100,7 +109,7 @@ describe('getAvailableDates window', () => {
 		// (~15 days out) past the 14.5-day limit, recreating the dead zone.
 		maxAdvanceDaysOneoff = 14.5;
 		try {
-			const dates: string[] = await getAvailableDates();
+			const { dates }: { dates: string[] } = await getAvailableDates();
 			expect(dates).toHaveLength(14);
 
 			const lastOffered = new Date(`${dates[dates.length - 1]}T23:59:59Z`);
@@ -109,5 +118,30 @@ describe('getAvailableDates window', () => {
 		} finally {
 			maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
 		}
+	});
+});
+
+// #2957: the floor and the window are the booker's, as `validateBooking` reads them.
+describe('getAvailableDates for a teaching booking', () => {
+	it('offers a day whose only gap is a half-hour, and withholds it from a member', async () => {
+		const halfHourOnly = [
+			{ startTime: '09:00', available: true },
+			{ startTime: '09:30', available: false }
+		];
+		vi.mocked(getAvailableSlotsForDates).mockImplementation(
+			async (dates: string[]) => new Map(dates.map((d) => [d, halfHourOnly])) as never
+		);
+		try {
+			expect((await getAvailableDates('instructor')).dates).not.toHaveLength(0);
+			expect((await getAvailableDates('user')).dates).toHaveLength(0);
+		} finally {
+			vi.mocked(getAvailableSlotsForDates).mockImplementation(
+				async (dates: string[]) => new Map(dates.map((d) => [d, openDay])) as never
+			);
+		}
+	});
+
+	it('offers the teaching window of days', async () => {
+		expect((await getAvailableDates('instructor')).dates).toHaveLength(TEACHING_MAX_ADVANCE_DAYS);
 	});
 });

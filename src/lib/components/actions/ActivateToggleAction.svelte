@@ -1,15 +1,16 @@
 <script lang="ts" generics="TOffOut, TOnOut">
-	import type { RemoteForm } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteForm } from '$app/server';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	let {
 		entityId,
 		isDeactivated,
 		deactivateAction,
 		reactivateAction,
-		entityLabel = 'item',
+		entityLabel = m.actions_activate_toggle_entity_default_label(),
 		deactivateWarning,
 		variant,
 		size = 'sm',
@@ -33,25 +34,33 @@
 
 	const action = $derived(isDeactivated ? reactivateAction : deactivateAction);
 	const fields = $derived(action.fields);
-	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
+	const label = $derived(
+		isDeactivated
+			? m.actions_activate_toggle_reactivate_label()
+			: m.actions_activate_toggle_deactivate_label()
+	);
 	const resolvedVariant = $derived(variant ?? (isDeactivated ? 'success' : 'error'));
 	const confirmText = $derived(
-		isDeactivated ? undefined : (deactivateWarning ?? `Deactivate this ${entityLabel}?`)
+		isDeactivated
+			? undefined
+			: (deactivateWarning ?? m.actions_activate_toggle_deactivate_confirm_text({ entityLabel }))
 	);
 	const toast = $derived(
-		isDeactivated ? `${entityLabel} reactivated` : `${entityLabel} deactivated`
+		isDeactivated
+			? m.actions_activate_toggle_reactivated_toast({ entityLabel })
+			: m.actions_activate_toggle_deactivated_toast({ entityLabel })
 	);
 </script>
 
 <Action
 	{action}
 	{label}
-	modalTitle="Confirm"
+	modalTitle={m.actions_confirm_title()}
 	successToast={toast}
 	variant={resolvedVariant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -59,7 +68,7 @@
 		{#if confirmText}
 			<p class="py-4">{confirmText}</p>
 		{:else}
-			<p class="py-4">Reactivate this {entityLabel}?</p>
+			<p class="py-4">{m.actions_activate_toggle_reactivate_text({ entityLabel })}</p>
 		{/if}
 	{/snippet}
 </Action>

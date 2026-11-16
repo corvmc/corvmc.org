@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 import { rangeCondition } from './range';
-import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
+import { volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
 
 const dialect = new SQLiteSyncDialect();
 const render = (c: SQL | undefined) => dialect.sqlToQuery(c as SQL);

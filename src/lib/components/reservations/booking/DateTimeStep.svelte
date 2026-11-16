@@ -1,15 +1,18 @@
 <script lang="ts">
-	import type { BookerType } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { BookerType } from '#lib/config.js';
 	import { untrack } from 'svelte';
 	import {
 		getAvailableDates,
 		getReservationStartTimes,
 		getReservationEndTimes
-	} from '$lib/remote/reservations.remote';
-	import * as Form from '$lib/components/ui/Form';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	} from '#lib/remote/reservations.remote.js';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
-	import { isValidPhone } from '$lib/utils/phone';
+	import { isValidPhone } from '#lib/utils/phone.js';
+	import { formatSlotTime } from '#lib/utils/format.js';
 
 	let {
 		isSustaining = false,
@@ -34,6 +37,8 @@
 	} = $props();
 
 	const tz = getLocalTimeZone();
+	// Three booking forms share this step, so the names come from whichever one holds it.
+	const fields = getFormContext()!.fields;
 
 	// Left empty until availability loads, then preselected to the first bookable
 	// day (see the effect below). Defaulting to today opened the dialog on a dead
@@ -65,9 +70,9 @@
 
 	const monthlyLabels = $derived.by(() => {
 		if (!date) return { weekday: 'Same weekday each month', monthday: 'Same date each month' };
-		const d = new Date(date + 'T00:00:00');
-		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-		const dayOfMonth = d.getDate();
+		const d = new Date(date + 'T00:00:00Z');
+		const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+		const dayOfMonth = d.getUTCDate();
 		const nth = Math.ceil(dayOfMonth / 7);
 		return {
 			weekday: `${ordinal(nth)} ${weekdayName} of the month`,
@@ -76,6 +81,10 @@
 	});
 
 	let availableDates = $state<string[]>([]);
+	// Minutes of notice when the member has no Practice space clearance yet.
+	let newMemberNotice = $state<number | null>(null);
+	// Minutes held before the chosen start for a new member's tour.
+	let tourMinutes = $state(0);
 	let initialLoading = $state(true);
 
 	// Bound the calendar by what the server actually offers rather than
@@ -95,16 +104,19 @@
 		const forceReload = token > availSeen;
 		availSeen = token;
 		const gen = ++availGen;
-		const q = getAvailableDates();
+		const q = getAvailableDates(bookerType);
 		(async () => {
 			// refresh() re-fetches and updates the resource's reactive `current`;
 			// the awaitable itself resolves only once, so read `current` after it.
 			if (forceReload) await q.refresh();
-			const dates = (forceReload ? q.current : await q) ?? [];
+			const result = forceReload ? q.current : await q;
+			const dates = result?.dates ?? [];
 			// Drop a stale resolve (e.g. the initial load finishing after a
 			// conflict-triggered refresh already ran).
 			if (gen !== availGen) return;
 			availableDates = dates;
+			newMemberNotice = result?.newMemberNoticeMinutes ?? null;
+			tourMinutes = result?.tourMinutes ?? 0;
 			// Preselect the first bookable day, and re-pick if a conflict reload
 			// took the selected day away — otherwise the user is stranded on a
 			// date the server no longer offers. untrack: reading `date` here must
@@ -146,7 +158,7 @@
 			startTimeOptions = [];
 			return;
 		}
-		const q = getReservationStartTimes(d);
+		const q = getReservationStartTimes({ date: d, bookerType });
 		(async () => {
 			if (forceReload) await q.refresh();
 			const opts = (forceReload ? q.current : await q) ?? [];
@@ -170,6 +182,14 @@
 		}
 	});
 
+	// "HH:MM" less the tour, for the arrival line.
+	const arrivalTime = $derived.by(() => {
+		if (!startTime || tourMinutes <= 0) return '';
+		const [h, min] = startTime.split(':').map(Number);
+		const total = h * 60 + min - tourMinutes;
+		return formatSlotTime(`${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`);
+	});
+
 	const step1Valid = $derived(
 		!!date && !!startTime && !!endTime && (!needsPhone || isValidPhone(phone))
 	);
@@ -187,12 +207,20 @@
 		</div>
 	{:else if availableDates.length === 0}
 		<EmptyState
-			title="No open practice times"
-			description="Every slot in the current booking window is taken. Check back soon — cancellations free up time regularly."
+			title={m.reservations_booking_date_time_step_title()}
+			description={m.reservations_booking_date_time_step_every_slot_current_booki_body()}
 		/>
 	{:else}
+		{#if newMemberNotice !== null}
+			<p class="text-muted text-sm">
+				{m.reservations_booking_date_time_step_first_booking_notice_text({
+					days: Math.ceil(newMemberNotice / 1440)
+				})}
+			</p>
+		{/if}
+
 		<Form.Field
-			name="date"
+			field={fields.date}
 			label=""
 			type="calendar"
 			bind:value={date}
@@ -203,77 +231,86 @@
 
 		{#if date && noStartTimes}
 			<p class="mt-2 text-sm text-error">
-				No available times on this date. Please select another day.
+				{m.reservations_booking_date_time_step_no_available_times_date_text()}
 			</p>
 		{/if}
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
-				name="startTime"
-				label="Start time"
+				field={fields.startTime}
+				label={m.reservations_booking_date_time_step_start_time_label()}
 				type="select"
 				bind:value={startTime}
 				options={startTimeOptions ?? []}
 				placeholder={startTimeOptions === null
-					? 'Loading...'
+					? m.reservations_booking_date_time_step_loading_placeholder()
 					: noStartTimes
-						? 'No times available'
-						: 'Select a start time'}
+						? m.reservations_booking_date_time_step_no_times_available_placeholder()
+						: m.reservations_booking_date_time_step_select_start_time_placeholder()}
 				required
 			/>
 
 			<Form.Field
-				name="endTime"
-				label="End time"
+				field={fields.endTime}
+				label={m.reservations_booking_date_time_step_end_time_label()}
 				type="select"
 				bind:value={endTime}
 				options={endTimeOptions ?? []}
 				placeholder={!startTime
-					? 'Select a start time first'
+					? m.reservations_booking_date_time_step_select_start_time_first_placeholder()
 					: endTimeOptions === null
-						? 'Loading...'
+						? m.reservations_booking_date_time_step_loading_placeholder()
 						: endTimeOptions.length === 0
-							? 'No end times available'
-							: 'Select an end time'}
+							? m.reservations_booking_date_time_step_no_end_times_available_placeholder()
+							: m.reservations_booking_date_time_step_select_end_time_placeholder()}
 				required
 			/>
 		</div>
 
+		{#if arrivalTime}
+			<p class="text-muted text-sm">
+				{m.reservations_booking_date_time_step_tour_arrival_text({
+					time: arrivalTime,
+					minutes: tourMinutes
+				})}
+			</p>
+		{/if}
+
 		{#if needsPhone}
-			<!-- Bound by `name`, not `field`: FormField only wires bind:value on the
-			     name-only branch, and step1Valid needs to see each keystroke. Issues
-			     resolve identically either way (Form.issuesFor reads
-			     remote.fields[name].issues()). -->
+			<!-- Bound as well as field-backed: step1Valid needs to see each keystroke. -->
 			<Form.Field
-				name="phone"
+				field={fields.phone}
 				type="tel"
-				label="Contact phone"
+				label={m.reservations_booking_date_time_step_contact_phone_label()}
 				bind:value={phone}
 				placeholder="(541) 555-0123"
 				required
-				description="Staff use this to reach you about your booking. Saved to your account."
+				description={m.reservations_booking_date_time_step_staff_use_reach_about_bo_body()}
 			/>
 		{/if}
 
 		<Form.Field
-			name="notes"
-			label="Notes (optional)"
+			field={fields.notes}
+			label={m.reservations_booking_date_time_step_notes_optional_label()}
 			type="textarea"
 			bind:value={notes}
-			placeholder="What are you working on?"
+			placeholder={m.reservations_booking_date_time_step_what_working_placeholder()}
 			rows={2}
 		/>
 
 		{#if isSustaining}
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Frequency</legend>
+				<legend class="fieldset-legend"
+					>{m.reservations_booking_date_time_step_frequency_title()}</legend
+				>
 				<div class="flex gap-1">
-					{#each [{ value: '', label: 'One Time' }, { value: 'weekly', label: 'Weekly' }, { value: 'biweekly', label: 'Biweekly' }, { value: 'monthly', label: 'Monthly' }] as opt (opt.value)}
+					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly_label() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly_label() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly_label() }] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
+							<!-- One-time posts nothing: kit refuses a radio with an empty value. -->
 							<input
-								type="radio"
-								name="recurring"
-								value={opt.value}
+								{...opt.value
+									? fields.recurring.as('radio', opt.value)
+									: { type: 'radio', value: '' }}
 								bind:group={frequency}
 								class="hidden"
 							/>
@@ -285,14 +322,14 @@
 
 			{#if isMonthly}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Monthly pattern</legend>
+					<legend class="fieldset-legend"
+						>{m.reservations_booking_date_time_step_monthly_pattern_title()}</legend
+					>
 					<div class="flex flex-col gap-1">
 						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
 							<label class="btn justify-start btn-sm" class:btn-primary={monthlyMode === opt.value}>
 								<input
-									type="radio"
-									name="monthlyMode"
-									value={opt.value}
+									{...fields.monthlyMode.as('radio', opt.value)}
 									bind:group={monthlyMode}
 									class="hidden"
 								/>
@@ -302,10 +339,23 @@
 					</div>
 				</fieldset>
 			{/if}
+
+			{#if frequency}
+				<Form.Field
+					field={fields.recurringUntil}
+					type="date"
+					label={m.reservations_booking_date_time_step_label()}
+					min={date}
+				/>
+			{/if}
 		{/if}
 	{/if}
 
 	<div class="flex justify-end pt-2">
-		<Form.SubmitButton label="Save" continueLabel="Continue" class="btn-primary" />
+		<Form.SubmitButton
+			label={m.reservations_booking_date_time_step_save_label()}
+			continueLabel={m.reservations_booking_date_time_step_continue_label()}
+			class="btn-primary"
+		/>
 	</div>
 </Form.Step>

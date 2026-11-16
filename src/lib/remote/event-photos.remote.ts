@@ -1,20 +1,22 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	addEventPhotos,
 	describeEventPhoto as describePhoto,
 	removeEventPhoto as removePhoto,
 	setEventRecapText
-} from '$lib/server/event/event-photo-service';
-import { recapUploadAccess } from '$lib/server/event/recap-access';
-import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remote';
+} from '#lib/server/event/event-photo-service.js';
+import { recapUploadAccess } from '#lib/server/event/recap-access.js';
+import { getPublicEventDetail, getStaffEventPage } from '#lib/remote/events.remote.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
- * Recap photo writes (docs/specs/event-recaps-spec.md). The event id comes from
+ * Recap photo writes (business-workflows.md §9). The event id comes from
  * the form body and is the scope every service call checks against. Uploading
- * is open to volunteer photographers; editing and removing stay `event.manage`.
+ * and the written recap are open to volunteer photographers; captions, alt text
+ * and removal stay `event.manage`.
  */
 
 async function requireRecapUploader(eventId: string) {
@@ -42,13 +44,21 @@ export const uploadEventPhotos = form(
 
 export const removeEventPhoto = form(
 	z.object({ eventId: z.string().min(1), attachmentId: z.string().min(1) }),
-	async (data) => {
+	unaudited('Gallery content: no standing, money or access changes.', async (data) => {
 		await requireCapability('event.manage');
 		await removePhoto(data.eventId, data.attachmentId);
 		void getStaffEventPage(data.eventId).refresh();
 		return { success: true };
-	}
+	})
 );
+
+/** `event.manage`, or the photographer's grant for this event alone (#2544). */
+async function requireRecapWriter(eventId: string) {
+	const user = requireUser();
+	if (await can('event.manage')) return { staff: true };
+	if ((await recapUploadAccess(user.id, eventId)) === 'photographer') return { staff: false };
+	error(403, 'Not permitted');
+}
 
 /** The written recap (#1401): markdown, and a blank submission clears it. */
 export const saveEventRecapText = form(
@@ -57,9 +67,9 @@ export const saveEventRecapText = form(
 		recapText: z.string().max(5000).default('')
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		const { staff } = await requireRecapWriter(data.eventId);
 		await setEventRecapText(data.eventId, data.recapText);
-		void getStaffEventPage(data.eventId).refresh();
+		if (staff) void getStaffEventPage(data.eventId).refresh();
 		void getPublicEventDetail(data.eventId).refresh();
 		return { success: true };
 	}

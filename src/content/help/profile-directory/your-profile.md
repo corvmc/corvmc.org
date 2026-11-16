@@ -1,5 +1,5 @@
 ---
-title: Your Profile
+title: Your profile
 slug: your-profile
 category: profile-directory
 summary: An overview of your public profile and directory listing.

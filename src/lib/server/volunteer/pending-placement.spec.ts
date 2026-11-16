@@ -6,37 +6,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			sqlite.exec('begin');
-			try {
-				const out = [];
-				for (const s of stmts) out.push(await s);
-				sqlite.exec('commit');
-				return out;
-			} catch (e) {
-				sqlite.exec('rollback');
-				throw e;
-			}
-		}
-	})
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb
 }));
 
 const { applyDutyList } = await import('./duty-list-service');
-const { updateProductionDetails } = await import('$lib/server/production/production-service');
-const { updateProject, attachToProject } = await import('$lib/server/project/project-service');
+const { updateProductionDetails } = await import('#lib/server/production/production-service.js');
+const { updateProject, attachToProject } = await import('#lib/server/project/project-service.js');
 
 const T = Date.UTC(2026, 10, 7, 1, 0) / 1000;
 const rows = () =>
 	sqlite
 		.prepare(
-			`select starts_at s, ends_at e, due_at d, pending_offset_minutes p
-			 from work_order order by coalesce(starts_at, due_at, 0), pending_offset_minutes`
+			`select s.starts_at s, s.ends_at e, wo.due_at d, wo.pending_offset_minutes p
+			 from work_order wo left join volunteer_shift s on s.work_order_id = wo.id
+			 order by coalesce(s.starts_at, wo.due_at, 0), wo.pending_offset_minutes`
 		)
 		.all();
 
@@ -44,6 +32,7 @@ beforeEach(() => {
 	for (const t of [
 		'audit_log',
 		'work_task',
+		'volunteer_shift',
 		'work_order',
 		'duty_list_item',
 		'duty_list',

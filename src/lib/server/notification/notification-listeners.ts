@@ -2,35 +2,40 @@ import {
 	domainEvents,
 	type GroupInviteCreatedEvent,
 	type MemberInviteCreatedEvent
-} from '$lib/server/event-bus/event-bus';
+} from '#lib/server/event-bus/event-bus.js';
 import {
+	CLASSIFIED_LIFETIME_DAYS,
 	INVITE_EXPIRY_DAYS,
-	UNCONFIRMED_RELEASE_NOTICE,
-	hourLogExceptionLabels,
-	renewalKindLabels
-} from '$lib/config';
-import { formatCents } from '$lib/utils/format';
-import { groupKindLabels } from '$lib/terms';
-import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
-import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
+	PERFORMANCE_INQUIRY_SUBJECT,
+	hourLogExceptionLabels
+} from '#lib/config.js';
+import { formatCents, formatDateLong, formatSlotTime, formatTime } from '#lib/utils/format.js';
+import { groupKindLabels } from '#lib/terms.js';
+import { fanOutAnnouncement } from '#lib/server/group/announcement-fanout.js';
+import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
 import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
-import { membersAddedNotice } from '$lib/server/group/roster-import-service';
+import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
 import { quoteForPlainText } from './email/normalize-model';
-import { captureException } from '$lib/server/sentry';
-import { listUsersWithCapability } from '$lib/server/authorization';
-import { applicationNotice } from '$lib/server/group/application-reviewers';
-import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
-import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { captureException } from '#lib/server/sentry.js';
+import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { taskNoticeRecipients } from '#lib/server/task/task-audience.js';
+import { applicationNotice } from '#lib/server/group/application-reviewers.js';
+import { buildReplyToAddress } from '#lib/server/inbox/reply-address.js';
+import * as env from '$app/env/private';
+import * as publicEnv from '$app/env/public';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, inArray } from 'drizzle-orm';
-import { shiftLabel } from '$lib/utils/shift-label';
-import { formatIsoDay } from '$lib/utils/deadline';
+import { shiftLabel } from '#lib/utils/shift-label.js';
+import { formatIsoDay } from '#lib/utils/deadline.js';
+import { getBookingTerms } from '#lib/server/reservation/config.js';
+import type { ClubDate, ClubTime } from '#lib/server/reservation/timezone.js';
 import type {
 	NotificationEmailCtaSpec,
 	NotificationEmailDetail,
 	StandaloneEmailContent
-} from '$lib/types/notification-email';
+} from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // Notification listeners
@@ -106,27 +111,15 @@ function memberInvitationEmail(event: MemberInviteCreatedEvent): StandaloneEmail
 	};
 }
 
-function formatPickupDate(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
-		weekday: 'long',
-		month: 'long',
-		day: 'numeric'
-	});
-}
-
 /** Display hours for email copy. 3 → "3 hours", 1.5 → "1.5 hours", 1 → "1 hour". */
 function formatHours(hours: number): string {
 	const rendered = Number.isInteger(hours) ? String(hours) : String(Number(hours.toFixed(2)));
 	return `${rendered} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-/** Calendar date for volunteer copy — no time component to render. */
-function formatWorkedOn(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
-		weekday: 'long',
-		month: 'long',
-		day: 'numeric'
-	});
+/** An instant as the club's calendar day: "Tuesday, November 10". */
+function formatClubDay(value: string): string {
+	return formatDateLong(new Date(value));
 }
 
 /** "Saturday, February 7, 6:00–10:00 PM" — one string for a shift's when. */
@@ -140,22 +133,34 @@ function formatWorkedOn(value: string): string {
  */
 function formatShiftWhen(startsAt: string | null, endsAt: string | null): string {
 	if (!startsAt || !endsAt) return 'a time to be arranged';
-	const start = new Date(startsAt);
-	const end = new Date(endsAt);
-	const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-	return `${formatWorkedOn(startsAt)}, ${time(start)}–${time(end)}`;
+	return `${formatClubDay(startsAt)}, ${formatTime(new Date(startsAt))}–${formatTime(new Date(endsAt))}`;
 }
 
+/**
+ * A payload's club wall-clock day, `YYYY-MM-DD`, as "Saturday, November 14".
+ * Noon UTC is the same calendar day in club time.
+ */
+function clubDay(iso: ClubDate): string {
+	return formatDateLong(new Date(`${iso}T12:00:00Z`));
+}
+
+/** A payload's club wall-clock time, `HH:MM`, as "3:00 PM". */
+const clubTime = (time: ClubTime): string => formatSlotTime(time);
+
 /** Date + time range as rows for the details card. En-dash per the brand voice. */
-function whenDetails(date: string, startTime: string, endTime: string): NotificationEmailDetail[] {
+function whenDetails(
+	date: ClubDate,
+	startTime: ClubTime,
+	endTime: ClubTime
+): NotificationEmailDetail[] {
 	return [
-		{ label: 'Date', value: date },
-		{ label: 'Time', value: `${startTime} – ${endTime}` }
+		{ label: 'Date', value: clubDay(date) },
+		{ label: 'Time', value: `${clubTime(startTime)} – ${clubTime(endTime)}` }
 	];
 }
 
 export function registerAllNotificationListeners(): void {
-	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+	const siteUrl = publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
 	// --- Direct messages (member↔member) ---
 	//
@@ -169,16 +174,6 @@ export function registerAllNotificationListeners(): void {
 	// frequency thing on the site, and the notification names the group and the
 	// person, never what they wrote.
 	domainEvents.on('inbox.group_message', async ({ data: event }) => {
-		// An `email` room is an announcement, and a roster-sized email fan-out
-		// does not belong in the per-reader loop below: `dispatch` is a
-		// preference SELECT, an INSERT, an SSE push and an outbound HTTPS call
-		// each, awaited serially, against a Worker's 1000-subrequest ceiling.
-		// `fanOutGroupRoom` is the batched path (#1304).
-		if (event.notifyPolicy === 'email') {
-			await fanOutGroupRoom(event, siteUrl);
-			return;
-		}
-
 		const readers = await db
 			.select({ id: user.id, name: user.name, email: user.email })
 			.from(user)
@@ -258,9 +253,8 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Music purchase: the download link, and for a guest the only copy of it ---
 	domainEvents.on('audio.purchased', async ({ data: event }) => {
-		const base = env.PUBLIC_SITE_URL ?? '';
-		const downloadUrl = `${base}/music/download/${event.downloadToken}`;
-		const releaseUrl = `${base}/music/${event.bandSlug}/${event.releaseSlug}`;
+		const downloadUrl = `${siteUrl}/music/download/${event.downloadToken}`;
+		const releaseUrl = `${siteUrl}/music/${event.bandSlug}/${event.releaseSlug}`;
 
 		const paid = event.amountPaidCents > 0;
 		const paragraphs: { text: string }[] = [
@@ -398,15 +392,57 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Upcoming reservation reminder',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation reminder: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				subject: `Reservation reminder: ${clubDay(event.date)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 				heading: 'Upcoming reservation',
 				paragraphs: [{ text: 'You have a reservation coming up at the space.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
+	// --- First visit, the day before (#2569) ---
+	// Sent in place of the reservation reminder for that booking. The door code
+	// opens at the reservation's start, so before then the volunteer lets them in.
+	domainEvents.on('reservation.first_visit_due', async ({ data: event }) => {
+		const arrive = event.tourTime
+			? `Arrive by ${event.tourTime}. Someone will meet you at the door and show you around before your reservation starts at ${clubTime(event.startTime)}.`
+			: `Arrive a few minutes before ${clubTime(event.startTime)}.`;
+		await dispatch({
+			type: 'first_visit',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `First visit: ${clubDay(event.date)}`,
+			body: event.tourTime
+				? `Arrive by ${event.tourTime}`
+				: `${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `First visit: ${clubDay(event.date)}`,
+				preview_text: event.tourTime
+					? `Arrive by ${event.tourTime} on ${clubDay(event.date)}.`
+					: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
+				heading: 'First visit',
+				paragraphs: [
+					{ text: arrive },
+					...(event.address ? [{ text: `The space is at ${event.address}.` }] : []),
+					{
+						text: event.tourTime
+							? 'Your door code comes in a separate email. It works from the start of your reservation; until then, the person showing you around lets you in.'
+							: 'Your door code comes in a separate email. It works from the start of your reservation.'
+					}
+				],
+				...(event.notes ? { body_plain: event.notes } : {}),
+				details: [
+					...(event.tourTime ? [{ label: 'Arrive by', value: event.tourTime }] : []),
+					...whenDetails(event.date, event.startTime, event.endTime)
+				],
 				cta: { label: 'View my reservations' }
 			}
 		});
@@ -419,12 +455,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Your door code is ready',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Your door code for ${event.date}`,
-				preview_text: `The lock has your code for ${event.date}.`,
+				subject: `Your door code for ${clubDay(event.date)}`,
+				preview_text: `The lock has your code for ${clubDay(event.date)}.`,
 				heading: 'Your door code is ready',
 				paragraphs: [
 					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' }
@@ -439,39 +475,9 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
-	// --- Confirmation reminder ---
-	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
-		// The first reminder is an invitation and the second is a deadline. Same
-		// notification type either way: a member who silenced one silenced both.
-		const opening = event.stage === 'window_open';
-		const title = opening
-			? 'You can confirm your reservation now'
-			: 'Please confirm your reservation';
-
-		await dispatch({
-			type: 'confirmation_reminder',
-			userId: event.userId,
-			userEmail: event.userEmail,
-			title,
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
-			href: '/member/reservations',
-			email: {
-				recipientName: event.userName,
-				subject: `${title}: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-				heading: title,
-				paragraphs: [
-					{
-						text: opening
-							? `Confirming is open for this booking from today. ${UNCONFIRMED_RELEASE_NOTICE}`
-							: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}`
-					}
-				],
-				details: whenDetails(event.date, event.startTime, event.endTime),
-				footnote: 'Please confirm or cancel your reservation to free up the time slot for others.',
-				cta: { label: 'Confirm now' }
-			}
-		});
+	// --- A session ended still payment due (#2876); audits every attempt ---
+	domainEvents.on('reservation.payment_due', async ({ data: event }) => {
+		await sendPaymentReminder(event);
 	});
 
 	// --- Band invitation sent ---
@@ -608,11 +614,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring reservation skipped',
-			body: `${event.skippedDate} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			body: `${clubDay(event.skippedDate)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring reservation skipped: ${event.skippedDate}`,
+				subject: `Recurring reservation skipped: ${clubDay(event.skippedDate)}`,
 				heading: 'Recurring reservation skipped',
 				paragraphs: [
 					{ text: 'One date in your recurring reservation was skipped.' },
@@ -634,11 +640,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring event could not reserve space',
-			body: `${event.eventTitle} on ${event.date} ${event.startTime}–${event.endTime}: ${event.reason}`,
+			body: `${event.eventTitle} on ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: ${event.reason}`,
 			href: `/staff/events/${event.eventId}`,
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring event needs space: ${event.eventTitle} on ${event.date}`,
+				subject: `Recurring event needs space: ${event.eventTitle} on ${clubDay(event.date)}`,
 				heading: 'Recurring event could not reserve space',
 				paragraphs: [
 					{
@@ -663,7 +669,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `Equipment pickup confirmed: ${event.equipmentName}`,
-			body: `Pickup on ${new Date(event.scheduledPickupDate).toLocaleDateString()}`,
+			body: `Pickup on ${formatClubDay(event.scheduledPickupDate)}`,
 			href: '/member/equipment/loans',
 			email: {
 				recipientName: event.userName,
@@ -675,7 +681,7 @@ export function registerAllNotificationListeners(): void {
 				],
 				details: [
 					{ label: 'Item', value: event.equipmentName },
-					{ label: 'Pickup date', value: formatPickupDate(event.scheduledPickupDate) }
+					{ label: 'Pickup date', value: formatClubDay(event.scheduledPickupDate) }
 				],
 				cta: { label: 'View my loans' }
 			}
@@ -695,7 +701,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: [{ text: `${event.userName} has requested to borrow equipment.` }],
 				details: [
 					{ label: 'Item', value: event.equipmentName ?? 'Free-form request' },
-					{ label: 'Requested pickup', value: formatPickupDate(event.requestedPickupDate) },
+					{ label: 'Requested pickup', value: formatClubDay(event.requestedPickupDate) },
 					...(event.memberNotes ? [{ label: 'Notes', value: event.memberNotes }] : [])
 				],
 				cta: { url: `/staff/inventory/loans/${event.loanId}`, label: 'Review request' }
@@ -791,6 +797,31 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- A classified post leaves the board soon (#2549) ---
+	domainEvents.on('classified.expiring', async ({ data: event }) => {
+		const title = `"${event.title}" expires ${event.expiresOn}`;
+		await dispatch({
+			type: 'classified_expiring',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title,
+			body: 'Renew it to keep it on the board',
+			href: `/member/classifieds/${event.postId}`,
+			email: {
+				recipientName: event.userName,
+				subject: title,
+				preview_text: 'Renew it to keep it on the board',
+				heading: 'Post expiring',
+				paragraphs: [
+					{
+						text: `"${event.title}" leaves the classifieds board on ${event.expiresOn}. Renew it to keep it up for another ${CLASSIFIED_LIFETIME_DAYS} days, or close it if you are done.`
+					}
+				],
+				cta: { label: 'View post' }
+			}
+		});
+	});
+
 	// Development deadlines (#1477). Fanned out over whoever manages the module
 	// the deadline belongs to; a committee-scoped recipient waits on #607.
 	domainEvents.on('development.deadline_due', async ({ data: event }) => {
@@ -807,7 +838,9 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title,
 					body: `${event.counterparty} · ${date}`,
-					href: grant ? `/staff/grants/${event.parentId}` : `/staff/sponsors/${event.parentId}`,
+					href: grant
+						? `/staff/grants/${event.parentId}`
+						: `/staff/contacts/${event.parentId}#sponsorships`,
 					email: {
 						recipientName: member.name,
 						subject: `${event.counterparty}: ${event.title}, ${date}`,
@@ -885,7 +918,7 @@ export function registerAllNotificationListeners(): void {
 		const details: NotificationEmailDetail[] = [
 			{ label: 'Contribution', value: `${formatCents(event.amountCents)} / month` },
 			{ label: 'Free rehearsal hours', value: `${formatHours(event.freeHoursPerMonth)} / month` },
-			{ label: 'Next renewal', value: formatPickupDate(event.periodEnd) }
+			{ label: 'Next renewal', value: formatClubDay(event.periodEnd) }
 		];
 		if (event.coveringFees) {
 			details.push({ label: 'Processing fees', value: 'Covered by you — thank you' });
@@ -947,7 +980,7 @@ export function registerAllNotificationListeners(): void {
 			{ label: 'Amount due', value: formatCents(event.amountCents) }
 		];
 		if (event.nextAttemptAt) {
-			details.push({ label: 'Next attempt', value: formatPickupDate(event.nextAttemptAt) });
+			details.push({ label: 'Next attempt', value: formatClubDay(event.nextAttemptAt) });
 		}
 
 		// Stripe's hosted invoice is a card form the member can complete without
@@ -980,14 +1013,14 @@ export function registerAllNotificationListeners(): void {
 				details,
 				cta,
 				footnote:
-					'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your free hours will reset.'
+					'Your member benefits are unchanged for now. If the card keeps declining, the membership will end and your credits will reset.'
 			}
 		});
 	});
 
 	domainEvents.on('membership.cancellation_scheduled', async ({ data: event }) => {
 		const details: NotificationEmailDetail[] = event.endsAt
-			? [{ label: 'Benefits run through', value: formatPickupDate(event.endsAt) }]
+			? [{ label: 'Benefits run through', value: formatClubDay(event.endsAt) }]
 			: [];
 
 		await dispatch({
@@ -995,7 +1028,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Your membership is set to end',
-			body: event.endsAt ? `Benefits run through ${formatPickupDate(event.endsAt)}` : undefined,
+			body: event.endsAt ? `Benefits run through ${formatClubDay(event.endsAt)}` : undefined,
 			href: '/member/membership',
 			email: {
 				recipientName: event.userName,
@@ -1056,12 +1089,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Reservation confirmed',
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
+			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation confirmed: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				subject: `Reservation confirmed: ${clubDay(event.date)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – ${clubTime(event.endTime)}`,
 				heading: 'Reservation confirmed',
 				paragraphs: [{ text: 'The practice room is yours for this slot.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1098,11 +1131,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Reservation cancelled',
-			body: `${event.date} ${event.startTime}–${event.endTime}`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Reservation cancelled: ${event.date}`,
+				subject: `Reservation cancelled: ${clubDay(event.date)}`,
 				heading: 'Reservation cancelled',
 				paragraphs: [{ text: 'Your reservation has been cancelled.' }, { text: reasonLine }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1118,17 +1151,48 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Recurring reservation waitlisted',
-			body: `${event.date} ${event.startTime}–${event.endTime}: waiting for slot`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}: waiting for slot`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Recurring reservation waitlisted: ${event.date}`,
+				subject: `Recurring reservation waitlisted: ${clubDay(event.date)}`,
 				heading: 'Recurring reservation waitlisted',
 				paragraphs: [
 					{
 						text: 'This date is on the waitlist because the time slot is currently booked.'
 					},
 					{ text: "You'll be notified automatically if the slot opens up." }
+				],
+				details: whenDetails(event.date, event.startTime, event.endTime),
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
+	// --- Recurring reservation rescheduled by staff ---
+	domainEvents.on('reservation.recurring_rescheduled', async ({ data: event }) => {
+		const kept =
+			event.keptCount > 0
+				? [
+						{
+							text: 'Some bookings on the old schedule stay booked. Cancel any you no longer need.'
+						}
+					]
+				: [];
+		await dispatch({
+			type: 'recurring_rescheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Recurring reservation changed',
+			body: `New schedule from ${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `Recurring reservation changed: from ${clubDay(event.date)}`,
+				heading: 'Recurring reservation changed',
+				paragraphs: [
+					{ text: 'Staff changed the schedule of your recurring reservation.' },
+					...kept
 				],
 				details: whenDetails(event.date, event.startTime, event.endTime),
 				cta: { label: 'View my reservations' }
@@ -1143,12 +1207,12 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'A slot has opened up!',
-			body: `${event.date} ${event.startTime}–${event.endTime} is available — confirm within 24 hours`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)} is available — confirm within 24 hours`,
 			href: `/member/reservations?confirm=${event.reservationId}`,
 			email: {
 				recipientName: event.userName,
-				subject: `Slot available: ${event.date} ${event.startTime}`,
-				preview_text: `${event.date}, ${event.startTime} – confirm within 24 hours or it goes to the next member.`,
+				subject: `Slot available: ${clubDay(event.date)}, ${clubTime(event.startTime)}`,
+				preview_text: `${clubDay(event.date)}, ${clubTime(event.startTime)} – confirm within 24 hours or it goes to the next member.`,
 				heading: 'A slot has opened up',
 				paragraphs: [{ text: 'The time slot you were waiting on is now available.' }],
 				details: whenDetails(event.date, event.startTime, event.endTime),
@@ -1165,11 +1229,11 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Waitlisted reservation expired',
-			body: `${event.date} ${event.startTime}–${event.endTime} was not confirmed in time`,
+			body: `${clubDay(event.date)}, ${clubTime(event.startTime)}–${clubTime(event.endTime)} was not confirmed in time`,
 			href: '/member/reservations',
 			email: {
 				recipientName: event.userName,
-				subject: `Waitlisted reservation expired: ${event.date}`,
+				subject: `Waitlisted reservation expired: ${clubDay(event.date)}`,
 				heading: 'Waitlisted reservation expired',
 				paragraphs: [
 					{
@@ -1186,7 +1250,11 @@ export function registerAllNotificationListeners(): void {
 	// Plain text, and replyable: staff answer this from whatever mail client
 	// they already have open instead of clicking through to the inbox.
 	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
-		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
+		// Only the recipient differs by subject; the thread and its Reply-To do not.
+		const staffEmail =
+			event.subject === PERFORMANCE_INQUIRY_SUBJECT
+				? (env.BOOKING_CONTACT_EMAIL ?? 'booking@corvmc.org')
+				: (env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org');
 
 		// The signed thread address routes a staff reply back through the inbox,
 		// which relays it to the sender and records it on the conversation. With
@@ -1218,7 +1286,7 @@ export function registerAllNotificationListeners(): void {
 				// per line, and the marker has to survive into the staffer's reply
 				// as a quote rather than as literal fence text.
 				message: quoteForPlainText(event.message),
-				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
+				threadUrl: `${siteUrl}/staff/inbox/${event.threadId}`
 			}
 		});
 	});
@@ -1265,7 +1333,7 @@ export function registerAllNotificationListeners(): void {
 						heading: 'You were added to a lineup',
 						paragraphs: [
 							{
-								text: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
+								text: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}" on ${formatClubDay(event.startsAt)}.`
 							},
 							{
 								text: 'The show will not appear on your band’s profile until you confirm it. If this is wrong, decline and your band will be unlinked from the listing.'
@@ -1287,8 +1355,8 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('production.cancelled', async ({ data: event }) => {
 		const by = event.cancelledByName;
 		const line = by
-			? `${by} cancelled "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
-			: `"${event.eventTitle}" on ${formatWorkedOn(event.startsAt)} was cancelled.`;
+			? `${by} cancelled "${event.eventTitle}" on ${formatClubDay(event.startsAt)}.`
+			: `"${event.eventTitle}" on ${formatClubDay(event.startsAt)} was cancelled.`;
 		for (const member of event.recipients) {
 			const items = member.items.join(', ');
 			try {
@@ -1311,7 +1379,7 @@ export function registerAllNotificationListeners(): void {
 						],
 						details: [
 							{ label: 'Show', value: event.eventTitle },
-							{ label: 'Date', value: formatWorkedOn(event.startsAt) },
+							{ label: 'Date', value: formatClubDay(event.startsAt) },
 							...(by ? [{ label: 'Cancelled by', value: by }] : [])
 						],
 						cta: { label: 'Open the committee' }
@@ -1326,46 +1394,185 @@ export function registerAllNotificationListeners(): void {
 		}
 	});
 
-	// --- A committee's show work, due in three days or late (#1709) ---
-	domainEvents.on('volunteer.deliverable_due', async ({ data: event }) => {
-		const due = formatWorkedOn(event.dueAt);
-		const late = event.stage === 'overdue';
-		const on = event.eventTitle ? ` for ${event.eventTitle}` : '';
-		const title = late ? `Overdue: ${event.title}` : `Due ${due}: ${event.title}`;
-		const line = late
-			? `"${event.title}"${on} was due ${due} and is not done yet.`
-			: `"${event.title}"${on} is due ${due}.`;
-		for (const person of event.recipients) {
-			try {
-				await dispatch({
-					type: 'deliverable_due',
-					userId: person.userId,
-					userEmail: person.userEmail,
-					title,
-					body: `${event.groupName} · ${line}`,
-					href: `/member/groups/${event.groupSlug}?tab=items`,
-					email: {
-						recipientName: person.userName,
-						subject: title,
-						heading: late ? 'Show work overdue' : 'Show work due soon',
-						paragraphs: [
-							{ text: line },
-							{
-								text: 'It is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
-							}
-						],
-						details: [
-							{ label: 'Item', value: event.title },
-							...(event.eventTitle ? [{ label: 'Show', value: event.eventTitle }] : []),
-							{ label: 'Due', value: due },
-							{ label: 'Committee', value: event.groupName }
-						],
-						cta: { label: 'Open the committee' }
+	// --- Named the event lead on a show (#2726) ---
+	domainEvents.on('production.lead_assigned', async ({ data: event }) => {
+		const day = formatClubDay(event.startsAt);
+		const by = event.assignedByName;
+		const line = by
+			? `${by} named you the event lead for "${event.eventTitle}" on ${day}.`
+			: `You are the event lead for "${event.eventTitle}" on ${day}.`;
+		try {
+			await dispatch({
+				type: 'show_lead_assigned',
+				userId: event.leadUserId,
+				userEmail: event.leadEmail,
+				title: `Event lead: ${event.eventTitle}`,
+				body: line,
+				href: `/staff/events/${event.eventId}/production`,
+				email: {
+					recipientName: event.leadName,
+					subject: `Event lead: ${event.eventTitle}`,
+					heading: 'Event lead',
+					paragraphs: [
+						{ text: line },
+						{ text: 'The production console has the lineup, terms, crew and room for the show.' }
+					],
+					details: [
+						{ label: 'Event', value: event.eventTitle },
+						{ label: 'Date', value: day },
+						...(by ? [{ label: 'Named by', value: by }] : [])
+					],
+					cta: { label: 'Open the console' }
+				}
+			});
+		} catch (err) {
+			captureException(err, {
+				event: 'notification.show_lead_assigned',
+				to: event.leadEmail
+			});
+		}
+	});
+
+	// --- A committee's work, due soon or late (#1709) ---
+	// One event is one person's digest for a reminder pass (#2507). Not caught:
+	// a throw here is how the drain knows to leave the items owed. A grant's or
+	// sponsorship's item has no show, so it is named for its project (#2622).
+	domainEvents.on('volunteer.deliverable_due', async ({ data: { recipient, items: owed } }) => {
+		if (owed.length === 0) return;
+		const items = [...owed].sort(
+			(a, b) =>
+				Number(b.stage === 'overdue') - Number(a.stage === 'overdue') ||
+				a.dueAt.localeCompare(b.dueAt)
+		);
+		const late = items.filter((i) => i.stage === 'overdue').length;
+		const oneCommittee = new Set(items.map((i) => i.groupSlug)).size === 1;
+		const oneShow = new Set(items.map((i) => i.eventId)).size === 1;
+		const forWhat = (i: (typeof items)[number]) => i.eventTitle ?? i.projectName;
+		const on = (i: (typeof items)[number]) => (forWhat(i) ? ` for ${forWhat(i)}` : '');
+		const shows = items.every((i) => i.eventTitle);
+		const noun = shows ? 'show items' : 'items';
+		const due = (i: (typeof items)[number]) => formatClubDay(i.dueAt);
+
+		const [first] = items;
+		const single = items.length === 1;
+		const title = single
+			? first.stage === 'overdue'
+				? `Overdue: ${first.title}${on(first)}`
+				: `Due ${due(first)}: ${first.title}${on(first)}`
+			: `${items.length} ${noun} need you`;
+		const line = single
+			? first.stage === 'overdue'
+				? `"${first.title}"${on(first)} was due ${due(first)} and is not done yet.`
+				: `"${first.title}"${on(first)} is due ${due(first)}.`
+			: `${items.length} ${noun} are not done yet: ${late} late, ${items.length - late} due soon.`;
+
+		await dispatch({
+			type: 'deliverable_due',
+			userId: recipient.userId,
+			userEmail: recipient.userEmail,
+			title,
+			body: single ? `${first.groupName} · ${line}` : line,
+			href: items.every((i) => i.forLead)
+				? oneShow && first.eventId
+					? `/staff/events/${first.eventId}/production`
+					: '/staff'
+				: oneCommittee
+					? `/member/groups/${first.groupSlug}?tab=items`
+					: '/member/groups',
+			data: { workOrderIds: items.map((i) => i.workOrderId) },
+			email: {
+				recipientName: recipient.userName,
+				subject: title,
+				heading: shows
+					? late > 0
+						? 'Show work overdue'
+						: 'Show work due soon'
+					: late > 0
+						? 'Committee work overdue'
+						: 'Committee work due soon',
+				paragraphs: [
+					{ text: line },
+					{
+						text: shows
+							? 'An item is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
+							: 'Mark an item done once it is finished.'
 					}
-				});
-			} catch (err) {
-				captureException(err, { event: 'notification.deliverable_due', to: person.userEmail });
+				],
+				details: single
+					? [
+							{ label: 'Item', value: first.title },
+							...(first.eventTitle ? [{ label: 'Show', value: first.eventTitle }] : []),
+							...(!first.eventTitle && first.projectName
+								? [{ label: 'Project', value: first.projectName }]
+								: []),
+							{ label: 'Due', value: due(first) },
+							{ label: 'Committee', value: first.groupName }
+						]
+					: items.map((i) => ({
+							label: i.stage === 'overdue' ? `Overdue, ${due(i)}` : `Due ${due(i)}`,
+							value: [i.title, forWhat(i), i.groupName].filter(Boolean).join(' · ')
+						})),
+				cta: { label: oneCommittee ? 'Open the committee' : 'Open your committees' }
 			}
+		});
+	});
+
+	// The last task one of yours waits on is done (#2625). The member's own task
+	// page: an assignee need not be staff.
+	domainEvents.on('volunteer.task_ready', async ({ data: event }) => {
+		const title = `Ready to start: ${event.title}`;
+		const line = `"${event.closedTitle}" is done, and nothing else "${event.title}" waits on is open.`;
+		await dispatch({
+			type: 'task_ready',
+			userId: event.recipient.userId,
+			userEmail: event.recipient.userEmail,
+			title,
+			body: line,
+			href: `/member/volunteer/tasks/${event.workOrderId}`,
+			data: { workOrderId: event.workOrderId },
+			email: {
+				recipientName: event.recipient.userName,
+				subject: title,
+				heading: 'Task ready',
+				paragraphs: [{ text: line }],
+				cta: { label: 'Open the task' }
+			}
+		});
+	});
+
+	// --- Assigned a task by somebody else (#2986) ---
+	domainEvents.on('volunteer.task_assigned', async ({ data: event }) => {
+		const title = `Task assigned: ${event.title}`;
+		const by = event.assignedByName;
+		const line = by ? `${by} assigned you "${event.title}".` : `You are assigned "${event.title}".`;
+		const due = event.dueAt ? formatClubDay(event.dueAt) : null;
+		try {
+			await dispatch({
+				type: 'task_assigned',
+				userId: event.recipient.userId,
+				userEmail: event.recipient.userEmail,
+				title,
+				body: due ? `${line} Due ${due}.` : line,
+				href: `/member/volunteer/tasks/${event.workOrderId}`,
+				data: { workOrderId: event.workOrderId },
+				email: {
+					recipientName: event.recipient.userName,
+					subject: title,
+					heading: 'Task assigned',
+					paragraphs: [{ text: line }],
+					details: [
+						{ label: 'Task', value: event.title },
+						...(due ? [{ label: 'Due', value: due }] : []),
+						...(by ? [{ label: 'Assigned by', value: by }] : [])
+					],
+					cta: { label: 'Open the task' }
+				}
+			});
+		} catch (err) {
+			captureException(err, {
+				event: 'notification.task_assigned',
+				to: event.recipient.userEmail
+			});
 		}
 	});
 
@@ -1421,7 +1628,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} logged ${formatHours(event.hours)} to review`,
 					body: `${event.roleName} — ${event.reasons.map((r) => hourLogExceptionLabels[r]).join(', ')}`,
-					href: '/staff/volunteer'
+					href: '/staff/volunteering/hours'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1440,7 +1647,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `${formatHours(event.hours)} of volunteer time approved`,
-			body: `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			body: `${event.roleName} on ${formatClubDay(event.workedOn)}`,
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
@@ -1451,7 +1658,7 @@ export function registerAllNotificationListeners(): void {
 					...(event.reviewNotes ? [{ text: `Note from staff: ${event.reviewNotes}` }] : [])
 				],
 				details: [
-					{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+					{ label: 'Date', value: formatClubDay(event.workedOn) },
 					{ label: 'Role', value: event.roleName },
 					{ label: 'Hours', value: formatHours(event.hours) }
 				],
@@ -1469,7 +1676,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `${formatHours(event.hours)} of volunteer time needs another look`,
-			body: event.reviewNotes ?? `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			body: event.reviewNotes ?? `${event.roleName} on ${formatClubDay(event.workedOn)}`,
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
@@ -1482,7 +1689,7 @@ export function registerAllNotificationListeners(): void {
 					...(event.reviewNotes ? [{ text: `Reason: ${event.reviewNotes}` }] : [])
 				],
 				details: [
-					{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+					{ label: 'Date', value: formatClubDay(event.workedOn) },
 					{ label: 'Role', value: event.roleName },
 					{ label: 'Hours', value: formatHours(event.hours) },
 					...(event.reviewNotes ? [{ label: 'Reason', value: event.reviewNotes }] : [])
@@ -1507,28 +1714,83 @@ export function registerAllNotificationListeners(): void {
 			userEmail: event.userEmail,
 			title: `Can you take ${shiftLabel(event)}?`,
 			body: `${formatShiftWhen(event.startsAt, event.endsAt)} — say yes or no from your dashboard`,
-			href: '/member/volunteer'
+			href: '/member/volunteer',
+			email: {
+				recipientName: event.userName,
+				subject: `Can you take ${shiftLabel(event)}?`,
+				heading: 'Shift invitation',
+				paragraphs: [
+					{
+						text: `A coordinator asked whether you can take ${shiftLabel(event)} on ${formatShiftWhen(event.startsAt, event.endsAt)}.`
+					},
+					{ text: 'Say yes or no from your volunteering page.' }
+				],
+				cta: { label: 'Answer invitation' }
+			}
 		});
 	});
 
-	// Declined (notify staff). Fanned out like a claim, because the next move is
-	// somebody else's to ask and whoever picks it up needs to know.
+	// --- Orientation shifts a day out with nobody signed up (#2567) ---
+	// One event is one coordinator's digest for a reminder pass. Not caught: a
+	// throw here is how the drain knows to leave the items owed.
+	domainEvents.on(
+		'volunteer.orientation_unclaimed',
+		async ({ data: { recipient, items: owed } }) => {
+			if (owed.length === 0) return;
+			const items = [...owed].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+			const [first] = items;
+			const single = items.length === 1;
+			const title = single
+				? `Unstaffed orientation: ${first.memberName}`
+				: `${items.length} unstaffed orientations`;
+			const line = single
+				? `${first.memberName}'s orientation, ${formatShiftWhen(first.startsAt, first.endsAt)}, has no volunteer signed up.`
+				: `${items.length} orientations in the next day have no volunteer signed up.`;
+
+			await dispatch({
+				type: 'orientation_unclaimed',
+				userId: recipient.userId,
+				userEmail: recipient.userEmail,
+				title,
+				body: single ? formatShiftWhen(first.startsAt, first.endsAt) : line,
+				href: single ? `/staff/tasks/${first.workOrderId}` : '/staff/volunteering?needs=short',
+				data: { workOrderIds: items.map((i) => i.workOrderId) },
+				email: {
+					recipientName: recipient.userName,
+					subject: title,
+					heading: 'Unstaffed orientation',
+					paragraphs: [
+						{ text: line },
+						{ text: 'Sign up for the shift, or invite a volunteer from the shift page.' }
+					],
+					details: items.map((i) => ({
+						label: i.memberName,
+						value: formatShiftWhen(i.startsAt, i.endsAt)
+					})),
+					cta: { label: single ? 'View shift' : 'View short-staffed shifts' }
+				}
+			});
+		}
+	);
+
+	// Declined. The task's news (#2990): its position, else its committee, else
+	// every coordinator, because the next move is somebody's to ask.
 	domainEvents.on('volunteer.signup_declined', async ({ data: event }) => {
-		const staff = await listUsersWithCapability('volunteer.manageShifts');
+		const staff = await taskNoticeRecipients(event.workOrderId, 'volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
 					type: 'volunteer_shift_declined',
-					userId: member.id,
-					userEmail: member.email,
+					userId: member.userId,
+					userEmail: member.userEmail,
 					title: `${event.userName} can't do ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
-					href: '/staff/volunteer/schedule'
+					href: '/staff/volunteering'
 				});
 			} catch (err) {
 				captureException(err, {
 					event: 'notification.volunteer_shift_declined',
-					to: member.email
+					to: member.userEmail
 				});
 			}
 		}
@@ -1546,7 +1808,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} claimed ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
-					href: '/staff/volunteer'
+					href: '/staff/volunteering?needs=claims'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1590,7 +1852,7 @@ export function registerAllNotificationListeners(): void {
 	// Deliberately not sent when the shift is created: "we hope somebody will
 	// meet you" is not information.
 	domainEvents.on('volunteer.signup_confirmed', async ({ data: event }) => {
-		const { orientationOwnerOf } = await import('$lib/server/volunteer/orientation-service');
+		const { orientationOwnerOf } = await import('#lib/server/volunteer/orientation-service.js');
 		const member = await orientationOwnerOf(event.shiftId);
 		if (!member) return;
 
@@ -1620,23 +1882,23 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
-	// Dropped (notify staff). The useful half is that a place reopened.
+	// Dropped. The useful half is that a place reopened; routed like a decline.
 	domainEvents.on('volunteer.signup_cancelled', async ({ data: event }) => {
-		const staff = await listUsersWithCapability('volunteer.manageShifts');
+		const staff = await taskNoticeRecipients(event.workOrderId, 'volunteer.manageShifts');
 		for (const member of staff) {
 			try {
 				await dispatch({
 					type: 'volunteer_shift_dropped',
-					userId: member.id,
-					userEmail: member.email,
+					userId: member.userId,
+					userEmail: member.userEmail,
 					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
-					href: '/staff/volunteer'
+					href: '/staff/volunteering?needs=short'
 				});
 			} catch (err) {
 				captureException(err, {
 					event: 'notification.volunteer_shift_dropped',
-					to: member.email
+					to: member.userEmail
 				});
 			}
 		}
@@ -1738,7 +2000,7 @@ export function registerAllNotificationListeners(): void {
 					{
 						// The date is dropped rather than faked when the work had no
 						// scheduled window — "on null" is worse than no date at all.
-						text: `Thanks for working ${shiftLabel(event)}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
+						text: `Thanks for working ${shiftLabel(event)}${event.startsAt ? ` on ${formatClubDay(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
 					}
 				],
 				cta: { label: 'Answer two questions' }
@@ -1781,7 +2043,17 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.applicantName} applied to teach`,
 					body: event.headline ?? 'A teaching application is waiting for review',
-					href: '/staff/members/instructors?status=requested'
+					href: '/staff/members?role=teacher&status=requested',
+					email: {
+						recipientName: member.name,
+						subject: `${event.applicantName} applied to teach`,
+						heading: 'Teaching application',
+						paragraphs: [
+							{ text: `${event.applicantName} has applied to teach at the Collective.` },
+							{ text: 'Open it to read their listing and approve it or send it back.' }
+						],
+						cta: { label: 'Review application' }
+					}
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1832,6 +2104,7 @@ export function registerAllNotificationListeners(): void {
 	// --- Teaching application approved or sent back (notify the member) ---
 	domainEvents.on('instructor.application_reviewed', async ({ data: event }) => {
 		const approved = event.approved;
+		const rate = approved ? formatCents((await getBookingTerms('instructor')).hourlyRateCents) : '';
 		await dispatch({
 			type: 'instructor_application_reviewed',
 			userId: event.applicantUserId,
@@ -1848,7 +2121,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: approved
 					? [
 							{
-								text: 'Your teaching application is approved. You can book the practice room on teaching terms — the member rate, with the monthly cap lifted — and your listing is now on the teacher directory.'
+								text: `Staff have approved you to teach. You can book the practice room for teaching at ${rate} an hour, with no monthly cap and no practice-space tour. Your profile page shows whether the teacher directory lists you.`
 							}
 						]
 					: [
@@ -1862,6 +2135,36 @@ export function registerAllNotificationListeners(): void {
 				// what was asked for cannot answer it.
 				...(event.reviewNotes ? { quote: event.reviewNotes } : {}),
 				cta: { label: approved ? 'See your listing' : 'Edit and send it back' }
+			}
+		});
+	});
+
+	// --- Teaching paused or retired (notify the teacher) ---
+	// The staff note stays staff-only; the teacher is told the status, not the reason.
+	domainEvents.on('instructor.status_ended', async ({ data: event }) => {
+		const paused = event.status === 'paused';
+		const title = paused ? 'Your teaching is paused' : 'Your teaching has ended';
+		await dispatch({
+			type: 'instructor_status_ended',
+			userId: event.userId,
+			userEmail: event.email,
+			title,
+			href: '/member/profile',
+			email: {
+				recipientName: event.name,
+				subject: title,
+				heading: title,
+				paragraphs: [
+					{
+						text: paused
+							? 'Staff have paused your teaching at the Collective. You can no longer book the practice room on teaching terms.'
+							: 'Staff have ended your teaching at the Collective. You can no longer book the practice room on teaching terms.'
+					},
+					{
+						text: 'Teaching bookings you already hold still stand. Get in touch with staff if you have questions.'
+					}
+				],
+				cta: { label: 'View profile' }
 			}
 		});
 	});
@@ -2010,6 +2313,36 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Staff moved a classified post on or off the board (#2549) ---
+	domainEvents.on('classified.moderated', async ({ data: event }) => {
+		const shown = event.visibility === 'visible';
+		const title = shown
+			? `"${event.title}" is on the classifieds board`
+			: `"${event.title}" was taken down`;
+		await dispatch({
+			type: 'classified_moderated',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title,
+			body: event.note ?? undefined,
+			href: `/member/classifieds/${event.postId}`,
+			email: {
+				recipientName: event.authorName,
+				subject: title,
+				heading: shown ? 'Post approved' : 'Post taken down',
+				paragraphs: [
+					{
+						text: shown
+							? `Staff reviewed "${event.title}" and it is on the board.`
+							: `Staff took "${event.title}" off the board. Edit the post to send it back for review.`
+					}
+				],
+				...(event.note ? { quote: event.note } : {}),
+				cta: { label: 'View post' }
+			}
+		});
+	});
+
 	// --- A member appealed an upheld report (notify moderators) ---
 	domainEvents.on('moderation.appeal_filed', async ({ data: event }) => {
 		const staff = await listUsersWithCapability('moderation.reviewFlags');
@@ -2132,48 +2465,6 @@ export function registerAllNotificationListeners(): void {
 					event: 'notification.radio_attestation_expiring',
 					to: admin.userEmail
 				});
-			}
-		}
-	});
-
-	domainEvents.on('renewal.expiry_due', async ({ data: event }) => {
-		const recipients = event.responsible
-			? [event.responsible]
-			: await listUsersWithCapability('renewal.manage');
-		const date = formatIsoDay(event.expiresOn);
-		const soon = event.stage === '14d' ? 'in two weeks or less' : 'in the next two months';
-		const kind = renewalKindLabels[event.kind];
-		const details: NotificationEmailDetail[] = [
-			{ label: 'Kind', value: kind },
-			...(event.issuer ? [{ label: 'Issued by', value: event.issuer }] : []),
-			...(event.reference ? [{ label: 'Reference', value: event.reference }] : []),
-			{ label: 'Expires', value: date }
-		];
-		for (const member of recipients) {
-			try {
-				await dispatch({
-					type: 'renewal_expiry',
-					userId: member.id,
-					userEmail: member.email,
-					title: `${event.name} expires ${date}`,
-					body: event.issuer ?? kind,
-					href: `/staff/renewals/${event.renewalId}`,
-					email: {
-						recipientName: member.name,
-						subject: `${event.name} expires ${date}`,
-						preview_text: `${event.name} expires ${soon}`,
-						heading: `${event.name} expires ${date}`,
-						paragraphs: [
-							{
-								text: `${event.name} expires on ${date}, ${soon}. Once it is renewed, move the expiry date forward and attach the new certificate.`
-							}
-						],
-						details,
-						cta: { label: 'Open the renewal' }
-					}
-				});
-			} catch (err) {
-				captureException(err, { event: 'notification.renewal_expiry', to: member.email });
 			}
 		}
 	});

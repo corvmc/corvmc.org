@@ -117,7 +117,7 @@ Raw status-code usage for contrast: `error(404)` 69, `error(400)` 44, `error(403
 
 ### C3. The Stripe fee formula is hard-coded in 3 UI files — drift risk, currently correct
 
-`$lib/finance/fees.ts` owns the fee math (`STRIPE_PERCENT` at `:9`, the derivation documented at
+`#lib/finance/fees.js` owns the fee math (`STRIPE_PERCENT` at `:9`, the derivation documented at
 `:25-26`) and is used correctly by `(public)/events/[id]/tickets/+page.svelte` and both server
 payment services. Three UI files bypass it and inline the solved formula:
 
@@ -497,7 +497,7 @@ Recorded so a future pass doesn't churn them:
 
 Both nav fragilities recorded here are resolved: `Nav.Collapsible`'s hand-maintained `childHrefs`
 now derive from the panel's nav data, and the triplicated `panels` array is
-`$lib/components/layout/panel-tabs.ts`.
+`#lib/components/layout/panel-tabs.js`.
 
 ---
 
@@ -509,7 +509,7 @@ Ordered by impact ÷ risk. Each tranche is independently shippable.
 | --- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | 1   | **Shared filter schemas** (C1)                                                                | Smallest diff in the audit; fixes a live `?page=` bug.                                                                         |
 | 2   | **`DefinitionList`**                                                                          | 11 byte-identical copies, zero design decisions.                                                                               |
-| 3   | **`Money` + route the 3 fee formulas through `$lib/finance/fees`** (C3)                       | Deletes 4 private helpers and closes a silent payment-display desync.                                                          |
+| 3   | **`Money` + route the 3 fee formulas through `#lib/finance/fees.js`** (C3)                    | Deletes 4 private helpers and closes a silent payment-display desync.                                                          |
 | 4   | **Centralize validation limits**                                                              | Mechanical; copy the volunteer pattern outward.                                                                                |
 | 5   | **Extract `StatusBadge`'s maps to a `.ts` module; pick one home for enum definitions**        | Unblocks server-side label use; deletes 3 duplicated maps.                                                                     |
 | 6   | **Finish the `DomainError` migration + land `mapDomainError` in the remaining 22 files** (C2) | The ~32 classes falling through to 500 is the real payload.                                                                    |

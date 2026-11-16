@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { eq } from 'drizzle-orm';
 import { account } from '../src/lib/server/db/schema/authentication';
 import { readLocalDb } from './fixtures/platform-db';
@@ -21,9 +21,12 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(email);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(password);
+	// The sign-in form is the one with a password field.
+	await page
+		.locator('form:has(input:is([name="password"], [name^="password/"])) button[type="submit"]')
+		.click();
 }
 
 async function storedHash(): Promise<string | null> {
@@ -50,7 +53,7 @@ test('a member on a legacy bcrypt password signs in, and the hash retires', asyn
 test('a wrong password on a legacy account is still refused', async ({ page }) => {
 	await login(page, SEED_BCRYPT_EMAIL, 'definitely not the password');
 
-	// The copy appears twice — the alert and its live region — so `.first()`.
-	await expect(page.getByText(/invalid email or password/i).first()).toBeVisible();
+	// The refusal is the form's error alert; the page never leaves /login.
+	await expect(page.locator('.alert-error[role="alert"]').first()).toBeVisible();
 	await expect(page).toHaveURL(/\/login/);
 });

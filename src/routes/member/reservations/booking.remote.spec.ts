@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { DomainError } from '$lib/server/domain-error';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -76,9 +76,9 @@ const reservationServiceMock = {
 	ReservationAuthorizationError
 };
 
-vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+vi.mock('#lib/server/reservation/reservation-service.js', () => reservationServiceMock);
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
@@ -86,8 +86,8 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
@@ -95,14 +95,14 @@ const recurringSeriesServiceMock = {
 	create: vi.fn(async () => ({ id: 'series-1' }))
 };
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => recurringSeriesServiceMock);
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
 const can = vi.fn(async (_cap: string) => false);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: (...a: unknown[]) => can(...(a as [string])),
 	requireCapability: vi.fn(async () => testUser),
 	requireCapabilityOrOwner: vi.fn(),
@@ -124,14 +124,26 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
 // Contact-phone gate. Mocked at the service boundary (like reservation-service
 // above) so these tests stay about the handler wiring, not the DB read/write.
 const ensureContactPhone = vi.fn(async () => true);
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
+
+// Pricing is not under test here: nothing is covered, so it settles at the door.
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import('#lib/server/reservation/reservation-credit-service.js')
+	>()),
+	commitReservationCredits: vi.fn(async () => ({
+		remainingCents: 1500,
+		creditDiscountCents: 0,
+		alreadyCommitted: true
+	}))
+}));
 
 /** Stands in for the `issue` helper SvelteKit hands the form handler. */
 const issueProxy = new Proxy(
@@ -185,7 +197,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { bookAndPayReservation } = (await import('$lib/remote/reservations.remote')) as any;
+const { bookAndPayReservation } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -276,12 +288,11 @@ describe('contact phone requirement', () => {
 		// `never` — cast to override it for the success path.
 		reservationServiceMock.create.mockImplementation((async () => ({
 			id: 'res-1',
-			status: 'scheduled',
+			status: 'confirmed',
 			startsAt: new Date(),
 			endsAt: new Date()
 		})) as never);
 
-		// Far enough out that the booking is held rather than charged.
 		const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 		const result = await bookAndPayReservation({
 			date,
@@ -297,61 +308,27 @@ describe('contact phone requirement', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The confirmation window
-//
-// Confirming further out than the window inserted a `scheduled` row and then
-// threw a 400 the member never saw, which the row survived. That row is an
-// ordinary unconfirmed booking, so it is the answer rather than a failure — but it has to be reported as the hold it is. #872.
+// A booking far ahead is confirmed like any other (#2502); before, it was a
+// `scheduled` hold reported back as `scheduled: true` (#872).
 // ---------------------------------------------------------------------------
 
-describe('bookAndPayReservation before the confirmation window opens', () => {
-	/** A date far enough out that no plausible window covers it. */
-	function farOutDate(): string {
-		return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-	}
-
-	beforeEach(() => {
-		reservationServiceMock.create.mockImplementation(async () => ({
-			id: 'res-held',
-			status: 'scheduled',
+describe('bookAndPayReservation far ahead', () => {
+	it('confirms the booking rather than holding it', async () => {
+		reservationServiceMock.create.mockImplementation((async () => ({
+			id: 'res-far',
+			status: 'confirmed',
 			startsAt: new Date(),
 			endsAt: new Date()
-		}));
-	});
+		})) as never);
+		const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-	it('reports the booking as held rather than throwing over it', async () => {
 		const result = await bookAndPayReservation({
-			date: farOutDate(),
+			date,
 			startTime: '09:00',
 			endTime: '10:00',
 			skipPayment: 'on'
 		});
 
-		expect(result).toMatchObject({ reservationId: 'res-held', scheduled: true });
-		expect(result.confirmOpensAt).toEqual(expect.any(String));
-	});
-
-	/**
-	 * Both control cases run on past the held-booking return into the credit
-	 * commit, which this spec does not stand up — so what is asserted is that the
-	 * hold was not taken, not what the commit then did.
-	 */
-	async function tookTheHold(date: string): Promise<boolean> {
-		return bookAndPayReservation({ date, startTime: '09:00', endTime: '10:00', skipPayment: 'on' })
-			.then((r: { scheduled?: boolean }) => r?.scheduled === true)
-			.catch(() => false);
-	}
-
-	it('still confirms inside the window', async () => {
-		const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-		expect(await tookTheHold(tomorrow)).toBe(false);
-	});
-
-	it('lets a reservation.comp holder confirm outside the window', async () => {
-		can.mockImplementation(async (cap) => cap === 'reservation.comp');
-
-		expect(await tookTheHold(farOutDate())).toBe(false);
-		expect(can).toHaveBeenCalledWith('reservation.comp');
+		expect(result).toEqual({ reservationId: 'res-far', confirmed: true });
 	});
 });

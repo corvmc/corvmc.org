@@ -43,6 +43,16 @@ export const GROUP_LEADER_PERSONAS = [
 		joinPolicy: 'invite_only' as const,
 		tagline: 'Chairs the Facilities Committee',
 		bio: 'Fixes what breaks. Keeps a list of what is about to.'
+	},
+	// Last, so `find` by join policy still lands on `facilities@`.
+	{
+		id: 'seed-group-leader-market',
+		email: 'marketlead@corvallismusic.org',
+		name: 'Tamsin Oyelaran',
+		memberNumber: 79,
+		joinPolicy: 'invite_only' as const,
+		tagline: 'Chairs the Art and Merchandise Committee',
+		bio: 'Runs the makers market. Knows which vendor needs the outlet.'
 	}
 ];
 
@@ -69,8 +79,8 @@ export const GROUP_INVITEE_PERSONA = {
  * `seedUserRoles` indexes into that array and `seedVolunteerProfiles` slices
  * it, so appending would silently reassign both.
  *
- * `member` and nothing else — a leader holding a position would pass
- * `isElevated` and read every group surface as staff.
+ * `member` and nothing else — a leader holding `staff` would hold
+ * `group.read` and read every group surface as staff.
  */
 export async function seedGroupLeaders(roles: SeedRole[]): Promise<SeedUser[]> {
 	console.log('Seeding group leaders...');

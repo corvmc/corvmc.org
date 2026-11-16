@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Move a production one step along the usual path.
 	 *
@@ -11,17 +13,17 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { IconDots } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { advanceProduction, reopenProduction } from '$lib/remote/productions.remote';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { hasCapability } from '$lib/config';
-	import { isTerminalProduction } from '$lib/production/status';
-	import type { ProductionStatus } from '$lib/server/db/schema/production';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { advanceProduction, reopenProduction } from '#lib/remote/productions.remote.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import { hasCapability } from '#lib/config.js';
+	import { isTerminalProduction } from '#lib/production/status.js';
+	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 	let {
 		production,
@@ -34,16 +36,22 @@
 	/** The usual path, forward one step, plus the walk-back a mis-click needs. */
 	const NEXT: Partial<Record<ProductionStatus, { to: ProductionStatus; label: string }[]>> = {
 		draft: [
-			{ to: 'offered', label: 'Send the offer' },
-			{ to: 'confirmed', label: 'Confirm' }
+			{ to: 'offered', label: m.staff_events_id_production_production_status_send_offer_label() },
+			{ to: 'confirmed', label: m.staff_confirm_label() }
 		],
 		offered: [
-			{ to: 'confirmed', label: 'Confirm' },
-			{ to: 'draft', label: 'Pull the offer' }
+			{ to: 'confirmed', label: m.staff_confirm_label() },
+			{ to: 'draft', label: m.staff_events_id_production_production_status_pull_offer_label() }
 		],
-		confirmed: [{ to: 'completed', label: 'Mark it played' }],
-		completed: [{ to: 'settled', label: 'Settle' }],
-		settled: [{ to: 'closed', label: 'Close out' }]
+		confirmed: [
+			{ to: 'completed', label: m.staff_events_id_production_production_status_mark_played_label() }
+		],
+		completed: [
+			{ to: 'settled', label: m.staff_events_id_production_production_status_settle_label() }
+		],
+		settled: [
+			{ to: 'closed', label: m.staff_events_id_production_production_status_close_out_label() }
+		]
 	};
 
 	const ALL: ProductionStatus[] = [
@@ -118,9 +126,21 @@
 			{#if (step.result as Result)?.conflict}
 				{@render warningsFor(step.result as Result)}
 				<input {...step.fields.acknowledged.as('hidden', true)} />
-				<FormField field={step.fields.reason} type="textarea" label="Why go ahead?" required />
+				<FormField
+					field={step.fields.reason}
+					type="textarea"
+					label={m.staff_events_id_production_production_status_why_go_ahead_label()}
+					required
+				/>
 			{:else}
-				<p class="text-muted">Move this production to <strong>{move.to}</strong>?</p>
+				<p class="text-muted">
+					<ParaglideMessage
+						message={m.staff_events_id_production_production_status_move_production_text}
+						inputs={{ to: move.to }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
+				</p>
 			{/if}
 		{/snippet}
 	</Action>
@@ -130,7 +150,7 @@
 	{@const cancel = advanceProduction.for('cancelled')}
 	<Action
 		action={cancel}
-		label="Call it off"
+		label={m.staff_events_id_production_production_status_call_off_label()}
 		variant="warning"
 		size="sm"
 		onsuccess={(r) => done(r, 'Production cancelled')}
@@ -140,8 +160,7 @@
 			<input {...cancel.fields.eventId.as('hidden', eventId)} />
 			<input {...cancel.fields.status.as('hidden', 'cancelled')} />
 			<p class="text-muted">
-				Cancels the production record only. The listing on the guide is cancelled from the event
-				page — that is what tells ticket holders.
+				{m.staff_events_id_production_production_status_cancels_product_text()}
 			</p>
 		{/snippet}
 	</Action>
@@ -151,7 +170,13 @@
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
-				<Button {...props} variant="ghost" size="xs" shape="square" aria-label="More">
+				<Button
+					{...props}
+					variant="ghost"
+					size="xs"
+					shape="square"
+					aria-label={m.staff_events_id_production_production_status_aria_label()}
+				>
 					<IconDots size={16} />
 				</Button>
 			{/snippet}
@@ -164,7 +189,7 @@
 			>
 				{#if terminal}
 					<DropdownMenu.Item class={itemClass} onSelect={() => (reopenOpen = true)}>
-						Reopen…
+						{m.staff_events_id_production_production_status_reopen_text()}
 					</DropdownMenu.Item>
 				{:else}
 					<DropdownMenu.Item
@@ -175,7 +200,7 @@
 							setOpen = true;
 						}}
 					>
-						Set status…
+						{m.staff_events_id_production_production_status_set_status_text()}
 					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>
@@ -183,7 +208,10 @@
 	</DropdownMenu.Root>
 {/if}
 
-<Modal bind:open={setOpen} title="Set status">
+<Modal
+	bind:open={setOpen}
+	title={m.staff_events_id_production_production_status_set_status_2_title()}
+>
 	<Form
 		remote={override}
 		class="space-y-4"
@@ -198,7 +226,7 @@
 		<FormField
 			field={override.fields.status}
 			type="select"
-			label="Status"
+			label={m.staff_status_label()}
 			options={setOptions}
 			bind:value={setTo}
 			required
@@ -207,43 +235,63 @@
 			{@render warningsFor({ conflict: true, warnings: warned.warnings })}
 			<input {...override.fields.acknowledged.as('hidden', true)} />
 		{/if}
-		<FormField field={override.fields.reason} type="textarea" label="Reason" required />
+		<FormField
+			field={override.fields.reason}
+			type="textarea"
+			label={m.staff_reason_label()}
+			required
+		/>
 		<div class="flex justify-end">
-			<SubmitButton label="Change status" variant="default" />
+			<SubmitButton
+				label={m.staff_events_id_production_production_status_change_status_label()}
+				variant="default"
+			/>
 		</div>
 	</Form>
 </Modal>
 
 {#if terminal && canReopen}
-	<Modal bind:open={reopenOpen} title="Reopen">
+	<Modal
+		bind:open={reopenOpen}
+		title={m.staff_events_id_production_production_status_reopen_2_title()}
+	>
 		<Form
 			remote={reopenProduction}
 			class="space-y-4"
 			onsuccess={() => {
-				toast.success('Production reopened');
+				toast.success(m.staff_events_id_production_production_status_toast());
 				reopenOpen = false;
 			}}
 		>
 			<input {...reopenProduction.fields.id.as('hidden', production.id)} />
 			<input {...reopenProduction.fields.eventId.as('hidden', eventId)} />
 			<p class="text-muted text-sm">
-				This show is {production.status}. Reopening it is recorded in the audit log with your
-				reason.
+				{m.staff_events_id_production_production_status_show_reopening_text({
+					status: production.status
+				})}
 				{#if production.status === 'cancelled'}
-					Crew shifts called off with it, and the cancellation notice, are not undone.
+					{m.staff_events_id_production_production_status_crew_shifts_cal_text()}
 				{/if}
 			</p>
 			<FormField
 				field={reopenProduction.fields.status}
 				type="select"
-				label="Reopen to"
+				label={m.staff_events_id_production_production_status_reopen_3_label()}
 				options={reopenOptions}
 				bind:value={reopenTo}
 				required
 			/>
-			<FormField field={reopenProduction.fields.reason} type="textarea" label="Reason" required />
+			<FormField
+				field={reopenProduction.fields.reason}
+				type="textarea"
+				label={m.staff_reason_label()}
+				required
+			/>
 			<div class="flex justify-end">
-				<SubmitButton label="Reopen" variant="default" />
+				<SubmitButton
+					label={m.staff_events_id_production_production_status_reopen_2_label()}
+					variant="default"
+				/>
 			</div>
 		</Form>
 	</Modal>

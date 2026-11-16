@@ -1,12 +1,13 @@
 <script lang="ts">
-	import type { getUserOverview } from '$lib/remote/users.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { getUserOverview } from '#lib/remote/users.remote.js';
 	import type { TabKey } from '../tabs';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
-	import { standingScopeConfig } from '$lib/config';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShortYear, formatDateTimeShort } from '#lib/utils/format.js';
+	import { standingScopeConfig } from '#lib/config.js';
 
 	let {
 		overview,
@@ -65,7 +66,7 @@
 		}
 		if (c.unpaidReservations > 0) {
 			items.push({
-				text: `${c.unpaidReservations} booking${c.unpaidReservations === 1 ? '' : 's'} with cash still owed.`,
+				text: `${c.unpaidReservations} booking${c.unpaidReservations === 1 ? '' : 's'} with payment due.`,
 				tab: 'space',
 				tone: 'warning'
 			});
@@ -135,7 +136,7 @@
 	who this is.
 -->
 {#if attention.length > 0}
-	<InfoCard title="Needs attention">
+	<InfoCard title={m.staff_members_id_panels_overview_panel_needs_attention_title()}>
 		<ul class="flex flex-col gap-2">
 			{#each attention as item (item.text)}
 				<li>
@@ -160,33 +161,39 @@
 	already; repeating them here as rows was the same duplication the identity
 	strip had, one card down. What stays is what the header has no room to say.
 -->
-<InfoCard title="At a glance">
+<InfoCard title={m.staff_members_id_panels_overview_panel_at_glance_title()}>
 	<DefinitionList>
-		<Fact label="Joined">{formatDateShortYear(member.createdAt)}</Fact>
+		<Fact label={m.staff_joined_label()}>{formatDateShortYear(member.createdAt)}</Fact>
 
-		<Fact label="Last sign-in">
+		<Fact label={m.staff_members_id_panels_overview_panel_last_sign_label()}>
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
-				<span class="opacity-60">Never, or signed out everywhere</span>
+				<span class="opacity-60"
+					>{m.staff_members_id_panels_overview_panel_never_signed_out_ever_text()}</span
+				>
 			{/if}
 		</Fact>
 
 		<!-- Sustaining is a header badge; the free tier has no badge, so it says so. -->
-		<Fact label="Membership">
+		<Fact label={m.staff_membership_label()}>
 			{#if overview.membership.sustaining}
 				{overview.membership.hoursPerReset
-					? `${overview.membership.hoursPerReset / 2} hrs a month`
-					: 'Sustaining'}
+					? m.staff_members_id_panels_overview_panel_hrs_month_text({
+							value: overview.membership.hoursPerReset / 2
+						})
+					: m.staff_sustaining_text()}
 			{:else}
-				Free tier
+				{m.staff_members_id_panels_overview_panel_free_tier_text()}
 			{/if}
 		</Fact>
 
-		<Fact label="Directory">
+		<Fact label={m.staff_members_id_panels_overview_panel_directory_label()}>
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
-				<span class="opacity-60"> · profile incomplete</span>
+				<span class="opacity-60">
+					{m.staff_members_id_panels_overview_panel_profile_incomplete_text()}</span
+				>
 			{/if}
 		</Fact>
 	</DefinitionList>

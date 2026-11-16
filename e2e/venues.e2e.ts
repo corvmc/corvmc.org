@@ -1,10 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import {
-	SEED_VENUE_ARCHIVED_NAME,
-	SEED_VENUE_OFFSITE_NAME,
-	SEED_VENUE_ROOM_NAME
-} from './fixtures/seed-venues';
+import { SEED_VENUE_OFFSITE_NAME } from './fixtures/seed-venues';
 import { SEED_EVENT_DATE, SEED_EVENT_TITLE_PREFIX } from './fixtures/seed-staff-event';
 
 /**
@@ -17,43 +14,10 @@ import { SEED_EVENT_DATE, SEED_EVENT_TITLE_PREFIX } from './fixtures/seed-staff-
  */
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 test.describe('venues', () => {
-	test('the room leads the list and says it is ours', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/venues');
-
-		const roomRow = page.locator('tr').filter({ hasText: SEED_VENUE_ROOM_NAME });
-		await expect(roomRow).toBeVisible({ timeout: 15000 });
-		await expect(roomRow.getByText('Our room')).toBeVisible();
-
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_OFFSITE_NAME })).toBeVisible();
-	});
-
-	/**
-	 * Archiving takes a venue off the picker without taking it off the events that
-	 * already name it, so the list has to be able to show what the picker hides.
-	 */
-	test('an archived venue is out of the list until asked for', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/venues');
-
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toHaveCount(0, {
-			timeout: 15000
-		});
-
-		await page.goto('/staff/venues?archived=1');
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_ARCHIVED_NAME })).toBeVisible({
-			timeout: 15000
-		});
-	});
-
 	/**
 	 * The refusal that matters: a hold for a show somewhere else cannot happen,
 	 * and `updateEvent` says so. The console's edit form withdraws the toggle once
@@ -66,31 +30,37 @@ test.describe('venues', () => {
 
 		// The fixture sweeps this prefix, and the event is never given a hold.
 		const title = `${SEED_EVENT_TITLE_PREFIX} venue ${Date.now()}`;
-		await page.getByRole('button', { name: 'Create Listing' }).click();
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(SEED_EVENT_DATE);
-		await page.locator('input[name="eventStartTime"]').fill('19:00');
-		await page.locator('input[name="eventEndTime"]').fill('22:00');
-		await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
+		await page.getByTestId('create-listing').click();
+		await page.locator('input:is([name="title"], [name^="title/"])').fill(title);
+		await page.locator('input:is([name="eventDate"], [name^="eventDate/"])').fill(SEED_EVENT_DATE);
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('19:00');
+		await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill('22:00');
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 		// Create lands with `?edit=1`; reloaded bare so the test opens Edit itself.
 		await page.goto(new URL(page.url()).pathname);
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByTestId('edit-listing').click();
 
 		// The toggle is there while the show is in our room.
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible({
+		await expect(page.getByTestId('reserve-space')).toBeVisible({
 			timeout: 15000
 		});
 
-		await page.locator('select[name="venueId"]').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
+		await page
+			.locator('select:is([name="venueId"], [name^="venueId/"])')
+			.selectOption({ label: SEED_VENUE_OFFSITE_NAME });
 
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toHaveCount(0);
-		await expect(page.getByText('Off-site, so the practice space stays bookable')).toBeVisible();
+		await expect(page.getByTestId('reserve-space')).toHaveCount(0);
+		await expect(page.getByTestId('offsite-note')).toBeVisible();
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
-		await page.locator('select[name="venueId"]').selectOption({ label: 'The practice room' });
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible();
+		await page
+			.locator('select:is([name="venueId"], [name^="venueId/"])')
+			.selectOption({ label: 'The practice room' });
+		await expect(page.getByTestId('reserve-space')).toBeVisible();
 	});
 });

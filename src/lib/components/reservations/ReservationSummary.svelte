@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { formatDistanceToNow } from 'date-fns';
 	import {
 		formatMonthDayYear,
 		formatTimeRange,
 		formatDateShortYear,
 		formatDuration
-	} from '$lib/utils/format';
+	} from '#lib/utils/format.js';
+	import { reservationTrack } from '#lib/utils/reservation-actions.js';
 
 	let {
 		reservation,
@@ -17,6 +19,8 @@
 			endsAt: Date;
 			price?: number;
 			status?: string;
+			bookerType?: string;
+			cashDueCents?: number | null;
 			paidAt?: Date | null;
 			refundedAt?: Date | null;
 			waitlistExpiresAt?: Date | null;
@@ -24,6 +28,20 @@
 		member?: { name: string };
 		class?: string;
 	} = $props();
+
+	// The money line follows the track; a caller without the columns gets the price alone.
+	const track = $derived(
+		reservation.status && reservation.bookerType
+			? reservationTrack({
+					status: reservation.status,
+					bookerType: reservation.bookerType,
+					endsAt: reservation.endsAt,
+					paidAt: reservation.paidAt ?? null,
+					refundedAt: reservation.refundedAt ?? null,
+					cashDueCents: reservation.cashDueCents ?? null
+				})
+			: null
+	);
 
 	// Promoted, not merely queued: the offer exists and has not lapsed.
 	const offered = $derived(
@@ -52,32 +70,37 @@
 		     off the session date while the offer expired in 24 hours — the one
 		     deadline that mattered, contradicted by the only line that named
 		     one (#1005). -->
-		<p class="font-medium text-success">A slot opened up</p>
+		<p class="font-medium text-success">
+			{m.reservations_reservation_summary_slot_opened_up_text()}
+		</p>
 		<p class="text-muted">
-			Confirm by {formatMonthDayYear(reservation.waitlistExpiresAt!)}, {formatDistanceToNow(
-				reservation.waitlistExpiresAt!,
-				{ addSuffix: true }
-			)}, or it goes to the next person.
+			{m.reservations_reservation_summary_confirm_by_goes_next_person_text({
+				formatMonthDayYear: formatMonthDayYear(reservation.waitlistExpiresAt!),
+				formatDistanceToNow: formatDistanceToNow(reservation.waitlistExpiresAt!, {
+					addSuffix: true
+				})
+			})}
 		</p>
 	{:else if reservation.price === 0}
-		<p class="text-muted">Covered by credits</p>
+		<p class="text-muted">{m.reservations_reservation_summary_covered_by_credits_text()}</p>
 	{:else if reservation.price != null}
 		<p class="text-muted">
-			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })} ·
-			{#if reservation.refundedAt}
-				Refunded {formatDateShortYear(reservation.refundedAt)}
-			{:else if reservation.paidAt}
-				Paid {formatDateShortYear(reservation.paidAt)}
-			{:else if reservation.status === 'cancelled'}
-				Payment Cancelled
-			{:else if reservation.status === 'completed' || reservation.status === 'no_show'}
-				<!-- Session is over but the balance was never settled. -->
-				<span class="font-medium text-error">Overdue</span>
-			{:else}
+			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+			<!-- The card's badge names the track; this adds only the date it lacks. -->
+			{#if track === 'refunded' && reservation.refundedAt}
+				· {m.reservations_reservation_summary_refunded_text({
+					formatDateShortYear: formatDateShortYear(reservation.refundedAt)
+				})}
+			{:else if track === 'paid' && reservation.paidAt}
+				· {m.reservations_reservation_summary_paid_text({
+					formatDateShortYear: formatDateShortYear(reservation.paidAt)
+				})}
+			{:else if track === 'booked'}
 				<!-- Stays date-fns: a distance between two instants has no timezone to
-				     get wrong, and there is no venue-time equivalent because there is
-				     nothing to equivalise. -->
-				Due {formatDistanceToNow(reservation.startsAt, { addSuffix: true })}
+				     get wrong. -->
+				· {m.reservations_reservation_summary_due_text({
+					formatDistanceToNow: formatDistanceToNow(reservation.startsAt, { addSuffix: true })
+				})}
 			{/if}
 		</p>
 	{/if}

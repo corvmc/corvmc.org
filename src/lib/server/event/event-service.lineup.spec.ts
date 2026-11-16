@@ -33,7 +33,7 @@ function chain(): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		insert: () => ({
@@ -66,18 +66,18 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: () => 0
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn(),
 	cancel: vi.fn(),
 	ReservationConflictError: class extends Error {}
 }));
-vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn() }));
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({ hasConflict: vi.fn() }));
 const mockEmit = vi.fn();
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => mockEmit(...a) }
 }));
-vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 import {
 	setEventLineup,

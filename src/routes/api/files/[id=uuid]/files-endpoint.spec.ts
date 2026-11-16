@@ -1,3 +1,4 @@
+import { groupRead } from '#lib/server/group/group-read.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error } from '@sveltejs/kit';
 
@@ -21,7 +22,7 @@ type DownloadRow = {
 let downloadRow: DownloadRow | null = null;
 
 const getForDownload = vi.fn(async (_id: string) => downloadRow);
-vi.mock('$lib/server/group/file-service', () => ({
+vi.mock('#lib/server/group/file-service.js', () => ({
 	getForDownload: (id: string) => getForDownload(id)
 }));
 
@@ -29,7 +30,7 @@ type GroupRef = { id: string } | { slug: string };
 const requireGroupRole = vi.fn(
 	async (_ref: GroupRef, _minRole: string, _opts?: { allowStaff?: boolean }) => ({})
 );
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (ref: GroupRef, minRole: string, opts?: { allowStaff?: boolean }) =>
 		requireGroupRole(ref, minRole, opts)
 }));
@@ -40,7 +41,7 @@ const arrayBuffer = vi.fn(async () => new ArrayBuffer(0));
 let storedObject: unknown = { body, size: 2048, arrayBuffer };
 
 const getPrivateObject = vi.fn(async (_key: string) => storedObject);
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	getPrivateObject: (key: string) => getPrivateObject(key)
 }));
 
@@ -88,7 +89,7 @@ describe('GET /api/files/[id]', () => {
 		await get('file-1');
 
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'group-1' }, 'member', {
-			allowStaff: true
+			staff: groupRead
 		});
 	});
 
@@ -99,7 +100,7 @@ describe('GET /api/files/[id]', () => {
 
 		await expect(get('file-1')).rejects.toMatchObject({ status: 403 });
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: 'group-b' }, 'member', {
-			allowStaff: true
+			staff: groupRead
 		});
 	});
 

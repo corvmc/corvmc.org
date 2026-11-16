@@ -1,5 +1,5 @@
-import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
-import type { BookerType } from '$lib/config';
+import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
+import type { BookerType } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Defaults — kept as named exports for tests and static references
@@ -12,6 +12,8 @@ export const DEFAULT_OPERATING_HOURS_START = '09:00';
 export const DEFAULT_OPERATING_HOURS_END = '22:00';
 export const DEFAULT_BUFFER_MINUTES = 0;
 export const DEFAULT_MIN_ADVANCE_MINUTES = 60;
+// A member without the Practice space clearance: 3 days to find someone to show them around.
+export const DEFAULT_NEW_MEMBER_MIN_ADVANCE_MINUTES = 4320;
 export const DEFAULT_MAX_ADVANCE_DAYS_ONEOFF = 14;
 export const DEFAULT_MAX_ADVANCE_DAYS_RECURRING = 17.5;
 
@@ -39,6 +41,7 @@ export interface ReservationConfig {
 	operatingHoursEnd: string;
 	bufferMinutes: number;
 	minAdvanceMinutes: number;
+	newMemberMinAdvanceMinutes: number;
 	maxAdvanceDaysOneoff: number;
 	maxAdvanceDaysRecurring: number;
 	hourlyRateCents: number;
@@ -46,6 +49,8 @@ export interface ReservationConfig {
 	teachingMinDurationHours: number;
 	teachingMaxAdvanceDaysOneoff: number;
 	teachingMaxAdvanceDaysRecurring: number;
+	/** `YYYY-MM-DD`: sessions from this day count toward the fee gate. Empty turns it off. */
+	feeGateFrom: string;
 }
 
 export async function getReservationConfig(): Promise<ReservationConfig> {
@@ -58,6 +63,9 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		operatingHoursEnd: String(raw.operatingHoursEnd ?? DEFAULT_OPERATING_HOURS_END),
 		bufferMinutes: Number(raw.bufferMinutes ?? DEFAULT_BUFFER_MINUTES),
 		minAdvanceMinutes: Number(raw.minAdvanceMinutes ?? DEFAULT_MIN_ADVANCE_MINUTES),
+		newMemberMinAdvanceMinutes: Number(
+			raw.newMemberMinAdvanceMinutes ?? DEFAULT_NEW_MEMBER_MIN_ADVANCE_MINUTES
+		),
 		maxAdvanceDaysOneoff: Number(raw.maxAdvanceDaysOneoff ?? DEFAULT_MAX_ADVANCE_DAYS_ONEOFF),
 		maxAdvanceDaysRecurring: Number(
 			raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING
@@ -72,7 +80,8 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		),
 		teachingMaxAdvanceDaysRecurring: Number(
 			raw.teachingMaxAdvanceDaysRecurring ?? DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
-		)
+		),
+		feeGateFrom: String(raw.feeGateFrom ?? '')
 	};
 }
 
@@ -123,6 +132,11 @@ export function termsFor(bookerType: BookerType, cfg: ReservationConfig): Bookin
 		maxAdvanceDaysOneoff: cfg.maxAdvanceDaysOneoff,
 		maxAdvanceDaysRecurring: cfg.maxAdvanceDaysRecurring
 	};
+}
+
+/** The booker's duration floor in slots: what every picker counts a start against. */
+export function minSlotsFor(bookerType: BookerType | undefined, cfg: ReservationConfig): number {
+	return termsFor(bookerType ?? 'user', cfg).minDurationHours * (60 / cfg.timeSlotMinutes);
 }
 
 /** One config read, then `termsFor`. The form every call site should take. */

@@ -48,282 +48,258 @@ export async function seedDirectMessages(
 	const pendingFromCarol = randomUUID();
 	const reported = randomUUID();
 
-	const threads = await batchInsert(
-		inboxThread,
-		[
-			{
-				id: accepted,
-				channel: 'direct' as const,
-				status: 'open' as const,
-				preview: 'Sounds good — Thursday works for me. I can bring an amp.',
-				messageCount: 3,
-				lastMessageAt: new Date(now.getTime() - 2 * hour),
-				createdAt: new Date(now.getTime() - 3 * day),
-				updatedAt: new Date(now.getTime() - 2 * hour)
-			},
-			{
-				id: pendingForBob,
-				channel: 'direct' as const,
-				status: 'open' as const,
-				preview: 'Hi! Saw you play bass at the open mic — I am putting a soul band together.',
-				messageCount: 1,
-				lastMessageAt: new Date(now.getTime() - 6 * hour),
-				createdAt: new Date(now.getTime() - 6 * hour),
-				updatedAt: new Date(now.getTime() - 6 * hour)
-			},
-			{
-				id: pendingFromCarol,
-				channel: 'direct' as const,
-				status: 'open' as const,
-				preview: 'Are you still looking for a drummer?',
-				messageCount: 1,
-				lastMessageAt: new Date(now.getTime() - day),
-				createdAt: new Date(now.getTime() - day),
-				updatedAt: new Date(now.getTime() - day)
-			},
-			{
-				id: reported,
-				channel: 'direct' as const,
-				// Reporting closes the conversation, same as declining.
-				status: 'resolved' as const,
-				preview: 'I said I am not interested. Please stop messaging me.',
-				messageCount: 3,
-				lastMessageAt: new Date(now.getTime() - 2 * day),
-				createdAt: new Date(now.getTime() - 4 * day),
-				updatedAt: new Date(now.getTime() - 2 * day)
-			}
-		],
-		2
-	);
+	const threads = await batchInsert(inboxThread, [
+		{
+			id: accepted,
+			channel: 'direct' as const,
+			status: 'open' as const,
+			preview: 'Sounds good — Thursday works for me. I can bring an amp.',
+			messageCount: 3,
+			lastMessageAt: new Date(now.getTime() - 2 * hour),
+			createdAt: new Date(now.getTime() - 3 * day),
+			updatedAt: new Date(now.getTime() - 2 * hour)
+		},
+		{
+			id: pendingForBob,
+			channel: 'direct' as const,
+			status: 'open' as const,
+			preview: 'Hi! Saw you play bass at the open mic — I am putting a soul band together.',
+			messageCount: 1,
+			lastMessageAt: new Date(now.getTime() - 6 * hour),
+			createdAt: new Date(now.getTime() - 6 * hour),
+			updatedAt: new Date(now.getTime() - 6 * hour)
+		},
+		{
+			id: pendingFromCarol,
+			channel: 'direct' as const,
+			status: 'open' as const,
+			preview: 'Are you still looking for a drummer?',
+			messageCount: 1,
+			lastMessageAt: new Date(now.getTime() - day),
+			createdAt: new Date(now.getTime() - day),
+			updatedAt: new Date(now.getTime() - day)
+		},
+		{
+			id: reported,
+			channel: 'direct' as const,
+			// Reporting closes the conversation, same as declining.
+			status: 'resolved' as const,
+			preview: 'I said I am not interested. Please stop messaging me.',
+			messageCount: 3,
+			lastMessageAt: new Date(now.getTime() - 2 * day),
+			createdAt: new Date(now.getTime() - 4 * day),
+			updatedAt: new Date(now.getTime() - 2 * day)
+		}
+	]);
 
 	// acceptedAt is the request mechanism: stamped on the person who started the
 	// conversation, null on the recipient until they accept.
-	await batchInsert(
-		inboxParticipant,
-		[
-			{
-				id: randomUUID(),
-				threadId: accepted,
-				userId: alice.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - 3 * day),
-				lastReadAt: new Date(now.getTime() - 2 * hour),
-				createdAt: new Date(now.getTime() - 3 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: accepted,
-				userId: bob.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - 3 * day),
-				lastReadAt: new Date(now.getTime() - 3 * hour),
-				createdAt: new Date(now.getTime() - 3 * day)
-			},
+	await batchInsert(inboxParticipant, [
+		{
+			id: randomUUID(),
+			threadId: accepted,
+			userId: alice.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - 3 * day),
+			lastReadAt: new Date(now.getTime() - 2 * hour),
+			createdAt: new Date(now.getTime() - 3 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: accepted,
+			userId: bob.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - 3 * day),
+			lastReadAt: new Date(now.getTime() - 3 * hour),
+			createdAt: new Date(now.getTime() - 3 * day)
+		},
 
-			// Waiting on Bob: he sees this in Messages tagged "Request".
-			{
-				id: randomUUID(),
-				threadId: pendingForBob,
-				userId: carol.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - 6 * hour),
-				lastReadAt: new Date(now.getTime() - 6 * hour),
-				createdAt: new Date(now.getTime() - 6 * hour)
-			},
-			{
-				id: randomUUID(),
-				threadId: pendingForBob,
-				userId: bob.id,
-				role: 'member' as const,
-				acceptedAt: null,
-				lastReadAt: null,
-				createdAt: new Date(now.getTime() - 6 * hour)
-			},
+		// Waiting on Bob: he sees this in Messages tagged "Request".
+		{
+			id: randomUUID(),
+			threadId: pendingForBob,
+			userId: carol.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - 6 * hour),
+			lastReadAt: new Date(now.getTime() - 6 * hour),
+			createdAt: new Date(now.getTime() - 6 * hour)
+		},
+		{
+			id: randomUUID(),
+			threadId: pendingForBob,
+			userId: bob.id,
+			role: 'member' as const,
+			acceptedAt: null,
+			lastReadAt: null,
+			createdAt: new Date(now.getTime() - 6 * hour)
+		},
 
-			// Waiting on Dave: counts against Carol's outstanding-request cap.
-			{
-				id: randomUUID(),
-				threadId: pendingFromCarol,
-				userId: carol.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - day),
-				lastReadAt: new Date(now.getTime() - day),
-				createdAt: new Date(now.getTime() - day)
-			},
-			{
-				id: randomUUID(),
-				threadId: pendingFromCarol,
-				userId: dave.id,
-				role: 'member' as const,
-				acceptedAt: null,
-				lastReadAt: null,
-				createdAt: new Date(now.getTime() - day)
-			},
+		// Waiting on Dave: counts against Carol's outstanding-request cap.
+		{
+			id: randomUUID(),
+			threadId: pendingFromCarol,
+			userId: carol.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - day),
+			lastReadAt: new Date(now.getTime() - day),
+			createdAt: new Date(now.getTime() - day)
+		},
+		{
+			id: randomUUID(),
+			threadId: pendingFromCarol,
+			userId: dave.id,
+			role: 'member' as const,
+			acceptedAt: null,
+			lastReadAt: null,
+			createdAt: new Date(now.getTime() - day)
+		},
 
-			{
-				id: randomUUID(),
-				threadId: reported,
-				userId: erin.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - 4 * day),
-				lastReadAt: new Date(now.getTime() - 2 * day),
-				createdAt: new Date(now.getTime() - 4 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: reported,
-				userId: frank.id,
-				role: 'member' as const,
-				acceptedAt: new Date(now.getTime() - 4 * day),
-				lastReadAt: null,
-				createdAt: new Date(now.getTime() - 4 * day)
-			}
-		],
-		2
-	);
+		{
+			id: randomUUID(),
+			threadId: reported,
+			userId: erin.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - 4 * day),
+			lastReadAt: new Date(now.getTime() - 2 * day),
+			createdAt: new Date(now.getTime() - 4 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: reported,
+			userId: frank.id,
+			role: 'member' as const,
+			acceptedAt: new Date(now.getTime() - 4 * day),
+			lastReadAt: null,
+			createdAt: new Date(now.getTime() - 4 * day)
+		}
+	]);
 
 	// Every DM is 'peer': nobody wrote to CorvMC and CorvMC sent nothing.
-	await batchInsert(
-		inboxMessage,
-		[
-			{
-				id: randomUUID(),
-				threadId: accepted,
-				direction: 'peer' as const,
-				body: 'Hey — are you free to jam this week?',
-				authorName: alice.name,
-				authorUserId: alice.id,
-				createdAt: new Date(now.getTime() - 3 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: accepted,
-				direction: 'peer' as const,
-				body: 'Yeah! Thursday or Saturday both work.',
-				authorName: bob.name,
-				authorUserId: bob.id,
-				createdAt: new Date(now.getTime() - 2 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: accepted,
-				direction: 'peer' as const,
-				body: 'Sounds good — Thursday works for me. I can bring an amp.',
-				authorName: alice.name,
-				authorUserId: alice.id,
-				createdAt: new Date(now.getTime() - 2 * hour)
-			},
+	await batchInsert(inboxMessage, [
+		{
+			id: randomUUID(),
+			threadId: accepted,
+			direction: 'peer' as const,
+			body: 'Hey — are you free to jam this week?',
+			authorName: alice.name,
+			authorUserId: alice.id,
+			createdAt: new Date(now.getTime() - 3 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: accepted,
+			direction: 'peer' as const,
+			body: 'Yeah! Thursday or Saturday both work.',
+			authorName: bob.name,
+			authorUserId: bob.id,
+			createdAt: new Date(now.getTime() - 2 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: accepted,
+			direction: 'peer' as const,
+			body: 'Sounds good — Thursday works for me. I can bring an amp.',
+			authorName: alice.name,
+			authorUserId: alice.id,
+			createdAt: new Date(now.getTime() - 2 * hour)
+		},
 
-			{
-				id: randomUUID(),
-				threadId: pendingForBob,
-				direction: 'peer' as const,
-				body: 'Hi! Saw you play bass at the open mic — I am putting a soul band together and wondered if you were looking for something.',
-				authorName: carol.name,
-				authorUserId: carol.id,
-				createdAt: new Date(now.getTime() - 6 * hour)
-			},
+		{
+			id: randomUUID(),
+			threadId: pendingForBob,
+			direction: 'peer' as const,
+			body: 'Hi! Saw you play bass at the open mic — I am putting a soul band together and wondered if you were looking for something.',
+			authorName: carol.name,
+			authorUserId: carol.id,
+			createdAt: new Date(now.getTime() - 6 * hour)
+		},
 
-			{
-				id: randomUUID(),
-				threadId: pendingFromCarol,
-				direction: 'peer' as const,
-				body: 'Are you still looking for a drummer?',
-				authorName: carol.name,
-				authorUserId: carol.id,
-				createdAt: new Date(now.getTime() - day)
-			},
+		{
+			id: randomUUID(),
+			threadId: pendingFromCarol,
+			direction: 'peer' as const,
+			body: 'Are you still looking for a drummer?',
+			authorName: carol.name,
+			authorUserId: carol.id,
+			createdAt: new Date(now.getTime() - day)
+		},
 
-			{
-				id: randomUUID(),
-				threadId: reported,
-				direction: 'peer' as const,
-				body: 'Hi, want to get a drink sometime?',
-				authorName: frank.name,
-				authorUserId: frank.id,
-				createdAt: new Date(now.getTime() - 4 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: reported,
-				direction: 'peer' as const,
-				body: 'No thanks, I am just here for the music.',
-				authorName: erin.name,
-				authorUserId: erin.id,
-				createdAt: new Date(now.getTime() - 3 * day)
-			},
-			{
-				id: randomUUID(),
-				threadId: reported,
-				direction: 'peer' as const,
-				body: 'I said I am not interested. Please stop messaging me.',
-				authorName: erin.name,
-				authorUserId: erin.id,
-				createdAt: new Date(now.getTime() - 2 * day)
-			}
-		],
-		3
-	);
+		{
+			id: randomUUID(),
+			threadId: reported,
+			direction: 'peer' as const,
+			body: 'Hi, want to get a drink sometime?',
+			authorName: frank.name,
+			authorUserId: frank.id,
+			createdAt: new Date(now.getTime() - 4 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: reported,
+			direction: 'peer' as const,
+			body: 'No thanks, I am just here for the music.',
+			authorName: erin.name,
+			authorUserId: erin.id,
+			createdAt: new Date(now.getTime() - 3 * day)
+		},
+		{
+			id: randomUUID(),
+			threadId: reported,
+			direction: 'peer' as const,
+			body: 'I said I am not interested. Please stop messaging me.',
+			authorName: erin.name,
+			authorUserId: erin.id,
+			createdAt: new Date(now.getTime() - 2 * day)
+		}
+	]);
 
 	// Reporting blocks the other person straight away — the reporter should not
 	// have to wait on the staff queue to stop hearing from them.
-	const blocks = await batchInsert(
-		userBlock,
-		[
-			{
-				id: randomUUID(),
-				blockerUserId: erin.id,
-				blockedUserId: frank.id,
-				source: 'reported' as const,
-				createdAt: new Date(now.getTime() - 2 * day)
-			},
-			{
-				id: randomUUID(),
-				blockerUserId: dave.id,
-				blockedUserId: alice.id,
-				source: 'declined_request' as const,
-				createdAt: new Date(now.getTime() - 5 * day)
-			}
-		],
-		2
-	);
+	const blocks = await batchInsert(userBlock, [
+		{
+			id: randomUUID(),
+			blockerUserId: erin.id,
+			blockedUserId: frank.id,
+			source: 'reported' as const,
+			createdAt: new Date(now.getTime() - 2 * day)
+		},
+		{
+			id: randomUUID(),
+			blockerUserId: dave.id,
+			blockedUserId: alice.id,
+			source: 'declined_request' as const,
+			createdAt: new Date(now.getTime() - 5 * day)
+		}
+	]);
 
 	const reportFlag = randomUUID();
-	await batchInsert(
-		contentFlag,
-		[
-			{
-				id: reportFlag,
-				entityType: 'inbox_thread' as const,
-				entityId: reported,
-				reportedByUserId: erin.id,
-				reason: 'Harassment',
-				description: 'They kept messaging after I said no.',
-				status: 'pending' as const,
-				createdAt: new Date(now.getTime() - 2 * day),
-				updatedAt: new Date(now.getTime() - 2 * day)
-			}
-		],
-		1
-	);
+	await batchInsert(contentFlag, [
+		{
+			id: reportFlag,
+			entityType: 'inbox_thread' as const,
+			entityId: reported,
+			reportedByUserId: erin.id,
+			reason: 'Harassment',
+			description: 'They kept messaging after I said no.',
+			status: 'pending' as const,
+			createdAt: new Date(now.getTime() - 2 * day),
+			updatedAt: new Date(now.getTime() - 2 * day)
+		}
+	]);
 
 	// Probation from an upheld report: Frank can reply where he already is, but
 	// cannot start anything new. A moderation record, so it is a standing row.
-	const standings = await batchInsert(
-		memberStanding,
-		[
-			{
-				userId: frank.id,
-				scope: 'messaging' as const,
-				status: 'restricted' as const,
-				reason: 'Continued messaging after being asked to stop.',
-				triggeringFlagId: reportFlag,
-				updatedByUserId: adminUser.id,
-				updatedAt: new Date(now.getTime() - day)
-			}
-		],
-		1
-	);
+	const standings = await batchInsert(memberStanding, [
+		{
+			userId: frank.id,
+			scope: 'messaging' as const,
+			status: 'restricted' as const,
+			reason: 'Continued messaging after being asked to stop.',
+			triggeringFlagId: reportFlag,
+			updatedByUserId: adminUser.id,
+			updatedAt: new Date(now.getTime() - day)
+		}
+	]);
 
 	// Dave switched his own messaging off. Deliberately NOT a standing row —
 	// nothing was imposed on him, so there is no moderation record to write, and

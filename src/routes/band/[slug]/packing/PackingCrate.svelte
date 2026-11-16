@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PackingItemsEditor from './PackingItemsEditor.svelte';
-	import { savePackingItems, savePackingItemsFor } from '$lib/remote/packing.remote';
-	import type { PackingItemRowState } from '$lib/types/packing';
+	import { savePackingItems, savePackingItemsFor } from '#lib/remote/packing.remote.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
 
 	/**
 	 * One person's crate — or the band's shared kit, which a null owner means.
@@ -52,6 +53,7 @@
 	 */
 	const adminRemote = $derived(savePackingItemsFor.for(ownerUserId ?? 'shared'));
 
+	// svelte-ignore state_referenced_locally
 	let items = $state<PackingItemRowState[]>(initial);
 
 	const count = $derived(items.filter((it) => it.label?.trim()).length);
@@ -61,8 +63,14 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge variant="primary">You</Badge>{/if}
-			<Badge class="ml-auto">{count} {count === 1 ? 'thing' : 'things'}</Badge>
+			{#if mine}<Badge variant="primary">{m.band_slug_packing_packing_crate_text_label()}</Badge
+				>{/if}
+			<Badge class="ml-auto"
+				>{count}
+				{count === 1
+					? m.band_slug_packing_packing_crate_thing_label()
+					: m.band_slug_packing_packing_crate_things_label()}</Badge
+			>
 		</div>
 		{#if subtitle}
 			<p class="mb-3 text-xs text-base-content/60">{subtitle}</p>
@@ -72,27 +80,27 @@
 			<Form
 				remote={savePackingItems}
 				guard
-				successToast="Packing list saved"
+				successToast={m.band_slug_packing_packing_crate_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
 				<input {...savePackingItems.fields.bandId.as('hidden', bandId)} />
 				<PackingItemsEditor bind:items field={savePackingItems.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save_label()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
 				remote={adminRemote}
 				guard
-				successToast="Packing list saved"
+				successToast={m.band_slug_packing_packing_crate_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
 				<input {...adminRemote.fields.bandId.as('hidden', bandId)} />
 				<input {...adminRemote.fields.targetUserId.as('hidden', ownerUserId ?? '')} />
 				<PackingItemsEditor bind:items field={adminRemote.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save_label()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else}

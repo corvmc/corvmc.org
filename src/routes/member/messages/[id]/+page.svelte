@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One conversation, of four kinds since #1250: a DM, a staff thread, a
 	 * group's chat and a band's booking enquiry. The last two are panes of
@@ -8,32 +9,34 @@
 	 * Report *instead of* a box, which keeps a request to one message.
 	 */
 	import { untrack } from 'svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { page } from '$app/state';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { IconCheck, IconX, IconBan } from '@tabler/icons-svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
-	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
-	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
-	import GroupChat from '$lib/components/inbox/GroupChat.svelte';
-	import EnquiryThread from '$lib/components/inbox/EnquiryThread.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
+	import ThreadHeader from '#lib/components/inbox/ThreadHeader.svelte';
+	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
+	import GroupChat from '#lib/components/inbox/GroupChat.svelte';
+	import EnquiryThread from '#lib/components/inbox/EnquiryThread.svelte';
 	import ReportDirectThreadAction from './ReportDirectThreadAction.svelte';
 	import { refreshConversations } from '../list-state.svelte';
-	import { sendConversationMessage, markConversationRead } from '$lib/remote/inbox.remote';
+	import { sendConversationMessage, markConversationRead } from '#lib/remote/inbox.remote.js';
 	import {
 		getMyMessageThread,
 		sendDirectMessage,
 		acceptDirectRequest,
 		declineDirectRequest,
 		blockFromThread
-	} from '$lib/remote/direct-messages.remote';
+	} from '#lib/remote/direct-messages.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const threadId = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const threadId = $derived(params.id);
 
 	// Deliberately the only query this page awaits. It carries viewerUserId, so
 	// there is no second await for the reader's identity — and in particular not
@@ -77,7 +80,7 @@
 		<!-- The group's own room. Its own pane because a reply here goes in-app
 		     as you, not out as the group. `t` is the topic itself, so the pane
 		     runs no query of its own (#1776). -->
-		<GroupChat chat={t} viewerUserId={t.viewerUserId} />
+		<GroupChat chat={t} viewerUserId={t.viewerUserId} backHref="/member/messages" />
 	{:else if t.kind === 'enquiry'}
 		<!-- A booking enquiry, the same pane the band panel renders — reply as
 		     the band, by email, with the address hidden either way. -->
@@ -86,8 +89,8 @@
 		<ThreadHeader
 			{title}
 			subtitle={t.kind === 'direct'
-				? 'Your conversation with another member'
-				: 'Your conversation with CorvMC staff'}
+				? m.member_messages_id_conversation_with_another_member_body()
+				: m.member_messages_id_conversation_with_corvmc_staff_body()}
 			backHref="/member/messages"
 		>
 			{#snippet actions()}
@@ -97,10 +100,14 @@
 
 		<div class="min-h-0 flex-1 overflow-y-auto">
 			{#if t.kind === 'direct' && t.counterpartDeleted}
-				<Alert type="info">This member's account is no longer active.</Alert>
+				<Alert type="info">{m.member_messages_id_member_s_account_no_longer_body()}</Alert>
 			{/if}
 
-			<ThreadTimeline messages={t.messages} viewerUserId={t.viewerUserId} />
+			<ThreadTimeline
+				messages={t.messages}
+				channel={t.kind === 'staff' ? 'portal' : t.kind}
+				viewerUserId={t.viewerUserId}
+			/>
 		</div>
 
 		<div class="flex flex-col gap-2">
@@ -111,17 +118,18 @@
 				<Card bordered>
 					<CardBody padding="sm" class="gap-3">
 						<p class="text-muted">
-							{t.counterpartName ?? 'This member'} would like to start a conversation with you. They cannot
-							send anything else unless you accept.
+							{m.member_messages_id_would_like_start_conversation_with_text({
+								counterpartName: t.counterpartName ?? m.member_messages_id_member_text()
+							})}
 						</p>
 						<div class="flex flex-wrap items-center gap-2">
 							<Form
 								remote={acceptDirectRequest}
-								successToast="Request accepted"
+								successToast={m.member_messages_id_request_accepted_toast()}
 								onsuccess={refreshConversations}
 							>
 								<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label="Accept" variant="primary" size="sm">
+								<SubmitButton label={m.member_accept_label()} variant="primary" size="sm">
 									{#snippet icon()}<IconCheck size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -131,11 +139,11 @@
 						     request, which is what makes saying no cost nothing. -->
 							<Form
 								remote={declineDirectRequest}
-								successToast="Request declined"
+								successToast={m.member_messages_id_request_declined_toast()}
 								onsuccess={refreshConversations}
 							>
 								<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label="Decline" variant="ghost" size="sm">
+								<SubmitButton label={m.member_decline_label()} variant="ghost" size="sm">
 									{#snippet icon()}<IconX size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -146,12 +154,12 @@
 				</Card>
 			{:else if blocked}
 				<Alert type="info">
-					This conversation is closed. You can still read it, but neither of you can write here.
+					{m.member_messages_id_conversation_closed_can_still_read_body()}
 				</Alert>
 			{:else if closed}
 				<Alert type="info">
-					This conversation has been closed.
-					{#if t.kind === 'staff'}Start a new message if you need anything else.{/if}
+					{m.member_messages_id_conversation_has_been_closed_body()}
+					{#if t.kind === 'staff'}{m.member_messages_id_start_new_message_if_need_body()}{/if}
 				</Alert>
 			{:else}
 				<!-- No noteForm: internal notes are staff-private, so the shared composer
@@ -169,9 +177,18 @@
 			     it if they later decide to report. -->
 				<div class="flex justify-end gap-2">
 					<ReportDirectThreadAction threadId={t.id} />
-					<Form remote={blockFromThread} successToast="Blocked" onsuccess={refreshConversations}>
+					<Form
+						remote={blockFromThread}
+						successToast={m.member_messages_id_blocked_toast()}
+						onsuccess={refreshConversations}
+					>
 						<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Block" variant="error" size="sm" outline>
+						<SubmitButton
+							label={m.member_messages_id_block_label()}
+							variant="error"
+							size="sm"
+							outline
+						>
 							{#snippet icon()}<IconBan size={16} />{/snippet}
 						</SubmitButton>
 					</Form>

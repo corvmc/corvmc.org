@@ -1,5 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
@@ -12,17 +14,14 @@
 	} = $props();
 
 	let textarea = $state<HTMLTextAreaElement>(undefined!);
-	let fileInput = $state<HTMLInputElement>(undefined!);
 	let activeTab = $state<'write' | 'preview'>('write');
 
-	async function handleImageUpload() {
-		if (!uploadImage || !fileInput.files?.length) return;
-		const file = fileInput.files[0];
+	async function handleImageUpload(file: File) {
+		if (!uploadImage) return;
 		const url = await uploadImage(file);
 		const insertion = `![${file.name}](${url})`;
 		const pos = textarea.selectionStart;
 		value = value.slice(0, pos) + insertion + value.slice(pos);
-		fileInput.value = '';
 	}
 </script>
 
@@ -35,7 +34,7 @@
 			class={activeTab === 'write' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'write')}
 		>
-			Write
+			{m.help_markdown_editor_write_label()}
 		</Button>
 		<Button
 			type="button"
@@ -44,27 +43,21 @@
 			class={activeTab === 'preview' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'preview')}
 		>
-			Preview
+			{m.help_markdown_editor_preview_label()}
 		</Button>
 		<div class="flex-1"></div>
 		{#if uploadImage}
-			<Button
-				type="button"
+			<FileUpload
+				upload={handleImageUpload}
+				accept="image/*"
+				showPreview={false}
 				variant="ghost"
 				size="xs"
-				shape="square"
-				title="Insert image"
-				onclick={() => fileInput.click()}
+				square
+				aria-label={m.help_markdown_editor_aria_label()}
 			>
 				<IconPhoto size={14} />
-			</Button>
-			<input
-				type="file"
-				accept="image/*"
-				class="hidden"
-				bind:this={fileInput}
-				onchange={handleImageUpload}
-			/>
+			</FileUpload>
 		{/if}
 	</div>
 
@@ -73,13 +66,13 @@
 			bind:this={textarea}
 			bind:value
 			class="min-h-64 w-full resize-y bg-base-100 p-3 font-mono text-sm focus:outline-none"
-			placeholder="Write your article in Markdown..."></textarea>
+			placeholder={m.help_markdown_editor_placeholder()}></textarea>
 	{:else}
 		<div class="min-h-64 p-3">
 			{#if value.trim()}
 				<MarkdownPreview content={value} />
 			{:else}
-				<p class="text-sm italic opacity-50">Nothing to preview</p>
+				<p class="text-sm italic opacity-50">{m.help_markdown_editor_nothing_preview_text()}</p>
 			{/if}
 		</div>
 	{/if}

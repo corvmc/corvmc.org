@@ -1,0 +1,5 @@
+# Local resources directory
+
+Status: ✅ /local-resources
+
+Staff-curated music businesses and services grouped by category (`local_resource`, `local_resource_category`), one public query filtered to published and undeleted rows in SQL. Contact fields live on the row and are public by design — never `contact`. Staff curate at `/staff/local-resources`, the Local resources view of the **Content** row beside Help articles (#2765) (pending first; publish, return with a note, remove as a soft delete) and manage categories, which cannot be deleted while any listing uses them. Websites must be http(s). A public tip (Turnstile-guarded, name/category/website/phone/address/description/email) files a `pending` listing, notifies staff in-app and queues as the Pending status filter (`/staff/local-resources?status=pending`, oldest first with who sent it; `/staff/local-resources/tips` is a 308, #1566, #2765), and the submitter is emailed when it is published or returned with the note (#1498). See `docs/decisions/0028-local-resources-are-their-own-table.md`

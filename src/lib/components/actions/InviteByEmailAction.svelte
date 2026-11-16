@@ -1,15 +1,16 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { inviteByEmailApi } from '$lib/remote/bands.remote';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { inviteByEmailApi } from '#lib/remote/bands.remote.js';
 
 	const { fields } = inviteByEmailApi;
 
 	const ROLE_OPTIONS = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.actions_member_label() },
+		{ value: 'admin', label: m.actions_admin_label() }
 	];
 
 	let {
@@ -33,33 +34,41 @@
 
 <Action
 	action={inviteByEmailApi}
-	label="Invite by Email"
-	modalTitle="Invite by Email"
-	successToast="Email invitation sent"
+	label={m.actions_invite_by_email_invite_by_email_label()}
+	modalTitle={m.actions_invite_by_email_invite_by_email_title()}
+	successToast={m.actions_invite_by_email_success_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				Invite someone who doesn't have a CorvMC account. They'll get a signup link and be
-				auto-added to this band.
+				{m.actions_invite_by_email_invite_someone_who_doesn_t_text()}
 			</p>
 			<!-- The handler raises its "already a member" rejection as an issue on
 			     `email`, which a bare input renders as `aria-invalid` and nothing else. -->
 			<FormField
 				field={fields.email}
 				type="email"
-				label="Email"
-				placeholder="musician@example.com"
+				label={m.actions_email_label()}
+				placeholder={m.actions_invite_by_email_musician_example_com_placeholder()}
 			/>
-			<FormField field={fields.role} type="select" label="Role" options={ROLE_OPTIONS} />
-			<FormField field={fields.position} label="Position (optional)" placeholder="e.g. Bassist" />
+			<FormField
+				field={fields.role}
+				type="select"
+				label={m.actions_role_label()}
+				options={ROLE_OPTIONS}
+			/>
+			<FormField
+				field={fields.position}
+				label={m.actions_position_optional_label()}
+				placeholder={m.actions_invite_by_email_e_g_bassist_placeholder()}
+			/>
 		</div>
 	{/snippet}
 </Action>

@@ -69,6 +69,10 @@ export default {
 	create(context) {
 		/** @type {Array<{ names: Map<string, any> }>} */
 		const formStack = [];
+		/** Open FormField/Field wrappers: a component inside one is its control. */
+		let wrapperDepth = 0;
+		const isWrapper = (/** @type {RuleNode} */ node) =>
+			node.name?.name === 'FormField' || node.name?.name === 'Field';
 
 		/** @param {RuleNode} node */
 		function isFormTag(node) {
@@ -86,6 +90,9 @@ export default {
 
 				const scope = formStack[formStack.length - 1];
 				if (!scope) return;
+				const nested = wrapperDepth > 0;
+				if (isWrapper(node)) wrapperDepth++;
+				if (nested) return;
 
 				// Only consider field *components* (FormField, Field, FileUpload, …). Raw HTML
 				// elements legitimately share a `name`: radio groups, native checkbox groups, and
@@ -119,6 +126,7 @@ export default {
 			/** @param {RuleNode} node */
 			'SvelteElement:exit'(node) {
 				if (isFormTag(node)) formStack.pop();
+				else if (formStack.length && isWrapper(node)) wrapperDepth--;
 			}
 		};
 	}

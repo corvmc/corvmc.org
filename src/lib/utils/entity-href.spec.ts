@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { entityHref } from './entity-href';
-import { ANONYMOUS, type Panel, type Viewer } from '$lib/types/entity';
-import { capabilities as CAPS, entityTypes } from '$lib/config';
-import { fakeRef } from '$lib/test/fixtures';
+import { ANONYMOUS, type Panel, type Viewer } from '#lib/types/entity.js';
+import { capabilities as CAPS, entityTypes } from '#lib/config.js';
+import { fakeRef } from '#lib/test/fixtures.js';
 
 /**
  * Every capability, which is what somebody holding `staff` actually has — the
@@ -48,7 +48,7 @@ describe('entityHref', () => {
 		});
 
 		it('gives the staff record in the staff panel', () => {
-			expect(entityHref(ref, them('staff'))).toBe('/staff/bands/band-1');
+			expect(entityHref(ref, them('staff'))).toBe('/staff/groups/band-1');
 		});
 
 		it('gives the directory entry in the member panel', () => {
@@ -87,6 +87,16 @@ describe('entityHref', () => {
 				const href = entityHref(fakeRef(type), viewer({ panel }));
 				expect(href === null || !href.startsWith('/staff')).toBe(true);
 			}
+		});
+
+		// The record's remotes refuse marketing.read alone, so the link would land on a 403 (#2436).
+		it('links an audience only for someone who can open its record', () => {
+			const panel = 'staff';
+			const held = (...caps: string[]) => viewer({ panel, capabilities: new Set(caps) });
+			expect(entityHref(fakeRef('audience'), held('marketing.read'))).toBeNull();
+			expect(entityHref(fakeRef('audience'), held('marketing.manageAudiences'))).toBe(
+				'/staff/marketing/audiences/audience-1'
+			);
 		});
 
 		it('returns null for a staff-only record when the viewer is not staff', () => {
@@ -154,12 +164,30 @@ describe('entityHref', () => {
 		});
 	});
 
+	describe('records decided on another page', () => {
+		const staff = viewer({ isStaff: true, panel: 'staff' });
+
+		it.each([
+			['work_request', '/staff/inventory/problems/work_request-1'],
+			['group_application', '/staff/groups/club-1'],
+			['market_vendor', '/staff/events/event-1/vendors'],
+			['volunteer', '/staff/members?role=volunteer&status=blocked'],
+			['local_resource', '/staff/local-resources?status=pending']
+		] as const)('links a %s to where it is decided', (type, href) => {
+			expect(entityHref(fakeRef(type), staff)).toBe(href);
+		});
+
+		it('has no page for an application whose group is unknown', () => {
+			expect(entityHref(fakeRef('group_application', { groupId: null }), staff)).toBeNull();
+		});
+	});
+
 	describe('records addressed by slug', () => {
 		it('has no non-staff page for a band whose slug is missing', () => {
 			const ref = fakeRef('band', { id: 'band-1', slug: null });
 			expect(entityHref(ref, viewer())).toBeNull();
 			expect(entityHref(ref, viewer({ isStaff: true, panel: 'staff' }))).toBe(
-				'/staff/bands/band-1'
+				'/staff/groups/band-1'
 			);
 		});
 	});

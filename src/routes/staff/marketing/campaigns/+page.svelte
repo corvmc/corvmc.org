@@ -1,50 +1,56 @@
 <script lang="ts">
-	import { getCampaigns } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getCampaigns } from '#lib/remote/marketing.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { outreachViews } from '../views';
 
 	let statusFilter = $state('');
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-<PageHeader title="Campaigns" subtitle="Marketing">
-	<Button href="/staff/marketing/campaigns/new" variant="default" size="sm">New Campaign</Button>
+<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_marketing_campaigns_title()}>
+	<StaffViews views={outreachViews} active="campaigns" />
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">
-		<Select size="sm" aria-label="Status" bind:value={statusFilter}>
-			<option value="">All statuses</option>
-			<option value="draft">Draft</option>
-			<option value="scheduled">Scheduled</option>
-			<option value="sent">Sent</option>
+		<Select size="sm" aria-label={m.staff_status_label()} bind:value={statusFilter}>
+			<option value="">{m.staff_all_statuses_label()}</option>
+			<option value="draft">{m.staff_draft_label()}</option>
+			<option value="scheduled">{m.staff_marketing_campaigns_scheduled_label()}</option>
+			<option value="sent">{m.staff_sent_label()}</option>
 		</Select>
+		<Button class="ml-auto" href="/staff/marketing/campaigns/new" variant="default" size="sm"
+			>{m.staff_new_campaign_label()}</Button
+		>
 	</div>
 
 	{#if campaigns.length === 0}
-		<EmptyState description="No campaigns yet." />
+		<EmptyState description={m.staff_marketing_campaigns_description_body()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Campaign</th>
-				<th class="col-support cell-num">Recipients</th>
-				<th class="col-support whitespace-nowrap">Date</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_campaign_label()}</th>
+				<th class="col-support cell-num">{m.staff_recipients_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.staff_date_label()}</th>
 			{/snippet}
 			{#each campaigns as c (c.id)}
 				{@const href =
 					c.status === 'draft'
-						? resolve(`/staff/marketing/campaigns/${c.id}/edit`)
-						: resolve(`/staff/marketing/campaigns/${c.id}`)}
+						? resolve(`staff/marketing/campaigns/${c.id}/edit`)
+						: resolve(`staff/marketing/campaigns/${c.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={c.status} /></td>
 					<!-- Audiences was its own column; it qualifies the campaign, so the

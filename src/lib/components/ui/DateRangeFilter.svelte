@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A from/to date range in a `FilterBar`, with the periods a report is
 	 * actually asked for as one click.
@@ -9,6 +10,7 @@
 	 */
 	// Native `<input type="date">` rather than a calendar widget: it is what
 	// every other filter bar here uses, and the picker is the platform's.
+	import type { Snippet } from 'svelte';
 	import FilterBar from './FilterBar.svelte';
 	import Button from './Button.svelte';
 
@@ -17,7 +19,8 @@
 		to = $bindable(),
 		defaultFrom = '',
 		defaultTo = '',
-		onchange
+		onchange,
+		actions
 	}: {
 		/** `YYYY-MM-DD`, inclusive. Empty string means unbounded. */
 		from: string;
@@ -27,6 +30,8 @@
 		defaultTo?: string;
 		/** Fired after any change, for a page that has to reset pagination. */
 		onchange?: () => void;
+		/** The current view's own actions, at the row's end. */
+		actions?: Snippet;
 	} = $props();
 
 	const uid = $props.id();
@@ -36,9 +41,13 @@
 	// End-of-year is spelled out rather than computed: `new Date(y, 11, 31)` is
 	// local time, and this value is read back as a club-time date string.
 	const presets = [
-		{ label: 'This year', from: `${thisYear}-01-01`, to: '' },
-		{ label: 'Last year', from: `${thisYear - 1}-01-01`, to: `${thisYear - 1}-12-31` },
-		{ label: 'All time', from: '', to: '' }
+		{ label: m.ui_range_this_year_label(), from: `${thisYear}-01-01`, to: '' },
+		{
+			label: m.ui_range_last_year_label(),
+			from: `${thisYear - 1}-01-01`,
+			to: `${thisYear - 1}-12-31`
+		},
+		{ label: m.ui_range_all_time_label(), from: '', to: '' }
 	];
 
 	const activeFilterCount = $derived((from !== defaultFrom ? 1 : 0) + (to !== defaultTo ? 1 : 0));
@@ -58,12 +67,13 @@
 	activeCount={activeFilterCount}
 	onclear={() => apply(defaultFrom, defaultTo)}
 	searchWidth="content"
+	{actions}
 >
 	{#snippet search()}
 		<div class="flex flex-wrap items-center gap-2">
 			<!-- Each label wraps with its own input, never apart from it. -->
 			<span class="flex items-center gap-2">
-				<label class="text-muted" for="range-from-{uid}">From</label>
+				<label class="text-muted" for="range-from-{uid}">{m.ui_range_from_label()}</label>
 				<input
 					id="range-from-{uid}"
 					type="date"
@@ -73,7 +83,7 @@
 				/>
 			</span>
 			<span class="flex items-center gap-2">
-				<label class="text-muted" for="range-to-{uid}">To</label>
+				<label class="text-muted" for="range-to-{uid}">{m.ui_range_to_label()}</label>
 				<input
 					id="range-to-{uid}"
 					type="date"

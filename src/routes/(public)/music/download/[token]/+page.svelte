@@ -1,15 +1,18 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getDownload } from '$lib/remote/music.remote';
-	import { formatTrackLength } from '$lib/utils/audio';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getDownload } from '#lib/remote/music.remote.js';
+	import { formatTrackLength } from '#lib/utils/audio.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconDownload } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const download = $derived(await getDownload(page.params.token!));
+	const params = routeParams('token');
+
+	const download = $derived(await getDownload(params.token));
 
 	// The purchase is flipped to `paid` by `checkout.session.completed`, not by
 	// the payment itself, and the buyer now pays on our own page — so they can
@@ -26,7 +29,7 @@
 
 		const timer = setTimeout(() => {
 			attempts += 1;
-			void getDownload(page.params.token!).refresh();
+			void getDownload(params.token).refresh();
 		}, RETRY_MS);
 
 		return () => clearTimeout(timer);
@@ -35,7 +38,9 @@
 
 <svelte:head>
 	<title
-		>{download.status === 'ready' ? download.releaseTitle : 'Your download'} — your download</title
+		>{download.status === 'ready'
+			? m.public_music_download_title({ title: download.releaseTitle })
+			: m.public_music_download_title_pending_title()}</title
 	>
 	<!-- Never indexed: the URL in the address bar IS the entitlement. -->
 	<meta name="robots" content="noindex, nofollow" />
@@ -43,11 +48,13 @@
 
 <div class="mx-auto max-w-2xl space-y-6 p-6">
 	{#if download.status === 'pending'}
-		<h1 class="text-3xl font-semibold">Confirming your payment…</h1>
+		<h1 class="text-3xl font-semibold">
+			{m.public_music_download_token_confirming_payment_title()}
+		</h1>
 		<Alert type={attempts >= RETRY_LIMIT ? 'warning' : 'info'}>
 			{attempts >= RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Nothing has gone wrong with your order — the download link is emailed to you as soon as it lands, and this page will work then too."
-				: 'This usually takes a couple of seconds. Your files appear here as soon as it clears.'}
+				? m.public_music_download_token_we_haven_t_had_confirmation_body()
+				: m.public_music_download_token_usually_takes_couple_seconds_fil_body()}
 		</Alert>
 	{:else}
 		<div>
@@ -59,7 +66,7 @@
 		     the only handle they have on what they bought. The receipt email carries
 		     the same link, which is the copy that survives closing the tab. -->
 		<Alert type="info">
-			Bookmark this page — it's how you get these files again later. We've emailed you the link too.
+			{m.public_music_download_token_bookmark_page_s_how_get_body()}
 		</Alert>
 
 		<Card>
@@ -79,10 +86,12 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href={resolve(`/api/audio/download/${page.params.token}/${track.id}`)}
+								href={resolve(`api/audio/download/${params.token}/${track.id}`)}
 							>
 								<IconDownload size={16} />
-								<span class="sr-only">Download {track.title}</span>
+								<span class="sr-only"
+									>{m.public_music_download_token_download_label({ title: track.title })}</span
+								>
 							</Button>
 						</li>
 					{/each}

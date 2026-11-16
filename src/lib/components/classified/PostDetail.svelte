@@ -1,22 +1,23 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { formatDate, formatDateTime } from '#lib/utils/format.js';
 	import {
 		classifiedKindLabel,
 		classifiedCategoryLabels,
 		CLASSIFIED_GEAR_DISCLAIMER,
 		type ClassifiedCategory,
 		type ClassifiedTagKind
-	} from '$lib/config';
-	import type { EntityRef } from '$lib/types/entity';
+	} from '#lib/config.js';
+	import type { EntityRef } from '#lib/types/entity.js';
 
 	/** A post's body and facts, shared by the member and staff detail pages. */
 	let {
@@ -37,7 +38,7 @@
 
 	function tagHref(t: { kind: ClassifiedTagKind; value: string }) {
 		const q = new URLSearchParams({ tagKind: t.kind, tagValue: t.value });
-		return withQuery(resolve('/member/classifieds'), q);
+		return withQuery(resolve('member/classifieds'), q);
 	}
 </script>
 
@@ -49,19 +50,21 @@
 	<p class="whitespace-pre-wrap">{post.body}</p>
 </InfoCard>
 
-<InfoCard title="Details">
+<InfoCard title={m.classified_details_title()}>
 	<DefinitionList>
-		<Fact label="Status"><StatusBadge status={post.displayStatus} label /></Fact>
+		<Fact label={m.classified_post_detail_status_label()}
+			><StatusBadge status={post.displayStatus} label /></Fact
+		>
 		<Fact
-			label="Category"
+			label={m.classified_category_label()}
 			value={classifiedCategoryLabels[post.category as ClassifiedCategory] ?? post.category}
 		/>
-		<Fact label="Posted by"><EntityChip ref={post.author} /></Fact>
+		<Fact label={m.classified_post_detail_posted_by_label()}><EntityChip ref={post.author} /></Fact>
 		{#if post.band}
-			<Fact label="For"><EntityChip ref={post.band} /></Fact>
+			<Fact label={m.classified_post_detail_text_label()}><EntityChip ref={post.band} /></Fact>
 		{/if}
 		{#if post.tags.length > 0}
-			<Fact label="Tags">
+			<Fact label={m.classified_post_detail_tags_label()}>
 				<span class="flex flex-wrap gap-1">
 					{#each post.tags as t (`${t.kind}:${t.value}`)}
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tagHref resolves the path -->
@@ -70,7 +73,7 @@
 				</span>
 			</Fact>
 		{/if}
-		<Fact label="Posted" value={formatDateTime(post.createdAt)} />
-		<Fact label="Expires" value={formatDate(post.expiresAt)} />
+		<Fact label={m.classified_post_detail_posted_label()} value={formatDateTime(post.createdAt)} />
+		<Fact label={m.classified_post_detail_expires_label()} value={formatDate(post.expiresAt)} />
 	</DefinitionList>
 </InfoCard>

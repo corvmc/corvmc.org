@@ -1,46 +1,49 @@
-import { db, getRowCount } from '$lib/server/db';
-import { staffVisible } from './calendar-totals-service';
-import { DomainError } from '$lib/server/domain-error';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	eventListing,
 	eventBand,
 	eventGroup,
 	publicEventStatuses,
+	programSessionKind,
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
-} from '$lib/server/db/schema/event';
+} from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
 	shortOfActsSql,
+	productionStatusSql,
 	ticketSaleColumns,
 	noSaleTerms,
 	type ListingSaleTerms
 } from './event-columns';
-import { saveTicketSale, type TicketSaleTerms } from '$lib/server/ticket/ticket-sale';
-import { bandSaleBlocker, refundBandTicketSale } from '$lib/server/ticket/ticket-seller';
-import type { EventSource } from '$lib/config';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { createExternalAct } from '$lib/server/directory/entry-service';
-import { user } from '$lib/server/db/schema/authentication';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { ticket } from '$lib/server/db/schema/ticket';
-import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { contentFlag } from '$lib/server/db/schema/flag';
-import { venue } from '$lib/server/db/schema/venue';
-import { production } from '$lib/server/db/schema/production';
-import { cancelProductionsForEvent } from '$lib/server/production/production-service';
-import { openDeliverablesOnListing } from '$lib/server/production/cancellation-notice';
-import { assertProjectTakesListing } from '$lib/server/production/production-scope';
+import { saveTicketSale, type TicketSaleTerms } from '#lib/server/ticket/ticket-sale.js';
+import { bandSaleBlocker, refundBandTicketSale } from '#lib/server/ticket/ticket-seller.js';
+import type { EventSource } from '#lib/config.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { createExternalAct, findOutsideActByName } from '#lib/server/directory/entry-service.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { production, type ProductionStatus } from '#lib/server/db/schema/production.js';
+import { cancelProductionsForEvent } from '#lib/server/production/production-service.js';
+import { openDeliverablesOnListing } from '#lib/server/production/cancellation-notice.js';
+import { assertProjectTakesListing } from '#lib/server/production/production-scope.js';
 import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
-} from '$lib/server/volunteer/show-cancellation';
+} from '#lib/server/volunteer/show-cancellation.js';
 import { showBlockers } from './show-readiness';
-import { requireProgramGroup } from '$lib/server/group/group-kind';
+import { requireProgramGroup } from '#lib/server/group/group-kind.js';
+import { defaultVisibility, visibleTo, type ListingViewer } from './visibility';
+import type { EventVisibility } from '#lib/server/db/schema/event.js';
 import {
 	eq,
 	sql,
@@ -56,51 +59,56 @@ import {
 	inArray,
 	not,
 	count,
-	getTableColumns
+	getTableColumns,
+	isNull
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns } from '$lib/server/entity/refs';
-import type { EventStatus } from '$lib/server/db/schema/event';
-import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
-import { getProductionByEvent } from '$lib/server/production/production-service';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import type { EventStatus } from '#lib/server/db/schema/event.js';
+import { staffCreate, adjustWindow } from '#lib/server/reservation/reservation-service.js';
+import { getProductionByEvent } from '#lib/server/production/production-service.js';
 import {
-	announceProductionCreated,
 	createShowProject,
-	deleteShowProject
-} from '$lib/server/production/production-project';
+	deleteShowProject,
+	stampProductionTemplate
+} from '#lib/server/production/production-project.js';
 import {
 	placePendingWorkOrders,
 	shiftAnchoredWorkOrders
-} from '$lib/server/volunteer/retime-work-orders';
+} from '#lib/server/volunteer/retime-work-orders.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import type { EventEditField } from '$lib/types/audit';
-import { project } from '$lib/server/db/schema/project';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { hasConflict } from '$lib/server/reservation/conflict-service';
-import { listingHoldBooker } from '$lib/server/reservation/event-hold';
-import { captureException } from '$lib/server/sentry';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { uploadFile, deleteObject } from '$lib/server/storage';
-import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
+import type { EventEditField } from '#lib/types/audit.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
+import { hasConflict } from '#lib/server/reservation/conflict-service.js';
+import { listingHoldBooker } from '#lib/server/reservation/event-hold.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { uploadFile, deleteObject } from '#lib/server/storage.js';
+import {
+	copyToPrivate,
+	copyFromPrivate,
+	deletePrivateObject
+} from '#lib/server/private-storage.js';
 import {
 	detachSlot,
 	findByKey,
 	isKeyReferenced,
 	replaceSlot
-} from '$lib/server/media/media-service';
-import { isWithheldPosterKey, mediaKey, withheldPosterKey } from '$lib/server/storage-keys';
-import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+} from '#lib/server/media/media-service.js';
+import { isWithheldPosterKey, mediaKey, withheldPosterKey } from '#lib/server/storage-keys.js';
+import { ReservationConflictError } from '#lib/server/reservation/reservation-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import {
 	formatDateFull,
 	formatDateInTz,
 	buildDateInTz,
 	nextDay
-} from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
-import { formatCents } from '$lib/utils/format';
+} from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+import { formatCents } from '#lib/utils/format.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -184,7 +192,7 @@ export class BandTicketSaleUnavailableError extends DomainError {
 // EventService — create, update, publish, cancel events
 // ---------------------------------------------------------------------------
 
-export type { EventStatus } from '$lib/server/db/schema/event';
+export type { EventStatus } from '#lib/server/db/schema/event.js';
 
 /**
  * The managing group's own `event_group` row.
@@ -243,6 +251,8 @@ async function readBack(row: typeof eventListing.$inferSelect): Promise<EventRow
 export interface EventRow {
 	id: string;
 	title: string;
+	/** The `/e/<code>` short link; null only on a row the backfill has not reached. */
+	shortCode?: string | null;
 	description: string | null;
 	/** Markdown: the written recap of a past event (#1401). */
 	recapText: string | null;
@@ -265,7 +275,10 @@ export interface EventRow {
 	source: string;
 	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
 	kind: EventKind;
+	/** Who may see it once published. See `eventVisibilities`. */
+	visibility?: EventVisibility;
 	location: string | null;
+	address: string | null;
 	/** The structured half of `location`. Null means the practice room. */
 	venueId: string | null;
 	externalTicketUrl: string | null;
@@ -273,6 +286,8 @@ export interface EventRow {
 	reviewNotes: string | null;
 	/** Set on a series' prototype and on every occurrence it generated. */
 	recurringSeriesId: string | null;
+	/** The partner feed that wrote this listing, if one did. */
+	importSourceId?: string | null;
 	createdByUserId: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -301,6 +316,7 @@ export interface CreateEventParams {
 	/** Where it is. Null means the practice room, which is what every event meant before the column. */
 	venueId?: string | null;
 	location?: string | null;
+	address?: string | null;
 	createdByUserId: string;
 	/**
 	 * Open the show's production with the listing. Off by default: a listing is
@@ -319,6 +335,17 @@ export interface CreateEventParams {
 	};
 }
 
+/** The owner's kind, which a meeting's default visibility reads. */
+async function groupKindOf(groupId: string | null | undefined) {
+	if (!groupId) return null;
+	const [row] = await db
+		.select({ kind: group.kind })
+		.from(group)
+		.where(eq(group.id, groupId))
+		.limit(1);
+	return row?.kind ?? null;
+}
+
 export async function create(params: CreateEventParams): Promise<EventRow> {
 	const {
 		title,
@@ -334,6 +361,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		ticketQuantity,
 		venueId,
 		location,
+		address,
 		createdByUserId,
 		withProduction = false,
 		reservation: reservationParams,
@@ -416,8 +444,11 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
 				kind,
+				// Changed on the edit form; a new listing starts at its default.
+				visibility: defaultVisibility(kind, kind === 'meeting' ? await groupKindOf(groupId) : null),
 				venueId: venueId ?? null,
 				location: location ?? null,
+				address: address ?? null,
 				groupId: groupId ?? null,
 				...(showProjectId ? { projectId: showProjectId } : {}),
 				reservationId,
@@ -463,7 +494,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		row.ticketQuantity = saleTerms.quantity ?? null;
 	}
 
-	if (productionId) await announceProductionCreated(productionId, row.id, createdByUserId);
+	if (showProjectId) await stampProductionTemplate(showProjectId, row.id, createdByUserId);
 
 	// The invariant `linkManagingGroup` documents: a write that sets
 	// `event.groupId` owes the managing group its own `event_group` row, so read
@@ -494,7 +525,9 @@ export interface UpdateEventParams {
 	doorsAt?: Date | null;
 	tags?: string | null;
 	kind?: EventKind;
+	visibility?: EventVisibility;
 	location?: string | null;
+	address?: string | null;
 	venueId?: string | null;
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
@@ -643,7 +676,16 @@ function changedFields(existing: EventRow, params: UpdateEventParams): EventEdit
 	const differs = (a: Date | null | undefined, b: Date | null) =>
 		a !== undefined && (a?.getTime() ?? null) !== (b?.getTime() ?? null);
 	const fields: EventEditField[] = [];
-	const plain = ['title', 'description', 'kind', 'tags', 'location', 'externalTicketUrl'] as const;
+	const plain = [
+		'title',
+		'description',
+		'kind',
+		'visibility',
+		'tags',
+		'location',
+		'address',
+		'externalTicketUrl'
+	] as const;
 	for (const key of plain) {
 		if (params[key] !== undefined && params[key] !== existing[key]) fields.push(key);
 	}
@@ -710,7 +752,9 @@ export async function update(
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.kind !== undefined) updates.kind = params.kind;
+	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.venueId !== undefined) updates.venueId = params.venueId;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
@@ -803,7 +847,7 @@ export async function update(
 			// to follow. Best-effort: a lock outage must not fail the re-time, and
 			// the daily job will reconcile whatever is left.
 			try {
-				const { syncAccessWindow } = await import('$lib/server/lock/lock-service');
+				const { syncAccessWindow } = await import('#lib/server/lock/lock-service.js');
 				await syncAccessWindow(existing.reservationId, previousStartsAt, previousEndsAt);
 			} catch (err) {
 				console.error(
@@ -857,6 +901,15 @@ export async function update(
 				) as (typeof eventListing.$inferSelect)[])
 			: await write;
 
+	// The column defaults to public, so a row read without it was public.
+	const visibilityBefore = existing.visibility ?? 'public';
+	if (params.visibility !== undefined && params.visibility !== visibilityBefore) {
+		await recordAuditEntry({
+			action: 'event.visibility_changed',
+			subject: { type: 'event', id: eventId, label: updated.title },
+			details: { from: visibilityBefore, to: params.visibility }
+		});
+	}
 	if (isCancelled) {
 		await recordAuditEntry({
 			action: 'event.edited_while_cancelled',
@@ -890,16 +943,18 @@ function listingClockWrites(
 	const writes = [];
 	if (updates.startsAt !== undefined) {
 		writes.push(
-			shiftAnchoredWorkOrders(eventId, ['start'], sql`${start} - ${current(sql`starts_at`)}`)
+			...shiftAnchoredWorkOrders(eventId, ['start'], sql`${start} - ${current(sql`starts_at`)}`)
 		);
 	}
 	if (updates.endsAt !== undefined) {
-		writes.push(shiftAnchoredWorkOrders(eventId, ['end'], sql`${end} - ${current(sql`ends_at`)}`));
+		writes.push(
+			...shiftAnchoredWorkOrders(eventId, ['end'], sql`${end} - ${current(sql`ends_at`)}`)
+		);
 	}
 	if (updates.startsAt !== undefined || updates.doorsAt !== undefined) {
 		// Doors falls back to the start, as `resolveAnchor` does.
 		writes.push(
-			shiftAnchoredWorkOrders(
+			...shiftAnchoredWorkOrders(
 				eventId,
 				['doors'],
 				sql`coalesce(${doors}, ${start}) - ${current(sql`coalesce(doors_at, starts_at)`)}`
@@ -908,7 +963,7 @@ function listingClockWrites(
 	}
 	// Work stamped before the time existed is placed against the new one.
 	if (updates.endsAt !== undefined) {
-		writes.push(placePendingWorkOrders({ eventId }, ['end'], end));
+		writes.push(...placePendingWorkOrders({ eventId }, ['end'], end));
 	}
 	if (
 		updates.startsAt !== undefined ||
@@ -1022,43 +1077,6 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 }
 
 /**
- * Take an event live.
- *
- * Accepts `pending_review` as well as `draft`: staff approving a community
- * listing is the same transition as an owner publishing their own draft, and
- * splitting it into two functions would mean two places to get the
- * publishedAt/status pair right.
- */
-/**
- * CMC shows that are close and still not public.
- *
- * No query answered this, so an unannounced show was noticed by someone
- * remembering it. Ordered soonest first, because that is the order they stop
- * being fixable in.
- */
-export async function unannouncedShows(withinDays = 21, now = new Date()) {
-	const horizon = new Date(now.getTime() + withinDays * 86_400_000);
-	return db
-		.select({
-			id: eventListing.id,
-			title: eventListing.title,
-			startsAt: eventListing.startsAt,
-			announceAt: eventListing.announceAt,
-			status: eventListing.status
-		})
-		.from(eventListing)
-		.where(
-			and(
-				eq(eventListing.source, 'cmc'),
-				inArray(eventListing.status, ['draft', 'pending_review']),
-				gt(eventListing.startsAt, now),
-				lte(eventListing.startsAt, horizon)
-			)
-		)
-		.orderBy(asc(eventListing.startsAt));
-}
-
-/**
  * What a CMC listing is still missing before the public sees it. Warnings, not
  * refusals (docs/development/conventions.md#workflow-gates): `publish` goes
  * ahead over them once acknowledged with a reason.
@@ -1146,7 +1164,7 @@ export async function unpublish(eventId: string): Promise<void> {
 		throw new EventStateError(`Cannot unpublish an event with status "${existing.status}"`);
 	}
 
-	const { getTicketsSold } = await import('$lib/server/ticket/ticket-service');
+	const { getTicketsSold } = await import('#lib/server/ticket/ticket-service.js');
 	const sold = await getTicketsSold(eventId);
 	if (sold > 0) {
 		throw new EventStateError(`Cannot unpublish: ${sold} ticket(s) have been sold`);
@@ -1191,7 +1209,7 @@ export async function unpublishWithNotice(
 	if (!row || row.status !== 'published') return;
 
 	if (opts.staffActionBy && row.source === 'community' && row.createdByUserId) {
-		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		const { fileStaffAction } = await import('#lib/server/flag/flag-service.js');
 		await fileStaffAction({
 			entityType: 'event',
 			entityId: eventId,
@@ -1351,7 +1369,7 @@ export async function unpublishWithNotice(
 		.where(
 			and(
 				inArray(groupMember.groupId, notifyBandIds),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active')
 			)
 		);
@@ -1531,7 +1549,8 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 	await cancelProductionsForEvent(eventId, userId, openBefore);
 	await callOffShifts(eventId, userId);
 
-	await detachSlot('event_listing', eventId, 'poster');
+	// The poster stays attached: a cancelled listing still shows on the public
+	// calendar, marked cancelled (#2180).
 
 	// Capture ticket holders before voiding their tickets (the query below
 	// filters on live statuses), then mark the tickets cancelled so they can't
@@ -1576,7 +1595,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 					userId: h.userId ?? undefined
 				})),
 				// Refunds are handled manually by staff — do not promise automatic
-				// processing (no auto-refund flow exists; see tickets-spec deferred).
+				// processing (no auto-refund flow exists for a collective sale).
 				refundNote:
 					'If you purchased tickets, CMC staff will reach out about your refund. Questions? Reply to this email.'
 			});
@@ -1610,6 +1629,7 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				gt(eventListing.startsAt, new Date())
@@ -1633,6 +1653,7 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				gte(eventListing.startsAt, dayStart),
@@ -1654,6 +1675,7 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				lte(eventListing.startsAt, new Date())
@@ -1685,6 +1707,7 @@ export async function listAll(
 		to?: Date;
 		/** Only bills short of the act count their production asks for (#859). */
 		needsActs?: boolean;
+		productionStatus?: ProductionStatus;
 	} = {},
 	pagination: PaginationInput = {}
 ) {
@@ -1695,6 +1718,7 @@ export async function listAll(
 		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
 		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
 		opts.needsActs ? shortOfActsSql : undefined,
+		opts.productionStatus ? productionStatusSql(opts.productionStatus) : undefined,
 		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
 	].filter(Boolean);
 	const where = and(...filters);
@@ -1725,64 +1749,7 @@ export async function listAll(
 	return paginate(dataQ, countQ, pagination);
 }
 
-/**
- * The staff calendar: the public gig guide, plus what is asking to join it.
- *
- * Modelled on `listPublicUpcomingEvents` rather than on `listAll`, because it
- * answers a different question. `listAll` is an admin index — newest first,
- * every status, one source at a time — and it is what `/staff/events` uses to
- * run the shows CMC produces. This is the moderation surface, and moderation
- * asks what the public can see, so it reads forward from today across every
- * source, ordered the way the guide orders it.
- *
- * `pending_review` sits alongside the public statuses here and nowhere else. A
- * listing waiting on staff is not public, but it is asking to be, and it has a
- * date — so it belongs in the day it would land on rather than in a queue
- * beside the calendar. That adjacency is the whole point: it is how a staffer
- * sees that the show they are about to approve is already on the calendar under
- * a different name. `checkForDuplicate` calls that the characteristic failure of
- * a community calendar and names moderation as the only backstop, and until this
- * existed the moderation UI could not see it.
- *
- * `from` floors what is *on* the calendar — published and cancelled — and
- * deliberately does not floor the rows that are merely asking to be. See the
- * filter below.
- *
- * The community-draft exclusion is kept even though `draft` is not a status any
- * caller should pass. The list arrives from the caller; a member's private
- * working copy must not become visible because someone widened a Zod enum later.
- */
-/**
- * Every listing staff may see, in every status and on any date: the ones
- * waiting on staff first, then newest first.
- */
-export async function listStaffCalendar(pagination: PaginationInput = {}) {
-	const where = staffVisible();
-
-	const dataQ = db
-		.select({
-			...getTableColumns(eventListing),
-			bandName: group.name,
-			bandSlug: group.slug,
-			// Who posted it. `listAll` needs no such join — every row there is
-			// CMC's — but on the calendar the submitter is the first fact a
-			// moderator wants. Left, so a deleted account does not take the event
-			// off the calendar with it; `toMemberRef` renders the missing side as
-			// an unlinked row rather than dropping it.
-			submitter: memberRefColumns()
-		})
-		.from(eventListing)
-		.leftJoin(group, eq(group.id, eventListing.groupId))
-		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
-		.where(where)
-		.orderBy(
-			sql`case when ${eventListing.status} = ${'pending_review'} then 0 else 1 end`,
-			desc(eventListing.startsAt)
-		)
-		.$dynamic();
-	const countQ = db.select({ count: count() }).from(eventListing).where(where);
-	return paginate(dataQ, countQ, pagination);
-}
+export { listStaffCalendar } from './staff-calendar';
 
 /** How far either side of a show counts as "the same slot". */
 const NEAR_WINDOW_MINUTES = 120;
@@ -1856,21 +1823,24 @@ export async function listEventsNear(
 //
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
-// profile until they agree. See `docs/specs/shipped/event-lineup-spec.md`.
+// profile until they agree. See
+// `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
 
 export interface LineupRow {
 	id: string;
 	name: string;
 	/** The CMC band behind this credit, if the entry has one. */
 	bandId: string | null;
+	/** The outside act behind this credit: an entry with no band and no member. */
+	actId: string | null;
 	bandSlug: string | null;
 	/**
 	 * Where to send someone for an act with no CMC page — the first link the act
 	 * gave. Null when they gave none, and then the name renders as plain text.
 	 *
-	 * This is the third case in the spec's render table. `bandSlug` covers
-	 * "confirmed, entry has an owner"; this covers "confirmed, entry has no
-	 * owner"; neither is set for the rest.
+	 * The third way a credit renders: `bandSlug` covers "confirmed, entry has an
+	 * owner"; this covers "confirmed, entry has no owner"; neither is set for the
+	 * rest. See docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md.
 	 */
 	externalUrl: string | null;
 	/** The CMC band's avatar storage key; resolve it with `toBandRef`. */
@@ -1904,6 +1874,23 @@ async function entryIdsForGroups(groupIds: string[]): Promise<Map<string, string
 	return new Map(rows.filter((r) => r.groupId).map((r) => [r.groupId as string, r.id]));
 }
 
+/** Which of these entries are outside acts: no band and no member own them. */
+async function outsideActIds(entryIds: string[]): Promise<Set<string>> {
+	const unique = [...new Set(entryIds)];
+	if (unique.length === 0) return new Set();
+	const rows = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(
+			and(
+				inArray(directoryEntry.id, unique),
+				isNull(directoryEntry.groupId),
+				isNull(directoryEntry.userId)
+			)
+		);
+	return new Set(rows.map((r) => r.id));
+}
+
 /** One group's entry id, for the single-credit write paths. */
 async function entryIdForGroup(groupId: string): Promise<string | null> {
 	return (await entryIdsForGroups([groupId])).get(groupId) ?? null;
@@ -1919,6 +1906,8 @@ function lineupSelect() {
 			// for an external act, which is the same fact as "there is no CMC page
 			// to link to".
 			bandId: directoryEntry.groupId,
+			entryId: eventBand.directoryEntryId,
+			entryUserId: directoryEntry.userId,
 			bandSlug: group.slug,
 			bandAvatarKey: group.avatarKey,
 			// Where an unowned act's name should point instead. Public attribution
@@ -1940,8 +1929,9 @@ function lineupSelect() {
  * page. One helper so the single and batched reads cannot disagree about it.
  */
 function toLineupRow(row: Awaited<ReturnType<typeof lineupSelect>>[number]): LineupRow {
-	const { eventId: _eventId, links, ...rest } = row;
-	return { ...rest, externalUrl: links?.[0]?.url ?? null };
+	const { eventId: _eventId, links, entryId, entryUserId, ...rest } = row;
+	const actId = entryId && !rest.bandId && !entryUserId ? entryId : null;
+	return { ...rest, actId, externalUrl: links?.[0]?.url ?? null };
 }
 
 export async function getEventLineup(eventId: string): Promise<LineupRow[]> {
@@ -2012,9 +2002,10 @@ export async function setEventLineup(
 		const name = e.name.trim();
 		if (!name) continue;
 		const nameKey = name.toLowerCase();
-		if (e.bandId) {
-			if (seenBands.has(e.bandId)) continue;
-			seenBands.add(e.bandId);
+		const identity = e.bandId ?? (e.actId ? `act:${e.actId}` : undefined);
+		if (identity) {
+			if (seenBands.has(identity)) continue;
+			seenBands.add(identity);
 		} else if (seenNames.has(nameKey)) {
 			continue;
 		}
@@ -2031,6 +2022,25 @@ export async function setEventLineup(
 	]);
 
 	const existing = await db.select().from(eventBand).where(eq(eventBand.eventId, eventId));
+	// Outside acts this bill may name: the ones picked, and the ones already on
+	// it, so a chip saved by name by an editor that cannot search acts keeps its link.
+	const outsideActs = await outsideActIds([
+		...deduped.map((e) => e.actId).filter((id): id is string => !!id),
+		...existing.map((r) => r.directoryEntryId).filter((id): id is string => !!id)
+	]);
+	const actByName = new Map(
+		existing
+			.filter((r) => r.directoryEntryId && outsideActs.has(r.directoryEntryId))
+			.map((r) => [r.name.toLowerCase(), r.directoryEntryId!])
+	);
+	const actFor = (e: LineupEntry): string | null =>
+		e.bandId
+			? null
+			: e.actId
+				? outsideActs.has(e.actId)
+					? e.actId
+					: null
+				: (actByName.get(e.name.toLowerCase()) ?? null);
 	// Existing credits are keyed by the entry they name, so matching an incoming
 	// group against them goes through `entryIds` rather than comparing directly.
 	const byEntry = new Map(
@@ -2060,7 +2070,12 @@ export async function setEventLineup(
 
 	const invited: { bandId: string; name: string }[] = [];
 	const rows = deduped.map((e, i) => {
-		const prior = e.bandId ? priorFor(e.bandId) : byName.get(e.name.toLowerCase());
+		const actId = actFor(e);
+		const prior = e.bandId
+			? priorFor(e.bandId)
+			: actId
+				? byEntry.get(actId)
+				: byName.get(e.name.toLowerCase());
 
 		let status: EventBandStatus;
 		if (!e.bandId) {
@@ -2087,7 +2102,7 @@ export async function setEventLineup(
 			name: e.name,
 			// `e.bandId` is the *group* a lineup editor picked; the credit stores
 			// that band's entry.
-			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : null,
+			directoryEntryId: e.bandId ? (entryIds.get(e.bandId) ?? null) : actId,
 			billingOrder: i,
 			status,
 			note: e.note ?? null,
@@ -2205,7 +2220,7 @@ async function notifyLineupInvites(
 		.where(
 			and(
 				inArray(groupMember.groupId, invitedBandIds),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active')
 			)
 		);
@@ -2281,24 +2296,6 @@ export async function isCreditedOn(eventId: string, bandId: string): Promise<boo
 		.where(and(eq(eventBand.eventId, eventId), creditBelongsToGroup(bandId)))
 		.limit(1);
 	return !!row;
-}
-
-/**
- * Staff: attach a party to a name that was typed in free-text.
- *
- * Still takes the *group* a staffer picked, and resolves it to that band's
- * entry — the picker names bands, the credit names entries. A group with no
- * entry leaves the slot unlinked rather than half-linking it, since `unlinked`
- * ⇔ `directoryEntryId IS NULL` is the invariant the whole render path reads.
- */
-export async function linkLineupSlot(eventBandId: string, bandId: string): Promise<void> {
-	const directoryEntryId = await entryIdForGroup(bandId);
-	if (!directoryEntryId) return;
-
-	await db
-		.update(eventBand)
-		.set({ directoryEntryId, status: 'pending' })
-		.where(and(eq(eventBand.id, eventBandId), eq(eventBand.status, 'unlinked')));
 }
 
 export interface LineupInvite {
@@ -2384,6 +2381,7 @@ export interface CreateBandEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date;
 	location?: string;
+	address?: string;
 	tags?: string;
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. Bands never sell through our checkout. */
@@ -2406,6 +2404,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		endsAt,
 		doorsAt,
 		location,
+		address,
 		tags,
 		externalTicketUrl,
 		ticketPrice,
@@ -2429,11 +2428,13 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			doorsAt: doorsAt ?? null,
 			tags: tags ?? null,
 			location: location ?? null,
+			address: address ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
 			// The event's owner. The `bandId` on the lineup row below is a different
 			// column with a different meaning — a credit, not authority.
 			groupId: bandId,
 			source: 'band',
+			visibility: defaultVisibility('show'),
 			createdByUserId
 		})
 		.returning();
@@ -2601,7 +2602,8 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	// and an "event" for its own rehearsal is how the free path would be reached.
 	// Checked before anything is written, reservation or not — the wrong `source`
 	// on a band's listing is a second, quieter bug.
-	await requireProgramGroup(groupId);
+	const ownerKind = await requireProgramGroup(groupId);
+	const visibility = defaultVisibility(programSessionKind, ownerKind);
 
 	const eventId = crypto.randomUUID();
 
@@ -2619,7 +2621,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			userId: createdByUserId,
 			// `'group'` since #855. The discriminator says which table `booker_id`
 			// points at; free-versus-paid is `group.kind`, and only a band pays —
-			// groups-spec.md § Room time keeps those two apart on purpose.
+			// docs/decisions/0024-groups-split-the-band-table-by-purpose.md keeps those two apart on purpose.
 			bookerType: 'group',
 			hardHold: true,
 			bookerId: groupId,
@@ -2645,6 +2647,8 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				externalTicketUrl: externalTicketUrl ?? null,
 				groupId,
 				source: 'group',
+				kind: programSessionKind,
+				visibility,
 				// Published, matching `processEventSeries` — a club's weekly series
 				// publishes itself, and the extra meeting the chair adds by hand used
 				// to land as a draft only staff could release. The room is held
@@ -2711,6 +2715,7 @@ export interface UpdateGroupSessionParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
+	visibility?: EventVisibility;
 	/** A replacement poster. Absent leaves the existing one alone. */
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
@@ -2807,6 +2812,7 @@ export async function updateGroupSession(
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+	if (params.visibility !== undefined) updates.visibility = params.visibility;
 
 	// Written after the row, matching `createGroupEvent`: `writeEventPoster`
 	// needs the event to exist to key the object against it.
@@ -2870,7 +2876,7 @@ export async function cancelGroupSession(
  * (#808) and reads resolve through `eventPosterKeySql`. The previous poster is
  * *detached*, never deleted here, because a recurring series' occurrences may
  * share one object and only the sweep can see that.
- * See docs/specs/shipped/media-spec.md.
+ * See docs/decisions/0026-uploads-are-detached-and-swept.md.
  */
 async function writeEventPoster(
 	eventId: string,
@@ -2897,9 +2903,11 @@ export interface UpdateBandEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string | null;
+	address?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
+	visibility?: EventVisibility;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -2924,8 +2932,10 @@ export async function updateBandEvent(
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
+	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	if (params.posterFile) {
@@ -3134,6 +3144,7 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				gt(eventListing.startsAt, new Date())
 			)
 		)
@@ -3167,6 +3178,7 @@ export async function countBandPastEvents(bandId: string): Promise<number> {
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		);
@@ -3188,6 +3200,7 @@ export async function listBandEventsPast(
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		)
@@ -3299,6 +3312,7 @@ export async function listMemberUpcomingShows(userId: string): Promise<MemberSho
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				gt(eventListing.startsAt, new Date())
 			)
 		)
@@ -3322,6 +3336,7 @@ export async function listMemberPastShows(
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		)
@@ -3341,6 +3356,7 @@ export async function countMemberPastShows(userId: string): Promise<number> {
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
+				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		);
@@ -3371,7 +3387,8 @@ export interface CalendarEventRow extends EventRow {
  */
 export async function listPublicCalendarEvents(
 	start: Date,
-	end: Date
+	end: Date,
+	viewer: ListingViewer = null
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({
@@ -3386,6 +3403,7 @@ export async function listPublicCalendarEvents(
 		.where(
 			and(
 				inArray(eventListing.status, [...publicEventStatuses]),
+				visibleTo(viewer),
 				gte(eventListing.startsAt, start),
 				lt(eventListing.startsAt, end)
 			)
@@ -3411,7 +3429,8 @@ export async function listPublicCalendarEvents(
  */
 export async function listPublicUpcomingEvents(
 	from: Date,
-	opts: { limit: number; offset: number }
+	opts: { limit: number; offset: number },
+	viewer: ListingViewer = null
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({
@@ -3424,7 +3443,11 @@ export async function listPublicUpcomingEvents(
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.where(
-			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
+			and(
+				inArray(eventListing.status, [...publicEventStatuses]),
+				visibleTo(viewer),
+				gte(eventListing.startsAt, from)
+			)
 		)
 		.orderBy(asc(eventListing.startsAt))
 		.limit(opts.limit + 1)
@@ -3439,12 +3462,19 @@ export async function listPublicUpcomingEvents(
 }
 
 /** How many the guide has in total, so its pager can say what is left (#1059). */
-export async function countPublicUpcomingEvents(from: Date): Promise<number> {
+export async function countPublicUpcomingEvents(
+	from: Date,
+	viewer: ListingViewer = null
+): Promise<number> {
 	const [row] = await db
 		.select({ n: count() })
 		.from(eventListing)
 		.where(
-			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
+			and(
+				inArray(eventListing.status, [...publicEventStatuses]),
+				visibleTo(viewer),
+				gte(eventListing.startsAt, from)
+			)
 		);
 	return Number(row?.n ?? 0);
 }
@@ -3462,6 +3492,16 @@ export async function countPublicUpcomingEvents(from: Date): Promise<number> {
  * An external act, not a band: both owner columns stay null, so this mints no
  * public page and no membership. Claiming remains the separate door it was.
  */
+/** The event a bill credit belongs to, or null: what a guard on the credit names. */
+export async function getCreditEventId(eventBandId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ eventId: eventBand.eventId })
+		.from(eventBand)
+		.where(eq(eventBand.id, eventBandId))
+		.limit(1);
+	return row?.eventId ?? null;
+}
+
 export async function listCreditInDirectory(eventBandId: string): Promise<string> {
 	const [credit] = await db
 		.select({ id: eventBand.id, name: eventBand.name, entryId: eventBand.directoryEntryId })
@@ -3474,7 +3514,9 @@ export async function listCreditInDirectory(eventBandId: string): Promise<string
 	// double-clicked button.
 	if (credit.entryId) return credit.entryId;
 
-	const entryId = await createExternalAct({ name: credit.name });
+	// An act already on file under this name is the one meant (#2782).
+	const entryId =
+		(await findOutsideActByName(credit.name)) ?? (await createExternalAct({ name: credit.name }));
 	await db
 		.update(eventBand)
 		.set({ directoryEntryId: entryId })

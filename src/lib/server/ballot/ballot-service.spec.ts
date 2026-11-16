@@ -8,43 +8,35 @@ import type { BallotInput } from './ballot-service';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order and
-// stops at the first failure, as this does.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: vi.fn(async () => 60)
 }));
 
 const emit = vi.fn(async () => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
 
 const recordAuditEntry = vi.fn(async () => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...(a as []))
 }));
 
 const svc = await import('./ballot-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { group, groupMember } = await import('$lib/server/db/schema/group');
-const { memberOrientation } = await import('$lib/server/db/schema/volunteer');
-const { ballotElector, ballotChoice, ballotParticipation, ballotRecordedVote } =
-	await import('$lib/server/db/schema/ballot');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { group, groupMember } = await import('#lib/server/db/schema/group.js');
+const { memberOrientation } = await import('#lib/server/db/schema/volunteer.js');
+const { ballot, ballotElector, ballotChoice, ballotParticipation, ballotRecordedVote } =
+	await import('#lib/server/db/schema/ballot.js');
 const { eq } = await import('drizzle-orm');
 
 const DAY = 86_400_000;
@@ -106,11 +98,14 @@ async function seed() {
 		{ id: A_BAND, kind: 'band', name: 'A Band', slug: 'a-band' }
 	] as never);
 	await testDb.insert(groupMember).values([
-		{ groupId: COMMITTEE, userId: CHAIR, role: 'owner', status: 'active' },
+		{ id: 'gm-chair', groupId: COMMITTEE, userId: CHAIR, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: VETERAN, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: NEWCOMER, role: 'member', status: 'active' },
 		{ groupId: COMMITTEE, userId: PENDING, role: 'member', status: 'pending' }
 	] as never);
+	// A committee's chair holds its chair position (#3009).
+	sqlite.exec(`insert into group_position (id, group_id, name, is_chair) values ('p-chair', '${COMMITTEE}', 'Chair', 1);
+		insert into group_position_holder (position_id, member_id) values ('p-chair', 'gm-chair')`);
 }
 
 beforeEach(async () => {
@@ -125,6 +120,8 @@ beforeEach(async () => {
 		'ballot_option',
 		'ballot',
 		'member_orientation',
+		'group_position_holder',
+		'group_position',
 		'group_member',
 		'"group"',
 		'user'
@@ -179,6 +176,34 @@ describe('status', () => {
 		const opened = await svc.getBallot(id);
 		expect(svc.ballotStatusOf(opened, NOW)).toBe('open');
 		expect(svc.ballotStatusOf(opened, AFTER_CLOSE)).toBe('closed');
+	});
+});
+
+describe('the member list', () => {
+	it('flags the rolls a member is on and the votes they cast', async () => {
+		const id = await groupBallot();
+		await svc.openBallot(id, { now: NOW });
+
+		const before = await svc.listBallotsForMember(VETERAN, { now: NOW });
+		expect(before).toMatchObject([{ id, isElector: true, hasVoted: false }]);
+
+		const option = sqlite.prepare('select id from ballot_option where ballot_id = ?').get(id) as {
+			id: string;
+		};
+		await svc.castVote(id, VETERAN, option.id, { now: NOW });
+
+		const after = await svc.listBallotsForMember(VETERAN, { now: NOW });
+		expect(after).toMatchObject([{ id, isElector: true, hasVoted: true }]);
+	});
+
+	it('leaves out a ballot the member has no part in', async () => {
+		const id = await groupBallot();
+		await svc.openBallot(id, { now: NOW });
+
+		expect(await svc.listBallotsForMember(UNORIENTED, { now: NOW })).toEqual([]);
+		expect(
+			await svc.listBallotsForMember(UNORIENTED, { now: NOW, managedGroupIds: [COMMITTEE] })
+		).toMatchObject([{ id, isElector: false }]);
 	});
 });
 
@@ -270,6 +295,17 @@ describe('opening a member-wide ballot', () => {
 		const counters = await testDb.select().from(ballotChoice).where(eq(ballotChoice.ballotId, id));
 		expect(counters).toHaveLength(2);
 		expect(counters.every((c) => c.votes === 0)).toBe(true);
+	});
+
+	// Kept as a refusal (#2235): createBallot requires a certifier, so a null one
+	// is a purged account, and opening would leave nobody able to certify.
+	it('refuses to open once the certifier is gone, and records no override', async () => {
+		const id = await memberBallot();
+		await testDb.update(ballot).set({ certifierId: null }).where(eq(ballot.id, id));
+
+		await expect(svc.openBallot(id, { now: NOW })).rejects.toBeInstanceOf(svc.BallotStateError);
+		expect((await svc.getBallot(id)).openedAt).toBeNull();
+		expect(await roll(id)).toEqual([]);
 	});
 
 	it('cannot be opened twice', async () => {

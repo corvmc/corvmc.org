@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NOTIFICATION_TYPES, preferenceTypesFor } from '$lib/server/db/schema/notification';
+import {
+	NOTIFICATION_TYPES,
+	preferenceTypesFor,
+	SEAT_HOLDER
+} from '#lib/server/db/schema/notification.js';
+import { capabilities } from '#lib/config.js';
+
+const capabilityList = Object.entries(capabilities).flatMap(([r, as]) =>
+	as.map((a) => `${r}.${a}`)
+);
 
 /**
  * Who a notification type is *for* is a field, not a suffix on its label.
@@ -24,17 +33,38 @@ const dispatchSites = [
 
 describe('notification audience', () => {
 	it('offers a member no switch they can never receive', () => {
-		const member = preferenceTypesFor('member');
+		const member = preferenceTypesFor(new Set());
 
-		expect(member.filter((t) => t.staffOnly)).toEqual([]);
-		expect(member.length).toBeLessThan(preferenceTypesFor('staff').length);
+		expect(member.filter((t) => t.forHolders)).toEqual([]);
+		expect(member.length).toBeLessThan(preferenceTypesFor(new Set(capabilityList)).length);
 	});
 
-	it('offers a staffer both audiences', () => {
-		const staff = preferenceTypesFor('staff').map((t) => t.key);
+	it('offers a holder the types their capability receives, and no others (#2985)', () => {
+		const moderator = preferenceTypesFor(new Set(['moderation.reviewFlags'])).map((t) => t.key);
 
-		expect(staff).toContain('content_flagged');
-		expect(staff).toContain('reservation_reminder');
+		expect(moderator).toContain('content_flagged');
+		expect(moderator).toContain('reservation_reminder');
+		expect(moderator).not.toContain('volunteer_hours_submitted');
+	});
+
+	// #2990: a task's notice reaches its position or committee before any holder.
+	it('offers a committee seat the task notices routed to it, and no other staff type', () => {
+		const seat = preferenceTypesFor(new Set([SEAT_HOLDER])).map((t) => t.key);
+		const routed = NOTIFICATION_TYPES.filter((t) => t.forSeats).map((t) => t.key);
+
+		expect(routed.sort()).toEqual(
+			['orientation_unclaimed', 'volunteer_shift_declined', 'volunteer_shift_dropped'].sort()
+		);
+		expect(seat).toEqual(expect.arrayContaining(routed));
+		expect(seat).not.toContain('volunteer_shift_claimed');
+	});
+
+	it('gates every staff type on capabilities that exist', () => {
+		const known = new Set<string>(capabilityList);
+		const unknown = NOTIFICATION_TYPES.flatMap((t) => t.forHolders ?? []).filter(
+			(c) => !known.has(c)
+		);
+		expect(unknown).toEqual([]);
 	});
 
 	// The suffix was standing in for the field. Leaving both would let the two
@@ -51,7 +81,7 @@ describe('notification audience', () => {
 	// listeners to a capability holder or to STAFF_CONTACT_EMAIL, so marking one
 	// wrongly puts a dead switch back on every member's account page.
 	it('marks every type the listeners fan out over staff', () => {
-		const staffOnly = NOTIFICATION_TYPES.filter((t) => t.staffOnly).map((t) => t.key);
+		const staffOnly = NOTIFICATION_TYPES.filter((t) => t.forHolders).map((t) => t.key);
 
 		expect(staffOnly.sort()).toEqual(
 			[
@@ -65,7 +95,7 @@ describe('notification audience', () => {
 				'inbox_message_received',
 				'local_resource_submitted',
 				'moderation_appeal_filed',
-				'renewal_expiry',
+				'orientation_unclaimed',
 				'volunteer_hours_submitted',
 				'volunteer_shift_claimed',
 				'volunteer_shift_declined',

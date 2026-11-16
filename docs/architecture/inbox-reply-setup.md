@@ -219,7 +219,7 @@ Read this by symptom.
 | A reply to a member↔member DM does nothing                         | By design. `direct` threads are dropped: nothing we send carries a reply address for one, so anything arriving with one is misrouted or forged.                                                                                                                                                                                                                                                  |
 | Postmark logs `200` but nothing appears in the inbox               | The handler swallows its own errors so Postmark never retries. Sentry is the only signal — the `200` proves delivery, not success.                                                                                                                                                                                                                                                               |
 
-One thing that is **not** a cause: the `email` channel toggle (Staff → Settings → Inbox Channels).
+One thing that is **not** a cause: the `email` channel toggle (Staff → Settings → Inbox channels).
 It gates only mail from a sender we have no thread with. A signed reply always lands, because we
 invited it — so if a reply is missing and the toggle happens to be off, the toggle is a red
 herring and the real problem is the signature.

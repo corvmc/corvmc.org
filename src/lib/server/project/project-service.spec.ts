@@ -39,18 +39,20 @@ const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 // The impact rate is site config; pinning it here keeps the arithmetic below
 // legible and independent of whatever Independent Sector publishes next April.
 const HOUR_VALUE_CENTS = 3766;
-vi.mock('$lib/server/volunteer/hour-value', () => ({
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({
 	getHourValueCents: vi.fn(async () => HOUR_VALUE_CENTS)
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn(() => ({
 			values: (v: unknown) => {
 				insertValues.push(v);
 				return chain(() => [{ id: 'proj-1', ...(v as object) }]);
-			}
+			},
+			// Placing pending duty-list windows inserts shifts from a select.
+			select: () => chain(() => [])
 		})),
 		update: vi.fn(() => ({
 			set: (values: Record<string, unknown>) => {
@@ -66,7 +68,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 

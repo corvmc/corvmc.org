@@ -8,14 +8,14 @@
  * second copy of the event lookup and payload assembly would drift from the
  * first the moment either receipt changed.
  */
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { eventListingColumns } from '$lib/server/event/event-columns';
-import { ticket } from '$lib/server/db/schema/ticket';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { eventListingColumns } from '#lib/server/event/event-columns.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
 import { eq } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 type TicketRow = typeof ticket.$inferSelect;
 

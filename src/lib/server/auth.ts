@@ -3,29 +3,33 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { getRequestEvent } from '$app/server';
-import { db } from '$lib/server/db';
-import * as schema from '$lib/server/db/schema';
-import { account } from '$lib/server/db/schema/authentication';
-import { user } from '$lib/server/db/schema/authentication';
-import { eq, and } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import * as schema from '#lib/server/db/schema.js';
+import { account } from '#lib/server/db/schema/authentication.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eq, and, isNull } from 'drizzle-orm';
+import { accountRemoval } from '#lib/server/db/schema/moderation.js';
 import { userAdditionalFields } from './auth-fields';
-import { captureException } from '$lib/server/sentry';
-import { ensureUserEntry } from '$lib/server/directory/entry-service';
-import { assignMemberNumber } from '$lib/server/user/member-number-service';
-import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
-import { verifyTurnstile } from '$lib/server/turnstile';
+import { impersonation } from '#lib/server/impersonation/impersonation-plugin.js';
+import { captureException } from '#lib/server/sentry.js';
+import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
+import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
+import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { findBlockedEmail, recordRefusedSignup } from '#lib/server/moderation/blocklist-service.js';
 import {
 	ACCOUNT_SUSPENDED_MESSAGE,
+	STAFF_CONTACT_EMAIL,
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
 	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
 	sendPasswordChangedEmail,
 	sendPasswordResetEmail,
 	sendVerifyEmail
-} from '$lib/server/auth-emails';
+} from '#lib/server/auth-emails.js';
 import { compare as bcryptCompare } from 'bcrypt-ts';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------
@@ -189,7 +193,7 @@ export async function verifyBcryptInWorker(hash: string, password: string): Prom
 	return true;
 }
 
-async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
+export async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
 	const laravelUrl = env.LARAVEL_URL;
 	const migrationSecret = env.MIGRATION_SECRET;
 
@@ -276,20 +280,9 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 			const newHash = await scryptHash(password);
 
 			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
-		} else {
-			// Laravel reached and authoritative, but rejected the credentials. This is
-			// the one bcrypt path that previously failed silently — surface it so a
-			// migration that rejects a known-good password is visible.
-			captureException(
-				new Error('bcrypt migration: Laravel verify-password rejected the credentials'),
-				{
-					event: 'auth.bcrypt_migration',
-					stage: 'invalid_credentials',
-					email: userRow.email
-				}
-			);
 		}
 
+		// Not valid: both verifiers refused it, which is simply a wrong password.
 		return valid;
 	} catch (err) {
 		captureException(err, {
@@ -337,15 +330,15 @@ export const ACCOUNT_SUSPENDED_CODE = 'ACCOUNT_SUSPENDED';
 
 /**
  * Why a sign-in is refused before better-auth runs, or null to let it run.
- * A ban is named only once the password matches, so the answer tells nothing
+ * A ban or open removal is named only once the password matches, so it tells nothing
  * to someone without it; any other closed account reads as a wrong password.
  */
 export async function signInRefusal(
-	row: { deletedAt: Date | null; bannedAt: Date | null } | undefined,
+	row: { deletedAt: Date | null; bannedAt: Date | null; removalId?: string | null } | undefined,
 	passwordMatches: () => Promise<boolean>
 ): Promise<'suspended' | 'invalid' | null> {
 	if (!row) return null;
-	if (row.bannedAt) return (await passwordMatches()) ? 'suspended' : 'invalid';
+	if (row.bannedAt || row.removalId) return (await passwordMatches()) ? 'suspended' : 'invalid';
 	return isDeactivated(row.deletedAt) ? 'invalid' : null;
 }
 
@@ -608,63 +601,102 @@ function createAuth() {
 			}
 		},
 		hooks: {
-			before: createAuthMiddleware(async (ctx) => {
-				// Gate public sign-up behind Cloudflare Turnstile. The login page sends
-				// the widget token in the x-turnstile-token header on register.
-				if (ctx.path === '/sign-up/email') {
-					const token = ctx.headers?.get('x-turnstile-token');
-					const ip = ctx.headers?.get('CF-Connecting-IP');
-					if (!(await verifyTurnstile(token, ip))) {
-						throw new APIError('BAD_REQUEST', {
-							message: 'Verification failed. Please try again.'
-						});
-					}
-					return;
-				}
-
-				if (ctx.path !== '/sign-in/email') return;
-
-				// Closed accounts are refused here, before better-auth would sign them
-				// in. Kept outside the diagnostics try/catch below, which swallows throws.
-				const body = ctx.body as { email?: unknown; password?: unknown } | undefined;
-				const signInEmail = normalizeEmail(body?.email);
-				if (signInEmail) {
-					const [row] = await db
-						.select({ id: user.id, deletedAt: user.deletedAt, bannedAt: user.bannedAt })
-						.from(user)
-						.where(eq(user.email, signInEmail));
-					const refusal = await signInRefusal(row, async () => {
-						if (!row || typeof body?.password !== 'string') return false;
-						const [cred] = await db
-							.select({ password: account.password })
-							.from(account)
-							.where(and(eq(account.userId, row.id), eq(account.providerId, 'credential')));
-						if (!cred?.password) return false;
-						return ctx.context.password.verify({ hash: cred.password, password: body.password });
-					});
-					if (refusal === 'suspended') {
-						throw new APIError('FORBIDDEN', {
-							message: ACCOUNT_SUSPENDED_MESSAGE,
-							code: ACCOUNT_SUSPENDED_CODE
-						});
-					}
-					if (refusal === 'invalid') {
-						throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
-					}
-				}
-
-				try {
-					await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
-				} catch (err) {
-					// Diagnostics must never break the sign-in flow.
-					captureException(err, { event: 'auth.sign_in', stage: 'diagnostic_error' });
-				}
-			})
+			before: createAuthMiddleware(async (ctx) => beforeAuth(ctx))
 		},
 		plugins: [
+			impersonation(),
 			sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
 		]
 	});
+}
+
+/** The `code` a refused sign-up carries. The message does not say why. */
+export const BLOCKED_SIGNUP_CODE = 'SIGNUP_BLOCKED';
+export const BLOCKED_SIGNUP_MESSAGE = `This address can't be used to create an account. Contact ${STAFF_CONTACT_EMAIL} if you think that's a mistake.`;
+
+/** What the before hook reads of better-auth's context; narrow so a spec can build one. */
+export interface AuthBeforeContext {
+	path: string;
+	headers?: Headers;
+	body?: unknown;
+	context: { password: { verify(input: { hash: string; password: string }): Promise<boolean> } };
+}
+
+/**
+ * better-auth's `before` hook. Sign-up refuses a blocklisted address; sign-in
+ * refuses a closed account. The blocklist is never read on sign-in, so it
+ * cannot lock out an existing member: only a recorded removal does that.
+ */
+export async function beforeAuth(ctx: AuthBeforeContext): Promise<void> {
+	// Gate public sign-up behind Cloudflare Turnstile. The login page sends
+	// the widget token in the x-turnstile-token header on register.
+	if (ctx.path === '/sign-up/email') {
+		const token = ctx.headers?.get('x-turnstile-token');
+		const ip = ctx.headers?.get('CF-Connecting-IP');
+		if (!(await verifyTurnstile(token, ip))) {
+			throw new APIError('BAD_REQUEST', {
+				message: 'Verification failed. Please try again.'
+			});
+		}
+		// After Turnstile, so a bot hammering the form does not inflate the count.
+		const signUpEmail = normalizeEmail((ctx.body as { email?: unknown } | undefined)?.email);
+		const blocked = signUpEmail ? await findBlockedEmail(signUpEmail) : null;
+		if (blocked) {
+			await recordRefusedSignup(blocked.id);
+			throw new APIError('FORBIDDEN', {
+				message: BLOCKED_SIGNUP_MESSAGE,
+				code: BLOCKED_SIGNUP_CODE
+			});
+		}
+		return;
+	}
+
+	if (ctx.path !== '/sign-in/email') return;
+
+	// Closed accounts are refused here, before better-auth would sign them
+	// in. Kept outside the diagnostics try/catch below, which swallows throws.
+	const body = ctx.body as { email?: unknown; password?: unknown } | undefined;
+	const signInEmail = normalizeEmail(body?.email);
+	if (signInEmail) {
+		const [row] = await db
+			.select({
+				id: user.id,
+				deletedAt: user.deletedAt,
+				bannedAt: user.bannedAt,
+				removalId: accountRemoval.id
+			})
+			.from(user)
+			.leftJoin(
+				accountRemoval,
+				and(eq(accountRemoval.userId, user.id), isNull(accountRemoval.liftedAt))
+			)
+			.where(eq(user.email, signInEmail));
+		const refusal = await signInRefusal(row, async () => {
+			if (!row || typeof body?.password !== 'string') return false;
+			const [cred] = await db
+				.select({ password: account.password })
+				.from(account)
+				.where(and(eq(account.userId, row.id), eq(account.providerId, 'credential')));
+			if (!cred?.password) return false;
+			return ctx.context.password.verify({ hash: cred.password, password: body.password });
+		});
+		if (refusal === 'suspended') {
+			throw new APIError('FORBIDDEN', {
+				message: ACCOUNT_SUSPENDED_MESSAGE,
+				code: ACCOUNT_SUSPENDED_CODE
+			});
+		}
+		if (refusal === 'invalid') {
+			throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
+		}
+	}
+
+	try {
+		await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
+	} catch (err) {
+		// Diagnostics must never break the sign-in flow.
+		captureException(err, { event: 'auth.sign_in', stage: 'diagnostic_error' });
+	}
 }
 
 export const auth = new Proxy({} as Auth, {

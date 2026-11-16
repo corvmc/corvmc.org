@@ -47,7 +47,7 @@ function chainable(sink?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		// The claim path writes with a conditional statement through `all`, so the
 		// capacity test and the write are one round trip. Capturing the SQL lets
@@ -70,12 +70,14 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => null) }));
 
 const getShiftById = vi.fn();
-vi.mock('./work-order-service', () => ({
-	getShiftById: (...a: unknown[]) => getShiftById(...a),
-	workOrderAuditLabel: (w: { id: string; title: string | null }) => w.title ?? w.id
+// The real predicates (`liveShift`, `openTask`, …) are SQL fragments the queries
+// embed; only the shift lookup the guards branch on is stubbed.
+vi.mock('./work-order-service', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	getShiftById: (...a: unknown[]) => getShiftById(...a)
 }));
 
 const missingRequirements = vi.fn();
@@ -95,7 +97,7 @@ vi.mock('./member-certification-service', () => ({
 }));
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 
@@ -108,7 +110,6 @@ import {
 	cancelSignup,
 	notifySignupsOfCancellation,
 	markSignupNotified,
-	countUnnotified,
 	availabilityConflictsWithDay,
 	SignupNotFoundError,
 	ShiftFullError,
@@ -126,14 +127,19 @@ const FUTURE = new Date(Date.now() + 7 * 86_400_000);
 const LATER = new Date(Date.now() + 7 * 86_400_000 + 4 * 3_600_000);
 
 function shift(over: Record<string, unknown> = {}) {
+	// A `ShiftRecord`: the shift, with the facts about its task the guards read.
 	return {
 		id: 'shift-1',
+		workOrderId: 'task-1',
 		volunteerRoleId: 'role-1',
+		title: null,
+		eventId: null,
 		startsAt: FUTURE,
 		endsAt: LATER,
 		capacity: 2,
 		cancelledAt: null,
-		postedAt: new Date(),
+		taskCancelledAt: null,
+		taskResolvedAt: null,
 		...over
 	};
 }
@@ -207,18 +213,16 @@ describe('claimShift', () => {
 	 * on the shift's own times, everything overlaps everything, and this is exactly
 	 * the headcount it replaced.
 	 */
-	it('counts only overlapping signups, and still every signup when no window is named', async () => {
+	it('counts only sign-ups overlapping the shift, each defaulting to the shift’s own times', async () => {
 		selectResultQueue = [[], [{ id: 'signup-new', status: 'claimed' }]];
 
 		await claimShift('shift-1', 'user-1');
 
 		const written = render(rawWrites[0]);
+		// A shift always has both times (#2518), so there are no null arms to keep.
+		expect(written).toContain('join "volunteer_shift" vsh');
 		expect(written).toContain('coalesce(vs."scheduled_starts_at", vsh."starts_at")');
 		expect(written).toContain('coalesce(vs."scheduled_ends_at", vsh."ends_at")');
-		// The null arms are what keep the degenerate cases counting rather than
-		// silently skipping — an unbounded piece of work is not disjoint from
-		// another, it is the same work.
-		expect(written).toContain('is null');
 	});
 
 	it('refuses when the conditional write finds no room', async () => {
@@ -233,6 +237,14 @@ describe('claimShift', () => {
 	it('refuses a cancelled shift', async () => {
 		getShiftById.mockResolvedValue(shift({ cancelledAt: new Date() }));
 
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(ShiftClosedError);
+	});
+
+	it('refuses a shift whose task is called off or already done', async () => {
+		getShiftById.mockResolvedValue(shift({ taskCancelledAt: new Date() }));
+		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(ShiftClosedError);
+
+		getShiftById.mockResolvedValue(shift({ taskResolvedAt: new Date() }));
 		await expect(claimShift('shift-1', 'user-1')).rejects.toThrow(ShiftClosedError);
 	});
 
@@ -343,7 +355,8 @@ describe('staff acting on somebody else', () => {
 		]);
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'work_order.assigned_over_warnings',
-			subject: { type: 'work_order', id: 'shift-1', label: 'shift-1' },
+			// On the task's log: the shift is a time on it.
+			subject: { type: 'work_order', id: 'task-1', label: 'task-1' },
 			details: { userId: 'user-1', memberName: 'Ada', warnings: row.warnings }
 		});
 	});
@@ -431,7 +444,7 @@ describe('staff acting on somebody else', () => {
 
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'work_order.member_unassigned',
-			subject: { type: 'work_order', id: 'shift-1', label: 'Load-in' },
+			subject: { type: 'work_order', id: 'task-1', label: 'Load-in' },
 			details: { userId: 'user-1', memberName: 'Ada' }
 		});
 	});
@@ -533,13 +546,6 @@ describe('the notify list on a called-off shift', () => {
 		expect(updatedSets[0]).toMatchObject({ notifiedAt: expect.any(Date) });
 		// Idempotent: a second press must not move the stamp, so the predicate
 		// carries the null check rather than relying on the button being hidden.
-		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
-	});
-
-	it('counts only the people still owed a call', async () => {
-		selectResultQueue = [[{ n: 3 }]];
-
-		expect(await countUnnotified('shift-1')).toBe(3);
 		expect(render(whereClauses[0] as SQL)).toContain('"notified_at" is null');
 	});
 });

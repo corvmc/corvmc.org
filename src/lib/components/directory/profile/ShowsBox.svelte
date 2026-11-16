@@ -1,8 +1,9 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import ProfileSection from './ProfileSection.svelte';
-	import GigList from '$lib/components/events/GigList.svelte';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	import GigList from '#lib/components/events/GigList.svelte';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	let {
 		upcoming,
@@ -47,7 +48,7 @@
 	}
 </script>
 
-<ProfileSection title="Shows">
+<ProfileSection title={m.directory_profile_shows_box_title()}>
 	{#snippet actions()}
 		<div class="seg">
 			<button
@@ -56,7 +57,7 @@
 				class:is-active={tab === 'upcoming'}
 				onclick={() => (tab = 'upcoming')}
 			>
-				Upcoming
+				{m.directory_profile_shows_box_upcoming_label()}
 			</button>
 			<button
 				type="button"
@@ -64,7 +65,7 @@
 				class:is-active={tab === 'past'}
 				onclick={() => (tab = 'past')}
 			>
-				Past · {pastCount}
+				{m.directory_profile_shows_box_past_label({ pastCount })}
 			</button>
 		</div>
 	{/snippet}
@@ -73,19 +74,21 @@
 		{#if upcoming.length > 0}
 			<GigList events={upcoming} {eventBase} />
 		{:else}
-			<p class="shows__empty">No upcoming dates.</p>
+			<p class="shows__empty">{m.directory_profile_shows_box_no_upcoming_dates_text()}</p>
 		{/if}
 	{:else if pastRows.length > 0}
 		<GigList events={pastRows} {eventBase} />
 		{#if hasMore && loadMorePast}
 			<div class="shows__more">
 				<Button type="button" variant="ghost" size="sm" disabled={loading} onclick={showMore}>
-					{loading ? 'Loading…' : 'Show more'}
+					{loading
+						? m.directory_profile_shows_box_loading_label()
+						: m.directory_profile_shows_box_show_more_label()}
 				</Button>
 			</div>
 		{/if}
 	{:else}
-		<p class="shows__empty">No past shows yet.</p>
+		<p class="shows__empty">{m.directory_profile_shows_box_no_past_shows_yet_text()}</p>
 	{/if}
 </ProfileSection>
 

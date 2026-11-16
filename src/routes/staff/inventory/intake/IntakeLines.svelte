@@ -1,13 +1,16 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StickyBar from '$lib/components/ui/StickyBar.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StickyBar from '#lib/components/ui/StickyBar.svelte';
 	// Not `MoneyField`: that one owns a remote form field and posts cents through
 	// a hidden sibling, and these rows are local state serialized into one JSON
 	// field. The dollars-in/cents-out conversion happens in `centsOf` below.
-	import { Field } from '$lib/components/ui/Form';
-	import { formatCents } from '$lib/utils/format';
-	import { equipmentConditions } from '$lib/config';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { recordIntake } from '#lib/remote/inventory.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { equipmentConditions } from '#lib/config.js';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 
 	/**
@@ -38,7 +41,7 @@
 	const itemById = $derived(new Map(items.map((i) => [i.id, i])));
 
 	const options = $derived([
-		{ value: '', label: 'Pick an item…' },
+		{ value: '', label: m.staff_inventory_intake_intake_lines_pick_item_label() },
 		...items.map((i) => ({
 			value: i.id,
 			label: i.categoryName ? `${i.categoryName} → ${i.name}` : i.name
@@ -120,47 +123,44 @@
 
 <!--
 	These rows are editor state, not form fields — only `lines` below posts. They
-	still carry names, because a `FormField` label is a `<legend>` and an unnamed
-	input is reachable by neither name nor label.
-
-	The names are underscored rather than hyphenated for a hard reason: SvelteKit
-	parses every submitted field name into a schema path against
-	`/^[a-zA-Z_$]\w*(\.[a-zA-Z_$]\w*|\[\d+\])*$/`, and a hyphen fails it — the
-	whole submit dies with `Invalid path line-item-0` and a 500 before Zod ever
-	runs. Underscores and digits are `\w`, so these parse as plain keys and Zod
-	strips them as unknown.
+	carry ids, not names: a remote form rejects a name its fields did not hand out.
 -->
-<input type="hidden" name="lines" value={serialized} />
+<input {...recordIntake.fields.lines.as('hidden', serialized)} />
 
 <div class="space-y-4">
 	{#each lines as line, index (index)}
 		<div class="rounded-box border border-base-300 p-4">
 			<div class="grid gap-3 md:grid-cols-[2fr_auto_auto_auto]">
 				<Field
-					name="lineItem_{index}"
+					id="lineItem_{index}"
 					type="select"
-					label="Item"
+					label={m.staff_item_label()}
 					{options}
 					bind:value={line.itemId}
 					onchange={() => syncUnits(line)}
 				/>
 				<Field
-					name="lineQty_{index}"
+					id="lineQty_{index}"
 					type="number"
-					label="Quantity"
+					label={m.staff_quantity_label()}
 					min="1"
 					bind:value={line.quantity}
 					onchange={() => syncUnits(line)}
 				/>
 				<div class="w-32">
-					<Field name="lineCost_{index}" type="text" label="Each ($)" bind:value={line.unitCost} />
+					<Field
+						id="lineCost_{index}"
+						type="text"
+						label={m.staff_inventory_intake_intake_lines_each_label()}
+						bind:value={line.unitCost}
+					/>
 				</div>
 				<div class="flex items-end pb-1">
 					<Button
 						type="button"
 						variant="ghost"
 						size="sm"
-						aria-label="Remove line {index + 1}"
+						aria-label={m.staff_inventory_intake_intake_lines_aria_label({ value: index + 1 })}
 						onclick={() => removeLine(index)}
 					>
 						<IconTrash size={16} />
@@ -171,27 +171,27 @@
 			{#if isSerialized(line) && line.units.length > 0}
 				<div class="mt-3 space-y-2">
 					<p class="text-subtle text-sm">
-						One row per unit. A blank tag is fine — it lands in the tagging queue.
+						{m.staff_inventory_intake_intake_lines_one_row_per_unit_blank_text()}
 					</p>
 					{#each line.units as unit, u (u)}
 						<div class="grid gap-2 md:grid-cols-3">
 							<Field
-								name="unitTag_{index}_{u}"
+								id="unitTag_{index}_{u}"
 								type="text"
-								label={u === 0 ? 'Asset tag' : undefined}
-								placeholder="CMC-000123"
+								label={u === 0 ? m.staff_asset_tag_label() : undefined}
+								placeholder={m.staff_cmc_000123_placeholder()}
 								bind:value={unit.assetTag}
 							/>
 							<Field
-								name="unitSerial_{index}_{u}"
+								id="unitSerial_{index}_{u}"
 								type="text"
-								label={u === 0 ? 'Serial' : undefined}
+								label={u === 0 ? m.staff_serial_label() : undefined}
 								bind:value={unit.serialNumber}
 							/>
 							<Field
-								name="unitCondition_{index}_{u}"
+								id="unitCondition_{index}_{u}"
 								type="select"
-								label={u === 0 ? 'Condition' : undefined}
+								label={u === 0 ? m.staff_condition_label() : undefined}
 								options={conditionOptions}
 								bind:value={unit.condition}
 							/>
@@ -202,18 +202,34 @@
 		</div>
 	{/each}
 
-	<Button type="button" variant="ghost" size="sm" onclick={addLine}>
+	<Button type="button" variant="ghost" size="sm" data-testid="add-intake-line" onclick={addLine}>
 		<IconPlus size={16} />
-		Add a line
+		{m.staff_add_line_label()}
 	</Button>
 </div>
 
 <!-- The running tally: what this session will write, before it writes it. -->
 <StickyBar class="mt-4 flex flex-wrap items-center gap-3">
-	<span><strong>{lines.filter((l) => l.itemId).length}</strong> lines</span>
-	<span><strong>{unitTotal}</strong> units</span>
+	<span
+		><ParaglideMessage
+			message={m.staff_inventory_intake_intake_lines_lines_text}
+			inputs={{ length: lines.filter((l) => l.itemId).length }}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}</ParaglideMessage
+		></span
+	>
+	<span
+		><ParaglideMessage
+			message={m.staff_inventory_intake_intake_lines_units_text}
+			inputs={{ unitTotal }}
+			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+				>{/snippet}</ParaglideMessage
+		></span
+	>
 	<span><strong>{formatCents(valueTotal)}</strong></span>
 	{#if needsTagging > 0}
-		<Badge variant="warning" size="sm">{needsTagging} will need tagging</Badge>
+		<Badge variant="warning" size="sm"
+			>{m.staff_inventory_intake_intake_lines_will_need_tagging_label({ needsTagging })}</Badge
+		>
 	{/if}
 </StickyBar>

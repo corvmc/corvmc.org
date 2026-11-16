@@ -233,14 +233,10 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 		}
 	}
 
-	// 17 columns × 5 = 85, under D1's 100 bound parameters.
-	await batchInsert(audioRelease, releaseRows, 5);
-	// 13 × 7 = 91.
-	await batchInsert(audioTrack, trackRows, 7);
-	// 9 × 11 = 99.
-	await batchInsert(media, mediaRows, 11);
-	// 7 × 14 = 98.
-	await batchInsert(mediaAttachment, attachmentRows, 14);
+	await batchInsert(audioRelease, releaseRows);
+	await batchInsert(audioTrack, trackRows);
+	await batchInsert(media, mediaRows);
+	await batchInsert(mediaAttachment, attachmentRows);
 
 	// -------------------------------------------------------------------------
 	// Connect accounts
@@ -290,8 +286,7 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			updatedAt: new Date()
 		}))
 	];
-	// 8 × 12 = 96.
-	await batchInsert(bandStripeAccount, accountRows, 12);
+	await batchInsert(bandStripeAccount, accountRows);
 
 	// -------------------------------------------------------------------------
 	// Purchases
@@ -364,11 +359,7 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			});
 		}
 	}
-	// D1 caps a statement at 100 bound parameters. 17 columns × 5 rows = 85; the
-	// chunk was 6 until `refunded_at` made that 102 and the seed died on
-	// "too many SQL variables", which names the limit but not the column that
-	// crossed it. Recount this when the table gains one.
-	if (purchaseRows.length) await batchInsert(releasePurchase, purchaseRows, 5);
+	if (purchaseRows.length) await batchInsert(releasePurchase, purchaseRows);
 
 	// -------------------------------------------------------------------------
 	// The objects themselves
@@ -429,12 +420,10 @@ export async function seedAudio(bands: any[], users: any[], alsoInclude: any[] =
 			)
 		: [];
 
-	// 4 columns × 20 = 80, under D1's 100 bound parameters.
 	if (entries.length) {
 		await batchInsert(
 			radioPlay,
-			entries.map((e) => ({ id: randomUUID(), ...e, createdAt: now })),
-			20
+			entries.map((e) => ({ id: randomUUID(), ...e, createdAt: now }))
 		);
 	}
 

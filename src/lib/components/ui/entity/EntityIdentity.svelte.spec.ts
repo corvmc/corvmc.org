@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './EntityIdentityHarness.svelte';
-import { fakeRef } from '$lib/test/fixtures';
+import { fakeRef } from '#lib/test/fixtures.js';
 
 describe('EntityIdentity', () => {
 	/**
@@ -59,7 +59,7 @@ describe('EntityIdentity', () => {
 
 	it('marks a subtype with its glyph and label', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'sustaining' }) });
-		expect(document.querySelector('[data-tip]')?.getAttribute('data-tip')).toBe(
+		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(
 			'Sustaining member'
 		);
 	});
@@ -71,12 +71,12 @@ describe('EntityIdentity', () => {
 	 */
 	it('leaves the ordinary case unmarked', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: null }) });
-		expect(document.querySelector('[data-tip]')).toBeNull();
+		expect(document.querySelector('[role="img"]')).toBeNull();
 	});
 
 	it('leaves an unrecognised subtype unmarked rather than blank', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'nonsense' }) });
-		expect(document.querySelector('[data-tip]')).toBeNull();
+		expect(document.querySelector('[role="img"]')).toBeNull();
 		expect(document.querySelector('td.cell-primary > a')?.textContent).toContain('Jane Doe');
 	});
 
@@ -131,8 +131,7 @@ describe('EntityIdentity', () => {
  * an inherited value does lose to a direct declaration.
  *
  * Asserted structurally rather than via `getComputedStyle`: this project loads
- * no app stylesheet, so `.truncate` resolves to nothing here regardless. The
- * visual proof lives in the Storybook stories, which do import `layout.css`.
+ * no app stylesheet, so `.truncate` resolves to nothing here regardless.
  */
 describe('EntityIdentity truncation elements', () => {
 	it('never puts truncate directly on a heading or a paragraph', async () => {

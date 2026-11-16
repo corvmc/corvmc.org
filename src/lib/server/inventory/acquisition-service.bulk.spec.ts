@@ -34,7 +34,7 @@ function tableNameOf(t: unknown): string {
 	return 'unknown';
 }
 
-vi.mock('$lib/server/db', () => {
+vi.mock('#lib/server/db/index.js', () => {
 	const selectChain = () => {
 		const proxy: unknown = new Proxy(() => proxy, {
 			get(_, prop) {
@@ -54,10 +54,14 @@ vi.mock('$lib/server/db', () => {
 		db: {
 			select: vi.fn(() => selectChain()),
 			insert: vi.fn((table: unknown) => ({
-				values: (rows: unknown) => ({
-					__table: tableNameOf(table),
-					__rows: Array.isArray(rows) ? rows : [rows]
-				})
+				values: (rows: unknown) => {
+					const list = (Array.isArray(rows) ? rows : [rows]) as object[];
+					return {
+						__table: tableNameOf(table),
+						__rows: list,
+						toSQL: () => ({ params: list.flatMap((r) => Object.values(r)) })
+					};
+				}
 			})),
 			batch: vi.fn(async (statements: { __table: string; __rows: unknown[] }[]) => {
 				batchCalls += 1;
@@ -74,13 +78,15 @@ vi.mock('./stock-service', () => ({
 		reason === 'receive' ? quantity : -quantity
 }));
 
+vi.mock('./restock-tasks', () => ({ afterStockChange: vi.fn() }));
 vi.mock('./asset-service', () => ({
 	createAsset: vi.fn(),
-	AssetTagTakenError: class AssetTagTakenError extends Error {}
+	AssetTagTakenError: class AssetTagTakenError extends Error {},
+	afterForm8282Change: vi.fn()
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({ listFor: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn() }));
+vi.mock('#lib/server/media/media-service.js', () => ({ listFor: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn() }));
 
 const { recordAcquisitionBulk, DuplicateAssetTagError, UnknownItemError, InvalidAcquisitionError } =
 	await import('./acquisition-service');

@@ -1,0 +1,5 @@
+# Direct messages
+
+Status: ✅ /member/messages
+
+Members message each other from the directory **or from a recipient picker in the Messages composer**, behind `directMessages`. The picker searches the directory roster the sender can already browse, and deliberately does not say who accepts messages. A first message is a request: one message, no unread badge, and an email that names neither sender nor content. Accept / Decline / Report; declining blocks silently, so it is indistinguishable from an unopened request. Staff see nothing until a conversation is reported, then the whole thread in `/staff/flags`. Upholding restricts the sender to replies only (`member_standing` at scope `messaging`). Staff can switch a member's messaging off; separately, a member can switch off their own (`user.accepts_direct_messages`) — the two are independent, and a member's switch never lifts a restriction. See `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md` and `docs/decisions/0035-direct-message-refusals-look-alike.md`

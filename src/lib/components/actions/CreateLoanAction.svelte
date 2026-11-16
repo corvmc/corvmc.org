@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { createLoan, getAvailableItems } from '$lib/remote/inventory.remote';
+	import { refreshAll } from '$app/navigation';
+	import { createLoan, getAvailableItems } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 
 	const { fields } = createLoan;
 
@@ -31,13 +32,13 @@
 
 <Action
 	action={createLoan}
-	label="New Loan"
-	modalTitle="Create Loan Request"
-	successToast="Loan request created"
+	label={m.actions_create_loan_new_loan_label()}
+	modalTitle={m.actions_create_loan_modal_title()}
+	successToast={m.actions_create_loan_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -59,18 +60,30 @@
 				<Field
 					field={fields.itemId}
 					type="select"
-					label="Equipment"
-					placeholder="-- Select equipment --"
+					label={m.actions_create_loan_equipment_label()}
+					placeholder={m.actions_create_loan_placeholder()}
 					value=""
 				>
 					{#each await getAvailableItems() as eq (eq.id)}
 						<option value={eq.id}>{eq.name}</option>
 					{/each}
 				</Field>
-				<Field field={fields.quantity} type="number" label="Quantity" value={1} />
-				<Field field={fields.requestedPickupDate} type="date" label="Requested pickup date" />
-				<Field field={fields.estimatedReturnDate} type="date" label="Estimated return date" />
-				<Field field={fields.memberNotes} type="textarea" label="Notes (optional)" />
+				<Field field={fields.quantity} type="number" label={m.actions_quantity_label()} value={1} />
+				<Field
+					field={fields.requestedPickupDate}
+					type="date"
+					label={m.actions_create_loan_requested_pickup_date_label()}
+				/>
+				<Field
+					field={fields.estimatedReturnDate}
+					type="date"
+					label={m.actions_create_loan_estimated_return_date_label()}
+				/>
+				<Field
+					field={fields.memberNotes}
+					type="textarea"
+					label={m.actions_create_loan_notes_optional_label()}
+				/>
 			</div>
 
 			{#snippet pending()}
@@ -81,7 +94,9 @@
 
 			{#snippet failed(error, reset)}
 				<Alert type="warning" reset={() => retryQuery(getAvailableItems(), reset)}>
-					Could not load the equipment list: {errorMessage(error)}
+					{m.actions_create_loan_could_not_load_equipment_list_body({
+						errorMessage: errorMessage(error)
+					})}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>

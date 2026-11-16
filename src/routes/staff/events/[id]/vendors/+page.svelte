@@ -1,39 +1,48 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
+	import VendorFee from '#lib/components/market/VendorFee.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
 	import { IconCheck, IconX, IconArrowBackUp, IconTable } from '@tabler/icons-svelte';
-	import { formatCents, formatDateTime, toLocalDateTime } from '$lib/utils/format';
+	import { formatDateTime, toLocalDateTime } from '#lib/utils/format.js';
 	import {
 		marketVendorStatuses,
 		marketVendorStatusLabels,
 		type MarketVendorStatus
-	} from '$lib/config';
-	import PreviousMarketNote from '$lib/components/market/PreviousMarketNote.svelte';
+	} from '#lib/config.js';
+	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
+	import AlsoAppliedNote from '#lib/components/market/AlsoAppliedNote.svelte';
+	import WaitlistPrompt from '#lib/components/market/WaitlistPrompt.svelte';
+	import WaitlistVendorAction from '#lib/components/market/WaitlistVendorAction.svelte';
 	import {
 		decideVendorForm,
 		getStaffMarketVendors,
 		openMarketDayForm,
 		setTableLabelForm,
-		withdrawVendorForm
-	} from '$lib/remote/market.remote';
+		withdrawVendorForm,
+		resendVendorDecisionForm
+	} from '#lib/remote/market.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+	import { toastDelivery } from '#lib/utils/delivery-toast.js';
+
+	const params = routeParams('id');
 
 	/**
-	 * A market day's vendor applications. docs/specs/shipped/market-vendors-spec.md.
+	 * A market day's vendor applications. docs/development/business-workflows.md §19.
 	 *
 	 * Accept and decline each send the vendor a message on their inbox thread,
 	 * which is why both modals ask for one: the decision and the telling are one
@@ -43,8 +52,9 @@
 	const decideFields = decideVendorForm.fields;
 	const tableFields = setTableLabelForm.fields;
 	const withdrawFields = withdrawVendorForm.fields;
+	const resendFields = resendVendorDecisionForm.fields;
 
-	const eventId = $derived(page.params.id!);
+	const eventId = $derived(params.id);
 	const data = $derived(await getStaffMarketVendors(eventId));
 
 	type Tab = 'all' | MarketVendorStatus;
@@ -57,7 +67,7 @@
 			label: marketVendorStatusLabels[s],
 			badge: counts?.[s] ?? 0
 		})),
-		{ key: 'all', label: 'All', badge: data.applications.length }
+		{ key: 'all', label: m.staff_all_label(), badge: data.applications.length }
 	]);
 	const rows = $derived(
 		tab === 'all' ? data.applications : data.applications.filter((a) => a.status === tab)
@@ -88,43 +98,43 @@
 )}
 	<MoneyField
 		field={setupFields.tableFeeCents}
-		label="Table fee"
-		description="Per table, charged when a vendor is accepted. Blank means no fee."
+		label={m.staff_events_id_vendors_table_fee_label()}
+		description={m.staff_events_id_vendors_per_table_charged_when_vendor_body()}
 		value={market?.tableFeeCents || undefined}
 	/>
 	<FormField
 		field={setupFields.slidingScale}
 		type="checkbox"
-		label="Sliding scale"
-		description="Let vendors pay what they can, down to the floor below."
+		label={m.staff_events_id_vendors_sliding_scale_label()}
+		description={m.staff_events_id_vendors_let_vendors_pay_what_they_body()}
 		value={market?.slidingScale ?? false}
 	/>
 	<MoneyField
 		field={setupFields.slidingScaleFloorCents}
-		label="Sliding-scale floor"
-		description="Per table. Only used with the sliding scale."
+		label={m.staff_events_id_vendors_sliding_scale_floor_label()}
+		description={m.staff_events_id_vendors_per_table_only_used_with_body()}
 		value={market?.slidingScaleFloorCents || undefined}
 	/>
 {/snippet}
 
 <PageHeader
-	title="Vendors: {data.event.title}"
+	title={m.staff_events_id_vendors_vendors_title({ title: data.event.title })}
 	crumb="Vendors"
 	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 >
 	{#if data.market}
 		<Button
-			href={resolve(`/staff/events/${data.event.id}/vendors/check-in`)}
+			href={resolve(`staff/events/${data.event.id}/vendors/check-in`)}
 			variant="ghost"
 			size="sm"
 		>
-			Market day
+			{m.staff_events_id_vendors_market_day_label()}
 		</Button>
 		<Action
 			action={openMarketDayForm}
-			label="Edit setup"
-			modalTitle="Market setup"
-			successToast="Saved"
+			label={m.staff_events_id_vendors_edit_setup_label()}
+			modalTitle={m.staff_events_id_vendors_market_setup_title()}
+			successToast={m.staff_saved_toast()}
 			variant="ghost"
 			size="sm"
 		>
@@ -133,8 +143,8 @@
 				<FormField
 					field={setupFields.applicationsCloseAt}
 					type="datetime-local"
-					label="Applications close"
-					description="Leave blank to take applications until the market starts."
+					label={m.staff_events_id_vendors_applications_close_label()}
+					description={m.staff_events_id_vendors_leave_blank_take_applications_until_body()}
 					value={data.market?.applicationsCloseAt
 						? toLocalDateTime(data.market.applicationsCloseAt)
 						: undefined}
@@ -142,7 +152,7 @@
 				<FormField
 					field={setupFields.tableCount}
 					type="number"
-					label="Tables available"
+					label={m.staff_events_id_vendors_tables_available_label()}
 					value={data.market?.tableCount ?? undefined}
 				/>
 				{@render feeFields(data.market)}
@@ -155,34 +165,50 @@
 	{#if !data.market}
 		<Card>
 			<CardBody>
-				<h2 class="font-semibold">Take vendor applications</h2>
+				<h2 class="font-semibold">{m.staff_events_id_vendors_take_vendor_applications_title()}</h2>
 				<p class="text-muted">
-					Opening this listing as a market puts an "Apply for a table" button on its public page
-					while applications are open. Each application arrives in the inbox as its own
-					conversation.
+					{m.staff_events_id_vendors_opening_listing_as_market_puts_text()}
 				</p>
-				<Form remote={openMarketDayForm} successToast="Open for applications" class="space-y-2">
+				<Form
+					remote={openMarketDayForm}
+					successToast={m.staff_events_id_vendors_open_applications_toast()}
+					class="space-y-2"
+				>
 					<input {...setupFields.eventId.as('hidden', data.event.id)} />
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormField
 							field={setupFields.applicationsCloseAt}
 							type="datetime-local"
-							label="Applications close"
-							description="Blank means open until the market starts."
+							label={m.staff_events_id_vendors_applications_close_label()}
+							description={m.staff_events_id_vendors_blank_means_open_until_market_body()}
 						/>
-						<FormField field={setupFields.tableCount} type="number" label="Tables available" />
+						<FormField
+							field={setupFields.tableCount}
+							type="number"
+							label={m.staff_events_id_vendors_tables_available_label()}
+						/>
 					</div>
 					{@render feeFields(null)}
-					<SubmitButton label="Open for applications" />
+					<SubmitButton label={m.staff_events_id_vendors_open_applications_label()} />
 				</Form>
 			</CardBody>
 		</Card>
 	{:else}
 		<div class="flex flex-wrap gap-4">
-			<StatCard title="To review" value={counts?.applied ?? 0} size="sm" class="p-4" />
-			<StatCard title="Accepted" value={counts?.accepted ?? 0} size="sm" class="p-4" />
 			<StatCard
-				title="Tables taken"
+				title={m.staff_events_id_vendors_review_title()}
+				value={counts?.applied ?? 0}
+				size="sm"
+				class="p-4"
+			/>
+			<StatCard
+				title={m.staff_events_id_vendors_accepted_title()}
+				value={counts?.accepted ?? 0}
+				size="sm"
+				class="p-4"
+			/>
+			<StatCard
+				title={m.staff_events_id_vendors_tables_taken_title()}
 				value={data.market.tableCount
 					? `${tablesAssigned} / ${data.market.tableCount}`
 					: tablesAssigned}
@@ -190,7 +216,7 @@
 				class="p-4"
 			/>
 			<StatCard
-				title="Applications"
+				title={m.staff_events_id_vendors_applications_title()}
 				value={data.market.accepting
 					? data.market.applicationsCloseAt
 						? `Open until ${formatDateTime(data.market.applicationsCloseAt)}`
@@ -201,69 +227,117 @@
 			/>
 		</div>
 
+		<WaitlistPrompt applications={data.applications} tableCount={data.market.tableCount} />
+
 		<TabBar {tabs} active={tab} onchange={(key) => (tab = key as Tab)} collapse />
 
 		{#if rows.length === 0}
 			<EmptyState
-				title="No applications here"
+				title={m.staff_events_id_vendors_no_applications_here_title()}
 				description={tab === 'applied'
-					? 'Nothing waiting on a decision.'
-					: 'Applications arrive from the public event page.'}
+					? m.staff_events_id_vendors_nothing_waiting_decision_body()
+					: m.staff_events_id_vendors_applications_arrive_from_public_even_body()}
 			/>
 		{:else}
-			<p class="text-muted text-sm">{rows.length} of {data.applications.length} applications</p>
+			<p class="text-muted text-sm">
+				{m.staff_events_id_vendors_applications_2_text({
+					length: rows.length,
+					length2: data.applications.length
+				})}
+			</p>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Vendor</th>
-					<th class="col-support">Needs</th>
-					<th class="col-support">Contact</th>
-					<th>Table</th>
-					<th class="col-support">Fee</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_events_id_vendors_vendor_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_needs_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_contact_label()}</th>
+					<th>{m.staff_events_id_vendors_table_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_fee_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each rows as row (row.id)}
 					<tr>
 						<td><StatusBadge status={row.status} /></td>
 						<td class="cell-primary">
-							<div class="font-medium">{row.businessName}</div>
+							<div class="font-medium">
+								{#if row.organizationId}
+									<a class="link" href={resolve(`staff/contacts/${row.organizationId}`)}
+										>{row.businessName}</a
+									>
+								{:else}
+									{row.businessName}
+								{/if}
+							</div>
 							<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
 							<PreviousMarketNote previous={row.previous} />
+							<AlsoAppliedNote others={row.alsoApplied} />
+							{#if row.decisionMessage && row.decisionMessage !== 'sent'}
+								<Form
+									remote={resendVendorDecisionForm.for(row.id)}
+									onsuccess={(r) =>
+										toastDelivery(r, {
+											sent: m.staff_events_id_vendors_message_sent_toast(),
+											notSent: m.staff_events_id_vendors_message_not_sent_toast()
+										})}
+									class="mt-1 flex items-center gap-2 text-sm text-warning"
+									data-testid="decision-not-sent"
+								>
+									<input {...resendFields.vendorId.as('hidden', row.id)} />
+									{m.staff_events_id_vendors_message_not_sent_text()}
+									<SubmitButton
+										label={m.staff_events_id_vendors_resend_message_label()}
+										variant="ghost"
+										size="xs"
+									/>
+								</Form>
+							{/if}
 						</td>
 						<td class="col-support">
 							{row.tablesRequested}
-							{row.tablesRequested === 1 ? 'table' : 'tables'}{row.needsPower ? ', power' : ''}
+							{row.tablesRequested === 1
+								? m.staff_events_id_vendors_table_3_text()
+								: m.staff_events_id_vendors_tables_text()}{row.needsPower
+								? m.staff_events_id_vendors_power_text()
+								: ''}{row.bringsOwnTable
+								? m.staff_events_id_vendors_own_table_text()
+								: ''}{row.bringsTent ? m.staff_events_id_vendors_tent_text() : ''}
 						</td>
 						<td class="col-support">
 							{#if row.threadId}
-								<a class="link" href={resolve(`/staff/inbox/${row.threadId}`)}>
+								<a class="link" href={resolve(`staff/inbox/${row.threadId}`)}>
 									{row.contactName ?? row.contactEmail}
 								</a>
 							{:else}
 								<span class="text-muted">{row.contactName ?? '—'}</span>
 							{/if}
+							{#if row.contactName && row.contactEmail}
+								<div class="text-muted text-sm">{row.contactEmail}</div>
+							{/if}
+							{#if row.contactSource === 'application'}
+								<div class="text-sm text-warning" data-testid="application-email">
+									{m.staff_events_id_vendors_application_email_text()}
+								</div>
+							{/if}
 						</td>
 						<td>{row.tableLabel ?? '—'}</td>
 						<td class="col-support">
-							{#if row.feeCents === 0}
-								<span class="text-muted">—</span>
-							{:else if row.refundedAt}
-								Refunded
-							{:else if row.paidAt}
-								Paid {formatCents(row.paidCents ?? 0)}
-							{:else}
-								{formatCents(row.feeCents)} due
-							{/if}
+							<VendorFee fee={row.fee} />
 						</td>
 						<td>
 							<div class="flex w-max justify-end gap-1">
-								{#if row.status === 'applied' || row.status === 'declined'}
+								{#if row.status === 'applied' || row.status === 'waitlisted' || row.status === 'declined'}
 									<Action
 										action={decideVendorForm.for(`accept-${row.id}`)}
-										label="Accept"
+										label={m.staff_events_id_vendors_accept_label()}
 										iconOnly
-										modalTitle="Accept {row.businessName}"
-										successToast="Accepted — vendor told"
+										modalTitle={m.staff_events_id_vendors_accept_2_title({
+											businessName: row.businessName
+										})}
+										onsuccess={(r) =>
+											toastDelivery(r, {
+												sent: m.staff_events_id_vendors_accepted_vendor_told_toast(),
+												notSent: m.staff_events_id_vendors_accepted_message_not_sent_toast()
+											})}
 										variant="ghost"
 										size="sm"
 									>
@@ -271,14 +345,18 @@
 										{#snippet form()}
 											<input {...decideFields.vendorId.as('hidden', row.id)} />
 											<input {...decideFields.decision.as('hidden', 'accepted')} />
-											<FormField field={decideFields.tableLabel} label="Table" value="" />
+											<FormField
+												field={decideFields.tableLabel}
+												label={m.staff_events_id_vendors_table_label()}
+												value=""
+											/>
 											<FormField
 												field={decideFields.message}
 												type="textarea"
-												label="Message to the vendor"
+												label={m.staff_events_id_vendors_message_vendor_label()}
 												description={data.market?.tableFeeCents
-													? 'Sent by email on their inbox thread, with a link to pay the table fee.'
-													: 'Sent by email on their inbox thread.'}
+													? m.staff_events_id_vendors_sent_by_email_their_inbox_body()
+													: m.staff_events_id_vendors_sent_by_email_their_inbox_2_body()}
 												value={acceptMessage(row.businessName)}
 											/>
 										{/snippet}
@@ -287,10 +365,12 @@
 								{#if row.status === 'accepted'}
 									<Action
 										action={setTableLabelForm.for(row.id)}
-										label="Move table"
+										label={m.staff_events_id_vendors_move_table_label()}
 										iconOnly
-										modalTitle="Table for {row.businessName}"
-										successToast="Table saved"
+										modalTitle={m.staff_events_id_vendors_table_2_title({
+											businessName: row.businessName
+										})}
+										successToast={m.staff_events_id_vendors_table_saved_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -299,19 +379,32 @@
 											<input {...tableFields.vendorId.as('hidden', row.id)} />
 											<FormField
 												field={tableFields.tableLabel}
-												label="Table"
+												label={m.staff_events_id_vendors_table_label()}
 												value={row.tableLabel ?? ''}
 											/>
 										{/snippet}
 									</Action>
 								{/if}
-								{#if row.status === 'applied' || row.status === 'accepted'}
+								{#if row.status === 'applied'}
+									<WaitlistVendorAction
+										vendorId={row.id}
+										businessName={row.businessName}
+										eventTitle={data.event.title}
+									/>
+								{/if}
+								{#if row.status === 'applied' || row.status === 'waitlisted' || row.status === 'accepted'}
 									<Action
 										action={decideVendorForm.for(`decline-${row.id}`)}
-										label="Decline"
+										label={m.staff_events_id_vendors_decline_label()}
 										iconOnly
-										modalTitle="Decline {row.businessName}"
-										successToast="Declined — vendor told"
+										modalTitle={m.staff_events_id_vendors_decline_2_title({
+											businessName: row.businessName
+										})}
+										onsuccess={(r) =>
+											toastDelivery(r, {
+												sent: m.staff_events_id_vendors_declined_vendor_told_toast(),
+												notSent: m.staff_events_id_vendors_declined_message_not_sent_toast()
+											})}
 										variant="ghost"
 										size="sm"
 									>
@@ -322,8 +415,8 @@
 											<FormField
 												field={decideFields.message}
 												type="textarea"
-												label="Message to the vendor"
-												description="Sent by email on their inbox thread."
+												label={m.staff_events_id_vendors_message_vendor_label()}
+												description={m.staff_events_id_vendors_sent_by_email_their_inbox_2_body()}
 												value={declineMessage(row.businessName)}
 											/>
 										{/snippet}
@@ -332,10 +425,12 @@
 								{#if row.status !== 'withdrawn' && row.status !== 'no_show'}
 									<Action
 										action={withdrawVendorForm.for(row.id)}
-										label="Mark withdrawn"
+										label={m.staff_events_id_vendors_mark_withdrawn_label()}
 										iconOnly
-										modalTitle="{row.businessName} pulled out"
-										successToast="Marked withdrawn"
+										modalTitle={m.staff_events_id_vendors_pulled_out_title({
+											businessName: row.businessName
+										})}
+										successToast={m.staff_events_id_vendors_marked_withdrawn_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -343,8 +438,7 @@
 										{#snippet form()}
 											<input {...withdrawFields.vendorId.as('hidden', row.id)} />
 											<p>
-												For when the vendor says they can't come. This is final, and frees their
-												table. Nothing is sent to them.
+												{m.staff_events_id_vendors_when_vendor_says_they_can_text()}
 											</p>
 										{/snippet}
 									</Action>

@@ -12,13 +12,13 @@
  * gets a track plus the wall-clock window it occupies, and seeks into it. That
  * is the whole mechanism.
  */
-import { db } from '$lib/server/db';
-import { audioRelease, audioTrack, radioPlay } from '$lib/server/db/schema/audio';
-import { group } from '$lib/server/db/schema/group';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { audioRelease, audioTrack, radioPlay } from '#lib/server/db/schema/audio.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { and, asc, desc, eq, gt, isNull, lt, lte, sql } from 'drizzle-orm';
-import { resolveImageUrl } from '$lib/server/storage';
-import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '#lib/config.js';
 import { currentRadioAttestation } from './radio-attestation';
 import { buildSchedule, type EligibleTrack } from './radio-rotation';
 

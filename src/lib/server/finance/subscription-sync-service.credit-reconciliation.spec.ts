@@ -44,8 +44,8 @@ const {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({ db: { select: dbSelect, update: dbUpdate } }));
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: dbSelect, update: dbUpdate } }));
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: {
 		subscriptions: { list: subscriptionsList },
 		invoices: { list: invoicesList }
@@ -57,9 +57,11 @@ vi.mock('./credit-service', () => ({
 	allocateEquipmentCredits
 }));
 vi.mock('./subscription-service', () => ({ buildMemberSubscriptionState }));
-vi.mock('$lib/server/band/band-subscription-service', () => ({ syncFromWebhook }));
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({ cancelAllForUser: vi.fn() }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/band/band-subscription-service.js', () => ({ syncFromWebhook }));
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
+	cancelAllForUser: vi.fn()
+}));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
 
 import { syncAllSubscriptions } from './subscription-sync-service';
 

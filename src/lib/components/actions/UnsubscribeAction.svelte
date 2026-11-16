@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { unsubscribe } from '$lib/remote/account.remote';
+	import { refreshAll } from '$app/navigation';
+	import { unsubscribe } from '#lib/remote/account.remote.js';
 
 	const { fields } = unsubscribe;
 
@@ -27,17 +28,17 @@
 
 <Action
 	action={unsubscribe}
-	label="Unsubscribe"
-	modalTitle="Unsubscribe"
-	successToast={`Unsubscribed from ${name}`}
+	label={m.actions_unsubscribe_label()}
+	modalTitle={m.actions_unsubscribe_title()}
+	successToast={m.actions_unsubscribe_success_toast({ name })}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<p class="py-4">Unsubscribe from {name}?</p>
+		<p class="py-4">{m.actions_unsubscribe_unsubscribe_from_text({ name })}</p>
 	{/snippet}
 </Action>

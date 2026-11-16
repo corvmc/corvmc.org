@@ -1,31 +1,34 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ManageRecurringReservations from './ManageRecurringReservations.svelte';
-	import BookingPolicy from '$lib/components/reservations/BookingPolicy.svelte';
-	import FreeHoursRemaining from '$lib/components/member/membership/FreeHoursRemaining.svelte';
+	import BookingPolicy from '#lib/components/reservations/BookingPolicy.svelte';
+	import FreeHoursRemaining from '#lib/components/member/membership/FreeHoursRemaining.svelte';
 
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { confirmWaitlisted, getMemberReservationsPage } from '$lib/remote/reservations.remote';
+	import { confirmWaitlisted, getMemberReservationsPage } from '#lib/remote/reservations.remote.js';
 
 	const { fields } = confirmWaitlisted;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import CreateModal from './CreateModal.svelte';
+	import FirstBookingRules from './FirstBookingRules.svelte';
 	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import OverdueTable from './OverdueTable.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
-	import { formatMonthDayYear, formatTimeRange } from '$lib/utils/format';
-	import { groupReservationsByMonth } from '$lib/utils/reservation-groups';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import { formatMonthDayYear, formatTimeRange } from '#lib/utils/format.js';
+	import { groupReservationsByMonth } from '#lib/utils/reservation-groups.js';
+	import { reservationTrack } from '#lib/utils/reservation-actions.js';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 
 	let activeTab = $state<'active' | 'all'>('active');
 
@@ -53,7 +56,7 @@
 	const overdueReservations = $derived(pageData.then((d) => d.overdue));
 	// Payment confirmation via ?paid={id}
 	//
-	// A reservation is flipped to `confirmed` with a `paidAt` by
+	// A reservation is flipped to `confirmed` with a `paidAt` (the Paid track) by
 	// `checkout.session.completed`, not by the payment itself. Paying on Stripe's
 	// own page meant the redirect back took long enough that the webhook had all
 	// but always landed first; paying on our page, the member can arrive here in
@@ -89,8 +92,12 @@
 	// above exists because `async-effect-shape.spec.ts` fails the build if it is
 	// undone.
 	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
+	const feeGate = $derived(await pageData.then((d) => d.feeGate));
 
-	// Remote queries aren't refreshed by invalidateAll() — only by their own
+	// Null for a member who holds the Practice space clearance.
+	const firstBooking = $derived(await pageData.then((d) => d.firstBooking));
+
+	// Remote queries aren't refreshed by refreshAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
 	// lists (and free-hours balance) update without a manual page reload.
 	function refreshReservations() {
@@ -112,7 +119,7 @@
 			if (cancelled) return;
 
 			const match = rows.find((r) => r.id === id) ?? null;
-			const settled = match === null || match.paidAt !== null;
+			const settled = match === null || reservationTrack(match) === 'paid';
 			awaitingPayment = !settled && attempt < PAID_RETRY_LIMIT;
 			if (settled || attempt >= PAID_RETRY_LIMIT) return;
 
@@ -150,16 +157,21 @@
 	function closeConfirmModal() {
 		confirmModalOpen = false;
 		confirmReservation = null;
-		goto(resolve('/member/reservations'), { replaceState: true });
+		goto(resolve('member/reservations'), { replace: true });
 	}
 </script>
 
-<PageHeader title="Reserve Practice Space">
-	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+<PageHeader title={m.member_reservations_reserve_practice_space_title()}>
+	<CreateModal
+		{isSustaining}
+		{feeGate}
+		needsPhone={contact.needsPhone}
+		onbooked={refreshReservations}
+	/>
 	{#if isInstructor}
 		<!-- A separate button rather than a mode: teaching time has its own rate,
 		     duration floor and advance window, and settles at the door. -->
-		<TeachingCreateModal needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+		<TeachingCreateModal {feeGate} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
 	{/if}
 </PageHeader>
 <PageContent>
@@ -167,29 +179,40 @@
 		<div class="mb-4">
 			<Alert type="info">
 				{paidAttempts >= PAID_RETRY_LIMIT
-					? "We haven't had confirmation from our payment processor yet. Your booking is below and the time is held — if it still reads unpaid in a few minutes, get in touch."
-					: 'Confirming your payment…'}
+					? m.member_reservations_we_haven_t_had_confirmation_body()
+					: m.member_confirming_payment_body()}
 			</Alert>
 		</div>
 	{/if}
+	{#if isInstructor}
+		<SectionLabel label={m.member_reservations_practice_terms_label()} />
+	{/if}
 	<BookingPolicy />
+	{#if firstBooking}
+		<FirstBookingRules {...firstBooking} />
+	{/if}
+	{#if isInstructor}
+		<!-- Teaching needs no Practice space clearance, so no first-booking block (#2808). -->
+		<SectionLabel label={m.member_reservations_teaching_terms_label()} class="mt-4" />
+		<BookingPolicy bookerType="instructor" />
+	{/if}
 	<FreeHoursRemaining />
 	<article class="@container">
 		<Tabs.Root bind:value={activeTab}>
 			<header class="mb-4 flex w-full items-center justify-between">
-				<h2 class="title">My Reservations</h2>
+				<h2 class="title">{m.member_reservations_my_reservations_title()}</h2>
 				<Tabs.List class="join">
 					<Tabs.Trigger
 						value="active"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'active'
-						})}>Upcoming</Tabs.Trigger
+						})}>{m.member_reservations_upcoming_text()}</Tabs.Trigger
 					>
 					<Tabs.Trigger
 						value="all"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'all'
-						})}>All</Tabs.Trigger
+						})}>{m.member_all_text()}</Tabs.Trigger
 					>
 				</Tabs.List>
 			</header>
@@ -202,17 +225,22 @@
 					{#await overdueReservations then overdue}
 						{#if overdue.length > 0}
 							<section class="mb-6">
-								<SectionLabel label="Overdue" count={overdue.length} />
+								<SectionLabel
+									label={m.member_reservations_overdue_payments_label()}
+									count={overdue.length}
+								/>
 								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}
+					{:catch}
+						<!-- `creditData` takes this rejection to the boundary. -->
 					{/await}
 					<div class="card-grid">
 						{#each await activeReservations as reservation (reservation.id)}
 							<ReservationCard {reservation} onchange={refreshReservations} />
 						{:else}
 							<EmptyState
-								message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
+								message={m.member_reservations_no_upcoming_reservations_use_reserve_body()}
 								class="col-span-full"
 							/>
 						{/each}
@@ -226,17 +254,17 @@
 						{#if history.length > 0}
 							<p class="mb-3 text-subtle">
 								{#if shown.length < history.length}
-									Showing your {shown.length} most recent of {history.length} reservations.
+									{m.member_reservations_showing_most_recent_reservations_text({
+										length: shown.length,
+										length2: history.length
+									})}
 								{:else}
-									{history.length}
-									{history.length === 1 ? 'reservation' : 'reservations'}, newest first.
+									{m.member_reservations_reservations_newest_first_text({ length: history.length })}
 								{/if}
 							</p>
 						{/if}
 						{#if shown.length === 0}
-							<EmptyState
-								message="No reservations yet. Use Reserve Space above to book your first practice slot."
-							/>
+							<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve_body()} />
 						{/if}
 						<!-- A month header every dozen-or-so rows. Two years of fortnightly
 						     bookings is 53 rows that look alike, and scrolling was the only
@@ -254,10 +282,12 @@
 						{#if shown.length < history.length}
 							<div class="mt-3 flex justify-center">
 								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
-									Show all {history.length}
+									{m.member_reservations_show_all_label({ length: history.length })}
 								</Button>
 							</div>
 						{/if}
+					{:catch}
+						<!-- `creditData` takes this rejection to the boundary. -->
 					{/await}
 				{/if}
 			</Tabs.Content>
@@ -269,20 +299,20 @@
 {#if confirmReservation}
 	<Modal
 		bind:open={confirmModalOpen}
-		title="Slot Available"
+		title={m.member_reservations_slot_available_title()}
 		maxWidth="max-w-md"
 		onclose={closeConfirmModal}
 	>
 		<Form
 			remote={confirmWaitlisted}
-			successToast="Reservation confirmed"
+			successToast={m.member_reservations_success_toast()}
 			onsuccess={async () => {
 				closeConfirmModal();
 				refreshReservations();
 			}}
 		>
 			<div class="space-y-4">
-				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
+				<p class="text-sm">{m.member_reservations_slot_has_opened_up_waitlisted_text()}</p>
 				<div class="inset border border-base-300 px-4 py-3">
 					<p class="font-medium">{formatMonthDayYear(confirmReservation.startsAt)}</p>
 					<p class="text-muted">
@@ -291,16 +321,21 @@
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-subtle">
-						Confirm by {formatMonthDayYear(confirmReservation.waitlistExpiresAt)} or the slot will be
-						offered to someone else.
+						{m.member_reservations_confirm_by_slot_will_offered_text({
+							formatMonthDayYear: formatMonthDayYear(confirmReservation.waitlistExpiresAt)
+						})}
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
 					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
-						>Dismiss</Button
+						>{m.member_reservations_dismiss_label()}</Button
 					>
-					<SubmitButton label="Confirm Reservation" variant="success" size="sm" />
+					<SubmitButton
+						label={m.member_reservations_confirm_reservation_label()}
+						variant="success"
+						size="sm"
+					/>
 				</div>
 			</div>
 		</Form>

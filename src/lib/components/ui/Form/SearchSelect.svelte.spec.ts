@@ -132,3 +132,53 @@ describe('SearchSelect when the search rejects', () => {
 		expect(document.querySelector('[data-outer-failed]')).toBeNull();
 	});
 });
+
+/**
+ * Searches that overlap and settle in the same tick must leave the newest
+ * query's results on screen. An awaited `$derived` kept an older one's, and
+ * with the member search capped, a short prefix's page can omit the match
+ * outright, so the option typed for never appears (#1970).
+ */
+describe('SearchSelect when overlapping searches settle together', () => {
+	const MEMBERS = [
+		{ id: 'u1', name: 'E2E Role Target', email: 'target@example.com' },
+		{ id: 'u2', name: 'E2E Other', email: 'other@example.com' }
+	];
+
+	function heldSearch() {
+		const held: { q: string; release: () => void }[] = [];
+		const search = (q: string) =>
+			new Promise<typeof MEMBERS>((resolve) =>
+				held.push({ q, release: () => resolve(MEMBERS.filter((m) => m.name.includes(q))) })
+			);
+		return { search, held };
+	}
+
+	const frames = async (n: number) => {
+		for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
+	};
+
+	for (const order of ['newest first', 'oldest first'] as const) {
+		it(`shows the newest query's results when they settle ${order}`, async () => {
+			const { search, held } = heldSearch();
+			await render(SearchSelect, { search });
+			await vi.waitFor(() => expect(input()).not.toBeNull());
+			await userEvent.click(input());
+
+			// Each chunk waits for its own search to start, so three are in flight.
+			for (const typed of ['E2E', 'E2E Role', 'E2E Role Tar']) {
+				await userEvent.type(input(), typed.slice(input().value.length));
+				await expect.poll(() => held.at(-1)?.q).toBe(typed);
+			}
+
+			const batch = order === 'newest first' ? [...held].reverse() : held;
+			for (const h of batch) h.release();
+			await frames(5);
+
+			const ids = [...document.querySelectorAll('[role="option"]')].map((o) =>
+				o.getAttribute('data-value')
+			);
+			expect(ids).toEqual(['u1']);
+		});
+	}
+});

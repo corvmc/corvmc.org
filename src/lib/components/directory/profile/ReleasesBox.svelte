@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { releaseKindLabels, type ReleaseKind } from '$lib/config';
-	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear, formatCents } from '$lib/utils/format';
+	import { releaseKindLabels, type ReleaseKind } from '#lib/config.js';
+	import { formatTrackSummary } from '#lib/utils/audio.js';
+	import { formatDateYear, formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { IconDisc } from '@tabler/icons-svelte';
 
@@ -36,13 +37,16 @@
 <!-- Nothing at all when there is nothing: an empty "Releases" heading on a profile
      reads as something broken rather than as something absent. -->
 {#if releases.length > 0}
-	<ProfileSection title="Releases" note={`${releases.length} on CMC`}>
+	<ProfileSection
+		title={m.directory_profile_releases_box_title()}
+		note={m.directory_profile_releases_box_note_body({ length: releases.length })}
+	>
 		<ul class="space-y-3">
 			{#each releases as release (release.id)}
 				<li>
 					<a
 						class="flex items-center gap-3 rounded p-2 transition-colors hover:bg-base-200"
-						href={resolve(`/music/${bandSlug}/${release.slug}`)}
+						href={resolve(`music/${bandSlug}/${release.slug}`)}
 					>
 						{#if release.coverUrl}
 							<img src={release.coverUrl} alt="" class="size-14 shrink-0 rounded object-cover" />
@@ -61,7 +65,9 @@
 							</span>
 						</span>
 						<span class="shrink-0 text-muted">
-							{release.priceMinCents === 0 ? 'Free' : formatCents(release.priceMinCents)}
+							{release.priceMinCents === 0
+								? m.directory_profile_releases_box_free_text()
+								: formatCents(release.priceMinCents)}
 						</span>
 					</a>
 				</li>

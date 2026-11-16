@@ -18,14 +18,14 @@ let crewFor: string | null = null;
 const can = vi.fn(async (_cap: string, scope?: { eventId?: string }) =>
 	scope?.eventId ? everywhere || scope.eventId === crewFor : everywhere
 );
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...a: unknown[]) => requireCapability(...a),
 	requireUser: () => requireUser(),
 	can: (...a: [string, { eventId?: string }?]) => can(...a)
 }));
 
 const mintConnectionToken = vi.fn();
-vi.mock('$lib/server/finance/terminal-service', () => ({
+vi.mock('#lib/server/finance/terminal-service.js', () => ({
 	mintConnectionToken: () => mintConnectionToken()
 }));
 
@@ -37,14 +37,42 @@ const door = {
 	cancelDoorSale: vi.fn(),
 	fulfillDoorSale: vi.fn()
 };
-vi.mock('$lib/server/ticket/door-sale', () => door);
+vi.mock('#lib/server/ticket/door-sale.js', () => door);
+
+const gift = {
+	doorDonationEventId: vi.fn(async () => null as string | null),
+	startDoorDonation: vi.fn(),
+	getDoorDonation: vi.fn(),
+	cancelDoorDonation: vi.fn(),
+	fulfillDoorDonation: vi.fn()
+};
+vi.mock('#lib/server/finance/door-donation.js', () => gift);
 
 let driver = 'fake';
-vi.mock('$lib/server/stripe', () => ({ paymentDriver: () => driver }));
+vi.mock('#lib/server/stripe.js', () => ({ paymentDriver: () => driver }));
 
 const completeFakeTerminalPayment = vi.fn((id: string) => ({ id, status: 'succeeded' }));
-vi.mock('$lib/server/finance/gateway/fake-gateway', () => ({
+vi.mock('#lib/server/finance/gateway/fake-gateway.js', () => ({
 	completeFakeTerminalPayment: (id: string) => completeFakeTerminalPayment(id)
+}));
+
+const listBriefingsForEvents = vi.fn(
+	async (_u: string, _e: string[]) =>
+		[] as { eventId: string; roleName: string; articleId: string }[]
+);
+const listConfirmedSignupsForEvents = vi.fn(
+	async (_u: string, _e: string[]) => [] as { eventId: string; signupId: string }[]
+);
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
+	listBriefingsForEvents: (u: string, e: string[]) => listBriefingsForEvents(u, e),
+	listConfirmedSignupsForEvents: (u: string, e: string[]) => listConfirmedSignupsForEvents(u, e)
+}));
+const listReadableArticles = vi.fn(async (ids: readonly string[]) =>
+	ids.filter((id) => id !== 'art-draft').map((id) => ({ id, title: id, slug: id, summary: null }))
+);
+vi.mock('#lib/server/help/help-service.js', () => ({
+	resolveHelpReader: async () => ({ audience: 'member', capabilities: [] }),
+	listReadableArticles: (ids: readonly string[]) => listReadableArticles(ids)
 }));
 
 const remote = (await import('./door.remote')) as unknown as Record<
@@ -63,18 +91,23 @@ beforeEach(() => {
 	requireCapability.mockResolvedValue({ id: 'staff-1' });
 	door.listDoorEvents.mockResolvedValue([]);
 	door.doorSaleEventId.mockResolvedValue('evt-1');
+	gift.doorDonationEventId.mockResolvedValue(null);
+	listBriefingsForEvents.mockResolvedValue([]);
+	listConfirmedSignupsForEvents.mockResolvedValue([]);
 });
 
 describe('the door remotes', () => {
 	it.each([
 		['getTerminalConnection', 'evt-1'],
-		['startDoorSale', { eventId: 'evt-1', quantity: 1, unitPriceCents: 1000 }]
+		['startDoorSale', { eventId: 'evt-1', quantity: 1, unitPriceCents: 1000 }],
+		['startDoorDonation', { eventId: 'evt-1', amountCents: 2500 }]
 	])('%s asks for finance.collect on the show, before touching anything', async (name, arg) => {
 		forbidden();
 		await expect(remote[name](arg)).rejects.toMatchObject({ status: 403 });
 		expect(requireCapability).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-1' });
 		expect(mintConnectionToken).not.toHaveBeenCalled();
-		for (const fn of Object.values(door)) expect(fn).not.toHaveBeenCalled();
+		for (const fn of [...Object.values(door), ...Object.values(gift)])
+			expect(fn).not.toHaveBeenCalled();
 	});
 
 	it.each([['getDoorSale'], ['cancelDoorSale'], ['simulateDoorTap']])(
@@ -88,6 +121,45 @@ describe('the door remotes', () => {
 				expect(fn).not.toHaveBeenCalled();
 		}
 	);
+
+	it.each([['getDoorSale'], ['cancelDoorSale'], ['simulateDoorTap']])(
+		"%s asks for finance.collect on a donation's own show, and does nothing else when refused",
+		async (name) => {
+			door.doorSaleEventId.mockResolvedValue(null);
+			gift.doorDonationEventId.mockResolvedValue('evt-2');
+			forbidden();
+			await expect(remote[name]('pi_g')).rejects.toMatchObject({ status: 403 });
+			expect(requireCapability).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-2' });
+			for (const fn of [gift.getDoorDonation, gift.cancelDoorDonation, gift.fulfillDoorDonation])
+				expect(fn).not.toHaveBeenCalled();
+		}
+	);
+
+	it('routes a donation to the donation service, never the ticket one', async () => {
+		door.doorSaleEventId.mockResolvedValue(null);
+		gift.doorDonationEventId.mockResolvedValue('evt-1');
+		gift.getDoorDonation.mockResolvedValue({ status: 'paid', amountCents: 2500 });
+		await expect(remote.getDoorSale('pi_g')).resolves.toEqual({
+			status: 'paid',
+			quantity: 0,
+			donationCents: 2500
+		});
+		await remote.cancelDoorSale('pi_g');
+		await remote.simulateDoorTap('pi_g');
+		expect(gift.cancelDoorDonation).toHaveBeenCalledWith('pi_g');
+		expect(gift.fulfillDoorDonation).toHaveBeenCalledWith({ id: 'pi_g', status: 'succeeded' });
+		for (const fn of [door.getDoorSale, door.cancelDoorSale, door.fulfillDoorSale])
+			expect(fn).not.toHaveBeenCalled();
+	});
+
+	it('takes a donation as the staffer who is signed in', async () => {
+		await remote.startDoorDonation({ eventId: 'evt-1', amountCents: 2500, staffUserId: 'x' });
+		expect(gift.startDoorDonation).toHaveBeenCalledWith({
+			eventId: 'evt-1',
+			amountCents: 2500,
+			staffUserId: 'staff-1'
+		});
+	});
 
 	it('refuses a payment id that is no door sale, without asking the matrix', async () => {
 		door.doorSaleEventId.mockResolvedValue(null);
@@ -132,8 +204,16 @@ describe('the door remotes', () => {
 			eventId: 'evt-1',
 			quantity: 2,
 			unitPriceCents: 1500,
+			payment: 'card',
 			staffUserId: 'staff-1'
 		});
+	});
+
+	it('passes a cash sale through as cash', async () => {
+		await remote.startDoorSale({ eventId: 'evt-1', quantity: 1, payment: 'cash' });
+		expect(door.startDoorSale).toHaveBeenCalledWith(
+			expect.objectContaining({ payment: 'cash', unitPriceCents: 0 })
+		);
 	});
 
 	it('simulates a tap only under the fake driver', async () => {
@@ -146,8 +226,49 @@ describe('the door remotes', () => {
 	});
 
 	it('tells the screen whether it may simulate', async () => {
-		await expect(remote.getDoorEvents()).resolves.toEqual({ events: [], canSimulate: true });
+		await expect(remote.getDoorEvents()).resolves.toMatchObject({ canSimulate: true });
 		driver = 'stripe';
-		await expect(remote.getDoorEvents()).resolves.toEqual({ events: [], canSimulate: false });
+		await expect(remote.getDoorEvents()).resolves.toMatchObject({ canSimulate: false });
+	});
+
+	it("shows the caller's role briefings for the listed shows, once each and only readable ones", async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }, { id: 'evt-2' }]);
+		listBriefingsForEvents.mockResolvedValue([
+			{ eventId: 'evt-2', roleName: 'Door', articleId: 'art-door' },
+			{ eventId: 'evt-2', roleName: 'Door lead', articleId: 'art-door' },
+			{ eventId: 'evt-2', roleName: 'Bar', articleId: 'art-draft' }
+		]);
+		const { briefings } = (await remote.getDoorEvents()) as { briefings: { id: string }[] };
+
+		expect(listBriefingsForEvents).toHaveBeenCalledWith('staff-1', ['evt-2']);
+		expect(briefings.map((b) => b.id)).toEqual(['art-door']);
+	});
+
+	// The door screen links back to the list it admits people from (#2798).
+	type DoorLists = { doorLists: { eventId: string; signupId: string | null }[] };
+
+	it("points a door volunteer at their own shift's list", async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }, { id: 'evt-2' }]);
+		listConfirmedSignupsForEvents.mockResolvedValue([{ eventId: 'evt-2', signupId: 's-2' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([{ eventId: 'evt-2', signupId: 's-2' }]);
+	});
+
+	it('offers no list to a volunteer without a signup on the show', async () => {
+		everywhere = false;
+		crewFor = 'evt-2';
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-2' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([]);
+	});
+
+	it('points staff at the staff list for every show', async () => {
+		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }]);
+		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
+		expect(doorLists).toEqual([{ eventId: 'evt-1', signupId: null }]);
 	});
 });

@@ -6,18 +6,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * work order. Against a real SQLite replayed from the migrations.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	})
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb
 }));
 
 const { addDutyListItem, updateDutyListItem, applyDutyList, getDutyListDetail } =
@@ -154,12 +148,12 @@ describe("the coordinator's queue", () => {
 		]);
 	});
 
-	it('counts on the badge only what the queue lists (#1828)', async () => {
-		const { listWorkOrders } = await import('./work-order-service');
+	it("counts no task without a shift on Volunteering's badge (#2625)", async () => {
 		const { countVolunteerWorkWaiting } = await import('./volunteer-signup-service');
 		exec(`insert into work_order (id, volunteer_role_id, event_id, group_id)
 			values ('owned', 'role-lead', 'evt', 'g-book'), ('staffs', 'role-lead', 'evt', null)`);
 
-		expect(await countVolunteerWorkWaiting()).toBe((await listWorkOrders()).length);
+		// Work with no time yet is Tasks' chip, whoever owns it.
+		expect(await countVolunteerWorkWaiting()).toBe(0);
 	});
 });

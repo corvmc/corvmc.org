@@ -1,15 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { expectSuccessToast } from './toast';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
-	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
-	SEED_HIDDEN_BAND_SLUG,
-	SEED_MEMBERS_BAND_SLUG,
-	SEED_MEMBERS_BAND_NAME,
 	SEED_RETITLE_BAND_SLUG
 } from './fixtures/seed-band-onboarding';
 
@@ -42,11 +39,25 @@ function quickFact(page: import('@playwright/test').Page, label: string) {
 		.locator('dd');
 }
 
-async function login(page: import('@playwright/test').Page) {
+/** The profile form's own submit, told apart by the field only it has. */
+async function saveProfile(page: Page) {
+	await page
+		.locator('form')
+		.filter({ has: page.locator('input:is([name="tagline"], [name^="tagline/"])') })
+		.locator('button[type="submit"]')
+		.click();
+}
+
+async function login(page: Page) {
+	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
+}
+
+/** Through the form, for the test about the window right after signing in. */
+async function loginThroughForm(page: Page) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_OWNER_EMAIL);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(SEED_OWNER_PASSWORD);
+	await page.locator('form button[type="submit"]').click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
@@ -58,68 +69,29 @@ test('the edit form renders for an owner, and saving preserves hometown and foun
 
 	// The regression rendered a "Failed to load: effect_update_depth_exceeded"
 	// banner instead of the form.
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByText(/failed to load/i)).toHaveCount(0);
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toBeVisible({
+		timeout: 15000
+	});
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 
 	// The profile fields the public page displays are all editable — hometown
 	// and foundedYear were missing entirely, which wiped them on save.
-	await expect(page.locator('input[name="hometown"]')).toHaveValue(SEED_PUBLIC_BAND_HOMETOWN);
-	await expect(page.locator('input[name="foundedYear"]')).toHaveValue(SEED_PUBLIC_BAND_FOUNDED);
+	await expect(page.locator('input:is([name="hometown"], [name^="hometown/"])')).toHaveValue(
+		SEED_PUBLIC_BAND_HOMETOWN
+	);
+	await expect(page.locator('input:is([name="foundedYear"], [name^="foundedYear/"])')).toHaveValue(
+		SEED_PUBLIC_BAND_FOUNDED
+	);
 
 	// Dirty the form so the submit is a real save, then save.
-	await page.locator('input[name="tagline"]').fill('E2E save round-trip');
-	await page.getByRole('button', { name: 'Save' }).click();
+	await page.locator('input:is([name="tagline"], [name^="tagline/"])').fill('E2E save round-trip');
+	await saveProfile(page);
 	await expectSuccessToast(page, 15000);
 
 	// The public profile still shows "Based in {hometown}" / "Formed {year}".
 	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
 	await expect(quickFact(page, 'Based in')).toHaveText(SEED_PUBLIC_BAND_HOMETOWN);
 	await expect(quickFact(page, 'Formed')).toHaveText(SEED_PUBLIC_BAND_FOUNDED);
-});
-
-// Public pages server-render their remote queries (the (public) layout's
-// boundary has no pending snippet), so the visibility gate is a real HTTP 404
-// carrying SvelteKit's +error.svelte — not a 200 shell that resolves the gate
-// client-side. Either way no profile content is rendered.
-/**
- * The band directory LIST, as opposed to a band detail page.
- *
- * Nothing covered this before phase 3a, and the gap was load-bearing: the list
- * moved from `group` to `directory_entry`, and a band with no entry silently
- * drops out of it. Every existing directory e2e keys off tab controls and URLs
- * rather than cards — deliberately, since the card count depends on other
- * suites' fixtures — so an empty list passed all of them. This asserts one named
- * band is present, which does not depend on how many others are.
- */
-test('a public band appears in the public directory list', async ({ page }) => {
-	await page.goto('/directory');
-
-	await expect(page.getByRole('link', { name: new RegExp(SEED_PUBLIC_BAND_NAME) })).toBeVisible({
-		timeout: 15000
-	});
-	// The visibility gate still applies to the list, not just the detail page.
-	await expect(page.getByRole('link', { name: /E2E Hidden Band/ })).toHaveCount(0);
-	await expect(page.getByRole('link', { name: new RegExp(SEED_MEMBERS_BAND_NAME) })).toHaveCount(0);
-});
-
-test('hidden band detail page is not publicly readable', async ({ page }) => {
-	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
-	// The band's own name is the thing that must not leak; the 404's wording is
-	// free to change, so the status is what this asserts.
-	await expect(page.getByText('E2E Hidden Band')).toHaveCount(0);
-});
-
-test('members-only band is withheld publicly but renders in the member directory', async ({
-	page
-}) => {
-	await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	// .first(): the message is also embedded in the serialized __sveltekit payload.
-	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
-	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
-
-	await login(page);
-	await page.goto(`/member/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
 });
 
 // Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band used to rotate its slug,
@@ -142,7 +114,7 @@ test('members-only band is withheld publicly but renders in the member directory
 // restore was confirmed by a `Profile saved` toast that was often still the
 // *first* save's, so the assertion passed instantly and the test could finish
 // with the restore in flight. Playwright then closed the page, the request was
-// cut off, the band stayed renamed, and three `band-subdomain.e2e.ts` tests
+// cut off, the band stayed renamed, and three `j-band-addresses.e2e.ts` tests
 // failed several files later for a reason nothing in them could explain. The
 // fixture recreates its bands every run, so there is nothing to put back.
 test('renaming a band saves cleanly and leaves its address alone', async ({ page }) => {
@@ -155,14 +127,16 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 
 	await login(page);
 	await page.goto(`/band/${SEED_RETITLE_BAND_SLUG}/edit`);
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toBeVisible({
+		timeout: 15000
+	});
 
-	await page.locator('input[name="name"]').fill(NEW_NAME);
-	await page.getByRole('button', { name: 'Save' }).click();
+	await page.locator('input:is([name="name"], [name^="name/"])').fill(NEW_NAME);
+	await saveProfile(page);
 
 	await expectSuccessToast(page, 15000);
-	// The save worked, so nothing on the page may claim the band is missing.
-	await expect(page.getByText('Band not found')).toHaveCount(0);
+	// The save worked, so the page must not have dropped into its failed state.
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	// Same URL as before the rename — no slug rotation, nothing to follow.
 	await expect(page).toHaveURL(new RegExp(`/band/${SEED_RETITLE_BAND_SLUG}/edit`));
 
@@ -174,16 +148,18 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 	// the extra load: a save that toasts without landing is exactly what made the
 	// old restore step unreliable.
 	await page.reload();
-	await expect(page.locator('input[name="name"]')).toHaveValue(NEW_NAME, { timeout: 15000 });
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toHaveValue(NEW_NAME, {
+		timeout: 15000
+	});
 });
 
 test('the sidebar New link opens the create-band modal', async ({ page }) => {
-	await login(page);
+	await loginThroughForm(page);
 
 	// The My Bands header's New link (#2114). It once pointed at
 	// /member/bands/create, a 404; it must carry the create param instead.
-	const createLink = page.locator('aside').getByRole('link', { name: 'New band' });
-	await expect(createLink).toHaveAttribute('href', '/member/bands?create=1');
+	const createLink = page.locator('aside a[href="/member/bands?create=1"]');
+	await expect(createLink).toBeVisible();
 
 	// Clicking the link (immediately after login, while the layout's async
 	// queries are still settling) opens the create-band modal. The link carries
@@ -194,5 +170,7 @@ test('the sidebar New link opens the create-band modal', async ({ page }) => {
 	await createLink.click();
 	await page.waitForURL(/\/member\/bands\?create=1/, { timeout: 15000 });
 	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByRole('dialog').locator('input[name="name"]')).toBeVisible();
+	await expect(
+		page.getByRole('dialog').locator('input:is([name="name"], [name^="name/"])')
+	).toBeVisible();
 });

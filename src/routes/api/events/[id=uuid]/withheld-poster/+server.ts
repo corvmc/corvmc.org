@@ -2,10 +2,10 @@ import { error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
-import { getById } from '$lib/server/event/event-service';
-import { getPrivateObject } from '$lib/server/private-storage';
-import { isWithheldPosterKey } from '$lib/server/storage-keys';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getById } from '#lib/server/event/event-service.js';
+import { getPrivateObject } from '#lib/server/private-storage.js';
+import { isWithheldPosterKey } from '#lib/server/storage-keys.js';
 
 /**
  * The one way a withheld poster reaches a person.

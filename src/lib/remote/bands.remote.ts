@@ -1,26 +1,33 @@
+import { reservationTrack } from '#lib/utils/reservation-actions.js';
+import { listPositionsHeld } from '#lib/server/group/position-service.js';
 import { z } from 'zod';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
-import { query, getRequestEvent } from '$app/server';
+import { query } from '$app/server';
 import { form } from './_remote';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { eq, and, desc, gte } from 'drizzle-orm';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
-import { getBandTotals } from '$lib/server/band/band-totals-service';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { listAll, listForUser, partitionByStatus } from '#lib/server/band/band-service.js';
+import { getBandTotals } from '#lib/server/band/band-totals-service.js';
 import {
 	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
+} from '#lib/server/entity/refs.js';
 import {
 	getByIdWithDetails,
 	getMembers,
+	getRosterMembers,
 	update,
 	updateMember,
 	updateOwnMembership,
@@ -38,15 +45,16 @@ import {
 	reactivate,
 	setTier,
 	BandMemberExistsError
-} from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/band-site';
+} from '#lib/server/band/band-service.js';
+import { bandTiers } from '#lib/server/db/schema/band-site.js';
 import {
 	createInvite as createEmailInviteService,
 	listForGroup as listEmailInvitesForGroup,
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
-} from '$lib/server/group/group-invite-service';
-import { requireGroupRole } from '$lib/server/group/group-context';
+} from '#lib/server/group/group-invite-service.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ===========================================================================
 // Queries — Staff (list)
@@ -90,7 +98,7 @@ export const getStaffBand = query(z.string(), async (id) => {
 
 export const getStaffBandMembers = query(z.string(), async (bandId) => {
 	await requireCapability('band.read');
-	return getMembers(bandId);
+	return getRosterMembers(bandId);
 });
 
 export const getStaffBandReservations = query(z.string(), async (bandId) => {
@@ -156,11 +164,11 @@ export const getBandEmailInvites = query(z.string(), async (bandId) => {
 // ===========================================================================
 
 export const getBandUpcoming = query(z.string(), async (bandId) => {
-	// `allowStaff`, like every band-panel read below it. `getBandLayout` admits a
+	// `staff`, like every band-panel read below it. `getBandLayout` admits a
 	// staff non-member and reports `userRole: 'staff'`, but the member-only guard
 	// these carried 403'd them — so staff rendered the panel frame and every card
-	// inside it failed. See groups-spec.md § The guard.
-	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	// inside it failed.
+	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	const now = new Date();
 	const rows = await db
 		.select({
@@ -189,12 +197,14 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	return rows.map((r) => ({
 		...r,
 		ref: toReservationRef(r.ref, band),
+		// The one status the card shows, as staff read it (#2861).
+		track: reservationTrack(r.ref, now),
 		bookedBy: toMemberRef(r.bookedBy)
 	}));
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
-	await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	// `getMembers` already returns a presentation ref per row, alias included.
 	const members = partitionByStatus(await getMembers(bandId));
 	return {
@@ -216,7 +226,7 @@ export const getBandMembersPage = query(z.string(), async (bandId) => {
 	// Roster changes go through staff tools." — could never render, because the
 	// member-only guard 403'd staff before the page did. `role` comes back as
 	// `'staff'` now, so `canManage` is false and that branch is reachable.
-	const { role } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	const { role } = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 	const canManage = role === 'owner' || role === 'admin';
 
 	const [members, emailInvites] = await Promise.all([
@@ -276,21 +286,21 @@ export const getMemberBands = query(async () => {
 
 export const updateStaffBand = form(
 	z.object({
+		id: z.string().min(1),
 		name: z.string().trim().min(1).max(SHORT_TEXT_MAX),
 		bio: z.string().trim().max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		await requireCapability('band.manage');
-		const { params } = getRequestEvent();
-		const id = params.id!;
-		await update(id, { name: data.name, bio: data.bio || undefined });
-		void getStaffBandPage(id).refresh();
+		await update(data.id, { name: data.name, bio: data.bio || undefined });
+		void getStaffBandPage(data.id).refresh();
 		return { success: true };
 	}
 );
 
 export const updateMemberRole = form(
 	z.object({
+		bandId: z.string().min(1),
 		memberId: z.string().min(1),
 		role: z.enum(['admin', 'member']),
 		position: z.string().optional()
@@ -298,15 +308,16 @@ export const updateMemberRole = form(
 	async (data) => {
 		await requireCapability('band.manageMembers');
 		try {
-			await updateMember(data.memberId, {
-				role: data.role,
-				position: data.position ?? undefined
-			});
+			// Scoped to the band, so a member id from another band is not found.
+			await updateMember(
+				data.memberId,
+				{ role: data.role, position: data.position ?? undefined },
+				data.bandId
+			);
 		} catch (err) {
 			mapDomainError(err);
 		}
-		const { params } = getRequestEvent();
-		void getStaffBandPage(params.id!).refresh();
+		void getStaffBandPage(data.bandId).refresh();
 		return { success: true };
 	}
 );
@@ -386,15 +397,35 @@ export const removeBandMember = form(
 	z.object({
 		memberId: z.string().min(1)
 	}),
-	async (data) => {
+	writesAudit('band.member_removed', async (data) => {
 		await requireCapability('band.manageMembers');
+		// Read first: the row is gone after, and these names are all the log keeps of it.
+		const [row] = await db
+			.select({
+				bandId: groupMember.groupId,
+				bandName: group.name,
+				userId: groupMember.userId,
+				memberName: user.name
+			})
+			.from(groupMember)
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.innerJoin(user, eq(user.id, groupMember.userId))
+			.where(eq(groupMember.id, data.memberId))
+			.limit(1);
 		try {
 			await removeMemberService(data.memberId);
 		} catch (err) {
 			mapDomainError(err);
 		}
+		if (row) {
+			await recordAuditEntry({
+				action: 'band.member_removed',
+				subject: { type: 'band', id: row.bandId, label: row.bandName },
+				details: { memberId: data.memberId, userId: row.userId, memberName: row.memberName }
+			});
+		}
 		return { success: true };
-	}
+	})
 );
 
 export const revokeBandInvite = form(
@@ -762,9 +793,14 @@ export const getUserBands = query(z.string(), async (userId) => {
 	// Every kind and every status: a staff member looking at one person's record
 	// wants the whole picture, including an invitation that was never accepted
 	// and any club or committee they sit on.
-	const bands = await listForUser(userId, groupKinds);
+	const [bands, held] = await Promise.all([
+		listForUser(userId, groupKinds),
+		listPositionsHeld(userId)
+	]);
 	return bands.map((b) => ({
 		...b,
+		// A committee's defined positions this person holds (#2988).
+		positions: held.filter((p) => p.groupId === b.id).map((p) => p.name),
 		// The member count is what qualifies a band in this list, so it takes the
 		// ref's subline rather than a column of its own.
 		ref: {
@@ -789,4 +825,16 @@ export const getStaffBandPage = query(z.string(), async (id) => {
 	]);
 
 	return { band, members, reservations, emailInvites };
+});
+
+/** A band's History card: deactivations, and roster and grant changes made by staff. */
+export const getBandHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('band.read');
+	return listAuditFeed(
+		[
+			{ type: 'band', id },
+			{ type: 'group', id }
+		],
+		{ limit }
+	);
 });

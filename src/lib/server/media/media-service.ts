@@ -1,11 +1,11 @@
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import type { Media } from '$lib/server/db/schema/media';
-import type { MediaSlot } from '$lib/server/db/schema/media';
-import type { AttachableType } from '$lib/config';
-import { eventListing } from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import type { Media } from '#lib/server/db/schema/media.js';
+import type { MediaSlot } from '#lib/server/db/schema/media.js';
+import type { AttachableType } from '#lib/config.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -313,9 +313,8 @@ export async function countAttachments(mediaId: string): Promise<number> {
  * the last sweep. This returns the `EXISTS` predicate that excludes them, one
  * arm per `attachableType`, so there is a single place that has to be right.
  *
- * Note this is narrower than `docs/specs/shipped/media-spec.md` claims: the spec says a
- * per-group quota needs it, and a per-group quota does not, because it filters
- * to a live group's id already. Global reporting totals are the real case.
+ * A per-group quota does not need it, because it filters to a live group's id
+ * already. Global reporting totals are the real case.
  */
 export function liveAttachmentCondition(): SQL {
 	return sql`(
@@ -347,14 +346,4 @@ export async function findByKey(key: string): Promise<Media | null> {
 export async function isKeyReferenced(key: string): Promise<boolean> {
 	const row = await findByKey(key);
 	return !!row && (await countAttachments(row.id)) > 0;
-}
-
-/** Total bytes referenced by live attachments. Uses the guard above. */
-export async function totalLiveBytes(): Promise<number> {
-	const [row] = await db
-		.select({ bytes: sql<number>`coalesce(sum(${media.byteSize}), 0)`.as('bytes') })
-		.from(mediaAttachment)
-		.innerJoin(media, eq(media.id, mediaAttachment.mediaId))
-		.where(liveAttachmentCondition());
-	return Number(row?.bytes ?? 0);
 }

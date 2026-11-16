@@ -1,15 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
 	import ProfileSection from './ProfileSection.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { submitBandContactForm } from '$lib/remote/band-contact.remote';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { submitBandContactForm } from '#lib/remote/band-contact.remote.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
 
 	/**
 	 * The only route to an act from its public page.
@@ -32,9 +29,11 @@
 	const fields = $derived(rf.fields);
 </script>
 
-<ProfileSection title="Booking">
+<ProfileSection title={m.directory_profile_contact_form_title()}>
 	{#if submitted}
-		<p class="contact__done">Sent. {bandName} will get back to you.</p>
+		<p class="contact__done">
+			{m.directory_profile_contact_form_sent_will_get_back_text({ bandName })}
+		</p>
 	{:else}
 		<Form
 			remote={rf}
@@ -50,19 +49,34 @@
 			class="contact__form"
 		>
 			<input {...fields.slug.as('hidden', slug)} />
-			<FormField field={fields.name} type="text" label="Your name" required />
-			<FormField field={fields.email} type="email" label="Your email" required />
-			<FormField field={fields.message} type="textarea" label="Message" required />
+			<FormField
+				field={fields.name}
+				type="text"
+				label={m.directory_profile_contact_form_name_label()}
+				required
+			/>
+			<FormField
+				field={fields.email}
+				type="email"
+				label={m.directory_profile_contact_form_email_label()}
+				required
+			/>
+			<FormField
+				field={fields.message}
+				type="textarea"
+				label={m.directory_profile_contact_form_message_label()}
+				required
+			/>
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
-				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				responseFieldName={fields.turnstileToken.as('hidden', '').name}
 				theme="auto"
 				bind:reset={resetTurnstile}
 			/>
 			{#if failure}
 				<p class="contact__error" role="alert">{failure}</p>
 			{/if}
-			<SubmitButton label="Send" />
+			<SubmitButton label={m.directory_profile_contact_form_send_label()} />
 		</Form>
 	{/if}
 </ProfileSection>

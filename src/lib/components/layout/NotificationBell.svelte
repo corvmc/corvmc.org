@@ -1,18 +1,22 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
-	import { browser } from '$app/environment';
-	import { invalidateAll } from '$app/navigation';
-	import { markNotificationRead, markAllNotificationsRead } from '$lib/remote/notifications.remote';
-	import { timeAgo } from '$lib/utils/format';
+	import { browser } from '$app/env';
+	import { refreshAll } from '$app/navigation';
+	import {
+		markNotificationRead,
+		markAllNotificationsRead
+	} from '#lib/remote/notifications.remote.js';
+	import { timeAgo } from '#lib/utils/format.js';
 	import type { ChromeNotification } from './chrome';
 
 	// Props, not a query of its own. This component is mounted by `AppTopbar` on
 	// every authenticated page, so a `getNotifications()` here was a third remote
 	// query racing the layout's and the page's (#569). Each panel's layout query
-	// assembles it now — see `appChrome` in `$lib/remote/layout.remote`.
+	// assembles it now — see `appChrome` in `#lib/remote/layout.remote.js`.
 	let { notifications, unreadCount }: { notifications: ChromeNotification[]; unreadCount: number } =
 		$props();
 
@@ -46,7 +50,7 @@
 		});
 
 		eventSource.addEventListener('message', () => {
-			invalidateAll();
+			refreshAll();
 		});
 
 		eventSource.onerror = () => {
@@ -81,12 +85,12 @@
 
 	async function markRead(id: string) {
 		await markNotificationRead({ id });
-		invalidateAll();
+		refreshAll();
 	}
 
 	async function markAllRead() {
 		await markAllNotificationsRead();
-		invalidateAll();
+		refreshAll();
 	}
 
 	function handleClickOutside(e: MouseEvent) {
@@ -113,7 +117,7 @@
 		size="sm"
 		shape="circle"
 		onclick={toggleDropdown}
-		aria-label="Notifications"
+		aria-label={m.layout_notifications_label()}
 	>
 		<IconBell size={20} />
 		{#if unreadCount > 0}
@@ -130,17 +134,19 @@
 			class="absolute top-full right-0 z-1000 mt-2 w-80 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
-				<span class="text-sm font-semibold">Notifications</span>
+				<span class="text-sm font-semibold">{m.layout_notifications_text()}</span>
 				{#if unreadCount > 0}
-					<button class="text-xs text-primary hover:underline" onclick={markAllRead}>
-						Mark all read
+					<button type="button" class="text-xs text-primary hover:underline" onclick={markAllRead}>
+						{m.layout_notifications_mark_all_read_label()}
 					</button>
 				{/if}
 			</div>
 
 			<div class="max-h-80 overflow-y-auto">
 				{#if notifications.length === 0}
-					<div class="p-6 text-center text-sm text-base-content/60">No notifications yet</div>
+					<div class="p-6 text-center text-sm text-base-content/60">
+						{m.layout_notifications_empty_text()}
+					</div>
 				{:else}
 					{#each notifications as n (n.id)}
 						{@const isUnread = !n.readAt}
@@ -175,7 +181,9 @@
 											     primary from the panel, and `sr-only` carries it into the
 											     accessibility tree, where 28 rows read identically. -->
 											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
-												{#if isUnread}<span class="sr-only">Unread. </span>{/if}{n.title}
+												{#if isUnread}<span class="sr-only"
+														>{m.layout_notification_unread_text()}
+													</span>{/if}{n.title}
 											</p>
 											{#if n.body}
 												<p class="truncate text-xs text-base-content/60">{n.body}</p>
@@ -189,9 +197,10 @@
 									<div class="flex items-start gap-2">
 										{#if isUnread}
 											<button
+												type="button"
 												class="mt-1.5 h-2 w-2 shrink-0 cursor-pointer rounded-full bg-primary"
 												onclick={() => markRead(n.id)}
-												aria-label="Mark as read"
+												aria-label={m.layout_notification_mark_read_label()}
 											></button>
 										{:else}
 											<span class="w-2 shrink-0"></span>

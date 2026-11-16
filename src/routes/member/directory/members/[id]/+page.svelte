@@ -1,40 +1,45 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { env } from '$env/dynamic/public';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
-	import { getDirectoryMember, getMemberPastShows } from '$lib/remote/directory.remote';
-	import { ReportContentAction } from '$lib/components/actions';
-	import MessageMemberAction from '$lib/components/actions/MessageMemberAction.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { pageTitle } from '$lib/config';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import * as env from '$app/env/public';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
+	import { getDirectoryMember, getMemberPastShows } from '#lib/remote/directory.remote.js';
+	import { ReportContentAction } from '#lib/components/actions/index.js';
+	import MessageMemberAction from '#lib/components/actions/MessageMemberAction.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { pageTitle } from '#lib/config.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
-	import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import ProfileSection from '#lib/components/directory/profile/ProfileSection.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const BANDS_BASE = '/member/directory/bands';
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	// One query — see the note on `getDirectoryMember`. The two permission flags are decided
 	// server-side now; the "message yourself" reasoning moved there with them.
 	let data = $derived(await getDirectoryMember(id));
 
 	const member = $derived(data.profile);
 	const shows = $derived(data.shows);
+	const positions = $derived(data.positions);
 	const canReport = $derived(data.viewer.canReport);
 	const canMessage = $derived(data.viewer.canMessage);
 
@@ -57,21 +62,29 @@
 		if (!member) return [];
 		const p: ProfilePill[] = [];
 		if (member.memberNumber != null)
-			p.push({ label: `Member · #${String(member.memberNumber).padStart(4, '0')}` });
-		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
-		if (member.availableForHire) p.push({ label: 'Available for hire' });
-		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
-		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
+			p.push({
+				label: m.member_directory_members_id_member_label({
+					padStart: String(member.memberNumber).padStart(4, '0')
+				})
+			});
+		if (member.lookingForBand)
+			p.push({ label: m.member_directory_members_id_looking_band_label(), variant: 'warm' });
+		if (member.availableForHire) p.push({ label: m.member_available_hire_label() });
+		if (member.teachesLessons) p.push({ label: m.member_teaches_privately_label() });
+		if (member.openToCollaboration) p.push({ label: m.member_open_collaboration_label() });
 		return p;
 	});
 
 	let facts = $derived(
 		member
 			? [
-					{ label: 'Joined', value: String(new Date(member.createdAt).getFullYear()) },
-					{ label: 'Pronouns', value: member.pronouns },
-					{ label: 'Based in', value: member.hometown },
-					{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+					{
+						label: m.member_directory_members_id_joined_label(),
+						value: String(new Date(member.createdAt).getFullYear())
+					},
+					{ label: m.member_pronouns_label(), value: member.pronouns },
+					{ label: m.member_based_label(), value: member.hometown },
+					{ label: m.member_looking_label(), value: member.lookingForBand ? 'A band' : null }
 				]
 			: []
 	);
@@ -99,7 +112,9 @@
 {#if member}
 	<PageContent width="3xl">
 		<div class="flex items-center justify-between">
-			<a href={resolve('/member/directory')} class="link text-muted">&larr; Back to Directory</a>
+			<a href={resolve('member/directory')} class="link text-muted"
+				>{m.member_directory_members_id_back_directory_text()}</a
+			>
 			<div class="flex items-center gap-2">
 				{#if canMessage}
 					<MessageMemberAction recipientId={id} recipientName={member.name} />
@@ -127,7 +142,7 @@
 
 		<ProfileGrid>
 			{#snippet main()}
-				<ProseBlock label="Bio" markdown={member.bio} />
+				<ProseBlock kind="bio" markdown={member.bio} />
 				<ListenStrip {links} />
 				<ShowsBox
 					upcoming={shows.upcoming}
@@ -139,19 +154,37 @@
 				/>
 			{/snippet}
 			{#snippet side()}
-				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
-				<TagCloud label="Plays · Genres" {tags} />
-				<TagCloud label="Skills" tags={member.skills ?? []} />
+				<CrossRefList
+					kind="bands"
+					items={bandRefs}
+					note={m.member_directory_members_id_note_body({ length: bandRefs.length })}
+				/>
+				{#if positions.length > 0}
+					<ProfileSection title={m.member_directory_members_id_positions_title()}>
+						<ul class="flex flex-col gap-1">
+							{#each positions as p (p.id)}
+								<li>
+									<span class="font-medium">{p.name}</span>
+									<span class="text-muted">· {p.committee}</span>
+								</li>
+							{/each}
+						</ul>
+					</ProfileSection>
+				{/if}
+				<TagCloud label={m.member_directory_members_id_plays_genres_label()} {tags} />
+				<TagCloud label={m.member_skills_label()} tags={member.skills ?? []} />
 				<LinksBox {links} />
-				<ContactBox label="Contact" {contact} />
+				<ContactBox kind="contact" {contact} />
 			{/snippet}
 		</ProfileGrid>
 	</PageContent>
 {:else}
 	<Alert type="warning">
-		Member not found or profile is hidden.
+		{m.member_directory_members_id_member_not_found_profile_hidden_body()}
 		{#snippet action()}
-			<Button href="/member/directory" variant="default" size="sm">Back to Directory</Button>
+			<Button href="/member/directory" variant="default" size="sm"
+				>{m.member_directory_members_id_back_directory_2_label()}</Button
+			>
 		{/snippet}
 	</Alert>
 {/if}

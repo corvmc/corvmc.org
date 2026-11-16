@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One bar across both panes: the page and the way into Daily over the queue,
 	 * the open conversation's subject and actions over the thread (#1927).
@@ -8,8 +9,8 @@
 	 */
 	import { resolve } from '$app/paths';
 	import { IconPlayerPlay } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
 	import { doneToday } from './daily/session.svelte';
 	import { useInboxToolbar } from './toolbar.svelte';
 
@@ -24,22 +25,30 @@
 			? 'hidden lg:flex'
 			: 'flex w-full'}"
 	>
-		<h1 class="text-xl font-bold">Inbox</h1>
+		<h1 class="text-xl font-bold">{m.staff_inbox_inbox_toolbar_inbox_title()}</h1>
+
+		<Button href={resolve('staff/inbox/channels')} variant="ghost" size="sm" class="ms-auto">
+			{m.staff_inbox_channels_label()}
+		</Button>
 
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->
 		{#await getInboxThreadCounts() then counts}
 			{#if counts.open > 0}
 				<Button
-					href={resolve('/staff/inbox/daily')}
+					href={resolve('staff/inbox/daily')}
 					variant={doneToday() ? 'default' : 'primary'}
 					size="sm"
 					class="shrink-0"
 				>
 					<IconPlayerPlay size={16} />
-					{doneToday() ? 'Daily again' : 'Start Daily'} · {counts.open}
+					{doneToday()
+						? m.staff_inbox_inbox_toolbar_daily_again_label()
+						: m.staff_inbox_inbox_toolbar_start_daily_label()} · {counts.open}
 				</Button>
 			{/if}
+		{:catch}
+			<!-- Only a shortcut into Daily. -->
 		{/await}
 	</div>
 

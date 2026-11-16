@@ -1,9 +1,10 @@
 ---
-title: Reconcile Payments & Credits
+title: Reconcile payments & credits
 slug: staff-payments-credits
 category: staff-guide
 summary: Review payment records and the credit ledger.
 minRole: staff
+capabilities: finance.read, credit.read
 sortOrder: 15
 ---
 
@@ -15,7 +16,7 @@ method, status, and Stripe reference.
 
 ## Credits
 
-**Staff → Credits** is the ledger of credit activity — free practice hours and
+**Staff → Credits** is the ledger of credit activity — practice credits and
 equipment credits. Search by member and filter by credit type and source to see
 where credits came from and how they were used.
 

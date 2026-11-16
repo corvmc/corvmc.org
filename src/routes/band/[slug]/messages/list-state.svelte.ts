@@ -1,4 +1,4 @@
-import { getMyMessages } from '$lib/remote/direct-messages.remote';
+import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
 
 /**
  * The enquiry list's page, and the one way to refresh it.

@@ -1,13 +1,14 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getMemberCategories } from '$lib/remote/help.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import HelpSearch from '$lib/components/help/HelpSearch.svelte';
+	import { getMemberCategories } from '#lib/remote/help.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import HelpSearch from '#lib/components/help/HelpSearch.svelte';
 	import {
 		IconBook,
 		IconSettings,
@@ -50,7 +51,7 @@
 	};
 
 	function handleSelect(slug: string) {
-		goto(resolve(`/member/help/${slug}`));
+		goto(resolve(`member/help/${slug}`));
 	}
 
 	/** Enough to show what a category covers without the tallest card setting the row. */
@@ -59,12 +60,16 @@
 
 <!-- `3xl`, not `2xl`: 672px split into two columns is ~320px each, which
      wrapped every category name and description (#1045). -->
-<PageHeader width="3xl" title="Help Center" subtitle="Support" />
+<PageHeader
+	width="3xl"
+	title={m.member_help_center_title()}
+	subtitle={m.member_help_subtitle_body()}
+/>
 <PageContent width="3xl">
 	<HelpSearch onselect={handleSelect} />
 
 	{#if categories.length === 0}
-		<EmptyState message="No help articles available yet." />
+		<EmptyState message={m.member_help_message_body()} />
 	{:else}
 		<div class="grid gap-4 sm:grid-cols-2">
 			{#each categories as category (category.id)}
@@ -93,7 +98,7 @@
 								{#each category.articles.slice(0, ARTICLES_SHOWN) as article (article.slug)}
 									<li>
 										<a
-											href={resolve(`/member/help/${article.slug}`)}
+											href={resolve(`member/help/${article.slug}`)}
 											class="text-sm transition-colors hover:text-primary"
 										>
 											{article.title}
@@ -105,11 +110,11 @@
 								<!-- A count, not a link: there is no per-category page to go
 								     to, and the search above is how the rest are found. -->
 								<p class="mt-2 text-subtle text-sm">
-									and {category.articles.length - ARTICLES_SHOWN} more
+									{m.member_help_more_text({ value: category.articles.length - ARTICLES_SHOWN })}
 								</p>
 							{/if}
 						{:else}
-							<p class="mt-3 text-subtle italic">No articles yet</p>
+							<p class="mt-3 text-subtle italic">{m.member_help_no_articles_yet_text()}</p>
 						{/if}
 					</CardBody>
 				</Card>

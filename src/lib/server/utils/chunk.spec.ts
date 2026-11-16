@@ -1,20 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { chunk, chunkSize } from './chunk';
+import { chunk, chunkInsert } from './chunk';
 
-describe('chunkSize', () => {
-	// The point of the helper: the row budget falls as the row gets wider, and
-	// the four shapes in use each land on a different number.
-	it('divides the 100-parameter budget by column count', () => {
-		expect(chunkSize(4)).toBe(25);
-		expect(chunkSize(5)).toBe(20);
-		expect(chunkSize(8)).toBe(12);
-		expect(chunkSize(9)).toBe(11);
+/** A stand-in builder: each row binds as many parameters as it has entries. */
+const build = (group: number[][]) => ({ group, toSQL: () => ({ params: group.flat() }) });
+
+describe('chunkInsert', () => {
+	it('keeps every statement within 100 parameters', () => {
+		const rows = Array.from({ length: 60 }, () => [1, 2, 3, 4, 5]);
+		const statements = chunkInsert(rows, build);
+		expect(statements.map((s) => s.toSQL().params.length)).toEqual([100, 100, 100]);
 	});
 
-	it('never returns a size whose statement would exceed 100 parameters', () => {
-		for (let columns = 1; columns <= 100; columns++) {
-			expect(chunkSize(columns) * columns).toBeLessThanOrEqual(100);
-		}
+	it('sizes groups by what each row binds', () => {
+		const rows = [Array(60).fill(0), Array(30).fill(0), Array(20).fill(0)];
+		expect(chunkInsert(rows, build).map((s) => s.group.length)).toEqual([2, 1]);
+	});
+
+	it('returns nothing for no rows', () => {
+		expect(chunkInsert([], build)).toEqual([]);
 	});
 });
 

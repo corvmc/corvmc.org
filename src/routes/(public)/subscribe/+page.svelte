@@ -1,41 +1,43 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import { getPublicAudiences, subscribeToAudience } from '$lib/remote/marketing.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import { getPublicAudiences, subscribeToAudience } from '#lib/remote/marketing.remote.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
 
 	const { fields } = subscribeToAudience;
 
 	let audiences = $derived(await getPublicAudiences());
 
-	let selectedAudienceId = $state('');
+	// The radios are the `slug` field itself: picking a list is the answer it posts.
+	let selectedSlug = $state('');
 	let success = $state(false);
-
-	const selectedSlug = $derived(audiences.find((a) => a.id === selectedAudienceId)?.slug ?? '');
 </script>
 
 <div class="mx-auto max-w-lg space-y-6 p-6">
 	<div class="text-center">
-		<h1 class="text-2xl font-bold">Subscribe</h1>
-		<p class="mt-1 opacity-60">Join our mailing lists to stay in the loop.</p>
+		<h1 class="text-2xl font-bold">{m.public_subscribe_title()}</h1>
+		<p class="mt-1 opacity-60">{m.public_subscribe_join_our_mailing_lists_stay_text()}</p>
 	</div>
 
 	{#if success}
-		<Alert type="success">You've been subscribed! Check your inbox for future updates.</Alert>
+		<Alert type="success">{m.public_subscribe_ve_been_subscribed_check_inbox_body()}</Alert>
 		<Button
 			variant="ghost"
 			size="sm"
 			onclick={() => {
 				success = false;
-				selectedAudienceId = '';
+				selectedSlug = '';
 			}}
 		>
-			Subscribe to another list
+			{m.public_subscribe_subscribe_another_list_label()}
 		</Button>
 	{:else if audiences.length === 0}
-		<p class="text-center opacity-60">No mailing lists are currently accepting signups.</p>
+		<p class="text-center opacity-60">
+			{m.public_subscribe_no_mailing_lists_currently_accepting_text()}
+		</p>
 	{:else}
 		<Form
 			remote={subscribeToAudience}
@@ -44,22 +46,18 @@
 			}}
 			class="space-y-4"
 		>
-			<input {...fields.slug.as('hidden', selectedSlug)} />
-			<Field name="audience" label="Choose a list">
+			<Field field={fields.slug} label={m.public_subscribe_choose_list_label()}>
 				<div class="space-y-2">
 					{#each audiences as a (a.id)}
 						<label
-							class="label cursor-pointer gap-3 rounded-lg border px-4 py-3 {selectedAudienceId ===
-							a.id
+							class="label cursor-pointer gap-3 rounded-lg border px-4 py-3 {selectedSlug === a.slug
 								? 'border-primary bg-primary/10'
 								: 'border-base-300'}"
 						>
 							<input
-								type="radio"
-								name="audience"
+								{...fields.slug.as('radio', a.slug)}
 								class="radio radio-sm radio-primary"
-								value={a.id}
-								bind:group={selectedAudienceId}
+								bind:group={selectedSlug}
 							/>
 							<div class="flex-1">
 								<p class="text-sm font-medium">{a.name}</p>
@@ -72,16 +70,26 @@
 				</div>
 			</Field>
 
-			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
-			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
+			<Field
+				field={subscribeToAudience.fields.email}
+				type="email"
+				label={m.public_email_label()}
+				placeholder={m.public_email_com_placeholder()}
+			/>
+			<Field
+				field={subscribeToAudience.fields.name}
+				type="text"
+				label={m.public_name_optional_label()}
+				placeholder={m.public_name_2_placeholder()}
+			/>
 
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
-				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				responseFieldName={fields.turnstileToken.as('hidden', '').name}
 				theme="auto"
 			/>
 
-			<SubmitButton label="Subscribe" variant="primary" class="w-full" />
+			<SubmitButton label={m.public_subscribe_label()} variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

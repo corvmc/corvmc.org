@@ -1,21 +1,31 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getOrder, markOrderPlaced, dropOrder, closeOrder } from '$lib/remote/inventory.remote';
-	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { isOrderLate } from '$lib/utils/order-late';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import {
+		getOrder,
+		markOrderPlaced,
+		dropOrder,
+		closeOrder,
+		reopenOrderForm
+	} from '#lib/remote/inventory.remote.js';
+	import { ReopenAction } from '#lib/components/actions/index.js';
+	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
+	import { isOrderLate } from '#lib/utils/order-late.js';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One order: what was promised, what has turned up, what is still coming.
@@ -25,7 +35,7 @@
 	 * same path every other arrival uses, so the ledger cannot fork on whether
 	 * something happened to be ordered first.
 	 */
-	const id = $derived(page.params.id!);
+	const id = $derived(params.id);
 	const order = $derived(await getOrder(id));
 
 	const status = $derived(order.status as OrderStatus);
@@ -39,14 +49,18 @@
 	);
 </script>
 
-<PageHeader width="3xl" title={order.supplierName ?? 'Order'} subtitle="Order">
+<PageHeader
+	width="3xl"
+	title={order.supplierName ?? m.staff_order_2_title()}
+	subtitle={m.staff_order_2_body()}
+>
 	<Badge variant={orderStatusBadge[status]} size="md">{orderStatusLabels[status]}</Badge>
 	{#if late}
-		<Badge variant="error" size="md">Late</Badge>
+		<Badge variant="error" size="md">{m.staff_late_label()}</Badge>
 	{/if}
 	{#if status === 'placed' && outstanding.length > 0}
 		<Button href={`/staff/inventory/intake?order=${order.id}`} variant="primary" size="sm">
-			Receive
+			{m.staff_receive_label()}
 		</Button>
 	{/if}
 </PageHeader>
@@ -54,26 +68,29 @@
 <PageContent width="3xl">
 	{#if status === 'draft'}
 		<Alert type="info" class="mb-4">
-			A draft is still a shopping list — nothing is on the way and the restock list still counts
-			these as missing. Placing it is what changes that.
+			{m.staff_inventory_orders_id_draft_still_shopping_list_nothing_body()}
 		</Alert>
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-		<InfoCard title="What was ordered">
+		<InfoCard title={m.staff_inventory_orders_id_what_was_ordered_title()}>
 			<Table>
 				{#snippet head()}
-					<th>Item</th>
-					<th class="cell-num">Ordered</th>
-					<th class="cell-num">Received</th>
-					<th class="cell-num">Each</th>
+					<th>{m.staff_item_label()}</th>
+					<th class="cell-num">{m.staff_inventory_orders_id_ordered_label()}</th>
+					<th class="cell-num">{m.staff_received_label()}</th>
+					<th class="cell-num">{m.staff_each_label()}</th>
 				{/snippet}
 				{#each order.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="link" href={resolve(`/staff/inventory/${line.itemId}`)}>{line.item.name}</a>
+							<a class="link" href={resolve(`staff/inventory/${line.itemId}`)}>{line.item.name}</a>
 							{#if line.outstanding > 0 && status === 'placed'}
-								<Badge variant="warning" size="xs">{line.outstanding} still out</Badge>
+								<Badge variant="warning" size="xs"
+									>{m.staff_inventory_orders_id_still_out_label({
+										outstanding: line.outstanding
+									})}</Badge
+								>
 							{/if}
 						</td>
 						<td class="cell-num">{line.quantityOrdered}</td>
@@ -87,17 +104,30 @@
 		</InfoCard>
 
 		<div class="space-y-6">
-			<InfoCard title="Order" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_order_2_title()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="Reference">{order.reference ?? '—'}</Fact>
-					<Fact label="Placed">
-						{order.placedAt ? formatDateShort(order.placedAt) : 'Not yet'}
+					<Fact label={m.staff_supplier_label()}>
+						{#if order.organizationId}
+							<a class="link" href={resolve(`staff/contacts/${order.organizationId}`)}
+								>{order.supplierName}</a
+							>
+						{:else}
+							—
+						{/if}
 					</Fact>
-					<Fact label="Expected" class={late ? 'text-error' : ''}>
+					<Fact label={m.staff_reference_label()}>{order.reference ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_placed_label()}>
+						{order.placedAt ? formatDateShort(order.placedAt) : m.staff_not_yet_text()}
+					</Fact>
+					<Fact label={m.staff_expected_label()} class={late ? 'text-error' : ''}>
 						{order.expectedAt ? formatDateShort(order.expectedAt) : '—'}
 					</Fact>
-					<Fact label="Estimated">{formatCents(order.estimatedTotalCents)}</Fact>
-					<Fact label="Raised by">{order.createdByName ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_estimated_label()}
+						>{formatCents(order.estimatedTotalCents)}</Fact
+					>
+					<Fact label={m.staff_inventory_orders_id_raised_by_label()}
+						>{order.createdByName ?? '—'}</Fact
+					>
 				</DefinitionList>
 				{#if order.notes}
 					<p class="mt-3 whitespace-pre-wrap">{order.notes}</p>
@@ -105,13 +135,13 @@
 			</InfoCard>
 
 			{#if order.arrivals.length > 0}
-				<InfoCard title="What arrived">
+				<InfoCard title={m.staff_what_arrived_title()}>
 					<!-- The receipts this order produced. An order is a promise; these
 					     are the acquisitions that made it true. -->
 					<ul class="space-y-1">
 						{#each order.arrivals as arrival (arrival.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/acquisitions/${arrival.id}`)}>
+								<a class="link" href={resolve(`staff/inventory/acquisitions/${arrival.id}`)}>
 									{formatDateShort(arrival.occurredAt)}
 								</a>
 							</li>
@@ -123,32 +153,52 @@
 			<!-- No card once the order is closed: the whole body is four words, and
 			     a titled box around one sentence is chrome (#1078). -->
 			{#if status !== 'draft' && status !== 'placed'}
-				<p class="text-subtle">This order is closed.</p>
+				<div class="flex items-center justify-between gap-2">
+					<p class="text-subtle">{m.staff_inventory_orders_id_order_closed_text()}</p>
+					<ReopenAction action={reopenOrderForm} id={order.id} capability="inventory.reopen">
+						{(order.placedAt
+							? m.staff_inventory_orders_id_back_placed_what_was_received_text
+							: m.staff_inventory_orders_id_back_draft_what_was_received_text)()}
+					</ReopenAction>
+				</div>
 			{:else}
-				<InfoCard title="Next step">
+				<InfoCard title={m.staff_inventory_orders_id_next_step_title()}>
 					{#if status === 'draft'}
-						<Form remote={markOrderPlaced} successToast="Order placed">
+						<Form
+							remote={markOrderPlaced}
+							successToast={m.staff_inventory_orders_id_order_placed_toast()}
+						>
 							<input {...markOrderPlaced.fields.id.as('hidden', order.id)} />
-							<SubmitButton label="Mark as placed" />
+							<SubmitButton label={m.staff_inventory_orders_id_mark_as_placed_label()} />
 						</Form>
 						<div class="mt-3">
-							<Form remote={dropOrder} successToast="Order cancelled">
+							<Form
+								remote={dropOrder}
+								successToast={m.staff_inventory_orders_id_order_cancelled_toast()}
+							>
 								<input {...dropOrder.fields.id.as('hidden', order.id)} />
-								<SubmitButton label="Cancel this order" variant="ghost" />
+								<SubmitButton
+									label={m.staff_inventory_orders_id_cancel_order_label()}
+									variant="ghost"
+								/>
 							</Form>
 						</div>
 					{:else if status === 'placed'}
 						<p class="mb-3 text-subtle">
-							Receiving opens the intake page with these lines already filled in. Partial deliveries
-							are normal — the order stays open until every line is met.
+							{m.staff_inventory_orders_id_receiving_opens_intake_page_with_text()}
 						</p>
-						<Form remote={closeOrder} successToast="Order closed">
+						<Form
+							remote={closeOrder}
+							successToast={m.staff_inventory_orders_id_order_closed_2_toast()}
+						>
 							<input {...closeOrder.fields.id.as('hidden', order.id)} />
-							<SubmitButton label="Close it short" variant="ghost" />
+							<SubmitButton
+								label={m.staff_inventory_orders_id_close_short_label()}
+								variant="ghost"
+							/>
 						</Form>
 						<p class="mt-2 text-subtle text-sm">
-							Use that when the rest is never coming — an order left open keeps suppressing restock
-							suggestions for goods that will not arrive.
+							{m.staff_inventory_orders_id_use_when_rest_never_coming_text()}
 						</p>
 					{/if}
 				</InfoCard>

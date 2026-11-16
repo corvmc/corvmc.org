@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { detectPlatform } from '$lib/utils/link-platform';
+	import { detectPlatform } from '#lib/utils/link-platform.js';
 	import {
 		IconBrandYoutube,
 		IconBrandSoundcloud,
@@ -18,8 +19,8 @@
 		IconLink,
 		IconExternalLink
 	} from '@tabler/icons-svelte';
-	import { partitionLinks } from '$lib/utils/directory-display';
-	import type { ProfileLink } from '$lib/server/db/schema/authentication';
+	import { partitionLinks } from '#lib/utils/directory-display.js';
+	import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	let { links }: { links: ProfileLink[] } = $props();
 
@@ -56,10 +57,10 @@
 </script>
 
 {#if resolved.length > 0}
-	<ProfileSection title="Links">
+	<ProfileSection title={m.directory_profile_links_box_title()}>
 		<div class="links-box">
 			{#if streaming.length > 0}
-				<p class="links-box__group">Listen on</p>
+				<p class="links-box__group">{m.directory_profile_links_box_listen_text()}</p>
 				<div class="links-box__ribbon">
 					{#each streaming as item (item.link.url)}
 						{@const Icon = item.icon}
@@ -78,7 +79,7 @@
 			{/if}
 
 			{#if web.length > 0}
-				<p class="links-box__group">On the web</p>
+				<p class="links-box__group">{m.directory_profile_links_box_web_text()}</p>
 				<div class="links-box__rows">
 					{#each web as item (item.link.url)}
 						{@const Icon = item.icon}

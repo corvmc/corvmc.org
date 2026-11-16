@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { capabilities } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Regression: help access is a visibility ladder, not a ranking of role names.
@@ -6,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // The implementation this replaced scored role names against a closed
 // ROLE_LEVEL table and fell back to `?? 4` — narrower than `member` — for any
 // name it had never heard of. So the instant a named position exists
-// (docs/specs/shipped/admin-vs-staff-spec.md), its holder resolves to `member` and the
+// (docs/decisions/0032-guards-name-capabilities.md), its holder resolves to `member` and the
 // entire Staff Guide disappears for them. Latent today because only `admin`
 // and `staff` are assigned; certain on the day the first `treasurer` row is
 // inserted, which is why this ships before any position exists.
@@ -15,20 +17,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // nobody has heard of widens access instead of erasing it.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const getUserRoles = vi.fn<(userId: string) => Promise<string[]>>();
 const isSustainingMember = vi.fn<(userId: string) => Promise<boolean>>();
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	getUserRoles: (id: string) => getUserRoles(id),
-	committeeCapabilitiesFor: async () => []
+	committeeCapabilitiesFor: async () => [],
+	positionsFor: async () => [],
+	capabilitySet: () => []
 }));
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: (id: string) => isSustainingMember(id)
 }));
 
-const { resolveHelpAudience, normalizeAudience } = await import('./help-service');
+const { resolveHelpAudience, normalizeAudience, articleVisibleTo } = await import('./help-service');
 
 beforeEach(() => {
 	getUserRoles.mockReset();
@@ -99,5 +103,18 @@ describe('normalizeAudience', () => {
 		expect(normalizeAudience('')).toBe('staff');
 		expect(normalizeAudience(null)).toBe('staff');
 		expect(normalizeAudience(undefined)).toBe('staff');
+	});
+});
+
+describe('articleVisibleTo', () => {
+	it('binds the same few parameters however many capabilities the reader holds', () => {
+		// D1 refuses a statement binding more than 100; admin holds every capability.
+		const all = Object.entries(capabilities).flatMap(([r, as]) => as.map((a) => `${r}.${a}`));
+		const params = (held: string[]) =>
+			new SQLiteSyncDialect().sqlToQuery(
+				articleVisibleTo({ audience: 'staff', capabilities: held })
+			).params.length;
+		expect(params(all)).toBe(params(['user.read']));
+		expect(params(all)).toBeLessThan(10);
 	});
 });

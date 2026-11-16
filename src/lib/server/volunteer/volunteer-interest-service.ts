@@ -1,14 +1,14 @@
-import { db } from '$lib/server/db';
-import { volunteerRole, volunteerRoleInterest } from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { volunteerRole, volunteerRoleInterest } from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { DomainError } from '$lib/server/errors';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { VOLUNTEER_MAX_INTERESTS } from '$lib/config';
-import type { VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { DomainError } from '#lib/server/errors.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { VOLUNTEER_MAX_INTERESTS } from '#lib/config.js';
+import type { VolunteerRoleGroup } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Volunteer role interests

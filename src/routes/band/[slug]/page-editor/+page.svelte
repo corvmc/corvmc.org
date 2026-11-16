@@ -1,42 +1,45 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
 	// The canvas *is* the public page, so it needs the same stylesheet the public
 	// layout loads. Without this the `.theme-x` class resolved to nothing here and
 	// the theme picker changed the preview not at all — which was survivable while
 	// the theme was a swatch, and is not now that the pane's whole claim is that
 	// it shows what applies. The rules only ever match inside a `.theme-x`
 	// container, so importing them into the app leaks nothing.
-	import '$lib/themes/band-site/index.css';
-	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
+	import '#lib/themes/band-site/index.css';
+	import BandSiteFonts from '#lib/components/band-site/BandSiteFonts.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
 	import { IconAdjustments } from '@tabler/icons-svelte';
-	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
-	import { blocksForPreview } from '$lib/components/band-site/block-editing';
-	import { env } from '$env/dynamic/public';
-	import { bandSiteUrl } from '$lib/utils/band-site-url';
-	import { themeClass } from '$lib/utils/theme-starter';
+	import BandSiteRenderer from '#lib/components/band-site/BandSiteRenderer.svelte';
+	import { blocksForPreview } from '#lib/components/band-site/block-editing.js';
+	import * as env from '$app/env/public';
+	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
+	import { themeClass } from '#lib/utils/theme-starter.js';
 	import { getBandLayoutContext } from '../layout-context';
-	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
-	import { type BandThemeValue, type Block } from '$lib/types/band-page';
-	import themeSheet from '$lib/themes/band-site/index.css?raw';
-	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
+	import { getBandPageEditor, saveBandPageConfig } from '#lib/remote/band-page-editor.remote.js';
+	import { type BandThemeValue, type Block } from '#lib/types/band-page.js';
+	import themeSheet from '#lib/themes/band-site/index.css?raw';
+	import { refreshAll } from '$app/navigation';
 	import EditorShell from './EditorShell.svelte';
 	import StylePanel from './StylePanel.svelte';
 	import BlockMediaField from './BlockMediaField.svelte';
 	import { foldLegacy, type ThemeState } from './theme-fork';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote
 	// query in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let pageData = $derived(await getBandPageEditor(page.params.slug!));
+	let pageData = $derived(await getBandPageEditor(params.slug));
 	const band = $derived(layout.band);
 
 	// Gate: premium only
@@ -51,6 +54,7 @@
 
 	// Local state for editable fields — initialized from server data
 	const initialConfig = $derived(pageData.config);
+	// svelte-ignore state_referenced_locally
 	const storedTheme = (initialConfig?.theme ?? 'default') as BandThemeValue;
 
 	/**
@@ -59,6 +63,7 @@
 	 * stylesheet on the way in, preserving the cascade exactly; see
 	 * `theme-fork.ts`. Nothing persists until they save.
 	 */
+	// svelte-ignore state_referenced_locally
 	const foldedStyle = foldLegacy(
 		{ theme: storedTheme, customCss: initialConfig?.customCss ?? '' },
 		themeSheet
@@ -66,6 +71,7 @@
 	let style = $state<ThemeState>(foldedStyle);
 	const wasFolded = foldedStyle.theme !== storedTheme;
 
+	// svelte-ignore state_referenced_locally
 	let blocks = $state<Block[]>(structuredClone(initialConfig?.blocks ?? []));
 
 	/**
@@ -100,7 +106,7 @@
 
 	/**
 	 * The page arrives with every block already on it — `reconcileBlocks` in
-	 * `$lib/utils/band-site-preset` sees to that — so this editor arranges a page
+	 * `#lib/utils/band-site-preset.js` sees to that — so this editor arranges a page
 	 * rather than building one. There is no add and no delete: a block a band does
 	 * not want is one they stop publishing.
 	 */
@@ -140,17 +146,22 @@
      below post back. -->
 <Form
 	remote={saveBandPageConfig}
-	successToast="Page saved"
-	onsuccess={() => invalidateAll()}
+	successToast={msg.band_slug_page_editor_success_toast()}
+	onsuccess={() => refreshAll()}
 	class="flex h-full min-h-0 flex-col"
 >
-	<PageHeader width="2xl" title="Page Editor" subtitle={band.name} flush={isPremium}>
+	<PageHeader
+		width="2xl"
+		title={msg.band_slug_page_editor_title()}
+		subtitle={band.name}
+		flush={isPremium}
+	>
 		{#if isPremium && pageData.config}
-			<Badge variant="success">Premium</Badge>
+			<Badge variant="success">{msg.band_slug_page_editor_premium_label()}</Badge>
 			<!-- The band's own subdomain, so this leaves the app: rel="external" is
 			     both the correct annotation and what keeps it out of the router. -->
 			<a href={siteUrl} target="_blank" rel="external noopener" class="link text-sm">
-				View site &rarr;
+				{msg.band_slug_page_editor_view_site_text()}
 			</a>
 			<Button
 				type="button"
@@ -160,22 +171,26 @@
 				onclick={() => (styleOpen = styleOpen === true ? false : true)}
 			>
 				<IconAdjustments size={16} />
-				Style
+				{msg.band_style_label()}
 			</Button>
-			<SubmitButton label="Save Changes" variant="primary" size="sm" />
+			<SubmitButton
+				label={msg.band_slug_page_editor_save_changes_label()}
+				variant="primary"
+				size="sm"
+			/>
 		{/if}
 	</PageHeader>
 
 	{#if !isPremium}
 		<PageContent width="2xl">
 			<EmptyState>
-				<p class="text-lg font-medium">Premium Feature</p>
+				<p class="text-lg font-medium">{msg.band_slug_page_editor_premium_feature_text()}</p>
 				<p class="mt-2 opacity-70">
-					The page editor is available with a premium subscription. Your band's page arrives already
-					built — reorder its blocks, hide the ones you don't want, and make it yours with genre
-					themes and custom CSS.
+					{msg.band_slug_page_editor_page_editor_available_with_premium_text()}
 				</p>
-				<Button href="../subscription" variant="primary" class="mt-4">Upgrade to Premium</Button>
+				<Button href="../subscription" variant="primary" class="mt-4"
+					>{msg.band_upgrade_premium_label()}</Button
+				>
 			</EmptyState>
 		</PageContent>
 	{:else}
@@ -250,7 +265,7 @@
 			<BlockMediaField
 				bandId={band.id}
 				type="hero"
-				label="Hero image"
+				label={msg.band_slug_page_editor_hero_image_label()}
 				src={imageUrls[block.imageKey]}
 				previewClass="h-20 w-32"
 				onuploaded={(key, url) => {
@@ -259,7 +274,9 @@
 				}}
 			/>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">…or an image key / URL</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_image_key_url_label()}</span
+				>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -270,7 +287,7 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Headline</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_headline_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -281,7 +298,7 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Subtitle</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_subtitle_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -293,7 +310,9 @@
 			</label>
 		{:else if block.type === 'bio'}
 			<label class="fieldset w-full">
-				<span class="fieldset-legend text-xs">Content (HTML/Markdown)</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_content_html_markdown_label()}</span
+				>
 				<textarea
 					class="textarea w-full text-sm"
 					rows="5"
@@ -304,7 +323,7 @@
 			</label>
 		{:else if block.type === 'links'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Style</span>
+				<span class="fieldset-legend text-xs">{msg.band_style_label()}</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -314,9 +333,9 @@
 							'buttons' | 'icons' | 'list';
 					}}
 				>
-					<option value="buttons">Buttons</option>
-					<option value="icons">Icons</option>
-					<option value="list">List</option>
+					<option value="buttons">{msg.band_slug_page_editor_buttons_label()}</option>
+					<option value="icons">{msg.band_slug_page_editor_icons_label()}</option>
+					<option value="list">{msg.band_slug_page_editor_list_label()}</option>
 				</Select>
 			</label>
 		{:else if block.type === 'members'}
@@ -329,11 +348,13 @@
 						block.showPositions = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">Show member positions</span>
+				<span class="text-sm">{msg.band_slug_page_editor_show_member_positions_label()}</span>
 			</label>
 		{:else if block.type === 'events'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Max events to show</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_max_events_show_label()}</span
+				>
 				<input
 					type="number"
 					class="input w-24 input-sm"
@@ -354,14 +375,14 @@
 						block.showPast = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">Also list past shows</span>
+				<span class="text-sm">{msg.band_slug_page_editor_also_list_past_shows_label()}</span>
 			</label>
 		{:else if block.type === 'gallery'}
 			<BlockMediaField
 				bandId={band.id}
 				type="image"
-				label="Add a photo"
-				onuploaded={() => invalidateAll()}
+				label={msg.band_add_photo_label()}
+				onuploaded={() => refreshAll()}
 			/>
 			{#if mediaIn('gallery').length}
 				<div class="flex flex-wrap gap-2">
@@ -379,15 +400,17 @@
 						block.downloadable = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">Allow downloads (press-quality)</span>
+				<span class="text-sm"
+					>{msg.band_slug_page_editor_allow_downloads_press_quality_label()}</span
+				>
 			</label>
 		{:else if block.type === 'embed'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Platform</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_platform_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
-					placeholder="spotify, youtube, soundcloud"
+					placeholder={msg.band_slug_page_editor_spotify_youtube_soundcloud_placeholder()}
 					value={block.platform}
 					oninput={(e) => {
 						block.platform = e.currentTarget.value;
@@ -395,11 +418,11 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">URL</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_url_label()}</span>
 				<input
 					type="url"
 					class="input w-full input-sm"
-					placeholder="https://open.spotify.com/track/..."
+					placeholder={msg.band_slug_page_editor_https_open_spotify_com_track_placeholder()}
 					value={block.url}
 					oninput={(e) => {
 						block.url = e.currentTarget.value;
@@ -408,7 +431,7 @@
 			</label>
 		{:else if block.type === 'spacer'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">Height</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_height_label()}</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -417,14 +440,16 @@
 						block.height = (e.currentTarget as HTMLSelectElement).value as 'sm' | 'md' | 'lg';
 					}}
 				>
-					<option value="sm">Small</option>
-					<option value="md">Medium</option>
-					<option value="lg">Large</option>
+					<option value="sm">{msg.band_slug_page_editor_small_label()}</option>
+					<option value="md">{msg.band_slug_page_editor_medium_label()}</option>
+					<option value="lg">{msg.band_slug_page_editor_large_label()}</option>
 				</Select>
 			</label>
 		{:else if block.type === 'custom_html'}
 			<label class="fieldset w-full">
-				<span class="fieldset-legend text-xs">HTML content (sanitized on save)</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_html_content_sanitized_save_label()}</span
+				>
 				<textarea
 					class="textarea w-full font-mono text-sm"
 					rows="6"
@@ -441,18 +466,18 @@
 			<BlockMediaField
 				bandId={band.id}
 				type="stage_plot"
-				label="Stage plot"
+				label={msg.band_stage_plot_label()}
 				accept="image/*,.pdf"
 				src={mediaIn('stage_plot')[0]?.url ?? undefined}
-				onuploaded={() => invalidateAll()}
+				onuploaded={() => refreshAll()}
 			/>
 			<BlockMediaField
 				bandId={band.id}
 				type="rider"
-				label="Tech rider (PDF or image)"
+				label={msg.band_slug_page_editor_tech_rider_pdf_image_label()}
 				accept="image/*,.pdf"
 				src={mediaIn('rider')[0]?.url ?? undefined}
-				onuploaded={() => invalidateAll()}
+				onuploaded={() => refreshAll()}
 			/>
 		{:else if block.type === 'contact'}
 			<label class="flex items-center gap-2">
@@ -465,7 +490,7 @@
 					}}
 				/>
 				<span class="text-sm">
-					Show contact form (messages are emailed to your booking contact)
+					{msg.band_slug_page_editor_show_contact_form_messages_emailed_label()}
 				</span>
 			</label>
 		{:else if block.type === 'merch'}
@@ -475,7 +500,7 @@
 						<input
 							type="text"
 							class="input flex-1 input-sm"
-							placeholder="Title"
+							placeholder={msg.band_title_placeholder()}
 							value={item.title}
 							oninput={(e) => {
 								item.title = e.currentTarget.value;
@@ -484,7 +509,7 @@
 						<input
 							type="url"
 							class="input flex-1 input-sm"
-							placeholder="URL"
+							placeholder={msg.band_slug_page_editor_url_placeholder()}
 							value={item.url}
 							oninput={(e) => {
 								item.url = e.currentTarget.value;
@@ -516,18 +541,20 @@
 					size="xs"
 					onclick={() => {
 						block.items = [...block.items, { title: '', url: '' }];
-					}}>+ Add item</Button
+					}}>{msg.band_slug_page_editor_add_item_label()}</Button
 				>
 			</div>
 		{/if}
 
 		<!-- CSS class (all blocks) -->
 		<label class="fieldset">
-			<span class="fieldset-legend text-xs">CSS class (optional)</span>
+			<span class="fieldset-legend text-xs"
+				>{msg.band_slug_page_editor_css_class_optional_label()}</span
+			>
 			<input
 				type="text"
 				class="input w-full input-sm"
-				placeholder="custom-class"
+				placeholder={msg.band_slug_page_editor_custom_class_placeholder()}
 				value={block.cssClass ?? ''}
 				oninput={(e) => {
 					// Every member of the Block union carries `cssClass`, but TypeScript

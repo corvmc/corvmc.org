@@ -1,22 +1,22 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { workTask } from '$lib/server/db/schema/volunteer';
-import { eventPosterKeySql } from '$lib/server/event/event-columns';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { workTask } from '#lib/server/db/schema/volunteer.js';
+import { eventPosterKeySql } from '#lib/server/event/event-columns.js';
 import {
 	hasDescription,
 	hasPoster,
 	isProductionConfirmed,
 	isProductionSettled
-} from '$lib/server/event/show-readiness';
-import { eventsWithEveryActAsked } from '$lib/server/production/artifact-request-service';
-import { productionsOwingCloseOut } from '$lib/server/production/production-service';
-import type { WorkDoneCondition } from '$lib/config';
+} from '#lib/server/event/show-readiness.js';
+import { eventsWithEveryActAsked } from '#lib/server/production/artifact-request-service.js';
+import { productionsOwingCloseOut } from '#lib/server/production/production-service.js';
+import type { WorkDoneCondition } from '#lib/config.js';
 import { eventsShortOfCrew } from './work-order-service';
 
 /**
- * When a committee's work order is done (docs/specs/shipped/committee-deliverables-spec.md §2).
+ * When a committee's work order is done (docs/decisions/0053-committees-own-deliverables-not-permissions.md).
  *
  * Each `done_when` names a fact about the work order's show, evaluated here by
  * a typed function over a batch of shows. Nothing is stored when a fact comes

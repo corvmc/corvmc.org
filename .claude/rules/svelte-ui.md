@@ -32,7 +32,7 @@ Compose the existing shared primitives rather than inventing new ones.
   could stay uncommitted after an SPA navigation, producing dead modals.
 - **A `$effect` created inside a pending boundary could be stranded forever** — a separate Svelte
   scheduler bug with the same symptom (a dead modal, because `bits-ui`'s `Dialog.Portal` mounts
-  from a `$effect`). Fixed in `patches/svelte@5.57.0.patch`; see
+  from a `$effect`). Fixed in `patches/svelte@5.57.3.patch`; see
   `docs/development/conventions.md#patched-dependencies`. If dead-UI-after-navigation ever returns,
   check that the patch still applies before reading page code.
 - **`<svelte:window>` listeners are not gated.** They are attached synchronously during setup, so a
@@ -42,6 +42,11 @@ Compose the existing shared primitives rather than inventing new ones.
   it is gated too, reads falsy, and waves the event through. Declare anything a listener touches
   _above_ the awaited derived, leaving only genuinely derived values below.
   `src/async-gated-listener.spec.ts` fails the build on this shape.
+
+- **`page.params` is global, so it changes while the outgoing page is still mounted.** A query
+  re-run from that page goes out with `undefined`, or with the next route's same-named value. Read
+  params through `routeParams()` from `#lib/route-params.svelte.js`;
+  `custom/no-asserted-route-param` rejects `page.params.x!`.
 
 ## Filter state in the URL
 

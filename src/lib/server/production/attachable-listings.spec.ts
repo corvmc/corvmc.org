@@ -3,11 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Which listings "New production" offers to attach to, against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listAttachableListings } = await import('./attachable-listings');
 

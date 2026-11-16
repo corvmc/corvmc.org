@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // Regression: `createClosure` called `issue.endsAt(...)` without throwing it.
 // Constructing an issue is inert — only `invalid()` throws — so an inverted date
@@ -10,10 +10,17 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 // was meant to do too.
 
 const insertValues = vi.fn(async () => undefined);
-const db = { insert: vi.fn(() => ({ values: insertValues })), select: vi.fn() };
+const deleteWhere = vi.fn(async () => undefined);
+const db = {
+	insert: vi.fn(() => ({ values: insertValues })),
+	select: vi.fn(),
+	delete: vi.fn(() => ({ where: deleteWhere }))
+};
 
-vi.mock('$lib/server/db', () => ({ db }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db }));
+const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 's-1' }))
 }));
 
@@ -147,5 +154,44 @@ describe('createClosure validation', () => {
 		const issues = (thrown as { issues: Array<{ path: string[] }> }).issues;
 		expect(issues.some((i) => i.path?.includes('endsAt'))).toBe(true);
 		expect(db.insert).not.toHaveBeenCalled();
+	});
+});
+
+// #2891: a closure that comes off the calendar frees the room, so the audit log keeps it.
+describe('deleteClosure', () => {
+	const upcoming = {
+		startsAt: new Date('2026-09-10T16:00:00Z'),
+		endsAt: new Date('2026-09-10T20:00:00Z'),
+		reason: 'Deep clean'
+	};
+	// Read once before the delete and once after, when the row is gone.
+	const selecting = (rows: unknown[]) => {
+		const reading = (r: unknown[]) =>
+			({ from: () => ({ where: () => ({ limit: async () => r }) }) }) as never;
+		db.select.mockReturnValueOnce(reading(rows)).mockReturnValue(reading([]));
+	};
+
+	it('records the deleted closure in the audit log', async () => {
+		selecting([upcoming]);
+		await closures.deleteClosure({ id: 'cl-1' }, makeIssue());
+		expect(deleteWhere).toHaveBeenCalled();
+		expect(recordAuditEntry).toHaveBeenCalledWith({
+			action: 'closure.deleted',
+			subject: { type: 'setting', id: 'reservation', label: null },
+			details: {
+				closureId: 'cl-1',
+				startsAt: '2026-09-10T16:00:00.000Z',
+				endsAt: '2026-09-10T20:00:00.000Z',
+				reason: 'Deep clean'
+			}
+		});
+	});
+
+	it('records nothing when the closure has already started', async () => {
+		selecting([{ ...upcoming, startsAt: new Date('2026-08-31T00:00:00Z') }]);
+		await expect(closures.deleteClosure({ id: 'cl-1' }, makeIssue())).rejects.toMatchObject({
+			status: 400
+		});
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 });

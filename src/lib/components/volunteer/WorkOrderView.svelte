@@ -1,55 +1,55 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
-	 * One work order: who is on it, who to ask, its engagements, hours, reports
-	 * and duties. Rendered by the shift page and by a project's task page, which
-	 * passes its project as `context`. A cancelled work order's roster becomes the
-	 * list of people still to be told, and the candidate column withdraws.
+	 * One task: who is assigned, each of its shifts with its own roster, who to
+	 * ask, its engagements, hours, reports and checklist (#2518). Rendered by the
+	 * shift URL and by a project's task page, which passes its project as
+	 * `context`. Done and Cancel for the work are the task's; each shift card
+	 * cancels only itself.
 	 */
 	import type { Snippet } from 'svelte';
-	import { shiftLabel } from '$lib/utils/shift-label';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import type { Crumb } from '$lib/components/ui/breadcrumbs';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { untrack } from 'svelte';
+	import { shiftLabel } from '#lib/utils/shift-label.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '#lib/components/ui/breadcrumbs.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import ShiftRoleFields from './ShiftRoleFields.svelte';
 	import ShiftChecklist from './ShiftChecklist.svelte';
+	import ShiftCard from './ShiftCard.svelte';
+	import OpenShiftAction from './OpenShiftAction.svelte';
 	import CandidateColumn from './CandidateColumn.svelte';
 	import WorkOrderHours from './WorkOrderHours.svelte';
 	import WorkOrderReports from './WorkOrderReports.svelte';
-	import EngagementCard from '$lib/components/contractor/EngagementCard.svelte';
-	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import TaskDependencies from './TaskDependencies.svelte';
+	import EngagementCard from '#lib/components/contractor/EngagementCard.svelte';
+	import { formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
-	import { IconCheck, IconUserX, IconUserMinus, IconPencil } from '@tabler/icons-svelte';
+	import { IconPencil, IconUserMinus } from '@tabler/icons-svelte';
 	import {
-		confirmSignup,
-		confirmSignups,
-		releaseSignup,
-		markSignupNoShow,
-		markSignupNotified,
-		notifyCancelledShift,
-		cancelShift,
-		duplicateShift,
-		updateShift,
-		type getStaffShiftPage
-	} from '$lib/remote/volunteer.remote';
+		cancelTask,
+		resolveWorkOrder,
+		unassignFromTask,
+		updateTask,
+		type getTaskPage
+	} from '#lib/remote/volunteer.remote.js';
 
-	type View = Omit<Awaited<ReturnType<typeof getStaffShiftPage>>, 'contractors'>;
+	type View = Omit<Awaited<ReturnType<typeof getTaskPage>>, 'contractors'>;
 	let {
 		view,
 		subtitle,
 		parent,
 		context,
 		activity,
-		actions
+		actions,
+		access
 	}: {
 		view: View;
 		subtitle: string;
@@ -57,50 +57,70 @@
 		parent?: Crumb[];
 		/** Leads the line under the header: the project a task belongs to. */
 		context?: Snippet;
-		/** The work order's history, read by each page through its own guard. */
+		/** The task's history, read by each page through its own guard. */
 		activity?: Snippet;
 		/** Header actions a page adds to the view's own. */
 		actions?: Snippet;
+		/** Who the task waits on and why, read by the page through its own guard. */
+		access?: Snippet;
 	} = $props();
 
-	const shift = $derived(view.shift);
-	const claimants = $derived(view.claimants);
-	const unconfirmed = $derived(claimants.filter((c) => c.status === 'claimed'));
-	const booked = $derived(
-		claimants.filter((c) => c.status === 'confirmed' || c.status === 'completed')
+	const task = $derived(view.task);
+	const label = $derived(shiftLabel(task));
+	const open = $derived(!task.cancelledAt && !task.resolvedAt);
+	const openBlockers = $derived(view.dependencies.waitsOn.filter((t) => t.open).length);
+	const editForm = $derived(updateTask.for(task.id));
+	const liveShifts = $derived(
+		view.shifts.filter((s) => !s.cancelledAt && s.endsAt.getTime() > Date.now())
 	);
-	const calledOff = $derived(!!shift.cancelledAt);
-	const toNotify = $derived(claimants.filter((c) => !c.notifiedAt).length);
-	const editForm = $derived(updateShift.for(shift.id));
 
-	function timeRange(start: Date, end: Date): string {
-		const fmt = new Intl.DateTimeFormat('en-US', {
-			hour: 'numeric',
-			minute: '2-digit',
-			timeZone: DEFAULT_TIMEZONE
-		});
-		return `${fmt.format(start)}–${fmt.format(end)}`;
-	}
-
-	const statusBadge: Record<string, string> = {
-		claimed: 'badge-info',
-		confirmed: 'badge-success',
-		completed: 'badge-neutral',
-		no_show: 'badge-error',
-		cancelled: 'badge-ghost'
-	};
+	// Who "Who to ask" adds people to: a shift still to come, or the task itself.
+	// Seeded with the next shift and kept by id, so a refresh does not reset it.
+	let target = $state<string>(untrack(() => liveShifts[0]?.id ?? ''));
+	const targetShift = $derived(liveShifts.find((s) => s.id === target) ?? null);
 </script>
 
-<!-- An unscheduled work order has no date to name, so the title is the role
-     and the body line says a window is still to be booked. -->
-<PageHeader
-	title={shift.startsAt
-		? `${shiftLabel(shift)} · ${formatDateShortYear(shift.startsAt)}`
-		: shiftLabel(shift)}
-	{subtitle}
-	{parent}
->
+<PageHeader title={label} {subtitle} {parent}>
 	{@render actions?.()}
+	{#if open}
+		<OpenShiftAction
+			taskId={task.id}
+			{label}
+			start={task.dueAt}
+			capacity={task.pendingCapacity ?? 1}
+			size="sm"
+		/>
+		<Action
+			action={resolveWorkOrder.for(task.id)}
+			label={m.staff_volunteer_mark_done_label()}
+			data-testid="mark-done"
+			variant="ghost"
+			size="sm"
+			modalTitle={m.staff_volunteer_mark_done_title({ subject: label })}
+			submitLabel={m.staff_volunteer_mark_done_label()}
+			successToast={m.staff_volunteer_marked_done_toast()}
+		>
+			{#snippet form()}
+				<input {...resolveWorkOrder.for(task.id).fields.id.as('hidden', task.id)} />
+				{#if openBlockers > 0}
+					<!-- Warn, record, allow (#2625): the audit entry notes it was done early. -->
+					<Alert type="warning">
+						{m.volunteer_work_order_view_open_blockers_body({ count: openBlockers })}
+					</Alert>
+				{/if}
+				{#if view.reports.length > 0}
+					<p class="text-sm">
+						{m.staff_volunteer_mark_done_closes_reports_text({ reports: view.reports.length })}
+					</p>
+				{/if}
+				<FormField
+					field={resolveWorkOrder.for(task.id).fields.notes}
+					label={m.staff_volunteer_work_done_label()}
+					type="textarea"
+				/>
+			{/snippet}
+		</Action>
+	{/if}
 </PageHeader>
 
 <PageContent>
@@ -108,406 +128,210 @@
 	     subtitle is the panel label everywhere else in the app. -->
 	<p class="text-subtle text-sm">
 		{#if context}{@render context()} ·{/if}
-		{#if shift.startsAt && shift.endsAt}
-			{timeRange(shift.startsAt, shift.endsAt)}
-		{:else if shift.dueAt}
-			<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
-			due {formatDateShortYear(shift.dueAt)}
-		{:else}
-			a time to be arranged
-		{/if} ·
-		{#if shift.eventId && shift.eventTitle}
-			<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
-				{shift.eventTitle}
-			</a>
-		{:else}
-			not tied to an event
+		{#if task.dueAt}
+			{@const due = task.dueAt}
+			<!-- A deadline is not a shift: "done by Friday" is not "happens Friday 6-8". -->
+			<ParaglideMessage
+				message={m.volunteer_work_order_view_due_text}
+				inputs={{ formatDateShortYear: formatDateShortYear(due) }}
+				>{#snippet time({ children })}<time datetime={new Date(due).toISOString()}
+						>{@render children?.()}</time
+					>{/snippet}</ParaglideMessage
+			> ·
 		{/if}
-		{#if shift.assetId && shift.assetName}
+		{#if task.eventId && task.eventTitle}
+			<a href={resolve(`staff/events/${task.eventId}`)} class="link link-primary">
+				{task.eventTitle}
+			</a>
+		{:else}{m.volunteer_work_order_view_not_tied_event_text()}{/if}
+		{#if task.assetId && task.assetName}
 			·
-			<a href={resolve(`/staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
-				{shift.assetName}
+			<a href={resolve(`staff/inventory/assets/${task.assetId}`)} class="link link-primary">
+				{task.assetName}
 			</a>
 		{/if}
 	</p>
 
-	{#if calledOff}
-		<!-- Leads with the outstanding count, because that is the only thing
-		     left to do about this shift. -->
+	{#if task.cancelledAt}
 		<Alert type="warning">
-			<div class="flex flex-wrap items-center justify-between gap-3">
-				<div>
-					<p class="font-medium">
-						{toNotify > 0 ? `${toNotify} to notify` : 'Everybody has been notified'}
-					</p>
-					<p class="text-sm">
-						Called off {formatDateShort(shift.cancelledAt!)}{shift.cancelledByName
-							? ` by ${shift.cancelledByName}`
-							: ''}. Claims and bookings stay on the roster — they are who you need to tell.
-					</p>
-				</div>
-				{#if toNotify > 0}
-					<Action
-						action={notifyCancelledShift.for(shift.id)}
-						label="Notify all"
-						variant="warning"
-						size="sm"
-						modalTitle="Tell everybody this is off?"
-						submitLabel="Notify all"
-						successToast="Sent. They know."
-					>
-						{#snippet form()}
-							<input type="hidden" name="shiftId" value={shift.id} />
-							<p class="text-sm">
-								{toNotify}
-								{toNotify === 1 ? 'person' : 'people'} still on this shift will be emailed that it is
-								off. Anybody you already marked by hand is skipped, and pressing this twice mails nobody
-								twice.
-							</p>
-						{/snippet}
-					</Action>
-				{/if}
-			</div>
+			{task.cancelledByName
+				? m.volunteer_work_order_view_task_called_off_by_body({
+						date: formatDateShort(task.cancelledAt),
+						name: task.cancelledByName
+					})
+				: m.volunteer_work_order_view_task_called_off_body({
+						date: formatDateShort(task.cancelledAt)
+					})}
+		</Alert>
+	{:else if task.resolvedAt}
+		<Alert type="success">
+			{m.volunteer_work_order_view_task_done_body({ date: formatDateShort(task.resolvedAt) })}
 		</Alert>
 	{/if}
 
 	<!-- Ahead of the roster: on a contractor's task the engagement is the work. -->
 	{#if view.engagements.length > 0}
 		<section class="flex flex-col gap-3" aria-labelledby="engagements-heading">
-			<h2 id="engagements-heading" class="text-lg font-semibold">Engagements</h2>
+			<h2 id="engagements-heading" class="text-lg font-semibold">
+				{m.volunteer_work_order_view_engagements_title()}
+			</h2>
 			{#each view.engagements as row (row.job.id)}
 				<EngagementCard {row} />
 			{/each}
 		</section>
 	{/if}
 
-	<div class="grid gap-6 {calledOff ? '' : 'lg:grid-cols-2'}">
+	<div class="grid gap-6 {open ? 'lg:grid-cols-2' : ''}">
 		<div class="flex flex-col gap-6">
-			<InfoCard title={calledOff ? 'Who to tell' : "Who's on it"}>
-				{#snippet header()}
-					<div class="flex items-center justify-between gap-2">
-						<CardTitle>
-							{calledOff ? 'Who to tell' : "Who's on it"} · {claimants.length}
-						</CardTitle>
-						{#if !calledOff && unconfirmed.length > 1}
-							<Action
-								action={confirmSignups.for(shift.id)}
-								label="Confirm all {unconfirmed.length}"
-								variant="ghost"
-								size="sm"
-								class="text-success"
-								modalTitle="Confirm everyone waiting?"
-								submitLabel="Confirm all"
-								successToast="Confirmed"
-							>
-								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.id} />
-									{#each unconfirmed as c (c.signupId)}
-										<input type="hidden" name="signupIds" value={c.signupId} />
-									{/each}
-									<p class="text-sm">
-										{unconfirmed.map((c) => c.member.title).join(', ')} — all confirmed for this shift.
-										Each of them gets a reminder the day before.
-									</p>
-								{/snippet}
-							</Action>
-						{/if}
-					</div>
-				{/snippet}
+			{@render access?.()}
 
-				{#if claimants.length === 0}
-					<EmptyState
-						title="Nobody on it yet"
-						description={view.engagements.length > 0
-							? 'A contractor answers this one; see the engagements above.'
-							: 'Members interested in this role see it at the top of their list.'}
-					/>
-				{:else}
-					<ul class="flex flex-col gap-4">
-						{#each claimants as claimant (claimant.signupId)}
-							<li class="flex flex-col gap-2">
-								<div class="flex flex-wrap items-center justify-between gap-3">
-									<div class="flex min-w-0 flex-wrap items-center gap-2">
-										<EntityIdentity ref={claimant.member} />
-										{#if calledOff}
-											<span
-												class="badge badge-sm {claimant.notifiedAt
-													? 'badge-success'
-													: 'badge-warning'}"
-											>
-												{claimant.notifiedAt ? 'notified' : 'not notified'}
-											</span>
-										{:else}
-											<span class="badge badge-sm {statusBadge[claimant.status]}">
-												{claimant.status.replace('_', ' ')}
-											</span>
-										{/if}
-									</div>
-
-									<div class="flex shrink-0 gap-1">
-										{#if calledOff}
-											{#if claimant.notifiedAt}
-												<span class="text-sm text-success">✓ Notified</span>
-											{:else}
-												<!-- The escape hatch beside the mail-out, for staff who
-												     rang them. Sends nothing. -->
-												<Action
-													action={markSignupNotified.for(claimant.signupId)}
-													label="Mark as notified"
-													variant="ghost"
-													size="sm"
-													modalTitle="Mark {claimant.member.title} as told?"
-													submitLabel="Mark as notified"
-													successToast="Marked"
-												>
-													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
-														<p class="text-sm">
-															Use this when you reached them another way. Nothing is sent — it just
-															takes them off the list.
-														</p>
-													{/snippet}
-												</Action>
-											{/if}
-										{:else}
-											{#if claimant.status === 'claimed'}
-												<Action
-													action={confirmSignup.for(claimant.signupId)}
-													label="Confirm"
-													iconOnly
-													icon={checkIcon}
-													variant="ghost"
-													size="sm"
-													class="text-success"
-													modalTitle="Confirm {claimant.member.title}?"
-													submitLabel="Confirm"
-													successToast="Confirmed"
-												>
-													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
-														<p class="text-sm">
-															They'll get a reminder the day before. Only confirmed claims complete
-															automatically afterwards, so this is what turns a claim into a
-															booking.
-														</p>
-													{/snippet}
-												</Action>
-											{/if}
-
-											{#if claimant.status === 'claimed' || claimant.status === 'confirmed'}
-												<!-- Notice, not a no-show: somebody who rang to say they
-												     can't make it should not get a mark against them. -->
-												<Action
-													action={releaseSignup.for(claimant.signupId)}
-													label="Remove"
-													iconOnly
-													icon={releaseIcon}
-													variant="ghost"
-													size="sm"
-													modalTitle="Take {claimant.member.title} off this shift?"
-													submitLabel="Take them off"
-													successToast="Taken off. The place is open again."
-												>
-													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
-														<p class="text-sm">
-															Their place opens up straight away. Use this when they gave you notice
-															— a no-show is for somebody who simply didn't turn up.
-														</p>
-													{/snippet}
-												</Action>
-											{/if}
-
-											{#if claimant.status === 'confirmed' || claimant.status === 'completed'}
-												<!-- Confirmed people only: a claim nobody confirmed was never a booking. -->
-												<Action
-													action={markSignupNoShow.for(claimant.signupId)}
-													label="Mark no-show"
-													iconOnly
-													icon={noShowIcon}
-													variant="ghost"
-													size="sm"
-													class="text-error"
-													modalTitle="Mark {claimant.member.title} as a no-show?"
-													submitLabel="No-show"
-													submitVariant="error"
-													successToast="Marked as no-show"
-												>
-													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
-														<p class="text-sm">
-															Different from removing them: a removal is notice, a no-show isn't,
-															and only one of them is worth remembering next time.
-														</p>
-													{/snippet}
-												</Action>
-											{/if}
-										{/if}
-									</div>
-								</div>
-
-								{#if !calledOff && claimant.status === 'claimed'}
-									<!-- Only confirmation sends the reminder; the claim still
-									     completes as worked once the shift ends. -->
-									<p class="border-l-2 border-warning pl-2 text-xs text-warning">
-										Unconfirmed: no reminder.
-									</p>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</InfoCard>
-
-			{#if view.tasks.length > 0}
-				<ShiftChecklist tasks={view.tasks} shiftId={shift.id} />
-			{/if}
-
-			<!-- Apart from "Who's on it", because neither an invitation nor a
-			     refusal holds a place. -->
-			{#if view.invitations.length > 0}
-				<InfoCard title="Asked">
+			{#if view.assignees.length > 0}
+				<InfoCard
+					title={m.volunteer_work_order_view_assignees_title()}
+					state={view.assignees.length}
+					testid="assignees"
+				>
 					<ul class="flex flex-col gap-2">
-						{#each view.invitations as invitation (invitation.signupId)}
-							<li class="flex flex-wrap items-center gap-2">
-								<EntityIdentity ref={invitation.member} size="sm" />
-								<Badge variant={invitation.status === 'declined' ? 'error' : 'ghost'} size="xs">
-									{invitation.status === 'declined' ? 'SAID NO' : 'WAITING'}
-								</Badge>
-								{#if invitation.invitedByName}
-									<span class="text-subtle text-xs">{invitation.invitedByName} asked</span>
+						{#each view.assignees as a (a.userId)}
+							{@const drop = unassignFromTask.for(`${task.id}:${a.userId}`)}
+							<li class="flex flex-wrap items-center justify-between gap-2">
+								<EntityIdentity ref={a.member} />
+								{#if open && !a.completedAt}
+									<Action
+										action={drop}
+										label={m.volunteer_work_order_view_unassign_label()}
+										iconOnly
+										icon={unassignIcon}
+										variant="ghost"
+										size="sm"
+										modalTitle={m.volunteer_work_order_view_unassign_title({
+											title: a.member.title
+										})}
+										submitLabel={m.volunteer_work_order_view_unassign_label()}
+										successToast={m.volunteer_work_order_view_unassigned_toast()}
+									>
+										{#snippet form()}
+											<input {...drop.fields.workOrderId.as('hidden', task.id)} />
+											<input {...drop.fields.userId.as('hidden', a.userId)} />
+										{/snippet}
+									</Action>
 								{/if}
 							</li>
 						{/each}
 					</ul>
-					<p class="mt-2 text-subtle text-xs">
-						An invitation holds no place. A no is kept so the same person is not asked twice by
-						mistake.
-					</p>
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Briefing">
-				{#if shift.notes}
-					<p class="text-sm">{shift.notes}</p>
+			<TaskDependencies
+				taskId={task.id}
+				waitsOn={view.dependencies.waitsOn}
+				neededFor={view.dependencies.neededFor}
+				options={view.dependencyOptions}
+				editable={open}
+			/>
+
+			<section class="flex flex-col gap-3" aria-labelledby="shifts-heading">
+				<h2 id="shifts-heading" class="text-lg font-semibold">
+					{m.volunteer_work_order_view_shifts_title()}
+					<span class="text-muted font-normal">· {view.shifts.length}</span>
+				</h2>
+				{#if view.shifts.length === 0}
+					<EmptyState
+						title={m.volunteer_work_order_view_no_shifts_title()}
+						description={view.engagements.length > 0
+							? m.volunteer_work_order_view_contractor_answers_one_see_engagem_body()
+							: undefined}
+					/>
+				{/if}
+				{#each view.shifts as shift (shift.id)}
+					<ShiftCard {shift} taskOpen={open} />
+				{/each}
+			</section>
+
+			{#if view.tasks.length > 0}
+				<ShiftChecklist tasks={view.tasks} shiftId={task.id} />
+			{/if}
+
+			<InfoCard title={m.volunteer_work_order_view_task_notes_title()}>
+				{#if task.notes}
+					<p class="text-sm">{task.notes}</p>
 				{:else}
-					<p class="text-subtle text-sm">
-						No briefing yet — add one and claimants see it before they commit.
-					</p>
+					<p class="text-subtle text-sm">{m.volunteer_work_order_view_no_notes_text()}</p>
 				{/if}
 
-				<div class="mt-4 flex flex-wrap gap-2">
-					<Action
-						action={editForm}
-						label="Edit"
-						variant="ghost"
-						size="sm"
-						modalTitle="Edit this shift"
-						submitLabel="Save"
-						successToast="Shift updated. Everyone on it stays on it."
-					>
-						{#snippet icon()}<IconPencil size={16} />{/snippet}
-						{#snippet form()}
-							<input type="hidden" name="id" value={shift.id} />
-							<!-- An archived role stays in the list when this shift is on it, or
-							     the select would post an empty role and quietly reassign it. -->
-							<ShiftRoleFields
-								form={editForm}
-								keepId={shift.volunteerRoleId}
-								roleId={shift.volunteerRoleId ?? undefined}
-								initialEvent={shift.eventId && shift.eventTitle
-									? { id: shift.eventId, title: shift.eventTitle }
-									: null}
-								initialAsset={shift.assetId && shift.assetName
-									? { id: shift.assetId, name: shift.assetName }
-									: null}
-								startsAt={shift.startsAt ? toLocalDateTime(shift.startsAt) : ''}
-								endsAt={shift.endsAt ? toLocalDateTime(shift.endsAt) : ''}
-								capacity={String(shift.capacity)}
-								notes={shift.notes ?? ''}
-								title={shift.title ?? ''}
-							/>
-						{/snippet}
-					</Action>
-
-					{#if shift.startsAt}
-						{@const copy = duplicateShift.for(shift.id)}
+				{#if open}
+					<div class="mt-4 flex flex-wrap gap-2">
 						<Action
-							action={copy}
-							label="Copy forward"
+							action={editForm}
+							label={m.volunteer_work_order_view_edit_label()}
+							data-testid="edit-task"
 							variant="ghost"
 							size="sm"
-							modalTitle="Copy this shift forward"
-							submitLabel="Copy"
-							successToast="Copied. Nobody is on the copy yet."
-							onsuccess={(r) => {
-								const copyId = (r as { id?: string } | undefined)?.id;
-								// The shift URL sends a project's copy on to its task page.
-								if (copyId) goto(resolve(`/staff/volunteer/shifts/${copyId}`));
-							}}
+							modalTitle={m.volunteer_work_order_view_edit_task_title()}
+							submitLabel={m.volunteer_save_label()}
+							successToast={m.volunteer_work_order_view_task_updated_toast()}
 						>
+							{#snippet icon()}<IconPencil size={16} />{/snippet}
 							{#snippet form()}
-								<input {...copy.fields.id.as('hidden', shift.id)} />
-								<FormField
-									field={copy.fields.offsetDays}
-									type="number"
-									label="Days later"
-									value={7}
-									description="Same role, times and capacity, on a later date. A weekly slot is 7."
+								<input {...editForm.fields.id.as('hidden', task.id)} />
+								<!-- An archived role stays in the list when this task is on it, or
+								     the select would post an empty role and quietly reassign it. -->
+								<ShiftRoleFields
+									form={editForm}
+									taskOnly
+									keepId={task.volunteerRoleId}
+									roleId={task.volunteerRoleId ?? undefined}
+									initialEvent={task.eventId && task.eventTitle
+										? { id: task.eventId, title: task.eventTitle }
+										: null}
+									initialAsset={task.assetId && task.assetName
+										? { id: task.assetId, name: task.assetName }
+										: null}
+									startsAt=""
+									endsAt=""
+									capacity=""
+									notes={task.notes ?? ''}
+									title={task.title ?? ''}
 								/>
 							{/snippet}
 						</Action>
-					{/if}
 
-					{#if !calledOff}
 						<Action
-							action={cancelShift.for(shift.id)}
-							label="Cancel shift"
+							action={cancelTask.for(task.id)}
+							label={m.volunteer_work_order_view_cancel_task_label()}
+							data-testid="cancel-task"
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Cancel this shift?"
-							submitLabel="Cancel shift"
+							modalTitle={m.volunteer_work_order_view_cancel_task_title()}
+							submitLabel={m.volunteer_work_order_view_cancel_task_label()}
 							submitVariant="error"
-							successToast="Called off. Tell the people on it."
+							successToast={m.volunteer_work_order_view_called_off_tell_people_toast()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={shift.id} />
-								<p class="text-sm">
-									Claims and bookings stay in place — they are who you need to notify. The shift
-									stops taking claims.
-								</p>
+								<input {...cancelTask.for(task.id).fields.id.as('hidden', task.id)} />
+								<p class="text-sm">{m.volunteer_work_order_view_cancel_task_text()}</p>
 							{/snippet}
 						</Action>
-					{/if}
-				</div>
+					</div>
+				{/if}
 			</InfoCard>
 		</div>
 
 		<!-- Nobody can be put on work with no role, so there is nobody to suggest. -->
-		{#if !calledOff && shift.roleName !== null}
-			<CandidateColumn shiftId={shift.id} startsAt={shift.startsAt} />
+		{#if open && task.roleName !== null}
+			<CandidateColumn
+				workOrderId={task.id}
+				shifts={liveShifts}
+				bind:target
+				shiftId={targetShift?.id ?? null}
+				startsAt={targetShift?.startsAt ?? null}
+			/>
 		{/if}
 	</div>
 
-	<!-- Staffing reads as two numbers wherever it appears: "3 of 3" where none
-	     is confirmed gets no reminders, never completes and produces no hours. -->
-	{#if shift.roleName !== null}
-		<p class="text-subtle text-sm">
-			{booked.length} of {shift.capacity} confirmed{#if unconfirmed.length > 0}
-				<Badge variant="warning" size="sm" class="ml-1">
-					{unconfirmed.length} unconfirmed
-				</Badge>
-			{/if}
-		</p>
-	{/if}
-
 	{#if view.hours.length > 0}
-		<WorkOrderHours hours={view.hours} shiftId={shift.id} />
+		<WorkOrderHours hours={view.hours} shiftId={task.id} />
 	{/if}
 
 	{#if view.reports.length > 0}
@@ -515,18 +339,21 @@
 	{/if}
 
 	{#if view.feedback.length > 0}
-		<InfoCard title="How it went">
+		<InfoCard title={m.volunteer_work_order_view_how_went_title()}>
 			<ul class="flex flex-col gap-3">
 				{#each view.feedback as response (response.signupId)}
 					<li class="text-sm">
 						<div class="flex items-center gap-2">
-							<span class="text-warning" aria-label="{response.rating} out of 5">
+							<span
+								class="text-warning"
+								aria-label={m.volunteer_work_order_view_aria_label({ rating: response.rating })}
+							>
 								{'★'.repeat(response.rating)}{'☆'.repeat(5 - response.rating)}
 							</span>
 							{#if !response.wasSetUp}
 								<!-- The actionable signal: enjoyment and preparedness pull
 								     apart exactly where the briefing needs work. -->
-								<Badge variant="warning">wasn't set up</Badge>
+								<Badge variant="warning">{m.volunteer_work_order_view_wasn_t_set_up_label()}</Badge>
 							{/if}
 						</div>
 						{#if response.comment}
@@ -541,14 +368,6 @@
 	{@render activity?.()}
 </PageContent>
 
-{#snippet checkIcon()}
-	<IconCheck size={16} />
-{/snippet}
-
-{#snippet noShowIcon()}
-	<IconUserX size={16} />
-{/snippet}
-
-{#snippet releaseIcon()}
+{#snippet unassignIcon()}
 	<IconUserMinus size={16} />
 {/snippet}

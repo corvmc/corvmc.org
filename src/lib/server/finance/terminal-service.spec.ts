@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const env: Record<string, string | undefined> = {};
-vi.mock('$env/dynamic/private', () => ({ env }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock(env));
 
-const { initStripe } = await import('$lib/server/stripe');
+const { initStripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, FAKE_TERMINAL_LOCATION_ID, FAKE_TERMINAL_READER_ID } =
 	await import('./gateway/fake-gateway');
 const {

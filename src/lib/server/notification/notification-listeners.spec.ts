@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
+import { INVITE_EXPIRY_DAYS } from '#lib/config.js';
+import { forEachTimeZone } from '#lib/test/clock-edges.js';
+import { clubInstant } from '#lib/utils/format.js';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -19,26 +21,42 @@ vi.mock('./dispatcher', () => ({
 	dispatchBatch: (...args: unknown[]) => mockDispatchBatch(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const mockStaffUsers = vi.fn(async (_cap?: string) => [
 	{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
 	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
 ]);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: (cap: string) => mockStaffUsers(cap)
+}));
+
+// A task's notice goes to its position, else its committee, else every holder
+// (#2990). Unrouted by default, so it falls through to `mockStaffUsers`.
+const mockTaskAudience = vi.fn(
+	async (
+		_workOrderId: string
+	): Promise<{ userId: string; userName: string; userEmail: string }[] | null> => null
+);
+vi.mock('#lib/server/task/task-audience.js', () => ({
+	taskNoticeRecipients: async (workOrderId: string, cap: string) =>
+		(await mockTaskAudience(workOrderId)) ??
+		(await mockStaffUsers(cap)).map((u) => ({ userId: u.id, userName: u.name, userEmail: u.email }))
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
 // production state — both branches are exercised below.
 const mockBuildReplyToAddress = vi.fn((threadId: string) => `reply+${threadId}.sig@replies.test`);
-vi.mock('$lib/server/inbox/reply-address', () => ({
+vi.mock('#lib/server/inbox/reply-address.js', () => ({
 	buildReplyToAddress: (threadId: string) => mockBuildReplyToAddress(threadId)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STAFF_CONTACT_EMAIL: 'staff@test.com' })
+);
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.corvmc.com' })
+);
 
 // Capture event handlers.
 //
@@ -48,7 +66,7 @@ vi.mock('$env/dynamic/private', () => ({
 // are meeting. A single slot would silently keep only whichever registered last
 // and quietly test the wrong one.
 const handlers: Record<string, ((...args: any[]) => any)[]> = {};
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		on: (event: string, handler: (...args: any[]) => any) => {
 			(handlers[event] ??= []).push(handler);
@@ -63,7 +81,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 const mockOrientationOwnerOf = vi.fn(
 	async (_shiftId: string): Promise<{ userId: string; name: string; email: string } | null> => null
 );
-vi.mock('$lib/server/volunteer/orientation-service', () => ({
+vi.mock('#lib/server/volunteer/orientation-service.js', () => ({
 	orientationOwnerOf: (id: string) => mockOrientationOwnerOf(id)
 }));
 
@@ -75,7 +93,7 @@ const mockApplicationNotice = vi.fn(async (_groupId: string, _applicantUserId: s
 		{ id: 'chair-2', name: 'Di', email: 'di@test.com', href: '/member/groups/booking' }
 	]
 }));
-vi.mock('$lib/server/group/application-reviewers', () => ({
+vi.mock('#lib/server/group/application-reviewers.js', () => ({
 	applicationNotice: (g: string, u: string) => mockApplicationNotice(g, u)
 }));
 
@@ -85,7 +103,7 @@ const mockMembersAddedNotice = vi.fn(async (_groupId: string, _addedById: string
 	groupKind: 'club' as const,
 	addedByName: 'Sam'
 }));
-vi.mock('$lib/server/group/roster-import-service', () => ({
+vi.mock('#lib/server/group/roster-import-service.js', () => ({
 	membersAddedNotice: (g: string, a: string) => mockMembersAddedNotice(g, a)
 }));
 
@@ -150,7 +168,7 @@ describe('registerAllNotificationListeners', () => {
 			'ticket.purchased',
 			'event.cancelled',
 			'reservation.reminder_due',
-			'reservation.confirmation_reminder_due',
+			'reservation.payment_due',
 			'reservation.confirmed',
 			'reservation.cancelled',
 			'band.invitation_sent',
@@ -161,6 +179,7 @@ describe('registerAllNotificationListeners', () => {
 			'announcement.published',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
+			'reservation.recurring_rescheduled',
 			'reservation.waitlist_slot_available',
 			'reservation.waitlist_expired',
 			'equipment.loan_scheduled',
@@ -238,6 +257,66 @@ describe('what a shift notification calls the shift', () => {
 		await emit('volunteer.shift_reminder_due', { ...shift, title: 'Spring Deep Clean' });
 
 		expect(dispatchedTitle('volunteer_shift_reminder')).toContain('Spring Deep Clean');
+	});
+});
+
+/**
+ * A place reopening is the task's news (#2990): it goes to the position the task
+ * waits on, else its committee, and to every coordinator only when neither has
+ * anybody. A claim still goes to coordinators: confirming it needs the roster
+ * grant, which no committee carries.
+ */
+describe('shift notices route to the task first', () => {
+	beforeEach(() => {
+		registerAllNotificationListeners();
+		mockDispatch.mockClear();
+		mockTaskAudience.mockReset().mockResolvedValue(null);
+	});
+
+	const signup = {
+		signupId: 'sg-1',
+		shiftId: 'sh-1',
+		workOrderId: 'wo-1',
+		userId: 'vol-1',
+		userName: 'Sam',
+		userEmail: 'sam@test.com',
+		roleName: 'Door',
+		title: null,
+		eventTitle: null,
+		startsAt: '2026-09-06T00:45:00.000Z',
+		endsAt: '2026-09-06T01:30:00.000Z'
+	};
+	const recipientsOf = (type: string) =>
+		mockDispatch.mock.calls
+			.map(([a]) => a as { type: string; userId: string })
+			.filter((a) => a.type === type)
+			.map((a) => a.userId);
+
+	for (const [event, type] of [
+		['volunteer.signup_declined', 'volunteer_shift_declined'],
+		['volunteer.signup_cancelled', 'volunteer_shift_dropped']
+	] as const) {
+		it(`sends ${type} to the task's position holder and nobody else`, async () => {
+			mockTaskAudience.mockResolvedValue([
+				{ userId: 'holder', userName: 'Hol', userEmail: 'hol@test.com' }
+			]);
+			await emit(event, signup);
+			expect(mockTaskAudience).toHaveBeenCalledWith('wo-1');
+			expect(recipientsOf(type)).toEqual(['holder']);
+		});
+
+		it(`sends ${type} to every coordinator when the task routes nowhere`, async () => {
+			await emit(event, signup);
+			expect(recipientsOf(type)).toEqual(['staff-1', 'staff-2']);
+		});
+	}
+
+	it('still sends a claim to every coordinator', async () => {
+		mockTaskAudience.mockResolvedValue([
+			{ userId: 'holder', userName: 'Hol', userEmail: 'hol@test.com' }
+		]);
+		await emit('volunteer.signup_claimed', signup);
+		expect(recipientsOf('volunteer_shift_claimed')).toEqual(['staff-1', 'staff-2']);
 	});
 });
 
@@ -396,9 +475,9 @@ describe('door code ready', () => {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		const params = mockDispatch.mock.calls[0][0];
@@ -406,6 +485,58 @@ describe('door code ready', () => {
 		expect(params.userId).toBe('user-1');
 		expect(detailText(params.email)).toContain('Door code: 482913');
 		expect(params.href).toBe('/member/reservations');
+	});
+});
+
+describe('classified post expiring', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	it('writes to the author and links to the post they can renew', async () => {
+		await emit('classified.expiring', {
+			postId: 'post-1',
+			title: 'Drummer wanted',
+			expiresOn: 'Wednesday, June 17, 2026',
+			userId: 'user-1',
+			userName: 'Bob',
+			userEmail: 'user@test.com'
+		});
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('classified_expiring');
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/classifieds/post-1');
+	});
+});
+
+describe('classified post moderated', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const decision = {
+		postId: 'post-1',
+		title: 'Drummer wanted',
+		note: 'Say what the band plays',
+		authorUserId: 'user-1',
+		authorName: 'Bob',
+		authorEmail: 'user@test.com'
+	};
+
+	it('passes a takedown note to the author, linked to the post they can edit', async () => {
+		await emit('classified.moderated', { ...decision, visibility: 'hidden' });
+
+		const params = mockDispatch.mock.calls[0][0];
+		expect(params.type).toBe('classified_moderated');
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/classifieds/post-1');
+		expect(params.email.quote).toBe(decision.note);
+	});
+
+	it('words an approval differently from a takedown', async () => {
+		await emit('classified.moderated', { ...decision, visibility: 'hidden' });
+		await emit('classified.moderated', { ...decision, visibility: 'visible', note: null });
+
+		const [down, up] = mockDispatch.mock.calls.map(([p]) => p);
+		expect(up.title).not.toBe(down.title);
+		expect(up.email.quote).toBeUndefined();
 	});
 });
 
@@ -417,9 +548,9 @@ describe('collapsed listeners use the generic template', () => {
 			userId: 'user-1',
 			userEmail: 'user@test.com',
 			userName: 'Bob',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		const params = mockDispatch.mock.calls[0][0];
@@ -427,48 +558,13 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.email).toBeDefined();
 		expect(params.email.subject).toContain('May 21');
 		expect(params.email.details.map((d: { value: string }) => d.value)).toEqual([
-			'May 21',
+			'Thursday, May 21',
 			'10:00 AM – 11:00 AM'
 		]);
 		// The button carries a label only; it follows the notification's own href,
 		// and build-model.spec.ts owns turning that into an absolute URL.
 		expect(params.email.cta).toEqual({ label: 'View my reservations' });
 		expect(params.href).toBe('/member/reservations');
-	});
-
-	it('confirmation_reminder → notification alias', async () => {
-		await emit('reservation.confirmation_reminder_due', {
-			userId: 'user-1',
-			userEmail: 'user@test.com',
-			userName: 'Bob',
-			date: 'May 22',
-			startTime: '2:00 PM',
-			endTime: '3:00 PM'
-		});
-
-		const params = mockDispatch.mock.calls[0][0];
-		expect(params.type).toBe('confirmation_reminder');
-		expect(params.email).toBeDefined();
-		expect(params.email.subject).toContain('May 22');
-	});
-
-	// The reminder is the only thing that reaches a member who is not looking at
-	// the app, and the sweep cancels the booking outright. Asking them to confirm
-	// without saying what happens if they do not is the gap #895 filed.
-	it('confirmation_reminder says the booking is released if nobody confirms', async () => {
-		await emit('reservation.confirmation_reminder_due', {
-			userId: 'user-1',
-			userEmail: 'user@test.com',
-			userName: 'Bob',
-			date: 'May 22',
-			startTime: '2:00 PM',
-			endTime: '3:00 PM'
-		});
-
-		const { email } = mockDispatch.mock.calls[0][0];
-		expect(email.paragraphs.map((p: { text: string }) => p.text).join(' ')).toContain(
-			UNCONFIRMED_RELEASE_NOTICE
-		);
 	});
 
 	it('band.invitation_sent → notification alias', async () => {
@@ -617,6 +713,25 @@ describe('collapsed listeners use the generic template', () => {
 		expect(mockDispatchBatch).not.toHaveBeenCalled();
 	});
 
+	it('audio.purchased → absolute download and release links', async () => {
+		await emit('audio.purchased', {
+			purchaseId: 'p-1',
+			downloadToken: 'tok-1',
+			buyerEmail: 'buyer@test.com',
+			releaseTitle: 'Album',
+			releaseSlug: 'album',
+			bandName: 'Band',
+			bandSlug: 'band',
+			amountPaidCents: 0,
+			platformFeeCents: 0,
+			bandNetCents: 0
+		});
+
+		const { email } = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(email.cta.url).toBe('https://test.corvmc.com/music/download/tok-1');
+		expect(email.footnote).toContain('https://test.corvmc.com/music/band/album');
+	});
+
 	const contactFormEvent = {
 		threadId: 'thread-9',
 		name: 'Charlie',
@@ -642,6 +757,14 @@ describe('collapsed listeners use the generic template', () => {
 		// staffer's reply as a quote rather than as literal fence text.
 		expect(params.model.message).toBe('> Hello, I have a question');
 		expect(params.model.threadUrl).toBe('https://test.corvmc.com/staff/inbox/thread-9');
+	});
+
+	it('contact.form_submitted → a performance inquiry goes to booking, with the thread Reply-To', async () => {
+		await emit('contact.form_submitted', { ...contactFormEvent, subject: 'Performance Inquiry' });
+
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.toEmail).toBe('booking@corvmc.org');
+		expect(params.replyTo).toBe('reply+thread-9.sig@replies.test');
 	});
 
 	it('contact.form_submitted → replies route back through the thread address', async () => {
@@ -936,9 +1059,9 @@ describe('reservation.confirmed handler', () => {
 			userId: 'user-1',
 			userName: 'Bob',
 			userEmail: 'user@test.com',
-			date: 'May 21',
-			startTime: '10:00 AM',
-			endTime: '11:00 AM'
+			date: '2026-05-21',
+			startTime: '10:00',
+			endTime: '11:00'
 		});
 
 		expect(mockDispatch).toHaveBeenCalledTimes(1);
@@ -947,7 +1070,7 @@ describe('reservation.confirmed handler', () => {
 		expect(params.userEmail).toBe('user@test.com');
 		expect(params.email.subject).toContain('May 21');
 		expect(params.email.details).toEqual([
-			{ label: 'Date', value: 'May 21' },
+			{ label: 'Date', value: 'Thursday, May 21' },
 			{ label: 'Time', value: '10:00 AM – 11:00 AM' }
 		]);
 	});
@@ -961,9 +1084,9 @@ describe('reservation.cancelled handler', () => {
 		userId: 'user-1',
 		userName: 'Bob',
 		userEmail: 'user@test.com',
-		date: 'May 21',
-		startTime: '10:00 AM',
-		endTime: '11:00 AM'
+		date: '2026-05-21',
+		startTime: '10:00',
+		endTime: '11:00'
 	};
 
 	it('emails the member when cancelled by staff', async () => {
@@ -1041,7 +1164,7 @@ describe('volunteer hour-log handlers', () => {
 		});
 
 		expect(mockDispatch.mock.calls[0][0].email).toBeUndefined();
-		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteer');
+		expect(mockDispatch.mock.calls[0][0].href).toBe('/staff/volunteering/hours');
 		// Only exceptions are announced, so the notice says which one.
 		expect(mockDispatch.mock.calls[0][0].body).toContain('Long entry');
 	});
@@ -1104,14 +1227,14 @@ describe('every notification-alias model', () => {
 
 	/** Fire one representative event per listener and collect the email models. */
 	async function collectModels(): Promise<Record<string, unknown>[]> {
-		const when = { date: 'May 21', startTime: '10:00 AM', endTime: '11:00 AM' };
+		const when = { date: '2026-05-21', startTime: '10:00', endTime: '11:00' };
 		const member = { userId: 'user-1', userEmail: 'u@test.com', userName: 'Bob' };
 
 		await emit('reservation.reminder_due', { ...member, ...when });
-		await emit('reservation.confirmation_reminder_due', { ...member, ...when });
 		await emit('reservation.confirmed', { ...member, ...when });
 		await emit('reservation.cancelled', { ...member, ...when, cancelledBy: 'staff' });
 		await emit('reservation.recurring_waitlisted', { ...member, ...when });
+		await emit('reservation.recurring_rescheduled', { ...member, ...when, keptCount: 1 });
 		await emit('reservation.waitlist_expired', { ...member, ...when });
 		await emit('reservation.waitlist_slot_available', {
 			...member,
@@ -1121,7 +1244,7 @@ describe('every notification-alias model', () => {
 		});
 		await emit('reservation.recurring_skipped', {
 			...member,
-			skippedDate: 'May 21',
+			skippedDate: '2026-05-21',
 			startTime: when.startTime,
 			endTime: when.endTime,
 			reason: 'Space closed'
@@ -1392,19 +1515,19 @@ describe('development deadline due (#1477)', () => {
 		registerAllNotificationListeners();
 	});
 
-	const grantReport = {
+	const grantApply = {
 		stage: '14d',
 		module: 'grant',
-		kind: 'report',
+		kind: 'apply',
 		on: '2026-10-01',
-		title: 'Interim report',
+		title: 'Apply by',
 		parentId: 'g1',
 		parentTitle: '2027 operating support',
 		counterparty: 'Oregon Arts Commission'
 	};
 
 	it('tells every grant manager, linking to the application', async () => {
-		await emit('development.deadline_due', grantReport);
+		await emit('development.deadline_due', grantApply);
 
 		expect(mockStaffUsers).toHaveBeenCalledWith('grant.manage');
 		const calls = mockDispatch.mock.calls
@@ -1412,13 +1535,13 @@ describe('development deadline due (#1477)', () => {
 			.filter((p) => p.type === 'development_deadline');
 		expect(new Set(calls.map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
 		expect(calls[0].href).toBe('/staff/grants/g1');
-		expect(calls[0].title).toContain('Interim report');
+		expect(calls[0].title).toContain('Apply by');
 		expect(calls[0].email.subject).toContain('Oregon Arts Commission');
 	});
 
 	it("tells sponsor managers about a term's end, linking to the sponsor", async () => {
 		await emit('development.deadline_due', {
-			...grantReport,
+			...grantApply,
 			stage: '3d',
 			module: 'sponsor',
 			kind: 'end',
@@ -1430,46 +1553,7 @@ describe('development deadline due (#1477)', () => {
 
 		expect(mockStaffUsers).toHaveBeenCalledWith('sponsor.manage');
 		const call = mockDispatch.mock.calls.find(([p]) => p.type === 'development_deadline')?.[0];
-		expect(call.href).toBe('/staff/sponsors/s1');
-	});
-});
-
-describe('renewal expiry due (#1478)', () => {
-	beforeEach(() => {
-		registerAllNotificationListeners();
-	});
-
-	const policy = {
-		stage: '60d',
-		renewalId: 'r1',
-		name: 'General liability',
-		kind: 'insurance',
-		issuer: 'Acme Mutual',
-		reference: 'GL-123',
-		expiresOn: '2026-11-01',
-		responsible: { id: 'u9', name: 'Cy', email: 'cy@test.com' }
-	};
-
-	const renewalCalls = () =>
-		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'renewal_expiry');
-
-	it('tells the responsible staffer alone, linking to the renewal', async () => {
-		await emit('renewal.expiry_due', policy);
-
-		expect(mockStaffUsers).not.toHaveBeenCalled();
-		const calls = renewalCalls();
-		expect(calls.map((c) => c.userId)).toEqual(['u9']);
-		expect(calls[0].href).toBe('/staff/renewals/r1');
-		expect(calls[0].title).toContain('General liability');
-		expect(calls[0].email.subject).toContain('General liability');
-		expect(detailText(calls[0].email)).toContain('GL-123');
-	});
-
-	it('tells every renewal manager when nobody is responsible', async () => {
-		await emit('renewal.expiry_due', { ...policy, responsible: null });
-
-		expect(mockStaffUsers).toHaveBeenCalledWith('renewal.manage');
-		expect(new Set(renewalCalls().map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
+		expect(call.href).toBe('/staff/contacts/s1#sponsorships');
 	});
 });
 
@@ -1561,46 +1645,245 @@ describe('show cancelled, to each committee with open items (#1709)', () => {
 	});
 });
 
+describe('named the event lead on a show (#2726)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const assigned = {
+		productionId: 'prod-1',
+		eventId: 'evt-1',
+		eventTitle: 'Friday Night Fuzz',
+		startsAt: '2026-10-09T03:00:00.000Z',
+		leadUserId: 'u-lead',
+		leadName: 'Sam',
+		leadEmail: 'sam@test.com',
+		assignedByName: 'Ada Booker'
+	};
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'show_lead_assigned');
+
+	it('tells the lead which show and who named them, linking the console', async () => {
+		await emit('production.lead_assigned', assigned);
+
+		const [sent] = calls();
+		expect(sent.userId).toBe('u-lead');
+		expect(sent.href).toBe('/staff/events/evt-1/production');
+		expect(sent.title).toContain('Friday Night Fuzz');
+		expect(sent.body).toContain('Ada Booker');
+		expect(detailText(sent.email)).toContain('Ada Booker');
+	});
+
+	it('names nobody when the account that did it is gone', async () => {
+		await emit('production.lead_assigned', { ...assigned, assignedByName: null });
+
+		const [sent] = calls();
+		expect(sent.body).not.toContain('null');
+		expect(detailLabels(sent.email)).toHaveLength(2);
+	});
+});
+
+describe('assigned a task (#2986)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const assigned = {
+		workOrderId: 'wo-1',
+		title: 'Fix the PA',
+		dueAt: '2026-10-09T03:00:00.000Z',
+		recipient: { userId: 'u-nia', userName: 'Nia', userEmail: 'nia@test.com' },
+		assignedByName: 'Ada Booker'
+	};
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'task_assigned');
+
+	it('tells the assignee the task, who assigned it and when it is due, linking their task page', async () => {
+		await emit('volunteer.task_assigned', assigned);
+
+		const [sent] = calls();
+		expect(sent.userId).toBe('u-nia');
+		expect(sent.href).toBe('/member/volunteer/tasks/wo-1');
+		expect(sent.title).toContain('Fix the PA');
+		expect(sent.body).toContain('Ada Booker');
+		expect(detailLabels(sent.email)).toHaveLength(3);
+	});
+
+	it('names nobody and no date when neither is known', async () => {
+		await emit('volunteer.task_assigned', { ...assigned, assignedByName: null, dueAt: null });
+
+		const [sent] = calls();
+		expect(sent.body).not.toContain('null');
+		expect(detailLabels(sent.email)).toHaveLength(1);
+	});
+});
+
 describe('committee show work due (#1709)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
-	const due = {
+	const item = {
 		stage: 'due_3d' as const,
 		workOrderId: 'wo-1',
 		title: 'Poster art made',
 		eventTitle: 'Friday Night Fuzz',
+		projectName: 'Friday Night Fuzz',
 		dueAt: '2026-10-09T03:00:00.000Z',
 		groupName: 'Art and Merchandise Committee',
-		groupSlug: 'art-and-merchandise-committee',
-		recipients: [
-			{ userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' },
-			{ userId: 'u2', userName: 'Di', userEmail: 'u2@test.com' }
-		]
+		groupSlug: 'art-and-merchandise-committee'
 	};
+	const recipient = { userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' };
+	const digest = (...items: object[]) => ({
+		recipient,
+		items
+	});
 	const calls = () =>
 		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'deliverable_due');
 
-	it('tells each recipient what is due and when, linking to the Open items tab', async () => {
-		await emit('volunteer.deliverable_due', due);
-		const sent = calls();
-		expect(sent.map((c) => c.userId)).toEqual(['u1', 'u2']);
-		expect(sent[0].href).toBe('/member/groups/art-and-merchandise-committee?tab=items');
-		expect(sent[0].title).toContain('Poster art made');
-		expect(paragraphText(sent[0].email)).toContain('Friday Night Fuzz');
-		expect(detailText(sent[0].email)).toContain('Committee: Art and Merchandise Committee');
+	it('names the item and its show for a single item, linking to the Open items tab', async () => {
+		await emit('volunteer.deliverable_due', digest(item));
+		const [sent] = calls();
+		expect(sent.userId).toBe('u1');
+		expect(sent.href).toBe('/member/groups/art-and-merchandise-committee?tab=items');
+		expect(sent.email.subject).toContain('Poster art made');
+		expect(sent.email.subject).toContain('Friday Night Fuzz');
+		expect(detailText(sent.email)).toContain('Committee: Art and Merchandise Committee');
 	});
 
-	it('says overdue once it is late', async () => {
-		await emit('volunteer.deliverable_due', { ...due, stage: 'overdue' });
+	// #2990: the show's lead is not on the committee, so their mail opens the show.
+	it("links the event lead's digest to the show", async () => {
+		mockDispatch.mockClear();
+		await emit('volunteer.deliverable_due', digest({ ...item, eventId: 'evt-1', forLead: true }));
+		expect(calls()[0].href).toBe('/staff/events/evt-1/production');
+	});
+
+	it('names a grant item by its project, two weeks ahead', async () => {
+		await emit(
+			'volunteer.deliverable_due',
+			digest({
+				...item,
+				stage: 'due_14d',
+				title: 'Submit the interim report',
+				eventTitle: null,
+				projectName: 'Practice room soundproofing'
+			})
+		);
+		const [sent] = calls();
+		expect(sent.email.subject).toContain('Submit the interim report');
+		expect(sent.email.subject).toContain('Practice room soundproofing');
+		expect(detailText(sent.email)).toContain('Practice room soundproofing');
+	});
+
+	it('names the show in an overdue subject too, so two shows do not read as duplicates', async () => {
+		await emit('volunteer.deliverable_due', digest({ ...item, stage: 'overdue' }));
 		const [first] = calls();
-		expect(first.title).toBe('Overdue: Poster art made');
-		expect(first.email.heading).toBe('Show work overdue');
+		expect(first.email.subject).toContain('Poster art made');
+		expect(first.email.subject).toContain('Friday Night Fuzz');
 	});
 
-	it('keeps going past a recipient whose dispatch fails', async () => {
+	it('sends several items as one mail, late ones first, one row each', async () => {
+		await emit(
+			'volunteer.deliverable_due',
+			digest(
+				item,
+				{ ...item, workOrderId: 'wo-2', eventTitle: 'Show B', stage: 'overdue' },
+				{
+					...item,
+					workOrderId: 'wo-3',
+					eventTitle: 'Show C',
+					groupSlug: 'booking',
+					groupName: 'Booking'
+				}
+			)
+		);
+		const sent = calls();
+		expect(sent).toHaveLength(1);
+		expect(sent[0].email.subject).toContain('3');
+		expect(sent[0].email.details).toHaveLength(3);
+		expect(sent[0].email.details[0].value).toContain('Show B');
+		expect(sent[0].data).toEqual({ workOrderIds: ['wo-2', 'wo-1', 'wo-3'] });
+		// Two committees: the link is the committees list, not one of them.
+		expect(sent[0].href).toBe('/member/groups');
+	});
+
+	it('lets a failed dispatch throw, so the drain leaves the items owed', async () => {
 		mockDispatch.mockRejectedValueOnce(new Error('down'));
-		await emit('volunteer.deliverable_due', due);
-		expect(mockDispatch).toHaveBeenCalledTimes(2);
+		await expect(emit('volunteer.deliverable_due', digest(item))).rejects.toThrow('down');
+	});
+});
+
+describe('first visit (#2569)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const visit = {
+		reservationId: 'res-1',
+		userId: 'user-1',
+		userEmail: 'nia@test.com',
+		userName: 'Nia',
+		date: '2026-07-14',
+		startTime: '18:00',
+		endTime: '19:00',
+		tourTime: '5:50 PM',
+		address: '6775 SW Philomath Blvd, Corvallis',
+		notes: 'Park in the back lot.\nNo food in the room.'
+	};
+	const sent = () => mockDispatch.mock.calls.map(([p]) => p).find((p) => p.type === 'first_visit');
+	const copy = (email: { paragraphs?: { text: string }[] }) =>
+		(email.paragraphs ?? []).map((p) => p.text).join('\n');
+
+	it('tells the member when to arrive, where, and carries the staff notes as plain text', async () => {
+		await emit('reservation.first_visit_due', visit);
+		const params = sent();
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/reservations');
+		expect(params.email.subject).toContain('Tuesday, July 14');
+		expect(copy(params.email)).toContain('5:50 PM');
+		expect(copy(params.email)).toContain(visit.address);
+		expect(params.email.body_plain).toBe(visit.notes);
+		expect(detailText(params.email)).toContain('5:50 PM');
+	});
+
+	it('leaves out the tour and the notes when there are none', async () => {
+		await emit('reservation.first_visit_due', { ...visit, tourTime: null, notes: '' });
+		const params = sent();
+		expect(params.email.body_plain).toBeUndefined();
+		expect(detailLabels(params.email)).toHaveLength(2);
+	});
+});
+
+describe('unclaimed orientation (#2567)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const item = {
+		workOrderId: 'wo-1',
+		memberName: 'Nia',
+		startsAt: '2026-07-15T00:50:00.000Z',
+		endsAt: '2026-07-15T01:20:00.000Z'
+	};
+	const recipient = { userId: 'staff-1', userName: 'Ada', userEmail: 'ada@test.com' };
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'orientation_unclaimed');
+
+	it('names the member and links to the shift', async () => {
+		await emit('volunteer.orientation_unclaimed', { recipient, items: [item] });
+		const [params] = calls();
+		expect(params.userId).toBe('staff-1');
+		expect(params.title).toContain('Nia');
+		expect(params.href).toBe('/staff/tasks/wo-1');
+		expect(params.email.details).toHaveLength(1);
+	});
+
+	it('sends several as one mail, soonest first, linking to the short-staffed list', async () => {
+		await emit('volunteer.orientation_unclaimed', {
+			recipient,
+			items: [{ ...item, workOrderId: 'wo-2', startsAt: '2026-07-15T03:00:00.000Z' }, item]
+		});
+		const sent = calls();
+		expect(sent).toHaveLength(1);
+		expect(sent[0].data).toEqual({ workOrderIds: ['wo-1', 'wo-2'] });
+		expect(sent[0].href).toBe('/staff/volunteering?needs=short');
+	});
+
+	it('lets a failed dispatch throw, so the drain leaves the items owed', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('down'));
+		await expect(
+			emit('volunteer.orientation_unclaimed', { recipient, items: [item] })
+		).rejects.toThrow('down');
 	});
 });
 
@@ -1633,5 +1916,138 @@ describe('group application submitted (#1726)', () => {
 		mockApplicationNotice.mockResolvedValueOnce(null as never);
 		await emit('group.application_submitted', submitted);
 		expect(mockDispatch).not.toHaveBeenCalled();
+	});
+});
+
+describe('notification dates are the club day in any runtime zone (#2509)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	// 8 PM on Nov 10 in Corvallis is already Nov 11 in UTC, the Workers zone.
+	const evening = '2026-11-11T04:00:00.000Z';
+	const sentOf = (type: string) =>
+		mockDispatch.mock.calls.map(([p]) => p).find((p) => p.type === type);
+
+	forEachTimeZone('a cancelled show names its own day', async () => {
+		await emit('production.cancelled', {
+			productionId: 'prod-1',
+			eventId: 'evt-1',
+			eventTitle: 'Friday Night Fuzz',
+			startsAt: evening,
+			cancelledByName: null,
+			recipients: [
+				{ userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com', committeeSlug: 'c', items: ['x'] }
+			]
+		});
+		const sent = sentOf('production_cancelled');
+		expect(detailText(sent.email)).toContain('November 10');
+		expect(sent.body).not.toContain('November 11');
+	});
+
+	forEachTimeZone('a deliverable is due on the club day', async () => {
+		await emit('volunteer.deliverable_due', {
+			recipient: { userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' },
+			items: [
+				{
+					stage: 'due_3d',
+					workOrderId: 'wo-1',
+					title: 'Poster art made',
+					eventTitle: null,
+					dueAt: evening,
+					groupName: 'Art',
+					groupSlug: 'art'
+				}
+			]
+		});
+		expect(sentOf('deliverable_due').title).toContain('November 10');
+	});
+
+	forEachTimeZone('a shift reads in club time', async () => {
+		await emit('volunteer.shift_reminder_due', {
+			signupId: 'sg-1',
+			shiftId: 'wo-1',
+			userId: 'vol-1',
+			userName: 'Sam',
+			userEmail: 'sam@test.com',
+			roleName: 'Door',
+			title: null,
+			eventTitle: null,
+			startsAt: evening,
+			endsAt: '2026-11-11T06:00:00.000Z'
+		});
+		const sent = sentOf('volunteer_shift_reminder');
+		expect(sent.body).toContain('November 10');
+		expect(sent.body).toContain('8:00');
+	});
+
+	// #2538: a pickup date is stored as noon club time, like every date input.
+	forEachTimeZone('a pickup is on the club day', async () => {
+		await emit('equipment.loan_scheduled', {
+			loanId: 'l1',
+			userId: 'u1',
+			userName: 'Cy',
+			userEmail: 'u1@test.com',
+			equipmentName: 'SM58',
+			scheduledPickupDate: clubInstant('2026-06-01', '12:00').toISOString()
+		});
+		expect(sentOf('equipment_loan_scheduled').body).toContain('June 1');
+	});
+});
+
+// Payloads carry the club wall clock as machine forms (`ClubDate`, `ClubTime`);
+// every listener reading them formats before a member sees it (#2816).
+describe('wall-clock payloads reach members formatted', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const wallClock = {
+		date: '2026-11-14',
+		skippedDate: '2026-11-14',
+		startTime: '15:00',
+		endTime: '16:30'
+	};
+	const payload = {
+		...wallClock,
+		reservationId: 'r1',
+		seriesId: 's1',
+		eventId: 'e1',
+		eventTitle: 'Open mic',
+		userId: 'user-1',
+		userName: 'Bob',
+		userEmail: 'user@test.com',
+		cancelledBy: 'staff',
+		reason: 'Room taken',
+		code: '1234',
+		tourTime: null,
+		address: '1 Main St',
+		notes: ''
+	};
+	const events = [
+		'reservation.confirmed',
+		'reservation.cancelled',
+		'reservation.reminder_due',
+		'reservation.first_visit_due',
+		'reservation.door_code_ready',
+		'reservation.recurring_skipped',
+		'reservation.recurring_waitlisted',
+		'reservation.recurring_rescheduled',
+		'reservation.waitlist_slot_available',
+		'reservation.waitlist_expired',
+		'event.recurring_reservation_skipped'
+	];
+
+	it.each(events)('%s', async (event) => {
+		await emit(event, payload);
+
+		const sent = [
+			mockDispatch,
+			mockDispatchEmailOnly,
+			mockDispatchBatch,
+			mockDispatchEmailOnlyBatch
+		]
+			.flatMap((m) => m.mock.calls)
+			.map((call) => JSON.stringify(call));
+		expect(sent.length).toBeGreaterThan(0);
+		for (const raw of Object.values(wallClock)) {
+			expect(sent.join('\n')).not.toContain(raw);
+		}
 	});
 });

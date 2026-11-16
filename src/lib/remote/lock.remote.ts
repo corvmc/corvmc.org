@@ -2,30 +2,35 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { requireCapability } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq } from 'drizzle-orm';
-import { LOCK_MODE_PASSAGE, queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
-import { getLastLockJobRun, runDailyLockJob } from '$lib/server/lock/lock-service';
-import { readOutCodeFor } from '$lib/server/lock/door-service';
-import { listPoolCodes, poolDepth } from '$lib/server/lock/fallback-code-service';
+import { LOCK_MODE_PASSAGE, queryDeviceHealth } from '#lib/server/lock/ultraloc-client.js';
+import { listActiveCodes } from '#lib/server/lock/building-access.js';
+import {
+	getLastLockJobRun,
+	getLockStatus,
+	runDailyLockJob
+} from '#lib/server/lock/lock-service.js';
+import { readOutCodeFor } from '#lib/server/lock/door-service.js';
+import { listPoolCodes, poolDepth } from '#lib/server/lock/fallback-code-service.js';
 import {
 	listUnmanagedLockUsers,
 	adoptLockUser,
 	grantMemberCode,
 	revokeMemberCode,
 	listMemberCodes
-} from '$lib/server/lock/member-code-service';
+} from '#lib/server/lock/member-code-service.js';
 import {
 	issueHolding,
 	listAccessRegister,
 	returnHolding
-} from '$lib/server/lock/access-register-service';
-import { mapDomainError } from '$lib/server/errors';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { accessHoldingKinds, DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/lock/access-register-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { accessHoldingKinds, clubToday, DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Door access
@@ -61,6 +66,22 @@ export const getLockHealth = query(async () => {
 	} catch (err) {
 		return { ok: false as const, lastRun, error: (err as Error).message };
 	}
+});
+
+/**
+ * The Building access sidebar: the last health reading, the last daily run, and
+ * every code the door holds or is waiting for. KV and D1 only, so opening the
+ * sidebar never waits on U-tec.
+ */
+export const getBuildingAccess = query(async () => {
+	await requireCapability('lock.manage');
+	const now = new Date();
+	const [status, lastRun, codes] = await Promise.all([
+		getLockStatus(),
+		getLastLockJobRun(),
+		listActiveCodes(now)
+	]);
+	return { status, lastRun, codes };
 });
 
 /**
@@ -233,11 +254,23 @@ export const issueAccessForm = form(
 );
 
 export const returnAccessForm = form(
-	z.object({ id: z.string().min(1), notes: z.string().max(2000).optional() }),
-	async ({ id, notes }) => {
+	z.object({
+		id: z.string().min(1),
+		returnedOn: z.string().optional(),
+		notes: z.string().max(2000).optional()
+	}),
+	async ({ id, returnedOn, notes }) => {
 		const staff = await requireCapability('lock.manage');
 		try {
-			await returnHolding(id, { returnedByUserId: staff.id, notes: notes || null });
+			await returnHolding(id, {
+				returnedByUserId: staff.id,
+				notes: notes || null,
+				// Today is "now"; an earlier day is noon, as `issuedOn` is.
+				returnedAt:
+					returnedOn && returnedOn !== clubToday()
+						? buildDateInTz(returnedOn, '12:00', DEFAULT_TIMEZONE)
+						: undefined
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}

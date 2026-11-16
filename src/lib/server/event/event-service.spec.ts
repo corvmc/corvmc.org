@@ -92,7 +92,8 @@ const insertValues = vi.fn((vals: Record<string, unknown> | Record<string, unkno
 		)
 	};
 });
-const eventInsert = vi.fn(() => ({ values: insertValues }));
+// `select` is the insert-from-select that places pending duty-list windows as shifts.
+const eventInsert = vi.fn(() => ({ values: insertValues, select: () => Promise.resolve([]) }));
 
 const deleteWhere = vi.fn(() => Promise.resolve());
 const eventDelete = vi.fn(() => ({ where: deleteWhere }));
@@ -107,7 +108,7 @@ const saleNames: Record<string, string> = {
 	quantity: 'ticketQuantity',
 	groupId: 'groupId'
 };
-vi.mock('$lib/server/ticket/ticket-sale', () => ({
+vi.mock('#lib/server/ticket/ticket-sale.js', () => ({
 	saveTicketSale: vi.fn((_id: string, terms: Record<string, unknown>) => {
 		const set = Object.fromEntries(
 			Object.entries(terms)
@@ -122,13 +123,13 @@ vi.mock('$lib/server/ticket/ticket-sale', () => ({
 
 const bandSaleBlocker = vi.fn();
 const refundBandTicketSale = vi.fn();
-vi.mock('$lib/server/ticket/ticket-seller', () => ({
+vi.mock('#lib/server/ticket/ticket-seller.js', () => ({
 	bandSaleBlocker: (...a: unknown[]) => bandSaleBlocker(...(a as [])),
 	refundBandTicketSale: (...a: unknown[]) => refundBandTicketSale(...(a as []))
 }));
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -169,7 +170,7 @@ const { ReservationConflictError } = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn().mockResolvedValue({ id: 'res-1' }),
 	cancel: vi.fn().mockResolvedValue(undefined),
 	adjustWindow: vi.fn().mockResolvedValue({
@@ -180,33 +181,33 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 }));
 
 const mockSyncAccessWindow = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	syncAccessWindow: (...args: unknown[]) => mockSyncAccessWindow(...args)
 }));
 
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	hasConflict: vi.fn().mockResolvedValue(false)
 }));
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: vi.fn().mockResolvedValue('events/posters/evt-1.jpg'),
 	deleteObject: vi.fn().mockResolvedValue(undefined)
 }));
 
 // The two buckets. Both copies return the destination key on success and null
 // when the source is gone — the real contract in private-storage.ts.
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	copyToPrivate: vi.fn((_src: string, dest: string) => Promise.resolve(dest)),
 	copyFromPrivate: vi.fn((_src: string, dest: string) => Promise.resolve(dest)),
 	deletePrivateObject: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	replaceSlot: vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' }),
 	detachSlot: vi.fn().mockResolvedValue(undefined),
 	findByKey: vi.fn().mockResolvedValue({ contentType: 'image/jpeg', byteSize: 4096 }),
@@ -215,18 +216,19 @@ vi.mock('$lib/server/media/media-service', () => ({
 }));
 
 const mockFileStaffAction = vi.fn().mockResolvedValue({ id: 'flag-staff' });
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	fileStaffAction: (...args: unknown[]) => mockFileStaffAction(...args)
 }));
 
 const mockTicketsSold = vi.fn().mockResolvedValue(0);
-vi.mock('$lib/server/ticket/ticket-service', () => ({
+vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsSold: (...args: unknown[]) => mockTicketsSold(...args)
 }));
 
 const mockCancelProductions = vi.fn().mockResolvedValue(0);
-vi.mock('$lib/server/directory/entry-service', () => ({
-	createExternalAct: vi.fn(async () => 'entry-new')
+vi.mock('#lib/server/directory/entry-service.js', () => ({
+	createExternalAct: vi.fn(async () => 'entry-new'),
+	findOutsideActByName: vi.fn(async () => null)
 }));
 
 const mockCreateProduction = vi.fn(async (_eventId: string, opts?: { id?: string }) => ({
@@ -236,32 +238,32 @@ const mockGetProductionByEvent = vi.fn(async () => null);
 // A show's project, production and committees are one batch in their own module.
 const mockCreateShowProject = vi.fn(async (_input: unknown) => undefined);
 const mockDeleteShowProject = vi.fn(async (_id: string) => undefined);
-vi.mock('$lib/server/production/production-project', () => ({
+vi.mock('#lib/server/production/production-project.js', () => ({
 	createShowProject: (input: unknown) => mockCreateShowProject(input),
 	deleteShowProject: (id: string) => mockDeleteShowProject(id),
-	announceProductionCreated: async () => undefined
+	stampProductionTemplate: async () => undefined
 }));
 const mockAssertProjectTakesListing = vi.fn(async (_projectId: string, _eventId: string) => {});
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	assertProjectTakesListing: (projectId: string, eventId: string) =>
 		mockAssertProjectTakesListing(projectId, eventId)
 }));
-vi.mock('$lib/server/production/production-service', () => ({
+vi.mock('#lib/server/production/production-service.js', () => ({
 	cancelProductionsForEvent: (...args: unknown[]) => mockCancelProductions(...args),
 	createProduction: (...a: unknown[]) => mockCreateProduction(...(a as [string, { id?: string }])),
 	getProductionByEvent: () => mockGetProductionByEvent()
 }));
 
 const mockRecordAudit = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => mockRecordAudit(...args)
 }));
 
 const mockCancelShifts = vi.fn(async (..._args: unknown[]) => 0);
-vi.mock('$lib/server/production/cancellation-notice', () => ({
+vi.mock('#lib/server/production/cancellation-notice.js', () => ({
 	openDeliverablesOnListing: async () => []
 }));
-vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+vi.mock('#lib/server/volunteer/show-cancellation.js', () => ({
 	cancelDeliverablesForEvent: async () => undefined,
 	cancelShiftsForEvent: (...args: unknown[]) => mockCancelShifts(...args)
 }));
@@ -288,16 +290,20 @@ import {
 	EventHasTicketsError,
 	PosterRestoreError
 } from './event-service';
-import { createExternalAct } from '$lib/server/directory/entry-service';
+import { createExternalAct } from '#lib/server/directory/entry-service.js';
 import {
 	staffCreate,
 	cancel as cancelReservation,
 	adjustWindow
-} from '$lib/server/reservation/reservation-service';
-import { hasConflict } from '$lib/server/reservation/conflict-service';
-import { uploadFile, deleteObject } from '$lib/server/storage';
-import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
-import { detachSlot, isKeyReferenced, replaceSlot } from '$lib/server/media/media-service';
+} from '#lib/server/reservation/reservation-service.js';
+import { hasConflict } from '#lib/server/reservation/conflict-service.js';
+import { uploadFile, deleteObject } from '#lib/server/storage.js';
+import {
+	copyToPrivate,
+	copyFromPrivate,
+	deletePrivateObject
+} from '#lib/server/private-storage.js';
+import { detachSlot, isKeyReferenced, replaceSlot } from '#lib/server/media/media-service.js';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
 describe('EventService', () => {
@@ -855,14 +861,12 @@ describe('EventService', () => {
 			await expect(cancel('evt-1', 'staff-1')).resolves.toBeUndefined();
 		});
 
-		it('releases the poster slot without deleting the object', async () => {
-			// A recurring series' occurrences share one poster object, so cancelling
-			// one must not take the others' image with it. See media-spec.md.
+		it('keeps the poster: a cancelled listing still shows on the calendar (#2180)', async () => {
 			selectResult = [{ ...mockEventRow, status: 'draft', posterKey: 'events/posters/evt-1.jpg' }];
 
 			await cancel('evt-1', 'staff-1');
 
-			expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
+			expect(detachSlot).not.toHaveBeenCalled();
 			expect(deleteObject).not.toHaveBeenCalled();
 		});
 
@@ -1301,6 +1305,16 @@ describe('EventService', () => {
 				new SQLiteSyncDialect().sqlToQuery(c.args[0] as any).params;
 			expect(render(wheres[0])).toEqual(render(wheres[1]));
 			expect(whereParams()).toContain('ven-1');
+		});
+
+		// The Events list's Productions view filters by the production's status (#2766).
+		it('filters by production status in the shared predicate', async () => {
+			await listAll({ source: 'cmc', productionStatus: 'offered' });
+
+			const wheres = selectChainCalls.filter((c) => c.method === 'where');
+			const sql = new SQLiteSyncDialect().sqlToQuery(wheres[1].args[0] as any);
+			expect(sql.sql).toContain('"p"."status"');
+			expect(sql.params).toContain('offered');
 		});
 
 		// A member's private working copy is not a staff browsing surface, and the
@@ -1897,7 +1911,7 @@ describe('EventService', () => {
 
 	describe('public queries', () => {
 		it('selects published and cancelled, and nothing else', async () => {
-			const { publicEventStatuses } = await import('$lib/server/db/schema/event');
+			const { publicEventStatuses } = await import('#lib/server/db/schema/event.js');
 
 			expect([...publicEventStatuses]).toEqual(['published', 'cancelled']);
 			expect(publicEventStatuses).not.toContain('rejected');
@@ -1912,7 +1926,7 @@ describe('EventService', () => {
 			// The chainable proxy erases the call shape, so assert on the SQL the
 			// filter renders to instead.
 			const { inArray } = await import('drizzle-orm');
-			const { eventListing, publicEventStatuses } = await import('$lib/server/db/schema/event');
+			const { eventListing, publicEventStatuses } = await import('#lib/server/db/schema/event.js');
 			const { params } = new SQLiteSyncDialect().sqlToQuery(
 				inArray(eventListing.status, [...publicEventStatuses])
 			);
@@ -2119,6 +2133,28 @@ describe('EventService', () => {
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })).rejects.toThrow(
 				EventStateError
 			);
+		});
+	});
+
+	// A listing that leaves the public calendar says who moved it (#2821).
+	describe('changing visibility', () => {
+		it('records the move from one visibility to another', async () => {
+			selectResult = [{ ...mockEventRow, visibility: 'public' }];
+			await update('evt-1', { visibility: 'members' });
+			expect(mockRecordAudit).toHaveBeenCalledWith(
+				expect.objectContaining({
+					action: 'event.visibility_changed',
+					details: { from: 'public', to: 'members' }
+				})
+			);
+		});
+
+		it('records nothing when the visibility stays', async () => {
+			selectResult = [{ ...mockEventRow, visibility: 'members' }];
+			await update('evt-1', { visibility: 'members' });
+			selectResult = [mockEventRow];
+			await update('evt-1', { visibility: 'public' });
+			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 	});
 

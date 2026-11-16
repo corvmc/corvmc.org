@@ -21,7 +21,7 @@ import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy';
 import { drizzle as drizzleNode } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 import { sql } from 'drizzle-orm';
-import { groupInvite } from '$lib/server/db/schema/group-invite';
+import { groupInvite } from '#lib/server/db/schema/group-invite.js';
 
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 

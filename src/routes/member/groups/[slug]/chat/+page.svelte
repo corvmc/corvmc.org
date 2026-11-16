@@ -1,18 +1,21 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The group's topics. One page rather than a pane: a club's panel has no
 	 * inbox shell, so picking a topic is a navigation and the topic page has a
 	 * breadcrumb back to here (#1301).
 	 */
-	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import GroupTopicList from '$lib/components/inbox/GroupTopicList.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import GroupTopicList from '#lib/components/inbox/GroupTopicList.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const slug = $derived(page.params.slug!);
+	const params = routeParams('slug');
+
+	const slug = $derived(params.slug);
 </script>
 
-<PageHeader width="2xl" title="Chat" />
+<PageHeader width="2xl" title={m.member_chat_title()} />
 <PageContent width="2xl">
 	<GroupTopicList
 		{slug}

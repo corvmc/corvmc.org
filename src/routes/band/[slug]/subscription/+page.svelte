@@ -1,44 +1,46 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import AddCardModal from '$lib/components/member/membership/AddCardModal.svelte';
-	import { getBandBilling, startBandAddCard } from '$lib/remote/billing.remote';
-	import { invalidateAll } from '$app/navigation';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import { formatDate, formatCents } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import BandBillingCard from './BandBillingCard.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
 	import {
 		getBandSubscriptionInfo,
 		upgradeToPremium,
 		cancelPremium,
 		resumePremium
-	} from '$lib/remote/band-subscription.remote';
+	} from '#lib/remote/band-subscription.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
-	import { env } from '$env/dynamic/public';
-	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import * as env from '$app/env/public';
+	import { bandSiteUrl, baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 	import { page } from '$app/state';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
+	let info = $derived(await getBandSubscriptionInfo(params.slug));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
 	// An owner who has left the act is precisely the person who cannot fix the
 	// card, so an admin has to be able to (#1098).
 	const canManageBilling = $derived(isOwner || layout.userRole === 'admin');
 
-	let addCardOpen = $state(false);
 	const siteUrl = $derived(
 		bandSiteUrl(
 			band.slug,
@@ -73,21 +75,21 @@
 
 		const timer = setTimeout(() => {
 			upgradeAttempts += 1;
-			void getBandSubscriptionInfo(page.params.slug!).refresh();
+			void getBandSubscriptionInfo(params.slug).refresh();
 		}, UPGRADE_RETRY_MS);
 
 		return () => clearTimeout(timer);
 	});
 </script>
 
-<PageHeader width="2xl" title="Subscription" subtitle={band.name} />
+<PageHeader width="2xl" title={m.band_slug_subscription_title()} subtitle={band.name} />
 <PageContent width="2xl">
 	{#if awaitingUpgrade}
 		<div class="mb-4">
 			<Alert type="info">
 				{upgradeAttempts >= UPGRADE_RETRY_LIMIT
-					? "We haven't had confirmation from our payment processor yet. Your card has been charged and premium switches on as soon as it lands — if this page still says otherwise in a few minutes, get in touch."
-					: 'Confirming your payment…'}
+					? m.band_slug_subscription_we_haven_t_had_confirmation_body()
+					: m.band_slug_subscription_confirming_payment_body()}
 			</Alert>
 		</div>
 	{/if}
@@ -96,15 +98,17 @@
 		<Card>
 			<CardBody>
 				<div class="flex items-center gap-3">
-					<CardTitle level={2}>Premium Band Page</CardTitle>
-					<Badge variant="success">Active</Badge>
+					<CardTitle level={2}>{m.band_slug_subscription_premium_band_page_title()}</CardTitle>
+					<Badge variant="success">{m.band_slug_subscription_active_label()}</Badge>
 				</div>
 				<DefinitionList class="mt-4">
-					<Fact label="Billing">
+					<Fact label={m.band_slug_subscription_billing_label()}>
 						<span class="capitalize">{info.subscription.billingInterval}</span>
 					</Fact>
-					<Fact label="Renews">{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact>
-					<Fact label="Your site">
+					<Fact label={m.band_slug_subscription_renews_label()}
+						>{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact
+					>
+					<Fact label={m.band_slug_subscription_site_label()}>
 						<!-- The band's own subdomain, so this leaves the app: rel="external" is
 						     both the correct annotation and what keeps it out of the router. -->
 						<a href={siteUrl} target="_blank" rel="external noopener" class="link">
@@ -115,29 +119,34 @@
 
 				{#if info.subscription.cancelAtPeriodEnd}
 					<Alert type="warning" class="mt-4">
-						Your subscription will end on {formatDate(
-							new Date(info.subscription.currentPeriodEnd)
-						)}.
+						{m.band_slug_subscription_subscription_will_end_body({
+							formatDate: formatDate(new Date(info.subscription.currentPeriodEnd))
+						})}
 					</Alert>
 					{#if isOwner}
 						<Form
 							remote={resumePremium}
-							successToast="Subscription resumed"
-							onsuccess={() => invalidateAll()}
+							successToast={m.band_slug_subscription_subscription_resumed_toast()}
+							onsuccess={() => refreshAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
-							<SubmitButton label="Resume Subscription" variant="primary" size="sm" class="mt-2" />
+							<SubmitButton
+								label={m.band_slug_subscription_resume_subscription_label()}
+								variant="primary"
+								size="sm"
+								class="mt-2"
+							/>
 						</Form>
 					{/if}
 				{:else if isOwner}
 					<Form
 						remote={cancelPremium}
-						successToast="Subscription will cancel at end of billing period"
-						onsuccess={() => invalidateAll()}
+						successToast={m.band_slug_subscription_subscription_will_cancel_at_end_toast()}
+						onsuccess={() => refreshAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<SubmitButton
-							label="Cancel Subscription"
+							label={m.band_slug_subscription_cancel_subscription_label()}
 							variant="ghost"
 							size="sm"
 							class="mt-4 text-error"
@@ -156,65 +165,21 @@
 			exactly who cannot fix it.
 		-->
 		{#if canManageBilling}
-			{#await getBandBilling(band.slug) then billing}
-				<Card>
-					<CardBody>
-						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle size="base">Card on file</CardTitle>
-							<Button
-								type="button"
-								variant="default"
-								size="sm"
-								outline
-								onclick={() => (addCardOpen = true)}
-							>
-								{billing.cards.length > 0 ? 'Replace card' : 'Add a card'}
-							</Button>
-						</div>
-
-						{#if !billing.available}
-							<p class="text-muted">
-								We could not reach our payment processor just now, so the card on file is unknown.
-							</p>
-						{:else if billing.cards.length === 0}
-							<p class="text-muted">
-								No card is saved for this act. Renewals will fail until one is.
-							</p>
-						{:else}
-							{#each billing.cards as card (card.id)}
-								<p class="text-sm">
-									<span class="font-medium">{card.brand.toUpperCase()} ···· {card.last4}</span>
-									<span class="text-muted">
-										expires {card.expMonth}/{card.expYear}{card.isDefault ? ' · billed' : ''}
-									</span>
-								</p>
-							{/each}
-							<p class="mt-2 text-muted">
-								This is the band's card, not a member's. Replacing it here does not touch anyone's
-								own membership.
-							</p>
-						{/if}
-
-						<AddCardModal
-							bind:open={addCardOpen}
-							driver={billing.driver}
-							start={() => startBandAddCard(band.slug)}
-							onsaved={() => getBandBilling(band.slug).refresh()}
-						/>
-					</CardBody>
-				</Card>
-			{/await}
+			<BandBillingCard slug={band.slug} />
 		{/if}
 	{:else}
 		<!-- Free tier — upgrade CTA -->
 		<div class="space-y-6">
 			<Card>
 				<CardBody class="text-center">
-					<h2 class="text-2xl font-bold">Upgrade to Premium</h2>
+					<h2 class="text-2xl font-bold">{m.band_upgrade_premium_title()}</h2>
 					<p class="mt-2 opacity-70">
-						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
-						directory profile. Premium turns it into a real website — a block editor, custom CSS,
-						genre themes, a full EPK — and lets you serve it from your own domain.
+						<ParaglideMessage
+							message={m.band_slug_subscription_band_already_has_pointing_at_text}
+							inputs={{ slug: band.slug, baseDomain }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				</CardBody>
 			</Card>
@@ -223,16 +188,21 @@
 				<!-- Monthly -->
 				<Card class="border">
 					<CardBody center>
-						<h3 class="text-lg font-bold">Monthly</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_monthly_title()}</h3>
 						<p class="text-3xl font-bold">
-							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal">/mo</span
+							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal"
+								>{m.band_slug_subscription_mo_text()}</span
 							>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeMonthly} onsuccess={startCheckout}>
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
-								<SubmitButton label="Subscribe Monthly" variant="primary" class="mt-4" />
+								<SubmitButton
+									label={m.band_slug_subscription_subscribe_monthly_label()}
+									variant="primary"
+									class="mt-4"
+								/>
 							</Form>
 						{/if}
 					</CardBody>
@@ -242,17 +212,25 @@
 				<Card class="border border-primary">
 					<CardBody center>
 						<Badge variant="primary">
-							{info.pricing.yearlyMonthsFree} months free
+							{m.band_slug_subscription_months_free_label({
+								yearlyMonthsFree: info.pricing.yearlyMonthsFree
+							})}
 						</Badge>
-						<h3 class="text-lg font-bold">Yearly</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_yearly_title()}</h3>
 						<p class="text-3xl font-bold">
-							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal">/yr</span>
+							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal"
+								>{m.band_slug_subscription_yr_text()}</span
+							>
 						</p>
 						{#if isOwner}
 							<Form remote={upgradeYearly} onsuccess={startCheckout}>
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
-								<SubmitButton label="Subscribe Yearly" variant="primary" class="mt-4" />
+								<SubmitButton
+									label={m.band_slug_subscription_subscribe_yearly_label()}
+									variant="primary"
+									class="mt-4"
+								/>
 							</Form>
 						{/if}
 					</CardBody>
@@ -262,35 +240,63 @@
 			<!-- Feature list -->
 			<Card>
 				<CardBody>
-					<h3 class="font-bold">What's included</h3>
+					<h3 class="font-bold">{m.band_slug_subscription_what_s_included_title()}</h3>
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Your own domain — or keep using {band.slug}.{baseDomain}
+							<ParaglideMessage
+								message={m.band_slug_subscription_own_domain_keep_using_text}
+								inputs={{ slug: band.slug, baseDomain }}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							A page that arrives already built — reorder its blocks and hide what you don't need
+							<ParaglideMessage
+								message={m.band_slug_subscription_page_arrives_already_built_reorder_text}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Genre-themed templates (Punk, Jazz, Metal, Indie, Electronic, Folk)
+							<ParaglideMessage
+								message={m.band_slug_subscription_genre_themed_templates_punk_jazz_text}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Full custom CSS
+							<ParaglideMessage message={m.band_slug_subscription_full_custom_css_text} inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<!-- The EPK, the embedded player and one press photo are free for
 						     every act now, so selling them here would be selling something
 						     the band already has. What premium adds is presentation and
 						     volume. -->
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							A video section — live clips on your page and in your press kit
+							<ParaglideMessage
+								message={m.band_slug_subscription_video_section_live_clips_page_text}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Unlimited press photos, instead of one
+							<ParaglideMessage
+								message={m.band_slug_subscription_unlimited_press_photos_instead_one_text}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 					</ul>
 				</CardBody>

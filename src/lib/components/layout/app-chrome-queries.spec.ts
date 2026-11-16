@@ -49,10 +49,18 @@ function queryExports(file: string): Set<string> {
 function resolveSpecifier(fromFile: string, spec: string): string | null {
 	let base: string;
 	if (spec.startsWith('.')) base = resolve(dirname(fromFile), spec);
-	else if (spec.startsWith('$lib/')) base = join(SRC, 'lib', spec.slice('$lib/'.length));
+	else if (/^[$#]lib\//.test(spec)) base = join(SRC, 'lib', spec.slice('#lib/'.length));
 	else return null;
 
-	const candidates = [base, `${base}.svelte`, `${base}.ts`, `${base}.js`, join(base, 'index.ts')];
+	const ts = base.replace(/\.js$/, '.ts');
+	const candidates = [
+		base,
+		ts,
+		`${base}.svelte`,
+		`${base}.ts`,
+		`${base}.js`,
+		join(base, 'index.ts')
+	];
 	return candidates.find((c) => existsSync(c) && !c.endsWith('/')) ?? null;
 }
 
@@ -76,7 +84,7 @@ function chromeComponents(): string[] {
 function queriesImportedBy(file: string): string[] {
 	const out: string[] = [];
 	for (const { spec, names } of valueImports(readFileSync(file, 'utf8'))) {
-		if (!spec.startsWith('$lib/remote/')) continue;
+		if (!/^[$#]lib\/remote\//.test(spec)) continue;
 		const module = resolveSpecifier(file, spec);
 		if (!module) continue;
 		const queries = queryExports(module);
@@ -101,7 +109,7 @@ describe('the authenticated app chrome', () => {
 
 		// A component here renders on every member, staff and band page. Its data
 		// belongs in that panel's layout query (`appChrome` in
-		// `$lib/remote/layout.remote`), handed down as a prop.
+		// `#lib/remote/layout.remote.js`), handed down as a prop.
 		expect(offenders).toEqual([]);
 	});
 

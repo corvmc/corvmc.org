@@ -129,7 +129,7 @@ their password or removes the app.
 There is **no refresh path in the code**. That is a deliberate trade — the token is one secret
 rather than an OAuth flow with its own tables — and the cost is that an expired token does not
 announce itself: replies simply start failing on a channel nobody is watching. Staff → Settings →
-Inbox Channels has a **Test connection** button on both Meta cards for exactly this. Use it after
+Inbox channels has a **Test connection** button on both Meta cards for exactly this. Use it after
 setting the secret, and again whenever a reply fails for no visible reason.
 
 ```bash
@@ -140,7 +140,7 @@ pnpm exec wrangler secret bulk .secrets.json
 
 ## 5. Enable the channels — last
 
-Staff → Settings → Inbox Channels, toggle Instagram and Messenger on.
+Staff → Settings → Inbox channels, toggle Instagram and Messenger on.
 
 Do this **after** steps 1–4, not before. The toggle is checked at the top of the webhook route, so
 while it is off an early or misconfigured delivery is answered `{ ok: true, skipped }` and
@@ -185,7 +185,7 @@ _inbound_ message, so a reply of ours does not reopen the window.
 
 ## Rollback
 
-Toggle both channels off in Staff → Settings → Inbox Channels. Inbound stops being filed
+Toggle both channels off in Staff → Settings → Inbox channels. Inbound stops being filed
 immediately and the composer stops offering a reply. Nothing bounces; Meta keeps delivering
 webhooks and the route keeps answering `200`.
 
@@ -213,6 +213,6 @@ Read this by symptom.
 | A reply we sent appears as an **inbound** message         | `is_echo` is not being read. This inverts the thread's whole state: it clears `awaitingReplySince` and re-queues a conversation that was just answered.                                                                           |
 | A reply is refused with "the messaging window has closed" | Over 7 days since the contact wrote. Nothing to fix — answer in the Meta app, or wait for them to write again. The composer normally blocks this before a send is attempted.                                                      |
 | A reply is refused, mentioning a missing permission       | Error code `10` without the window subcode: the app does not hold Human Agent, so it cannot send between 24 hours and 7 days.                                                                                                     |
-| Replies stop working with no other change                 | The Page token expired or was revoked — error code `190`. Press **Test connection** in Staff → Settings → Inbox Channels; it names this outright.                                                                                 |
+| Replies stop working with no other change                 | The Page token expired or was revoked — error code `190`. Press **Test connection** in Staff → Settings → Inbox channels; it names this outright.                                                                                 |
 | Meta logs a successful delivery but nothing appears       | The route swallows handler errors and answers `200` unconditionally, because Meta retries for 36 hours and unsubscribes an app that keeps failing. Sentry is the only signal — the `200` proves delivery, not success.            |
 | Instagram comments do not appear in the inbox             | By design. They arrive on `entry[].changes[]` and are not read; a comment is a public post, not a conversation.                                                                                                                   |

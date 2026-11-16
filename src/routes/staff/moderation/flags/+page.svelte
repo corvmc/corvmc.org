@@ -1,0 +1,102 @@
+<script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { entityLabels } from '#lib/terms.js';
+	import { resolve } from '$app/paths';
+	import { getFlagsQueue } from '#lib/remote/flags.remote.js';
+	import TriageTable from '#lib/components/ui/TriageTable.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { moderationViews } from '../views';
+
+	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
+
+	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
+	// named `search`, and a snippet shadows a same-named script binding.
+	let searchText = $state('');
+	let statusFilter = $state<'pending' | 'resolved' | 'dismissed' | 'appealed' | ''>('pending');
+	let page = $state(1);
+
+	let searchDebounced = $state('');
+	let filters = $derived({
+		search: searchDebounced || undefined,
+		// "Appealed" is not a flag status — an appeal hangs off a resolved flag.
+		status:
+			statusFilter === 'appealed'
+				? undefined
+				: ((statusFilter || undefined) as (typeof flagStatuses)[number] | undefined),
+		appealPending: statusFilter === 'appealed' || undefined,
+		page
+	});
+
+	let result = $derived(getFlagsQueue(filters));
+
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) + (statusFilter === 'pending' ? 0 : 1)
+	);
+
+	function clearFilters() {
+		searchText = '';
+		searchDebounced = '';
+		statusFilter = 'pending';
+		page = 1;
+	}
+</script>
+
+<PageHeader title={m.staff_moderation_title()} documentTitle={m.staff_content_flags_title()}>
+	<StaffViews views={moderationViews} active="flags" />
+</PageHeader>
+<PageContent>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
+		{#snippet search()}
+			<SearchInput
+				bind:value={searchText}
+				placeholder={m.staff_flags_placeholder()}
+				onsearch={(q) => {
+					searchDebounced = q;
+					page = 1;
+				}}
+			/>
+		{/snippet}
+		<Select
+			size="sm"
+			aria-label={m.staff_status_label()}
+			value={statusFilter}
+			onchange={(e: Event) => {
+				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
+				page = 1;
+			}}
+		>
+			<option value="">{m.staff_all_statuses_label()}</option>
+			{#each flagStatuses as s (s)}
+				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+			{/each}
+			<option value="appealed">{m.staff_flags_appeal_waiting_label()}</option>
+		</Select>
+	</FilterBar>
+
+	<DataList {result} empty={m.staff_flags_empty_body()} onpage={(p) => (page = p)}>
+		{#snippet children(flags)}
+			<!-- `ref.type` is `flag` for every row, so what was flagged is the
+			     type column, read from `target.type`. -->
+			<TriageTable
+				subjectLabel={m.staff_flags_subject_label()}
+				rows={flags.map((f) => ({
+					id: f.id,
+					href: resolve(`staff/flags/${f.id}`),
+					status: f.status,
+					kind: entityLabels[f.target.type].one,
+					subject: f.ref,
+					text: f.reason,
+					appealed: f.appeal === 'pending',
+					reporter: f.reportedByName ?? 'Anonymous visitor',
+					createdAt: f.createdAt
+				}))}
+			/>
+		{/snippet}
+	</DataList>
+</PageContent>

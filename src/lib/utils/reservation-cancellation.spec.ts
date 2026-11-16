@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { describeCancellation } from './reservation-cancellation';
-import { reservationCancellerLabels, reservationCancellers } from '$lib/config';
+import { reservationCancellerLabels, reservationCancellers } from '#lib/config.js';
 
 // 2026-09-03 23:15 UTC is 4:15 PM in the venue's zone.
 const AT = new Date('2026-09-03T23:15:00Z');

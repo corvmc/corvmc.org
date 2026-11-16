@@ -10,7 +10,7 @@
 	 * same value the nav uses, so the two cannot disagree.
 	 */
 	import { page } from '$app/state';
-	import InboxShell from '$lib/components/inbox/InboxShell.svelte';
+	import ListDetailShell from '#lib/components/ui/ListDetailShell.svelte';
 	import BandInbox from './BandInbox.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 
@@ -22,12 +22,13 @@
 	// Both panes count as "open" below `lg`: the chat is a conversation in the
 	// right pane exactly as an enquiry is.
 	const threadOpen = $derived(
-		page.route.id === '/band/[slug]/messages/[id]' || page.route.id === '/band/[slug]/messages/chat'
+		page.route.id === '/band/[slug]/messages/[id]' ||
+			page.route.id === '/band/[slug]/messages/chat/[threadId]'
 	);
 </script>
 
-<InboxShell {threadOpen} {children}>
+<ListDetailShell open={threadOpen} {children}>
 	{#snippet list()}
 		<BandInbox {canReadEnquiries} />
 	{/snippet}
-</InboxShell>
+</ListDetailShell>

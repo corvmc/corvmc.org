@@ -8,7 +8,13 @@ let currentUser: { id: string; name: string; email: string } | null = null;
 let evt: Record<string, unknown> | null = null;
 let mine: unknown = null;
 
-vi.mock('$lib/server/authorization', () => ({
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
+
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		return currentUser;
@@ -19,25 +25,25 @@ vi.mock('@sveltejs/kit', () => ({
 		throw new Error(`${status}: ${message}`);
 	}
 }));
-vi.mock('$lib/server/event/event-service', () => ({ getById: vi.fn(async () => evt) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ getById: vi.fn(async () => evt) }));
 const svc = {
 	createRsvp: vi.fn(async () => undefined),
 	cancelRsvp: vi.fn(async () => undefined),
 	getUserRsvp: vi.fn(async () => mine),
-	listRsvpsForEvent: vi.fn(async () => [] as unknown[])
+	listRsvpRoster: vi.fn(async () => [] as unknown[])
 };
-vi.mock('$lib/server/event/rsvp-service', () => svc);
+vi.mock('#lib/server/event/rsvp-service.js', () => svc);
 
 const refresh = vi.fn();
 const refreshPublic = vi.fn();
-vi.mock('$lib/remote/events.remote', () => ({
+vi.mock('#lib/remote/events.remote.js', () => ({
 	getPublicEventDetail: () => ({ refresh: refreshPublic })
 }));
 const roster = { requireListingWriter: vi.fn(async (): Promise<unknown> => ({ id: 'staff-1' })) };
-vi.mock('$lib/server/event/listing-guard', () => ({
+vi.mock('#lib/server/event/listing-guard.js', () => ({
 	requireListingWriter: (...a: unknown[]) => roster.requireListingWriter(...(a as []))
 }));
-vi.mock('$lib/server/entity/refs', () => ({
+vi.mock('#lib/server/entity/refs.js', () => ({
 	toMemberRef: (r: { id: string; name: string; email: string }) => ({
 		type: 'member',
 		id: r.id,
@@ -183,7 +189,7 @@ describe('getEventRsvpRoster', () => {
 			Object.assign(new Error('403'), { status: 403 })
 		);
 		expect(await getEventRsvpRoster('e1')).toBeNull();
-		expect(svc.listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(svc.listRsvpRoster).not.toHaveBeenCalled();
 	});
 
 	it('still fails a signed-out caller', async () => {
@@ -193,22 +199,10 @@ describe('getEventRsvpRoster', () => {
 		await expect(getEventRsvpRoster('e1')).rejects.toThrow('401');
 	});
 
-	it('lists each RSVP as a person, a contact and a time, with the total', async () => {
-		const at = new Date('2026-11-01T18:30:00Z');
-		svc.listRsvpsForEvent.mockResolvedValueOnce([
-			{ id: 'r1', userId: 'u-ada', name: 'Ada', email: 'ada@example.com', createdAt: at }
-		]);
-		expect(await getEventRsvpRoster('e1')).toEqual({
-			total: 1,
-			rows: [
-				{
-					id: 'r1',
-					person: { type: 'member', id: 'u-ada', title: 'Ada', subtitle: 'ada@example.com' },
-					contact: 'ada@example.com',
-					at
-				}
-			]
-		});
+	it('returns the roster rows with the total', async () => {
+		const row = { personId: 'u-ada', email: 'ada@example.com', rsvpedAt: new Date(0) };
+		svc.listRsvpRoster.mockResolvedValueOnce([row]);
+		expect(await getEventRsvpRoster('e1')).toEqual({ total: 1, rows: [row] });
 		expect(roster.requireListingWriter).toHaveBeenCalledWith('e1');
 	});
 });

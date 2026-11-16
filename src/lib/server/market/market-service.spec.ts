@@ -7,19 +7,38 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+// The channel is the outside service: Postmark, Twilio or Meta behind one call.
+const dispatchReply = vi.hoisted(() =>
+	vi.fn(async (..._a: unknown[]): Promise<string | null> => null)
+);
+vi.mock('#lib/server/inbox/channel-dispatcher.js', () => ({ dispatchReply }));
 
-// Delivery is the inbox's job; what matters here is that the vendor is told.
-const sent = vi.fn(async (_params: { threadId: string; body: string }) => ({ id: 'msg' }));
-vi.mock('$lib/server/inbox/message-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/inbox/message-service')>()),
-	addOutboundMessage: (params: { threadId: string; body: string }) => sent(params)
-}));
+/**
+ * What the vendor was told: each outbound message on a thread, with the outbox
+ * row that sends it. The message and the row are written with the decision (#2819).
+ */
+function sent() {
+	return sqlite
+		.prepare(
+			`select m.thread_id as threadId, m.body, o.subject_type as subjectType, o.subject_id as subjectId, o.status
+			 from inbox_message m
+			 join outbox_message o on o.kind = 'inbox_reply' and json_extract(o.payload, '$.messageId') = m.id
+			 where m.direction = 'outbound' order by m.created_at, m.rowid`
+		)
+		.all() as {
+		threadId: string;
+		body: string;
+		subjectType: string;
+		subjectId: string;
+		status: string;
+	}[];
+}
 
 const {
 	openMarketDay,
@@ -28,6 +47,7 @@ const {
 	submitApplication,
 	listApplications,
 	decideApplication,
+	resendDecisionMessage,
 	setTableLabel,
 	withdrawApplication,
 	listPublicVendors,
@@ -38,9 +58,11 @@ const {
 	checkInVendor,
 	markVendorNoShow,
 	recordInviteBack,
+	listAllApplications,
 	MarketClosedError,
 	VendorTransitionError
 } = await import('./market-service');
+const { deliverOutbox, backoffMs } = await import('#lib/server/outbox/outbox-service.js');
 
 const EVENT = 'evt-market';
 const NOW = new Date('2026-10-01T12:00:00Z');
@@ -70,6 +92,11 @@ function insertEvent(status = 'published', startsAt = STARTS) {
 beforeEach(() => {
 	for (const t of [
 		'market_vendor',
+		'vendor_detail',
+		'party_role',
+		'contact',
+		'subscriber',
+		'organization',
 		'market_day',
 		'inbox_message',
 		'inbox_thread',
@@ -79,7 +106,7 @@ beforeEach(() => {
 	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
-	sent.mockClear();
+	sqlite.exec('delete from outbox_message');
 });
 
 describe('opening a market day', () => {
@@ -176,6 +203,70 @@ describe('applying', () => {
 		expect(msg.body).toContain('Handmade mugs and planters');
 	});
 
+	it('files the vendor as an organization, with its person and standing setup', async () => {
+		await submitApplication(EVENT, { ...application, bringsTent: true }, NOW);
+
+		const [row] = await listApplications(EVENT);
+		const org = sqlite
+			.prepare(
+				`select o.name, o.website, r.role from organization o join party_role r on r.organization_id = o.id where o.id = ?`
+			)
+			.get(row.organizationId);
+		expect(org).toEqual({
+			name: 'Rosa Ceramics',
+			website: 'https://rosa.example.com',
+			role: 'vendor'
+		});
+		expect(
+			sqlite
+				.prepare(`select name, email, phone, source from contact where organization_id = ?`)
+				.all(row.organizationId)
+		).toEqual([
+			{
+				name: 'Rosa Diaz',
+				email: 'rosa@example.com',
+				phone: '541-555-0100',
+				source: 'self_entered'
+			}
+		]);
+		expect(
+			sqlite
+				.prepare(
+					`select tables_needed as t, needs_power as p, brings_tent as tent, setup_notes as notes from vendor_detail where organization_id = ?`
+				)
+				.get(row.organizationId)
+		).toEqual({ t: 2, p: 1, tent: 1, notes: 'Near an outlet please' });
+		expect(
+			sqlite.prepare(`select organization_id as o from inbox_thread where id = ?`).get(row.threadId)
+		).toEqual({ o: row.organizationId });
+	});
+
+	it('reuses the organization of a person already holding the email, and keeps its setup', async () => {
+		await submitApplication(EVENT, application, NOW);
+		await submitApplication(
+			EVENT,
+			{
+				...application,
+				contactEmail: ' ROSA@example.com ',
+				tablesRequested: 1,
+				notes: null,
+				website: null
+			},
+			NOW
+		);
+
+		const rows = await listApplications(EVENT);
+		expect(new Set(rows.map((r) => r.organizationId)).size).toBe(1);
+		expect(sqlite.prepare(`select count(*) as n from contact`).get()).toEqual({ n: 1 });
+		// The second application's blanks come from the standing setup; its own ask is kept.
+		expect(rows[1]).toMatchObject({
+			tablesRequested: 1,
+			notes: 'Near an outlet please',
+			website: 'https://rosa.example.com'
+		});
+		expect(sqlite.prepare(`select tables_needed as t from vendor_detail`).get()).toEqual({ t: 2 });
+	});
+
 	it('keeps contact details off the vendor row', () => {
 		const cols = (
 			sqlite.prepare(`pragma table_info(market_vendor)`).all() as { name: string }[]
@@ -214,9 +305,167 @@ describe('deciding', () => {
 		);
 		const [row] = await listApplications(EVENT);
 		expect(row).toMatchObject({ status: 'accepted', tableLabel: 'B3', decidedByUserId: 'staff-1' });
-		expect(sent).toHaveBeenCalledWith(
-			expect.objectContaining({ threadId: row.threadId, body: 'You are in — table B3.' })
+		expect(sent()).toEqual([
+			{
+				threadId: row.threadId,
+				body: 'You are in — table B3.',
+				subjectType: 'market_vendor',
+				subjectId: vendorId,
+				status: 'pending'
+			}
+		]);
+	});
+
+	it('waitlists an applied vendor, tells them, and accepts them later (#2832)', async () => {
+		await decideApplication(
+			vendorId,
+			{ decision: 'waitlisted', tableLabel: 'B3', message: 'On the waitlist.' },
+			ACTOR
 		);
+		let [row] = await listApplications(EVENT);
+		expect(row).toMatchObject({ status: 'waitlisted', tableLabel: null });
+		expect(sent().map((m) => m.body)).toEqual(['On the waitlist.']);
+		expect((await getMarketDay(EVENT, NOW))?.counts.waitlisted).toBe(1);
+		expect(await listPublicVendors(EVENT)).toEqual([]);
+
+		await decideApplication(vendorId, { decision: 'accepted', message: 'A table opened.' }, ACTOR);
+		[row] = await listApplications(EVENT);
+		expect(row.status).toBe('accepted');
+	});
+
+	it('does not waitlist a vendor already accepted or declined', async () => {
+		await decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR);
+		await expect(
+			decideApplication(vendorId, { decision: 'waitlisted', message: 'Wait.' }, ACTOR)
+		).rejects.toBeInstanceOf(VendorTransitionError);
+	});
+
+	// #2819: the send ran after the write and its throw became a 500 over a
+	// saved decision. The send is the outbox's now, and its failure is a row.
+	it('keeps the decision when the send is refused, records why, and sends on retry', async () => {
+		const { outboxId } = await decideApplication(
+			vendorId,
+			{ decision: 'accepted', message: 'You are in.' },
+			ACTOR
+		);
+		dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+		const now = new Date(Date.now() + 1000);
+		expect(await deliverOutbox({ ids: [outboxId!], now })).toEqual([
+			{ id: outboxId, status: 'pending', error: '406 Inactive recipient' }
+		]);
+		expect((await listApplications(EVENT))[0].status).toBe('accepted');
+
+		dispatchReply.mockResolvedValueOnce('<pm-1@corvmc.org>');
+		const later = new Date(now.getTime() + backoffMs(1));
+		expect(await deliverOutbox({ ids: [outboxId!], now: later })).toEqual([
+			{ id: outboxId, status: 'sent', error: null }
+		]);
+		const [message] = sqlite
+			.prepare(`select channel_message_id from inbox_message where direction = 'outbound'`)
+			.all() as { channel_message_id: string }[];
+		expect(message.channel_message_id).toBe('<pm-1@corvmc.org>');
+		expect(sent()[0].status).toBe('sent');
+	});
+
+	// #2819: the vendors page shows a message that has not gone, and sends it on request.
+	it('shows an unsent decision message on the row, and resends it', async () => {
+		const { outboxId } = await decideApplication(
+			vendorId,
+			{ decision: 'accepted', message: 'You are in.' },
+			ACTOR
+		);
+		dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+		await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+		expect((await listApplications(EVENT))[0].decisionMessage).toBe('pending');
+
+		dispatchReply.mockResolvedValueOnce('<pm-2@corvmc.org>');
+		expect(await resendDecisionMessage(vendorId)).toMatchObject({ status: 'sent' });
+		expect((await listApplications(EVENT))[0].decisionMessage).toBe('sent');
+		expect(await resendDecisionMessage(vendorId)).toBeNull();
+	});
+
+	// #2830: the address on the organization in Contacts is the one mail goes to.
+	describe('the recipient (#2830)', () => {
+		function threadEmail(): string {
+			return (sqlite.prepare(`select contact_email as e from inbox_thread`).get() as { e: string })
+				.e;
+		}
+		function changeContactEmail(email: string) {
+			sqlite.prepare(`update contact set email = ?`).run(email);
+		}
+
+		it('is the organization contact, read at decision time', async () => {
+			changeContactEmail('rosa@studio.example.com');
+			expect((await listApplications(EVENT))[0]).toMatchObject({
+				contactEmail: 'rosa@studio.example.com',
+				contactSource: 'contact'
+			});
+
+			const { outboxId } = await decideApplication(
+				vendorId,
+				{ decision: 'waitlisted', message: 'On the waitlist.' },
+				ACTOR
+			);
+			await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+			expect(dispatchReply).toHaveBeenLastCalledWith(
+				expect.objectContaining({ contactEmail: 'rosa@studio.example.com' })
+			);
+			expect(sent().map((m) => m.body)).toEqual(['On the waitlist.']);
+		});
+
+		it('follows a contact changed between the decision and a resend', async () => {
+			const { outboxId } = await decideApplication(
+				vendorId,
+				{ decision: 'accepted', message: 'You are in.' },
+				ACTOR
+			);
+			dispatchReply.mockRejectedValueOnce(new Error('406 Inactive recipient'));
+			await deliverOutbox({ ids: [outboxId!], now: new Date(Date.now() + 1000) });
+
+			changeContactEmail('rosa@new.example.com');
+			dispatchReply.mockResolvedValueOnce('<pm-3@corvmc.org>');
+			expect(await resendDecisionMessage(vendorId)).toMatchObject({ status: 'sent' });
+			expect(dispatchReply).toHaveBeenLastCalledWith(
+				expect.objectContaining({ contactEmail: 'rosa@new.example.com' })
+			);
+		});
+
+		it('falls back to the application email when the organization has no contact', async () => {
+			sqlite.exec(`delete from contact`);
+			expect((await listApplications(EVENT))[0]).toMatchObject({
+				contactEmail: 'rosa@example.com',
+				contactSource: 'application'
+			});
+			await decideApplication(vendorId, { decision: 'declined', message: 'Not this time.' }, ACTOR);
+			expect(threadEmail()).toBe('rosa@example.com');
+			expect(sent().map((m) => m.body)).toEqual(['Not this time.']);
+		});
+	});
+
+	it('has no decision message on a row nobody decided', async () => {
+		expect((await listApplications(EVENT))[0].decisionMessage).toBeNull();
+		expect(await resendDecisionMessage(vendorId)).toBeNull();
+	});
+
+	// #2822: a second application from the same business landed under Applied
+	// with nothing to say the business already had a table.
+	it('marks each application with the same business’s other ones for the market', async () => {
+		await decideApplication(
+			vendorId,
+			{ decision: 'accepted', tableLabel: 'A1', message: 'In.' },
+			ACTOR
+		);
+		const { id: repeatId } = await submitApplication(
+			EVENT,
+			{ ...application, businessName: 'Rosa Ceramics Co.' },
+			NOW
+		);
+
+		const rows = await listApplications(EVENT);
+		const first = rows.find((r) => r.id === vendorId)!;
+		const repeat = rows.find((r) => r.id === repeatId)!;
+		expect(repeat.alsoApplied).toEqual([{ id: vendorId, status: 'accepted', tableLabel: 'A1' }]);
+		expect(first.alsoApplied).toEqual([{ id: repeatId, status: 'applied', tableLabel: null }]);
 	});
 
 	it('declines and clears any table', async () => {
@@ -242,7 +491,7 @@ describe('deciding', () => {
 		await expect(
 			decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR)
 		).rejects.toBeInstanceOf(VendorTransitionError);
-		expect(sent).not.toHaveBeenCalled();
+		expect(sent()).toEqual([]);
 	});
 
 	it('moves a table only for an accepted vendor', async () => {
@@ -261,11 +510,30 @@ describe('deciding', () => {
 		await submitApplication(EVENT, { ...application, businessName: 'Second' }, NOW);
 		expect((await getMarketDay(EVENT, NOW))?.counts).toEqual({
 			applied: 1,
+			waitlisted: 0,
 			accepted: 1,
 			declined: 0,
 			withdrawn: 0,
 			no_show: 0
 		});
+	});
+});
+
+describe("every market's applications (#2766)", () => {
+	it('lists them with their market, filtered by status', async () => {
+		insertEvent();
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: 20 });
+		const { id } = await submitApplication(EVENT, application, NOW);
+		await submitApplication(EVENT, { ...application, businessName: 'Kiln Co' }, NOW);
+		await decideApplication(id, { decision: 'declined', message: 'Full' }, ACTOR);
+
+		const all = await listAllApplications();
+		expect(all.pagination.total).toBe(2);
+		expect(all.rows[0]).toMatchObject({ eventId: EVENT, eventTitle: 'Autumn Market' });
+
+		const applied = await listAllApplications({ status: 'applied' });
+		expect(applied.rows.map((r) => r.businessName)).toEqual(['Kiln Co']);
+		expect(applied.pagination.total).toBe(1);
 	});
 });
 
@@ -388,7 +656,7 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		await expect(
 			decideApplication(vendorId, { decision: 'accepted', message: 'In.' }, ACTOR)
 		).rejects.toBeInstanceOf(VendorTransitionError);
-		expect(sent).toHaveBeenCalledTimes(1);
+		expect(sent()).toHaveLength(1);
 	});
 
 	it('lists only accepted vendors and no-shows for the day, without contact detail', async () => {
@@ -398,6 +666,31 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		expect(rows.map((r) => r.businessName)).toEqual(['Rosa Ceramics']);
 		expect(Object.keys(rows[0])).not.toContain('contactEmail');
 		expect(Object.keys(rows[0])).not.toContain('threadId');
+	});
+
+	it('shows what each booked vendor still owes (#2828)', async () => {
+		await openMarketDay(EVENT, { applicationsCloseAt: null, tableCount: 20, tableFeeCents: 2500 });
+		const { id: paidId } = await submitApplication(
+			EVENT,
+			{ ...application, businessName: 'Paid Co', contactEmail: 'paid@example.com' },
+			NOW
+		);
+		await accept();
+		await decideApplication(
+			paidId,
+			{ decision: 'accepted', tableLabel: 'B1', message: 'In.' },
+			ACTOR
+		);
+		sqlite.exec(
+			`update market_vendor set paid_cents = 2500, paid_at = 1760000000 where id = '${paidId}'`
+		);
+
+		const rows = await listMarketDayVendors(EVENT);
+		expect(rows.map((r) => [r.businessName, r.fee])).toEqual([
+			['Rosa Ceramics', { state: 'due', cents: 5000 }],
+			['Paid Co', { state: 'paid', cents: 2500 }]
+		]);
+		expect(Object.keys(rows[0])).not.toContain('paidAt');
 	});
 
 	it('records whether to invite a vendor back, with a note', async () => {
@@ -446,6 +739,19 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 			note: 'Never came, never called.'
 		});
 		expect(later.find((a) => a.businessName === 'New Co')?.previous).toBeNull();
+
+		// A second person at the same business, from their own address, matches too.
+		const rosa = later.find((a) => a.businessName === 'Rosa Ceramics')!;
+		sqlite.exec(
+			`insert into contact (id, organization_id, email, source) values ('c2', '${rosa.organizationId}', 'shop@rosa.example.com', 'staff_entered')`
+		);
+		await submitApplication(
+			LATER,
+			{ ...application, contactEmail: 'shop@rosa.example.com' },
+			applyAt
+		);
+		const again = (await listApplications(LATER)).filter((a) => a.businessName === 'Rosa Ceramics');
+		expect(again.map((a) => a.previous?.status)).toEqual(['no_show', 'no_show']);
 		// The earlier market does not look forward.
 		expect((await listApplications(EVENT))[0].previous).toBeNull();
 	});

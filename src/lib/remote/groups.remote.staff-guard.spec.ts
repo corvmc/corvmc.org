@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
-import { groupJoinPolicies, positionOrder, type Capability, type Position } from '$lib/config';
+import {
+	groupJoinPolicies,
+	positionOrder,
+	positionsGranting,
+	type Capability,
+	type Position
+} from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -26,9 +32,9 @@ vi.mock('$app/server', () => ({
 let heldPositions: Position[] = ['staff'];
 let signedIn = true;
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	return {
 		requireUser: () => ({ id: 'user-1' }),
 		isElevated: vi.fn(async () => false),
@@ -53,17 +59,21 @@ const svc = vi.hoisted(() => ({
 	deactivate: vi.fn(),
 	reactivate: vi.fn(),
 	setCommitteeCapabilityGrants: vi.fn(),
-	importRoster: vi.fn()
+	importRoster: vi.fn(),
+	listAuditFeed: vi.fn()
 }));
-vi.mock('$lib/server/group/roster-import-service', () => ({
+vi.mock('#lib/server/audit/audit-feed.js', () => ({ listAuditFeed: svc.listAuditFeed }));
+// The audit declarations reach the writer, which would load the real db.
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/group/roster-import-service.js', () => ({
 	importRoster: svc.importRoster,
 	parseRosterImport: () => ({ emails: ['a@example.com'], invalid: [], duplicates: 0 }),
 	RosterImportInputError: class extends Error {}
 }));
-vi.mock('$lib/server/capability/capability-grant-service', () => ({
+vi.mock('#lib/server/capability/capability-grant-service.js', () => ({
 	setCommitteeCapabilityGrants: svc.setCommitteeCapabilityGrants
 }));
-vi.mock('$lib/server/group/group-service', () => ({
+vi.mock('#lib/server/group/group-service.js', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
 	...svc,
 	joinGroup: vi.fn(),
@@ -74,14 +84,17 @@ vi.mock('$lib/server/group/group-service', () => ({
 	listPublicGroups: vi.fn(),
 	updateGroupProfile: vi.fn()
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: vi.fn(),
 	requireProgramRole: vi.fn()
 }));
 const getUserRole = vi.hoisted(() => vi.fn(async (): Promise<string | null> => null));
-vi.mock('$lib/server/band/band-service', () => ({
+const getByIdActive = vi.hoisted(() => vi.fn(async () => ({ id: 'group-1', kind: 'club' })));
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getMembers: vi.fn(async () => []),
+	getRosterMembers: vi.fn(async () => []),
 	getUserRole,
+	getByIdActive,
 	partitionByStatus: () => ({ active: [], pending: [] }),
 	acceptInvitation: vi.fn(),
 	declineInvitation: vi.fn(),
@@ -94,46 +107,53 @@ vi.mock('$lib/server/band/band-service', () => ({
 	updateOwnMembership: vi.fn(),
 	BandMemberExistsError: class extends Error {}
 }));
-vi.mock('$lib/server/group/group-invite-service', () => ({
+vi.mock('#lib/server/group/group-invite-service.js', () => ({
 	createInvite: vi.fn(),
 	listForGroup: vi.fn(),
 	listInvitesForEmail: vi.fn(),
 	revoke: vi.fn()
 }));
-vi.mock('$lib/server/group/announcement-service', () => ({
+vi.mock('#lib/server/group/announcement-service.js', () => ({
 	getMuteState: vi.fn(),
 	listForManager: vi.fn(),
 	listPublished: vi.fn()
 }));
-vi.mock('$lib/server/group/application-service', () => ({
+vi.mock('#lib/server/group/application-service.js', () => ({
 	listForGroup: vi.fn(async () => []),
 	listForApplicant: vi.fn(async () => []),
 	hasOpenApplication: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn() }));
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists: vi.fn() }));
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
+	activeEventSeries: vi.fn(async () => new Map())
+}));
+vi.mock('#lib/server/event/event-service.js', () => ({ listGroupSessions: vi.fn() }));
+vi.mock('#lib/server/event/attendance-service.js', () => ({
+	countAttendanceByMember: vi.fn(async () => new Map())
+}));
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({ listDutyLists: vi.fn() }));
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/deliverables-service', () => ({
+vi.mock('#lib/server/volunteer/deliverables-service.js', () => ({
 	countCommitteeUnfinished: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
+vi.mock('#lib/server/volunteer/maintenance-schedule-service.js', () => ({
 	listMaintenanceSchedules: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/project/project-service', () => ({
+vi.mock('#lib/server/project/project-service.js', () => ({
 	listProjects: vi.fn(),
 	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/group/group-totals-service', () => ({ getClubTotals: vi.fn() }));
-vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/group/group-totals-service.js', () => ({ getClubTotals: vi.fn() }));
+vi.mock('#lib/server/group/file-service.js', () => ({ list: vi.fn(), getUsage: vi.fn() }));
+vi.mock('#lib/server/group/position-service.js', () => ({ listPositions: vi.fn(async () => []) }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v }));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}
 }));
-vi.mock('$lib/server/db/schema/directory', () => ({
+vi.mock('#lib/server/db/schema/directory.js', () => ({
 	directoryVisibilities: ['hidden', 'members', 'public']
 }));
 
@@ -146,6 +166,7 @@ const settings = { joinPolicy: groupJoinPolicies[0], visibility: 'public' };
 const EXPORTS = [
 	['getStaffGroups', {}, 'group.read', svc.listGroups],
 	['getStaffGroupPage', 'group-1', 'group.read', svc.getGroupDetail],
+	['getGroupHistory', { id: 'group-1' }, 'group.read', svc.listAuditFeed],
 	[
 		'createStaffGroup',
 		{ kind: 'club', name: 'Book club', ...settings },
@@ -175,7 +196,7 @@ const EXPORTS = [
 	[
 		'setCommitteeGrants',
 		{ groupId: 'group-1', capabilities: ['sponsor.manage'] },
-		'group.manage',
+		'committee.manage',
 		svc.setCommitteeCapabilityGrants
 	]
 ] as const;
@@ -244,9 +265,10 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 	});
 
 	// Before: `requireStaff`, any position at all. After: only the holders of
-	// `group.*`, which today are admin and staff. Every named position alone
-	// loses this surface, as #1388 intends.
-	it('admits exactly the admin or staff holders, where any position used to pass', async () => {
+	// the named capability — admin, staff, and for committee oversight the
+	// Operations chair (#2992). Every other named position alone loses it (#1388).
+	it('admits exactly the capability’s holders, where any position used to pass', async () => {
+		const holders = new Set<string>(positionsGranting(cap as Capability));
 		const table = [];
 		for (const held of subsets) {
 			heldPositions = held;
@@ -257,7 +279,7 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 			});
 		}
 		for (const row of table) {
-			const holdsGroup = row.held.split('+').some((p) => p === 'admin' || p === 'staff');
+			const holdsGroup = row.held.split('+').some((p) => holders.has(p));
 			expect(row, row.held).toMatchObject({ after: holdsGroup ? 'allowed' : 403 });
 		}
 		const narrowed = table.filter((r) => r.before !== r.after).map((r) => r.held);
@@ -265,7 +287,8 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 		expect(narrowed).toContain(
 			'technology_coordinator+volunteer_coordinator+site_moderator+treasurer'
 		);
-		expect(narrowed).toHaveLength(15);
+		// Every non-empty set of positions that holds none of them.
+		expect(narrowed).toHaveLength(2 ** (positionOrder.length - holders.size) - 1);
 	});
 });
 
@@ -275,9 +298,15 @@ describe('setStaffGroupRole', () => {
 		'hands %s to the service, scoped to the group',
 		async (role) => {
 			await groups.setStaffGroupRole({ groupId: 'group-1', userId: 'user-9', role });
-			expect(svc.setChairRole).toHaveBeenCalledWith('group-1', 'user-9', role);
+			expect(svc.setChairRole).toHaveBeenCalledWith('group-1', 'user-9', role, 'user-1');
 		}
 	);
+
+	it('names committee.manage for a committee (#3009)', async () => {
+		getByIdActive.mockResolvedValueOnce({ id: 'group-2', kind: 'committee' });
+		await groups.setStaffGroupRole({ groupId: 'group-2', userId: 'user-9', role: 'admin' });
+		expect(requested).toEqual(['committee.manage']);
+	});
 
 	it('refuses owner before reaching the service', async () => {
 		await expect(
@@ -301,7 +330,7 @@ describe('the committee pages', () => {
 	};
 
 	beforeEach(async () => {
-		const cas = await import('$lib/server/group/application-service');
+		const cas = await import('#lib/server/group/application-service.js');
 		vi.mocked(cas.listForGroup).mockResolvedValue(applications as never);
 		svc.listGroups.mockResolvedValue({ rows: [{ id: 'group-1', openApplications: 1 }] });
 		svc.getGroupDetail.mockResolvedValue(committee);

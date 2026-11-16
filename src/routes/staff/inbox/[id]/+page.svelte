@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One staff conversation — the thread pane of the two-pane inbox.
 	 *
@@ -8,25 +9,25 @@
 	 * draws: this page hands it `conversationBar` (#1927).
 	 */
 	import { onDestroy } from 'svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { useInboxToolbar } from '../toolbar.svelte';
 	import DetailsPanel from './DetailsPanel.svelte';
-	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
+	import DispositionBar from '#lib/components/inbox/DispositionBar.svelte';
 	import {
 		channelIcon,
 		channelLabel,
 		isMetaReplyWindowClosed
-	} from '$lib/components/inbox/channels';
-	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
-	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '$lib/config';
-	import { formatDate } from '$lib/utils/format';
+	} from '#lib/components/inbox/channels.js';
+	import { threadDisplayStatus } from '#lib/components/inbox/thread-status.js';
+	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '#lib/config.js';
+	import { formatDate } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { IconAlarmSnooze, IconArrowLeft, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
@@ -35,9 +36,12 @@
 		addThreadNote,
 		assignThread,
 		getAssignableStaff
-	} from '$lib/remote/inbox.remote';
+	} from '#lib/remote/inbox.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const threadId = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const threadId = $derived(params.id);
 
 	// Above the await: a cleanup registered after it would be async-gated.
 	const toolbar = useInboxToolbar();
@@ -79,16 +83,23 @@
 	$effect(() => {
 		toolbar.conversation = conversationBar;
 	});
+
+	// Not `{#await}`: a refresh would re-pend it and remount the composer, draft
+	// and all (#2357). Started after the thread lands, so the two never overlap.
+	const channels = new Latest(() => getInboxEnabledChannels());
+	$effect(() => {
+		if (channels.error) throw channels.error.e;
+	});
 </script>
 
 {#snippet conversationBar()}
 	<Button
-		href={resolve('/staff/inbox')}
+		href={resolve('staff/inbox')}
 		variant="ghost"
 		size="sm"
 		shape="square"
 		class="lg:hidden"
-		aria-label="Back to the inbox"
+		aria-label={m.staff_inbox_id_aria_label()}
 	>
 		<IconArrowLeft size={18} />
 	</Button>
@@ -122,11 +133,15 @@
 	     date alone. -->
 	{#if t.status === 'snoozed' && t.snoozedUntil}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
-			<IconAlarmSnooze size={14} /> Returns {formatDate(new Date(t.snoozedUntil))}
+			<IconAlarmSnooze size={14} />
+			{m.staff_inbox_id_returns_text({ formatDate: formatDate(new Date(t.snoozedUntil)) })}
 		</p>
 	{:else if t.awaitingReplySince}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
-			<IconSend size={14} /> Waiting on a reply since {formatDate(new Date(t.awaitingReplySince))}
+			<IconSend size={14} />
+			{m.staff_inbox_id_waiting_reply_since_text({
+				formatDate: formatDate(new Date(t.awaitingReplySince))
+			})}
 		</p>
 	{/if}
 
@@ -136,7 +151,12 @@
 	     two-line window onto the conversation — so below `sm` the whole thread
 	     pane scrolls as one instead. -->
 	<div class="sm:min-h-0 sm:flex-1 sm:overflow-y-auto">
-		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
+		<ThreadTimeline
+			messages={t.messages}
+			channel={t.channel}
+			notes={t.notes}
+			contactName={t.contactName}
+		/>
 	</div>
 
 	<!--
@@ -149,7 +169,8 @@
 		disabled: a web thread replies by email to the address the contact form
 		captured, and a portal thread's reply is the message row itself.
 	-->
-	{#await getInboxEnabledChannels() then enabledChannels}
+	{#if channels.current}
+		{@const enabledChannels = channels.current}
 		{@const channelDisabled =
 			!isAlwaysEnabledChannel(t.channel) &&
 			(!isStaffInboxChannel(t.channel) || !enabledChannels.includes(t.channel))}
@@ -163,9 +184,10 @@
 						: undefined}
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
-				<Alert type="warning" href={resolve('/staff/settings')}>
-					The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to
-					send replies.
+				<Alert type="warning" href={resolve('staff/inbox/channels')}>
+					{m.staff_inbox_id_channel_disabled_enable_settings_inbox_body({
+						channelLabel: channelLabel(t.channel)
+					})}
 				</Alert>
 			{/if}
 
@@ -192,5 +214,5 @@
 				/>
 			</div>
 		</div>
-	{/await}
+	{/if}
 </ThreadPane>

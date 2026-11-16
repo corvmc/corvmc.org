@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { sweepAuditLog } from '$lib/server/audit/audit-retention';
+import * as env from '$app/env/private';
+import { sweepAuditLog } from '#lib/server/audit/audit-retention.js';
 
 /**
  * Delete audit rows past the 24-month window and strip name and email from
@@ -16,5 +16,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	const auth = request.headers.get('Authorization');
 	if (auth !== `Bearer ${secret}`) throw error(401, 'Unauthorized');
 
-	return json(await sweepAuditLog());
+	return Response.json(await sweepAuditLog());
 };

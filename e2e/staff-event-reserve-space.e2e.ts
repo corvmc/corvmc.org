@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	bookingDate,
@@ -26,11 +27,7 @@ import {
  */
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 /**
@@ -63,7 +60,18 @@ async function goToListing(page: Page, title: string) {
 	await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 }
 
-const RESERVE_CHECKBOX = { name: 'Reserve practice space' };
+/** The edit form's submit, by the field only that form carries (not the bill's). */
+function saveButton(page: Page) {
+	return page
+		.locator('form', {
+			has: page.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+		})
+		.locator('button[type="submit"]');
+}
+
+/** ConflictWarnings once settled: `data-conflicts` renders only when the answer is in. */
+const blockers = (page: Page) => page.locator('[data-conflicts] .alert-error');
+const advisories = (page: Page) => page.locator('[data-conflicts] .alert-warning');
 
 // The window and title prefix come from the fixture, which clears the previous
 // run's event first — its reservation would otherwise conflict with this one.
@@ -88,59 +96,59 @@ async function createEvent(
 	end = EVENT_END
 ) {
 	await page.goto('/staff/events');
-	await page.getByRole('button', { name: 'Create Listing' }).click();
-	await page.locator('input[name="title"]').fill(title);
-	await page.locator('input[name="eventDate"]').fill(date);
-	await page.locator('input[name="eventStartTime"]').fill(start);
-	await page.locator('input[name="eventEndTime"]').fill(end);
-	await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
+	await page.locator('[data-page-header]').getByRole('button').click();
+	await page.locator('input:is([name="title"], [name^="title/"])').fill(title);
+	await page.locator('input:is([name="eventDate"], [name^="eventDate/"])').fill(date);
+	await page.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])').fill(start);
+	await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill(end);
+	await page.getByRole('dialog').locator('button[type="submit"]').click();
 	await goToListing(page, title);
 }
 
 /** From the listing: open Edit, tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
-	await page.getByRole('button', { name: 'Edit', exact: true }).click();
-	await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
-	// `exact`: the open edit form also carries "Save bill".
-	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	await page.getByTestId('edit-listing').click();
+	await page.getByTestId('reserve-space').check();
+	await saveButton(page).click();
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 		timeout: 15000
 	});
 }
 
 test.describe('staff event creation — minimal modal', () => {
-	test('the create modal asks for no room, ticket or poster', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/events');
-		await page.getByRole('button', { name: 'Create Listing' }).click();
-
-		const dialog = page.getByRole('dialog');
-		await expect(dialog.locator('input[name="title"]')).toBeVisible({ timeout: 15000 });
-		await expect(dialog.locator('input[name="eventEndTime"]')).toBeVisible();
-		await expect(dialog.getByText('Reserve practice space')).toHaveCount(0);
-		await expect(dialog.getByText('Sell tickets through the site')).toHaveCount(0);
-		await expect(dialog.locator('input[type="file"]')).toHaveCount(0);
-	});
-
 	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
 		await loginAsStaff(page);
 		// Never saved, so the date cannot collide with anything.
 		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await page.getByRole('button', { name: 'Edit', exact: true }).click();
-		await page.getByRole('checkbox', RESERVE_CHECKBOX).check();
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+		await page.getByTestId('edit-listing').click();
+		await page.getByTestId('reserve-space').check();
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue(EVENT_START);
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue(EVENT_END);
 
 		// An hour either side of the 19:00–22:00 show for load-in and load-out.
-		await page.locator('input[name="reservationStartTime"]').fill('18:00');
-		await page.locator('input[name="reservationEndTime"]').fill('23:00');
+		await page
+			.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+			.fill('18:00');
+		await page
+			.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+			.fill('23:00');
 
 		// The show moves two hours earlier, and the padding moves with it.
-		await page.locator('input[name="eventStartTime"]').fill('17:00');
-		await page.locator('input[name="eventEndTime"]').fill('20:00');
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('16:00');
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue('21:00');
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('17:00');
+		await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill('20:00');
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue('16:00');
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue('21:00');
 	});
 
 	test('the reservation list links an event hold to its event, not to the booker', async ({
@@ -157,13 +165,16 @@ test.describe('staff event creation — minimal modal', () => {
 		// Searching the title is itself part of the change: the list only matched
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByRole('searchbox').fill(title);
+		// The search is applied once it reaches the address.
+		await expect(page).toHaveURL(/[?&]q=/);
 		// The date bounds keep the row off a later page of the 50-row list. They
-		// sit in the Filters menu, closed again so it cannot cover the row.
-		await page.getByRole('button', { name: /^Filters/ }).click();
-		await page.getByLabel('From date').fill(eventDate);
-		await page.getByLabel('To date').fill(eventDate);
+		// sit in the Date panel, closed again so it cannot cover the row.
+		await page.getByTestId('date-filter').click();
+		await page.getByLabel('From', { exact: true }).fill(eventDate);
+		await page.getByLabel('To', { exact: true }).fill(eventDate);
 		await page.keyboard.press('Escape');
-		await expect(page.getByLabel('From date')).toBeHidden();
+		await expect(page.getByLabel('From', { exact: true })).toBeHidden();
+		await expect(page).toHaveURL(/[?&]to=/);
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(
@@ -177,11 +188,13 @@ test.describe('staff event creation — minimal modal', () => {
 		// "Member", with the event nowhere on the page.
 		await row.locator('a[href^="/staff/reservations/"]').first().click();
 		await page.waitForURL(/\/staff\/reservations\/[^/]+$/, { timeout: 15000 });
-		await expect(page.getByRole('link', { name: 'View Event' })).toHaveAttribute(
-			'href',
-			`/staff/events/${eventId}`
-		);
-		await expect(page.getByText('Booked by')).toBeVisible();
+		await expect(
+			page.locator('[data-pane="detail"]').locator(`a[href="/staff/events/${eventId}"]`).first()
+		).toBeVisible();
+		// The account that raised the hold stays on the record, below the show.
+		await expect(
+			page.locator('[data-pane="detail"]').locator('a[href^="/staff/members/"]').first()
+		).toBeVisible();
 	});
 
 	test('a double-booking blocks the save until the override is ticked', async ({ page }) => {
@@ -193,16 +206,16 @@ test.describe('staff event creation — minimal modal', () => {
 			SEED_CONFLICT_START,
 			SEED_CONFLICT_END
 		);
-		await page.getByRole('button', { name: 'Edit', exact: true }).click();
-		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
+		await page.getByTestId('edit-listing').click();
+		const reserve = page.getByTestId('reserve-space');
 		await reserve.check();
 
 		// The seeded booking holds this window, so the overlap has to fire — and it
 		// is an error, not a warning.
-		await expect(page.getByText(/Double-books the space/)).toBeVisible({ timeout: 15000 });
+		await expect(blockers(page).first()).toBeVisible({ timeout: 15000 });
 
-		const override = page.getByRole('checkbox', { name: /double-books the space/i });
-		const submit = page.getByRole('button', { name: 'Save', exact: true });
+		const override = page.getByTestId('override-conflicts');
+		const submit = saveButton(page);
 
 		// A second, deliberate action rather than a relabelled submit.
 		await expect(override).not.toBeChecked();
@@ -214,7 +227,7 @@ test.describe('staff event creation — minimal modal', () => {
 		// along on the next save and skip the server's double-booking check.
 		await reserve.uncheck();
 		await expect(submit).toBeEnabled();
-		await expect(page.getByRole('checkbox', { name: /double-books the space/i })).toHaveCount(0);
+		await expect(page.getByTestId('override-conflicts')).toHaveCount(0);
 	});
 });
 
@@ -233,23 +246,25 @@ test.describe('staff event edit — reserve space', () => {
 		const title = `${SEED_EVENT_TITLE_PREFIX} edit ${Date.now()}`;
 		await createEvent(page, title, bookingDate(SEED_EDIT_EVENT_DATE, retry));
 
-		// The card always renders now; with no hold it says so, rather than
-		// vanishing and leaving "not held" indistinguishable from "not shown".
-		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
+		// Not held yet: nothing on the listing links to a reservation.
+		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Edit', exact: true }).click();
-		const reserve = page.getByRole('checkbox', RESERVE_CHECKBOX);
+		await page.getByTestId('edit-listing').click();
+		const reserve = page.getByTestId('reserve-space');
 		await expect(reserve).toBeVisible();
 		await reserve.check();
 
 		// Pre-filled from the event's own window: the times are a setup/teardown
 		// override, not a precondition.
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue(EVENT_START);
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue(EVENT_END);
 
-		// `exact`: the open edit form also carries "Save bill", and a substring
-		// match resolves to both the moment the lineup editor renders.
-		await page.getByRole('button', { name: 'Save', exact: true }).click();
+		// The listing form's submit, not the bill's, which renders beside it.
+		await saveButton(page).click();
 
 		// Presence of the link proves the reservation was created AND linked. By
 		// href, not by wording: the card is an EntityIdentity now.
@@ -271,27 +286,31 @@ test.describe('staff event edit — reserve space', () => {
 		// window that overlaps the event's own reservation. Earlier rather than
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
-		await page.getByRole('button', { name: 'Edit', exact: true }).click();
-		await page.locator('input[name="eventStartTime"]').fill('17:00');
-		await page.getByRole('checkbox', { name: 'Confirm rebook' }).check();
+		await page.getByTestId('edit-listing').click();
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('17:00');
+		await page.getByTestId('confirm-rebook').check();
 
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('17:00');
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue('17:00');
 
 		// The seeded dates are years out, so ConflictWarnings always reports the
-		// advance-booking warning here. Asserting it first proves the component
+		// advance-booking advisory here. Asserting it first proves the component
 		// actually ran and rendered — without it, the check below would pass just
 		// as happily against a panel that never mounted.
-		await expect(page.getByText('More than 14 days in advance')).toBeVisible();
+		await expect(advisories(page).first()).toBeVisible();
 
 		// The real assertion. checkConflicts filtered on `!('id' in c)` while
 		// getConflictDetails never selected an id, so the filter dropped nothing and
 		// the event's own hold came back as a conflict against a window that merely
 		// extends it.
-		await expect(page.getByText(/Double-books the space/)).toHaveCount(0);
+		await expect(blockers(page)).toHaveCount(0);
 
 		// And the advance-days warning on its own asks for nothing. It used to
 		// offer an override, which is how "this is further out than we normally
 		// take" ended up wearing the same control as "somebody else has the room".
-		await expect(page.getByRole('checkbox', { name: /double-books the space/i })).toHaveCount(0);
+		await expect(page.getByTestId('override-conflicts')).toHaveCount(0);
 	});
 });

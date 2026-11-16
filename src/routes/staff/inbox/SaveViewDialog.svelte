@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Name the filter combination you are looking at, and keep it as a tab.
 	 *
@@ -6,11 +7,11 @@
 	 * bookmark of this page describe the same thing — which is why saving one
 	 * needs nothing but a name.
 	 */
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { saveInboxView } from '$lib/remote/inbox.remote';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { saveInboxView } from '#lib/remote/inbox.remote.js';
 	import { filters } from './filters.svelte';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
@@ -29,17 +30,24 @@
 	);
 </script>
 
-<Modal bind:open title="Save as view" maxWidth="max-w-sm">
+<Modal bind:open title={m.staff_save_as_view_title()} maxWidth="max-w-sm">
 	<Form
 		remote={saveInboxView}
-		successToast="View saved"
+		successToast={m.staff_inbox_save_view_dialog_success_toast()}
 		onsuccess={() => (open = false)}
 		class="flex flex-col gap-4"
 	>
 		<input {...saveInboxView.fields.filters.as('hidden', payload)} />
-		<FormField name="name" label="Name" placeholder="Practice space, unanswered" />
+		<FormField
+			field={saveInboxView.fields.name}
+			label={m.staff_name_label()}
+			placeholder={m.staff_inbox_save_view_dialog_placeholder()}
+		/>
 		<div class="flex justify-end">
-			<SubmitButton label="Save view" successLabel="Saved" />
+			<SubmitButton
+				label={m.staff_inbox_save_view_dialog_save_view_label()}
+				successLabel={m.staff_saved_label()}
+			/>
 		</div>
 	</Form>
 </Modal>

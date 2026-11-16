@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { toLocalDate } from '#lib/utils/format.js';
+import { forEachTimeZone } from '#lib/test/clock-edges.js';
 
 // Regression: a `<Field field={fields.X} type="number">` registers through
 // SvelteKit's `field.as('number')`, which prefixes the submitted name with `n:`.
@@ -16,11 +18,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const createItemService = vi.fn(async () => ({ id: 'it-1' }));
 const updateItem = vi.fn(async () => undefined);
 const requestLoan = vi.fn(async () => ({ id: 'loan-1' }));
+const scheduleLoan = vi.fn(async () => undefined);
+const checkoutLoan = vi.fn(async () => undefined);
 const recordAcquisition = vi.fn(async () => ({ id: 'acq-1' }));
 const consumeStock = vi.fn(async () => ({ id: 'mv-1' }));
 const adjustStock = vi.fn(async () => ({ id: 'mv-2' }));
 
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	createItem: createItemService,
 	updateItem,
 	getItemById: vi.fn(),
@@ -35,7 +39,7 @@ vi.mock('$lib/server/inventory/item-service', () => ({
 	restoreItem: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/asset-service', () => ({
+vi.mock('#lib/server/inventory/asset-service.js', () => ({
 	bindAssetTag: vi.fn(),
 	createAsset: vi.fn(),
 	getAssetById: vi.fn(),
@@ -46,22 +50,20 @@ vi.mock('$lib/server/inventory/asset-service', () => ({
 	updateAsset: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/stock-service', () => ({
-	listLowStock: vi.fn(),
-	listMovements: vi.fn()
+vi.mock('#lib/server/inventory/stock-service.js', () => ({
+	listLowStock: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/acquisition-service', () => ({
+vi.mock('#lib/server/inventory/acquisition-service.js', () => ({
 	recordAcquisition,
 	consumeStock,
 	adjustStock
 }));
 
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	getLoanById: vi.fn(),
-	getLoanHistory: vi.fn(),
-	scheduleLoan: vi.fn(),
-	checkoutLoan: vi.fn(),
+	scheduleLoan,
+	checkoutLoan,
 	requestLoan,
 	cancelLoan: vi.fn(),
 	returnLoan: vi.fn(),
@@ -69,14 +71,14 @@ vi.mock('$lib/server/inventory/loan-service', () => ({
 	listUserLoans: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(() => ({ id: 'user-1' })),
 	requireCapabilityOrOwner: vi.fn(async () => 'staff'),
 	isStaff: vi.fn(async () => true)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -231,5 +233,34 @@ describe('number fields submitted through field.as("number")', () => {
 		});
 
 		expect(requestLoan).toHaveBeenCalledWith('user-2', expect.objectContaining({ quantity: 1 }));
+	});
+});
+
+// #2538: `new Date('2026-06-01')` is UTC midnight, the evening of May 31 in club
+// time, so every loan page showed the pickup a day early.
+describe('loan date inputs are club days', () => {
+	const pickedDay = (call: unknown[] | undefined, key: string) =>
+		toLocalDate((call?.at(-1) as Record<string, Date>)[key]);
+
+	forEachTimeZone('a request keeps the days the member picked', async () => {
+		await inventory.submitLoanRequest({
+			itemId: 'it-1',
+			requestedPickupDate: '2026-06-01',
+			estimatedReturnDate: '2026-06-08'
+		});
+		const call = requestLoan.mock.calls.at(-1);
+		expect(pickedDay(call, 'requestedPickupDate')).toBe('2026-06-01');
+		expect(pickedDay(call, 'estimatedReturnDate')).toBe('2026-06-08');
+	});
+
+	forEachTimeZone('staff scheduling and checkout keep their days', async () => {
+		await inventory.scheduleLoanForm({
+			loanId: 'loan-1',
+			itemId: '00000000-0000-4000-8000-000000000001',
+			scheduledPickupDate: '2026-06-01'
+		});
+		await inventory.checkoutLoanForm({ loanId: 'loan-1', dueDate: '2026-06-15' });
+		expect(pickedDay(scheduleLoan.mock.calls.at(-1), 'scheduledPickupDate')).toBe('2026-06-01');
+		expect(pickedDay(checkoutLoan.mock.calls.at(-1), 'dueDate')).toBe('2026-06-15');
 	});
 });

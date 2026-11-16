@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { command } from './_remote';
-import { requireUser } from '$lib/server/authorization';
+import { requireUser } from '#lib/server/authorization.js';
 import {
 	checkOut,
 	getDoorState,
 	openDoor,
 	recordOfflineReveal
-} from '$lib/server/lock/door-service';
+} from '#lib/server/lock/door-service.js';
 
 // The back-door page (#2120). Each mutation re-checks that the booking is the
 // member's and open now: the id comes from the client.

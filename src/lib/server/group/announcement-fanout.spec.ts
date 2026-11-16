@@ -27,6 +27,7 @@ const mockRecord = vi.fn(async (_id: string, n: number) => {
 
 vi.mock('./announcement-service', () => ({
 	claimForNotification: (...a: unknown[]) => mockClaim(...(a as [])),
+	findAnnouncementThread: async () => 'thread-announcements',
 	listRecipients: (...a: unknown[]) => mockList(...(a as [])),
 	recordRecipientCount: (id: string, n: number) => mockRecord(id, n)
 }));
@@ -34,7 +35,7 @@ vi.mock('./announcement-service', () => ({
 /** Every `db.insert(...).values(rows)` the batch was handed. */
 let insertedBatches: unknown[][] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		insert: () => ({
 			values: (rows: unknown[]) => {
@@ -47,17 +48,17 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const mockSendBatch = vi.fn(async () => {});
-vi.mock('$lib/server/notification/email', () => ({
+vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendTemplateBatch: (...a: unknown[]) => mockSendBatch(...(a as [])),
 	type: {}
 }));
 
 const mockPush = vi.fn();
-vi.mock('$lib/server/notification/sse', () => ({
+vi.mock('#lib/server/notification/sse.js', () => ({
 	pushToUser: (...a: unknown[]) => mockPush(...(a as []))
 }));
 
-vi.mock('$lib/server/db/schema/notification', () => ({
+vi.mock('#lib/server/db/schema/notification.js', () => ({
 	notification: { id: 'id' },
 	getNotificationType: () => ({ defaults: { email: true, inApp: true, sms: false } })
 }));
@@ -136,8 +137,8 @@ describe('recipients', () => {
 		// The exclusions live in the query, so this pins that both ids actually
 		// reach it: the author, because being emailed your own post reads as a
 		// bug, and the room, because a reader who muted it is excluded there
-		// rather than here (#1309).
-		expect(mockList).toHaveBeenCalledWith('group-1', 'user-author', 'ann-1');
+		// rather than here (#1309). The room is the Announcements thread (#2618).
+		expect(mockList).toHaveBeenCalledWith('group-1', 'user-author', 'thread-announcements');
 	});
 
 	it('records a count of zero and sends nothing when nobody is left', async () => {
@@ -286,18 +287,6 @@ describe('the email', () => {
 
 		const html = String(firstModel().body_html);
 		expect(html).not.toMatch(/<script|onerror|javascript:/i);
-	});
-
-	it('keeps a room message as plain text, line breaks and all', async () => {
-		recipients = [member(1)];
-
-		await fanOutAnnouncement(
-			event({ body: 'line one\n<b>line</b> two' }),
-			'https://test.corvmc.org',
-			{ claim: async () => true, record: async () => {}, format: 'plain' }
-		);
-
-		expect(firstModel().body_html).toBe('line one<br />&lt;b&gt;line&lt;/b&gt; two');
 	});
 
 	it('keeps the bell to an excerpt', async () => {

@@ -6,15 +6,15 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { holdsCertificationSql } = await import('./member-certification-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { db } = await import('$lib/server/db');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { db } = await import('#lib/server/db/index.js');
 
 const AT = new Date('2026-10-15T19:00:00Z');
 const s = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);

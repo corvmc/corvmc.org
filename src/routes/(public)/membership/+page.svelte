@@ -1,17 +1,19 @@
 <script lang="ts">
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import SectionHeading from '#lib/components/public/SectionHeading.svelte';
 	import {
 		IconClock,
 		IconCalendarRepeat,
 		IconTicket,
 		IconDeviceSpeaker
 	} from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { signInHref } from '$lib/utils/sign-in';
+	import { signInHref } from '#lib/utils/sign-in.js';
 
 	// Sustaining membership is a sliding scale: every $5/month earns one free hour
 	// of practice time (up to 12), and every tier gets the same benefits. Kept in
@@ -19,19 +21,19 @@
 	const tiers = [
 		{
 			amount: '$10',
-			hours: '2 free practice hours',
+			hours: '2 hrs of practice credits',
 			body: 'A great way to start — and the practice time refreshes every month.',
 			featured: false
 		},
 		{
 			amount: '$25',
-			hours: '5 free practice hours',
+			hours: '5 hrs of practice credits',
 			body: 'Free gear accessories and invites to member-only events.',
 			featured: true
 		},
 		{
 			amount: '$60',
-			hours: '12 free practice hours',
+			hours: '12 hrs of practice credits',
 			body: 'The most practice time per dollar, with every member benefit included.',
 			featured: false
 		}
@@ -40,89 +42,89 @@
 	const benefits = [
 		{
 			icon: IconClock,
-			title: 'Free Practice Hours',
-			desc: 'A monthly allotment of free rehearsal time that refreshes each billing cycle.'
+			title: m.public_membership_free_practice_hours_title(),
+			desc: m.public_membership_monthly_allotment_free_rehearsal_time_body()
 		},
 		{
 			icon: IconCalendarRepeat,
-			title: 'Recurring Reservations',
-			desc: 'Lock in a standing weekly practice slot — a members-only perk.'
+			title: m.public_membership_recurring_reservations_title(),
+			desc: m.public_membership_lock_standing_weekly_practice_slot_body()
 		},
 		{
 			icon: IconTicket,
-			title: 'Member Events',
-			desc: 'Invites to member-only events. Show tickets are a sliding scale for everyone — no one is turned away for lack of funds.'
+			title: m.public_membership_member_events_title(),
+			desc: m.public_membership_invites_member_only_events_show_body()
 		},
 		{
 			icon: IconDeviceSpeaker,
-			title: 'Gear Perks',
-			desc: 'Free accessory loans and reduced rates on major equipment from the lending library.'
+			title: m.public_membership_gear_perks_title(),
+			desc: m.public_membership_free_accessory_loans_reduced_rates_body()
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>Membership | Corvallis Music Collective</title>
+	<title>{m.public_membership_membership_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
-		content="A free account gets you started at the Corvallis Music Collective. Sustaining membership is a sliding-scale monthly contribution that supports the space and unlocks free practice hours and more."
+		content="A free account gets you started at the Corvallis Music Collective. Sustaining membership is a sliding-scale monthly contribution that supports the space and unlocks practice credits and more."
 	/>
 </svelte:head>
 
 <!-- Hero -->
-<Hero title="Become a Member">
-	A free account gets you in the door. Sustaining membership keeps the doors open — and unlocks free
-	practice hours, recurring reservations, and member perks.
+<Hero title={m.public_become_member_title()}>
+	{m.public_membership_free_account_gets_door_sustaining_text()}
 </Hero>
 
 <!-- Free vs Sustaining -->
 <Section>
 	<div class="mb-10 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight">Two Ways to Belong</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">
+			{m.public_membership_two_ways_belong_title()}
+		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			Everyone starts with a free account. Sustaining members chip in monthly to keep the collective
-			running — and get more out of the space in return.
+			{m.public_membership_everyone_starts_with_free_account_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 		<!-- Free -->
 		<Tile align="stack" gap="4" pad="lg">
 			<div>
-				<div class="text-3xl font-bold">Free Account</div>
-				<div class="text-sm text-fg-3">Always free</div>
+				<div class="text-3xl font-bold">{m.public_membership_free_account_text()}</div>
+				<div class="text-sm text-fg-3">{m.public_membership_always_free_text()}</div>
 			</div>
 			<p class="text-muted leading-relaxed">
-				Create an account to use the basics — book practice space at the standard hourly rate,
-				browse the member directory, and RSVP to events.
+				{m.public_membership_create_account_use_basics_book_text()}
 			</p>
 			<ul class="space-y-2 text-muted">
-				<li>• Reserve practice space hourly</li>
-				<li>• Member directory access</li>
-				<li>• RSVP to events</li>
+				<li>{m.public_membership_reserve_practice_space_hourly_text()}</li>
+				<li>{m.public_membership_member_directory_access_text()}</li>
+				<li>{m.public_membership_rsvp_events_text()}</li>
 			</ul>
 			<Button
 				href={signInHref({ register: true, returnTo: '/member' })}
 				variant="default"
 				outline
-				class="mt-auto">Create an Account</Button
+				class="mt-auto">{m.public_membership_create_account_label()}</Button
 			>
 		</Tile>
 
 		<!-- Sustaining -->
 		<Tile align="stack" gap="4" pad="lg" fill="navy">
 			<div>
-				<div class="text-3xl font-bold">Sustaining Member</div>
-				<div class="text-sm" style="opacity: 0.85">From $10/month · sliding scale</div>
+				<div class="text-3xl font-bold">{m.public_membership_sustaining_member_text()}</div>
+				<div class="text-sm" style="opacity: 0.85">
+					{m.public_membership_from_10_month_sliding_scale_text()}
+				</div>
 			</div>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
-				A recurring contribution that supports the space and unlocks the full set of member
-				benefits. Change or cancel anytime.
+				{m.public_membership_recurring_contribution_supports_space_unlo_text()}
 			</p>
 			<ul class="space-y-2 text-sm" style="opacity: 0.9">
-				<li>• Everything in the free account</li>
-				<li>• Free practice hours every month</li>
-				<li>• Recurring reservations</li>
-				<li>• Gear perks and member-only events</li>
+				<li>{m.public_membership_everything_free_account_text()}</li>
+				<li>{m.public_membership_free_practice_hours_every_month_text()}</li>
+				<li>{m.public_membership_recurring_reservations_2_text()}</li>
+				<li>{m.public_membership_gear_perks_member_only_events_text()}</li>
 			</ul>
 			<Button
 				href={signInHref({ register: true, returnTo: '/member/membership' })}
@@ -130,7 +132,7 @@
 				size="sm"
 				class="mt-auto"
 			>
-				Become a Sustaining Member
+				{m.public_become_sustaining_member_label()}
 			</Button>
 		</Tile>
 	</div>
@@ -138,7 +140,7 @@
 
 <!-- Benefits -->
 <Section tint="secondary">
-	<SectionHeading title="What Sustaining Members Get" />
+	<SectionHeading title={m.public_membership_what_sustaining_members_get_title()} />
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each benefits as item (item.title)}
 			<Tile fill="raised">
@@ -155,11 +157,14 @@
 <!-- Sliding scale tiers -->
 <Section>
 	<div class="mb-10 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight">Pick Your Contribution</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">
+			{m.public_membership_pick_contribution_title()}
+		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			It's a sliding scale: every <strong>$5/month</strong> earns you another free hour of practice time
-			— up to 12. Every tier gets the same member benefits, you just walk away with more practice hours.
-			Change or cancel anytime.
+			<ParaglideMessage message={m.public_membership_s_sliding_scale_every_earns_text} inputs={{}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -167,7 +172,7 @@
 			<Tile pad="lg" gap="none" fill={tier.featured ? 'orange' : 'surface'}>
 				<div class="mb-1 text-5xl leading-none font-bold">{tier.amount}</div>
 				<div class="mb-3 text-xs" style={tier.featured ? 'opacity: 0.85' : 'color: var(--fg-3)'}>
-					per month
+					{m.public_membership_per_month_text()}
 				</div>
 				<div
 					class="mb-3 text-sm font-bold tracking-widest uppercase"
@@ -191,15 +196,16 @@
 						? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'
 						: ''}
 				>
-					Become a Member
+					{m.public_become_member_label()}
 				</Button>
 			</Tile>
 		{/each}
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
-		Not looking to join monthly? There are <a
-			href={resolve('/contribute')}
-			class="text-cmc-teal underline">other ways to support the collective</a
-		>.
+		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there_text} inputs={{}}
+			>{#snippet a({ children })}<a href={resolve('contribute')} class="text-cmc-teal underline"
+					>{@render children?.()}</a
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
 </Section>

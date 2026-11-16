@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The member's conversations — staff threads and member threads in one list.
 	 *
@@ -9,11 +10,11 @@
 	 * whether it is waiting on you.
 	 */
 	import { page } from '$app/state';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import ConversationRows from '#lib/components/inbox/ConversationRows.svelte';
 	import ComposeAction from './ComposeAction.svelte';
-	import { getMyMessages } from '$lib/remote/direct-messages.remote';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { goto } from '$app/navigation';
 	import { getMemberLayoutContext } from '../layout-context';
 	import { conversationList } from './list-state.svelte';
@@ -23,7 +24,7 @@
 	// actually showing. See list-state.svelte.ts.
 	/**
 	 * The inbox in the URL, mirrored into local state rather than read back.
-	 * `replaceState` updates neither `page.url` nor the router, so a filter read
+	 * A shallow `goto` updates neither `page.url` nor the router, so a filter read
 	 * straight off the URL lags the control by a navigation.
 	 */
 	let inbox = $state(page.url.searchParams.get('inbox') ?? 'all');
@@ -31,10 +32,10 @@
 	function chooseInbox(next: string) {
 		inbox = next;
 		conversationList.page = 1;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (next === 'all') url.searchParams.delete('inbox');
 		else url.searchParams.set('inbox', next);
-		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+		void goto(url, { replace: true, reset: false });
 	}
 
 	const result = $derived(getMyMessages({ page: conversationList.page, inbox }));
@@ -63,16 +64,16 @@
 	const dmsOff = $derived(layout.features.directMessages && !layout.acceptsDirectMessages);
 	const emptyMessage = $derived(
 		dmsOff
-			? 'Direct messages are switched off for your account, so only staff can reach you here.'
+			? m.member_messages_conversation_list_direct_messages_switched_o_body()
 			: layout.features.directMessages
-				? 'Use Message a Member or Message Staff above to start one.'
-				: 'Use Message Staff above to start one.'
+				? m.member_messages_conversation_list_use_message_member_message_body()
+				: m.member_messages_conversation_list_use_message_staff_above_st_body()
 	);
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-xl font-bold">Messages</h1>
+		<h1 class="text-xl font-bold">{m.member_messages_conversation_list_messages_title()}</h1>
 		<div class="flex flex-wrap gap-2">
 			<ComposeAction
 				canMessageMembers={layout.features.directMessages && layout.acceptsDirectMessages}
@@ -88,8 +89,9 @@
 	-->
 	{#if layout.pendingRequests > 0}
 		<p class="text-muted text-sm">
-			{layout.pendingRequests}
-			{layout.pendingRequests === 1 ? 'message request is' : 'message requests are'} waiting for you.
+			{m.member_messages_conversation_list_message_requests_waiting_text({
+				pendingRequests: layout.pendingRequests
+			})}
 		</p>
 	{/if}
 
@@ -99,12 +101,12 @@
 	{#if inboxes.length > 0}
 		<Select
 			size="sm"
-			aria-label="Inbox"
+			aria-label={m.member_messages_conversation_list_aria_label()}
 			value={inbox}
 			onchange={(e: Event) => chooseInbox((e.currentTarget as HTMLSelectElement).value)}
 		>
-			<option value="all">All inboxes</option>
-			<option value="own">Just mine</option>
+			<option value="all">{m.member_messages_conversation_list_all_inboxes_label()}</option>
+			<option value="own">{m.member_messages_conversation_list_just_mine_label()}</option>
 			{#each inboxes as box (box.slug)}
 				<option value={box.slug}>{box.name}</option>
 			{/each}
@@ -118,9 +120,9 @@
 		     something it did not offer (#907). -->
 		<DataList
 			{result}
-			emptyTitle="No messages yet"
+			emptyTitle={m.member_messages_conversation_list_empty_title()}
 			empty={emptyMessage}
-			actionLabel={dmsOff ? 'Turn direct messages on' : undefined}
+			actionLabel={dmsOff ? m.member_messages_conversation_list_action_label() : undefined}
 			actionHref={dmsOff ? '/member/account' : undefined}
 			onpage={(p) => (conversationList.page = p)}
 		>

@@ -48,8 +48,6 @@ __screenshots__/
 # Attachments the browser reporter writes beside a failure screenshot.
 .vitest-attachments/
 
-*storybook.log
-storybook-static
 test-results.json
 
 # Migration
@@ -84,3 +82,4 @@ docs/handoff/**/capture-report.json
 /project.inlang/.lix/
 /project.inlang/.meta.json
 /project.inlang/README.md
+/project.inlang/cache/

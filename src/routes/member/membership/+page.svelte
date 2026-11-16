@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		MembershipHero,
 		BenefitsGrid,
@@ -11,11 +12,11 @@
 		CancelledBanner,
 		PaymentMethodsCard,
 		InvoiceHistoryCard
-	} from '$lib/components/member/membership';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { pageTitle } from '$lib/config';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	} from '#lib/components/member/membership/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { pageTitle } from '#lib/config.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import { page } from '$app/state';
 	import {
 		createSubscription,
@@ -23,8 +24,8 @@
 		resumeSubscription,
 		cancelSubscription,
 		getMemberMembership
-	} from '$lib/remote/membership.remote';
-	import { getBilling } from '$lib/remote/billing.remote';
+	} from '#lib/remote/membership.remote.js';
+	import { getBilling } from '#lib/remote/billing.remote.js';
 
 	let data = $derived(await getMemberMembership());
 
@@ -72,15 +73,16 @@
 
 {#snippet bottomCta(id?: string)}
 	<div {id} class="rounded-xl bg-primary/5 p-8 text-center">
-		<h2 class="mb-4 text-3xl font-bold">Sounds Good?</h2>
+		<h2 class="mb-4 text-3xl font-bold">{m.member_membership_sounds_good_title()}</h2>
 		<p class="mx-auto mb-6 max-w-2xl opacity-70">
-			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the
-			amount — keeps the spaces open, the gear available, and the music going.
+			{m.member_membership_members_already_contribution_whatever_amou_text({
+				sustainingMemberCount: communityStats.sustainingMemberCount
+			})}
 		</p>
 		<Button variant="primary" size="lg" onclick={() => (subscribeModalOpen = true)}>
-			Become a Sustaining Member
+			{m.member_membership_become_sustaining_member_label()}
 		</Button>
-		<p class="mt-4 text-muted">Cancel anytime. Seriously.</p>
+		<p class="mt-4 text-muted">{m.member_membership_cancel_anytime_seriously_text()}</p>
 	</div>
 {/snippet}
 
@@ -103,13 +105,13 @@
 
 		{#snippet failed()}
 			<Alert type="warning">
-				We couldn't load your billing details just now. Everything else on this page is up to date.
+				{m.member_membership_we_couldn_t_load_billing_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 {/snippet}
 
-<Modal bind:open={subscribeModalOpen} title="Become a Sustaining Member">
+<Modal bind:open={subscribeModalOpen} title={m.member_membership_become_sustaining_member_title()}>
 	<SubscriptionForm mode="create" remote={createSubscription} />
 </Modal>
 
@@ -117,8 +119,8 @@
 	{#if awaitingSubscription}
 		<Alert type="info">
 			{subscribeAttempts >= SUBSCRIBE_RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Your card has been charged and your membership starts as soon as it lands — if this page still says otherwise in a few minutes, get in touch."
-				: 'Confirming your payment…'}
+				? m.member_membership_we_haven_t_had_confirmation_body()
+				: m.member_confirming_payment_body()}
 		</Alert>
 	{/if}
 	<!-- Active sustaining member view -->
@@ -162,7 +164,7 @@
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
 				<Button variant="default" size="lg" onclick={() => (subscribeModalOpen = true)}>
-					Become a Sustaining Member
+					{m.member_membership_become_sustaining_member_label()}
 				</Button>
 			{/snippet}
 		</MembershipHero>

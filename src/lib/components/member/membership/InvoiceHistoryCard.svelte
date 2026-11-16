@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconReceipt, IconFileDownload } from '@tabler/icons-svelte';
-	import { formatCents } from '$lib/utils/format';
-	import type { BillingInvoice } from '$lib/server/finance/billing-service';
+	import { formatCents, formatMonthDayYear } from '#lib/utils/format.js';
+	import type { BillingInvoice } from '#lib/server/finance/billing-service.js';
 
 	let {
 		invoices,
@@ -21,46 +22,57 @@
 	// rare but real, and reading a raw Stripe enum on a member's page is worse
 	// than a word for it.
 	const STATUS: Record<string, { label: string; variant: 'success' | 'warning' | 'error' }> = {
-		paid: { label: 'Paid', variant: 'success' },
-		open: { label: 'Due', variant: 'warning' },
-		void: { label: 'Voided', variant: 'error' },
-		uncollectible: { label: 'Unpaid', variant: 'error' }
+		paid: { label: m.member_membership_invoice_history_card_paid_label(), variant: 'success' },
+		open: { label: m.member_membership_invoice_history_card_due_label(), variant: 'warning' },
+		void: { label: m.member_membership_invoice_history_card_voided_label(), variant: 'error' },
+		uncollectible: {
+			label: m.member_membership_invoice_history_card_unpaid_label(),
+			variant: 'error'
+		}
 	};
 
-	const date = (value: Date) =>
-		value.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+	const date = formatMonthDayYear;
 </script>
 
-<Card>
+<Card testid="billing-history">
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconReceipt size={24} class="text-primary" />
 			</div>
 			<div>
-				<h3 class="text-xl font-semibold">Billing History</h3>
-				<p class="text-muted">Every receipt, with the PDF</p>
+				<h3 class="text-xl font-semibold">
+					{m.member_membership_invoice_history_card_billing_history_title()}
+				</h3>
+				<p class="text-muted">
+					{m.member_membership_invoice_history_card_every_receipt_with_pd_text()}
+				</p>
 			</div>
 		</div>
 
 		{#if !available}
 			<div class="mt-4">
 				<Alert type="warning">
-					We couldn't reach our payment processor just now, so your history isn't shown. Try again
-					in a moment.
+					{m.member_membership_invoice_history_card_we_couldn_t_reach_our_body()}
 				</Alert>
 			</div>
 		{:else if invoices.length === 0}
-			<p class="mt-4 text-muted">Nothing billed yet.</p>
+			<p class="mt-4 text-muted">
+				{m.member_membership_invoice_history_card_nothing_billed_yet_text()}
+			</p>
 		{:else}
 			<div class="mt-4 overflow-x-auto">
 				<table class="table">
 					<thead>
 						<tr>
-							<th>Date</th>
-							<th>Amount</th>
-							<th>Status</th>
-							<th><span class="sr-only">Receipt</span></th>
+							<th>{m.member_membership_invoice_history_card_date_label()}</th>
+							<th>{m.member_membership_invoice_history_card_amount_label()}</th>
+							<th>{m.member_membership_invoice_history_card_status_label()}</th>
+							<th
+								><span class="sr-only"
+									>{m.member_membership_invoice_history_card_receipt_label()}</span
+								></th
+							>
 						</tr>
 					</thead>
 					<tbody>
@@ -76,12 +88,18 @@
 								<td class="text-right">
 									<div class="flex w-max justify-end gap-1">
 										{#if invoice.hostedUrl}
-											<Button href={invoice.hostedUrl} variant="ghost" size="sm">Receipt</Button>
+											<Button href={invoice.hostedUrl} variant="ghost" size="sm"
+												>{m.member_membership_invoice_history_card_receipt_label()}</Button
+											>
 										{/if}
 										{#if invoice.pdfUrl}
 											<Button href={invoice.pdfUrl} variant="ghost" size="sm">
 												<IconFileDownload size={16} />
-												<span class="sr-only">Download PDF for {date(invoice.created)}</span>
+												<span class="sr-only"
+													>{m.member_membership_invoice_history_card_download_pdf_label({
+														date: date(invoice.created)
+													})}</span
+												>
 											</Button>
 										{/if}
 									</div>

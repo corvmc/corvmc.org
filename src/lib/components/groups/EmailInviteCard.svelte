@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * An invitation addressed to an email rather than to an account.
 	 *
@@ -7,10 +8,10 @@
 	 * member can learn the invitation happened at all — before it lapsed there was
 	 * no surface anywhere that said so, expired or not (#906).
 	 */
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDate } from '#lib/utils/format.js';
 
 	let {
 		invite,
@@ -34,19 +35,23 @@
 			<span class="font-semibold">{invite.name}</span>
 			<p class="text-subtle">
 				{#if kindLabel}{kindLabel} ·
-				{/if}{invite.invitedByName ?? 'Someone'} invited you as
-				{invite.role}
+				{/if}{m.groups_email_invite_card_invited_as_text({
+					invitedByName: invite.invitedByName ?? m.groups_email_invite_card_someone_text(),
+					role: invite.role
+				})}
 			</p>
 			<p class="text-muted text-sm">
-				{#if invite.expired}
-					This invitation expired on {formatDate(invite.expiresAt)}. Ask them to send a new one.
-				{:else}
-					The link is in your email, and works until {formatDate(invite.expiresAt)}.
-				{/if}
+				{#if invite.expired}{m.groups_email_invite_card_invitation_expired_ask_them_send_text({
+						formatDate: formatDate(invite.expiresAt)
+					})}{:else}{m.groups_email_invite_card_link_email_works_until_text({
+						formatDate: formatDate(invite.expiresAt)
+					})}{/if}
 			</p>
 		</div>
 		<Badge variant={invite.expired ? 'ghost' : 'warning'}>
-			{invite.expired ? 'Expired' : 'Invited'}
+			{invite.expired
+				? m.groups_email_invite_card_expired_label()
+				: m.groups_email_invite_card_invited_label()}
 		</Badge>
 	</CardBody>
 </Card>

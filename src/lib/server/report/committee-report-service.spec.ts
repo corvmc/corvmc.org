@@ -13,9 +13,9 @@ const getVolunteerTotals = vi.fn();
 const listProjects = vi.fn();
 const getProjectBurn = vi.fn();
 
-vi.mock('$lib/server/finance/financial-entry-service', () => ({ totalsByKindAndCategory }));
-vi.mock('$lib/server/volunteer/volunteer-report-service', () => ({ getVolunteerTotals }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects, getProjectBurn }));
+vi.mock('#lib/server/finance/financial-entry-service.js', () => ({ totalsByKindAndCategory }));
+vi.mock('#lib/server/volunteer/volunteer-report-service.js', () => ({ getVolunteerTotals }));
+vi.mock('#lib/server/project/project-service.js', () => ({ listProjects, getProjectBurn }));
 
 const { getCommitteeReport } = await import('./committee-report-service');
 

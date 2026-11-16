@@ -6,7 +6,7 @@ import {
 	PACKING_LABEL_MAX,
 	PACKING_MAX_ITEMS,
 	PACKING_MAX_QUANTITY
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * What a packing-list editor posts.

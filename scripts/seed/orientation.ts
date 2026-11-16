@@ -3,12 +3,13 @@ import { holdRoom } from './room';
 import { eq } from 'drizzle-orm';
 import {
 	memberOrientation,
-	workOrder,
 	workTask,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts, shiftIdFor } from './shifts';
 import { ORIENTATION_DEFAULT_TASKS } from '../../src/lib/config';
 import { ptDate } from './util';
 
@@ -17,8 +18,8 @@ import { ptDate } from './util';
  *
  * Written by hand: the seed runs outside the app, where no listener fires. The
  * shape matches the orientation setting's defaults — ten minutes before the
- * booking, 30 minutes long, with the default checklist. The role lives in KV and
- * starts empty, so the listener stays off locally until staff pick one.
+ * booking, 30 minutes long, with the default checklist. The role lives in KV;
+ * `seed/practice-space.ts` sets it, so the listener is on locally.
  *
  * Every state is seeded, not just the happy one. `pending` and `scheduled` are
  * what a fresh member looks like; `completed` and `waived` are the two the staff
@@ -52,21 +53,22 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	const workOrderRows: any[] = [];
 	const orientationRows: any[] = [];
 	const taskRows: any[] = [];
+	const linkRows: { workOrderId: string; reservationId: string }[] = [];
 
 	function shiftFor(id: string, reservationId: string, startsAt: Date) {
 		const from = new Date(startsAt.getTime() - LEAD_MINUTES * 60_000);
 		workOrderRows.push({
 			id,
 			volunteerRoleId: role.id,
-			reservationId,
 			startsAt: from,
 			endsAt: new Date(from.getTime() + DURATION_MINUTES * 60_000),
 			capacity: 1,
-			notes: 'First visit — meet them at the front door.',
+			shiftNotes: 'First visit — meet them at the front door.',
 			anchor: 'start' as const,
 			isOrientation: true,
 			createdByUserId: null
 		});
+		linkRows.push({ workOrderId: id, reservationId });
 		ORIENTATION_DEFAULT_TASKS.forEach((label, sortOrder) =>
 			taskRows.push({ workOrderId: id, label, sortOrder })
 		);
@@ -168,16 +170,17 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 		});
 	}
 
-	if (workOrderRows.length > 0) await batchInsert(workOrder, workOrderRows, 8);
-	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows, 7);
+	if (workOrderRows.length > 0) await insertTasksWithShifts(workOrderRows);
+	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows);
 	if (taskRows.length > 0) await batchInsert(workTask, taskRows);
+	if (linkRows.length > 0) await batchInsert(workOrderLink, linkRows);
 
 	// Sam is on the cancelled one and has not been told, which is the whole point
 	// of seeding it.
 	await batchInsert(volunteerSignup, [
 		{
 			id: 'seed-orientation-signup-cancelled',
-			shiftId: 'seed-orientation-wo-cancelled',
+			shiftId: shiftIdFor('seed-orientation-wo-cancelled'),
 			userId: 'seed-vol-active',
 			status: 'confirmed' as const,
 			claimedAt: new Date(Date.now() - 3 * 86_400_000),

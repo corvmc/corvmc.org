@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { listPublicCalendarEvents } from '$lib/server/event/event-service';
-import { buildIcsFeed } from '$lib/server/event/calendar-feed';
+import { listPublicCalendarEvents } from '#lib/server/event/event-service.js';
+import { buildIcsFeed } from '#lib/server/event/calendar-feed.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

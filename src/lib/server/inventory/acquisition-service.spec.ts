@@ -20,7 +20,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -60,7 +60,8 @@ vi.mock('./stock-service', () => ({
 
 vi.mock('./asset-service', () => ({
 	createAsset: vi.fn().mockResolvedValue({ id: 'as-1' }),
-	AssetTagTakenError: class AssetTagTakenError extends Error {}
+	AssetTagTakenError: class AssetTagTakenError extends Error {},
+	afterForm8282Change: vi.fn()
 }));
 
 import {

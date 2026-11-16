@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * Contractor spend reaches a project through its work orders, and only from
@@ -6,32 +7,37 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/volunteer/hour-value', () => ({ getHourValueCents: vi.fn(async () => 0) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({ getHourValueCents: vi.fn(async () => 0) }));
 
-const { getProjectBurn, listProjectAttachments } = await import('./project-service');
+const { getProjectBurn } = await import('./project-service');
 
 function engagement(id: string, workOrderId: string, status: string, money: string) {
 	sqlite.exec(
-		`insert into contractor_job (id, contractor_id, work_order_id, status, ${money.split('=')[0]})
+		`insert into contractor_job (id, organization_id, work_order_id, status, ${money.split('=')[0]})
 			values ('${id}', 'c-1', '${workOrderId}', '${status}', ${money.split('=')[1]})`
 	);
 }
 
 beforeEach(() => {
-	for (const table of ['contractor_job', 'work_order', 'contractor', 'project']) {
+	for (const table of [
+		'contractor_job',
+		'work_order',
+		'grant_application',
+		'sponsorship',
+		'project'
+	]) {
 		sqlite.exec(`delete from ${table}`);
 	}
+	sqlite.exec(clearOrganizationsSql);
 	sqlite.exec(
 		`insert into project (id, name) values ('proj-1', 'Stage power'), ('proj-2', 'Other')`
 	);
-	sqlite.exec(
-		`insert into contractor (id, name, trade) values ('c-1', 'Benton Electric', 'electrical')`
-	);
+	sqlite.exec(contractorSql('c-1', 'Benton Electric', 'electrical'));
 	sqlite.exec(
 		`insert into work_order (id, title, project_id) values
 			('wo-1', 'Add a dedicated circuit', 'proj-1'),
@@ -59,7 +65,7 @@ describe('contractor burn', () => {
 	it('does not count a declined quote, cash or donated', async () => {
 		engagement('job-1', 'wo-1', 'declined', 'cost_cents=30000');
 		sqlite.exec(
-			`insert into contractor_job (id, contractor_id, work_order_id, status, is_donated, fair_value_cents)
+			`insert into contractor_job (id, organization_id, work_order_id, status, is_donated, fair_value_cents)
 				values ('job-2', 'c-1', 'wo-1', 'declined', 1, 42000)`
 		);
 
@@ -70,15 +76,41 @@ describe('contractor burn', () => {
 	});
 });
 
-describe('attached contractor jobs', () => {
-	it('are the engagements on the project’s work orders, titled by them', async () => {
-		engagement('job-1', 'wo-1', 'booked', 'quoted_cents=50000');
-		engagement('job-2', 'wo-2', 'booked', 'quoted_cents=50000');
+describe('what a project was given (#2622)', () => {
+	beforeEach(() => {
+		sqlite.exec(
+			`insert into organization (id, name) values ('oac', 'Arts Commission'), ('shop', 'Guitar Shop')`
+		);
+		const grant = (id: string, status: string, project: string, cents: number) =>
+			`('${id}', 'oac', '${id}', '${status}', '${project}', ${cents})`;
+		sqlite.exec(
+			`insert into grant_application (id, organization_id, title, status, funds_project_id, amount_awarded_cents) values
+				${grant('won', 'awarded', 'proj-1', 500000)},
+				${grant('spent', 'closed', 'proj-1', 100000)},
+				${grant('pending', 'applied', 'proj-1', 900000)},
+				${grant('elsewhere', 'awarded', 'proj-2', 700000)}`
+		);
+		const ship = (id: string, status: string, cents: number) =>
+			`('${id}', 'shop', '${id}', '${status}', 'proj-1', ${cents})`;
+		sqlite.exec(
+			`insert into sponsorship (id, organization_id, title, status, funds_project_id, amount_cents) values
+				${ship('running', 'active', 25000)}, ${ship('pitched', 'prospect', 99000)}`
+		);
+	});
 
-		const { jobs } = await listProjectAttachments('proj-1');
+	it('counts awarded grants and running or finished sponsorships that name the project', async () => {
+		const { funding } = await getProjectBurn('proj-1');
+		expect(funding).toMatchObject({
+			grantsCents: 600_000,
+			sponsorshipsCents: 25_000,
+			totalCents: 625_000
+		});
+		expect(funding.sources.map((s) => s.id).sort()).toEqual(['running', 'spent', 'won']);
+	});
 
-		expect(jobs.map((j) => [j.id, j.title, j.workOrderId])).toEqual([
-			['job-1', 'Add a dedicated circuit', 'wo-1']
-		]);
+	it('leaves the spend and the remaining budget alone', async () => {
+		sqlite.exec(`update project set budget_cents = 1000 where id = 'proj-1'`);
+		const burn = await getProjectBurn('proj-1');
+		expect([burn.cash.totalCents, burn.remainingCents]).toEqual([0, 1000]);
 	});
 });

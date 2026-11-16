@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
 
 /**
  * The yearly term on a radio attestation (#1516). An attestation counts only to
@@ -9,7 +9,7 @@ import { RADIO_PRO_ATTESTATION } from '$lib/config';
  * readiness panel alike, which is why all three read these two helpers.
  */
 
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { radioAttested, radioAttestationExpiresAt, currentRadioAttestation } =
 	await import('./radio-attestation');

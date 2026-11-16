@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	dismissFlag,
 	getWorkRequestDetail,
@@ -13,7 +13,7 @@ import {
 	reportBuildingProblem,
 	sendToWorkOrder,
 	workRequestStages
-} from '$lib/server/inventory/work-request-service';
+} from '#lib/server/inventory/work-request-service.js';
 
 /**
  * Equipment reports — the staff triage half. Members raise them through

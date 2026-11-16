@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchEvents } from '$lib/remote/events.remote';
-	import { searchWorkAssets } from '$lib/remote/maintenance-schedules.remote';
-	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import type { RemoteForm } from '$app/server';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchEvents } from '#lib/remote/events.remote.js';
+	import { searchWorkAssets } from '#lib/remote/maintenance-schedules.remote.js';
+	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
 
 	/** The shape SearchSelect hands back, and the shape an edit form seeds it with. */
 	type ShiftEvent = { id: string; title: string; when?: string };
@@ -23,10 +24,11 @@
 		capacity,
 		notes,
 		title,
-		timed = true
+		timed = true,
+		taskOnly = false
 	}: {
 		/**
-		 * The remote form this field set posts into — `createShift`, or
+		 * The remote form this field set posts into — `createWorkOrder`, or
 		 * `updateShift.for(id)`. Taken as a prop only so the event picker can build
 		 * its hidden input from `form.fields`; see the comment on it below.
 		 */
@@ -37,8 +39,8 @@
 		 * generic instantiation. Expressing "some remote form, I don't care
 		 * which" needs an existential type, which TypeScript does not have.
 		 *
-		 * Generics were tried and reverted; three call sites pass `createShift` (no `id`)
-		 * and a fourth passes `updateShift.for(id)` (has one), proves the point.
+		 * Generics were tried and reverted; `createWorkOrder` (no `id`)
+		 * and `updateShift.for(id)` (has one) prove the point.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		form: RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
@@ -65,6 +67,8 @@
 		 * the event picker goes, since `createWorkOrder` only ties a timed one to a show.
 		 */
 		timed?: boolean;
+		/** Edits a task, not a shift: no times or places, and notes are the task's own. */
+		taskOnly?: boolean;
 	} = $props();
 
 	// Seeded once and then owned by the picker. `untrack` says that on purpose:
@@ -76,19 +80,19 @@
 
 {#if roles}
 	<FormField
-		name="volunteerRoleId"
-		label="Role"
+		field={form.fields.volunteerRoleId}
+		label={m.volunteer_shift_form_fields_role_label()}
 		type="select"
 		bind:value={roleId}
 		options={roles.map((r) => ({ value: r.id, label: r.name }))}
 	/>
 {:else}
-	<input type="hidden" name="volunteerRoleId" value={roleId} />
+	<input {...form.fields.volunteerRoleId.as('hidden', roleId)} />
 {/if}
 
 {#if lockedEvent}
 	<input {...form.fields.eventId.as('hidden', lockedEvent.id)} />
-{:else if timed}
+{:else if timed || taskOnly}
 	<!--
 		Rendered unconditionally, even with nothing picked, and that is the whole
 		point: `updateShift` writes `eventId` only when the key is *present*, so an
@@ -102,9 +106,9 @@
 	-->
 	<input {...form.fields.eventId.as('hidden', selectedEvent?.id ?? '')} />
 	<FormField
-		name="eventId"
-		label="Event"
-		description="Optional — work parties and repair days aren't tied to a show."
+		field={form.fields.eventId}
+		label={m.volunteer_shift_form_fields_event_label()}
+		description={m.volunteer_shift_form_fields_optional_work_parties_repair_day_body()}
 	>
 		<!-- Children rather than the `input` snippet: that snippet's argument is the
 		     id of the one control the caption labels, and SearchSelect has no single
@@ -115,7 +119,7 @@
 			bind:value={selectedEvent}
 			labelKey="title"
 			descriptionKey="when"
-			placeholder="Search events by title..."
+			placeholder={m.volunteer_shift_form_fields_search_events_by_title_placeholder()}
 		/>
 	</FormField>
 {/if}
@@ -123,16 +127,16 @@
 <!-- Always rendered, like the event's: an empty value is how a link is removed. -->
 <input {...form.fields.assetId.as('hidden', selectedAsset?.id ?? '')} />
 <FormField
-	name="assetId"
-	label="Equipment"
-	description="Optional: the unit this work is about, such as the PA it checks."
+	field={form.fields.assetId}
+	label={m.volunteer_shift_form_fields_equipment_label()}
+	description={m.volunteer_shift_form_fields_optional_unit_work_about_such_body()}
 >
 	<SearchSelect
 		search={(q) => searchWorkAssets(q)}
 		bind:value={selectedAsset}
 		labelKey="name"
 		descriptionKey="detail"
-		placeholder="Search by item, tag or serial..."
+		placeholder={m.volunteer_shift_form_fields_search_by_item_tag_serial_placeholder()}
 	/>
 </FormField>
 
@@ -143,36 +147,58 @@
 	identically on the board.
 -->
 <FormField
-	name="title"
-	label="Name"
+	field={form.fields.title}
+	label={m.volunteer_shift_form_fields_name_label()}
 	value={title}
 	maxlength={String(VOLUNTEER_SHIFT_TITLE_MAX)}
-	description="Optional. Leave it blank to use the event's name, or the role's."
+	description={m.volunteer_shift_form_fields_optional_leave_blank_use_event_body()}
 />
 
-{#if timed}
-	<FormField name="startsAt" label="Starts" type="datetime-local" value={startsAt} />
-	<FormField name="endsAt" label="Ends" type="datetime-local" value={endsAt} />
+{#if taskOnly}
+	<FormField
+		field={form.fields.notes}
+		label={m.volunteer_shift_form_fields_notes_label()}
+		type="textarea"
+		value={notes}
+	/>
+{:else if timed}
+	<FormField
+		field={form.fields.startsAt}
+		label={m.volunteer_shift_form_fields_starts_label()}
+		type="datetime-local"
+		value={startsAt}
+	/>
+	<FormField
+		field={form.fields.endsAt}
+		label={m.volunteer_shift_form_fields_ends_label()}
+		type="datetime-local"
+		value={endsAt}
+	/>
 {:else}
 	<FormField
-		name="dueAt"
-		label="Due by"
+		field={form.fields.dueAt}
+		label={m.volunteer_shift_form_fields_due_by_label()}
 		type="datetime-local"
-		description="Optional. It waits on Unscheduled Work Orders until somebody gives it a time."
+		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work_body()}
 	/>
 {/if}
-<FormField
-	name="capacity"
-	label="People needed"
-	type="number"
-	min="1"
-	value={capacity}
-	description="Claims beyond this are refused."
-/>
-<FormField
-	name="notes"
-	label="Anything they should know"
-	type="textarea"
-	value={notes}
-	description="Where to meet, what to bring — shown when they claim it. Up to {VOLUNTEER_SHIFT_NOTES_MAX} characters."
-/>
+{#if !taskOnly}
+	<FormField
+		field={form.fields.capacity}
+		submitAs="text"
+		label={m.volunteer_shift_form_fields_people_needed_label()}
+		type="number"
+		min="1"
+		value={capacity}
+		description={m.volunteer_shift_form_fields_claims_beyond_refused_body()}
+	/>
+	<FormField
+		field={form.fields.notes}
+		label={m.volunteer_shift_form_fields_anything_they_should_know_label()}
+		type="textarea"
+		value={notes}
+		description={m.volunteer_shift_form_fields_where_meet_what_bring_shown_body({
+			VOLUNTEER_SHIFT_NOTES_MAX
+		})}
+	/>
+{/if}

@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { revokeBandInvite } from '$lib/remote/bands.remote';
+	import { refreshAll } from '$app/navigation';
+	import { revokeBandInvite } from '#lib/remote/bands.remote.js';
 
 	const { fields } = revokeBandInvite;
 
@@ -27,17 +28,17 @@
 
 <Action
 	action={revokeBandInvite}
-	label="Revoke"
-	modalTitle="Confirm"
-	successToast="Invitation revoked"
+	label={m.actions_revoke_label()}
+	modalTitle={m.actions_confirm_title()}
+	successToast={m.actions_revoke_invite_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.memberId.as('hidden', memberId)} />
-		<p class="py-4">Revoke invitation for {name}?</p>
+		<p class="py-4">{m.actions_revoke_invite_revoke_invitation_text({ name })}</p>
 	{/snippet}
 </Action>

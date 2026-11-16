@@ -1,9 +1,10 @@
 ---
-title: Manage the Equipment Catalog
+title: Manage the equipment catalog
 slug: staff-equipment-catalog
 category: staff-guide
 summary: Add gear, organize categories, and track item condition.
 minRole: staff
+capabilities: inventory.read
 sortOrder: 10
 ---
 

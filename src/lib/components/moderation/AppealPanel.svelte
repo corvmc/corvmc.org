@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
-	import { fileAppeal, getMyAppeal } from '$lib/remote/appeals.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { APPEAL_BODY_MAX, appealVerdictLabels, type StandingScope } from '$lib/config';
-	import { formatDate } from '$lib/utils/format';
+	import { fileAppeal, getMyAppeal } from '#lib/remote/appeals.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { APPEAL_BODY_MAX, appealVerdictLabels, type StandingScope } from '#lib/config.js';
+	import { formatDate } from '#lib/utils/format.js';
 
 	type Target =
 		| { kind: 'suggestion'; suggestionId: string }
@@ -33,15 +35,14 @@
 	<div class="mt-3 space-y-2 text-sm">
 		{#if !view.appeal}
 			<p class="text-wrap">
-				If you think this decision was wrong, you can ask a different member of staff to look at it
-				again. You get one appeal per decision.
+				{m.moderation_appeal_panel_if_think_decision_was_wrong_text()}
 			</p>
 			<Action
 				action={instance}
-				label="Appeal this decision"
-				modalTitle="Appeal this decision"
-				submitLabel="Send appeal"
-				successToast="Appeal sent"
+				label={m.moderation_appeal_panel_label()}
+				modalTitle={m.moderation_appeal_panel_title()}
+				submitLabel={m.moderation_appeal_panel_submit_label()}
+				successToast={m.moderation_appeal_panel_success_toast()}
 				variant="default"
 				size="sm"
 				outline
@@ -52,11 +53,18 @@
 					<div class="space-y-3">
 						{#if view.upheld.notes}
 							<p class="text-muted text-wrap">
-								Staff's reason: <span class="italic">{view.upheld.notes}</span>
+								<ParaglideMessage
+									message={m.moderation_appeal_panel_staff_s_reason_text}
+									inputs={{ notes: view.upheld.notes }}
+									>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+										>{/snippet}</ParaglideMessage
+								>
 							</p>
 						{/if}
 						<label class="fieldset w-full">
-							<span class="fieldset-legend">Why do you think it was wrong?</span>
+							<span class="fieldset-legend"
+								>{m.moderation_appeal_panel_why_do_think_was_wrong_label()}</span
+							>
 							<textarea
 								class="textarea w-full"
 								rows="5"
@@ -64,22 +72,28 @@
 								{...instance.fields.body.as('text')}></textarea>
 						</label>
 						<p class="text-muted text-wrap">
-							Nothing changes while your appeal is looked at. You'll get an email with the answer.
+							{m.moderation_appeal_panel_nothing_changes_while_appeal_looked_text()}
 						</p>
 					</div>
 				{/snippet}
 			</Action>
 		{:else if !view.appeal.decision}
 			<p class="text-wrap">
-				You appealed this on {formatDate(view.appeal.createdAt)}. A member of staff will look at it
-				and email you the answer; nothing changes until then.
+				{m.moderation_appeal_panel_appealed_member_staff_will_look_text({
+					formatDate: formatDate(view.appeal.createdAt)
+				})}
 			</p>
 		{:else}
 			<p class="text-wrap">
-				<span class="font-medium"
-					>Appeal {appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()}</span
+				<ParaglideMessage
+					message={m.moderation_appeal_panel_text}
+					inputs={{
+						toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase(),
+						formatDate: formatDate(view.appeal.decision.decidedAt)
+					}}
+					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
 				>
-				on {formatDate(view.appeal.decision.decidedAt)}.
 			</p>
 		{/if}
 	</div>

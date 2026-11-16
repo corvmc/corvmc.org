@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { memberStanding } from '$lib/server/db/schema/standing';
-import type { FlagEntityType } from '$lib/server/db/schema/flag';
+import { db } from '#lib/server/db/index.js';
+import { memberStanding } from '#lib/server/db/schema/standing.js';
+import type { FlagEntityType } from '#lib/server/db/schema/flag.js';
 import { eq, and } from 'drizzle-orm';
 import {
 	standingScopes,
@@ -8,8 +8,8 @@ import {
 	STANDING_REASON_MAX,
 	type StandingScope,
 	type StandingStatus
-} from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+} from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -184,7 +184,7 @@ export async function restrictStanding(params: RestrictStandingParams): Promise<
  * still answerable afterwards — flipping the status is what marks it forgiven.
  *
  * The shape (`{ userId, scope, staffId }`) is deliberately what an appeal needs
- * to call; see `docs/specs/shipped/member-standing-spec.md`.
+ * to call; see `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
  */
 export async function restoreStanding(params: {
 	userId: string;
@@ -215,11 +215,13 @@ export async function restoreStanding(params: {
  */
 export function scopeForFlag(
 	entityType: FlagEntityType,
-	context: { eventSource?: string | null } = {}
+	context: { eventSource?: string | null; imported?: boolean } = {}
 ): StandingScope | null {
 	switch (entityType) {
+		// An imported listing's author is whoever added the feed, not who wrote
+		// the show; staff pause the feed instead.
 		case 'event':
-			return context.eventSource === 'community' ? 'community_event' : null;
+			return context.eventSource === 'community' && !context.imported ? 'community_event' : null;
 		case 'suggestion':
 			return 'suggestion';
 		case 'inbox_thread':

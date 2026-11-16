@@ -1,19 +1,21 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import SplitBar from '$lib/components/ui/SplitBar.svelte';
-	import { buyReleaseForm } from '$lib/remote/music.remote';
-	import { computeAudioSplit, suggestedPlatformCents } from '$lib/finance/audio-split';
-	import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import SplitBar from '#lib/components/ui/SplitBar.svelte';
+	import { buyReleaseForm } from '#lib/remote/music.remote.js';
+	import { computeAudioSplit, suggestedPlatformCents } from '#lib/finance/audio-split.js';
+	import { AUDIO_MIN_PRICE_CENTS } from '#lib/config.js';
 	import { goto } from '$app/navigation';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	let {
 		bandSlug,
@@ -75,13 +77,17 @@
 		// Paid: off to pay, wherever `checkout()` decided that is. Free: already
 		// fulfilled, straight to the download.
 		if (r?.checkoutUrl) await goToCheckout(r.checkoutUrl);
-		else if (r?.downloadToken) await goto(resolve(`/music/download/${r.downloadToken}`));
+		else if (r?.downloadToken) await goto(resolve(`music/download/${r.downloadToken}`));
 	}
 </script>
 
 <Card>
 	<CardBody>
-		<CardTitle>{free ? 'Get it' : 'Buy it'}</CardTitle>
+		<CardTitle
+			>{free
+				? m.public_music_band_slug_release_slug_buy_panel_get_title()
+				: m.public_music_band_slug_release_slug_buy_panel_buy_title()}</CardTitle
+		>
 
 		<Form remote={buyReleaseForm} onsuccess={afterBuy}>
 			<input {...fields.bandSlug.as('hidden', bandSlug)} />
@@ -90,10 +96,16 @@
 			{#if priceMinCents > 0 || allowPayMore}
 				<label class="flex flex-col gap-1">
 					<span class="font-medium">
-						{allowPayMore ? 'Name your price' : 'Price'}
+						{allowPayMore
+							? m.public_music_band_slug_release_slug_buy_panel_name_price_label()
+							: m.public_music_band_slug_release_slug_buy_panel_price_label()}
 						{#if priceMinCents > 0}
 							<span class="text-muted">
-								— {allowPayMore ? `${dollars(priceMinCents)} or more` : dollars(priceMinCents)}
+								— {allowPayMore
+									? m.public_music_band_slug_release_slug_buy_panel_more_label({
+											dollars: dollars(priceMinCents)
+										})
+									: dollars(priceMinCents)}
 							</span>
 						{/if}
 					</span>
@@ -114,7 +126,9 @@
 
 			{#if totalCents > 0}
 				<div class="mt-4 space-y-2">
-					<p class="text-muted">Where your money goes — drag to change it.</p>
+					<p class="text-muted">
+						{m.public_music_band_slug_release_slug_buy_panel_where_money_go_text()}
+					</p>
 					<!--
 						No `otherFloorCents`. What protects the band is the TOTAL being at
 						least its asking price — enforced server-side in `validateSplit` —
@@ -129,9 +143,9 @@
 						value={split.platformNetCents}
 						onchange={(cents) => (platformOverride = cents)}
 						fixedCents={split.stripeFeeCents}
-						fixedLabel="Card processing"
+						fixedLabel={m.public_music_band_slug_release_slug_buy_panel_fixed_label()}
 						fixedCovered={coverFees}
-						valueLabel="CMC"
+						valueLabel={m.public_music_band_slug_release_slug_buy_panel_value_label()}
 						otherLabel={bandName}
 						otherTone="blue"
 						valueTone="orange"
@@ -143,7 +157,11 @@
 							     segment gold the moment this is ticked, so the sentence
 							     explaining the consequence was saying twice what the control
 							     shows once. -->
-							<span>Add {dollars(covered.feeCoveredCents)} to cover processing</span>
+							<span
+								>{m.public_music_band_slug_release_slug_buy_panel_add_cover_proc_label({
+									dollars: dollars(covered.feeCoveredCents)
+								})}</span
+							>
 						</label>
 						{#if platformOverride !== null && platformOverride !== suggested}
 							<button
@@ -151,13 +169,15 @@
 								class="btn btn-ghost btn-xs"
 								onclick={() => (platformOverride = null)}
 							>
-								Reset to suggested
+								{m.public_music_band_slug_release_slug_buy_panel_reset_suggeste_label()}
 							</button>
 						{/if}
 					</div>
 				</div>
 			{:else if priceMinCents === 0}
-				<p class="text-muted">This one's free. Pay something if you'd like to.</p>
+				<p class="text-muted">
+					{m.public_music_band_slug_release_slug_buy_panel_one_s_free_pay_text()}
+				</p>
 			{/if}
 
 			<!--
@@ -179,21 +199,35 @@
 				{#if viewerEmail}
 					<input {...fields.email.as('hidden', viewerEmail)} />
 					<p class="text-muted">
-						Buying as <span class="font-medium">{viewerEmail}</span> — it'll be in your
-						<a class="link" href={resolve('/member/purchases')}>Purchases</a> straight away.
+						<ParaglideMessage
+							message={m.public_music_band_slug_release_slug_buy_panel_buying_as_ll_s_text}
+							inputs={{
+								viewerEmail
+							}}
+							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+								>{/snippet}{#snippet a({ children })}<a
+									class="link"
+									href={resolve('member/purchases')}>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{:else}
 					<FormField
 						field={fields.email}
-						label="Email"
+						label={m.public_email_label()}
 						type="email"
-						description="Where the download link goes."
+						description={m.public_music_band_slug_release_slug_buy_panel_description_body()}
 						required
 					/>
 					<p class="text-muted">
-						Got an account?
-						<a class="link" href={signInHref({ returnTo: here(page.url) })}> Sign in </a>
-						and it lands in your Purchases too.
+						<ParaglideMessage
+							message={m.public_music_band_slug_release_slug_buy_panel_got_account_la_text}
+							inputs={{}}
+							>{#snippet a({ children })}<a
+									class="link"
+									href={signInHref({ returnTo: here(page.url) })}>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/if}
 			</div>
@@ -207,14 +241,19 @@
 			<input {...fields.coverFees.as('checkbox', coverFees)} type="hidden" />
 
 			<SubmitButton
-				label={free ? 'Download' : `Pay ${dollars(split.chargeCents)}`}
+				label={free
+					? m.public_music_band_slug_release_slug_buy_panel_download_label()
+					: m.public_music_band_slug_release_slug_buy_panel_pay_label({
+							dollars: dollars(split.chargeCents)
+						})}
 				disabled={totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 			/>
 
 			{#if totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 				<p class="text-warning">
-					Pay nothing, or at least {dollars(AUDIO_MIN_PRICE_CENTS)} — below that, card fees take almost
-					all of it.
+					{m.public_music_band_slug_release_slug_buy_panel_pay_nothing_at_text({
+						dollars: dollars(AUDIO_MIN_PRICE_CENTS)
+					})}
 				</p>
 			{/if}
 		</Form>

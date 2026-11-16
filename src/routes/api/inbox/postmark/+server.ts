@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import {
 	handlePostmarkInbound,
 	type PostmarkInboundPayload
-} from '$lib/server/inbox/inbound-handlers';
+} from '#lib/server/inbox/inbound-handlers.js';
 
 /**
  * Postmark's inbound hook is a bare `InboundHookUrl` — unlike modular
@@ -63,5 +63,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (import.meta.env.DEV) throw err;
 	}
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

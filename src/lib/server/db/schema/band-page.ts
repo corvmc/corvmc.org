@@ -20,7 +20,7 @@ import { BAND_THEME_VALUES } from '../../../types/band-page';
 
 /**
  * What every block carries regardless of type — the mirror of `BlockBase` in
- * `$lib/types/band-page`. `hidden` is the page editor's visibility toggle;
+ * `#lib/types/band-page.js`. `hidden` is the page editor's visibility toggle;
  * absent means visible.
  */
 const blockBase = {

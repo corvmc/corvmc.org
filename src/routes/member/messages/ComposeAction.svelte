@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Starting a conversation, of either kind.
 	 *
@@ -11,13 +12,13 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus, IconUsers } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { startConversation } from '$lib/remote/inbox.remote';
-	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
-	import { searchMessageRecipients } from '$lib/remote/directory.remote';
-	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { startConversation } from '#lib/remote/inbox.remote.js';
+	import { startDirectConversation } from '#lib/remote/direct-messages.remote.js';
+	import { searchMessageRecipients } from '#lib/remote/directory.remote.js';
+	import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 	import { refreshConversations } from './list-state.svelte';
 
 	let { canMessageMembers = false }: { canMessageMembers?: boolean } = $props();
@@ -33,10 +34,11 @@
 {#if canMessageMembers}
 	<Action
 		action={directForm}
-		label="Message a Member"
-		modalTitle="Message a member"
-		submitLabel="Send request"
-		successToast="Request sent"
+		data-testid="message-member"
+		label={m.member_messages_compose_message_member_label()}
+		modalTitle={m.member_messages_compose_message_member_2_title()}
+		submitLabel={m.member_messages_compose_send_request_label()}
+		successToast={m.member_messages_compose_request_sent_toast()}
 		variant="primary"
 		size="sm"
 		canSubmit={!!recipient && body.trim().length > 0}
@@ -57,7 +59,7 @@
 					<input {...directForm.fields.recipientId.as('hidden', recipient.id)} />
 				{/if}
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">To</span>
+					<span class="fieldset-legend">{m.member_text_label()}</span>
 					<!-- The picker lists everyone the viewer can already see in the
 					     directory, and says nothing about who accepts messages. Marking
 					     the unreachable ones would leak exactly what the silent drop in
@@ -66,7 +68,7 @@
 						bind:value={recipient}
 						labelKey="name"
 						descriptionKey="tagline"
-						placeholder="Search members by name..."
+						placeholder={m.member_messages_compose_search_members_by_name_placeholder()}
 						search={(q) => searchMessageRecipients({ search: q })}
 					/>
 					<!-- Picking someone commits a tick after the click, so submitting
@@ -74,24 +76,23 @@
 					     a silent no-op: the field has no FormField to hang its issue on,
 					     so nothing on screen changes. -->
 					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
-						<p class="text-sm text-error">Choose who this is going to.</p>
+						<p class="text-sm text-error">{m.member_messages_compose_choose_who_going_text()}</p>
 					{/each}
 				</label>
 
 				<p class="text-muted">
-					This goes as a message request. They'll see it in their Messages and can accept or decline
-					— you'll be able to write again once they accept.
+					{m.member_messages_compose_goes_as_message_request_they_text()}
 				</p>
 
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">Message</span>
+					<span class="fieldset-legend">{m.member_messages_compose_message_label()}</span>
 					<textarea
 						{...directForm.fields.body.as('text')}
 						class="textarea w-full"
 						rows="5"
 						maxlength={DIRECT_MESSAGE_BODY_MAX}
 						bind:value={body}
-						placeholder="Say who you are and what you're after"></textarea>
+						placeholder={m.member_messages_compose_say_who_what_re_after_placeholder()}></textarea>
 				</label>
 			</div>
 		{/snippet}
@@ -100,26 +101,30 @@
 
 <Action
 	action={startForm}
-	label="Message Staff"
-	modalTitle="Message CorvMC staff"
-	submitLabel="Send"
-	successToast="Message sent"
+	label={m.member_messages_compose_message_staff_label()}
+	modalTitle={m.member_messages_compose_message_corvmc_staff_title()}
+	submitLabel={m.member_messages_compose_send_label()}
+	successToast={m.member_messages_compose_message_sent_toast()}
 	variant={canMessageMembers ? 'default' : 'primary'}
 	outline={canMessageMembers}
 	size="sm"
 	onsuccess={(result) => {
 		const { threadId } = (result ?? {}) as { threadId?: string };
-		if (threadId) goto(resolve(`/member/messages/${threadId}`));
+		if (threadId) goto(resolve(`member/messages/${threadId}`));
 	}}
 >
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		<FormField
-			name="subject"
-			label="What's this about?"
+			field={startForm.fields.subject}
+			label={m.member_messages_compose_what_s_about_label()}
 			type="text"
-			description="A short summary helps staff route your message."
+			description={m.member_messages_compose_description_body()}
 		/>
-		<FormField name="body" label="Message" type="textarea" />
+		<FormField
+			field={startForm.fields.body}
+			label={m.member_messages_compose_message_label()}
+			type="textarea"
+		/>
 	{/snippet}
 </Action>

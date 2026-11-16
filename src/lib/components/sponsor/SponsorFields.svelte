@@ -1,7 +1,8 @@
 <script lang="ts">
-	/** The create and edit forms share every field; `value` pre-fills the edit. */
-	import { Field } from '$lib/components/ui/Form';
-	import type { createSponsor } from '$lib/remote/sponsors.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	/** The sponsor's edit form; `value` pre-fills it. A sponsor is created under Contacts. */
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import type { updateSponsor } from '#lib/remote/sponsors.remote.js';
 
 	interface Value {
 		name: string;
@@ -15,18 +16,38 @@
 		fields,
 		value
 	}: {
-		fields: (typeof createSponsor)['fields'];
+		fields: (typeof updateSponsor)['fields'];
 		value?: Value;
 	} = $props();
 </script>
 
-<Field field={fields.name} type="text" label="Business" value={value?.name ?? ''} />
-<Field field={fields.website} type="text" label="Website" value={value?.website ?? ''} />
-<Field field={fields.contactName} type="text" label="Contact" value={value?.contactName ?? ''} />
+<Field
+	field={fields.name}
+	type="text"
+	label={m.sponsor_sponsor_fields_business_label()}
+	value={value?.name ?? ''}
+/>
+<Field
+	field={fields.website}
+	type="text"
+	label={m.sponsor_sponsor_fields_website_label()}
+	value={value?.website ?? ''}
+/>
+<Field
+	field={fields.contactName}
+	type="text"
+	label={m.sponsor_sponsor_fields_contact_label()}
+	value={value?.contactName ?? ''}
+/>
 <Field
 	field={fields.contactEmail}
 	type="email"
-	label="Contact email"
+	label={m.sponsor_sponsor_fields_contact_email_label()}
 	value={value?.contactEmail ?? ''}
 />
-<Field field={fields.notes} type="textarea" label="Notes" value={value?.notes ?? ''} />
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.sponsor_sponsor_fields_notes_label()}
+	value={value?.notes ?? ''}
+/>

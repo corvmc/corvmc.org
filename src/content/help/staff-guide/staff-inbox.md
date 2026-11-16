@@ -1,9 +1,10 @@
 ---
-title: Handle the Inbox
+title: Handle the inbox
 slug: staff-inbox
 category: staff-guide
 summary: Read and respond to contact-form and channel messages.
 minRole: staff
+capabilities: inbox.read
 sortOrder: 14
 ---
 

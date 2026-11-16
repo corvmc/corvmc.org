@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { generateRecurring } from '$lib/server/reservation/generation-job';
+import * as env from '$app/env/private';
+import { generateRecurring } from '#lib/server/reservation/generation-job.js';
 
 /**
  * Cron endpoint for generating recurring instances.
@@ -25,5 +25,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const result = await generateRecurring();
 
-	return json(result);
+	return Response.json(result);
 };

@@ -1,63 +1,62 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { readStarred, resolveStarred, toggleStarred } from '$lib/components/layout/Nav/nav-stars';
+	import { resolve } from '$app/paths';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import {
+		readStarred,
+		resolveStarred,
+		toggleStarred
+	} from '#lib/components/layout/Nav/nav-stars.js';
 	import {
 		IconDisc,
 		IconCheckbox,
-		IconMapPinPlus,
 		IconBulb,
 		IconSpeakerphone,
 		IconUsers,
 		IconClipboardCheck,
 		IconSettings,
 		IconHistory,
-		IconShieldLock,
 		IconCash,
-		IconCoins,
-		IconMusic,
 		IconMail,
-		IconMailbox,
 		IconTool,
-		IconAlertTriangle,
-		IconHammer,
 		IconFolders,
-		IconClipboardList,
 		IconPackage,
-		IconReceipt,
-		IconChartBar,
-		IconScale,
 		IconBook,
 		IconLayoutDashboard,
 		IconInbox,
 		IconFlag,
-		IconHeartHandshake,
 		IconUsersGroup,
 		IconReportAnalytics,
 		IconCalendarWeek,
 		IconCalendarMonth,
-		IconMapPin,
-		IconKey,
-		IconBuildingStore,
+		IconAddressBook,
 		IconContract,
-		IconCertificate
+		IconArrowLeft,
+		IconBuilding,
+		IconToggleRight,
+		IconKey
 	} from '@tabler/icons-svelte';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
+	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import {
 		activeNavKey,
+		activeSystemKey,
 		childHrefsFor,
+		inSystemPanel,
 		filterNavItems,
 		filterNavSections,
 		sectionHasKey,
+		staffNavBottom,
 		staffNavSections,
 		staffNavTop,
+		systemNavItems,
 		type StaffNavBadgeKey,
 		type StaffNavItem,
 		type StaffNavKey
@@ -68,7 +67,7 @@
 	// Before the await: `setContext` has to run during synchronous init. The full
 	// tree, not the filtered one — a trail only ever names rows above a page the
 	// viewer already reached.
-	const trailGroups = [{ items: staffNavTop }, ...staffNavSections];
+	const trailGroups = [{ items: staffNavTop }, ...staffNavSections, { items: staffNavBottom }];
 	setBreadcrumbTrail({
 		get current() {
 			return navTrail(trailGroups, page.url.pathname);
@@ -81,6 +80,10 @@
 	onMount(() => (starredKeys = readStarred('staff')));
 	const toggleStar = (key: StaffNavKey) => (starredKeys = toggleStarred('staff', key));
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	await requireLayoutSession(page.url.pathname + page.url.search);
 	let layout = $derived(await getStaffLayout());
 
 	// Only the rows this viewer can use. `getStaffLayout` settled that they may
@@ -89,10 +92,14 @@
 	// offering a treasurer a Volunteering row is offering them a 403.
 	const navTop = $derived(filterNavItems(staffNavTop, layout.capabilities));
 	const navSections = $derived(filterNavSections(staffNavSections, layout.capabilities));
+	const navBottom = $derived(filterNavItems(staffNavBottom, layout.capabilities));
+	const navSystem = $derived(filterNavItems(systemNavItems, layout.capabilities));
+	// The System panel swaps this sidebar for its own (#2763).
+	const system = $derived(inSystemPanel(page.url.pathname));
 	// Resolved against the filtered tree, so a star on a row this viewer cannot
 	// see, or on a key that no longer exists, simply does not render.
 	const navStarred = $derived(
-		resolveStarred(starredKeys, [...navTop, ...navSections.flatMap((s) => s.items)])
+		resolveStarred(starredKeys, [...navTop, ...navSections.flatMap((s) => s.items), ...navBottom])
 	);
 
 	const panels = $derived(
@@ -108,57 +115,40 @@
 		dashboard: IconLayoutDashboard,
 		inbox: IconInbox,
 		users: IconUsers,
-		bands: IconMusic,
+		groups: IconUsersGroup,
 		music: IconDisc,
-		clubs: IconUsersGroup,
-		committees: IconClipboardList,
 		ballots: IconCheckbox,
-		volunteer: IconHeartHandshake,
 		'volunteer-schedule': IconCalendarWeek,
-		'project-templates': IconClipboardList,
-		'volunteer-report': IconReportAnalytics,
 		reservations: IconClipboardCheck,
-		equipment: IconTool,
-		'equipment-reports': IconFlag,
-		'equipment-loans': IconPackage,
-		'inventory-acquisitions': IconReceipt,
-		'inventory-spend': IconChartBar,
-		'inventory-compliance': IconScale,
-		contractors: IconHammer,
-		incidents: IconAlertTriangle,
-		keys: IconKey,
+		gear: IconTool,
+		supplies: IconPackage,
 		projects: IconFolders,
-		venues: IconMapPin,
 		calendar: IconCalendarMonth,
-		flags: IconFlag,
+		moderation: IconFlag,
 		suggestions: IconBulb,
 		classifieds: IconSpeakerphone,
-		campaigns: IconMail,
-		audiences: IconMailbox,
-		help: IconBook,
-		'local-resources': IconMapPin,
-		'resource-tips': IconMapPinPlus,
+		outreach: IconMail,
+		content: IconBook,
 		reports: IconReportAnalytics,
 		payments: IconCash,
-		credits: IconCoins,
-		sponsors: IconBuildingStore,
-		grants: IconContract,
-		renewals: IconCertificate,
+		contacts: IconAddressBook,
+		funding: IconContract,
 		settings: IconSettings,
-		access: IconShieldLock,
+		organization: IconBuilding,
+		features: IconToggleRight,
+		access: IconKey,
 		audit: IconHistory
 	};
 
 	let badges = $derived({
 		inboxUnread: layout.inboxUnread,
-		resourceTipsPending: layout.resourceTipsPending,
-		suggestionsAwaiting: layout.suggestionsAwaiting,
 		volunteerPending: layout.volunteerPending,
-		listingsPending: layout.listingsPending,
-		appealsPending: layout.appealsPending
+		reviewWaiting: layout.reviewWaiting
 	} satisfies Record<StaffNavBadgeKey, number>);
 
-	let activeKey = $derived(activeNavKey(page.url.pathname));
+	let activeKey = $derived(
+		system ? activeSystemKey(page.url.pathname) : activeNavKey(page.url.pathname)
+	);
 
 	function badgeFor(item: StaffNavItem): number | undefined {
 		return item.badgeKey ? badges[item.badgeKey] : undefined;
@@ -202,32 +192,55 @@
 	</Nav.Item>
 {/snippet}
 
+{#snippet staffNav()}
+	{#if navStarred.length > 0}
+		<Nav.Group title={m.staff_starred_title()}>
+			{#each navStarred as item (item.key)}
+				{@render flat(item)}
+			{/each}
+		</Nav.Group>
+	{/if}
+
+	{#each navTop as item (item.key)}
+		{@render row(item)}
+	{/each}
+
+	{#each navSections as section (section.key)}
+		<Nav.Group
+			title={section.title}
+			collapsible
+			persistKey={section.key}
+			containsActive={sectionHasKey(section, activeKey)}
+		>
+			{#each section.items as item (item.key)}
+				{@render row(item)}
+			{/each}
+		</Nav.Group>
+	{/each}
+
+	{#each navBottom as item (item.key)}
+		{@render row(item)}
+	{/each}
+{/snippet}
+
 <AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
-		{#if navStarred.length > 0}
-			<Nav.Group title="Starred">
-				{#each navStarred as item (item.key)}
-					{@render flat(item)}
+		{#if system}
+			<Nav.Item href={resolve('staff')} label={m.staff_system_back_label()} active={false}>
+				{#snippet icon()}<IconArrowLeft />{/snippet}
+			</Nav.Item>
+			<Nav.Group title={m.staff_system_title()}>
+				<!-- Not starrable: a star shows in the staff sidebar, which these rows are not in. -->
+				{#each navSystem as item (item.key)}
+					{@const Icon = icons[item.key]}
+					<Nav.Item href={item.href} label={item.label} active={activeKey === item.key}>
+						{#snippet icon()}<Icon />{/snippet}
+					</Nav.Item>
 				{/each}
 			</Nav.Group>
+		{:else}
+			{@render staffNav()}
 		{/if}
-
-		{#each navTop as item (item.key)}
-			{@render row(item)}
-		{/each}
-
-		{#each navSections as section (section.key)}
-			<Nav.Group
-				title={section.title}
-				collapsible
-				persistKey={section.key}
-				containsActive={sectionHasKey(section, activeKey)}
-			>
-				{#each section.items as item (item.key)}
-					{@render row(item)}
-				{/each}
-			</Nav.Group>
-		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
 		<!-- `getStaffLayout` redirects anyone without the role, so reaching this

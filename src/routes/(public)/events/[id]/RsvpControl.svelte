@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import { getRsvpStatus, confirmRsvp, withdrawRsvp } from '$lib/remote/event-rsvp.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import { getRsvpStatus, confirmRsvp, withdrawRsvp } from '#lib/remote/event-rsvp.remote.js';
 
 	/**
 	 * The event page's RSVP (#1995), the first consumer of the sign-in interrupt
@@ -17,7 +18,16 @@
 	}: { eventId: string; eventTitle: string; external?: boolean } = $props();
 
 	const status = $derived(await getRsvpStatus(eventId));
-	const label = $derived(external ? "I'm going" : 'RSVP');
+	const name = $derived(status.attendee?.name);
+	const label = $derived(
+		external
+			? name
+				? m.public_events_id_rsvp_control_i_m_going_as_label({ name })
+				: m.public_events_id_rsvp_control_i_m_going_label()
+			: name
+				? m.public_events_id_rsvp_control_rsvp_as_label({ name })
+				: m.public_events_id_rsvp_control_rsvp_label()
+	);
 	const variant = $derived(external ? 'ghost' : 'primary');
 </script>
 
@@ -26,29 +36,38 @@
 {:else if status.state === 'open'}
 	<Form remote={confirmRsvp}>
 		<input {...confirmRsvp.fields.eventId.as('hidden', eventId)} />
-		<SubmitButton {label} successLabel="You're going" {variant} size="lg" />
+		<SubmitButton
+			{label}
+			successLabel={m.public_events_id_rsvp_control_success_label()}
+			{variant}
+			size="lg"
+			class="h-auto! min-w-0 shrink! py-2 wrap-anywhere whitespace-normal!"
+		/>
 	</Form>
-	{#if status.attendee}
-		<span class="text-muted">as {status.attendee.name}</span>
-	{/if}
 {:else if status.state === 'going'}
-	<span class="text-base font-semibold" data-testid="rsvp-going">You're going!</span>
+	<span class="text-base font-semibold" data-testid="rsvp-going"
+		>{m.public_events_id_rsvp_control_re_going_text()}</span
+	>
 	<Action
 		action={withdrawRsvp}
-		label="Can't make it?"
-		modalTitle="Cancel RSVP"
-		submitLabel="Yes, cancel my RSVP"
+		label={m.public_events_id_rsvp_control_label()}
+		modalTitle={m.public_events_id_rsvp_control_modal_title()}
+		submitLabel={m.public_events_id_rsvp_control_submit_label()}
 		submitVariant="error"
 		variant="ghost"
 		size="sm"
 	>
 		{#snippet form()}
 			<input {...withdrawRsvp.fields.eventId.as('hidden', eventId)} />
-			<p>You can RSVP again any time before the event.</p>
+			<p>{m.public_events_id_rsvp_control_can_rsvp_again_any_time_text()}</p>
 		{/snippet}
 	</Action>
 {:else if status.reason === 'ticketed'}
-	<Button href={resolve(`/events/${eventId}/tickets`)} size="lg">Get tickets</Button>
+	<Button href={resolve(`events/${eventId}/tickets`)} size="lg"
+		>{m.public_events_id_rsvp_control_get_tickets_label()}</Button
+	>
 {:else}
-	<span class="text-base font-medium text-fg-2">RSVPs are closed for this event.</span>
+	<span class="text-base font-medium text-fg-2"
+		>{m.public_events_id_rsvp_control_rsvps_closed_event_text()}</span
+	>
 {/if}

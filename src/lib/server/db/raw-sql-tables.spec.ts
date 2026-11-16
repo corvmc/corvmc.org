@@ -66,7 +66,17 @@ function tableRefsIn(sqlText: string): string[] {
 	// use bare names or backticks. A regex that missed one would give a
 	// false pass on exactly the kind of literal this exists to catch.
 	const pattern = /\b(?:FROM|JOIN)\s+["`]?([a-z_][a-z0-9_]*)\b["`]?(?!\s*\()/gi;
-	return [...sqlText.matchAll(pattern)].map((ref) => ref[1].toLowerCase());
+	// A name the statement's own `with` clause declares is a CTE, not a table.
+	const ctes = new Set(
+		[
+			...sqlText.matchAll(
+				/(?:\bwith\s+(?:recursive\s+)?|,\s*)([a-z_][a-z0-9_]*)\s*(?:\([^)]*\))?\s+as\s*\(/gi
+			)
+		].map((m) => m[1].toLowerCase())
+	);
+	return [...sqlText.matchAll(pattern)]
+		.map((ref) => ref[1].toLowerCase())
+		.filter((name) => !ctes.has(name));
 }
 
 /** Tables named after FROM or JOIN inside a `sql` template literal. */
@@ -88,6 +98,14 @@ describe('hand-written SQL', () => {
 		expect(tableRefsIn('select 1 from json_each(${x}) where value in (1)')).toEqual([]);
 		expect(tableRefsIn('from json_tree (x) join "user" on 1')).toEqual(['user']);
 		expect(tableRefsIn('from `band` join member_standing')).toEqual(['band', 'member_standing']);
+	});
+
+	it('reads a name its own `with` clause declares as a CTE, not a table', () => {
+		expect(
+			tableRefsIn(
+				'with recursive reach(id) as (select a from edge union select b from edge join reach r on 1) select 1 from reach'
+			)
+		).toEqual(['edge', 'edge']);
 	});
 
 	it('names only tables the schema declares', () => {

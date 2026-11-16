@@ -21,49 +21,55 @@ import '../../../../routes/layout.css';
  *    cannot see is worse than no highlight at all.
  */
 
-const header = (name: string) => page.getByRole('button', { name });
+// A collapsible group with no action has exactly one button: its header. Its
+// rows are the harness's two links, counted rather than named.
+const header = () => page.getByRole('button');
+const rows = () => page.getByRole('link');
 
 beforeEach(() => localStorage.clear());
 
 describe('NavGroup', () => {
 	it('leaves the plain group untouched — no button, no disclosure', async () => {
-		await render(NavGroupHarness, { title: 'My Bands' });
+		const title = 'My Bands';
+		await render(NavGroupHarness, { title });
 
-		await expect.element(page.getByText('My Bands')).toBeInTheDocument();
+		await expect.element(page.getByText(title)).toBeInTheDocument();
 		expect(await page.getByRole('button').elements()).toHaveLength(0);
 	});
 
 	it('renders expanded by default', async () => {
 		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
-		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'true');
-		await expect.element(page.getByRole('link', { name: 'Users' })).toBeVisible();
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'true');
+		await expect.element(rows().first()).toBeVisible();
+		expect(rows().elements()).toHaveLength(2);
 	});
 
 	it('hides its rows when collapsed, and brings them back', async () => {
 		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
-		await header('People').click();
-		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
+		await header().click();
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'false');
 		// Out of the accessibility tree, not merely dimmed — which is what makes
 		// default-open matter for the e2e suite's role-based selectors.
-		expect(await page.getByRole('link', { name: 'Users' }).elements()).toHaveLength(0);
+		expect(rows().elements()).toHaveLength(0);
 
-		await header('People').click();
-		await expect.element(page.getByRole('link', { name: 'Users' })).toBeVisible();
+		await header().click();
+		await expect.element(rows().first()).toBeVisible();
+		expect(rows().elements()).toHaveLength(2);
 	});
 
 	it('points aria-controls at the list it toggles', async () => {
 		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
-		const id = await header('People').element().getAttribute('aria-controls');
+		const id = await header().element().getAttribute('aria-controls');
 		expect(document.getElementById(id!)).not.toBeNull();
 	});
 
 	it('remembers a collapsed group', async () => {
 		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
-		await header('People').click();
+		await header().click();
 
 		expect(readCollapsed('staff', 'people')).toBe(true);
 	});
@@ -72,7 +78,7 @@ describe('NavGroup', () => {
 		writeCollapsed('staff', 'people', true);
 		await render(NavGroupHarness, { collapsible: true, persistKey: 'people' });
 
-		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'false');
 		// Hidden, but still in the DOM — the collapse is a class, not an `{#if}`,
 		// so nothing was ever server-rendered as missing.
 		expect(document.querySelector('a[href="/staff/members"]')).not.toBeNull();
@@ -85,11 +91,11 @@ describe('NavGroup', () => {
 			persistKey: 'people',
 			containsActive: false
 		});
-		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'false');
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'false');
 
 		await rerender({ collapsible: true, persistKey: 'people', containsActive: true });
 
-		await expect.element(header('People')).toHaveAttribute('aria-expanded', 'true');
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'true');
 		expect(readCollapsed('staff', 'people')).toBe(false);
 	});
 
@@ -100,7 +106,7 @@ describe('NavGroup', () => {
 			persistScope: 'member'
 		});
 
-		await header('People').click();
+		await header().click();
 
 		expect(readCollapsed('member', 'people')).toBe(true);
 		expect(readCollapsed('staff', 'people')).toBe(false);

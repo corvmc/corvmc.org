@@ -2,24 +2,33 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireCapability } from '$lib/server/authorization';
-import { requireCommitteeMember, requireProjectCommittee } from '$lib/server/group/group-context';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
+import {
+	requireCommitteeMember,
+	requireProjectCommittee
+} from '#lib/server/group/group-context.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	DEFAULT_TIMEZONE,
 	LONG_TEXT_MAX,
 	MARKET_MAX_TABLES_REQUESTED,
+	marketVendorDecisions,
+	marketVendorStatuses,
 	SHORT_TEXT_MAX
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	decideApplication,
+	resendDecisionMessage,
 	getApplicationWindow,
 	getMarketDay,
 	getMarketEvent,
 	getMarketProjectId,
 	getVendorEventId,
 	checkInVendor,
+	listAllApplications,
 	listApplications,
 	listCommitteeMarkets,
 	listMarketDayVendors,
@@ -30,24 +39,30 @@ import {
 	setTableLabel,
 	submitApplication,
 	withdrawApplication
-} from '$lib/server/market/market-service';
+} from '#lib/server/market/market-service.js';
+import { deliverNow } from '#lib/server/outbox/outbox-service.js';
 import {
 	getVendorFee,
 	startVendorFeeCheckout,
 	VendorFeeAmountError
-} from '$lib/server/market/vendor-fee-service';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/market/vendor-fee-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
 
 /**
- * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.
+ * Market vendor applications. docs/development/business-workflows.md §19.
  *
- * The public half takes no session. Setup, seating and withdrawals guard on
- * `event.manage`; accept and decline also belong to the committees taking part
- * in the market's project (#1503), read off the row, never the request.
+ * The public half takes no session. Setup and the staff page, which carries
+ * vendor contacts, guard on `event.manage`. Deciding, seating, withdrawals and
+ * check-in also belong to the committees on the market's project (#1503,
+ * #2834) and its vendor host (#2993), read off the row, never the request.
  */
 
-/** Members of a committee on the market's project, or staff holding `event.manage`. */
+/**
+ * The market's vendor host (`market.host` for this event, through a shift
+ * role), members of a committee on its project, or staff holding `event.manage`.
+ */
 async function requireMarketDecider(eventId: string) {
+	if (await can('market.host', { eventId })) return { user: requireUser() };
 	return requireProjectCommittee(await getMarketProjectId(eventId), 'event.manage');
 }
 
@@ -67,6 +82,7 @@ const website = z
 
 /** The application page's header; 404 for anything not a public market. */
 export const getVendorApplyPage = query(eventId, async (id) => {
+	await requireListingVisible(id);
 	const info = await getApplicationWindow(id);
 	if (!info) error(404, 'Not found');
 	return info;
@@ -77,6 +93,7 @@ export const getVendorApplyPage = query(eventId, async (id) => {
  * the accepted vendors. Null for anything not a public market. Never a contact.
  */
 export const getPublicMarket = query(eventId, async (id) => {
+	await requireListingVisible(id);
 	const [info, vendors] = await Promise.all([getApplicationWindow(id), listPublicVendors(id)]);
 	return info ? { info, vendors } : null;
 });
@@ -92,6 +109,8 @@ export const submitVendorApplicationForm = form(
 		website,
 		tablesRequested: z.number().int().min(1).max(MARKET_MAX_TABLES_REQUESTED),
 		needsPower: z.boolean().optional(),
+		bringsOwnTable: z.boolean().optional(),
+		bringsTent: z.boolean().optional(),
 		notes: z.string().trim().max(LONG_TEXT_MAX).optional(),
 		turnstileToken: z.string().min(1)
 	}),
@@ -100,6 +119,7 @@ export const submitVendorApplicationForm = form(
 		if (!(await verifyTurnstile(data.turnstileToken, ip))) {
 			invalid(issue.turnstileToken('Verification failed. Please try again.'));
 		}
+		await requireListingVisible(data.eventId);
 		await submitApplication(data.eventId, {
 			contactName: data.contactName,
 			contactEmail: data.contactEmail,
@@ -109,6 +129,8 @@ export const submitVendorApplicationForm = form(
 			website: data.website || null,
 			tablesRequested: data.tablesRequested,
 			needsPower: data.needsPower ?? false,
+			bringsOwnTable: data.bringsOwnTable ?? false,
+			bringsTent: data.bringsTent ?? false,
 			notes: data.notes || null
 		});
 		return { success: true };
@@ -155,6 +177,18 @@ export const getStaffMarketVendors = query(eventId, async (id) => {
 	return { event, market, applications };
 });
 
+/** Every market's applications, for the Events list's vendor view (#2766). */
+export const getStaffVendorApplications = query(
+	z.object({
+		status: z.enum(marketVendorStatuses).optional(),
+		page: z.number().int().positive().optional()
+	}),
+	async ({ status, page }) => {
+		await requireCapability('event.manage');
+		return listAllApplications({ status }, { page: page ?? 1 });
+	}
+);
+
 /** "YYYY-MM-DDTHH:mm" from a datetime-local input, read in venue time. */
 function parseLocalDateTime(value: string | undefined): Date | null {
 	if (!value) return null;
@@ -177,7 +211,7 @@ export const openMarketDayForm = form(
 		slidingScaleFloorCents: z.number().int().min(0).max(100_000).optional()
 	}),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireCapability('event.manage', () => eventScope(data.eventId));
 		await openMarketDay(data.eventId, {
 			applicationsCloseAt: parseLocalDateTime(data.applicationsCloseAt || undefined),
 			tableCount: data.tableCount ?? null,
@@ -192,8 +226,8 @@ export const openMarketDayForm = form(
 
 /**
  * The owning committee's view of a market: the applications, with no contact
- * detail. Those live on the inbox thread, which is staff-only, and the decision
- * message reaches the vendor through it all the same.
+ * detail. Those are staff-only, and the decision message reaches the vendor's
+ * contact all the same.
  */
 export const getCommitteeMarketVendors = query(eventId, async (id) => {
 	await requireMarketDecider(id);
@@ -205,7 +239,14 @@ export const getCommitteeMarketVendors = query(eventId, async (id) => {
 		event,
 		market,
 		applications: applications.map(
-			({ threadId: _t, contactName: _n, contactEmail: _e, contactPhone: _p, ...rest }) => rest
+			({
+				threadId: _t,
+				contactName: _n,
+				contactEmail: _e,
+				contactPhone: _p,
+				contactSource: _s,
+				...rest
+			}) => rest
 		)
 	};
 });
@@ -219,37 +260,50 @@ export const getCommitteeMarkets = query(z.string().min(1), async (groupId) => {
 export const decideVendorForm = form(
 	z.object({
 		vendorId: z.string().min(1),
-		decision: z.enum(['accepted', 'declined']),
+		decision: z.enum(marketVendorDecisions),
 		tableLabel: z.string().trim().max(40).optional(),
 		message: z.string().trim().min(1, 'Write the vendor a message').max(LONG_TEXT_MAX)
 	}),
 	async (data) => {
 		const { user } = await requireMarketDecider(await getVendorEventId(data.vendorId));
-		const { eventId: id } = await decideApplication(
+		const { eventId: id, outboxId } = await decideApplication(
 			data.vendorId,
 			{ decision: data.decision, tableLabel: data.tableLabel, message: data.message },
 			{ id: user.id, name: user.name }
 		);
 		void getStaffMarketVendors(id).refresh();
 		void getCommitteeMarketVendors(id).refresh();
-		return { success: true };
+		// The decision stands either way; the page says whether the vendor was told (#2819).
+		const delivery = outboxId ? await deliverNow(outboxId) : null;
+		return { success: true, messageSent: delivery?.status === 'sent' };
+	}
+);
+
+/** Send a decision message that did not reach the vendor (#2819). */
+export const resendVendorDecisionForm = form(
+	z.object({ vendorId: z.string().min(1) }),
+	async (data) => {
+		await requireVendorMarketDecider(data.vendorId);
+		const delivery = await resendDecisionMessage(data.vendorId);
+		refreshMarket(await getVendorEventId(data.vendorId));
+		return { success: true, messageSent: delivery?.status === 'sent' };
 	}
 );
 
 export const setTableLabelForm = form(
 	z.object({ vendorId: z.string().min(1), tableLabel: z.string().trim().max(40).optional() }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireVendorMarketDecider(data.vendorId);
 		const { eventId: id } = await setTableLabel(data.vendorId, data.tableLabel || null);
-		void getStaffMarketVendors(id).refresh();
+		refreshMarket(id);
 		return { success: true };
 	}
 );
 
 export const withdrawVendorForm = form(z.object({ vendorId: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
+	await requireVendorMarketDecider(data.vendorId);
 	const { eventId: id } = await withdrawApplication(data.vendorId);
-	void getStaffMarketVendors(id).refresh();
+	refreshMarket(id);
 	return { success: true };
 });
 
@@ -302,7 +356,8 @@ export const markNoShowForm = form(
 export const inviteBackForm = form(
 	z.object({
 		vendorId: z.string().min(1),
-		inviteBack: yesNo,
+		// No default: a blank choice is refused, not read as either answer (#2827).
+		inviteBack: z.enum(['yes', 'no'], { message: 'Choose whether to invite this vendor back' }),
 		note: z.string().trim().max(LONG_TEXT_MAX).optional()
 	}),
 	async (data) => {

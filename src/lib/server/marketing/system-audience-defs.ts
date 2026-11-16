@@ -1,9 +1,10 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { ticket } from '$lib/server/db/schema/ticket';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { leadsGroup } from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audience definitions
@@ -25,7 +26,7 @@ import { ticket } from '$lib/server/db/schema/ticket';
 //   - This is a closed, code-defined set. It is deliberately not a
 //     user-authored rules engine.
 //
-// This module is kept free of `$lib` imports so scripts/seed-dev.ts — which
+// This module is kept free of `#lib` imports so scripts/seed-dev.ts — which
 // runs under tsx, where SvelteKit aliases don't resolve — can provision the
 // same audiences. Query and mutation helpers live in system-audiences.ts.
 // ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ const LEADS_A_BAND = sql`exists (
 	select 1 from ${groupMember}
 	inner join ${group} on ${group.id} = ${groupMember.groupId}
 	where ${groupMember.userId} = ${user.id}
-		and ${groupMember.role} in ('owner', 'admin')
+		and ${leadsGroup()}
 		and ${groupMember.status} = 'active'
 		and ${group.deletedAt} is null
 )`;
@@ -80,7 +81,7 @@ const LEADS_A_BAND = sql`exists (
 const ACTIVE_MEMBER = sql`"user"."deleted_at" is null`;
 
 /**
- * Bought a ticket to this show, or said they were coming.
+ * Bought a ticket to this event, or said they were coming.
  *
  * Two correlated EXISTS rather than a union: the outer query is over `user`
  * already, and a subscriber matching either one is one row either way. A
@@ -129,15 +130,15 @@ export const SYSTEM_AUDIENCES = {
 	 * The one audience whose membership depends on the campaign rather than
 	 * only on the member (#857).
 	 *
-	 * Nobody, unless the campaign names a show. `1 = 0` and not "everybody" is
-	 * the safe direction for a blast, and it means the audience can be left
-	 * ticked on a campaign that is not about a show without sending to the
+	 * Nobody, unless the campaign names an event. `1 = 0` and not "everybody"
+	 * is the safe direction for a blast, and it means the audience can be left
+	 * ticked on a campaign that is not about an event without sending to the
 	 * whole list.
 	 */
 	'event-interest': {
-		name: "This show's audience",
+		name: 'Event audience',
 		description:
-			'Everyone holding a ticket to the show a campaign is about, plus everyone who RSVP’d. Empty unless the campaign names a show.',
+			'Everyone holding a ticket to the event a campaign is about, plus everyone who RSVP’d. Empty unless the campaign names an event.',
 		predicate: (eventId?: string | null) =>
 			eventId ? sql`${ACTIVE_MEMBER} and ${caresAbout(eventId)}` : sql`1 = 0`
 	}

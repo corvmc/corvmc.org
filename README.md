@@ -62,7 +62,7 @@ Start at the [docs index](docs/README.md). New maintainer? Read in this order:
    provisioning only
 
 Also: [ui-patterns.md](docs/development/ui-patterns.md) (mandatory before touching pages),
-`docs/specs/` (per-feature design intent), `docs/manual/` + `src/content/help/` (the
+`docs/decisions/` (why it is built the way it is), `docs/manual/` + `src/content/help/` (the
 end-user help articles).
 
 ## Common commands
@@ -75,7 +75,6 @@ pnpm test:unit          # vitest (watch)
 pnpm test               # full suite: unit + Playwright e2e (what CI runs)
 pnpm db:generate        # create a migration from schema changes (review the SQL!)
 pnpm db:reset           # wipe + migrate + seed local D1
-pnpm storybook          # component workshop :6006
 pnpm docs:check         # docs integrity + route drift (CI gate)
 pnpm help:sync          # push help articles into the D1 help tables
 ```

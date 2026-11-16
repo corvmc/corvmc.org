@@ -1,21 +1,9 @@
 [
-	"createContractorForm.website",
-	"createLocalResourceForm.description",
-	"createLocalResourceForm.phone",
-	"createSubscription.amount",
-	"createSubscription.coverFees",
 	"createVolunteerRole.defaultCapacity",
 	"createVolunteerRole.defaultDurationMinutes",
 	"createVolunteerRole.isSpecializedSkill",
 	"createVolunteerRole.marketRate",
 	"refundAndCancelReservation.reason",
 	"replyToThread.disposition",
-	"saveMemberProfile.hometown",
-	"updateAmount.amount",
-	"updateAmount.coverFees",
-	"updateContractorForm.website",
-	"updateReservationSettings.teachingMaxAdvanceDaysOneoff",
-	"updateReservationSettings.teachingMaxAdvanceDaysRecurring",
-	"updateReservationSettings.teachingMinDurationHours",
-	"updateReservationSettings.teachingRateCents"
+	"saveMemberProfile.hometown"
 ]

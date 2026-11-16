@@ -1,14 +1,15 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import CommitteeGrantsAction, { committeeReach } from './CommitteeGrantsAction.svelte';
-	import { grantRuleFor } from '$lib/config';
+	import { grantRuleFor } from '#lib/config.js';
 
 	/** What this committee's active members may do. */
 	let { groupId, name, held }: { groupId: string; name: string; held: string[] } = $props();
 </script>
 
-<InfoCard title="Grants">
+<InfoCard title={m.groups_committee_grants_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle>{title}</CardTitle>
@@ -17,7 +18,7 @@
 	{/snippet}
 
 	{#if held.length === 0}
-		<p class="text-muted">Members of this committee hold nothing beyond their seat.</p>
+		<p class="text-muted">{m.groups_committee_grants_card_members_committee_hold_nothing_text()}</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
 			{#each held as cap (cap)}

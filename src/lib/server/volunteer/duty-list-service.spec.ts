@@ -9,18 +9,12 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb,
 	getRowCount: () => 0
 }));
 
@@ -29,7 +23,10 @@ const {
 	createDutyList,
 	getDutyListDetail,
 	listDutyLists,
-	DutyListAlreadyAppliedError
+	updateDutyList,
+	updateDutyListItem,
+	DutyListAlreadyAppliedError,
+	DutyListNameTakenError
 } = await import('./duty-list-service');
 
 const at = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
@@ -50,6 +47,7 @@ beforeEach(() => {
 	for (const t of [
 		'audit_log',
 		'work_task',
+		'volunteer_shift',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -91,21 +89,25 @@ const anchor = (a: string) => sqlite.exec(`UPDATE duty_list SET anchor = '${a}' 
 function shifts() {
 	return sqlite
 		.prepare(
-			`SELECT id, starts_at, ends_at, due_at, capacity, duty_list_id, event_id, project_id,
-				pending_offset_minutes, pending_duration_minutes
-			 FROM work_order ORDER BY coalesce(starts_at, due_at)`
+			// A task with the times and places of its shift, when it has one (#2518).
+			`SELECT wo.id, s.starts_at, s.ends_at, wo.due_at, s.capacity, wo.duty_list_id,
+				wo.event_id, wo.project_id, wo.pending_offset_minutes, wo.pending_duration_minutes,
+				wo.pending_capacity
+			 FROM work_order wo LEFT JOIN volunteer_shift s ON s.work_order_id = wo.id
+			 ORDER BY coalesce(s.starts_at, wo.due_at)`
 		)
 		.all() as {
 		id: string;
 		starts_at: number | null;
 		ends_at: number | null;
 		due_at: number | null;
-		capacity: number;
+		capacity: number | null;
 		duty_list_id: string | null;
 		event_id: string | null;
 		project_id: string | null;
 		pending_offset_minutes: number | null;
 		pending_duration_minutes: number | null;
+		pending_capacity: number | null;
 	}[];
 }
 
@@ -231,7 +233,7 @@ describe('applyDutyList — project subject', () => {
 		])('stamps %s items unscheduled with a warning', async (a, setUp, message) => {
 			setUp();
 			anchor(a);
-			addItem('i1', 'offset_minutes, duration_minutes', '-30, 60');
+			addItem('i1', 'offset_minutes, duration_minutes, capacity', '-30, 60, 2');
 			addItem('i2', 'due_offset_minutes', '-1440');
 
 			const result = await applyDutyList('dl-1', SHOW, 'u1');
@@ -249,6 +251,8 @@ describe('applyDutyList — project subject', () => {
 				[-1440, null],
 				[-30, 60]
 			]);
+			// The window's places wait on the task for the shift placement makes.
+			expect(rows.find((r) => r.pending_duration_minutes === 60)?.pending_capacity).toBe(2);
 		});
 	});
 
@@ -384,5 +388,92 @@ describe('createDutyList', () => {
 				createDutyList({ name: `P ${a}`, anchor: a, createdByUserId: 'u1' })
 			).resolves.toMatchObject({ subject: 'project', anchor: a });
 		}
+	});
+
+	// Both name checks find nothing before either insert runs (#2695).
+	it('refuses the second of two overlapping creates of a name as taken', async () => {
+		const make = () => createDutyList({ name: 'Load-in', anchor: 'doors', createdByUserId: 'u1' });
+		const results = await Promise.allSettled([make(), make()]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(DutyListNameTakenError);
+	});
+});
+
+// #2387: every show opened without a picker stamps one template, so only one may start a production.
+describe('the Production template', () => {
+	const holders = () =>
+		(
+			sqlite.prepare(`SELECT id FROM duty_list WHERE project_kind = 'production'`).all() as {
+				id: string;
+			}[]
+		).map((r) => r.id);
+
+	it('moves to whichever template was marked last', async () => {
+		const made = await createDutyList({
+			name: 'Festival',
+			anchor: 'doors',
+			projectKind: 'production',
+			createdByUserId: 'u1'
+		});
+		expect(holders()).toEqual([made.id]);
+
+		await updateDutyList('dl-1', { projectKind: 'production' });
+		expect(holders()).toEqual(['dl-1']);
+
+		await updateDutyList('dl-1', { projectKind: 'general' });
+		expect(holders()).toEqual([]);
+	});
+
+	it('leaves the orientation trigger alone', async () => {
+		await updateDutyList('dl-1', { projectKind: 'production' });
+		expect(
+			sqlite.prepare(`SELECT auto_apply_on AS t FROM duty_list WHERE id = 'dl-res'`).get()
+		).toEqual({ t: 'reservation.first' });
+	});
+});
+
+describe('updateDutyListItem', () => {
+	const row = () =>
+		sqlite
+			.prepare(
+				`SELECT volunteer_role_id AS role, offset_minutes AS offset, due_offset_minutes AS due,
+					duration_minutes AS duration, capacity, tasks FROM duty_list_item WHERE id = 'i1'`
+			)
+			.get();
+
+	it('changes the role, timing, capacity and tasks of a template item', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await updateDutyListItem('i1', {
+			volunteerRoleId: 'role-2',
+			offsetMinutes: null,
+			durationMinutes: null,
+			dueOffsetMinutes: -10080,
+			capacity: 3,
+			tasks: ['Book the room']
+		});
+
+		expect(row()).toEqual({
+			role: 'role-2',
+			offset: null,
+			due: -10080,
+			duration: null,
+			capacity: 3,
+			tasks: '["Book the room"]'
+		});
+	});
+
+	it('refuses an archived role, but still edits an item already on one', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+		sqlite.exec(`UPDATE volunteer_role SET is_active = 0 WHERE id = 'role-2'`);
+		await expect(
+			updateDutyListItem('i1', { volunteerRoleId: 'role-2', capacity: 1 })
+		).rejects.toThrow(/archived/);
+
+		sqlite.exec(`UPDATE volunteer_role SET is_active = 0 WHERE id = 'role-1'`);
+		await updateDutyListItem('i1', { volunteerRoleId: 'role-1', capacity: 4 });
+		expect(row()).toMatchObject({ role: 'role-1', capacity: 4 });
 	});
 });

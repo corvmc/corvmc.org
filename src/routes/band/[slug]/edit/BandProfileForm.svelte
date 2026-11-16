@@ -1,23 +1,24 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
-	import { env } from '$env/dynamic/public';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
+	import * as env from '$app/env/public';
 	import { resolve } from '$app/paths';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import LinkListEditor from '$lib/components/directory/LinkListEditor.svelte';
-	import VisibilityField from '$lib/components/ui/Form/VisibilityField.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import { saveBandProfile } from '$lib/remote/directory.remote';
-	import type { getBandProfile } from '$lib/remote/directory.remote';
-	import type { getBandLayout } from '$lib/remote/layout.remote';
-	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';
+	import VisibilityField from '#lib/components/ui/Form/VisibilityField.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import { saveBandProfile } from '#lib/remote/directory.remote.js';
+	import type { getBandProfile } from '#lib/remote/directory.remote.js';
+	import type { getBandLayout } from '#lib/remote/layout.remote.js';
+	import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	// The band and profile arrive as plain resolved props, NOT awaited remote
 	// queries. Keeping this component's script fully synchronous matters: a
@@ -75,10 +76,10 @@
 	remote={saveBandProfile}
 	guard
 	onsuccess={() => {
-		toast.success('Profile saved');
+		toast.success(m.band_slug_edit_band_profile_form_toast());
 		// No slug branch: renaming the band no longer moves its address, so the
 		// page always stays where it is. Band settings is where an owner changes it.
-		invalidateAll();
+		refreshAll();
 	}}
 >
 	<input {...profileFields.slug.as('hidden', band.slug)} />
@@ -86,13 +87,13 @@
 	<input {...profileFields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 
 	<!-- Basics -->
-	<InfoCard title="Basics">
+	<InfoCard title={m.band_slug_edit_band_profile_form_basics_title()}>
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
 			<div class="flex-1 space-y-4">
 				<FormField
 					field={profileFields.name}
 					type="text"
-					label="Band Name"
+					label={m.band_slug_edit_band_profile_form_band_name_label()}
 					value={band.name}
 					required
 				/>
@@ -102,11 +103,15 @@
 				     not move the address. Saying so here — with the address in
 				     front of them — beats letting them rename and then wonder why
 				     the URL didn't follow. -->
-				<FormField label="Band address" readonly display={`${band.slug}.${baseDomain}`}>
+				<FormField
+					label={m.band_slug_edit_band_profile_form_band_address_label()}
+					readonly
+					display={`${band.slug}.${baseDomain}`}
+				>
 					{#snippet description()}
-						Renaming the band doesn't move its address.{#if isOwner}
-							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
-								Change it in Settings
+						{m.band_slug_edit_band_profile_form_renaming_band_doesn_t_move_body()}{#if isOwner}
+							<a href={resolve(`band/${band.slug}/settings`)} class="ml-1 link link-primary">
+								{m.band_slug_edit_band_profile_form_change_settings_text()}
 							</a>
 						{/if}
 					{/snippet}
@@ -114,17 +119,16 @@
 
 				<FormField
 					field={profileFields.tagline}
-					label="Tagline"
+					label={m.band_slug_edit_band_profile_form_tagline_label()}
 					type="text"
 					value={profile?.tagline ?? ''}
-					placeholder="e.g. Funk trio from Portland"
-					description="A short one-liner shown on your directory card"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
+					description={m.band_slug_edit_band_profile_form_short_one_liner_shown_direc_body()}
 				/>
 			</div>
 
 			<FormField
-				label="Avatar"
-				name="avatarKey"
+				label={m.band_slug_edit_band_profile_form_avatar_label()}
 				type="file"
 				upload={uploadAvatar}
 				accept="image/jpeg,image/png,image/webp"
@@ -138,33 +142,39 @@
 			<div class="grid gap-4 sm:grid-cols-2">
 				<FormField
 					field={profileFields.hometown}
-					label="Hometown"
+					label={m.band_slug_edit_band_profile_form_hometown_label()}
 					type="text"
 					value={profile?.hometown ?? ''}
-					placeholder="e.g. Corvallis, OR"
-					description="Shown as “Based in” on your profile"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_corvallis_placeholder()}
+					description={m.band_slug_edit_band_profile_form_shown_as_based_profile_body()}
 				/>
 
 				<FormField
 					field={profileFields.foundedYear}
-					label="Founded"
+					label={m.band_slug_edit_band_profile_form_founded_label()}
 					type="text"
 					value={profile?.foundedYear ?? ''}
-					placeholder="e.g. 2019"
-					description="Shown as “Formed” on your profile"
+					placeholder={m.band_slug_edit_band_profile_form_e_g_2019_placeholder()}
+					description={m.band_slug_edit_band_profile_form_shown_as_formed_profile_body()}
 				/>
 			</div>
 
-			<FormField field={profileFields.bio} label="Bio">
+			<FormField field={profileFields.bio} label={m.band_slug_edit_band_profile_form_bio_label()}>
 				<input {...profileFields.bio.as('hidden', bioHtml)} />
-				<RichTextEditor bind:value={bioHtml} placeholder="Tell people about your act..." />
+				<RichTextEditor
+					bind:value={bioHtml}
+					placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act_placeholder()}
+				/>
 			</FormField>
 
-			<FormField field={profileFields.genres} label="Genres">
+			<FormField
+				field={profileFields.genres}
+				label={m.band_slug_edit_band_profile_form_genres_label()}
+			>
 				<FreeformTagInput
 					bind:value={genres}
 					suggestions={genreSuggestions}
-					placeholder="e.g. jazz, funk, rock..."
+					placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock_placeholder()}
 				/>
 			</FormField>
 
@@ -172,7 +182,7 @@
 				field={profileFields.lookingForMembers}
 				type="toggle"
 				bind:value={lookingForMembers}
-				checkboxLabel="We're looking for members"
+				checkboxLabel={m.band_slug_edit_band_profile_form_checkbox_label_checkbox()}
 			/>
 
 			<!-- The half a band could never say before: "we want members" had
@@ -180,11 +190,14 @@
 			     with the toggle it belongs to, and it is what puts this band on the
 			     dashboard of a member who plays what you are short of. -->
 			{#if lookingForMembers}
-				<FormField field={profileFields.seekingInstruments} label="What we're looking for">
+				<FormField
+					field={profileFields.seekingInstruments}
+					label={m.band_slug_edit_band_profile_form_what_we_re_looking_label()}
+				>
 					<FreeformTagInput
 						bind:value={seekingInstruments}
 						suggestions={instrumentSuggestions}
-						placeholder="e.g. drums, bass, vocals..."
+						placeholder={m.band_slug_edit_band_profile_form_e_g_drums_bass_vocals_placeholder()}
 					/>
 				</FormField>
 			{/if}
@@ -192,9 +205,9 @@
 	</InfoCard>
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Links">
+		<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
 			<p class="mb-3 text-muted">
-				SoundCloud, YouTube, and Spotify links show as embedded players on your profile.
+				{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
 			</p>
 			<LinkListEditor bind:value={links} field={profileFields.links} />
 		</InfoCard>
@@ -204,48 +217,52 @@
 		     form, so nothing is published for a scraper to take. The fields stay
 		     because they still route an enquiry — but the page has to say that,
 		     or a band reads "contact info" and assumes it is on display. -->
-		<InfoCard title="Where enquiries go">
+		<InfoCard title={m.band_slug_edit_band_profile_form_where_enquiries_go_title()}>
 			<p class="mb-3 text-muted">
-				Never shown publicly. Your page offers a contact form instead, and a message sent through it
-				lands here — or at your press kit's booking contact, if you have set one.
+				{m.band_slug_edit_band_profile_form_never_shown_publicly_page_o_text()}
 			</p>
 			<div class="space-y-3">
 				<FormField
 					field={profileFields.contactEmail}
-					label="Email"
+					label={m.band_email_label()}
 					type="email"
 					value={contact.email ?? ''}
-					placeholder="band@example.com"
+					placeholder={m.band_slug_edit_band_profile_form_band_example_com_placeholder()}
 				/>
 				<FormField
 					field={profileFields.contactPhone}
-					label="Phone"
+					label={m.band_phone_label()}
 					type="tel"
 					value={contact.phone ?? ''}
 				/>
 				<FormField
 					field={profileFields.contactSocial}
-					label="Social handle"
+					label={m.band_slug_edit_band_profile_form_social_handle_label()}
 					type="text"
 					value={contact.social ?? ''}
-					placeholder="@handle or URL"
+					placeholder={m.band_slug_edit_band_profile_form_handle_url_placeholder()}
 				/>
 			</div>
 		</InfoCard>
 	</div>
 
 	<div class="mb-6">
-		<InfoCard title="Visibility">
+		<InfoCard title={m.band_slug_edit_band_profile_form_visibility_title()}>
 			<VisibilityField
 				field={profileFields.directoryVisibility}
 				bind:value={directoryVisibility}
-				publicDescription="Anyone can see this band's profile, no login required"
+				publicDescription={m.band_slug_edit_band_profile_form_public_description_body()}
 			/>
 		</InfoCard>
 	</div>
 
 	<div class="flex justify-end">
-		<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s">
+		<SubmitButton
+			label={m.band_save_label()}
+			successLabel={m.band_saved_label()}
+			variant="primary"
+			shortcut="mod+s"
+		>
 			{#snippet icon()}<IconDeviceFloppy size={18} />{/snippet}
 		</SubmitButton>
 	</div>

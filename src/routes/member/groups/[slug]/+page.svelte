@@ -1,18 +1,19 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShort } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import {
 		getMemberGroup,
@@ -20,22 +21,24 @@
 		removeGroupMember,
 		revokeGroupInvitation,
 		revokeGroupEmailInvite
-	} from '$lib/remote/groups.remote';
+	} from '#lib/remote/groups.remote.js';
 	import {
 		cancelGroupSession,
 		publishGroupSession,
 		unpublishGroupSession
-	} from '$lib/remote/group-events.remote';
-	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
-	import DocumentList from '$lib/components/groups/DocumentList.svelte';
-	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
-	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
-	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
-	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
-	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
-	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
-	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
-	import RepeatSessionAction from '$lib/components/groups/RepeatSessionAction.svelte';
+	} from '#lib/remote/group-events.remote.js';
+	import AnnouncementList from '#lib/components/groups/AnnouncementList.svelte';
+	import DocumentList from '#lib/components/groups/DocumentList.svelte';
+	import MuteAnnouncementsAction from '#lib/components/groups/MuteAnnouncementsAction.svelte';
+	import CreateSessionAction from '#lib/components/groups/CreateSessionAction.svelte';
+	import InviteGroupMemberAction from '#lib/components/groups/InviteGroupMemberAction.svelte';
+	import GroupMemberEditAction from '#lib/components/groups/GroupMemberEditAction.svelte';
+	import GroupSelfEditAction from '#lib/components/groups/GroupSelfEditAction.svelte';
+	import ApplicationsCard from '#lib/components/groups/ApplicationsCard.svelte';
+	import EditSessionAction from '#lib/components/groups/EditSessionAction.svelte';
+	import RepeatSessionAction from '#lib/components/groups/RepeatSessionAction.svelte';
+	import SessionAttendanceAction from '#lib/components/groups/SessionAttendanceAction.svelte';
+	import { EditScheduleAction } from '#lib/components/actions/index.js';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
@@ -45,6 +48,12 @@
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 	import CommitteeOpenItems from './CommitteeOpenItems.svelte';
+	import CommitteePositions from './CommitteePositions.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	/**
 	 * A club gets a page, not a panel.
@@ -53,7 +62,7 @@
 	 * a band member keeps coming back to band-shaped work with money attached. A
 	 * club is a subscription to a program: its value arrives by notification and
 	 * on the calendar, and this page is where you come for the archive and the
-	 * roster. See docs/specs/shipped/groups-spec.md § Interface.
+	 * roster. See docs/decisions/0021-a-club-gets-a-page-not-a-panel.md.
 	 *
 	 * Announcements, Documents and Sessions are phases 7, 8 and 9, and all three
 	 * are now built.
@@ -80,13 +89,13 @@
 		| 'sessions'
 		| 'roster';
 
-	let slug = $derived(page.params.slug!);
+	let slug = $derived(params.slug);
 	const data = $derived(await getMemberGroup(slug));
 	const group = $derived(data.group);
 	const members = $derived(data.members);
 
 	/**
-	 * Announcements lead, per docs/specs/shipped/groups-spec.md § Interface: the archive
+	 * Announcements lead, per docs/decisions/0021-a-club-gets-a-page-not-a-panel.md: the archive
 	 * is what you come back for, where Overview is what you read once. It is also
 	 * the default tab, so `?tab=` names the other three and the bare URL is the
 	 * post list.
@@ -105,9 +114,13 @@
 		return defaultTab;
 	});
 	const tabHref = (t: Tab) =>
-		resolve(`/member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
+		resolve(`member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
-	const kindLabel = $derived(group.kind === 'committee' ? 'Committee' : 'Club');
+	const kindLabel = $derived(
+		group.kind === 'committee'
+			? msg.member_groups_slug_committee_body()
+			: msg.member_groups_slug_club_body()
+	);
 	// Staff read this page without being on the roster, so there is nothing for
 	// them to leave.
 	const isMember = $derived(data.role !== 'staff');
@@ -119,6 +132,7 @@
 	 * member can move a project's status; budget and burn are on the Numbers tab.
 	 */
 	const projects = $derived(data.projects);
+	const hasProjectsTab = $derived(projects.length > 0 || may('production.create'));
 
 	// The actions column exists for a chair, and for a plain member who has a
 	// row of their own to edit. A staff non-member matches neither.
@@ -127,10 +141,27 @@
 	);
 	const pendingEmailInvites = $derived(data.emailInvites.filter((i) => i.status === 'pending'));
 
+	/** A committee seat is its defined positions (#2988); a club seat is free text. */
+	const seatTitle = (m: { id: string; position: string | null }) =>
+		group.kind === 'committee'
+			? data.positions
+					.filter((p) => p.holders.some((h) => h.memberId === m.id))
+					.map((p) => p.name)
+					.join(', ') || null
+			: m.position;
+
 	// Repointed at the wrapper query: nothing reads the parts, so refreshing one
 	// of those would repaint nothing. See `custom/refresh-the-composed-query`.
 	const refreshRoster = () => void getMemberGroup(slug).refresh();
 </script>
+
+{#snippet relatedCards()}
+	<!-- Roster only: the member remotes refuse a staff reader. -->
+	{#if isMember}
+		<RelatedShifts subject={{ type: 'group', id: group.id }} member />
+		<RelatedTasks subject={{ type: 'group', id: group.id }} member />
+	{/if}
+{/snippet}
 
 <PageHeader width="3xl" title={group.name} subtitle={kindLabel}>
 	<!-- Your role, for anyone who has one. It was gated behind `canManage`, so
@@ -140,7 +171,9 @@
 		<Badge variant="ghost">{data.role}</Badge>
 	{/if}
 	{#if data.canManage}
-		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm">Edit</Button>
+		<Button href={resolve(`member/groups/${slug}/edit`)} variant="ghost" size="sm"
+			>{msg.member_edit_label()}</Button
+		>
 	{/if}
 	<!-- Beside Leave, which is the other thing a member does to a group they are
 	     tired of hearing from. Null for staff, who have no roster row to mute. -->
@@ -154,16 +187,16 @@
 	{#if isMember}
 		<Action
 			action={leaveGroupForm}
-			label="Leave"
-			modalTitle="Leave group"
-			submitLabel="Leave"
+			label={msg.member_groups_slug_leave_label()}
+			modalTitle={msg.member_groups_slug_leave_group_title()}
+			submitLabel={msg.member_groups_slug_leave_label()}
 			confirm={group.joinPolicy === 'open'
-				? `Leave ${group.name}? You can rejoin whenever you like.`
-				: `Leave ${group.name}? You'll need to be invited back.`}
-			successToast="You have left"
+				? msg.member_groups_slug_leave_can_rejoin_whenever_like_body({ name: group.name })
+				: msg.member_groups_slug_leave_ll_need_invited_back_body({ name: group.name })}
+			successToast={msg.member_groups_slug_have_left_toast()}
 			variant="ghost"
 			size="sm"
-			onsuccess={() => goto(resolve('/member/groups'))}
+			onsuccess={() => goto(resolve('member/groups'))}
 		>
 			{#snippet form()}
 				<input {...leaveFields.groupId.as('hidden', group.id)} />
@@ -174,25 +207,29 @@
 
 <PageContent width="3xl">
 	<!-- URL-driven, so the tabs are real links and the router owns the state.
-	     Not `replaceState()`, which updates neither `page.url` nor the router's
+	     Not a shallow `goto`, which updates neither `page.url` nor the router's
 	     own state. -->
 	<TabBar
 		tabs={[
-			{ key: 'announcements', label: 'Announcements', href: tabHref('announcements') },
+			{
+				key: 'announcements',
+				label: msg.member_groups_slug_announcements_label(),
+				href: tabHref('announcements')
+			},
 			{
 				key: 'documents',
-				label: 'Documents',
+				label: msg.member_groups_slug_documents_label(),
 				badge: data.files.length,
 				href: tabHref('documents')
 			},
 			// Committee-only, and hidden while empty: a club can never own a project,
 			// so the tab would be a permanent dead end on most of these pages.
 			// A committee that opens shows keeps the tab while empty: its button is here.
-			...(projects.length > 0 || may('production.create')
+			...(hasProjectsTab
 				? [
 						{
 							key: 'projects',
-							label: 'Projects',
+							label: msg.member_groups_slug_projects_label(),
 							badge: projects.length,
 							href: tabHref('projects')
 						}
@@ -201,15 +238,30 @@
 			// What the committee owes on its shows (#1701). Committee-only, and hidden
 			// while there is nothing unfinished, as Projects is.
 			...(group.kind === 'committee' && data.hasOpenItems
-				? [{ key: 'items', label: 'Open items', href: tabHref('items') }]
+				? [{ key: 'items', label: msg.member_open_items_label(), href: tabHref('items') }]
 				: []),
 			// Its roster only (#1562); staff read the whole report on `/staff/reports`.
 			...(group.kind === 'committee' && may('finance.read')
-				? [{ key: 'numbers', label: 'Numbers', href: tabHref('numbers') }]
+				? [
+						{
+							key: 'numbers',
+							label: msg.member_groups_slug_numbers_label(),
+							href: tabHref('numbers')
+						}
+					]
 				: []),
-			{ key: 'sessions', label: 'Sessions', href: tabHref('sessions') },
-			{ key: 'roster', label: 'Roster', badge: members.active.length, href: tabHref('roster') },
-			{ key: 'overview', label: 'Overview', href: tabHref('overview') }
+			{
+				key: 'sessions',
+				label: msg.member_groups_slug_sessions_label(),
+				href: tabHref('sessions')
+			},
+			{
+				key: 'roster',
+				label: msg.member_groups_slug_roster_label(),
+				badge: members.active.length,
+				href: tabHref('roster')
+			},
+			{ key: 'overview', label: msg.member_groups_slug_overview_label(), href: tabHref('overview') }
 		]}
 		active={tab}
 	/>
@@ -221,21 +273,21 @@
 			canManage={data.canManage}
 		/>
 	{:else if tab === 'projects'}
-		<InfoCard title="Projects">
+		<InfoCard title={msg.member_groups_slug_projects_title()}>
 			{#snippet action()}
 				{#if may('production.create')}
 					<NewShowAction />
 				{/if}
 			{/snippet}
 			{#if projects.length === 0}
-				<EmptyState description="Nothing on the go right now." />
+				<EmptyState description={msg.member_groups_slug_nothing_go_right_now_body()} />
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Project</th>
-						<th>Status</th>
-						<th>Dates</th>
-						{#if isMember}<th><span class="sr-only">Actions</span></th>{/if}
+						<th>{msg.member_project_label()}</th>
+						<th>{msg.member_status_label()}</th>
+						<th>{msg.member_groups_slug_dates_label()}</th>
+						{#if isMember}<th><span class="sr-only">{msg.member_actions_label()}</span></th>{/if}
 					{/snippet}
 					{#each projects as project (project.id)}
 						<tr>
@@ -246,7 +298,9 @@
 								     of 6:55 PM is noise pretending to be precision. -->
 								{#if project.startsAt}
 									{formatDateShort(project.startsAt)}
-									{project.endsAt ? ` – ${formatDateShort(project.endsAt)}` : ' onward'}
+									{project.endsAt
+										? ` – ${formatDateShort(project.endsAt)}`
+										: msg.member_groups_slug_onward_text()}
 								{:else}
 									—
 								{/if}
@@ -270,21 +324,21 @@
 			{/if}
 		</InfoCard>
 		{#if data.projectEvents.length > 0}
-			<InfoCard title="Events on these projects">
+			<InfoCard title={msg.member_groups_slug_events_these_projects_title()}>
 				<Table>
 					{#snippet head()}
-						<th>Event</th>
-						<th>Project</th>
-						<th>Status</th>
-						<th>When</th>
-						{#if isMember}<th><span class="sr-only">Actions</span></th>{/if}
+						<th>{msg.member_groups_slug_event_label()}</th>
+						<th>{msg.member_project_label()}</th>
+						<th>{msg.member_status_label()}</th>
+						<th>{msg.member_when_label()}</th>
+						{#if isMember}<th><span class="sr-only">{msg.member_actions_label()}</span></th>{/if}
 					{/snippet}
 					{#each data.projectEvents as event (event.id)}
 						<tr>
 							<td class="cell-primary">
 								<!-- A show's console reads either half of it through the project. -->
 								{#if event.productionId && (may('production.book') || may('production.run'))}
-									<a class="link" href={resolve(`/staff/events/${event.id}/production`)}
+									<a class="link" href={resolve(`staff/events/${event.id}/production`)}
 										>{event.title}</a
 									>
 								{:else}
@@ -315,6 +369,7 @@
 			roles={data.workOrderRoles}
 			canEdit={may('volunteer.manageRecurring')}
 		/>
+		{@render relatedCards()}
 	{:else if tab === 'items' && group.kind === 'committee'}
 		<CommitteeOpenItems {slug} />
 	{:else if tab === 'numbers' && may('finance.read')}
@@ -332,35 +387,37 @@
 				<CreateSessionAction groupId={group.id} />
 			</div>
 		{/if}
-		<InfoCard title="Sessions">
+		<InfoCard title={msg.member_groups_slug_sessions_title()}>
 			{#if data.sessions.length === 0}
 				<EmptyState
 					description={data.canManage
-						? 'Nothing on the calendar. Put the first session up.'
-						: 'Nothing on the calendar yet.'}
+						? msg.member_groups_slug_nothing_calendar_put_first_session_body()
+						: msg.member_groups_slug_nothing_calendar_yet_body()}
 				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>When</th>
-						<th>What</th>
-						<th class="w-px"><span class="sr-only">Room</span></th>
-						<th class="w-px">Status</th>
+						<th>{msg.member_when_label()}</th>
+						<th>{msg.member_groups_slug_what_label()}</th>
+						<th class="w-px"><span class="sr-only">{msg.member_groups_slug_room_label()}</span></th>
+						<th class="w-px">{msg.member_status_label()}</th>
 						{#if data.canManage}
-							<th class="w-px"><span class="sr-only">Actions</span></th>
+							<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 						{/if}
 					{/snippet}
 					{#each data.sessions as s (s.id)}
 						<tr>
 							<td class="whitespace-nowrap">{formatDateTimeShort(s.startsAt)}</td>
 							<td class="cell-primary">
-								<a class="link" href={resolve(`/events/${s.id}`)}>{s.title}</a>
+								<a class="link" href={resolve(`events/${s.id}`)}>{s.title}</a>
 							</td>
 							<td class="w-px">
 								<!-- The fact that separates a program's session from a listing
 								     it merely advertises: this one holds the room, free. -->
 								{#if s.reservesRoom}
-									<Badge variant="ghost">Room held</Badge>
+									<Badge variant="ghost" data-testid="room-held"
+										>{msg.member_groups_slug_room_held_label()}</Badge
+									>
 								{/if}
 							</td>
 							<td class="w-px"><StatusBadge status={s.status} /></td>
@@ -368,6 +425,13 @@
 								<td class="w-px">
 									{#if s.status !== 'cancelled'}
 										<div class="flex w-max justify-end gap-2">
+											{#if s.startsAt <= new Date()}
+												<SessionAttendanceAction
+													groupId={group.id}
+													session={s}
+													onchanged={refreshRoster}
+												/>
+											{/if}
 											<EditSessionAction groupId={group.id} session={s} onchanged={refreshRoster} />
 											{#if !s.repeats}
 												<RepeatSessionAction
@@ -375,18 +439,29 @@
 													session={s}
 													onchanged={refreshRoster}
 												/>
+											{:else if s.series}
+												<EditScheduleAction
+													kind="event"
+													size="xs"
+													series={s.series}
+													onsuccess={refreshRoster}
+												/>
 											{/if}
 											{#if s.status === 'published'}
 												<Action
 													action={unpublishGroupSession.for(s.id)}
-													label="Unlist"
-													aria-label={`Take ${s.title} off the gig guide`}
-													modalTitle="Take it off the guide"
-													submitLabel="Unlist"
-													confirm="Take {s.title} off the public gig guide? The room stays held and the roster still sees it."
+													label={msg.member_groups_slug_unlist_label()}
+													aria-label={msg.member_groups_slug_take_off_gig_guide_label({
+														title: s.title
+													})}
+													modalTitle={msg.member_groups_slug_take_off_guide_title()}
+													submitLabel={msg.member_groups_slug_unlist_label()}
+													confirm={msg.member_groups_slug_take_off_public_gig_guide_body({
+														title: s.title
+													})}
 													variant="ghost"
 													size="xs"
-													successToast="Taken off the guide"
+													successToast={msg.member_groups_slug_taken_off_guide_toast()}
 													onsuccess={refreshRoster}
 												>
 													{#snippet form()}
@@ -397,14 +472,16 @@
 											{:else}
 												<Action
 													action={publishGroupSession.for(s.id)}
-													label="Publish"
-													aria-label={`Publish ${s.title}`}
-													modalTitle="Publish this session"
-													submitLabel="Publish"
-													confirm="Put {s.title} on the public gig guide?"
+													label={msg.member_publish_label()}
+													aria-label={msg.member_publish_2_label({ title: s.title })}
+													modalTitle={msg.member_groups_slug_publish_session_title()}
+													submitLabel={msg.member_publish_label()}
+													confirm={msg.member_groups_slug_put_public_gig_guide_body({
+														title: s.title
+													})}
 													variant="ghost"
 													size="xs"
-													successToast="Published"
+													successToast={msg.member_published_toast()}
 													onsuccess={refreshRoster}
 												>
 													{#snippet form()}
@@ -415,16 +492,18 @@
 											{/if}
 											<Action
 												action={cancelGroupSession.for(s.id)}
-												label="Cancel"
-												aria-label={`Cancel ${s.title}`}
-												modalTitle="Call it off"
-												submitLabel="Cancel session"
+												label={msg.member_cancel_label()}
+												aria-label={msg.member_groups_slug_cancel_label({ title: s.title })}
+												modalTitle={msg.member_groups_slug_call_off_title()}
+												submitLabel={msg.member_groups_slug_cancel_session_label()}
 												confirm={s.reservesRoom
-													? `Cancel ${s.title}? The room it holds goes back.`
-													: `Cancel ${s.title}?`}
+													? msg.member_groups_slug_cancel_room_holds_goes_back_body({
+															title: s.title
+														})
+													: msg.member_groups_slug_cancel_2_body({ title: s.title })}
 												variant="ghost"
 												size="xs"
-												successToast="Session cancelled"
+												successToast={msg.member_groups_slug_session_cancelled_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -442,18 +521,18 @@
 			{/if}
 		</InfoCard>
 	{:else if tab === 'overview'}
-		<InfoCard title="About">
+		<InfoCard title={msg.member_about_title()}>
 			{#if group.bio}
 				<p class="text-sm">{group.bio}</p>
 			{:else}
 				<EmptyState
 					description={data.canManage
-						? 'Nothing written about this program yet. Say what it is for.'
-						: 'Nothing written about this program yet.'}
+						? msg.member_groups_slug_nothing_written_about_program_yet_body()
+						: msg.member_groups_slug_nothing_written_about_program_yet_2_body()}
 				>
 					{#if data.canManage}
-						<Button href={resolve(`/member/groups/${slug}/edit`)} variant="primary" size="sm">
-							Write it
+						<Button href={resolve(`member/groups/${slug}/edit`)} variant="primary" size="sm">
+							{msg.member_groups_slug_write_label()}
 						</Button>
 					{/if}
 				</EmptyState>
@@ -461,9 +540,13 @@
 		</InfoCard>
 
 		{#if group.joinInstructions}
-			<InfoCard title="How it works">
+			<InfoCard title={msg.member_how_works_title()}>
 				<p class="text-sm">{group.joinInstructions}</p>
 			</InfoCard>
+		{/if}
+		<!-- A group without the Projects tab shows its tasks and shifts here. -->
+		{#if !hasProjectsTab}
+			{@render relatedCards()}
 		{/if}
 	{:else}
 		<!-- Above the roster: applications are the rows waiting on somebody. -->
@@ -475,26 +558,32 @@
 
 		{#if data.canManage}
 			<div class="flex justify-end">
-				<InviteGroupMemberAction {slug} groupName={group.name} onchanged={refreshRoster} />
+				<InviteGroupMemberAction
+					{slug}
+					groupName={group.name}
+					positions={group.kind !== 'committee'}
+					onchanged={refreshRoster}
+				/>
 			</div>
 		{/if}
 
-		<InfoCard title="Members">
+		<InfoCard title={msg.member_members_title()}>
 			{#if members.active.length === 0 && members.pending.length === 0}
 				<EmptyState
 					description={data.canManage
-						? 'Nobody on the roster yet. Invite the first person.'
-						: 'No members yet.'}
+						? msg.member_groups_slug_nobody_roster_yet_invite_first_body()
+						: msg.member_groups_slug_no_members_yet_body()}
 				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Member</th>
-						<th class="w-px">Role</th>
-						<th>Position</th>
+						<th class="w-px"><span class="sr-only">{msg.member_status_label()}</span></th>
+						<th>{msg.member_member_label()}</th>
+						<th class="w-px">{msg.member_role_label()}</th>
+						<th>{msg.member_groups_slug_position_label()}</th>
+						<th class="w-px">{msg.member_groups_slug_attended_label()}</th>
 						{#if rosterActions}
-							<th class="w-px"><span class="sr-only">Actions</span></th>
+							<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 						{/if}
 					{/snippet}
 					{#each [...members.active, ...members.pending] as m (m.id)}
@@ -504,7 +593,8 @@
 							     the ref already does that. -->
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-							<td>{m.position ?? '—'}</td>
+							<td>{seatTitle(m) ?? '—'}</td>
+							<td class="w-px text-right tabular-nums">{data.attendance[m.userId] ?? 0}</td>
 							{#if rosterActions}
 								<td class="w-px">
 									<div class="flex w-max justify-end gap-2">
@@ -514,12 +604,16 @@
 										{#if data.canManage && m.status === 'pending'}
 											<Action
 												action={revokeGroupInvitation.for(m.id)}
-												label="Revoke"
-												aria-label={`Revoke the invitation for ${m.member.title}`}
+												label={msg.member_groups_slug_revoke_label()}
+												aria-label={msg.member_groups_slug_revoke_invitation_label({
+													title: m.member.title
+												})}
 												variant="ghost"
 												size="xs"
-												confirm="Revoke the invitation for {m.member.title}?"
-												successToast="Invitation revoked"
+												confirm={msg.member_groups_slug_revoke_invitation_3_body({
+													title: m.member.title
+												})}
+												successToast={msg.member_groups_slug_invitation_revoked_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -539,12 +633,17 @@
 											/>
 											<Action
 												action={removeGroupMember.for(m.id)}
-												label="Remove"
-												aria-label={`Remove ${m.member.title}`}
+												label={msg.member_groups_slug_remove_label()}
+												aria-label={msg.member_groups_slug_remove_2_label({
+													title: m.member.title
+												})}
 												variant="ghost"
 												size="xs"
-												confirm="Remove {m.member.title} from {group.name}?"
-												successToast="Member removed"
+												confirm={msg.member_groups_slug_remove_from_body({
+													title: m.member.title,
+													name: group.name
+												})}
+												successToast={msg.member_groups_slug_member_removed_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -562,15 +661,25 @@
 			{/if}
 		</InfoCard>
 
+		{#if group.kind === 'committee'}
+			<CommitteePositions
+				{slug}
+				positions={data.positions}
+				members={members.active}
+				canManage={data.canManagePositions}
+				onchanged={refreshRoster}
+			/>
+		{/if}
+
 		{#if data.canManage && pendingEmailInvites.length > 0}
 			<!-- Invitations to an address rather than an account. They have no roster
 			     row until the person signs up, so they cannot live in the table. -->
-			<InfoCard title="Invited by email">
+			<InfoCard title={msg.member_groups_slug_invited_by_email_title()}>
 				<Table>
 					{#snippet head()}
-						<th>Email</th>
-						<th class="w-px">Role</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th>{msg.member_email_label()}</th>
+						<th class="w-px">{msg.member_role_label()}</th>
+						<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 					{/snippet}
 					{#each pendingEmailInvites as inv (inv.id)}
 						<tr>
@@ -579,12 +688,14 @@
 							<td class="w-px">
 								<Action
 									action={revokeGroupEmailInvite.for(inv.id)}
-									label="Revoke"
-									aria-label={`Revoke the invitation to ${inv.email}`}
+									label={msg.member_groups_slug_revoke_label()}
+									aria-label={msg.member_groups_slug_revoke_invitation_2_label({
+										email: inv.email
+									})}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation to {inv.email}?"
-									successToast="Invitation revoked"
+									confirm={msg.member_groups_slug_revoke_invitation_4_body({ email: inv.email })}
+									successToast={msg.member_groups_slug_invitation_revoked_toast()}
 									onsuccess={refreshRoster}
 								>
 									{#snippet form()}

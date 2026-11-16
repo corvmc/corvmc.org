@@ -1,5 +1,5 @@
 import { createContext } from 'svelte';
-import type { getMemberLayout } from '$lib/remote/layout.remote';
+import type { getMemberLayout } from '#lib/remote/layout.remote.js';
 
 export type MemberLayout = Awaited<ReturnType<typeof getMemberLayout>>;
 

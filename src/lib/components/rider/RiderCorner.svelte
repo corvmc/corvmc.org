@@ -1,12 +1,13 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import RiderElementsEditor from './RiderElementsEditor.svelte';
-	import { saveMyRiderElements, saveMemberRiderElements } from '$lib/remote/rider.remote';
-	import type { RiderElementRowState } from '$lib/types/rider';
+	import { saveMyRiderElements, saveMemberRiderElements } from '#lib/remote/rider.remote.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
 
 	/**
 	 * One person's corner of the rider — or the band's shared items, which is
@@ -55,6 +56,7 @@
 	 */
 	const adminRemote = $derived(saveMemberRiderElements.for(ownerUserId ?? 'shared'));
 
+	// svelte-ignore state_referenced_locally
 	let elements = $state<RiderElementRowState[]>(initial);
 
 	// Labelled inputs only, matching what the editor posts. It is now the card's
@@ -71,8 +73,13 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge variant="primary">You</Badge>{/if}
-			<Badge class="ml-auto">{inputCount} {inputCount === 1 ? 'input' : 'inputs'}</Badge>
+			{#if mine}<Badge variant="primary">{m.rider_rider_corner_text_label()}</Badge>{/if}
+			<Badge class="ml-auto"
+				>{inputCount}
+				{inputCount === 1
+					? m.rider_rider_corner_input_label()
+					: m.rider_rider_corner_inputs_label()}</Badge
+			>
 		</div>
 		{#if subtitle}
 			<p class="mb-3 text-xs text-base-content/60">{subtitle}</p>
@@ -82,7 +89,7 @@
 			<Form
 				remote={saveMyRiderElements}
 				guard
-				successToast="Rider saved"
+				successToast={m.rider_rider_corner_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
@@ -94,14 +101,14 @@
 					field={saveMyRiderElements.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
 				>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.rider_rider_corner_label()} />{/snippet}
 				</RiderElementsEditor>
 			</Form>
 		{:else if canEdit}
 			<Form
 				remote={adminRemote}
 				guard
-				successToast="Rider saved"
+				successToast={m.rider_rider_corner_success_toast()}
 				onsuccess={onsaved}
 				class="space-y-4"
 			>
@@ -114,7 +121,7 @@
 					field={adminRemote.fields.elements}
 					idPrefix={ownerUserId ?? 'shared'}
 				>
-					{#snippet action()}<SubmitButton label="Save" />{/snippet}
+					{#snippet action()}<SubmitButton label={m.rider_rider_corner_label()} />{/snippet}
 				</RiderElementsEditor>
 			</Form>
 		{:else}

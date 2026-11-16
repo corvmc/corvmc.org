@@ -1,7 +1,7 @@
 import type Stripe from 'stripe';
 import { fulfillPurchase } from './ticket-service';
 import { emitTicketPurchased } from './purchased-event';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // Ticket checkout listener

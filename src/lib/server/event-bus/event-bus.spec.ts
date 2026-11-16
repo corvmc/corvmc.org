@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Emittery from 'emittery';
-import { domainEvents } from './event-bus';
+import { domainEvents, type ReservationConfirmedEvent } from './event-bus';
 
 beforeEach(() => {
 	domainEvents.clearListeners();
@@ -57,7 +57,7 @@ describe('domainEvents', () => {
 			receivedPayload = data;
 		});
 
-		const payload = {
+		const payload: ReservationConfirmedEvent = {
 			reservationId: 'res-1',
 			userId: 'user-1',
 			userName: 'Alice',

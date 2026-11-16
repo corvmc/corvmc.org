@@ -14,6 +14,9 @@ import { batchInsert, db } from './db';
  * The off-site rows exist so the difference is renderable locally at all: with
  * only one venue the picker has nothing to pick and the production console's
  * off-site branch is unreachable.
+ *
+ * Access answers are mixed, and the theatre's are all unknown, so a listing
+ * with no access line is reachable too.
  */
 export async function seedVenues(events: any[]) {
 	console.log('Seeding venues...');
@@ -29,7 +32,9 @@ export async function seedVenues(events: any[]) {
 			state: 'OR',
 			postalCode: '97333',
 			capacity: 60,
-			loadInNotes: 'Alley door, ring the buzzer. Two steps up, no ramp.'
+			loadInNotes: 'Alley door, ring the buzzer. Two steps up, no ramp.',
+			stepFreeEntry: 'no',
+			accessibleRestroom: 'yes'
 		},
 		{
 			id: 'seed-venue-park',
@@ -40,7 +45,9 @@ export async function seedVenues(events: any[]) {
 			state: 'OR',
 			capacity: 400,
 			contactName: 'Festival production office',
-			loadInNotes: 'Van to the NW corner off 6th. Generator is theirs; we bring everything else.'
+			loadInNotes: 'Van to the NW corner off 6th. Generator is theirs; we bring everything else.',
+			stepFreeEntry: 'yes',
+			seating: 'no'
 		},
 		{
 			id: 'seed-venue-hall',
@@ -70,7 +77,11 @@ export async function seedVenues(events: any[]) {
 	if (offSite) {
 		await db
 			.update(eventListing)
-			.set({ venueId: 'seed-venue-hall', location: 'Whiteside Theatre, 361 SW Madison Ave' })
+			.set({
+				venueId: 'seed-venue-hall',
+				location: 'Whiteside Theatre',
+				address: '361 SW Madison Ave, Corvallis, OR'
+			})
 			.where(eq(eventListing.id, offSite.id));
 	}
 

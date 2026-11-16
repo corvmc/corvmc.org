@@ -45,6 +45,7 @@ and the numbers are what somebody is paid.
 
 ## Ending
 
-The output is a spec in `docs/specs/` that says **what gets built** — rejected alternatives go in
-git, not in it — plus a `spec`-labelled tracking issue, plus a filed issue for everything found
-along the way that is not this feature. Then `feature-workflow` takes over.
+The output is a proposal on the issue, as its body or a comment, that says **what gets built** —
+rejected alternatives go in the issue discussion and later the decision record, not in it — plus a
+filed issue for everything found along the way that is not this feature. Nothing is committed to
+`docs/specs/`. Then `feature-workflow` takes over.

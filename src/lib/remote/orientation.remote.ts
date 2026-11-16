@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { ORIENTATION_WAIVED_REASON_MAX } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { ORIENTATION_WAIVED_REASON_MAX } from '#lib/config.js';
 import {
 	getOrientation,
 	waiveOrientation as waiveService
-} from '$lib/server/volunteer/orientation-service';
+} from '#lib/server/volunteer/orientation-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Whether a member has been shown around the space.
@@ -48,7 +49,7 @@ export const waiveMemberOrientation = form(
 		userId: z.string().min(1),
 		reason: z.string().trim().min(1, 'Say why it is not needed').max(ORIENTATION_WAIVED_REASON_MAX)
 	}),
-	async (data) => {
+	writesAudit('orientation.waived', async (data) => {
 		const staff = await requireCapability('reservation.manage');
 
 		try {
@@ -59,5 +60,5 @@ export const waiveMemberOrientation = form(
 
 		await getMemberOrientation(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );

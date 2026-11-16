@@ -2,10 +2,11 @@ import { error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { getForDownload } from '$lib/server/group/file-service';
-import { getPrivateObject } from '$lib/server/private-storage';
-import { contentDispositionAttachment } from '$lib/server/storage-keys';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { groupRead } from '#lib/server/group/group-read.js';
+import { getForDownload } from '#lib/server/group/file-service.js';
+import { getPrivateObject } from '#lib/server/private-storage.js';
+import { contentDispositionAttachment } from '#lib/server/storage-keys.js';
 
 /**
  * The one way a private object reaches a person.
@@ -17,8 +18,7 @@ import { contentDispositionAttachment } from '$lib/server/storage-keys';
  *
  * An API route rather than a remote function because it returns a stream, not
  * JSON — which is also why the upload and the delete are *not* here. Those are
- * remote forms in `$lib/remote/files.remote.ts`; the spec's routes table listed
- * a `DELETE` verb only because this `GET` was already in it.
+ * remote forms in `#lib/remote/files.remote.js`.
  */
 export const GET: RequestHandler = async ({ params }) => {
 	// Read the row first. The group this authorizes against comes from stored
@@ -32,9 +32,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	// tell "no such file" from "not your file" by the status code.
 	if (!row) error(404, 'Not found');
 
-	// The whole authorization, against the file's own group. `allowStaff`,
+	// The whole authorization, against the file's own group. `staff`,
 	// matching every other group read.
-	await requireGroupRole({ id: row.groupId }, 'member', { allowStaff: true });
+	await requireGroupRole({ id: row.groupId }, 'member', { staff: groupRead });
 
 	const obj = await getPrivateObject(row.key);
 	// A live row whose object is gone: a put that failed after the insert, or the

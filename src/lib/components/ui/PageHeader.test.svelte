@@ -12,9 +12,14 @@
 
 <Tooltip.Provider delayDuration={300}>
 	<PageHeader title="Volunteering" documentTitle={null}>
-		<Button>Unsized</Button>
-		<Button size="lg">Large</Button>
-		<Action action={async () => undefined} label="New shift" confirm="Make it?" />
+		<Button data-testid="unsized">Unsized</Button>
+		<Button size="lg" data-testid="large">Large</Button>
+		<Action
+			action={async () => undefined}
+			label="New shift"
+			confirm="Make it?"
+			data-testid="new-shift"
+		/>
 	</PageHeader>
-	<Button>Outside</Button>
+	<Button data-testid="outside">Outside</Button>
 </Tooltip.Provider>

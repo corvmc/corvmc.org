@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 // ---------------------------------------------------------------------------
 // Plus-addressed inbox reply addresses

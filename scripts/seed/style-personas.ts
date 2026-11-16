@@ -268,7 +268,7 @@ export async function seedStylePersonaHistory(
 		bookerType: 'user',
 		bookerId: HALF,
 		createdByUserId: HALF,
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt: ptDate(9, 19),
 		endsAt: ptDate(9, 21),
 		notes: 'Will confirm the time',
@@ -447,7 +447,6 @@ export async function seedStylePersonaHistory(
 		[
 			'check_in_reminder',
 			'reservation_reminder',
-			'confirmation_reminder',
 			'band_invitation',
 			'band_invitation_accepted',
 			'recurring_skipped'
@@ -457,20 +456,13 @@ export async function seedStylePersonaHistory(
 			notificationType,
 			emailEnabled: false,
 			inAppEnabled: false
-		})),
-		7
+		}))
 	);
 
-	// --- writes --------------------------------------------------------------
-	// 12 bound parameters a row × 8 = 96, under D1's 100. The count is what
-	// drizzle binds, not what is written here: `id` carries a JS default.
-	await batchInsert(reservation, reservationRows, 8);
-	// 17 × 5 = 85 — `ticket` binds its split columns whether or not they are set.
-	if (ticketRows.length) await batchInsert(ticket, ticketRows, 5);
-	// 8 × 12 = 96.
-	await batchInsert(creditTransaction, creditRows, 12);
-	// 7 × 14 = 98.
-	await batchInsert(notification, notificationRows, 14);
+	await batchInsert(reservation, reservationRows);
+	if (ticketRows.length) await batchInsert(ticket, ticketRows);
+	await batchInsert(creditTransaction, creditRows);
+	await batchInsert(notification, notificationRows);
 	await db
 		.update(user)
 		.set({ creditFreeHours: balance, creditEquipment: 3 })

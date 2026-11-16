@@ -1,12 +1,13 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 // One file for the marketing actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/marketing.remote', () => {
+vi.mock('#lib/remote/marketing.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null
@@ -24,7 +25,13 @@ vi.mock('$lib/remote/marketing.remote', () => {
 		},
 		createAudience: {
 			enhance: () => ({ method: 'POST', action: '?/createAudience' }),
-			fields: { allIssues: () => null },
+			fields: {
+				name: field('name'),
+				slug: field('slug'),
+				description: field('description'),
+				allowOptIn: field('allowOptIn'),
+				allIssues: () => null
+			},
 			result: undefined
 		}
 	};
@@ -34,7 +41,7 @@ vi.mock('$lib/remote/marketing.remote', () => {
 // partial mock of this module is a missing-export error at import time rather
 // than at the call.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -50,17 +57,19 @@ const CreateAudienceAction = (await import('./CreateAudienceAction.svelte')).def
  */
 describe('AddSubscriberAction', () => {
 	const open = async () => {
-		await render(AddSubscriberAction, { audienceId: 'aud-3' });
-		await page.getByRole('button', { name: 'Add Subscriber' }).click();
+		// The trigger is the container's only button; the dialog portals out of it.
+		const { locator } = await render(AddSubscriberAction, { audienceId: 'aud-3' });
+		await locator.getByRole('button').click();
 		return page.getByRole('dialog');
 	};
 
 	it('renders a server issue on the email as a message', async () => {
-		issues.email = [{ path: ['email'], message: 'That address is already subscribed.' }];
+		const message = 'That address is already subscribed.';
+		issues.email = [{ path: ['email'], message }];
 		try {
-			await open();
+			const dialog = await open();
 
-			await expect.element(page.getByText('That address is already subscribed.')).toBeVisible();
+			await expect.element(dialog.getByText(message)).toBeVisible();
 		} finally {
 			issues.email = null;
 		}
@@ -69,14 +78,15 @@ describe('AddSubscriberAction', () => {
 	// `canSubmit` reads `email`, so the binding has to survive the wrapper — if it
 	// does not, the submit button never enables and nobody can be added.
 	it('enables the submit once an address is typed', async () => {
-		await open();
+		const dialog = await open();
 
-		const submit = page.getByRole('button', { name: 'Add Subscriber', exact: true }).last();
+		const submit = dialog.getByCss('button[type="submit"]');
 		await expect.element(submit).toBeDisabled();
 
-		// By role: `required` puts an `aria-hidden` `*` inside the caption, so the
-		// label reads "Email*" while the accessible name is "Email".
-		await userEvent.fill(page.getByRole('textbox', { name: 'Email' }), 'nina@example.dev');
+		await userEvent.fill(
+			dialog.getByCss('input:is([name="email"], [name^="email/"])'),
+			'nina@example.dev'
+		);
 
 		await expect.element(submit).toBeEnabled();
 	});
@@ -90,12 +100,17 @@ describe('AddSubscriberAction', () => {
  * nothing on either side complains.
  */
 describe('CreateAudienceAction', () => {
+	/** The public signup route for a slug — a path, not copy. */
+	const signupPath = (slug: string) => `/subscribe/${slug}`;
+
 	const slug = () =>
-		document.querySelector('[role="dialog"] input[name="slug"]') as unknown as HTMLInputElement;
+		document.querySelector(
+			'[role="dialog"] input:is([name="slug"], [name^="slug/"])'
+		) as unknown as HTMLInputElement;
 
 	const open = async () => {
-		await render(CreateAudienceAction, {});
-		await page.getByRole('button', { name: 'New Audience' }).click();
+		const { locator } = await render(CreateAudienceAction, {});
+		await locator.getByRole('button').click();
 		await expect.element(page.getByLabelText('Name')).toBeVisible();
 		return page.getByRole('dialog');
 	};
@@ -122,7 +137,7 @@ describe('CreateAudienceAction', () => {
 
 		await userEvent.fill(page.getByLabelText('Name'), 'Volunteers');
 
-		await expect.element(page.getByText('/subscribe/volunteers')).toBeVisible();
+		await expect.element(page.getByText(signupPath('volunteers'))).toBeVisible();
 	});
 
 	// A derived slug is a starting point, not a rule. Once somebody has typed
@@ -137,7 +152,7 @@ describe('CreateAudienceAction', () => {
 		await userEvent.fill(slug(), 'helpers');
 		await userEvent.fill(page.getByLabelText('Name'), 'Volunteer Crew');
 
-		await expect.element(page.getByText('/subscribe/helpers')).toBeVisible();
+		await expect.element(page.getByText(signupPath('helpers'))).toBeVisible();
 		expect(slug().value).toBe('helpers');
 	});
 });

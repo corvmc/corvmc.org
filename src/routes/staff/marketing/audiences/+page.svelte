@@ -1,50 +1,62 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getAudiences } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { CreateAudienceAction } from '$lib/components/actions';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { getAudienceList } from '#lib/remote/marketing.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { CreateAudienceAction } from '#lib/components/actions/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { outreachViews } from '../views';
 
-	let audiences = $derived(await getAudiences());
+	let audiences = $derived(await getAudienceList());
 </script>
 
-<PageHeader title="Audiences" subtitle="Marketing">
-	<CreateAudienceAction
-		onsuccess={(result) => {
-			const r = result as { audienceId?: string };
-			if (r?.audienceId) goto(resolve(`/staff/marketing/audiences/${r.audienceId}`));
-		}}
-	/>
+<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_audiences_title()}>
+	<StaffViews views={outreachViews} active="audiences" />
 </PageHeader>
 <PageContent>
+	<div class="flex justify-end">
+		<CreateAudienceAction
+			size="sm"
+			onsuccess={(result) => {
+				const r = result as { audienceId?: string };
+				if (r?.audienceId) goto(resolve(`staff/marketing/audiences/${r.audienceId}`));
+			}}
+		/>
+	</div>
 	{#if audiences.length === 0}
-		<EmptyState description="No audiences yet. Create one to start building your email lists." />
+		<EmptyState
+			title={m.staff_marketing_audiences_no_audiences_title()}
+			description={m.staff_marketing_audiences_description_body()}
+		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Audience</th>
-				<th class="col-support w-px">Opt-in</th>
-				<th class="cell-num">Subscribers</th>
-				<th class="col-extra whitespace-nowrap">Created</th>
+				<th>{m.staff_audience_label()}</th>
+				<th class="col-support w-px">{m.staff_opt_label()}</th>
+				<th class="cell-num">{m.staff_subscribers_label()}</th>
+				<th class="col-extra whitespace-nowrap">{m.staff_created_label()}</th>
 			{/snippet}
 			{#each audiences as a (a.id)}
-				{@const href = resolve(`/staff/marketing/audiences/${a.id}`)}
+				{@const href = resolve(`staff/marketing/audiences/${a.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="cell-primary"><EntityIdentity ref={a.ref} /></td>
 					<td class="col-support w-px">
 						{#if a.systemKey}
-							<Badge size="sm" variant="info" class="whitespace-nowrap">Built-in</Badge>
+							<Badge size="sm" variant="info" class="whitespace-nowrap"
+								>{m.staff_built_label()}</Badge
+							>
 						{:else}
 							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
-								{a.allowOptIn ? 'Public' : 'Staff only'}
+								{a.allowOptIn ? m.staff_public_label() : m.staff_staff_only_label()}
 							</Badge>
 						{/if}
 					</td>

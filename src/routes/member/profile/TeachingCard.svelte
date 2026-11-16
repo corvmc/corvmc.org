@@ -1,19 +1,25 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { resolve } from '$app/paths';
 	import {
 		applyToTeach,
 		updateInstructorListing,
 		withdrawApplication,
 		setAcceptingStudents
-	} from '$lib/remote/instructors.remote';
-	import type { Instructor } from '$lib/server/db/schema/instructor';
+	} from '#lib/remote/instructors.remote.js';
+	import type { Instructor } from '#lib/server/db/schema/instructor.js';
+	import type { DirectoryReach } from '#lib/server/instructor/instructor-directory-service.js';
 
 	/**
 	 * Teaching, on the member's own profile — one card with five states. Only the
@@ -30,11 +36,13 @@
 	let {
 		instructor,
 		hasPublicContact,
-		hasAnyContact
+		hasAnyContact,
+		directoryReach
 	}: {
 		instructor: Instructor | null;
 		hasPublicContact: boolean;
 		hasAnyContact: boolean;
+		directoryReach: DirectoryReach;
 	} = $props();
 
 	const applyFields = applyToTeach.fields;
@@ -44,23 +52,39 @@
 	const isApplication = $derived(
 		instructor?.status === 'requested' || instructor?.status === 'rejected'
 	);
+
+	// The directory lists a teacher through their profile, so a hidden or unsaved
+	// one leaves an approved teacher unlisted (#2806).
+	const reachWarning = $derived(
+		{
+			public: null,
+			members: m.member_profile_teaching_card_reach_members_body(),
+			hidden: m.member_profile_teaching_card_reach_hidden_body(),
+			missing: m.member_profile_teaching_card_reach_missing_body()
+		}[directoryReach]
+	);
 </script>
 
-<InfoCard title="Teaching at CMC">
+<InfoCard title={m.member_profile_teaching_card_title()}>
 	{#if !instructor}
 		<p class="mb-4 text-subtle">
-			Teach here and you can book the room at the member rate without the monthly cap, and appear in
-			the teacher directory. Staff review your application, and it becomes your listing.
+			{#await getReservationPolicy('instructor') then teaching}{m.member_profile_teaching_card_teach_here_can_book_room_text(
+					{ rate: formatCents(teaching.hourlyRateCents) }
+				)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
 		</p>
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
-		<Button href={resolve('/member/profile/teaching/apply')} size="sm">Apply to teach</Button>
+		<Button href={resolve('member/profile/teaching/apply')} size="sm"
+			>{m.member_apply_teach_label()}</Button
+		>
 	{:else}
 		<div class="mb-4 flex items-center gap-2">
 			<StatusBadge status={instructor.status} />
 			{#if instructor.status === 'requested'}
-				<span class="text-subtle text-sm">Staff will take a look.</span>
+				<span class="text-subtle text-sm"
+					>{m.member_profile_teaching_card_staff_will_take_look_text()}</span
+				>
 			{/if}
 		</div>
 
@@ -68,10 +92,16 @@
 			<!-- Handed back, not refused. Stored rather than only emailed because
 			     they cannot fix what they cannot see. -->
 			<Alert type="warning" class="mb-4">
-				<p class="font-semibold">Staff asked for a change</p>
+				<p class="font-semibold">{m.member_profile_teaching_card_staff_asked_change_text()}</p>
 				<p class="whitespace-pre-line">{instructor.reviewNotes}</p>
-				<p class="mt-2 text-sm">Edit below and send it back — nothing is lost.</p>
+				<p class="mt-2 text-sm">
+					{m.member_profile_teaching_card_edit_below_send_back_nothing_text()}
+				</p>
 			</Alert>
+		{/if}
+
+		{#if (instructor.status === 'active' || isApplication) && reachWarning}
+			<Alert type="warning" class="mb-4">{reachWarning}</Alert>
 		{/if}
 
 		{#if instructor.status === 'active' && !hasPublicContact}
@@ -80,10 +110,9 @@
 			     never publish a members-only contact on their behalf. -->
 			<Alert type="warning" class="mb-4">
 				{#if hasAnyContact}
-					Your contact details are members-only, so students browsing publicly can't see them. Add a
-					teaching contact, or make your directory contact public.
+					{m.member_profile_teaching_card_contact_details_members_only_so_body()}
 				{:else}
-					You have no contact details, so students can't reach you. Add some to your profile.
+					{m.member_profile_teaching_card_have_no_contact_details_so_body()}
 				{/if}
 			</Alert>
 		{/if}
@@ -93,32 +122,41 @@
 				{@const f = isApplication ? applyFields : editFields}
 				<FormField
 					field={f.headline}
-					label="What do you teach?"
+					label={m.member_what_do_teach_label()}
 					value={instructor.headline}
 					required={isApplication}
 				/>
 				<FormField
 					field={f.blurb}
-					label="About your teaching"
+					label={m.member_about_teaching_label()}
 					type="textarea"
 					value={instructor.blurb}
 					required={isApplication}
 				/>
-				<FormField field={f.ratesNote} label="Your rates" value={instructor.ratesNote} />
+				<FormField
+					field={f.ratesNote}
+					label={m.member_profile_teaching_card_rates_label()}
+					value={instructor.ratesNote}
+				/>
 				<FormField
 					field={f.bookingUrl}
-					label="Where students book you"
+					label={m.member_profile_teaching_card_where_students_book_label()}
 					value={instructor.bookingUrl}
 				/>
 				{#if isApplication}
 					<FormField
 						field={applyFields.applicationNote}
-						label="Anything staff should know? (not published)"
+						label={m.member_anything_staff_should_know_not_label()}
+						description={m.member_not_published_body()}
 						type="textarea"
 						value={instructor.applicationNote}
 					/>
 				{/if}
-				<SubmitButton>{isApplication ? 'Send for review' : 'Save listing'}</SubmitButton>
+				<SubmitButton
+					>{isApplication
+						? m.member_profile_teaching_card_send_review_label()
+						: m.member_profile_teaching_card_save_listing_label()}</SubmitButton
+				>
 			</Form>
 		{/if}
 
@@ -128,20 +166,31 @@
 					{...acceptFields.accepting.as('hidden', instructor.acceptingStudents ? 'false' : 'true')}
 				/>
 				<SubmitButton variant="ghost">
-					{instructor.acceptingStudents ? 'Stop taking new students' : 'Take new students again'}
+					{instructor.acceptingStudents
+						? m.member_profile_teaching_card_stop_taking_new_students_label()
+						: m.member_profile_teaching_card_take_new_students_again_label()}
 				</SubmitButton>
 			</Form>
 		{/if}
 
 		{#if isApplication}
-			<Form remote={withdrawApplication} class="mt-4">
-				<SubmitButton variant="ghost">Withdraw application</SubmitButton>
-			</Form>
+			<!-- Withdrawing deletes the application, so it asks first. -->
+			<div class="mt-4">
+				<Action
+					action={withdrawApplication}
+					label={m.member_profile_teaching_card_withdraw_application_label()}
+					modalTitle={m.member_profile_teaching_card_withdraw_application_title()}
+					confirm={m.member_profile_teaching_card_withdraw_application_body()}
+					successToast={m.member_profile_teaching_card_withdrawn_toast()}
+					variant="ghost"
+					submitVariant="error"
+				/>
+			</div>
 		{/if}
 
 		{#if instructor.status === 'paused' || instructor.status === 'retired'}
 			<p class="text-subtle">
-				Your teaching status is set by staff. Get in touch if you'd like to start again.
+				{m.member_profile_teaching_card_teaching_status_set_by_staff_text()}
 			</p>
 		{/if}
 	{/if}

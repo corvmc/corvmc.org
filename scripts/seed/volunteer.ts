@@ -8,10 +8,14 @@ import {
 	volunteerRoleCertification,
 	volunteerRoleInterest,
 	workOrder,
+	workOrderAssignee,
+	volunteerShift,
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
+import { and, asc, count, eq, gt, isNotNull, isNull, notInArray } from 'drizzle-orm';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts } from './shifts';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
@@ -33,6 +37,8 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 	skillMatches?: string[];
 	/** Capabilities a confirmed signup carries for its shift's event; see `grantableCapabilities`. */
 	capabilityGrants?: string[];
+	/** Days before the event those grants start (#2993); 0 when left out. */
+	grantLeadDays?: number;
 }> = [
 	{
 		name: 'Sound Engineering',
@@ -187,7 +193,19 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 47,
 		defaultDurationMinutes: 240,
 		defaultCapacity: 1,
-		capabilityGrants: ['finance.collect']
+		capabilityGrants: ['finance.collect', 'event.checkIn']
+	},
+	{
+		// One market's vendor host (#2993): decides, checks in and takes table fees
+		// for that market, from 30 days before it. Named like the canonical role.
+		name: 'Vendor host',
+		group: 'at-shows' as const,
+		description: 'Decide vendor applications for a market, check vendors in, and take table fees.',
+		displayOrder: 48,
+		defaultDurationMinutes: 360,
+		defaultCapacity: 1,
+		grantLeadDays: 30,
+		capabilityGrants: ['market.host']
 	},
 	{
 		// Archived so the restore path and the "archived roles still resolve in
@@ -307,9 +325,7 @@ export async function seedVolunteerProfiles(users: SeedUser[], reviewer: SeedUse
 		};
 	});
 
-	// 11 columns × the default batch of 10 is 110 bound parameters, over D1's
-	// 100-variable ceiling for a single statement. 8 × 11 = 88.
-	const inserted = await batchInsert(volunteerProfile, rows, 8);
+	const inserted = await batchInsert(volunteerProfile, rows);
 
 	const blockedIds = new Set(blockedMinors.map((u) => u.id));
 	return {
@@ -494,11 +510,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	// Named work parties, so the board shows something other than the role.
 	const UNATTACHED_SHIFT_TITLES = ['Spring Deep Clean', 'Back Room Build', 'Gear Triage Day'];
 
-	// `startsAt`/`endsAt` are nullable on `work_order` — an undated duty-list job
-	// has no times — but every row built below sets both. Narrowed once here so
-	// the reads downstream do not each need a non-null assertion.
-	const shiftRows = (await batchInsert(
-		workOrder,
+	// Each row is a task with one shift on it (#2518); sign-ups name `shiftId`.
+	const shiftRows = await insertTasksWithShifts(
 		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
 			// Every third shift is deliberately left unattached.
 			const pool = offset < 0 ? pastShows : futureShows;
@@ -529,13 +542,10 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 				// paired with — which is what keeps it inside the dashboard's two-week
 				// horizon rather than wherever the events happen to fall.
 				capacity: offset === 2 ? 4 : 1 + (i % 3),
-				notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
+				shiftNotes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
 			};
-		}),
-		// One more bound column per row than this insert used to carry, and D1 caps
-		// a statement at 100 parameters.
-		8
-	)) as (typeof workOrder.$inferSelect & { startsAt: Date; endsAt: Date })[];
+		})
+	);
 
 	const signupRows: (typeof volunteerSignup.$inferInsert)[] = [];
 	const feedbackRows: (typeof volunteerShiftFeedback.$inferInsert)[] = [];
@@ -586,7 +596,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 					: 'claimed';
 			signupRows.push({
 				id: signupId,
-				shiftId: shift.id,
+				shiftId: shift.shiftId,
 				userId: u.id,
 				status,
 				// Five days before the shift, but never in the future: a claim is something
@@ -603,7 +613,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 			if (status === 'completed') {
 				completions.push({
 					signupId,
-					shiftId: shift.id,
+					shiftId: shift.shiftId,
 					userId: u.id,
 					volunteerRoleId,
 					eventId: shift.eventId,
@@ -644,7 +654,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		for (const [i, u] of asked.entries()) {
 			signupRows.push({
 				id: randomUUID(),
-				shiftId: invitableShift.id,
+				shiftId: invitableShift.shiftId,
 				userId: u.id,
 				status: i === 0 ? ('invited' as const) : ('declined' as const),
 				invitedAt: new Date(now.getTime() - (i + 1) * day),
@@ -665,7 +675,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	let docShifts = 0;
 	if (docRole && lastShow) {
 		const endsAt = lastShow.endsAt ?? new Date(lastShow.startsAt.getTime() + 4 * 3_600_000);
-		const [docShift] = await batchInsert(workOrder, [
+		const [docShift] = await insertTasksWithShifts([
 			{
 				id: randomUUID(),
 				volunteerRoleId: docRole.id,
@@ -677,7 +687,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		]);
 		signupRows.push({
 			id: randomUUID(),
-			shiftId: docShift.id,
+			shiftId: docShift.shiftId,
 			userId: photographer.id,
 			status: 'completed',
 			claimedAt: new Date(lastShow.startsAt.getTime() - 5 * day),
@@ -687,8 +697,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		docShifts = 1;
 	}
 
-	const signups = await batchInsert(volunteerSignup, signupRows, 8);
-	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
+	const signups = await batchInsert(volunteerSignup, signupRows);
+	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows);
 
 	return {
 		shifts: shiftRows.length + docShifts,
@@ -792,7 +802,78 @@ export async function seedVolunteerHours(
 		};
 	});
 
-	// 13 columns × the default batch of 10 is 130 bound parameters, over D1's
-	// 100-variable ceiling for a single statement. 7 × 13 = 91.
-	return batchInsert(volunteerHourLog, [...linked, ...bulk], 7);
+	return batchInsert(volunteerHourLog, [...linked, ...bulk]);
+}
+
+/**
+ * Assignment beside a shift (#2518): the owner's example is Nia owning the
+ * festival stage while a shift asks for two more people on the day. Gives the
+ * soonest upcoming live shift's task an assignee who is not signed up for it,
+ * and a second shift the day after, so the task page lists two rosters.
+ * Runs last, after every seeder that writes shifts.
+ */
+export async function seedTasksAndShifts() {
+	console.log('Seeding a task with both an assignee and a shift...');
+	const [upcoming] = await db
+		.select({ workOrderId: volunteerShift.workOrderId, shift: volunteerShift })
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.where(
+			and(
+				gt(volunteerShift.startsAt, new Date()),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt),
+				isNull(workOrder.resolvedAt)
+			)
+		)
+		.orderBy(asc(volunteerShift.startsAt), asc(volunteerShift.id))
+		.limit(1);
+	if (!upcoming) return totals();
+
+	const onShift = await db
+		.select({ userId: volunteerSignup.userId })
+		.from(volunteerSignup)
+		.where(eq(volunteerSignup.shiftId, upcoming.shift.id));
+	const [owner] = await db
+		.select({ userId: volunteerProfile.userId })
+		.from(volunteerProfile)
+		.where(
+			and(
+				eq(volunteerProfile.status, 'active'),
+				onShift.length
+					? notInArray(
+							volunteerProfile.userId,
+							onShift.map((r) => r.userId)
+						)
+					: undefined
+			)
+		)
+		.orderBy(asc(volunteerProfile.userId))
+		.limit(1);
+	if (!owner) return totals();
+
+	await batchInsert(workOrderAssignee, [
+		{ workOrderId: upcoming.workOrderId, userId: owner.userId, assignedAt: new Date() }
+	]);
+	const DAY = 86_400_000;
+	await batchInsert(volunteerShift, [
+		{
+			workOrderId: upcoming.workOrderId,
+			startsAt: new Date(upcoming.shift.startsAt.getTime() + DAY),
+			endsAt: new Date(upcoming.shift.endsAt.getTime() + DAY),
+			capacity: upcoming.shift.capacity,
+			anchor: upcoming.shift.anchor
+		}
+	]);
+	return totals();
+}
+
+/** What every seeder above wrote, for the summary line. */
+async function totals() {
+	const [[shifts], [assignees], [taskHours]] = await Promise.all([
+		db.select({ n: count() }).from(volunteerShift),
+		db.select({ n: count() }).from(workOrderAssignee),
+		db.select({ n: count() }).from(volunteerHourLog).where(isNotNull(volunteerHourLog.workOrderId))
+	]);
+	return { shifts: shifts.n, assignees: assignees.n, taskHours: taskHours.n };
 }

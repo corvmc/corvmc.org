@@ -1,24 +1,30 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import DateRangeFilter from '$lib/components/ui/DateRangeFilter.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { formatDateShortYear, formatCents } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
-	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import DateRangeFilter from '#lib/components/ui/DateRangeFilter.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { formatDateShortYear, formatCents } from '#lib/utils/format.js';
+	import { formatVolunteerHours } from '#lib/config.js';
+	import { getVolunteerReportPage } from '#lib/remote/volunteer.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { reportViews } from '../views';
 	import { IconDownload } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -37,9 +43,9 @@
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/reports/volunteering'), search);
+		const href = withQuery(resolve('staff/reports/volunteering'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -51,7 +57,7 @@
 	const byGroup = $derived(pageData.then((d) => d.byGroup));
 	const stillInReview = $derived(pageData.then((d) => d.stillInReview));
 
-	// Refresh once on mount. An approval on /staff/volunteer changes these totals,
+	// Refresh once on mount. An approval in the hours queue changes these totals,
 	// but it can't refresh them from there — `refresh()` is keyed by argument and
 	// the queue page doesn't know this page's date range. Arriving here after
 	// approving something would otherwise show cached pre-approval numbers, which
@@ -65,8 +71,8 @@
 
 	function monthLabel(month: string): string {
 		const [year, m] = month.split('-');
-		const date = new Date(Number(year), Number(m) - 1, 1);
-		return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+		const date = new Date(Date.UTC(Number(year), Number(m) - 1, 1));
+		return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 	}
 
 	/**
@@ -90,18 +96,11 @@
 	}
 </script>
 
-<PageHeader title="Volunteering" subtitle="Reports">
-	<!--
-		A plain anchor rather than an Action: the endpoint returns a file, not a
-		value, so it is a `+server.ts` and the browser has to navigate to it for
-		`Content-Disposition` to mean anything. `rel="external"` keeps the router
-		out of it for the same reason — and is what the navigation lint rule wants
-		for an href it cannot statically resolve.
-	-->
-	<Button href={exportHref} size="sm" rel="external" download>
-		<IconDownload size={18} />
-		Export CSV
-	</Button>
+<PageHeader
+	title={msg.staff_reports_title()}
+	documentTitle={msg.staff_reports_volunteering_volunteering_title()}
+>
+	<StaffViews views={reportViews} active="volunteering" collapse />
 </PageHeader>
 
 <PageContent>
@@ -110,15 +109,32 @@
 		bind:to={toDate}
 		defaultFrom={yearStart}
 		onchange={() => (pageNumber = 1)}
-	/>
+	>
+		{#snippet actions()}
+			<!--
+				A plain anchor rather than an Action: the endpoint returns a file, not a
+				value, so it is a `+server.ts` and the browser has to navigate to it for
+				`Content-Disposition` to mean anything. `rel="external"` keeps the router
+				out of it for the same reason — and is what the navigation lint rule wants
+				for an href it cannot statically resolve.
+			-->
+			<Button href={exportHref} rel="external" download>
+				<IconDownload size={18} />
+				{msg.staff_export_csv_label()}
+			</Button>
+		{/snippet}
+	</DateRangeFilter>
 
 	{#await report then r}
 		<!-- Approved hours only. That is the whole point of the review step: this
 		     is the number that has to hold up to a funder. -->
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title="Approved hours" value={formatVolunteerHours(r.totals.totalMinutes)} />
-			<StatCard title="Volunteers" value={r.totals.volunteerCount} />
-			<StatCard title="Logs" value={r.totals.logCount} />
+		<StatGrid cols={4}>
+			<StatCard
+				title={msg.staff_approved_hours_title()}
+				value={formatVolunteerHours(r.totals.totalMinutes)}
+			/>
+			<StatCard title={msg.staff_volunteers_title()} value={r.totals.volunteerCount} />
+			<StatCard title={msg.staff_reports_volunteering_logs_title()} value={r.totals.logCount} />
 			<!--
 				Not an average. Everything else on this page is approved-only by
 				design, so without this the report cannot say how much work is still
@@ -126,9 +142,11 @@
 				long" are different problems with different fixes.
 			-->
 			{#await stillInReview then pending}
-				<StatCard title="Still in review" value={pending} />
+				<StatCard title={msg.staff_reports_volunteering_still_review_title()} value={pending} />
+			{:catch}
+				<!-- The `report` block around this says the page's query failed. -->
 			{/await}
-		</div>
+		</StatGrid>
 
 		<!--
 			Two valuations, side by side, never added. They overlap: a donated
@@ -136,34 +154,41 @@
 			the grant reader and the accountant alike. The copy under them says so
 			rather than trusting the layout to.
 		-->
-		<InfoCard title="What that time was worth">
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+		<InfoCard title={msg.staff_reports_volunteering_what_time_was_worth_title()}>
+			<StatGrid cols={2}>
 				<div>
-					<StatCard bare title="Impact value" value={formatCents(r.contributed.impactValueCents)} />
+					<StatCard
+						bare
+						title={msg.staff_impact_value_title()}
+						value={formatCents(r.contributed.impactValueCents)}
+					/>
 					<p class="mt-1 text-subtle text-xs">
-						Every approved hour, at {formatCents(r.contributed.rateCents)}/hr
+						{msg.staff_reports_volunteering_every_approved_hour_at_hr_text({
+							formatCents: formatCents(r.contributed.rateCents)
+						})}
 					</p>
 				</div>
 				<div>
 					<StatCard
 						bare
-						title="Contributed services"
+						title={msg.staff_reports_volunteering_contributed_services_title()}
 						value={formatCents(r.contributed.recognizableServicesCents)}
 					/>
-					<p class="mt-1 text-subtle text-xs">Specialized hours only, each at its own rate</p>
+					<p class="mt-1 text-subtle text-xs">
+						{msg.staff_reports_volunteering_specialized_hours_only_each_at_text()}
+					</p>
 				</div>
-			</div>
+			</StatGrid>
 			<p class="mt-3 text-subtle text-sm">
-				These are two answers to two different questions, not parts of one total — the specialized
-				hours are counted in both, so adding them double-counts that work. Impact value is what a
-				grant application asks for; contributed services is the narrower figure a financial
-				statement can recognise. Rate: {r.contributed.rateSource}.
+				{msg.staff_reports_volunteering_these_two_answers_two_different_text({
+					rateSource: r.contributed.rateSource
+				})}
 			</p>
 			{#if r.contributed.unpricedSpecializedMinutes > 0}
 				<p class="mt-2 text-sm text-warning">
-					{formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)} of specialized time sits on
-					a role with no market rate set, and counts as zero above rather than as the impact rate. Set
-					one on the role to include it.
+					{msg.staff_reports_volunteering_specialized_time_sits_role_with_text({
+						formatVolunteerHours: formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)
+					})}
 				</p>
 			{/if}
 		</InfoCard>
@@ -173,12 +198,12 @@
 				<!-- Only when something named a program. Hours given to CMC at large
 				     are the rest of this page, so a "no program" row would be a
 				     restatement of the total under a confusing label. -->
-				<InfoCard title="Hours by committee or club">
+				<InfoCard title={msg.staff_reports_volunteering_hours_by_committee_club_title()}>
 					<Table>
 						{#snippet head()}
-							<th>Program</th>
-							<th class="text-right">Hours</th>
-							<th class="text-right">People</th>
+							<th>{msg.staff_reports_volunteering_program_label()}</th>
+							<th class="text-right">{msg.staff_reports_volunteering_hours_label()}</th>
+							<th class="text-right">{msg.staff_people_label()}</th>
 						{/snippet}
 						{#each groups as g (g.groupId)}
 							<tr>
@@ -190,11 +215,13 @@
 					</Table>
 				</InfoCard>
 			{/if}
+		{:catch}
+			<!-- The `report` block around this says the page's query failed. -->
 		{/await}
 
-		<InfoCard title="Hours by role">
+		<InfoCard title={msg.staff_reports_volunteering_hours_by_role_title()}>
 			{#if r.byRole.length === 0}
-				<EmptyState description="No approved hours in this range." />
+				<EmptyState description={msg.staff_reports_volunteering_description_body()} />
 			{:else}
 				<!--
 					A bar list rather than a table: the question this answers is "where
@@ -209,13 +236,15 @@
 							<div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
 								<span class="truncate">
 									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
-											>(archived)</span
+											>{msg.staff_reports_volunteering_archived_text()}</span
 										>{/if}{#if row.isSpecializedSkill}<Badge
 											class="ml-2"
 											variant={row.marketRateCents === null ? 'warning' : 'outline'}
 											>{row.marketRateCents === null
-												? 'specialized · unpriced'
-												: `specialized · ${formatCents(row.marketRateCents)}/hr`}</Badge
+												? msg.staff_reports_volunteering_specialized_unpriced_label()
+												: msg.staff_reports_volunteering_specialized_hr_label({
+														formatCents: formatCents(row.marketRateCents)
+													})}</Badge
 										>{/if}
 								</span>
 								<span class="whitespace-nowrap">
@@ -229,20 +258,22 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="mt-3 text-subtle text-xs">Approved logs only.</p>
+				<p class="mt-3 text-subtle text-xs">
+					{msg.staff_reports_volunteering_approved_logs_only_text()}
+				</p>
 			{/if}
 		</InfoCard>
 
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<InfoCard title="By month">
+			<InfoCard title={msg.staff_reports_volunteering_by_month_title()}>
 				{#if r.byMonth.length === 0}
-					<EmptyState description="No approved hours in this range." />
+					<EmptyState description={msg.staff_reports_volunteering_description_body()} />
 				{:else}
 					<Table>
 						{#snippet head()}
-							<th>Month</th>
-							<th class="cell-num">Hours</th>
-							<th class="col-support cell-num">Logs</th>
+							<th>{msg.staff_reports_volunteering_month_label()}</th>
+							<th class="cell-num">{msg.staff_reports_volunteering_hours_label()}</th>
+							<th class="col-support cell-num">{msg.staff_reports_volunteering_logs_label()}</th>
 						{/snippet}
 						{#each r.byMonth as row (row.month)}
 							<tr>
@@ -255,21 +286,25 @@
 				{/if}
 			</InfoCard>
 		</div>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 
-	<InfoCard title="By member">
+	<InfoCard title={msg.staff_reports_volunteering_by_member_title()}>
 		<DataList
 			result={byMember}
-			empty="No approved hours in this range"
+			empty={msg.staff_reports_volunteering_empty_body()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
-						<th>Member</th>
-						<th class="cell-num">Hours</th>
-						<th class="col-support cell-num">Logs</th>
-						<th class="col-support whitespace-nowrap">Last worked</th>
+						<th>{msg.staff_member_label()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_hours_label()}</th>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_logs_label()}</th>
+						<th class="col-support whitespace-nowrap"
+							>{msg.staff_reports_volunteering_last_worked_label()}</th
+						>
 					{/snippet}
 					{#each members as m (m.userId)}
 						<tr class="hover">
@@ -294,17 +329,19 @@
 	-->
 	{#await feedbackByRole then rollup}
 		{#if rollup.length > 0}
-			<InfoCard title="How shifts are going">
+			<InfoCard title={msg.staff_reports_volunteering_how_shifts_going_title()}>
 				<Table>
 					{#snippet head()}
-						<th>Role</th>
-						<th class="cell-num">Avg rating</th>
-						<th class="col-support cell-num">Set up to succeed</th>
-						<th class="col-support cell-num">Responses</th>
+						<th>{msg.staff_role_label()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_avg_rating_label()}</th>
+						<th class="col-support cell-num"
+							>{msg.staff_reports_volunteering_set_up_succeed_label()}</th
+						>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_responses_label()}</th>
 					{/snippet}
 
 					{#each rollup as role (role.volunteerRoleId)}
-						<tr>
+						<tr data-feedback-role={role.volunteerRoleId}>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{role.roleName}</div>
 								{#if role.latestComments.length > 0}
@@ -325,5 +362,7 @@
 				</Table>
 			</InfoCard>
 		{/if}
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 </PageContent>

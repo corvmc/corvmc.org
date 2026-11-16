@@ -1,36 +1,42 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { ResolvedPathname } from '$app/types';
-	import Section from '$lib/components/public/Section.svelte';
+	import Section from '#lib/components/public/Section.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import IdCard from '$lib/components/directory/IdCard.svelte';
-	import IdCardCta from '$lib/components/directory/IdCardCta.svelte';
-	import VinylCard from '$lib/components/directory/VinylCard.svelte';
-	import VinylCardCta from '$lib/components/directory/VinylCardCta.svelte';
-	import { getPublicDirectoryPage } from '$lib/remote/directory.remote';
-	import { hashIndex } from '$lib/utils/patterns';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import IdCard from '#lib/components/directory/IdCard.svelte';
+	import IdCardCta from '#lib/components/directory/IdCardCta.svelte';
+	import VinylCard from '#lib/components/directory/VinylCard.svelte';
+	import VinylCardCta from '#lib/components/directory/VinylCardCta.svelte';
+	import { getPublicDirectoryPage } from '#lib/remote/directory.remote.js';
+	import { hashIndex } from '#lib/utils/patterns.js';
 	import {
 		BAND_COLORS,
 		genreFacets,
 		matchesGenre,
-		matchesSearch
-	} from '$lib/utils/directory-browse';
+		matchesSearch,
+		sortRows,
+		directorySortOptions,
+		type DirectorySort
+	} from '#lib/utils/directory-browse.js';
 
 	type Tab = 'bands' | 'musicians';
 
 	/** Cards rendered before "Show more" appears. */
 	const PAGE_SIZE = 24;
 
-	// Everything seeded from the URL is declared above the top-level await below.
-	// Declarations that follow one are async-gated, so they don't exist yet during
-	// the first render — the same ordering constraint documented in member/bands.
+	// Everything seeded from the URL, and the effect mirroring it back, is declared
+	// above the top-level await below. Declarations that follow one are
+	// async-gated, so they don't exist yet during the first render, and an effect
+	// created there can be stranded (#2224). `url-mirror.spec.ts` holds the line.
 
 	// Bands are the public front door, so they're the default and the clean URL;
 	// musicians carry `?tab=musicians`. Read from the URL rather than mirrored
@@ -46,18 +52,7 @@
 	const initial = page.url.searchParams;
 	let searchText = $state(initial.get('q') ?? '');
 	let genre = $state(initial.get('genre') ?? '');
-
-	// One unfiltered payload; searching and faceting happen in the browser. See
-	// $lib/utils/directory-browse for why, and for what to do if that stops
-	// being the right trade.
-	const pageData = $derived(await getPublicDirectoryPage());
-	const data = $derived(pageData.directory);
-	const user = $derived(pageData.viewer);
-	const visibility = $derived(pageData.visibility);
-	const profileIsHidden = $derived(user && visibility !== 'public');
-
-	const members = $derived(data.members);
-	const bands = $derived(data.bands);
+	let sort = $state<DirectorySort>('newest');
 
 	/** Shared by the tab links and the URL mirror, so they can't disagree. */
 	function directoryHref(target: Tab, q: string, g: string): ResolvedPathname {
@@ -69,14 +64,14 @@
 		if (g) pairs.push(['genre', g]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		return withQuery(resolve('/directory'), search);
+		return withQuery(resolve('directory'), search);
 	}
 
 	// Writes the URL, never state — `searchText` and `genre` stay the source of
-	// truth. `goto(..., { replaceState })` rather than `replaceState()`: the
+	// truth. `goto(..., { replace: true })` rather than a shallow `goto`: the
 	// latter only rewrites the address bar, and the router then overwrites that
 	// entry with its own record on the next navigation. Debounced so typing a
-	// word costs one rewrite rather than one per character, and `keepFocus` so
+	// word costs one rewrite rather than one per character, and `reset: false` so
 	// the rewrite doesn't yank the caret out of the search box mid-word.
 	$effect(() => {
 		// `tab` is read from the URL here, deliberately. Mirroring a state copy of
@@ -84,14 +79,31 @@
 		const href = directoryHref(tab, searchText, genre);
 		const timer = setTimeout(() => {
 			if (location.pathname + location.search !== href) {
-				void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+				void goto(href, { replace: true, reset: false });
 			}
 		}, 300);
 		return () => clearTimeout(timer);
 	});
 
+	// One unfiltered payload; searching and faceting happen in the browser. See
+	// $lib/utils/directory-browse for why, and for what to do if that stops
+	// being the right trade.
+	const pageData = $derived(await getPublicDirectoryPage());
+	const data = $derived(pageData.directory);
+	const user = $derived(pageData.viewer);
+	const visibility = $derived(pageData.visibility);
+	// Missing for either reason: not public, or nothing on the profile yet.
+	const profileIsIncomplete = $derived(user && visibility === 'public' && !pageData.complete);
+	const profileIsHidden = $derived(user && visibility !== 'public');
+
+	const members = $derived(data.members);
+	const bands = $derived(data.bands);
+
 	function matching<T extends { name: string; genres?: string[] }>(rows: T[]): T[] {
-		return rows.filter((r) => matchesSearch(r, searchText) && matchesGenre(r, genre));
+		return sortRows(
+			rows.filter((r) => matchesSearch(r, searchText) && matchesGenre(r, genre)),
+			sort
+		);
 	}
 
 	const bandMatches = $derived(matching(bands));
@@ -145,42 +157,48 @@
 </script>
 
 <svelte:head>
-	<title>Directory | Corvallis Music Collective</title>
+	<title>{m.public_directory_directory_corvallis_music_collective_title()}</title>
 	<meta name="description" content="Bands and musicians in the Corvallis Music Collective." />
 </svelte:head>
 
 {#snippet empty(singular: string, plural: string, total: number)}
 	{#if total === 0}
-		<EmptyState message="No public {singular} profiles yet." />
+		<EmptyState message={m.public_directory_message_body({ singular })} />
 	{:else}
 		<EmptyState>
-			<p>No {plural} match your search.</p>
-			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}>Clear filters</Button>
+			<p>{m.public_directory_no_match_search_text({ plural })}</p>
+			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
+				>{m.public_directory_clear_filters_label()}</Button
+			>
 		</EmptyState>
 	{/if}
 {/snippet}
 
 <Section>
 	<div class="mb-8 text-center">
-		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">Directory</h1>
-		<p class="text-base text-fg-2">Bands and musicians in the Corvallis Music Collective</p>
+		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">
+			{m.public_directory_directory_title()}
+		</h1>
+		<p class="text-base text-fg-2">
+			{m.public_directory_bands_musicians_corvallis_music_collective_text()}
+		</p>
 	</div>
 
 	{#if data.failed}
-		<Alert type="error">Couldn't load the directory right now — please refresh the page.</Alert>
+		<Alert type="error">{m.public_directory_couldn_t_load_directory_right_body()}</Alert>
 	{:else}
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
 					{
 						key: 'bands',
-						label: 'Bands',
+						label: m.public_bands_label(),
 						badge: bandMatches.length,
 						href: directoryHref('bands', searchText, genre)
 					},
 					{
 						key: 'musicians',
-						label: 'Musicians',
+						label: m.public_musicians_label(),
 						badge: musicianMatches.length,
 						href: directoryHref('musicians', searchText, genre)
 					},
@@ -189,8 +207,8 @@
 						// the columns both differ. TabBar renders an <a> in URL mode, so
 						// cross-route tabs compose with no shared state.
 						key: 'instructors',
-						label: 'Teachers',
-						href: resolve('/directory/instructors')
+						label: m.public_teachers_label(),
+						href: resolve('directory/instructors')
 					}
 				]}
 				active={tab}
@@ -201,10 +219,20 @@
 			<FormField
 				type="text"
 				name="q"
-				label="Search"
+				label={m.public_search_label()}
 				class="w-full max-w-sm"
-				placeholder={tab === 'bands' ? 'Search bands by name…' : 'Search musicians by name…'}
+				placeholder={tab === 'bands'
+					? m.public_directory_search_bands_by_name_placeholder()
+					: m.public_directory_search_musicians_by_name_placeholder()}
 				bind:value={searchText}
+			/>
+			<FormField
+				type="select"
+				name="sort"
+				label={m.public_directory_sort_label()}
+				class="w-full max-w-sm"
+				options={directorySortOptions}
+				bind:value={sort}
 			/>
 
 			{#if chips.length > 0}
@@ -224,7 +252,9 @@
 			{/if}
 
 			{#if hasFilters}
-				<Button variant="ghost" size="xs" onclick={clearFilters}>Clear filters</Button>
+				<Button variant="ghost" size="xs" onclick={clearFilters}
+					>{m.public_directory_clear_filters_label()}</Button
+				>
 			{/if}
 		</div>
 
@@ -282,19 +312,33 @@
 		{#if remaining > 0}
 			<div class="mt-8 flex justify-center">
 				<Button variant="default" size="sm" outline onclick={showMore}>
-					Show more ({remaining} left)
+					{m.public_directory_show_more_left_label({ remaining })}
 				</Button>
 			</div>
 		{/if}
 
 		{#if profileIsHidden}
 			<p class="mt-10 text-center text-sm text-fg-3">
-				Don't see your name? Your profile is set to
-				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
-				<a href={resolve('/member/directory')} class="text-cmc-teal underline"
-					>Update your visibility</a
+				<ParaglideMessage
+					message={visibility === 'hidden'
+						? m.public_directory_don_t_see_name_profile_2_text
+						: m.public_directory_don_t_see_name_profile_text}
+					inputs={{}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}{#snippet a({ children })}<a
+							href={resolve('member/directory')}
+							class="text-cmc-teal underline">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
 				>
-				to appear here.
+			</p>
+		{:else if profileIsIncomplete}
+			<p class="mt-10 text-center text-sm text-fg-3">
+				<ParaglideMessage message={m.public_directory_don_t_see_name_profiles_text} inputs={{}}
+					>{#snippet a({ children })}<a
+							href={resolve('member/profile')}
+							class="text-cmc-teal underline">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		{/if}
 	{/if}

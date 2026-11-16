@@ -1,13 +1,14 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { joinGroupForm } from '$lib/remote/groups.remote';
-	import { applyToGroups } from '$lib/remote/group-applications.remote';
-	import { groupApplicationQuestions } from '$lib/config';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { joinGroupForm } from '#lib/remote/groups.remote.js';
+	import { applyToGroups } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationQuestions } from '#lib/config.js';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * One control for both self-service doors, mounted on the member index and
@@ -43,14 +44,14 @@
 {#if policy === 'open'}
 	<Action
 		action={joinGroupForm}
-		label="Join"
-		aria-label={`Join ${groupName}`}
-		modalTitle={`Join ${groupName}`}
-		submitLabel="Join"
-		successToast="You have joined"
+		label={m.groups_join_2_label()}
+		aria-label={m.groups_join_label({ groupName })}
+		modalTitle={m.groups_join_title({ groupName })}
+		submitLabel={m.groups_join_2_label()}
+		successToast={m.groups_join_group_have_joined_toast()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-3">
@@ -59,31 +60,31 @@
 					<p class="text-sm">{instructions}</p>
 				{/if}
 				<p class="text-subtle">
-					You will be a member straight away — no approval, and you can leave whenever you like.
+					{m.groups_join_group_will_member_straight_away_no_text()}
 				</p>
 			</div>
 		{/snippet}
 	</Action>
 {:else if kind === 'committee'}
 	<Button
-		href={withQuery(resolve('/member/groups'), new URLSearchParams({ committee: slug }))}
+		href={withQuery(resolve('member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
-		aria-label={`Apply to ${groupName}`}
+		aria-label={m.groups_join_group_apply_label({ groupName })}
 	>
-		Apply
+		{m.groups_join_group_apply_2_label()}
 	</Button>
 {:else}
 	<Action
 		action={applyForm}
-		label="Apply"
-		aria-label={`Apply to ${groupName}`}
-		modalTitle={`Apply to ${groupName}`}
-		submitLabel="Send application"
-		successToast="Application sent"
+		label={m.groups_join_group_apply_2_label()}
+		aria-label={m.groups_join_group_apply_label({ groupName })}
+		modalTitle={m.groups_join_group_apply_title({ groupName })}
+		submitLabel={m.groups_join_group_send_application_label()}
+		successToast={m.groups_join_group_application_sent_toast()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-3">
@@ -94,8 +95,7 @@
 				{/if}
 				<FormField field={applyForm.fields.note} type="textarea" label={notePrompt} />
 				<p class="text-subtle">
-					The group's chairs will see your application and answer it. You are not a member until
-					they invite you and you accept.
+					{m.groups_join_group_group_s_chairs_will_see_text()}
 				</p>
 			</div>
 		{/snippet}

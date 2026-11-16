@@ -1,21 +1,17 @@
-import { bandBookerJoin, eventBookerJoin } from '$lib/server/reservation/event-hold';
+import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
+import { listPaymentRemindersSent } from '#lib/server/reservation/payment-reminder.js';
 import {
 	recordReservationCash,
 	recordReservationCredit
-} from '$lib/server/finance/reservation-entries';
+} from '#lib/server/finance/reservation-entries.js';
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { command, form } from './_remote';
-import { db } from '$lib/server/db';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
-import {
-	reservation,
-	type Reservation,
-	reservationStatuses,
-	type ReservationStatus
-} from '$lib/server/db/schema/reservation';
-import { createReservationSchema } from '$lib/server/db/schema/reservation';
+import { db } from '#lib/server/db/index.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
+import { reservation, type Reservation } from '#lib/server/db/schema/reservation.js';
+import { createReservationSchema } from '#lib/server/db/schema/reservation.js';
 import {
 	or,
 	eq,
@@ -24,7 +20,6 @@ import {
 	lt,
 	gt,
 	gte,
-	lte,
 	inArray,
 	notInArray,
 	sql,
@@ -34,119 +29,127 @@ import {
 	count,
 	type SQL
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { getById as getBandById } from '$lib/server/band/band-service';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { getById as getBandById } from '#lib/server/band/band-service.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { alias } from 'drizzle-orm/sqlite-core';
 
 /** The roster row that defines ownership — see `band-service.ts`. */
 const ownerMember = alias(groupMember, 'owner_member');
-import { eventListing } from '$lib/server/db/schema/event';
-import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
-import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { formatDateInTz, buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { describeFrequency, monthlyModeOf } from '#lib/server/reservation/rrule-helpers.js';
+import { getLockStatus } from '#lib/server/lock/lock-service.js';
+import { closuresOverlapping } from '#lib/server/reservation/closure-timeline.js';
 import {
-	closuresInWindow,
-	closuresOverlapping,
-	closuresPage,
-	countClosures,
-	interleave,
-	type ClosureFilters,
-	type ClosureRow
-} from '$lib/server/reservation/closure-timeline';
-import type { Pagination } from '$lib/types/pagination';
-import {
-	can,
-	requireCapability,
-	requireCapabilityOrOwner,
-	requireUser
-} from '$lib/server/authorization';
+	countOwedAfterSession,
+	countStaffStatuses,
+	listStaffReservations,
+	staffDateRanges,
+	staffListTypes,
+	staffStatusViews
+} from '#lib/server/reservation/staff-reservation-list.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
-	eventRefColumns,
 	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
 	toBookerRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
+} from '#lib/server/entity/refs.js';
 import {
 	getAvailableSlots,
 	getAvailableSlotsForDates,
 	getConflictDetails,
-	getValidationWarnings
-} from '$lib/server/reservation/conflict-service';
+	getValidationWarnings,
+	isBookableStart,
+	noticeFor,
+	tourSlotsFor,
+	type BookingNotice
+} from '#lib/server/reservation/conflict-service.js';
 import {
 	staffCreate,
 	create,
 	createWaitlisted,
 	cancel,
-	confirm,
 	comp,
+	recordReservationAudit,
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
-	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
-} from '$lib/server/reservation/reservation-service';
-import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
-import { mapDomainError } from '$lib/server/errors';
-import { isAwaitingPayment, isOverdue, isTerminalStatus } from '$lib/utils/reservation-actions';
-import { bookerTypes, type BookerType } from '$lib/config';
-import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
-import { requireInstructor } from '$lib/server/instructor/instructor-context';
-import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { isInAccessWindow } from '$lib/server/lock/fallback-code-service';
-import { doorRecordFor } from '$lib/server/lock/door-service';
-import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
+} from '#lib/server/reservation/reservation-service.js';
+import { orientationForReservation } from '#lib/server/volunteer/orientation-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import {
+	isAwaitingPayment,
+	isTerminalStatus,
+	reservationTrack,
+	trackDetail
+} from '#lib/utils/reservation-actions.js';
+import { bookerTypes, type BookerType } from '#lib/config.js';
+import {
+	getReservationConfig,
+	getBookingTerms,
+	minSlotsFor,
+	termsFor
+} from '#lib/server/reservation/config.js';
+import {
+	assertFeeGateAllows,
+	doorCodeHeldSince,
+	getFeeGate,
+	withholdDoorCode
+} from '#lib/server/reservation/outstanding-fees.js';
+import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
+import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
+import { isInAccessWindow } from '#lib/server/lock/fallback-code-service.js';
+import { doorRecordFor } from '#lib/server/lock/door-service.js';
+import type { CheckoutLineItem } from '#lib/server/finance/payment-service.js';
 import {
 	checkout,
 	recordCashPayment,
 	refund as refundPayment
-} from '$lib/server/finance/payment-service';
-import { getBalance } from '$lib/server/finance/credit-service';
-import { notAProgramHold } from '$lib/server/reservation/program-hold';
+} from '#lib/server/finance/payment-service.js';
+import { getBalance } from '#lib/server/finance/credit-service.js';
+import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
 import {
+	billableHours,
 	commitReservationCredits,
 	computeReservationCredit,
 	freeHoursResetAt,
 	getFreeHoursWallet,
 	reverseReservationCredits,
 	usableFreeHours
-} from '$lib/server/reservation/reservation-credit-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { readerTapCanBeSimulated, terminalReaderId } from '$lib/server/finance/terminal-service';
+} from '#lib/server/reservation/reservation-credit-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { readerTapCanBeSimulated, terminalReaderId } from '#lib/server/finance/terminal-service.js';
 import {
 	cancelReaderPayment,
 	readerPayable,
 	readerPaymentStatus,
 	simulateReaderTap,
 	startReaderPayment
-} from '$lib/server/reservation/reader-payment';
-import { recurringSeries, type RecurringFrequency } from '$lib/server/db/schema/recurring';
-import { formatSlotTime } from '$lib/utils/format';
-import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
+} from '#lib/server/reservation/reader-payment.js';
+import { recurringSeries, type RecurringFrequency } from '#lib/server/db/schema/recurring.js';
+import { formatSlotTime } from '#lib/utils/format.js';
+import { buildRRule, getOccurrences } from '#lib/server/reservation/rrule-helpers.js';
 import {
 	create as createSeries,
 	listActive as listActiveSeries
-} from '$lib/server/reservation/recurring-series-service';
-import { getMembers } from '$lib/server/band/band-service';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { paginate } from '$lib/server/db/paginate';
-import { ensureContactPhone } from '$lib/server/user/user-service';
-import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
-import {
-	DEFAULT_TIMEZONE,
-	SEARCH_LIMIT,
-	LIST_LIMIT,
-	CONFIRMATION_WINDOW_DAYS,
-	confirmWindowOpensAt,
-	withinConfirmationWindow
-} from '$lib/config';
+} from '#lib/server/reservation/recurring-series-service.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import { ensureContactPhone } from '#lib/server/user/user-service.js';
+import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
+import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ===========================================================================
 // Queries
@@ -197,8 +200,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	// Resolved for who is booking. Reading the config directly quoted an
 	// instructor the $15 drop-in rate on the page they pay from.
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-	const durationHours = durationMs / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 	// The booker's, whoever pays. Zero for a session on or after the next reset.
 	const freeHoursBalance = usableFreeHours(
@@ -248,11 +250,16 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
+	// Neither while they owe a fee (#2874): the page says what is held and why.
+	const paymentDueOn = await doorCodeHeldSince(row.createdByUserId);
+
 	return {
-		reservation: row,
+		reservation: withholdDoorCode(row, paymentDueOn !== null),
+		/** The oldest fee's start while the door code is held for one. */
+		paymentDueOn,
 		/** The booking as a record, for the detail page's identity (#1061). */
 		ref: toReservationRef(
 			row,
@@ -308,7 +315,7 @@ export const getBandReservations = query(
 			user: currentUser,
 			group: band,
 			role
-		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		} = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 		const now = new Date();
 		// Whether the viewer may cancel each row. `cancel()` authorizes on
@@ -332,7 +339,9 @@ export const getBandReservations = query(
 				bookedBy: memberRefColumns(),
 				// Not for display — `canCancel` and `canPay` below derive from these.
 				createdByUserId: reservation.createdByUserId,
+				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
+				refundedAt: reservation.refundedAt,
 				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
@@ -356,7 +365,9 @@ export const getBandReservations = query(
 				bookedBy: memberRefColumns(),
 				// Not for display — `canCancel` and `canPay` below derive from these.
 				createdByUserId: reservation.createdByUserId,
+				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
+				refundedAt: reservation.refundedAt,
 				cashDueCents: reservation.cashDueCents
 			})
 			.from(reservation)
@@ -378,13 +389,12 @@ export const getBandReservations = query(
 		);
 
 		// Any member may pay what the band owes (#2095); staff take payment elsewhere.
-		// A scheduled session that has started is past paying online, as on the
-		// member's own card (`memberPayAction`).
-		const canPayRow = (r: (typeof upcoming)[number]) =>
-			role !== 'staff' && isAwaitingPayment(r) && (r.status === 'confirmed' || r.startsAt > now);
+		const canPayRow = (r: (typeof upcoming)[number]) => role !== 'staff' && isAwaitingPayment(r);
 		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
 			...r,
 			ref: toReservationRef(r.ref, band),
+			// The one status the card shows, as staff read it (#2861).
+			track: reservationTrack(r.ref, now),
 			bookedBy: toMemberRef(r.bookedBy),
 			canCancel: cancellable && canCancelRow(r.createdByUserId),
 			canPay: canPayRow(r)
@@ -406,7 +416,7 @@ export const getBandReservations = query(
  *
  * The band panel could show *that* a session existed and nothing behind it, so
  * the notes, the settlement state and a cancellation reason all had to come
- * from staff. The guard is the list's — `member`, `allowStaff` because staff
+ * from staff. The guard is the list's — `member`, `staff` because staff
  * administer band panels — and the row must belong to this band, 404 otherwise.
  *
  * What it deliberately does not return: the booker's phone or email (a
@@ -422,7 +432,7 @@ export const getBandReservationDetail = query(
 			user: currentUser,
 			group: band,
 			role
-		} = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		} = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 		const [row] = await db
 			.select({
@@ -443,11 +453,14 @@ export const getBandReservationDetail = query(
 
 		const res = row.reservation;
 		const { hourlyRateCents } = await getBookingTerms(res.bookerType);
-		const durationHours = (res.endsAt.getTime() - res.startsAt.getTime()) / (1000 * 60 * 60);
+		const durationHours = billableHours(res);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
 		const bandAdmin = role === 'owner' || role === 'admin';
 		const isBooker = res.createdByUserId === currentUser.id;
+
+		// Held from the whole act while the booker owes a fee (#2874).
+		const heldSince = role === 'staff' ? null : await doorCodeHeldSince(res.createdByUserId);
 
 		return {
 			id: res.id,
@@ -466,27 +479,29 @@ export const getBandReservationDetail = query(
 			hourlyRateCents,
 			// What the act owes and whether it has been settled. `cashDueCents` is
 			// null until credits are committed at Confirm; see the schema comment.
-			paidAt: res.paidAt,
-			refundedAt: res.refundedAt,
+			track: reservationTrack(res),
+			trackDetail: trackDetail(res),
 			cashDueCents: res.cashDueCents,
 			creditsUsed: res.creditsUsed,
 			// Every member of the act gets in through `/door` (#756, #2120).
+			codeWithheld: heldSince !== null,
+			// The fee's date is the booker's own business.
+			paymentDueOn: isBooker ? heldSince : null,
 			inAccessWindow: isInAccessWindow(res),
 			canCancel:
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&
-				(res.status === 'scheduled' || res.status === 'confirmed'),
+				res.status === 'confirmed',
 			// The member checkout takes this row — it authorizes on
 			// `createdByUserId`, and a band booking is in its booker's own list —
 			// so the booker gets the link the member page has. The condition is
 			// `getReservationPayment`'s own, restated rather than re-derived:
-			// awaiting confirmation, or confirmed with a balance still owed.
+			// confirmed with a balance still owed.
 			canPay:
 				isBooker &&
-				(res.status === 'scheduled' ||
-					(res.status === 'confirmed' &&
-						!res.paidAt &&
-						(res.cashDueCents == null || res.cashDueCents > 0)))
+				res.status === 'confirmed' &&
+				!res.paidAt &&
+				(res.cashDueCents == null || res.cashDueCents > 0)
 		};
 	}
 );
@@ -569,7 +584,11 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bookerType: reservation.bookerType,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
-			status: reservation.status
+			status: reservation.status,
+			// The overlap warning names each one by its track (#2991).
+			paidAt: reservation.paidAt,
+			refundedAt: reservation.refundedAt,
+			cashDueCents: reservation.cashDueCents
 		})
 		.from(reservation)
 		.where(
@@ -617,6 +636,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 	// One more read inside this remote rather than a second query fanned out of
 	// the page — see `custom/no-concurrent-remote-queries`.
 	const orientation = await orientationForReservation(id);
+	const paymentReminders = await listPaymentRemindersSent(id);
 
 	return {
 		reservation: row,
@@ -626,7 +646,10 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			bookerType: r.bookerType,
 			startsAt: r.startsAt,
 			endsAt: r.endsAt,
-			status: r.status
+			status: r.status,
+			paidAt: r.paidAt,
+			refundedAt: r.refundedAt,
+			cashDueCents: r.cashDueCents
 		})),
 		sameDayClosures,
 		door,
@@ -639,11 +662,18 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			row.status !== 'waitlisted' &&
 			priorCount === 0,
 		orientation,
+		paymentReminders,
 		hourlyRateCents: (await getBookingTerms(row.bookerType)).hourlyRateCents
 	};
 });
 
 /** Staff: search members by name or email for the create-reservation modal. */
+/** The fee gate as staff see it for a member they book for: a warning, never a refusal. */
+export const getMemberFeeGate = query(z.string().min(1), async (memberId) => {
+	await requireCapability('reservation.read');
+	return getFeeGate(memberId, { onBehalf: true });
+});
+
 export const searchMembers = query(z.string(), async (q) => {
 	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
@@ -696,30 +726,48 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 		getAvailableSlots(dateStr),
 		getReservationConfig()
 	]);
+	// Staff book for a member or a band, never as a teacher.
+	const terms = termsFor('user', reservationConfig);
 
 	return {
 		date: dateStr,
 		slots,
 		config: {
-			hourlyRateCents: reservationConfig.hourlyRateCents,
+			hourlyRateCents: terms.hourlyRateCents,
 			slotMinutes: reservationConfig.timeSlotMinutes,
-			minDurationHours: reservationConfig.minDurationHours,
+			minDurationHours: terms.minDurationHours,
 			maxDurationHours: reservationConfig.maxDurationHours
 		}
 	};
 });
 
-/** Member: dates with bookable availability in the next N days. */
-export const getAvailableDates = query(async () => {
+/**
+ * The notice the signed-in member's own booking needs, so the picker offers only
+ * starts `validateBooking` will accept. Signed out, the room minimum.
+ */
+async function viewerNotice(
+	config: Awaited<ReturnType<typeof getReservationConfig>>,
+	bookerType: BookerType | undefined
+): Promise<BookingNotice> {
+	const { locals } = getRequestEvent();
+	return noticeFor(config, { userId: locals.user?.id ?? null, bookerType });
+}
+
+/**
+ * Member: dates with bookable availability in the next N days, and the
+ * new-member notice in minutes when it is what holds back the earliest starts.
+ */
+export const getAvailableDates = query(z.enum(bookerTypes).optional(), async (bookerType) => {
 	const config = await getReservationConfig();
-	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
+	const notice = await viewerNotice(config, bookerType);
+	const minSlots = minSlotsFor(bookerType, config);
 	// Floor, not ceil: the validator (validateBooking) rejects any start *instant*
 	// more than `maxAdvanceDaysOneoff * 24h` past now. A whole calendar day is only
 	// fully bookable when its latest instant is still within that window, i.e. up to
 	// offset `floor(maxAdvanceDays) - 1`. Using ceil could offer a day whose later
 	// slots exceed a fractional limit (e.g. 14.5), recreating the "dead zone" where
 	// the picker shows a date that then 500s on Book & Pay.
-	const days = Math.floor(config.maxAdvanceDaysOneoff);
+	const days = Math.floor(termsFor(bookerType ?? 'user', config).maxAdvanceDaysOneoff);
 	const tz = DEFAULT_TIMEZONE;
 	const todayStr = formatDateInTz(new Date(), tz);
 
@@ -731,58 +779,54 @@ export const getAvailableDates = query(async () => {
 	const dateStrs = Array.from({ length: Math.max(days, 0) }, (_, i) =>
 		formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz)
 	);
-	const slotsByDate = await getAvailableSlotsForDates(dateStrs);
+	const slotsByDate = await getAvailableSlotsForDates(dateStrs, {
+		minAdvanceMinutes: notice.minutes
+	});
+
+	const tourSlots = tourSlotsFor(notice.tourMinutes, config);
 
 	const results: string[] = [];
 	for (const dateStr of dateStrs) {
 		const slots = slotsByDate.get(dateStr) ?? [];
-
-		let maxRun = 0;
-		let run = 0;
-		for (const s of slots) {
-			if (s.available) {
-				run++;
-				if (run > maxRun) maxRun = run;
-			} else {
-				run = 0;
-			}
+		if (slots.some((_, i) => isBookableStart(slots, i, minSlots, tourSlots))) {
+			results.push(dateStr);
 		}
-		if (maxRun >= minSlots) results.push(dateStr);
 	}
-	return results;
+	return {
+		dates: results,
+		newMemberNoticeMinutes: notice.newMember ? notice.minutes : null,
+		tourMinutes: notice.tourMinutes
+	};
 });
 
 /** Available start times for a given date, with pricing config. */
-export const getReservationStartTimes = query(z.string(), async (dateParam) => {
-	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
-	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(dateStr),
-		getReservationConfig()
-	]);
+export const getReservationStartTimes = query(
+	z.object({ date: z.string(), bookerType: z.enum(bookerTypes).optional() }),
+	async ({ date: dateParam, bookerType }) => {
+		const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
+		const reservationConfig = await getReservationConfig();
+		const notice = await viewerNotice(reservationConfig, bookerType);
+		const slots = await getAvailableSlots(dateStr, { minAdvanceMinutes: notice.minutes });
 
-	const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
+		const minSlots = minSlotsFor(bookerType, reservationConfig);
+		const tourSlots = tourSlotsFor(notice.tourMinutes, reservationConfig);
 
-	function contiguousFrom(startIdx: number): number {
-		let count = 0;
-		for (let i = startIdx; i < slots.length && slots[i].available; i++) count++;
-		return count;
+		// Every operating-hour slot, not only the bookable ones. Dropping the rest
+		// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
+		// simply did not contain 10 AM, which reads as a broken app rather than as
+		// somebody else having the room. The *reason* it is unpickable is not
+		// spelled out on the option — "booked" and "too short" were asked for and
+		// then asked back off, because a greyed row already reads as unavailable and
+		// the suffix doubled the length of every line (#1027).
+		return slots.map((s, i) => {
+			const label = formatSlotTime(s.startTime);
+			// Free, but with a booking or closing time too soon after it to fit the
+			// shortest session, or too soon before it to fit a tour, is unpickable.
+			const bookable = isBookableStart(slots, i, minSlots, tourSlots);
+			return { value: s.startTime, label, disabled: !bookable };
+		});
 	}
-
-	// Every operating-hour slot, not only the bookable ones. Dropping the rest
-	// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
-	// simply did not contain 10 AM, which reads as a broken app rather than as
-	// somebody else having the room. The *reason* it is unpickable is not
-	// spelled out on the option — "booked" and "too short" were asked for and
-	// then asked back off, because a greyed row already reads as unavailable and
-	// the suffix doubled the length of every line (#1027).
-	return slots.map((s, i) => {
-		const label = formatSlotTime(s.startTime);
-		// Free, but with a booking or closing time too soon after it to fit the
-		// shortest session, is as unpickable as taken.
-		const bookable = s.available && contiguousFrom(i) >= minSlots;
-		return { value: s.startTime, label, disabled: !bookable };
-	});
-});
+);
 
 /** Available end times for a given date and start time. */
 export const getReservationEndTimes = query(
@@ -803,8 +847,7 @@ export const getReservationEndTimes = query(
 		]);
 
 		const slotMinutes = reservationConfig.timeSlotMinutes;
-		const { minDurationHours } = termsFor(bookerType ?? 'user', reservationConfig);
-		const minSlots = minDurationHours * (60 / slotMinutes);
+		const minSlots = minSlotsFor(bookerType, reservationConfig);
 		const maxSlots = reservationConfig.maxDurationHours * (60 / slotMinutes);
 
 		const startIdx = slots.findIndex((s) => s.startTime === startTime);
@@ -922,9 +965,10 @@ export const previewRecurringInstances = query(
 		date: z.string(),
 		startTime: z.string(),
 		frequency: z.enum(['weekly', 'biweekly', 'monthly']),
-		monthlyMode: z.enum(['weekday', 'monthday']).optional()
+		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+		until: z.string().optional()
 	}),
-	async ({ date, startTime, frequency, monthlyMode }) => {
+	async ({ date, startTime, frequency, monthlyMode, until }) => {
 		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
 		const rruleString = buildRRule(
 			startsAt,
@@ -933,7 +977,9 @@ export const previewRecurringInstances = query(
 		);
 		const now = new Date();
 		// Show ~60 days of preview
-		const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		const sixtyDays = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		const seriesEnd = recurringSeriesEnd({ recurring: frequency, date, recurringUntil: until });
+		const windowEnd = seriesEnd && seriesEnd < sixtyDays ? seriesEnd : sixtyDays;
 		const occurrences = getOccurrences(rruleString, now, windowEnd);
 		return {
 			dates: occurrences.slice(0, 8).map((d) => d.toISOString()),
@@ -960,18 +1006,26 @@ export const checkConflicts = query(
 /**
  * Booking policy facts for the info strip — live config, so staff changes to
  * `reservation.*` site-config show up instead of drifting from hard-coded copy.
+ * `instructor` gives a teacher the teaching terms, which carry no new-member
+ * notice (#2808).
  */
-export const getReservationPolicy = query(async () => {
-	const reservationConfig = await getReservationConfig();
-	return {
-		hourlyRateCents: reservationConfig.hourlyRateCents,
-		operatingHoursStart: reservationConfig.operatingHoursStart,
-		operatingHoursEnd: reservationConfig.operatingHoursEnd,
-		minDurationHours: reservationConfig.minDurationHours,
-		maxDurationHours: reservationConfig.maxDurationHours,
-		minAdvanceMinutes: reservationConfig.minAdvanceMinutes
-	};
-});
+export const getReservationPolicy = query(
+	z.enum(['user', 'instructor']).optional(),
+	async (bookerType = 'user') => {
+		const reservationConfig = await getReservationConfig();
+		const terms = termsFor(bookerType, reservationConfig);
+		// The viewer's own notice: a new member is told 3 days, not the room's hour.
+		const notice = await viewerNotice(reservationConfig, bookerType);
+		return {
+			hourlyRateCents: terms.hourlyRateCents,
+			operatingHoursStart: reservationConfig.operatingHoursStart,
+			operatingHoursEnd: reservationConfig.operatingHoursEnd,
+			minDurationHours: terms.minDurationHours,
+			maxDurationHours: reservationConfig.maxDurationHours,
+			minAdvanceMinutes: notice.minutes
+		};
+	}
+);
 
 /**
  * Member: the contact number on file, so the booking forms know whether to ask
@@ -1021,11 +1075,11 @@ export const getMembershipStatus = query(async () => {
 
 /** Band: check if any active band member has a sustaining membership. */
 export const getBandMembershipStatus = query(z.string(), async (slug) => {
-	// `allowStaff` to match `getBandReservations`, which it is composed with in
+	// `staff` to match `getBandReservations`, which it is composed with in
 	// `getBandReservationsPage`. Without it the composed query admitted staff on
 	// its first read and 403'd them on its second, taking the whole page down —
 	// exactly what the comment on that first read says must not happen.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	const members = await getMembers(band.id);
 	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
 
@@ -1043,221 +1097,6 @@ export const getBandMembershipStatus = query(z.string(), async (slug) => {
 // ===========================================================================
 // Queries — staff reservations
 // ===========================================================================
-
-const staffReservationFiltersSchema = z.object({
-	tab: z.enum(['upcoming', 'all']).optional(),
-	search: z.string().optional(),
-	dateFrom: z.string().optional(),
-	dateTo: z.string().optional(),
-	statusFilter: z.array(z.string()).optional(),
-	// Derived rather than hard-listed. It was hard-listed to leave out `'lesson'`,
-	// which had no staff filter worth offering; with that value gone the two lists
-	// are identical, and deriving means a booker type added later cannot be
-	// filterable in the schema but missing from the filter, or the reverse.
-	bookerType: z.enum(bookerTypes).optional(),
-	page: z.number().optional()
-});
-
-type StaffReservationFilters = z.infer<typeof staffReservationFiltersSchema>;
-
-/** The list's filters as one `WHERE`, over `reservation` joined to its booker as the list joins it. */
-function staffReservationWhere(filters: StaffReservationFilters, now: Date) {
-	const tab = filters.tab ?? 'upcoming';
-	const conditions = [];
-
-	// A cancelled booking stays on Upcoming until its slot is over. The room is
-	// free from the moment it is cancelled, but the hour is still the one staff
-	// are looking at, and "why is nobody here?" is only answerable from a list
-	// that still shows it. `statusFilter` is how you get the old view back.
-	if (tab === 'upcoming') {
-		conditions.push(gt(reservation.endsAt, now));
-	}
-
-	if (filters.statusFilter && filters.statusFilter.length > 0) {
-		const valid = filters.statusFilter.filter((s): s is ReservationStatus =>
-			(reservationStatuses as readonly string[]).includes(s)
-		);
-		if (valid.length > 0) conditions.push(inArray(reservation.status, valid));
-	}
-
-	// Day bounds anchored to the app timezone (a bare `new Date(...)` parses in
-	// the runtime zone — UTC on Workers — shifting the window vs the LA-anchored
-	// data). Same pattern as credit-service listTransactions.
-	if (filters.dateFrom) {
-		conditions.push(
-			gte(reservation.startsAt, buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE))
-		);
-	}
-	if (filters.dateTo) {
-		conditions.push(
-			lte(reservation.startsAt, buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE))
-		);
-	}
-
-	if (filters.bookerType) {
-		conditions.push(eq(reservation.bookerType, filters.bookerType));
-	}
-
-	if (filters.search) {
-		conditions.push(
-			or(
-				containsLiteral(user.name, filters.search),
-				containsLiteral(user.email, filters.search),
-				containsLiteral(group.name, filters.search),
-				containsLiteral(eventListing.title, filters.search)
-			)
-		);
-	}
-
-	return conditions.length > 0 ? and(...conditions) : undefined;
-}
-
-const STAFF_LIST_PAGE_SIZE = 50;
-
-/** Where the next page of the list starts, so a page knows which closures are its own. */
-async function nextStaffPageStart(filters: StaffReservationFilters, now: Date) {
-	const [row] = await db
-		.select({ startsAt: reservation.startsAt })
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(staffReservationWhere(filters, now))
-		.orderBy(
-			(filters.tab ?? 'upcoming') === 'upcoming'
-				? asc(reservation.startsAt)
-				: desc(reservation.startsAt)
-		)
-		.limit(1)
-		.offset((filters.page ?? 1) * STAFF_LIST_PAGE_SIZE);
-	return row?.startsAt;
-}
-
-/** Staff: paginated, filtered reservation list. */
-export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
-	await requireCapability('reservation.read');
-
-	const now = new Date();
-	const tab = filters.tab ?? 'upcoming';
-	const where = staffReservationWhere(filters, now);
-
-	const dataQ = db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			bookerType: reservation.bookerType,
-			notes: reservation.notes,
-			stripePaymentRecordId: reservation.stripePaymentRecordId,
-			paidAt: reservation.paidAt,
-			// `reservationPaymentState` reads this to tell a refunded booking from a
-			// plain cancellation, and takes it as a required field so a query that
-			// forgets it cannot compile.
-			refundedAt: reservation.refundedAt,
-			cashDueCents: reservation.cashDueCents,
-			creditsUsed: reservation.creditsUsed,
-			createdByUserId: reservation.createdByUserId,
-			recurringSeriesId: reservation.recurringSeriesId,
-			// The desk staffs a volunteer for a member's first visit, so the list
-			// has to say which booking that is without opening any of them.
-			isFirstReservation: isFirstReservationSql(),
-			// Three joins for one column: the booker is a member, a band or an
-			// event, and which one it is comes from `bookerType`.
-			member: memberRefColumns(),
-			band: bandRefColumns(),
-			event: eventRefColumns()
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(where)
-		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
-		.$dynamic();
-
-	const countQ = db
-		.select({ count: count() })
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(where);
-
-	const { rows, pagination } = await paginate(dataQ, countQ, {
-		page: filters.page ?? 1,
-		pageSize: STAFF_LIST_PAGE_SIZE
-	});
-	return {
-		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
-			...r,
-			// SQLite has no booleans, so the correlated subquery lands as 0 or 1 —
-			// the same coercion `toMemberRef` does for `sustaining`.
-			isFirstReservation: !!r.isFirstReservation,
-			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
-		})),
-		pagination
-	};
-});
-
-/** Staff: tab badge counts for reservations. */
-export const getReservationCounts = query(async () => {
-	await requireCapability('reservation.read');
-	const now = new Date();
-
-	// Matches the tab's own filter, cancellations included — a badge that counts
-	// something other than what the tab lists is worse than no badge.
-	const [upcomingCount] = await db
-		.select({ count: count() })
-		.from(reservation)
-		.where(gt(reservation.endsAt, now));
-
-	const [allCount] = await db.select({ count: count() }).from(reservation);
-
-	return { upcoming: upcomingCount.count, all: allCount.count };
-});
-
-/** Staff: unresolved reservations (past end time, still scheduled). */
-export const getUnresolvedReservations = query(async () => {
-	await requireCapability('reservation.read');
-	const now = new Date();
-
-	const rows = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			createdByUserId: reservation.createdByUserId,
-			notes: reservation.notes,
-			member: memberRefColumns(),
-			cashDueCents: reservation.cashDueCents,
-			// So the resolve modal can price a row that has no `cashDueCents` yet
-			// at the booker's own rate rather than everyone's at the member one.
-			bookerType: reservation.bookerType
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				lt(reservation.endsAt, now),
-				or(
-					// Never confirmed/paid — pending resolution.
-					eq(reservation.status, 'scheduled'),
-					// Confirmed with cash still owed at the door.
-					and(
-						eq(reservation.status, 'confirmed'),
-						isNull(reservation.paidAt),
-						gt(reservation.cashDueCents, 0)
-					)
-				)
-			)
-		)
-		.orderBy(asc(reservation.endsAt))
-		.limit(LIST_LIMIT);
-
-	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
-});
 
 /**
  * Staff: the hourly rate for every booker type, for reservation pricing.
@@ -1355,7 +1194,7 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 	return { reservationId: res.id };
 });
 
-const CONFIRM_WINDOW_MSG = `Confirmation opens ${CONFIRMATION_WINDOW_DAYS} days before your reservation — pay now to lock it in earlier.`;
+const NOT_COVERED_MSG = 'Your credits do not cover this booking. Pay online instead.';
 
 /**
  * Whether free hours fully cover the reservation (nothing to charge). Never for
@@ -1441,12 +1280,11 @@ async function commitCreditsAndSettleIfCovered(opts: {
 		console.error('[reservation] $0 credit settlement record failed (settling anyway):', err);
 	}
 
-	// Guarded by status so a cancelled/completed/no_show row can never be
-	// flipped back to confirmed by a late or repeated settle call.
+	// Payment fields only, and only on a live row: a cancelled one keeps its
+	// reversed credits. The row was announced when it was confirmed (#2502).
 	await db
 		.update(reservation)
 		.set({
-			status: 'confirmed',
 			// paidAt intentionally left null — credit-settled, not cash-paid. The
 			// $0 stripePaymentRecordId is the best-effort receipt; creditsUsed is
 			// what marks this as "Paid with credits" vs. a true comp.
@@ -1455,14 +1293,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, opts.reservationId),
-				inArray(reservation.status, ['scheduled', 'confirmed'])
-			)
-		);
-
-	await announceConfirmed(opts.reservationId);
+		.where(and(eq(reservation.id, opts.reservationId), eq(reservation.status, 'confirmed')));
 
 	return { remainingCents: 0, settled: true };
 }
@@ -1473,7 +1304,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
  * (idempotent) and not re-applied inside checkout.
  */
 async function payReservationRemainder(opts: {
-	row: { id: string; startsAt: Date; endsAt: Date; bookerType: BookerType };
+	row: { id: string; startsAt: Date; endsAt: Date; tourMinutes: number; bookerType: BookerType };
 	/** Whose free hours settle it first. */
 	booker: Person;
 	/** Who is charged the remainder. */
@@ -1484,8 +1315,7 @@ async function payReservationRemainder(opts: {
 }): Promise<{ paid: true } | { checkoutUrl: string }> {
 	const reservationConfig = await getReservationConfig();
 	const hourlyRateCents = termsFor(opts.row.bookerType, reservationConfig).hourlyRateCents;
-	const durationHours =
-		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(opts.row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
@@ -1525,35 +1355,43 @@ async function payReservationRemainder(opts: {
 		coverFees: opts.coverFees,
 		metadata: { reservation_id: opts.row.id },
 		successUrl: opts.successUrl,
-		cancelUrl: opts.cancelUrl,
-		// Paid on our own page rather than checkout.stripe.com. The two URLs
-		// above are unchanged — `checkout()` maps them onto the `return_url` /
-		// metadata pair that `elements` mode takes instead.
-		uiMode: 'elements'
+		cancelUrl: opts.cancelUrl
 	});
 
 	if (result.paid) {
 		await db
 			.update(reservation)
 			.set({
-				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
 				paidAt: new Date(),
 				cashDueCents: 0,
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
-		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
 	return { checkoutUrl: result.checkoutUrl! };
 }
 
+/**
+ * One outstanding fee refuses a member's own booking (#2748, #2859), a named
+ * exception to warn-record-allow. Staff booking on a member's behalf are not
+ * refused; `createReservation` never calls this.
+ */
+async function refuseOnOutstandingFees(userId: string): Promise<void> {
+	try {
+		await assertFeeGateAllows(userId);
+	} catch (err) {
+		mapDomainError(err);
+	}
+}
+
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional(),
 	coverFees: z.boolean().default(false),
 	skipPayment: z.enum(['', 'on']).optional()
 });
@@ -1561,12 +1399,15 @@ const bookAndPaySchema = createReservationSchema.extend({
 export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
 	const { locals, url } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
+	await refuseOnOutstandingFees(locals.user.id);
 
 	// Before anything is written: a reservation staff can't call about is the
 	// problem this guard exists to prevent.
 	if (!(await ensureContactPhone(locals.user.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1632,7 +1473,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
@@ -1646,23 +1488,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Outside the window, booking is a hold: nothing is priced or committed,
-	// even when free hours would cover it (#2108). Paying ahead, below, is the
-	// only way to confirm early. The hold is the answer, not a 400.
-	const waivesWindow = await can('reservation.comp');
-	const outsideWindow = !waivesWindow && !withinConfirmationWindow(startsAt);
-	if (outsideWindow && data.skipPayment === 'on') {
-		return {
-			reservationId: res.id,
-			scheduled: true as const,
-			confirmOpensAt: confirmWindowOpensAt(startsAt).toISOString()
-		};
-	}
-
 	if (data.skipPayment === 'on') {
-		// Confirm inside the window: price it now from free hours, and any
-		// remainder is cash at the door (owner decision on #2108).
-		const { settled } = await commitCreditsAndSettleIfCovered({
+		// Price it now from free hours; any remainder is cash at the door (#2108).
+		await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
 			email: locals.user.email,
@@ -1671,15 +1499,6 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			totalCents,
 			hourlyRateCents
 		});
-		if (!settled) {
-			await db
-				.update(reservation)
-				.set({ status: 'confirmed', updatedAt: new Date() })
-				.where(eq(reservation.id, res.id));
-			// The settled branch announced it from inside
-			// `commitCreditsAndSettleIfCovered`; this is the other half.
-			await announceConfirmed(res.id);
-		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
 
@@ -1723,23 +1542,19 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		coverFees: data.coverFees,
 		metadata: { reservation_id: res.id },
 		successUrl: `${url.origin}/member/reservations?paid=${res.id}`,
-		cancelUrl: `${url.origin}/member/reservations`,
-		uiMode: 'elements'
+		cancelUrl: `${url.origin}/member/reservations`
 	});
 
 	if (result.paid) {
 		await db
 			.update(reservation)
 			.set({
-				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
 				paidAt: new Date(),
 				cashDueCents: 0,
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
-
-		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
@@ -1750,7 +1565,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 /** Instructor: book the room to teach (optionally recurring). */
 const instructorBookingSchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	monthlyMode: z.enum(['weekday', 'monthday']).optional()
+	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional()
 });
 
 /**
@@ -1787,12 +1603,15 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 		// that sentence became a 500 "Internal Error" and a Sentry crash (#958).
 		mapDomainError(err);
 	}
+	await refuseOnOutstandingFees(currentUser.id);
 
 	// Same reason as every other booking path: a reservation staff cannot call
 	// about is the problem this guard exists to prevent.
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1827,7 +1646,8 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
@@ -1842,6 +1662,7 @@ const bandBookingSchema = createReservationSchema.extend({
 	slug: z.string().min(1),
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional(),
 	coverFees: z.boolean().default(false),
 	// Set only by the pay step's submit, so a plain booking never charges.
 	payNow: z.enum(['', 'on']).optional()
@@ -1849,11 +1670,15 @@ const bandBookingSchema = createReservationSchema.extend({
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
 	const { user: currentUser, group: band } = await requireGroupRole({ slug: data.slug }, 'member');
+	// The booking member's own fees, not the band's: a person is on the hook.
+	await refuseOnOutstandingFees(currentUser.id);
 
 	// The band books, but a person is on the hook — same guard as a solo booking.
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1911,14 +1736,21 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
 	if (data.payNow === 'on' && !waitlisted) {
 		const back = `${getRequestEvent().url.origin}/band/${band.slug}/reservations`;
 		const result = await payReservationRemainder({
-			row: { id: res.id, startsAt: res.startsAt, endsAt: res.endsAt, bookerType: 'group' },
+			row: {
+				id: res.id,
+				startsAt: res.startsAt,
+				endsAt: res.endsAt,
+				tourMinutes: res.tourMinutes,
+				bookerType: 'group'
+			},
 			booker: currentUser,
 			payer: currentUser,
 			coverFees: data.coverFees,
@@ -1949,7 +1781,7 @@ export const cancelBandReservation = form(
 		reservationId: z.string().min(1)
 	}),
 	async (data, _issue) => {
-		// A mutation, so member-only — no `allowStaff`. Staff cancel through their
+		// A mutation, so member-only — no `staff`. Staff cancel through their
 		// own reservation surface, which carries the audit trail.
 		const {
 			user: currentUser,
@@ -2010,23 +1842,18 @@ export const payForReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { isBooker, backPath } = await requireReservationPayer(row);
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for payment');
-		// Confirming without paying is the booker's call; a bandmate only pays.
+		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		// Spending free hours is the booker's call; a bandmate only pays.
 		if (data.skipPayment === 'on' && !isBooker) throw error(403, 'Not your reservation');
 
-		const waivesWindow = await can('reservation.comp');
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
-		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+		const durationHours = billableHours(row);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
-		const outsideWindow = !waivesWindow && !withinConfirmationWindow(row.startsAt);
 
 		if (data.skipPayment === 'on') {
-			// Confirm: commit free hours; settle if fully covered, else cash at door.
-			// Outside the window only a full free-hours settle confirms (#2060).
+			// Settle from free hours alone; a partial cover is a payment, not this.
 			if (
-				outsideWindow &&
 				!(await isFullyCreditCovered(
 					currentUser.id,
 					row.startsAt,
@@ -2035,8 +1862,8 @@ export const payForReservation = form(
 					hourlyRateCents
 				))
 			)
-				throw error(400, CONFIRM_WINDOW_MSG);
-			const { settled } = await commitCreditsAndSettleIfCovered({
+				throw error(400, NOT_COVERED_MSG);
+			await commitCreditsAndSettleIfCovered({
 				reservationId: row.id,
 				userId: currentUser.id,
 				email: currentUser.email,
@@ -2045,7 +1872,6 @@ export const payForReservation = form(
 				totalCents,
 				hourlyRateCents
 			});
-			if (!settled && row.status === 'scheduled') await confirm(row.id);
 			return { confirmed: true };
 		}
 
@@ -2066,22 +1892,22 @@ export const payForReservation = form(
 /** Member: pay for a reservation via Stripe checkout (from pay page). */
 export const payReservation = form(
 	z.object({
+		reservationId: z.string().min(1),
 		coverFees: z.boolean().default(false)
 	}),
 	async (data, _issue) => {
 		const currentUser = requireUser();
-		const { params, url } = getRequestEvent();
+		const { url } = getRequestEvent();
 
 		const [row] = await db
 			.select()
 			.from(reservation)
-			.where(eq(reservation.id, params.id!))
+			.where(eq(reservation.id, data.reservationId))
 			.limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { backPath } = await requireReservationPayer(row);
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for payment');
+		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
 
 		// No window gate: free hours settle a covered session before the next
 		// reset at any time, and anything else is a real charge (#2060).
@@ -2101,82 +1927,6 @@ export const payReservation = form(
 // ===========================================================================
 // Forms — staff actions (converted from API routes)
 // ===========================================================================
-
-/**
- * Staff/owner: confirm a reservation. Staff may submit with comp=on to waive
- * payment entirely instead of committing the owner's credits.
- */
-export const confirmReservation = form(
-	z.object({ id: z.string(), comp: z.enum(['', 'on']).optional() }),
-	async (data, _issue) => {
-		// No `requireUser()` here: `requireCapabilityOrOwner` below reads the
-		// acting user from the request event itself and 401s without one.
-		const [row] = await db
-			.select({
-				id: reservation.id,
-				createdByUserId: reservation.createdByUserId,
-				startsAt: reservation.startsAt,
-				endsAt: reservation.endsAt,
-				status: reservation.status,
-				// Selected so the rate can be resolved for who booked it. Every
-				// pricing site needs this now; most did not select it before.
-				bookerType: reservation.bookerType
-			})
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
-		if (!row) throw error(404, 'Reservation not found');
-
-		// Returns which of the two the caller is, which the confirmation-window and
-		// comp rules below both branch on.
-		const staff =
-			(await requireCapabilityOrOwner('reservation.manage', row.createdByUserId)) === 'staff';
-
-		// Only live reservations can be confirmed. Without this, a cancelled
-		// reservation (credits already reversed, cashDueCents possibly 0) would be
-		// resurrected to confirmed for free by the settle path below.
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for confirmation');
-
-		// Members may only confirm (without a Stripe charge) within the window; staff
-		// override anytime.
-		if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
-
-		if (data.comp === 'on') {
-			// Comp is a staff-only choice: fully free, no credits committed.
-			if (!staff) throw error(403, 'Not authorized');
-			if (row.status === 'scheduled') await confirm(row.id);
-			await db
-				.update(reservation)
-				.set({ cashDueCents: 0, updatedAt: new Date() })
-				.where(eq(reservation.id, row.id));
-			return { success: true };
-		}
-
-		// Commit the owner's free hours; settle if fully covered, else confirm with
-		// the cash remainder owed at the door.
-		const [owner] = await db
-			.select({ email: user.email, name: user.name })
-			.from(user)
-			.where(eq(user.id, row.createdByUserId))
-			.limit(1);
-		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
-		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-		const totalCents = Math.round(durationHours * hourlyRateCents);
-		const { settled } = await commitCreditsAndSettleIfCovered({
-			reservationId: row.id,
-			userId: row.createdByUserId,
-			email: owner?.email ?? '',
-			name: owner?.name ?? null,
-			durationHours,
-			totalCents,
-			hourlyRateCents
-		});
-		if (!settled && row.status === 'scheduled') await confirm(row.id);
-		return { success: true };
-	}
-);
 
 /** Cancel a reservation (staff can override). */
 export const cancelReservation = form(
@@ -2219,6 +1969,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			createdByUserId: reservation.createdByUserId,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
+			tourMinutes: reservation.tourMinutes,
 			bookerType: reservation.bookerType
 		})
 		.from(reservation)
@@ -2226,7 +1977,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const hourlyRateCents = (await getBookingTerms(row.bookerType)).hourlyRateCents;
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -2289,15 +2040,18 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 });
 
 /** Staff: comp a scheduled or confirmed reservation (waive payment — no credits used). */
-export const compReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('reservation.comp');
-	try {
-		await comp(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	return { success: true };
-});
+export const compReservation = form(
+	z.object({ id: z.string() }),
+	writesAudit('reservation.comped', async (data, _issue) => {
+		await requireCapability('reservation.comp');
+		try {
+			await comp(data.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		return { success: true };
+	})
+);
 
 /**
  * The row a refund action needs before it commits to anything: who owns the
@@ -2329,7 +2083,7 @@ async function readRefundableReservation(id: string) {
  */
 export const refundAndCancelReservation = form(
 	z.object({ id: z.string(), reason: z.string().optional() }),
-	async (data, _issue) => {
+	writesAudit('reservation.refunded', async (data, _issue) => {
 		await requireCapability('finance.refund');
 		const currentUser = requireUser();
 		await readRefundableReservation(data.id);
@@ -2342,33 +2096,44 @@ export const refundAndCancelReservation = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
+		await recordReservationAudit(data.id, (when) => ({
+			action: 'reservation.refunded',
+			details: { ...when, cancelled: true, reason: data.reason?.trim() || null }
+		}));
 		return { success: true };
-	}
+	})
 );
 
 /**
  * Staff: refund the payment and leave the booking standing — a comp after the
  * fact on a session that went ahead. `status` and `paidAt` are deliberately
- * untouched; `reservationPaymentState` reads `refundedAt` first, so the row
+ * untouched; `reservationTrack` reads `refundedAt` first, so the row
  * reports as refunded without pretending the session never happened (#669).
  */
-export const refundOnlyReservation = form(z.object({ id: z.string() }), async (data, _issue) => {
-	await requireCapability('finance.refund');
-	const row = await readRefundableReservation(data.id);
+export const refundOnlyReservation = form(
+	z.object({ id: z.string() }),
+	writesAudit('reservation.refunded', async (data, _issue) => {
+		await requireCapability('finance.refund');
+		const row = await readRefundableReservation(data.id);
 
-	await refundPayment({
-		userId: row.createdByUserId,
-		stripePaymentRecordId: row.stripePaymentRecordId
-	});
-	// Reservation free-hour credits live in the ledger (not the payment record's
-	// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
-	await reverseReservationCredits(row.createdByUserId, data.id);
-	await db
-		.update(reservation)
-		.set({ refundedAt: new Date(), updatedAt: new Date() })
-		.where(eq(reservation.id, data.id));
-	return { success: true };
-});
+		await refundPayment({
+			userId: row.createdByUserId,
+			stripePaymentRecordId: row.stripePaymentRecordId
+		});
+		// Reservation free-hour credits live in the ledger (not the payment record's
+		// breakdown), so reverse them explicitly. Idempotent and a no-op when none.
+		await reverseReservationCredits(row.createdByUserId, data.id);
+		await db
+			.update(reservation)
+			.set({ refundedAt: new Date(), updatedAt: new Date() })
+			.where(eq(reservation.id, data.id));
+		await recordReservationAudit(data.id, (when) => ({
+			action: 'reservation.refunded',
+			details: { ...when, cancelled: false, reason: null }
+		}));
+		return { success: true };
+	})
+);
 
 /** Member: confirm a waitlisted reservation when the slot opens. */
 export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data, _issue) => {
@@ -2406,7 +2171,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 	await db
 		.update(reservation)
 		.set({
-			status: 'scheduled',
+			status: 'confirmed',
 			waitlistNotifiedAt: null,
 			waitlistExpiresAt: null,
 			updatedAt: new Date()
@@ -2447,6 +2212,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 });
 
 type ReservationWithPrice = Reservation & {
+	codeWithheld: boolean;
 	price: number;
 	creditsAvailable: boolean;
 	/** Free hours cover all of it and `payForReservation` would settle it now. */
@@ -2455,7 +2221,7 @@ type ReservationWithPrice = Reservation & {
 export const getReservations = query(
 	z
 		.object({
-			after: z.coerce.date().optional(),
+			after: z.iso.datetime().optional(),
 			forUser: z.string().optional(),
 			includeTerminal: z.boolean().optional(),
 			/**
@@ -2481,8 +2247,8 @@ export const getReservations = query(
 			// The room a program holds is the venue's, not theirs — it has no member
 			// confirm/pay flow, so listing it here offered actions that don't apply.
 			notAProgramHold(),
-			after && gt(reservation.endsAt, after),
-			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
+			after && gt(reservation.endsAt, new Date(after)),
+			!includeTerminal && inArray(reservation.status, ['confirmed', 'waitlisted'])
 		];
 		// Resolved per row rather than once for the list: this query excludes only
 		// `event`, so a member's own teaching bookings appear here too and would
@@ -2496,6 +2262,11 @@ export const getReservations = query(
 			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
 			.orderBy(newestFirst ? desc(reservation.startsAt) : reservation.startsAt);
 
+		// Staff reading a member's list keep the codes; the member owing a fee does not (#2874).
+		const forSelf = !forUser || forUser === locals.user.id;
+		const now = new Date();
+		const held = forSelf && (await doorCodeHeldSince(locals.user.id, now)) !== null;
+
 		// `price` is the full room rate. We deliberately do NOT project a credit
 		// discount onto uncommitted bookings here: free hours are only applied at
 		// confirm/pay time, against the live balance. Projecting a discounted
@@ -2508,7 +2279,7 @@ export const getReservations = query(
 		return rows.map((value: Reservation) => {
 			const freeHoursBalance = usableFreeHours(wallet, value.startsAt);
 			const hasFreeHours = freeHoursBalance > 0;
-			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
+			const durationHours = billableHours(value);
 			const rateInCents = termsFor(value.bookerType, reservationConfig).hourlyRateCents;
 			const totalCents = Math.round(durationHours * rateInCents);
 			const isTerminal = isTerminalStatus(value.status);
@@ -2521,7 +2292,7 @@ export const getReservations = query(
 			// which `usableFreeHours` has already applied (#2060).
 			const payableWithCredits =
 				creditsAvailable &&
-				(value.status === 'scheduled' || value.status === 'confirmed') &&
+				value.status === 'confirmed' &&
 				computeReservationCredit({
 					totalCents,
 					durationHours,
@@ -2529,7 +2300,12 @@ export const getReservations = query(
 					freeHoursBalance
 				}).remainingCents <= 0;
 
-			return { ...value, price: netCents / 100, creditsAvailable, payableWithCredits };
+			return {
+				...withholdDoorCode(value, held, now),
+				price: netCents / 100,
+				creditsAvailable,
+				payableWithCredits
+			};
 		});
 	}
 );
@@ -2541,10 +2317,11 @@ export const getRecurringReservations = query(
 		})
 		.optional(),
 	async (options) => {
+		const currentUser = requireUser();
 		const includeCancelled = options?.includeCancelled ?? false;
 
 		const filters = [
-			eq(reservation.createdByUserId, getRequestEvent().locals.user?.id),
+			eq(reservation.createdByUserId, currentUser.id),
 			eq(recurringSeries.prototypeType, 'reservation'),
 			isNull(recurringSeries.supersededBy),
 			!includeCancelled && isNull(recurringSeries.cancelledAt)
@@ -2597,92 +2374,60 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
 export const getBandReservationsPage = query(
 	z.object({ slug: z.string(), pastPage: z.number().int().min(1).default(1) }),
 	async ({ slug, pastPage }) => {
-		const [reservations, membership, contact] = await Promise.all([
+		// The fee gate reads the booking member's own fees, not the band's (#2748).
+		const [reservations, membership, contact, feeGate] = await Promise.all([
 			getBandReservations({ slug, pastPage }),
 			getBandMembershipStatus(slug),
-			getBookingContact()
+			getBookingContact(),
+			getFeeGate(requireUser().id)
 		]);
 
-		return { reservations, membership, contact };
+		return { reservations, membership, contact, feeGate };
 	}
 );
 
-/**
- * The staff reservations page's one load-bearing query.
- *
- * Four query promises used to leave this component at once — the list, the tab counts, the
- * unresolved queue and the hourly rate — and `filters` moves on every keystroke, so each one was
- * recreated as fast as it could be typed. A superseded promise that rejects has no consumer left
- * to catch it, which is where JAVASCRIPT-SVELTEKIT-3's 33 unhandled rejections came from.
- *
- * The page derives `.then()` views off the single promise rather than awaiting it: awaiting in the
- * script would suspend the page into the staff layout boundary's `pending` snippet and blank it on
- * every keystroke, which is what `DataList` exists to avoid.
- */
-const staffReservationsPageSchema = staffReservationFiltersSchema.extend({
-	show: z.enum(['everything', 'reservations', 'closures']).optional()
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const staffReservationsPageSchema = z.object({
+	search: z.string().max(200).optional(),
+	// Derived, so a booker type added later is filterable here and in the select alike.
+	bookerType: z.enum(staffListTypes).optional(),
+	range: z.enum(staffDateRanges).optional(),
+	dateFrom: dateString.optional(),
+	dateTo: dateString.optional(),
+	status: z.enum(staffStatusViews).optional(),
+	page: z.number().int().positive().optional()
 });
 
 /**
- * The staff reservations page's one query. The list is what the room is doing
- * over time (#1833): closures interleave with bookings unless `show` narrows it
- * to one kind. A closure has no booker, so a booker or status filter is a
- * question about bookings alone and leaves them out.
+ * The staff Practice space page's one load-bearing query: the list, the status
+ * counts, the payment-due dot and the rates. One promise, because `filters`
+ * moves on every keystroke and a superseded promise that rejects has no consumer
+ * left to catch it (JAVASCRIPT-SVELTEKIT-3).
  */
-export const getStaffReservationsPage = query(staffReservationsPageSchema, async (input) => {
+export const getStaffReservationsPage = query(staffReservationsPageSchema, async (filters) => {
 	await requireCapability('reservation.read');
-	const { show = 'everything', ...filters } = input;
 	const now = new Date();
-	const tab = filters.tab ?? 'upcoming';
-	const order = tab === 'upcoming' ? 'asc' : 'desc';
-	const closureFilters: ClosureFilters = {
-		upcomingOnly: tab === 'upcoming',
-		from: filters.dateFrom ? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE) : undefined,
-		to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined,
-		search: filters.search
-	};
-	const withClosures =
-		show === 'everything' && !filters.bookerType && !filters.statusFilter?.length;
-
-	type Row =
-		| (Awaited<ReturnType<typeof getStaffReservations>>['rows'][number] & {
-				kind: 'reservation';
-		  })
-		| ClosureRow;
-	const listRows = async (): Promise<{ rows: Row[]; pagination: Pagination }> => {
-		if (show === 'closures') {
-			return closuresPage(closureFilters, now, order, filters.page ?? 1, STAFF_LIST_PAGE_SIZE);
-		}
-		const page = await getStaffReservations(filters);
-		const rows = page.rows.map((r) => ({ ...r, kind: 'reservation' as const }));
-		const p = page.pagination.page;
-		if (!withClosures || (p > 1 && rows.length === 0)) return { ...page, rows };
-		const closures = await closuresInWindow(closureFilters, now, order, {
-			first: p > 1 ? rows[0].startsAt : undefined,
-			next: p < page.pagination.totalPages ? await nextStaffPageStart(filters, now) : undefined
-		});
-		return { ...page, rows: interleave(rows, closures, order) };
-	};
-
-	const [list, counts, closureCounts, unresolved, hourlyRates, canManageClosures] =
+	// The header's Building access dot: the last health reading in KV, never a U-tec call.
+	const lockReading = async () =>
+		(await can('lock.manage')) ? { offline: (await getLockStatus()).online === false } : null;
+	const [list, statusCounts, owedAfterSession, hourlyRates, canManageClosures, lock, canSettings] =
 		await Promise.all([
-			listRows(),
-			getReservationCounts(),
-			show === 'closures' || withClosures ? countClosures(now) : null,
-			getUnresolvedReservations(),
+			listStaffReservations(filters, now),
+			countStaffStatuses(filters, now),
+			countOwedAfterSession(now),
 			getHourlyRates(),
-			can('reservation.manageClosures')
+			can('reservation.manageClosures'),
+			lockReading(),
+			can('settings.read')
 		]);
-
-	// A tab's badge counts what the tab lists.
-	const add = (key: 'upcoming' | 'all') =>
-		(show === 'closures' ? 0 : counts[key]) + (closureCounts?.[key] ?? 0);
 	return {
 		list,
-		counts: { upcoming: add('upcoming'), all: add('all') },
-		unresolved,
+		statusCounts,
+		owedAfterSession,
 		hourlyRates,
-		canManageClosures
+		canManageClosures,
+		lock,
+		canSettings
 	};
 });
 
@@ -2698,12 +2443,14 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// Joined into the page query rather than fetched by the component that needs
 	// it: a second remote query fanned out of a child is the waterfall this
 	// query exists to collapse.
-	const [active, all, membership, contact, instructor] = await Promise.all([
+	const [active, all, membership, contact, instructor, notice, feeGate] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
-		getInstructorByUserId(currentUser.id)
+		getInstructorByUserId(currentUser.id),
+		getReservationConfig().then((config) => viewerNotice(config, 'user')),
+		getFeeGate(currentUser.id)
 	]);
 
 	// The booking surface only ever asks whether teaching terms are available, and
@@ -2712,12 +2459,18 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// member-facing DTO by construction rather than by remembering to omit it.
 	return {
 		active,
-		// Kept in `all` as well: Overdue is what is owed, All is the history.
-		overdue: all.filter((r) => isOverdue(r)),
+		// Kept in `all` as well: this is what is owed, All is the history. The
+		// Payment due track, so it lists what the fee gate counts.
+		overdue: all.filter((r) => reservationTrack(r) === 'payment_due'),
 		all,
 		membership,
 		contact,
-		isInstructor: instructor?.status === 'active'
+		isInstructor: instructor?.status === 'active',
+		// Null once the member holds the Practice space clearance.
+		firstBooking: notice.newMember
+			? { noticeMinutes: notice.minutes, tourMinutes: notice.tourMinutes }
+			: null,
+		feeGate
 	};
 });
 
@@ -2744,7 +2497,7 @@ export const payAtReader = command(z.string().min(1), async (id) => {
 	if (!readerPayable(row)) error(400, 'This booking cannot be paid at the reader right now');
 
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
 		reservationId: id,
 		userId: currentUser.id,

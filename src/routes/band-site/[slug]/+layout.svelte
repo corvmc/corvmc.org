@@ -1,14 +1,17 @@
 <script lang="ts">
-	import '$lib/themes/band-site/index.css';
-	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
-	import { getBandSiteData } from '$lib/remote/band-site.remote';
-	import { bandSitePath, bandSiteUrl } from '$lib/utils/band-site-url';
-	import { env } from '$env/dynamic/public';
+	import '#lib/themes/band-site/index.css';
+	import BandSiteFonts from '#lib/components/band-site/BandSiteFonts.svelte';
+	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
+	import { bandSitePath, bandSiteUrl } from '#lib/utils/band-site-url.js';
+	import * as env from '$app/env/public';
 	import { page } from '$app/state';
-	import { themeClass } from '$lib/utils/theme-starter';
+	import { themeClass } from '#lib/utils/theme-starter.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	let { children } = $props();
-	let data = $derived(await getBandSiteData(page.params.slug!));
+	let data = $derived(await getBandSiteData(params.slug));
 	// `custom` means the band took a theme's rules over: no theme class applies
 	// and their own CSS is the whole look.
 	const containerClass = $derived(
@@ -16,7 +19,7 @@
 	);
 
 	const canonicalUrl = $derived(
-		`${bandSiteUrl(page.params.slug!, env.PUBLIC_SITE_URL, data.band.customDomain)}${bandSitePath(page.params.slug!, page.url).replace(/\/$/, '')}`
+		`${bandSiteUrl(params.slug, env.PUBLIC_SITE_URL, data.band.customDomain)}${bandSitePath(params.slug, page.url).replace(/\/$/, '')}`
 	);
 	const description = $derived(data.band.tagline || `${data.band.name} — official site`);
 	const heroBlock = $derived(data.config?.blocks.find((b) => b.type === 'hero'));

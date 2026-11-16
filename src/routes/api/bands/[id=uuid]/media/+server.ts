@@ -1,17 +1,17 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined and forced a `!` at every use.
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import { mediaAttachment } from '$lib/server/db/schema/media';
-import type { MediaSlot } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import type { MediaSlot } from '#lib/server/db/schema/media.js';
 import { eq, and, max, count } from 'drizzle-orm';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, resolveImageUrl } from '$lib/server/storage';
-import { extensionForType } from '$lib/server/storage-keys';
-import { attach, detach, record } from '$lib/server/media/media-service';
-import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, resolveImageUrl } from '#lib/server/storage.js';
+import { extensionForType } from '#lib/server/storage-keys.js';
+import { attach, detach, record } from '#lib/server/media/media-service.js';
+import { photoLimitForTier } from '#lib/server/band/press-kit-limits.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -192,7 +192,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		uploaded.push({ id: attachment.id, key, url: resolveImageUrl(key), sortOrder: sortOrder - 1 });
 	}
 
-	return json({ success: true, media: uploaded });
+	return Response.json({ success: true, media: uploaded });
 };
 
 // ---------------------------------------------------------------------------
@@ -226,8 +226,8 @@ export const DELETE: RequestHandler = async ({ params, url }) => {
 
 	// Detach only. Nothing here deletes the R2 object: another band, or another
 	// slot, may still point at it, and only `/api/cron/sweep-media` can see the
-	// whole reference graph. See docs/specs/shipped/media-spec.md.
+	// whole reference graph. See docs/decisions/0026-uploads-are-detached-and-swept.md.
 	await detach(row.id);
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getMergeCandidates } from '$lib/remote/suggestions.remote';
+	import { getMergeCandidates } from '#lib/remote/suggestions.remote.js';
 
 	/**
 	 * The merge target `<option>` list, owning its own query.

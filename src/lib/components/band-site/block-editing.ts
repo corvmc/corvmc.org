@@ -1,5 +1,5 @@
-import type { Block } from '$lib/types/band-page';
-import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
+import type { Block } from '#lib/types/band-page.js';
+import { sanitizeBio, sanitizeHtml } from '#lib/utils/markdown.js';
 
 /**
  * Where a block's content actually comes from.

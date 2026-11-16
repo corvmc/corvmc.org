@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { count, desc, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns } from '$lib/server/entity/refs';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { allRosterRows, rosterCsv, toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { allRosterRows, rosterCsv, toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
 import { sustainingUser, userListWhere, type UserListFilters } from './user-totals-service';
+import { toLocalDate } from '#lib/utils/format.js';
 
 export interface UserRosterRow extends RosterPerson {
 	id: string;
@@ -86,6 +87,6 @@ export function userRosterCsv(rows: UserRosterRow[]): string {
 	return rosterCsv(rows, [
 		{ header: 'phone', value: (r) => r.phone },
 		{ header: 'deactivated', value: (r) => (r.deletedAt ? 'yes' : 'no') },
-		{ header: 'joined', value: (r) => r.createdAt.toISOString().slice(0, 10) }
+		{ header: 'joined', value: (r) => toLocalDate(r.createdAt) }
 	]);
 }

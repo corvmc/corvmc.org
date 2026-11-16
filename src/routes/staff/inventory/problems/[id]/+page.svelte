@@ -1,78 +1,93 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
-	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { NO_ROLE_LABEL } from '#lib/utils/shift-label.js';
 	import {
 		getEquipmentReport,
 		dismissEquipmentReport,
 		sendEquipmentReportToWorkOrder
-	} from '$lib/remote/work-requests.remote';
+	} from '#lib/remote/work-requests.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let report = $derived(await getEquipmentReport(id));
 
 	const dismissFields = dismissEquipmentReport.fields;
+	// An empty workOrderId means "raise a new one"; the role picker only matters then.
 	const sendFields = sendEquipmentReportToWorkOrder.fields;
-
-	// Empty means "raise a new one"; the role picker only matters then.
-	let workOrderId = $state('');
 </script>
 
 <PageHeader
 	width="3xl"
-	subtitle="Reported Problem"
-	title={report.asset?.title ?? report.location ?? 'Building problem'}
+	subtitle={m.staff_inventory_problems_id_subtitle_body()}
+	title={report.asset?.title ??
+		report.location ??
+		m.staff_inventory_problems_id_building_problem_title()}
 >
 	<StatusBadge status={report.stage === 'in_work_order' ? 'in_progress' : report.status} label />
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Report">
+		<InfoCard title={m.staff_report_title()}>
 			<DefinitionList>
 				{#if report.asset}
-					<Fact label="Unit"><EntityChip ref={report.asset} /></Fact>
+					<Fact label={m.staff_unit_label()}><EntityChip ref={report.asset} /></Fact>
 				{:else}
-					<Fact label="Where">{report.location}</Fact>
+					<Fact label={m.staff_inventory_problems_id_where_label()}>{report.location}</Fact>
 				{/if}
-				<Fact label="Note" wrap>{report.note}</Fact>
-				<Fact label="Still usable?">{report.blocksUse ? 'No — out of use' : 'Yes'}</Fact>
+				<Fact label={m.staff_note_label()} wrap>{report.note}</Fact>
+				<Fact label={m.staff_inventory_problems_id_still_usable_label()}
+					>{report.blocksUse
+						? m.staff_inventory_problems_id_no_out_use_text()
+						: m.staff_yes_text()}</Fact
+				>
 				{#if report.condition}
-					<Fact label="Condition" class="capitalize">{report.condition}</Fact>
+					<Fact label={m.staff_condition_label()} class="capitalize">{report.condition}</Fact>
 				{/if}
-				<Fact label="Reported by">
+				<Fact label={m.staff_inventory_problems_id_reported_by_label()}>
 					{#if report.reporterName}
 						{report.reporterName} <span class="opacity-60">({report.reporterEmail})</span>
 					{:else}
-						Deleted account
+						{m.staff_inventory_problems_id_deleted_account_text()}
 					{/if}
 				</Fact>
-				<Fact label="Reported">{formatDateTime(report.createdAt)}</Fact>
+				<Fact label={m.staff_reported_label()}>{formatDateTime(report.createdAt)}</Fact>
 			</DefinitionList>
 		</InfoCard>
 
 		{#if report.asset}
-			<InfoCard title="Other open reports on this unit" state={report.otherPending.length}>
+			<InfoCard
+				title={m.staff_inventory_problems_id_other_open_reports_unit_title()}
+				state={report.otherPending.length}
+			>
 				{#if report.otherPending.length === 0}
-					<p class="text-muted">None. Sending this to a work order takes any that arrive first.</p>
+					<p class="text-muted">
+						{m.staff_inventory_problems_id_none_sending_work_order_takes_text()}
+					</p>
 				{:else}
 					<ul class="space-y-2">
 						{#each report.otherPending as o (o.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/problems/${o.id}`)}>{o.note}</a>
+								<a class="link" href={resolve(`staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
-									{o.reporterName ?? 'Deleted account'} · {formatDateShort(o.createdAt)}
+									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account_text()} · {formatDateShort(
+										o.createdAt
+									)}
 								</div>
 							</li>
 						{/each}
@@ -81,71 +96,88 @@
 			</InfoCard>
 		{/if}
 
-		<InfoCard title="Triage" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_inventory_problems_id_triage_title()} class="bg-base-200 shadow-none">
 			{#if report.stage === 'untriaged'}
 				<p class="mb-3 text-muted">
-					Send it to the work that will fix it, or dismiss it if there is nothing to do.
+					{m.staff_inventory_problems_id_send_work_will_fix_dismiss_text()}
 				</p>
 				<div class="flex gap-2">
 					<Action
 						action={sendEquipmentReportToWorkOrder}
-						label="Send to work order"
-						modalTitle="Send to a work order"
-						submitLabel="Send"
-						successToast="Sent to a work order"
+						label={m.staff_inventory_problems_id_send_work_order_label()}
+						modalTitle={m.staff_inventory_problems_id_send_work_order_2_title()}
+						submitLabel={m.staff_inventory_problems_id_send_label()}
+						successToast={m.staff_inventory_problems_id_sent_work_order_toast()}
 						variant="primary"
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...sendFields.id.as('hidden', id)} />
 							<label class="fieldset w-full">
-								<span class="fieldset-legend">Work order</span>
-								<Select class="w-full" name="workOrderId" bind:value={workOrderId}>
-									<option value="">Raise a new work order</option>
+								<span class="fieldset-legend"
+									>{m.staff_inventory_problems_id_work_order_label()}</span
+								>
+								<Select class="w-full" {...sendFields.workOrderId.as('select')}>
+									<option value=""
+										>{m.staff_inventory_problems_id_raise_new_work_order_label()}</option
+									>
 									{#each report.openWorkOrders as w (w.id)}
 										<option value={w.id}
-											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ?? 'No notes'}</option
+											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ??
+												m.staff_inventory_problems_id_no_notes_label()}</option
 										>
 									{/each}
 								</Select>
 							</label>
-							{#if !workOrderId}
+							{#if !sendFields.workOrderId.value()}
 								<label class="fieldset w-full">
-									<span class="fieldset-legend">Who does the work</span>
-									<Select class="w-full" name="volunteerRoleId">
-										<option value="" disabled selected>Choose a role</option>
+									<span class="fieldset-legend"
+										>{m.staff_inventory_problems_id_who_does_work_label()}</span
+									>
+									<Select class="w-full" {...sendFields.volunteerRoleId.as('select')}>
+										<option value="" disabled selected
+											>{m.staff_inventory_problems_id_choose_role_label()}</option
+										>
 										<RoleOptions activeOnly />
 									</Select>
 								</label>
-								<Field field={sendFields.dueAt} type="date" label="Needed by (optional)" />
+								<Field
+									field={sendFields.dueAt}
+									type="date"
+									label={m.staff_inventory_problems_id_needed_by_optional_label()}
+								/>
 								<Field
 									field={sendFields.notes}
 									type="textarea"
-									label="Notes"
-									description="Leave blank to use the member's note."
+									label={m.staff_notes_label()}
+									description={m.staff_inventory_problems_id_description_body()}
 								/>
 							{/if}
 							<p class="text-muted text-wrap">
 								{report.asset
-									? 'Every other open report on this unit goes with it, and all of them close when the work order is resolved.'
-									: 'It closes when the work order is resolved.'}
+									? m.staff_inventory_problems_id_every_other_open_report_unit_text()
+									: m.staff_inventory_problems_id_closes_when_work_order_resolved_text()}
 							</p>
 						{/snippet}
 					</Action>
 					<Action
 						action={dismissEquipmentReport}
-						label="Dismiss"
-						modalTitle="Dismiss this report"
-						submitLabel="Dismiss — nothing to do"
-						successToast="Report dismissed"
+						label={m.staff_inventory_problems_id_dismiss_label()}
+						modalTitle={m.staff_inventory_problems_id_dismiss_report_title()}
+						submitLabel={m.staff_inventory_problems_id_dismiss_nothing_do_label()}
+						successToast={m.staff_inventory_problems_id_report_dismissed_toast()}
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...dismissFields.id.as('hidden', id)} />
-							<Field field={dismissFields.notes} type="textarea" label="Why (optional)" />
+							<Field
+								field={dismissFields.notes}
+								type="textarea"
+								label={m.staff_inventory_problems_id_why_optional_label()}
+							/>
 							{#if report.blocksUse}
 								<p class="text-muted text-wrap">
-									Dismissing does not put the unit back in service — do that from its page.
+									{m.staff_inventory_problems_id_dismissing_does_not_put_unit_text()}
 								</p>
 							{/if}
 						{/snippet}
@@ -153,19 +185,26 @@
 				</div>
 			{:else if report.stage === 'in_work_order' && report.workOrderId}
 				<p class="text-muted">
-					Waiting on
-					<a class="link" href={resolve(`/staff/volunteer/shifts/${report.workOrderId}`)}>
-						its work order</a
-					>. It closes when that does.
+					<ParaglideMessage
+						message={m.staff_inventory_problems_id_waiting_closes_when_does_text}
+						inputs={{
+							staff_inventory_problems_id_its_work_order:
+								m.staff_inventory_problems_id_its_work_order_text()
+						}}
+						>{#snippet a({ children })}<a
+								class="link"
+								href={resolve(`staff/tasks/${report.workOrderId}`)}>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{:else}
 				<DefinitionList>
-					<Fact label="Outcome"><StatusBadge status={report.status} label /></Fact>
+					<Fact label={m.staff_outcome_label()}><StatusBadge status={report.status} label /></Fact>
 					{#if report.resolutionNotes}
-						<Fact label="Notes" wrap>{report.resolutionNotes}</Fact>
+						<Fact label={m.staff_notes_label()} wrap>{report.resolutionNotes}</Fact>
 					{/if}
 					{#if report.resolvedAt}
-						<Fact label="Closed">{formatDateTime(report.resolvedAt)}</Fact>
+						<Fact label={m.staff_closed_label()}>{formatDateTime(report.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
 			{/if}

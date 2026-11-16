@@ -7,39 +7,31 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => {
 		throw new Error('outside a request');
 	}
 }));
-vi.mock('$lib/server/volunteer/volunteer-profile-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
 const emit = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => undefined));
-vi.mock('$lib/server/events', () => ({ domainEvents: { emit } }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
 	missingRequirements: vi.fn(async () => [])
 }));
 
 const tasks = await import('./project-task-service');
-const shifts = await import('$lib/server/volunteer/work-order-service');
-const signups = await import('$lib/server/volunteer/volunteer-signup-service');
+const shifts = await import('#lib/server/volunteer/work-order-service.js');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';
@@ -70,6 +62,8 @@ beforeEach(() => {
 		'contractor_job',
 		'work_task',
 		'volunteer_signup',
+		'volunteer_shift',
+		'work_order_assignee',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -109,14 +103,22 @@ beforeEach(() => {
 });
 
 const task = (id: string, cols: Record<string, unknown> = {}) =>
-	insert('work_order', { id, project_id: PROJECT, title: id, capacity: 1, ...cols });
-
-const FUTURE = '2030-06-01T10:00';
-const FUTURE_END = '2030-06-01T12:00';
+	insert('work_order', { id, project_id: PROJECT, title: id, ...cols });
 
 /** Two twins on the project: `viaTask` changes through the task list, `viaShift` the shift page. */
 function twins() {
-	for (const id of ['viaTask', 'viaShift']) task(id, { volunteer_role_id: ROLE, capacity: 2 });
+	for (const id of ['viaTask', 'viaShift']) task(id, { volunteer_role_id: ROLE });
+}
+
+/** A shift still to come on the shift-page twin, with two places. */
+function viaShiftShift() {
+	insert('volunteer_shift', {
+		id: 'sh',
+		work_order_id: 'viaShift',
+		starts_at: 4_000_000_000,
+		ends_at: 4_000_003_600,
+		capacity: 2
+	});
 }
 
 const logOf = (id: string) =>
@@ -128,47 +130,6 @@ const logOf = (id: string) =>
 const actions = (id: string) => logOf(id).map((e) => e.action);
 
 describe('the same entries from either page', () => {
-	it('reschedules', async () => {
-		twins();
-		await tasks.rescheduleTask(PROJECT, 'viaTask', {
-			startsAt: FUTURE,
-			endsAt: FUTURE_END,
-			dueAt: null
-		});
-		await shifts.updateShift('viaShift', { startsAt: FUTURE, endsAt: FUTURE_END });
-
-		expect(actions('viaTask')).toEqual(['work_order.rescheduled']);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
-	});
-
-	it('puts a member on it and takes them off', async () => {
-		twins();
-		await tasks.assignMembers(PROJECT, 'viaTask', { userIds: [ADA] });
-		await signups.claimShift('viaShift', ADA, { assignedByStaff: true });
-		await tasks.unassignMember(PROJECT, 'viaTask', ADA);
-		const [signup] = all<{ id: string }>(
-			`select id from volunteer_signup where shift_id = 'viaShift'`
-		);
-		await signups.releaseSignup(signup.id);
-
-		const roster = (id: string) =>
-			logOf(id).filter((e) => e.action.startsWith('work_order.member_'));
-		expect(roster('viaTask').map((e) => e.action)).toEqual([
-			'work_order.member_assigned',
-			'work_order.member_unassigned'
-		]);
-		expect(roster('viaShift')).toEqual(roster('viaTask'));
-	});
-
-	it('marks it done', async () => {
-		twins();
-		await tasks.resolveTask(PROJECT, 'viaTask', { resolvedByUserId: STAFF });
-		await shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF });
-
-		expect(actions('viaTask')).toEqual(['work_order.resolved']);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
-	});
-
 	it('calls it off', async () => {
 		twins();
 		await tasks.cancelTask(PROJECT, 'viaTask', STAFF);
@@ -178,18 +139,23 @@ describe('the same entries from either page', () => {
 		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
 	});
 
-	it('names the fields a shift edit changed, leaving times to rescheduled', async () => {
+	it('names the fields a task edit and a shift edit changed, leaving times to rescheduled', async () => {
 		twins();
-		await shifts.updateShift('viaShift', { capacity: 3, title: 'Prime', notes: 'Bring rollers' });
+		viaShiftShift();
+		await shifts.editTask('viaShift', { title: 'Prime' });
+		await shifts.editShift('sh', { capacity: 3, notes: 'Bring rollers' });
 
 		expect(logOf('viaShift')).toEqual([
-			{ action: 'work_order.edited', details: { fields: ['title', 'capacity', 'notes'] } }
+			{ action: 'work_order.edited', details: { fields: ['title'] } },
+			{ action: 'work_order.edited', details: { fields: ['capacity', 'notes'] } }
 		]);
 	});
 
 	it('records nothing for an edit that changed nothing', async () => {
 		twins();
-		await shifts.updateShift('viaShift', { capacity: 2, title: 'viaShift' });
+		viaShiftShift();
+		await shifts.editTask('viaShift', { title: 'viaShift' });
+		await shifts.editShift('sh', { capacity: 2 });
 
 		expect(logOf('viaShift')).toEqual([]);
 	});

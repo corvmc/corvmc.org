@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getPreview } from '$lib/remote/marketing.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getPreview } from '#lib/remote/marketing.remote.js';
 
 	/**
 	 * The live campaign preview, owning the query that renders it.
@@ -19,7 +20,7 @@
 		{@html html}
 	{:else}
 		<div class="flex h-full items-center justify-center p-12 text-sm opacity-40">
-			Start typing to see a preview...
+			{m.staff_marketing_campaigns_campaign_preview_start_typing_see_text()}
 		</div>
 	{/if}
 </div>

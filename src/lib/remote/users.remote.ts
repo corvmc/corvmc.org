@@ -1,36 +1,42 @@
 import { z } from 'zod';
-import { titleCase } from '$lib/utils/format';
 import {
-	CONFIRMATION_WINDOW_DAYS,
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
-	confirmationHorizon,
+	bookingLeadHorizon,
 	creditCompCeiling,
 	creditsToHours,
-	hoursToCredits
-} from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
+	hoursToCredits,
+	isJob,
+	surfaces
+} from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { getUserTotals } from '$lib/server/user/user-totals-service';
-import { listAllStaffUsers, listStaffUsers, userRosterFilters } from '$lib/server/user/user-roster';
-import { rosterEmails } from '$lib/server/roster/roster';
+import { getUserTotals } from '#lib/server/user/user-totals-service.js';
+import {
+	listAllStaffUsers,
+	listStaffUsers,
+	userRosterFilters
+} from '#lib/server/user/user-roster.js';
+import { rosterEmails } from '#lib/server/roster/roster.js';
 
-import { requireCapability, can, requireUser } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { eq, or, gt, gte, lte, ne, inArray, isNull, sql, and } from 'drizzle-orm';
-import { getUserRoles } from '$lib/server/authorization';
-import { positionChangeRefusal } from '$lib/server/access/position-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
+import { requireCapability, can, requireUser } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eq, or, gte, lte, ne, inArray, sql, and } from 'drizzle-orm';
+import { getUserRoles } from '#lib/server/authorization.js';
+import { positionChangeRefusal } from '#lib/server/access/position-service.js';
+import { toEventRef, toGenericRef } from '#lib/server/entity/refs.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { auditFeedItem } from '#lib/utils/audit-display.js';
+import { FEED_MAX, feedLimit, type FeedPage } from '#lib/types/activity.js';
+import { listByUser, list as listPayments } from '#lib/server/finance/payment-cache-service.js';
 import {
 	getAllBalances,
 	getBalance,
@@ -39,18 +45,24 @@ import {
 	deductCredits,
 	listTransactions,
 	InsufficientCreditsError
-} from '$lib/server/finance/credit-service';
-import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
-import { listUpcoming } from '$lib/server/event/event-service';
-import { getUserOverview as getUserOverviewService } from '$lib/server/user/user-overview-service';
-import { listNeedsYou } from '$lib/server/user/needs-you-service';
+} from '#lib/server/finance/credit-service.js';
+import {
+	getMemberSubscription,
+	mapDbSubscription
+} from '#lib/server/finance/subscription-service.js';
+import { listUpcoming } from '#lib/server/event/event-service.js';
+import { getUserOverview as getUserOverviewService } from '#lib/server/user/user-overview-service.js';
+import { listNeedsYou } from '#lib/server/user/needs-you-service.js';
 import {
 	coveredByFreeHours,
 	freeHoursResetAt
-} from '$lib/server/reservation/reservation-credit-service';
-import { getReservationConfig } from '$lib/server/reservation/config';
-import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
-import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
+} from '#lib/server/reservation/reservation-credit-service.js';
+import { getReservationConfig } from '#lib/server/reservation/config.js';
+import { confirmedUnpaidSql } from '#lib/server/reservation/payment-due.js';
+import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
+import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
+import { getOpenRemoval, listRemovals } from '#lib/server/moderation/removal-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	inviteMember,
 	listInviteGroups,
@@ -58,23 +70,28 @@ import {
 	memberInviteStatusFilters,
 	resendMemberInvite,
 	revokeMemberInvite
-} from '$lib/server/user/member-invite-service';
+} from '#lib/server/user/member-invite-service.js';
 import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
 	reactivateUser as reactivateUserService,
 	purgeUser as purgeUserService,
 	banUser as banUserService,
-	unbanUser as unbanUserService
-} from '$lib/server/user/user-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { recordAuditEntry, listAuditEntriesForSubject } from '$lib/server/audit/audit-service';
-import type { AuditProfileField } from '$lib/types/audit';
-import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directory-service';
+	unbanUser as unbanUserService,
+	suspendUser as suspendUserService,
+	liftSuspension as liftSuspensionService,
+	resendRemovalNotice as resendRemovalNoticeService
+} from '#lib/server/user/user-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { recordAuditEntry, listAuditEntriesForSubject } from '#lib/server/audit/audit-service.js';
+import type { AuditProfileField } from '#lib/types/audit.js';
+import { findMatchesFor, isProfileComplete } from '#lib/server/directory/directory-service.js';
+import { listPostsMatching } from '#lib/server/classified/classified-service.js';
 import { startOfWeek, endOfWeek } from 'date-fns';
-import type { CreditType } from '$lib/server/db/schema/finance';
+import type { CreditType } from '#lib/server/db/schema/finance.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { parseBirthDateInput } from '$lib/utils/age';
+import { parseBirthDateInput } from '#lib/utils/age.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -147,7 +164,7 @@ export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
 			search: filters.search || undefined,
 			creditType: (filters.creditType || undefined) as CreditType | undefined,
 			source: (filters.source ||
-				undefined) as import('$lib/server/finance/credit-service').CreditTransactionFilters['source'],
+				undefined) as import('#lib/server/finance/credit-service.js').CreditTransactionFilters['source'],
 			from: filters.from || undefined,
 			to: filters.to || undefined
 		},
@@ -194,9 +211,13 @@ export const getUser = query(z.string(), async (id) => {
 	const roles = await getUserRoles(id);
 
 	// Not an FK, so the staffer may since have been purged; the name is then null.
-	const [bannedBy] = found.bannedById
-		? await db.select({ name: user.name }).from(user).where(eq(user.id, found.bannedById))
-		: [];
+	const [[bannedBy], openRemoval, suspensionDefaultDays] = await Promise.all([
+		found.bannedById
+			? db.select({ name: user.name }).from(user).where(eq(user.id, found.bannedById))
+			: Promise.resolve([]),
+		getOpenRemoval(id),
+		config<number>('moderation.suspensionDefaultDays')
+	]);
 
 	// `subscription` is a stored JSON blob that only staff-side code reads for
 	// its presence. It is reduced to a boolean here rather than shipped: the
@@ -207,6 +228,9 @@ export const getUser = query(z.string(), async (id) => {
 	return {
 		...rest,
 		bannedByName: bannedBy?.name ?? null,
+		suspendedUntil: openRemoval?.kind === 'suspension' ? openRemoval.endsAt : null,
+		hasOpenRemoval: openRemoval !== null,
+		suspensionDefaultDays,
 		// Matches the default `ensureUserEntry` creates an entry with, so a staff
 		// page never renders a blank where a visibility should be.
 		directoryVisibility: directoryVisibility ?? 'members',
@@ -230,7 +254,9 @@ export const getRoleCatalog = query(async () => {
 	await requireCapability('user.update');
 	const canSetRole = await can('user.setRole');
 	if (!canSetRole) return { canSetRole, roles: [] as { id: number; name: string }[] };
-	return { canSetRole, roles: await db.select({ id: role.id, name: role.name }).from(role) };
+	// Jobs are Operations seats, set on the Access page (#2992), not role rows.
+	const rows = await db.select({ id: role.id, name: role.name }).from(role);
+	return { canSetRole, roles: rows.filter((r) => !isJob(r.name)) };
 });
 
 export const getUserPayments = query(z.string(), async (userId) => {
@@ -280,7 +306,10 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 	const actor = await requireCapability('user.update');
 	const id = data.id;
 
-	const targetCurrentRoles = await getUserRoles(id);
+	const targetHeld = await getUserRoles(id);
+	// The picker edits role rows only; jobs are Operations seats (#2992).
+	const targetCurrentRoles = targetHeld.filter((n) => !isJob(n));
+	const targetJobs = targetHeld.filter(isJob);
 	// `undefined` means the form did not carry the field at all — the caller
 	// cannot edit roles, so leave them alone. An empty array is a real request
 	// to remove every role and is handled as one.
@@ -291,8 +320,10 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 		const namesById = new Map(
 			(await db.select({ id: role.id, name: role.name }).from(role)).map((r) => [r.id, r.name])
 		);
-		const submitted = data.roles.map(Number);
-		const nextRoleNames = submitted.map((rid) => namesById.get(rid)).filter(Boolean) as string[];
+		const submitted = data.roles
+			.map(Number)
+			.filter((rid) => namesById.has(rid) && !isJob(namesById.get(rid)!));
+		const nextRoleNames = submitted.map((rid) => namesById.get(rid)!);
 
 		const unchanged =
 			nextRoleNames.length === targetCurrentRoles.length &&
@@ -303,12 +334,12 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				error(403, 'You cannot change roles.');
 			}
 
-			// Self-demotion and the last admin are refused here and on /staff/access.
+			// Self-demotion and the last admin are refused here and on the Settings Access tab.
 			const refusal = await positionChangeRefusal({
 				actorId: actor.id,
 				targetId: id,
-				current: targetCurrentRoles,
-				next: nextRoleNames
+				current: targetHeld,
+				next: [...nextRoleNames, ...targetJobs]
 			});
 			if (refusal) error(refusal.httpStatus, refusal.message);
 
@@ -387,17 +418,23 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
  * "Insufficient free_hours: requested 300, available 200" — that leaks the raw
  * enum into something a staff member reads.
  */
+/** The word a staffer reads for each credit type. */
+const CREDIT_WORDS: Record<CreditType, string> = {
+	free_hours: 'Credits',
+	equipment_credits: 'Equipment credits'
+};
+
 function overdrawn(type: CreditType, available: number, requested: number): string {
 	const show = (credits: number) =>
 		type === 'free_hours' ? `${creditsToHours(credits)} hrs` : `${credits}`;
-	return `${titleCase(type)} balance is ${show(available)} — cannot deduct ${show(requested)}.`;
+	return `${CREDIT_WORDS[type]} balance is ${show(available)} — cannot deduct ${show(requested)}.`;
 }
 
 /** What a comp-only staffer reads when an adjustment is beyond them. */
 function compRefusal(type: CreditType, ceiling: number): string {
-	if (ceiling === 0) return `An admin adjusts ${titleCase(type).toLowerCase()}.`;
+	if (ceiling === 0) return `An admin adjusts ${CREDIT_WORDS[type].toLowerCase()}.`;
 	const limit = type === 'free_hours' ? `${creditsToHours(ceiling)} hrs` : `${ceiling}`;
-	return `Up to ${limit} of ${titleCase(type).toLowerCase()} can be added here. An admin can do more, or deduct.`;
+	return `Up to ${limit} of ${CREDIT_WORDS[type].toLowerCase()} can be added here. An admin can do more, or deduct.`;
 }
 
 export const adjustCredits = form(
@@ -407,7 +444,7 @@ export const adjustCredits = form(
 		amount: z.string(),
 		description: z.string().min(1)
 	}),
-	async (data, issue) => {
+	writesAudit('credits.adjusted', async (data, issue) => {
 		// `credit.comp` alone is bounded by `creditCompCeiling`; see below.
 		const unbounded = await can('credit.adjust');
 		if (!unbounded) await requireCapability('credit.comp');
@@ -481,7 +518,7 @@ export const adjustCredits = form(
 
 		void getUserCredits(userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const deactivateUser = form(
@@ -546,6 +583,7 @@ export const banUser = form(
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -555,23 +593,76 @@ export const unbanUser = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireCapability('user.ban');
+		const me = await requireCapability('user.ban');
 		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 		try {
-			({ subscription } = await unbanUserService(data.id));
+			({ subscription } = await unbanUserService(data.id, { actorId: me.id }));
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
 		return { success: true, subscription };
 	}
 );
+
+/** The term is a whole number of days; the service checks it against the configured ceiling. */
+export const suspendUser = form(
+	z.object({
+		id: z.string().min(1),
+		reason: z.string().trim().min(1, 'Say why, for the record').max(LONG_TEXT_MAX),
+		days: z.number().int().min(1)
+	}),
+	async (data) => {
+		const me = await requireCapability('user.ban');
+		try {
+			await suspendUserService(data.id, { actorId: me.id, reason: data.reason, days: data.days });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const liftSuspension = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		const me = await requireCapability('user.ban');
+		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
+		try {
+			({ subscription } = await liftSuspensionService(data.id, {
+				actorId: me.id,
+				liftReason: 'staff_lifted'
+			}));
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
+		return { success: true, subscription };
+	}
+);
+
+/** A fresh appeal link for a removed member whose last one expired or went astray. */
+export const resendRemovalNotice = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('user.ban');
+	try {
+		await resendRemovalNoticeService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	return { success: true };
+});
 
 export const purgeUser = form(
 	z.object({
 		id: z.string().min(1)
 	}),
-	async (data) => {
+	writesAudit('user.purged', async (data) => {
 		await requireCapability('user.purge');
 		try {
 			await purgeUserService(data.id);
@@ -582,7 +673,7 @@ export const purgeUser = form(
 			mapDomainError(err);
 		}
 		return { success: true };
-	}
+	})
 );
 
 export const getLocalUser = query(async () => {
@@ -624,7 +715,8 @@ export const getMemberDashboard = query(async () => {
 		dbSubscription,
 		profileComplete,
 		matches,
-		unconfirmed
+		owing,
+		classifiedMatches
 	] = await Promise.all([
 		db
 			.select()
@@ -662,24 +754,16 @@ export const getMemberDashboard = query(async () => {
 		// is on one load-bearing query (`custom/no-concurrent-remote-queries`),
 		// and a card that fanned out a second one would not render past kit 2.64.
 		findMatchesFor(currentUser.id),
-		// Bookings inside their confirmation window that still need paying or
-		// confirming, whatever week they fall in (#964). Bounded at the window in
-		// SQL so out-of-window rows cannot use up the five (#2107).
+		// Confirmed bookings starting soon with a balance owed, whatever week they
+		// fall in (#964). Bounded in SQL so later rows cannot use up the five (#2107).
 		db
 			.select()
 			.from(reservation)
 			.where(
 				and(
-					or(
-						eq(reservation.status, 'scheduled'),
-						and(
-							eq(reservation.status, 'confirmed'),
-							isNull(reservation.paidAt),
-							or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0))
-						)
-					),
+					confirmedUnpaidSql(),
 					gte(reservation.startsAt, nowDate),
-					lte(reservation.startsAt, confirmationHorizon(nowDate)),
+					lte(reservation.startsAt, bookingLeadHorizon(nowDate)),
 					or(
 						and(
 							eq(reservation.createdByUserId, currentUser.id),
@@ -695,13 +779,14 @@ export const getMemberDashboard = query(async () => {
 				)
 			)
 			.orderBy(reservation.startsAt)
-			.limit(5)
+			.limit(5),
+		surfaces.classifieds ? listPostsMatching(currentUser.id) : Promise.resolve([])
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
 
 	// Only read when there is a booking to price; the figure is live, never held.
-	const reservationConfig = unconfirmed.length > 0 ? await getReservationConfig() : null;
+	const reservationConfig = owing.length > 0 ? await getReservationConfig() : null;
 	const freeHoursWallet = {
 		balance: credits.free_hours ?? 0,
 		resetAt: freeHoursResetAt(dbSubscription)
@@ -712,11 +797,13 @@ export const getMemberDashboard = query(async () => {
 	// work on the server, not five.
 	const needsYou = await listNeedsYou({
 		userId: currentUser.id,
-		reservations: unconfirmed.map((r) => ({
+		reservations: owing.map((r) => ({
 			id: r.id,
 			startsAt: r.startsAt,
 			status: r.status,
+			bookerType: r.bookerType,
 			paidAt: r.paidAt,
+			refundedAt: r.refundedAt,
 			cashDueCents: r.cashDueCents,
 			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
 			coveredByFreeHours:
@@ -773,12 +860,13 @@ export const getMemberDashboard = query(async () => {
 		pendingInviteCount,
 		profileComplete,
 		matches,
-		unconfirmed: unconfirmed.map((r) => ({
-			id: r.id,
-			startsAt: r.startsAt,
-			endsAt: r.endsAt,
-			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
-			confirmFrom: new Date(r.startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+		/** Classified posts sharing a tag with this member's profile; empty while the surface is off. */
+		classifiedMatches: classifiedMatches.map((p) => ({
+			id: p.id,
+			kind: p.kind,
+			category: p.category,
+			ref: toGenericRef('classified', { id: p.id, title: p.title }),
+			sharedTags: p.sharedTags.map((t) => t.value)
 		}))
 	};
 });
@@ -848,19 +936,51 @@ export const getUserMembership = query(z.string(), async (userId) => {
 	};
 });
 
+/**
+ * A member's credit ledger as feed rows. The ledger stores no actor; a staff
+ * adjustment's actor is on the `credits.adjusted` entry in their History.
+ */
 export const getUserCreditHistory = query(
-	z.object({ userId: z.string(), page: z.number().int().min(1).default(1) }),
-	async ({ userId, page }) => {
+	z.object({ userId: z.string(), limit: z.number().int().min(1).max(FEED_MAX).optional() }),
+	async ({ userId, limit }) => {
 		await requireCapability('credit.read');
-		return listTransactions({ userId }, { page, pageSize: 10 });
+		const size = feedLimit(limit);
+		const { rows, pagination } = await listTransactions({ userId }, { page: 1, pageSize: size });
+		return {
+			items: rows.map((t) => ({
+				id: `credit:${t.id}`,
+				at: new Date(t.createdAt),
+				actorId: null,
+				actorName: null,
+				summary: t.description,
+				source: t.source,
+				creditType: t.creditType,
+				amount: t.amount,
+				balanceAfter: t.balanceAfter
+			})),
+			hasMore: pagination.total > size
+		};
 	}
 );
 
 /** Who changed this member's account, newest first. Staff-only, like the rest of the record. */
-export const getUserHistory = query(z.string(), async (userId) => {
+/** Every suspension or ban of this member, open or lifted. */
+export const getUserRemovals = query(z.string(), async (userId) => {
 	await requireCapability('user.read');
-	return listAuditEntriesForSubject('user', userId, { limit: 20 });
+	return listRemovals(userId);
 });
+
+export const getUserHistory = query(
+	z.object({ userId: z.string(), limit: z.number().int().min(1).max(FEED_MAX).optional() }),
+	async ({ userId, limit }): Promise<FeedPage> => {
+		await requireCapability('user.read');
+		const { entries, hasMore } = await listAuditEntriesForSubject(
+			{ type: 'user', id: userId },
+			{ limit }
+		);
+		return { items: entries.map(auditFeedItem), hasMore };
+	}
+);
 
 export const getUserSessions = query(z.string(), async (userId) => {
 	await requireCapability('user.read');

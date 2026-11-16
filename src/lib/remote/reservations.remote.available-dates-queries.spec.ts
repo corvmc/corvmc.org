@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // getAvailableDates reads the whole booking window in a constant number of
 // queries — one per source (reservations, closures) — not one per day (#1775).
@@ -17,13 +17,13 @@ function chainable(): any {
 
 const select = vi.fn(() => chainable());
 
-vi.mock('$lib/server/db', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/db')>()),
+vi.mock('#lib/server/db/index.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/db/index.js')>()),
 	db: { select }
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -35,6 +35,12 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 		maxAdvanceDaysOneoff: 14,
 		maxAdvanceDaysRecurring: 17.5
 	}))
+}));
+
+// A cleared member, so only the two window reads count here; the clearance read
+// is per request, not per day, and `booking-notice.spec.ts` owns it.
+vi.mock('#lib/server/volunteer/practice-space-clearance.js', () => ({
+	holdsPracticeSpaceClearance: vi.fn(async () => true)
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
@@ -61,12 +67,12 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getAvailableDates } = (await import('$lib/remote/reservations.remote')) as any;
+const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 describe('getAvailableDates query count', () => {
 	it('reads reservations and closures once for the whole window, not once per day', async () => {
 		select.mockClear();
-		const dates: string[] = await getAvailableDates();
+		const { dates }: { dates: string[] } = await getAvailableDates();
 
 		// Today may be past closing, so 13 or 14 days are offered; either way the
 		// window spans many days and the read count must not scale with it.

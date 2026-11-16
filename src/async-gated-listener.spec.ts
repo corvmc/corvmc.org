@@ -142,7 +142,7 @@ function gatedStateReachableFromSyncListener(code: string, filename: string): st
 const compileSource = (source: string, filename: string) =>
 	compile(source, {
 		generate: 'client',
-		// Matches svelte.config.js, as `async-effect-shape.spec.ts` does: runes
+		// Matches kit.config.js, as `async-effect-shape.spec.ts` does: runes
 		// everywhere except the mdsvex prose layout, which still uses `export let`.
 		runes: !filename.includes('/markdown/prose.svelte'),
 		experimental: { async: true },

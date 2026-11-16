@@ -1,21 +1,22 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import { session, user, verification } from '$lib/server/db/schema/authentication';
+import * as env from '$app/env/private';
+import { db } from '#lib/server/db/index.js';
+import { session, user, verification } from '#lib/server/db/schema/authentication.js';
 import { and, eq, gt } from 'drizzle-orm';
 import { DomainError } from '../domain-error';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import {
 	linkExistingSubscriberToUser,
 	moveLinkedSubscriberEmail
-} from '$lib/server/marketing/subscriber-service';
-import { captureException } from '$lib/server/sentry';
-import { stripe } from '$lib/server/stripe';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+} from '#lib/server/marketing/subscriber-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { stripe } from '#lib/server/stripe.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
-// Staff-proposed, mailbox-confirmed email change (docs/specs/staff-email-change-spec.md)
+// Staff-proposed, mailbox-confirmed email change (docs/decisions/0033-staff-propose-email-changes.md)
 // ---------------------------------------------------------------------------
 // The address is the login credential, so nothing here moves it on a staff
 // member's word alone: the change applies only when the new mailbox redeems
@@ -25,9 +26,6 @@ import { recordAuditEntry } from '$lib/server/audit/audit-service';
 
 /** How long a confirmation link stays good. */
 export const EMAIL_CHANGE_TTL_SECONDS = 86_400;
-
-/** Where the old address is told to write to have a change reversed. */
-const STAFF_CONTACT_EMAIL = 'contact@corvmc.org';
 
 /** Confirmation sends allowed per member per day, counting resends. */
 export const EMAIL_CHANGE_SENDS_PER_DAY = 5;
@@ -306,6 +304,7 @@ export async function confirmEmailChange(token: string): Promise<ConfirmEmailCha
 
 	// A notice, not a veto: nothing here undoes the change. Reversal is a staff
 	// action, so the notice's one button is a message to staff asking for it.
+	const reversalAddress = await contactEmail();
 	await dispatchEmailOnly({
 		type: 'email_changed',
 		toEmail: member.email,
@@ -318,12 +317,12 @@ export async function confirmEmailChange(token: string): Promise<ConfirmEmailCha
 					text: `The address you sign in to the Corvallis Music Collective with is now ${maskEmail(found.email)}. The change was requested by CMC staff and confirmed from the new mailbox.`
 				},
 				{
-					text: `If you did not ask for this, email CMC staff at ${STAFF_CONTACT_EMAIL} from this address and we will change it back. The button below starts that email for you.`
+					text: `If you did not ask for this, email CMC staff at ${reversalAddress} from this address and we will change it back. The button below starts that email for you.`
 				}
 			],
 			cta: {
 				label: 'Ask staff to reverse this change',
-				url: `mailto:${STAFF_CONTACT_EMAIL}?subject=${encodeURIComponent('Please reverse the email change on my CorvMC account')}`
+				url: `mailto:${reversalAddress}?subject=${encodeURIComponent('Please reverse the email change on my CorvMC account')}`
 			},
 			footnote: 'Until staff reverse it, you cannot sign in with this address.',
 			transactional_only: true

@@ -1,8 +1,9 @@
 <script lang="ts">
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import SectionHeading from '#lib/components/public/SectionHeading.svelte';
 	import {
 		IconBuildingCommunity,
 		IconCoin,
@@ -12,9 +13,9 @@
 		IconTicket
 	} from '@tabler/icons-svelte';
 	import type { Icon } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { signInHref } from '$lib/utils/sign-in';
-	import { getPublicCommittees } from '$lib/remote/committees.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { signInHref } from '#lib/utils/sign-in.js';
+	import { getPublicCommittees } from '#lib/remote/committees.remote.js';
 	import WishlistSection from './WishlistSection.svelte';
 
 	type VolunteerGroup = {
@@ -55,59 +56,68 @@
 	const volunteerGroups: VolunteerGroup[] = $derived([
 		{
 			icon: IconTicket,
-			title: 'At shows',
-			desc: 'Show-night jobs, start to finish. Usually one evening at a time.',
+			title: m.public_contribute_at_shows_title(),
+			desc: m.public_contribute_show_night_jobs_start_finish_body(),
 			roles: [
-				{ name: 'Host', desc: 'Welcome bands, introduce sets, keep things on schedule.' },
-				{ name: 'Tech', desc: 'Operate the soundboard and run soundcheck.' },
-				{ name: 'Door', desc: 'Handle entry, welcome the audience, keep an eye on the space.' },
-				{ name: 'Merch', desc: 'Run CMC merch and concessions, coordinate band merch tables.' },
-				{ name: 'Photo/Video', desc: 'Document the show with your own equipment.' }
+				{ name: 'Host', desc: m.public_contribute_welcome_bands_introduce_sets_keep_body() },
+				{ name: 'Tech', desc: m.public_contribute_operate_soundboard_run_soundcheck_body() },
+				{ name: 'Door', desc: m.public_contribute_handle_entry_welcome_audience_keep_body() },
+				{ name: 'Merch', desc: m.public_contribute_run_cmc_merch_concessions_coordinate_body() },
+				{ name: 'Photo/Video', desc: m.public_contribute_document_show_with_own_equipment_body() }
 			]
 		},
 		{
 			icon: IconSpeakerphone,
-			title: 'Away from shows',
-			desc: 'Keeping the place running between events, mostly on your own schedule.',
+			title: m.public_contribute_away_from_shows_title(),
+			desc: m.public_contribute_keeping_place_running_between_events_body(),
 			roles: [
-				{ name: 'Street team', desc: 'Put up posters around town.' },
-				{ name: 'Tabling', desc: 'Staff a table at festivals and community events.' },
-				{ name: 'Work parties', desc: 'Cleaning, organizing, and building projects.' },
-				{ name: 'Gear repair', desc: 'Clean, maintain, and repair lending library equipment.' },
-				{ name: 'Audio engineering', desc: 'Help members record, mix, or master.' }
+				{ name: 'Street team', desc: m.public_contribute_put_up_posters_around_town_body() },
+				{ name: 'Tabling', desc: m.public_contribute_staff_table_at_festivals_community_body() },
+				{
+					name: 'Work parties',
+					desc: m.public_contribute_cleaning_organizing_building_projects_body()
+				},
+				{
+					name: 'Gear repair',
+					desc: m.public_contribute_clean_maintain_repair_lending_library_body()
+				},
+				{
+					name: 'Audio engineering',
+					desc: m.public_contribute_help_members_record_mix_master_body()
+				}
 			]
 		},
 		{
 			icon: IconBuildingCommunity,
-			title: 'Committees',
-			desc: 'Committees meet monthly to build and guide the organization. You apply, and a chair contacts you to talk it over.',
+			title: m.public_committees_title(),
+			desc: m.public_contribute_committees_meet_monthly_build_guide_body(),
 			roles: committees.map((c) => ({ name: c.name, desc: c.bio ?? '' })),
 			// Committees are not volunteer roles any more, so the shift signup at the
 			// foot of this section is the wrong door for them. Members apply.
-			link: { href: '/member/groups', label: 'Apply to a committee' }
+			link: { href: '/member/groups', label: m.public_contribute_label() }
 		}
 	]);
 
 	const otherWays: ContributeWay[] = [
 		{
 			icon: IconCoin,
-			title: 'One-Time Donation',
-			desc: 'Not ready to commit monthly? A one-time gift goes straight toward keeping the doors open.',
+			title: m.public_contribute_one_time_donation_title(),
+			desc: m.public_contribute_not_ready_commit_monthly_one_body(),
 			href: ZEFFY_DONATION_URL,
 			cta: 'Donate Now',
 			external: true
 		},
 		{
 			icon: IconGuitarPick,
-			title: 'Donate Gear',
-			desc: 'Working amps, drums, mics, or instruments find a new home in our lending library.',
+			title: m.public_contribute_donate_gear_title(),
+			desc: m.public_contribute_working_amps_drums_mics_instruments_body(),
 			href: '/contact',
 			cta: 'Offer Gear'
 		},
 		{
 			icon: IconMicrophone,
-			title: 'Host a Workshop',
-			desc: 'Share your craft with other musicians — songwriting, recording, gear repair, theory.',
+			title: m.public_contribute_host_workshop_title(),
+			desc: m.public_contribute_share_craft_with_other_musicians_body(),
 			href: '/contact',
 			cta: 'Pitch an Idea'
 		}
@@ -115,7 +125,7 @@
 </script>
 
 <svelte:head>
-	<title>Contribute | Corvallis Music Collective</title>
+	<title>{m.public_contribute_contribute_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="Volunteer with the Corvallis Music Collective. Shows are run by volunteers — no experience needed, and a free account is all it takes to start. You can also become a sustaining member, donate gear, or make a gift."
@@ -123,9 +133,8 @@
 </svelte:head>
 
 <!-- Hero -->
-<Hero title="Help Us Keep the Music Going">
-	CMC is a 501(c)(3) nonprofit. Every membership, donation, and volunteer hour goes directly toward
-	affordable practice space and programs for local musicians.
+<Hero title={m.public_contribute_help_us_keep_music_going_title()}>
+	{m.public_contribute_cmc_501_c_3_nonprofit_text()}
 </Hero>
 
 <!--
@@ -140,11 +149,11 @@
 -->
 <Section>
 	<div class="measure-center mb-12">
-		<h2 class="text-4xl font-bold tracking-tight">Volunteer with Us</h2>
+		<h2 class="text-4xl font-bold tracking-tight">
+			{m.public_contribute_volunteer_with_us_title()}
+		</h2>
 		<p class="text-base leading-relaxed text-fg-2">
-			Volunteers are the beating heart of our organization! Every show, every piece of gear, and
-			every program is made possible by the time and energy of our members. No experience is
-			necessary — just a willingness to help. Create a free account to get started.
+			{m.public_contribute_volunteers_beating_heart_our_organization_text()}
 		</p>
 	</div>
 
@@ -177,7 +186,7 @@
 
 	<div class="measure-center">
 		<Button href={VOLUNTEER_SIGNUP_URL} variant="default" size="lg"
-			>Create a Free Account to Volunteer</Button
+			>{m.public_contribute_create_free_account_volunteer_label()}</Button
 		>
 	</div>
 </Section>
@@ -185,14 +194,13 @@
 <!-- Become a Sustaining Member (pointer to /membership) -->
 <section class="section-tint-secondary px-6 py-16">
 	<div class="measure-center">
-		<h2 class="text-4xl font-bold tracking-tight">Become a Sustaining Member</h2>
+		<h2 class="text-4xl font-bold tracking-tight">{m.public_become_sustaining_member_title()}</h2>
 		<p class="text-base leading-relaxed text-fg-2">
-			The most direct way to support the space is a monthly contribution on a sliding scale —
-			starting at $10/month. Sustaining members earn free practice hours every month, can lock in a
-			recurring weekly practice slot, and get discounts on show tickets and gear. Your contribution
-			keeps the doors open.
+			{m.public_contribute_most_direct_way_support_space_text()}
 		</p>
-		<Button href="/membership" variant="default" size="lg">Explore Membership</Button>
+		<Button href="/membership" variant="default" size="lg"
+			>{m.public_contribute_explore_membership_label()}</Button
+		>
 	</div>
 </section>
 
@@ -207,7 +215,7 @@
 
 <!-- Other Ways to Contribute -->
 <Section tint="warning">
-	<SectionHeading title="Other Ways to Contribute" />
+	<SectionHeading title={m.public_contribute_other_ways_contribute_title()} />
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
 		{#each otherWays as item (item.title)}
 			<Tile fill="raised">

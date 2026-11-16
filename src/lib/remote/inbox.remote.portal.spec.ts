@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let currentUser: { id: string; name: string; email: string } | null = null;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireStaff: async () => {
 		throw new Error('403: Staff access required');
 	},
@@ -30,7 +30,7 @@ const startPortalConversation = vi.fn(async () => ({ threadId: 't1', messageId: 
 const replyToPortalThread = vi.fn(async () => ({ messageId: 'm1' }));
 const markPortalThreadRead = vi.fn(async () => undefined);
 
-vi.mock('$lib/server/inbox/portal-service', () => ({
+vi.mock('#lib/server/inbox/portal-service.js', () => ({
 	listPortalThreads: (...a: unknown[]) => listPortalThreads(...(a as [])),
 	getPortalThread: (...a: unknown[]) => getPortalThread(...(a as [string, string])),
 	startPortalConversation: (...a: unknown[]) => startPortalConversation(...(a as [])),
@@ -40,7 +40,7 @@ vi.mock('$lib/server/inbox/portal-service', () => ({
 }));
 
 // Everything else inbox.remote.ts pulls in at module scope.
-vi.mock('$lib/server/inbox/thread-service', () => ({
+vi.mock('#lib/server/inbox/thread-service.js', () => ({
 	listThreads: vi.fn(),
 	getThread: vi.fn(),
 	assignThread: vi.fn(),
@@ -48,20 +48,20 @@ vi.mock('$lib/server/inbox/thread-service', () => ({
 	getUnresolvedCount: vi.fn(),
 	countThreadsByStatus: vi.fn()
 }));
-vi.mock('$lib/server/inbox/message-service', () => ({
+vi.mock('#lib/server/inbox/message-service.js', () => ({
 	addOutboundMessage: vi.fn(),
 	addNote: vi.fn()
 }));
-vi.mock('$lib/server/inbox/channel-config-service', () => ({
+vi.mock('#lib/server/inbox/channel-config-service.js', () => ({
 	getAllChannelConfigs: vi.fn(),
 	getEnabledChannels: vi.fn(),
 	updateChannelConfig: vi.fn()
 }));
-vi.mock('$lib/server/inbox/inbound-handlers', () => ({ handleContactForm: vi.fn() }));
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: vi.fn(async () => true) }));
-vi.mock('$lib/server/notification/dispatcher', () => ({ dispatch: vi.fn() }));
-vi.mock('$lib/server/reservation/timezone', () => ({ buildDateInTz: vi.fn() }));
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/server/inbox/inbound-handlers.js', () => ({ handleContactForm: vi.fn() }));
+vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: vi.fn(async () => true) }));
+vi.mock('#lib/server/notification/dispatcher.js', () => ({ dispatch: vi.fn() }));
+vi.mock('#lib/server/reservation/timezone.js', () => ({ buildDateInTz: vi.fn() }));
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: () => ({ refresh: () => undefined }),
 	getMemberLayout: () => ({ refresh: () => undefined })
 }));

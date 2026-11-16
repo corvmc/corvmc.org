@@ -2,17 +2,21 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { getById, openBandTicketSale, closeBandTicketSale } from '$lib/server/event/event-service';
-import { bandSaleBlocker } from '$lib/server/ticket/ticket-seller';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import {
+	getById,
+	openBandTicketSale,
+	closeBandTicketSale
+} from '#lib/server/event/event-service.js';
+import { bandSaleBlocker } from '#lib/server/ticket/ticket-seller.js';
 import {
 	checkIn,
 	getEventTickets,
 	getTicketById,
 	getTicketsSold
-} from '$lib/server/ticket/ticket-service';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
+} from '#lib/server/ticket/ticket-service.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
 
 /**
  * A band selling its own gig through the collective (#1203).

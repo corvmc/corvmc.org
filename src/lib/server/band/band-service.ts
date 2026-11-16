@@ -1,25 +1,27 @@
-import type { GroupJoinPolicy } from '$lib/config';
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
-import { db } from '$lib/server/db';
-import { DomainError } from '$lib/server/domain-error';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
+import type { GroupJoinPolicy } from '#lib/config.js';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	group,
 	groupMember,
+	groupPosition,
+	groupPositionHolder,
 	groupMemberStatuses,
 	groupSlugHistory,
 	type GroupMemberStatus,
 	type GroupRole
-} from '$lib/server/db/schema/group';
-import type { GroupKind } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
+} from '#lib/server/db/schema/group.js';
+import type { GroupKind } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { groupEntryInsert } from '$lib/server/directory/entry-service';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { groupEntryInsert } from '#lib/server/directory/entry-service.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
 import { activeBand, deactivatedBand, isBand, premiumBand } from './band-totals-service';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import {
 	eq,
 	and,
@@ -34,22 +36,36 @@ import {
 	exists,
 	type SQL
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { detachSlot } from '$lib/server/media/media-service';
-import { deletePrivateObject } from '$lib/server/private-storage';
-import { DocumentPurgeFailedError, listAllKeys } from '$lib/server/group/file-service';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { captureException } from '$lib/server/sentry';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import {
+	bandRefColumns,
+	memberRefColumns,
+	toBandRef,
+	toMemberRef
+} from '#lib/server/entity/refs.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
+import { groupGrantsColumn } from '#lib/server/capability/grant-columns.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
+import { detachSlot } from '#lib/server/media/media-service.js';
+import { deletePrivateObject } from '#lib/server/private-storage.js';
+import { DocumentPurgeFailedError, listAllKeys } from '#lib/server/group/file-service.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { captureException } from '#lib/server/sentry.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
-import type { BandTier } from '$lib/server/db/schema/band-site';
+import type { BandTier } from '#lib/server/db/schema/band-site.js';
+import {
+	CHAIR_POSITION_NAME,
+	isCommitteeChair,
+	leadersFirst,
+	leadsGroup,
+	rosterRole,
+	setChairHolder
+} from '#lib/server/group/chair.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -194,9 +210,9 @@ export class NotAnActiveBandMemberError extends DomainError {
 /**
  * Only a band can be deleted by the person who runs it.
  *
- * `docs/specs/shipped/groups-spec.md:818` is the one place the role table differs by
- * kind: an appointed program leader runs the program, they do not own it, and
- * ending a CMC program is a staff decision made in `/staff/clubs`.
+ * This is the one place the role table differs by kind: an appointed program
+ * leader runs the program, they do not own it, and ending a CMC program is a
+ * staff decision made in `/staff/clubs`.
  */
 export class CannotDeleteProgramError extends DomainError {
 	readonly httpStatus = 403;
@@ -248,6 +264,8 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
 
 	const bandId = crypto.randomUUID();
+	const firstMemberId = crypto.randomUUID();
+	const chairPositionId = crypto.randomUUID();
 
 	await db.batch([
 		// A previous owner may have released this slug. Claiming it retires their
@@ -266,12 +284,31 @@ export async function create(ownerId: string | null, data: CreateBandData) {
 		...(ownerId
 			? [
 					db.insert(groupMember).values({
+						id: firstMemberId,
 						groupId: bandId,
 						userId: ownerId,
-						// A club or committee has chairs (admins) and never an owner.
-						role: kind === 'band' ? 'owner' : 'admin',
+						// A club's chair is `admin`; a committee's holds its chair position.
+						role: kind === 'band' ? 'owner' : kind === 'club' ? 'admin' : 'member',
 						status: 'active'
 					})
+				]
+			: []),
+		// Every committee has a chair position from the start (#3009).
+		...(kind === 'committee'
+			? [
+					db.insert(groupPosition).values({
+						id: chairPositionId,
+						groupId: bandId,
+						name: CHAIR_POSITION_NAME,
+						isChair: true
+					}),
+					...(ownerId
+						? [
+								db
+									.insert(groupPositionHolder)
+									.values({ positionId: chairPositionId, memberId: firstMemberId })
+							]
+						: [])
 				]
 			: []),
 		// The public listing, in the same batch as the band it belongs to. A band
@@ -369,7 +406,7 @@ export async function deleteBand(bandId: string, actorUserId: string) {
 
 	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
 	// the group by design, so nothing cascades here, and whether the object can
-	// be reclaimed is the sweep's question. See docs/specs/shipped/media-spec.md.
+	// be reclaimed is the sweep's question. See docs/decisions/0026-uploads-are-detached-and-swept.md.
 	await detachSlot('group', bandId, 'avatar');
 
 	// Private documents, deleted BEFORE the group row. `file.groupId` cascades,
@@ -494,7 +531,7 @@ export async function getById(bandId: string) {
  * and committees the moment the first one is created, and the group surfaces
  * must not list bands: `/member/groups` answers "what can I be part of", and a
  * band, always `invite_only` and already holding its own index and panel, has no
- * answer to give. See docs/specs/shipped/groups-spec.md § The index.
+ * answer to give. See docs/decisions/0021-a-club-gets-a-page-not-a-panel.md.
  */
 export async function listForUser(
 	userId: string,
@@ -505,7 +542,7 @@ export async function listForUser(
 		slug: group.slug,
 		kind: group.kind,
 		avatarKey: group.avatarKey,
-		role: groupMember.role,
+		role: rosterRole(),
 		status: groupMember.status,
 		memberCount: activeMemberCount()
 	}
@@ -556,7 +593,7 @@ export async function listBandAdmins(
 		.where(
 			and(
 				eq(groupMember.groupId, bandId),
-				inArray(groupMember.role, ['owner', 'admin']),
+				leadsGroup(),
 				eq(groupMember.status, 'active'),
 				// This list is fanned out to as a notification recipient set, so a
 				// removed member kept getting band mail without it.
@@ -567,12 +604,12 @@ export async function listBandAdmins(
 	return rows.map((r) => ({ userId: r.id, userName: r.name, userEmail: r.email }));
 }
 
-export async function getMembers(bandId: string) {
-	const rows = await db
+function selectMembers(bandId: string) {
+	return db
 		.select({
 			id: groupMember.id,
 			userId: groupMember.userId,
-			role: groupMember.role,
+			role: rosterRole(),
 			position: groupMember.position,
 			alias: groupMember.alias,
 			status: groupMember.status,
@@ -585,12 +622,13 @@ export async function getMembers(bandId: string) {
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(and(eq(groupMember.groupId, bandId), isNull(user.deletedAt)))
-		.orderBy(
-			sql`case ${groupMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
-			user.name
-		);
+		.orderBy(leadersFirst(), user.name);
+}
 
-	return rows.map((row) => ({
+type MemberRow = Awaited<ReturnType<typeof selectMembers>>[number];
+
+function toMemberRow(row: MemberRow) {
+	return {
 		...row,
 		member: {
 			...toMemberRef(row.member),
@@ -603,7 +641,22 @@ export async function getMembers(bandId: string) {
 			// separate lines, which is a third line on a two-line row.
 			subtitle: row.position ?? row.member.email
 		}
-	}));
+	};
+}
+
+export async function getMembers(bandId: string) {
+	return (await selectMembers(bandId)).map(toMemberRow);
+}
+
+/**
+ * `getMembers` with the roster contract added, for staff lists. Kept apart
+ * because it carries every address, which the member-facing lists do not show.
+ */
+export async function getRosterMembers(bandId: string) {
+	return (await selectMembers(bandId)).map((row) => {
+		const { member, ...rest } = toMemberRow(row);
+		return { ...rest, ...toRosterPerson(row.member), member };
+	});
 }
 
 export async function searchMembers(query: string, bandId: string) {
@@ -770,7 +823,7 @@ export async function acceptInvitation(
 				.where(
 					and(
 						eq(groupMember.groupId, row.groupId),
-						inArray(groupMember.role, ['owner', 'admin']),
+						leadsGroup(),
 						eq(groupMember.status, 'active'),
 						ne(groupMember.userId, userId)
 					)
@@ -850,8 +903,22 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	if (row.role === 'owner') throw new CannotRemoveOwnerError();
 
 	const updates: Record<string, unknown> = {};
-	if (data.role !== undefined) updates.role = data.role;
+	if (data.role !== undefined) {
+		// A committee's chair is its chair position, not the stored role.
+		const [g] = await db
+			.select({ kind: group.kind, groupId: groupMember.groupId })
+			.from(groupMember)
+			.innerJoin(group, eq(group.id, groupMember.groupId))
+			.where(scope)
+			.limit(1);
+		if (g?.kind === 'committee') {
+			await setChairHolder(g.groupId, memberId, data.role === 'admin', null);
+		} else {
+			updates.role = data.role;
+		}
+	}
 	if (data.position !== undefined) updates.position = data.position;
+	if (Object.keys(updates).length === 0) return;
 
 	return db.update(groupMember).set(updates).where(scope);
 }
@@ -1055,6 +1122,8 @@ export async function getByIdWithDetails(bandId: string) {
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			deletedAt: group.deletedAt,
+			/** The outside act it was before it joined, on the Contacts page. */
+			fromOrganizationId: group.fromOrganizationId,
 			memberCount: activeMemberCount()
 		})
 		.from(group)
@@ -1197,8 +1266,9 @@ export async function setTier(bandId: string, tier: BandTier) {
 
 export async function getUserRole(bandId: string, userId: string): Promise<GroupRole | null> {
 	const [row] = await db
-		.select({ role: groupMember.role, status: groupMember.status })
+		.select({ role: groupMember.role, kind: group.kind })
 		.from(groupMember)
+		.innerJoin(group, eq(group.id, groupMember.groupId))
 		.where(
 			and(
 				eq(groupMember.groupId, bandId),
@@ -1208,5 +1278,10 @@ export async function getUserRole(bandId: string, userId: string): Promise<Group
 		)
 		.limit(1);
 
-	return (row?.role as GroupRole) ?? null;
+	if (!row) return null;
+	// A committee's `admin` tier is its chair position (#3009).
+	if (row.kind === 'committee') {
+		return (await isCommitteeChair(userId, bandId)) ? 'admin' : 'member';
+	}
+	return row.role as GroupRole;
 }

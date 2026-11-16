@@ -1,12 +1,13 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 import { createAttachmentKey } from 'svelte/attachments';
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -63,7 +64,7 @@ function failingRemoteForm() {
 	return instance as never;
 }
 
-vi.mock('$lib/remote/flags.remote', () => ({ submitEventReport: failingRemoteForm() }));
+vi.mock('#lib/remote/flags.remote.js', () => ({ submitEventReport: failingRemoteForm() }));
 
 const ReportEventAction = (await import('./ReportEventAction.svelte')).default;
 
@@ -76,11 +77,15 @@ const ReportEventAction = (await import('./ReportEventAction.svelte')).default;
  */
 describe('ReportEventAction', () => {
 	it('tells the reporter when the bot check rejected the submission', async () => {
-		await render(ReportEventAction, { eventId: 'event-1', eventTitle: 'Night Two' });
+		const { locator } = await render(ReportEventAction, {
+			eventId: 'event-1',
+			eventTitle: 'Night Two'
+		});
 
-		await page.getByRole('button', { name: 'Report' }).click();
-		await page.getByRole('textbox', { name: 'Reason' }).fill('Spam');
-		await page.getByRole('dialog').getByRole('button', { name: 'Submit report' }).click();
+		await locator.getByRole('button').click();
+		const dialog = page.getByRole('dialog');
+		await dialog.getByCss(':is([name="reason"], [name^="reason/"])').fill('Spam');
+		await dialog.getByCss('button[type="submit"]').click();
 
 		await expect.element(page.getByRole('alert')).toBeVisible();
 	});

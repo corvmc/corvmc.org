@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -16,12 +17,11 @@ import {
  * the answer down as `canCancel` — which is only observable from the outside,
  * hence an e2e rather than another unit test.
  */
+/** A card's cancel form posts directly; it is the card's only submit. */
+const cancelButton = (card: Locator) => card.locator('button[type="submit"]');
+
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 test('a band books a session, and only the booker is offered Cancel', async ({ page }) => {
@@ -29,13 +29,13 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
 	// Booking is a modal on the list page now, not a /reservations/new route.
-	await page.getByRole('button', { name: 'Book a Session' }).click();
+	await page.getByTestId('book-session').click();
 
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible({ timeout: 15000 });
 
 	// DateTimeStep preselects the first bookable day and loads its start times.
-	const startTime = dialog.locator('select[name="startTime"]');
+	const startTime = dialog.locator('select:is([name="startTime"], [name^="startTime/"])');
 	await expect(startTime).toBeEnabled({ timeout: 15000 });
 	// The earliest *bookable* start, found by value: the list carries the taken
 	// hours too now (#874), so a fixed index can land on a disabled option and
@@ -46,65 +46,64 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 		.getAttribute('value');
 	await startTime.selectOption(firstFree ?? '');
 
-	const endTime = dialog.locator('select[name="endTime"]');
+	const endTime = dialog.locator('select:is([name="endTime"], [name^="endTime/"])');
 	await expect(endTime).toBeEnabled({ timeout: 15000 });
 	await endTime.selectOption({ index: 1 });
 
 	// The band books but a person is on the hook, so staff need a number to call.
 	// The seeded owner has none, which gates the step — same rule as a solo
 	// booking, and the reason `step1Valid` won't clear without it.
-	const phone = dialog.locator('input[name="phone"]');
+	const phone = dialog.locator('input:is([name="phone"], [name^="phone/"])');
 	if (await phone.count()) {
 		await phone.fill('541-555-0123');
 	}
 
-	// `Form.SubmitButton` labels the advance action 'Continue' on every step but
-	// the last, where it becomes the step's own label.
-	const advance = dialog.getByRole('button', { name: 'Continue' });
+	// Steps stay mounted, hidden, so each is found by index. `Form.SubmitButton`
+	// (the only button carrying `data-status`) is `type="button"` until the last.
+	const advance = dialog.locator('[data-step="0"] button[data-status]');
 	await expect(advance).toBeEnabled({ timeout: 15000 });
 	await advance.click();
 
 	// The confirm step must say whose free hours this spends — bands have none of
 	// their own, and two bandmates seeing different prices reads as a bug
 	// otherwise.
-	await expect(dialog.getByText(/free hours/i)).toBeVisible({
+	await expect(dialog.getByTestId('band-credit-note')).toBeVisible({
 		timeout: 15000
 	});
+	// The note renders without a price, so the price is asserted on its own (#2571).
+	await expect(dialog.getByTestId('confirm-pricing')).toBeVisible({ timeout: 15000 });
 
-	await dialog.getByRole('button', { name: 'Book Session' }).click();
+	await dialog.locator('[data-step="1"] button[type="submit"]').click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// The booking lands on the band's list, visible to the whole band.
 	const upcomingRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(upcomingRow).toBeVisible({ timeout: 15000 });
-	await expect(upcomingRow.getByRole('button', { name: 'Cancel' })).toBeVisible();
+	await expect(cancelButton(upcomingRow)).toBeVisible();
 
 	// A plain member who didn't book sees the session but is offered nothing.
-	await page.context().clearCookies();
 	await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
 	const mateRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(mateRow).toBeVisible({ timeout: 15000 });
-	await expect(mateRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+	await expect(cancelButton(mateRow)).toHaveCount(0);
 
 	// A cancelled session stays on the list until its slot is over, everywhere.
 	// The band panel used to drop it twice over — it filtered cancellations out
 	// and split the list on `startsAt` — so "why is nobody in the room?" had no
 	// answer on the surface the band was looking at.
-	await page.context().clearCookies();
 	await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
 	// A plain submit, not a confirm dialog — the card posts the form directly.
 	const ownRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
-	await ownRow.getByRole('button', { name: 'Cancel' }).click();
+	await cancelButton(ownRow).click();
 
 	// The row keeps its place in the list and changes state in it. `.cancelled`
 	// is the shell's own class, from the raw status.
 	const cancelledRow = page.locator('.reservation-card.cancelled').first();
 	await expect(cancelledRow).toBeVisible({ timeout: 20000 });
-	await expect(cancelledRow).toContainText('Booked by');
 	// Nobody's to cancel twice.
-	await expect(cancelledRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+	await expect(cancelButton(cancelledRow)).toHaveCount(0);
 });

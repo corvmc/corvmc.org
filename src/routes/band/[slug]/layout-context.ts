@@ -1,5 +1,5 @@
 import { createContext } from 'svelte';
-import type { getBandLayout } from '$lib/remote/layout.remote';
+import type { getBandLayout } from '#lib/remote/layout.remote.js';
 
 export type BandLayout = Awaited<ReturnType<typeof getBandLayout>>;
 

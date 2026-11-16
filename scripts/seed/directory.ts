@@ -86,9 +86,7 @@ export async function seedDirectoryEntries() {
 		})
 	];
 
-	// 19 columns × the default batch of 10 is 190 bound parameters, over D1's
-	// 100-variable ceiling. 5 × 19 = 95.
-	await batchInsert(directoryEntry, entries, 5);
+	await batchInsert(directoryEntry, entries);
 
 	const byGroup = new Map(entries.filter((e) => 'groupId' in e).map((e: any) => [e.groupId, e.id]));
 	const byUser = new Map(entries.filter((e) => 'userId' in e).map((e: any) => [e.userId, e.id]));
@@ -107,8 +105,7 @@ export async function seedDirectoryEntries() {
 		tags.push({ entryId, kind, value });
 	}
 
-	// 3 columns × 30 = 90.
-	await batchInsert(directoryTag, tags, 30);
+	await batchInsert(directoryTag, tags);
 
 	return { entries: entries.length, tags: tags.length };
 }

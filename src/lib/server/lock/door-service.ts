@@ -1,11 +1,15 @@
-import { db } from '$lib/server/db';
-import { doorAccess, reservation } from '$lib/server/db/schema/reservation';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { doorAccess, reservation } from '#lib/server/db/schema/reservation.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, eq, gte, inArray, lte, or } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { config } from '$lib/server/site-config/site-config-service';
-import { DOOR_WINDOW_LEAD_MINUTES, type DoorAccessKind, type DoorAccessOutcome } from '$lib/config';
+import { DomainError } from '#lib/server/domain-error.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import {
+	DOOR_WINDOW_LEAD_MINUTES,
+	type DoorAccessKind,
+	type DoorAccessOutcome
+} from '#lib/config.js';
 import { operateDoor, type OperateOptions } from './door-command-service';
 import {
 	claimPoolCode,

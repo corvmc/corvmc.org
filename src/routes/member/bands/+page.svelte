@@ -1,31 +1,32 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { goto, invalidateAll, replaceState } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import EmailInviteCard from '#lib/components/groups/EmailInviteCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { goto, refreshAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		createBand,
 		acceptInvite,
 		declineInvite,
 		getMemberBands
-	} from '$lib/remote/bands.remote';
+	} from '#lib/remote/bands.remote.js';
 
 	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
 	//
 	// Two constraints, both svelte experimental-async related (still present in
-	// 5.57.0; covered by e2e/create-band-modal.e2e.ts):
+	// 5.57.3; covered by e2e/create-band-modal.e2e.ts):
 	// - This declaration must sit BEFORE the top-level await. Declarations after
 	//   it compile as "blocked" and the modal wiring goes dead.
 	// - A client-side navigation landing while the member layout's async queries
@@ -33,7 +34,7 @@
 	//   one bits-ui's `Dialog.Portal` uses to mount itself, so no dialog ever
 	//   entered the DOM and the button was dead for the life of the page. That
 	//   is a svelte scheduler bug, not a shape this page can avoid, and it is
-	//   fixed in `patches/svelte@5.57.0.patch` — see the note there. The sidebar
+	//   fixed in `patches/svelte@5.57.3.patch` — see the note there. The sidebar
 	//   links still carry data-sveltekit-reload; that is now belt-and-braces
 	//   rather than the mitigation it was.
 	// Deliberately an $effect over $state, NOT a writable $derived. A derived on
@@ -61,7 +62,7 @@
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {
 		if (page.url.searchParams.has('create')) {
-			replaceState(resolve('/member/bands'), {});
+			void goto(resolve('member/bands'), { shallow: true, replace: true });
 		}
 	}
 
@@ -71,14 +72,16 @@
 	const active = $derived(data.active);
 </script>
 
-<PageHeader width="2xl" title="My Bands" subtitle="Member">
-	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
+<PageHeader width="2xl" title={m.member_bands_my_bands_title()} subtitle={m.member_member_body()}>
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}
+		>{m.member_bands_create_band_label()}</Button
+	>
 </PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
 	{#if pending.length > 0 || data.emailInvites.length > 0}
 		<section>
-			<h2 class="mb-3 text-lg font-semibold">Pending Invitations</h2>
+			<h2 class="mb-3 text-lg font-semibold">{m.member_bands_pending_invitations_title()}</h2>
 			<div class="space-y-3">
 				{#each pending as invite (invite.id)}
 					{@const accept = acceptInvite.for(invite.id)}
@@ -89,7 +92,7 @@
 								<div>
 									<p class="font-medium">{invite.name}</p>
 									<p class="text-muted">
-										Invited as {invite.role}
+										{m.member_bands_invited_as_text({ role: invite.role })}
 									</p>
 								</div>
 								<div class="flex gap-2">
@@ -97,17 +100,17 @@
 										remote={accept}
 										onsuccess={(result) => {
 											if (result?.success === false) {
-												toast.error('That invitation is no longer available.');
+												toast.error(m.member_bands_invitation_no_longer_available_toast());
 											} else {
-												toast.success('Invitation accepted');
+												toast.success(m.member_bands_invitation_accepted_toast());
 											}
-											invalidateAll();
+											refreshAll();
 										}}
 									>
 										<input {...accept.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
-											label="Accept"
-											successLabel="Accepted"
+											label={m.member_accept_label()}
+											successLabel={m.member_bands_accepted_label()}
 											variant="primary"
 											size="sm"
 										/>
@@ -116,17 +119,17 @@
 										remote={decline}
 										onsuccess={(result) => {
 											if (result?.success === false) {
-												toast.error('That invitation is no longer available.');
+												toast.error(m.member_bands_invitation_no_longer_available_toast());
 											} else {
-												toast.success('Invitation declined');
+												toast.success(m.member_bands_invitation_declined_toast());
 											}
-											invalidateAll();
+											refreshAll();
 										}}
 									>
 										<input {...decline.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
-											label="Decline"
-											successLabel="Declined"
+											label={m.member_decline_label()}
+											successLabel={m.member_bands_declined_label()}
 											variant="ghost"
 											size="sm"
 										/>
@@ -147,14 +150,14 @@
 	<!-- Active bands -->
 	<section>
 		{#if active.length === 0 && pending.length === 0 && data.emailInvites.length === 0}
-			<EmptyState message="You're not in any bands yet. Create one to get started." />
+			<EmptyState message={m.member_bands_re_not_any_bands_yet_body()} />
 		{:else if active.length === 0}
-			<EmptyState message="No active bands yet." />
+			<EmptyState message={m.member_bands_no_active_bands_yet_body()} />
 		{:else}
 			<div class="space-y-3">
 				{#each active as b (b.id)}
 					<a
-						href={resolve(`/band/${b.slug}`)}
+						href={resolve(`band/${b.slug}`)}
 						class="card bg-base-100 shadow transition-shadow hover:shadow-md"
 					>
 						<CardBody row class="py-4">
@@ -162,7 +165,9 @@
 								<p class="font-medium">{b.name}</p>
 								<p class="text-muted">
 									{b.memberCount}
-									{b.memberCount === 1 ? 'member' : 'members'}
+									{b.memberCount === 1
+										? m.member_bands_member_text()
+										: m.member_bands_members_text()}
 								</p>
 							</div>
 							<StatusBadge status={b.role} />
@@ -175,7 +180,11 @@
 </PageContent>
 
 <!-- Create Band Modal -->
-<Modal title="Create Band" bind:open={showCreateModal} onclose={onCreateModalClose}>
+<Modal
+	title={m.member_bands_create_band_title()}
+	bind:open={showCreateModal}
+	onclose={onCreateModalClose}
+>
 	<Form
 		remote={createBand}
 		onfailure={(issues) => {
@@ -183,33 +192,37 @@
 			// toast would only repeat it. Reserve the generic message for genuine
 			// server/network failures, which have no field to point at — previously
 			// both produced the same opaque "Failed to create band".
-			if (!issues?.length) toast.error('Failed to create band');
+			if (!issues?.length) toast.error(m.member_bands_failed_create_band_toast());
 		}}
 		onsuccess={(result) => {
-			toast.success('Band created');
+			toast.success(m.member_bands_band_created_toast());
 			showCreateModal = false;
-			if (result?.slug) goto(resolve(`/band/${result.slug}`));
+			if (result?.slug) goto(resolve(`band/${result.slug}`));
 		}}
 	>
 		<div class="space-y-4">
 			<FormField
 				field={createBand.fields.name}
-				label="Band name"
+				label={m.member_bands_band_name_label()}
 				type="text"
-				placeholder="e.g. The Velvet Underground"
+				placeholder={m.member_bands_e_g_velvet_underground_placeholder()}
 				required
 			/>
 
 			<FormField
 				field={createBand.fields.bio}
-				label="Bio"
+				label={m.member_bio_label()}
 				type="textarea"
 				rows={3}
-				placeholder="Tell people about your band (optional)"
+				placeholder={m.member_bands_tell_people_about_band_optional_placeholder()}
 			/>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Create Band" successLabel="Created" variant="primary" />
+				<SubmitButton
+					label={m.member_bands_create_band_label()}
+					successLabel={m.member_bands_created_label()}
+					variant="primary"
+				/>
 			</div>
 		</div>
 	</Form>

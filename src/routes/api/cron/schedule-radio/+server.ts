@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { scheduleRadio } from '$lib/server/audio/radio-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
+import * as env from '$app/env/private';
+import { scheduleRadio } from '#lib/server/audio/radio-service.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
 
 /**
  * Keep CMC Radio's timetable ahead of wall clock.
@@ -30,8 +30,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	if (!(await isFeatureEnabled('cmcRadio'))) {
-		return json({ skipped: 'cmcRadio is off', scheduled: 0, pruned: 0 });
+		return Response.json({ skipped: 'cmcRadio is off', scheduled: 0, pruned: 0 });
 	}
 
-	return json(await scheduleRadio());
+	return Response.json(await scheduleRadio());
 };

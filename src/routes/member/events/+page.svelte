@@ -1,21 +1,23 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import GigList from '$lib/components/events/GigList.svelte';
-	import TicketStub from '$lib/components/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import Carousel from '$lib/components/ui/Carousel.svelte';
-	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
-	import { tagToTapeVariant } from '$lib/utils/tag-colors';
-	import { getMemberEventsPage } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import GigList from '#lib/components/events/GigList.svelte';
+	import TicketStub from '#lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import Carousel from '#lib/components/ui/Carousel.svelte';
+	import ButtonGroup from '#lib/components/ui/ButtonGroup.svelte';
+	import { tagToTapeVariant } from '#lib/utils/tag-colors.js';
+	import { getMemberEventsPage } from '#lib/remote/events.remote.js';
 	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
-	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
+	import { getMemberGigGuide } from '#lib/remote/calendar.remote.js';
 	import MyListingsSection from './MyListingsSection.svelte';
-	import { resolve } from '$app/paths';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	import AddShowAction from './AddShowAction.svelte';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	interface EventItem {
 		id: string;
@@ -65,7 +67,7 @@
 	async function showMore() {
 		loadingMore = true;
 		try {
-			const next = await getPublicGigGuide({ offset: allEvents.length });
+			const next = await getMemberGigGuide({ offset: allEvents.length });
 			extra = [...extra, ...next.events];
 			extraHasMore = next.hasMore;
 		} finally {
@@ -119,15 +121,15 @@
 	}
 </script>
 
-<PageHeader title="Events">
-	<Button href={resolve('/member/events/submit')} variant="primary" size="sm">Add a show</Button>
+<PageHeader title={m.member_events_title()}>
+	<AddShowAction />
 </PageHeader>
 <PageContent>
 	<MyListingsSection />
 
 	{#if activeTickets.length > 0}
 		<section>
-			<SectionLabel label="My Tickets" count={activeTickets.length} />
+			<SectionLabel label={m.member_events_my_tickets_label()} count={activeTickets.length} />
 			<Carousel itemCount={activeTickets.length} cardWidth={360}>
 				{#each activeTickets as ticket (ticket.id)}
 					<TicketStub
@@ -150,7 +152,7 @@
 	     listed a dozen (#1025). -->
 	{#if upcoming.length > 0}
 		<section>
-			<SectionLabel label="At the Collective" count={upcoming.length} />
+			<SectionLabel label={m.member_events_at_collective_label()} count={upcoming.length} />
 
 			{#if allTags.length > 1}
 				<div class="mb-4">
@@ -161,7 +163,13 @@
 							class="join-item {activeFilter === null ? 'latched' : ''}"
 							onclick={() => (activeFilter = null)}
 						>
-							All <span class="ml-1 opacity-60">{upcoming.length}</span>
+							<ParaglideMessage
+								message={m.member_events_all_label}
+								inputs={{ length: upcoming.length }}
+								>{#snippet span({ children })}<span class="ml-1 opacity-60"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</Button>
 						{#each allTags as tag (tag)}
 							<Button
@@ -209,14 +217,16 @@
 	<section>
 		{#if allEvents.length === 0}
 			<div class="py-8 text-center opacity-60">
-				<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+				<p class="text-base">{m.member_events_nothing_calendar_yet_check_back_text()}</p>
 			</div>
 		{:else}
 			<GigList events={allEvents} eventBase="/member/events" {rsvpEventIds} />
 			{#if hasMore}
 				<div class="mt-8 text-center">
 					<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
-						{loadingMore ? 'Loading…' : `Show more (${remaining} left)`}
+						{loadingMore
+							? m.member_events_loading_label()
+							: m.member_show_more_left_label({ remaining })}
 					</Button>
 				</div>
 			{/if}
@@ -225,12 +235,12 @@
 
 	{#if past.length > 0}
 		<section class="opacity-75">
-			<SectionLabel label="Past Events" />
+			<SectionLabel label={m.member_events_past_events_label()} />
 			<GigList events={pastRows} eventBase="/member/events" />
 			{#if !showAllPast && past.length > PAST_PREVIEW}
 				<div class="mt-4 text-center">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (showAllPast = true)}>
-						Show more
+						{m.member_events_show_more_label()}
 					</Button>
 				</div>
 			{/if}

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Latest } from '#lib/latest.svelte.js';
+	import { isRedirect } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The day-after survey. Reached from the notification/email, so it has to
 	 * stand alone: say which shift it's about, take two answers, and cope with
@@ -8,21 +11,29 @@
 	 * server-side against the session, and a signup that isn't yours (or isn't
 	 * completed) renders the not-yours state rather than leaking whose it is.
 	 */
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { RatingGroup } from 'bits-ui';
 	import { IconStar, IconStarFilled } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getShiftFeedbackContext, submitShiftFeedback } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getShiftFeedbackContext, submitShiftFeedback } from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let signupId = $derived(page.params.signupId!);
-	let context = $derived(getShiftFeedbackContext(signupId));
+	const params = routeParams('signupId');
+
+	let signupId = $derived(params.signupId);
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-answer.
+	const context = new Latest(() => getShiftFeedbackContext(signupId));
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (context.error && !isRedirect(context.error.e)) throw context.error.e;
+	});
 
 	let submitted = $state(false);
 	// The answer comes back from the form rather than being read off the input:
@@ -31,19 +42,24 @@
 	const setUp = $derived(submitShiftFeedback.result?.wasSetUp ?? null);
 </script>
 
-<PageHeader width="md" title="How did it go?" subtitle="Volunteering" />
+<PageHeader
+	width="md"
+	title={m.member_how_did_go_title()}
+	subtitle={m.member_volunteering_body()}
+/>
 
 <PageContent width="md">
-	{#await context then ctx}
+	{#if context.current !== undefined}
+		{@const ctx = context.current}
 		{#if !ctx}
 			<EmptyState
-				title="Nothing to review here"
-				description="This shift isn't yours, or it hasn't finished yet."
-				actionLabel="Back to volunteering"
+				title={m.member_volunteer_feedback_signup_id_nothing_review_here_title()}
+				description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn_body()}
+				actionLabel={m.member_volunteer_feedback_signup_id_action_label()}
 				actionHref="/member/volunteer"
 			/>
 		{:else if ctx.alreadySubmitted || submitted}
-			<InfoCard title="Thank you">
+			<InfoCard title={m.member_volunteer_feedback_signup_id_thank_title()}>
 				<!--
 					The confirmation answers what they actually said. Somebody who has
 					just told us they were not set up to succeed should not be thanked
@@ -52,32 +68,38 @@
 				-->
 				<p class="text-sm">
 					{#if !submitted}
-						You already answered for this shift.
+						{m.member_volunteer_feedback_signup_id_already_answered_shift_text()}
 					{:else if setUp === false}
-						Got it — and sorry we didn't set you up properly. That goes straight into the briefing
-						for this role, which is the part we can actually fix.
+						{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t_text()}
 					{:else}
-						Got it — thanks for helping us run the next one better.
+						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru_text()}
 					{/if}
 				</p>
-				<a href={resolve('/member/volunteer')} class="link text-sm">Back to volunteering</a>
+				<a href={resolve('member/volunteer')} class="link text-sm"
+					>{m.member_volunteer_feedback_signup_id_action_text()}</a
+				>
 			</InfoCard>
 		{:else}
 			<InfoCard
 				title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
 			>
 				<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
-					<input type="hidden" name="signupId" value={ctx.signupId} />
+					<input {...submitShiftFeedback.fields.signupId.as('hidden', ctx.signupId)} />
 
 					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
 				     hidden input, and naming the wrapper too double-registers the name. -->
-					<Field label="How did the shift go?">
+					<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go_label()}>
 						<!--
 							RatingGroup writes the value to a hidden input via `name`, so it
 							submits like any other field while the stars stay keyboard- and
 							screen-reader-accessible.
 						-->
-						<RatingGroup.Root name="rating" min={1} max={5} class="flex gap-1">
+						<RatingGroup.Root
+							name={submitShiftFeedback.fields.rating.as('hidden', '').name}
+							min={1}
+							max={5}
+							class="flex gap-1"
+						>
 							{#snippet children({ items })}
 								{#each items as item (item.index)}
 									<RatingGroup.Item index={item.index} class="cursor-pointer text-warning">
@@ -93,23 +115,26 @@
 					</Field>
 
 					<FormField
-						name="wasSetUp"
+						field={submitShiftFeedback.fields.wasSetUp}
 						type="checkbox"
-						label="Were you set up to succeed?"
-						checkboxLabel="I knew what to do and had what I needed"
-						description="Used to fix the briefing, not to assess you."
+						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed_label()}
+						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label_checkbox()}
+						description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as_body()}
 					/>
 
 					<FormField
-						name="comment"
+						field={submitShiftFeedback.fields.comment}
 						type="textarea"
-						label="Anything we should fix?"
-						description="Optional. Sent to staff without your name on it."
+						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix_label()}
+						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with_body()}
 					/>
 
-					<SubmitButton label="Send it" variant="primary" />
+					<SubmitButton
+						label={m.member_volunteer_feedback_signup_id_send_label()}
+						variant="primary"
+					/>
 				</Form>
 			</InfoCard>
 		{/if}
-	{/await}
+	{/if}
 </PageContent>

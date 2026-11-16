@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // The start-time list used to contain only the free slots, so a member who
@@ -8,16 +8,17 @@ import { mockUser } from '$lib/server/db/test-factory';
 // 9 AM – 10 PM. #874.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn((d: Date) => d.toISOString().slice(0, 10)),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00Z`))
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff: 14,
 		minDurationHours: 1,
+		teachingMinDurationHours: 0.5,
 		maxDurationHours: 8,
 		timeSlotMinutes: 30,
 		hourlyRateCents: 1500
@@ -26,18 +27,23 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 
 // 10:00–11:00 is taken. 09:30 and 12:00 are free but have too little room after
 // them to fit the one-hour minimum — a different thing from being booked.
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
+	isBookableStart: (
+		await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()
+	).isBookableStart,
+	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => [
-		{ startTime: '09:00', available: true },
-		{ startTime: '09:30', available: true },
-		{ startTime: '10:00', available: false },
-		{ startTime: '10:30', available: false },
-		{ startTime: '11:00', available: true },
-		{ startTime: '11:30', available: true },
-		{ startTime: '12:00', available: true }
+		{ startTime: '09:00', endTime: '09:30', available: true },
+		{ startTime: '09:30', endTime: '10:00', available: true },
+		{ startTime: '10:00', endTime: '10:30', available: false },
+		{ startTime: '10:30', endTime: '11:00', available: false },
+		{ startTime: '11:00', endTime: '11:30', available: true },
+		{ startTime: '11:30', endTime: '12:00', available: true },
+		{ startTime: '12:00', endTime: '12:30', available: true }
 	]),
 	getConflictDetails: vi.fn(),
-	getValidationWarnings: vi.fn()
+	getValidationWarnings: vi.fn(),
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false, tourMinutes: 0 }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
@@ -66,13 +72,14 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getReservationStartTimes } = (await import('$lib/remote/reservations.remote')) as any;
+const { getReservationStartTimes, getReservationEndTimes } =
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 type Option = { value: string; label: string; disabled?: boolean };
 
 describe('getReservationStartTimes', () => {
 	it('lists every operating-hour slot, not only the bookable ones', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 
 		expect(options.map((o) => o.value)).toEqual([
 			'09:00',
@@ -86,7 +93,7 @@ describe('getReservationStartTimes', () => {
 	});
 
 	it('disables a taken slot rather than dropping it', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 		const taken = options.find((o) => o.value === '10:00')!;
 
 		expect(taken.disabled).toBe(true);
@@ -98,20 +105,57 @@ describe('getReservationStartTimes', () => {
 	// Free, but with too little room after it to fit the shortest session, which
 	// is as unpickable as taken.
 	it('disables a slot that is free but too short', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 		const short = options.find((o) => o.value === '09:30')!;
 
 		expect(short.disabled).toBe(true);
 		expect(short.label).toBe('9:30 AM');
 	});
 
+	// #2957: the floor is the booker's, so a half-hour gap is a teaching start.
+	it('offers a teaching booking a start with a half-hour after it', async () => {
+		const options: Option[] = await getReservationStartTimes({
+			date: '2026-09-09',
+			bookerType: 'instructor'
+		});
+
+		expect(options.filter((o) => !o.disabled).map((o) => o.value)).toEqual([
+			'09:00',
+			'09:30',
+			'11:00',
+			'11:30',
+			'12:00'
+		]);
+	});
+
 	it('leaves a genuinely bookable slot selectable', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 
 		expect(options.filter((o) => !o.disabled).map((o) => o.value)).toEqual([
 			'09:00',
 			'11:00',
 			'11:30'
 		]);
+	});
+});
+
+// The duration floor is a fact about the booker: a half-hour lesson is the teaching unit.
+describe('getReservationEndTimes', () => {
+	const ends = async (bookerType?: string) =>
+		(
+			(await getReservationEndTimes({
+				date: '2026-09-09',
+				startTime: '11:00',
+				bookerType
+			})) as Option[]
+		).map((o) => o.value);
+
+	it('offers a teaching booking a half-hour', async () => {
+		expect(await ends('instructor')).toEqual(['11:30', '12:00', '12:30']);
+	});
+
+	it('holds a member to the hour', async () => {
+		expect(await ends()).toEqual(['12:00', '12:30']);
+		expect(await ends('user')).toEqual(['12:00', '12:30']);
 	});
 });

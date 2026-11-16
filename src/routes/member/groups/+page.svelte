@@ -1,23 +1,24 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { replaceState } from '$app/navigation';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { goto } from '$app/navigation';
+	import Button from '#lib/components/ui/Button.svelte';
 	import CommitteeApplyModal from './CommitteeApplyModal.svelte';
-	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
-	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
-	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
-	import { getMemberGroups } from '$lib/remote/groups.remote';
-	import { withdrawGroupApplication } from '$lib/remote/group-applications.remote';
-	import { groupApplicationStatusLabels } from '$lib/config';
+	import JoinGroupAction from '#lib/components/groups/JoinGroupAction.svelte';
+	import AnswerGroupInviteAction from '#lib/components/groups/AnswerGroupInviteAction.svelte';
+	import EmailInviteCard from '#lib/components/groups/EmailInviteCard.svelte';
+	import { getMemberGroups } from '#lib/remote/groups.remote.js';
+	import { withdrawGroupApplication } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationStatusLabels } from '#lib/config.js';
 
 	// Above the awaited query, so `fields.X.as()` is not compiled async-gated.
 	const withdrawFields = withdrawGroupApplication.fields;
@@ -42,7 +43,8 @@
 	}
 
 	function onApplyClose() {
-		if (page.url.searchParams.has('committee')) replaceState(resolve('/member/groups'), {});
+		if (page.url.searchParams.has('committee'))
+			void goto(resolve('member/groups'), { shallow: true, replace: true });
 	}
 
 	/**
@@ -75,20 +77,28 @@
 	const applyId = $derived(committees.find((c) => c.slug === applySlug)?.id ?? null);
 </script>
 
-<PageHeader width="3xl" title="Groups" subtitle="Clubs and committees at the Collective" />
+<PageHeader
+	width="3xl"
+	title={m.member_groups_groups_title()}
+	subtitle={m.member_groups_subtitle_body()}
+/>
 <PageContent width="3xl">
-	<InfoCard title="Your programs">
+	<InfoCard title={m.member_groups_programs_title()}>
 		{#if active.length === 0 && invited.length === 0 && applied.length === 0 && data.emailInvites.length === 0}
-			<EmptyState description="You're not in any clubs or committees yet." />
+			<EmptyState description={m.member_groups_description_body()} />
 		{:else}
 			<div class="space-y-3">
 				{#each active as g (g.id)}
 					<Card>
 						<CardBody row class="py-4">
 							<div class="min-w-0">
-								<a class="link font-semibold" href={resolve(`/member/groups/${g.slug}`)}>{g.name}</a
-								>
-								<p class="text-subtle">{kindLabel(g.kind)} · {g.memberCount} members</p>
+								<a class="link font-semibold" href={resolve(`member/groups/${g.slug}`)}>{g.name}</a>
+								<p class="text-subtle">
+									{m.member_groups_members_text({
+										kindLabel: kindLabel(g.kind),
+										memberCount: g.memberCount
+									})}
+								</p>
 							</div>
 							<Badge variant="ghost">{g.myRole}</Badge>
 						</CardBody>
@@ -100,7 +110,9 @@
 						<CardBody row class="py-4">
 							<div class="min-w-0">
 								<span class="font-semibold">{g.name}</span>
-								<p class="text-subtle">{kindLabel(g.kind)} · invited you to join</p>
+								<p class="text-subtle">
+									{m.member_groups_invited_join_text({ kindLabel: kindLabel(g.kind) })}
+								</p>
 							</div>
 							<AnswerGroupInviteAction groupId={g.id} groupName={g.name} />
 						</CardBody>
@@ -117,7 +129,9 @@
 							<div class="min-w-0">
 								<span class="font-semibold">{a.name}</span>
 								<p class="text-subtle">
-									{kindLabel(a.kind)} · {a.open ? 'you applied to join' : 'your application'}
+									{kindLabel(a.kind)} · {a.open
+										? m.member_groups_applied_join_text()
+										: m.member_groups_application_text()}
 								</p>
 								<!-- The reviewer's reason, where they left one: a decision you
 								     cannot see is one you cannot ask about. -->
@@ -134,14 +148,16 @@
 								{#if a.open}
 									<Action
 										action={withdrawGroupApplication.for(a.applicationId)}
-										label="Withdraw"
-										aria-label={`Withdraw your application to ${a.name}`}
+										label={m.member_withdraw_label()}
+										aria-label={m.member_groups_withdraw_application_label({ name: a.name })}
 										variant="ghost"
 										size="xs"
 										confirm={a.sharedWith > 0
-											? `This application also names ${a.sharedWith} other ${a.sharedWith === 1 ? 'committee' : 'committees'}, and withdrawing takes it back from all of them. Anything already decided stays decided.`
-											: 'Withdraw this application?'}
-										successToast="Application withdrawn"
+											? m.member_groups_application_also_names_other_committees_body({
+													sharedWith: a.sharedWith
+												})
+											: m.member_groups_confirm_body()}
+										successToast={m.member_groups_success_toast()}
 									>
 										{#snippet form()}
 											<input {...withdrawFields.applicationId.as('hidden', a.applicationId)} />
@@ -157,7 +173,7 @@
 	</InfoCard>
 
 	{#if data.open.length > 0}
-		<InfoCard title="Open to join">
+		<InfoCard title={m.member_groups_open_join_title()}>
 			<div class="space-y-3">
 				{#each data.open as g (g.id)}
 					<Card>
@@ -182,7 +198,7 @@
 	{/if}
 
 	{#if data.byApplication.length > 0}
-		<InfoCard title="Apply to join">
+		<InfoCard title={m.member_groups_apply_join_title()}>
 			<div class="space-y-3">
 				{#each data.byApplication as g (g.id)}
 					<Card>
@@ -195,8 +211,8 @@
 								<Button
 									variant="primary"
 									size="sm"
-									aria-label={`Apply to ${g.name}`}
-									onclick={() => openApply(g.slug)}>Apply</Button
+									aria-label={m.member_groups_apply_label({ name: g.name })}
+									onclick={() => openApply(g.slug)}>{m.member_apply_label()}</Button
 								>
 							{:else}
 								<JoinGroupAction
@@ -218,7 +234,7 @@
 	{#if data.inviteOnly.length > 0}
 		<!-- Listed with their instructions and no action. Seeing that a committee
 		     exists is the point; the way in is a conversation. -->
-		<InfoCard title="Invite only">
+		<InfoCard title={m.member_groups_invite_only_title()}>
 			<div class="space-y-3">
 				{#each data.inviteOnly as g (g.id)}
 					<Card>

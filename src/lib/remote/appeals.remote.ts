@@ -2,16 +2,16 @@ import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { APPEAL_BODY_MAX, standingScopes } from '$lib/config';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { APPEAL_BODY_MAX, standingScopes } from '#lib/config.js';
 import {
 	getMemberAppeal,
 	fileAppeal as fileAppealSvc,
 	decideAppeal as decideAppealSvc,
 	reopenAppeal as reopenAppealSvc,
 	type AppealTarget
-} from '$lib/server/moderation/appeal-service';
+} from '#lib/server/moderation/appeal-service.js';
 import { getFlagDetail } from './flags.remote';
 
 // Appeals against upheld reports. The member never names a flag: they name the
@@ -77,10 +77,13 @@ export const decideAppeal = form(
 		flagId: z.string().min(1),
 		restoreContent: z.boolean().default(false),
 		restoreStanding: z.boolean().default(false),
+		restoreAccount: z.boolean().default(false),
 		notes: z.string().trim().min(1, 'Give a reason').max(APPEAL_BODY_MAX)
 	}),
 	async (data) => {
 		const staff = await requireCapability('moderation.reviewFlags');
+		// Restoring an account lifts a suspension or ban, which is `user.ban`'s to do.
+		if (data.restoreAccount) await requireCapability('user.ban');
 		await decideAppealSvc({ ...data, staffId: staff.id });
 		void getFlagDetail(data.flagId).refresh();
 		return { success: true };

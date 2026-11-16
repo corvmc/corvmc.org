@@ -25,8 +25,8 @@ const SCOPES = [
 	{ key: 'components', label: 'src/lib/components', dir: 'src/lib/components' }
 ];
 
-/** Storybook stories and test harnesses are fixtures, not shipped UI. */
-const EXCLUDE = /\.(stories|test)\.svelte$/;
+/** Test harnesses are fixtures, not shipped UI. */
+const EXCLUDE = /\.test\.svelte$/;
 const HARNESS = /Harness\.svelte$/;
 
 /**

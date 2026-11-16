@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { json, error } from '@sveltejs/kit';
-import { markRead, markAllRead } from '$lib/server/notification/in-app-service';
+import { error } from '@sveltejs/kit';
+import { markRead, markAllRead } from '#lib/server/notification/in-app-service.js';
 
 // ---------------------------------------------------------------------------
 // POST /api/notifications/read — mark notifications as read
@@ -22,5 +22,5 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		error(400, 'Provide { id } or { all: true }');
 	}
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * An upload, in the settings of the block that shows the file.
 	 *
@@ -11,7 +12,7 @@
 	 * vocabulary its own mapping comment describes (`image` is the gallery slot).
 	 */
 	import { toast } from 'svelte-sonner';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 
 	let {
 		bandId,
@@ -46,7 +47,7 @@
 		const res = await fetch(`/api/bands/${bandId}/media`, { method: 'POST', body });
 		if (!res.ok) {
 			const err = (await res.json().catch(() => ({}))) as { message?: string };
-			const message = err.message || 'Upload failed';
+			const message = err.message || m.band_slug_page_editor_block_media_field_message_toast();
 			toast.error(message);
 			// Thrown as well as toasted: `FileUpload` shows the failure on the field
 			// itself, and a toast alone leaves the picker looking like it worked.
@@ -55,7 +56,7 @@
 
 		const { media } = (await res.json()) as { media: Array<{ key: string; url: string | null }> };
 		const key = media[0]?.key ?? '';
-		toast.success('Uploaded');
+		toast.success(m.band_uploaded_toast());
 		onuploaded(key, media[0]?.url ?? null);
 		return key;
 	}
@@ -66,6 +67,13 @@
 <div class="fieldset">
 	<span class="fieldset-legend text-xs">{label}</span>
 	<div class="mt-1">
-		<FileUpload {upload} {accept} {src} {previewClass} emptyLabel="Upload" replaceLabel="Replace" />
+		<FileUpload
+			{upload}
+			{accept}
+			{src}
+			{previewClass}
+			emptyLabel={m.band_slug_page_editor_block_media_field_empty_label_title()}
+			replaceLabel={m.band_slug_page_editor_block_media_field_replace_label()}
+		/>
 	</div>
 </div>

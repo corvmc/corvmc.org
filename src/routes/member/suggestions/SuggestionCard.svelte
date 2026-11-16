@@ -1,17 +1,18 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { EntityRef } from '$lib/types/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { EntityRef } from '#lib/types/entity.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { IconFlag, IconCaretUpFilled } from '@tabler/icons-svelte';
-	import { relativeDay } from '$lib/utils/format';
-	import { suggestionCategoryLabels } from '$lib/config';
-	import { toggleSuggestionVote, flagSuggestion } from '$lib/remote/suggestions.remote';
+	import { relativeDay } from '#lib/utils/format.js';
+	import { suggestionCategoryLabels } from '#lib/config.js';
+	import { toggleSuggestionVote, flagSuggestion } from '#lib/remote/suggestions.remote.js';
 
 	// No `mergedIntoId`: merged suggestions are filtered out of the board query,
 	// so a card never renders one.
@@ -56,8 +57,9 @@
 			<SubmitButton
 				label={String(suggestion.voteCount)}
 				aria-pressed={!!suggestion.hasVoted}
-				aria-label="{suggestion.hasVoted ? 'Remove your vote for' : 'Vote for'} {suggestion.ref
-					.title}"
+				aria-label={(suggestion.hasVoted
+					? m.member_suggestions_unvote_label
+					: m.member_suggestions_vote_label)({ title: suggestion.ref.title })}
 				class="h-auto flex-col gap-0 py-1 btn-sm {suggestion.hasVoted
 					? 'btn-primary'
 					: 'btn-outline'}"
@@ -86,24 +88,26 @@
 				     unclamped made one row several times taller than its neighbours,
 				     and it was the only unclamped text on the board (#1046). -->
 				<p class="line-clamp-3 border-l-2 border-primary/40 pl-3 text-sm">
-					<span class="font-medium">Staff:</span>
+					<span class="font-medium">{m.member_suggestions_suggestion_card_staff_text()}</span>
 					{suggestion.responseBody}
 				</p>
 			{/if}
 
 			<p class="text-muted">
-				{suggestion.authorName ?? 'A former member'} · {relativeDay(suggestion.createdAt)}
+				{suggestion.authorName ?? m.member_suggestions_suggestion_card_former_member_text()} · {relativeDay(
+					suggestion.createdAt
+				)}
 			</p>
 		</div>
 
 		{#if !isMine}
 			<Action
 				action={flag}
-				label="Flag"
+				label={m.member_suggestions_suggestion_card_flag_label()}
 				iconOnly
-				modalTitle="Flag for review"
-				submitLabel="Send report"
-				successToast="Reported — staff will take a look"
+				modalTitle={m.member_flag_review_title()}
+				submitLabel={m.member_send_report_label()}
+				successToast={m.member_reported_staff_will_take_look_toast()}
 				variant="ghost"
 				size="xs"
 				class="shrink-0"
@@ -113,11 +117,18 @@
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
 					<p class="mb-3 text-muted">
-						This takes the suggestion off the board straight away while staff look at it. If they
-						don't agree with the report, it goes back up.
+						{m.member_takes_suggestion_off_board_straight_text()}
 					</p>
-					<FormField name="reason" type="text" label="What's the problem?" />
-					<FormField name="description" type="textarea" label="Anything else? (optional)" />
+					<FormField
+						field={flag.fields.reason}
+						type="text"
+						label={m.member_what_s_problem_label()}
+					/>
+					<FormField
+						field={flag.fields.description}
+						type="textarea"
+						label={m.member_anything_else_optional_label()}
+					/>
 				{/snippet}
 			</Action>
 		{/if}

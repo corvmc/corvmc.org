@@ -23,7 +23,7 @@
  * no per-bucket "private" switch to get wrong.
  *
  * The surface is deliberately thin. Three consumers were designed and unbuilt —
- * group documents (`docs/specs/shipped/groups-spec.md`), contractor invoices, and
+ * group documents, contractor invoices, and
  * digital downloads — and each will want different key conventions, validation
  * and retention. Guessing at those now would mean three callers bending around
  * one wrong abstraction, so this exposes the bucket and lets the first real
@@ -37,7 +37,7 @@
  * the body passes through rather than of documents.
  */
 
-import { getBucket } from '$lib/server/storage';
+import { getBucket } from '#lib/server/storage.js';
 
 let _bucket: R2Bucket;
 

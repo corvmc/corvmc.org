@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import { toast } from 'svelte-sonner';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';
@@ -9,11 +10,11 @@
 	import SubmitButton from './Form/SubmitButton.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { signInInterruptFor } from '$lib/utils/sign-in';
+	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 
 	// ---------------------------------------------------------------------------
 	// Props
@@ -29,11 +30,11 @@
 
 	let {
 		action,
-		label = 'Run',
+		label = m.ui_action_label(),
 		icon,
 		iconOnly = false,
-		successLabel = 'Done',
-		errorLabel = 'Error',
+		successLabel = m.ui_action_success_label(),
+		errorLabel = m.ui_error_label(),
 		confirm,
 		modalTitle,
 		form: formSnippet,
@@ -70,8 +71,8 @@
 		 * generic instantiation. Expressing "some remote form, I don't care
 		 * which" needs an existential type, which TypeScript does not have.
 		 *
-		 * Generics were tried and reverted; `ConfirmReservationAction` passes
-		 * `confirmReservation | payForReservation`, differing in both parameters, proves the point.
+		 * Generics were tried and reverted: a union of two remote forms differing
+		 * in both parameters has no single instantiation.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;
@@ -177,7 +178,7 @@
 			await minDelay;
 			dialogOpen = false;
 			onsuccess?.(result);
-			toast.success(successToast ?? `${label} successful`);
+			toast.success(successToast ?? m.ui_action_succeeded_toast({ label }));
 			status = 'success';
 		} catch (err) {
 			await minDelay;
@@ -257,6 +258,9 @@
 			return;
 		}
 		dialogOpen = false;
+		// What was typed lives on the remote form instance, not in the dialog, so
+		// a field-bound input would reopen showing the last submission.
+		remoteAction.fields.set({});
 		if (typeof onsuccess === 'function') onsuccess(result);
 	}
 
@@ -274,6 +278,7 @@
 		title={iconOnly ? label : undefined}
 		aria-label={iconOnly ? label : undefined}
 		disabled={disabled || status === 'pending'}
+		data-status={status}
 		onclick={handleClick}
 		{variant}
 		{size}
@@ -307,13 +312,13 @@
 			<!-- Hidden, not unmounted: the discard question is asked over the form so
 			     that "Keep editing" gives back exactly what was typed. -->
 			{#if askingDiscard}
-				<div class="space-y-4">
-					<p class="py-4">You have unsaved changes. Closing will lose them.</p>
+				<div class="space-y-4" data-testid="discard-prompt">
+					<p class="py-4">{m.ui_unsaved_close_prompt_text()}</p>
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>
-							Keep editing
+							{m.ui_keep_editing_label()}
 						</Button>
-						<Button type="button" variant="error" onclick={discard}>Discard</Button>
+						<Button type="button" variant="error" onclick={discard}>{m.ui_discard_label()}</Button>
 					</div>
 				</div>
 			{/if}
@@ -357,7 +362,9 @@
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" variant="default" outline onclick={close}>Dismiss</Button>
+				<Button type="button" variant="default" outline onclick={close}
+					>{m.ui_dismiss_label()}</Button
+				>
 				<Button type="button" variant="primary" onclick={run}>
 					{@render icon?.()}
 					{label}

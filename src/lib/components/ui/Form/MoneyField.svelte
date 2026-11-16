@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import FormField from './FormField.svelte';
 
 	/**
@@ -35,6 +35,8 @@
 		/** Existing amount, in cents. */
 		value?: number | null;
 		description?: string;
+		/** The input is this component's own content, so it takes none. */
+		children?: never;
 		/** `id` and anything else flow through to `FormField` via `...rest`. */
 		[key: string]: unknown;
 	} = $props();

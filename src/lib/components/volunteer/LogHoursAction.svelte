@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The member's own hour log, in its three variants.
 	 *
@@ -10,14 +11,16 @@
 	 * - **shift** — started from a worked shift that owes hours, so the role,
 	 *   date and duration are already known and the picker would be asking a
 	 *   question the button already answered.
+	 * - **task** — started from a task marked done that the member was
+	 *   assigned. The task names the role when it has one; no time is known.
 	 * - **fix** — a log the member is correcting. Same fields, filled in; the
 	 *   service classifies it again, as if it were new.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { clubToday, VOLUNTEER_HOUR_STEP, VOLUNTEER_DESCRIPTION_MAX } from '$lib/config';
-	import { submitVolunteerHours, editVolunteerHours } from '$lib/remote/volunteer.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { clubToday, VOLUNTEER_HOUR_STEP, VOLUNTEER_DESCRIPTION_MAX } from '#lib/config.js';
+	import { submitVolunteerHours, editVolunteerHours } from '#lib/remote/volunteer.remote.js';
 
 	type Role = { id: string; name: string };
 	type Program = { id: string; name: string };
@@ -30,9 +33,10 @@
 		variant = 'ghost',
 		size = 'sm',
 		shift,
+		task,
 		log
 	}: {
-		mode?: 'free' | 'shift' | 'fix';
+		mode?: 'free' | 'shift' | 'task' | 'fix';
 		roles?: Role[];
 		/** Committees and clubs the member belongs to. Empty hides the picker. */
 		programs?: Program[];
@@ -45,9 +49,15 @@
 			shiftId: string;
 			volunteerRoleId: string;
 			roleName: string;
-			/** Null for an unscheduled work order. */
-			startsAt: Date | null;
+			startsAt: Date;
 			hours: string;
+			workedOn: string;
+		};
+		/** `task` mode: the done task the hours are owed for. */
+		task?: {
+			workOrderId: string;
+			/** Null asks for the role, from `roles`. */
+			volunteerRoleId: string | null;
 			workedOn: string;
 		};
 		/** `fix` mode: the returned log being corrected. */
@@ -63,40 +73,55 @@
 	// `.for()` keys the form instance. A free entry has nothing to key on, so it
 	// uses the bare form — two of those on one page would share state, which is
 	// why the dashboard renders exactly one.
-	const action = $derived(
-		mode === 'fix'
-			? editVolunteerHours.for(log!.id)
-			: shift
-				? submitVolunteerHours.for(shift.signupId)
+	const submitForm = $derived(
+		shift
+			? submitVolunteerHours.for(shift.signupId)
+			: task
+				? submitVolunteerHours.for(task.workOrderId)
 				: submitVolunteerHours
 	);
+	const editForm = $derived(log ? editVolunteerHours.for(log.id) : undefined);
+	const action = $derived(mode === 'fix' ? editForm! : submitForm);
 
 	const title = $derived(
-		mode === 'fix' ? 'Fix these hours' : mode === 'shift' ? 'Log these hours' : 'Log Hours'
+		mode === 'fix'
+			? m.volunteer_log_hours_fix_these_hours_title()
+			: mode === 'shift' || mode === 'task'
+				? m.volunteer_log_hours_log_these_hours_title()
+				: m.volunteer_log_hours_log_hours_title()
 	);
 </script>
 
 <Action
 	{action}
 	label={label ?? title}
+	data-testid="log-hours-{mode}"
 	{variant}
 	{size}
 	modalTitle={title}
-	submitLabel={mode === 'fix' ? 'Save' : 'File it'}
-	successToast={mode === 'fix' ? 'Saved' : 'Hours logged'}
+	submitLabel={mode === 'fix' ? m.volunteer_save_label() : m.volunteer_log_hours_file_label()}
+	successToast={mode === 'fix'
+		? m.volunteer_log_hours_saved_toast()
+		: m.volunteer_hours_logged_toast()}
 >
 	{#snippet form()}
 		{#if mode === 'fix'}
-			<input type="hidden" name="id" value={log!.id} />
-			<input type="hidden" name="volunteerRoleId" value={log!.volunteerRoleId} />
+			<input {...editForm!.fields.id.as('hidden', log!.id)} />
+			<input {...editForm!.fields.volunteerRoleId.as('hidden', log!.volunteerRoleId)} />
 		{:else if mode === 'shift'}
-			<input type="hidden" name="volunteerRoleId" value={shift!.volunteerRoleId} />
-			<input type="hidden" name="shiftId" value={shift!.shiftId} />
-			<p class="text-sm">Pre-filled from the shift. Adjust if it differs.</p>
+			<input {...submitForm.fields.volunteerRoleId.as('hidden', shift!.volunteerRoleId)} />
+			<input {...submitForm.fields.shiftId.as('hidden', shift!.shiftId)} />
+			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust_text()}</p>
+		{:else if mode === 'task' && task!.volunteerRoleId}
+			<input {...submitForm.fields.volunteerRoleId.as('hidden', task!.volunteerRoleId)} />
+			<input {...submitForm.fields.workOrderId.as('hidden', task!.workOrderId)} />
 		{:else}
+			{#if mode === 'task'}
+				<input {...submitForm.fields.workOrderId.as('hidden', task!.workOrderId)} />
+			{/if}
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">What did you help with?</span>
-				<Select name="volunteerRoleId">
+				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with_label()}</span>
+				<Select {...submitForm.fields.volunteerRoleId.as('select')}>
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>
 					{/each}
@@ -108,9 +133,9 @@
 			<!-- Only for somebody who is on one. Most volunteering is for CMC at
 			     large, so this stays optional and blank by default. -->
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">Was this for a committee or club?</span>
-				<Select name="groupId">
-					<option value="">CMC generally</option>
+				<span class="fieldset-legend">{m.volunteer_log_hours_was_committee_club_label()}</span>
+				<Select {...submitForm.fields.groupId.as('select')}>
+					<option value="">{m.volunteer_log_hours_cmc_generally_label()}</option>
 					{#each programs as program (program.id)}
 						<option value={program.id}>{program.name}</option>
 					{/each}
@@ -119,29 +144,36 @@
 		{/if}
 
 		<FormField
-			name="workedOn"
-			label="Date"
+			field={action.fields.workedOn}
+			label={m.volunteer_date_label()}
 			type="date"
 			max={clubToday()}
-			value={mode === 'fix' ? log!.workedOn : mode === 'shift' ? shift!.workedOn : clubToday()}
+			value={mode === 'fix'
+				? log!.workedOn
+				: mode === 'shift'
+					? shift!.workedOn
+					: mode === 'task'
+						? task!.workedOn
+						: clubToday()}
 		/>
 		<FormField
-			name="hours"
-			label="Hours"
+			field={action.fields.hours}
+			submitAs="text"
+			label={m.volunteer_hours_label()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
 			max="12"
 			value={mode === 'fix' ? log!.hours : mode === 'shift' ? shift!.hours : ''}
-			description="To the nearest quarter hour. Twelve is the most one log can carry."
+			description={m.volunteer_log_hours_nearest_quarter_hour_twelve_most_body()}
 		/>
 		<FormField
-			name="description"
-			label="What you did"
+			field={action.fields.description}
+			label={m.volunteer_log_hours_what_did_label()}
 			type="textarea"
 			maxlength={VOLUNTEER_DESCRIPTION_MAX}
 			value={mode === 'fix' ? log!.description : ''}
-			description="One sentence."
+			description={m.volunteer_log_hours_one_sentence_body()}
 		/>
 	{/snippet}
 </Action>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	/**
 	 * Daily — one thread, one decision, no list scanning.
 	 *
@@ -15,17 +17,19 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconArrowDown, IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
-	import { getInboxDailyScope, getInboxThread } from '$lib/remote/inbox.remote';
-	import { useShortcut } from '$lib/useShortcut.svelte';
-	import { waitingDays } from '$lib/components/inbox/thread-status';
-	import { channelLabel } from '$lib/components/inbox/channels';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import DispositionBar from '#lib/components/inbox/DispositionBar.svelte';
+	import { getInboxDailyScope, getInboxThread } from '#lib/remote/inbox.remote.js';
+	import { useShortcut } from '#lib/useShortcut.svelte.js';
+	import { waitingDays } from '#lib/components/inbox/thread-status.js';
+	import { channelLabel } from '#lib/components/inbox/channels.js';
 	import { session, doneToday, markDoneToday } from './session.svelte';
 	import DailyStartCard from './DailyStartCard.svelte';
 	import SessionSummary from './SessionSummary.svelte';
@@ -46,7 +50,7 @@
 
 	function leave() {
 		session.end();
-		void goto(resolve('/staff/inbox'));
+		void goto(resolve('staff/inbox'));
 	}
 
 	function finish() {
@@ -58,11 +62,12 @@
 	{#if !session.started}
 		{#if scope.threadIds.length === 0}
 			<EmptyState
-				title="Nothing to triage"
-				description="The queue is clear. Daily has nothing to walk you through."
+				title={m.staff_inbox_daily_title()}
+				description={m.staff_inbox_daily_description_body()}
 			/>
 			<div class="flex justify-center">
-				<Button href={resolve('/staff/inbox')} variant="default">Back to inbox</Button>
+				<Button href={resolve('staff/inbox')} variant="default">{m.staff_back_inbox_label()}</Button
+				>
 			</div>
 		{:else}
 			<DailyStartCard
@@ -82,11 +87,14 @@
 	{:else}
 		<div class="flex items-center justify-between gap-3">
 			<div class="flex items-baseline gap-3">
-				<h1 class="text-xl font-bold">Daily</h1>
-				<span class="text-muted text-sm">{session.position} of {session.total}</span>
+				<h1 class="text-xl font-bold">{m.staff_inbox_daily_daily_title()}</h1>
+				<span class="text-muted text-sm"
+					>{m.staff_inbox_daily_text({ position: session.position, total: session.total })}</span
+				>
 			</div>
 			<Button variant="ghost" size="sm" onclick={leave}>
-				<IconX size={16} /> Esc to exit
+				<IconX size={16} />
+				{m.staff_inbox_daily_esc_exit_label()}
 			</Button>
 		</div>
 
@@ -100,27 +108,37 @@
 					<CardBody class="gap-4">
 						<div class="flex flex-wrap items-baseline justify-between gap-2">
 							<h2 class="text-lg font-bold">
-								{t.contactUserName ?? t.contactName ?? t.contactEmail ?? 'Conversation'}
+								{t.contactUserName ??
+									t.contactName ??
+									t.contactEmail ??
+									m.staff_inbox_daily_conversation_title()}
 							</h2>
 							<!-- The age line is the pressure signal, and in Daily it is the
 							     only context on screen — there is no list beside it saying
 							     how this thread compares to the rest. -->
 							<p class="text-muted text-sm">
-								{t.subject ?? channelLabel(t.channel)} · waiting {waitingDays(t)} day{waitingDays(
-									t
-								) === 1
-									? ''
-									: 's'}
+								{m.staff_inbox_daily_waiting_days_text({
+									value: t.subject ?? channelLabel(t.channel),
+									waitingDays: waitingDays(t),
+									count: waitingDays(t)
+								})}
 							</p>
 						</div>
 
 						<div class="max-h-96 overflow-y-auto">
-							<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
+							<ThreadTimeline
+								messages={t.messages}
+								channel={t.channel}
+								notes={t.notes}
+								contactName={t.contactName}
+							/>
 						</div>
 
 						{#if t.awaitingReplySince}
 							<p class="text-subtle text-sm">
-								No response since {new Date(t.awaitingReplySince).toLocaleDateString()}
+								{m.staff_inbox_daily_no_response_since_text({
+									formatDateShortYear: formatDateShortYear(new Date(t.awaitingReplySince))
+								})}
 							</p>
 						{/if}
 
@@ -133,19 +151,22 @@
 							status={t.status}
 							awaiting={!!t.awaitingReplySince}
 							variant="focus"
-							onreply={() => goto(resolve(`/staff/inbox/${t.id}`))}
-							onassign={() => goto(resolve(`/staff/inbox/${t.id}`))}
+							onreply={() => goto(resolve(`staff/inbox/${t.id}`))}
+							onassign={() => goto(resolve(`staff/inbox/${t.id}`))}
 							ondisposed={(action) => session.dispose(action)}
 						/>
 					</CardBody>
 				</Card>
-
-				<div class="flex justify-center">
-					<Button variant="ghost" size="sm" onclick={() => session.skip()}>
-						<IconArrowDown size={16} /> Skip — stays open, moves to the end
-					</Button>
-				</div>
+			{:catch error}
+				<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 			{/await}
+
+			<div class="flex justify-center">
+				<Button variant="ghost" size="sm" onclick={() => session.skip()}>
+					<IconArrowDown size={16} />
+					{m.staff_inbox_daily_skip_stays_open_moves_end_label()}
+				</Button>
+			</div>
 		{/key}
 	{/if}
 </PageContent>

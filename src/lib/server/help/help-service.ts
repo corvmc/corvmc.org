@@ -1,10 +1,15 @@
-import { db } from '$lib/server/db';
-import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
+import { db } from '#lib/server/db/index.js';
+import { helpCategory, helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, or, sql, inArray, asc, exists, type SQL } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '$lib/config';
-import { committeeCapabilitiesFor, getUserRoles } from '$lib/server/authorization';
-import { isSustainingMember } from '$lib/server/finance/subscription-service';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '#lib/config.js';
+import {
+	capabilitySet,
+	committeeCapabilitiesFor,
+	getUserRoles,
+	positionsFor
+} from '#lib/server/authorization.js';
+import { isSustainingMember } from '#lib/server/finance/subscription-service.js';
 
 /**
  * Role names that are *not* an elevated position.
@@ -15,7 +20,7 @@ import { isSustainingMember } from '$lib/server/finance/subscription-service';
  * position like `treasurer` exists, its holder resolves to `member` and the
  * whole Staff Guide disappears for them. Naming the three non-elevated rows
  * instead means a new position widens access by default, which is the failure
- * direction you want. See docs/specs/shipped/admin-vs-staff-spec.md.
+ * direction you want. See docs/decisions/0032-guards-name-capabilities.md.
  *
  * `sustaining` and `volunteer` are legacy seeded rows that grant nothing;
  * sustaining status comes from the subscription, not the role (below).
@@ -69,36 +74,63 @@ export async function resolveHelpAudience(userId: string): Promise<HelpAudience>
 	return 'member';
 }
 
-/** A reader's tier, plus the capabilities that can admit them past it (see `helpArticle.capabilities`). */
+/** A reader's tier, plus every capability they hold (see `helpArticle.capabilities`). */
 export interface HelpReader {
 	audience: HelpAudience;
 	capabilities: readonly string[];
 }
 
 /**
- * The reader for `userId`. Staff already read every tier, so only a reader below
- * it pays for the committee lookup. Takes a user id, not the request, so the
- * `/api/help` endpoints resolve it the same way the remote functions do.
+ * The reader for `userId`: positions and org-wide committee grants together, so a
+ * staff article naming a capability reaches whoever can open its surface (#3005).
+ * Takes a user id, not the request, so `/api/help` resolves it as the remotes do.
  */
 export async function resolveHelpReader(userId: string): Promise<HelpReader> {
-	const audience = await resolveHelpAudience(userId);
-	if (audience === 'staff') return { audience, capabilities: [] };
-	return { audience, capabilities: await committeeCapabilitiesFor(userId) };
+	const [audience, held, committee] = await Promise.all([
+		resolveHelpAudience(userId),
+		positionsFor(userId),
+		committeeCapabilitiesFor(userId)
+	]);
+	return { audience, capabilities: [...new Set([...capabilitySet(held), ...committee])] };
 }
 
-/** Articles admitted by a capability the reader holds, whatever their tier. */
+/**
+ * Articles naming a capability the reader holds, whatever their tier. The held
+ * set is bound as one JSON parameter: admin holds ~100 capabilities, and D1
+ * refuses a statement binding more than 100 parameters.
+ */
 function admittedByCapability(reader: HelpReader): SQL | undefined {
 	if (reader.capabilities.length === 0) return undefined;
-	const held = sql.join(
-		reader.capabilities.map((c) => sql`${c}`),
-		sql`, `
-	);
-	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (${held}))`;
+	const held = JSON.stringify(reader.capabilities);
+	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (select value from json_each(${held})))`;
 }
 
-/** The article rows this reader may open, published or not. */
-function articleVisibleTo(reader: HelpReader): SQL {
-	const byTier = inArray(helpArticle.minRole, accessibleAudiences(reader.audience));
+/** Stored values that read as the top tier, where an article's capabilities gate it. */
+const STAFF_TIER = accessibleAudiences('staff').filter(
+	(a) => !accessibleAudiences('sustaining').includes(a)
+);
+
+/**
+ * The article rows this reader may open, published or not. The one filter every
+ * read path goes through, search included, so a hidden title never leaks.
+ *
+ * A staff-tier article that names capabilities is for their holders only; one
+ * naming none is for every position holder. Below staff, capabilities only add
+ * readers (a committee granted `sponsor.read`).
+ */
+export function articleVisibleTo(reader: HelpReader): SQL {
+	const tiers = accessibleAudiences(reader.audience);
+	const belowStaff = tiers.filter((a) => !STAFF_TIER.includes(a));
+	const byTier =
+		reader.audience === 'staff'
+			? or(
+					inArray(helpArticle.minRole, belowStaff),
+					and(
+						inArray(helpArticle.minRole, STAFF_TIER),
+						sql`coalesce(json_array_length(${helpArticle.capabilities}), 0) = 0`
+					)
+				)!
+			: inArray(helpArticle.minRole, tiers);
 	const byCapability = admittedByCapability(reader);
 	return byCapability ? or(byTier, byCapability)! : byTier;
 }
@@ -155,11 +187,6 @@ export async function listNonEmptyCategories(reader: HelpReader) {
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
 }
 
-export async function getCategoryBySlug(slug: string) {
-	const [cat] = await db.select().from(helpCategory).where(eq(helpCategory.slug, slug)).limit(1);
-	return cat ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Article Queries
 // ---------------------------------------------------------------------------
@@ -193,6 +220,31 @@ export async function getArticleBySlug(slug: string, reader: HelpReader) {
 		)
 		.limit(1);
 	return article ?? null;
+}
+
+/**
+ * The articles among `ids` this reader may open, as links. For pages that point
+ * at an article another record names (a volunteer role's briefing): a draft or
+ * an article above the reader's tier is left out rather than linked to a 404.
+ */
+export async function listReadableArticles(ids: readonly string[], reader: HelpReader) {
+	if (ids.length === 0) return [];
+	return db
+		.select({
+			id: helpArticle.id,
+			title: helpArticle.title,
+			slug: helpArticle.slug,
+			summary: helpArticle.summary
+		})
+		.from(helpArticle)
+		.where(
+			and(
+				inArray(helpArticle.id, [...new Set(ids)]),
+				eq(helpArticle.published, true),
+				articleVisibleTo(reader)
+			)
+		)
+		.orderBy(asc(helpArticle.title));
 }
 
 export async function searchArticles(query: string, reader: HelpReader) {
@@ -310,9 +362,16 @@ export interface CreateArticleData {
 	content: string;
 	source?: string;
 	minRole?: string;
+	/** See `helpArticle.capabilities`. Callers validate each with `isCapability`. */
+	capabilities?: readonly string[] | null;
 	published?: boolean;
 	sortOrder?: number;
 	createdByUserId?: string;
+}
+
+/** None stored as NULL, as `help:sync` writes it, so the row reads as naming none. */
+function storedCapabilities(caps: readonly string[] | null | undefined): string[] | null {
+	return caps && caps.length > 0 ? [...new Set(caps)] : null;
 }
 
 export async function createArticle(data: CreateArticleData) {
@@ -326,6 +385,7 @@ export async function createArticle(data: CreateArticleData) {
 			content: data.content,
 			source: data.source ?? 'dynamic',
 			minRole: normalizeAudience(data.minRole ?? 'member'),
+			capabilities: storedCapabilities(data.capabilities),
 			published: data.published ?? false,
 			sortOrder: data.sortOrder ?? 0,
 			createdByUserId: data.createdByUserId ?? null
@@ -335,13 +395,16 @@ export async function createArticle(data: CreateArticleData) {
 }
 
 export async function updateArticle(id: string, data: Partial<CreateArticleData>) {
+	const { capabilities, ...rest } = data;
 	const [article] = await db
 		.update(helpArticle)
 		.set({
-			...data,
+			...rest,
 			// Normalised on the way in so a legacy or hand-posted value can never
 			// land outside the ladder and make the row invisible to everyone.
 			...(data.minRole === undefined ? {} : { minRole: normalizeAudience(data.minRole) }),
+			// Absent leaves them; the editor omits the picker below the staff tier.
+			...(capabilities === undefined ? {} : { capabilities: storedCapabilities(capabilities) }),
 			updatedAt: new Date()
 		})
 		.where(eq(helpArticle.id, id))

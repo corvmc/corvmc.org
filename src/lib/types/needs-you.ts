@@ -9,6 +9,7 @@ import type { ResolvedPathname } from '$app/types';
  */
 
 export type NeedsYouKind =
+	| 'show-lead'
 	| 'reservation-unconfirmed'
 	| 'volunteer-shift-soon'
 	| 'volunteer-hours-unlogged'

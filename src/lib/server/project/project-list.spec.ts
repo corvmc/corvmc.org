@@ -3,11 +3,11 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 /** The index's active/archived split is a `WHERE`, so it runs against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listProjects } = await import('./project-service');
 

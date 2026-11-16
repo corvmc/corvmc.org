@@ -1,18 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 
 // Importing the real config would pull in adapter-cloudflare, and through it
 // miniflare's raw TypeScript sources, which this runner cannot parse. The
 // adapter contributes nothing to the CSP.
 vi.mock('@sveltejs/adapter-cloudflare', () => ({ default: () => ({ name: 'stub' }) }));
 
-const { default: config } = await import('../svelte.config.js');
+const { default: config } = await import('../kit.config.js');
 
-// `svelte.config.js` is plain JS loaded by Node before any alias map exists, so
-// it cannot import `$lib/sentry-dsn` and the report endpoint is written out
+// `kit.config.js` is plain JS loaded by Node before any alias map exists, so
+// it cannot import `#lib/sentry-dsn.js` and the report endpoint is written out
 // longhand. These assertions are what keeps the two in step.
 
-const csp = config.kit?.csp;
+const csp = config.csp;
+
+describe('kit.paths', () => {
+	// A query that calls resolve() would otherwise read the request URL, which
+	// kit refuses, and every other remote function would get a href relative to
+	// /_app/remote/... that means nothing to the page it reaches.
+	it('resolves absolute paths', () => {
+		expect(config.paths?.relative).toBe(false);
+	});
+});
 
 describe('kit.csp', () => {
 	it('points report-uri at the Sentry project in SENTRY_DSN', () => {
@@ -40,6 +49,27 @@ describe('kit.csp', () => {
 		expect(csp?.directives?.['frame-src']).toContain('https://js.stripe.com');
 		expect(csp?.directives?.['frame-src']).toContain('https://hooks.stripe.com');
 		expect(csp?.directives?.['connect-src']).toContain('https://api.stripe.com');
+	});
+
+	// Stripe's published list for Stripe.js and Link
+	// (docs.stripe.com/security/guide#content-security-policy). Stripe starts
+	// frames on *.js.stripe.com where it can.
+	it("allows every origin on Stripe's published Stripe.js and Link list", () => {
+		const want = {
+			'script-src': ['https://js.stripe.com', 'https://*.js.stripe.com'],
+			'frame-src': [
+				'https://js.stripe.com',
+				'https://*.js.stripe.com',
+				'https://hooks.stripe.com',
+				'https://link.com',
+				'https://*.link.com'
+			],
+			'connect-src': ['https://api.stripe.com', 'https://link.com', 'https://*.link.com']
+		} as const;
+		for (const [directive, origins] of Object.entries(want)) {
+			const have = csp?.directives?.[directive as keyof typeof want] as string[] | undefined;
+			for (const origin of origins) expect(have, directive).toContain(origin);
+		}
 	});
 
 	// Kit only injects a nonce into a style directive that does NOT already allow

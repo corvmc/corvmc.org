@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import { withQuery } from '$lib/utils/with-query';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { admittedAtDoor, type DoorTakings } from '#lib/door/takings.js';
 
 	/**
-	 * What this show took at the door (#1809): tapped card sales and free
-	 * let-ins, from the door's own ticket rows. Door sales have no buyer account,
+	 * What this show took at the door (#1809): tapped card sales, cash sales
+	 * (#2800), free let-ins and door donations (#2799), from the door's own rows. Door sales have no buyer account,
 	 * so they never reach Payments; this card is where staff read them.
 	 */
 	let {
@@ -15,42 +17,60 @@
 		open
 	}: {
 		eventId: string;
-		takings: { card: { tickets: number; grossCents: number }; free: { tickets: number } };
+		takings: Omit<DoorTakings, 'checkedIn'>;
 		/** The till offers this show right now. */
 		open: boolean;
 	} = $props();
 
-	const total = $derived(takings.card.tickets + takings.free.tickets);
+	const total = $derived(admittedAtDoor(takings));
+	const tickets = (n: number) =>
+		`${n} ${n === 1 ? m.events_door_sales_card_ticket_text() : m.events_door_sales_card_tickets_text()}`;
 	const tillHref = $derived(
-		withQuery(resolve('/member/volunteer/door'), new URLSearchParams({ event: eventId }))
+		withQuery(resolve('member/volunteer/door'), new URLSearchParams({ event: eventId }))
 	);
 </script>
 
-{#if open || total > 0}
-	<InfoCard title="Door Sales" state={total === 0 ? 'None yet' : `${total} admitted`}>
+{#if open || total > 0 || takings.donations.count > 0}
+	<InfoCard
+		title={m.events_door_sales_card_title()}
+		state={total === 0 ? 'None yet' : `${total} admitted`}
+	>
 		<div class="flex flex-wrap gap-6">
 			<div>
-				<p class="text-muted">Card</p>
+				<p class="text-muted">{m.events_door_sales_card_card_text()}</p>
 				<p class="text-lg font-medium">{formatCents(takings.card.grossCents)}</p>
-				<p class="text-muted text-sm">
-					{takings.card.tickets}
-					{takings.card.tickets === 1 ? 'ticket' : 'tickets'}
-				</p>
+				<p class="text-muted text-sm">{tickets(takings.card.tickets)}</p>
+			</div>
+			<div data-testid="door-cash">
+				<p class="text-muted">{m.events_door_sales_card_cash_text()}</p>
+				<p class="text-lg font-medium">{formatCents(takings.cash.grossCents)}</p>
+				<p class="text-muted text-sm">{tickets(takings.cash.tickets)}</p>
 			</div>
 			<div>
-				<p class="text-muted">Free</p>
+				<p class="text-muted">{m.events_free_text()}</p>
 				<p class="text-lg font-medium">{takings.free.tickets}</p>
-				<p class="text-muted text-sm">let in at no charge</p>
+				<p class="text-muted text-sm">{m.events_door_sales_card_let_at_no_charge_text()}</p>
 			</div>
+			{#if takings.donations.count > 0}
+				<div data-testid="door-donations">
+					<p class="text-muted">{m.events_door_sales_card_donations_text()}</p>
+					<p class="text-lg font-medium">{formatCents(takings.donations.grossCents)}</p>
+					<p class="text-muted text-sm">
+						{m.events_door_sales_card_donation_count_text({ count: takings.donations.count })}
+					</p>
+				</div>
+			{/if}
 		</div>
 		<!-- No door refund path exists; a refund is a human in the Stripe dashboard. -->
 		<p class="mt-2 text-muted text-sm">
-			As sold. Refunds are handled in Stripe and are not reflected here.
+			{m.events_as_sold_refunds_handled_stripe_text()}
 		</p>
 		{#if open}
 			<div class="mt-3">
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- withQuery over resolve() -->
-				<a href={tillHref} class="link text-sm link-primary">Open the till →</a>
+				<a href={tillHref} class="link text-sm link-primary"
+					>{m.events_door_sales_card_open_till_text()}</a
+				>
 			</div>
 		{/if}
 	</InfoCard>

@@ -1,17 +1,21 @@
-import { db } from '$lib/server/db';
-import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
-import { config } from '$lib/server/site-config/site-config-service';
+import { linkedIdSql, linkedTo, linkInserts } from '#lib/server/task/work-order-link.js';
+import { db } from '#lib/server/db/index.js';
+import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	memberOrientation,
 	volunteerRole,
+	volunteerShift,
 	workOrder,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
-import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
-import type { MemberOrientationState } from '$lib/config';
-import { cancelShift, countActiveSignups } from './work-order-service';
+} from '#lib/server/db/schema/volunteer.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
+import type { MemberOrientationState } from '#lib/config.js';
+import { cancelShift, countActiveSignups, liveShift } from './work-order-service';
+import { grantPracticeSpaceClearance } from './practice-space-clearance';
+import { memberSubject, recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 /**
  * Whether a member has been shown around the space, and when.
@@ -19,7 +23,7 @@ import { cancelShift, countActiveSignups } from './work-order-service';
  * One row per member, reused rather than appended to: this is one fact about
  * them, unlike `member_certification` where each renewal is its own grant with
  * its own expiry. The state is **derived** — see `memberOrientationStates` in
- * `$lib/config`; a stored status would sit at `scheduled` for ever unclaimed.
+ * `#lib/config.js`; a stored status would sit at `scheduled` for ever unclaimed.
  */
 
 export interface MemberOrientationView extends MemberOrientation {
@@ -125,6 +129,8 @@ export async function completeOrientation(
 			updatedAt: now
 		})
 		.where(and(eq(memberOrientation.userId, userId), isNull(memberOrientation.completedAt)));
+
+	await grantPracticeSpaceClearance(userId, { grantedByUserId: opts.completedByUserId });
 }
 
 /**
@@ -158,6 +164,16 @@ export async function waiveOrientation(
 				updatedAt: now
 			}
 		});
+
+	await grantPracticeSpaceClearance(userId, {
+		grantedByUserId: opts.waivedByUserId,
+		notes: reason
+	});
+	await recordAuditEntry({
+		action: 'orientation.waived',
+		subject: await memberSubject(userId),
+		details: { reason }
+	});
 }
 
 /**
@@ -169,18 +185,21 @@ export async function getOrientationSetting(): Promise<{
 	minutes: number;
 	leadMinutes: number;
 	tasks: string[];
+	firstVisitNotes: string;
 }> {
-	const [roleId, minutes, leadMinutes, tasks] = await Promise.all([
+	const [roleId, minutes, leadMinutes, tasks, firstVisitNotes] = await Promise.all([
 		config('volunteer.orientationRoleId'),
 		config('volunteer.orientationMinutes'),
 		config('volunteer.orientationLeadMinutes'),
-		config('volunteer.orientationTasks')
+		config('volunteer.orientationTasks'),
+		config('volunteer.firstVisitNotes')
 	]);
 	return {
 		roleId: String(roleId).trim(),
 		minutes: Number(minutes),
 		leadMinutes: Number(leadMinutes) || 0,
-		tasks: parseOrientationTasks(String(tasks))
+		tasks: parseOrientationTasks(String(tasks)),
+		firstVisitNotes: String(firstVisitNotes).trim()
 	};
 }
 
@@ -199,20 +218,8 @@ export function parseOrientationTasks(text: string): string[] {
 export async function raiseOrientationShift(
 	reservationId: string,
 	bookingStartsAt: Date
-): Promise<{ id: string; startsAt: Date | null } | null> {
-	const [live] = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
-		.from(workOrder)
-		.where(
-			and(
-				eq(workOrder.reservationId, reservationId),
-				eq(workOrder.isOrientation, true),
-				isNull(workOrder.cancelledAt),
-				isNotNull(workOrder.startsAt)
-			)
-		)
-		.orderBy(asc(workOrder.startsAt))
-		.limit(1);
+): Promise<{ id: string; startsAt: Date } | null> {
+	const [live] = await liveOrientation(reservationId, asc(volunteerShift.startsAt));
 	if (live) return live;
 
 	const setting = await getOrientationSetting();
@@ -227,30 +234,67 @@ export async function raiseOrientationShift(
 	const now = new Date();
 	const id = crypto.randomUUID();
 	const startsAt = new Date(bookingStartsAt.getTime() - setting.leadMinutes * 60_000);
-	const insertShift = db.insert(workOrder).values({
+	// The orientation task on the booking, and one shift at the booking's time.
+	const insertTask = db.insert(workOrder).values({
 		id,
 		volunteerRoleId: setting.roleId,
-		reservationId,
-		startsAt,
-		endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
 		anchor: 'start',
 		isOrientation: true,
 		notes: 'First visit — meet them at the front door.',
-		postedAt: now,
 		createdAt: now,
 		updatedAt: now
 	});
-	if (setting.tasks.length === 0) {
-		await insertShift;
-	} else {
-		await db.batch([
-			insertShift,
-			db
-				.insert(workTask)
-				.values(setting.tasks.map((label, sortOrder) => ({ workOrderId: id, label, sortOrder })))
-		]);
+	const insertShift = db.insert(volunteerShift).values({
+		workOrderId: id,
+		startsAt,
+		endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
+		anchor: 'start',
+		createdAt: now,
+		updatedAt: now
+	});
+	await db.batch(
+		setting.tasks.length === 0
+			? [insertTask, insertShift, ...linkInserts(id, { reservationId })]
+			: [
+					insertTask,
+					insertShift,
+					...linkInserts(id, { reservationId }),
+					db
+						.insert(workTask)
+						.values(
+							setting.tasks.map((label, sortOrder) => ({ workOrderId: id, label, sortOrder }))
+						)
+				]
+	);
+
+	// No unique key: the booking is a link row, not a column. So two raises
+	// that both read nothing collapse after inserting: the earliest-inserted
+	// live orientation wins, by rowid, and the later deletes its own task (its
+	// shift, links and checklist cascade) before anyone is rostered on it.
+	const [first] = await liveOrientation(reservationId, sql`"work_order".rowid`);
+	if (first && first.id !== id) {
+		await db.delete(workOrder).where(eq(workOrder.id, id));
+		return first;
 	}
 	return { id, startsAt };
+}
+
+/** The first live orientation shift on one booking, in the caller's order. */
+function liveOrientation(reservationId: string, order: SQL) {
+	return db
+		.select({ id: workOrder.id, startsAt: volunteerShift.startsAt })
+		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
+		.where(
+			and(
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
+				isNull(workOrder.cancelledAt),
+				liveShift()
+			)
+		)
+		.orderBy(order)
+		.limit(1);
 }
 
 export interface OrientationOwner {
@@ -262,7 +306,7 @@ export interface OrientationOwner {
 /**
  * Whose orientation is this work order, if it is one at all?
  *
- * Both conditions are needed: `reservation_id` alone would catch any work order
+ * Both conditions are needed: a booking link alone would catch any work order
  * hanging off a booking, and `is_orientation`, stamped when the shift was made,
  * is what says this row is one. Returns the *member who booked* with their name and
  * address, because both callers need to write to them.
@@ -271,7 +315,7 @@ export async function orientationOwnerOf(workOrderId: string): Promise<Orientati
 	const [row] = await db
 		.select({ userId: user.id, name: user.name, email: user.email })
 		.from(workOrder)
-		.innerJoin(reservation, eq(reservation.id, workOrder.reservationId))
+		.innerJoin(reservation, eq(reservation.id, linkedIdSql('reservationId')))
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.isOrientation, true)))
 		.limit(1);
@@ -281,7 +325,8 @@ export async function orientationOwnerOf(workOrderId: string): Promise<Orientati
 
 export interface ReservationOrientationShift {
 	workOrderId: string;
-	startsAt: Date | null;
+	shiftId: string;
+	startsAt: Date;
 	capacity: number;
 	claimed: number;
 }
@@ -300,22 +345,26 @@ export async function orientationForReservation(
 	const [row] = await db
 		.select({
 			workOrderId: workOrder.id,
-			startsAt: workOrder.startsAt,
-			capacity: workOrder.capacity
+			shiftId: volunteerShift.id,
+			startsAt: volunteerShift.startsAt,
+			capacity: volunteerShift.capacity
 		})
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
 				eq(workOrder.isOrientation, true),
-				isNull(workOrder.cancelledAt)
+				isNull(workOrder.cancelledAt),
+				liveShift()
 			)
 		)
+		.orderBy(asc(volunteerShift.startsAt))
 		.limit(1);
 
 	if (!row) return null;
 
-	return { ...row, claimed: await countActiveSignups(row.workOrderId) };
+	return { ...row, claimed: await countActiveSignups(row.shiftId) };
 }
 
 /**
@@ -335,7 +384,8 @@ export async function cancelOrientationFor(
 		.from(workOrder)
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt)
 			)
@@ -366,14 +416,21 @@ export async function rescheduleOrientationFor(
 	if (deltaMs === 0) return 0;
 
 	const live = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt, endsAt: workOrder.endsAt })
+		.select({
+			id: workOrder.id,
+			shiftId: volunteerShift.id,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt
+		})
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
-				isNotNull(workOrder.startsAt)
+				liveShift()
 			)
 		);
 
@@ -381,18 +438,21 @@ export async function rescheduleOrientationFor(
 
 	const now = new Date();
 	for (const row of live) {
-		const startsAt = new Date(row.startsAt!.getTime() + deltaMs);
-		const endsAt = new Date(row.endsAt!.getTime() + deltaMs);
+		const startsAt = new Date(row.startsAt.getTime() + deltaMs);
+		const endsAt = new Date(row.endsAt.getTime() + deltaMs);
 
-		await db
-			.update(workOrder)
-			.set({ startsAt, endsAt, updatedAt: now })
-			.where(eq(workOrder.id, row.id));
-
-		await db
-			.update(memberOrientation)
-			.set({ scheduledFor: startsAt, updatedAt: now })
-			.where(and(eq(memberOrientation.workOrderId, row.id), isNull(memberOrientation.completedAt)));
+		await db.batch([
+			db
+				.update(volunteerShift)
+				.set({ startsAt, endsAt, updatedAt: now })
+				.where(eq(volunteerShift.id, row.shiftId)),
+			db
+				.update(memberOrientation)
+				.set({ scheduledFor: startsAt, updatedAt: now })
+				.where(
+					and(eq(memberOrientation.workOrderId, row.id), isNull(memberOrientation.completedAt))
+				)
+		]);
 	}
 
 	return live.length;

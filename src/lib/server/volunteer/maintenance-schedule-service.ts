@@ -1,16 +1,17 @@
-import { db } from '$lib/server/db';
-import { maintenanceSchedule, volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
-import { project } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { maintenanceSchedule, volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
+import { DomainError } from '#lib/server/errors.js';
+import { linkInsertIfTaskExists, linkInserts } from '#lib/server/task/work-order-link.js';
 import {
 	MAINTENANCE_INTERVAL_MAX_DAYS,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
-} from '$lib/config';
-import type { MaintenanceSchedule } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { MaintenanceSchedule } from '#lib/server/db/schema/volunteer.js';
 
 // Generate-on-close recurring work. Nothing here runs on a clock: the next
 // occurrence is written in the same batch that closes the current one, so the
@@ -39,38 +40,41 @@ export function nextDueAt(closedAt: Date, intervalDays: number): Date {
 
 type OccurrenceSource = Pick<
 	MaintenanceSchedule,
-	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'assetId' | 'notes' | 'capacity'
+	'id' | 'name' | 'volunteerRoleId' | 'projectId' | 'assetId' | 'groupId' | 'notes' | 'capacity'
 >;
 
-function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
+/** Exported for the spec that holds every column the two tables share to a copy. */
+export function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 	return {
 		maintenanceScheduleId: s.id,
 		title: s.name,
 		volunteerRoleId: s.volunteerRoleId,
 		projectId: s.projectId,
-		assetId: s.assetId,
+		groupId: s.groupId,
 		notes: s.notes,
-		capacity: s.capacity,
-		startsAt: null,
-		endsAt: null,
-		dueAt,
-		// Recurring facility work is volunteers' to claim once it has a time.
-		postedAt: new Date()
+		// The places for a shift opened on it once it has a time.
+		pendingCapacity: s.capacity,
+		dueAt
 	};
 }
 
 /**
- * The insert that writes the next occurrence, for the caller to batch with its
- * close. A conflict on `uq_work_order_open_occurrence` is a no-op.
+ * The inserts that write the next occurrence and its unit link, for the caller
+ * to batch with its close. A conflict on `uq_work_order_open_occurrence` is a
+ * no-op, and the link is then skipped with it.
  */
-export function nextOccurrenceInsert(
+export function nextOccurrenceInserts(
 	s: OccurrenceSource & Pick<MaintenanceSchedule, 'intervalDays'>,
 	closedAt: Date
 ) {
-	return db
+	const id = crypto.randomUUID();
+	const insert = db
 		.insert(workOrder)
-		.values(occurrenceValues(s, nextDueAt(closedAt, s.intervalDays)))
+		.values({ id, ...occurrenceValues(s, nextDueAt(closedAt, s.intervalDays)) })
 		.onConflictDoNothing();
+	return s.assetId
+		? ([insert, linkInsertIfTaskExists(id, 'assetId', s.assetId)] as const)
+		: ([insert] as const);
 }
 
 /** The schedule an occurrence belongs to, if it is still writing occurrences. */
@@ -162,11 +166,15 @@ export async function createMaintenanceSchedule(data: {
 		createdByUserId: data.createdByUserId
 	};
 
+	const occurrenceId = crypto.randomUUID();
 	await db.batch([
 		db.insert(maintenanceSchedule).values(row),
-		db
-			.insert(workOrder)
-			.values({ ...occurrenceValues(row, data.firstDueAt), createdByUserId: data.createdByUserId })
+		db.insert(workOrder).values({
+			id: occurrenceId,
+			...occurrenceValues(row, data.firstDueAt),
+			createdByUserId: data.createdByUserId
+		}),
+		...linkInserts(occurrenceId, { assetId: row.assetId })
 	]);
 
 	return { id: row.id };
@@ -270,10 +278,9 @@ export async function listMaintenanceSchedules(
 			openDueAt: workOrder.dueAt,
 			// Newline-separated: a name can hold a comma, not a line break.
 			assignees: sql<string | null>`(
-				select group_concat(u."name", char(10)) from "volunteer_signup" vs
-				join "user" u on u."id" = vs."user_id"
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" in ('claimed', 'confirmed', 'completed')
+				select group_concat(u."name", char(10)) from "work_order_assignee" a
+				join "user" u on u."id" = a."user_id"
+				where a."work_order_id" = ${workOrder.id}
 			)`,
 			lastClosedAt: sql<number | null>`(
 				select max(coalesce(wo."resolved_at", wo."cancelled_at")) from "work_order" wo

@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
-vi.mock('$lib/server/db', async () => {
+vi.mock('#lib/server/db/index.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
 	const { drizzle } = await import('drizzle-orm/node-sqlite');
 	const { migrate } = await import('drizzle-orm/node-sqlite/migrator');
@@ -38,11 +38,13 @@ vi.mock('$lib/server/db', async () => {
 	};
 });
 
-const { client } = (await import('$lib/server/db')) as unknown as {
+const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
 const svc = await import('./instructor-service');
 const { requireInstructor } = await import('./instructor-context');
+const { STAFF_TRANSITIONS } = await import('./instructor-transitions');
+type StaffTransition = import('./instructor-transitions').StaffTransition;
 
 const USER = 'user-teacher';
 const STAFF = 'user-staff';
@@ -298,7 +300,7 @@ describe('what gets announced', () => {
 	// The events are real here — only the database is substituted — so this
 	// asserts the emit actually happens rather than that a mock was called.
 	async function captureEvents<T>(name: T, run: () => Promise<void>) {
-		const { domainEvents } = await import('$lib/server/event-bus/event-bus');
+		const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
 		const seen: Record<string, unknown>[] = [];
 		const off = domainEvents.on(name as never, (e: unknown) => {
 			seen.push((e as { data: Record<string, unknown> }).data);
@@ -373,6 +375,104 @@ describe('what gets announced', () => {
 	});
 });
 
+describe('every staff transition tells the member', () => {
+	// Pause and retire once changed a teacher's status in silence (#2811). Typed
+	// over STAFF_TRANSITIONS, so a new transition cannot ship without a row here.
+	const MEMBER_EVENTS = ['instructor.application_reviewed', 'instructor.status_ended'] as const;
+	const setUp = async () => {
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
+		return row()!.id as string;
+	};
+	const toActive = async () => {
+		const id = await setUp();
+		await svc.approve(id, STAFF);
+		return id;
+	};
+	const cases: Record<
+		StaffTransition,
+		{ arrange: () => Promise<string>; act: (id: string) => Promise<void> }
+	> = {
+		approve: { arrange: setUp, act: (id) => svc.approve(id, STAFF) },
+		sendBack: { arrange: setUp, act: (id) => svc.sendBack(id, STAFF, 'Say which levels.') },
+		pause: { arrange: toActive, act: (id) => svc.pause(id, STAFF, 'off for the summer') },
+		retire: { arrange: toActive, act: (id) => svc.retire(id, STAFF, 'moved away') },
+		grant: {
+			arrange: async () => {
+				const id = await toActive();
+				await svc.retire(id, STAFF, 'moved away');
+				return id;
+			},
+			act: () => svc.grant(USER, STAFF)
+		}
+	};
+
+	it.each(Object.keys(STAFF_TRANSITIONS) as StaffTransition[])('%s', async (transition) => {
+		const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
+		const id = await cases[transition].arrange();
+		const seen: { userId?: string; applicantUserId?: string }[] = [];
+		const offs = MEMBER_EVENTS.map((name) =>
+			domainEvents.on(name, (e) => {
+				seen.push(e.data as never);
+			})
+		);
+		await cases[transition].act(id);
+		await new Promise((r) => setTimeout(r, 0));
+		offs.forEach((off) => off());
+
+		expect(seen.map((e) => e.userId ?? e.applicantUserId)).toEqual([USER]);
+	});
+
+	it('grants a member with no application and tells them', async () => {
+		const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
+		const seen: unknown[] = [];
+		const off = domainEvents.on('instructor.application_reviewed', (e) => {
+			seen.push(e.data);
+		});
+		await svc.grant(USER, STAFF);
+		await new Promise((r) => setTimeout(r, 0));
+		off();
+
+		expect(seen).toEqual([expect.objectContaining({ applicantUserId: USER, approved: true })]);
+	});
+
+	it('does not carry the staff note to the teacher', async () => {
+		const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
+		const id = await toActive();
+		const seen: unknown[] = [];
+		const off = domainEvents.on('instructor.status_ended', (e) => {
+			seen.push(e.data);
+		});
+		await svc.pause(id, STAFF, 'complaint from a student');
+		await new Promise((r) => setTimeout(r, 0));
+		off();
+
+		expect(seen).toEqual([
+			{ instructorId: id, userId: USER, name: USER, email: 'teacher@example.com', status: 'paused' }
+		]);
+	});
+});
+
+describe('future teaching bookings', () => {
+	it('counts only the instructor’s future, uncancelled teaching bookings', async () => {
+		await svc.grant(USER, STAFF);
+		const id = row()!.id as string;
+		const now = Math.floor(Date.now() / 1000);
+		const add = (rid: string, type: string, booker: string, start: number, status: string) =>
+			client.exec(
+				`INSERT INTO reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at)
+				 VALUES ('${rid}', '${type}', '${booker}', '${USER}', '${status}', ${start}, ${start + 3600})`
+			);
+		add('next', 'instructor', id, now + 86400, 'confirmed');
+		add('later', 'instructor', id, now + 2 * 86400, 'confirmed');
+		add('past', 'instructor', id, now - 86400, 'confirmed');
+		add('cancelled', 'instructor', id, now + 86400, 'cancelled');
+		add('own', 'user', USER, now + 86400, 'confirmed');
+
+		expect((await svc.futureTeachingBookings([id])).get(id)).toBe(2);
+		client.exec('DELETE FROM reservation');
+	});
+});
+
 describe('the Members instructors view', () => {
 	it('filters by status and search, and counts pending whatever the filter', async () => {
 		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar' });
@@ -389,5 +489,39 @@ describe('the Members instructors view', () => {
 		const found = await svc.listInstructorRoster({ search: 'teacher@' });
 		expect(found.rows.map((r) => r.personId)).toEqual([USER]);
 		expect(found.pagination.total).toBe(1);
+	});
+
+	it('moves an approved application from Pending to teaching, note and all until then', async () => {
+		await svc.apply(USER, { blurb: BLURB, headline: 'Guitar', applicationNote: 'Ten years' });
+
+		const before = await svc.listInstructorRoster({ status: 'requested' });
+		expect(before.rows.map((r) => [r.personId, r.applicationNote])).toEqual([[USER, 'Ten years']]);
+
+		await svc.approve(before.rows[0].id, STAFF);
+
+		const after = await svc.listInstructorRoster({ status: 'requested' });
+		expect(after.rows).toEqual([]);
+		expect(after.pending).toBe(0);
+		const teaching = await svc.listInstructorRoster({ status: 'active' });
+		expect(teaching.rows.map((r) => r.personId)).toEqual([USER]);
+	});
+
+	it('carries the listing as it would publish, and where it would show', async () => {
+		await svc.apply(USER, {
+			headline: 'Guitar',
+			blurb: BLURB,
+			ratesNote: '$40 an hour',
+			bookingUrl: 'https://example.com/book'
+		});
+
+		const [r] = (await svc.listInstructorRoster({ status: 'requested' })).rows;
+		expect(r).toMatchObject({
+			headline: 'Guitar',
+			blurb: BLURB,
+			ratesNote: '$40 an hour',
+			bookingUrl: 'https://example.com/book',
+			// No profile saved, so no directory entry: approving would list nobody.
+			directoryReach: 'missing'
+		});
 	});
 });

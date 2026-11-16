@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { groupGigs } from './gig-groups';
-import type { CalendarEntry } from '$lib/types/calendar';
+import type { CalendarEntry } from '#lib/types/calendar.js';
 
 /** Minimal entry starting at local noon on the given day. */
 function entry(id: string, day: string): CalendarEntry {

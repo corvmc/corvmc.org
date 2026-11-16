@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
@@ -36,16 +37,19 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * list locator, so the identity has to be what separates them.
  */
 const enquirerFor = (retry: number) => (retry === 0 ? 'E2E Booker' : `E2E Booker ${retry}`);
+// Every seeded account shares a domain; no address of any kind may be published.
+const SEED_EMAIL_DOMAIN = SEED_OWNER_EMAIL.slice(SEED_OWNER_EMAIL.indexOf('@'));
+
+/** A chat room row: General at least, since every group has one (#1301). */
+const chatRoom = (page: Page) =>
+	page.locator(`a[href^="/band/${SEED_MEMBERS_BAND_SLUG}/messages/chat/"]`).first();
+
 const ENQUIRER = enquirerFor(0);
 const ENQUIRER_EMAIL = 'e2e.booker@example.com';
 const MESSAGE = 'Would you play a Thursday in April? Door split, 40 minute set.';
 
 async function login(page: Page, email: string, password: string) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email, password });
 }
 
 /** The Messages count in the band sidebar; absent entirely when it is zero. */
@@ -59,28 +63,37 @@ async function navBadgeCount(page: Page, slug: string): Promise<number> {
  * Holding the entry chunk back gives a fill that lands before hydration, which a
  * slow phone produces on its own. The remote field spreads `value: ''` onto its
  * input, so hydration used to wipe name and email and keep only the textarea.
+ * The chunk waits on a gate the test opens after the fills, not on a timer: a
+ * loaded runner outran a fixed delay and hydrated mid-fill (#2347).
  */
 test('what a visitor types before the form hydrates survives it', async ({ page }) => {
 	let held = 0;
+	let release = () => {};
+	const gate = new Promise<void>((r) => (release = r));
 	await page.route('**/_app/immutable/entry/*.js', async (route) => {
 		held++;
-		await new Promise((r) => setTimeout(r, 1500));
+		await gate;
 		await route.continue();
 	});
 
-	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
-	const name = page.locator('input[name="name"]');
-	const email = page.locator('input[name="email"]');
-	const message = page.locator('textarea[name="message"]');
+	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`, { waitUntil: 'domcontentloaded' });
+	const name = page.locator('input:is([name="name"], [name^="name/"])');
+	const email = page.locator('input:is([name="email"], [name^="email/"])');
+	const message = page.locator('textarea:is([name="message"], [name^="message/"])');
 	await name.fill('Early Typist');
 	await email.fill(ENQUIRER_EMAIL);
 	await message.fill(MESSAGE);
 	// svelte-turnstile renders nothing until onMount, so an absent token input
 	// proves the fills landed before hydration and the test cannot pass vacuously.
-	await expect(page.locator('input[name="turnstileToken"]')).toHaveCount(0);
+	await expect(
+		page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+	).toHaveCount(0);
+	release();
 
 	// The token input appears only once the client has mounted.
-	await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+	await expect(
+		page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+	).not.toHaveValue('', {
 		timeout: 30000
 	});
 	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
@@ -98,28 +111,34 @@ test.describe.serial('band booking enquiries', () => {
 
 		// No address of any kind is published — that is the reason the form exists,
 		// and the reason it is the only thing to assert on here.
-		await expect(page.locator('body')).not.toContainText('@example.com');
+		await expect(page.locator('body')).not.toContainText(SEED_EMAIL_DOMAIN);
 
 		// The token input is created by `window.turnstile.render` on mount, so a
 		// non-empty token proves hydration too: a fill before it is wiped from the
 		// name and email inputs, and Send then stops on the empty `required` fields.
 		//
 		// The name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`, spelled
-		// out because that module reads `$env/dynamic/public`, which does not
+		// out because that module reads `$app/env/public`, which does not
 		// resolve outside the SvelteKit build.
-		await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+		await expect(
+			page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+		).not.toHaveValue('', {
 			timeout: 30000
 		});
 
-		await page.locator('input[name="name"]').fill(enquirer);
-		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
-		await page.locator('textarea[name="message"]').fill(MESSAGE);
+		await page.locator('input:is([name="name"], [name^="name/"])').fill(enquirer);
+		await page.locator('input:is([name="email"], [name^="email/"])').fill(ENQUIRER_EMAIL);
+		await page.locator('textarea:is([name="message"], [name^="message/"])').fill(MESSAGE);
 
-		await page.getByRole('button', { name: 'Send' }).click();
+		await page
+			.locator('form')
+			.filter({ has: page.locator('textarea:is([name="message"], [name^="message/"])') })
+			.locator('button[type="submit"]')
+			.click();
 
 		// Generous: this is the run's first write against a cold preview server, and
 		// the round trip opens both a thread and a message.
-		await expect(page.getByText('Sent.')).toBeVisible({ timeout: 30000 });
+		await expect(page.locator('.contact__done')).toBeVisible({ timeout: 30000 });
 
 		// Now the other side of it.
 		await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
@@ -143,14 +162,19 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(page.getByRole('heading', { name: enquirer })).toBeVisible({ timeout: 15000 });
 
 		// `.last()` because the message reads twice: once truncated into the row's
-		// preview, once in full in the timeline. `InboxShell` renders the list pane
+		// preview, once in full in the timeline. `ListDetailShell` renders the list pane
 		// (from the layout) before the thread pane (its children), so the timeline
 		// is the later of the two — and on a retry the earlier rows are the
 		// previous attempts'.
 		await expect(page.getByText(MESSAGE).last()).toBeVisible({ timeout: 15000 });
 
 		// The reply box, addressed at this thread. Sending it is Postmark's job.
-		await expect(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
+		await expect(
+			page
+				.locator('form')
+				.filter({ has: page.locator('textarea:is([name="body"], [name^="body/"])') })
+				.locator('button[type="submit"]')
+		).toBeVisible();
 
 		// Opening it is what marks it read — for this reader and this thread. The
 		// dot rather than the nav badge, which is an aggregate: on a retry it also
@@ -165,13 +189,13 @@ test.describe.serial('band booking enquiries', () => {
 			await page.goto(`/staff/inbox?view=${view}`);
 			// Waiting on the list itself, so the negative assertion cannot pass
 			// against a pane that has not rendered yet.
-			await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible({ timeout: 15000 });
+			await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 			await expect(page.getByRole('listitem').filter({ hasText: ENQUIRER })).toHaveCount(0);
 		}
 
 		// And not by search, which LIKEs the preview — the enquiry's own words.
 		await page.goto(`/staff/inbox?q=${encodeURIComponent(ENQUIRER)}`);
-		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 		await expect(page.getByRole('listitem').filter({ hasText: ENQUIRER })).toHaveCount(0);
 	});
 
@@ -189,11 +213,28 @@ test.describe.serial('band booking enquiries', () => {
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/messages`);
 		// Their own rooms are there — General at least, since every group has
 		// one whether or not anybody has named a topic (#1301).
-		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
+		await expect(chatRoom(page)).toBeVisible({ timeout: 15000 });
 		// ...and the enquiry list is not drawn at all. `requireGroupRole` in the
 		// remote function is still the guard; this is the page not offering them
 		// a list that would refuse them.
-		await expect(page.getByText('Enquiries from your public booking form')).toHaveCount(0);
+		await expect(page.getByTestId('enquiry-list')).toHaveCount(0);
+	});
+
+	test('on a phone a chat room replaces the list, and back returns to it', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
+
+		const inbox = `/band/${SEED_MEMBERS_BAND_SLUG}/messages`;
+		await page.goto(inbox);
+		await chatRoom(page).click();
+		await expect(page).toHaveURL(new RegExp(`${inbox}/chat/`));
+
+		await expect(page.locator('form textarea:is([name="body"], [name^="body/"])')).toBeVisible();
+		await expect(chatRoom(page)).toBeHidden();
+
+		await page.locator(`main a[href="${inbox}"]`).click();
+		await expect(page).toHaveURL(new RegExp(`${inbox}$`));
+		await expect(chatRoom(page)).toBeVisible();
 	});
 
 	// The old single-room route. It lands on the inbox rather than on a thread,
@@ -203,6 +244,6 @@ test.describe.serial('band booking enquiries', () => {
 
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/chat`);
 		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages$`));
-		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
+		await expect(chatRoom(page)).toBeVisible({ timeout: 15000 });
 	});
 });

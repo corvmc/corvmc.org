@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		if (!isStaff) throw new Error('403: Staff access required');
@@ -27,10 +27,10 @@ const svc = {
 	setStanding: vi.fn(async () => undefined),
 	restoreStanding: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/moderation/standing-service', () => svc);
+vi.mock('#lib/server/moderation/standing-service.js', () => svc);
 
 const flagSvc = { fileStaffAction: vi.fn(async () => ({ id: 'flag-staff-1' })) };
-vi.mock('$lib/server/flag/flag-service', () => flagSvc);
+vi.mock('#lib/server/flag/flag-service.js', () => flagSvc);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

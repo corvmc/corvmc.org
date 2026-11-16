@@ -8,7 +8,8 @@
  *   2. Doc INDEX integrity (hard errors): every doc under docs/ is linked from the
  *      index that owns it. docs/README.md is the map of this folder and is only a map
  *      while it names everything; four docs had quietly fallen out of it, which is
- *      invisible precisely because an unlisted doc is one nobody opens.
+ *      invisible precisely because an unlisted doc is one nobody opens. Feature files under
+ *      docs/reports/features/ are rendered rather than listed, so they are parsed instead.
  *   3. Route DRIFT (work signal): routes added/removed vs the committed snapshot
  *      at docs/manual/route-inventory.json (regenerate with `docs:routes`).
  *
@@ -26,6 +27,7 @@
 import { readdirSync, statSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, relative } from 'path';
 import { listRoutes, readSnapshot, SNAPSHOT_PATH } from './route-inventory.mjs';
+import { FEATURES_DIR, readCatalog } from './feature-catalog.mjs';
 
 const HELP_DIR = 'src/content/help';
 
@@ -203,6 +205,8 @@ export function checkDocIndexes() {
 		// A README is indexed by its own parent folder's link, not by name; the folders are few
 		// and linked as directories, so checking them by basename would only produce noise.
 		if (file.endsWith('/README.md')) continue;
+		// Feature files are indexed by `pnpm docs:catalog`; `readCatalog` validates them instead.
+		if (file.startsWith(`${FEATURES_DIR}/`)) continue;
 
 		const owner = ownerOf(file);
 		if (!owner) {
@@ -241,10 +245,11 @@ function main() {
 
 	const help = checkHelpContent();
 	const docIndexErrors = checkDocIndexes();
+	const catalog = readCatalog();
 	const routes = checkRouteDrift();
 
 	const report = {
-		integrityErrors: [...help.errors, ...docIndexErrors],
+		integrityErrors: [...help.errors, ...docIndexErrors, ...catalog.errors],
 		routeAdded: routes.added.map((r) => (typeof r === 'string' ? r : r.route)),
 		routeRemoved: routes.removed.map((r) => (typeof r === 'string' ? r : r.route)),
 		snapshotMissing: routes.snapshotMissing,

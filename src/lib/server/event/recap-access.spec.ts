@@ -5,7 +5,7 @@ let forEvent: string | null = null;
 const can = vi.fn(async (_cap: string, scope?: { eventId?: string }) =>
 	scope?.eventId ? scope.eventId === forEvent : everywhere
 );
-vi.mock('$lib/server/authorization', () => ({ can }));
+vi.mock('#lib/server/authorization.js', () => ({ can }));
 
 const { recapUploadAccess } = await import('./recap-access');
 

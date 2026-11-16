@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_inbox_thread_group_general` ON `inbox_thread` (`group_id`) WHERE "inbox_thread"."channel" = 'group' AND "inbox_thread"."subject" IS NULL;

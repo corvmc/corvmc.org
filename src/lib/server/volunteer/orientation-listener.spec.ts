@@ -17,7 +17,7 @@ const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'mig
 const sqlite = new DatabaseSync(':memory:');
 const base = drizzle({ client: sqlite });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: new Proxy(
 		{},
 		{
@@ -38,7 +38,7 @@ vi.mock('$lib/server/db', () => ({
 
 /** A real emitter would do, but a hand-rolled one keeps the assertions direct. */
 const handlers = new Map<string, ((e: { data: unknown }) => Promise<void>)[]>();
-vi.mock('$lib/server/event-bus', () => ({
+vi.mock('#lib/server/event-bus/index.js', () => ({
 	domainEvents: {
 		on(name: string, fn: (e: { data: unknown }) => Promise<void>) {
 			handlers.set(name, [...(handlers.get(name) ?? []), fn]);
@@ -46,13 +46,13 @@ vi.mock('$lib/server/event-bus', () => ({
 		emit: vi.fn()
 	}
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { on: vi.fn(), emit: vi.fn() }
 }));
 
 /** The orientation setting. An empty role is the feature switched off. */
 const settings = vi.hoisted(() => new Map<string, string | number>());
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: async (key: string) => {
 		const defaults: Record<string, string | number> = {
 			'volunteer.orientationRoleId': '',
@@ -101,9 +101,13 @@ function createdEvent(over: Record<string, unknown> = {}) {
 function shifts() {
 	return sqlite
 		.prepare(
-			`SELECT id, starts_at, ends_at, reservation_id, project_id, volunteer_role_id,
-				is_orientation, duty_list_id, cancelled_at
-			 FROM work_order ORDER BY created_at, id`
+			// The orientation task with the times of its shift (#2518).
+			`SELECT wo.id, s.starts_at, s.ends_at, wo.project_id,
+				(SELECT l.reservation_id FROM work_order_link l
+				 WHERE l.work_order_id = wo.id AND l.reservation_id IS NOT NULL) AS reservation_id,
+				wo.volunteer_role_id, wo.is_orientation, wo.duty_list_id, wo.cancelled_at
+			 FROM work_order wo LEFT JOIN volunteer_shift s ON s.work_order_id = wo.id
+			 ORDER BY wo.created_at, wo.id`
 		)
 		.all() as {
 		id: string;
@@ -120,7 +124,14 @@ function shifts() {
 
 beforeEach(() => {
 	settings.clear();
-	for (const t of ['member_orientation', 'work_task', 'work_order', 'reservation']) {
+	for (const t of [
+		'member_orientation',
+		'work_task',
+		'work_order_link',
+		'volunteer_shift',
+		'work_order',
+		'reservation'
+	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.exec(`DELETE FROM volunteer_role WHERE id = 'role-orient'`);
@@ -149,8 +160,16 @@ function seedList() {
 /** A shift a coordinator made by hand for the booking, before the listener ran. */
 function byHandShift() {
 	sqlite.exec(
-		`INSERT INTO work_order (id, volunteer_role_id, reservation_id, starts_at, ends_at, is_orientation)
-		 VALUES ('wo-hand','role-orient','res-1', ${STARTS}, ${STARTS + 2700}, 1)`
+		`INSERT INTO work_order (id, volunteer_role_id, is_orientation)
+		 VALUES ('wo-hand','role-orient', 1)`
+	);
+	sqlite.exec(
+		`INSERT INTO work_order_link (id, work_order_id, reservation_id)
+		 VALUES ('wo-hand-link','wo-hand','res-1')`
+	);
+	sqlite.exec(
+		`INSERT INTO volunteer_shift (id, work_order_id, starts_at, ends_at)
+		 VALUES ('wo-hand-shift','wo-hand', ${STARTS}, ${STARTS + 2700})`
 	);
 }
 
@@ -222,6 +241,15 @@ describe('reservation.created', () => {
 		sqlite.exec(`UPDATE reservation SET booker_type = 'group' WHERE id = 'res-1'`);
 
 		await fire('reservation.created', createdEvent({ bookerType: 'group' }));
+
+		expect(shifts()).toHaveLength(0);
+	});
+
+	it('does nothing for a teaching booking — teaching needs no clearance (#2808)', async () => {
+		seedList();
+		sqlite.exec(`UPDATE reservation SET booker_type = 'instructor' WHERE id = 'res-1'`);
+
+		await fire('reservation.created', createdEvent({ bookerType: 'instructor' }));
 
 		expect(shifts()).toHaveLength(0);
 	});

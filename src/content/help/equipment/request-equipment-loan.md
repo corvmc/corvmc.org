@@ -1,5 +1,5 @@
 ---
-title: Request an Equipment Loan
+title: Request an equipment loan
 slug: request-equipment-loan
 category: equipment
 summary: Borrow gear from the lending library for a set period.

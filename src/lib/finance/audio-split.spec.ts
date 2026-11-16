@@ -6,7 +6,7 @@ import {
 	suggestedPlatformCents,
 	divisibleCents
 } from './audio-split';
-import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
+import { AUDIO_MIN_PRICE_CENTS } from '#lib/config.js';
 
 /**
  * The Connect adapter over `split.ts`, which owns the arithmetic and has its own

@@ -1,6 +1,8 @@
-import { contractor, contractorJob } from '../../src/lib/server/db/schema/contractor';
+import { contractorJob } from '../../src/lib/server/db/schema/contractor';
+import { seedOrganizations, type SeedOrganization } from './parties';
 import { inventoryAsset } from '../../src/lib/server/db/schema/inventory';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -32,80 +34,93 @@ export async function seedContractors(staffId: string) {
 		piano: randomUUID()
 	};
 
-	const contractors = await batchInsert(
-		contractor,
-		[
-			{
-				id: ids.amps,
-				name: 'Corvallis Amp Works',
-				trade: 'instrument_repair' as const,
-				contactName: 'Rita Alvarez',
+	const contractors: SeedOrganization[] = [
+		{
+			id: ids.amps,
+			name: 'Corvallis Amp Works',
+			roles: ['contractor'],
+			notes: 'Tube work and speaker reconing. Two-week turnaround in summer.',
+			person: {
+				name: 'Rita Alvarez',
 				phone: '541-555-0143',
-				email: 'shop@corvallisampworks.example',
-				insuranceExpiresAt: new Date(now.getTime() + 200 * day),
-				notes: 'Tube work and speaker reconing. Two-week turnaround in summer.'
+				email: 'shop@corvallisampworks.example'
 			},
-			{
-				id: ids.electric,
-				name: 'Benton Electric',
-				trade: 'electrical' as const,
-				contactName: 'Sam Okafor',
-				phone: '541-555-0188',
-				licenseNumber: 'OR-EL-44219',
-				insuranceExpiresAt: new Date(now.getTime() + 21 * day),
-				notes: 'Did the stage subpanel. Knows the building.'
-			},
-			{
-				id: ids.plumb,
-				name: 'Willamette Plumbing',
-				trade: 'plumbing' as const,
-				phone: '541-555-0107',
-				insuranceExpiresAt: new Date(now.getTime() + 120 * day)
-			},
-			{
-				id: ids.hvac,
-				name: 'Mid-Valley Heating & Air',
-				trade: 'hvac' as const,
-				phone: '541-555-0166',
-				// Lapsed a fortnight ago: the one row /staff/contractors must warn on.
-				insuranceExpiresAt: new Date(now.getTime() - 14 * day),
-				notes: 'Certificate of insurance expired — do not schedule until renewed.'
-			},
-			{
-				id: ids.fire,
-				name: 'Cascade Fire Safety',
-				trade: 'fire_safety' as const,
-				phone: '541-555-0121',
-				insuranceExpiresAt: new Date(now.getTime() + 300 * day),
-				notes: 'Annual extinguisher inspection.'
-			},
-			{
-				id: ids.lock,
-				name: 'Alsea Lock & Key',
-				trade: 'locksmith' as const,
-				phone: '541-555-0190'
-				// No certificate on file at all — not the same as lapsed, and the
-				// insurance list must leave it out.
-			},
-			{
-				id: ids.handy,
-				name: 'Dale Prescott',
-				trade: 'general' as const,
-				phone: '541-555-0134',
-				notes: 'Handyman. Drywall, doors, shelving.'
-			},
-			{
-				id: ids.piano,
-				name: 'Marguerite Chen',
-				trade: 'other' as const,
-				phone: '541-555-0175',
-				notes: 'Piano tuner. Twice a year.',
-				// Retired from the pickers, but the tuning history stays.
-				archivedAt: new Date(now.getTime() - 90 * day)
+			contractor: {
+				trade: 'instrument_repair' as const,
+				insuranceExpiresAt: new Date(now.getTime() + 200 * day)
 			}
-		],
-		4
-	);
+		},
+		{
+			id: ids.electric,
+			name: 'Benton Electric',
+			roles: ['contractor'],
+			notes: 'Did the stage subpanel. Knows the building.',
+			person: { name: 'Sam Okafor', phone: '541-555-0188' },
+			contractor: {
+				trade: 'electrical' as const,
+				licenseNumber: 'OR-EL-44219',
+				insuranceExpiresAt: new Date(now.getTime() + 21 * day)
+			}
+		},
+		{
+			id: ids.plumb,
+			name: 'Willamette Plumbing',
+			roles: ['contractor'],
+			person: { phone: '541-555-0107' },
+			contractor: {
+				trade: 'plumbing' as const,
+				insuranceExpiresAt: new Date(now.getTime() + 120 * day)
+			}
+		},
+		{
+			id: ids.hvac,
+			name: 'Mid-Valley Heating & Air',
+			roles: ['contractor'],
+			notes: 'Certificate of insurance expired — do not schedule until renewed.',
+			person: { phone: '541-555-0166' },
+			// Lapsed a fortnight ago: the one row /staff/contractors must warn on.
+			contractor: { trade: 'hvac' as const, insuranceExpiresAt: new Date(now.getTime() - 14 * day) }
+		},
+		{
+			id: ids.fire,
+			name: 'Cascade Fire Safety',
+			roles: ['contractor'],
+			notes: 'Annual extinguisher inspection.',
+			person: { phone: '541-555-0121' },
+			contractor: {
+				trade: 'fire_safety' as const,
+				insuranceExpiresAt: new Date(now.getTime() + 300 * day)
+			}
+		},
+		{
+			id: ids.lock,
+			name: 'Alsea Lock & Key',
+			roles: ['contractor'],
+			person: { phone: '541-555-0190' },
+			// No certificate on file at all — not the same as lapsed, and the
+			// insurance list must leave it out.
+			contractor: { trade: 'locksmith' as const }
+		},
+		{
+			id: ids.handy,
+			name: 'Dale Prescott',
+			roles: ['contractor'],
+			notes: 'Handyman. Drywall, doors, shelving.',
+			person: { phone: '541-555-0134' },
+			contractor: { trade: 'general' as const }
+		},
+		{
+			id: ids.piano,
+			name: 'Marguerite Chen',
+			roles: ['contractor'],
+			notes: 'Piano tuner. Twice a year.',
+			// Retired from the pickers, but the tuning history stays.
+			archivedAt: new Date(now.getTime() - 90 * day),
+			person: { phone: '541-555-0175' },
+			contractor: { trade: 'other' as const }
+		}
+	];
+	await seedOrganizations(contractors);
 
 	// The unit `seedEquipment` left in the shop, and one still in service, so the
 	// asset page has both an open job and a closed one to render.
@@ -130,7 +145,7 @@ export async function seedContractors(staffId: string) {
 		// At the shop right now, and late — the overdue list's only row.
 		{
 			id: randomUUID(),
-			contractorId: ids.amps,
+			organizationId: ids.amps,
 			status: 'booked' as const,
 			title: 'Retube and rebias the Bassman',
 			assetId: inShop?.id ?? null,
@@ -143,7 +158,7 @@ export async function seedContractors(staffId: string) {
 		// A finished repair, with an invoice — the asset page's history.
 		{
 			id: randomUUID(),
-			contractorId: ids.amps,
+			organizationId: ids.amps,
 			status: 'completed' as const,
 			title: 'Recone the 4x10 cabinet',
 			assetId: inService?.id ?? null,
@@ -158,7 +173,7 @@ export async function seedContractors(staffId: string) {
 		// Building work: no asset, which is the case the module exists for.
 		{
 			id: randomUUID(),
-			contractorId: ids.electric,
+			organizationId: ids.electric,
 			status: 'completed' as const,
 			title: 'Add a dedicated circuit for the stage subpanel',
 			scheduledFor: new Date(now.getTime() - 60 * day),
@@ -174,7 +189,7 @@ export async function seedContractors(staffId: string) {
 		// it up as cash spend.
 		{
 			id: randomUUID(),
-			contractorId: ids.electric,
+			organizationId: ids.electric,
 			status: 'completed' as const,
 			title: 'Trace and repair the dead outlets along the north wall',
 			scheduledFor: new Date(now.getTime() - 30 * day),
@@ -186,7 +201,7 @@ export async function seedContractors(staffId: string) {
 		},
 		{
 			id: randomUUID(),
-			contractorId: ids.fire,
+			organizationId: ids.fire,
 			status: 'completed' as const,
 			title: 'Annual extinguisher inspection and recharge',
 			scheduledFor: new Date(now.getTime() - 40 * day),
@@ -198,7 +213,7 @@ export async function seedContractors(staffId: string) {
 		// Booked, not yet due — the ordinary open job.
 		{
 			id: randomUUID(),
-			contractorId: ids.plumb,
+			organizationId: ids.plumb,
 			status: 'booked' as const,
 			title: 'Green room sink is backing up',
 			scheduledFor: new Date(now.getTime() + 4 * day),
@@ -209,7 +224,7 @@ export async function seedContractors(staffId: string) {
 		// Nobody has been called yet.
 		{
 			id: randomUUID(),
-			contractorId: ids.handy,
+			organizationId: ids.handy,
 			status: 'asked' as const,
 			title: 'Rehang the practice room door — hinges pulling out of the frame',
 			requestedByUserId: staffId,
@@ -219,7 +234,7 @@ export async function seedContractors(staffId: string) {
 		// is still in the shop under the job above.
 		{
 			id: randomUUID(),
-			contractorId: ids.hvac,
+			organizationId: ids.hvac,
 			status: 'cancelled' as const,
 			title: 'Service the rooftop unit before summer',
 			scheduledFor: new Date(now.getTime() - 30 * day),
@@ -230,7 +245,7 @@ export async function seedContractors(staffId: string) {
 		// Against the archived tuner, proving history survives archiving.
 		{
 			id: randomUUID(),
-			contractorId: ids.piano,
+			organizationId: ids.piano,
 			status: 'completed' as const,
 			title: 'Tune the upright',
 			scheduledFor: new Date(now.getTime() - 200 * day),
@@ -243,9 +258,7 @@ export async function seedContractors(staffId: string) {
 	const workOrders = specs.map((spec) => ({
 		id: randomUUID(),
 		title: spec.title,
-		assetId: spec.assetId ?? null,
 		volunteerRoleId: null,
-		postedAt: null,
 		resolvedAt: spec.status === 'completed' ? (spec.completedAt ?? null) : null,
 		resolvedByUserId: spec.status === 'completed' ? staffId : null,
 		cancelledAt: spec.status === 'cancelled' ? (spec.scheduledFor ?? now) : null,
@@ -253,6 +266,10 @@ export async function seedContractors(staffId: string) {
 		createdByUserId: staffId
 	}));
 	await batchInsert(workOrder, workOrders);
+	const links = specs.flatMap((spec, i) =>
+		spec.assetId ? [{ workOrderId: workOrders[i].id, assetId: spec.assetId }] : []
+	);
+	if (links.length > 0) await batchInsert(workOrderLink, links);
 
 	const jobs = await batchInsert(
 		contractorJob,

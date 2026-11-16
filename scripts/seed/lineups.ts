@@ -1,6 +1,6 @@
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { eventBand } from '../../src/lib/server/db/schema/event';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { SUPPORT_BAND_NAMES } from './pools';
 import { pickN, randomInt } from './util';
 import { inArray } from 'drizzle-orm';
@@ -56,10 +56,7 @@ export async function seedLineup(
 		});
 	});
 	if (rows.length === 0) return;
-	// D1 caps a statement at 100 bound params.
-	for (let i = 0; i < rows.length; i += 12) {
-		await db.insert(eventBand).values(rows.slice(i, i + 12));
-	}
+	await batchInsert(eventBand, rows);
 }
 
 /**

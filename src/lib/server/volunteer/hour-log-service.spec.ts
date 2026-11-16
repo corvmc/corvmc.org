@@ -28,7 +28,7 @@ function chainable(result?: unknown[]) {
 
 const insertValues = vi.fn();
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -53,7 +53,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: (...args: unknown[]) => emit(...(args as [])),
 		on: vi.fn()
@@ -62,7 +62,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 
 const deductCredits = vi.fn();
 const addCredits = vi.fn();
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	deductCredits: (...args: unknown[]) => deductCredits(...(args as [])),
 	addCredits: (...args: unknown[]) => addCredits(...(args as [])),
 	getBalance: vi.fn(() => Promise.resolve(0))
@@ -70,7 +70,7 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 
 const getActiveVolunteerRoleById = vi.fn();
 vi.mock('./volunteer-role-service', async () => {
-	const { DomainError } = await import('$lib/server/errors');
+	const { DomainError } = await import('#lib/server/errors.js');
 	class VolunteerRoleNotFoundError extends DomainError {
 		readonly httpStatus = 404;
 		constructor() {
@@ -100,12 +100,16 @@ vi.mock('./member-certification-service', () => ({
 	flagUnclearedLogs: async () => unclearedIds
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => 'member') }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('#lib/server/audit/audit-service.js', () => ({
+	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
+}));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => 'member') }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	submitHours,
 	updateHourLog,
@@ -126,7 +130,7 @@ import {
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
 	VOLUNTEER_REVIEW_MINUTES_OVER
-} from '$lib/config';
+} from '#lib/config.js';
 
 const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, isSpecializedSkill: false };
 const USER_ID = 'user-1';
@@ -533,6 +537,45 @@ describe('HourLogService', () => {
 		it('throws when the log is gone', async () => {
 			selectResultQueue = [[]];
 			await expect(approveHourLog('missing', STAFF_ID)).rejects.toThrow(HourLogNotFoundError);
+		});
+
+		// Warn, record, allow (#2233): a returned log is not terminal, so staff may
+		// approve it over the warning, and the reason is what the audit log keeps.
+		it('refuses a returned log when no reason is given', async () => {
+			selectResultQueue = [[pendingLog({ status: 'rejected' })]];
+			await expect(approveHourLog('log-1', STAFF_ID, undefined, { reason: '  ' })).rejects.toThrow(
+				HourLogAlreadyReviewedError
+			);
+			expect(db.update).not.toHaveBeenCalled();
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		it('approves a returned log over a reason and records the override', async () => {
+			const workedOn = new Date('2026-03-10T19:00:00Z');
+			selectResultQueue[0] = [pendingLog({ status: 'rejected', workedOn })];
+			updateResult = [pendingLog({ status: 'approved', workedOn })];
+
+			const row = await approveHourLog('log-1', STAFF_ID, undefined, {
+				reason: 'Returned by mistake'
+			});
+
+			expect(row.status).toBe('approved');
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'volunteer_hours.approved_over_return',
+				subject: { type: 'user', id: USER_ID },
+				details: {
+					logId: 'log-1',
+					workedOn: '2026-03-10',
+					minutes: 120,
+					warnings: [expect.any(String)],
+					reason: 'Returned by mistake'
+				}
+			});
+		});
+
+		it('records nothing for an ordinary approval', async () => {
+			await approveHourLog('log-1', STAFF_ID, undefined, { reason: 'unneeded' });
+			expect(recordAuditEntry).not.toHaveBeenCalled();
 		});
 
 		// Two staff clicking approve at once: the UPDATE re-asserts 'pending', so

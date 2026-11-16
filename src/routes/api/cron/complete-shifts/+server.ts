@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { completeFinishedShifts } from '$lib/server/volunteer/volunteer-signup-service';
+import * as env from '$app/env/private';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { completeFinishedShifts } from '#lib/server/volunteer/volunteer-signup-service.js';
 
 /**
  * Close out shifts that have finished.
@@ -34,6 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			await domainEvents.emit('volunteer.shift_completed', {
 				signupId: row.signupId,
 				shiftId: row.shiftId,
+				workOrderId: row.workOrderId,
 				userId: row.userId,
 				userName: row.userName,
 				userEmail: row.userEmail,
@@ -51,5 +52,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 
-	return json({ completed: completed.length, emitted });
+	return Response.json({ completed: completed.length, emitted });
 };

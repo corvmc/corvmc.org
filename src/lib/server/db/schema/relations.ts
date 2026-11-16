@@ -301,7 +301,10 @@ export const relations = defineRelations(schema, (t) => ({
 		project: t.one.project({ from: t.suggestion.id, to: t.project.suggestionId })
 	},
 	contractorJob: {
-		contractor: t.one.contractor({ from: t.contractorJob.contractorId, to: t.contractor.id }),
+		organization: t.one.organization({
+			from: t.contractorJob.organizationId,
+			to: t.organization.id
+		}),
 		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id }),
 		workOrder: t.one.workOrder({ from: t.contractorJob.workOrderId, to: t.workOrder.id })
 	},
@@ -379,7 +382,7 @@ export const relations = defineRelations(schema, (t) => ({
 	volunteerRole: {
 		hourLogs: t.many.volunteerHourLog(),
 		interests: t.many.volunteerRoleInterest(),
-		shifts: t.many.workOrder(),
+		workOrders: t.many.workOrder(),
 		requiredCertifications: t.many.volunteerRoleCertification()
 	},
 	volunteerRoleInterest: {
@@ -395,19 +398,36 @@ export const relations = defineRelations(schema, (t) => ({
 			to: t.volunteerRole.id
 		}),
 		event: t.one.eventListing({ from: t.workOrder.eventId, to: t.eventListing.id }),
-		asset: t.one.inventoryAsset({ from: t.workOrder.assetId, to: t.inventoryAsset.id }),
 		project: t.one.project({ from: t.workOrder.projectId, to: t.project.id }),
 		section: t.one.projectSection({ from: t.workOrder.sectionId, to: t.projectSection.id }),
 		resolvedBy: t.one.user({
 			from: t.workOrder.resolvedByUserId,
 			to: t.user.id
 		}),
-		postedBy: t.one.user({ from: t.workOrder.postedByUserId, to: t.user.id }),
-		signups: t.many.volunteerSignup(),
-		contractorJobs: t.many.contractorJob()
+		contractorJobs: t.many.contractorJob(),
+		shifts: t.many.volunteerShift(),
+		assignees: t.many.workOrderAssignee(),
+		links: t.many.workOrderLink()
+	},
+	workOrderLink: {
+		workOrder: t.one.workOrder({ from: t.workOrderLink.workOrderId, to: t.workOrder.id }),
+		organization: t.one.organization({
+			from: t.workOrderLink.organizationId,
+			to: t.organization.id
+		}),
+		asset: t.one.inventoryAsset({ from: t.workOrderLink.assetId, to: t.inventoryAsset.id }),
+		reservation: t.one.reservation({ from: t.workOrderLink.reservationId, to: t.reservation.id })
+	},
+	volunteerShift: {
+		workOrder: t.one.workOrder({ from: t.volunteerShift.workOrderId, to: t.workOrder.id }),
+		signups: t.many.volunteerSignup()
+	},
+	workOrderAssignee: {
+		workOrder: t.one.workOrder({ from: t.workOrderAssignee.workOrderId, to: t.workOrder.id }),
+		user: t.one.user({ from: t.workOrderAssignee.userId, to: t.user.id })
 	},
 	volunteerSignup: {
-		shift: t.one.workOrder({ from: t.volunteerSignup.shiftId, to: t.workOrder.id }),
+		shift: t.one.volunteerShift({ from: t.volunteerSignup.shiftId, to: t.volunteerShift.id }),
 		user: t.one.user({ from: t.volunteerSignup.userId, to: t.user.id }),
 		feedback: t.one.volunteerShiftFeedback({
 			from: t.volunteerSignup.id,
@@ -449,7 +469,9 @@ export const relations = defineRelations(schema, (t) => ({
 		role: t.one.volunteerRole({
 			from: t.volunteerHourLog.volunteerRoleId,
 			to: t.volunteerRole.id
-		})
+		}),
+		shift: t.one.volunteerShift({ from: t.volunteerHourLog.shiftId, to: t.volunteerShift.id }),
+		workOrder: t.one.workOrder({ from: t.volunteerHourLog.workOrderId, to: t.workOrder.id })
 	},
 	media: {
 		attachments: t.many.mediaAttachment()

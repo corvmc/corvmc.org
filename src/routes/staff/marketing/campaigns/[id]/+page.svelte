@@ -1,65 +1,113 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatHistoryTime, formatDateShortYear } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { UnscheduleCampaignAction } from '$lib/components/actions';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { getCampaignDetail } from '$lib/remote/marketing.remote';
-	import { sanitizeHtml } from '$lib/utils/markdown';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { campaignSendStatuses } from '#lib/types/marketing.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { UnscheduleCampaignAction } from '#lib/components/actions/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { getCampaignDetail } from '#lib/remote/marketing.remote.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let campaign = $derived(await getCampaignDetail(id));
 </script>
 
-<PageHeader width="3xl" subtitle="Campaign" title={campaign.subject}>
+<PageHeader width="3xl" subtitle={m.staff_campaign_body()} title={campaign.subject}>
 	<StatusBadge status={campaign.status} />
 	{#if campaign.status === 'draft'}
-		<Button href="/staff/marketing/campaigns/{id}/edit" variant="default" size="sm">Edit</Button>
+		<Button href="/staff/marketing/campaigns/{id}/edit" variant="default" size="sm"
+			>{m.staff_edit_label()}</Button
+		>
 	{/if}
 	{#if campaign.status === 'scheduled'}
 		<UnscheduleCampaignAction
 			campaignId={id}
-			onsuccess={() => goto(resolve(`/staff/marketing/campaigns/${id}/edit`))}
+			onsuccess={() => goto(resolve(`staff/marketing/campaigns/${id}/edit`))}
 		/>
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Details">
+		<InfoCard title={m.staff_details_title()}>
 			<DefinitionList>
-				<Fact label="Status"><StatusBadge status={campaign.status} /></Fact>
+				<Fact label={m.staff_status_label()}><StatusBadge status={campaign.status} /></Fact>
 
-				<Fact label="Audiences">{campaign.audiences.map((a) => a.name).join(', ') || '—'}</Fact>
+				<Fact label={m.staff_audiences_label()}
+					>{campaign.audiences.map((a) => a.name).join(', ') || '—'}</Fact
+				>
 
 				{#if campaign.recipientCount !== null}
-					<Fact label="Recipients">{campaign.recipientCount}</Fact>
+					<Fact label={m.staff_recipients_label()}>{campaign.recipientCount}</Fact>
 				{/if}
 
 				{#if campaign.sentAt}
-					<Fact label="Sent at">{new Date(campaign.sentAt).toLocaleString()}</Fact>
+					<Fact label={m.staff_marketing_campaigns_id_sent_at_label()}
+						>{formatHistoryTime(new Date(campaign.sentAt))}</Fact
+					>
 				{/if}
 
 				{#if campaign.scheduledFor && !campaign.sentAt}
-					<Fact label="Scheduled for">{new Date(campaign.scheduledFor).toLocaleString()}</Fact>
+					<Fact label={m.staff_marketing_campaigns_id_scheduled_label()}
+						>{formatHistoryTime(new Date(campaign.scheduledFor))}</Fact
+					>
 				{/if}
 
-				<Fact label="Created">{new Date(campaign.createdAt).toLocaleDateString()}</Fact>
+				<Fact label={m.staff_created_label()}
+					>{formatDateShortYear(new Date(campaign.createdAt))}</Fact
+				>
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title="Markdown Source">
+		<InfoCard title={m.staff_marketing_campaigns_id_markdown_source_title()}>
 			<pre
 				class="max-h-64 overflow-auto code-block p-3 whitespace-pre-wrap">{campaign.markdownBody}</pre>
 		</InfoCard>
 	</div>
 
-	<InfoCard title="Rendered Preview">
+	{#if campaign.sends}
+		{@const sends = campaign.sends}
+		<InfoCard title={m.staff_recipients_title()} class="mb-6">
+			<DefinitionList>
+				{#each campaignSendStatuses.filter((st) => sends.counts[st]) as st (st)}
+					<Fact label={statusLabel(st)}>{sends.counts[st]}</Fact>
+				{/each}
+			</DefinitionList>
+			{#if sends.rows && sends.rows.length > 0}
+				<Table size="sm" class="mt-4">
+					{#snippet head()}
+						<th>{m.staff_email_label()}</th>
+						<th>{m.staff_audience_label()}</th>
+						<th class="w-px">{m.staff_status_label()}</th>
+					{/snippet}
+					{#each sends.rows as r (r.id)}
+						<tr>
+							<td class="cell-primary">
+								<div class="truncate font-mono text-sm">{r.email}</div>
+								{#if r.error}
+									<div class="truncate text-muted">{r.error}</div>
+								{/if}
+							</td>
+							<td>{r.audience ?? '—'}</td>
+							<td class="w-px"><StatusBadge status={r.status} /></td>
+						</tr>
+					{/each}
+				</Table>
+			{/if}
+		</InfoCard>
+	{/if}
+
+	<InfoCard title={m.staff_marketing_campaigns_id_rendered_preview_title()}>
 		<div class="overflow-hidden rounded-lg border bg-white">
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (admin campaign HTML) -->
 			{@html sanitizeHtml(campaign.htmlBody)}

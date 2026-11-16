@@ -3,8 +3,8 @@
 	 * Why an hour log needs a staff look. Advisory, never a block: refusing
 	 * hours would not undo the work, only lose the record.
 	 */
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { hourLogExceptionLabels, type HourLogException } from '$lib/config';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { hourLogExceptionLabels, type HourLogException } from '#lib/config.js';
 
 	let { exceptions }: { exceptions: HourLogException[] } = $props();
 </script>

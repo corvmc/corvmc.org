@@ -8,30 +8,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
-// D1 runs a batch as one transaction; better-sqlite3's drizzle has no `batch`, so this is it.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			sqlite.exec('begin');
-			try {
-				const out = [];
-				for (const s of stmts) out.push(await s);
-				sqlite.exec('commit');
-				return out;
-			} catch (e) {
-				sqlite.exec('rollback');
-				throw e;
-			}
-		}
-	}),
-	getRowCount: (r: unknown) => {
-		const x = r as { meta?: { changes?: number }; changes?: number };
-		return Number(x?.meta?.changes ?? x?.changes ?? 0);
-	}
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
 const { emit, refund, promoteNextWaitlisted } = vi.hoisted(() => ({
@@ -39,8 +22,8 @@ const { emit, refund, promoteNextWaitlisted } = vi.hoisted(() => ({
 	refund: vi.fn(),
 	promoteNextWaitlisted: vi.fn(async () => ({ promoted: false }))
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
-vi.mock('$lib/server/finance/payment-service', () => ({ refund }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ refund }));
 vi.mock('./waitlist-service', () => ({ promoteNextWaitlisted }));
 
 const svc = await import('./recurring-series-service');
@@ -59,7 +42,7 @@ function insertReservation(
 		booker_type: 'user',
 		booker_id: MEMBER,
 		created_by_user_id: MEMBER,
-		status: extra.status ?? 'scheduled',
+		status: extra.status ?? 'confirmed',
 		recurring_series_id: extra.series ?? 'ser-1',
 		...extra.columns
 	};
@@ -91,7 +74,7 @@ const statusOf = (id: string) =>
 beforeEach(() => {
 	vi.clearAllMocks();
 	sqlite.pragma('foreign_keys = OFF');
-	for (const t of ['work_order', 'reservation', 'recurring_series', 'user']) {
+	for (const t of ['work_order_link', 'work_order', 'reservation', 'recurring_series', 'user']) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.pragma('foreign_keys = ON');
@@ -118,7 +101,8 @@ beforeEach(() => {
 	insertReservation('res-gone', 36, { status: 'cancelled' });
 	insertReservation('res-staffed', 43);
 	sqlite.exec(
-		`INSERT INTO work_order (id, title, reservation_id) VALUES ('wo-1', 'Orientation', 'res-staffed')`
+		`INSERT INTO work_order (id, title) VALUES ('wo-1', 'Orientation');
+		 INSERT INTO work_order_link (id, work_order_id, reservation_id) VALUES ('l-1', 'wo-1', 'res-staffed')`
 	);
 });
 
@@ -183,7 +167,7 @@ describe('cancelling a reservation series', () => {
 
 	it('never deletes the prototype, even when it is still ahead', async () => {
 		sqlite.exec(`UPDATE reservation SET starts_at = unixepoch() + ${3 * DAY},
-		             ends_at = unixepoch() + ${3 * DAY + 7200}, status = 'scheduled' WHERE id = 'res-proto'`);
+		             ends_at = unixepoch() + ${3 * DAY + 7200}, status = 'confirmed' WHERE id = 'res-proto'`);
 
 		await svc.cancel('ser-1', { kind: 'staff', userId: STAFF });
 
@@ -196,11 +180,12 @@ describe('cancelling a reservation series', () => {
 		await expect(svc.cancel('ser-1', { kind: 'staff', userId: STAFF })).rejects.toThrow(
 			svc.RecurringSeriesError
 		);
-		expect(statusOf('res-next')).toBe('scheduled');
-		expect(statusOf('res-later-a')).toBe('scheduled');
+		expect(statusOf('res-next')).toBe('confirmed');
+		expect(statusOf('res-later-a')).toBe('confirmed');
 	});
 
 	it('leaves an event series’ bookings alone', async () => {
+		sqlite.exec(`DELETE FROM work_order_link`);
 		sqlite.exec(`DELETE FROM work_order`);
 		sqlite.exec(`DELETE FROM reservation WHERE recurring_series_id = 'ser-1'`);
 		insertSeries('ser-event', 'evt-proto', 'event_listing');
@@ -209,8 +194,8 @@ describe('cancelling a reservation series', () => {
 
 		await svc.cancel('ser-event', { kind: 'staff', userId: STAFF });
 
-		expect(statusOf('res-event-next')).toBe('scheduled');
-		expect(statusOf('res-event-later')).toBe('scheduled');
+		expect(statusOf('res-event-next')).toBe('confirmed');
+		expect(statusOf('res-event-later')).toBe('confirmed');
 		expect(emit).not.toHaveBeenCalled();
 	});
 });

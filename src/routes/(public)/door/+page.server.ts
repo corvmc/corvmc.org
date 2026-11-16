@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { signInHref } from '$lib/utils/sign-in';
+import { signInHref } from '#lib/utils/sign-in.js';
 import type { PageServerLoad } from './$types';
 
 /**

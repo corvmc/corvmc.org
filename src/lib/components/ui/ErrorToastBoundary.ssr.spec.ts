@@ -34,4 +34,17 @@ describe('ErrorToastBoundary server rendering', () => {
 		expect(body).toContain('resolved content');
 		expect(body).not.toContain(SPINNER);
 	});
+
+	// SvelteKit 3 renders with `transformError`, which arms every `failed` snippet
+	// on the server. This one must stay out of it, or a 404 is an alert in the
+	// layout instead of +error.svelte.
+	it('leaves a server-side failure to the boundary above it', async () => {
+		const rendered = async () =>
+			await render(Harness, {
+				props: { showPending: false, fails: true },
+				transformError: (error) => error
+			});
+
+		await expect(rendered()).rejects.toThrow('not found');
+	});
 });

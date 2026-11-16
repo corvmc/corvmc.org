@@ -1,38 +1,41 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { env } from '$env/dynamic/public';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
-	import { getDirectoryBand, getBandPastShows } from '$lib/remote/directory.remote';
-	import { ReportContentAction } from '$lib/components/actions';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { pageTitle } from '$lib/config';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	import * as env from '$app/env/public';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
+	import { getDirectoryBand, getBandPastShows } from '#lib/remote/directory.remote.js';
+	import { ReportContentAction } from '#lib/components/actions/index.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { pageTitle } from '#lib/config.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
-	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
-	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
-	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import PressBox from '#lib/components/directory/profile/PressBox.svelte';
+	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
+	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	const MEMBERS_BASE = '/member/directory/members';
 
 	// One query. Three concurrent ones is what -1V was: past kit 2.64 the component blows up in
 	// Svelte's reactivity instead of rendering. `getBandPastShows` below is still its own call,
 	// but it fires from the pager's callback, long after first paint.
-	let data = $derived(await getDirectoryBand(page.params.slug!));
+	let data = $derived(await getDirectoryBand(params.slug));
 
 	const band = $derived(data.band);
 	const shows = $derived(data.shows);
@@ -48,17 +51,23 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [
-			{ label: `${band.memberCount} member${band.memberCount === 1 ? '' : 's'}` }
+			{
+				label: msg.member_directory_bands_slug_member_label({
+					memberCount: band.memberCount,
+					value: band.memberCount === 1 ? '' : 's'
+				})
+			}
 		];
-		if (band.lookingForMembers) p.push({ label: 'Looking for members', variant: 'warm' });
+		if (band.lookingForMembers)
+			p.push({ label: msg.member_looking_members_label(), variant: 'warm' });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: 'Formed', value: band.foundedYear },
-		{ label: 'Genre', value: band.genres.join(' · ') },
-		{ label: 'Based in', value: band.hometown },
-		{ label: 'Looking for', value: band.lookingForMembers ? 'Members' : null }
+		{ label: msg.member_directory_bands_slug_formed_label(), value: band.foundedYear },
+		{ label: msg.member_directory_bands_slug_genre_label(), value: band.genres.join(' · ') },
+		{ label: msg.member_based_label(), value: band.hometown },
+		{ label: msg.member_looking_label(), value: band.lookingForMembers ? 'Members' : null }
 	]);
 
 	let memberRefs = $derived<CrossRef[]>(
@@ -80,7 +89,7 @@
 
 <PageContent width="3xl">
 	<div class="flex items-center justify-between">
-		<a href={resolve('/member/directory/bands')} class="link text-muted"
+		<a href={resolve('member/directory/bands')} class="link text-muted"
 			>&larr; {many(m.term_band)}</a
 		>
 		{#if canReport}
@@ -101,7 +110,7 @@
 
 	<ProfileGrid>
 		{#snippet main()}
-			<ProseBlock label="About" markdown={band.bio} />
+			<ProseBlock kind="about" markdown={band.bio} />
 			<ListenStrip links={band.links} />
 			<ShowsBox
 				upcoming={shows.upcoming}
@@ -116,8 +125,15 @@
 			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
-			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
-			<TagCloud label="Genres · Influences" tags={band.genres} />
+			<CrossRefList
+				kind="members"
+				items={memberRefs}
+				note={msg.member_directory_bands_slug_note_body({ memberCount: band.memberCount })}
+			/>
+			<TagCloud
+				label={msg.member_directory_bands_slug_genres_influences_label()}
+				tags={band.genres}
+			/>
 			<LinksBox links={band.links} />
 			<ContactForm slug={band.slug} bandName={band.name} />
 		{/snippet}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // `searchEvents` backs the event picker on the volunteer shift forms. It is a
@@ -29,10 +29,10 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chainable() } }));
 
 let held: string[] | null = null;
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async (cap: string) => {
 		if (held && !held.includes(cap)) throw Object.assign(new Error('403'), { status: 403 });
 		return mockUser({ id: 'staff-1' });
@@ -40,7 +40,7 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => mockUser({ id: 'staff-1' }))
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -71,8 +71,8 @@ vi.mock('$app/server', () => ({
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
-const { searchEvents, searchEventsForPlacement } =
-	(await import('$lib/remote/events.remote')) as any;
+const { searchEvents, searchEventsForPlacement, searchEventsForCampaign } =
+	(await import('#lib/remote/events.remote.js')) as any;
 
 function rendered() {
 	const where = chainCalls.find((c) => c.method === 'where');
@@ -99,6 +99,22 @@ describe('searchEventsForPlacement (#1618)', () => {
 	it('refuses someone who cannot manage sponsors, before any read', async () => {
 		held = ['event.read', 'sponsor.read'];
 		await expect(searchEventsForPlacement('fall')).rejects.toMatchObject({ status: 403 });
+		expect(chainCalls).toHaveLength(0);
+	});
+});
+
+describe('searchEventsForCampaign (#2770)', () => {
+	it('answers a campaign writer who cannot read the staff event list', async () => {
+		held = ['marketing.manageCampaigns'];
+		selectResult = [{ id: 'e1', title: 'Fall Showcase', startsAt: new Date('2026-10-01') }];
+		const rows = await searchEventsForCampaign('fall');
+		expect(rows).toEqual([expect.objectContaining({ id: 'e1' })]);
+		await expect(searchEvents('fall')).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('refuses someone who cannot write campaigns, before any read', async () => {
+		held = ['event.read', 'marketing.read'];
+		await expect(searchEventsForCampaign('fall')).rejects.toMatchObject({ status: 403 });
 		expect(chainCalls).toHaveLength(0);
 	});
 });

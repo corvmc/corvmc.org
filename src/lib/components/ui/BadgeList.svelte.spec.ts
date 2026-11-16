@@ -10,10 +10,11 @@ import '../../../routes/panel-theme.css';
 describe('BadgeList on a zebra panel table', () => {
 	it('keeps an edge distinct from the striped row behind it', async () => {
 		await render(BadgeListZebraHarness);
-		await expect.element(page.getByText('Booking Lead')).toBeVisible();
+		const striped = page.getByTestId('striped');
+		await expect.element(striped).toBeVisible();
 
-		const row = getComputedStyle(page.getByTestId('striped').element()).backgroundColor;
-		const chip = getComputedStyle(page.getByText('Booking Lead').element());
+		const row = getComputedStyle(striped.element()).backgroundColor;
+		const chip = getComputedStyle(striped.element().querySelector('.badge')!);
 		expect(row).not.toBe('rgba(0, 0, 0, 0)');
 		expect(chip.borderTopColor).not.toBe(row);
 	});

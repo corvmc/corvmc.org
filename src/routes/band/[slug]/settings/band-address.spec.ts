@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 /**
  * Who may move a band's public address, and — the part worth pinning down — that
@@ -28,7 +28,7 @@ const bandServiceMock = {
 	getUserRole: vi.fn(async () => 'owner' as string | null)
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const { changeBandSlug, allowRateLimited, SlugUnavailableError } = vi.hoisted(() => ({
 	changeBandSlug: vi.fn(async (_bandId: string, slug: string) => ({
@@ -42,7 +42,7 @@ const { changeBandSlug, allowRateLimited, SlugUnavailableError } = vi.hoisted(()
 
 // The address service's own rules are covered in band-address-service.spec.ts;
 // here only normalization matters, so it stays real in spirit but cheap.
-vi.mock('$lib/server/band/band-address-service', () => ({
+vi.mock('#lib/server/band/band-address-service.js', () => ({
 	MAX_BAND_SLUG_LENGTH: 63,
 	SlugUnavailableError,
 	normalizeBandSlug: (input: string) =>
@@ -57,11 +57,11 @@ vi.mock('$lib/server/band/band-address-service', () => ({
 	changeBandSlug
 }));
 
-vi.mock('$lib/server/rate-limit', () => ({ allowRateLimited }));
+vi.mock('#lib/server/rate-limit.js', () => ({ allowRateLimited }));
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => testUser
 }));
 
@@ -87,7 +87,7 @@ const issue = new Proxy(
 // Module scope, not inside each `it`: a cold Vite cache would otherwise pay the
 // transform of this module graph inside the 5s test timeout and report it as a
 // timeout. Same reason as commit 75fd70a.
-const { changeBandAddress } = (await import('$lib/remote/band-address.remote')) as any;
+const { changeBandAddress } = (await import('#lib/remote/band-address.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -1,4 +1,4 @@
-import type { EntityType } from '$lib/config';
+import type { EntityType } from '#lib/config.js';
 
 /**
  * A reference to one record, shaped for display.
@@ -9,7 +9,7 @@ import type { EntityType } from '$lib/config';
  *
  * There is deliberately **no `href`**. A record's canonical page depends on who
  * is looking and which panel they are in, so it is derived by
- * `entityHref(ref, viewer)` in `$lib/utils/entity-href` rather than decided at
+ * `entityHref(ref, viewer)` in `#lib/utils/entity-href.js` rather than decided at
  * whichever call site happens to render the link. Passing one in was how the
  * tree ended up with band links pointing at two different routes.
  */
@@ -82,12 +82,34 @@ export interface ReservationRef extends BaseRef {
 	bandSlug?: string | null;
 }
 
-/** The types whose reference is identity and nothing more. */
-export interface GenericRef extends BaseRef {
-	type: Exclude<EntityType, 'member' | 'band' | 'event' | 'reservation'>;
+/** Decided on its group's record, so the ref carries the group. */
+export interface GroupApplicationRef extends BaseRef {
+	type: 'group_application';
+	groupId?: string | null;
 }
 
-export type EntityRef = MemberRef | BandRef | EventRef | ReservationRef | GenericRef;
+/** Decided on its market day's vendors page, so the ref carries the event. */
+export interface MarketVendorRef extends BaseRef {
+	type: 'market_vendor';
+	eventId?: string | null;
+}
+
+/** The types whose reference is identity and nothing more. */
+export interface GenericRef extends BaseRef {
+	type: Exclude<
+		EntityType,
+		'member' | 'band' | 'event' | 'reservation' | 'group_application' | 'market_vendor'
+	>;
+}
+
+export type EntityRef =
+	| MemberRef
+	| BandRef
+	| EventRef
+	| ReservationRef
+	| GroupApplicationRef
+	| MarketVendorRef
+	| GenericRef;
 
 /** Which panel is being rendered. `public` is the unauthenticated site. */
 export type Panel = 'staff' | 'band' | 'member' | 'public';

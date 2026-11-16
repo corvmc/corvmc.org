@@ -3,23 +3,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /** The pool's claims and job stage against a real SQLite; the lock is mocked. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const kv = new Map<string, unknown>();
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: async (key: string) => kv.get(key) ?? null,
 	putJson: async (key: string, value: unknown) => void kv.set(key, value)
 }));
 
 const mockDispatchEmailOnly = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/notification', () => ({
+vi.mock('#lib/server/notification/index.js', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const mockAddLockUser = vi.fn();
 const mockGetLockUser = vi.fn();
@@ -37,7 +37,7 @@ vi.mock('./ultraloc-client', () => ({
 
 const { claimPoolCode, revealPoolCode, maintainCodePool, listPoolCodes, poolDepth } =
 	await import('./fallback-code-service');
-const { DOOR_CODE_POOL_SIZE } = await import('$lib/config');
+const { DOOR_CODE_POOL_SIZE } = await import('#lib/config.js');
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -106,6 +106,8 @@ beforeEach(() => {
 	mockGetLockUser.mockResolvedValue(null);
 	mockListLockUsers.mockResolvedValue([]);
 	mockRemoveTemporaryUser.mockResolvedValue(undefined);
+	sqlite.exec(`delete from lock_fallback_code`);
+	sqlite.exec(`delete from reservation`);
 });
 
 // ---------------------------------------------------------------------------

@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
-	import { formatDate } from '$lib/utils/format';
-	import type { Reservation } from '$lib/server/reservation';
+	import { refreshAll } from '$app/navigation';
+	import { confirmWaitlisted } from '#lib/remote/reservations.remote.js';
+	import { formatDate } from '#lib/utils/format.js';
+	import type { Reservation } from '#lib/server/reservation/index.js';
 
 	let {
 		reservation,
@@ -28,27 +29,28 @@
 
 <Action
 	action={confirmWaitlisted}
-	label="Confirm Slot"
-	modalTitle="Confirm Waitlisted Reservation"
-	submitLabel="Confirm Reservation"
+	label={m.actions_confirm_waitlisted_label()}
+	modalTitle={m.actions_confirm_waitlisted_modal_title()}
+	submitLabel={m.actions_confirm_reservation_label()}
 	submitVariant="success"
-	successToast="Reservation confirmed"
+	successToast={m.actions_confirm_waitlisted_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">
-			A slot has opened up for this time. Would you like to confirm this reservation?
+			{m.actions_confirm_waitlisted_slot_has_opened_up_time_text()}
 		</p>
 		{#if reservation.waitlistExpiresAt}
 			<p class="text-subtle">
-				You have until {formatDate(reservation.waitlistExpiresAt)} to confirm before the slot is offered
-				to someone else.
+				{m.actions_confirm_waitlisted_have_until_confirm_before_slot_text({
+					formatDate: formatDate(reservation.waitlistExpiresAt)
+				})}
 			</p>
 		{/if}
 	{/snippet}

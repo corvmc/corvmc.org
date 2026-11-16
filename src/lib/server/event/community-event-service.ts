@@ -1,24 +1,25 @@
-import { db } from '$lib/server/db';
-import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { eventListing, type LineupEntry } from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
 	noSaleTerms,
 	ticketSaleColumns
 } from './event-columns';
-import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
-import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, getTableColumns, gte, inArray, ne } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { uploadFile } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { DomainError } from '$lib/server/errors';
+import { saveTicketSale } from '#lib/server/ticket/ticket-sale.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, ne } from 'drizzle-orm';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { visibleTo } from './visibility';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { uploadFile } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	getById,
 	publish as publishEvent,
@@ -91,7 +92,11 @@ export type { EventRow } from './event-service';
 // Queries
 // ---------------------------------------------------------------------------
 
-/** The member's own listings, drafts included. Nobody else's, ever. */
+/**
+ * The member's own listings, drafts included. Nobody else's, ever. A partner
+ * feed's listings are excluded from the staffer who added it: the next import
+ * would overwrite any edit made here.
+ */
 export async function listCommunityEventsForUser(userId: string): Promise<EventRow[]> {
 	return db
 		.select(eventListingColumns)
@@ -100,6 +105,7 @@ export async function listCommunityEventsForUser(userId: string): Promise<EventR
 			and(
 				eq(eventListing.source, 'community'),
 				eq(eventListing.createdByUserId, userId),
+				isNull(eventListing.importSourceId),
 				ne(eventListing.status, 'rejected')
 			)
 		)
@@ -115,6 +121,7 @@ export async function listRejectedForUser(userId: string): Promise<EventRow[]> {
 			and(
 				eq(eventListing.source, 'community'),
 				eq(eventListing.createdByUserId, userId),
+				isNull(eventListing.importSourceId),
 				eq(eventListing.status, 'rejected')
 			)
 		)
@@ -147,11 +154,11 @@ export async function listPendingSubmissions(pagination: PaginationInput = {}) {
 	return paginate(dataQ, countQ, pagination);
 }
 
+/** A listing waiting on staff: the review feed's predicate. */
+export const pendingListing = () => eq(eventListing.status, 'pending_review');
+
 export async function countPendingSubmissions(): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(eventListing)
-		.where(eq(eventListing.status, 'pending_review'));
+	const [row] = await db.select({ value: count() }).from(eventListing).where(pendingListing());
 	return row?.value ?? 0;
 }
 
@@ -190,6 +197,8 @@ export async function checkForDuplicate(params: {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
+				// The member is told the match's title, so only one anyone may see.
+				visibleTo(),
 				gte(eventListing.startsAt, dayStart),
 				containsLiteral(eventListing.title, stem)
 			)
@@ -213,6 +222,7 @@ export interface CreateCommunityEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string;
+	address?: string;
 	tags?: string;
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. CMC never sells these. */
@@ -242,6 +252,7 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 			endsAt: params.endsAt ?? null,
 			doorsAt: params.doorsAt ?? null,
 			location: params.location ?? null,
+			address: params.address ?? null,
 			tags: params.tags ?? null,
 			externalTicketUrl: params.externalTicketUrl ?? null,
 			source: 'community',
@@ -277,9 +288,12 @@ export interface UpdateCommunityEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string | null;
+	address?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
+	/** No group owns a member's listing, so never `'group'`. */
+	visibility?: 'public' | 'members';
 	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
@@ -314,10 +328,12 @@ export async function updateCommunityEvent(
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
+	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	// A review-required member's edit to something already public sends it back
@@ -588,7 +604,7 @@ function assertValidTicketPrice(price: number | null | undefined): void {
  * Every poster write in this module funnels through here, which is what makes
  * "no request deletes an R2 object" enforceable in one place rather than at each
  * call site. The previous poster is detached; the sweep decides its fate. See
- * docs/specs/shipped/media-spec.md.
+ * docs/decisions/0026-uploads-are-detached-and-swept.md.
  */
 async function uploadPosterKey(
 	eventId: string,

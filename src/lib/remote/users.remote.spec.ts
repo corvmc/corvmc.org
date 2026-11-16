@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { isValidationError } from '@sveltejs/kit';
 
 // Mirrors SvelteKit's `issue` helper: `issue.field(msg)` only *builds* an issue
@@ -60,7 +60,7 @@ const POSITIONS = [
 	'site_moderator',
 	'treasurer'
 ];
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string])),
 	can: (...args: unknown[]) => can(...(args as [string])),
 	isPosition: (n: string) => POSITIONS.includes(n),
@@ -116,7 +116,7 @@ const dbUpdate = vi.fn(writeBuilder);
 const dbDelete = vi.fn(writeBuilder);
 const dbInsert = vi.fn(writeBuilder);
 const dbBatch = vi.fn(async () => []);
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: (...a: unknown[]) => dbSelect(...(a as [])),
 		update: (...a: unknown[]) => dbUpdate(...(a as [])),
@@ -127,7 +127,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const listByUser = vi.fn(async () => [{ id: 'pay_1', amountCents: 1500 }]);
-vi.mock('$lib/server/finance/payment-cache-service', () => ({
+vi.mock('#lib/server/finance/payment-cache-service.js', () => ({
 	listByUser: (...a: unknown[]) => listByUser(...(a as [])),
 	list: vi.fn(async () => [])
 }));
@@ -138,7 +138,7 @@ const addCredits = vi.fn(async () => undefined);
 const deductCredits = vi.fn(async () => undefined);
 const listTransactions = vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0 } }));
 class InsufficientCreditsError extends Error {}
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getAllBalances: (...a: unknown[]) => getAllBalances(...(a as [])),
 	getBalance: (...a: unknown[]) => getBalance(...(a as [])),
 	getUsageSinceLastAllocation: vi.fn(async () => 0),
@@ -148,7 +148,7 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 	InsufficientCreditsError
 }));
 
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMemberSql: vi.fn(() => null),
 	getMemberSubscription: vi.fn(async () => null),
 	mapDbSubscription: vi.fn(() => null)
@@ -179,7 +179,7 @@ class UserHasPublishedListingsError extends DomainError {
 	readonly httpStatus = 409;
 }
 
-vi.mock('$lib/server/user/user-service', () => ({
+vi.mock('#lib/server/user/user-service.js', () => ({
 	listActiveSessions: (...a: unknown[]) => listActiveSessions(...(a as [])),
 	getLastLoginAt: (...a: unknown[]) => getLastLoginAt(...(a as [])),
 	deactivateUser: vi.fn(async () => undefined),
@@ -196,17 +196,24 @@ vi.mock('$lib/server/user/user-service', () => ({
 }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => []);
-vi.mock('$lib/server/audit/audit-service', () => ({
+const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => ({
+	entries: [],
+	hasMore: false
+}));
+vi.mock('#lib/server/moderation/removal-service.js', () => ({
+	listRemovals: vi.fn(async () => []),
+	getOpenRemoval: vi.fn(async () => null)
+}));
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry),
 	listAuditEntriesForSubject: (...a: unknown[]) => listAuditEntriesForSubject(...a)
 }));
 
-vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ listUpcoming: vi.fn(async () => []) }));
 
 const inviteMember = vi.fn(async (..._a: unknown[]) => ({ kind: 'invited', email: 'n@x.org' }));
 const listInviteGroups = vi.fn(async () => []);
-vi.mock('$lib/server/user/member-invite-service', () => ({
+vi.mock('#lib/server/user/member-invite-service.js', () => ({
 	inviteMember: (...a: unknown[]) => inviteMember(...a),
 	listInviteGroups: () => listInviteGroups(),
 	listMemberInvites: vi.fn(async () => ({ rows: [], pagination: {} })),
@@ -221,18 +228,21 @@ const revokeMemberInvite = vi.fn(async (..._a: unknown[]) => undefined);
 // "argument, not params.id, identifies the target" test can read the userId
 // each one actually received.
 const getUserOverviewService = vi.fn(async () => ({ counts: {} }));
-vi.mock('$lib/server/user/user-overview-service', () => ({
+vi.mock('#lib/server/user/user-overview-service.js', () => ({
 	getUserOverview: (...a: unknown[]) => getUserOverviewService(...(a as []))
 }));
 
 const listForMember = vi.fn(async () => ({ upcoming: [], past: [], counts: {} }));
 const listActiveSessions = vi.fn(async () => []);
 const getLastLoginAt = vi.fn(async () => null);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	listForMember: (...a: unknown[]) => listForMember(...(a as []))
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn(() => null) }));
-vi.mock('$lib/server/db/paginate', () => ({
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn(() => null) }));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: vi.fn(async () => 30)
+}));
+vi.mock('#lib/server/db/paginate.js', () => ({
 	paginate: vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0, totalPages: 0 } }))
 }));
 
@@ -328,9 +338,9 @@ const STAFF_ONLY: Array<{ name: string; args?: unknown[] }> = [
 	{ name: 'getUserOverview', args: ['victim-user'] },
 	{ name: 'getUserReservations', args: ['victim-user'] },
 	{ name: 'getUserMembership', args: ['victim-user'] },
-	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user', page: 1 }] },
+	{ name: 'getUserCreditHistory', args: [{ userId: 'victim-user' }] },
 	{ name: 'getUserSessions', args: ['victim-user'] },
-	{ name: 'getUserHistory', args: ['victim-user'] },
+	{ name: 'getUserHistory', args: [{ userId: 'victim-user' }] },
 	{ name: 'getStaffUserTotals' },
 	{ name: 'inviteMemberForm', args: [{ email: 'n@x.org', groupIds: [] }] },
 	{ name: 'getMemberInvites', args: [{ page: 1 }] },
@@ -379,10 +389,10 @@ describe('users.remote staff guards', () => {
 		// every member's transactions on one member's page.
 		requireCapability.mockResolvedValue({ id: 'acting-staff' });
 		currentParams = { id: 'someone-else' };
-		await users.getUserCreditHistory({ userId: 'victim-user', page: 2 });
+		await users.getUserCreditHistory({ userId: 'victim-user', limit: 50 });
 		expect(listTransactions).toHaveBeenCalledWith(
 			{ userId: 'victim-user' },
-			{ page: 2, pageSize: 10 }
+			{ page: 1, pageSize: 50 }
 		);
 	});
 
@@ -498,7 +508,7 @@ describe('users.remote lockout guards', () => {
 	});
 
 	it('refuses to let a staff member drop their own staff access', async () => {
-		getUserRoles.mockResolvedValue(['staff']);
+		getUserRoles.mockResolvedValue(['admin']);
 		await expectHttpError(
 			// role 3 = member only
 			users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['3'] }),
@@ -506,6 +516,12 @@ describe('users.remote lockout guards', () => {
 			'cannot remove your own staff access'
 		);
 		expect(dbBatch).not.toHaveBeenCalled();
+	});
+
+	it('leaves a job alone: it is an Operations seat, not a picker row (#2992)', async () => {
+		getUserRoles.mockResolvedValue(['staff']);
+		await users.updateUser({ ...VALID_UPDATE, id: 'acting-staff', roles: ['3'] });
+		expect(dbBatch).toHaveBeenCalled();
 	});
 
 	it('lets a staff member keep their access while changing other roles', async () => {
@@ -613,7 +629,7 @@ describe('adjustCredits surfaces staff mistakes on the amount field', () => {
 		await expectFieldIssue(
 			() => users.adjustCredits({ ...VALID, amount: '-300' }),
 			'amount',
-			'Free hours'
+			'Credits balance'
 		);
 	});
 
@@ -867,7 +883,7 @@ describe('updateUser role-set split', () => {
 
 	it('still writes the roles when a holder of user.setRole changes them', async () => {
 		held = new Set(['user.update', 'user.setRole']);
-		await users.updateUser({ ...PROFILE_ONLY, roles: ['2'] });
+		await users.updateUser({ ...PROFILE_ONLY, roles: ['1'] });
 		expect(dbDelete).toHaveBeenCalled();
 		expect(dbInsert).toHaveBeenCalled();
 	});
@@ -885,19 +901,31 @@ describe('staff edits leave an audit entry', () => {
 
 	it('getUserHistory reads the member named in its argument, not params.id', async () => {
 		currentParams = { id: 'someone-else' };
-		await users.getUserHistory('victim-user');
-		expect(listAuditEntriesForSubject).toHaveBeenCalledWith('user', 'victim-user', { limit: 20 });
+		await users.getUserHistory({ userId: 'victim-user', limit: 50 });
+		expect(listAuditEntriesForSubject).toHaveBeenCalledWith(
+			{ type: 'user', id: 'victim-user' },
+			{ limit: 50 }
+		);
 	});
 
 	it('records roles added and removed by name', async () => {
 		getUserRoles.mockResolvedValue(['member']);
-		await users.updateUser({ ...PROFILE, roles: ['2'] });
+		await users.updateUser({ ...PROFILE, roles: ['1'] });
 
 		expect(recordAuditEntry).toHaveBeenCalledWith({
 			action: 'user.roles_changed',
 			subject: { type: 'user', id: 'victim-user', label: 'Renamed' },
-			details: { added: ['staff'], removed: ['member'] }
+			details: { added: ['admin'], removed: ['member'] }
 		});
+	});
+
+	it('ignores a job submitted through the picker: jobs are Operations seats (#2992)', async () => {
+		getUserRoles.mockResolvedValue(['member']);
+		await users.updateUser({ ...PROFILE, roles: ['2', '3'] });
+
+		expect(recordAuditEntry).not.toHaveBeenCalledWith(
+			expect.objectContaining({ action: 'user.roles_changed' })
+		);
 	});
 
 	it('records the names of changed profile fields, never their values', async () => {

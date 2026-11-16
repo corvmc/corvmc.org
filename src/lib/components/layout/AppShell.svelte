@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 	import { Toaster } from 'svelte-sonner';
@@ -7,7 +8,7 @@
 	import type { AppChrome } from './chrome';
 	import Sidebar from './Sidebar.svelte';
 	import { IconWorld } from '@tabler/icons-svelte';
-	import logo from '$lib/assets/cmc-compact-logo.svg';
+	import logo from '#lib/assets/cmc-compact-logo.svg';
 	import Button from '../ui/Button.svelte';
 	import Select from '../ui/Form/Select.svelte';
 
@@ -57,15 +58,15 @@
 		<Sidebar>
 			{#snippet brand()}
 				<span class="block flex h-[48px] items-center justify-between px-3">
-					<img src={logo} alt="CorvMC" class="h-full p-2" />
+					<img src={logo} alt={m.layout_brand_text()} class="h-full p-2" />
 					<Button
 						variant="default"
 						size="sm"
 						shape="square"
 						outline
 						class="latched"
-						title="To Public Site"
-						aria-label="To Public Site"
+						title={m.layout_to_public_site_title()}
+						aria-label={m.layout_to_public_site_label()}
 						href="/"
 					>
 						<IconWorld class="size-5 text-primary" />

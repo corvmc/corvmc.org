@@ -34,7 +34,7 @@ This is also why the Bits UI documentation index is a single link in
 | A multi-step procedure you keep re-explaining              | a `.claude/skills/<name>/SKILL.md`             |
 | Something that must happen every time, no exceptions       | a hook in `.claude/settings.json`              |
 | Reference material (an API surface, a component catalogue) | a link, or a doc under `docs/` — never a paste |
-| Deep background on how a feature behaves                   | a spec in `docs/specs/`                        |
+| Deep background on how a feature behaves                   | the living docs, and `docs/decisions/` for why |
 
 Two failure modes to watch for:
 
@@ -60,9 +60,9 @@ changed, and what it means for how you ask:
 - **Effort controls thinking, not response length.** If you want a short answer, ask for a short
   answer.
 
-For a feature of any size, the highest-leverage thing you can do is get a written spec first —
-`docs/specs/` exists for this. Ask the agent to interview you with `AskUserQuestion` until the hard
-parts are covered, write the spec, then start a **fresh session** to implement it. Clean context
+For a feature of any size, the highest-leverage thing you can do is get a written proposal first,
+on the issue. Ask the agent to interview you with `AskUserQuestion` until the hard parts are
+covered, post the proposal to the issue, then start a **fresh session** to implement it. Clean context
 plus a precise spec beats a long session with accumulated corrections nearly every time.
 
 ## Close the loop

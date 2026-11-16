@@ -1,6 +1,6 @@
 import { financialEntry } from '../../src/lib/server/db/schema/financial';
 import { calculateProcessingFee } from '../../src/lib/finance/fees';
-import { db } from './db';
+import { batchInsert } from './db';
 import { type SeedReservation, type SeedUser } from './types';
 import { randomInt } from './util';
 
@@ -9,7 +9,7 @@ import { randomInt } from './util';
  *
  * Written as the real write paths will write it — a sale is three or four rows,
  * not one — so a report built against this fixture is built against the shape
- * production will have. See `docs/specs/financial-record-spec.md`.
+ * production will have. See `docs/architecture/domain-model.md` (the append-only ledger).
  */
 export async function seedFinancialEntries(users: SeedUser[], reservations: SeedReservation[]) {
 	console.log('Seeding financial entries...');
@@ -107,6 +107,20 @@ export async function seedFinancialEntries(users: SeedUser[], reservations: Seed
 		description: 'Donated bass amp, fair value'
 	});
 
+	// An in-kind gift recorded on a party (#2727), so the Arts Center's
+	// timeline shows one. No FK on the subject, so the order of seeding is free.
+	rows.push({
+		amountCents: 25_000,
+		kind: 'in_kind',
+		category: 'donation',
+		occurredAt: new Date(Date.now() - 30 * 86_400_000),
+		settlement: 'none',
+		subjectType: 'organization',
+		subjectId: 'seed-org-arts-center',
+		description: 'Gallery space for the winter showcase',
+		metadata: { giftId: 'seed-gift-arts-center' }
+	});
+
 	// A free ticket. Without the $0 row, three comps are indistinguishable from
 	// seven sales.
 	rows.push({
@@ -120,11 +134,7 @@ export async function seedFinancialEntries(users: SeedUser[], reservations: Seed
 		description: 'Ticket, on the house'
 	});
 
-	// D1 caps a statement at 100 bound parameters and these rows are 16 columns
-	// wide, so chunk rather than sending one insert.
-	for (let i = 0; i < rows.length; i += 6) {
-		await db.insert(financialEntry).values(rows.slice(i, i + 6));
-	}
+	await batchInsert(financialEntry, rows);
 
 	return rows;
 }

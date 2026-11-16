@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import { getContext, hasContext, setContext } from 'svelte';
-	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '$app/server';
 
 	export type FormStatus = 'idle' | 'dirty' | 'pending' | 'success' | 'error';
 
@@ -9,6 +9,12 @@
 		readonly issues: RemoteFormIssue[] | null;
 		issuesFor(fieldName: string): RemoteFormIssue[] | null;
 		readonly values?: Record<string, unknown>;
+		/**
+		 * The remote form's fields, for a field set shared by several forms (a
+		 * wizard step) to take its names from. Untyped: each form's differ.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		readonly fields?: any;
 		submit(): void;
 		reset(): void;
 		changed(): void;
@@ -39,32 +45,38 @@
 </script>
 
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import type { Snippet } from 'svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
-	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { recoverFromStaleDeploy } from '#lib/stale-deploy-recovery.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { signInInterruptFor } from '$lib/utils/sign-in';
+	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
 	let {
 		remote,
 		action,
-		guard = false,
+		guard = true,
 		flashDuration = 1500,
 		successToast,
 		onsuccess,
 		onfailure,
 		ondirtychange,
+		refreshQueries = true,
 		children,
 		class: className,
 		...rest
 	}: {
 		remote?: RemoteForm<TInput, TOutput> | Omit<RemoteForm<TInput, TOutput>, 'for'>;
 		action?: (data: FormData) => Promise<TOutput | void>;
+		/**
+		 * Asks before a navigation discards typed input. On by default; off only
+		 * where leaving mid-entry loses nothing worth asking about (sign-in).
+		 */
 		guard?: boolean;
 		flashDuration?: number;
 		successToast?: string;
@@ -83,6 +95,13 @@
 		 * dialog needs it to know whether closing throws work away.
 		 */
 		ondirtychange?: (dirty: boolean) => void;
+		/**
+		 * Kit refreshes every query on the page after a successful submit. Turn that
+		 * off only for a mutation that invalidates the page's own query keys and
+		 * navigates in `onsuccess`: a refresh of a dead key can redirect after that
+		 * navigation and override it.
+		 */
+		refreshQueries?: boolean;
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
@@ -123,6 +142,8 @@
 		ondirtychange?.(changeCount > 0);
 	});
 
+	// Also called from the form element itself, so a raw input or a custom editor
+	// inside the form counts as an edit without wiring `changed()` by hand.
 	// Mark the form dirty at the mutation site rather than via an $effect that
 	// reads and writes `status` — an effect here re-scheduled on every keystroke
 	// and was one contributor to reactive churn (JAVASCRIPT-SVELTEKIT-W).
@@ -138,6 +159,9 @@
 		get issues() {
 			if (remote) return remote.fields.allIssues?.() ?? null;
 			return actionIssues;
+		},
+		get fields() {
+			return remote?.fields;
 		},
 		issuesFor(fieldName: string) {
 			if (remote) return remote.fields[fieldName]?.issues() ?? null;
@@ -186,6 +210,43 @@
 		}
 	};
 	setFormContext(ctx);
+
+	// Fields are disabled while pending, which blurs whichever one had focus. After
+	// the submit, focus goes to the first invalid field, or back where it was; when
+	// a success replaced the form with a message, to that message.
+	let focusBefore: HTMLElement | null = null;
+	let formParent: HTMLElement | null = null;
+
+	function rememberFocus() {
+		const active = document.activeElement;
+		focusBefore = active instanceof HTMLElement && formEl?.contains(active) ? active : null;
+		formParent = formEl?.parentElement ?? null;
+	}
+
+	async function restoreFocus(failed: boolean) {
+		await tick();
+		const active = document.activeElement;
+		if (active && active !== document.body) return;
+		if (!formEl?.isConnected) {
+			const message = formParent?.isConnected
+				? formParent.querySelector<HTMLElement>('[role="alert"], [role="status"]')
+				: null;
+			if (message && !failed) {
+				if (!message.hasAttribute('tabindex')) message.tabIndex = -1;
+				message.focus();
+			}
+			return;
+		}
+		const invalid = failed ? formEl.querySelector<HTMLElement>('[aria-invalid="true"]') : null;
+		const target = invalid ?? (focusBefore?.isConnected ? focusBefore : null);
+		target?.focus();
+	}
+
+	function endFlash() {
+		status = changeCount > 0 ? 'dirty' : 'idle';
+		// The submit button stays disabled through the flash, so it takes focus back only now.
+		void restoreFocus(false);
+	}
 
 	const delay = (t: number) => new Promise((r) => setTimeout(r, Math.max(0, t)));
 
@@ -253,23 +314,28 @@
 			if (submitting) return;
 			submitting = true;
 			const [{ submit }] = args;
+			rememberFocus();
 			status = 'pending';
 			const start = performance.now();
 
 			try {
-				if (await submit()) {
+				// `.updates()` has to be called in the same tick as `submit()`.
+				const submission = submit();
+				if (await (refreshQueries ? submission : submission.updates())) {
 					await delay(150 - (performance.now() - start));
 					await onsuccess?.(remote!.result);
 					if (successToast) toast.success(successToast);
 					status = 'success';
 					changeCount = 0;
+					void restoreFocus(false);
 				} else {
 					// Validation failed — expected. Field-level issues are already
 					// rendered; surface them without reporting a bug to Sentry.
 					await delay(150 - (performance.now() - start));
 					if (onfailure) onfailure(ctx.issues);
-					else toast.error('Please fix the highlighted fields and try again.');
+					else toast.error(m.ui_form_fix_fields_toast());
 					status = 'error';
+					void restoreFocus(true);
 				}
 			} catch (err) {
 				await delay(150 - (performance.now() - start));
@@ -291,44 +357,44 @@
 				surfaceFailure(err);
 				onfailure?.(ctx.issues, err);
 				status = 'error';
+				void restoreFocus(true);
 			} finally {
 				submitting = false;
 			}
 
-			setTimeout(() => {
-				// Restore dirty-awareness after the flash: edits made during the
-				// flash (or a failed submit that kept changeCount) must keep the
-				// unsaved-changes guard active.
-				status = changeCount > 0 ? 'dirty' : 'idle';
-			}, flashDuration);
+			// Restore dirty-awareness after the flash: edits made during the flash
+			// (or a failed submit that kept changeCount) keep the guard active.
+			setTimeout(endFlash, flashDuration);
 		})
 	);
 
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!action || !formEl) return;
+		rememberFocus();
 		status = 'pending';
 		actionIssues = null;
 		const start = performance.now();
 
 		try {
+			// eslint-disable-next-line no-restricted-syntax -- an `action` form posts its FormData whole
 			const result = await action(new FormData(formEl));
 			await delay(150 - (performance.now() - start));
 			await onsuccess?.(result ?? undefined);
 			if (successToast) toast.success(successToast);
 			status = 'success';
 			changeCount = 0;
+			void restoreFocus(false);
 		} catch (err) {
 			await delay(150 - (performance.now() - start));
 			if (await interruptForSignIn(err)) return;
 			surfaceFailure(err);
 			onfailure?.(null, err);
 			status = 'error';
+			void restoreFocus(true);
 		}
 
-		setTimeout(() => {
-			status = changeCount > 0 ? 'dirty' : 'idle';
-		}, flashDuration);
+		setTimeout(endFlash, flashDuration);
 	}
 </script>
 
@@ -338,6 +404,8 @@
 		{...remoteAttrs}
 		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}
+		oninputcapture={markChanged}
+		onchangecapture={markChanged}
 		class={className}
 		{...rest}
 	>
@@ -359,6 +427,8 @@
 		onsubmit={handleActionSubmit}
 		onsubmitcapture={guardSubmit}
 		onkeydown={handleKeydown}
+		oninputcapture={markChanged}
+		onchangecapture={markChanged}
 		class={className}
 		{...rest}
 	>

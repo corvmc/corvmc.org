@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import {
 	ballot,
 	ballotChoice,
@@ -17,6 +17,8 @@ import { GROUP_LEADER_PERSONAS } from './group-leaders';
 import type { SeedUser } from './types';
 
 const DAY = 86_400_000;
+
+export const BACK_ROOM_PA_PROJECT_ID = '6f1d2c84-3b7a-4e59-9c10-7ad4e2b85f36';
 
 /**
  * The seeded rolls: active accounts old enough at open. The orientation half of
@@ -88,7 +90,8 @@ export async function seedBallots(
 			openNoticeSentAt: new Date(now.getTime() - 2 * DAY),
 			electorateSize: roster.length
 		});
-		await db.insert(ballotOption).values(
+		await batchInsert(
+			ballotOption,
 			options.map((label, position) => ({
 				id: `${id}-opt-${position}`,
 				ballotId: id,
@@ -97,12 +100,14 @@ export async function seedBallots(
 			}))
 		);
 		if (roster.length) {
-			await db
-				.insert(ballotElector)
-				.values(roster.map((r) => ({ ballotId: id, userId: r.userId })));
+			await batchInsert(
+				ballotElector,
+				roster.map((r) => ({ ballotId: id, userId: r.userId }))
+			);
 			const voters = roster.filter((r) => r.userId !== chairId).slice(0, 2);
 			if (voters.length) {
-				await db.insert(ballotRecordedVote).values(
+				await batchInsert(
+					ballotRecordedVote,
 					voters.map((v, i) => ({
 						ballotId: id,
 						userId: v.userId,
@@ -169,7 +174,8 @@ export async function seedBallots(
 			openedAt: spec.openedAt,
 			openNoticeSentAt: spec.openedAt
 		});
-		await db.insert(ballotOption).values(
+		await batchInsert(
+			ballotOption,
 			spec.options.map((label, position) => ({
 				id: `${spec.id}-opt-${position}`,
 				ballotId: spec.id,
@@ -213,17 +219,17 @@ export async function seedBallots(
 		const voters = roll
 			.filter((r) => r.userId !== adminUser.id)
 			.slice(0, Math.floor((roll.length * 2) / 3));
-		for (let i = 0; i < voters.length; i += 40) {
-			await db
-				.insert(ballotParticipation)
-				.values(voters.slice(i, i + 40).map((v) => ({ ballotId: spec.id, userId: v.userId })));
-		}
+		await batchInsert(
+			ballotParticipation,
+			voters.map((v) => ({ ballotId: spec.id, userId: v.userId }))
+		);
 		const first = Math.ceil(voters.length * 0.6);
 		const votes =
 			'passed' in spec && spec.passed === false
 				? [voters.length - first, first]
 				: [first, voters.length - first];
-		await db.insert(ballotChoice).values(
+		await batchInsert(
+			ballotChoice,
 			spec.options.map((_, position) => ({
 				ballotId: spec.id,
 				optionId: `${spec.id}-opt-${position}`,
@@ -272,7 +278,7 @@ export async function seedBallots(
 	}
 
 	await db.insert(project).values({
-		id: 'seed-project-back-room-pa',
+		id: BACK_ROOM_PA_PROJECT_ID,
 		name: 'Back room PA',
 		description: 'Authorised by the members; see Why this exists.',
 		status: 'planned',

@@ -13,7 +13,7 @@
  * layout is missing the provider.
  */
 import { getContext, hasContext, setContext } from 'svelte';
-import { ANONYMOUS, type Viewer } from '$lib/types/entity';
+import { ANONYMOUS, type Viewer } from '#lib/types/entity.js';
 
 const VIEWER_KEY = Symbol('entity-viewer');
 

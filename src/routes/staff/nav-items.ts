@@ -1,12 +1,9 @@
 /**
  * The staff panel's sidebar, as data.
  *
- * Pulled out of the layout template for two reasons. First, `Nav.Collapsible`
- * takes a hand-maintained `childHrefs` array, and a hand-maintained list of
- * routes drifts the moment someone adds one — `childHrefsFor` derives it from
- * the tree instead. Second, the panel had outgrown a single "Operations" group
- * that held eight unrelated rows; as data the grouping is something you can
- * read in one screen and assert against, which `nav-items.spec.ts` does.
+ * As data, `childHrefsFor` derives what `Nav.Collapsible` would otherwise take
+ * as a hand-maintained list of routes, and the grouping into the four systems
+ * can be read in one screen and asserted, which `nav-items.spec.ts` does.
  *
  * Rows carry a `capability`. `getStaffLayout` still redirects anyone holding no
  * position at all, but "may open the panel" and "may use this row" stopped being
@@ -22,494 +19,58 @@
  */
 
 import { resolve } from '$app/paths';
-import { hasCapability, surfaces, type Capability, type Surface } from '$lib/config';
+import { hasCapability, surfaces } from '#lib/config.js';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
-	flattenNav,
-	type NavNode
-} from '$lib/components/layout/Nav/active-nav';
+	flattenNav
+} from '#lib/components/layout/Nav/active-nav.js';
+import type { StaffNavItem, StaffNavKey, StaffNavSection } from './nav-items/types';
+import { staffNavTop } from './nav-items/top';
+import { relationships } from './nav-items/relationships';
+import { community } from './nav-items/community';
+import { programs } from './nav-items/programs';
+import { operations } from './nav-items/operations';
+import { staffNavBottom } from './nav-items/bottom';
+import { systemNavItems } from './nav-items/system';
 
-export type StaffNavKey =
-	| 'dashboard'
-	| 'inbox'
-	| 'users'
-	| 'bands'
-	| 'music'
-	| 'clubs'
-	| 'committees'
-	| 'ballots'
-	| 'volunteer'
-	| 'volunteer-schedule'
-	| 'project-templates'
-	| 'volunteer-report'
-	| 'reservations'
-	| 'equipment'
-	| 'equipment-loans'
-	| 'equipment-reports'
-	| 'inventory-acquisitions'
-	| 'inventory-spend'
-	| 'inventory-compliance'
-	| 'contractors'
-	| 'incidents'
-	| 'keys'
-	| 'projects'
-	| 'venues'
-	| 'calendar'
-	| 'flags'
-	| 'suggestions'
-	| 'classifieds'
-	| 'campaigns'
-	| 'audiences'
-	| 'help'
-	| 'local-resources'
-	| 'resource-tips'
-	| 'payments'
-	| 'credits'
-	| 'sponsors'
-	| 'grants'
-	| 'renewals'
-	| 'reports'
-	| 'settings'
-	| 'access'
-	| 'audit';
-
-export type StaffNavSectionKey =
-	| 'people'
-	| 'planning'
-	| 'space'
-	| 'events'
-	| 'partners'
-	| 'moderation'
-	| 'outreach'
-	| 'money'
-	| 'reports'
-	| 'system';
+export type {
+	StaffNavBadgeKey,
+	StaffNavItem,
+	StaffNavKey,
+	StaffNavSection,
+	StaffNavSectionKey
+} from './nav-items/types';
+export type { SystemNavKey } from './nav-items/system';
+export { staffNavTop, staffNavBottom, systemNavItems };
 
 /**
- * Field names on `getStaffLayout()`'s return. Items name a count rather than
- * carrying one so the nav can stay a `const`: a badge changes a rendered
- * integer, never which rows exist, and rebuilding the array on every poll
- * would churn every `{#each}` for nothing.
+ * The four systems (#2762): who the Collective deals with, its members and
+ * what they do together, what it runs for them, and the work and money behind
+ * it. A new module joins one of them, in its file under `nav-items/`. Row keys
+ * predate the regrouping and stay, because starred rows store them.
  */
-export type StaffNavBadgeKey =
-	| 'inboxUnread'
-	| 'resourceTipsPending'
-	| 'suggestionsAwaiting'
-	| 'volunteerPending'
-	| 'listingsPending'
-	| 'appealsPending';
+export const staffNavSections: StaffNavSection[] = [relationships, community, programs, operations];
 
-export interface StaffNavItem extends NavNode<StaffNavKey> {
-	label: string;
-	badgeKey?: StaffNavBadgeKey;
-	/**
-	 * What the viewer must hold for this row to be worth showing. Omitted on
-	 * rows every position can use — the dashboard, and nothing else so far.
-	 */
-	capability?: Capability;
-	/** Further capabilities that each also show the row, for a page with per-view gates. */
-	alsoFor?: readonly Capability[];
-	/** A surface switched off in code drops the row for everyone (#2116). */
-	surface?: Surface;
-	/** Present ⇒ the layout renders this row as a `Nav.Collapsible`. */
-	children?: StaffNavItem[];
+/** Whether a path is in the System panel, which has its own sidebar. */
+export function inSystemPanel(pathname: string): boolean {
+	const root = resolve('staff/system');
+	return pathname === root || pathname.startsWith(root + '/');
 }
 
-export interface StaffNavSection {
-	/** Stable id. The persisted collapse record keys off this, never the title. */
-	key: StaffNavSectionKey;
-	title: string;
-	items: StaffNavItem[];
+/** Which System row to light for a pathname. */
+export function activeSystemKey(pathname: string): StaffNavKey | null {
+	return resolveActiveNavKey<StaffNavKey>(systemNavItems, pathname);
 }
-
-/** Rows above the first section header. */
-export const staffNavTop: StaffNavItem[] = [
-	// `exact`, unlike the band panel's. `/staff` is a prefix of every path here,
-	// so without it an unrecognised one — `/staff/membersomething` — lit Dashboard,
-	// which is the #1237 bug. The band panel keeps its fallback because a row
-	// there can be hidden by role and the root is the honest answer; no staff
-	// spec asserts that, and none of the eight paths #1237 sampled needed it.
-	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff'), exact: true },
-	{
-		key: 'inbox',
-		capability: 'inbox.read',
-		label: 'Inbox',
-		href: resolve('/staff/inbox'),
-		badgeKey: 'inboxUnread'
-	}
-];
-
-export const staffNavSections: StaffNavSection[] = [
-	{
-		key: 'people',
-		title: 'People',
-		items: [
-			// Each view has its own gate; the page sends a viewer to one they hold.
-			{
-				key: 'users',
-				capability: 'user.list',
-				alsoFor: ['volunteer.read', 'instructor.read'],
-				label: 'Members',
-				href: resolve('/staff/members')
-			},
-			{ key: 'bands', capability: 'band.read', label: 'Bands', href: resolve('/staff/bands') },
-			// Separate from Bands on purpose: a band is a member's own project and a
-			// club is a sanctioned CMC one.
-			{ key: 'clubs', capability: 'group.read', label: 'Clubs', href: resolve('/staff/clubs') },
-			// Each committee with its open applications counted; its applications
-			// are on its own page (#1671). Every `group.read` holder also holds
-			// `committee.reviewApplications`, so this gate admits the coordinator too.
-			{
-				key: 'committees',
-				capability: 'committee.reviewApplications',
-				label: 'Committees',
-				href: resolve('/staff/committees')
-			},
-			{
-				// A dashboard, not an index: docs/development/ui-patterns.md#section-dashboards.
-				// Its volunteers are a Members view (#2074).
-				key: 'volunteer',
-				capability: 'volunteer.read',
-				label: 'Volunteering',
-				href: resolve('/staff/volunteer'),
-				badgeKey: 'volunteerPending'
-			}
-		]
-	},
-	{
-		// What the Collective decides to do: what members asked for, what was
-		// voted, and the work (production-projects-spec.md).
-		key: 'planning',
-		title: 'Planning',
-		items: [
-			{
-				key: 'suggestions',
-				capability: 'suggestion.read',
-				label: 'Suggestions',
-				href: resolve('/staff/suggestions'),
-				badgeKey: 'suggestionsAwaiting'
-			},
-			{
-				key: 'ballots',
-				capability: 'ballot.manage',
-				surface: 'ballots',
-				label: 'Ballots',
-				href: resolve('/staff/ballots')
-			},
-			// Productions is a view on it (#2101), gated as the row it replaced.
-			{
-				key: 'projects',
-				capability: 'project.read',
-				alsoFor: ['event.manage'],
-				label: 'Projects',
-				href: resolve('/staff/projects')
-			},
-			// Gated like Projects: a template is edited under `project.manage`.
-			{
-				key: 'project-templates',
-				capability: 'project.read',
-				label: 'Project Templates',
-				href: resolve('/staff/project-templates')
-			},
-			// Every work order, in a project or not (#2034), and the recurring
-			// work that writes them (#2087). The route stays put.
-			{
-				key: 'volunteer-schedule',
-				capability: 'volunteer.manageShifts',
-				label: 'Schedule',
-				href: resolve('/staff/volunteer/schedule')
-			}
-		]
-	},
-	{
-		key: 'space',
-		title: 'Space',
-		items: [
-			{
-				// Closures sit in its list and recurring series in a modal off its
-				// header (#1936); a series' own page still lights this row.
-				key: 'reservations',
-				capability: 'reservation.read',
-				label: 'Reservations',
-				href: resolve('/staff/reservations'),
-				also: [resolve('/staff/recurring')]
-			},
-			{
-				// Equipment used to hang the other way up: the parent row landed on
-				// Loans and the child was labelled Inventory, which the loans page
-				// itself contradicted by pointing back to `/staff/inventory`.
-				//
-				// "Inventory" rather than "Equipment" since #286: the section now
-				// covers consumables too, and calling it Equipment would send anyone
-				// looking for the drumstick count somewhere else.
-				key: 'equipment',
-				capability: 'inventory.read',
-				label: 'Inventory',
-				href: resolve('/staff/inventory'),
-				children: [
-					{
-						// Gear and building problems members report: a repair queue, not
-						// moderation and not a Reports-section report (#1840).
-						key: 'equipment-reports',
-						capability: 'inventory.manageAssets',
-						label: 'Reported Problems',
-						href: resolve('/staff/inventory/problems')
-					},
-					{
-						key: 'inventory-compliance',
-						capability: 'inventory.manageAcquisitions',
-						label: 'Compliance',
-						href: resolve('/staff/inventory/compliance')
-					}
-				]
-			},
-			// A row of its own, not under Inventory: the loan desk is somewhere staff
-			// go, and the URL stays where loan links already point (#1937).
-			{
-				key: 'equipment-loans',
-				capability: 'inventory.manageLoans',
-				label: 'Loans',
-				href: resolve('/staff/inventory/loans')
-			},
-			// Permit, license and insurance renewals: compliance for the building.
-			{
-				key: 'renewals',
-				capability: 'renewal.read',
-				label: 'Renewals',
-				href: resolve('/staff/renewals')
-			},
-			{
-				// Who can open the door: keys, alarm codes, and every code on the lock,
-				// managed here (#2120).
-				key: 'keys',
-				capability: 'lock.manage',
-				label: 'Key Holders',
-				href: resolve('/staff/keys')
-			}
-		]
-	},
-	{
-		// Keyed `events`, not `programs`: "programs" is spoken-for — it is a
-		// reserved slug for the Groups module, where a program is a club or
-		// committee that runs its own sessions. Those will want a home of their
-		// own, and it should not have to fight this section for the name.
-		key: 'events',
-		title: 'Events',
-		items: [
-			// Every source, everything the public can see plus what is asking to
-			// join it, at the address every event ref resolves to. The CMC work
-			// surface over the same table is the Productions view on Projects.
-			{
-				key: 'calendar',
-				capability: 'event.read',
-				label: 'Calendar',
-				href: resolve('/staff/events'),
-				badgeKey: 'listingsPending'
-			}
-		]
-	},
-	{
-		// The organisations the Collective deals with. Contractor jobs are work,
-		// so they sit beside Projects instead.
-		key: 'partners',
-		title: 'Partners',
-		items: [
-			{
-				key: 'sponsors',
-				capability: 'sponsor.read',
-				label: 'Sponsors',
-				href: resolve('/staff/sponsors')
-			},
-			// Guarded as an event because that is what a venue is a fact about.
-			{
-				key: 'venues',
-				capability: 'event.read',
-				label: 'Venues',
-				href: resolve('/staff/venues')
-			},
-			{
-				key: 'local-resources',
-				capability: 'localResource.manage',
-				label: 'Local Resources',
-				href: resolve('/staff/local-resources'),
-				// The count sits on the parent too, so it shows while collapsed.
-				badgeKey: 'resourceTipsPending',
-				children: [
-					{
-						key: 'resource-tips',
-						capability: 'localResource.manage',
-						label: 'Tips',
-						href: resolve('/staff/local-resources/tips'),
-						badgeKey: 'resourceTipsPending'
-					}
-				]
-			},
-			{
-				key: 'contractors',
-				capability: 'contractor.read',
-				label: 'Contractors',
-				href: resolve('/staff/contractors')
-			}
-		]
-	},
-	{
-		// Online content and in-person conduct alike: an incident can be about a
-		// member or an off-site show, not only the building.
-		key: 'moderation',
-		title: 'Moderation',
-		items: [
-			{
-				key: 'flags',
-				capability: 'moderation.reviewFlags',
-				label: 'Content Flags',
-				href: resolve('/staff/flags'),
-				badgeKey: 'appealsPending'
-			},
-			{
-				key: 'classifieds',
-				capability: 'listing.review',
-				surface: 'classifieds',
-				label: 'Classifieds',
-				href: resolve('/staff/classifieds')
-			},
-			{
-				key: 'incidents',
-				capability: 'incident.read',
-				label: 'Incidents',
-				href: resolve('/staff/incidents')
-			}
-		]
-	},
-	{
-		key: 'outreach',
-		title: 'Outreach',
-		items: [
-			{
-				key: 'campaigns',
-				capability: 'marketing.read',
-				label: 'Campaigns',
-				href: resolve('/staff/marketing/campaigns')
-			},
-			{
-				key: 'audiences',
-				capability: 'marketing.manageAudiences',
-				label: 'Audiences',
-				href: resolve('/staff/marketing/audiences')
-			}
-		]
-	},
-	{
-		key: 'money',
-		title: 'Money',
-		items: [
-			{
-				key: 'payments',
-				capability: 'finance.read',
-				label: 'Payments',
-				href: resolve('/staff/payments')
-			},
-			// Money rather than Moderation: the page's first job is answering
-			// whether there is enough music to switch the station on, and its
-			// second is the sales the collective takes a share of. The takedown
-			// controls ride along because they act on the same rows.
-			//
-			// `music.read`: the treasurer for the sales, the site moderator for the
-			// takedowns.
-			{
-				key: 'music',
-				capability: 'music.read',
-				label: 'Releases',
-				href: resolve('/staff/music')
-			},
-			{
-				key: 'credits',
-				capability: 'credit.read',
-				label: 'Credits',
-				href: resolve('/staff/credits')
-			},
-			{
-				key: 'grants',
-				capability: 'grant.read',
-				label: 'Grants',
-				href: resolve('/staff/grants')
-			}
-		]
-	},
-	{
-		// Every report in one place.
-		key: 'reports',
-		title: 'Reports',
-		items: [
-			// `finance.read` rather than a report capability of its own: the money
-			// lines are what decides who may open it.
-			{
-				key: 'reports',
-				capability: 'finance.read',
-				label: 'Annual Report',
-				href: resolve('/staff/reports')
-			},
-			{
-				key: 'volunteer-report',
-				capability: 'volunteer.report',
-				label: 'Volunteering',
-				href: resolve('/staff/reports/volunteering')
-			},
-			{
-				key: 'inventory-spend',
-				capability: 'inventory.report',
-				label: 'Inventory Spend',
-				href: resolve('/staff/inventory/spend')
-			},
-			// When stock arrived and from whom; each item's page lists its own (#1841).
-			{
-				key: 'inventory-acquisitions',
-				capability: 'inventory.manageAcquisitions',
-				label: 'Acquisitions',
-				href: resolve('/staff/inventory/acquisitions')
-			}
-		]
-	},
-	{
-		key: 'system',
-		title: 'System',
-		items: [
-			{
-				key: 'settings',
-				capability: 'settings.read',
-				label: 'Settings',
-				href: resolve('/staff/settings')
-			},
-			// The app's own documentation for members and staff.
-			{
-				key: 'help',
-				capability: 'help.read',
-				label: 'Help Articles',
-				href: resolve('/staff/help')
-			},
-			// Who holds which position, committee grant and clearance (#1942).
-			{
-				key: 'access',
-				capability: 'user.setRole',
-				label: 'Access',
-				href: resolve('/staff/access')
-			},
-			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
-		]
-	}
-];
 
 /** Every row in the panel, parents and children alike, in render order. */
 export function allStaffNavItems(): StaffNavItem[] {
-	return flattenNav<StaffNavKey>([
-		...staffNavTop,
-		...staffNavSections.flatMap((s) => s.items)
-	]) as StaffNavItem[];
+	return flattenNav<StaffNavKey>(mainNav()) as StaffNavItem[];
 }
 
 /**
  * What `Nav.Collapsible` wants: the hrefs that should hold the row open. The
- * parent counts — being on `/staff/volunteer` itself keeps its children visible.
+ * parent counts — being on a parent's own page keeps its children visible.
  */
 export function childHrefsFor(item: StaffNavItem): string[] {
 	return resolveChildHrefs(item);
@@ -522,10 +83,11 @@ export function sectionHasKey(section: StaffNavSection, key: StaffNavKey | null)
 
 /** Which single row to light up for a pathname. See `active-nav.ts`. */
 export function activeNavKey(pathname: string): StaffNavKey | null {
-	return resolveActiveNavKey<StaffNavKey>(
-		[...staffNavTop, ...staffNavSections.flatMap((s) => s.items)],
-		pathname
-	);
+	return resolveActiveNavKey<StaffNavKey>(mainNav(), pathname);
+}
+
+function mainNav(): StaffNavItem[] {
+	return [...staffNavTop, ...staffNavSections.flatMap((s) => s.items), ...staffNavBottom];
 }
 
 /**

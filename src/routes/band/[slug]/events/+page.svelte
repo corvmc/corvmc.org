@@ -1,37 +1,40 @@
 <script lang="ts">
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
-	import { formatDate, formatTime } from '$lib/utils/format';
-	import { describeTerms } from '$lib/production/terms';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import { formatDate, formatTime } from '#lib/utils/format.js';
+	import { describeTerms } from '#lib/production/terms.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import {
 		getBandEventsPage,
 		confirmLineupSlotForm,
 		declineLineupSlotForm
-	} from '$lib/remote/band-events.remote';
+	} from '#lib/remote/band-events.remote.js';
 	import RequestCorrectionAction from './RequestCorrectionAction.svelte';
 	import { getBandLayoutContext } from '../layout-context';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	const { events, invites, bookings } = $derived(await getBandEventsPage(page.params.slug!));
+	const { events, invites, bookings } = $derived(await getBandEventsPage(params.slug));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
@@ -46,9 +49,11 @@
 <!-- Unclamped: the column tiers are container queries, and `2xl` is 672px —
      narrower than `col-extra`'s 768px, so a clamped page renders its widest
      tier set in the narrowest container the app allows (ui-patterns, #1216). -->
-<PageHeader title="Events" subtitle={band.name}>
+<PageHeader title={m.band_slug_events_title()} subtitle={band.name}>
 	{#if isAdmin}
-		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
+		<Button variant="ghost" size="sm" onclick={() => (importing = true)}
+			>{m.band_import_past_gigs_label()}</Button
+		>
 		<CreateEventModal bandSlug={band.slug} />
 	{/if}
 </PageHeader>
@@ -57,7 +62,7 @@
 	     the show is on the other band's listing only — never on this profile. -->
 	{#if invites.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">Invitations</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_invitations_title()}</h2>
 			{#each invites as invite (invite.eventId)}
 				<!-- One form object can only back a single <form>, so each invite gets
 				     its own instance with its own pending state. -->
@@ -71,7 +76,9 @@
 								{formatDate(invite.startsAt)}{invite.location ? ` · ${invite.location}` : ''}
 							</p>
 							<p class="text-subtle">
-								Added by {invite.ownerBandName ?? 'CMC staff'}
+								{m.band_slug_events_added_by_text({
+									ownerBandName: invite.ownerBandName ?? m.band_slug_events_cmc_staff_text()
+								})}
 							</p>
 						</div>
 						{#if isAdmin}
@@ -79,23 +86,31 @@
 								<RequestCorrectionAction slug={band.slug} eventId={invite.eventId} />
 								<Form
 									remote={confirm}
-									successToast="Added to your profile"
-									onsuccess={() => invalidateAll()}
+									successToast={m.band_slug_events_added_profile_toast()}
+									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Confirm" variant="primary" size="sm" />
+									<SubmitButton
+										label={m.band_slug_events_confirm_label()}
+										variant="primary"
+										size="sm"
+									/>
 								</Form>
 								<Form
 									remote={decline}
-									successToast="Declined"
-									onsuccess={() => invalidateAll()}
+									successToast={m.band_slug_events_declined_toast()}
+									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Decline" variant="ghost" size="sm" />
+									<SubmitButton
+										label={m.band_slug_events_decline_label()}
+										variant="ghost"
+										size="sm"
+									/>
 								</Form>
 							</div>
 						{/if}
@@ -112,15 +127,15 @@
 	-->
 	{#if bookings.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">Bookings</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_bookings_title()}</h2>
 			<!-- A table: read-only with no actions at all, and the call times were a
 			     run-on line of up to four conditional facts (#1048). -->
 			<Table>
 				{#snippet head()}
-					<th class="cell-primary">Show</th>
-					<th class="col-support whitespace-nowrap">On at</th>
-					<th class="col-extra whitespace-nowrap">Call times</th>
-					<th class="whitespace-nowrap">Terms</th>
+					<th class="cell-primary">{m.band_slug_events_show_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.band_slug_events_at_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.band_slug_events_call_times_label()}</th>
+					<th class="whitespace-nowrap">{m.band_slug_events_terms_label()}</th>
 				{/snippet}
 
 				{#each bookings as booking (booking.eventId)}
@@ -137,17 +152,27 @@
 							{:else}
 								<span class="text-subtle">—</span>
 							{/if}
-							<div class="text-subtle">{booking.setLengthMinutes} min</div>
+							<div class="text-subtle">
+								{m.band_slug_events_min_text({ setLengthMinutes: booking.setLengthMinutes })}
+							</div>
 						</td>
 						<td class="col-extra text-subtle">
 							{#if booking.soundcheckAt}
-								<div>soundcheck {formatTime(booking.soundcheckAt)}</div>
+								<div>
+									{m.band_slug_events_soundcheck_text({
+										formatTime: formatTime(booking.soundcheckAt)
+									})}
+								</div>
 							{/if}
 							{#if booking.loadInAt}
-								<div>load-in {formatTime(booking.loadInAt)}</div>
+								<div>
+									{m.band_slug_events_load_text({ formatTime: formatTime(booking.loadInAt) })}
+								</div>
 							{/if}
 							{#if booking.curfewAt}
-								<div>curfew {formatTime(booking.curfewAt)}</div>
+								<div>
+									{m.band_slug_events_curfew_text({ formatTime: formatTime(booking.curfewAt) })}
+								</div>
 							{/if}
 						</td>
 						<td class="whitespace-nowrap">{describeTerms(booking.terms)}</td>
@@ -159,7 +184,7 @@
 
 	{#if events.length === 0}
 		<EmptyState>
-			<p>No events yet</p>
+			<p>{m.band_slug_events_no_events_yet_text()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
 					<CreateEventModal bandSlug={band.slug} />
@@ -175,22 +200,22 @@
 		-->
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th class="cell-primary">Event</th>
-				<th class="col-support">Where</th>
-				<th class="col-extra">On the bill</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_status_label()}</span></th>
+				<th class="cell-primary">{m.band_slug_events_event_label()}</th>
+				<th class="col-support">{m.band_slug_events_where_label()}</th>
+				<th class="col-extra">{m.band_slug_events_bill_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_actions_label()}</span></th>
 			{/snippet}
 
 			{#each events as evt (evt.id)}
 				<tr
 					class="hover cursor-pointer"
-					use:rowLink={resolve(`/band/${band.slug}/events/${evt.id}`)}
+					use:rowLink={resolve(`band/${band.slug}/events/${evt.id}`)}
 				>
 					<td class="w-px whitespace-nowrap">
 						<StatusBadge status={evt.status} />
 						{#if !evt.isOwner}
-							<Badge variant="ghost" size="xs">guest</Badge>
+							<Badge variant="ghost" size="xs">{m.band_slug_events_guest_label()}</Badge>
 						{/if}
 					</td>
 					<td class="cell-primary">

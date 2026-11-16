@@ -1,0 +1,5 @@
+# Email marketing
+
+Status: ✅ Immediate send
+
+Audiences, campaigns (draft/send-now), markdown editor with live preview, broadcast via Postmark. Static staff-curated lists plus five built-in attribute-defined audiences (All Members, Sustaining Members, Non-Sustaining Members, Band Leaders, and **This show's audience**) resolved by SQL at send time — `audience.systemKey` + `marketing/system-audience-defs.ts`; built-ins reject list edits and opt-in, and store opt-outs as `audience_member` tombstones. A campaign can name a show (`campaign.eventId`), which is what makes the last of those resolve — to its ticket holders and RSVPs, minus cancelled tickets — and which makes it empty rather than universal when no show is named. Recipients are deduplicated per subscriber across targeted audiences. Per-audience opt-out + global suppression (Postmark bounce/complaint webhook → `subscriber.suppressedAt`) + one-click `List-Unsubscribe`. Scheduled send built but deferred (UI hidden); the `send-campaigns` cron trigger now exists, so un-hiding the UI is the remaining step.

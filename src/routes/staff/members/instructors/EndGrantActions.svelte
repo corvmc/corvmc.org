@@ -1,8 +1,11 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { pauseInstructor, retireInstructor } from '$lib/remote/instructors.remote';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { pauseInstructor, retireInstructor } from '#lib/remote/instructors.remote.js';
+	import { refreshAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Pause and retire both block booking and differ only in intent — which is the
@@ -13,52 +16,93 @@
 	 * about the future, and a booked lesson has a student on the other end who has
 	 * already been told a time. Cancelling those is a separate, deliberate act.
 	 */
-	let { id, name }: { id: string; name: string } = $props();
+	let {
+		id,
+		name,
+		pause = true,
+		bookings,
+		email
+	}: {
+		id: string;
+		name: string;
+		pause?: boolean;
+		bookings: number;
+		email: string | null;
+	} = $props();
 
 	const pauseFields = pauseInstructor.fields;
 	const retireFields = retireInstructor.fields;
 </script>
 
+{#snippet heldBookings()}
+	{#if bookings > 0}
+		<p class="text-sm" data-testid="held-bookings">
+			{#if email}
+				<a
+					class="link"
+					href={withQuery(resolve('staff/reservations'), new URLSearchParams({ q: email }))}
+					>{m.staff_members_instructors_end_grant_actions_bookings_text({ count: bookings })}</a
+				>
+			{:else}
+				{m.staff_members_instructors_end_grant_actions_bookings_text({ count: bookings })}
+			{/if}
+		</p>
+	{/if}
+{/snippet}
+
 <div class="flex w-max gap-2">
-	<Action
-		action={pauseInstructor}
-		label="Pause"
-		modalTitle="Pause {name}"
-		submitLabel="Pause"
-		successToast="Paused"
-		variant="ghost"
-		size="sm"
-		onsuccess={() => invalidateAll()}
-	>
-		{#snippet form()}
-			<div class="space-y-4">
-				<input {...pauseFields.id.as('hidden', id)} />
-				<FormField field={pauseFields.note} label="Why?" type="textarea" required />
-				<p class="text-subtle">
-					They stop being listed and cannot book teaching time. Bookings they already hold stand.
-				</p>
-			</div>
-		{/snippet}
-	</Action>
+	{#if pause}
+		<Action
+			action={pauseInstructor}
+			label={m.staff_members_instructors_end_grant_actions_pause_label()}
+			modalTitle={m.staff_members_instructors_end_grant_actions_pause_2_title({ name })}
+			submitLabel={m.staff_members_instructors_end_grant_actions_pause_label()}
+			successToast={m.staff_members_instructors_end_grant_actions_paused_toast()}
+			variant="ghost"
+			size="sm"
+			onsuccess={() => refreshAll()}
+		>
+			{#snippet form()}
+				<div class="space-y-4">
+					<input {...pauseFields.id.as('hidden', id)} />
+					<FormField
+						field={pauseFields.note}
+						label={m.staff_members_instructors_end_grant_actions_why_label()}
+						type="textarea"
+						required
+					/>
+					<p class="text-subtle">
+						{m.staff_members_instructors_end_grant_actions_they_stop_being_text()}
+					</p>
+					{@render heldBookings()}
+				</div>
+			{/snippet}
+		</Action>
+	{/if}
 
 	<Action
 		action={retireInstructor}
-		label="Retire"
-		modalTitle="Retire {name}"
-		submitLabel="Retire"
-		successToast="Retired"
+		label={m.staff_retire_label()}
+		modalTitle={m.staff_members_instructors_end_grant_actions_retire_title({ name })}
+		submitLabel={m.staff_retire_label()}
+		successToast={m.staff_retired_toast()}
 		variant="ghost"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
 				<input {...retireFields.id.as('hidden', id)} />
-				<FormField field={retireFields.note} label="Why?" type="textarea" required />
+				<FormField
+					field={retireFields.note}
+					label={m.staff_members_instructors_end_grant_actions_why_label()}
+					type="textarea"
+					required
+				/>
 				<p class="text-subtle">
-					For someone who has stopped teaching here rather than paused. Bookings they already hold
-					stand — cancel those separately if they need cancelling.
+					{m.staff_members_instructors_end_grant_actions_someone_who_has_text()}
 				</p>
+				{@render heldBookings()}
 			</div>
 		{/snippet}
 	</Action>

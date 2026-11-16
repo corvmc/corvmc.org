@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createBandApi } from '$lib/remote/bands.remote';
+	import { createBandApi } from '#lib/remote/bands.remote.js';
 	import { Field } from '../ui/Form';
 	import SearchSelect from '../ui/Form/SearchSelect.svelte';
 
@@ -33,20 +34,20 @@
 
 <Action
 	action={createBandApi}
-	label="New Band"
-	modalTitle="New Band"
-	submitLabel="Create Band"
+	label={m.actions_create_band_new_band_label()}
+	modalTitle={m.actions_create_band_new_band_title()}
+	submitLabel={m.actions_create_band_submit_label()}
 	canSubmit={!!selectedOwner}
 	maxWidth="max-w-md"
-	successToast="Band created"
+	successToast={m.actions_create_band_success_toast()}
 	{variant}
 	{size}
 	class={className}
 	onsuccess={onsuccess ??
 		(async (result) => {
 			const r = result as { bandId?: string };
-			await invalidateAll();
-			if (r?.bandId) goto(resolve(`/staff/bands/${r.bandId}`));
+			await refreshAll();
+			if (r?.bandId) goto(resolve(`staff/groups/${r.bandId}`));
 		})}
 	{...rest}
 >
@@ -54,14 +55,18 @@
 		{#if selectedOwner}
 			<input {...fields.ownerId.as('hidden', selectedOwner.id)} />
 		{/if}
-		<Field name="name" type="text" label="Name" />
-		<Field name="bio" type="textarea" label="Bio" />
+		<Field field={createBandApi.fields.name} type="text" label={m.actions_name_label()} />
+		<Field
+			field={createBandApi.fields.bio}
+			type="textarea"
+			label={m.actions_create_band_bio_label()}
+		/>
 		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Owner</legend>
+			<legend class="fieldset-legend">{m.actions_create_band_owner_title()}</legend>
 			<SearchSelect
 				search={searchUsers}
 				bind:value={selectedOwner}
-				placeholder="Search by name or email..."
+				placeholder={m.actions_create_band_placeholder()}
 			/>
 		</fieldset>
 	{/snippet}

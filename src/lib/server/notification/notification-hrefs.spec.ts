@@ -9,9 +9,11 @@ import { fileURLToPath } from 'node:url';
  * neither `resolve()` nor svelte-check ever sees it.
  */
 
-const listeners = ['./notification-listeners.ts', '../event-bus/register-listeners.ts'].map((rel) =>
-	fileURLToPath(new URL(rel, import.meta.url))
-);
+const listeners = [
+	'./notification-listeners.ts',
+	'../event-bus/register-listeners.ts',
+	'../reservation/payment-reminder.ts'
+].map((rel) => fileURLToPath(new URL(rel, import.meta.url)));
 const routes = fileURLToPath(new URL('../../../routes', import.meta.url));
 
 /** Every `href:` a listener dispatches, literal or interpolated, query stripped. */

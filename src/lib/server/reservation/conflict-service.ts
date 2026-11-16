@@ -1,12 +1,14 @@
-import { db } from '$lib/server/db';
-import { reservation, closure } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation, closure } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
-import type { BookerType } from '$lib/config';
+import { CLEARANCE_BOOKER, type BookerType } from '#lib/config.js';
 import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
-import type { TimeSlot } from '$lib/server/db/schema/reservation';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { holdsPracticeSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
+import { config as siteConfig } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation
@@ -60,6 +62,47 @@ export interface BusyInterval {
 
 type SlotConfig = Awaited<ReturnType<typeof getReservationConfig>>;
 
+export interface BookingNotice {
+	minutes: number;
+	/** The new-member minimum applies: no current Practice space clearance. */
+	newMember: boolean;
+	/** Minutes held before the requested start for the tour; 0 when none. */
+	tourMinutes: number;
+}
+
+/**
+ * The tour a new member's booking starts with: the orientation length, while
+ * an orientation role is set. With no role nobody runs a tour, so none is held.
+ */
+async function tourMinutes(): Promise<number> {
+	const [roleId, minutes] = await Promise.all([
+		siteConfig('volunteer.orientationRoleId'),
+		siteConfig('volunteer.orientationMinutes')
+	]);
+	const n = Number(minutes);
+	return String(roleId).trim() && n > 0 ? n : 0;
+}
+
+/**
+ * How much notice a booking needs, resolved for who is booking. Only
+ * `CLEARANCE_BOOKER` can need the new-member minimum and tour, so a teaching
+ * booking never does (#2808). Staff paths never call this.
+ */
+export async function noticeFor(
+	config: SlotConfig,
+	who: { userId: string | null; bookerType?: BookerType }
+): Promise<BookingNotice> {
+	const own = (who.bookerType ?? CLEARANCE_BOOKER) === CLEARANCE_BOOKER && who.userId !== null;
+	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
+		return {
+			minutes: config.newMemberMinAdvanceMinutes,
+			newMember: true,
+			tourMinutes: await tourMinutes()
+		};
+	}
+	return { minutes: config.minAdvanceMinutes, newMember: false, tourMinutes: 0 };
+}
+
 /**
  * One day's slots from rows already fetched. Pure: rows outside the day's
  * operating window are ignored, so a caller may pass a whole range's rows.
@@ -69,7 +112,8 @@ export function buildDaySlots(
 	config: SlotConfig,
 	reservations: BusyInterval[],
 	closures: BusyInterval[],
-	now: number = Date.now()
+	now: number = Date.now(),
+	minAdvanceMinutes: number = config.minAdvanceMinutes
 ): TimeSlot[] {
 	const tz = DEFAULT_TIMEZONE;
 	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
@@ -81,7 +125,7 @@ export function buildDaySlots(
 	const slots: TimeSlot[] = [];
 	const slotMs = config.timeSlotMinutes * 60 * 1000;
 	const bufferMs = config.bufferMinutes * 60 * 1000;
-	const earliestStart = now + config.minAdvanceMinutes * 60 * 1000;
+	const earliestStart = now + minAdvanceMinutes * 60 * 1000;
 
 	for (let time = dayStart.getTime(); time < dayEnd.getTime(); time += slotMs) {
 		const slotStart = time;
@@ -106,6 +150,29 @@ export function buildDaySlots(
 }
 
 /**
+ * Whether slot `i` can start a booking: free for the shortest session after it,
+ * and, when a tour comes first, free for the tour's slots before it. The slots
+ * already carry the notice cutoff, so a free tour slot is past it too.
+ */
+export function isBookableStart(
+	slots: TimeSlot[],
+	i: number,
+	minSlots: number,
+	tourSlots: number = 0
+): boolean {
+	if (i - tourSlots < 0) return false;
+	for (let j = i - tourSlots; j < i + minSlots; j++) {
+		if (!slots[j]?.available) return false;
+	}
+	return true;
+}
+
+/** The slots a tour of this many minutes takes, rounded up to whole slots. */
+export function tourSlotsFor(tourMinutes: number, config: SlotConfig): number {
+	return Math.ceil(tourMinutes / config.timeSlotMinutes);
+}
+
+/**
  * Slots for several days, keyed by date string, from one reservation query and
  * one closure query spanning all of them.
  *
@@ -114,7 +181,8 @@ export function buildDaySlots(
  *   the result matches the submit/validation path whatever the runtime timezone.
  */
 export async function getAvailableSlotsForDates(
-	dateStrs: string[]
+	dateStrs: string[],
+	opts: { minAdvanceMinutes?: number } = {}
 ): Promise<Map<string, TimeSlot[]>> {
 	const result = new Map<string, TimeSlot[]>();
 	if (dateStrs.length === 0) return result;
@@ -144,13 +212,19 @@ export async function getAvailableSlotsForDates(
 	]);
 
 	const now = Date.now();
-	for (const d of dateStrs) result.set(d, buildDaySlots(d, config, reservations, closures, now));
+	const notice = opts.minAdvanceMinutes ?? config.minAdvanceMinutes;
+	for (const d of dateStrs) {
+		result.set(d, buildDaySlots(d, config, reservations, closures, now, notice));
+	}
 	return result;
 }
 
 /** One day's slots within operating hours, marked available or not. */
-export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
-	return (await getAvailableSlotsForDates([dateStr])).get(dateStr) ?? [];
+export async function getAvailableSlots(
+	dateStr: string,
+	opts: { minAdvanceMinutes?: number } = {}
+): Promise<TimeSlot[]> {
+	return (await getAvailableSlotsForDates([dateStr], opts)).get(dateStr) ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -170,12 +244,15 @@ export type BookingRejection =
 	| 'BEFORE_OPENING'
 	| 'AFTER_CLOSING'
 	| 'TOO_SOON'
+	| 'NEW_MEMBER_NOTICE'
 	| 'TOO_FAR_AHEAD';
 
 export interface ValidationResult {
 	valid: boolean;
 	code?: BookingRejection;
 	error?: string;
+	/** Minutes to hold before the requested start for a new member's tour. */
+	tourMinutes?: number;
 }
 
 export interface ValidateBookingOptions {
@@ -191,6 +268,12 @@ export interface ValidateBookingOptions {
 	 * would otherwise be warned that a perfectly valid lesson is too short.
 	 */
 	bookerType?: BookerType;
+	/**
+	 * The member booking. A `'user'` booking by a member without a current
+	 * Practice space clearance needs the new-member notice. Omitted, only the
+	 * room minimum applies.
+	 */
+	userId?: string | null;
 }
 
 /**
@@ -242,15 +325,26 @@ export async function validateBooking(
 		};
 	}
 
+	// The tour comes first, so the room is held from the arrival time: it has
+	// to fall inside opening hours and past the notice, like any start.
+	const notice = await noticeFor(config, {
+		userId: options?.userId ?? null,
+		bookerType: options?.bookerType
+	});
+	const arrival = new Date(startsAt.getTime() - notice.tourMinutes * 60_000);
+
 	// Check operating hours
-	const startTime = formatTimeInTz(startsAt, tz);
+	const startTime = formatTimeInTz(arrival, tz);
 	const endTime = formatTimeInTz(endsAt, tz);
 
 	if (startTime < config.operatingHoursStart) {
 		return {
 			valid: false,
 			code: 'BEFORE_OPENING',
-			error: `Cannot start before ${config.operatingHoursStart}`
+			error:
+				notice.tourMinutes > 0
+					? `Your first booking starts with a ${notice.tourMinutes}-minute tour, so it cannot start before ${addMinutes(config.operatingHoursStart, notice.tourMinutes)}`
+					: `Cannot start before ${config.operatingHoursStart}`
 		};
 	}
 
@@ -264,12 +358,18 @@ export async function validateBooking(
 
 	// The near end of the window, which the slot picker also applies. A past start
 	// falls inside it too. Staff paths use `staffCreate`, which never calls this.
-	if (startsAt.getTime() < Date.now() + config.minAdvanceMinutes * 60 * 1000) {
-		return {
-			valid: false,
-			code: 'TOO_SOON',
-			error: `Bookings must start at least ${config.minAdvanceMinutes} minutes from now`
-		};
+	if (arrival.getTime() < Date.now() + notice.minutes * 60 * 1000) {
+		return notice.newMember
+			? {
+					valid: false,
+					code: 'NEW_MEMBER_NOTICE',
+					error: `Your first booking needs ${formatNotice(notice.minutes)} notice so someone can show you around`
+				}
+			: {
+					valid: false,
+					code: 'TOO_SOON',
+					error: `Bookings must start at least ${notice.minutes} minutes from now`
+				};
 	}
 
 	// Check advance booking window
@@ -283,7 +383,23 @@ export async function validateBooking(
 		};
 	}
 
-	return { valid: true };
+	return notice.tourMinutes > 0
+		? { valid: true, tourMinutes: notice.tourMinutes }
+		: { valid: true };
+}
+
+/** "09:00" + 30 → "09:30". */
+function addMinutes(hhmm: string, minutes: number): string {
+	const [h, m] = hhmm.split(':').map(Number);
+	const total = h * 60 + m + minutes;
+	return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** 4320 → "3 days'", 90 → "90 minutes'": the possessive the notice sentence wants. */
+export function formatNotice(minutes: number): string {
+	if (minutes % 1440 === 0) return minutes === 1440 ? "1 day's" : `${minutes / 1440} days'`;
+	if (minutes % 60 === 0) return minutes === 60 ? "1 hour's" : `${minutes / 60} hours'`;
+	return `${minutes} minutes'`;
 }
 
 // ---------------------------------------------------------------------------

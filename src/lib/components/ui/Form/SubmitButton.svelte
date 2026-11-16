@@ -1,19 +1,21 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getFormContext } from './Form.svelte';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import type { ButtonSize, ButtonVariant } from '$lib/components/ui/Button.svelte';
+	import { useShortcut, shortcutLabel } from '#lib/useShortcut.svelte.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { ButtonSize, ButtonVariant } from '#lib/components/ui/Button.svelte';
 
 	let {
 		shortcut,
 		icon,
-		label = 'Save',
-		continueLabel = 'Continue',
-		successLabel = 'Saved',
-		errorLabel = 'Error',
+		children,
+		label = m.ui_form_submit_button_label(),
+		continueLabel = m.ui_form_submit_button_continue_label(),
+		successLabel = m.ui_form_submit_button_success_label(),
+		errorLabel = m.ui_error_label(),
 		variant = 'primary',
 		size,
 		class: className = '',
@@ -22,6 +24,8 @@
 	}: {
 		shortcut?: string;
 		icon?: Snippet;
+		/** The idle and pending text, in place of `label`. */
+		children?: Snippet;
 		label?: string;
 		continueLabel?: string;
 		successLabel?: string;
@@ -58,7 +62,9 @@
 	// `Button` renders a native `title` on a disabled control precisely for this;
 	// `{...rest}` is spread after it, so a caller's own `title` still wins.
 	const disabledReason = $derived(
-		browser && !disabled && !ctx.currentStepValid ? 'Fill in the required fields first' : undefined
+		browser && !disabled && !ctx.currentStepValid
+			? m.ui_form_submit_button_disabled_reason_title()
+			: undefined
 	);
 
 	// The status flash outranks the caller's colour: a destructive `variant="error"`
@@ -78,9 +84,13 @@
 	);
 </script>
 
+{#snippet text()}
+	{#if children && isLastStep}{@render children()}{:else}{activeLabel}{/if}
+{/snippet}
+
 <div class="flex items-center gap-2">
 	{#if ctx.currentStep > 0}
-		<Button type="button" variant="ghost" onclick={() => ctx.back()}>Back</Button>
+		<Button type="button" variant="ghost" onclick={() => ctx.back()}>{m.ui_back_label()}</Button>
 	{/if}
 	<Button
 		type={isLastStep ? 'submit' : 'button'}
@@ -89,12 +99,13 @@
 		class={className}
 		title={disabledReason}
 		disabled={isDisabled}
+		data-status={ctx.status}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}
 	>
 		{#if ctx.status === 'pending'}
 			<span class="loading loading-sm loading-spinner"></span>
-			{activeLabel}
+			{@render text()}
 		{:else if ctx.status === 'success'}
 			<IconCheck size={20} />
 			{successLabel}
@@ -107,7 +118,7 @@
 			{:else if icon}
 				{@render icon()}
 			{/if}
-			{activeLabel}
+			{@render text()}
 		{/if}
 	</Button>
 </div>

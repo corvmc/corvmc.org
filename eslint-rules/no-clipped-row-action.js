@@ -13,6 +13,8 @@
 
 const TIER = /\b(col-support|col-extra)\b/;
 const ACTION = /^(Button|Action)$|Actions?$/;
+/** A flex container, at any breakpoint. `flex-1` and the like size a flex item instead. */
+const FLEX_ROW = /(^|\s)([\w-]+:)*(inline-)?flex(\s|$)/;
 
 /** The literal `class` on a start tag, or `''`. */
 function classOf(/** @type {RuleNode} */ node) {
@@ -68,7 +70,7 @@ export default {
 				for (const d of descendants(node)) {
 					if (d.name?.name !== 'div') continue;
 					const cls = classOf(d);
-					if (!/\bflex\b/.test(cls) || /\bw-max\b/.test(cls)) continue;
+					if (!FLEX_ROW.test(cls) || /\bw-max\b/.test(cls)) continue;
 					if (![...descendants(d)].some((c) => ACTION.test(c.name?.name ?? ''))) continue;
 					context.report({ node: d, messageId: 'collapsed' });
 				}

@@ -1,28 +1,29 @@
-import { db, getRowCount } from '$lib/server/db';
-import { recurringSeries } from '$lib/server/db/schema/recurring';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { recurringSeries } from '#lib/server/db/schema/recurring.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
 
 import { bandBookerJoin, eventBookerJoin } from './event-hold';
 import { eq, and, isNull, sql, count, gt, inArray, asc } from 'drizzle-orm';
-import { workOrder, memberOrientation } from '$lib/server/db/schema/volunteer';
-import { paymentCache } from '$lib/server/db/schema/finance';
+import { memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { workOrderLink } from '#lib/server/db/schema/work-order-link.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { cancel as cancelReservation } from './reservation-service';
 import { promoteNextWaitlisted } from './waitlist-service';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
 	memberRefColumns,
 	toBookerRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
-import type { EntityRef, ReservationRef } from '$lib/types/entity';
+} from '#lib/server/entity/refs.js';
+import type { EntityRef, ReservationRef } from '#lib/types/entity.js';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
-import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
-import { DomainError } from '$lib/server/domain-error';
+import type { RecurringFrequency } from '#lib/server/db/schema/recurring.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // RecurringSeriesService — create, cancel, and query recurring series
@@ -212,18 +213,14 @@ export interface SeriesCancelOutcome {
 }
 
 const SERIES_CANCEL_REASON = 'Recurring series cancelled';
-const LIVE_STATUSES: ('scheduled' | 'confirmed' | 'waitlisted')[] = [
-	'scheduled',
-	'confirmed',
-	'waitlisted'
-];
+export const LIVE_STATUSES: ('confirmed' | 'waitlisted')[] = ['confirmed', 'waitlisted'];
 
 /**
  * A booking that may be hard-deleted: nothing paid or committed against it, no
  * door code issued for it, and no row pointing at it. Anything else is
  * cancelled instead, so its refund and its listeners still run.
  */
-const deletable = () =>
+export const deletable = () =>
 	and(
 		isNull(reservation.stripePaymentRecordId),
 		isNull(reservation.paidAt),
@@ -232,13 +229,13 @@ const deletable = () =>
 		isNull(reservation.lockCode),
 		isNull(reservation.lockAccessId),
 		isNull(reservation.lockFallbackRevealedAt),
-		sql`NOT EXISTS (SELECT 1 FROM ${workOrder} WHERE ${workOrder.reservationId} = ${reservation.id})`,
+		sql`NOT EXISTS (SELECT 1 FROM ${workOrderLink} WHERE ${workOrderLink.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${memberOrientation} WHERE ${memberOrientation.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${eventListing} WHERE ${eventListing.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${paymentCache} WHERE ${paymentCache.reservationId} = ${reservation.id})`
 	);
 
-function cancelArgs(by: SeriesCanceller): [string, Parameters<typeof cancelReservation>[3]] {
+export function cancelArgs(by: SeriesCanceller): [string, Parameters<typeof cancelReservation>[3]] {
 	if (by.kind === 'staff') return [by.userId, { staffOverride: true }];
 	// The caller has already established that this user owns the series.
 	if (by.kind === 'owner') return [by.userId, { authorizedActor: true }];
@@ -509,6 +506,7 @@ export interface EventSeriesWithPrototype extends SeriesRow {
 	prototypeEventId: string;
 	prototypeTitle: string;
 	prototypeStartsAt: Date;
+	prototypeEndsAt: Date | null;
 	prototypeCreatedByUserId: string;
 }
 
@@ -526,6 +524,7 @@ export async function getEventSeries(seriesId: string): Promise<EventSeriesWithP
 			prototypeEventId: eventListing.id,
 			prototypeTitle: eventListing.title,
 			prototypeStartsAt: eventListing.startsAt,
+			prototypeEndsAt: eventListing.endsAt,
 			prototypeCreatedByUserId: eventListing.createdByUserId
 		})
 		.from(recurringSeries)
@@ -541,6 +540,48 @@ export async function getEventSeries(seriesId: string): Promise<EventSeriesWithP
 		frequencyLabel: describeFrequency(row.rrule),
 		monthlyMode: monthlyModeOf(row.rrule)
 	};
+}
+
+/** The live event series among `seriesIds`, keyed by id, for a schedule edit. */
+export async function activeEventSeries(seriesIds: (string | null)[]) {
+	const ids = [...new Set(seriesIds.filter((id): id is string => !!id))];
+	if (!ids.length) return new Map<string, EventSeriesWithPrototype>();
+	const rows = await db
+		.select({
+			id: recurringSeries.id,
+			supersededBy: recurringSeries.supersededBy,
+			prototypeType: recurringSeries.prototypeType,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
+			cancelledAt: recurringSeries.cancelledAt,
+			prototypeEventId: eventListing.id,
+			prototypeTitle: eventListing.title,
+			prototypeStartsAt: eventListing.startsAt,
+			prototypeEndsAt: eventListing.endsAt,
+			prototypeCreatedByUserId: eventListing.createdByUserId
+		})
+		.from(recurringSeries)
+		.innerJoin(eventListing, eq(recurringSeries.prototypeId, eventListing.id))
+		.where(
+			and(
+				inArray(recurringSeries.id, ids),
+				eq(recurringSeries.prototypeType, 'event_listing'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy)
+			)
+		);
+	return new Map(
+		rows.map((row) => [
+			row.id,
+			{
+				...row,
+				frequencyLabel: describeFrequency(row.rrule),
+				monthlyMode: monthlyModeOf(row.rrule)
+			}
+		])
+	);
 }
 
 // ---------------------------------------------------------------------------

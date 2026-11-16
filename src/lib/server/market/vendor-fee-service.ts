@@ -1,11 +1,11 @@
 import type Stripe from 'stripe';
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { marketVendor } from '$lib/server/db/schema/market';
-import { DomainError } from '$lib/server/domain-error';
-import { checkout, refund } from '$lib/server/finance/payment-service';
-import { buildLineItem } from '$lib/server/finance/product-config-service';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { marketVendor } from '#lib/server/db/schema/market.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { checkout, refund } from '#lib/server/finance/payment-service.js';
+import { buildLineItem } from '#lib/server/finance/product-config-service.js';
 
 /**
  * Market vendor table fees (#1502). The fee is fixed on the vendor row at
@@ -33,6 +33,48 @@ export function vendorPayPath(vendorId: string): string {
 }
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+export type VendorFeeState =
+	| { state: 'none' }
+	| { state: 'due'; cents: number }
+	| { state: 'paid'; cents: number }
+	| { state: 'refunded' };
+
+/**
+ * The one reading of a vendor's fee columns (#2828). Lists return this in place
+ * of the columns, so no view can leave the fee out or read them its own way.
+ */
+export function vendorFeeState(row: {
+	feeCents: number;
+	paidCents: number | null;
+	paidAt: Date | null;
+	refundedAt: Date | null;
+}): VendorFeeState {
+	if (row.refundedAt) return { state: 'refunded' };
+	if (row.paidAt) return { state: 'paid', cents: row.paidCents ?? row.feeCents };
+	if (row.feeCents > 0) return { state: 'due', cents: row.feeCents };
+	return { state: 'none' };
+}
+
+/** The fee columns `vendorFeeState` reads, for a select. */
+export const vendorFeeColumns = {
+	feeCents: marketVendor.feeCents,
+	paidCents: marketVendor.paidCents,
+	paidAt: marketVendor.paidAt,
+	refundedAt: marketVendor.refundedAt
+};
+
+/** Swap a row's fee columns for its fee state. */
+export function withFeeState<
+	R extends {
+		feeCents: number;
+		paidCents: number | null;
+		paidAt: Date | null;
+		refundedAt: Date | null;
+	}
+>({ feeCents, paidCents, paidAt, refundedAt, ...rest }: R) {
+	return { ...rest, fee: vendorFeeState({ feeCents, paidCents, paidAt, refundedAt }) };
+}
 
 async function loadFeeRow(vendorId: string) {
 	const [row] = await db
@@ -108,8 +150,7 @@ export async function startVendorFeeCheckout(
 		lineItems: [await buildLineItem('market_table', amountCents, 1)],
 		metadata: { type: VENDOR_FEE_CHECKOUT_TYPE, vendor_id: row.id, event_id: row.eventId },
 		successUrl: `${origin}${vendorPayPath(row.id)}?paid=1`,
-		cancelUrl: `${origin}${vendorPayPath(row.id)}`,
-		uiMode: 'elements'
+		cancelUrl: `${origin}${vendorPayPath(row.id)}`
 	});
 	if (!result.checkoutUrl) throw new Error('Checkout could not be started');
 	return { checkoutUrl: result.checkoutUrl };

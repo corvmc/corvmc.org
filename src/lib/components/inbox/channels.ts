@@ -9,7 +9,7 @@ import {
 	IconMicrophone2,
 	IconUsersGroup
 } from '@tabler/icons-svelte';
-import { inboxChannels, META_HUMAN_AGENT_WINDOW_MS } from '$lib/config';
+import { inboxChannels, META_HUMAN_AGENT_WINDOW_MS } from '#lib/config.js';
 
 type Channel = (typeof inboxChannels)[number];
 

@@ -23,4 +23,4 @@ export { entityKinds, type EntityKind } from './registry';
 export { getEntityViewer, setEntityViewer } from './context';
 // Re-exported so a page can drive `use:rowLink` from the same resolver the
 // components use, rather than rebuilding the URL by hand on the <tr>.
-export { entityHref } from '$lib/utils/entity-href';
+export { entityHref } from '#lib/utils/entity-href.js';

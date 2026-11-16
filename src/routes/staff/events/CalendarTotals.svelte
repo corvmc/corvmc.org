@@ -1,17 +1,19 @@
 <script lang="ts">
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import { getStaffCalendarTotals } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
+	import { getStaffCalendarTotals } from '#lib/remote/events.remote.js';
 
 	const totals = await getStaffCalendarTotals();
 	const stats = $derived([
-		{ title: 'This week', value: totals.thisWeek },
-		{ title: 'This month', value: totals.thisMonth },
-		{ title: 'Needs review', value: totals.needsReview }
+		{ title: m.staff_events_calendar_totals_week_title(), value: totals.thisWeek },
+		{ title: m.staff_events_calendar_totals_month_title(), value: totals.thisMonth },
+		{ title: m.staff_events_calendar_totals_needs_review_title(), value: totals.needsReview }
 	]);
 </script>
 
-<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+<StatGrid cols={3} class="mb-4">
 	{#each stats as stat (stat.title)}
 		<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
 	{/each}
-</div>
+</StatGrid>

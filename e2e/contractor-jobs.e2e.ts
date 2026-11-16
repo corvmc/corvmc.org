@@ -1,9 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
 import { inventoryAsset, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { contractorJob } from '../src/lib/server/db/schema/contractor';
 import { workOrder } from '../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../src/lib/server/db/schema/work-order-link';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import { SEED_CONTRACTOR_NAME, SEED_SERVICE_ASSETS } from './fixtures/seed-contractors';
 
@@ -18,16 +20,12 @@ import { SEED_CONTRACTOR_NAME, SEED_SERVICE_ASSETS } from './fixtures/seed-contr
  */
 
 /** The submit inside an open Action modal, as distinct from the trigger. */
-function modalSubmit(page: Page, name: RegExp) {
-	return page.getByRole('dialog').getByRole('button', { name });
+function modalSubmit(page: Page) {
+	return page.getByRole('dialog').locator('button[type="submit"]');
 }
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 /** The unit's status and every movement against it, read straight off the file. */
@@ -51,10 +49,15 @@ async function assetState(assetId: string) {
 async function jobState(assetId: string) {
 	const [job] = await readLocalDb((db) =>
 		db
-			.select({ status: contractorJob.status, resolvedAt: workOrder.resolvedAt })
+			.select({
+				id: contractorJob.id,
+				status: contractorJob.status,
+				resolvedAt: workOrder.resolvedAt
+			})
 			.from(contractorJob)
 			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
-			.where(eq(workOrder.assetId, assetId))
+			.innerJoin(workOrderLink, eq(workOrderLink.workOrderId, workOrder.id))
+			.where(eq(workOrderLink.assetId, assetId))
 	);
 	return job ?? null;
 }
@@ -77,23 +80,21 @@ test.describe('contractor jobs', () => {
 		expect(before.status).toBe('in_service');
 
 		// Engage a contractor on the unit's work order.
-		await page.goto(`/staff/volunteer/shifts/${asset.workOrderId}`);
-		await page.getByRole('button', { name: 'Engage contractor', exact: true }).click();
+		await page.goto(`/staff/tasks/${asset.workOrderId}`);
+		await page.getByTestId('engage-contractor').click();
 		const dialog = page.getByRole('dialog');
 		await dialog.locator('select').first().selectOption({ label: SEED_CONTRACTOR_NAME });
-		await modalSubmit(page, /^Engage contractor$/).click();
+		await modalSubmit(page).click();
 
-		await expect(page.getByRole('heading', { name: 'Engagements', exact: true })).toBeVisible({
-			timeout: 15000
-		});
+		await expect(page.locator('#engagements-heading')).toBeVisible({ timeout: 15000 });
 
 		// Engaging is not sending the unit anywhere — the ledger must be
 		// untouched until it is actually booked.
 		expect((await state()).status).toBe('in_service');
 
 		// Book it: this is what takes the unit out of service.
-		await page.getByRole('button', { name: 'Book', exact: true }).click();
-		await modalSubmit(page, /^Book$/).click();
+		await page.getByTestId('engagement-schedule').click();
+		await modalSubmit(page).click();
 
 		// Poll the movement rather than read it bare. `setAssetStatus` commits the
 		// status row and the ledger row in one `db.batch`, so the window this
@@ -110,8 +111,8 @@ test.describe('contractor jobs', () => {
 		expect((await state()).status).toBe('maintenance');
 
 		// Complete it: back in service, and the ledger nets out.
-		await page.getByRole('button', { name: 'Complete', exact: true }).click();
-		await modalSubmit(page, /^Complete$/).click();
+		await page.getByTestId('engagement-complete').click();
+		await modalSubmit(page).click();
 
 		// Poll the work order's resolution, not `repair_in`: completing writes the
 		// engagement, then the unit's batch, then the work order, as separate
@@ -132,20 +133,19 @@ test.describe('contractor jobs', () => {
 		expect(after.movements.reduce((sum, m) => sum + m.quantity, 0)).toBe(0);
 
 		// Finished with no cost entered: the old list's address lands on the
-		// Schedule's contractor filter, where it waits on its invoice.
+		// Tasks table's contractor filter, under its invoice chip.
 		await page.goto('/staff/contractors/jobs?view=awaiting-invoice');
-		await expect(page).toHaveURL(
-			/\/staff\/volunteer\/schedule\?kind=contractor&contractor=awaiting-invoice/
-		);
-		await expect(page.getByRole('row').filter({ hasText: title })).toContainText(
-			'Awaiting invoice',
-			{ timeout: 15000 }
-		);
+		await expect(page).toHaveURL(/\/staff\/tasks\?kind=contractor&chip=invoice/);
+		await expect(page.getByRole('row').filter({ hasText: title })).toBeVisible({
+			timeout: 15000
+		});
 
-		// And the unit keeps the job in its service history.
+		// And the unit keeps the job in its history, one feed with its movements.
+		const jobId = (await jobState(asset.id))!.id;
 		await page.goto(`/staff/inventory/assets/${asset.id}`);
-		await expect(page.getByRole('heading', { name: asset.tag })).toBeVisible({ timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Service', exact: true })).toBeVisible();
-		await expect(page.getByRole('link', { name: title })).toBeVisible();
+		const jobLink = page.locator(`a[href$="#engagement-${jobId}"]`);
+		await expect(jobLink).toBeVisible({ timeout: 15000 });
+		const history = page.locator('ol', { has: jobLink });
+		await expect(history.locator('li')).toHaveCount(after.movements.length + 1);
 	});
 });

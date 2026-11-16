@@ -1,22 +1,46 @@
-import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
+import * as env from '$app/env/public';
+import { db } from '#lib/server/db/index.js';
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
-import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
-import { inboxThread } from '$lib/server/db/schema/inbox';
-import { projectCommittee } from '$lib/server/db/schema/project';
-import { marketDay, marketVendor, type MarketVendor } from '$lib/server/db/schema/market';
-import { findOrCreateThread } from '$lib/server/inbox/thread-service';
-import { addInboundMessage, addOutboundMessage } from '$lib/server/inbox/message-service';
-import { DomainError } from '$lib/server/domain-error';
-import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
-import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
+import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
+import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { marketDay, marketVendor, type MarketVendor } from '#lib/server/db/schema/market.js';
+import { organization, vendorDetail } from '#lib/server/db/schema/party.js';
+import { recordApplicantUnguarded } from '#lib/server/directory/contact-service.js';
+import { fileThread } from '#lib/server/party/thread-filing.js';
+import { findOrCreateThread } from '#lib/server/inbox/thread-service.js';
+import {
+	addInboundMessage,
+	announceQueuedReply,
+	queuedReplyStatements
+} from '#lib/server/inbox/message-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import {
+	latestDeliveries,
+	latestDelivery,
+	retryNow,
+	type Delivery
+} from '#lib/server/outbox/outbox-service.js';
+import {
+	marketVendorDecisions,
+	marketVendorStatuses,
+	type MarketVendorStatus
+} from '#lib/config.js';
+import {
+	refundVendorFee,
+	vendorFeeColumns,
+	vendorPayPath,
+	withFeeState
+} from './vendor-fee-service';
+import { addressVendorThread, vendorRecipients } from './vendor-recipient';
 
 /**
- * Vendor applications for a market day CMC hosts. docs/specs/shipped/market-vendors-spec.md.
+ * Vendor applications for a market day CMC hosts. docs/development/business-workflows.md §19.
  *
- * Unguarded: the remote layer guards. The vendor's contact details live on the
- * inbox thread each application opens, never on `market_vendor`, so the public
- * list below cannot leak one however it is later reshaped.
+ * Unguarded: the remote layer guards. A vendor is an organization holding
+ * `vendor`; its people are `contact` rows, never columns on `market_vendor`, so
+ * the public list below cannot leak one however it is later reshaped. The
+ * inbox thread each application opens is the conversation.
  */
 
 export class MarketClosedError extends DomainError {
@@ -43,9 +67,11 @@ export class VendorTransitionError extends DomainError {
 /**
  * Where a decision or withdrawal may move each status. `withdrawn` is the
  * vendor's call and is final. `no_show` moves only through `markVendorNoShow`.
+ * `waitlisted` holds a vendor in reserve until a table frees up (#2832).
  */
 const transitions: Record<MarketVendorStatus, readonly MarketVendorStatus[]> = {
-	applied: ['accepted', 'declined', 'withdrawn'],
+	applied: ['accepted', 'waitlisted', 'declined', 'withdrawn'],
+	waitlisted: ['accepted', 'declined', 'withdrawn'],
 	accepted: ['declined', 'withdrawn'],
 	declined: ['accepted', 'withdrawn'],
 	withdrawn: [],
@@ -171,6 +197,8 @@ export interface VendorApplicationInput {
 	website?: string | null;
 	tablesRequested: number;
 	needsPower: boolean;
+	bringsOwnTable?: boolean;
+	bringsTent?: boolean;
 	notes?: string | null;
 }
 
@@ -181,6 +209,8 @@ function applicationBody(input: VendorApplicationInput, title: string): string {
 		`Sells: ${input.offering}`,
 		input.website ? `Website: ${input.website}` : null,
 		`Tables: ${input.tablesRequested}${input.needsPower ? ', needs power' : ''}`,
+		input.bringsOwnTable ? 'Brings own table' : null,
+		input.bringsTent ? 'Brings a tent' : null,
 		input.contactPhone ? `Phone: ${input.contactPhone}` : null
 	].filter(Boolean);
 	return input.notes ? `${lines.join('\n')}\n\n---\n\n${input.notes}` : lines.join('\n');
@@ -213,23 +243,80 @@ export async function submitApplication(
 		authorName: input.contactName
 	});
 
+	// The business: found through a contact already holding the email, else new.
+	const { organizationId } = await recordApplicantUnguarded({
+		organizationName: input.businessName,
+		role: 'vendor',
+		name: input.contactName,
+		email: input.contactEmail,
+		phone: input.contactPhone
+	});
+	await fileThread(thread.id, { type: 'organization', id: organizationId });
+	const standing = await standingNeeds(organizationId, input);
+
 	const [row] = await db
 		.insert(marketVendor)
 		.values({
 			eventId,
 			threadId: thread.id,
+			organizationId,
 			businessName: input.businessName,
 			offering: input.offering,
-			website: input.website || null,
+			website: input.website || standing.website,
 			tablesRequested: input.tablesRequested,
 			needsPower: input.needsPower,
-			notes: input.notes || null
+			bringsOwnTable: input.bringsOwnTable ?? false,
+			bringsTent: input.bringsTent ?? false,
+			notes: input.notes || standing.setupNotes
 		})
 		.returning({ id: marketVendor.id });
 	return row;
 }
 
-/** Every application for a market, with the contact joined from its thread. Staff only. */
+/**
+ * A returning vendor's standing needs fill what the form left blank, and a
+ * first application writes them. Later ones never overwrite them: staff keep
+ * `vendor_detail` on the organization page. The public form shows none of it,
+ * since anyone can type a vendor's email.
+ */
+async function standingNeeds(organizationId: string, input: VendorApplicationInput) {
+	const [[detail], [org]] = await Promise.all([
+		db.select().from(vendorDetail).where(eq(vendorDetail.organizationId, organizationId)).limit(1),
+		db
+			.select({ website: organization.website })
+			.from(organization)
+			.where(eq(organization.id, organizationId))
+			.limit(1)
+	]);
+	if (!detail) {
+		// Keyed by organization: a concurrent first application writes it once.
+		await db
+			.insert(vendorDetail)
+			.values({
+				organizationId,
+				offering: input.offering,
+				tablesNeeded: input.tablesRequested,
+				needsPower: input.needsPower,
+				bringsOwnTable: input.bringsOwnTable ?? false,
+				bringsTent: input.bringsTent ?? false,
+				setupNotes: input.notes || null
+			})
+			.onConflictDoNothing();
+	}
+	if (!org?.website && input.website) {
+		await db
+			.update(organization)
+			.set({ website: input.website, updatedAt: new Date() })
+			.where(eq(organization.id, organizationId));
+	}
+	return { website: org?.website ?? null, setupNotes: detail?.setupNotes ?? null };
+}
+
+/**
+ * Every application for a market, with the contact joined from its thread.
+ * Staff only. A business that applied twice is kept twice (warn, record,
+ * allow), and each row names the other ones in `alsoApplied`.
+ */
 export async function listApplications(eventId: string) {
 	const rows = await db
 		.select({
@@ -238,34 +325,52 @@ export async function listApplications(eventId: string) {
 			businessName: marketVendor.businessName,
 			offering: marketVendor.offering,
 			website: marketVendor.website,
+			organizationId: marketVendor.organizationId,
 			tablesRequested: marketVendor.tablesRequested,
 			needsPower: marketVendor.needsPower,
+			bringsOwnTable: marketVendor.bringsOwnTable,
+			bringsTent: marketVendor.bringsTent,
 			notes: marketVendor.notes,
 			status: marketVendor.status,
 			tableLabel: marketVendor.tableLabel,
 			decidedByUserId: marketVendor.decidedByUserId,
 			decidedAt: marketVendor.decidedAt,
-			feeCents: marketVendor.feeCents,
-			paidCents: marketVendor.paidCents,
-			paidAt: marketVendor.paidAt,
-			refundedAt: marketVendor.refundedAt,
-			createdAt: marketVendor.createdAt,
-			contactName: inboxThread.contactName,
-			contactEmail: inboxThread.contactEmail,
-			contactPhone: inboxThread.contactPhone
+			...vendorFeeColumns,
+			createdAt: marketVendor.createdAt
 		})
 		.from(marketVendor)
-		.leftJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.where(eq(marketVendor.eventId, eventId))
 		.orderBy(asc(marketVendor.createdAt), asc(marketVendor.businessName));
-	const previous = await previousRecords(
-		eventId,
-		rows.map((r) => r.contactEmail)
-	);
-	return rows.map((r) => ({
-		...r,
-		previous: (r.contactEmail && previous.get(r.contactEmail.toLowerCase())) || null
-	}));
+	const [previous, told, recipients] = await Promise.all([
+		previousRecords(
+			eventId,
+			rows.map((r) => r.organizationId)
+		),
+		latestDeliveries(
+			vendorDecisionSubject('').type,
+			rows.map((r) => r.id)
+		),
+		vendorRecipients(rows)
+	]);
+	return rows.map((r) => {
+		const to = recipients.get(r.id)!;
+		return {
+			...withFeeState(r),
+			contactName: to.name,
+			contactEmail: to.email,
+			contactPhone: to.phone,
+			/** `application` when the organization has no contact with an email (#2830). */
+			contactSource: to.source,
+			/** Whether the decision message reached the vendor; null when none was sent (#2819). */
+			decisionMessage: told.get(r.id) ?? null,
+			previous: (r.organizationId && previous.get(r.organizationId)) || null,
+			alsoApplied: r.organizationId
+				? rows
+						.filter((o) => o.id !== r.id && o.organizationId === r.organizationId)
+						.map(({ id, status, tableLabel }) => ({ id, status, tableLabel }))
+				: []
+		};
+	});
 }
 
 export interface PreviousMarketRecord {
@@ -277,14 +382,15 @@ export interface PreviousMarketRecord {
 }
 
 /**
- * The newest invite-back record from an earlier market, per contact email
- * (#1505). Email is the only identity a vendor has: there is no vendor table.
+ * The newest invite-back record from an earlier market, per vendor
+ * organization (#1505, #2622). A vendor who applies from a new address still
+ * matches once staff merge the two organizations.
  */
 async function previousRecords(
 	eventId: string,
-	emails: (string | null)[]
+	organizationIds: (string | null)[]
 ): Promise<Map<string, PreviousMarketRecord>> {
-	const wanted = [...new Set(emails.filter((e): e is string => !!e).map((e) => e.toLowerCase()))];
+	const wanted = [...new Set(organizationIds.filter((o): o is string => !!o))];
 	const found = new Map<string, PreviousMarketRecord>();
 	if (wanted.length === 0) return found;
 
@@ -295,10 +401,9 @@ async function previousRecords(
 		.limit(1);
 	if (!current) return found;
 
-	const email = sql<string>`lower(${inboxThread.contactEmail})`;
 	const rows = await db
 		.select({
-			email,
+			organizationId: marketVendor.organizationId,
 			eventTitle: eventListing.title,
 			startsAt: eventListing.startsAt,
 			status: marketVendor.status,
@@ -306,46 +411,50 @@ async function previousRecords(
 			note: marketVendor.inviteBackNote
 		})
 		.from(marketVendor)
-		.innerJoin(inboxThread, eq(inboxThread.id, marketVendor.threadId))
 		.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
 		.where(
 			and(
 				ne(marketVendor.eventId, eventId),
 				isNotNull(marketVendor.inviteBack),
 				lt(eventListing.startsAt, current.startsAt),
-				inArray(email, wanted)
+				inArray(marketVendor.organizationId, wanted)
 			)
 		)
-		.orderBy(desc(eventListing.startsAt));
-	for (const { email: key, inviteBack, ...rest } of rows) {
-		if (!found.has(key)) found.set(key, { ...rest, inviteBack: inviteBack === true });
+		.orderBy(desc(eventListing.startsAt), desc(marketVendor.id));
+	for (const { organizationId: key, inviteBack, ...rest } of rows) {
+		if (key && !found.has(key)) found.set(key, { ...rest, inviteBack: inviteBack === true });
 	}
 	return found;
 }
 
 /**
- * The day-of list: accepted vendors and no-shows, by table then name. No
- * contact detail, so the owning committee can work the door with it.
+ * The day-of list: accepted vendors and no-shows, by table then name, with
+ * what each still owes. No contact detail, so the owning committee can work
+ * the door with it.
  */
 export async function listMarketDayVendors(eventId: string) {
-	return db
+	const rows = await db
 		.select({
 			id: marketVendor.id,
 			businessName: marketVendor.businessName,
 			offering: marketVendor.offering,
 			tablesRequested: marketVendor.tablesRequested,
 			needsPower: marketVendor.needsPower,
+			bringsOwnTable: marketVendor.bringsOwnTable,
+			bringsTent: marketVendor.bringsTent,
 			status: marketVendor.status,
 			tableLabel: marketVendor.tableLabel,
 			checkedInAt: marketVendor.checkedInAt,
 			inviteBack: marketVendor.inviteBack,
-			inviteBackNote: marketVendor.inviteBackNote
+			inviteBackNote: marketVendor.inviteBackNote,
+			...vendorFeeColumns
 		})
 		.from(marketVendor)
 		.where(
 			and(eq(marketVendor.eventId, eventId), inArray(marketVendor.status, ['accepted', 'no_show']))
 		)
 		.orderBy(asc(marketVendor.tableLabel), asc(marketVendor.businessName));
+	return rows.map(withFeeState);
 }
 
 export type MarketDayVendor = Awaited<ReturnType<typeof listMarketDayVendors>>[number];
@@ -417,7 +526,7 @@ function assertTransition(from: MarketVendorStatus, to: MarketVendorStatus) {
 }
 
 export interface VendorDecision {
-	decision: 'accepted' | 'declined';
+	decision: (typeof marketVendorDecisions)[number];
 	tableLabel?: string | null;
 	/** What the vendor is told, sent on their thread. */
 	message: string;
@@ -446,24 +555,32 @@ async function feeOnAcceptance(vendor: MarketVendor) {
 	};
 }
 
+/** The outbox subject a vendor's decision message is filed under. */
+export const vendorDecisionSubject = (vendorId: string) => ({
+	type: 'market_vendor',
+	id: vendorId
+});
+
 /**
- * Accept or decline, and tell the vendor. Returns the event id, for refreshes.
- * Accepting fixes the fee and adds the pay link to the message; declining a
- * vendor who paid refunds them first, since CMC is the one cancelling (#1502).
+ * Accept, waitlist or decline, and tell the vendor. Accepting fixes the fee and adds the
+ * pay link to the message; declining a vendor who paid refunds them first,
+ * since CMC is the one cancelling (#1502). The decision and its message commit
+ * together; the message is sent by the outbox, so a refused send leaves the
+ * decision standing (#2819). `outboxId` is null when there was nothing to send.
  */
 export async function decideApplication(
 	vendorId: string,
 	decision: VendorDecision,
 	actor: { id: string; name: string }
-): Promise<{ eventId: string }> {
+): Promise<{ eventId: string; outboxId: string | null }> {
 	const vendor = await loadVendor(vendorId);
 	assertTransition(vendor.status, decision.decision);
 
 	const accepted = decision.decision === 'accepted';
 	const fee = accepted ? await feeOnAcceptance(vendor) : null;
-	if (!accepted) await refundVendorFee(vendorId);
+	if (decision.decision === 'declined') await refundVendorFee(vendorId);
 
-	await db
+	const update = db
 		.update(marketVendor)
 		.set({
 			status: decision.decision,
@@ -479,15 +596,34 @@ export async function decideApplication(
 		fee && fee.feeCents > 0
 			? `\n\nPay your table fee here: ${env.PUBLIC_SITE_URL ?? 'https://corvmc.org'}${vendorPayPath(vendorId)}`
 			: '';
-	if (vendor.threadId && decision.message.trim()) {
-		await addOutboundMessage({
-			threadId: vendor.threadId,
-			body: decision.message.trim() + payLine,
-			authorUserId: actor.id,
-			authorName: actor.name
-		});
+	if (!vendor.threadId || !decision.message.trim()) {
+		await update;
+		return { eventId: vendor.eventId, outboxId: null };
 	}
-	return { eventId: vendor.eventId };
+
+	const address = await addressVendorThread(vendor);
+	const queued = await queuedReplyStatements({
+		threadId: vendor.threadId,
+		body: decision.message.trim() + payLine,
+		authorUserId: actor.id,
+		authorName: actor.name,
+		subject: vendorDecisionSubject(vendorId)
+	});
+	await db.batch([update, ...address, ...queued.statements]);
+	announceQueuedReply(queued, actor.id);
+	return { eventId: vendor.eventId, outboxId: queued.outboxId };
+}
+
+/**
+ * Send a decision message that did not reach the vendor, now (#2819). Null when
+ * there is none to send: it went, or none was written.
+ */
+export async function resendDecisionMessage(vendorId: string): Promise<Delivery | null> {
+	const latest = await latestDelivery(vendorDecisionSubject(vendorId));
+	if (!latest || latest.status === 'sent') return null;
+	// The contact may have changed since the decision; the resend follows it.
+	for (const statement of await addressVendorThread(await loadVendor(vendorId))) await statement;
+	return retryNow(latest.id);
 }
 
 /** A vendor's market, read off the row: what a guard on a vendor id checks against. */
@@ -509,6 +645,43 @@ export async function getMarketProjectId(eventId: string): Promise<string | null
 	return row?.projectId ?? null;
 }
 
+/** An application nobody has answered: the review feed's predicate. */
+export const appliedVendor = () => eq(marketVendor.status, 'applied');
+
+/**
+ * Every market's applications on one list, latest market first, for the staff
+ * Events list's vendor view (#2766). No contact detail: the row links to its
+ * market's vendors page, which has it.
+ */
+export async function listAllApplications(
+	opts: { status?: MarketVendorStatus } = {},
+	pagination: PaginationInput = {}
+) {
+	const where = opts.status ? eq(marketVendor.status, opts.status) : undefined;
+	const dataQ = db
+		.select({
+			id: marketVendor.id,
+			eventId: marketVendor.eventId,
+			eventTitle: eventListing.title,
+			eventStartsAt: eventListing.startsAt,
+			businessName: marketVendor.businessName,
+			offering: marketVendor.offering,
+			tablesRequested: marketVendor.tablesRequested,
+			status: marketVendor.status,
+			createdAt: marketVendor.createdAt
+		})
+		.from(marketVendor)
+		.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
+		.where(where)
+		.orderBy(desc(eventListing.startsAt), asc(marketVendor.createdAt), asc(marketVendor.id))
+		.$dynamic();
+	const countQ = db
+		.select({ count: sql<number>`count(*)` })
+		.from(marketVendor)
+		.where(where);
+	return paginate(dataQ, countQ, pagination);
+}
+
 /** A committee's market days, soonest first, with how many applications wait on a decision. */
 export async function listCommitteeMarkets(groupId: string) {
 	const rows = await db
@@ -516,7 +689,7 @@ export async function listCommitteeMarkets(groupId: string) {
 			eventId: marketDay.eventId,
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
-			toReview: sql<number>`(select count(*) from ${marketVendor} where ${marketVendor.eventId} = ${marketDay.eventId} and ${marketVendor.status} = 'applied')`
+			toReview: sql<number>`(select count(*) from ${marketVendor} where ${marketVendor.eventId} = ${marketDay.eventId} and ${appliedVendor()})`
 		})
 		.from(marketDay)
 		.innerJoin(eventListing, eq(eventListing.id, marketDay.eventId))

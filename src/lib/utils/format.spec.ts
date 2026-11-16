@@ -6,15 +6,18 @@
 process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 import {
 	formatCents,
+	formatElapsed,
 	formatDate,
 	formatDateLong,
 	formatDateShort,
 	formatDateShortYear,
 	formatDateTime,
 	formatDateTimeShort,
+	formatHistoryTime,
 	formatDateYear,
 	formatDayNumber,
 	formatDayOfWeek,
@@ -26,6 +29,8 @@ import {
 	isVenueTomorrow,
 	isVenueThisWeek,
 	formatTime,
+	venueDateInput,
+	venueTimeInput,
 	formatTimeRange,
 	fullDate,
 	initials,
@@ -34,7 +39,9 @@ import {
 	reservationPaymentBreakdown,
 	toLocalDate,
 	toLocalTime,
-	formatBytes
+	formatBytes,
+	formatMonthDay,
+	utcCalendarDate
 } from './format';
 
 /**
@@ -73,6 +80,10 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			expect(fullDate(CROSSES_MIDNIGHT)).toBe('Friday, July 3, 2026');
 		});
 
+		it('formatMonthDay uses the venue day', () => {
+			expect(formatMonthDay(CROSSES_MIDNIGHT)).toBe('July 3');
+		});
+
 		it('formatDateShort uses the venue day', () => {
 			expect(formatDateShort(CROSSES_MIDNIGHT)).toBe('Jul 3');
 		});
@@ -105,12 +116,26 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			expect(formatTime(CROSSES_MIDNIGHT)).toBe('7:30 PM');
 		});
 
+		it('venueDateInput and venueTimeInput give field values in venue time', () => {
+			expect(venueDateInput(CROSSES_MIDNIGHT)).toBe('2026-07-03');
+			expect(venueTimeInput(CROSSES_MIDNIGHT)).toBe('19:30');
+		});
+
 		it('formatDateTime uses the venue day and clock', () => {
 			expect(formatDateTime(CROSSES_MIDNIGHT)).toBe('Fri, Jul 3, 7:30 PM');
 		});
 
 		it('formatDateTimeShort uses the venue day and clock', () => {
 			expect(formatDateTimeShort(CROSSES_MIDNIGHT)).toBe('Jul 3, 7:30 PM');
+		});
+
+		it('formatHistoryTime adds the venue year only outside the current one', () => {
+			// UTC Jan 1 is still Dec 31 at the venue, so the year is the venue's.
+			const newYearUtc = new Date('2027-01-01T03:00:00Z');
+			expect(formatHistoryTime(CROSSES_MIDNIGHT, newYearUtc)).toBe('Jul 3, 7:30 PM');
+			expect(formatHistoryTime(CROSSES_MIDNIGHT, new Date('2027-01-02T12:00:00Z'))).toBe(
+				'Jul 3, 2026, 7:30 PM'
+			);
 		});
 
 		it('toLocalDate emits the venue date for date inputs', () => {
@@ -185,6 +210,28 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 			expect(formatDuration(CROSSES_MIDNIGHT, end)).toBe('1.3 hours');
 		});
 	});
+});
+
+describe('format.ts at every clock edge, in every viewer zone', () => {
+	const zones = { zones: viewerTimeZones };
+
+	forEachClockEdge(
+		'input values are the club date and clock',
+		({ at, clubDate, clubTime }) => {
+			expect([toLocalDate(at), toLocalTime(at)]).toEqual([clubDate, clubTime]);
+		},
+		zones
+	);
+
+	forEachClockEdge(
+		'day predicates count from the club day',
+		({ at, clubDate }) => {
+			// 20:00Z is midday at the club in PST and PDT; changeover days are not 24h long.
+			const nextDay = new Date(`${addCalendarDays(clubDate, 1)}T20:00:00Z`);
+			expect([isVenueToday(at, at), isVenueTomorrow(nextDay, at)]).toEqual([true, true]);
+		},
+		zones
+	);
 });
 
 describe('initials', () => {
@@ -342,5 +389,22 @@ describe('formatCents with a negative', () => {
 	it('leaves zero and positives alone', () => {
 		expect(formatCents(0)).toBe('$0.00');
 		expect(formatCents(13_806)).toBe('$138.06');
+	});
+});
+
+describe('utcCalendarDate', () => {
+	it('keeps the stored day of a UTC-midnight date-only value', () => {
+		// toLocalDate would read this as Mar 13 in club time, a day early.
+		expect(utcCalendarDate(new Date('2026-03-14T00:00:00Z'))).toBe('2026-03-14');
+	});
+});
+
+describe('formatElapsed', () => {
+	it('picks minutes, hours or days by size', () => {
+		expect(formatElapsed(20)).toBe('1 min');
+		expect(formatElapsed(40 * 60)).toBe('40 min');
+		expect(formatElapsed(2.5 * 3_600)).toBe('2.5 hr');
+		expect(formatElapsed(30 * 3_600)).toBe('30 hr');
+		expect(formatElapsed(3 * 86_400)).toBe('3 days');
 	});
 });

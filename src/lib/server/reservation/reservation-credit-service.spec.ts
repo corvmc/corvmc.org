@@ -29,7 +29,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		update: () => chainable()
@@ -43,7 +43,7 @@ const mockCreditService = {
 	deductCredits: vi.fn(),
 	getAllBalances: vi.fn()
 };
-vi.mock('$lib/server/finance/credit-service', () => mockCreditService);
+vi.mock('#lib/server/finance/credit-service.js', () => mockCreditService);
 
 const {
 	computeReservationCredit,

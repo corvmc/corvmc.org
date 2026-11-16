@@ -1,12 +1,19 @@
-import { db } from '$lib/server/db';
-import { directoryEntryLink } from '$lib/server/db/schema/directory-link';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { and, eq, isNull } from 'drizzle-orm';
-import { requireCapability } from '$lib/server/authorization';
-import { DomainError } from '$lib/server/domain-error';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { writeContactUnguarded, type ContactData } from './contact-service';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { directoryEntryLink } from '#lib/server/db/schema/directory-link.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { requireCapability } from '#lib/server/authorization.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { writeActContactUnguarded, type ContactData } from './contact-service';
+import { performerFor } from '#lib/server/party/organization-service.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import * as publicEnv from '$app/env/public';
+import { outboxMessage } from '#lib/server/db/schema/outbox.js';
+import { emailRow } from '#lib/server/outbox/outbox-row.js';
+import { latestDelivery } from '#lib/server/outbox/outbox-service.js';
+import { standaloneEmail } from '#lib/server/notification/dispatcher.js';
+import type { StandaloneEmailContent } from '#lib/types/notification-email.js';
 
 /**
  * The contact-sheet link, and the only surface an external act can reach.
@@ -37,36 +44,123 @@ function expiresAt(): Date {
 	return d;
 }
 
+/** Where an act fills its contact sheet in. Staff copy it when the act asks again. */
+export function contactSheetUrl(token: string): string {
+	return `${publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org'}/act/${token}`;
+}
+
+/** The outbox subject a link's email is filed under: the link row, so each send has its own. */
+export const contactSheetSubject = (linkId: string) => ({
+	type: 'directory_entry_link',
+	id: linkId
+});
+
 /**
- * Issue a link for one act, to one address.
+ * Issue a link for one act, to one address, and email it (#2781).
  *
  * Any live link for that entry is revoked first. Two live links would mean an
  * address staff had deliberately cut off could still be used by whoever holds
- * the older one, which is the opposite of what revoking is for.
+ * the older one, which is the opposite of what revoking is for. The revoke, the
+ * new link and its email commit in one batch; the outbox sends the email.
  */
 export async function issueContactSheetLink(
 	entryId: string,
 	email: string,
 	actorId: string
-): Promise<{ token: string }> {
+): Promise<{ token: string; url: string; outboxId: string }> {
 	await requireCapability('directory.shareContactSheet');
 
-	await db
-		.update(directoryEntryLink)
-		.set({ revokedAt: new Date() })
-		.where(and(eq(directoryEntryLink.entryId, entryId), isNull(directoryEntryLink.revokedAt)));
+	const [entry] = await db
+		.select({ name: directoryEntry.name })
+		.from(directoryEntry)
+		.where(eq(directoryEntry.id, entryId))
+		.limit(1);
 
-	const [row] = await db
-		.insert(directoryEntryLink)
-		.values({
-			entryId,
-			email: email.toLowerCase().trim(),
-			expiresAt: expiresAt(),
-			createdById: actorId
+	const to = email.toLowerCase().trim();
+	const link = {
+		id: crypto.randomUUID(),
+		token: crypto.randomUUID(),
+		entryId,
+		email: to,
+		expiresAt: expiresAt(),
+		createdById: actorId
+	};
+	const url = contactSheetUrl(link.token);
+	const mail = emailRow(
+		standaloneEmail(
+			'contact_sheet.link',
+			to,
+			contactSheetEmail(entry?.name ?? null, url, link.expiresAt)
+		),
+		contactSheetSubject(link.id)
+	);
+
+	await db.batch([
+		db
+			.update(directoryEntryLink)
+			.set({ revokedAt: new Date() })
+			.where(and(eq(directoryEntryLink.entryId, entryId), isNull(directoryEntryLink.revokedAt))),
+		db.insert(directoryEntryLink).values(link),
+		db.insert(outboxMessage).values(mail)
+	]);
+
+	return { token: link.token, url, outboxId: mail.id };
+}
+
+function contactSheetEmail(
+	actName: string | null,
+	url: string,
+	until: Date
+): StandaloneEmailContent {
+	const expires = until.toLocaleDateString('en-US', {
+		month: 'long',
+		day: 'numeric',
+		timeZone: 'America/Los_Angeles'
+	});
+	return {
+		subject: 'Your contact sheet for Corvallis Music Collective',
+		heading: actName ? `Contact sheet for ${actName}` : 'Your contact sheet',
+		paragraphs: [
+			{ text: 'Add your bio, links and booking contact so we can reach you about the show.' },
+			{ text: `The link works until ${expires}. No account is needed.` }
+		],
+		cta: { label: 'Open contact sheet', url }
+	};
+}
+
+/**
+ * The act's live link, for its record: who holds it, until when, and whether
+ * the email reached them. Null when no link is live (#2781).
+ */
+export async function liveContactSheetLink(entryId: string) {
+	await requireCapability('directory.shareContactSheet');
+
+	const [link] = await db
+		.select({
+			id: directoryEntryLink.id,
+			email: directoryEntryLink.email,
+			expiresAt: directoryEntryLink.expiresAt,
+			lastUsedAt: directoryEntryLink.lastUsedAt
 		})
-		.returning({ token: directoryEntryLink.token });
+		.from(directoryEntryLink)
+		.where(
+			and(
+				eq(directoryEntryLink.entryId, entryId),
+				isNull(directoryEntryLink.revokedAt),
+				gt(directoryEntryLink.expiresAt, new Date())
+			)
+		)
+		.orderBy(desc(directoryEntryLink.createdAt), desc(directoryEntryLink.id))
+		.limit(1);
+	if (!link) return null;
 
-	return { token: row.token };
+	const delivery = await latestDelivery(contactSheetSubject(link.id));
+	return {
+		email: link.email,
+		expiresAt: link.expiresAt,
+		lastUsedAt: link.lastUsedAt,
+		emailed: delivery?.status === 'sent'
+	};
 }
 
 export async function revokeContactSheetLink(entryId: string): Promise<void> {
@@ -125,10 +219,11 @@ export interface ContactSheetData {
  * the parameter type is what makes that structural rather than a check somebody
  * has to remember.
  *
- * The contact rows written here are `self_entered`, which is the whole point of
- * this path — CMC then holds what the act chose to give rather than what staff
- * transcribed. `writeContactUnguarded` is the deliberate exception to the
- * contact service's staff guard, because the act has no session to check.
+ * The person is written as a `self_entered` contact at the act's performer
+ * organization, which is the whole point of this path: CMC then holds what the
+ * act chose to give rather than what staff transcribed. `writeActContactUnguarded`
+ * is the deliberate exception to the contact service's staff guard, because the
+ * act has no session to check.
  */
 export async function saveContactSheet(token: string, data: ContactSheetData): Promise<void> {
 	const link = await resolveContactSheetToken(token);
@@ -146,7 +241,7 @@ export async function saveContactSheet(token: string, data: ContactSheetData): P
 		})
 		.where(eq(directoryEntry.id, link.entryId));
 
-	await writeContactUnguarded(link.entryId, data.contact, 'self_entered');
+	await writeActContactUnguarded(await performerFor(link.entryId), data.contact);
 
 	// Recorded after the write, so a link that failed mid-save does not look used.
 	await db

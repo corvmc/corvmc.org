@@ -10,10 +10,10 @@ const { txSelect, txInsert, emit } = vi.hoisted(() => ({
 	emit: vi.fn()
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -31,19 +31,17 @@ vi.mock('./conflict-service', () => ({
 	hasConflict: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	refund: vi.fn()
 }));
 
 import {
 	create,
 	cancel,
-	cancelUnconfirmedReservations,
 	staffCreate,
 	createWaitlisted,
 	adjustWindow,
 	announceWaitlistConfirmed,
-	confirm,
 	comp,
 	markComplete,
 	markNoShow,
@@ -56,8 +54,8 @@ import {
 	ReservationAuthorizationError
 } from './reservation-service';
 import { validateBooking, hasConflict } from './conflict-service';
-import { refund } from '$lib/server/finance/payment-service';
-import { db } from '$lib/server/db';
+import { refund } from '#lib/server/finance/payment-service.js';
+import { db } from '#lib/server/db/index.js';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
@@ -104,7 +102,7 @@ describe('ReservationService', () => {
 			txSelect.mockReturnValue({ from: txFrom });
 
 			// tx.insert for the new reservation
-			const mockRow = { id: 'res-1', ...params, status: 'scheduled', createdByUserId: 'user-1' };
+			const mockRow = { id: 'res-1', ...params, status: 'confirmed', createdByUserId: 'user-1' };
 			const returning = vi.fn().mockResolvedValue([mockRow]);
 			const values = vi.fn().mockReturnValue({ returning });
 			txInsert.mockReturnValue({ values });
@@ -114,19 +112,15 @@ describe('ReservationService', () => {
 			// The booker type is forwarded, not defaulted: without it a half-hour
 			// teaching booking is refused by the member `minDurationHours`, and a
 			// term of lessons by the member advance window.
+			// And the member, whose clearance decides the notice (#2565).
 			expect(validateBooking).toHaveBeenCalledWith(params.startsAt, params.endsAt, {
-				bookerType: params.bookerType
+				bookerType: params.bookerType,
+				userId: params.userId
 			});
 			expect(result.id).toBe('res-1');
 		});
 
-		/**
-		 * Regression for #1123. A booking made inside the window used to be born
-		 * `scheduled`, which meant the daily reminder cron — whose two bands only
-		 * see rows that existed when it ran — never caught it, and
-		 * `cancelUnconfirmedReservations` released the slot at its start time. The
-		 * member's first and only word about the booking was that it was cancelled.
-		 */
+		/** #2502: booking is the confirmation, however far ahead it is made. */
 		function setupCreate(status: string) {
 			vi.mocked(validateBooking).mockResolvedValue({ valid: true });
 			const row = { id: 'res-1', ...params, status, createdByUserId: 'user-1' };
@@ -146,29 +140,19 @@ describe('ReservationService', () => {
 			return values;
 		}
 
-		it('confirms a booking whose start is already inside the window', async () => {
+		it.each([
+			['an hour', 60 * 60 * 1000],
+			['a month', 30 * 24 * 60 * 60 * 1000]
+		])('confirms a booking %s out', async (_label, ahead) => {
 			const values = setupCreate('confirmed');
-			const soon = new Date(Date.now() + 60 * 60 * 1000);
+			const start = new Date(Date.now() + ahead);
 
-			await create({ ...params, startsAt: soon, endsAt: new Date(soon.getTime() + 3600_000) });
+			await create({ ...params, startsAt: start, endsAt: new Date(start.getTime() + 3600_000) });
 
 			expect(values).toHaveBeenCalledWith(expect.objectContaining({ status: 'confirmed' }));
 		});
 
-		it('leaves a booking made ahead of the window scheduled', async () => {
-			// Outside the window a member cannot confirm without paying, so the
-			// cron's bands are the right mechanism and still reach it.
-			const values = setupCreate('scheduled');
-			const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-			await create({ ...params, startsAt: later, endsAt: new Date(later.getTime() + 3600_000) });
-
-			expect(values).toHaveBeenCalledWith(expect.objectContaining({ status: 'scheduled' }));
-		});
-
-		it('announces a booking that is born confirmed', async () => {
-			// `confirmed` reached without passing through a confirm path is the one
-			// case `announceConfirmed` exists for — see its docstring.
+		it('announces the booking as confirmed', async () => {
 			setupCreate('confirmed');
 			const soon = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -214,11 +198,11 @@ describe('ReservationService', () => {
 			return set;
 		}
 
-		it('cancels a scheduled reservation without refund', async () => {
+		it('cancels an unpaid reservation without refund', async () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -281,7 +265,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null
 			});
 
@@ -323,7 +307,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -337,7 +321,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: past,
 				endsAt: new Date(past.getTime() + 2 * 60 * 60 * 1000)
@@ -354,7 +338,7 @@ describe('ReservationService', () => {
 			const row = {
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -464,7 +448,7 @@ describe('ReservationService', () => {
 		});
 
 		it('uses provided status', async () => {
-			const mockRow = { ...returnedRow, id: 'res-2', status: 'scheduled' };
+			const mockRow = { ...returnedRow, id: 'res-2', status: 'waitlisted' };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -473,10 +457,10 @@ describe('ReservationService', () => {
 				bookerId: 'user-1',
 				startsAt: new Date('2025-07-15T17:00:00Z'),
 				endsAt: new Date('2025-07-15T19:00:00Z'),
-				status: 'scheduled'
+				status: 'waitlisted'
 			});
 
-			expect(result.status).toBe('scheduled');
+			expect(result.status).toBe('waitlisted');
 		});
 	});
 
@@ -495,7 +479,7 @@ describe('ReservationService', () => {
 
 		const row = {
 			id: 'res-1',
-			status: 'scheduled',
+			status: 'confirmed',
 			bookerType: 'user',
 			createdByUserId: 'user-1',
 			createdByStaffId: null,
@@ -560,12 +544,16 @@ describe('ReservationService', () => {
 		});
 
 		it('announces a queued booking once the member confirms the slot', async () => {
-			// Two `.limit(1)` reads in a row: the row this function re-checks, then
-			// the owner lookup `emitCreated` does.
+			// `.limit(1)` reads in order: the row this function re-checks, the owner
+			// `emitCreated` looks up, then the same pair for `announceConfirmed`.
+			const confirmedRow = { ...row, status: 'confirmed' };
+			const owner = { name: 'Ada', email: 'a@x.test' };
 			const where = vi
 				.fn()
-				.mockReturnValueOnce(whereResult([], [{ ...row, status: 'scheduled' }]))
-				.mockReturnValueOnce(whereResult([], [{ name: 'Ada', email: 'a@x.test' }]));
+				.mockReturnValueOnce(whereResult([], [confirmedRow]))
+				.mockReturnValueOnce(whereResult([], [owner]))
+				.mockReturnValueOnce(whereResult([], [confirmedRow]))
+				.mockReturnValueOnce(whereResult([], [owner]));
 			txSelect.mockReturnValue({ from: () => ({ where }) });
 
 			await announceWaitlistConfirmed('res-1');
@@ -573,6 +561,10 @@ describe('ReservationService', () => {
 			expect(emit).toHaveBeenCalledWith(
 				'reservation.created',
 				expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
+			);
+			expect(emit).toHaveBeenCalledWith(
+				'reservation.confirmed',
+				expect.objectContaining({ reservationId: 'res-1' })
 			);
 		});
 
@@ -683,7 +675,6 @@ describe('ReservationService', () => {
 
 			const { sql: rendered, params } = dialect.sqlToQuery(updateWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('status');
-			expect(params).toContain('scheduled');
 			expect(params).toContain('confirmed');
 			expect(params).not.toContain('cancelled');
 		});
@@ -759,85 +750,6 @@ describe('ReservationService', () => {
 		});
 	});
 
-	describe('confirm', () => {
-		/**
-		 * One row answers both selects `announceConfirmed` makes — the reservation
-		 * and its owner — so it carries the columns of each.
-		 */
-		const CONFIRMED_ROW = {
-			id: 'res-1',
-			status: 'confirmed',
-			createdByUserId: 'user-1',
-			startsAt: new Date('2026-05-20T17:00:00Z'),
-			endsAt: new Date('2026-05-20T19:00:00Z'),
-			name: 'Alice',
-			email: 'alice@test.com'
-		};
-
-		function setupUpdateMock(
-			rowCount: number,
-			selectRow: Record<string, unknown> | null = CONFIRMED_ROW
-		) {
-			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
-			const set = vi.fn().mockReturnValue({ where: updateWhere });
-			vi.mocked(db.update).mockReturnValue({ set } as any);
-
-			if (selectRow !== null) {
-				const limit = vi.fn().mockResolvedValue([selectRow]);
-				const where = vi.fn().mockReturnValue({ limit });
-				const from = vi.fn().mockReturnValue({ where });
-				vi.mocked(db.select).mockReturnValue({ from } as any);
-			}
-		}
-
-		it('confirms a scheduled reservation', async () => {
-			setupUpdateMock(1);
-			await confirm('res-1');
-			expect(db.update).toHaveBeenCalled();
-		});
-
-		it('announces the confirmation on the bus', async () => {
-			setupUpdateMock(1);
-
-			await confirm('res-1');
-
-			expect(emit).toHaveBeenCalledWith(
-				'reservation.confirmed',
-				expect.objectContaining({ reservationId: 'res-1', userId: 'user-1', userName: 'Alice' })
-			);
-		});
-
-		// A confirm the atomic update rolled back has nothing to announce, and a
-		// listener acting on one would be acting on a booking that is not confirmed.
-		it('announces nothing when the row is no longer confirmed', async () => {
-			setupUpdateMock(1, null);
-			const limit = vi.fn().mockResolvedValue([]);
-			const where = vi.fn().mockReturnValue({ limit });
-			const from = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.select).mockReturnValue({ from } as any);
-
-			await confirm('res-1');
-
-			expect(emit).not.toHaveBeenCalled();
-		});
-
-		it('throws when reservation not found', async () => {
-			setupUpdateMock(0, null);
-			const limit = vi.fn().mockResolvedValue([]);
-			const where = vi.fn().mockReturnValue({ limit });
-			const from = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.select).mockReturnValue({ from } as any);
-
-			await expect(confirm('res-999')).rejects.toThrow(ReservationNotFoundError);
-		});
-
-		it('throws when status is not scheduled', async () => {
-			setupUpdateMock(0, { status: 'completed' });
-
-			await expect(confirm('res-1')).rejects.toThrow(ReservationStateError);
-		});
-	});
-
 	describe('comp (#1818)', () => {
 		/** The status read, then every update's `set` payload in call order. */
 		function setup(status: string | null) {
@@ -849,9 +761,15 @@ describe('ReservationService', () => {
 					return { where: updateWhere };
 				})
 			} as any);
-			const limit = vi.fn().mockResolvedValue(status ? [{ status }] : []);
+			// The status read, then the audit row's read of the booking (`reservation-audit.spec.ts`).
+			const limit = vi
+				.fn()
+				.mockResolvedValueOnce(status ? [{ status }] : [])
+				.mockResolvedValue([]);
 			const where = vi.fn().mockReturnValue({ limit });
-			vi.mocked(db.select).mockReturnValue({ from: vi.fn().mockReturnValue({ where }) } as any);
+			vi.mocked(db.select).mockReturnValue({
+				from: vi.fn().mockReturnValue({ where, leftJoin: vi.fn().mockReturnValue({ where }) })
+			} as any);
 			return sets;
 		}
 
@@ -860,13 +778,6 @@ describe('ReservationService', () => {
 			await comp('res-1');
 			expect(sets.some((s) => 'status' in s)).toBe(false);
 			expect(sets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
-		});
-
-		it('confirms a scheduled booking, then waives it', async () => {
-			const sets = setup('scheduled');
-			await comp('res-1');
-			expect(sets[0]).toMatchObject({ status: 'confirmed' });
-			expect(sets.at(-1)).toMatchObject({ cashDueCents: 0 });
 		});
 
 		it('refuses a terminal booking', async () => {
@@ -901,7 +812,7 @@ describe('ReservationService', () => {
 		});
 
 		it('throws when reservation has wrong status', async () => {
-			setupUpdateMock(0, { status: 'scheduled' });
+			setupUpdateMock(0, { status: 'cancelled' });
 
 			await expect(markComplete('res-1')).rejects.toThrow(ReservationStateError);
 		});
@@ -938,7 +849,7 @@ describe('ReservationService', () => {
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 		}
 
-		it('transitions scheduled → completed with payment record', async () => {
+		it('transitions confirmed → completed with payment record', async () => {
 			setupUpdateMock(1);
 			await recordCashAndComplete('res-1', 'pr_abc');
 			expect(db.update).toHaveBeenCalled();
@@ -964,132 +875,6 @@ describe('ReservationService', () => {
 			vi.mocked(db.select).mockReturnValue({ from } as any);
 
 			await expect(recordCashAndComplete('res-1', 'pr_abc')).rejects.toThrow(ReservationStateError);
-		});
-	});
-
-	describe('cancelUnconfirmedReservations', () => {
-		const past = new Date(Date.now() - 60 * 60 * 1000);
-		const pastEnd = new Date(past.getTime() + 2 * 60 * 60 * 1000);
-
-		// First db.select is the sweep (returns ids); the rest are cancel()'s internal
-		// lookups (return the full row). Mirrors the blanket select used in cancel tests.
-		function setupSweep(ids: Array<{ id: string }>, row: Record<string, unknown>) {
-			const sweepWhere = vi.fn().mockResolvedValue(ids);
-			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
-			const limit = vi.fn().mockResolvedValue([row]);
-			const where = vi.fn().mockReturnValue({ limit });
-			const from = vi.fn().mockReturnValue({ where });
-			vi.mocked(db.select)
-				.mockReturnValueOnce({ from: sweepFrom } as any)
-				.mockReturnValue({ from } as any);
-		}
-
-		function setupUpdateMock(rowCount: number) {
-			const updateWhere = vi.fn().mockResolvedValue({ meta: { changes: rowCount } });
-			const set = vi.fn().mockReturnValue({ where: updateWhere });
-			vi.mocked(db.update).mockReturnValue({ set } as any);
-			return set;
-		}
-
-		it('cancels a scheduled reservation whose start has passed', async () => {
-			setupSweep([{ id: 'res-1' }], {
-				id: 'res-1',
-				createdByUserId: 'user-1',
-				status: 'scheduled',
-				stripePaymentRecordId: null,
-				startsAt: past,
-				endsAt: pastEnd
-			});
-			const set = setupUpdateMock(1);
-
-			const result = await cancelUnconfirmedReservations(new Date());
-
-			expect(result.cancelled).toBe(1);
-			expect(result.errors).toHaveLength(0);
-			expect(set).toHaveBeenCalledWith(
-				expect.objectContaining({
-					status: 'cancelled',
-					cancellationReason: 'Not confirmed before start'
-				})
-			);
-			// No payment on a scheduled reservation → no refund.
-			expect(refund).not.toHaveBeenCalled();
-		});
-
-		// Regression for #1124. `staffOverride` means "skip the permission and
-		// past-start checks"; it was being read as "a person did this", so the cron
-		// told the member CMC staff had cancelled and invited them to reach out
-		// about a conversation that never happened.
-		it('attributes the sweep to the system, not to staff', async () => {
-			setupSweep([{ id: 'res-1' }], {
-				id: 'res-1',
-				createdByUserId: 'user-1',
-				status: 'scheduled',
-				stripePaymentRecordId: null,
-				startsAt: past,
-				endsAt: pastEnd
-			});
-			const set = setupUpdateMock(1);
-
-			await cancelUnconfirmedReservations(new Date());
-
-			expect(set).toHaveBeenCalledWith(
-				expect.objectContaining({ cancelledBy: 'system', cancelledByUserId: null })
-			);
-			expect(emit).toHaveBeenCalledWith(
-				'reservation.cancelled',
-				expect.objectContaining({ cancelledBy: 'system' })
-			);
-		});
-
-		it('returns zero when nothing is unconfirmed', async () => {
-			const sweepWhere = vi.fn().mockResolvedValue([]);
-			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
-			vi.mocked(db.select).mockReturnValue({ from: sweepFrom } as any);
-
-			const result = await cancelUnconfirmedReservations(new Date());
-
-			expect(result.cancelled).toBe(0);
-			expect(db.update).not.toHaveBeenCalled();
-		});
-
-		it('records an error and continues when a cancel fails', async () => {
-			setupSweep([{ id: 'res-1' }], {
-				id: 'res-1',
-				createdByUserId: 'user-1',
-				status: 'scheduled',
-				stripePaymentRecordId: null,
-				startsAt: past,
-				endsAt: pastEnd
-			});
-			setupUpdateMock(0); // concurrent change → cancel() throws
-
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-			const result = await cancelUnconfirmedReservations(new Date());
-
-			expect(result.cancelled).toBe(0);
-			expect(result.errors).toHaveLength(1);
-			expect(result.errors[0]).toContain('res-1');
-			consoleSpy.mockRestore();
-		});
-
-		// Regression: the room a show holds is staff-held — there is no member
-		// confirm/pay flow for it and publishing an event never touches its
-		// reservation. Sweeping it as "unconfirmed" released the room at showtime
-		// and cascaded waitlist promotion into a live event.
-		it("excludes a show's room from the sweep", async () => {
-			const sweepWhere = vi.fn().mockResolvedValue([]);
-			const sweepFrom = vi.fn().mockReturnValue({ where: sweepWhere });
-			vi.mocked(db.select).mockReturnValue({ from: sweepFrom } as any);
-
-			await cancelUnconfirmedReservations(new Date());
-
-			const { sql: rendered, params } = dialect.sqlToQuery(sweepWhere.mock.calls[0][0] as SQL);
-			expect(rendered).toContain('"booker_type" not in');
-			expect(params).toEqual(expect.arrayContaining(['production', 'event_listing']));
-			// And a program's hold once #855 re-points it at the group running it,
-			// which is the same room and the same reason.
-			expect(rendered).toContain('"group"."kind" <> \'band\'');
 		});
 	});
 

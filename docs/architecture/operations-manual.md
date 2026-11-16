@@ -158,7 +158,7 @@ Notes:
 ### Break-glass: acting when no admin is reachable
 
 `admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
-(see [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md) and the matrix in
+(see [the decision record](../decisions/0032-guards-name-capabilities.md) and the matrix in
 `src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
 to change, this is the way in — **not** a second shared admin account.
 
@@ -166,8 +166,9 @@ A standing shared credential is a permanent risk to defend; a documented procedu
 occasional one. This needs infrastructure access, which is already a smaller circle than
 staff, and it leaves a trail in the Cloudflare audit log.
 
-**Grant somebody a position.** Positions live in `roles`, assignment in `model_has_roles`.
-Both are plain rows; nothing is cached beyond the request.
+**Grant somebody admin.** `admin` lives in `roles`, assignment in `model_has_roles`.
+Both are plain rows; nothing is cached beyond the request. Every other position is a seat in
+the Operations committee (#2992), given on the Access page once an admin can sign in.
 
 ```bash
 # 1. Confirm the position exists and note its id.
@@ -223,23 +224,25 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 
 ### Secret inventory
 
-| Secret                                                             | Used by                                                                                                                                                                                                    |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`                                               | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                                                                             |
-| `CRON_SECRET`                                                      | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations                                                              |
-| `MIGRATION_SECRET`                                                 | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                                                                              |
-| `DATABASE_URL`                                                     | **Not read by anything.** The Worker never referenced it, and the three Postgres one-offs that did are deleted — see §6. Remove it from Worker secrets and from `.env`.                                    |
-| `MARKETING_UNSUBSCRIBE_SECRET`                                     | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                                                                        |
-| `STRIPE_SECRET_KEY`                                                | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                                                                          |
-| `STRIPE_WEBHOOK_SECRET`                                            | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                                                                                |
-| `STRIPE_WEBHOOK_ID`                                                | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                                                                         |
-| `POSTMARK_SERVER_TOKEN`                                            | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                                                                        |
-| `POSTMARK_INBOUND_TOKEN`                                           | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                                                                  |
-| `INBOX_REPLY_SECRET`                                               | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                                                   |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                         | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                                                                 |
-| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN` | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)                                         |
-| `ULTRALOC_CLIENT_SECRET`                                           | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`) — an optional fallback, like `ULTRALOC_CLIENT_ID` / `_DEVICE_ID` / `_REFRESH_TOKEN`. All four are staff-settable and the stored value wins |
-| `TURNSTILE_SECRET_KEY`                                             | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                                                         |
+| Secret                                                             | Used by                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                                               | Session/signing key for better-auth (`src/lib/server/auth.ts`)                                                                                                                                                                                                                                            |
+| `CRON_SECRET`                                                      | Bearer token every `/api/cron/*` endpoint requires; sent by the Worker's own `scheduled` handler (`worker.js`) and by manual curl invocations                                                                                                                                                             |
+| `MIGRATION_SECRET`                                                 | Shared secret for the legacy-Laravel `verify-password` proxy (see §6; retire with the bridge)                                                                                                                                                                                                             |
+| `DATABASE_URL`                                                     | **Not read by anything.** The Worker never referenced it, and the three Postgres one-offs that did are deleted — see §6. Remove it from Worker secrets and from `.env`.                                                                                                                                   |
+| `MARKETING_UNSUBSCRIBE_SECRET`                                     | Signs unsubscribe links (`src/lib/server/marketing/unsubscribe.ts`)                                                                                                                                                                                                                                       |
+| `STRIPE_SECRET_KEY`                                                | All Stripe API calls (`src/lib/server/stripe.ts`)                                                                                                                                                                                                                                                         |
+| `STRIPE_WEBHOOK_SECRET`                                            | Webhook signature verification (`src/routes/api/stripe/webhook/+server.ts`)                                                                                                                                                                                                                               |
+| `STRIPE_WEBHOOK_ID`                                                | Which endpoint `pnpm stripe:sync-webhooks` manages                                                                                                                                                                                                                                                        |
+| `POSTMARK_SERVER_TOKEN`                                            | Outbound email (`src/lib/server/notification/email/postmark-client.ts`) + the `email:push/pull` CLI                                                                                                                                                                                                       |
+| `POSTMARK_INBOUND_TOKEN`                                           | Authenticates Postmark's inbound webhook (`src/routes/api/inbox/postmark/+server.ts`) — sent as the HTTP Basic _password_ in the hook URL                                                                                                                                                                 |
+| `POSTMARK_WEBHOOK_TOKEN`                                           | Authenticates Postmark's event webhook (`src/routes/api/webhooks/postmark/events/+server.ts`), sent as the `x-postmark-token` header. Enable the Delivery, Bounce and SpamComplaint events on the broadcast stream: all three update the campaign's recipient list, and the last two suppress the address |
+| `INBOX_REPLY_SECRET`                                               | Signs the thread id in inbox reply addresses (`src/lib/server/inbox/reply-address.ts`). Optional — falls back to `POSTMARK_SERVER_TOKEN`                                                                                                                                                                  |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`                         | SMS send/receive (`src/lib/server/inbox/twilio-client.ts`)                                                                                                                                                                                                                                                |
+| `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN` | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)                                                                                                                                        |
+| `ULTRALOC_CLIENT_SECRET`                                           | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`) — an optional fallback, like `ULTRALOC_CLIENT_ID` / `_DEVICE_ID` / `_REFRESH_TOKEN`. All four are staff-settable and the stored value wins                                                                                                |
+| `TURNSTILE_SECRET_KEY`                                             | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                                                                                                                                                        |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID`                      | Band custom domains (`src/lib/server/band/custom-domain-service.ts`) — optional; unset, the feature reports itself unavailable                                                                                                                                                                            |
 
 Local equivalents: Worker secrets go in **`.dev.vars`** (read by `vite dev` / wrangler),
 Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are gitignored;
@@ -328,7 +331,7 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
     mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
     MX records.
-- The `email` **channel toggle** (Staff → Settings → Inbox Channels) gates only _new-sender_
+- The `email` **channel toggle** (Staff → Inbox → Channels) gates only _new-sender_
   mail. A reply to a thread we started always lands, because we invited it.
 
 ### Twilio (SMS)
@@ -347,8 +350,10 @@ collection for the vendor API is checked in at
 `docs/architecture/U-Tec Api.postman_collection.json`.
 
 **All four values are staff-settable**, each falling back to its `ULTRALOC_*` env var when
-the stored value is blank. Change any of them at Staff Settings → Integrations; no deploy is
-involved, and the client secret is not a special case.
+the stored value is blank. Change any of them under **Lock settings** in the **Building
+access** sidebar on Staff → Practice space (behind **Reconnect** once connected); no deploy is
+involved, and the client secret is not a special case. `/staff/settings?tab=integrations`
+redirects there.
 
 #745 had moved the client secret out to a Worker secret alone. That is **reversed**: a client
 id and its secret are one credential, and keeping half of it somewhere the app could not write
@@ -372,6 +377,23 @@ run was a log line, which is how three days of unminted door codes went unnotice
 Pressing it twice is safe — every stage filters on work still outstanding, so a repeat run
 reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
+
+**The Building access view reads KV and D1 only.** Lock status is the daily job's last
+health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the
+Lock offline link in the Practice space header is the same reading. Active codes list
+per-booking codes, standing key-holder codes and the break-glass code, each by its last two
+digits and whether the lock has confirmed it. Recent usage is not shown: no U-tec directive
+for access history has been confirmed (#2589).
+
+### Cloudflare for SaaS (band addresses)
+
+Every band answers at `{slug}.corvmc.org` through the `*.corvmc.org/*` route in `wrangler.toml`,
+which needs a proxied wildcard DNS record in the zone. A premium band's own domain is a Cloudflare
+for SaaS custom hostname that `custom-domain-service.ts` creates through the API, with TXT
+validation; the band points a CNAME at `domains.corvmc.org`. The wildcard-host route in
+`wrangler.toml` is what lets the Worker answer those hosts as the fallback origin. The API calls
+need `CLOUDFLARE_API_TOKEN` (Zone → SSL and Certificates → Edit) and `CLOUDFLARE_ZONE_ID` as Worker
+secrets; with either unset, the band's settings page reports custom domains as unavailable.
 
 ### Turnstile (bot protection)
 
@@ -410,7 +432,7 @@ Two things worth knowing before touching it:
   through `graph.facebook.com/…/me/messages` with the account linked to the Page under
   Facebook Login for Business. The Instagram Login flavour needs `graph.instagram.com` and a
   token of its own, and connecting it that way fails silently.
-- **The token has no refresh path.** Staff → Settings → Inbox Channels carries a Test
+- **The token has no refresh path.** Staff → Inbox → Channels carries a Test
   connection button for each Meta channel, which is the only thing that makes an expired
   token visible before replies start failing.
 
@@ -422,6 +444,7 @@ full endpoint table. Requirements:
 ```
 POST https://corvmc.org/api/cron/<name>
 Authorization: Bearer <CRON_SECRET>
+Content-Type: application/json
 ```
 
 **The schedule lives in this repo, on native Cloudflare cron triggers.** The `[triggers]`
@@ -435,28 +458,32 @@ Cron expressions are **UTC only** (no DST handling), so the Pacific wall-clock t
 shift an hour when DST flips. Weekdays are **named** (`MON`, never `1`): Cloudflare numbers
 them 1 = Sunday, while the Sentry monitor that receives the same string numbers them 1 = Monday.
 
-| Cron (UTC)     | Endpoints, in order                                                                                                                                                                                                          | Pacific                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                                                                   | every 5 min                 |
-| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio`    | every 15 min                |
-| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-incidents`, `/api/cron/sweep-audit-log`, `/api/cron/sweep-media` | daily, 8am PST / 9am PDT    |
-| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                                                 | Mondays, 9am PST / 10am PDT |
+| Cron (UTC)     | Endpoints, in order                                                                                                                                                                                                                                                                                                    | Pacific                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `*/5 * * * *`  | `/api/cron/send-campaigns`, `/api/cron/send-outbox`                                                                                                                                                                                                                                                                    | every 5 min                 |
+| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lift-lapsed-removals`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio`, `/api/cron/sweep-door-sales`                                                              | every 15 min                |
+| `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-incidents`, `/api/cron/sweep-contacts`, `/api/cron/open-tasks`, `/api/cron/sweep-audit-log`, `/api/cron/import-partner-calendars`, `/api/cron/sweep-media` | daily, 8am PST / 9am PDT    |
+| `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                                                                                                                                           | Mondays, 9am PST / 10am PDT |
 
 Each trigger runs its jobs sequentially in the order listed. The daily batch generates
 first, so freshly generated occurrences are visible to lock provisioning. Reminders are not
 a daily sweep: `/api/cron/reminders` drains a registry every 15 minutes, after
-`complete-shifts`. `CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
+`complete-shifts`, which completes sign-ups on shifts that have ended and closes nothing else:
+a task and its equipment reports stay open until someone marks the task done (#2518).
+`CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
 schedule spec pins both `wrangler.toml [triggers]` and this table against it.
 
 Manual invocation (safe — every job is idempotent and returns a JSON summary):
 
 ```bash
-curl -s -X POST https://corvmc.org/api/cron/cancel-unconfirmed \
-  -H "Authorization: Bearer $CRON_SECRET"
+curl -s -X POST https://corvmc.org/api/cron/expire-waitlisted \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json"
 ```
 
 A `401` means the secret doesn't match; a `500 CRON_SECRET not configured` means the
-Worker secret is missing. If reservations pile up unresolved, reminders stop, or recurring
+Worker secret is missing; a `403 Cross-site POST form submissions are forbidden` means the
+content type is missing, which Kit refuses before the endpoint runs. If reservations pile up unresolved, reminders stop, or recurring
 series stop generating: check **Sentry → Insights → Crons** first (see below), then the
 Worker's cron events in the Cloudflare dashboard (Workers & Pages → corvmc → Settings →
 Triggers shows the schedules; the logs show `[cron]`-prefixed per-job lines) and confirm
@@ -618,8 +645,8 @@ integrity, not staleness.
 Also keep current as you change things:
 
 - `docs/README.md` — the index; every doc gets a row and a status emoji.
-- `docs/reports/feature-catalog.md` — every shipped feature; add a row per shipped feature
-  (see [conventions](../development/conventions.md)).
+- `docs/reports/features/` — one file per shipped feature; `pnpm docs:catalog` renders the
+  tables (see [conventions](../development/conventions.md)).
 
 ## 8. Monitoring and incident triage
 

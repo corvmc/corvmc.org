@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { pageTitle } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import { pageTitle } from '#lib/config.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { resetPassword } from '$lib/remote/password-reset.remote';
+	import { resetPassword } from '#lib/remote/password-reset.remote.js';
 
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 
 	const fields = resetPassword.fields;
 
@@ -39,19 +40,23 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Set a new password</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_reset_password_set_new_password_title()}</CardTitle
+					>
 
 					{#if done}
 						<Alert type="success" class="text-sm">
-							Your password has been changed, and any other sessions were signed out.
+							{m.public_reset_password_password_has_been_changed_any_body()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/login')}>Sign in</Button>
+						<Button variant="primary" class="w-full" href={resolve('login')}
+							>{m.public_sign_label()}</Button
+						>
 					{:else if linkFailed}
 						<Alert type="error" class="text-sm">
-							That reset link has expired or has already been used.
+							{m.public_reset_password_reset_link_has_expired_has_body()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/forgot-password')}>
-							Request a new link
+						<Button variant="primary" class="w-full" href={resolve('forgot-password')}>
+							{m.public_reset_password_request_new_link_label()}
 						</Button>
 					{:else}
 						{#each tokenIssues as issue (issue.message)}
@@ -60,6 +65,7 @@
 
 						<Form
 							remote={resetPassword}
+							guard={false}
 							onsuccess={() => (done = true)}
 							class="flex flex-col gap-3"
 						>
@@ -67,17 +73,21 @@
 							<FormField
 								field={fields.newPassword}
 								type="password"
-								label="New password"
+								label={m.public_reset_password_new_password_label()}
 								minlength={8}
 								required
 							/>
 							<FormField
 								field={fields.confirmPassword}
 								type="password"
-								label="Confirm new password"
+								label={m.public_reset_password_confirm_new_password_label()}
 								required
 							/>
-							<SubmitButton label="Set password" variant="primary" class="mt-1 w-full" />
+							<SubmitButton
+								label={m.public_reset_password_set_password_label()}
+								variant="primary"
+								class="mt-1 w-full"
+							/>
 						</Form>
 					{/if}
 				</CardBody>

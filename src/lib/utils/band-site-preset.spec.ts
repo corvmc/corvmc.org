@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Block } from '$lib/types/band-page';
+import type { Block } from '#lib/types/band-page.js';
 import {
 	presetBlocks,
 	PRESET_ORDER,

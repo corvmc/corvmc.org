@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { markAcquisitionReimbursed } from '$lib/remote/inventory.remote';
-	import { formatCents } from '$lib/utils/format';
+	import { refreshAll } from '$app/navigation';
+	import { markAcquisitionReimbursed } from '#lib/remote/inventory.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	const { fields } = markAcquisitionReimbursed;
 
@@ -33,16 +34,21 @@
      bank, and what is worth keeping is that a person dealt with it. -->
 <Action
 	action={markAcquisitionReimbursed}
-	label="Mark reimbursed"
-	modalTitle="Mark as reimbursed"
-	confirm={`Record that ${paidByName ?? 'whoever paid'} has been paid back${
-		amountCents ? ` for ${formatCents(amountCents)}` : ''
-	}. This does not send any money — it records that the transfer has happened.`}
-	successToast="Marked reimbursed"
+	label={m.actions_mark_reimbursed_label()}
+	modalTitle={m.actions_mark_reimbursed_modal_title()}
+	confirm={amountCents
+		? m.actions_mark_reimbursed_confirm_amount_body({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid_text(),
+				amount: formatCents(amountCents)
+			})
+		: m.actions_mark_reimbursed_confirm_body({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid_text()
+			})}
+	successToast={m.actions_mark_reimbursed_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

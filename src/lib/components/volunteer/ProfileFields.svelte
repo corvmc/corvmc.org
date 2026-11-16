@@ -1,5 +1,7 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import type { RemoteFormField } from '$app/server';
 	/**
 	 * The "about you" half of volunteer onboarding, shared by the start step and
 	 * the Contact info section of /member/volunteer/profile. The step adds the
@@ -14,7 +16,7 @@
 	 * also renders a form marks the later declarations async-gated, and every
 	 * `bind:value` then blows up with effect_update_depth_exceeded.
 	 */
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { resolve } from '$app/paths';
 
 	let {
@@ -42,25 +44,37 @@
 </script>
 
 <div class="grid grid-cols-2 gap-4">
-	<FormField field={fields.firstName} type="text" label="First name" value={firstName} required />
-	<FormField field={fields.lastName} type="text" label="Last name" value={lastName} required />
+	<FormField
+		field={fields.firstName}
+		type="text"
+		label={m.volunteer_profile_fields_first_name_label()}
+		value={firstName}
+		required
+	/>
+	<FormField
+		field={fields.lastName}
+		type="text"
+		label={m.volunteer_profile_fields_last_name_label()}
+		value={lastName}
+		required
+	/>
 </div>
 
 <FormField
 	field={fields.pronouns}
 	type="text"
-	label="Pronouns"
+	label={m.volunteer_profile_fields_pronouns_label()}
 	value={pronouns}
-	placeholder="e.g. they/them"
+	placeholder={m.volunteer_profile_fields_placeholder()}
 />
 
 <FormField
 	field={fields.phone}
 	type="tel"
-	label="Phone"
+	label={m.volunteer_profile_fields_phone_label()}
 	value={phone}
 	placeholder="(541) 555-0123"
-	description="For shift-day contact."
+	description={m.volunteer_profile_fields_description_body()}
 />
 
 <!--
@@ -68,9 +82,18 @@
 	with, and changing it runs through its own verification flow. Shown so they
 	can check we have the right one.
 -->
-<FormField type="email" label="Email" value={email} readonly description={emailHint} />
+<FormField
+	type="email"
+	label={m.volunteer_profile_fields_email_label()}
+	value={email}
+	readonly
+	description={emailHint}
+/>
 
 {#snippet emailHint()}
-	Change this in your
-	<a href={resolve('/member/account')} class="link link-primary">account settings</a>.
+	<ParaglideMessage message={m.volunteer_profile_fields_change_body} inputs={{}}
+		>{#snippet a({ children })}<a href={resolve('member/account')} class="link link-primary"
+				>{@render children?.()}</a
+			>{/snippet}</ParaglideMessage
+	>
 {/snippet}

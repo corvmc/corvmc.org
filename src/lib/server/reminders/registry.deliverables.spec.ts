@@ -1,22 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A committee's show work (#1709): due in three days, then late by one to
- * fourteen. Pinned: the two bands do not overlap, the subject carries the due
- * date, and an item nobody can be told about is not stamped as sent.
+ * A committee's work (#1709): due in three days, then late by one to fourteen,
+ * and for grant and sponsorship work also four to fourteen days ahead (#2622).
+ * Pinned: the bands do not overlap, the subject carries the due date, and an
+ * item nobody can be told about is not stamped as sent.
  */
 
-const listDeliverablesDueBetween = vi.fn(async (_from: Date, _to: Date) => [] as unknown[]);
+const listDeliverablesDueBetween = vi.fn(
+	async (_from: Date, _to: Date, _opts?: unknown) => [] as unknown[]
+);
 
-vi.mock('$lib/server/volunteer/deliverables-service', () => ({ listDeliverablesDueBetween }));
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/volunteer/deliverables-service.js', () => ({ listDeliverablesDueBetween }));
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	listLoansDueBetween: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listSignupsStartingBetween: vi.fn(async () => []),
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { reminders } = await import('./registry');
 
@@ -29,25 +32,39 @@ const item = {
 	title: 'Poster art made',
 	dueAt: new Date('2026-10-03T07:00:00Z'),
 	eventTitle: 'Friday Night Fuzz',
+	projectName: 'Friday Night Fuzz',
 	groupName: 'Art and Merchandise Committee',
 	groupSlug: 'art-and-merchandise-committee',
-	recipients: [{ userId: 'u1', userName: 'Ada', userEmail: 'ada@example.com' }]
+	eventId: 'evt',
+	recipients: [{ userId: 'u1', userName: 'Ada', userEmail: 'ada@example.com' }],
+	lead: null as { userId: string; userName: string; userEmail: string } | null
 };
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('deliverable reminders', () => {
-	it('registers a due-soon and an overdue stage', () => {
+	it('registers a two-week, a due-soon and an overdue stage', () => {
 		const keys = reminders.filter((r) => r.event === 'volunteer.deliverable_due').map((r) => r.key);
-		expect(keys).toEqual(['deliverable_due_3d', 'deliverable_overdue']);
+		expect(keys).toEqual(['deliverable_due_14d', 'deliverable_due_3d', 'deliverable_overdue']);
 	});
 
 	it('asks for items due in the next three days, then for items one to fourteen days late', async () => {
 		await byKey('deliverable_due_3d').due(NOW);
 		await byKey('deliverable_overdue').due(NOW);
 		expect(listDeliverablesDueBetween.mock.calls).toEqual([
-			[NOW, new Date(NOW.getTime() + 3 * DAY)],
-			[new Date(NOW.getTime() - 14 * DAY), new Date(NOW.getTime() - DAY)]
+			[NOW, new Date(NOW.getTime() + 3 * DAY), {}],
+			[new Date(NOW.getTime() - 14 * DAY), new Date(NOW.getTime() - DAY), {}]
+		]);
+	});
+
+	it('asks two weeks ahead only for grant and sponsorship work, clear of the three-day band', async () => {
+		await byKey('deliverable_due_14d').due(NOW);
+		expect(listDeliverablesDueBetween.mock.calls).toEqual([
+			[
+				new Date(NOW.getTime() + 4 * DAY),
+				new Date(NOW.getTime() + 14 * DAY),
+				{ projectKinds: ['grant', 'sponsorship'] }
+			]
 		]);
 	});
 
@@ -56,15 +73,17 @@ describe('deliverable reminders', () => {
 		expect(await byKey('deliverable_due_3d').due(NOW)).toEqual([
 			{
 				subjectId: `wo-1:${item.dueAt.toISOString()}`,
-				payload: {
+				recipients: item.recipients,
+				item: {
 					stage: 'due_3d',
 					workOrderId: 'wo-1',
 					title: 'Poster art made',
 					eventTitle: 'Friday Night Fuzz',
+					eventId: 'evt',
+					projectName: 'Friday Night Fuzz',
 					dueAt: item.dueAt.toISOString(),
 					groupName: 'Art and Merchandise Committee',
-					groupSlug: 'art-and-merchandise-committee',
-					recipients: item.recipients
+					groupSlug: 'art-and-merchandise-committee'
 				}
 			}
 		]);
@@ -73,5 +92,24 @@ describe('deliverable reminders', () => {
 	it('owes nothing for an item with nobody to tell', async () => {
 		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, recipients: [] }]);
 		expect(await byKey('deliverable_overdue').due(NOW)).toEqual([]);
+	});
+
+	// #2983 case 6: the show's lead hears too, as a subject of their own.
+	it("owes the show's event lead the item under its own subject", async () => {
+		const lead = { userId: 'u-lead', userName: 'Lee', userEmail: 'lee@example.com' };
+		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, recipients: [], lead }]);
+		const due = await byKey('deliverable_due_3d').due(NOW);
+		expect(due).toMatchObject([
+			{
+				subjectId: `wo-1:${item.dueAt.toISOString()}:lead`,
+				recipients: [lead],
+				item: { workOrderId: 'wo-1', forLead: true }
+			}
+		]);
+	});
+
+	it('sends a lead who is already a recipient one copy', async () => {
+		listDeliverablesDueBetween.mockResolvedValueOnce([{ ...item, lead: item.recipients[0] }]);
+		expect(await byKey('deliverable_due_3d').due(NOW)).toHaveLength(1);
 	});
 });

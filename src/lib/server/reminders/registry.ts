@@ -1,24 +1,48 @@
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
-import { eq, and, gt, gte, lt, isNotNull, notInArray } from 'drizzle-orm';
-import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { reminderSent } from '#lib/server/db/schema/reminder.js';
+import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import {
-	CONFIRMATION_WINDOW_DAYS,
+	formatDateFull,
+	formatDateInTz,
+	formatTimeInTz,
+	formatTimeSimple
+} from '#lib/server/reservation/timezone.js';
+import {
+	CLEARANCE_BOOKER,
+	CLASSIFIED_EXPIRY_REMINDER_DAYS,
 	DEFAULT_TIMEZONE,
 	clubToday,
-	eventHoldBookers
-} from '$lib/config';
-import { addIsoDays } from '$lib/utils/deadline';
-import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
+	fundingProjectKinds,
+	surfaces,
+	type ProjectKind
+} from '#lib/config.js';
+import type { DeliverableDueItem } from '#lib/server/event-bus/event-bus.js';
+import { addIsoDays } from '#lib/utils/deadline.js';
+import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
 	listSignupsStartingBetween,
 	listCompletionsAwaitingFeedback
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
-import { listRenewalsExpiringBetween } from '$lib/server/renewal/renewal-service';
-import { listRadioAttestationsExpiringBetween } from '$lib/server/audio/radio-attestation';
-import { listDeliverablesDueBetween } from '$lib/server/volunteer/deliverables-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listLoansDueBetween } from '#lib/server/inventory/loan-service.js';
+import { listRadioAttestationsExpiringBetween } from '#lib/server/audio/radio-attestation.js';
+import { listDeliverablesDueBetween } from '#lib/server/volunteer/deliverables-service.js';
+import {
+	listFirstVisitsBetween,
+	listUnclaimedOrientationsBetween
+} from '#lib/server/volunteer/orientation-reminders.js';
+import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
+import {
+	getFeeGateCutoff,
+	listFeesEndedBetween,
+	membersOwingFees
+} from '#lib/server/reservation/outstanding-fees.js';
+import { PAYMENT_DUE_BANDS, paymentDueKey } from '#lib/server/reservation/payment-reminder.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { taskAudiences } from '#lib/server/task/task-audience.js';
+import { listPostsExpiringBetween } from '#lib/server/classified/classified-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -58,6 +82,40 @@ function overdueLoans({ days, until }: { days: number; until: number }) {
 					userEmail: row.userEmail,
 					equipmentName: row.equipmentName,
 					dueDate: formatDateFull(row.dueDate, TZ)
+				}
+			}));
+		}
+	});
+}
+
+/**
+ * One payment reminder stage: sessions that ended inside the band still owing,
+ * by the fee gate's own rule and cutoff. With no cutoff set nothing is sent,
+ * as the gate refuses nothing.
+ */
+function paymentDue({ days, until }: { days: number; until: number }) {
+	return defineReminder({
+		key: paymentDueKey(days),
+		subjectType: 'reservation',
+		event: 'reservation.payment_due' as const,
+		async due(now: Date) {
+			const cutoff = await getFeeGateCutoff();
+			if (!cutoff) return [];
+			const rows = await listFeesEndedBetween(
+				new Date(now.getTime() - until * DAY),
+				new Date(now.getTime() - days * DAY),
+				cutoff
+			);
+			return rows.map((row) => ({
+				subjectId: row.id,
+				payload: {
+					reservationId: row.id,
+					daysAfter: days,
+					amountCents: row.amountCents,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					...when(row)
 				}
 			}));
 		}
@@ -121,90 +179,79 @@ function radioAttestationExpiry(stage: '30d' | '7d', from: number, until: number
 }
 
 /**
- * One stage of a committee's show work (#1709): open items due between `from`
- * and `until` days from now, done ones dropped. The subject carries the due
- * date, so an item whose date moves is owed its reminders again.
+ * One stage of a committee's work (#1709): open items due between `from` and
+ * `until` days from now, done ones dropped, on projects of `projectKinds` when
+ * given. The subject carries the due date, so an item whose date moves is owed
+ * its reminders again. A digest: every stage reaches each person as one mail
+ * per pass (#2507).
  */
-function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: number) {
+function deliverablesDue(
+	stage: DeliverableDueItem['stage'],
+	from: number,
+	until: number,
+	projectKinds?: readonly ProjectKind[]
+) {
 	return defineReminder({
-		key: stage === 'due_3d' ? 'deliverable_due_3d' : 'deliverable_overdue',
+		key: stage === 'overdue' ? 'deliverable_overdue' : `deliverable_${stage}`,
 		subjectType: 'work_order',
 		event: 'volunteer.deliverable_due' as const,
+		digest: true,
 		async due(now: Date) {
 			const rows = await listDeliverablesDueBetween(
 				new Date(now.getTime() + from * DAY),
-				new Date(now.getTime() + until * DAY)
+				new Date(now.getTime() + until * DAY),
+				projectKinds ? { projectKinds } : {}
 			);
-			return rows
-				.filter((r) => r.recipients.length > 0)
-				.map((r) => ({
-					subjectId: `${r.id}:${r.dueAt.toISOString()}`,
-					payload: {
-						stage,
-						workOrderId: r.id,
-						title: r.title,
-						eventTitle: r.eventTitle,
-						dueAt: r.dueAt.toISOString(),
-						groupName: r.groupName,
-						groupSlug: r.groupSlug,
-						recipients: r.recipients
-					}
-				}));
-		}
-	});
-}
-
-/**
- * One stage of the renewal reminders (#1478): every renewal expiring between
- * `from` and `until` days from today. The subject carries the date, so a
- * renewal moved forward is owed its reminders again.
- */
-function renewalExpiry(stage: '60d' | '14d', from: number, until: number) {
-	return defineReminder({
-		key: `renewal_expiry_${stage}`,
-		subjectType: 'renewal',
-		event: 'renewal.expiry_due' as const,
-		async due(now: Date) {
-			const today = clubToday(now);
-			const rows = await listRenewalsExpiringBetween(
-				addIsoDays(today, from),
-				addIsoDays(today, until)
-			);
-			return rows.map((r) => ({
-				subjectId: `${r.id}:${r.expiresOn}`,
-				payload: {
+			return rows.flatMap((r) => {
+				const subjectId = `${r.id}:${r.dueAt.toISOString()}`;
+				const item = {
 					stage,
-					renewalId: r.id,
-					name: r.name,
-					kind: r.kind,
-					issuer: r.issuer,
-					reference: r.reference,
-					expiresOn: r.expiresOn,
-					responsible:
-						r.responsibleUserId && r.responsibleEmail
-							? {
-									id: r.responsibleUserId,
-									name: r.responsibleName ?? '',
-									email: r.responsibleEmail
-								}
-							: null
-				}
-			}));
+					workOrderId: r.id,
+					title: r.title,
+					eventTitle: r.eventTitle,
+					eventId: r.eventId,
+					projectName: r.projectName,
+					dueAt: r.dueAt.toISOString(),
+					groupName: r.groupName,
+					groupSlug: r.groupSlug
+				};
+				const owed = r.recipients.length > 0 ? [{ subjectId, recipients: r.recipients, item }] : [];
+				// The show's lead as a subject of its own, so their mail links to the show (#2990).
+				const { lead } = r;
+				if (!lead || r.recipients.some((p) => p.userId === lead.userId)) return owed;
+				return [
+					...owed,
+					{ subjectId: `${subjectId}:lead`, recipients: [lead], item: { ...item, forLead: true } }
+				];
+			});
 		}
 	});
 }
 
+const FIRST_VISIT = 'first_visit';
+
+/** What every first-visit mail says about the place: its address and staff notes. */
+async function firstVisitSettings() {
+	const [street, city, notes] = await Promise.all([
+		config('org.addressStreet'),
+		config('org.addressCity'),
+		config('volunteer.firstVisitNotes')
+	]);
+	return {
+		address: [street, city]
+			.map((v) => String(v).trim())
+			.filter(Boolean)
+			.join(', '),
+		notes: String(notes).trim()
+	};
+}
+
 /**
- * Reservations owed a reminder, by status and how far ahead they start.
- *
- * A show's room is excluded from the confirmation ones: staff-held,
- * with no member confirm/pay flow to nag about.
+ * Confirmed reservations starting within `ms` of `now`, less first visits:
+ * those get `first_visit` instead. A booking already sent that one stays out
+ * after a clearance lands, so the member gets one mail, not two.
  */
-async function reservationsStartingWithin(
-	status: 'scheduled' | 'confirmed',
-	ms: number,
-	now: Date
-) {
+async function reservationsStartingWithin(ms: number, now: Date) {
 	return db
 		.select({
 			id: reservation.id,
@@ -218,21 +265,23 @@ async function reservationsStartingWithin(
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.status, status),
-				...(status === 'scheduled'
-					? [notInArray(reservation.bookerType, [...eventHoldBookers])]
-					: []),
+				eq(reservation.status, 'confirmed'),
 				gte(reservation.startsAt, now),
-				lt(reservation.startsAt, new Date(now.getTime() + ms))
+				lt(reservation.startsAt, new Date(now.getTime() + ms)),
+				or(
+					ne(reservation.bookerType, CLEARANCE_BOOKER),
+					holdsPracticeSpaceClearanceSql(reservation.createdByUserId, now)
+				),
+				sql`not exists (select 1 from ${reminderSent} where ${reminderSent.reminderKey} = ${FIRST_VISIT} and ${reminderSent.subjectId} = ${reservation.id})`
 			)
 		)
 		.limit(500);
 }
 
 const when = (row: { startsAt: Date; endsAt: Date }) => ({
-	date: formatDateFull(row.startsAt, TZ),
-	startTime: formatTimeSimple(row.startsAt, TZ),
-	endTime: formatTimeSimple(row.endsAt, TZ)
+	date: formatDateInTz(row.startsAt, TZ),
+	startTime: formatTimeInTz(row.startsAt, TZ),
+	endTime: formatTimeInTz(row.endsAt, TZ)
 });
 
 /**
@@ -243,59 +292,12 @@ const when = (row: { startsAt: Date; endsAt: Date }) => ({
  * why the job fires once — and that last one is what #1123 was.
  */
 export const reminders: ReminderDefinition[] = [
-	// Two stages over one subject, so they carry different keys and each is sent
-	// once. Before the mark they had to be non-overlapping bands on a job that
-	// ran exactly daily, which is the constraint that made #1123 unfixable.
-	defineReminder({
-		key: 'reservation_confirmation_window_open',
-		subjectType: 'reservation',
-		event: 'reservation.confirmation_reminder_due',
-		async due(now) {
-			const rows = await reservationsStartingWithin(
-				'scheduled',
-				CONFIRMATION_WINDOW_DAYS * DAY,
-				now
-			);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					stage: 'window_open' as const,
-					reservationId: row.id,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
-		}
-	}),
-
-	defineReminder({
-		key: 'reservation_confirmation_final',
-		subjectType: 'reservation',
-		event: 'reservation.confirmation_reminder_due',
-		async due(now) {
-			const rows = await reservationsStartingWithin('scheduled', DAY, now);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					stage: 'final' as const,
-					reservationId: row.id,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
-		}
-	}),
-
 	defineReminder({
 		key: 'reservation_reminder',
 		subjectType: 'reservation',
 		event: 'reservation.reminder_due',
 		async due(now) {
-			const rows = await reservationsStartingWithin('confirmed', DAY, now);
+			const rows = await reservationsStartingWithin(DAY, now);
 			return rows.map((row) => ({
 				subjectId: row.id,
 				payload: {
@@ -309,9 +311,77 @@ export const reminders: ReminderDefinition[] = [
 		}
 	}),
 
+	// A member's visit before they hold the Practice space clearance (#2569).
+	defineReminder({
+		key: FIRST_VISIT,
+		subjectType: 'reservation',
+		event: 'reservation.first_visit_due',
+		async due(now) {
+			const rows = await listFirstVisitsBetween(now, new Date(now.getTime() + DAY), now);
+			if (rows.length === 0) return [];
+			const { address, notes } = await firstVisitSettings();
+			return rows.map((row) => ({
+				subjectId: row.id,
+				payload: {
+					reservationId: row.id,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					...when(row),
+					tourTime: row.tourStartsAt ? formatTimeSimple(row.tourStartsAt, TZ) : null,
+					address,
+					notes
+				}
+			}));
+		}
+	}),
+
+	// An orientation shift nobody has signed up for, a day out (#2567). A digest,
+	// so two on one day reach each coordinator as one mail. The subject carries
+	// the start, so a shift moved to another day is owed the alert again.
+	defineReminder({
+		key: 'orientation_unclaimed',
+		subjectType: 'work_order',
+		event: 'volunteer.orientation_unclaimed',
+		digest: true,
+		async due(now) {
+			const rows = await listUnclaimedOrientationsBetween(now, new Date(now.getTime() + DAY));
+			if (rows.length === 0) return [];
+			// The task's position or committee first (#2990), every coordinator otherwise.
+			const routed = await taskAudiences(rows.map((r) => r.workOrderId));
+			const staff = rows.every((r) => routed.has(r.workOrderId))
+				? []
+				: await listUsersWithCapability('volunteer.manageShifts');
+			const coordinators = staff.map((s) => ({
+				userId: s.id,
+				userName: s.name,
+				userEmail: s.email
+			}));
+			return rows.flatMap((r) => {
+				const recipients = routed.get(r.workOrderId)?.recipients ?? coordinators;
+				return recipients.length === 0
+					? []
+					: [
+							{
+								subjectId: `${r.workOrderId}:${r.startsAt.toISOString()}`,
+								recipients,
+								item: {
+									workOrderId: r.workOrderId,
+									memberName: r.memberName,
+									startsAt: r.startsAt.toISOString(),
+									endsAt: r.endsAt.toISOString()
+								}
+							}
+						];
+			});
+		}
+	}),
+
 	// Owed once `reconcileSyncState` stamps lockSyncedAt: a code U-tec only
 	// queued may not open the door yet. The one-day floor keeps the first drain
-	// from mailing every code already on the lock, and still retries a failure.
+	// from mailing every code already on the lock; a booking starting within a
+	// day stays owed past it. Withheld while the member owes a fee (#2859): no
+	// sent-mark, so the first drain after payment sends it.
 	defineReminder({
 		key: 'door_code_ready',
 		subjectType: 'reservation',
@@ -334,22 +404,31 @@ export const reminders: ReminderDefinition[] = [
 						eq(reservation.status, 'confirmed'),
 						isNotNull(reservation.lockCode),
 						isNotNull(reservation.lockSyncedAt),
-						gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
+						or(
+							gte(reservation.lockSyncedAt, new Date(now.getTime() - DAY)),
+							lt(reservation.startsAt, new Date(now.getTime() + DAY))
+						),
 						gt(reservation.endsAt, now)
 					)
 				)
 				.limit(500);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					reservationId: row.id,
-					code: row.lockCode!,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
+			const owing = await membersOwingFees(
+				rows.map((r) => r.userId),
+				now
+			);
+			return rows
+				.filter((row) => !owing.has(row.userId))
+				.map((row) => ({
+					subjectId: row.id,
+					payload: {
+						reservationId: row.id,
+						code: row.lockCode!,
+						userId: row.userId,
+						userName: row.userName,
+						userEmail: row.userEmail,
+						...when(row)
+					}
+				}));
 		}
 	}),
 
@@ -364,6 +443,7 @@ export const reminders: ReminderDefinition[] = [
 				payload: {
 					signupId: row.signupId,
 					shiftId: row.shiftId,
+					workOrderId: row.workOrderId,
 					userId: row.userId,
 					userName: row.userName,
 					userEmail: row.userEmail,
@@ -394,6 +474,7 @@ export const reminders: ReminderDefinition[] = [
 				payload: {
 					signupId: row.signupId,
 					shiftId: row.shiftId,
+					workOrderId: row.workOrderId,
 					userId: row.userId,
 					userName: row.userName,
 					userEmail: row.userEmail,
@@ -434,23 +515,48 @@ export const reminders: ReminderDefinition[] = [
 	}),
 
 	...OVERDUE_BANDS.map(overdueLoans),
+	...PAYMENT_DUE_BANDS.map(paymentDue),
 
 	// Non-overlapping bands, so one drain sends one stage: a deadline first seen
 	// inside three days gets only the last reminder. Past deadlines get none;
 	// the lists show those in red.
 	developmentDeadlines('14d', 4, 14),
 	developmentDeadlines('3d', 0, 3),
-	// Non-overlapping bands, so one drain sends one stage: a renewal first
-	// entered inside two weeks gets only the last one. A lapsed one gets none;
-	// the list shows it in red.
-	renewalExpiry('60d', 15, 60),
-	renewalExpiry('14d', 0, 14),
 	// Non-overlapping, as above. A lapsed attestation gets no reminder: the
 	// release is already off the air and the band's music page says so.
 	radioAttestationExpiry('30d', 8, 30),
 	radioAttestationExpiry('7d', 0, 7),
 	// Non-overlapping: due in the next three days, then late by one to fourteen.
 	// Past a fortnight late it gets no more; the committee's queue shows it red.
+	// A grant report needs more warning than a show item (#2622).
+	deliverablesDue('due_14d', 4, 14, fundingProjectKinds),
 	deliverablesDue('due_3d', 0, 3),
-	deliverablesDue('overdue', -14, -1)
+	deliverablesDue('overdue', -14, -1),
+
+	// A classified post about to leave the board (#2549). The subject carries the
+	// expiry, so a renewed post is owed the reminder again next time round.
+	// Nothing goes out while the surface is off: the link would 404.
+	defineReminder({
+		key: 'classified_expiring',
+		subjectType: 'classified_post',
+		event: 'classified.expiring',
+		async due(now) {
+			if (!surfaces.classifieds) return [];
+			const rows = await listPostsExpiringBetween(
+				now,
+				new Date(now.getTime() + CLASSIFIED_EXPIRY_REMINDER_DAYS * DAY)
+			);
+			return rows.map((r) => ({
+				subjectId: `${r.id}:${r.expiresAt.toISOString()}`,
+				payload: {
+					postId: r.id,
+					title: r.title,
+					expiresOn: formatDateFull(r.expiresAt, TZ),
+					userId: r.userId,
+					userName: r.userName,
+					userEmail: r.userEmail
+				}
+			}));
+		}
+	})
 ];

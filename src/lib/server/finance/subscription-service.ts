@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { eq, getColumnTable, getTableName, sql, type AnyColumn } from 'drizzle-orm';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
-import { DOLLARS_PER_UNIT } from '$lib/config';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db/index.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
+import { DOLLARS_PER_UNIT } from '#lib/config.js';
 import { checkout } from './payment-service';
-import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
 import {
 	getProductConfig,
 	getStripeProductId,
@@ -102,12 +102,7 @@ export async function createCheckoutSession(options: CreateSubscriptionOptions):
 			subscription_type: 'contribution'
 		},
 		successUrl,
-		cancelUrl,
-		// Contributions are paid on our own page. Not an option on
-		// `CreateSubscriptionOptions`: `checkout()` carries `uiMode` so products
-		// could migrate one at a time, and this one has. A knob no caller turns is
-		// worse than none.
-		uiMode: 'elements'
+		cancelUrl
 	});
 
 	if (!result.checkoutUrl) {
@@ -448,4 +443,35 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 	}
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });
+}
+
+// ---------------------------------------------------------------------------
+// pause / unpause
+// ---------------------------------------------------------------------------
+
+/**
+ * Stop collecting payment without ending the subscription. A suspension uses
+ * this so lifting it needs no new checkout; invoices in the pause are voided.
+ */
+export async function pause(stripeCustomerId: string): Promise<void> {
+	const subscriptions = await stripe.subscriptions.list({
+		customer: stripeCustomerId,
+		status: 'active',
+		limit: 1
+	});
+	const sub = subscriptions.data[0];
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
+	await stripe.subscriptions.update(sub.id, { pause_collection: { behavior: 'void' } });
+}
+
+/** Resume collection on a subscription `pause` stopped. */
+export async function unpause(stripeCustomerId: string): Promise<void> {
+	const subscriptions = await stripe.subscriptions.list({
+		customer: stripeCustomerId,
+		status: 'active',
+		limit: 1
+	});
+	const sub = subscriptions.data[0];
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
+	await stripe.subscriptions.update(sub.id, { pause_collection: '' });
 }

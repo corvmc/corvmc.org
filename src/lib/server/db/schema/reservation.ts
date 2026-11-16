@@ -24,7 +24,6 @@ import { recurringSeries } from './recurring';
 // ---------------------------------------------------------------------------
 
 export const reservationStatuses = [
-	'scheduled',
 	'confirmed',
 	'completed',
 	'no_show',
@@ -72,9 +71,13 @@ export const reservation = sqliteTable(
 		createdByStaffId: text('created_by_staff_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
-		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
+		status: text('status', { enum: reservationStatuses }).notNull().default('confirmed'),
 		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
 		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		// Minutes at the start of the window for a new member's tour. The room is
+		// held for them; the charge and free hours cover only the rest. Stored so a
+		// later change to `volunteer.orientationMinutes` moves no existing booking.
+		tourMinutes: integer('tour_minutes').notNull().default(0),
 		// A show holds the room outright; a member booking does not. Explicit
 		// rather than inferred from `booker_type`, which asked "was this created
 		// via a listing?" — so advertising a session quietly upgraded its
@@ -95,7 +98,7 @@ export const reservation = sqliteTable(
 		// Free credit-hours applied to this booking (legacy: reservations.free_hours_used).
 		creditsUsed: real('credits_used'),
 		// Cash owed at the door after free-hour credits are committed at Confirm.
-		// null = not yet committed (plain scheduled); 0 = settled (fully credit-covered
+		// null = not yet committed; 0 = settled (fully credit-covered
 		// or comped); > 0 = cash owed. Combined with paidAt: paidAt set ⇒ paid,
 		// paidAt null & >0 ⇒ cash owed, paidAt null & 0 ⇒ comped/credit-settled.
 		cashDueCents: integer('cash_due_cents'),

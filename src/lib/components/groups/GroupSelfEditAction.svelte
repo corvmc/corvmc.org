@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { updateMyGroupMembership } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { updateMyGroupMembership } from '#lib/remote/groups.remote.js';
 
 	/**
 	 * A member editing their own row: their stage name only. Role and position
@@ -22,12 +23,12 @@
 
 <Action
 	action={updateMyGroupMembership}
-	label="Edit"
-	aria-label="Edit your membership"
-	modalTitle="Your membership"
+	label={m.groups_edit_label()}
+	aria-label={m.groups_group_self_edit_aria_label()}
+	modalTitle={m.groups_group_self_edit_modal_title()}
 	variant="ghost"
 	size="xs"
-	successToast="Saved"
+	successToast={m.groups_saved_toast()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -36,10 +37,10 @@
 			<FormField
 				field={fields.alias}
 				type="text"
-				label="Display name"
+				label={m.groups_group_self_edit_display_name_label()}
 				value={alias ?? ''}
 				maxlength="100"
-				description="How you're credited on this roster. Leave blank to use your account name. A chair sets your position."
+				description={m.groups_group_self_edit_description_body()}
 			/>
 		</div>
 	{/snippet}

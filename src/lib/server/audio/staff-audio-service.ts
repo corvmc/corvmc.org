@@ -6,15 +6,15 @@
  * music for the station to sound like one — which is the whole reason `cmcRadio`
  * has a toggle, and which cannot be answered from behind that toggle.
  */
-import { db } from '$lib/server/db';
-import { audioRelease, audioTrack, releasePurchase } from '$lib/server/db/schema/audio';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { audioRelease, audioTrack, releasePurchase } from '#lib/server/db/schema/audio.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '$lib/config';
+import { DomainError } from '#lib/server/domain-error.js';
+import { RADIO_MIN_TRACK_MS, RADIO_MAX_TRACK_MS } from '#lib/config.js';
 import { currentRadioAttestation, radioAttested } from './radio-attestation';
 import { releaseAggregates } from './audio-service';
-import { calculateProcessingFee } from '$lib/finance/fees';
+import { calculateProcessingFee } from '#lib/finance/fees.js';
 
 export class StaffReleaseNotFoundError extends DomainError {
 	readonly httpStatus = 404;
@@ -237,7 +237,7 @@ export type StaffSaleRow = {
  * here is the difference between "the buyer never paid" and "we lost the
  * webhook", and hiding it would leave staff answering that question blind.
  */
-export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
+export async function recentSales(limit = 50, releaseId?: string): Promise<StaffSaleRow[]> {
 	const rows = await db
 		.select({
 			purchaseId: releasePurchase.purchaseId,
@@ -255,6 +255,7 @@ export async function recentSales(limit = 50): Promise<StaffSaleRow[]> {
 		.from(releasePurchase)
 		.innerJoin(audioRelease, eq(audioRelease.id, releasePurchase.releaseId))
 		.innerJoin(group, eq(group.id, audioRelease.groupId))
+		.where(releaseId ? eq(releasePurchase.releaseId, releaseId) : undefined)
 		.orderBy(desc(releasePurchase.createdAt), desc(releasePurchase.id))
 		.limit(limit);
 
@@ -334,17 +335,6 @@ export async function setRadioExclusion(releaseId: string, excluded: boolean, re
 			updatedAt: new Date()
 		})
 		.where(eq(audioRelease.id, releaseId))
-		.returning();
-	if (!row) throw new StaffReleaseNotFoundError();
-	return row;
-}
-
-/** The same, for one recording rather than a whole record. */
-export async function setTrackRadioExclusion(trackId: string, excluded: boolean) {
-	const [row] = await db
-		.update(audioTrack)
-		.set({ radioExcludedAt: excluded ? new Date() : null, updatedAt: new Date() })
-		.where(eq(audioTrack.id, trackId))
 		.returning();
 	if (!row) throw new StaffReleaseNotFoundError();
 	return row;

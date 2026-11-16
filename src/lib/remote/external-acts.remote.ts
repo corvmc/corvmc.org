@@ -1,16 +1,20 @@
 import { z } from 'zod';
+import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireCapability } from '$lib/server/authorization';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import {
 	claimExternalAct,
 	createExternalAct,
-	listExternalActs
-} from '$lib/server/directory/entry-service';
-import { listCreditInDirectory } from '$lib/server/event/event-service';
-import { searchAskableEntries } from '$lib/server/production/artifact-request-service';
+	listExternalActs,
+	searchOutsideActs
+} from '#lib/server/directory/entry-service.js';
+import { searchBandsByName } from '#lib/server/band/band-service.js';
+import { getCreditEventId, listCreditInDirectory } from '#lib/server/event/event-service.js';
+import { searchAskableEntries } from '#lib/server/production/artifact-request-service.js';
 
 /**
  * Any listing by name, including hidden external ones, for commissioning an
@@ -35,6 +39,27 @@ export const searchAskableListings = query(z.string().max(SHORT_TEXT_MAX), async
  * today, and the risk a flag would manage — a half-built surface reaching
  * members — does not exist when nothing reaches members at all.
  */
+
+/**
+ * The staff bill's search (#2782): member bands and outside acts, so an act
+ * already on file is picked rather than typed as a second one. Guarded by the
+ * listing, since outside acts are staff records.
+ */
+export const searchBillActs = query(
+	z.object({ eventId: z.string().min(1), q: z.string().max(SHORT_TEXT_MAX) }),
+	async ({ eventId, q }) => {
+		await requireListingWriter(eventId);
+		if (q.trim().length < 2) return [];
+		const [bands, acts] = await Promise.all([
+			searchBandsByName(q.trim()),
+			searchOutsideActs(q.trim())
+		]);
+		return [
+			...bands.map((b) => ({ id: b.id, name: b.name, kind: 'band' as const })),
+			...acts.map((a) => ({ id: a.id, name: a.name, kind: 'act' as const }))
+		];
+	}
+);
 
 /** Twenty-five fits a screen without scrolling the search box away. */
 const ACTS_PAGE_SIZE = 25;
@@ -117,7 +142,11 @@ export const claimStaffExternalAct = form(
 export const listActInDirectory = form(
 	z.object({ eventBandId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('event.manage');
+		requireUser();
+		// The show's booking committee lists its own bill's acts (#2780).
+		const eventId = await getCreditEventId(data.eventBandId);
+		if (!eventId) error(404, 'Not found');
+		await requireListingWriter(eventId);
 		try {
 			const entryId = await listCreditInDirectory(data.eventBandId);
 			return { success: true, entryId };

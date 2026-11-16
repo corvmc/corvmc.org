@@ -1,20 +1,22 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { formatDollars } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { formatDollars, formatMonthDayYear } from '#lib/utils/format.js';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { DOLLARS_PER_UNIT } from '$lib/config';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { DOLLARS_PER_UNIT } from '#lib/config.js';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import type { SubscriptionInfo } from '#lib/server/db/schema/finance.js';
 	import SubscriptionForm from './SubscriptionForm.svelte';
-	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
-	import type { RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
+	import type { RemoteFormInput } from '$app/server';
 	import type { ComponentProps } from 'svelte';
 
 	let {
@@ -43,57 +45,69 @@
 	const feeAmount = $derived(
 		formatDollars(calculateTotalWithFeeCoverage(amountPerMonth * 100).feeCents)
 	);
-	const nextBilling = $derived(
-		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+	const nextBilling = $derived(formatMonthDayYear(subscription.currentPeriodEnd));
 </script>
 
-<Card>
+<Card testid="contribution">
 	<CardBody>
 		<div class="flex items-center gap-4">
 			<div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
 				<IconCreditCard size={24} class="text-primary" />
 			</div>
 			<div>
-				<h3 class="text-xl font-semibold">Your Contribution</h3>
-				<p class="text-muted">Manage your monthly support</p>
+				<h3 class="text-xl font-semibold">
+					{m.member_membership_contribution_card_contribution_title()}
+				</h3>
+				<p class="text-muted">
+					{m.member_membership_contribution_card_manage_monthly_support_text()}
+				</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex items-center justify-between rounded-lg bg-base-200/50 p-4">
 			<div>
 				<div class="flex items-center gap-2">
-					<span class="text-3xl font-bold">${amountPerMonth}/month</span>
+					<span class="text-3xl font-bold"
+						>{m.member_membership_contribution_card_month_text({ amountPerMonth })}</span
+					>
 					{#if subscription.coveringFees}
-						<Badge variant="secondary">+ ${feeAmount} fees covered</Badge>
+						<Badge variant="secondary"
+							>{m.member_membership_contribution_card_fees_covered_label({ feeAmount })}</Badge
+						>
 					{/if}
 				</div>
-				<p class="mt-1 text-muted">Next bill {nextBilling}</p>
+				<p class="mt-1 text-muted">
+					{m.member_membership_contribution_card_next_bill_text({ nextBilling })}
+				</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
 			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
-				>Modify Amount</Button
+				>{m.member_membership_contribution_card_modify_amount_label()}</Button
 			>
 			<Action
 				action={cancelAction}
-				label="Cancel Membership"
-				modalTitle="Cancel Membership"
+				label={m.member_membership_contribution_card_label()}
+				modalTitle={m.member_membership_contribution_card_title()}
 				variant="error"
 				size="sm"
 				outline
-				onsuccess={() => toast.success('Membership cancelled')}
+				onsuccess={() =>
+					toast.success(m.member_membership_contribution_card_membership_cancelled_toast())}
 			>
 				{#snippet form()}
 					<p class="py-4">
-						Your benefits — including <strong>{subscription.quantity} free practice hours</strong> —
-						stay active until <strong>{nextBilling}</strong>, and you can pick it back up any time
-						before then.
+						<ParaglideMessage
+							message={m.member_membership_contribution_card_benefits_including_stay_text}
+							inputs={{
+								quantity: subscription.quantity,
+								nextBilling
+							}}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}{#snippet strong2({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/snippet}
 			</Action>
@@ -101,7 +115,7 @@
 	</CardBody>
 </Card>
 
-<Modal bind:open={modalOpen} title="Update Contribution">
+<Modal bind:open={modalOpen} title={m.member_update_contribution_title()}>
 	<SubscriptionForm
 		mode="modify"
 		currentAmount={amountPerMonth}
@@ -109,7 +123,7 @@
 		remote={updateRemote}
 		onsuccess={() => {
 			modalOpen = false;
-			toast.success('Contribution updated');
+			toast.success(m.member_membership_contribution_card_contribution_updated_toast());
 		}}
 	/>
 </Modal>

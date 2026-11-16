@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cancelReservation } from '$lib/remote/reservations.remote';
-	import type { Reservation } from '$lib/server/reservation';
+	import { refreshAll } from '$app/navigation';
+	import { cancelReservation } from '#lib/remote/reservations.remote.js';
+	import type { Reservation } from '#lib/server/reservation/index.js';
 
 	let {
 		reservation,
@@ -31,25 +32,25 @@
 
 <Action
 	action={cancelReservation}
-	label="Cancel"
-	modalTitle="Cancel Reservation"
+	label={m.actions_cancel_reservation_label()}
+	modalTitle={m.actions_cancel_reservation_modal_title()}
 	submitVariant="error"
-	successToast="Cancelled"
+	successToast={m.actions_cancelled_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Are you sure you want to cancel this reservation?</p>
+		<p class="text-sm">{m.actions_cancel_reservation_sure_want_cancel_reservation_text()}</p>
 		{#if showReasonInput}
 			<input
 				{...fields.reason.as('text')}
-				placeholder="Reason (optional)"
+				placeholder={m.actions_cancel_reservation_placeholder()}
 				class="input w-full input-sm"
 			/>
 		{/if}

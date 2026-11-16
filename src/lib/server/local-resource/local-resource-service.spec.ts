@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
+import { localResourceStatuses } from '#lib/config.js';
 
 /**
  * The local resources directory. What is worth pinning: the public read filters
@@ -36,7 +37,7 @@ const nextSelect = () => (selectResults.length > 0 ? selectResults.shift()! : []
 const dialect = new SQLiteSyncDialect();
 const renderWhere = (index: number) => dialect.sqlToQuery(whereArgs[index] as SQL);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(nextSelect)),
 		insert: vi.fn(() => ({
@@ -59,7 +60,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/event-bus/index.js', () => ({ domainEvents: { emit } }));
 
 const svc = await import('./local-resource-service');
 
@@ -143,6 +144,26 @@ describe('telling the submitter the outcome (#1498)', () => {
 
 		expect(emit).not.toHaveBeenCalled();
 	});
+
+	it('stays quiet when a published listing is taken down (#2789)', async () => {
+		selectResults = [
+			[{ id: 'lr-1', status: 'published', name: 'X', submitterEmail: 't@x.example' }]
+		];
+
+		await svc.rejectResource('lr-1', 'Closed for good', 'staff-1');
+
+		expect(emit).not.toHaveBeenCalled();
+	});
+});
+
+describe('tellsSubmitter', () => {
+	const told = localResourceStatuses.flatMap((from) =>
+		localResourceStatuses.filter((to) => svc.tellsSubmitter(from, to)).map((to) => `${from}>${to}`)
+	);
+
+	it('answers a pending tip, and a listing after a return, and nothing else', () => {
+		expect(told.sort()).toEqual(['pending>published', 'pending>rejected', 'rejected>published']);
+	});
 });
 
 describe('listPublishedByCategory', () => {
@@ -174,18 +195,19 @@ describe('listPublishedByCategory', () => {
 });
 
 describe('the tips queue (#1566)', () => {
-	it('lists pending, undeleted tips with who sent them', async () => {
+	it('is the staff list filtered to pending, with who sent each', async () => {
 		const tip = {
 			id: 'lr-9',
 			name: 'Fret Shop',
-			categoryName: 'Shops',
+			status: 'pending',
 			website: null,
+			categoryName: 'Shops',
 			submitterEmail: 'fan@example.com',
 			createdAt: new Date('2026-09-20T12:00:00Z')
 		};
 		selectResults = [[tip]];
 
-		expect(await svc.listTips()).toEqual([tip]);
+		expect(await svc.listResourcesForStaff({ status: 'pending' })).toEqual([tip]);
 
 		const { sql, params } = renderWhere(0);
 		expect(sql).toContain('"local_resource"."status" = ?');

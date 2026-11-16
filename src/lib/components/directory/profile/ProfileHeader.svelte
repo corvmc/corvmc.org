@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 
 	export type ProfilePill = { label: string; variant?: 'solid' | 'warm' };
 
@@ -57,7 +58,7 @@
 		{#if primaryAction}
 			<Button href={primaryAction.href} variant="primary" size="sm">{primaryAction.label}</Button>
 		{/if}
-		<ShareButton title="Copy link to this profile" url={shareUrl} />
+		<ShareButton title={m.directory_profile_profile_header_title()} url={shareUrl} />
 	</div>
 </header>
 

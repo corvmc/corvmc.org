@@ -1,23 +1,25 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { relativeDay } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { relativeDay } from '#lib/utils/format.js';
 	import {
 		classifiedKindLabel,
 		classifiedCategoryLabels,
 		classifiedVisibilityLabels,
 		type ClassifiedVisibility
-	} from '$lib/config';
-	import { getStaffClassifieds } from '$lib/remote/classifieds.remote';
+	} from '#lib/config.js';
+	import { getStaffClassifieds } from '#lib/remote/classifieds.remote.js';
 
 	// Opens on what is waiting for staff: nothing in it is visible to members.
 	let tab = $state<ClassifiedVisibility>('pending_review');
@@ -35,10 +37,9 @@
 	}));
 </script>
 
-<PageHeader title="Classifieds" subtitle="Staff" />
-
-<PageContent>
+<PageHeader title={m.staff_classifieds_title()} subtitle={m.staff_staff_body()}>
 	<TabBar
+		collapse
 		{tabs}
 		active={tab}
 		onchange={(k) => {
@@ -46,7 +47,9 @@
 			page = 1;
 		}}
 	/>
+</PageHeader>
 
+<PageContent>
 	<FilterBar
 		activeCount={searchDebounced ? 1 : 0}
 		onclear={() => {
@@ -58,7 +61,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search posts..."
+				placeholder={m.staff_classifieds_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -69,22 +72,27 @@
 
 	{#if tab === 'under_review'}
 		<p class="text-muted">
-			Reported posts are decided in
-			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>.
+			<ParaglideMessage
+				message={m.staff_classifieds_reported_posts_decided_text}
+				inputs={{ staff_content_flags: m.staff_content_flags_text() }}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/if}
 
-	<DataList {result} empty="No posts here" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_classifieds_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Post</th>
-					<th>Posted by</th>
-					<th class="col-extra whitespace-nowrap">Posted</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_classifieds_post_label()}</th>
+					<th>{m.staff_classifieds_posted_by_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/classifieds/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/classifieds/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.displayStatus} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>

@@ -1,6 +1,6 @@
 <!--
 	Test harness for a header with more actions than a phone row holds, shaped like
-	/staff/projects/[id] (#1910). `inline` passes all four as children, the way a
+	/staff/tasks/projects/[id] (#1910). `inline` passes all four as children, the way a
 	page without a `menu` does; `folded` splits them into primary, children and menu.
 -->
 <script lang="ts">
@@ -11,22 +11,37 @@
 
 	let { shape }: { shape: 'inline' | 'folded' } = $props();
 
-	const parent = { label: 'Projects', href: '/staff/projects' } as const;
+	const parent = { label: 'Projects', href: '/staff/tasks/projects' } as const;
 </script>
 
 {#snippet editProject()}
-	<Action action={async () => undefined} label="Edit project" confirm="Edit it?" />
+	<Action
+		action={async () => undefined}
+		label="Edit project"
+		confirm="Edit it?"
+		data-testid="edit-project"
+	/>
 {/snippet}
 
 {#snippet archive()}
-	<Action action={async () => undefined} label="Archive" confirm="Archive it?" />
+	<Action
+		action={async () => undefined}
+		label="Archive"
+		confirm="Archive it?"
+		data-testid="archive"
+	/>
 {/snippet}
 
 <Tooltip.Provider delayDuration={300}>
 	{#if shape === 'inline'}
 		<PageHeader title="Folk Circle" subtitle="Events committee" {parent} documentTitle={null}>
-			<Button variant="default" href="/budget">Budget</Button>
-			<Action action={async () => undefined} label="Apply duty list" confirm="Apply it?" />
+			<Button variant="default" href="/budget" data-testid="budget">Budget</Button>
+			<Action
+				action={async () => undefined}
+				label="Apply duty list"
+				confirm="Apply it?"
+				data-testid="apply-duty-list"
+			/>
 			{@render editProject()}
 			<Button variant="ghost" shape="square" aria-label="More">•••</Button>
 		</PageHeader>
@@ -39,12 +54,13 @@
 			primary={editProject}
 			menu={archive}
 		>
-			<Button variant="default" href="/budget">Budget</Button>
+			<Button variant="default" href="/budget" data-testid="budget">Budget</Button>
 			<Action
 				action={async () => undefined}
 				label="Apply duty list"
 				variant="default"
 				confirm="Apply it?"
+				data-testid="apply-duty-list"
 			/>
 		</PageHeader>
 	{/if}

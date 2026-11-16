@@ -1,23 +1,26 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { getFlagDetail, resolveFlag } from '$lib/remote/flags.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { entityLabels } from '$lib/terms';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
+	import { getFlagDetail, resolveFlag } from '#lib/remote/flags.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { entityLabels } from '#lib/terms.js';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import AppealCard from './AppealCard.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let flag = $derived(await getFlagDetail(id));
 
 	// `flag.entityHref` is the server's own answer, which this page used to
@@ -49,112 +52,129 @@
 	// The button says what it will do, because it is the only thing read.
 	const resolveLabel = $derived(
 		resolution === 'resolved'
-			? 'Resolve — action taken'
+			? m.staff_flags_id_resolve_action_taken_label()
 			: resolution === 'dismissed'
-				? 'Dismiss — no action'
-				: 'Choose an outcome first'
+				? m.staff_flags_id_dismiss_no_action_label()
+				: m.staff_flags_id_choose_outcome_first_label()
 	);
 	let notes = $state('');
 </script>
 
-<PageHeader width="3xl" subtitle="Content Flag" title={flag.entityLabel}>
+<PageHeader width="3xl" subtitle={m.staff_flags_id_subtitle_body()} title={flag.entityLabel}>
 	<StatusBadge status={flag.status} label />
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Report">
+		<InfoCard title={m.staff_report_title()}>
 			<DefinitionList>
-				<Fact label="Type">{entityLabels[flag.target.type].one}</Fact>
+				<Fact label={m.staff_type_label()}>{entityLabels[flag.target.type].one}</Fact>
 
-				<Fact label="Content">
+				<Fact label={m.staff_content_label()}>
 					<EntityChip ref={flag.target} />
 				</Fact>
 
-				<Fact label="Reason">{flag.reason}</Fact>
+				<Fact label={m.staff_reason_label()}>{flag.reason}</Fact>
 
 				{#if flag.description}
-					<Fact label="Details" wrap>{flag.description}</Fact>
+					<Fact label={m.staff_details_label()} wrap>{flag.description}</Fact>
 				{/if}
 
-				<Fact label={flag.origin === 'staff_action' ? 'Staff action by' : 'Reported by'}>
+				<Fact
+					label={flag.origin === 'staff_action'
+						? m.staff_flags_id_staff_action_by_label()
+						: m.staff_flags_id_reported_by_label()}
+				>
 					{#if flag.reportedByName}
 						{flag.reportedByName} <span class="opacity-60">({flag.reportedByEmail})</span>
 					{:else}
-						Anonymous visitor
+						{m.staff_flags_id_anonymous_visitor_text()}
 					{/if}
 				</Fact>
 
-				<Fact label="Reported">{formatDateTime(flag.createdAt)}</Fact>
+				<Fact label={m.staff_flags_id_reported_label()}>{formatDateTime(flag.createdAt)}</Fact>
 			</DefinitionList>
 		</InfoCard>
 
 		{#if flag.threadContext}
-			<InfoCard title="Conversation">
+			<InfoCard title={m.staff_flags_id_conversation_title()}>
 				<p class="mb-3 text-muted">
-					A private conversation between two members. It is not in the inbox and has no page of its
-					own — this report is what makes it readable.
+					{m.staff_flags_id_private_conversation_between_two_members_text()}
 				</p>
 				<!-- `DefinitionList`, like the two cards further up this same page. -->
 				<DefinitionList>
-					<Fact label="Between" class="flex flex-wrap gap-2">
+					<Fact label={m.staff_flags_id_between_label()} class="flex flex-wrap gap-2">
 						{#each flag.threadContext.participants as p (p.userId)}
-							<a class="link" href={resolve(`/staff/members/${p.userId}`)}>
-								{p.name}{#if p.isReporter}<span class="ml-1 opacity-60">(reported it)</span>{/if}
+							<a class="link" href={resolve(`staff/members/${p.userId}`)}>
+								{p.name}{#if p.isReporter}<span class="ml-1 opacity-60"
+										>{m.staff_flags_id_reported_2_text()}</span
+									>{/if}
 							</a>
 						{/each}
 					</Fact>
 
-					<Fact label="Messages">{flag.threadContext.messageCount}</Fact>
-					<Fact label="Started">{formatDateTime(flag.threadContext.createdAt)}</Fact>
+					<Fact label={m.staff_flags_id_messages_label()}>{flag.threadContext.messageCount}</Fact>
+					<Fact label={m.staff_flags_id_started_label()}
+						>{formatDateTime(flag.threadContext.createdAt)}</Fact
+					>
 				</DefinitionList>
 
 				<div class="mt-4">
-					<ThreadTimeline messages={flag.threadContext.messages} viewerUserId={reporterId} />
+					<ThreadTimeline
+						messages={flag.threadContext.messages}
+						channel="direct"
+						viewerUserId={reporterId}
+					/>
 				</div>
 			</InfoCard>
 		{/if}
 
 		{#if flag.eventContext}
-			<InfoCard title="Event details">
+			<InfoCard title={m.staff_flags_id_event_details_title()}>
 				<DefinitionList>
-					<Fact label="Title" class="font-medium">{flag.eventContext.title}</Fact>
+					<Fact label={m.staff_title_label()} class="font-medium">{flag.eventContext.title}</Fact>
 
-					<Fact label="Date">{formatDateTime(flag.eventContext.startsAt)}</Fact>
+					<Fact label={m.staff_date_label()}>{formatDateTime(flag.eventContext.startsAt)}</Fact>
 
 					{#if flag.eventContext.location}
-						<Fact label="Venue">{flag.eventContext.location}</Fact>
+						<Fact label={m.staff_venue_label()}>{flag.eventContext.location}</Fact>
 					{/if}
 
-					<Fact label="By">
+					<Fact label={m.staff_by_2_label()}>
 						{#if flag.eventBandRef}
 							<EntityChip ref={flag.eventBandRef} />
 						{:else}
-							CMC
+							{m.staff_flags_id_cmc_text()}
 						{/if}
 					</Fact>
 
-					<Fact label="Status"><StatusBadge status={flag.eventContext.status} label /></Fact>
+					<Fact label={m.staff_status_label()}
+						><StatusBadge status={flag.eventContext.status} label /></Fact
+					>
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} variant="default" size="sm" outline>View public listing</Button>
+					<Button href={entityHref} variant="default" size="sm" outline
+						>{m.staff_flags_id_view_public_listing_label()}</Button
+					>
 				</div>
 			</InfoCard>
 		{/if}
 
-		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_resolution_title()} class="bg-base-200 shadow-none">
 			{#if flag.status === 'pending'}
 				<p class="mb-3 text-muted">
-					Review the reported content, then mark this flag resolved (action taken) or dismissed (no
-					action needed).
+					{m.staff_flags_id_review_reported_content_then_mark_text()}
 				</p>
 				<div class="flex gap-2">
-					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline
+						>{m.staff_flags_id_view_content_label()}</Button
+					>
 					<Action
 						action={resolveFlag}
-						label="Resolve / Dismiss"
-						modalTitle="Resolve or dismiss this report"
+						data-testid="resolve-flag"
+						label={m.staff_flags_id_resolve_dismiss_label()}
+						modalTitle={m.staff_flags_id_modal_title()}
 						submitLabel={resolveLabel}
-						successToast="Flag updated"
+						successToast={m.staff_flags_id_success_toast()}
 						variant="primary"
 						size="sm"
 						onsuccess={() => void getFlagDetail(id).refresh()}
@@ -163,19 +183,23 @@
 							<input {...fields.flagId.as('hidden', id)} />
 							<div class="space-y-3">
 								<label class="fieldset w-full">
-									<span class="fieldset-legend">Resolution</span>
+									<span class="fieldset-legend">{m.staff_resolution_label()}</span>
 									<Select
 										class="w-full"
 										{...fields.resolution.as('select')}
 										bind:value={resolution}
 									>
-										<option value="" disabled>Choose an outcome</option>
-										<option value="resolved">Resolved — action taken</option>
-										<option value="dismissed">Dismissed — no action needed</option>
+										<option value="" disabled>{m.staff_flags_id_choose_outcome_label()}</option>
+										<option value="resolved"
+											>{m.staff_flags_id_resolved_action_taken_label()}</option
+										>
+										<option value="dismissed"
+											>{m.staff_flags_id_dismissed_no_action_needed_label()}</option
+										>
 									</Select>
 								</label>
 								<label class="fieldset w-full">
-									<span class="fieldset-legend">Notes (optional)</span>
+									<span class="fieldset-legend">{m.staff_flags_id_notes_optional_label()}</span>
 									<textarea
 										class="textarea w-full"
 										rows="3"
@@ -188,8 +212,7 @@
 									     standing, and a staffer shouldn't discover that
 									     afterwards. -->
 									<p class="text-muted text-wrap">
-										Resolving this also means the member who posted it has their future listings
-										checked by staff before they publish. Dismissing changes nothing.
+										{m.staff_flags_id_resolving_also_means_member_who_text()}
 									</p>
 								{/if}
 								{#if flag.entityType === 'suggestion'}
@@ -198,11 +221,9 @@
 									     and it also decides whether their post ever comes back. -->
 									<p class="text-muted text-wrap">
 										{#if resolution === 'resolved'}
-											Resolving keeps this suggestion off the board and means the member who posted
-											it has their future suggestions checked by staff first.
+											{m.staff_flags_id_resolving_keeps_suggestion_off_board_text()}
 										{:else}
-											Dismissing puts the suggestion straight back on the board. The member's
-											standing is unchanged.
+											{m.staff_flags_id_dismissing_puts_suggestion_straight_back_text()}
 										{/if}
 									</p>
 								{/if}
@@ -211,12 +232,9 @@
 										<input class="checkbox checkbox-sm" {...fields.unpublishEvent.as('checkbox')} />
 										<span class="fieldset-legend text-wrap">
 											{#if flag.eventContext?.source === 'community'}
-												Also unpublish this listing (removes it from the public gig guide and takes
-												its poster offline until it is republished; the member is notified with your
-												note)
+												{m.staff_flags_id_also_unpublish_listing_removes_from_label()}
 											{:else}
-												Also unpublish this event (removes it from the public gig guide; the band's
-												admins are notified with your note)
+												{m.staff_flags_id_also_unpublish_event_removes_from_label()}
 											{/if}
 										</span>
 									</label>
@@ -227,18 +245,22 @@
 				</div>
 			{:else}
 				<DefinitionList>
-					<Fact label="Outcome"><StatusBadge status={flag.status} label /></Fact>
+					<Fact label={m.staff_flags_id_outcome_label()}
+						><StatusBadge status={flag.status} label /></Fact
+					>
 
 					{#if flag.resolutionNotes}
-						<Fact label="Notes" wrap>{flag.resolutionNotes}</Fact>
+						<Fact label={m.staff_notes_label()} wrap>{flag.resolutionNotes}</Fact>
 					{/if}
 
 					{#if flag.resolvedAt}
-						<Fact label="Resolved">{formatDateTime(flag.resolvedAt)}</Fact>
+						<Fact label={m.staff_resolved_label()}>{formatDateTime(flag.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
 				<div class="mt-3">
-					<Button href={entityHref} variant="default" size="sm" outline>View content</Button>
+					<Button href={entityHref} variant="default" size="sm" outline
+						>{m.staff_flags_id_view_content_label()}</Button
+					>
 				</div>
 			{/if}
 		</InfoCard>

@@ -26,17 +26,17 @@ vi.mock('$app/server', () => ({
 // The member listing moved to `directory_entry` in phase 3a; the contact
 // details this spec guards moved with it, from `user.directoryContact` to
 // `directory_entry.contact`.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		query: {
 			directoryEntry: { findFirst: entryFindFirst, findMany: vi.fn() }
 		}
 	}
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/authorization', () => ({ requireUser: () => ({ id: 'u1' }) }));
-vi.mock('$lib/server/group/group-context', () => ({ requireGroupRole: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) => k }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({ requireUser: () => ({ id: 'u1' }) }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireGroupRole: vi.fn() }));
 
 import { getPublicMemberProfile } from './directory.remote';
 

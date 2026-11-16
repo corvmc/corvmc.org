@@ -76,6 +76,12 @@ describe('toHref', () => {
 		expect(toHref('/x', { q: text() }, { q: 'a b&c' })).toBe('/x?q=a%20b%26c');
 	});
 
+	it('appends to a path that fixes a view in its own query', () => {
+		const path = '/staff/members?role=teacher';
+		expect(toHref(path, { q: text() }, { q: '' })).toBe(path);
+		expect(toHref(path, { q: text() }, { q: 'ann' })).toBe(`${path}&q=ann`);
+	});
+
 	it('round-trips through parse', () => {
 		const values = { view: 'rejected' as const, source: 'cmc' as const, page: 7 };
 		const url = new URL(href(values), 'https://example.test');

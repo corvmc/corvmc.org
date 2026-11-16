@@ -1,19 +1,20 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { invalidateAll } from '$app/navigation';
-	import { formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { refreshAll } from '$app/navigation';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		deleteAnnouncement,
 		pinAnnouncement,
 		publishAnnouncement
-	} from '$lib/remote/announcements.remote';
+	} from '#lib/remote/announcements.remote.js';
 	import AnnouncementComposer from './AnnouncementComposer.svelte';
-	import type { AnnouncementView } from '$lib/server/group/announcement-service';
+	import type { AnnouncementView } from '#lib/server/group/announcement-service.js';
 
 	/**
 	 * A group's announcements, wherever they are shown.
@@ -51,7 +52,9 @@
 
 {#if announcements.length === 0}
 	<EmptyState
-		description={canManage ? 'Nothing posted yet. Write the first one.' : 'Nothing posted yet.'}
+		description={canManage
+			? m.groups_announcement_list_nothing_posted_yet_write_first_body()
+			: m.groups_announcement_list_nothing_posted_yet_body()}
 	/>
 {:else}
 	<div class="grid grid-cols-1 gap-3">
@@ -62,12 +65,14 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<h3 class="grow text-base font-semibold">{post.title}</h3>
 						{#if post.pinned}
-							<Badge variant="primary">Pinned</Badge>
+							<Badge variant="primary">{m.groups_announcement_list_pinned_label()}</Badge>
 						{/if}
 						{#if draft}
 							<!-- The one thing an author must not misread. A draft looks
 							     exactly like a post until you notice nobody replied. -->
-							<Badge variant="warning">Draft</Badge>
+							<Badge variant="warning" data-testid="announcement-draft"
+								>{m.groups_announcement_list_draft_label()}</Badge
+							>
 						{/if}
 					</div>
 
@@ -82,15 +87,23 @@
 						{#if post.author}
 							<EntityIdentity ref={post.author} size="sm" />
 						{:else}
-							<span>Former member</span>
+							<span>{m.groups_former_member_text()}</span>
 						{/if}
 						<span>
 							{draft
-								? `Saved ${formatDateShort(post.updatedAt)}`
-								: `Posted ${formatDateShort(post.publishedAt!)}`}
+								? m.groups_announcement_list_saved_text({
+										formatDateShort: formatDateShort(post.updatedAt)
+									})
+								: m.groups_announcement_list_posted_text({
+										formatDateShort: formatDateShort(post.publishedAt!)
+									})}
 						</span>
 						{#if post.recipientCount !== null}
-							<span>· {post.recipientCount} notified</span>
+							<span
+								>{m.groups_announcement_list_notified_text({
+									recipientCount: post.recipientCount
+								})}</span
+							>
 						{/if}
 					</div>
 
@@ -99,14 +112,17 @@
 							{#if draft}
 								<Action
 									action={publishAnnouncement.for(post.id)}
-									label="Publish"
-									modalTitle="Publish announcement"
-									submitLabel="Publish"
-									confirm="Publish “{post.title}”? Everyone on the roster can read it from then on, and publishing cannot be undone."
-									successToast="Published"
+									data-testid="publish-announcement"
+									label={m.groups_announcement_list_publish_label()}
+									modalTitle={m.groups_announcement_list_publish_announcement_title()}
+									submitLabel={m.groups_announcement_list_publish_label()}
+									confirm={m.groups_announcement_list_publish_everyone_roster_can_read_body({
+										title: post.title
+									})}
+									successToast={m.groups_announcement_list_published_toast()}
 									variant="primary"
 									size="xs"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => refreshAll()}
 								>
 									{#snippet form()}
 										<input {...publishFields.groupId.as('hidden', groupId)} />
@@ -119,11 +135,15 @@
 
 							<Action
 								action={pinAnnouncement.for(post.id)}
-								label={post.pinned ? 'Unpin' : 'Pin'}
-								successToast={post.pinned ? 'Unpinned' : 'Pinned'}
+								label={post.pinned
+									? m.groups_announcement_list_unpin_label()
+									: m.groups_announcement_list_pin_label()}
+								successToast={post.pinned
+									? m.groups_announcement_list_unpinned_toast()
+									: m.groups_announcement_list_pinned_toast()}
 								variant="ghost"
 								size="xs"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => refreshAll()}
 							>
 								{#snippet form()}
 									<input {...pinFields.groupId.as('hidden', groupId)} />
@@ -134,15 +154,17 @@
 
 							<Action
 								action={deleteAnnouncement.for(post.id)}
-								label="Delete"
-								modalTitle="Delete announcement"
-								submitLabel="Delete"
-								confirm="Delete “{post.title}”? It comes off the list for everyone."
-								successToast="Deleted"
+								label={m.groups_delete_label()}
+								modalTitle={m.groups_announcement_list_delete_announcement_title()}
+								submitLabel={m.groups_delete_label()}
+								confirm={m.groups_announcement_list_delete_comes_off_list_everyone_body({
+									title: post.title
+								})}
+								successToast={m.groups_deleted_toast()}
 								variant="error"
 								size="xs"
 								outline
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => refreshAll()}
 							>
 								{#snippet form()}
 									<input {...deleteFields.groupId.as('hidden', groupId)} />

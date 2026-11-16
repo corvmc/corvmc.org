@@ -1,14 +1,15 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
-	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { bookAndPayReservation } from '#lib/remote/reservations.remote.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
-	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
-	import BookingConflict from '$lib/components/reservations/booking/BookingConflict.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
+	import BookingConflict from '#lib/components/reservations/booking/BookingConflict.svelte';
+	import PaymentDue, { type FeeGate } from '#lib/components/reservations/booking/PaymentDue.svelte';
 
 	const { fields } = bookAndPayReservation;
 
@@ -19,58 +20,55 @@
 	let {
 		isSustaining = false,
 		needsPhone = false,
+		feeGate,
 		onbooked
 	}: {
 		isSustaining?: boolean;
 		/** Member has no usable contact number on file — collect one before booking. */
 		needsPhone?: boolean;
+		/** Outstanding fees (#2859): one swaps the booking form for `PaymentDue`. */
+		feeGate?: FeeGate;
 		onbooked?: () => void;
 	} = $props();
 </script>
 
-<Action
-	action={bookAndPayReservation}
-	label="Reserve Space"
-	modalTitle="Book a Session"
-	noFooter
-	variant="primary"
-	maxWidth="max-w-sm"
-	onsuccess={async (result) => {
-		const r = result as {
-			reservationId?: string;
-			paid?: boolean;
-			confirmed?: boolean;
-			waitlisted?: boolean;
-			scheduled?: boolean;
-			confirmOpensAt?: string;
-			redirectUrl?: string;
-		};
-		if (r?.redirectUrl) {
-			await goToCheckout(r.redirectUrl);
-		} else {
-			if (r?.waitlisted) {
-				toast.info('The first instance is waitlisted because the slot is currently booked.');
+{#if feeGate?.state === 'refuse'}
+	<PaymentDue gate={feeGate} label={m.member_reserve_space_label()} data-testid="book-space">
+		{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
+	</PaymentDue>
+{:else}
+	<Action
+		action={bookAndPayReservation}
+		label={m.member_reserve_space_label()}
+		data-testid="book-space"
+		modalTitle={m.member_reservations_create_modal_modal_title()}
+		noFooter
+		variant="primary"
+		maxWidth="max-w-sm"
+		onsuccess={async (result) => {
+			const r = result as {
+				reservationId?: string;
+				paid?: boolean;
+				confirmed?: boolean;
+				waitlisted?: boolean;
+				redirectUrl?: string;
+			};
+			if (r?.redirectUrl) {
+				await goToCheckout(r.redirectUrl);
+			} else {
+				if (r?.waitlisted) {
+					toast.info(m.member_first_instance_waitlisted_because_slot_toast());
+				}
+				onbooked?.();
 			}
-			// Booked outside the window: held, with nothing priced (#2108). Saying so is the point:
-			// this outcome used to arrive as a 400 nobody rendered, over a held
-			// booking the member was never told about.
-			if (r?.scheduled) {
-				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
-				toast.info(
-					opens
-						? `Room held. Pay for it any time, or confirm it from ${opens}.`
-						: 'Room held. Pay for it any time, or confirm it closer to the date.'
-				);
-			}
-			onbooked?.();
-		}
-	}}
->
-	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
-	{#snippet form()}
-		<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
-		<ConfirmStep submitLabel="Book Session" />
-		<PaymentStep fields={{ coverFees: fields.coverFees }} />
-		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
-	{/snippet}
-</Action>
+		}}
+	>
+		{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
+		{#snippet form()}
+			<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
+			<ConfirmStep submitLabel={m.member_reservations_create_modal_submit_label()} />
+			<PaymentStep fields={{ coverFees: fields.coverFees }} />
+			<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
+		{/snippet}
+	</Action>
+{/if}

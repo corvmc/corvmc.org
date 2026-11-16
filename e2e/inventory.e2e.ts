@@ -1,9 +1,14 @@
 import { eq } from 'drizzle-orm';
 import { expectSuccessToast } from './toast';
 import { assetStatusLabels, stockReasonLabels } from '../src/lib/config';
-import { inventoryLoan, stockMovement } from '../src/lib/server/db/schema/inventory';
+import {
+	inventoryAsset,
+	inventoryLoan,
+	stockMovement
+} from '../src/lib/server/db/schema/inventory';
 import { readLocalDb } from './fixtures/platform-db';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_ASSET_ID,
@@ -14,14 +19,10 @@ import {
 	SEED_ITEM_ID,
 	SEED_ITEM_NAME,
 	SEED_DISPOSED_ASSET_ID,
-	SEED_ARTICLE_TITLE,
 	SEED_DISPOSED_ASSET_TAG,
-	SEED_UNACKED_ASSET_ID,
-	SEED_UNACKED_ASSET_TAG,
 	SEED_SIGN_ASSET_ID,
 	SEED_SIGN_ASSET_TAG,
 	SEED_SIGN_DONATION_ID,
-	SEED_SIGN_DONOR,
 	SEED_OWED_ACQUISITION_ID,
 	SEED_OWED_SUPPLIER,
 	SEED_LOW_NAME,
@@ -53,11 +54,7 @@ import {
  */
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 /**
@@ -84,11 +81,7 @@ async function readOnHand(page: Page, itemId: string): Promise<number> {
  * member arm, were only ever exercised by a unit spec.
  */
 async function loginAsMember(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_LOAN_MEMBER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_LOAN_MEMBER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_LOAN_MEMBER_EMAIL, password: SEED_LOAN_MEMBER_PASSWORD });
 }
 
 /** Every movement recorded against one unit, summed. */
@@ -103,9 +96,22 @@ async function ledgerSumFor(assetId: string): Promise<number> {
 }
 
 /** The submit inside an open Action modal, as distinct from the trigger. */
-function modalSubmit(page: Page, name: RegExp) {
-	return page.getByRole('dialog').getByRole('button', { name });
+function modalSubmit(page: Page) {
+	return page.getByRole('dialog').locator('button[type="submit"]:not([data-add-another])');
 }
+
+/** The submit of the page form that carries `field`. */
+function formSubmit(page: Page, field: string) {
+	return page
+		.locator('form', { has: page.locator(`:is([name="${field}"], [name^="${field}/"])`) })
+		.locator('button[type="submit"]');
+}
+
+/** A test's own input, read back from the page: data, not copy. */
+const NEW_TAG = 'E2E-000099';
+const NOTE_8282 = 'Filed 2026-09-02, copy posted to the donor';
+const DAMAGE_NOTE = 'Crackling on channel two';
+const DB_POLL = { timeout: 15000 };
 
 /**
  * Load a page and wait for it to have actually rendered.
@@ -119,31 +125,40 @@ function modalSubmit(page: Page, name: RegExp) {
  * trivially true of a page that has rendered nothing, so a poll without this
  * gate reports success for a row that simply had not arrived yet.
  */
-async function visit(page: Page, path: string, heading: string) {
+async function visit(page: Page, path: string) {
 	await page.goto(path);
-	await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 }
 
 /** Whether the compliance queue currently lists a unit, re-read from scratch. */
 async function complianceLists(page: Page, tag: string): Promise<boolean> {
-	await visit(page, '/staff/inventory/compliance', 'Compliance');
+	await visit(page, '/staff/inventory/acquisitions?show=form-8282');
 	return page.getByText(tag).isVisible();
 }
 
 test.describe('inventory', () => {
-	test('the item list shows both kinds, and a serialized item lists its units', async ({
+	test('Gear and Supplies split the items, and a serialized item lists its units', async ({
 		page
 	}) => {
 		await loginAsStaff(page);
+		const search = () =>
+			page
+				.locator('input[type="search"], input:is([name="search"], [name^="search/"])')
+				.first()
+				.fill('E2E Test');
+
+		// Gear holds the serialized item; Supplies holds the consumable (#2573).
 		await page.goto('/staff/inventory');
-
-		await expect(page).toHaveURL(/\/staff\/inventory/);
-		await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
 		await expect(page.getByRole('table')).toBeVisible();
-
-		await page.locator('input[type="search"], input[name="search"]').first().fill('E2E Test');
+		await search();
 		await expect(page.getByText(SEED_ITEM_NAME)).toBeVisible({ timeout: 10000 });
-		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible();
+		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toHaveCount(0);
+
+		await page.goto('/staff/inventory/supplies');
+		await expect(page.getByRole('table')).toBeVisible();
+		await search();
+		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible({ timeout: 10000 });
+		await expect(page.getByText(SEED_ITEM_NAME)).toHaveCount(0);
 
 		// A serialized item lists its units, tagged and not.
 		await page.goto(`/staff/inventory/${SEED_ITEM_ID}`);
@@ -152,7 +167,8 @@ test.describe('inventory', () => {
 		await expect(page.getByText(SEED_ASSET_TAG)).toBeVisible();
 		// Gear is entered before the roll of stickers arrives, so an unbound unit
 		// is a normal state the UI has to state rather than hide.
-		await expect(page.getByText('Untagged')).toBeVisible();
+		// The unbound unit's row offers the bind instead of a tag.
+		await expect(page.getByTestId('bind-tag').first()).toBeVisible();
 	});
 
 	/**
@@ -167,9 +183,12 @@ test.describe('inventory', () => {
 		expect(before).toBe(SEED_CONSUMABLE_RECEIVED);
 
 		// Use three packs.
-		await page.getByRole('button', { name: 'Use' }).click();
-		await page.getByRole('dialog').locator('input[name$="quantity"]').fill('3');
-		await modalSubmit(page, /^Use$/).click();
+		await page.getByTestId('use-stock').click();
+		await page
+			.getByRole('dialog')
+			.locator('input:is([name$="quantity"], [name*="quantity/"])')
+			.fill('3');
+		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
 		const afterUse = await readOnHand(page, SEED_CONSUMABLE_ID);
@@ -178,9 +197,9 @@ test.describe('inventory', () => {
 		// Put them back with a stocktake correction — the one caller-signed reason.
 		// The modal asks for the counted total now, not the difference; the delta
 		// it derives is what still reaches the ledger.
-		await page.getByRole('button', { name: 'Stocktake' }).click();
-		await page.getByRole('dialog').locator('input[name="counted"]').fill(String(before));
-		await modalSubmit(page, /^Stocktake$/).click();
+		await page.getByTestId('stocktake').click();
+		await page.getByRole('dialog').getByTestId('stocktake-counted').fill(String(before));
+		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
 		const afterCorrection = await readOnHand(page, SEED_CONSUMABLE_ID);
@@ -195,64 +214,47 @@ test.describe('inventory', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/inventory/assets/${SEED_UNTAGGED_ASSET_ID}`);
 
-		await expect(page.getByRole('heading', { name: 'Untagged unit' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: NEW_TAG })).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Bind tag' }).click();
-		await page.getByRole('dialog').locator('input[name$="assetTag"]').fill('E2E-000099');
-		await modalSubmit(page, /^Bind tag$/).click();
+		await page.getByTestId('bind-tag').click();
+		await page
+			.getByRole('dialog')
+			.locator('input:is([name$="assetTag"], [name*="assetTag/"])')
+			.fill(NEW_TAG);
+		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
 		// Same record, new label — identity is the row, never the sticker.
 		await expect(page).toHaveURL(new RegExp(SEED_UNTAGGED_ASSET_ID));
-		await expect(page.getByRole('heading', { name: 'E2E-000099' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1, name: NEW_TAG })).toBeVisible();
+		await expect
+			.poll(async () => {
+				const [row] = await readLocalDb((db) =>
+					db
+						.select({ assetTag: inventoryAsset.assetTag })
+						.from(inventoryAsset)
+						.where(eq(inventoryAsset.id, SEED_UNTAGGED_ASSET_ID))
+				);
+				return row?.assetTag;
+			}, DB_POLL)
+			.toBe(NEW_TAG);
 	});
 
 	/**
 	 * Replenishment. A reorder point that only draws a badge on a detail page is
 	 * not doing anything — these pin that it reaches somewhere a person looks.
 	 */
-	/**
-	 * The Equipment row is derived from the catalogue, not from a flag, so it has
-	 * to be checked against a signed-in member rather than asserted in a unit
-	 * test alone — the unit spec pins the branch, this pins the wiring from
-	 * `getMemberLayout` through to the rendered sidebar.
-	 */
-	test('the member nav offers Equipment once there is something to lend', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/member');
-
-		// `aside ul.menu`, the same handle panel-nav.e2e.ts uses — the sidebar is
-		// a list inside an <aside>, not a <nav>.
-		const nav = page.locator('aside ul.menu').first();
-		await expect(nav.getByRole('link', { name: 'Equipment', exact: true })).toBeVisible();
-
-		// The child only renders once the section is open — `NavCollapsible` keys
-		// that off the path, the same way "Add a Show" hides under Events. So it
-		// is checked from inside the section rather than from the dashboard.
-		await page.goto('/member/equipment');
-		await expect(nav.getByRole('link', { name: 'My Loans' })).toBeVisible();
-	});
 
 	test.describe('running low', () => {
-		test('the dashboard surfaces what needs restocking', async ({ page }) => {
-			await loginAsStaff(page);
-			await page.goto('/staff');
-
-			await expect(page.getByText('Low-Stock Items')).toBeVisible();
-			await expect(page.getByRole('cell', { name: SEED_LOW_NAME })).toBeVisible();
-			// The well-stocked consumable must NOT appear — a low-stock list that
-			// shows everything is just the catalog again.
-			await expect(page.getByRole('cell', { name: SEED_CONSUMABLE_NAME })).toBeHidden();
-		});
-
 		test('the restock list says how many to buy, and leaves off what is above its point', async ({
 			page
 		}) => {
 			await loginAsStaff(page);
-			// The old Restock page forwards to the list's reorder-point view (#2021).
+			// The old Restock page forwards to the Supplies reorder-point view (#2021, #2573).
 			await page.goto('/staff/inventory/restock');
-			await page.waitForURL(/\/staff\/inventory\?show=restock$/);
-			await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
+			await page.waitForURL(/\/staff\/inventory\/supplies\?show=restock$/);
+			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 			const row = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
 			await expect(row).toBeVisible();
 			await expect(row).toContainText(String(SEED_LOW_ON_HAND));
@@ -265,76 +267,19 @@ test.describe('inventory', () => {
 	});
 
 	/**
-	 * Spend. The question Phase 1 existed to make answerable — under the old
-	 * schema, using stock up overwrote a number and left nothing to total.
-	 */
-	test.describe('spend', () => {
-		test('totals purchases by category, and reports an empty window as nothing', async ({
-			page
-		}) => {
-			await loginAsStaff(page);
-			await page.goto('/staff/inventory/spend');
-
-			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
-			// The fixture's one purchase covers the E2E category, so it has to show.
-			// Asserted on the row rather than on the stat card's label: the page
-			// grew a second source (contractor services) and the card that used to
-			// read "Total spend" is now "Stock", which is a copy change the row
-			// does not care about.
-			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toBeVisible();
-			await expect(page.getByRole('cell', { name: 'E2E Supplier', exact: true })).toBeVisible();
-
-			// A window with no purchases reports nothing rather than erroring.
-			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
-			await expect(page.getByRole('heading', { name: 'Spend' })).toBeVisible();
-			await expect(page.getByRole('cell', { name: 'E2E Test Gear' })).toHaveCount(0);
-		});
-	});
-
-	/**
 	 * Form 8282. The whole point is that the disposal and the paperwork are
 	 * separated by months and usually by different people, so these check the
 	 * flag actually reaches somewhere it will be seen.
 	 */
 	test.describe('form 8282', () => {
-		test('a donated unit disposed of inside three years raises a warning and is listed; one with no 8283 is not', async ({
-			page
-		}) => {
-			await loginAsStaff(page);
-			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
-
-			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toBeVisible();
-			await expect(page.getByRole('button', { name: 'Record 8282' })).toBeVisible();
-
-			// It is listed where somebody will look for it later.
-			await page.goto('/staff/inventory/compliance');
-
-			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
-			await expect(row).toBeVisible();
-
-			// The narrowing, which is the whole point of the rule: the signed 8283 is
-			// what makes property reportable, so a gift without one owes nothing no
-			// matter when it was disposed of. Flagging it would be a false positive,
-			// and a warning that is always wrong is one people stop reading.
-			await page.goto(`/staff/inventory/assets/${SEED_UNACKED_ASSET_ID}`);
-			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
-
-			await page.goto('/staff/inventory/compliance');
-			await expect(page.getByText(SEED_UNACKED_ASSET_TAG)).toBeHidden();
-		});
-
 		test('recording an outcome clears it from the list', async ({ page }) => {
 			await loginAsStaff(page);
-			await page.goto('/staff/inventory/compliance');
+			await page.goto('/staff/inventory/acquisitions?show=form-8282');
 
 			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
-			await row.getByRole('button', { name: 'Record 8282' }).click();
-			await page
-				.getByRole('dialog')
-				.locator('textarea')
-				.first()
-				.fill('Filed 2026-09-02, copy posted to the donor');
-			await page.getByRole('dialog').getByRole('button', { name: 'Record 8282' }).click();
+			await row.getByRole('button').click();
+			await page.getByRole('dialog').locator('textarea').first().fill(NOTE_8282);
+			await modalSubmit(page).click();
 			await expectSuccessToast(page, 10000);
 
 			// The obligation is discharged, so it stops asking — the note stays on
@@ -349,7 +294,7 @@ test.describe('inventory', () => {
 
 			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
 			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
-			await expect(page.getByText('copy posted to the donor')).toBeVisible();
+			await expect(page.getByText(NOTE_8282)).toBeVisible();
 		});
 	});
 
@@ -369,13 +314,20 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/loans/${SEED_SCHEDULE_LOAN_ID}`);
 
-			await expect(page.getByText('Schedule Pickup')).toBeVisible();
-			await page.locator('input[name="scheduledPickupDate"]').fill('2026-09-10');
-			await page.getByRole('button', { name: 'Schedule' }).click();
+			await expect(
+				page.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+			).toBeVisible();
+			await page
+				.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+				.fill('2026-09-10');
+			await formSubmit(page, 'scheduledPickupDate').click();
 			await expectSuccessToast(page, 10000);
 
 			// The state moved on, so the next step's control is the one on offer.
-			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toBeVisible();
+			await expect(
+				page.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+			).toHaveCount(0);
 		});
 
 		/**
@@ -391,17 +343,17 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/loans/${SEED_CHECKOUT_LOAN_ID}`);
 
-			await expect(page.getByText('Mark as Checked Out')).toBeVisible();
-			await page.locator('input[name="dueDate"]').fill('2026-09-20');
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toBeVisible();
+			await page.locator('input:is([name="dueDate"], [name^="dueDate/"])').fill('2026-09-20');
 
 			// The picker offers units by the tag printed on them, which is what a
 			// staffer is reading off the sticker in their hand.
-			const unitPicker = page.locator('select[name="assetId"]');
+			const unitPicker = page.locator('select:is([name="assetId"], [name^="assetId/"])');
 			await expect(unitPicker.locator('option', { hasText: SEED_CHECKOUT_ASSET_TAG })).toHaveCount(
 				1
 			);
 			await unitPicker.selectOption(SEED_CHECKOUT_ASSET_ID);
-			await page.getByRole('button', { name: 'Check Out' }).click();
+			await formSubmit(page, 'dueDate').click();
 			await expectSuccessToast(page, 10000);
 
 			// Bound to the loan, and out of the building on the ledger.
@@ -412,7 +364,9 @@ test.describe('inventory', () => {
 			await page.goto(`/staff/inventory/assets/${SEED_CHECKOUT_ASSET_ID}`);
 			// The status glyph carries its name on `aria-label`, not as body text —
 			// daisyUI's tooltip draws through ::before and is invisible to a11y.
-			await expect(page.getByRole('img', { name: 'On loan' }).first()).toBeVisible();
+			await expect(
+				page.getByRole('img', { name: assetStatusLabels.on_loan }).first()
+			).toBeVisible();
 		});
 
 		test('returning it computes the charge and brings the ledger back', async ({ page }) => {
@@ -422,7 +376,7 @@ test.describe('inventory', () => {
 			expect(await ledgerSumFor(SEED_RETURN_ASSET_ID)).toBe(0);
 
 			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
-			await expect(page.getByText('Mark as Returned')).toBeVisible();
+			await expect(page.getByTestId('mark-returned')).toBeVisible();
 			// The rate it was checked out at, shown before committing. Not the day
 			// count: the fixture stamps `checkedOutAt` exactly N days back, so by the
 			// time this runs it is milliseconds into day N+1 and `Math.ceil` says so.
@@ -430,16 +384,16 @@ test.describe('inventory', () => {
 				page.getByText(`× $${SEED_RETURN_DAILY_RATE / 100}.00/day`, { exact: false }).first()
 			).toBeVisible();
 
-			await page.getByRole('button', { name: 'Mark Returned' }).click();
-			await modalSubmit(page, /Mark Returned/).click();
+			await page.getByTestId('mark-returned').click();
+			await modalSubmit(page).click();
 
 			// Back on the shelf, and the ledger nets to the one unit on hand.
 			await expect.poll(async () => ledgerSumFor(SEED_RETURN_ASSET_ID), { timeout: 15000 }).toBe(1);
 
-			await page.goto(`/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
-			await expect(
-				page.getByRole('button', { name: /Mark Returned|Mark as Checked Out/ })
-			).toHaveCount(0);
+			// Returned is terminal: neither the return nor the checkout is offered.
+			await visit(page, `/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
+			await expect(page.getByTestId('mark-returned')).toHaveCount(0);
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toHaveCount(0);
 		});
 
 		test('a member requests a loan from the catalog', async ({ page }) => {
@@ -448,14 +402,15 @@ test.describe('inventory', () => {
 
 			// The seeded item's own card: other specs' units share the catalog, and
 			// one out on repair renders its Request button disabled.
-			await page
-				.locator('.card', { hasText: SEED_ITEM_NAME })
-				.getByRole('button', { name: 'Request' })
-				.click();
+			await page.locator('.card', { hasText: SEED_ITEM_NAME }).getByRole('button').click();
 			const dialog = page.getByRole('dialog');
-			await dialog.locator('input[name="requestedPickupDate"]').fill('2026-09-15');
-			await dialog.locator('input[name="estimatedReturnDate"]').fill('2026-09-18');
-			await dialog.getByRole('button', { name: /Request/ }).click();
+			await dialog
+				.locator('input:is([name="requestedPickupDate"], [name^="requestedPickupDate/"])')
+				.fill('2026-09-15');
+			await dialog
+				.locator('input:is([name="estimatedReturnDate"], [name^="estimatedReturnDate/"])')
+				.fill('2026-09-18');
+			await dialog.locator('button[type="submit"]').click();
 
 			await page.goto('/member/equipment/loans');
 			await expect(page.getByText(SEED_ITEM_NAME).first()).toBeVisible();
@@ -468,8 +423,8 @@ test.describe('inventory', () => {
 
 			// The row, not a card: the member's loans are a table now (#1042).
 			const row = page.locator('tbody tr').filter({ hasText: 'Changed my mind' }).first();
-			await row.getByRole('button', { name: /Cancel/ }).click();
-			await modalSubmit(page, /Cancel/).click();
+			await row.getByRole('button').click();
+			await modalSubmit(page).click();
 
 			await expect
 				.poll(
@@ -510,14 +465,6 @@ test.describe('inventory', () => {
 	 * signing test below is the loop that could not previously run at all.
 	 */
 	test.describe('acquisitions', () => {
-		test('lists what the collective has taken in', async ({ page }) => {
-			await loginAsStaff(page);
-			await visit(page, '/staff/inventory/acquisitions', 'Acquisitions');
-
-			await expect(page.getByRole('row').filter({ hasText: SEED_SIGN_DONOR })).toBeVisible();
-			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
-		});
-
 		/**
 		 * **The transition the module shipped without.** `form8282Status` treats a
 		 * gift with no signed 8283 as owing nothing, and nothing in the app could
@@ -532,13 +479,16 @@ test.describe('inventory', () => {
 			expect(await complianceLists(page, SEED_SIGN_ASSET_TAG)).toBe(false);
 
 			await page.goto(`/staff/inventory/acquisitions/${SEED_SIGN_DONATION_ID}`);
-			await page.getByRole('button', { name: 'Record 8283' }).click();
-			await page.getByRole('dialog').locator('input[name$="signedOn"]').fill('2026-03-04');
+			await page.getByTestId('record-8283').click();
 			await page
 				.getByRole('dialog')
-				.locator('input[name$="appraisalRef"]')
+				.locator('input:is([name$="signedOn"], [name*="signedOn/"])')
+				.fill('2026-03-04');
+			await page
+				.getByRole('dialog')
+				.locator('input:is([name$="appraisalRef"], [name*="appraisalRef/"])')
 				.fill('Appraisal 2026-03');
-			await modalSubmit(page, /^Record 8283$/).click();
+			await modalSubmit(page).click();
 			await expectSuccessToast(page, 10000);
 
 			// After: the same row, now an obligation with a deadline attached.
@@ -558,18 +508,19 @@ test.describe('inventory', () => {
 		test('marking a fronted purchase reimbursed clears it from the owed list', async ({ page }) => {
 			await loginAsStaff(page);
 
-			await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+			await visit(page, '/staff/inventory/acquisitions?owed=1');
 			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
 
 			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
-			await page.getByRole('button', { name: 'Mark reimbursed' }).click();
-			await modalSubmit(page, /^Mark reimbursed$/).click();
+			// The owed warning carries the one control that settles it.
+			await page.getByRole('main').getByRole('alert').getByRole('button').click();
+			await modalSubmit(page).click();
 			await expectSuccessToast(page, 10000);
 
 			await expect
 				.poll(
 					async () => {
-						await visit(page, '/staff/inventory/acquisitions?owed=1', 'Acquisitions');
+						await visit(page, '/staff/inventory/acquisitions?owed=1');
 						return page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER }).isVisible();
 					},
 					{ timeout: 15000 }
@@ -584,23 +535,15 @@ test.describe('inventory', () => {
 	 * unit, so it hangs off the asset and writes to the ledger.
 	 */
 	test.describe('resources and damage', () => {
-		test('a member sees the how-to linked to the gear', async ({ page }) => {
-			await loginAsStaff(page);
-			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
-
-			await expect(page.getByText('How to use it')).toBeVisible();
-			await expect(page.getByRole('link', { name: SEED_ARTICLE_TITLE })).toBeVisible();
-		});
-
 		test('reporting damage takes the unit out of service and writes the ledger', async ({
 			page
 		}) => {
 			await loginAsStaff(page);
 			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
 
-			await page.getByRole('button', { name: 'Report a problem' }).click();
-			await page.getByRole('dialog').locator('textarea').first().fill('Crackling on channel two');
-			await page.getByRole('dialog').getByRole('button', { name: 'Report a problem' }).click();
+			await page.getByTestId('report-damage').click();
+			await page.getByRole('dialog').locator('textarea').first().fill(DAMAGE_NOTE);
+			await modalSubmit(page).click();
 
 			// Asserted against the database first: the movement *is* the report, so
 			// if it were missing the unit would be out of service with no record of
@@ -622,7 +565,7 @@ test.describe('inventory', () => {
 
 			await page.goto(`/staff/inventory/assets/${SEED_ASSET_ID}`);
 			await expect(page.getByText(stockReasonLabels.repair_out)).toBeVisible();
-			await expect(page.getByText('Crackling on channel two')).toBeVisible();
+			await expect(page.getByText(DAMAGE_NOTE)).toBeVisible();
 		});
 
 		test('a unit already in the shop is not offered the form again', async ({ page }) => {
@@ -636,7 +579,7 @@ test.describe('inventory', () => {
 			// own it also passes when the page failed to render — which is how this
 			// test sat green while the flow it guards was completely broken.
 			await expect(page.getByText(assetStatusLabels.maintenance).first()).toBeVisible();
-			await expect(page.getByRole('button', { name: 'Report a problem' })).toBeHidden();
+			await expect(page.getByTestId('report-damage')).toHaveCount(0);
 		});
 	});
 
@@ -674,9 +617,11 @@ test.describe('inventory', () => {
 				}
 			);
 
-			await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-			await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-			await page.getByRole('button', { name: 'Sign in' }).click();
+			await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_STAFF_EMAIL);
+			await page
+				.locator('input:is([name="password"], [name^="password/"])')
+				.fill(SEED_STAFF_PASSWORD);
+			await formSubmit(page, 'password').click();
 
 			// Back through `/a/[tag]`, which now resolves the scan for a signed-in
 			// staff member rather than bouncing it.

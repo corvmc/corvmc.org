@@ -1,5 +1,5 @@
 import { sql, getTableColumns } from 'drizzle-orm';
-import { eventListing } from '$lib/server/db/schema/event';
+import { eventListing } from '#lib/server/db/schema/event.js';
 
 /**
  * The event's poster key, from its `media_attachment` (#808).
@@ -77,3 +77,9 @@ export const shortOfActsSql = sql`(SELECT "p"."acts_wanted" FROM "production" "p
 	WHERE "p"."project_id" = "event_listing"."project_id") >
 	(SELECT count(*) FROM "event_band" "eb"
 	WHERE "eb"."event_id" = "event_listing"."id")`;
+
+/** A CMC show whose production is at this status, by the same correlated read. */
+export const productionStatusSql = (
+	status: string
+) => sql`(SELECT "p"."status" FROM "production" "p"
+	WHERE "p"."project_id" = "event_listing"."project_id") = ${status}`;

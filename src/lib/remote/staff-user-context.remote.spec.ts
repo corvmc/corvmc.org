@@ -30,7 +30,7 @@ const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireStaff: (...a: unknown[]) => requireStaff(...(a as [])),
 	requireCapability: (...a: unknown[]) => requireCapability(...(a as [string])),
 	can: vi.fn(async () => false),
@@ -71,7 +71,7 @@ const dbUpdate = vi.fn(writeBuilder);
 const dbDelete = vi.fn(writeBuilder);
 const dbInsert = vi.fn(writeBuilder);
 const dbBatch = vi.fn(async () => []);
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: (...a: unknown[]) => dbSelect(...(a as [])),
 		update: (...a: unknown[]) => dbUpdate(...(a as [])),

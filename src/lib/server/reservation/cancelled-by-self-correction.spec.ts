@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { migratedSqlite } from '$lib/server/testing/migrated-sqlite';
+import { migratedSqlite } from '#lib/server/testing/migrated-sqlite.js';
 
 const migrationsFolder = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 const correctionDir = readdirSync(migrationsFolder).find((d) =>

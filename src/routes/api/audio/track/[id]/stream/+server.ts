@@ -1,9 +1,9 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getStreamableTrack } from '$lib/server/audio/audio-service';
-import { streamAudioObject } from '$lib/server/audio/audio-storage';
-import { requireFeature } from '$lib/server/feature-flags';
-import { allowRateLimited } from '$lib/server/rate-limit';
+import { getStreamableTrack } from '#lib/server/audio/audio-service.js';
+import { streamAudioObject } from '#lib/server/audio/audio-storage.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 
 /**
  * Play a track.

@@ -1,9 +1,9 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { resolveContactSheetToken } from '$lib/server/directory/contact-sheet-service';
-import { detachSlot, listFor, replaceSlot } from '$lib/server/media/media-service';
-import { uploadFile, resolveImageUrl } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
+import { resolveContactSheetToken } from '#lib/server/directory/contact-sheet-service.js';
+import { detachSlot, listFor, replaceSlot } from '#lib/server/media/media-service.js';
+import { uploadFile, resolveImageUrl } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
 
 /**
  * An external act's tech rider, as a file.
@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		filename: file.name
 	});
 
-	return json({ url: resolveImageUrl(key), filename: file.name });
+	return Response.json({ url: resolveImageUrl(key), filename: file.name });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
@@ -57,13 +57,13 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	// Detach only. The object and its `media` row are the sweep's to reap — this
 	// module never deletes an R2 object as a side effect of a row going away.
 	await detachSlot('directory_entry', entryId, 'rider');
-	return json({ success: true });
+	return Response.json({ success: true });
 };
 
 export const GET: RequestHandler = async ({ params }) => {
 	const entryId = await entryFor(params.token);
 	const [rider] = await listFor('directory_entry', entryId, 'rider');
-	return json(
+	return Response.json(
 		rider ? { url: resolveImageUrl(rider.key), filename: rider.filename } : { url: null }
 	);
 };

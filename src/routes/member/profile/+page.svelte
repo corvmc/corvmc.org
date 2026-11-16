@@ -1,18 +1,19 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
-	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import * as env from '$app/env/public';
+	import { getMemberProfileEditor } from '#lib/remote/directory.remote.js';
 
 	// Read above the awaited query below: a declaration after a top-level await
 	// is async-gated, and the header renders before it resolves.
 	const memberLayout = getMemberLayoutContext();
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconEye } from '@tabler/icons-svelte';
 	import { getMemberLayoutContext } from '../layout-context';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import AddressCard from '$lib/components/ui/AddressCard.svelte';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import AddressCard from '#lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import ProfileForm from './ProfileForm.svelte';
 	import TeachingCard from './TeachingCard.svelte';
 
@@ -25,8 +26,14 @@
 	// One query, not three. `custom/no-concurrent-remote-queries` refuses a page
 	// that fans several out at once, so the teaching card's data is assembled
 	// server-side in `getMemberProfileEditor` and arrives with everything else.
-	const { profile, instrumentSuggestions, genreSuggestions, skillSuggestions, teaching } =
-		await getMemberProfileEditor();
+	const editor = getMemberProfileEditor();
+
+	// The teaching card's forms change the record, and Kit refreshes this query
+	// after each one; a destructured constant would keep the first answer until
+	// a reload (#2846). Declared above the await so it is not a blocked value.
+	const teaching = $derived(editor.current?.teaching);
+
+	const { profile, instrumentSuggestions, genreSuggestions, skillSuggestions } = await editor;
 
 	// Plain const rather than `$derived`: everything after the await above is
 	// already async-gated, and nothing here changes without a refetch.
@@ -36,11 +43,16 @@
 	);
 </script>
 
-<PageHeader width="3xl" subtitle="Profile" title="My Profile">
+<PageHeader
+	width="3xl"
+	subtitle={m.member_profile_body()}
+	title={m.member_profile_my_profile_title()}
+>
 	<!-- This page is the form; the record it writes is read somewhere else
 	     entirely, and until now nothing connected the two (#1244). -->
-	<Button href={resolve(`/member/directory/members/${memberLayout.current.user.id}`)} size="sm">
-		<IconEye size={16} /> View as others see it
+	<Button href={resolve(`member/directory/members/${memberLayout.current.user.id}`)} size="sm">
+		<IconEye size={16} />
+		{m.member_profile_view_as_others_see_label()}
 	</Button>
 </PageHeader>
 <PageContent width="3xl">
@@ -49,8 +61,8 @@
 	     the backfill has not reached — a card advertising nothing is worse than
 	     no card. -->
 	{#if address}
-		<AddressCard url={address} title="Your CMC address">
-			Share this anywhere — it goes to your profile, whoever opens it.
+		<AddressCard url={address} title={m.member_profile_cmc_address_title()}>
+			{m.member_profile_share_anywhere_goes_profile_whoever_text()}
 		</AddressCard>
 	{/if}
 
@@ -58,11 +70,14 @@
 		<ProfileForm {profile} {instrumentSuggestions} {genreSuggestions} {skillSuggestions} />
 	</div>
 
-	<div class="mt-8">
-		<TeachingCard
-			instructor={teaching.instructor}
-			hasPublicContact={teaching.hasPublicContact}
-			hasAnyContact={teaching.hasAnyContact}
-		/>
-	</div>
+	{#if teaching}
+		<div class="mt-8">
+			<TeachingCard
+				instructor={teaching.instructor}
+				hasPublicContact={teaching.hasPublicContact}
+				hasAnyContact={teaching.hasAnyContact}
+				directoryReach={teaching.directoryReach}
+			/>
+		</div>
+	{/if}
 </PageContent>

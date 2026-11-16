@@ -1,6 +1,6 @@
 import type { User, Session } from 'better-auth/minimal';
-import type { Position } from '$lib/config';
-import type { CommitteeGrant } from '$lib/server/capability/capability-grants';
+import type { Position } from '#lib/config.js';
+import type { CommitteeGrant } from '#lib/server/capability/capability-grants.js';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -15,11 +15,14 @@ declare global {
 	namespace App {
 		interface Locals {
 			user?: User;
-			session?: Session;
+			/** `impersonatedBy` is set on a session an admin opened as this user (#2847). */
+			session?: Session & { impersonatedBy?: string | null };
+			/** The admin viewing the app as `user`; every write is audited with them as the actor. */
+			impersonator?: { id: string; name: string; email: string };
 			/**
 			 * The caller's authorization positions, memoised for this request.
 			 *
-			 * Written and read only by `$lib/server/authorization`; hooks.server.ts
+			 * Written and read only by `#lib/server/authorization.js`; hooks.server.ts
 			 * deliberately leaves it undefined so requests that never check a
 			 * capability never pay for the read. A promise rather than an array so
 			 * that concurrent guards inside one `Promise.all` share a single read
@@ -33,24 +36,16 @@ declare global {
 		// interface Error {}
 		// interface PageData {}
 		// interface PageState {}
+	}
 
-		interface Platform {
-			env?: {
-				DB: D1Database;
-				R2_BUCKET: R2Bucket;
-				R2_PRIVATE: R2Bucket;
-				KV: KVNamespace;
-			};
-			/**
-			 * The Worker's execution context, for `waitUntil`.
-			 *
-			 * Declared here rather than inherited from adapter-cloudflare's
-			 * `ambient.d.ts`: that file is only pulled in by importing the adapter's
-			 * types, which this project does not do — `svelte.config.js` is plain JS.
-			 * Optional because it is genuinely absent under `vitest` and anywhere the
-			 * request did not come through the Workers runtime.
-			 */
-			ctx?: ExecutionContext;
+	/** The bindings `env` from `cloudflare:workers` carries (wrangler.toml). */
+	namespace Cloudflare {
+		interface Env {
+			DB: D1Database;
+			R2_BUCKET: R2Bucket;
+			R2_PRIVATE: R2Bucket;
+			KV: KVNamespace;
+			BROWSER: Fetcher;
 		}
 	}
 }

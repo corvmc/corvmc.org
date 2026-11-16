@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
 	import { IconMail, IconPhone, IconAt } from '@tabler/icons-svelte';
-	import type { DirectoryContact } from '$lib/server/db/schema/authentication';
+	import type { DirectoryContact } from '#lib/server/db/schema/authentication.js';
 
 	let {
-		label,
+		kind,
 		contact
 	}: {
-		label: 'Contact' | 'Booking';
+		kind: 'contact' | 'booking';
 		contact: DirectoryContact | null | undefined;
 	} = $props();
 
@@ -16,12 +17,17 @@
 	// Booking contact is always public; personal contact reflects the member's
 	// own opt-in (members-only by default).
 	const note = $derived<'public' | 'members-only'>(
-		label === 'Booking' || c.visibility === 'public' ? 'public' : 'members-only'
+		kind === 'booking' || c.visibility === 'public' ? 'public' : 'members-only'
 	);
 </script>
 
 {#if hasAny}
-	<ProfileSection title={label} {note}>
+	<ProfileSection
+		title={kind === 'booking'
+			? m.directory_profile_booking_title()
+			: m.directory_profile_contact_title()}
+		{note}
+	>
 		<div class="contact">
 			{#if c.email}
 				<a href="mailto:{c.email}" class="contact__row">

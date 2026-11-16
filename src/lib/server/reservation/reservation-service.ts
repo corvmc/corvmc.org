@@ -1,5 +1,5 @@
-import { db, getRowCount } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import {
 	eq,
 	ne,
@@ -11,27 +11,30 @@ import {
 	desc,
 	asc,
 	count,
-	isNull,
 	isNotNull,
 	inArray,
 	notInArray,
+	not,
 	sql,
 	type AnyColumn
 } from 'drizzle-orm';
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
-import { refund } from '$lib/server/finance/payment-service';
+import { insertReservation } from './insert-reservation';
+import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
+import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { user } from '$lib/server/db/schema/authentication';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '$lib/config';
-import type { ReservationStatus } from '$lib/server/db/schema/reservation';
-import type { BookerType, ReservationCanceller } from '$lib/config';
-import { captureException } from '$lib/server/sentry';
-import { DomainError } from '$lib/server/domain-error';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import type { ReservationStatus } from '#lib/server/db/schema/reservation.js';
+import type { BookerType, ReservationCanceller } from '#lib/config.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry, type AuditEntryInput } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations
@@ -103,6 +106,7 @@ export interface ReservationRow {
 	status: string;
 	startsAt: Date;
 	endsAt: Date;
+	tourMinutes: number;
 	notes: string | null;
 	cancellationReason: string | null;
 	stripePaymentRecordId: string | null;
@@ -112,13 +116,16 @@ export interface ReservationRow {
 }
 
 export async function create(params: CreateReservationParams): Promise<ReservationRow> {
-	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
+	const { userId, bookerType, bookerId, endsAt, notes } = params;
 
 	// Validate time constraints
-	const validation = await validateBooking(startsAt, endsAt, { bookerType });
+	const validation = await validateBooking(params.startsAt, endsAt, { bookerType, userId });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}
+	// A new member's tour is held before the time they asked for (#2568).
+	const tourMinutes = validation.tourMinutes ?? 0;
+	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
 
 	// Conflict check then insert (D1 doesn't support interactive transactions)
 	const conflicts = await db
@@ -136,26 +143,21 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationConflictError();
 	}
 
-	// A booking made inside the confirmation window is its own confirmation:
-	// nobody is asked to re-assert an intent they expressed minutes ago. It also
-	// closes #1123 at the source — the reminder cron's bands only see rows that
-	// existed when it ran, so a `scheduled` row born inside the window was never
-	// reminded and was released at its start. `cash_due_cents` is untouched, so a
-	// costed one settles at the desk rather than prepay-or-lose-it.
-	const status = withinConfirmationWindow(startsAt) ? 'confirmed' : 'scheduled';
+	// Booking is the confirmation: there is no later step that asks the member
+	// to re-assert it (#2502). `cash_due_cents` stays null until priced, so any
+	// cash owed settles at the desk or by paying ahead.
+	const status = 'confirmed';
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			status,
-			startsAt,
-			endsAt,
-			notes: notes ?? null
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		status,
+		startsAt,
+		endsAt,
+		tourMinutes,
+		notes: notes ?? null
+	});
 
 	// Post-insert re-check narrows the check-then-insert race: two concurrent
 	// bookings can both pass the check above, but at least one of them sees the
@@ -229,25 +231,25 @@ async function emitCreated(row: typeof reservation.$inferSelect): Promise<void> 
  * is where the announcement happens instead.
  */
 export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
-	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
+	const { userId, bookerType, bookerId, endsAt, notes } = params;
 
-	const validation = await validateBooking(startsAt, endsAt, { bookerType });
+	const validation = await validateBooking(params.startsAt, endsAt, { bookerType, userId });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}
+	const tourMinutes = validation.tourMinutes ?? 0;
+	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			status: 'waitlisted',
-			startsAt,
-			endsAt,
-			notes: notes ?? null
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		status: 'waitlisted',
+		startsAt,
+		endsAt,
+		tourMinutes,
+		notes: notes ?? null
+	});
 
 	return row;
 }
@@ -255,7 +257,7 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 /**
  * A queued booking has just become a real one — announce it.
  *
- * The `waitlisted -> scheduled` transition is the moment a queue position turns
+ * The `waitlisted -> confirmed` transition is the moment a queue position turns
  * into somebody turning up, so it is the moment `reservation.created` is owed:
  * a member whose very first booking went through the waitlist gets the same
  * orientation shift as one who booked a free slot outright.
@@ -285,16 +287,16 @@ export async function announceWaitlistConfirmed(reservationId: string): Promise<
 	if (!row) return;
 
 	await emitCreated(row);
+	await announceConfirmed(row.id);
 }
 
 /**
  * Tell the bus a booking is confirmed.
  *
- * Here rather than in the remotes because a reservation reaches `confirmed` six
- * ways — staff-created, credit-settled, paid online, paid by webhook, confirmed
- * inside the window, and paid ahead — and a seventh would be forgotten. It
- * re-reads under the status it is announcing, so a confirm that a later write
- * rolled back announces nothing.
+ * Call it only where a row *becomes* confirmed — insert, staff insert,
+ * recurring generation, waitlist promotion — never where a confirmed row is
+ * paid or settled, or the member is told twice (#2502). It re-reads under the
+ * status it announces, so a write rolled back afterwards announces nothing.
  */
 export async function announceConfirmed(reservationId: string): Promise<void> {
 	const [row] = await db
@@ -361,20 +363,17 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 	if (startsAt >= endsAt)
 		throw new ReservationValidationError('Reservation must end after it starts');
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			createdByStaffId: staffUserId ?? null,
-			status,
-			startsAt,
-			endsAt,
-			notes: notes ?? null,
-			hardHold
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		createdByStaffId: staffUserId ?? null,
+		status,
+		startsAt,
+		endsAt,
+		notes: notes ?? null,
+		hardHold
+	});
 
 	// A desk booking on a member's behalf is still that member's first visit —
 	// `createdByUserId` is the owning member here by design, and
@@ -387,35 +386,71 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 	return row;
 }
 
-// ---------------------------------------------------------------------------
-// confirm() — staff confirmation without payment
-// ---------------------------------------------------------------------------
-
-export async function confirm(reservationId: string): Promise<void> {
-	await updateStatus(reservationId, ['scheduled'], 'confirmed');
-	await announceConfirmed(reservationId);
-}
-
 /**
- * Waive what a live booking owes. A scheduled one is confirmed first; a
- * confirmed one keeps its status. `cashDueCents = 0` is also what retires the
+ * Waive what a confirmed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
  * member's "Pay online" link, which `getReservationPayment` gates on.
  */
 export async function comp(reservationId: string): Promise<void> {
 	const [row] = await db
-		.select({ status: reservation.status })
+		.select({ status: reservation.status, cashDueCents: reservation.cashDueCents })
 		.from(reservation)
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
 	if (!row) throw new ReservationNotFoundError();
-	if (row.status === 'scheduled') await confirm(reservationId);
-	else if (row.status !== 'confirmed')
+	if (row.status !== 'confirmed')
 		throw new ReservationStateError(`Cannot comp a reservation with status "${row.status}"`);
 
 	await db
 		.update(reservation)
 		.set({ cashDueCents: 0, updatedAt: new Date() })
 		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
+	await recordReservationAudit(reservationId, (when) => ({
+		action: 'reservation.comped',
+		details: { ...when, waivedCents: row.cashDueCents ?? 0 }
+	}));
+}
+
+type ReservationAudit = Extract<
+	AuditEntryInput,
+	{ action: 'reservation.comped' | 'reservation.refunded' }
+>;
+
+/**
+ * One audit row about a booking, on the member who booked, with its slot in
+ * the space's zone as `reservation.cancelled_by_staff` carries it.
+ */
+export async function recordReservationAudit(
+	reservationId: string,
+	build: (when: {
+		reservationId: string;
+		date: string;
+		startTime: string;
+		endTime: string;
+	}) => Omit<ReservationAudit, 'subject'>
+): Promise<void> {
+	const [row] = await db
+		.select({
+			userId: reservation.createdByUserId,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			name: user.name
+		})
+		.from(reservation)
+		.leftJoin(user, eq(user.id, reservation.createdByUserId))
+		.where(eq(reservation.id, reservationId))
+		.limit(1);
+	if (!row) return;
+	const TZ = DEFAULT_TIMEZONE;
+	const entry = build({
+		reservationId,
+		date: formatDateInTz(row.startsAt, TZ),
+		startTime: formatTimeInTz(row.startsAt, TZ),
+		endTime: formatTimeInTz(row.endsAt, TZ)
+	});
+	await recordAuditEntry({
+		...entry,
+		subject: { type: 'user', id: row.userId, label: row.name }
+	} as AuditEntryInput);
 }
 
 // ---------------------------------------------------------------------------
@@ -469,7 +504,7 @@ export async function adjustWindow(
 	// Atomic conditional update, in the shape of updateStatus(): only a live
 	// booking can be re-timed, and a row cancelled between the read and the
 	// write must not silently come back.
-	const adjustable: ReservationStatus[] = ['scheduled', 'confirmed'];
+	const adjustable: ReservationStatus[] = ['confirmed'];
 	const result = await db
 		.update(reservation)
 		.set({ startsAt, endsAt, updatedAt: new Date() })
@@ -571,7 +606,7 @@ export async function cancel(
 		(options?.staffOverride && cancelledByUserId !== row.createdByUserId ? 'staff' : 'member');
 
 	// Atomic conditional update — only cancels if status hasn't changed since read
-	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
+	const cancellable: ReservationStatus[] = ['confirmed', 'waitlisted'];
 	const result = await db
 		.update(reservation)
 		.set({
@@ -651,51 +686,6 @@ export async function cancel(
 }
 
 // ---------------------------------------------------------------------------
-// cancelUnconfirmedReservations — release slots never confirmed by their start
-// ---------------------------------------------------------------------------
-
-/**
- * Cancel every `scheduled` reservation whose start time has passed without being
- * confirmed, freeing the slot. Members must confirm within the confirmation
- * window (or prepay via Stripe); anything still `scheduled` at start was never
- * committed. Space booked for an event is excluded: it is staff-held, has no
- * member confirm/pay flow, and releasing it at showtime handed a live event's
- * room to the waitlist. Delegates to `cancel()` with `staffOverride` so the already-started
- * guard is bypassed and any refund/credit reversal runs idempotently (a still-
- * scheduled reservation has neither, so they are no-ops), and with
- * `actor: 'system'` because no person acted. The emitted
- * `reservation.cancelled` event cascades waitlist promotion for the freed slot.
- */
-export async function cancelUnconfirmedReservations(
-	now: Date = new Date()
-): Promise<{ cancelled: number; errors: string[] }> {
-	const errors: string[] = [];
-	const rows = await db
-		.select({ id: reservation.id })
-		.from(reservation)
-		.where(
-			and(eq(reservation.status, 'scheduled'), lt(reservation.startsAt, now), notAProgramHold())
-		);
-
-	let cancelled = 0;
-	for (const row of rows) {
-		try {
-			await cancel(row.id, '', 'Not confirmed before start', {
-				staffOverride: true,
-				actor: 'system'
-			});
-			cancelled++;
-		} catch (err) {
-			const msg = `Failed to auto-cancel unconfirmed reservation ${row.id}: ${(err as Error).message}`;
-			console.error(msg);
-			errors.push(msg);
-		}
-	}
-
-	return { cancelled, errors };
-}
-
-// ---------------------------------------------------------------------------
 // Staff resolution actions
 // ---------------------------------------------------------------------------
 
@@ -704,11 +694,11 @@ export async function markComplete(reservationId: string): Promise<void> {
 }
 
 export async function markNoShow(reservationId: string): Promise<void> {
-	await updateStatus(reservationId, ['confirmed', 'scheduled'], 'no_show');
+	await updateStatus(reservationId, ['confirmed'], 'no_show');
 }
 
 /**
- * Staff records cash payment for a scheduled or confirmed (cash-owed) reservation
+ * Staff records cash payment for a confirmed (cash-owed) reservation
  * and completes it in one action. Returns the Stripe payment record ID for
  * bookkeeping.
  */
@@ -725,12 +715,7 @@ export async function recordCashAndComplete(
 			cashDueCents: 0,
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				inArray(reservation.status, ['scheduled', 'confirmed'])
-			)
-		);
+		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
 
 	if (getRowCount(result) === 0) {
 		const [row] = await db
@@ -740,21 +725,20 @@ export async function recordCashAndComplete(
 			.limit(1);
 
 		if (!row) throw new ReservationNotFoundError();
-		throw new ReservationStateError(
-			`Expected status "scheduled" or "confirmed", got "${row.status}"`
-		);
+		throw new ReservationStateError(`Expected status "confirmed", got "${row.status}"`);
 	}
 }
 
 // ---------------------------------------------------------------------------
-// autoCompleteExpired() — bulk-complete paid reservations past their end time
+// autoCompleteExpired() — bulk-complete ended reservations that owe nothing
 // ---------------------------------------------------------------------------
 
 export async function autoCompleteExpired(): Promise<number> {
 	const now = new Date();
-	// Auto-complete confirmed reservations past their end time that owe no cash:
-	// paid (has a payment record) or comped/credit-settled (cashDueCents = 0).
-	// Cash-owed reservations (cashDueCents > 0) are left for staff to collect.
+	// Completes every ended booking that is not payment due, by the definition the
+	// staff list and the fee gate read, so none is left confirmed with nobody asked
+	// to act on it. An unpriced (null) booking is owed in full and stays for staff.
+	// A payment record still completes, as it always has.
 	const result = await db
 		.update(reservation)
 		.set({ status: 'completed', updatedAt: now })
@@ -762,7 +746,7 @@ export async function autoCompleteExpired(): Promise<number> {
 			and(
 				eq(reservation.status, 'confirmed'),
 				lt(reservation.endsAt, now),
-				or(isNotNull(reservation.stripePaymentRecordId), eq(reservation.cashDueCents, 0))
+				or(isNotNull(reservation.stripePaymentRecordId), not(confirmedUnpaidSql()))
 			)
 		);
 	return getRowCount(result);
@@ -810,6 +794,7 @@ export interface MemberReservation {
 	bandName: string | null;
 	cashDueCents: number | null;
 	paidAt: Date | null;
+	refundedAt: Date | null;
 	/** The staff-entered reason, which is the whole point of keeping cancelled
 	 *  rows in this list — a status of "cancelled" on its own answers nothing. */
 	cancellationReason: string | null;
@@ -872,6 +857,7 @@ export async function listForMember(
 		bookerId: reservation.bookerId,
 		cashDueCents: reservation.cashDueCents,
 		paidAt: reservation.paidAt,
+		refundedAt: reservation.refundedAt,
 		cancellationReason: reservation.cancellationReason,
 		createdByUserId: reservation.createdByUserId
 	};
@@ -901,14 +887,7 @@ export async function listForMember(
 			db
 				.select({ count: count() })
 				.from(reservation)
-				.where(
-					and(
-						scope,
-						ne(reservation.status, 'cancelled'),
-						gt(reservation.cashDueCents, 0),
-						isNull(reservation.paidAt)
-					)
-				),
+				.where(and(scope, paymentDueSql(now))),
 			db
 				.select({ count: count() })
 				.from(reservation)
@@ -925,6 +904,7 @@ export async function listForMember(
 		bandName: r.bookerType === 'group' ? (bandNameById.get(r.bookerId) ?? null) : null,
 		cashDueCents: r.cashDueCents,
 		paidAt: r.paidAt,
+		refundedAt: r.refundedAt,
 		cancellationReason: r.cancellationReason,
 		own: r.createdByUserId === userId
 	});

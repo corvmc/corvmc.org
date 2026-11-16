@@ -4,6 +4,13 @@ import { render } from 'vitest-browser-svelte';
 import FilterBarHarness from './FilterBar.test.svelte';
 import '../../../routes/layout.css';
 
+/**
+ * The menu's trigger is the only control carrying `aria-expanded` (bits-ui
+ * popover); Clear is the button after it. The count is the trigger's badge.
+ */
+const filters = () => page.getByRole('button', { expanded: false });
+const badge = () => filters().element().querySelector('.badge')?.textContent?.trim() ?? null;
+
 describe('FilterBar menu', () => {
 	it('keeps inline filters visible and the secondary ones behind Filters', async () => {
 		await render(FilterBarHarness, { width: 1100 });
@@ -11,27 +18,42 @@ describe('FilterBar menu', () => {
 		await expect.element(page.getByLabelText('Category')).toBeVisible();
 		await expect.element(page.getByLabelText('Tier')).not.toBeInTheDocument();
 
-		await page.getByRole('button', { name: 'Filters' }).click();
+		await filters().click();
 		await expect.element(page.getByLabelText('Tier')).toBeVisible();
 	});
 
 	it('badges the button with the menu count and clears from the bar', async () => {
 		await render(FilterBarHarness, { width: 1100 });
 
-		await page.getByRole('button', { name: 'Filters' }).click();
+		await filters().click();
 		await page.getByLabelText('Tier').selectOptions('premium');
 		await userEvent.keyboard('{Escape}');
 
-		await expect.element(page.getByRole('button', { name: 'Filters 1' })).toBeVisible();
-		await page.getByRole('button', { name: 'Clear' }).click();
-		await expect.element(page.getByTestId('cleared')).toHaveTextContent('1');
-		await expect.element(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
+		await expect.element(filters()).toBeVisible();
+		await expect.poll(badge).toBe('1');
+		await page.getByRole('button').last().click();
+		await expect.poll(() => page.getByTestId('cleared').element().textContent).toBe('1');
+		await expect.poll(badge).toBeNull();
 	});
 
 	it('keeps inline filters inline on a phone rather than adding a second Filters button', async () => {
 		await render(FilterBarHarness, { width: 340 });
 
 		await expect.element(page.getByLabelText('Category')).toBeVisible();
-		expect(page.getByRole('button', { name: 'Filters' }).elements()).toHaveLength(1);
+		await expect.element(page.getByLabelText('Tier')).not.toBeInTheDocument();
+		expect(page.getByRole('button').elements()).toHaveLength(1);
+	});
+});
+
+describe('FilterBar without a menu', () => {
+	it('shows its filters and Clear on a phone without a toggle', async () => {
+		await render(FilterBarHarness, { width: 340, withMenu: false });
+
+		await expect.element(page.getByLabelText('Category')).toBeVisible();
+		expect(page.getByRole('button').elements()).toHaveLength(0);
+
+		await page.getByLabelText('Category').selectOptions('amps');
+		await page.getByRole('button').click();
+		await expect.poll(() => page.getByTestId('cleared').element().textContent).toBe('1');
 	});
 });

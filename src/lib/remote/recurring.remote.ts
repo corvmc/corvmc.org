@@ -1,15 +1,33 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireCapabilityOrOwner } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
+import {
+	previewReschedule,
+	reschedule,
+	type NewSchedule
+} from '#lib/server/reservation/recurring-series-reschedule.js';
+import {
+	previewEventReschedule,
+	rescheduleEventSeries,
+	seriesPrototype
+} from '#lib/server/reservation/event-series-reschedule.js';
+import { requireSeriesWriter } from '#lib/server/event/listing-guard.js';
+import {
+	requireCapability,
+	requireCapabilityOrOwner,
+	requireUser
+} from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	get,
 	getHistory,
 	cancel,
 	listAll as listAllSeries
-} from '$lib/server/reservation/recurring-series-service';
+} from '#lib/server/reservation/recurring-series-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -94,4 +112,83 @@ export const cancelRecurringSeries = form(z.object({ id: z.string() }), async (d
 export const getStaffSeriesDetail = query(z.string(), async (id) => {
 	const [series, history] = await Promise.all([getSeries(id), getSeriesHistory(id)]);
 	return { series, history };
+});
+
+// ---------------------------------------------------------------------------
+// Schedule changes — owner or staff
+// ---------------------------------------------------------------------------
+
+const scheduleSchema = z.object({
+	id: z.string(),
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	startTime: z.string().regex(/^\d{2}:\d{2}$/),
+	endTime: z.string().regex(/^\d{2}:\d{2}$/),
+	frequency: z.enum(['weekly', 'biweekly', 'monthly']),
+	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	until: z.string().optional()
+});
+type ScheduleInput = z.infer<typeof scheduleSchema>;
+
+/**
+ * A booking series: its owner, or staff who manage recurring bookings. An
+ * event series: whoever may write its prototype listing.
+ */
+async function seriesEditor(id: string) {
+	const proto = await seriesPrototype(id);
+	if (!proto) error(404, 'Series not found');
+	if (proto.type === 'event_listing') {
+		return { event: true, as: await requireSeriesWriter(proto.id) } as const;
+	}
+	const series = await get(id);
+	if (!series) error(404, 'Series not found');
+	const as = await requireCapabilityOrOwner(
+		'reservation.manageRecurring',
+		series.prototypeCreatedByUserId
+	);
+	return { event: false, as } as const;
+}
+
+function toSchedule(data: ScheduleInput, until: Date | undefined): NewSchedule {
+	return {
+		startsAt: buildDateInTz(data.date, data.startTime, DEFAULT_TIMEZONE),
+		endsAt: buildDateInTz(data.date, data.endTime, DEFAULT_TIMEZONE),
+		frequency: data.frequency,
+		monthlyMode: data.frequency === 'monthly' ? data.monthlyMode : undefined,
+		until
+	};
+}
+
+const seriesEnd = (data: ScheduleInput) =>
+	recurringSeriesEnd({ recurring: data.frequency, date: data.date, recurringUntil: data.until });
+
+/** What a schedule change would do, before it is saved. */
+export const previewSeriesSchedule = query(scheduleSchema, async (data) => {
+	requireUser();
+	const editor = await seriesEditor(data.id);
+	const preview = editor.event ? previewEventReschedule : previewReschedule;
+	try {
+		return await preview(data.id, toSchedule(data, seriesEnd(data) ?? undefined));
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+/** Replace a series with one on a new schedule (owner or staff). */
+export const rescheduleSeries = form(scheduleSchema, async (data, issue) => {
+	const user = requireUser();
+	const editor = await seriesEditor(data.id);
+	const until = seriesEnd(data);
+	if (until === null) invalid(issue.until(UNTIL_BEFORE_START));
+
+	const by = { kind: editor.as, userId: user.id };
+	const schedule = toSchedule(data, until);
+	const outcome = editor.event
+		? await rescheduleEventSeries(data.id, schedule, by)
+		: { ...(await reschedule(data.id, schedule, by)), eventId: null };
+	return {
+		seriesId: outcome.seriesId,
+		eventId: outcome.eventId,
+		waitlisted: outcome.waitlisted,
+		kept: outcome.kept
+	};
 });

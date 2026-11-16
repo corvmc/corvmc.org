@@ -1,14 +1,14 @@
 import type { AnyColumn } from 'drizzle-orm';
 import { and, desc, eq, gt, inArray, isNotNull, isNull, ne, or, count, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { db } from '$lib/server/db';
-import { inboxThread, inboxParticipant, inboxGroupRead } from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { paginate } from '$lib/server/db/paginate';
-import type { PaginationInput } from '$lib/server/db/paginate';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxParticipant, inboxGroupRead } from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
 import { messagingDisabledFor } from './direct-service';
-import type { UnifiedConversation } from '$lib/types/conversation';
+import type { UnifiedConversation } from '#lib/types/conversation.js';
 
 /**
  * Every thread one member can read, whichever inbox it is in (#1250).

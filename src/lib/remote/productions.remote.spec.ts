@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Who may do what on a show (docs/specs/production-projects-spec.md), as a
+ * Who may do what on a show (docs/decisions/0011-productions-are-projects.md), as a
  * matrix: every write, against Booking, Production, a committee on some other
  * show, the treasurer and staff. The committee guard is faked here from the
  * persona's grants; its resolution against `project_committee` has its own
@@ -52,7 +52,7 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!holds(persona, cap)) throw denied();
 	return { id: `${persona}-1` };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	// The listing guard asks these before it falls to the committee.
 	can: async (cap: string) => holds(persona, cap),
@@ -72,7 +72,7 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 	}
 	throw denied();
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: (projectId: string | null, cap: string) =>
 		requireProjectCommittee(projectId, cap)
 }));
@@ -86,7 +86,7 @@ const scope = vi.hoisted(() => ({
 	projectOfArtifactRequest: vi.fn(async () => 'proj-show'),
 	currentProduction: vi.fn(async () => currentRow)
 }));
-vi.mock('$lib/server/production/production-scope', () => scope);
+vi.mock('#lib/server/production/production-scope.js', () => scope);
 
 const service = {
 	createProduction: vi.fn(),
@@ -96,7 +96,7 @@ const service = {
 };
 /** The stored row `updateProduction` compares a submission against. */
 let currentRow: Record<string, unknown> = {};
-vi.mock('$lib/server/production/production-service', () => ({
+vi.mock('#lib/server/production/production-service.js', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
 	transitionProduction: (...a: unknown[]) => service.transitionProduction(...(a as [])),
@@ -104,12 +104,12 @@ vi.mock('$lib/server/production/production-service', () => ({
 }));
 
 const listings = { create: vi.fn() };
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	create: (...a: unknown[]) => listings.create(...a)
 }));
 
 const attachable = { listAttachableListings: vi.fn(async () => [] as unknown[]) };
-vi.mock('$lib/server/production/attachable-listings', () => ({
+vi.mock('#lib/server/production/attachable-listings.js', () => ({
 	listAttachableListings: () => attachable.listAttachableListings()
 }));
 
@@ -122,10 +122,15 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
-vi.mock('$lib/server/production/host-service', () => ({
+const showLead = { setShowLead: vi.fn(), searchLeadCandidates: vi.fn(async () => []) };
+vi.mock('#lib/server/production/show-lead-service.js', () => ({
+	setShowLead: (...a: unknown[]) => showLead.setShowLead(...a),
+	searchLeadCandidates: (...a: unknown[]) => showLead.searchLeadCandidates(...(a as []))
+}));
+vi.mock('#lib/server/production/host-service.js', () => ({
 	openHostShift: vi.fn()
 }));
-vi.mock('$lib/server/production/run-of-show-service', () => ({
+vi.mock('#lib/server/production/run-of-show-service.js', () => ({
 	addSlot: (...a: unknown[]) => runOfShow.addSlot(...a),
 	updateSlot: (...a: unknown[]) => runOfShow.updateSlot(...a),
 	markSlotTiming: (...a: unknown[]) => runOfShow.markSlotTiming(...a),
@@ -136,13 +141,19 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 }));
 
 const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn() };
-vi.mock('$lib/server/production/settlement-service', () => ({
+vi.mock('#lib/server/production/settlement-service.js', () => ({
 	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as [])),
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
+const doorCounts = { recordDoorTake: vi.fn(), recordDoorRecount: vi.fn() };
+vi.mock('#lib/server/production/door-count-service.js', () => ({
+	recordDoorTake: (...a: unknown[]) => doorCounts.recordDoorTake(...a),
+	recordDoorRecount: (...a: unknown[]) => doorCounts.recordDoorRecount(...a)
+}));
+
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
-vi.mock('$lib/server/production/expense-service', () => ({
+vi.mock('#lib/server/production/expense-service.js', () => ({
 	addExpense: (...a: unknown[]) => expenses.addExpense(...a),
 	removeExpense: (...a: unknown[]) => expenses.removeExpense(...a)
 }));
@@ -152,14 +163,19 @@ const artifacts = {
 	cancelArtifactRequest: vi.fn(),
 	promotePosterArt: vi.fn()
 };
-vi.mock('$lib/server/production/artifact-request-service', () => ({
+vi.mock('#lib/server/production/artifact-request-service.js', () => ({
 	requestArtifact: (...a: unknown[]) => artifacts.requestArtifact(...a),
 	cancelArtifactRequest: (...a: unknown[]) => artifacts.cancelArtifactRequest(...a),
 	promotePosterArt: (...a: unknown[]) => artifacts.promotePosterArt(...a)
 }));
 
+const riderStock = { setRiderElementStock: vi.fn() };
+vi.mock('#lib/server/production/rider-stock-service.js', () => ({
+	setRiderElementStock: (...a: unknown[]) => riderStock.setRiderElementStock(...a)
+}));
+
 const flyers = { useTemplateFlyer: vi.fn(), useArtWithFooter: vi.fn() };
-vi.mock('$lib/server/poster/flyer-service', () => ({
+vi.mock('#lib/server/poster/flyer-service.js', () => ({
 	useTemplateFlyer: (...a: unknown[]) => flyers.useTemplateFlyer(...a),
 	useArtWithFooter: (...a: unknown[]) => flyers.useArtWithFooter(...a)
 }));
@@ -256,10 +272,16 @@ const WRITES: Write[] = [
 		args: [{ id: 'prod-1', eventId: 'evt-1' }],
 		capability: RUN
 	},
+	// Booking appoints the lead; the lead then runs the show (#2726).
 	{
-		name: 'setProductionProducer',
-		args: [{ id: 'prod-1', eventId: 'evt-1', producer: 'me' }],
-		capability: RUN
+		name: 'setShowLead',
+		args: [{ id: 'prod-1', eventId: 'evt-1', leadUserId: 'member-9' }],
+		capability: BOOK
+	},
+	{
+		name: 'searchShowLeadCandidates',
+		args: [{ eventId: 'evt-1', q: 'sam' }],
+		capability: BOOK
 	},
 	{
 		name: 'advanceProduction',
@@ -280,6 +302,11 @@ const WRITES: Write[] = [
 	{
 		name: 'recordDoorTake',
 		args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }],
+		capability: RUN
+	},
+	{
+		name: 'recordDoorRecount',
+		args: [{ id: 'prod-1', eventId: 'evt-1', recountCents: 12_000 }],
 		capability: RUN
 	},
 	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
@@ -313,6 +340,11 @@ const WRITES: Write[] = [
 	{
 		name: 'dropArtifactRequest',
 		args: [{ id: 'req-1', eventId: 'evt-1' }],
+		capability: RUN
+	},
+	{
+		name: 'setRiderStock',
+		args: [{ eventId: 'evt-1', elementId: 'el-1', itemId: 'item-1' }],
 		capability: RUN
 	},
 	{
@@ -376,9 +408,12 @@ const allSpies = () =>
 		...attachable,
 		...runOfShow,
 		...artifacts,
+		...riderStock,
 		...flyers,
 		...settlement,
-		...expenses
+		...expenses,
+		...doorCounts,
+		...showLead
 	});
 
 beforeEach(() => {
@@ -728,5 +763,25 @@ describe('run of show validation', () => {
 			'slot-1',
 			expect.objectContaining({ techNotes: null, soundcheckAt: null })
 		);
+	});
+});
+
+describe('the door counts name the caller as the counter (#2722)', () => {
+	it('passes the signed-in user, never a field, as each counter', async () => {
+		persona = 'production';
+		await submit(productions.recordDoorTake, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			doorCashCents: 500_00,
+			countedByUserId: 'someone-else'
+		});
+		expect(doorCounts.recordDoorTake).toHaveBeenCalledWith('prod-1', 'production-1', {
+			cashCents: 500_00,
+			count: null,
+			splitActsPercent: null
+		});
+		persona = 'staff';
+		await submit(productions.recordDoorRecount, { id: 'prod-1', eventId: 'evt-1' });
+		expect(doorCounts.recordDoorRecount).toHaveBeenCalledWith('prod-1', 'staff-1', null);
 	});
 });

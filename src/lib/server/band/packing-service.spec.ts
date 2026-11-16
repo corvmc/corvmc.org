@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * neither unpacks a row nor un-delegates it; a member's save cannot reach
  * another member's rows even though drafts carry ids; owning and carrying are
  * different facts; a claim is a race settled by an `IS NULL` predicate; and a
- * reset clears ticks but leaves assignments. Spec: docs/specs/shipped/packing-list-spec.md
+ * reset clears ticks but leaves assignments. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 
 let selectResults: unknown[][] = [];
@@ -30,7 +30,7 @@ function chain(queue: () => unknown[]): unknown {
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 const nextUpdate = () => (updateResults.length > 0 ? updateResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn((table: unknown) => ({
@@ -58,8 +58,8 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { packingItem } = await import('$lib/server/db/schema/packing');
-const { riderElement, riderInput } = await import('$lib/server/db/schema/rider');
+const { packingItem } = await import('#lib/server/db/schema/packing.js');
+const { riderElement, riderInput } = await import('#lib/server/db/schema/rider.js');
 const {
 	compareItems,
 	getPackingList,
@@ -76,7 +76,7 @@ const {
 	PackingAlreadyClaimedError,
 	PackingNotPromotableError
 } = await import('./packing-service');
-const { PACKING_MAX_ITEMS, PACKING_MAX_QUANTITY } = await import('$lib/config');
+const { PACKING_MAX_ITEMS, PACKING_MAX_QUANTITY } = await import('#lib/config.js');
 
 const HEAD = {
 	id: 'list-1',

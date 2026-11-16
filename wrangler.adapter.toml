@@ -1,5 +1,5 @@
 # Read ONLY by @sveltejs/adapter-cloudflare (via `adapter({ config })` in
-# svelte.config.js) — never by `wrangler deploy`, which uses wrangler.toml.
+# kit.config.js) — never by `wrangler deploy`, which uses wrangler.toml.
 #
 # The adapter writes the generated worker to whatever `main` points at in the
 # config it reads, and DELETES that path first. wrangler.toml's `main` is our

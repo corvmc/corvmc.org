@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://corvmc.org' } }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://corvmc.org' })
+);
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 vi.mock('./band-host-service', () => ({ forgetCustomDomain: vi.fn() }));
 
 import {

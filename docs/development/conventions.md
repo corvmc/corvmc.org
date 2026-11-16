@@ -20,10 +20,10 @@ When building a new feature, work through these phases in order:
    `main` — a half-built admin page is a normal intermediate state. `/feature-branch start <slug>`
    sets one up.
 1. **Design** — understand the domain and map the workflows before proposing models. For
-   anything that touches multiple files or introduces schema, write a spec in
-   `docs/specs/` first. `docs/specs/shipped/` holds specs for features that already
-   exist — good templates, and the place to check whether the thing you are designing has
-   been argued about before.
+   anything that touches multiple files or introduces schema, write the proposal on the issue,
+   as its body or a comment, and settle it there. A proposal is never committed. Read
+   [`docs/decisions/`](../decisions/README.md) first to see whether the question has been
+   decided before. [Working out what to build](feature-analysis.md) covers the pass before it.
 2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
    migration yourself with `pnpm db:generate` and **review the SQL** before committing.
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
@@ -46,7 +46,9 @@ When building a new feature, work through these phases in order:
    (max lengths, max item counts).
 4. **Routes & UI** — build pages using [ui-patterns.md](ui-patterns.md). Data access via
    remote functions (`query()`/`form()` in `src/lib/remote/`). Add nav links in the
-   relevant layout (member / band / staff).
+   relevant layout (member / band / staff). A create flow asks only for what the record needs
+   to exist and then lands on its edit page —
+   [ui-patterns](ui-patterns.md#create-forms-ask-only-for-what-the-record-needs).
 5. ~~**Seed data**~~ — **do this with step 2, as soon as the schema settles.** Kept numbered
    here only so the steps below keep their numbers.
 6. **Tests** — write tests that describe **intended behavior**, not the current
@@ -60,41 +62,38 @@ When building a new feature, work through these phases in order:
    the queue ref, and `scripts/claude/block-whole-tree-gate.sh` blocks them here. `pnpm check` is
    still worth running when you have a specific type question; it is a required CI check either
    way, so it is not a step to perform out of habit.
-8. **Document** — add the feature row to the feature catalog
-   (`docs/reports/feature-catalog.md`) — one row per feature, written in the final phase, because
-   that table is a recurring merge conflict when every phase edits it; update/add help
+8. **Document** — add the feature's file under `docs/reports/features/<panel>/` (format in its
+   [README](../reports/features/README.md)), written in the final phase; update/add help
    articles and run the docs checks (see
-   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
-   feature had a spec, **retire it now** — see below.
+   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). The last PR
+   adds the feature's decision record — see
+   [Living docs and decision records](#living-docs-and-decision-records).
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
    `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
 
-### Retiring a spec
+### Living docs and decision records
 
-A spec describes what you intend to build. The moment it is built, it describes live
-behavior instead — and a document that describes live behavior with a spec's authority is
-how a doc folder starts lying, because nothing makes anyone update it. `docs/specs/` once held
-23 such files, three of which asserted a feature was unbuilt that had shipped months earlier,
-before an audit sorted them into `docs/specs/shipped/` and this rule got written down.
+The repo documents what the app does now and why it was built that way. What is planned lives on
+the issue.
 
-So when a feature lands, do three things in the same PR:
+**Each build PR updates the docs that describe current behaviour**, in the same PR as the code:
 
-1. **Write the behavior where behavior lives** — a section in
-   [business-workflows.md](business-workflows.md) for anything with a code path worth
-   tracing, and help articles for anything a member or staffer touches. The workflow
-   sections all follow one shape: the story, the code path, data touched, where it breaks.
-2. **Move the spec to `docs/specs/shipped/`** and fix the links that pointed at it. What
-   survives there is the design rationale — the options weighed and rejected — which is the
-   half no manual article ever carries.
-3. **If only part of it shipped, split it.** `specs/shipped/reservation-confirmation-window.md` was
-   the worked example: the shipped phases became prose in business-workflows §1 and the file
-   was rewritten down to the one phase that was never built.
+- [domain-model.md](../architecture/domain-model.md) — what the tables mean.
+- [overview.md](../architecture/overview.md) — how the system is wired.
+- [business-workflows.md](business-workflows.md) — a section for anything with a code path worth
+  tracing: the story, the code path, data touched, where it breaks.
+- [operations-manual.md](../architecture/operations-manual.md) — what staff and operators run.
+- Help articles for anything a member or staffer touches.
 
-Nothing enforces this. It is the last thing anyone feels like doing and the first thing that
-rots, which is exactly why it is written down.
+The update rides with the code so a reviewer reads both together.
+
+**A feature's last PR adds a decision record** in [`docs/decisions/`](../decisions/README.md):
+the context, the decision, the alternatives rejected and the consequences, in a page or less.
+A record is never edited after it merges. A later record supersedes it by number. The format is in
+[the decisions README](../decisions/README.md).
 
 ## Long-lived feature branches
 
@@ -109,7 +108,8 @@ carries the sequences; what follows is why they are what they are.
 
 **Not everything needs a branch.** Instructors shipped six phases straight to `main` with no flag
 and no branch, ordering the work so nothing advertised a capability that did not exist yet
-(`docs/specs/instructors-spec.md`). That is the better default when it is available:
+([decision 0015](../decisions/0015-instructors-rent-the-room.md)). That is the better default
+when it is available:
 
 - Staff-only surfaces land on `main` directly.
 - Schema and refactors land on `main` when they are safe standing alone.
@@ -150,12 +150,9 @@ What the three rules mean in practice:
 
 That last one is what makes landing a merge from `main` possible at all; see below.
 
-Two details worth knowing before trusting a green feature branch. The required set is
-`E2E`, `Unit tests`, `Schema drift`, `Svelte Check` and **`Lint (full)`** — but `Lint (full)` is
-`if: github.event_name == 'push'`, so on a PR it reports `skipped`, which rulesets count as passing.
-`Lint (changed)` and `Docs integrity` are required on `main` and **not** on `feature/*`. So lint and
-docs failures reach the branch and surface only at the landing PR. Run them yourself
-(#762 tracks the mismatch).
+The required set on both `main` and `feature/*` is `E2E`, `Unit tests`, `Schema drift`,
+`Svelte Check`, `Lint (changed)` and `Docs integrity`. `Lint (full)` is not required: it runs only on
+pushes to `main`, in its own workflow (`lint-full.yml`), and opens a `ci-failure` issue when red.
 
 ### Merging `main` in is a push, not a PR
 
@@ -273,15 +270,14 @@ A branch that merges `origin/main` repeatedly hits the same conflicts each time.
 `git config rerere.enabled true` once per clone (it is not committed, and the common `.git` shares
 it across worktrees) and it replays the resolutions.
 
-| File                                | How it conflicts, and what to do                                                                                                                                                                            |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/d1-table-order.mjs`        | **Position is semantic** — a table must follow everything it references. Taking both sides produces a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph. |
-| `scripts/seed-dev.ts`               | The orchestrator: `main()` and nothing else. It is now the only hot spot, and a feature touches one line of it. Seeders live one-per-file in `scripts/seed/`, so two features no longer conflict at all.    |
-| `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                     |
-| `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list.                                                                             |
-| `docs/reports/feature-catalog.md`   | A wide table plus a `Last updated:` line every phase wants to touch. One row per feature, in the landing PR.                                                                                                |
-| `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                 |
-| `migrations/`                       | The migrations never conflict; the pruned `snapshot.json` does. Delete this branch's own migration first, then merge, then take `--theirs`. See above.                                                      |
+| File                                | How it conflicts, and what to do                                                                                                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/d1-table-order.mjs`        | **Position is semantic** — a table must follow everything it references. Taking both sides produces a file that lints clean and breaks the seed at runtime. Re-derive placement from the foreign-key graph.                                                         |
+| `scripts/seed-dev.ts`               | The orchestrator: `main()` and nothing else. It is now the only hot spot, and a feature touches one line of it. Seeders live one-per-file in `scripts/seed/`, so two features no longer conflict at all.                                                            |
+| `src/lib/server/db/schema/index.ts` | Chronological `export *` lines. Append; never reorder. Take both sides.                                                                                                                                                                                             |
+| `src/routes/*/nav-items.ts`         | Ordered arrays where the order is cosmetic. Take both sides, then run the adjacent `nav-items.spec.ts`, which asserts the list. The staff panel's rows are one file per section in `src/routes/staff/nav-items/`, so only PRs that touch the same section conflict. |
+| `pnpm-lock.yaml`                    | Never hand-resolve: `git checkout --theirs pnpm-lock.yaml && pnpm install`.                                                                                                                                                                                         |
+| `migrations/`                       | The migrations never conflict; the pruned `snapshot.json` does. Delete this branch's own migration first, then merge, then take `--theirs`. See above.                                                                                                              |
 
 Never rebase a feature branch and never force-push one. Other worktrees hold it and open phase PRs
 would redisplay every merged phase as new commits. The `non_fast_forward` rule now refuses the push
@@ -408,12 +404,22 @@ to author migration SQL yourself, and it does not break the "migrations come onl
 - Every remote function starts with a **guard** (`requireUser`, `requireCapability`,
   `requireGroupRole`, `requireFeature`, ...) and validates its input with a **Zod
   schema**. A guard in the layout is not a guard on the data — the remote function is the
-  security boundary.
+  security boundary. `scripts/remote-guard.spec.ts` checks that each one reaches a guard before
+  it touches `db`; a remote meant to answer anyone goes in `scripts/remote-guard.public.json`
+  with its reason.
+- A remote keyed on an event id guards with `requireListingReader`/`requireListingWriter`
+  (`src/lib/server/event/listing-guard.ts`), which also admit the show's committee. A bare
+  `requireCapability('event.*')` refuses them; `scripts/listing-guard.spec.ts` fails on one
+  unless `scripts/listing-guard.json` says why it is staff-only.
 - A group-scoped guard takes the group as an **argument**, never from `params`. A remote
   function's `params` describe the page the client says it is on; the slug or id is a
   lookup key that the guard resolves before checking the caller's role on what it
   resolved.
 - Business logic lives in services; remotes are thin (guard + validate + orchestrate).
+- A page that shows what a person may do reads it from `explainAccess`
+  (`src/lib/server/access/why-can-act.ts`), never from the capability matrix in the browser.
+  `no-restricted-imports` refuses `positions`, `grantsCapability` and `positionsGranting` in a
+  `.svelte` file.
 - Services throw typed domain errors; remotes map them via `mapDomainError()`
   (`src/lib/server/errors.ts`).
 - Prefer DTO-shaped return values over passing raw rows to the UI; never return
@@ -424,6 +430,11 @@ to author migration SQL yourself, and it does not break the "migrations come onl
 ## Where a file goes
 
 Layering says which _tier_ a file belongs to. This says which _folder_.
+
+Import from `src/lib` through `#lib`, with the file's extension: `#lib/utils/format.js` for a `.ts`
+file, `#lib/components/ui/Button.svelte`, and `#lib/components/ui/entity/index.js` for a folder.
+`#lib` is a Node subpath import (`imports` in `package.json`). Kit 3 drops `$lib` and requires the
+extension, and `no-restricted-imports` refuses either mistake.
 
 ### Components
 
@@ -489,7 +500,7 @@ Assert the thing the wording stands for:
 | `getByText('Pickup scheduled')`                        | `expectSuccessToast(page)` (`e2e/toast.ts`)                               |
 | `getByText('This is off the board while…')`            | `getByRole('alert')`                                                      |
 | `getByPlaceholder('Search by name or email…')`         | `getByRole('combobox')` / `getByRole('searchbox')` / `input[name]`        |
-| `getByText('Out for repair')`                          | `stockReasonLabels.repair_out` from `$lib/config`                         |
+| `getByText('Out for repair')`                          | `stockReasonLabels.repair_out` from `#lib/config.js`                      |
 | `rejects.toThrow('Reservation not found')`             | `rejects.toThrow(ReservationNotFoundError)`                               |
 | `expect(result.error).toContain('Minimum duration')`   | `expect(result.code).toBe('MIN_DURATION')`                                |
 | `expect(subject).toBe('Reservation reminder: May 21')` | `expect(subject).toContain('May 21')` — the interpolation is the contract |
@@ -498,8 +509,21 @@ When a service throws a bare `Error` and there is no class to assert, add one: a
 subclass needs no registration in `errors.ts`, because `mapDomainError()` already branches on the
 base — and it upgrades a 500 into the status the case deserves.
 
-Do not add a `data-testid`. There are none in this codebase, and every case above was solved with
-markup that already existed.
+#### Locate and assert by structure
+
+A locator does not match on copy either. In order of preference:
+
+1. `button[type=submit]` scoped to its dialog or form;
+2. `href`;
+3. input `name`;
+4. a role with no name, when it is unique inside a scoped container (dialog, form, row, card);
+5. aria state (`aria-current`, `aria-expanded`, `checked`);
+6. `data-testid`, last, when nothing above is unique.
+
+`getByLabel` on a form field stays: a field's label is its accessible contract, not prose.
+Assert URL, field value, count, visibility or a DB row. `custom/no-wording-locators` errors on
+the literal-name forms in `*.spec.ts` and `e2e/` (#2189). Copy the app does not own, such as a card
+processor's decline message, takes an `eslint-disable-next-line` with the reason.
 
 What is **not** copy, and stays:
 
@@ -514,7 +538,7 @@ What is **not** copy, and stays:
   API, not like prose.
 - **Framework crash guards** — `not.toContainText('effect_update_depth_exceeded')` and friends.
 
-`e2e/directory-tabs.e2e.ts`, `e2e/panel-nav.e2e.ts`, `e2e/staff-nav.e2e.ts` and
+`e2e/j-directory-url-state.e2e.ts`, `e2e/panel-nav.e2e.ts`, `e2e/staff-nav.e2e.ts` and
 `e2e/create-band-modal.e2e.ts` are the model e2e specs; `src/lib/server/errors.spec.ts` and
 `src/lib/enum-labels.spec.ts` are the model unit specs.
 
@@ -524,7 +548,7 @@ What is **not** copy, and stays:
 if another one-shot suite is already running, printing who holds it. `vite.config.ts` halves
 `maxWorkers` off `availableParallelism()` for the same reason, but that is a per-process guess:
 on eight cores one suite takes four workers as intended and two suites take all eight, plus a
-headless-chromium pool each for the `client` and `storybook` projects.
+headless-chromium pool each for the `client` project.
 
 This is the sibling of `e2e/lock.ts`, with the difference that matters: **e2e refuses a second
 run, this one queues it.** e2e refuses because its runs share database state and its assertions
@@ -558,7 +582,10 @@ Pick the level by what the test proves:
 2. **Lint rule**: a pattern that is always wrong. See [Custom ESLint rules](#custom-eslint-rules).
 3. **Invariant spec**: walk a list the code already has and assert "every X has Y".
    `scripts/remote-domain-error.spec.ts` is the model.
-4. **Real SQLite**, through `migratedSqlite()`: anything whose answer depends on SQL.
+4. **Real SQLite**, through `migratedSqlite()`: anything whose answer depends on SQL. It runs
+   behind drizzle's D1 driver, so a failed statement throws production's `DrizzleQueryError` with
+   the driver text on `cause`, `db.batch` is one transaction, and a statement over 100 bound
+   parameters is refused (#2704, #2715).
 5. **Remote spec**: behaviour, guards, what gets written, who is refused.
 6. **Component spec**: what a user sees or decides. Form wiring belongs to the types and the remote.
 7. **E2E**: journeys across systems, such as money, auth, and one per main workflow. It never
@@ -575,22 +602,27 @@ spec that walks it.
 Services are tested against real SQLite. `vi.mock` is for outside services: Stripe, Postmark, the
 U-tec lock, R2. A partial `drizzle-orm` mock is a second copy of drizzle's export list, and every
 new operator a service imports breaks the sibling specs that hold one.
+`scripts/no-drizzle-orm-mock.spec.ts` fails on any `vi.mock('drizzle-orm'…)`.
 
 ### Time code runs at its edges
 
 A date or time spec runs at a fixed set of instants: a Pacific evening after UTC midnight, both DST
 changeover days, and a month end. CI runs in UTC and Workers do too, so a spec that only runs at
-noon proves nothing about the day boundary.
+noon proves nothing about the day boundary. `#lib/test/clock-edges.js` names those instants and runs a
+spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 
 ### Worked examples
 
-| Bug                                                                     | Class                                       | Guard                                    |
-| ----------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
-| UTC dates shown as the club's day (#1984, #1985)                        | untimezoned date formatting                 | lint rule (#2000)                        |
-| A listing remote checked the wrong permission (#2002, #2031)            | a listing remote outside the listing guards | invariant spec                           |
-| Hold times reachable only through a rebook                              | a service option no form reaches            | service param vs Zod schema vs form diff |
-| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite                              |
-| `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared | inexact role locators                       | lint rule                                |
+| Bug                                                                               | Class                                        | Guard                        |
+| --------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------- |
+| UTC dates shown as the club's day (#1984, #1985)                                  | untimezoned date formatting                  | lint rule (#2000)            |
+| A listing remote checked the wrong permission (#2002, #2031)                      | a listing remote outside the listing guards  | invariant spec               |
+| Hold times reachable only through a rebook                                        | a service option no form reaches             | invariant spec (allowlist)   |
+| Sibling specs broke after a service imported a new drizzle operator               | partial `drizzle-orm` mocks                  | real SQLite + invariant spec |
+| `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared           | inexact role locators                        | lint rule                    |
+| Service functions left with no caller after their pages moved (#2903)             | a service export only its spec calls         | invariant spec (allowlist)   |
+| A reservation's status and payment state read differently per surface (#2861)     | two definitions of one derived state         | real SQLite + invariant spec |
+| Two overlapping get-or-creates inserted twice, or the second threw (#2621, #2681) | select-then-insert without conflict handling | lint rule                    |
 
 ## Forms: no raw elements
 
@@ -611,7 +643,7 @@ and `pnpm messages:compile` — run by `prepare` and `check` — writes it every
 English only: `project.inlang/paraglide.config.ts` sets the `baseLocale` strategy alone, so
 there is no locale cookie, URL prefix or reroute.
 
-Code reads terms through `$lib/terms`, not the generated module directly: `entityLabels`
+Code reads terms through `#lib/terms.js`, not the generated module directly: `entityLabels`
 (capitalised `one`/`many` per entity type), `groupKindLabels` (lower-case, for prose), and
 `one(m.term_x)` / `many(m.term_x)` for anything else. `config.ts` stays free of the import
 because drizzle-kit loads it through jiti, which has no `$lib` alias.
@@ -630,33 +662,93 @@ template — `groupKindLabels` in the invitation email, for one — does come fr
 still has ~256 such labels and lint runs with `--max-warnings 0`; `pnpm lint:terms` lists them.
 Enable it in `eslint.config.js` once they are cleared (#2099).
 
+## Interface copy
+
+Every interface string lives in the catalog (#2099), so copy is reviewed and trimmed in
+one place: one file per area under `messages/en/` (`ui`, `layout`, `actions`, `components`,
+`band`, `member`, `staff`, `public`), each listed in `project.inlang/settings.json`; terms stay
+in `messages/en.json`. A key is prefixed by its area and then the feature or file it serves
+(`ui_`, `layout_`, `actions_cancel_reservation_`, …), and it is not renamed when its wording
+changes. Read one as `m.ui_close_label()` from `#lib/paraglide/messages.js`; an interpolated
+string takes named inputs (`m.ui_pagination_range_text({ from, to, total })`).
+
+**A key ends with its role** (#2513), so the catalog can be checked against the rubric for that
+role in [writing.md](writing.md). `term_*` keys are concepts and are exempt.
+
+| Suffix         | Passed to                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `_title`       | `title`, `*Title` (`modalTitle`, `documentTitle`, `emptyTitle`), `emptyLabel`, `heading`, `legend`; `h1`–`h4` text      |
+| `_label`       | `label`, `*Label` (`submitLabel`, `actionLabel`, …), `aria-label`, a native element's `title`; `th`, button, badge text |
+| `_checkbox`    | `checkboxLabel`                                                                                                         |
+| `_body`        | `description`, `subtitle`, `empty`, `note`, `tip`, `hint`, `message`, `confirm`; `Alert` text                           |
+| `_toast`       | `successToast`, `*Toast`, `toast.*()`                                                                                   |
+| `_placeholder` | `placeholder`, `searchPlaceholder`                                                                                      |
+| `_error`       | `error`, a thrown or returned error, a variable named for one                                                           |
+| `_text`        | inline prose, a message's inputs, anything else                                                                         |
+
+A string used in two roles is two keys, even with the same text: a button's "Delete band" and its
+modal's "Delete band?" are different strings. `custom/message-key-role` fails lint when a copy prop
+receives a key with the wrong suffix. `pnpm messages:roles` renames keys from their call sites,
+splits a two-role key and deletes an unused one; it is idempotent, so after a rebase that conflicts
+over keys, take either side and re-run it. `scripts/message-copy.spec.ts` runs the rubric's mechanical
+checks by suffix, with `scripts/message-copy.allow.json` listing what failed when it landed; that
+list only shrinks.
+
+A sentence with inline markup stays one message: the markup goes in as `{#strong}…{/strong}`, and
+`<ParaglideMessage message={m.key} inputs={…}>` from `@inlang/paraglide-js-svelte` renders it,
+taking one snippet per tag (`{#snippet strong({ children })}<strong>{@render children?.()}</strong>{/snippet}`).
+Splitting the sentence into fragment messages leaves pieces that can't be reviewed as a sentence.
+A word that depends on a count is a plural message (`local countPlural = count: plural`, as the
+`term_*` messages do), never `n === 1 ? 'x' : 'xs'` at the call site; a choice between two
+wordings is two whole messages, picked with `(cond ? m.a : m.b)(inputs)`.
+
+`custom/no-literal-ui-text` fails lint on literal copy in a shipped `.svelte` file, and
+`pnpm ui-string-census` lists it by directory. Its `allow` list in `eslint.config.js` is for
+strings that look like copy but are not (CSS shown as an example). Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
+not copy. Moving a string is not a licence to add one; a sweep notes redundant copy in its PR.
+
 ## Custom ESLint rules
 
 Project-specific rules live in `eslint-rules/` and are registered once as the
 `custom` plugin in `eslint.config.js` (note the comment there: registering the plugin in
 more than one config object crashes eslint with "Cannot redefine plugin custom").
 
-| Rule                                       | Severity / scope                                                      | What it flags → what to do instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `custom/no-db-transaction`                 | **error** on `src/lib/server/**/*.ts` (excluding specs)               | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `custom/stable-created-at-order`           | **error** on `src/lib/server/**/*.ts` (excluding specs)               | An `orderBy` whose **last** key is `created_at`. The column defaults to `(unixepoch())` — whole seconds — so two rows written in the same second tie and the order is whatever the plan gives (#1196). Autofixes by appending `asc(table.id)`: the id is a random UUID, which is the point, since the order only has to be the same twice rather than mean anything.                                                                                                                                                                                                                                                                                                                                                                 |
-| `custom/no-raw-form-elements`              | **warn** on all `+page.svelte` files                                  | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `custom/no-utility-soup`                   | **warn** on `+page.svelte`, excluding `src/routes/band-site/**`       | Hand-written utility-class soup where a component or semantic utility exists: >5 **non-layout** classes on one element (`flex`/`grid`/`gap-*` and the alignment family `items-*`/`justify-*`/`self-*`/`place-*` are not counted — they are how you put things in a row, not a component in disguise), a raw `btn`/`card`/`badge`/`alert`/`stat`/`table` where a component owns it, the dead `*-bordered` classes, `text-sm opacity-60` instead of `text-muted`, or an inline `style` reaching a `var(--…)`. A `card` that supplies its own surface (a `bg-*/N` tint or the `surface` token) is exempt — `Card`'s `tone` cannot express it. See `template-audit.md`.                                                                  |
-| `custom/no-duplicate-field-names`          | **error** on all `*.svelte`                                           | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `custom/no-concurrent-remote-queries`      | **error** on all `*.svelte`                                           | Two or more remote queries fanned out at once — `Promise.all`/`allSettled`/`race`/`any` over calls imported from a `*.remote` module, in script or template. A page gets one load-bearing query: assemble them in a single remote query on the server, or move what the first paint does not need behind its own boundary to load lazily. Past kit 2.64 this shape also renders the page as `effect_update_depth_exceeded`.                                                                                                                                                                                                                                                                                                          |
-| `custom/refresh-the-composed-query`        | **error** on `src/lib/remote/**/*.remote.ts`                          | `.refresh()` on a query that is composed into another query in the same file — nothing reading the wrapper repaints from it, so a save appears to do nothing. Refresh the wrapper too, or instead if nothing reads the constituent directly any more.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `custom/no-domain-imports-in-ui`           | **error** on `src/lib/components/ui/**` (excluding specs and stories) | A `$lib/remote` or `$lib/server` import — including a type-only one — inside the design system. The component belongs in `components/<domain>/`, or `components/layout/` if a `+layout.svelte` mounts it to frame pages. See [Where a file goes](#where-a-file-goes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `custom/no-direct-financial-entry-writes`  | **error** everywhere, specs included                                  | An `.insert()` of `financialEntry` outside `src/lib/server/finance/` or `scripts/seed/`, or an `.update()`/`.delete()` of it anywhere. The table is append-only — a correction is a reversing entry — and the chart of accounts lives in one module so a new transaction cannot invent its own `kind` and `category` at a call site. Reads are unrestricted. See [Money columns declare themselves](#money-columns-declare-themselves).                                                                                                                                                                                                                                                                                              |
-| `custom/no-unwrapped-remote-mutation`      | **error** on `src/lib/remote/**/*.ts` (excluding `_remote.ts`)        | An import of `form` or `command` from `$app/server`. They must come from `./_remote`, which wraps kit's originals in the catch that maps a domain error to the status it declares — without it a business rule reaches the caller as a 500 and Sentry files it as a crash. Autofixes, except for a renamed specifier, whose call sites would have to move too. `scripts/remote-domain-error.spec.ts` is the whole-program half of the same check.                                                                                                                                                                                                                                                                                    |
-| `custom/no-clipped-row-action`             | **error** on all `*.svelte`                                           | A table row's action that will not survive the layout. Either it sits in a `<td>` carrying `col-support`/`col-extra` — a visibility tier, so the action disappears below its breakpoint — or it is in a `<div class="flex">` with no `w-max`, which under `table-layout: auto` has no intrinsic width, so the column collapses and the last button is **clipped** rather than truncated. Give the action its own `<td class="w-px">`, and `w-max` to any flex row of buttons in a cell.                                                                                                                                                                                                                                              |
-| `custom/no-contact-schema-imports`         | **error** on all `*.ts` and `*.svelte`                                | An import of `contact`, `contactSources`, `Contact` or `ContactSource` from any schema module, outside `contact-service.ts` and the two files that define the table. `contact` holds the private booking details of people who are **not** members — a manager's phone number, notes about a night that went wrong — and it is a separate table precisely because this codebase splats with `select()` and `getTableColumns()`, so a private column on a public row is one refactor away from being serialized. Read through `contact-service.ts`, whose every export guards itself. Matched on the **symbol**, not the path: the table has to be re-exported from `schema/index.ts` or `drizzle-kit` generates no migration for it. |
-| `custom/no-dead-daisyui-classes`           | **error** on all `*.svelte`                                           | daisyUI 4 spellings that emit **no CSS at all** in daisyUI 5: `input-bordered`, `select-bordered`, `textarea-bordered`, `file-input-bordered` (the border is the default — delete it), `form-control` (use `fieldset`), `label-text` (use `fieldset-legend`), `label-text-alt` (use `text-muted text-sm`). Split out of `no-utility-soup`, which only warns and only reads `+page.svelte` — a dead class is a defect, not a style preference, and `form-control` was written in twenty components that rule never looked at.                                                                                                                                                                                                         |
-| `custom/no-clamped-tiered-table`           | **error** on all `*.svelte`                                           | A `PageContent width="…"` on a page whose table uses `col-support`/`col-extra`. Those are container queries on `PageContent`'s `@container`, so a fixed `max-w-*` pins the container at one size and the tiers stop tracking anything — `3xl` is exactly 48rem, which renders every `col-extra` column in the narrowest container the app allows, and `2xl` hides them at every width instead. Drop the width prop. Ten detail pages are grandfathered in the rule; #1218 decides each.                                                                                                                                                                                                                                              |
-| `custom/no-inline-alert-action`            | **error** on all `*.svelte`                                           | A `<Button>` or `<Action>` loose in an `<Alert>`'s children. `Alert` renders `action` as a sibling of its prose; written inline the button joins the text flow, and `.btn` is `inline-flex` with a fixed height taller than the line box, so it overlaps the text as soon as the sentence wraps. Use `{#snippet action()}`. A button inside a layout element the page owns — its own flex row — is fine and not reported.                                                                                                                                                                                                                                                                                                            |
-| `custom/page-header-width-matches-content` | **error** on all `*.svelte`                                           | A page whose `PageHeader` and `PageContent` declare different `width`s. The header is full-bleed and sticky so its border runs edge to edge, so a header that does not repeat the content's clamp puts the `h1` outside the column it titles — 232px left of it at `2xl`. Give `PageHeader` the same `width`. A dynamic width on either side is the page's own business and is not reported.                                                                                                                                                                                                                                                                                                                                         |
-| `custom/definite-action-labels`            | **error** on all `*.svelte`                                           | An indefinite word (someone, something, anyone, somebody, anything, anybody) in a literal `label`, `modalTitle` or `submitLabel` on `Button`, `Action`, `SubmitButton` or any `*Action` component, or in the literal default a `*Action.svelte` file gives one of those props. An action label names the act and its object; the form says who or what (#1829). Labels built at runtime are not seen.                                                                                                                                                                                                                                                                                                                                |
-| `custom/no-tracked-command-in-effect`      | **error** on `*.svelte` and `*.svelte.ts`                             | A remote `command()` called inside `$effect`/`$effect.pre` outside `untrack`. Kit's client command reads and writes its own `$state` pending count on every call, so the effect re-runs itself until `effect_update_depth_exceeded` (#1956). The rule reads the imported `.remote` module to tell a command from a query; queries in effects are fine.                                                                                                                                                                                                                                                                                                                                                                               |
-| `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                      | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `$lib/terms` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Rule                                       | Severity / scope                                                                                                          | What it flags → what to do instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `custom/no-db-transaction`                 | **error** on `src/lib/server/**/*.ts` (excluding specs)                                                                   | Any `.transaction()` call — broken on D1. Use `db.batch([...queries])` for atomic writes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `custom/stable-created-at-order`           | **error** on `src/lib/server/**/*.ts` (excluding specs)                                                                   | An `orderBy` whose **last** key is `created_at`. The column defaults to `(unixepoch())` — whole seconds — so two rows written in the same second tie and the order is whatever the plan gives (#1196). Autofixes by appending `asc(table.id)`: the id is a random UUID, which is the point, since the order only has to be the same twice rather than mean anything.                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `custom/no-check-then-insert`              | **error** on `src/lib/server/**/*.ts` (excluding specs)                                                                   | A get-or-create by select-then-insert: a `.from(t)…limit()` read, an `if` on its result that returns (or wraps the insert), then `.insert(t)` with no `onConflictDo*`. Two overlapping callers both read nothing and both insert, so the key gets a duplicate or the second caller a UNIQUE error (#2681). Back the key with a unique index and insert with `.onConflictDoNothing()` then re-read, or `.onConflictDoUpdate()`. A check-then-throw (`if (taken) throw`, then the insert) is flagged too: the second caller gets a raw UNIQUE error, so the insert uses `.onConflictDoNothing()` and throws the domain error when nothing returns, or sits in a `try` that maps `isUniqueConstraintError` to it (#2695). Not seen: a read in a helper, a renamed table binding, or an unlimited read. |
+| `custom/no-driver-message-match`           | **error** on `src/**/*.ts` (excluding specs and `constraint-errors.ts`)                                                   | A regex or string match on driver error text (`constraint`, `SQLITE_`, `D1_ERROR`). On D1 a single statement's error is drizzle's `DrizzleQueryError`, whose message is the SQL; the driver text is on `cause`, so a match on `err.message` never fires (#2704). Use `isUniqueConstraintError` or `isForeignKeyConstraintError` from `#lib/server/db/constraint-errors.js`.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `custom/booking-terms-by-booker`           | **error** on `src/lib/remote/**/*.ts` (excluding specs)                                                                   | `hourlyRateCents`, `minDurationHours`, `maxAdvanceDaysOneoff` or `maxAdvanceDaysRecurring` read straight off a reservation config object. A teaching booking has its own values, and `validateBooking` reads them through `termsFor`, so a direct read offers a teacher the member's (#2957). Use `termsFor(bookerType, config)`, or `minSlotsFor` for a picker's floor.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `custom/no-unqualified-correlation`        | **error** on `src/lib/server/**/*.ts` (excluding specs)                                                                   | A select field whose `sql` holds a subquery and refers to a column of a table the subquery does not name after `from` or `join`, on a `db.select()` chain with no join. With no join drizzle renders a top-level select field's columns unqualified, so the outer `"id"` resolves to the subquery's own table and a count reads 0 (#2788). Wrap it in a nested `sql`, which drizzle qualifies. Not seen: a join added to the query in a later statement.                                                                                                                                                                                                                                                                                                                                            |
+| `custom/no-raw-form-elements`              | **warn** on all `+page.svelte` files                                                                                      | Raw `<form>` elements in pages. Use the `<Form>` component.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `custom/no-utility-soup`                   | **warn** on `+page.svelte`, excluding `src/routes/band-site/**`                                                           | Hand-written utility-class soup where a component or semantic utility exists: >5 **non-layout** classes on one element (`flex`/`grid`/`gap-*` and the alignment family `items-*`/`justify-*`/`self-*`/`place-*` are not counted — they are how you put things in a row, not a component in disguise), a raw `btn`/`card`/`badge`/`alert`/`stat`/`table` where a component owns it, the dead `*-bordered` classes, `text-sm opacity-60` instead of `text-muted`, or an inline `style` reaching a `var(--…)`. A `card` that supplies its own surface (a `bg-*/N` tint or the `surface` token) is exempt — `Card`'s `tone` cannot express it. See `template-audit.md`.                                                                                                                                 |
+| `custom/no-duplicate-field-names`          | **error** on all `*.svelte`                                                                                               | Two fields submitting the same `name` within one `<Form>` (statically resolvable names only) — the later value silently wins on submit. Rename one.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `custom/no-concurrent-remote-queries`      | **error** on all `*.svelte`                                                                                               | Two or more remote queries fanned out at once — `Promise.all`/`allSettled`/`race`/`any` over calls imported from a `*.remote` module, in script or template. A page gets one load-bearing query: assemble them in a single remote query on the server, or move what the first paint does not need behind its own boundary to load lazily. Past kit 2.64 this shape also renders the page as `effect_update_depth_exceeded`.                                                                                                                                                                                                                                                                                                                                                                         |
+| `custom/refresh-the-composed-query`        | **error** on `src/lib/remote/**/*.remote.ts`                                                                              | `.refresh()` on a query that is composed into another query in the same file — nothing reading the wrapper repaints from it, so a save appears to do nothing. Refresh the wrapper too, or instead if nothing reads the constituent directly any more.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `custom/no-domain-imports-in-ui`           | **error** on `src/lib/components/ui/**` (excluding specs)                                                                 | A `#lib/remote` or `#lib/server` import — including a type-only one — inside the design system. The component belongs in `components/<domain>/`, or `components/layout/` if a `+layout.svelte` mounts it to frame pages. See [Where a file goes](#where-a-file-goes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `custom/no-direct-financial-entry-writes`  | **error** everywhere, specs included                                                                                      | An `.insert()` of `financialEntry` outside `src/lib/server/finance/` or `scripts/seed/`, or an `.update()`/`.delete()` of it anywhere. The table is append-only — a correction is a reversing entry — and the chart of accounts lives in one module so a new transaction cannot invent its own `kind` and `category` at a call site. Reads are unrestricted. See [Money columns declare themselves](#money-columns-declare-themselves).                                                                                                                                                                                                                                                                                                                                                             |
+| `custom/no-unwrapped-remote-mutation`      | **error** on `src/lib/remote/**/*.ts` (excluding `_remote.ts`)                                                            | An import of `form` or `command` from `$app/server`. They must come from `./_remote`, which wraps kit's originals in the catch that maps a domain error to the status it declares — without it a business rule reaches the caller as a 500 and Sentry files it as a crash. Autofixes, except for a renamed specifier, whose call sites would have to move too. `scripts/remote-domain-error.spec.ts` is the whole-program half of the same check.                                                                                                                                                                                                                                                                                                                                                   |
+| `custom/audit-declared`                    | **error** on `src/lib/remote/*.remote.ts`                                                                                 | A staff `form` or `command` (its handler calls `requireCapability` or `can`) that changes money, a clearance, a setting, a visibility or a record's existence with a bare handler. Wrap it in `audited(...)` (the wrapper writes the row with the fields that changed), `writesAudit('<action>', ...)` (a service writes it) or `unaudited('<why>', ...)` from `#lib/server/audit/declared.js`. `scripts/audit-coverage.spec.ts` is the whole-program half: it follows guards that ask the capability for the handler and checks each declaration against what the handler reaches.                                                                                                                                                                                                                 |
+| `custom/no-clipped-row-action`             | **error** on all `*.svelte`                                                                                               | A table row's action that will not survive the layout. Either it sits in a `<td>` carrying `col-support`/`col-extra` — a visibility tier, so the action disappears below its breakpoint — or it is in a `<div class="flex">` with no `w-max`, which under `table-layout: auto` has no intrinsic width, so the column collapses and the last button is **clipped** rather than truncated. Give the action its own `<td class="w-px">`, and `w-max` to any flex row of buttons in a cell.                                                                                                                                                                                                                                                                                                             |
+| `custom/no-contact-schema-imports`         | **error** on all `*.ts` and `*.svelte`                                                                                    | An import of `contact`, `contactSources`, `Contact` or `ContactSource` from any schema module, outside `contact-service.ts` and the two files that define the table. `contact` holds the private booking details of people who are **not** members — a manager's phone number, notes about a night that went wrong — and it is a separate table precisely because this codebase splats with `select()` and `getTableColumns()`, so a private column on a public row is one refactor away from being serialized. Read through `contact-service.ts`, whose every export guards itself. Matched on the **symbol**, not the path: the table has to be re-exported from `schema/index.ts` or `drizzle-kit` generates no migration for it.                                                                |
+| `custom/no-dead-daisyui-classes`           | **error** on all `*.svelte`                                                                                               | daisyUI 4 spellings that emit **no CSS at all** in daisyUI 5: `input-bordered`, `select-bordered`, `textarea-bordered`, `file-input-bordered` (the border is the default — delete it), `form-control` (use `fieldset`), `label-text` (use `fieldset-legend`), `label-text-alt` (use `text-muted text-sm`). Split out of `no-utility-soup`, which only warns and only reads `+page.svelte` — a dead class is a defect, not a style preference, and `form-control` was written in twenty components that rule never looked at.                                                                                                                                                                                                                                                                        |
+| `custom/no-clamped-tiered-table`           | **error** on all `*.svelte`                                                                                               | A `PageContent width="…"` on a page whose table uses `col-support`/`col-extra`. Those are container queries on `PageContent`'s `@container`, so a fixed `max-w-*` pins the container at one size and the tiers stop tracking anything — `3xl` is exactly 48rem, which renders every `col-extra` column in the narrowest container the app allows, and `2xl` hides them at every width instead. Drop the width prop. Ten detail pages are grandfathered in the rule; #1218 decides each.                                                                                                                                                                                                                                                                                                             |
+| `custom/no-inline-alert-action`            | **error** on all `*.svelte`                                                                                               | A `<Button>` or `<Action>` loose in an `<Alert>`'s children. `Alert` renders `action` as a sibling of its prose; written inline the button joins the text flow, and `.btn` is `inline-flex` with a fixed height taller than the line box, so it overlaps the text as soon as the sentence wraps. Use `{#snippet action()}`. A button inside a layout element the page owns — its own flex row — is fine and not reported.                                                                                                                                                                                                                                                                                                                                                                           |
+| `custom/page-header-width-matches-content` | **error** on all `*.svelte`                                                                                               | A page whose `PageHeader` and `PageContent` declare different `width`s. The header is full-bleed and sticky so its border runs edge to edge, so a header that does not repeat the content's clamp puts the `h1` outside the column it titles — 232px left of it at `2xl`. Give `PageHeader` the same `width`. A dynamic width on either side is the page's own business and is not reported.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `custom/definite-action-labels`            | **error** on all `*.svelte`                                                                                               | An indefinite word (someone, something, anyone, somebody, anything, anybody) in a literal `label`, `modalTitle` or `submitLabel` on `Button`, `Action`, `SubmitButton` or any `*Action` component, or in the literal default a `*Action.svelte` file gives one of those props. An action label names the act and its object; the form says who or what (#1829). Labels built at runtime are not seen.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `custom/no-raw-file-input`                 | **error** on all `*.svelte` except `ui/Form/FileUpload.svelte`                                                            | An `<input type="file">`, or a spread of `field.as('file')`. Use `FileUpload` from `$lib/components/ui/Form/` — or `FormField type="file"` inside a form — which owns the picker, preview, in-flight state, error and multipart enctype. Immediate uploads pass `upload` (or `uploadAll` for several files); deferred ones pass a remote `field`.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `custom/no-tracked-command-in-effect`      | **error** on `*.svelte` and `*.svelte.ts`                                                                                 | A remote `command()` called inside `$effect`/`$effect.pre` outside `untrack`. Kit's client command reads and writes its own `$state` pending count on every call, so the effect re-runs itself until `effect_update_depth_exceeded` (#1956). The rule reads the imported `.remote` module to tell a command from a query; queries in effects are fine.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `custom/no-svelte-element`                 | **error** on all `*.svelte`                                                                                               | A `<svelte:element>`. Svelte 5.57 hydrates one below a top-level `await` by re-inserting the server-rendered node, which blurs anything focused inside it (#2224, #2300). Branch over literal elements with `{#if}`. The one exception, `FormField`'s text-only label/legend, carries an inline disable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `custom/no-asserted-route-param`           | **error** on all `*.svelte`                                                                                               | `page.params.x!`. `page.params` is global and changes while the outgoing page is still mounted, so a query re-run from that page is sent with no argument (#2472). Use `routeParams()` from `#lib/route-params.svelte.js`. A read that handles the missing value, `page.params.id ?? null`, is allowed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `custom/no-interactive-await`              | **error** on all `*.svelte`                                                                                               | A form, input, dialog or `*Action` inside an `{#await}` block. The block re-pends on every new promise, and a remote query hands one out on each `refresh()`/`refreshAll()`, so the subtree is destroyed and rebuilt, along with any open dialog and typed input (#2352). Render from `new Latest(() => promise).current` (`#lib/latest.svelte.js`), as `DataList` does. The 21 sites left over carry an inline disable naming a sub-issue of #2355.                                                                                                                                                                                                                                                                                                                                                |
+| `custom/require-await-catch`               | **error** on all `*.svelte`                                                                                               | An `{#await}` block with no `{:catch}`. A rejection renders nothing and Svelte rethrows it as an unhandled rejection no `<svelte:boundary>` sees, so a failed query reads as an empty section (#2453, #2459). Use a top-level `await` to reach the panel boundary when nothing else on the page is worth keeping; a `{:catch}` with an alert when the rest still works; a `{:catch}` holding only a comment saying why when blank is the right failure, as for a count or a badge.                                                                                                                                                                                                                                                                                                                  |
+| `custom/club-time-dates`                   | **error** on `*.svelte` and `src/**/*.ts` (excluding specs)                                                               | A `toLocaleDateString`/`toLocaleTimeString` or `Intl.DateTimeFormat` with no `timeZone`, a date `toLocaleString` (on `new Date(…)`, a `Date`-typed receiver, or with date options) with none, `toISOString().slice(0, 10)`/`.split('T')`, ``new Date(`${date}T${time}`)`` with no `Z` or offset, or `z.coerce.date()`, which stores a date input as UTC midnight (#2538). Each renders in the runtime's zone — UTC during SSR, the viewer's after hydration — or gives the UTC day (#2000). Use `#lib/utils/format.js` for an instant, `clubToday()` for today, `addIsoDays()` for date arithmetic, `utcCalendarDate()` for a stored UTC-midnight date, `clubInstant()` to build an instant from a club date and time, and `clubInstant(date, '12:00')` to store a date input.                      |
+| `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                                                                          | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `#lib/terms.js` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `custom/no-wording-locators`               | **error** in `*.spec.ts` and `e2e/`; `pnpm test-wording-census` reports by file                                           | A literal `name:` in `getByRole`, a literal `getByText`, or a literal `toHaveTextContent`/`toContainText`/`toHaveText`. See [Locate and assert by structure](#locate-and-assert-by-structure).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `custom/no-literal-ui-text`                | **error** on `src/**/*.svelte` (not `*.test.svelte` or harnesses)                                                         | A template text node with a letter in it, a copy attribute (`label`, `title`, `note`, `confirm`, `*Label`, `*Toast`, …) or property, a literal branch of a `{…}` tag, a `toast.*()` message, or the literal a script variable rendered by any of those was declared with. Add it to `messages/en/<area>.json` and read `m.<key>()`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `custom/message-key-role`                  | **error** on `src/**/*.{svelte,ts}` (not specs or `paraglide/`)                                                           | An `m.<key>` passed straight to a copy prop, property, prop default or `toast.*()` whose key does not end in that role's suffix. Run `pnpm messages:roles`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `custom/no-manual-field-name`              | **error** on `src/**/*.svelte`; `pnpm field-name-census` also lists name-only controls in files with no form of their own | A `name` on a control (`FormField`, `Select`, `MoneyField`, `SearchSelect`, a raw `input`/`select`/`textarea`/`button`, …) inside a `<Form remote>`, a remote `Action`'s `form` snippet, or a `<form>` spread from `.enhance()`. Kit 3 rejects such a submission at runtime (#2196). Pass `field={fields.x}`, or spread `fields.x.as('hidden', value)` / `.as('submit', value)`. A `<Form action>` keeps `name`.                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### Money columns declare themselves
 
@@ -781,43 +873,47 @@ instead, where a human sees it.
 
 Every script in `package.json`:
 
-| Script                          | What it does                                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `dev`                           | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)          |
-| `build`                         | `vite build` (output: `.svelte-kit/cloudflare/`)                                                   |
-| `preview`                       | Serve the production build on :4173 (a worktree gets its own port)                                 |
-| `prepare`                       | (auto on install) svelte-kit sync + `messages:compile` + lefthook install                          |
-| `messages:compile`              | Compile `messages/en.json` into `src/lib/paraglide/` (see [Terminology](#terminology))             |
-| `check` / `check:watch`         | svelte-check type checking                                                                         |
-| `test:unit`                     | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)                |
-| `test:components`               | One-shot client (browser) + storybook vitest projects                                              |
-| `test:e2e`                      | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                                   |
-| `test:e2e:prepare`              | Just the migrate + seed half (CI runs it as its own step)                                          |
-| `test:e2e:run`                  | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                                  |
-| `test`                          | Full suite: unit one-shot + e2e (what CI runs)                                                     |
-| `test:report`                   | Vitest with JSON output → `test-results.json`                                                      |
-| `lint`                          | prettier `--check` + eslint over everything                                                        |
-| `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)          |
-| `lint:terms`                    | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                        |
-| `format`                        | prettier `--write` everything                                                                      |
-| `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe         |
-| `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                 |
-| `db:check-migrations`           | Fail if any migration has an unsafe table rebuild (runs in CI)                                     |
-| `db:migrate`                    | drizzle-kit: apply pending migrations to **remote** D1                                             |
-| `db:migrate:local`              | Apply pending migrations to the local D1 (tracked; a no-op when current)                           |
-| `db:seed`                       | Run `scripts/seed-dev.ts` against local D1                                                         |
-| `volunteer:seed-roles`          | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                              |
-| `db:reset`                      | Wipe local D1 + migrate + seed                                                                     |
-| `db:studio`                     | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                 |
-| `ci:migrate`                    | Remote migrate on `main` only; drop-only batches wait for `--after-publish` (ops manual §1)        |
-| `storybook` / `build-storybook` | Storybook on :6006 / static build                                                                  |
-| `stripe:sync-webhooks`          | Sync the Stripe webhook endpoint's event list to the code registry                                 |
-| `help:sync`                     | Upsert `src/content/help/**` articles into local D1; `--remote` writes production (deploys run it) |
-| `docs:routes`                   | Regenerate the route snapshot `docs/manual/route-inventory.json`                                   |
-| `docs:check`                    | Docs integrity + route-drift check (CI gate)                                                       |
-| `email:push` / `email:pull`     | Sync Postmark transactional templates repo ↔ Postmark                                              |
-| `email:preview`                 | Render the templates to `.email-preview/` for eyeballing                                           |
-| `email:validate`                | Check template syntax and required variables                                                       |
+| Script                      | What it does                                                                                                                                               |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev`                       | Vite dev server on :5173 (a worktree gets its own port — `scripts/lib/checkout-ports.ts`)                                                                  |
+| `build`                     | `vite build` (output: `.svelte-kit/cloudflare/`)                                                                                                           |
+| `preview`                   | Serve the production build on :4173 (a worktree gets its own port)                                                                                         |
+| `prepare`                   | (auto on install) svelte-kit sync + `messages:compile` + lefthook install                                                                                  |
+| `messages:compile`          | Compile `messages/en.json` into `src/lib/paraglide/` (see [Terminology](#terminology))                                                                     |
+| `messages:roles`            | Rename message keys to end with their role, from their call sites (see [Interface copy](#interface-copy))                                                  |
+| `check` / `check:watch`     | svelte-check type checking                                                                                                                                 |
+| `test:unit`                 | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)                                                                        |
+| `test:components`           | One-shot client (browser) vitest project                                                                                                                   |
+| `test:e2e`                  | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                                                                                           |
+| `test:e2e:prepare`          | Just the migrate + seed half (CI runs it as its own step)                                                                                                  |
+| `test:e2e:run`              | Just the Playwright half — takes its flags, e.g. `-- --workers=1`                                                                                          |
+| `test`                      | Full suite: unit one-shot + e2e (what CI runs)                                                                                                             |
+| `test:report`               | Vitest with JSON output → `test-results.json`                                                                                                              |
+| `lint`                      | prettier `--check` + eslint over everything                                                                                                                |
+| `lint:changed`              | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)                                                                  |
+| `lint:terms`                | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                                                                                |
+| `test-wording-census`       | Count tests that locate or assert by UI copy (`custom/no-wording-locators`), by directory                                                                  |
+| `form-reachability`         | Print the service keys no `form()`/`command()` passes (#2049); gated by its `.spec.ts`                                                                     |
+| `ui-string-census`          | Count literal interface strings in `.svelte` (`custom/no-literal-ui-text`), by directory; `--list`                                                         |
+| `field-name-census`         | List hand-written names on remote-form controls (`custom/no-manual-field-name`), including name-only controls in files with no form of their own; `--list` |
+| `format`                    | prettier `--write` everything                                                                                                                              |
+| `db:generate`               | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe                                                                 |
+| `db:fix-migrations`         | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                                                                         |
+| `db:check-migrations`       | Fail if any migration has an unsafe table rebuild (runs in CI)                                                                                             |
+| `db:migrate`                | drizzle-kit: apply pending migrations to **remote** D1                                                                                                     |
+| `db:migrate:local`          | Apply pending migrations to the local D1 (tracked; a no-op when current)                                                                                   |
+| `db:seed`                   | Run `scripts/seed-dev.ts` against local D1                                                                                                                 |
+| `volunteer:seed-roles`      | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                                                                                      |
+| `db:reset`                  | Wipe local D1 + migrate + seed                                                                                                                             |
+| `db:studio`                 | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                         |
+| `ci:migrate`                | Remote migrate on `main` only; drop-only batches wait for `--after-publish` (ops manual §1)                                                                |
+| `stripe:sync-webhooks`      | Sync the Stripe webhook endpoint's event list to the code registry                                                                                         |
+| `help:sync`                 | Upsert `src/content/help/**` articles into local D1; `--remote` writes production (deploys run it)                                                         |
+| `docs:routes`               | Regenerate the route snapshot `docs/manual/route-inventory.json`                                                                                           |
+| `docs:check`                | Docs integrity + route-drift check (CI gate)                                                                                                               |
+| `email:push` / `email:pull` | Sync Postmark transactional templates repo ↔ Postmark                                                                                                      |
+| `email:preview`             | Render the templates to `.email-preview/` for eyeballing                                                                                                   |
+| `email:validate`            | Check template syntax and required variables                                                                                                               |
 
 ## Docs workflow (when you change routes or help content)
 
@@ -827,8 +923,7 @@ Before opening a PR that adds/removes/moves a route or touches help articles:
    `docs/manual/README.md`.
 2. `pnpm docs:routes` — regenerate and commit `docs/manual/route-inventory.json`.
 3. `pnpm docs:check` — must pass; CI fails the PR on integrity errors.
-4. New feature shipped? Add its row to the feature catalog `docs/reports/feature-catalog.md`
-   (checklist phase 8)
+4. New feature shipped? Add its file under `docs/reports/features/<panel>/` (checklist phase 8)
    and index any new doc in `docs/README.md`.
 
 Keeping the docs honest is a manual step in every PR that changes behaviour — nothing
@@ -852,10 +947,17 @@ if it's broadly useful.
 
 ### Patched dependencies
 
-`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Two of them:
+`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Three of them:
 
 - **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
-- **`svelte@5.57.0`** — a two-line fix in `Boundary#resolve`
+- **`@sveltejs/kit@3.1.1`** — `flushSync` around the first `apply_navigation_result` in
+  `initialize` (`src/runtime/client/client.js`). Kit writes the render tree into `$state` and mounts
+  in the same tick, so under `experimental.async` the write's batch is still open when Root first
+  renders. A boundary's contents rendered in a later batch then read the tree's `child` as
+  undefined, and the page dies with "Cannot read properties of undefined (reading 'child')". A page
+  that starts a non-awaited remote query on hydration hits it every time (`/staff/reservations`,
+  `/staff/reports/volunteering`). Drop the patch once upstream commits the tree before mounting.
+- **`svelte@5.57.3`** — a two-line fix in `Boundary#resolve`
   (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
   `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then
   hands them back to the `Batch` that `increment_pending()` captured when the awaited work
@@ -872,12 +974,15 @@ if it's broadly useful.
   here.
 
   A `pnpm install` after a Svelte bump will fail loudly if the patch stops applying. When it does,
-  check whether upstream has fixed it before re-rolling the patch.
+  check whether upstream has fixed it before re-rolling the patch. As of 5.57.3 it has not:
+  `Boundary#resolve` still hands its parked reactions (now one `#dirty_reactions` map, moved by
+  `transfer_reactions`) to the captured batch unconditionally, and `Batch#merge` still unlinks
+  the batch it absorbs.
 
 ### Analytics and reporting tools
 
 Which vendor owns which question, so this is not re-litigated per feature. The governing rule
-lives in `docs/specs/reporting-spec.md`: **a report belongs in the app only when it joins data no
+lives in [a decision record](../decisions/0040-reports-are-module-owned.md): **a report belongs in the app only when it joins data no
 single vendor holds.**
 
 | Question                                                              | Where it is answered                                                                    | Notes                                                             |
@@ -960,6 +1065,16 @@ Only four things refuse outright:
 
 Between the first state and a terminal one, anything else that blocks is a bug against this rule.
 
+**Named owner exceptions.** Refusals outside the four, each an owner decision recorded on its issue:
+
+- **An outstanding fee refuses a member's own booking and withholds their door code messages**
+  (#2748, #2859). One practice space session that ended still payment due, counted from the cutoff
+  in Practice space settings, refuses a new booking at the reservation remote and drops the
+  member's `door_code_ready` reminder until it is paid. Member-facing remotes return no door code
+  or break-glass code for that member's bookings (#2874); `door-code-readers.spec.ts` holds every
+  remote returning a code to staff-only or this check. Staff booking on a member's behalf see the
+  fees and are never refused; the code is still minted. `src/lib/server/reservation/outstanding-fees.ts`.
+
 **The override is an escape hatch, not a feature.** The UI is designed for the usual path. Overrides
 live behind an overflow menu or a confirm step, never as a peer of the normal action, and nothing
 in the UI invites them. Because every non-terminal step can be repeated or walked back, a step's
@@ -970,6 +1085,20 @@ warnings, `transitionProduction` returns them unmoved until they are acknowledge
 `reopenProduction` is behind `production.reopen`, and `assertNotTerminal` in
 `src/lib/server/production/production-scope.ts` is the one read every write path makes first.
 
+Contractor jobs (`reopenJob`, behind `contractor.reopen`), purchase orders (`reopenOrder`) and
+inventory assets (`reopenAsset`, both behind `inventory.reopen`) have the same Reopen, through the
+quiet `ReopenAction`. None reverses money: a reopened job keeps its ledger rows and a re-completion
+books only the difference; a reopened asset's ledger is brought back with an `adjust` movement.
+
 Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
 returns its readiness warnings unpublished until acknowledged with a reason, and writes
 `event.published_over_warnings` when it goes ahead over them.
+
+So do approving a returned volunteer hour log (`approveHourLog`, which writes
+`volunteer_hours.approved_over_return`) and checking out a requested equipment loan without
+scheduling it (`checkoutLoan`, which writes `equipment_loan.checked_out_unscheduled`). Some
+refusals look like ordering but are kept on purpose, and each says why at the throw. Opening a
+ballot whose certifier's account is gone is one: the reference is broken, and the draft edit is
+the fix. Editing or sending a scheduled campaign is another: unscheduling is the reversal, and the
+cron sender claims it at most once. So is staff putting somebody on a shift that has already
+ended: past work is recorded as an hour log, not a signup.

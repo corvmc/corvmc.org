@@ -1,18 +1,21 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	acquisition,
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
-	inventoryLocation
-} from '$lib/server/db/schema/inventory';
+	inventoryLocation,
+	stockMovement
+} from '#lib/server/db/schema/inventory.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { and, asc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { user } from '$lib/server/db/schema/authentication';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { form8282Status, needsAttention } from './form-8282';
+import { afterSourceChange, reconcileSourcedTasks } from '#lib/server/task/sourced-tasks.js';
 import { movementStatement, recordMovement } from './stock-service';
-import type { AssetStatus, EquipmentCondition } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+import type { AssetStatus, EquipmentCondition } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * One physical unit of a `serialized` item.
@@ -39,6 +42,14 @@ export class AssetTagTakenError extends DomainError {
 	constructor(tag: string) {
 		super(`Tag '${tag}' is already bound to another asset`);
 		this.name = 'AssetTagTakenError';
+	}
+}
+
+export class AssetReopenError extends DomainError {
+	readonly httpStatus = 409;
+	constructor(message: string) {
+		super(message);
+		this.name = 'AssetReopenError';
 	}
 }
 
@@ -191,6 +202,17 @@ export async function setAssetStatus(
 	status: AssetStatus,
 	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string } = {}
 ) {
+	const row = await writeAssetStatus(id, status, opts);
+	// A disposal is what can owe a Form 8282 (#2757).
+	if (status === 'retired' || status === 'lost') await afterForm8282Change();
+	return row;
+}
+
+async function writeAssetStatus(
+	id: string,
+	status: AssetStatus,
+	opts: { notes?: string; condition?: EquipmentCondition; actorId?: string }
+) {
 	const change = await assetStatusChange(id, status, opts);
 	if (!change.statements) return change.asset;
 	if (change.statements.length === 1) {
@@ -239,22 +261,59 @@ export async function assetStatusChange(
 		.where(eq(inventoryAsset.id, id))
 		.returning();
 
-	const reason = movementReasonForStatus(asset.status, status);
-	const statements: [typeof statusUpdate, ...ReturnType<typeof movementStatement>[]] = reason
-		? [
-				statusUpdate,
-				movementStatement({
-					itemId: asset.itemId,
-					assetId: id,
-					quantity: 1,
-					reason,
-					locationId: asset.locationId,
-					actorId: opts.actorId ?? null,
-					notes: opts.notes ?? null
-				})
-			]
-		: [statusUpdate];
+	const terminal = status === 'retired' || status === 'lost';
+	const reason = terminal ? terminalReason(status) : movementReasonForStatus(asset.status, status);
+	const quantity = terminal ? await heldOnLedger(id) : 1;
+	const statements: [typeof statusUpdate, ...ReturnType<typeof movementStatement>[]] =
+		reason && quantity > 0
+			? [
+					statusUpdate,
+					movementStatement({
+						itemId: asset.itemId,
+						assetId: id,
+						quantity,
+						reason,
+						locationId: asset.locationId,
+						actorId: opts.actorId ?? null,
+						notes: opts.notes ?? null
+					})
+				]
+			: [statusUpdate];
 	return { asset, statements };
+}
+
+/** The unit's own ledger sum: 1 on the shelf, 0 in the shop or out on loan. */
+async function heldOnLedger(assetId: string) {
+	const moves = await db
+		.select({ quantity: stockMovement.quantity })
+		.from(stockMovement)
+		.where(eq(stockMovement.assetId, assetId));
+	return moves.reduce((total, m) => total + m.quantity, 0);
+}
+
+function terminalReason(status: 'retired' | 'lost') {
+	return status === 'retired' ? ('retire' as const) : ('loss' as const);
+}
+
+/**
+ * A retired or lost unit holds nothing on the ledger. Retiring takes off only
+ * what the unit still holds, so one retired while on loan is taken off when its
+ * `loan_return` puts it back; `returnLoan` calls this after writing that.
+ */
+export async function settleTerminalUnit(assetId: string, actorId: string | null) {
+	const asset = await getAssetRaw(assetId);
+	if (!asset || (asset.status !== 'retired' && asset.status !== 'lost')) return null;
+	const held = await heldOnLedger(assetId);
+	if (held <= 0) return null;
+	return recordMovement({
+		itemId: asset.itemId,
+		assetId,
+		quantity: held,
+		reason: terminalReason(asset.status),
+		locationId: asset.locationId,
+		actorId,
+		notes: 'Returned after it was closed'
+	});
 }
 
 /**
@@ -265,11 +324,64 @@ export async function assetStatusChange(
  * same amp twice.
  */
 function movementReasonForStatus(from: AssetStatus, to: AssetStatus) {
-	if (to === 'retired') return 'retire' as const;
-	if (to === 'lost') return 'loss' as const;
 	if (to === 'maintenance') return 'repair_out' as const;
 	if (to === 'in_service' && from === 'maintenance') return 'repair_in' as const;
 	return null;
+}
+
+/**
+ * Put a retired or lost unit back in service, behind the admin-only
+ * `inventory.reopen`: a terminal state is the past. The `retire`/`loss`
+ * movement stays; an `adjust` brings the unit's ledger sum back to one, which
+ * is what an in-service unit counts for. A recorded Form 8282 is kept.
+ */
+export async function reopenAsset(id: string, reason: string, actorId: string) {
+	const why = reason.trim();
+	if (!why) throw new AssetReopenError('Say why it is being reopened');
+	const asset = await getAssetRaw(id);
+	if (!asset) throw new AssetNotFoundError();
+	if (!TERMINAL_STATUSES.includes(asset.status)) {
+		throw new AssetReopenError(`This unit is ${asset.status}, not retired or lost`);
+	}
+
+	const delta = 1 - (await heldOnLedger(id));
+
+	const update = db
+		.update(inventoryAsset)
+		.set({ status: 'in_service', retiredAt: null, retiredReason: null, updatedAt: new Date() })
+		.where(and(eq(inventoryAsset.id, id), eq(inventoryAsset.status, asset.status)))
+		.returning();
+	// The status and its movement are one fact: db.batch, never db.transaction.
+	const [[row]] =
+		delta === 0
+			? [await update]
+			: await db.batch([
+					update,
+					movementStatement({
+						itemId: asset.itemId,
+						assetId: id,
+						quantity: delta,
+						reason: 'adjust',
+						locationId: asset.locationId,
+						actorId,
+						notes: `Reopened: ${why}`
+					})
+				]);
+	if (!row) throw new AssetReopenError('This unit changed while you were looking at it');
+
+	await recordAuditEntry({
+		action: 'inventory_asset.reopened',
+		subject: { type: 'inventory_asset', id, label: asset.assetTag ?? asset.serialNumber ?? id },
+		details: {
+			from: asset.status,
+			to: 'in_service',
+			reason: why,
+			retiredReason: asset.retiredReason,
+			stockAdjusted: delta
+		}
+	});
+	await afterForm8282Change();
+	return row;
 }
 
 // ---------------------------------------------------------------------------
@@ -355,8 +467,30 @@ export async function resolveForm8282(assetId: string, note: string) {
 		.returning();
 
 	if (!row) throw new AssetNotFoundError();
+	await afterForm8282Change();
 	return row;
 }
+
+/**
+ * Each Form 8282 owed has one open task (#2757), linked to the unit and due
+ * when the form is, until `resolveForm8282` records it. Run after the writes
+ * that change what is owed, and daily.
+ */
+export async function syncForm8282Tasks(now = new Date()) {
+	const { obligations } = await listForm8282Obligations(now);
+	return reconcileSourcedTasks(
+		'form_8282',
+		obligations.map((o) => ({
+			sourceId: o.id,
+			title: `File Form 8282 for ${o.assetTag ? `${o.item.name} (${o.assetTag})` : o.item.name}`,
+			dueAt: o.status.dueBy,
+			links: { assetId: o.id }
+		})),
+		'Closed: the Form 8282 is recorded as dealt with.'
+	);
+}
+
+export const afterForm8282Change = () => afterSourceChange('form_8282', () => syncForm8282Tasks());
 
 // ---------------------------------------------------------------------------
 // Reading

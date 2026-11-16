@@ -1,0 +1,6 @@
+ALTER TABLE `purchase_order` ADD `organization_id` text REFERENCES organization(id) ON DELETE SET NULL;--> statement-breakpoint
+CREATE INDEX `idx_purchase_order_organization` ON `purchase_order` (`organization_id`);--> statement-breakpoint
+-- Each distinct supplier name, compared trimmed and case-insensitively, becomes one organization unless one already has that name.
+INSERT INTO `organization` (`id`, `name`) SELECT lower(hex(randomblob(16))), min(trim(`supplier_name`)) FROM `purchase_order` WHERE trim(coalesce(`supplier_name`, '')) <> '' AND lower(trim(`supplier_name`)) NOT IN (SELECT lower(trim(`name`)) FROM `organization`) GROUP BY lower(trim(`supplier_name`));--> statement-breakpoint
+UPDATE `purchase_order` SET `organization_id` = (SELECT o.`id` FROM `organization` o WHERE lower(trim(o.`name`)) = lower(trim(`purchase_order`.`supplier_name`)) ORDER BY o.`archived_at` IS NOT NULL, o.`created_at`, o.`id` LIMIT 1) WHERE trim(coalesce(`supplier_name`, '')) <> '';--> statement-breakpoint
+INSERT OR IGNORE INTO `party_role` (`id`, `organization_id`, `role`) SELECT lower(hex(randomblob(16))), `organization_id`, 'supplier' FROM (SELECT DISTINCT `organization_id` FROM `purchase_order` WHERE `organization_id` IS NOT NULL);

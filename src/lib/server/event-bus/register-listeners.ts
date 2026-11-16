@@ -11,68 +11,44 @@ import { domainEvents } from './event-bus';
 // supports multiple listeners per event.
 // ---------------------------------------------------------------------------
 
-let registered = false;
+/** Each group imports its listener module lazily, then subscribes. */
+export const listenerGroups: ReadonlyArray<() => Promise<void>> = [
+	registerCheckoutListeners,
+	registerInKindListeners,
+	registerMembershipEntryListeners,
+	registerAudioEntryListeners,
+	registerEquipmentEntryListeners,
+	registerNotificationListeners,
+	registerInboxListeners,
+	registerWaitlistListeners,
+	registerOrientationGroup,
+	registerLockListeners,
+	registerAuditGroup,
+	registerLocalResourceGroup,
+	registerMarketGroup
+];
 
-export function registerListeners(): void {
-	if (registered) return;
-	registered = true;
+let registered: Promise<void> | undefined;
 
-	// --- Checkout fulfillment (migrated from callback pattern) ---
-	registerCheckoutListeners();
-
-	// --- Contributed services into the financial record ---
-	registerInKindListeners();
-
-	// --- Paid contribution invoices into the financial record ---
-	registerMembershipEntryListeners();
-
-	// --- Music sales into the financial record ---
-	registerAudioEntryListeners();
-
-	// --- Equipment loan charges into the financial record ---
-	registerEquipmentEntryListeners();
-
-	// --- Notification dispatch ---
-	registerNotificationListeners();
-
-	// --- Inbox message → staff notification ---
-	registerInboxListeners();
-
-	// --- Waitlist promotion on cancellation ---
-	registerWaitlistListeners();
-
-	// --- A member's first booking raises an orientation shift ---
-	registerOrientationGroup();
-
-	// --- Scheduled work that finished closes the equipment reports it answered ---
-	registerWorkRequestGroup();
-
-	// --- A confirmed booking gets its door code now, not the morning of ---
-	registerLockListeners();
-
-	// --- Staff actions that surface as domain events, into the audit log ---
-	registerAuditGroup();
-
-	// --- Local resources tips: staff hear of one, the submitter hears the outcome ---
-	registerLocalResourceGroup();
-
-	// --- Market vendor fees are refunded when CMC cancels the market ---
-	registerMarketGroup();
+/** Idempotent. Callers need not await it; the promise settles once every group has subscribed. */
+export function registerListeners(): Promise<void> {
+	registered ??= Promise.all(listenerGroups.map((group) => group())).then(() => undefined);
+	return registered;
 }
 
 async function registerMarketGroup(): Promise<void> {
-	const { registerMarketListeners } = await import('$lib/server/market/market-listeners');
+	const { registerMarketListeners } = await import('#lib/server/market/market-listeners.js');
 	registerMarketListeners();
 }
 
 async function registerLocalResourceGroup(): Promise<void> {
 	const { registerLocalResourceListeners } =
-		await import('$lib/server/local-resource/local-resource-listener');
+		await import('#lib/server/local-resource/local-resource-listener.js');
 	registerLocalResourceListeners();
 }
 
 async function registerAuditGroup(): Promise<void> {
-	const { registerAuditListeners } = await import('$lib/server/audit/audit-listeners');
+	const { registerAuditListeners } = await import('#lib/server/audit/audit-listeners.js');
 	registerAuditListeners();
 }
 
@@ -82,17 +58,11 @@ async function registerAuditGroup(): Promise<void> {
  * `/door` (#2120).
  */
 async function registerLockListeners(): Promise<void> {
-	const { revokeAccessFor } = await import('$lib/server/lock/lock-service');
+	const { revokeAccessFor } = await import('#lib/server/lock/lock-service.js');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		await revokeAccessFor(event.reservationId);
 	});
-}
-
-async function registerWorkRequestGroup(): Promise<void> {
-	const { registerWorkRequestListeners } =
-		await import('$lib/server/inventory/work-request-listener');
-	registerWorkRequestListeners();
 }
 
 /**
@@ -103,12 +73,8 @@ async function registerWorkRequestGroup(): Promise<void> {
  */
 async function registerOrientationGroup(): Promise<void> {
 	const { registerOrientationListeners } =
-		await import('$lib/server/volunteer/orientation-listener');
+		await import('#lib/server/volunteer/orientation-listener.js');
 	registerOrientationListeners();
-	// The same shape one level up: a new show is stamped with its deliverables.
-	const { registerDeliverablesListeners } =
-		await import('$lib/server/volunteer/deliverables-listener');
-	registerDeliverablesListeners();
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +91,7 @@ async function registerOrientationGroup(): Promise<void> {
  */
 async function registerInKindListeners(): Promise<void> {
 	const { handleApprovedHours, handleReturnedHours } =
-		await import('$lib/server/finance/in-kind-listener');
+		await import('#lib/server/finance/in-kind-listener.js');
 
 	domainEvents.on('volunteer.hours_approved', async ({ data: event }) => {
 		await handleApprovedHours(event.logId);
@@ -141,7 +107,7 @@ async function registerInKindListeners(): Promise<void> {
  * Both events carry the same shape; only the copy a receipt uses differs.
  */
 async function registerMembershipEntryListeners(): Promise<void> {
-	const { recordMembershipInvoice } = await import('$lib/server/finance/membership-entries');
+	const { recordMembershipInvoice } = await import('#lib/server/finance/membership-entries.js');
 
 	for (const name of ['membership.started', 'membership.renewed'] as const) {
 		domainEvents.on(name, async ({ data: event }) => {
@@ -157,7 +123,7 @@ async function registerMembershipEntryListeners(): Promise<void> {
  * checkout — is covered by the same writer.
  */
 async function registerAudioEntryListeners(): Promise<void> {
-	const { recordAudioSale } = await import('$lib/server/finance/audio-entries');
+	const { recordAudioSale } = await import('#lib/server/finance/audio-entries.js');
 
 	domainEvents.on('audio.purchased', async ({ data: event }) => {
 		await recordAudioSale(event);
@@ -170,7 +136,7 @@ async function registerAudioEntryListeners(): Promise<void> {
  * spend side, so the report showed what gear cost and not what it earned.
  */
 async function registerEquipmentEntryListeners(): Promise<void> {
-	const { recordEquipmentLoanCharge } = await import('$lib/server/finance/equipment-entries');
+	const { recordEquipmentLoanCharge } = await import('#lib/server/finance/equipment-entries.js');
 
 	domainEvents.on('equipment.returned', async ({ data: event }) => {
 		await recordEquipmentLoanCharge(event);
@@ -178,13 +144,15 @@ async function registerEquipmentEntryListeners(): Promise<void> {
 }
 
 async function registerCheckoutListeners(): Promise<void> {
-	const { handleReservationCheckout } = await import('$lib/server/reservation/checkout-listener');
-	const { handleTicketCheckout } = await import('$lib/server/ticket/checkout-listener');
-	const { handleBandPremiumCheckout } = await import('$lib/server/band/band-checkout-listener');
-	const { handleAudioCheckout } = await import('$lib/server/audio/checkout-listener');
-	const { recordVendorFeePaid } = await import('$lib/server/market/vendor-fee-service');
-	const { handleCheckoutCache } = await import('$lib/server/finance/checkout-cache-listener');
-	const { handleCheckoutEntries } = await import('$lib/server/finance/checkout-entries-listener');
+	const { handleReservationCheckout } =
+		await import('#lib/server/reservation/checkout-listener.js');
+	const { handleTicketCheckout } = await import('#lib/server/ticket/checkout-listener.js');
+	const { handleBandPremiumCheckout } = await import('#lib/server/band/band-checkout-listener.js');
+	const { handleAudioCheckout } = await import('#lib/server/audio/checkout-listener.js');
+	const { recordVendorFeePaid } = await import('#lib/server/market/vendor-fee-service.js');
+	const { handleCheckoutCache } = await import('#lib/server/finance/checkout-cache-listener.js');
+	const { handleCheckoutEntries } =
+		await import('#lib/server/finance/checkout-entries-listener.js');
 
 	domainEvents.on('checkout.completed', async ({ data: event }) => {
 		await handleReservationCheckout(event.stripeSession);
@@ -226,7 +194,7 @@ async function registerCheckoutListeners(): Promise<void> {
 
 async function registerNotificationListeners(): Promise<void> {
 	const { registerAllNotificationListeners } =
-		await import('$lib/server/notification/notification-listeners');
+		await import('#lib/server/notification/notification-listeners.js');
 	registerAllNotificationListeners();
 }
 
@@ -239,8 +207,8 @@ async function registerNotificationListeners(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function registerInboxListeners(): Promise<void> {
-	const { dispatch } = await import('$lib/server/notification/dispatcher');
-	const { listUsersWithCapability } = await import('$lib/server/authorization');
+	const { dispatch } = await import('#lib/server/notification/dispatcher.js');
+	const { listUsersWithCapability } = await import('#lib/server/authorization.js');
 
 	domainEvents.on('inbox.message_received', async ({ data: event }) => {
 		// A band's booking enquiry goes to the act, not to us. Same handler because
@@ -296,8 +264,8 @@ async function registerInboxListeners(): Promise<void> {
 		contactName: string | null;
 		preview: string;
 	}): Promise<void> {
-		const { bandOfThread } = await import('$lib/server/inbox/band-service');
-		const { getById, listBandAdmins } = await import('$lib/server/band/band-service');
+		const { bandOfThread } = await import('#lib/server/inbox/band-service.js');
+		const { getById, listBandAdmins } = await import('#lib/server/band/band-service.js');
 
 		const groupId = await bandOfThread(event.threadId);
 		if (!groupId) return;
@@ -340,10 +308,10 @@ async function registerInboxListeners(): Promise<void> {
 		// The event carries only ids. Everything the notification needs — the
 		// subject, and the preview that addOutboundMessage just set to this
 		// reply's opening line — is on the thread row.
-		const { findThreadById } = await import('$lib/server/inbox/thread-service');
-		const { listThreadParticipants } = await import('$lib/server/inbox/portal-service');
-		const { db } = await import('$lib/server/db');
-		const { user } = await import('$lib/server/db/schema/authentication');
+		const { findThreadById } = await import('#lib/server/inbox/thread-service.js');
+		const { listThreadParticipants } = await import('#lib/server/inbox/portal-service.js');
+		const { db } = await import('#lib/server/db/index.js');
+		const { user } = await import('#lib/server/db/schema/authentication.js');
 		const { inArray } = await import('drizzle-orm');
 
 		const thread = await findThreadById(event.threadId);
@@ -395,7 +363,7 @@ async function registerInboxListeners(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function registerWaitlistListeners(): Promise<void> {
-	const { promoteNextWaitlisted } = await import('$lib/server/reservation/waitlist-service');
+	const { promoteNextWaitlisted } = await import('#lib/server/reservation/waitlist-service.js');
 
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		// `expireWaitlisted()` promotes the next member itself, before it emits
@@ -407,8 +375,8 @@ async function registerWaitlistListeners(): Promise<void> {
 		// Parse the original reservation's time range to find waitlisted candidates
 		// We need the raw Date objects — reconstruct from the formatted strings
 		// by looking up the cancelled reservation directly
-		const { db } = await import('$lib/server/db');
-		const { reservation } = await import('$lib/server/db/schema/reservation');
+		const { db } = await import('#lib/server/db/index.js');
+		const { reservation } = await import('#lib/server/db/schema/reservation.js');
 		const { eq } = await import('drizzle-orm');
 
 		const [row] = await db

@@ -1,8 +1,9 @@
 import { page } from 'vitest/browser';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { forEachClockEdge } from '#lib/test/clock-edges.js';
 
-vi.mock('$lib/remote/events.remote', () => {
+vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -20,7 +21,7 @@ vi.mock('$lib/remote/events.remote', () => {
 	};
 });
 
-vi.mock('$lib/remote/productions.remote', () => ({
+vi.mock('#lib/remote/productions.remote.js', () => ({
 	createShow: {
 		enhance: () => ({ method: 'POST', action: '?/createShow' }),
 		fields: new Proxy({ allIssues: () => null } as Record<string, unknown>, {
@@ -36,7 +37,7 @@ vi.mock('$lib/remote/productions.remote', () => ({
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -49,7 +50,7 @@ describe('CreateEventModal', () => {
 	it('asks only for what the row needs', async () => {
 		await render(CreateEventModal, { open: true });
 
-		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
+		await expect.element(page.getByLabelText('Title')).toBeVisible();
 		await expect.element(page.getByLabelText('Date')).toBeVisible();
 		await expect.element(page.getByLabelText('Start time')).toBeVisible();
 		await expect.element(page.getByLabelText('End time')).toBeVisible();
@@ -57,8 +58,16 @@ describe('CreateEventModal', () => {
 		for (const gone of ['Description', 'Doors time', 'Tags', 'Address line', 'Ticket price ($)']) {
 			await expect.element(page.getByLabelText(gone)).not.toBeInTheDocument();
 		}
-		await expect.element(page.getByText('Reserve practice space')).not.toBeInTheDocument();
-		await expect.element(page.getByText('Repeat this event')).not.toBeInTheDocument();
+		// No room hold and no repeat: the form posts the row's own fields and
+		// nothing else, and its only buttons are Cancel and the submit.
+		const form = document.querySelector('[role="dialog"] form')!;
+		const posted = new Set(
+			[...form.querySelectorAll('[name]')].map((el) => el.getAttribute('name'))
+		);
+		expect([...posted].sort()).toEqual(
+			['eventDate', 'eventEndTime', 'eventStartTime', 'groupId', 'kind', 'title'].sort()
+		);
+		expect(form.querySelectorAll('button')).toHaveLength(2);
 	});
 
 	it('posts a plain listing from the Calendar, with its kind and who runs it', async () => {
@@ -69,16 +78,14 @@ describe('CreateEventModal', () => {
 		expect(document.querySelector('form')?.getAttribute('action')).toBe('?/createEvent');
 	});
 
-	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC.
-	describe('at 6pm club time', () => {
-		afterEach(() => vi.useRealTimers());
-
-		it('defaults the date to the club day, not the UTC day', async () => {
-			vi.useFakeTimers({ toFake: ['Date'] });
-			vi.setSystemTime(new Date('2026-10-27T01:00:00Z'));
+	// #1984: 6pm PDT on Oct 26 was already Oct 27 in UTC.
+	forEachClockEdge(
+		'defaults the date to the club day',
+		async ({ clubDate }) => {
 			await render(CreateEventModal, { open: true });
 
-			await expect.element(page.getByLabelText('Date')).toHaveValue('2026-10-26');
-		});
-	});
+			await expect.element(page.getByLabelText('Date')).toHaveValue(clubDate);
+		},
+		{ fakeTimers: true }
+	);
 });

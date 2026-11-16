@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeCss, hasBlockedPatterns } from './css-sanitizer';
-import { themeStarterCss } from '$lib/utils/theme-starter';
+import { themeStarterCss } from '#lib/utils/theme-starter.js';
 
 describe('sanitizeCss', () => {
 	it('passes through valid CSS unchanged', () => {

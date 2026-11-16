@@ -43,6 +43,7 @@
 	];
 	const todayValue = today(tz);
 	const dateLabel = new Intl.DateTimeFormat('en-US', {
+		timeZone: tz,
 		weekday: 'long',
 		month: 'long',
 		day: 'numeric',

@@ -35,7 +35,7 @@ export interface MerchItem {
  *
  * `hidden` is what the page editor's visibility toggle writes. Since the editor
  * became reorder-and-hide — every premium band starts with the whole catalogue,
- * see `$lib/utils/band-site-preset` — there is no delete, so a block a band does
+ * see `#lib/utils/band-site-preset.js` — there is no delete, so a block a band does
  * not want is one it keeps and stops publishing. Absent means visible.
  */
 interface BlockBase {
@@ -85,7 +85,7 @@ export interface BandVideo {
  * Everything a band writes into its press kit, both audiences mixed together.
  *
  * Nothing should read this shape directly. `publicPressKit()` and
- * `fullPressKit()` in `$lib/server/band/press-kit.ts` are the two ways out of
+ * `fullPressKit()` in `#lib/server/band/press-kit.js` are the two ways out of
  * it, and which one a caller picks is the whole of the privacy boundary.
  */
 export interface BandEpk {
@@ -116,7 +116,7 @@ export interface PressQuote {
 // `BandEpk` mixes two audiences. Everything a stranger may read is in
 // `PublicPressKit`; everything else reaches only whoever the band sends the
 // package to. The projections themselves live in
-// `$lib/server/band/press-kit.ts` — the types are here so components can name
+// `#lib/server/band/press-kit.js` — the types are here so components can name
 // what they are handed without importing from `$lib/server/`.
 // ---------------------------------------------------------------------------
 

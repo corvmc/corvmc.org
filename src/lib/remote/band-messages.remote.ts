@@ -25,7 +25,7 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form, command } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
 import {
 	listBandThreads,
 	getBandThread,
@@ -34,8 +34,8 @@ import {
 	markBandThreadRead,
 	bandOfThread,
 	BAND_THREAD_STATUSES
-} from '$lib/server/inbox/band-service';
-import { getBandLayout } from '$lib/remote/layout.remote';
+} from '#lib/server/inbox/band-service.js';
+import { getBandLayout } from '#lib/remote/layout.remote.js';
 
 /**
  * Resolve the band that owns a thread, then authorise against *that* band.

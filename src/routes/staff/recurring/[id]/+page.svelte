@@ -1,27 +1,30 @@
 <script lang="ts">
-	import { withQuery } from '$lib/utils/with-query';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { formatTimeRange, formatDate, formatScheduleLabel } from '$lib/utils/format';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { getStaffSeriesDetail, cancelDetailSeries } from '$lib/remote/recurring.remote';
+	import { refreshAll, goto } from '$app/navigation';
+	import { EditScheduleAction } from '#lib/components/actions/index.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { formatTimeRange, formatDate, formatScheduleLabel } from '#lib/utils/format.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { getStaffSeriesDetail, cancelDetailSeries } from '#lib/remote/recurring.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 	const { fields: cancelFields } = cancelDetailSeries;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffSeriesDetail(id));
 	const series = $derived(data.series);
 	const history = $derived(data.history);
 
-	let isActive = $derived(!series.cancelledAt);
+	let isActive = $derived(!series.cancelledAt && !series.supersededBy);
 </script>
 
 <!-- The schedule, not the word "Recurring Series": the title was a constant, so
@@ -29,28 +32,39 @@
 <PageHeader
 	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
-	subtitle="Recurring series"
+	subtitle={m.staff_recurring_series_body()}
 	parent={{
-		label: 'Recurring series',
-		href: withQuery(resolve('/staff/reservations'), 'recurring')
+		label: m.staff_recurring_series_label(),
+		href: resolve('staff/recurring')
 	}}
 >
 	{#if isActive}
+		<EditScheduleAction
+			series={{
+				id: series.id,
+				frequencyLabel: series.frequencyLabel,
+				monthlyMode: series.monthlyMode,
+				startsAt: series.prototypeStartsAt,
+				endsAt: series.prototypeEndsAt,
+				until: series.endsAt
+			}}
+			variant="primary"
+			onsuccess={(next) => goto(resolve('/staff/recurring/[id]', { id: next }))}
+		/>
 		<Action
 			action={cancelDetailSeries}
-			label="Cancel Series"
-			modalTitle="Confirm"
-			successToast="Series cancelled"
+			label={m.staff_recurring_id_cancel_series_label()}
+			modalTitle={m.staff_confirm_title()}
+			successToast={m.staff_series_cancelled_toast()}
 			variant="error"
 			size="sm"
 			outline
-			onsuccess={() => invalidateAll()}
+			onsuccess={() => refreshAll()}
 		>
 			{#snippet form()}
 				<input {...cancelFields.seriesId.as('hidden', id)} />
 				<p class="py-4">
-					Cancel this recurring series? The next session is cancelled and later ones are removed.
-					Any already paid for are cancelled and refunded instead.
+					{m.staff_cancel_recurring_series_next_session_text()}
 				</p>
 			{/snippet}
 		</Action>
@@ -58,7 +72,9 @@
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-4 flex items-center gap-2">
-		{#if series.cancelledAt}
+		{#if series.supersededBy}
+			<Badge variant="ghost">{m.staff_recurring_id_superseded_label()}</Badge>
+		{:else if series.cancelledAt}
 			<StatusBadge status="cancelled" />
 		{:else}
 			<StatusBadge status="active" />
@@ -66,52 +82,56 @@
 	</div>
 
 	<!-- Current schedule -->
-	<InfoCard title="Schedule">
+	<InfoCard title={m.staff_schedule_title()}>
 		<DefinitionList>
 			<!-- The plain-English schedule the list row shows. The raw RRULE stays,
 			     because staff do read it when a series misbehaves — but it is no
 			     longer the only thing on offer (#1065). -->
-			<Fact label="Schedule">
+			<Fact label={m.staff_schedule_label()}>
 				{formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 			</Fact>
 
-			<Fact label="RRULE" mono>{series.rrule}</Fact>
+			<Fact label={m.staff_recurring_id_rrule_label()} mono>{series.rrule}</Fact>
 
-			<Fact label="Prototype Time"
+			<Fact label={m.staff_recurring_id_prototype_time_label()}
 				>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</Fact
 			>
 
-			<Fact label="Booker"><EntityChip ref={series.booker} /></Fact>
+			<Fact label={m.staff_booker_label()}><EntityChip ref={series.booker} /></Fact>
 
 			<!-- The booking the series was cut from. Its times were on this page and
 			     its id was on the record, and there was no way to open it. -->
-			<Fact label="Prototype"><EntityChip ref={series.prototype} /></Fact>
+			<Fact label={m.staff_recurring_id_prototype_label()}
+				><EntityChip ref={series.prototype} /></Fact
+			>
 
 			{#if series.prototypeNotes}
-				<Fact label="Notes" wrap>{series.prototypeNotes}</Fact>
+				<Fact label={m.staff_notes_label()} wrap>{series.prototypeNotes}</Fact>
 			{/if}
 
-			<Fact label="Created">{formatDate(series.createdAt)}</Fact>
+			<Fact label={m.staff_created_label()}>{formatDate(series.createdAt)}</Fact>
 
 			{#if series.cancelledAt}
-				<Fact label="Cancelled">{formatDate(series.cancelledAt)}</Fact>
+				<Fact label={m.staff_cancelled_label()}>{formatDate(series.cancelledAt)}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
 	<!-- History -->
 	{#if history.length > 1}
-		<InfoCard title="Supersession History">
+		<InfoCard title={m.staff_recurring_id_supersession_history_title()}>
 			<div class="space-y-2">
-				{#each history as h, i (h.id)}
-					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
-						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
+				{#each history as h (h.id)}
+					<div class="flex items-center gap-3 text-sm" class:opacity-50={h.id !== id}>
+						<a class="link font-mono text-xs" href={resolve('/staff/recurring/[id]', { id: h.id })}
+							>{h.id.slice(0, 8)}</a
+						>
 						<span class="flex-1 font-mono text-xs">{h.rrule}</span>
 						<span>{formatDate(h.createdAt)}</span>
-						{#if h.cancelledAt}
+						{#if h.supersededBy}
+							<Badge variant="ghost">{m.staff_recurring_id_superseded_label()}</Badge>
+						{:else if h.cancelledAt}
 							<StatusBadge status="cancelled" />
-						{:else if h.supersededBy}
-							<Badge variant="ghost">superseded</Badge>
 						{:else}
 							<StatusBadge status="active" />
 						{/if}

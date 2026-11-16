@@ -1,15 +1,17 @@
-import { db } from '$lib/server/db';
-import { workRequest, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
-import { workOrder, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
+import { and, asc, count, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
+import { linkedTo, linkedToAny } from '#lib/server/task/work-order-link.js';
+import { openSourcedTask } from '#lib/server/task/sourced-tasks.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { toGenericRef } from '#lib/server/entity/refs.js';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
-import type { EquipmentCondition } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import type { EquipmentCondition } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * Flags: what somebody noticed about one unit.
@@ -125,7 +127,7 @@ export async function raiseFlag(input: RaiseFlagInput) {
 		});
 	}
 
-	return flag;
+	return { ...flag, workOrderId: await sendToRepair(flag) };
 }
 
 export class WorkRequestValidationError extends DomainError {
@@ -164,7 +166,101 @@ export async function reportBuildingProblem(input: {
 			updatedAt: now
 		})
 		.returning();
-	return flag;
+	return { ...flag, workOrderId: await sendToRepair(flag) };
+}
+
+/**
+ * Put a new report on the task that will fix it (#2756): the open task already
+ * about the unit, else a new one linked to it. A building problem opens its
+ * own task, as two reports about one room may be two faults. Every untriaged
+ * report on the unit goes with it, as `sendToWorkOrder` takes them.
+ */
+export async function sendToRepair(request: {
+	id: string;
+	assetId: string | null;
+	location: string | null;
+	note: string;
+}): Promise<string> {
+	let workOrderId: string;
+	if (request.assetId) {
+		const [open] = await db
+			.select({ id: workOrder.id })
+			.from(workOrder)
+			.where(and(linkedTo('assetId', request.assetId), openWork()))
+			.orderBy(asc(workOrder.createdAt), asc(workOrder.id))
+			.limit(1);
+		workOrderId =
+			open?.id ??
+			(
+				await openSourcedTask({
+					source: 'repair',
+					sourceId: request.assetId,
+					title: `Repair ${await unitLabel(request.assetId)}`,
+					notes: request.note,
+					links: { assetId: request.assetId }
+				})
+			).id;
+	} else {
+		workOrderId = (
+			await openSourcedTask({
+				source: 'repair',
+				sourceId: request.id,
+				title: `Repair ${request.location ?? 'the building'}`,
+				notes: request.note
+			})
+		).id;
+	}
+
+	await db
+		.update(workRequest)
+		.set({ workOrderId, updatedAt: new Date() })
+		.where(
+			and(
+				eq(workRequest.status, 'pending'),
+				isNull(workRequest.workOrderId),
+				request.assetId ? eq(workRequest.assetId, request.assetId) : eq(workRequest.id, request.id)
+			)
+		);
+	return workOrderId;
+}
+
+const openWork = () => and(isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt));
+
+async function unitLabel(assetId: string): Promise<string> {
+	const [unit] = await db
+		.select({ name: inventoryItem.name, assetTag: inventoryAsset.assetTag })
+		.from(inventoryAsset)
+		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+		.where(eq(inventoryAsset.id, assetId))
+		.limit(1);
+	if (!unit) return 'unit';
+	return unit.assetTag ? `${unit.name} (${unit.assetTag})` : unit.name;
+}
+
+/**
+ * Reports raised before #2756 that still wait in triage: each goes to its
+ * task as a new one would. Idempotent; the daily task sweep runs it.
+ */
+export async function sendUntriagedToRepair(): Promise<number> {
+	const waiting = await db
+		.select({
+			id: workRequest.id,
+			assetId: workRequest.assetId,
+			location: workRequest.location,
+			note: workRequest.note
+		})
+		.from(workRequest)
+		.where(untriagedRequest())
+		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
+	const sent = new Set<string>();
+	for (const r of waiting) {
+		// One call per unit: the first takes the unit's other reports with it.
+		const key = r.assetId ?? r.id;
+		if (sent.has(key)) continue;
+		sent.add(key);
+		await sendToRepair(r);
+	}
+	return sent.size;
 }
 
 /** Whether anything open says this unit must not go out. */
@@ -188,6 +284,10 @@ export async function hasBlockingFlag(assetId: string): Promise<boolean> {
  * Oldest first. A report that has been sitting a fortnight is the one that has
  * gone wrong, and a queue sorted newest-first hides exactly that.
  */
+/** Reported and not yet sent to a work order: the review feed's predicate. */
+export const untriagedRequest = () =>
+	and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId));
+
 export async function listPendingFlags() {
 	return db
 		.select({
@@ -200,18 +300,8 @@ export async function listPendingFlags() {
 		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
 		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-		.where(and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId)))
+		.where(untriagedRequest())
 		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
-}
-
-/** Everything ever raised against one unit, newest first — the unit's own page. */
-export async function listFlagsForAsset(assetId: string) {
-	return db
-		.select({ flag: workRequest, reporterName: user.name })
-		.from(workRequest)
-		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-		.where(eq(workRequest.assetId, assetId))
-		.orderBy(desc(workRequest.createdAt), desc(workRequest.id));
 }
 
 /** Flags answered by one work order, so resolving it can close them together. */
@@ -281,60 +371,6 @@ export async function resolveFlagsForWorkOrder(
 }
 
 /**
- * The clock-out path. Closes the reports only when staff flagged the work order
- * "close reports on completion"; otherwise it stays for the coordinator to confirm.
- */
-export async function resolveFlagsOnCompletion(
-	workOrderId: string,
-	userId: string,
-	notes?: string
-): Promise<string[]> {
-	const [order] = await db
-		.select({ closeReportsOnCompletion: workOrder.closeReportsOnCompletion })
-		.from(workOrder)
-		.where(eq(workOrder.id, workOrderId))
-		.limit(1);
-	if (!order?.closeReportsOnCompletion) return [];
-	return resolveFlagsForWorkOrder(workOrderId, userId, notes);
-}
-
-/**
- * Unflagged work orders whose window has passed with reports still attached and
- * open: "finished: confirm fixed?" on the coordinator's Today worklist.
- */
-export async function listFinishedWorkToConfirm(now = new Date()) {
-	return (
-		db
-			.select({
-				id: workOrder.id,
-				title: workOrder.title,
-				roleName: volunteerRole.name,
-				endsAt: workOrder.endsAt,
-				unitName: inventoryItem.name,
-				assetTag: inventoryAsset.assetTag,
-				reports: count(workRequest.id)
-			})
-			.from(workOrder)
-			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
-			// Left: a contractor's repair has no role and still answers the reports.
-			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
-			.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-			.where(
-				and(
-					eq(workOrder.closeReportsOnCompletion, false),
-					isNull(workOrder.resolvedAt),
-					isNull(workOrder.cancelledAt),
-					lt(workOrder.endsAt, now),
-					eq(workRequest.status, 'pending')
-				)
-			)
-			.groupBy(workOrder.id)
-			.orderBy(asc(workOrder.endsAt), asc(workOrder.id))
-	);
-}
-
-/**
  * `sendToWorkOrder` only attaches reports on the work order's own unit, so one
  * asset — or none, for building problems, where each reporter hears about the
  * place they named.
@@ -396,7 +432,7 @@ export type WorkRequestStage = (typeof workRequestStages)[number];
 function stageWhere(stage: WorkRequestStage | undefined) {
 	switch (stage) {
 		case 'untriaged':
-			return and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId));
+			return untriagedRequest();
 		case 'in_work_order':
 			return and(eq(workRequest.status, 'pending'), isNotNull(workRequest.workOrderId));
 		case 'resolved':
@@ -504,7 +540,11 @@ export async function getWorkRequestDetail(id: string) {
 		id: workOrder.id,
 		notes: workOrder.notes,
 		dueAt: workOrder.dueAt,
-		startsAt: workOrder.startsAt,
+		// The next live shift on it, if it has one.
+		startsAt: sql<Date | null>`(
+			select min(s."starts_at") from "volunteer_shift" s
+			where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
+		)`.mapWith(volunteerShift.startsAt),
 		roleName: volunteerRole.name
 	};
 
@@ -519,7 +559,7 @@ export async function getWorkRequestDetail(id: string) {
 			.where(
 				and(
 					isNull(workRequest.assetId),
-					isNull(workOrder.assetId),
+					not(linkedToAny('assetId')),
 					isNull(workOrder.resolvedAt),
 					isNull(workOrder.cancelledAt)
 				)
@@ -555,7 +595,7 @@ export async function getWorkRequestDetail(id: string) {
 			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.where(
 				and(
-					eq(workOrder.assetId, asset.id),
+					linkedTo('assetId', asset.id),
 					isNull(workOrder.resolvedAt),
 					isNull(workOrder.cancelledAt)
 				)
@@ -605,17 +645,21 @@ export async function sendToWorkOrder(
 
 	let workOrderId: string;
 	if ('workOrderId' in target) {
+		// The same unit is linked, or, for a building problem, no unit is.
+		const sameUnit = request.assetId
+			? linkedTo('assetId', request.assetId)
+			: not(linkedToAny('assetId'));
 		const [order] = await db
 			.select({
 				id: workOrder.id,
-				assetId: workOrder.assetId,
+				sameUnit: sql<number>`case when ${sameUnit} then 1 else 0 end`,
 				resolvedAt: workOrder.resolvedAt,
 				cancelledAt: workOrder.cancelledAt
 			})
 			.from(workOrder)
 			.where(eq(workOrder.id, target.workOrderId))
 			.limit(1);
-		if (!order || order.assetId !== request.assetId) {
+		if (!order || !order.sameUnit) {
 			throw new WorkRequestTriageError(
 				request.assetId
 					? 'That work order is not for this unit.'

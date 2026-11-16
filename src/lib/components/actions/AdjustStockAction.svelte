@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { correctStock } from '$lib/remote/inventory.remote';
+	import { refreshAll } from '$app/navigation';
+	import { correctStock } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 
 	const { fields } = correctStock;
@@ -54,13 +56,14 @@
 
 <Action
 	action={correctStock}
-	label="Stocktake"
-	modalTitle="Correct the count"
-	successToast="Correction recorded"
+	data-testid="stocktake"
+	label={m.actions_adjust_stock_stocktake_label()}
+	modalTitle={m.actions_adjust_stock_modal_title()}
+	successToast={m.actions_adjust_stock_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -68,37 +71,53 @@
 		<!-- The correction is itself a ledger row, so the discrepancy stays
 		     visible rather than a total being quietly overwritten. -->
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
-			<p>The system currently shows <strong>{onHand}</strong> on hand.</p>
+			<p>
+				<ParaglideMessage
+					message={m.actions_adjust_stock_system_currently_shows_hand_text}
+					inputs={{ onHand }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
+			</p>
 			<p class="mt-1 opacity-70">
-				Enter what you counted. The difference is recorded as its own entry, so the discrepancy
-				stays on the record rather than the total being quietly overwritten.
+				{m.actions_adjust_stock_enter_what_counted_difference_recorded_text()}
 			</p>
 		</div>
 		<!--
-			Named even though it is not a form field. `correctStock` never sees
-			`counted` — Zod strips the unknown key and the ledger takes the derived
-			delta below — but without a name the input renders `name=""`, which
-			`e2e/inventory.e2e.ts` selects on.
+			Not a form field: the ledger takes the derived delta below, so this
+			input posts nothing. A name would be one kit 3 rejects.
 		-->
 		<Field
-			name="counted"
+			data-testid="stocktake-counted"
 			type="number"
-			label="Counted on the shelf"
+			label={m.actions_adjust_stock_counted_shelf_label()}
 			bind:value={counted}
 			min="0"
 			issues={fields.delta.issues() ?? null}
 		/>
 		{#if delta !== null && delta !== 0}
-			<p class="text-sm" class:text-error={delta < 0}>
-				{delta > 0 ? 'Adding' : 'Removing'}
-				{Math.abs(delta)} — {onHand} on record, {counted} counted.
+			<p
+				class="text-sm"
+				class:text-error={delta < 0}
+				data-testid="stocktake-preview"
+				data-direction={delta > 0 ? 'add' : 'remove'}
+			>
+				{(delta > 0
+					? m.actions_adjust_stock_preview_add_text
+					: m.actions_adjust_stock_preview_remove_text)({
+					abs: Math.abs(delta),
+					onHand,
+					counted: counted ?? ''
+				})}
 			</p>
 		{:else if delta === 0}
-			<p class="text-subtle text-sm">Matches the record. Submitting will change nothing.</p>
+			<p class="text-subtle text-sm" data-testid="stocktake-preview" data-direction="none">
+				{m.actions_adjust_stock_matches_record_submitting_will_change_text()}
+			</p>
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
-		<input {...fields.delta.as('number', delta === null ? '' : String(delta))} type="hidden" />
-		<Field field={fields.notes} type="textarea" label="Why" />
+		<input {...fields.delta.as('number', delta ?? undefined)} type="hidden" />
+		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why_label()} />
 	{/snippet}
 </Action>

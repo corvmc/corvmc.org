@@ -1,13 +1,14 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 // One file for the staff band actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
 // Issues are per-field and settable per test.
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/bands.remote', () => {
+vi.mock('#lib/remote/bands.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null
@@ -31,7 +32,7 @@ vi.mock('$lib/remote/bands.remote', () => {
 // partial mock of this module is a missing-export error at import time rather
 // than at the call.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -60,9 +61,13 @@ describe('CreateBandAction', () => {
 		await vi.waitFor(() => expect(document.querySelector('[role="combobox"]')).toBeNull());
 	};
 
+	// The chip's clear button is named after the person picked.
+	const clearPick = (name: string) => page.getByRole('button', { name: new RegExp(name) });
+
 	const open = async () => {
-		await render(CreateBandAction, {});
-		await page.getByRole('button', { name: 'New Band' }).first().click();
+		// The trigger is the container's only button; the dialog portals out of it.
+		const { locator } = await render(CreateBandAction, {});
+		await locator.getByRole('button').click();
 		return page.getByRole('dialog');
 	};
 
@@ -79,8 +84,8 @@ describe('CreateBandAction', () => {
 	it('posts no owner before one is chosen', async () => {
 		await open();
 
-		expect(document.querySelector('input[name="ownerId"]')).toBeNull();
-		await expect.element(page.getByPlaceholder('Search by name or email...')).toBeVisible();
+		expect(document.querySelector('input:is([name="ownerId"], [name^="ownerId/"])')).toBeNull();
+		await expect.element(page.getByRole('combobox')).toBeVisible();
 	});
 
 	it('posts the chosen owner', async () => {
@@ -88,7 +93,9 @@ describe('CreateBandAction', () => {
 
 		await pick('Janet Ruiz');
 
-		const hidden = document.querySelector('input[name="ownerId"]') as HTMLInputElement;
+		const hidden = document.querySelector(
+			'input:is([name="ownerId"], [name^="ownerId/"])'
+		) as HTMLInputElement;
 		expect(hidden).not.toBeNull();
 		expect(hidden.value).toBe('user-8');
 	});
@@ -99,10 +106,10 @@ describe('CreateBandAction', () => {
 		await open();
 		await pick('Janet Ruiz');
 
-		await page.getByRole('button', { name: 'Clear Janet Ruiz' }).click();
+		await clearPick('Janet Ruiz').click();
 
 		await vi.waitFor(() => {
-			expect(document.querySelector('input[name="ownerId"]')).toBeNull();
+			expect(document.querySelector('input:is([name="ownerId"], [name^="ownerId/"])')).toBeNull();
 		});
 	});
 
@@ -120,7 +127,7 @@ describe('CreateBandAction', () => {
 		await pick('Janet Ruiz');
 		await vi.waitFor(() => expect(submit().disabled).toBe(false));
 
-		await page.getByRole('button', { name: 'Clear Janet Ruiz' }).click();
+		await clearPick('Janet Ruiz').click();
 		await vi.waitFor(() => expect(submit().disabled).toBe(true));
 	});
 });
@@ -132,12 +139,13 @@ describe('CreateBandAction', () => {
  */
 describe('InviteByEmailAction', () => {
 	it('renders the "already a member" rejection as a message', async () => {
-		issues.email = [{ path: ['email'], message: 'That person is already in this band.' }];
+		const message = 'That person is already in this band.';
+		issues.email = [{ path: ['email'], message }];
 		try {
-			await render(InviteByEmailAction, { bandId: 'band-5' });
-			await page.getByRole('button', { name: 'Invite by Email' }).click();
+			const { locator } = await render(InviteByEmailAction, { bandId: 'band-5' });
+			await locator.getByRole('button').click();
 
-			await expect.element(page.getByText('That person is already in this band.')).toBeVisible();
+			await expect.element(page.getByRole('dialog').getByText(message)).toBeVisible();
 		} finally {
 			issues.email = null;
 		}
@@ -158,12 +166,12 @@ describe('InviteMemberAction', () => {
 
 	const hidden = (name: string) =>
 		document.querySelector(
-			`[role="dialog"] input[name="${name}"][type="hidden"]`
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])[type="hidden"]`
 		) as unknown as HTMLInputElement;
 
 	const open = async () => {
-		await render(InviteMemberAction, { bandId: 'band-2' });
-		await page.getByRole('button', { name: 'Add Member' }).click();
+		const { locator } = await render(InviteMemberAction, { bandId: 'band-2' });
+		await locator.getByRole('button').click();
 		await expect.element(page.getByPlaceholder('Name or email...')).toBeVisible();
 		return page.getByRole('dialog');
 	};
@@ -214,7 +222,11 @@ describe('InviteMemberAction', () => {
 		await pick('Jamal Okafor');
 		await vi.waitFor(() => expect(hidden('userId').value).toBe('user-4'));
 
-		await page.getByRole('button', { name: 'Change' }).click();
+		// The picked member's row carries the dialog's only plain button besides ✕.
+		await page
+			.getByRole('dialog')
+			.getByCss('button[type="button"]:not([data-dialog-close])')
+			.click();
 
 		await vi.waitFor(() => expect(hidden('userId').value).toBe(''));
 		await expect.element(page.getByPlaceholder('Name or email...')).toBeVisible();
@@ -224,11 +236,12 @@ describe('InviteMemberAction', () => {
 	// the picker. Before the wrapper it rendered nowhere at all, and a rejected
 	// invite looked like a submit that did nothing.
 	it('renders a server issue on the member as a message beside the picker', async () => {
-		issues.userId = [{ path: ['userId'], message: 'Choose a member to invite.' }];
+		const message = 'Choose a member to invite.';
+		issues.userId = [{ path: ['userId'], message }];
 		try {
-			await open();
+			const dialog = await open();
 
-			await expect.element(page.getByText('Choose a member to invite.')).toBeVisible();
+			await expect.element(dialog.getByText(message)).toBeVisible();
 		} finally {
 			issues.userId = null;
 		}

@@ -1,0 +1,86 @@
+name: Lint (full)
+
+# The whole tree on every push to main. PRs and the merge queue run `Lint (changed)`
+# in ci.yml, so nothing waits on this. It lives in its own workflow because a ~30
+# minute job holding ci.yml's main concurrency group left later pushes pending, then
+# cancelled, with no main run of E2E or unit tests (#2428). A newer push lints the
+# whole tree again, so cancelling a superseded run loses nothing.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (full)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/install
+      # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
+      # serialize its config, and kit.config.js sets `compilerOptions.runes` to a
+      # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
+      # from runes mode), which ESLint refuses to serialize. ESLint is ~28m of this
+      # job (2026-11), so this only caches the small half.
+      - uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/prettier
+          key: prettier-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            prettier-cache-${{ runner.os }}-
+      - run: pnpm lint
+
+  # ci.yml's `main-red` opens one issue per failing job and closes them all on a
+  # green run, except this one, which only this workflow opens and closes.
+  main-red:
+    name: Track full lint going red
+    if: always() && needs.lint.result != 'cancelled'
+    needs: [lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open, update or close the Lint (full) issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          RESULT: ${{ needs.lint.result }}
+        run: |
+          set -euo pipefail
+          title="main is red: Lint (full)"
+          existing=$(gh issue list --label ci-failure --state open --limit 50 \
+            --json number,title --jq "map(select(.title == \"$title\")) | first | .number // empty")
+
+          if [ "$RESULT" = "success" ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "Green again on \`${SHA:0:7}\` — ${RUN_URL}"
+              gh issue close "$existing" --reason completed
+            fi
+            exit 0
+          fi
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Failed again on \`${SHA:0:7}\` — ${RUN_URL}"
+            exit 0
+          fi
+
+          gh label create ci-failure \
+            --color B60205 --description 'main is red — opened and closed by CI' --force
+          gh issue create --title "$title" --label ci-failure --body "$(cat <<EOF
+          The **Lint (full)** job failed on a push to \`main\`.
+
+          - Commit: \`${SHA}\`
+          - Run: ${RUN_URL}
+
+          Every recurrence is a comment on this issue, and the next green full lint
+          closes it.
+          EOF
+          )"

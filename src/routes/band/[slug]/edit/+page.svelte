@@ -1,7 +1,8 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getBandProfileEditor } from '$lib/remote/directory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getBandProfileEditor } from '#lib/remote/directory.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 	import BandProfileForm from './BandProfileForm.svelte';
 
@@ -16,14 +17,16 @@
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
 	// Above the await, and read from the resolved layout rather than
-	// `page.params`: it is the ref the editor query guards on.
-	const band = layout.band;
-	const { profile, genreSuggestions, instrumentSuggestions } = await getBandProfileEditor(
-		band.slug
+	// `page.params`: it is the ref the editor query guards on. A rename keeps the slug.
+	// svelte-ignore state_referenced_locally
+	const slug = layout.band.slug;
+	const band = $derived(layout.band);
+	const { profile, genreSuggestions, instrumentSuggestions } = $derived(
+		await getBandProfileEditor(slug)
 	);
 </script>
 
-<PageHeader width="3xl" title="Band Profile" subtitle={band.name} />
+<PageHeader width="3xl" title={m.band_slug_edit_title()} subtitle={band.name} />
 <PageContent width="3xl">
 	<BandProfileForm
 		{band}

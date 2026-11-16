@@ -31,8 +31,10 @@ function chain(queue: () => unknown[], wheres: unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
+		// The incident-orphan delete's subquery; its predicate is pinned against SQLite elsewhere.
+		select: vi.fn(() => chain(() => [], [])),
 		delete: vi.fn(() => chain(() => deleteResults.shift() ?? [], deleteWheres)),
 		update: vi.fn(() => ({
 			set: (v: Record<string, unknown>) => {
@@ -88,7 +90,8 @@ describe('sweepAuditLog', () => {
 
 		const result = await sweepAuditLog(now);
 
-		expect(deleteWheres).toHaveLength(3);
+		// Three age batches, then the one orphaned-incident delete.
+		expect(deleteWheres).toHaveLength(4);
 		expect(result.deleted).toBe(AUDIT_DELETE_BATCH * 2 + 3);
 	});
 

@@ -35,8 +35,7 @@ export async function seedBandSites(bands: any[]) {
 		updatedAt: b.updatedAt ?? new Date(),
 		...(pendingSites.get(b.id) ?? {})
 	}));
-	// 11 columns at their widest × 9 = 99, under D1's 100 bound parameters.
-	await batchInsert(bandSite, rows, 9);
+	await batchInsert(bandSite, rows);
 	return new Map(rows.map((r) => [r.groupId, r.id]));
 }
 

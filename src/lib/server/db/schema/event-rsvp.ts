@@ -31,6 +31,35 @@ export const eventRsvp = sqliteTable(
 	]
 );
 
+// Who came to a session, marked afterwards by a program lead. Its own table rather
+// than a column on `event_rsvp`: a walk-in has no RSVP, and writing one for them
+// would put them in RSVP counts and RSVP-built audiences. The unique index keeps
+// one mark per member per event; unmarking deletes the row.
+export const eventAttendance = sqliteTable(
+	'event_attendance',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		eventId: text('event_id')
+			.notNull()
+			.references(() => eventListing.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		markedByUserId: text('marked_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('idx_event_attendance_event_user').on(t.eventId, t.userId),
+		index('idx_event_attendance_user').on(t.userId)
+	]
+);
+
 // ---------------------------------------------------------------------------
 // Client-safe serialized types
 // ---------------------------------------------------------------------------

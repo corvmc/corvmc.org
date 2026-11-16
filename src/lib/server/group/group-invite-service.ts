@@ -1,15 +1,15 @@
-import { db } from '$lib/server/db';
-import { INVITE_EXPIRY_DAYS } from '$lib/config';
-import { groupInvite } from '$lib/server/db/schema/group-invite';
-import { groupMember, group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { INVITE_EXPIRY_DAYS } from '#lib/config.js';
+import { groupInvite } from '#lib/server/db/schema/group-invite.js';
+import { groupMember, group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, gt, desc, isNull, sql } from 'drizzle-orm';
-import { SEARCH_LIMIT } from '$lib/config';
-import { BandMemberExistsError, invite } from '$lib/server/band/band-service';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { DomainError } from '$lib/server/domain-error';
+import { SEARCH_LIMIT } from '#lib/config.js';
+import { BandMemberExistsError, invite } from '#lib/server/band/band-service.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 function expiresAt(): Date {
 	const d = new Date();

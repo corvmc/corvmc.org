@@ -1,5 +1,8 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
+	import { isRedirect } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -11,30 +14,54 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
-	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import InterestFields from '#lib/components/volunteer/InterestFields.svelte';
+	import {
+		getVolunteerInterestsPage,
+		saveVolunteerInterests
+	} from '#lib/remote/volunteer.remote.js';
 
-	// One query rather than three; the `{#await}` below now waits on a single promise.
-	const pageData = $derived(getVolunteerInterestsPage());
+	// One query rather than three. Not `{#await}`: a refresh would re-pend it and
+	// remount the form mid-edit.
+	const pageData = new Latest(() => getVolunteerInterestsPage());
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (pageData.error && !isRedirect(pageData.error.e)) throw pageData.error.e;
+	});
+
+	// Latched from the first load: saving refreshes the query, and a recomputed
+	// `onboarding` reads false by the time `onsuccess` runs, so it never moved on.
+	let latched = $state<boolean>();
+	const onboarding = $derived(latched ?? pageData.current?.interests.length === 0);
+	$effect(() => {
+		if (pageData.current && latched === undefined)
+			latched = pageData.current.interests.length === 0;
+	});
 </script>
 
-<PageHeader width="md" title="Preferred roles" subtitle="Volunteering" />
+<PageHeader
+	width="md"
+	title={m.member_preferred_roles_title()}
+	subtitle={m.member_volunteering_body()}
+/>
 
 <PageContent width="md">
-	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
-		{@const onboarding = myInterests.length === 0}
+	{#if pageData.current}
+		{@const { step: me, roles: roleOptions, interests: myInterests } = pageData.current}
 		<Card>
 			<CardBody>
 				{#if roleOptions.length === 0}
 					<p class="text-muted">
-						No volunteer roles are open right now. Get in touch and we'll find you something.
+						{m.member_volunteer_interests_no_volunteer_roles_open_right_text()}
 					</p>
-					<a href={resolve('/member/volunteer')} class="link text-sm">Go to volunteering</a>
+					<a href={resolve('member/volunteer')} class="link text-sm"
+						>{m.member_volunteer_interests_go_volunteering_text()}</a
+					>
 				{:else}
 					<!--
 					Onboarding sends them on to the board, because that is the next step
@@ -43,8 +70,8 @@
 				-->
 					<Form
 						remote={saveVolunteerInterests}
-						onsuccess={onboarding ? () => goto(resolve('/member/volunteer')) : undefined}
-						successToast="Saved. Staff see this when they're looking for people."
+						onsuccess={onboarding ? () => goto(resolve('member/volunteer')) : undefined}
+						successToast={m.member_volunteer_interests_success_toast()}
 					>
 						<InterestFields
 							fields={saveVolunteerInterests.fields}
@@ -54,14 +81,18 @@
 						/>
 
 						<div class="flex items-center justify-between gap-3">
-							<Button href={resolve('/member/volunteer')} variant="ghost" size="sm">
-								{onboarding ? 'Skip' : 'Back'}
+							<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
+								{onboarding
+									? m.member_volunteer_interests_skip_label()
+									: m.member_volunteer_interests_back_label()}
 							</Button>
 							<!-- Disabled until something changes, and it says "Saved" after —
 						     which is what makes a page you can leave open feel settled. -->
 							<SubmitButton
-								label={onboarding ? 'Finish' : 'Save'}
-								successLabel="Saved"
+								label={onboarding
+									? m.member_volunteer_interests_finish_label()
+									: m.member_save_label()}
+								successLabel={m.member_saved_label()}
 								variant="primary"
 							/>
 						</div>
@@ -69,5 +100,5 @@
 				{/if}
 			</CardBody>
 		</Card>
-	{/await}
+	{/if}
 </PageContent>

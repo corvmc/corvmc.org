@@ -61,7 +61,7 @@ function chain(op: Call['op'], table: unknown, next: () => unknown[] | Error): u
 const nextSelect = () => selectResults.shift() ?? [];
 const nextWrite = () => writeResults.shift() ?? [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain('select', null, nextSelect),
 		insert: (t: unknown) => chain('insert', t, nextWrite),
@@ -76,7 +76,7 @@ vi.mock('$lib/server/db', () => ({
 // Whether the show is still open is its own module's business, with its own spec.
 vi.mock('./production-scope', () => ({ assertNotTerminal: async () => undefined }));
 
-const { productionSlot } = await import('$lib/server/db/schema/production');
+const { productionSlot } = await import('#lib/server/db/schema/production.js');
 const {
 	addSlot,
 	updateSlot,

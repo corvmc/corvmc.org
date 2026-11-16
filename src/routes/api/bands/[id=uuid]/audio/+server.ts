@@ -1,17 +1,17 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // Typed params from `./$types`, matching the sibling media endpoint — the
 // generic kit `RequestHandler` types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
 import {
 	audioKey,
 	putAudioObject,
 	deleteAudioObject,
 	validateAudioUpload
-} from '$lib/server/audio/audio-storage';
-import { addTrack, getReleaseById, nextTrackNumber } from '$lib/server/audio/audio-service';
-import { RADIO_MIN_TRACK_MS, TRACK_TITLE_MAX } from '$lib/config';
+} from '#lib/server/audio/audio-storage.js';
+import { addTrack, getReleaseById, nextTrackNumber } from '#lib/server/audio/audio-service.js';
+import { RADIO_MIN_TRACK_MS, TRACK_TITLE_MAX } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // POST — upload one or more tracks onto a release
@@ -74,7 +74,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	// A real route param, not a remote function's client-supplied one, so `{ id }`
 	// is the honest ref.
 	const bandId = params.id;
-	await requireGroupRole({ id: bandId }, 'admin', { allowStaff: true });
+	await requireGroupRole({ id: bandId }, 'admin', { staff: 'band.manage' });
 
 	const formData = await request.formData();
 	const releaseId = formData.get('releaseId');
@@ -150,7 +150,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		}
 	}
 
-	return json({
+	return Response.json({
 		success: true,
 		tracks: created,
 		// So the caller can tell the band why a 40-minute live set will not be on

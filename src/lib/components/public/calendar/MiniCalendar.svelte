@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { CalendarDate, today as todayIn, getLocalTimeZone } from '@internationalized/date';
 	import { IconChevronLeft, IconChevronRight } from '@tabler/icons-svelte';
-	import { getPublicCalendar } from '$lib/remote/calendar.remote';
-	import { toLocalDate } from '$lib/utils/format';
+	import { getPublicCalendar } from '#lib/remote/calendar.remote.js';
+	import { toLocalDate } from '#lib/utils/format.js';
 
 	let { anchor }: { anchor: string } = $props();
 
@@ -89,7 +90,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label="Previous month"
+			aria-label={msg.public_calendar_mini_calendar_previous_month_label()}
 			onclick={() => shiftMonth(-1)}
 		>
 			<IconChevronLeft size={16} />
@@ -100,7 +101,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label="Next month"
+			aria-label={msg.public_calendar_mini_calendar_next_month_label()}
 			onclick={() => shiftMonth(1)}
 		>
 			<IconChevronRight size={16} />
@@ -117,12 +118,12 @@
 				{@const key = date.toString()}
 				{@const dot = dayDots[key]}
 				<a
-					href="{resolve('/events')}?from={key}"
+					href="{resolve('events')}?from={key}"
 					class="mini-cal__day"
 					class:mini-cal__day--out={date.month !== monthNumber}
 					class:mini-cal__day--today={key === todayStr}
 					class:mini-cal__day--anchor={key === anchor}
-					aria-label="Jump to {key}"
+					aria-label={msg.public_calendar_mini_calendar_jump_label({ key })}
 				>
 					{date.day}
 					{#if dot}

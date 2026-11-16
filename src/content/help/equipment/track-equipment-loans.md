@@ -1,5 +1,5 @@
 ---
-title: Track Your Loans & Returns
+title: Track your loans & returns
 slug: track-equipment-loans
 category: equipment
 summary: See the status of gear you've requested, borrowed, and returned.
@@ -7,9 +7,9 @@ minRole: member
 sortOrder: 2
 ---
 
-## My Loans
+## My loans
 
-Open **Equipment → My Loans** to see everything you've requested or borrowed.
+Open **Equipment → My loans** to see everything you've requested or borrowed.
 
 Each loan shows its current status:
 

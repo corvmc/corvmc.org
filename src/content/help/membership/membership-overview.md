@@ -1,5 +1,5 @@
 ---
-title: Membership Overview
+title: Membership overview
 slug: membership-overview
 category: membership
 summary: What sustaining membership is and what the membership page shows.
@@ -17,7 +17,7 @@ contribution that supports the space and unlocks extra benefits. Open
 
 - **Your status** — Whether you're a sustaining member and your contribution
   amount.
-- **Credit balance** — Your free practice hours and monthly allocation.
+- **Credit balance** — Your practice credits and monthly allocation.
 - **Benefits & sliding scale** — What membership includes and the contribution
   options.
 - **Community impact** — How contributions support the collective.

@@ -1,5 +1,5 @@
-import { BAND_THEMES, type BandThemeValue } from '$lib/types/band-page';
-import { themeOfStarter, themeStarterCss } from '$lib/utils/theme-starter';
+import { BAND_THEMES, type BandThemeValue } from '#lib/types/band-page.js';
+import { themeOfStarter, themeStarterCss } from '#lib/utils/theme-starter.js';
 
 /**
  * The two states a band's styling can be in, and the moves between them.

@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const requireCapability = vi.fn(async () => ({ id: 'staff-1' }));
 const requireCapabilityOrOwner = vi.fn(async () => 'staff' as const);
-vi.mock('$lib/server/authorization', () => ({ requireCapability, requireCapabilityOrOwner }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability, requireCapabilityOrOwner }));
 
 const svc = {
 	listInstructorRoster: vi.fn(async () => ({ rows: [], pagination: {}, pending: 0 })),
@@ -23,9 +23,10 @@ const svc = {
 	sendBack: vi.fn(async () => undefined),
 	grant: vi.fn(async () => undefined),
 	pause: vi.fn(async () => undefined),
-	retire: vi.fn(async () => undefined)
+	retire: vi.fn(async () => undefined),
+	searchMembersToGrant: vi.fn(async () => [])
 };
-vi.mock('$lib/server/instructor/instructor-service', () => svc);
+vi.mock('#lib/server/instructor/instructor-service.js', () => svc);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'staff-1' } } }),
@@ -98,6 +99,12 @@ describe('the acting staffer is recorded, not the subject', () => {
 });
 
 describe('reads', () => {
+	it('searches members to grant under instructor.review, not a booking capability (#2815)', async () => {
+		await remote.searchMembersToGrant('al');
+		expect(requireCapability).toHaveBeenCalledWith('instructor.review');
+		expect(svc.searchMembersToGrant).toHaveBeenCalledWith('al');
+	});
+
 	it('lists for staff behind the staff guard', async () => {
 		await remote.getStaffInstructors({ status: 'requested' });
 		expect(requireCapability).toHaveBeenCalledWith('instructor.read');

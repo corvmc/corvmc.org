@@ -1,6 +1,6 @@
-import { calculateProcessingFee } from '$lib/finance/fees';
+import { calculateProcessingFee } from '#lib/finance/fees.js';
 import { listForSubject, recordEntries, type RecordEntryInput } from './financial-entry-service';
-import type { MembershipPaymentEvent } from '$lib/server/event-bus/event-bus';
+import type { MembershipPaymentEvent } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * A paid contribution invoice, in the ledger's terms (#1172).

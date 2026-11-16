@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import InboxShell from '$lib/components/inbox/InboxShell.svelte';
+	import ListDetailShell from '#lib/components/ui/ListDetailShell.svelte';
 	import InboxList from './InboxList.svelte';
 	import FilterPanel from './FilterPanel.svelte';
 	import SaveViewDialog from './SaveViewDialog.svelte';
@@ -17,17 +17,20 @@
 	// filtering hides the only feedback the panel gives.
 	const threadOpen = $derived(page.route.id === '/staff/inbox/[id]' || filterPanel.open);
 
-	// Daily is the opposite of a list you scan, so it does not get one beside it.
-	// It stays under this layout for the nav frame and nothing else.
-	const daily = $derived(page.route.id === '/staff/inbox/daily');
+	// Daily is the opposite of a list you scan, so it does not get one beside it,
+	// and Channels is the inbox's settings. Both stay under this layout for the
+	// nav frame and nothing else.
+	const standalone = $derived(
+		page.route.id === '/staff/inbox/daily' || page.route.id === '/staff/inbox/channels'
+	);
 
 	let saving = $state(false);
 </script>
 
-{#if daily}
+{#if standalone}
 	{@render children()}
 {:else}
-	<InboxShell {threadOpen}>
+	<ListDetailShell open={threadOpen}>
 		{#snippet toolbar()}
 			<InboxToolbar {threadOpen} />
 		{/snippet}
@@ -48,7 +51,7 @@
 		{:else}
 			{@render children()}
 		{/if}
-	</InboxShell>
+	</ListDetailShell>
 {/if}
 
 <SaveViewDialog bind:open={saving} />

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconPencil } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import PostFields from '$lib/components/classified/PostFields.svelte';
-	import { editClassified, getClassifiedComposer } from '$lib/remote/classifieds.remote';
-	import type { ClassifiedTagKind } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import PostFields from '#lib/components/classified/PostFields.svelte';
+	import { editClassified, getClassifiedComposer } from '#lib/remote/classifieds.remote.js';
+	import type { ClassifiedTagKind } from '#lib/config.js';
 
 	/** Owns the composer query, so the detail page keeps one load-bearing query. */
 	let {
@@ -27,10 +28,10 @@
 
 <Action
 	action={editClassified}
-	label="Edit"
-	modalTitle="Edit your post"
-	submitLabel="Save"
-	successToast="Saved"
+	label={m.member_edit_label()}
+	modalTitle={m.member_classifieds_id_edit_classified_modal_title()}
+	submitLabel={m.member_save_label()}
+	successToast={m.member_saved_toast()}
 	variant="ghost"
 	size="sm"
 	{onsuccess}
@@ -39,6 +40,7 @@
 	{#snippet form()}
 		<input {...editClassified.fields.postId.as('hidden', post.id)} />
 		<PostFields
+			fields={editClassified.fields}
 			bands={composer.bands}
 			instrumentSuggestions={composer.instrumentSuggestions}
 			genreSuggestions={composer.genreSuggestions}

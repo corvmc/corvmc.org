@@ -8,15 +8,15 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                                 |
-| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`            |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                    |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`                                                                               |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_shift`, `work_order_assignee`, `work_order_dependency`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                                                                                       |
 
 **Horizontals** — services every vertical emits into:
 
-- **Comms** — `inbox`, `notification`, `marketing`, direct messages, `announcement`
+- **Comms** — `inbox`, `notification`, `marketing`, direct messages, group announcements
 - **Money** — `finance`, Stripe, `credit_transaction`, `payment_cache`
 - **Publishing** — what faces the public: the gig guide (`event_listing`), `band_site`,
   the directory, local resources, recaps, posters, radio, the help manual; with `media`,
@@ -37,8 +37,14 @@ image, moderation and page machinery; none of the three verticals owns the publi
 room, the amp, and the amp at the repair shop are the same flow over different
 resources, which is why they are one vertical rather than "space" and "gear."
 
-**A show is a project.** `duty_list` stamps work orders onto a listing anchored at
-`doors|start|end`; `work_task` is the checklist; `volunteer_signup` is who claimed it.
+**A show is a project.** `duty_list` stamps tasks (`work_order`) onto a listing anchored at
+`doors|start|end`; `work_task` is the checklist. A task's times are its shifts
+(`volunteer_shift`, #2518): `volunteer_signup` is who signed up for a shift, and
+`work_order_assignee` is who staff put on the task. `work_order` holds no time and no places;
+`pending_capacity` is the count for a shift not yet opened.
+A task can wait on others (`work_order_dependency`, a graph with no cycles, #2625); Blocked is
+derived from the open tasks it waits on, and a template's `duty_list_item_dependency` edges are
+copied onto the tasks it stamps.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 
@@ -55,7 +61,7 @@ parties and monthly deep cleans need advertising as much as a show does, so they
 listings too."_ A work party gets a row here for exactly the reason a gig does — it
 needs advertising — not because the table models occasions in general.
 
-The surfaces already read it that way: `/staff/projects/productions` is `source='cmc'` at every
+The surfaces already read it that way: Productions (`/staff/events?view=productions`) is `source='cmc'` at every
 status including draft, where a show is built; `/staff/events` is the public gig guide
 staff moderate. Both read the same table, at different layers.
 
@@ -68,6 +74,9 @@ Three layers, not two:
 | `production`    | A show's back-of-house — the room hold, run of show, settlement | Only `source='cmc'` shows |
 | `ticket_sale`   | What is on sale for a listing, and whose money it is            | Listings with sale terms  |
 
+Who may see a listing is the listing's own `visibility`: `public`, `members` or `group` (the
+owning group's members). One predicate, `visibleTo`, answers it for every read.
+
 Doors stay on the listing: a community submission has doors and can never have a
 production. Doors is the one time the public needs; load-in, soundcheck, first set, curfew
 and load-out are internal. Ticketing is neither announcement nor back-of-house, so it is
@@ -79,6 +88,11 @@ A listing announces a production by sitting on that production's project
 A production project takes one listing, held by the services rather than the database. A
 production with no listing is a show being built before it is announced. See #1202.
 
+A festival or a run of nights is a parent project over its show projects:
+`project.parent_project_id`, one level deep, checked in `project-service.ts`. Each night
+stays its own production. The parent's burn is its own plus its children's
+([0079](../decisions/0079-a-festival-is-a-parent-project.md)).
+
 Three of the app's columns store this table's _name_ as data, and so they read
 `'event_listing'` too: `reservation.booker_type`, `media_attachment.attachable_type`
 and `recurring_series.prototype_type`.
@@ -87,7 +101,7 @@ A listing's room hold is booked to its production when it has one, else to the g
 running it, else to the listing itself (#2004). Holding the room never opens a
 production: a CMC workshop with no back-of-house can still take the room.
 
-See [project-spec.md](../specs/project-spec.md).
+See [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md).
 
 ## The seam
 
@@ -95,8 +109,18 @@ Asset management and project management join at exactly two columns, and they ar
 two worth knowing:
 
 - **`work_request.workOrderId`** — a work request raises the work that answers it.
-- **`work_order.assetId`** — the work is done to a unit. Null means building work. A
-  contractor's engagement (`contractor_job`) reads it through its work order.
+- **`work_order_link.asset_id`** — the work is done to a unit. A task with no unit link is
+  building work. A contractor's engagement (`contractor_job`) reads it through its work order.
+
+### What a task is about: `work_order_link`
+
+A task links to the records it is about through `work_order_link` (#2622): one row per link,
+one nullable column per kind of record (`organization_id`, `contact_id`, `asset_id`,
+`reservation_id`), exactly one set, each a cascading foreign key with its own partial index. A
+new kind of target is one nullable column and its index. Columns that code acts on stay on
+`work_order`: `project_id`, `event_id`, `volunteer_role_id`, `group_id`, `duty_list_id`,
+`maintenance_schedule_id`. Reads go through `src/lib/server/task/work-order-link.ts`, and the
+related-tasks registry finds an organization's, contact's, unit's or booking's tasks with it.
 
 ## Inside the social vertical
 
@@ -109,10 +133,15 @@ each are in
 | ---------------------------- | ------------------------------------------------------------------ |
 | Member directory and profile | `directory_entry`, `directory_tag`, the four intent signals        |
 | The organization             | `group`, `group_member`, `group_invite`, ownership as a roster row |
-| Governance                   | Committees, chairs, `by_application` — designed, largely unbuilt   |
+| Governance                   | Committees, chairs, committee positions, `by_application`, ballots |
 | Self-published presence      | `band_site`, `band_page_config`, custom domains                    |
 | Identity and claiming        | External acts: `directory_entry` with both FKs null                |
 | Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
+
+`directory_tag.kind` is `genre`, `instrument`, `seeking_instrument` or `skill`. A member lists what
+they play and, as `skill`, what else they do (sound engineer, photographer); a band lists what it
+needs as `seeking_instrument`. Values are free text, lower-cased, with suggestions drawn from what
+members have already typed.
 
 ### The scope ladder
 
@@ -163,11 +192,49 @@ a bug invisible on exactly the rows you test with.
 the ownership, capped by a partial unique index that permits zero. The second copy drifted
 once: five of sixteen production bands had no usable owner row behind it.
 
-Only a band has an owner. Programs (`club`, `committee`) are ownerless by design: they have
-zero or more `admin` rows, and those admins are the program's **chairs**. Staff add and
-remove chairs from the program's staff page (`setChairRole`); nothing on the program side
-writes an `owner` row, and a program with no chairs is legal. Positions on a program roster
-are set by its chairs or staff, never by the member themselves.
+Only a band has an owner. Programs (`club`, `committee`) are ownerless by design and have
+zero or more **chairs**. A club's chairs are its `admin` rows. A committee's chair is
+whoever holds its chair position (below). Staff add and remove chairs from the program's
+staff page (`setChairRole`); nothing on the program side writes an `owner` row, and a
+program with no chairs is legal. Positions on a program roster are set by its chairs or
+staff, never by the member themselves.
+
+A committee acts as a department, and its positions are rows (#2988). `group_position`
+names a standing role in one committee, unique by name within it; `group_position_holder`
+says who holds it, keyed on the holder's `group_member` row, so leaving the committee
+vacates it. A position may have several holders or none. A band's or club's seat title
+stays the free-text `group_member.position`, which for a band is the instrument line on
+its site and press kit.
+
+Operations is the staff department (#2992): a committee with the fixed id `operations` and
+one position per job in the matrix, its `job` column naming it. Holding one is what grants
+that job's capabilities; `positionsFor` reads the seats, and `admin` alone stays a
+`model_has_roles` row. Its chair position carries `operations_chair`, which holds
+`committee.manage`. A job seat is filled on the Access page under `user.setRole`, never
+from the committee's own position editor, and nothing outside Operations sets `job`.
+`scripts/position-assignment-reads.spec.ts` keeps the role tables to the files that also
+read the seats.
+
+One position per committee has `is_chair` set, enforced by a partial unique index, and
+holding it makes someone chair (#3009). Every committee has one from creation, and it
+cannot be removed. A committee row's stored `group_member.role` is always `member`.
+Leadership is read through `src/lib/server/group/chair.ts`: `isCommitteeChair` for one
+person, `leadsGroup()` for recipient lists, and `rosterRole()` where a role goes to the
+UI. Guards keep the `owner > admin > member` tiers, and `getUserRole` reports a committee
+chair as `admin`. `scripts/committee-chair-guard.spec.ts` fails on a stored-role leader
+test anywhere else. Staff oversight of committees (positions, chair, grants) is
+`committee.manage`; `group.manage` covers clubs.
+
+A duty grants the duty (#2983, decision
+[0085](../decisions/0085-committees-are-departments.md)). `canActOnTask` in
+`src/lib/server/task/can-act.ts` admits a task's assignee, the holder of the position it is tagged
+for, an active seat on its committee, or a holder of `volunteer.manageShifts` scoped to the row,
+and returns which. `waitingOn` is the "Your tasks" list, a subset of that. The reason is shown
+from the same functions: `explainAccess` (`src/lib/server/access/why-can-act.ts`) lists a
+person's positions, committee seats and live shift roles with what each gives, and
+`waitsOnTask` and `explainTaskAct` say who a task waits on and why a viewer can or cannot act.
+Each spec checks the explanation against its guard, so a new way of holding a capability has to
+be added to both.
 
 ## Seven models that recur
 
@@ -181,7 +248,7 @@ state machine, credit settlement, a cancel.
 
 |                         | agreed      | committed   | in custody    | returned    | abandoned               |
 | ----------------------- | ----------- | ----------- | ------------- | ----------- | ----------------------- |
-| `reservationStatuses`   | `scheduled` | `confirmed` | —             | `completed` | `no_show` / `cancelled` |
+| `reservationStatuses`   | —           | `confirmed` | —             | `completed` | `no_show` / `cancelled` |
 | `loanStatuses`          | `requested` | `scheduled` | `checked_out` | `returned`  | `cancelled`             |
 | `contractorJobStatuses` | `asked`     | `booked`    | —             | `completed` | `no_show` / `cancelled` |
 
@@ -191,6 +258,10 @@ unavailable and it is not a booking), `recurring_series` ≡ a standing loan, th
 it is not derived alike: a JS predicate for loans, a SQL condition for contractor jobs, and
 not at all for reservations (#1559).
 
+A reservation's stored status is not what is shown. Every surface shows the track derived from
+it and the payment columns (`reservationTrack`, #2861): Waitlisted, Booked, Paid, Payment due,
+Covered, No-show, Cancelled, Refunded.
+
 What does _not_ unify: the room has capacity 1 and a calendar, gear has units and a tag.
 Availability genuinely differs. The state machine and the settlement do not.
 
@@ -199,6 +270,11 @@ Availability genuinely differs. The state machine and the settlement do not.
 Someone notices, staff triage, work is raised, the work closes the request. This is the
 industry-standard **work request → work order** pattern; `work_request` is the request and
 `work_order` is the order.
+
+The order is the task: the work, its owner and whether it is done. A `volunteer_shift` is a time
+volunteers sign up for on it, and a `work_order_assignee` is a person staff assigned to it. A
+task has zero or more of each, and marking it done is what closes its reports. An hour log may
+name a shift, a task (`volunteer_hour_log.work_order_id`) or neither.
 
 `content_flag` is the same lifecycle in social, where the "work" is a moderation decision
 rather than a repair — which is why `work_request` shares `flagStatuses` verbatim and
@@ -217,10 +293,15 @@ Three mechanics, and choosing between them has a rule:
 | Prototype row         | Instances are not edited after the fact                    | Recurring events — nobody edits a past show |
 | **Generate-on-close** | The next occurrence should not exist until this one closes | Monthly deep clean, quarterly PA check      |
 
+A real table's instance is a task, plus one shift when the item names a window: a duty-list
+item with an offset and a duration stamps both, and one with only a deadline stamps a task with
+a `due_at` (#2518). An item stamped before its anchor has a time keeps its offsets on the task,
+and the shift is made once the time is known.
+
 All three exist. Generate-on-close is `maintenance_schedule` (#1385): resolving or calling
 off an occurrence writes the next in the same `db.batch`, due an interval after the close,
-with a partial unique index allowing one open occurrence per schedule. Cleaning schedules
-and committee checklists run on it. `recurring_series` still materializes 2.5 weeks ahead,
+with a partial unique index allowing one open occurrence per schedule. Cleaning schedules,
+committee checklists and CMC's own permit, license and insurance renewals run on it. `recurring_series` still materializes 2.5 weeks ahead,
 which suits bookings, where the future slots must be held.
 
 ### 4. The append-only ledger `[one per vertical, plus money]`
@@ -231,11 +312,41 @@ backdating-and-correction stories. That each vertical grew its own is a point _f
 taxonomy.
 
 **Derived balances, never stored counters.** Project burn is a `sum()` across these.
+`getProjectBurn` in `project-service.ts` reads cash spend (contractor engagements on the
+project's work orders, purchase orders when placed, acquisitions, a show's expenses and guarantee
+top-ups) and contributed value apart. Volunteer time carries two valuations that are never
+added: impact value over every approved minute at `volunteer.hourValueCents`, and recognizable
+contributed services over specialized-skill minutes at each role's market rate. A specialized
+role with no rate counts as zero and is reported as unpriced. A parent project's burn adds
+its children's to its own, and `parts` lists each one's cash spend.
+
+`financial_entry` is the collective's accounting ledger: what was earned, spent, given and
+held for others. Stripe stays the record of settlement. Each row has a signed `amountCents`, a
+`kind` (`earned` · `spent` · `in_kind` · `pass_through`), a `category` from
+`financialCategories` in `src/lib/config.ts`, a `settlement` (`stripe` · `cash` · `credit` ·
+`none`) and a `subjectType`/`subjectId` with no foreign key, so an entry outlives what it
+describes. `occurredAt` is when the money moved. Writers go through
+`src/lib/server/finance/financial-entry-service.ts`; a refund is a reversing entry, a free sale
+still writes a $0 row, and `in_kind` is never summed with `earned`. `pass_through` rows share a
+`settlementGroup`, and a pool that does not net to zero is an anomaly to read, not a constraint.
+The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's balance transactions
+(`reconciliation.ts`). Decision: [A local financial record](../decisions/0016-a-local-financial-record.md).
 
 ### 5. Container membership `[social, projects, comms]`
 
 `group_member` · `volunteer_signup` · `audience_member` · `inbox_participant` ·
-`event_rsvp` · `member_certification`. All are (container, person, status, joined_at).
+`event_rsvp` · `event_attendance` · `member_certification`. All are (container, person, status,
+joined_at).
+
+`event_rsvp` is who said they would come; `event_attendance` is who a program lead marked as
+having come. They are two tables because a walk-in has no RSVP, and writing one for them would
+count them in RSVP totals and RSVP-built audiences. A ticketed show's check-in is
+`ticket.checkedInAt`, not either of these.
+
+One certification has a job in code: **Practice space** (`PRACTICE_SPACE_CLEARANCE_ID`, id
+`practice-space`) says a member has been shown around the room. Completing or waiving their
+orientation grants it, and without a current grant their own booking needs 3 days' notice.
+Decision: [Space training is a clearance](../decisions/0055-space-training-is-a-clearance-and-sets-booking-notice.md).
 
 The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
@@ -263,16 +374,18 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 A project's committees are rows in `project_committee`, each with a role, and a project with none
 is staff's, the same as a null above. `project` itself has no committee column.
 
-`announcement` and `event_group` are the same idea without the null: a band posting to its
-roster and a committee posting to its members are the same act on one table. Because the
+Group announcements (`group_announcement`, posted to the group's one Announcements thread) and `event_group` are the same
+idea without the null: a band posting to its roster and a committee posting to its members
+are the same act on one table. Because the
 null is the collective, every query for an owner LEFT joins, and a guard reads the column
 off the row, never off the request.
 
 **When to group-scope a tool.** Most of `/staff` is a tool scoped to an organization that
 happens to be the collective. Once a tool is genuinely group-scoped, a band, a club and a
-committee can all have one; the inbox was the clearest case, and
-`docs/specs/shipped/band-chat-spec.md` is what it became. Three conditions, all of which
-band chat demonstrates:
+committee can all have one; the inbox was the clearest case, and band chat
+([decision](../decisions/0041-band-enquiries-are-threads-the-band-owns.md),
+[workflow](../development/business-workflows.md#10-messaging-portal-threads-direct-messages-and-band-enquiries))
+is what it became. Three conditions, all of which band chat demonstrates:
 
 - **Internal notes must not leak.** `/member/messages` runs member↔staff on the same
   tables and never exposes a note.
@@ -318,6 +431,29 @@ projects are project management, and committees are social containers that hold 
 over work. The staff nav groups them as **Planning** because staff work the flow together;
 a nav section follows the work, this document follows the data.
 
+## Outside parties
+
+Every organization CMC deals with but does not contain is one `organization` row: a funder, a
+sponsor, a contractor, a supplier, a market vendor, an outside act (`performer`, linked to its
+hidden `directory_entry`), or a partner. What it is to CMC is
+a `party_role` row, so one business can sponsor a season and service the PA in the same year. A
+record that names an organization in a role (`grant_application`, `sponsorship`,
+`contractor_job`, `purchase_order`, `market_vendor`) is checked for the role by its service, since SQLite cannot,
+and `ORGANIZATION_RECORDS` in `organization-service.ts` lists them for merging. A band that was
+an outside act names it in `group.from_organization_id`, which has no FK because `organization`
+already reaches `group` through `directory_entry`. The people are `contact` rows, read only
+through `contact-service.ts`; a show's per-set contact is one of them
+(`production_slot.contact_id`). See #2622.
+
+Removing a role removes that `party_role` row only. An organization with no role stays, with its
+people, threads and records, and is archived rather than deleted. The one delete is the explicit
+Delete on a sponsor or funder, and it removes the organization only when it has no people, no act listing, and nothing in
+`ORGANIZATION_RECORDS` or `ORGANIZATION_LINKS` names it (#2784).
+
+Pursuing money is project work. A `grant_application` or a `sponsorship` is a 1:1 side table on a
+project of kind `grant` or `sponsorship`, as `production` is on a show's: the side table holds the
+money and the dates, and the project holds the tasks.
+
 ## Duplications to leave alone
 
 A list like the above invites merging everything. These three are deliberate:
@@ -345,16 +481,23 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
   three surfaces, merged from three per-domain tables.
 - **Polymorphic booking.** `reservation.bookerType` over
   `['user','group','event','instructor']`.
-- **Polymorphic attachment.** `media` / `media_attachment` over `attachableTypes`.
+- **Polymorphic attachment.** `media` / `media_attachment` over `attachableTypes`. No write
+  path deletes an R2 object: a row detaches, and `/api/cron/sweep-media` reaps objects nothing
+  points at, after a grace window. A count across parents goes through
+  `liveAttachmentCondition()`. See
+  [uploads are detached and swept](../decisions/0026-uploads-are-detached-and-swept.md).
 - **One vocabulary file.** [config.ts](../../src/lib/config.ts), imported by schema _by
   relative path_ — a `$lib` alias breaks `db:generate`.
 
 ## Further reading
 
-- [project-spec.md](../specs/project-spec.md) — the `project` design
+- [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md)
+  — the `project` decision
+- [A festival is a parent project](../decisions/0079-a-festival-is-a-parent-project.md) — the
+  one-level parent over several shows
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
 - [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
   what those products do better
-- [committees-and-roles-spec.md](../specs/committees-and-roles-spec.md) — committees as
-  the owners of projects
+- [A committee is a group, chaired by its admins](../decisions/0049-a-committee-is-a-group-chaired-by-admins.md)
+  — what a committee is in the data

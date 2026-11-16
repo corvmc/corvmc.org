@@ -1,25 +1,27 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
+	import { relativeDay } from '#lib/utils/format.js';
 	import {
 		suggestionCategories,
 		suggestionStatuses,
 		suggestionCategoryLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
-	import { getStaffSuggestionsQueues } from '$lib/remote/suggestions.remote';
+	} from '#lib/config.js';
+	import { getStaffSuggestionsQueues } from '#lib/remote/suggestions.remote.js';
 
 	// One tab per reason a suggestion is or isn't on the board. "Needs review" is
 	// the time-sensitive one: everything in it is invisible to members until
@@ -72,15 +74,13 @@
 	}
 
 	const tabs = $derived([
-		{ key: 'board', label: 'Board' },
-		{ key: 'review', label: 'Needs review' },
-		{ key: 'hidden', label: 'Hidden' }
+		{ key: 'board', label: m.staff_suggestions_board_label() },
+		{ key: 'review', label: m.staff_suggestions_needs_review_label() },
+		{ key: 'hidden', label: m.staff_hidden_label() }
 	]);
 </script>
 
-<PageHeader title="Suggestions" subtitle="Staff" />
-
-<PageContent width="full">
+<PageHeader title={m.staff_suggestions_title()} subtitle={m.staff_staff_body()}>
 	<TabBar
 		{tabs}
 		active={tab}
@@ -89,12 +89,14 @@
 			page = 1;
 		}}
 	/>
+</PageHeader>
 
+<PageContent width="full">
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search suggestions..."
+				placeholder={m.staff_suggestions_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -103,28 +105,28 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.staff_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.staff_suggestions_all_categories_label()}</option>
 			{#each suggestionCategories as c (c)}
 				<option value={c}>{suggestionCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Any status</option>
+			<option value="">{m.staff_suggestions_any_status_label()}</option>
 			{#each suggestionStatuses as s (s)}
 				<option value={s}>{suggestionStatusLabels[s]}</option>
 			{/each}
@@ -133,28 +135,35 @@
 
 	{#if tab === 'review'}
 		<p class="text-muted">
-			Nothing here is visible to members. Reported suggestions are resolved in
-			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>, not here.
+			<ParaglideMessage
+				message={m.staff_suggestions_nothing_here_visible_members_reported_text}
+				inputs={{ staff_content_flags: m.staff_content_flags_text() }}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/if}
 
 	<DataList
 		{result}
-		empty={tab === 'review' ? 'Nothing waiting on you' : 'No suggestions found'}
+		empty={tab === 'review'
+			? m.staff_suggestions_nothing_waiting_body()
+			: m.staff_suggestions_no_suggestions_found_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Suggestion</th>
-					<th>Author</th>
-					<th class="col-support w-px">Category</th>
-					<th class="col-support w-px cell-num">Votes</th>
-					<th class="col-extra whitespace-nowrap">Posted</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_suggestion_label()}</th>
+					<th>{m.staff_suggestions_author_label()}</th>
+					<th class="col-support w-px">{m.staff_category_label()}</th>
+					<th class="col-support w-px cell-num">{m.staff_votes_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 				{/snippet}
 				{#each rows as s (s.id)}
-					{@const href = resolve(`/staff/suggestions/${s.id}`)}
+					{@const href = resolve(`staff/suggestions/${s.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={s.mergedIntoId ? 'merged' : s.status} />
@@ -178,24 +187,26 @@
 	{#if tab === 'review'}
 		{#await pendingEditsPromise then pendingEdits}
 			{#if pendingEdits.length > 0}
-				<h2 class="text-muted font-medium">Edits waiting on approval</h2>
+				<h2 class="text-muted font-medium">{m.staff_suggestions_edits_waiting_approval_title()}</h2>
 				<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Proposed change</th>
-						<th>Requested by</th>
-						<th class="col-extra whitespace-nowrap">Requested</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_suggestions_proposed_change_label()}</th>
+						<th>{m.staff_suggestions_requested_by_label()}</th>
+						<th class="col-extra whitespace-nowrap">{m.staff_requested_label()}</th>
 					{/snippet}
 					{#each pendingEdits as e (e.id)}
-						{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
+						{@const href = resolve(`staff/suggestions/${e.suggestionId}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="pending_review" /></td>
 							<td class="cell-primary">
 								<EntityIdentity ref={e.ref}>
-									{#snippet subtitle()}was "{e.originalTitle}"{/snippet}
+									{#snippet subtitle()}{m.staff_suggestions_was_body({
+											originalTitle: e.originalTitle
+										})}{/snippet}
 								</EntityIdentity>
 							</td>
 							<td class="min-w-0"><EntityChip ref={e.requestedBy} icon={false} /></td>
@@ -204,23 +215,25 @@
 					{/each}
 				</Table>
 			{/if}
+		{:catch}
+			<!-- DataList takes this rejection to the boundary. -->
 		{/await}
 	{/if}
 
 	{#if tab === 'review'}
-		<h2 class="text-muted font-medium">Reported and pulled from the board</h2>
-		<DataList result={underReview} empty="No reported suggestions">
+		<h2 class="text-muted font-medium">{m.staff_suggestions_reported_pulled_from_board_title()}</h2>
+		<DataList result={underReview} empty={m.staff_suggestions_no_reported_suggestions_body()}>
 			{#snippet children(rows)}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Suggestion</th>
-						<th>Author</th>
-						<th class="col-support w-px cell-num">Votes</th>
-						<th class="col-extra whitespace-nowrap">Posted</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_suggestion_label()}</th>
+						<th>{m.staff_suggestions_author_label()}</th>
+						<th class="col-support w-px cell-num">{m.staff_votes_label()}</th>
+						<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 					{/snippet}
 					{#each rows as s (s.id)}
-						{@const href = resolve(`/staff/suggestions/${s.id}`)}
+						{@const href = resolve(`staff/suggestions/${s.id}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="under_review" /></td>
 							<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>

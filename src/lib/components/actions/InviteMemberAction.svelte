@@ -1,16 +1,17 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { addBandMember } from '$lib/remote/bands.remote';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { addBandMember } from '#lib/remote/bands.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 
 	const { fields } = addBandMember;
 
 	const ROLE_OPTIONS = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.actions_member_label() },
+		{ value: 'admin', label: m.actions_admin_label() }
 	];
 
 	let {
@@ -53,14 +54,14 @@
 
 <Action
 	action={addBandMember}
-	label="Add Member"
-	modalTitle="Invite Member"
+	label={m.actions_invite_member_add_member_label()}
+	modalTitle={m.actions_invite_member_modal_title()}
 	canSubmit={!!userId}
-	successToast="Invitation sent"
+	successToast={m.actions_invite_member_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -77,7 +78,7 @@
 						onclick={() => {
 							userId = '';
 							userName = '';
-						}}>Change</Button
+						}}>{m.actions_invite_member_change_label()}</Button
 					>
 				</div>
 			{:else}
@@ -85,7 +86,10 @@
 				     posts from the hidden field above, but an issue on it belongs
 				     beside the box where the member is picked, which is the only
 				     thing on screen when `userId` is still empty. -->
-				<FormField name="userId" label="Search members">
+				<FormField
+					field={addBandMember.fields.userId}
+					label={m.actions_invite_member_search_members_label()}
+				>
 					{#snippet input(id)}
 						<input
 							{id}
@@ -93,7 +97,7 @@
 							class="input w-full"
 							bind:value={query}
 							oninput={handleSearch}
-							placeholder="Name or email..."
+							placeholder={m.actions_invite_member_name_email_placeholder()}
 						/>
 					{/snippet}
 				</FormField>
@@ -112,8 +116,17 @@
 					</div>
 				{/if}
 			{/if}
-			<FormField field={fields.role} type="select" label="Role" options={ROLE_OPTIONS} />
-			<FormField field={fields.position} label="Position (optional)" placeholder="e.g. Guitarist" />
+			<FormField
+				field={fields.role}
+				type="select"
+				label={m.actions_role_label()}
+				options={ROLE_OPTIONS}
+			/>
+			<FormField
+				field={fields.position}
+				label={m.actions_position_optional_label()}
+				placeholder={m.actions_invite_member_e_g_guitarist_placeholder()}
+			/>
 		</div>
 	{/snippet}
 </Action>

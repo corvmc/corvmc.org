@@ -1,4 +1,4 @@
-import { expenseLines } from '$lib/server/production/expense-service';
+import { expenseLines } from '#lib/server/production/expense-service.js';
 import {
 	listForSubject,
 	recordEntries,

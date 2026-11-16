@@ -97,29 +97,32 @@ describe('capability grants: JSON columns to join tables', () => {
 		db.close();
 	});
 
-	it('keeps every grant through every later migration', () => {
-		applyMigrations(file);
-		const after = new DatabaseSync(file);
-		for (const [id, grants] of Object.entries(GROUPS)) {
-			expect(rowsOf(after, 'group_capability', 'group_id', id), id).toEqual([...grants].sort());
-		}
-		// A superset: later backfills may add a role grant (the door role gains finance.collect).
-		for (const [id, grants] of Object.entries(ROLES)) {
-			expect(rowsOf(after, 'volunteer_role_capability', 'volunteer_role_id', id), id).toEqual(
-				expect.arrayContaining([...grants])
-			);
-		}
-		after.close();
-	});
+	describe('after every later migration', () => {
+		beforeAll(() => applyMigrations(file));
 
-	it('leaves the tables as the only copy once the JSON columns are dropped', () => {
-		const after = new DatabaseSync(file);
-		const columns = (table: string) =>
-			(after.prepare(`PRAGMA table_info("${table}")`).all() as Array<{ name: string }>).map(
-				(c) => c.name
-			);
-		expect(columns('group')).not.toContain('capability_grants');
-		expect(columns('volunteer_role')).not.toContain('capability_grants');
-		after.close();
+		it('keeps every grant through every later migration', () => {
+			const after = new DatabaseSync(file);
+			for (const [id, grants] of Object.entries(GROUPS)) {
+				expect(rowsOf(after, 'group_capability', 'group_id', id), id).toEqual([...grants].sort());
+			}
+			// A superset: later backfills may add a role grant (the door role gains finance.collect).
+			for (const [id, grants] of Object.entries(ROLES)) {
+				expect(rowsOf(after, 'volunteer_role_capability', 'volunteer_role_id', id), id).toEqual(
+					expect.arrayContaining([...grants])
+				);
+			}
+			after.close();
+		});
+
+		it('leaves the tables as the only copy once the JSON columns are dropped', () => {
+			const after = new DatabaseSync(file);
+			const columns = (table: string) =>
+				(after.prepare(`PRAGMA table_info("${table}")`).all() as Array<{ name: string }>).map(
+					(c) => c.name
+				);
+			expect(columns('group')).not.toContain('capability_grants');
+			expect(columns('volunteer_role')).not.toContain('capability_grants');
+			after.close();
+		});
 	});
 });

@@ -1,6 +1,8 @@
 import { ServerClient } from 'postmark';
-import { env } from '$env/dynamic/private';
-import { captureException } from '$lib/server/sentry';
+import * as env from '$app/env/private';
+import { captureException } from '#lib/server/sentry.js';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
+import { createLogMailClient } from './log-mail-client';
 
 // ---------------------------------------------------------------------------
 // Postmark email client
@@ -12,12 +14,27 @@ import { captureException } from '$lib/server/sentry';
 // Postmark message streams, read from the environment. These are custom streams
 // rather than Postmark's defaults (`outbound` / `broadcast`), so both must exist
 // with the configured ids on the server POSTMARK_SERVER_TOKEN belongs to —
-// otherwise Postmark rejects every send. Required: there is no fallback.
+// otherwise Postmark rejects every send. Required under the postmark driver.
 
-let client: ServerClient | null = null;
+type MailClient = Pick<
+	ServerClient,
+	'sendEmailWithTemplate' | 'sendEmailBatch' | 'sendEmailBatchWithTemplates'
+>;
 
-function getClient(): ServerClient {
+let client: MailClient | null = null;
+
+/**
+ * `postmark` only when the environment asks for it, as `PAYMENTS_DRIVER` does
+ * for Stripe. A dev checkout carries a real token, so the safe default is the
+ * log driver; production opts in through `wrangler.toml`.
+ */
+export function mailDriver(): 'postmark' | 'log' {
+	return env.MAIL_DRIVER === 'postmark' ? 'postmark' : 'log';
+}
+
+function getClient(): MailClient {
 	if (client) return client;
+	if (mailDriver() === 'log') return (client = createLogMailClient());
 
 	const token = env.POSTMARK_SERVER_TOKEN;
 	if (!token) {
@@ -28,14 +45,21 @@ function getClient(): ServerClient {
 	return client;
 }
 
+/** Drop the cached client, so a spec can switch drivers between cases. */
+export function resetMailClient(): void {
+	client = null;
+}
+
 function getBroadcastStream(): string {
 	const stream = env.POSTMARK_BROADCAST_STREAM;
+	if (!stream && mailDriver() === 'log') return 'log';
 	if (!stream) throw new Error('POSTMARK_BROADCAST_STREAM is not configured');
 	return stream;
 }
 
 function getTransactionalStream(): string {
 	const stream = env.POSTMARK_TRANSACTIONAL_STREAM;
+	if (!stream && mailDriver() === 'log') return 'log';
 	if (!stream) throw new Error('POSTMARK_TRANSACTIONAL_STREAM is not configured');
 	return stream;
 }
@@ -56,22 +80,25 @@ export interface BroadcastMessage {
 const BATCH_SIZE = 500;
 
 /**
- * Send a batch of emails via Postmark's broadcast message stream.
- * Automatically chunks into batches of 500 (Postmark's limit).
+ * Send a batch of emails via Postmark's broadcast message stream, answered per
+ * message in order. Postmark refuses single messages inside an accepted batch
+ * (an inactive recipient is ErrorCode 406). A chunk whose call throws fails,
+ * and so does every chunk after it, unsent: a broadcast is at-most-once.
  */
-export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<void> {
-	if (messages.length === 0) return;
+export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
 
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
 	const messageStream = getBroadcastStream();
 
+	const out: SendResult[] = [];
 	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
 		const chunk = messages.slice(i, i + BATCH_SIZE);
 
 		try {
-			await getClient().sendEmailBatch(
+			const responses = await getClient().sendEmailBatch(
 				chunk.map((msg) => ({
 					From: from,
 					To: msg.to,
@@ -83,6 +110,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 					MessageStream: messageStream
 				}))
 			);
+			chunk.forEach((_, j) => out.push(sendResult(responses[j])));
 		} catch (err) {
 			captureException(err, {
 				event: 'email.send',
@@ -90,9 +118,12 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 				batchStart: i,
 				batchSize: chunk.length
 			});
-			throw err;
+			const error = err instanceof Error ? err.message : String(err);
+			while (out.length < messages.length) out.push({ ok: false, error });
+			break;
 		}
 	}
+	return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +132,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 // Transactional notifications render from templates stored in Postmark (source
 // of truth in postmark/templates, pushed via `pnpm email:push`). Most use the
 // generic `notification` template, whose subject + body come from the model.
+// Every template send adds `contact_email`, which the shared layout's footer reads.
 
 export interface SendTemplateParams {
 	to: string;
@@ -122,6 +154,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const messageStream = getTransactionalStream();
+	const contact_email = await contactEmail();
 
 	try {
 		await getClient().sendEmailWithTemplate({
@@ -129,7 +162,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 			To: params.to,
 			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: params.templateAlias,
-			TemplateModel: params.model,
+			TemplateModel: { ...params.model, contact_email },
 			Tag: params.tag,
 			Metadata: params.metadata,
 			MessageStream: messageStream
@@ -167,7 +200,7 @@ export interface TemplateBatchMessage {
  *
  * On the **transactional** stream, like `sendEmailWithTemplate` and unlike
  * `sendBroadcastBatch`. That is deliberate and argued in
- * docs/specs/shipped/groups-spec.md: an announcement is not marketing, you are getting
+ * docs/decisions/0023-group-announcements-are-transactional-and-batched.md: an announcement is not marketing, you are getting
  * it because you joined a roster, and a marketing opt-out must not silence a
  * group somebody chose to be in. The cost of that choice is that a spam
  * complaint here lands on the stream that also carries password resets, which
@@ -188,6 +221,7 @@ export async function sendTemplateBatch(
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
 	const messageStream = getTransactionalStream();
+	const contact_email = await contactEmail();
 
 	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
 		const chunk = messages.slice(i, i + BATCH_SIZE);
@@ -198,7 +232,7 @@ export async function sendTemplateBatch(
 					From: from,
 					To: msg.to,
 					TemplateAlias: templateAlias,
-					TemplateModel: msg.model,
+					TemplateModel: { ...msg.model, contact_email },
 					Tag: opts.tag,
 					MessageStream: messageStream
 				}))
@@ -258,13 +292,15 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 		headers.push({ Name: 'References', Value: params.references });
 	}
 
+	const contact_email = await contactEmail();
+
 	try {
 		const result = await getClient().sendEmailWithTemplate({
 			From: `${fromName} <${fromAddress}>`,
 			To: params.to,
 			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: params.templateAlias ?? 'inbox-reply',
-			TemplateModel: params.model,
+			TemplateModel: { ...params.model, contact_email },
 			Tag: params.templateAlias ?? 'inbox-reply',
 			Metadata: params.metadata,
 			Headers: headers.length > 0 ? headers : undefined,
@@ -279,4 +315,113 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 		});
 		throw err;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Per-message results (for the outbox)
+// ---------------------------------------------------------------------------
+
+export interface TemplatedEmail {
+	to: string;
+	templateAlias: string;
+	model: Record<string, unknown>;
+	replyTo?: string | null;
+	tag?: string;
+}
+
+/** Postmark's MessageID for a message it took, or its reason for refusing one. */
+export type SendResult = { ok: true; messageId: string } | { ok: false; error: string };
+
+/** An email rendered here rather than from a Postmark template: a campaign's test copy. */
+export interface HtmlEmail {
+	to: string;
+	subject: string;
+	htmlBody: string;
+	tag?: string;
+}
+
+/**
+ * Pre-rendered emails on the transactional stream, answered per message. One
+ * person's copy of a broadcast, so it goes where their account mail goes
+ * rather than on the broadcast stream with its unsubscribe rules.
+ */
+export async function sendHtmlEmails(messages: HtmlEmail[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+
+	const out: SendResult[] = [];
+	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+		const chunk = messages.slice(i, i + BATCH_SIZE);
+		try {
+			const messageStream = getTransactionalStream();
+			const responses = await getClient().sendEmailBatch(
+				chunk.map((msg) => ({
+					From: `${fromName} <${fromAddress}>`,
+					To: msg.to,
+					Subject: msg.subject,
+					HtmlBody: msg.htmlBody,
+					Tag: msg.tag,
+					MessageStream: messageStream
+				}))
+			);
+			chunk.forEach((_, j) => out.push(sendResult(responses[j])));
+		} catch (err) {
+			captureException(err, { event: 'email.send', kind: 'outbox_html', size: chunk.length });
+			const error = err instanceof Error ? err.message : String(err);
+			for (let j = 0; j < chunk.length; j++) out.push({ ok: false, error });
+		}
+	}
+	return out;
+}
+
+function sendResult(r: { ErrorCode: number; Message: string; MessageID: string } | undefined) {
+	return r && r.ErrorCode === 0
+		? ({ ok: true, messageId: r.MessageID } as const)
+		: ({ ok: false, error: r ? `${r.ErrorCode}: ${r.Message}` : 'No response' } as const);
+}
+
+/**
+ * Templated emails of any alias, 500 to a call, answered per message: Postmark
+ * accepts a batch and refuses single messages inside it (an inactive recipient
+ * is ErrorCode 406), so a whole-batch throw cannot say which ones went. A call
+ * that throws fails every message in its chunk.
+ */
+export async function sendTemplatedEmails(messages: TemplatedEmail[]): Promise<SendResult[]> {
+	if (messages.length === 0) return [];
+	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
+	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
+	const contact_email = await contactEmail();
+
+	const out: SendResult[] = [];
+	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
+		const chunk = messages.slice(i, i + BATCH_SIZE);
+		try {
+			const messageStream = getTransactionalStream();
+			const responses = await getClient().sendEmailBatchWithTemplates(
+				chunk.map((msg) => ({
+					From: `${fromName} <${fromAddress}>`,
+					To: msg.to,
+					ReplyTo: msg.replyTo ?? undefined,
+					TemplateAlias: msg.templateAlias,
+					TemplateModel: { ...msg.model, contact_email },
+					Tag: msg.tag,
+					MessageStream: messageStream
+				}))
+			);
+			chunk.forEach((_, j) => {
+				const r = responses[j];
+				out.push(
+					r && r.ErrorCode === 0
+						? { ok: true, messageId: r.MessageID }
+						: { ok: false, error: r ? `${r.ErrorCode}: ${r.Message}` : 'No response' }
+				);
+			});
+		} catch (err) {
+			captureException(err, { event: 'email.send', kind: 'outbox_batch', size: chunk.length });
+			const error = err instanceof Error ? err.message : String(err);
+			for (let j = 0; j < chunk.length; j++) out.push({ ok: false, error });
+		}
+	}
+	return out;
 }

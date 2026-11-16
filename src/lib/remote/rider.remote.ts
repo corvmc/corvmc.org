@@ -1,21 +1,21 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { getMembers } from '$lib/server/band/band-service';
-import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { listFor } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
 import {
 	getRider,
 	saveOwnElements,
 	saveElementsFor,
 	saveRiderSettings,
 	savePlacements
-} from '$lib/server/band/rider-service';
-import { riderElementsDraftSchema } from '$lib/types/rider';
-import { riderMonitorFormats, RIDER_MAX_ELEMENTS, RIDER_NOTES_MAX } from '$lib/config';
-import { config } from '$lib/server/site-config/site-config-service';
+} from '#lib/server/band/rider-service.js';
+import { riderElementsDraftSchema } from '#lib/types/rider.js';
+import { riderMonitorFormats, RIDER_MAX_ELEMENTS, RIDER_NOTES_MAX } from '#lib/config.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 
 /**
  * The band tech rider — see `/band/[slug]/rider`.
@@ -60,7 +60,7 @@ function parseElements(raw: string) {
  * queries out of the component, and past kit 2.64 doing so stops the page
  * rendering at all.
  *
- * `allowStaff` because a staffer advancing a show has to be able to read a
+ * `staff` because a staffer advancing a show has to be able to read a
  * rider for a band they are not in. It comes back as `role: 'staff'`, so
  * `canManage` is false and every control renders read-only.
  */
@@ -70,7 +70,7 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 		group: band,
 		role
 	} = await requireGroupRole({ id: bandId }, 'member', {
-		allowStaff: true
+		staff: 'band.read'
 	});
 	const canManage = role === 'owner' || role === 'admin';
 

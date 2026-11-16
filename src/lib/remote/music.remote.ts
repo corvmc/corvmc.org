@@ -2,15 +2,15 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireFeature } from '$lib/server/feature-flags';
-import { getPublishedRelease, listTracks } from '$lib/server/audio/audio-service';
-import { beginPurchase, findPurchaseByToken } from '$lib/server/audio/purchase-service';
-import { destinationFor } from '$lib/server/audio/connect-service';
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { requireFeature } from '#lib/server/feature-flags.js';
+import { getPublishedRelease, listTracks } from '#lib/server/audio/audio-service.js';
+import { beginPurchase, findPurchaseByToken } from '#lib/server/audio/purchase-service.js';
+import { destinationFor } from '#lib/server/audio/connect-service.js';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { and, eq } from 'drizzle-orm';
-import { resolveImageUrl } from '$lib/server/storage';
-import { mapDomainError } from '$lib/server/errors';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { mapDomainError } from '#lib/server/errors.js';
 
 // ---------------------------------------------------------------------------
 // Public reads

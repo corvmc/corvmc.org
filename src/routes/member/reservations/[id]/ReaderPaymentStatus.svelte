@@ -1,11 +1,12 @@
 <script lang="ts">
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		cancelPayAtReader,
 		getReaderPayment,
 		simulatePayAtReader
-	} from '$lib/remote/reservations.remote';
+	} from '#lib/remote/reservations.remote.js';
 
 	/**
 	 * After the amount is on the reader: the webhook settles the booking, so poll
@@ -65,19 +66,27 @@
 
 <div class="space-y-3" aria-live="polite">
 	{#if payment.status === 'processing' || payment.status === 'paid'}
-		<Alert>Card accepted. Confirming your booking…</Alert>
+		<Alert>{m.member_reservations_id_reader_payment_status_card_accepted_c_body()}</Alert>
 	{:else if payment.status === 'declined'}
-		<Alert type="warning">{payment.message}. Try again with the same or another card.</Alert>
+		<Alert type="warning"
+			>{m.member_reservations_id_reader_payment_status_try_again_with_body({
+				message: payment.message
+			})}</Alert
+		>
 	{:else if attempts >= RETRY_LIMIT}
-		<Alert type="warning">Still waiting for a card on the reader.</Alert>
+		<Alert type="warning"
+			>{m.member_reservations_id_reader_payment_status_still_waiting_c_body()}</Alert
+		>
 	{:else if payment.status === 'waiting'}
-		<Alert>Tap your card on the reader by the door.</Alert>
+		<Alert>{m.member_reservations_id_reader_payment_status_tap_card_reader_body()}</Alert>
 	{/if}
 
 	{#if payment.status === 'waiting' || payment.status === 'declined'}
 		<div class="flex flex-wrap gap-2">
 			{#if payment.status === 'declined' || attempts >= RETRY_LIMIT}
-				<Button variant="primary" disabled={busy} onclick={() => run(onretry)}>Try again</Button>
+				<Button variant="primary" disabled={busy} onclick={() => run(onretry)}
+					>{m.member_reservations_id_reader_payment_status_try_again_label()}</Button
+				>
 			{/if}
 			{#if canSimulate && payment.status === 'waiting'}
 				<Button
@@ -86,7 +95,7 @@
 					disabled={busy}
 					onclick={() => run(() => simulatePayAtReader({ ...ref, outcome: 'succeed' }))}
 				>
-					Simulate a tap
+					{m.member_simulate_tap_label()}
 				</Button>
 				<Button
 					variant="warning"
@@ -94,11 +103,11 @@
 					disabled={busy}
 					onclick={() => run(() => simulatePayAtReader({ ...ref, outcome: 'decline' }))}
 				>
-					Simulate a decline
+					{m.member_reservations_id_reader_payment_status_simulate_declin_label()}
 				</Button>
 			{/if}
 			<Button variant="ghost" disabled={busy} onclick={() => run(() => cancelPayAtReader(ref))}>
-				Cancel
+				{m.member_cancel_label()}
 			</Button>
 		</div>
 	{/if}

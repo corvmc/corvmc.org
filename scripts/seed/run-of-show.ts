@@ -22,7 +22,8 @@ import { asc, inArray } from 'drizzle-orm';
 type ProductionRow = typeof production.$inferSelect & { eventId: string };
 
 /**
- * One deal per act, walking `docs/specs/project-spec.md#the-deal-shape`. Every
+ * One deal per act, walking the deal shapes in
+ * `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`. Every
  * shape has to be reachable locally or the terms editor and the band-facing
  * summary are both built against one case.
  */
@@ -166,9 +167,7 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 
 	if (rows.length === 0) return { slots: 0, uncredited: 0, withoutTimes: 0 };
 
-	// Thirteen columns a row, so seven rows a statement stays under D1's
-	// 100-parameter cap (13 × 7 = 91).
-	await batchInsert(productionSlot, rows, 7);
+	await batchInsert(productionSlot, rows);
 
 	return { slots: rows.length, uncredited, withoutTimes };
 }

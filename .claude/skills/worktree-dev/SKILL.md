@@ -1,6 +1,6 @@
 ---
 name: worktree-dev
-description: Set up and run the dev server, Storybook, or the browser preview from inside a git worktree under .claude/worktrees/. Use when a worktree has no node_modules or no .env, when the dev server won't boot from a worktree, or when :5173 seems to belong to someone else.
+description: Set up and run the dev server or the browser preview from inside a git worktree under .claude/worktrees/. Use when a worktree has no node_modules or no .env, when the dev server won't boot from a worktree, or when :5173 seems to belong to someone else.
 ---
 
 # Running a dev server from a worktree
@@ -59,8 +59,10 @@ boot.
    pnpm worktree:ports
    ```
 
-   `ORIGIN` must match the port you actually serve on; a mismatch fails auth and Sentry gating
-   rather than erroring cleanly. Override both with `PORT` / `PREVIEW_PORT` if you need to.
+   `ORIGIN` must match the port you actually serve on, or every sign-in 404s. `vite dev` moves a
+   localhost `ORIGIN` from the copied `.env` onto this worktree's dev port (`devOrigin` in the same
+   file), so the copy needs no edit. An `ORIGIN` set in the shell is left as it is. Override the
+   ports with `PORT` / `PREVIEW_PORT` if you need to.
 
 4. **Launch.** `.claude/launch.json` is tracked and its `port` is a single static number, so its
    entries name the _main_ checkout's ports. From a worktree, start the browser pane with the URL

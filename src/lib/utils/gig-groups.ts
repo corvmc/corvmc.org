@@ -1,5 +1,5 @@
-import { toLocalDate } from '$lib/utils/format';
-import type { CalendarEntry } from '$lib/types/calendar';
+import { toLocalDate } from '#lib/utils/format.js';
+import type { CalendarEntry } from '#lib/types/calendar.js';
 
 const MONTH_NAMES = [
 	'January',

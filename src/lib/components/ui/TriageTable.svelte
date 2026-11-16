@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import type { ResolvedPathname } from '$app/types';
 
 	/** One report in a triage queue, whichever source it came from (#552). */
@@ -21,12 +21,13 @@
 </script>
 
 <script lang="ts">
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { relativeDay } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { relativeDay } from '#lib/utils/format.js';
 
 	let { rows, subjectLabel }: { rows: TriageRow[]; subjectLabel: string } = $props();
 </script>
@@ -38,12 +39,12 @@
 -->
 <Table>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">Status</span></th>
-		<th class="col-support">Type</th>
+		<th class="w-px"><span class="sr-only">{m.ui_triage_status_label()}</span></th>
+		<th class="col-support">{m.ui_triage_type_label()}</th>
 		<th>{subjectLabel}</th>
-		<th class="cell-primary">Reason</th>
-		<th class="col-support">Reported by</th>
-		<th class="col-support">When</th>
+		<th class="cell-primary">{m.ui_triage_reason_label()}</th>
+		<th class="col-support">{m.ui_triage_reported_by_label()}</th>
+		<th class="col-support">{m.ui_triage_when_label()}</th>
 	{/snippet}
 	{#each rows as r (r.id)}
 		<tr class="hover cursor-pointer" use:rowLink={r.href}>
@@ -54,7 +55,7 @@
 			</td>
 			<td class="cell-primary truncate">
 				{#if r.appealed}
-					<Badge variant="warning" size="sm" class="mr-1">Appealed</Badge>
+					<Badge variant="warning" size="sm" class="mr-1">{m.ui_triage_appealed_label()}</Badge>
 				{/if}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- `href` is typed ResolvedPathname; the caller resolved it -->
 				<a class="link-hover" href={r.href}>{r.text}</a>

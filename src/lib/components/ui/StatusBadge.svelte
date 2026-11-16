@@ -42,13 +42,16 @@
 		IconCalendarEvent,
 		IconArrowMerge,
 		IconEyeOff,
-		IconReceipt
+		IconReceipt,
+		IconMailX,
+		IconMailOff,
+		IconMailExclamation
 	} from '@tabler/icons-svelte';
 	import {
 		volunteerHourStatusLabels,
 		volunteerProfileStatusLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	/** Every tabler icon shares one props shape; borrow it from a concrete icon
 	   rather than reaching into the package's un-exported `dist/types`. */
@@ -70,7 +73,12 @@
 		pending_review: 'In review',
 		reported: 'Awaiting review',
 		// Same problem, and "Snooze expired" is the phrase the queue uses.
-		snooze_expired: 'Snooze expired'
+		snooze_expired: 'Snooze expired',
+		// A campaign's skipped recipients: the reason is the state.
+		skipped_unsubscribed: 'Unsubscribed',
+		skipped_suppressed: 'Suppressed',
+		// The word the staff actions and the audit log use.
+		no_show: 'No-show'
 	};
 
 	export const badgeClass: Record<string, string> = {
@@ -82,6 +90,11 @@
 		cancelled: 'badge-ghost',
 		waitlisted: 'badge-ghost',
 		refunded: 'badge-error',
+		// The reservation track (#2861), which is what a reservation is shown
+		// with. `booked` is shared with contractor engagements below.
+		paid: 'badge-success',
+		payment_due: 'badge-warning',
+		covered: 'badge-success',
 		// Events
 		draft: 'badge-warning',
 		pending_review: 'badge-info',
@@ -136,6 +149,14 @@
 		// Campaigns
 		sending: 'badge-info',
 		sent: 'badge-success',
+		// One recipient's copy of a campaign (#2777)
+		delivered: 'badge-success',
+		failed: 'badge-error',
+		bounced: 'badge-error',
+		complained: 'badge-error',
+		// An audience member the send left out (#2914)
+		skipped_unsubscribed: 'badge-ghost',
+		skipped_suppressed: 'badge-ghost',
 		// Ballots: a certified result is final and published.
 		certified: 'badge-success',
 		// Contractor engagements; `declined`, `completed`, `cancelled` and
@@ -199,6 +220,10 @@
 		cancelled: { icon: IconCircleX, color: 'text-base-content' },
 		waitlisted: { icon: IconClockPause, color: 'text-base-content' },
 		refunded: { icon: IconArrowBackUp, color: 'text-error' },
+		// The reservation track. Covered is settled without money changing hands.
+		paid: { icon: IconCircleCheckFilled, color: 'text-success' },
+		payment_due: { icon: IconClock, color: 'text-warning' },
+		covered: { icon: IconCircleCheck, color: 'text-success' },
 
 		// Event statuses
 		draft: { icon: IconPencil, color: 'text-warning' },
@@ -258,6 +283,13 @@
 		// Campaign statuses
 		sending: { icon: IconSend, color: 'text-info' },
 		sent: { icon: IconMailCheck, color: 'text-success' },
+		// One recipient's copy of a campaign (#2777)
+		delivered: { icon: IconMailCheck, color: 'text-success' },
+		failed: { icon: IconMailX, color: 'text-error' },
+		bounced: { icon: IconMailOff, color: 'text-error' },
+		complained: { icon: IconMailExclamation, color: 'text-error' },
+		skipped_unsubscribed: { icon: IconCircleOff, color: 'text-base-content/60' },
+		skipped_suppressed: { icon: IconBan, color: 'text-base-content/60' },
 		certified: { icon: IconCircleCheckFilled, color: 'text-success' },
 
 		// Contractor engagements; the other four are shared and mean the same.
@@ -375,7 +407,13 @@
 		status column announced its header and then nothing for each value, and the
 		entity cards carry status as a glyph alone.
 	-->
-	<span class="tooltip tooltip-right {extra}" data-tip={label} role="img" aria-label={label}>
+	<span
+		class="tooltip tooltip-right {extra}"
+		data-tip={label}
+		data-status={status}
+		role="img"
+		aria-label={label}
+	>
 		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/snippet}
@@ -384,7 +422,9 @@
 	<!-- Both render and the container query picks one; `display: none` keeps the
 	     other out of the accessibility tree, so the name is never doubled. -->
 	<span
-		class="badge gap-1 badge-sm @max-3xl:hidden {badgeClass[status] ?? 'badge-ghost'} {className}"
+		data-status={status}
+		class="badge gap-1 badge-sm whitespace-nowrap @max-3xl:hidden {badgeClass[status] ??
+			'badge-ghost'} {className}"
 	>
 		<variant.icon size={14} />
 		{label}
@@ -395,7 +435,10 @@
 		'@3xl:hidden group-has-focus-visible/row:before:opacity-100 group-has-focus-visible/row:after:opacity-100 group-has-focus-visible/row:before:[--tt-pos:0rem] group-has-focus-visible/row:after:[--tt-pos:0rem]'
 	)}
 {:else if showLabel}
-	<span class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}">
+	<span
+		data-status={status}
+		class="badge gap-1 badge-sm whitespace-nowrap {badgeClass[status] ?? 'badge-ghost'} {className}"
+	>
 		<variant.icon size={14} />
 		{label}
 	</span>

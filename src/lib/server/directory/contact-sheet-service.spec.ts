@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * The contact-sheet token — the only thing standing between a URL and one act's
@@ -15,6 +15,7 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
 let updates: { table: string; values: Record<string, unknown> }[] = [];
 let inserts: { table: string; rows: Record<string, unknown>[] }[] = [];
 let selectQueue: unknown[][] = [];
+let batches: number[] = [];
 
 function tableName(table: unknown): string {
 	if (!table || typeof table !== 'object') return 'unknown';
@@ -35,7 +36,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		insert: (table: unknown) => ({
@@ -52,16 +53,21 @@ vi.mock('$lib/server/db', () => ({
 				updates.push({ table: tableName(table), values });
 				return { where: () => ({ then: (r: (v: unknown) => void) => r(undefined) }) };
 			}
-		})
+		}),
+		// The statements were recorded as they were built; the batch only runs them.
+		batch: async (statements: unknown[]) => {
+			batches.push(statements.length);
+			return [];
+		}
 	}
 }));
 
 // Guards are simulated against the real matrix. `guard` records which one ran.
 let heldPositions: Position[] = ['staff'];
 const guard = vi.fn((_name: string) => {});
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	return {
 		requireCapability: async (cap: Capability) => {
 			guard(cap);
@@ -72,9 +78,12 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-const writeContactUnguarded = vi.fn(async () => {});
+const writeActContactUnguarded = vi.fn(async () => {});
 vi.mock('./contact-service', () => ({
-	writeContactUnguarded: (...a: unknown[]) => writeContactUnguarded(...(a as []))
+	writeActContactUnguarded: (...a: unknown[]) => writeActContactUnguarded(...(a as []))
+}));
+vi.mock('#lib/server/party/organization-service.js', () => ({
+	performerFor: async (entryId: string) => `org-of-${entryId}`
 }));
 
 const {
@@ -106,6 +115,7 @@ beforeEach(() => {
 	updates = [];
 	inserts = [];
 	selectQueue = [];
+	batches = [];
 	heldPositions = ['staff'];
 });
 
@@ -152,7 +162,7 @@ describe('saving a sheet', () => {
 		);
 
 		expect(updates.filter((u) => u.table === 'directory_entry')).toHaveLength(0);
-		expect(writeContactUnguarded).not.toHaveBeenCalled();
+		expect(writeActContactUnguarded).not.toHaveBeenCalled();
 	});
 
 	/**
@@ -169,17 +179,14 @@ describe('saving a sheet', () => {
 		expect(write.values).not.toHaveProperty('name');
 	});
 
-	it('records the contact as self-entered', async () => {
+	it("writes the person on the act's performer organization", async () => {
 		selectQueue = [[live()]];
 
-		await saveContactSheet('tok', { contact: { bookingEmail: 'a@b.test' } });
+		await saveContactSheet('tok', { contact: { email: 'a@b.test' } });
 
-		// The whole point of this path: CMC holds what the act chose to give,
-		// rather than what staff transcribed.
-		expect(writeContactUnguarded).toHaveBeenCalledWith(
-			'de-1',
-			expect.objectContaining({ bookingEmail: 'a@b.test' }),
-			'self_entered'
+		expect(writeActContactUnguarded).toHaveBeenCalledWith(
+			'org-of-de-1',
+			expect.objectContaining({ email: 'a@b.test' })
 		);
 	});
 
@@ -241,6 +248,21 @@ describe('issuing and revoking', () => {
 	it('normalizes the address it is valid for', async () => {
 		await issueContactSheetLink('de-1', '  Manager@Example.COM ', 'staff-1');
 		expect(inserts[0].rows[0]).toMatchObject({ email: 'manager@example.com' });
+	});
+
+	// #2781: "Link sent" answered with nothing sent. The email is now an outbox
+	// row committed with the link, so a link cannot exist without its send.
+	it('emails the link it issues, in the same batch as the link', async () => {
+		selectQueue = [[{ name: 'Touring Act' }]];
+		const { token, url, outboxId } = await issueContactSheetLink('de-1', 'A@B.test', 'staff-1');
+
+		expect(batches).toEqual([3]);
+		expect(inserts.map((i) => i.table)).toEqual(['directory_entry_link', 'outbox_message']);
+		const mail = inserts[1].rows[0] as { id: string; payload: { to: string; model: object } };
+		expect(mail.id).toBe(outboxId);
+		expect(mail.payload.to).toBe('a@b.test');
+		expect(url).toMatch(new RegExp(`/act/${token}$`));
+		expect(JSON.stringify(mail.payload.model)).toContain(url);
 	});
 
 	it('gives the link a finite life', async () => {

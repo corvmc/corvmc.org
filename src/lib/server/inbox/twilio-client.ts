@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 let client: ReturnType<typeof twilio> | null = null;
 
@@ -14,12 +14,6 @@ function getClient() {
 
 	client = twilio(accountSid, authToken);
 	return client;
-}
-
-export function getTwilioAuthToken(): string {
-	const token = env.TWILIO_AUTH_TOKEN;
-	if (!token) throw new Error('TWILIO_AUTH_TOKEN is not configured');
-	return token;
 }
 
 export function getTwilioPhoneNumber(): string {
@@ -49,6 +43,8 @@ export function validateTwilioSignature(
 	params: Record<string, string>,
 	signature: string
 ): boolean {
-	const authToken = getTwilioAuthToken();
+	// Nothing can verify against an unset token, which is a failed check, not a crash.
+	const authToken = env.TWILIO_AUTH_TOKEN;
+	if (!authToken) return false;
 	return twilio.validateRequest(authToken, signature, url, params);
 }

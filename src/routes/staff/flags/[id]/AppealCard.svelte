@@ -1,13 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { decideAppeal, reopenAppeal } from '$lib/remote/appeals.remote';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { appealVerdictLabels, type AppealOutcome } from '$lib/config';
+	import { decideAppeal, reopenAppeal } from '#lib/remote/appeals.remote.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { appealVerdictLabels, type AppealOutcome } from '#lib/config.js';
 
 	interface Appeal {
 		body: string;
@@ -17,12 +18,14 @@
 		decision: {
 			contentOutcome: AppealOutcome;
 			standingOutcome: AppealOutcome;
+			accountOutcome: AppealOutcome;
 			verdict: keyof typeof appealVerdictLabels;
 			notes: string | null;
 			decidedAt: Date;
 		} | null;
 		contentApplicable: boolean;
 		standingApplicable: boolean;
+		accountApplicable: boolean;
 		canDeny: boolean;
 	}
 
@@ -37,40 +40,55 @@
 	const { fields } = decideAppeal;
 </script>
 
-<InfoCard title="Appeal" class="lg:col-span-2">
+<InfoCard title={m.staff_flags_id_appeal_card_title()} class="lg:col-span-2">
 	<DefinitionList>
-		<Fact label="From">
+		<Fact label={m.staff_from_label()}>
 			{#if appeal.appellantUserId}
-				<a class="link" href={resolve(`/staff/members/${appeal.appellantUserId}`)}>
+				<a class="link" href={resolve(`staff/members/${appeal.appellantUserId}`)}>
 					{appeal.appellantName}
 				</a>
 			{:else}
-				Deleted account
+				{m.staff_flags_id_appeal_card_deleted_account_text()}
 			{/if}
 		</Fact>
-		<Fact label="Filed">{formatDateTime(appeal.createdAt)}</Fact>
-		<Fact label="Their case" wrap>{appeal.body}</Fact>
+		<Fact label={m.staff_flags_id_appeal_card_filed_label()}
+			>{formatDateTime(appeal.createdAt)}</Fact
+		>
+		<Fact label={m.staff_flags_id_appeal_card_their_case_label()} wrap>{appeal.body}</Fact>
 	</DefinitionList>
 
 	{#if appeal.decision}
 		<div class="mt-4">
 			<DefinitionList>
-				<Fact label="Verdict">{appealVerdictLabels[appeal.decision.verdict]}</Fact>
-				<Fact label="Content">{outcomeLabels[appeal.decision.contentOutcome]}</Fact>
-				<Fact label="Standing">{outcomeLabels[appeal.decision.standingOutcome]}</Fact>
-				{#if appeal.decision.notes}
-					<Fact label="Reason (staff only)" wrap>{appeal.decision.notes}</Fact>
+				<Fact label={m.staff_flags_id_appeal_card_verdict_label()}
+					>{appealVerdictLabels[appeal.decision.verdict]}</Fact
+				>
+				<Fact label={m.staff_content_label()}>{outcomeLabels[appeal.decision.contentOutcome]}</Fact>
+				<Fact label={m.staff_flags_id_appeal_card_standing_label()}
+					>{outcomeLabels[appeal.decision.standingOutcome]}</Fact
+				>
+				{#if appeal.decision.accountOutcome !== 'not_applicable'}
+					<Fact label={m.staff_flags_id_appeal_card_account_label()}
+						>{outcomeLabels[appeal.decision.accountOutcome]}</Fact
+					>
 				{/if}
-				<Fact label="Decided">{formatDateTime(appeal.decision.decidedAt)}</Fact>
+				{#if appeal.decision.notes}
+					<Fact label={m.staff_flags_id_appeal_card_reason_staff_only_label()} wrap
+						>{appeal.decision.notes}</Fact
+					>
+				{/if}
+				<Fact label={m.staff_flags_id_appeal_card_decided_label()}
+					>{formatDateTime(appeal.decision.decidedAt)}</Fact
+				>
 			</DefinitionList>
 		</div>
 		<div class="mt-3">
 			<Action
 				action={reopenAppeal}
-				label="Reopen appeal"
-				modalTitle="Reopen this appeal"
-				submitLabel="Reopen"
-				successToast="Appeal reopened"
+				label={m.staff_flags_id_appeal_card_reopen_appeal_label()}
+				modalTitle={m.staff_flags_id_appeal_card_reopen_appeal_2_title()}
+				submitLabel={m.staff_reopen_label()}
+				successToast={m.staff_flags_id_appeal_card_appeal_reopened_toast()}
 				variant="default"
 				size="sm"
 				outline
@@ -78,8 +96,7 @@
 				{#snippet form()}
 					<input {...reopenAppeal.fields.flagId.as('hidden', flagId)} />
 					<p class="text-muted text-wrap">
-						This puts the appeal back in the queue for a fresh decision. Anything the last decision
-						restored stays restored.
+						{m.staff_flags_id_appeal_card_puts_appeal_back_queue_fresh_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -87,17 +104,16 @@
 	{:else}
 		{#if !appeal.canDeny}
 			<Alert type="info" class="mt-4">
-				You upheld this report, so you can grant this appeal but a different staffer has to be the
-				one to deny it.
+				{m.staff_flags_id_appeal_card_upheld_report_so_can_grant_body()}
 			</Alert>
 		{/if}
 		<div class="mt-3">
 			<Action
 				action={decideAppeal}
-				label="Decide appeal"
-				modalTitle="Decide this appeal"
-				submitLabel="Record decision"
-				successToast="Appeal decided"
+				label={m.staff_flags_id_appeal_card_decide_appeal_label()}
+				modalTitle={m.staff_flags_id_appeal_card_decide_appeal_2_title()}
+				submitLabel={m.staff_flags_id_appeal_card_record_decision_label()}
+				successToast={m.staff_flags_id_appeal_card_appeal_decided_toast()}
 				variant="primary"
 				size="sm"
 			>
@@ -105,30 +121,40 @@
 					<input {...fields.flagId.as('hidden', flagId)} />
 					<div class="space-y-3">
 						<p class="text-muted text-wrap">
-							Each box you tick is applied as soon as you save. Leave both unticked to deny.
+							{m.staff_flags_id_appeal_card_each_box_tick_applied_as_text()}
 						</p>
 						{#if appeal.contentApplicable}
 							<label class="label cursor-pointer justify-start gap-2">
 								<input class="checkbox checkbox-sm" {...fields.restoreContent.as('checkbox')} />
-								<span class="fieldset-legend text-wrap">Put the content back up</span>
+								<span class="fieldset-legend text-wrap"
+									>{m.staff_flags_id_appeal_card_put_content_back_up_label()}</span
+								>
 							</label>
 						{/if}
 						{#if appeal.standingApplicable}
 							<label class="label cursor-pointer justify-start gap-2">
 								<input class="checkbox checkbox-sm" {...fields.restoreStanding.as('checkbox')} />
 								<span class="fieldset-legend text-wrap">
-									Restore the member's standing (their posts stop going to review)
+									{m.staff_flags_id_appeal_card_restore_member_s_standing_their_label()}
 								</span>
 							</label>
 						{/if}
-						{#if !appeal.contentApplicable && !appeal.standingApplicable}
+						{#if appeal.accountApplicable}
+							<label class="label cursor-pointer justify-start gap-2">
+								<input class="checkbox checkbox-sm" {...fields.restoreAccount.as('checkbox')} />
+								<span class="fieldset-legend text-wrap">
+									{m.staff_flags_id_appeal_card_restore_account_label()}
+								</span>
+							</label>
+						{/if}
+						{#if !appeal.contentApplicable && !appeal.standingApplicable && !appeal.accountApplicable}
 							<p class="text-muted text-wrap">
-								Nothing from this report is still in force, so this only records your answer.
+								{m.staff_flags_id_appeal_card_nothing_from_report_still_force_text()}
 							</p>
 						{/if}
 						<label class="fieldset w-full">
 							<span class="fieldset-legend"
-								>Reason (staff only; the member is told the verdict)</span
+								>{m.staff_flags_id_appeal_card_reason_staff_only_member_told_label()}</span
 							>
 							<textarea class="textarea w-full" rows="3" {...fields.notes.as('text')}></textarea>
 						</label>

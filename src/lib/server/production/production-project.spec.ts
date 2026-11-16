@@ -7,7 +7,7 @@ import { readFileSync, globSync } from 'node:fs';
  * backfill that gave every existing production its project.
  */
 const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return {
 		...migratedSqlite({ foreignKeys: true }),
 		// The backfill reads `project.group_id`, which a later migration drops (#1686).
@@ -19,15 +19,8 @@ const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
 /** The database the helpers below act on: the current schema, or the backfill's. */
 let db = sqlite;
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	})
+vi.mock('#lib/server/db/index.js', () => ({
+	db: testDb
 }));
 
 const { createShowProject, deleteShowProject, showCommittees } =

@@ -1,12 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 import { isHttpError } from '@sveltejs/kit';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * The market remotes' two boundaries: the public form checks Turnstile before
  * anything is filed, and every staff export names `event.manage`.
  */
+
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -42,13 +48,24 @@ vi.mock('@sveltejs/kit', async (importOriginal) => ({
 }));
 
 const turnstileOk = vi.fn(async () => true);
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: () => turnstileOk() }));
+vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: () => turnstileOk() }));
 
 let signedIn = false;
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+// The markets the caller hosts, as a `market.host` role grant scoped to each (#2993).
+let hostOf: string[] = [];
+const hostScopes: unknown[] = [];
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
+		can: async (cap: string, scope?: { eventId?: string }) => {
+			if (cap === 'market.host') hostScopes.push(scope);
+			return signedIn && cap === 'market.host' && hostOf.includes(scope?.eventId ?? '');
+		},
+		requireUser: () => {
+			if (!signedIn) throw error(401, 'Not authenticated');
+			return { id: 'host-1', name: 'Hana Host' };
+		},
 		requireCapability: async (cap: string) => {
 			requested.push(cap);
 			if (!signedIn) throw error(401, 'Not authenticated');
@@ -61,7 +78,7 @@ vi.mock('$lib/server/authorization', async () => {
 // `committeeOf` pass, anyone else falls through to the staff cover.
 let committeeOf: string[] = [];
 const guardedOn: [string | null, string][] = [];
-vi.mock('$lib/server/group/group-context', async () => {
+vi.mock('#lib/server/group/group-context.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireCommitteeMember: async (groupId: string | null, cover: string) => {
@@ -95,6 +112,7 @@ const svc = vi.hoisted(() => ({
 	getMarketDay: vi.fn(async () => null),
 	getMarketEvent: vi.fn(async () => ({ id: 'evt-1' })),
 	listApplications: vi.fn(async () => []),
+	listAllApplications: vi.fn(async () => ({ rows: [], pagination: {} })),
 	listPublicVendors: vi.fn(async () => []),
 	openMarketDay: vi.fn(async () => undefined),
 	setTableLabel: vi.fn(async () => ({ eventId: 'evt-1' })),
@@ -106,15 +124,21 @@ const svc = vi.hoisted(() => ({
 	listMarketDayVendors: vi.fn(async () => []),
 	checkInVendor: vi.fn(async () => ({ eventId: 'evt-1' })),
 	markVendorNoShow: vi.fn(async () => ({ eventId: 'evt-1' })),
-	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' }))
+	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' })),
+	resendDecisionMessage: vi.fn(async () => null)
 }));
-vi.mock('$lib/server/market/market-service', () => svc);
+vi.mock('#lib/server/market/market-service.js', () => svc);
 
 const fees = vi.hoisted(() => ({
 	getVendorFee: vi.fn(async (): Promise<unknown> => null),
 	startVendorFeeCheckout: vi.fn(async () => ({ checkoutUrl: '/checkout/cs_1' }))
 }));
-vi.mock('$lib/server/market/vendor-fee-service', () => fees);
+vi.mock('#lib/server/market/vendor-fee-service.js', () => fees);
+
+const outbox = vi.hoisted(() => ({
+	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null as string | null }))
+}));
+vi.mock('#lib/server/outbox/outbox-service.js', () => outbox);
 
 const remote = await import('./market.remote');
 
@@ -135,6 +159,8 @@ beforeEach(() => {
 	signedIn = false;
 	staff = true;
 	committeeOf = [];
+	hostOf = [];
+	hostScopes.length = 0;
 	requested.length = 0;
 	guardedOn.length = 0;
 	vi.clearAllMocks();
@@ -168,9 +194,8 @@ describe('the public application form', () => {
 describe('staff exports', () => {
 	const calls: [string, () => Promise<unknown>][] = [
 		['getStaffMarketVendors', () => remote.getStaffMarketVendors('evt-1')],
-		['openMarketDayForm', () => submit(remote.openMarketDayForm, { eventId: 'evt-1' })],
-		['setTableLabelForm', () => submit(remote.setTableLabelForm, { vendorId: 'v-1' })],
-		['withdrawVendorForm', () => submit(remote.withdrawVendorForm, { vendorId: 'v-1' })]
+		['getStaffVendorApplications', () => remote.getStaffVendorApplications({})],
+		['openMarketDayForm', () => submit(remote.openMarketDayForm, { eventId: 'evt-1' })]
 	];
 
 	for (const [name, call] of calls) {
@@ -205,6 +230,20 @@ describe('deciding an application (#1503)', () => {
 			);
 		}
 	);
+
+	// #2819: a refused send turned a saved decision into a 500. The decision
+	// stands; the answer says whether its message went.
+	it.each([
+		['sent', true],
+		['pending', false],
+		['failed', false]
+	] as const)('answers success when the message is %s, saying so', async (status, told) => {
+		signedIn = true;
+		svc.decideApplication.mockResolvedValueOnce({ eventId: 'evt-1', outboxId: 'ob-1' } as never);
+		outbox.deliverNow.mockResolvedValueOnce({ id: 'ob-1', status, error: null });
+		expect(await decide()).toEqual({ success: true, messageSent: told });
+		expect(outbox.deliverNow).toHaveBeenCalledWith('ob-1');
+	});
 
 	it('lets staff decide as cover', async () => {
 		signedIn = true;
@@ -308,8 +347,20 @@ describe('paying the fee, with no account', () => {
 	});
 });
 
-describe('market day: check-in, no-shows and invite-back (#1505)', () => {
+describe('market day: seating, withdrawals, check-in, no-shows and invite-back (#1505, #2834)', () => {
 	const writes: [string, () => Promise<unknown>, string, unknown[]][] = [
+		[
+			'setTableLabelForm',
+			() => submit(remote.setTableLabelForm, { vendorId: 'v-1', tableLabel: 'B4' }),
+			'setTableLabel',
+			['v-1', 'B4']
+		],
+		[
+			'withdrawVendorForm',
+			() => submit(remote.withdrawVendorForm, { vendorId: 'v-1' }),
+			'withdrawApplication',
+			['v-1']
+		],
 		[
 			'checkInVendorForm',
 			() => submit(remote.checkInVendorForm, { vendorId: 'v-1', arrived: 'yes' }),
@@ -359,6 +410,17 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		expect(thrown).toMatchObject({ body: { message: 'A no_show cannot' } });
 	});
 
+	it.each([[''], [undefined]])(
+		'inviteBackForm records nothing for a blank choice (%j)',
+		async (inviteBack) => {
+			committeeOf = ['proj-dev'];
+			await expect(
+				submit(remote.inviteBackForm, { vendorId: 'v-1', inviteBack, note: '' })
+			).rejects.toThrow(/Choose whether to invite/);
+			expect(svc.recordInviteBack).not.toHaveBeenCalled();
+		}
+	);
+
 	it('shows the day-of list to the committees on the market, and to staff', async () => {
 		committeeOf = ['proj-dev'];
 		svc.getMarketDay.mockResolvedValueOnce({ eventId: 'evt-1' } as never);
@@ -370,5 +432,62 @@ describe('market day: check-in, no-shows and invite-back (#1505)', () => {
 		staff = false;
 		committeeOf = [];
 		await expect(remote.getMarketDayCheckIn('evt-1')).rejects.toMatchObject({ status: 403 });
+	});
+});
+
+describe("a market's vendor host (#2993)", () => {
+	const decide = () =>
+		submit(remote.decideVendorForm, { vendorId: 'v-1', decision: 'accepted', message: 'In' });
+	const hostWrites: [string, () => Promise<unknown>][] = [
+		['decideVendorForm', decide],
+		['setTableLabelForm', () => submit(remote.setTableLabelForm, { vendorId: 'v-1' })],
+		['withdrawVendorForm', () => submit(remote.withdrawVendorForm, { vendorId: 'v-1' })],
+		[
+			'checkInVendorForm',
+			() => submit(remote.checkInVendorForm, { vendorId: 'v-1', arrived: 'yes' })
+		],
+		['markNoShowForm', () => submit(remote.markNoShowForm, { vendorId: 'v-1', noShow: 'yes' })],
+		[
+			'inviteBackForm',
+			() => submit(remote.inviteBackForm, { vendorId: 'v-1', inviteBack: 'no', note: '' })
+		],
+		['resendVendorDecisionForm', () => submit(remote.resendVendorDecisionForm, { vendorId: 'v-1' })]
+	];
+
+	beforeEach(() => {
+		signedIn = true;
+		staff = false;
+	});
+
+	it.each(hostWrites)("%s admits the host of the vendor's own market", async (_name, call) => {
+		hostOf = ['evt-1'];
+		await call();
+		expect(hostScopes).toContainEqual({ eventId: 'evt-1' });
+	});
+
+	it.each(hostWrites)('%s refuses the host of another market', async (_name, call) => {
+		hostOf = ['evt-2'];
+		await expect(call()).rejects.toMatchObject({ status: 403 });
+		expect(hostScopes).toContainEqual({ eventId: 'evt-1' });
+	});
+
+	it('records the decision as the host', async () => {
+		hostOf = ['evt-1'];
+		await decide();
+		expect(svc.decideApplication).toHaveBeenCalledWith(
+			'v-1',
+			expect.objectContaining({ decision: 'accepted' }),
+			{ id: 'host-1', name: 'Hana Host' }
+		);
+	});
+
+	it('shows the host the applications and the day-of list for that market only', async () => {
+		hostOf = ['evt-1'];
+		svc.getMarketDay.mockResolvedValue({ eventId: 'evt-1' } as never);
+		await expect(remote.getCommitteeMarketVendors('evt-1')).resolves.toBeTruthy();
+		await expect(remote.getMarketDayCheckIn('evt-1')).resolves.toBeTruthy();
+		await expect(remote.getCommitteeMarketVendors('evt-2')).rejects.toMatchObject({ status: 403 });
+		await expect(remote.getMarketDayCheckIn('evt-2')).rejects.toMatchObject({ status: 403 });
+		svc.getMarketDay.mockReset();
 	});
 });

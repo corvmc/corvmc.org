@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { grantRuleFor } from '$lib/config';
+	import { grantRuleFor } from '#lib/config.js';
 
 	/** Where a committee grant reaches, in a sentence. */
 	export function committeeReach(cap: string): string {
@@ -10,17 +10,18 @@
 </script>
 
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import { grantableBy } from '$lib/config';
-	import { setCommitteeGrants } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import { grantableBy } from '#lib/config.js';
+	import { setCommitteeGrants } from '#lib/remote/groups.remote.js';
 
 	/** The control that edits what a committee's active members may do. */
 	let {
 		groupId,
 		name,
 		held,
-		label = 'Edit',
+		label = m.groups_edit_label(),
 		onsuccess
 	}: {
 		groupId: string;
@@ -43,14 +44,14 @@
 	{label}
 	variant="ghost"
 	size="sm"
-	modalTitle="What {name} members may do"
-	successToast="Grants saved"
+	modalTitle={m.groups_committee_grants_modal_title({ name })}
+	successToast={m.groups_committee_grants_success_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
-		<input type="hidden" name="groupId" value={groupId} />
+		<input {...instance.fields.groupId.as('hidden', groupId)} />
 		<p class="text-muted">
-			Every active member of this committee holds these. Leaving the committee takes them away.
+			{m.groups_committee_grants_every_active_member_committee_holds_text()}
 		</p>
 		<CheckboxGroup field={instance.fields.capabilities} selected={held} {options} />
 	{/snippet}

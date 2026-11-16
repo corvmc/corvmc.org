@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { m } from '#lib/paraglide/messages.js';
+	import { browser } from '$app/env';
 	import Button from './Button.svelte';
 	import { IconCamera, IconCameraOff } from '@tabler/icons-svelte';
+	import { repeatGate } from '#lib/utils/scan.js';
 
 	/**
 	 * Read a barcode or QR code from the device camera.
@@ -15,18 +17,30 @@
 	 *
 	 * Domain-free by the folder's rule: it emits a decoded string and imports
 	 * nothing from `$lib/remote` or `$lib/server`. Deciding what the string *means*
-	 * is `parseScan` in `$lib/utils/scan`.
+	 * is `parseScan` in `#lib/utils/scan.js`.
 	 */
 	let {
 		onscan,
-		label = 'Scan',
+		onstop,
+		continuous = false,
+		label = m.ui_barcode_scanner_label(),
 		class: className = ''
 	}: {
 		/** Called with each successful decode while the camera is open. */
 		onscan: (value: string) => void;
+		/** Called when the camera closes, however it closed. */
+		onstop?: () => void;
+		/**
+		 * Keep the camera open after a read, for a queue of codes (#2796). The
+		 * same code read again within a few seconds is ignored.
+		 */
+		continuous?: boolean;
 		label?: string;
 		class?: string;
 	} = $props();
+
+	/** How long a code held in front of the camera counts as one read. */
+	const REPEAT_WINDOW_MS = 3000;
 
 	let open = $state(false);
 	let error = $state<string | null>(null);
@@ -71,14 +85,19 @@
 				formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
 			});
 
+			const fresh = repeatGate(REPEAT_WINDOW_MS);
 			const tick = async () => {
 				if (!open || !video) return;
 				try {
 					const found = await detector.detect(video);
 					if (found.length > 0 && found[0].rawValue) {
-						onscan(found[0].rawValue);
-						stop();
-						return;
+						const value = found[0].rawValue;
+						if (!continuous) {
+							onscan(value);
+							stop();
+							return;
+						}
+						if (fresh(value)) onscan(value);
 					}
 				} catch {
 					// A frame that cannot be decoded is the normal case, not an error —
@@ -99,6 +118,7 @@
 	}
 
 	function stop() {
+		if (open) onstop?.();
 		open = false;
 		if (frame !== null) cancelAnimationFrame(frame);
 		frame = null;
@@ -115,7 +135,7 @@
 			<video bind:this={video} class="w-full rounded bg-base-300" muted playsinline></video>
 			<Button type="button" variant="ghost" size="sm" class="mt-2" onclick={stop}>
 				<IconCameraOff size={16} />
-				Stop
+				{m.ui_scanner_stop_label()}
 			</Button>
 		{:else}
 			<Button type="button" variant="ghost" size="sm" onclick={start}>
@@ -126,7 +146,7 @@
 
 		{#if error}
 			<!-- Says what to do instead, because the field beside this still works. -->
-			<p class="mt-1 text-subtle">{error} Type it in instead.</p>
+			<p class="mt-1 text-subtle">{error} {m.ui_scanner_type_instead_text()}</p>
 		{/if}
 	</div>
 {/if}

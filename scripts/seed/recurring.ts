@@ -64,7 +64,7 @@ export async function seedRecurringSeries(users: SeedUser[]) {
 		for (let w = 1; w <= 2; w++) {
 			const instStart = slots[w];
 			const instEnd = new Date(instStart.getTime() + duration * 3_600_000);
-			const status = instStart < new Date() ? 'completed' : 'scheduled';
+			const status = instStart < new Date() ? 'completed' : 'confirmed';
 
 			await db.insert(reservation).values({
 				bookerType: 'user',

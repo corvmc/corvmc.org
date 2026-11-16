@@ -1,30 +1,32 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import {
 		submitLoanRequest as submitRequest,
 		getMemberEquipmentPage
-	} from '$lib/remote/inventory.remote';
+	} from '#lib/remote/inventory.remote.js';
 
 	const { fields } = submitRequest;
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import { Field, Select } from '$lib/components/ui/Form';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { Field, Select } from '#lib/components/ui/Form/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { estimateLoanCost } from '$lib/config';
-	import type { PricingTier } from '$lib/server/db/schema/inventory';
-	import { formatCents } from '$lib/utils/format';
+	import { estimateLoanCost } from '#lib/config.js';
+	import type { PricingTier } from '#lib/server/db/schema/inventory.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	let search = $state('');
 	let categoryId = $state('');
@@ -36,9 +38,9 @@
 	});
 
 	// One query for the list and the page's own facts (credit balance, sustaining status, the
-	// category filter). `equipmentResult` stays a promise for the {#await} below.
+	// category filter).
 	const pageData = $derived(await getMemberEquipmentPage(filters));
-	const equipmentResult = $derived(pageData.equipment);
+	const equipment = $derived(pageData.equipment);
 	const meta = $derived(pageData.meta);
 
 	let showRequestModal = $state(false);
@@ -78,12 +80,10 @@
 	$effect(() => {
 		const wanted = page.url.searchParams.get('request');
 		if (!wanted || opened) return;
-		void Promise.resolve(equipmentResult).then((rows) => {
-			const match = rows.find((r) => r.id === wanted);
-			if (!match) return;
-			opened = true;
-			openRequest(match.id, match.name, match.pricingTier);
-		});
+		const match = equipment.find((r) => r.id === wanted);
+		if (!match) return;
+		opened = true;
+		openRequest(match.id, match.name, match.pricingTier);
 	});
 
 	function openFreeFormRequest() {
@@ -110,23 +110,27 @@
 	}
 </script>
 
-<PageHeader title="Equipment Catalog">
+<PageHeader title={m.member_equipment_equipment_catalog_title()}>
 	<div class="flex items-center gap-3">
 		<!-- Equipment credits are stored in cents, the same as every other amount
 		     the ledger holds — `checkoutLoan` spends them against a cents total.
 		     Printed raw, a $25 balance read as "2500 credits", which is either a
 		     fortune or a currency nobody could name. -->
 		{#if meta.creditBalance > 0}
-			<Badge variant="info" size="md">{formatCents(meta.creditBalance)} credit</Badge>
+			<Badge variant="info" size="md"
+				>{m.member_equipment_credit_label({ formatCents: formatCents(meta.creditBalance) })}</Badge
+			>
 		{/if}
-		<Button href="/member/equipment/loans" variant="ghost" size="sm">My Loans</Button>
+		<Button href="/member/equipment/loans" variant="ghost" size="sm"
+			>{m.member_equipment_my_loans_label()}</Button
+		>
 	</div>
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-2">
 		<SearchInput
 			bind:value={search}
-			placeholder="Search equipment..."
+			placeholder={m.member_equipment_placeholder()}
 			onsearch={(q) => {
 				searchDebounced = q;
 			}}
@@ -138,87 +142,87 @@
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each meta.categories as cat (cat.id)}
 				<option value={cat.id}>{cat.name}</option>
 			{/each}
 		</Select>
 		{#if hasActiveFilters()}
-			<Button variant="ghost" size="sm" onclick={clearFilters}>Clear</Button>
+			<Button variant="ghost" size="sm" onclick={clearFilters}
+				>{m.member_equipment_clear_label()}</Button
+			>
 		{/if}
 	</div>
 
-	{#await equipmentResult}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{:then equipment}
-		{#if equipment.length === 0}
-			<EmptyState message="No equipment available." />
-		{:else}
-			{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
-				const key = eq.categoryName;
-				(acc[key] ??= []).push(eq);
-				return acc;
-			}, {})}
-			{#each Object.entries(groups) as [groupName, items] (groupName)}
-				<div class="mb-6">
-					<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
-					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{#each items as eq (eq.id)}
-							<Card class="border">
-								<CardBody padding="sm">
-									<CardTitle size="sm">{eq.name}</CardTitle>
-									{#if eq.description}
-										<p class="line-clamp-2 text-subtle">{eq.description}</p>
-									{/if}
-									<div class="mt-1 flex flex-wrap items-center gap-1">
-										<!-- Condition moved to the individual unit: four Twin Reverbs are
-										     one catalog row and four records, and one of them is the beat-up
-										     one. Which unit you get is decided at checkout. -->
-										<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
-										<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
-											{eq.availableQuantity} available
-										</Badge>
-									</div>
-									<div class="mt-2 card-actions">
-										<Button
-											variant="default"
-											size="xs"
-											disabled={eq.availableQuantity <= 0}
-											onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
-										>
-											Request
-										</Button>
-									</div>
-								</CardBody>
-							</Card>
-						{/each}
-					</div>
+	{#if equipment.length === 0}
+		<EmptyState message={m.member_equipment_message_body()} />
+	{:else}
+		{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
+			const key = eq.categoryName;
+			(acc[key] ??= []).push(eq);
+			return acc;
+		}, {})}
+		{#each Object.entries(groups) as [groupName, items] (groupName)}
+			<div class="mb-6">
+				<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{#each items as eq (eq.id)}
+						<Card class="border">
+							<CardBody padding="sm">
+								<CardTitle size="sm">{eq.name}</CardTitle>
+								{#if eq.description}
+									<p class="line-clamp-2 text-subtle">{eq.description}</p>
+								{/if}
+								<div class="mt-1 flex flex-wrap items-center gap-1">
+									<!-- Condition moved to the individual unit: four Twin Reverbs are
+									     one catalog row and four records, and one of them is the beat-up
+									     one. Which unit you get is decided at checkout. -->
+									<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
+									<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
+										{m.member_equipment_available_label({
+											availableQuantity: eq.availableQuantity
+										})}
+									</Badge>
+								</div>
+								<div class="mt-2 card-actions">
+									<Button
+										variant="default"
+										size="xs"
+										disabled={eq.availableQuantity <= 0}
+										onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
+									>
+										{m.member_equipment_request_label()}
+									</Button>
+								</div>
+							</CardBody>
+						</Card>
+					{/each}
 				</div>
-			{/each}
-		{/if}
-	{/await}
+			</div>
+		{/each}
+	{/if}
 
 	<div class="border-t pt-4">
-		<p class="mb-2 text-muted">Can't find what you need?</p>
+		<p class="mb-2 text-muted">{m.member_equipment_can_t_find_what_need_text()}</p>
 		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
-			>Describe Your Request</Button
+			>{m.member_equipment_describe_request_label()}</Button
 		>
 	</div>
 </PageContent>
 
 <Modal
 	bind:open={showRequestModal}
-	title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`}
+	title={isFreeForm
+		? m.member_equipment_free_form_equipment_request_title()
+		: m.member_equipment_request_2_title({ selectedEquipmentName })}
 	maxWidth="max-w-md"
 >
 	<Form
 		remote={submitRequest}
 		onsuccess={() => {
-			toast.success('Request submitted! Staff will confirm your pickup.');
+			toast.success(m.member_equipment_toast());
 			showRequestModal = false;
-			goto(resolve('/member/equipment/loans'));
+			goto(resolve('member/equipment/loans'));
 		}}
 	>
 		{#if !isFreeForm}
@@ -229,42 +233,65 @@
 				pickupDateValue = (e.target as HTMLInputElement).value;
 			}}
 		>
-			<Field name="requestedPickupDate" type="date" label="Preferred Pickup Date" required />
+			<Field
+				field={submitRequest.fields.requestedPickupDate}
+				type="date"
+				label={m.member_equipment_preferred_pickup_date_label()}
+				required
+			/>
 		</div>
 		<div
 			oninput={(e: Event) => {
 				returnDateValue = (e.target as HTMLInputElement).value;
 			}}
 		>
-			<Field name="estimatedReturnDate" type="date" label="Estimated Return Date" required />
+			<Field
+				field={submitRequest.fields.estimatedReturnDate}
+				type="date"
+				label={m.member_equipment_estimated_return_date_label()}
+				required
+			/>
 		</div>
 		{#if !isFreeForm}
-			<Field name="quantity" type="number" value={1} label="Quantity" />
+			<Field
+				field={submitRequest.fields.quantity}
+				submitAs="text"
+				type="number"
+				value={1}
+				label={m.member_equipment_quantity_label()}
+			/>
 		{/if}
 		{#if costEstimate != null}
 			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
 				{#if costEstimate === 0}
-					<span class="font-medium">Free for sustaining members</span>
+					<span class="font-medium">{m.member_equipment_free_sustaining_members_text()}</span>
 				{:else}
-					Estimated cost: <span class="font-semibold">{formatCents(costEstimate)}</span>
+					<ParaglideMessage
+						message={m.member_equipment_estimated_cost_text}
+						inputs={{ formatCents: formatCents(costEstimate) }}
+						>{#snippet span({ children })}<span class="font-semibold">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}
 			<div class="rounded-lg bg-base-200 px-4 py-3 text-muted">
-				Cost will be determined when equipment is assigned
+				{m.member_equipment_cost_will_determined_when_equipment_text()}
 			</div>
 		{/if}
 		<Field
-			name="memberNotes"
+			field={submitRequest.fields.memberNotes}
 			type="textarea"
-			label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'}
+			label={isFreeForm
+				? m.member_equipment_describe_what_need_label()
+				: m.member_equipment_notes_optional_label()}
 			required={isFreeForm}
 		/>
 		<div class="modal-action">
 			<Button type="button" variant="ghost" onclick={() => (showRequestModal = false)}
-				>Cancel</Button
+				>{m.member_cancel_label()}</Button
 			>
-			<SubmitButton label="Submit Request" />
+			<SubmitButton label={m.member_equipment_submit_request_label()} />
 		</div>
 	</Form>
 </Modal>

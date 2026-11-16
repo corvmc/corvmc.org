@@ -1,24 +1,27 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		BandPublishEventAction,
 		BandUnpublishEventAction,
 		BandCancelEventAction,
 		RemoveEventPosterAction
-	} from '$lib/components/actions';
+	} from '#lib/components/actions/index.js';
 	import EventFields from '../EventFields.svelte';
 	import TicketSaleCard from './TicketSaleCard.svelte';
 	import DoorListCard from './DoorListCard.svelte';
-	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
+	import { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { getBandEventDetail, updateBandEventForm } from '#lib/remote/band-events.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'eventId');
 
 	// Declared before the awaited queries below: a declaration that follows a
 	// top-level await is async-gated, which would compile every `fields.X.as()`
@@ -30,9 +33,7 @@
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let evt = $derived(
-		await getBandEventDetail({ slug: page.params.slug!, eventId: page.params.eventId! })
-	);
+	let evt = $derived(await getBandEventDetail({ slug: params.slug, eventId: params.eventId }));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
@@ -70,15 +71,15 @@
 <Form
 	remote={updateBandEventForm}
 	guard
-	successToast="Event updated"
-	onsuccess={() => invalidateAll()}
+	successToast={m.band_slug_events_event_id_success_toast()}
+	onsuccess={() => refreshAll()}
 >
 	<PageHeader width="2xl" title={evt.title} subtitle={band.name}>
 		<StatusBadge status={evt.status} />
 		{#if canEdit}
-			<SubmitButton label="Save" shortcut="mod+s" />
+			<SubmitButton label={m.band_save_label()} shortcut="mod+s" />
 			<details class="dropdown dropdown-end">
-				<summary class="btn btn-ghost btn-sm">More</summary>
+				<summary class="btn btn-ghost btn-sm">{m.band_slug_events_event_id_more_label()}</summary>
 				<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 					{#if evt.status === 'draft'}
 						<BandPublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
@@ -97,19 +98,24 @@
 	<PageContent width="2xl">
 		{#if !evt.isOwner}
 			<p class="text-muted text-sm">
-				Your band is credited on this bill{ownerActName ? `, added by ${ownerActName}` : ''}. Only
-				the band that created the listing can change it.
+				{ownerActName
+					? m.band_slug_events_event_id_credited_added_by_text({ name: ownerActName })
+					: m.band_slug_events_event_id_credited_text()}
 			</p>
 		{:else if evt.status === 'cancelled'}
-			<p class="text-muted text-sm">This event is cancelled, so it can no longer be edited.</p>
+			<p class="text-muted text-sm">
+				{m.band_slug_events_event_id_event_cancelled_so_can_no_text()}
+			</p>
 		{:else if !isAdmin}
-			<p class="text-muted text-sm">Band admins can edit this event.</p>
+			<p class="text-muted text-sm">
+				{m.band_slug_events_event_id_band_admins_can_edit_event_text()}
+			</p>
 		{/if}
 
 		<input {...updateFields.slug.as('hidden', band.slug)} />
 		<input {...updateFields.eventId.as('hidden', evt.id)} />
 
-		<InfoCard title="Event details">
+		<InfoCard title={m.band_slug_events_event_id_title()}>
 			<div class="space-y-4">
 				<EventFields
 					fields={updateFields}

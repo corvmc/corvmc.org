@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cancelRecurringSeries } from '$lib/remote/recurring.remote';
+	import { refreshAll } from '$app/navigation';
+	import { cancelRecurringSeries } from '#lib/remote/recurring.remote.js';
 
 	let {
 		seriesId,
@@ -27,21 +28,20 @@
 
 <Action
 	action={cancelRecurringSeries}
-	label="Cancel"
-	modalTitle="Confirm"
-	successToast="Series cancelled"
+	label={m.actions_cancel_series_label()}
+	modalTitle={m.actions_confirm_title()}
+	successToast={m.actions_cancel_series_success_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', seriesId)} />
 		<p class="py-4">
-			Cancel this recurring series? Your next session is cancelled and later ones are removed. Any
-			already paid for are cancelled and refunded instead.
+			{m.actions_cancel_series_cancel_recurring_series_next_session_text()}
 		</p>
 	{/snippet}
 </Action>

@@ -1,22 +1,24 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	// The money half of the ticket purchase form: how much, and where it goes.
 	// Shared by the public checkout page and the member event page. Both surfaces
 	// charge through the same remote, so the arithmetic they preview has to be the
 	// same arithmetic — kept in one component rather than written twice and
 	// drifting, and computed by the same module the server re-derives with.
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import SplitBar from '$lib/components/ui/SplitBar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { formatCents } from '$lib/utils/format';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import SplitBar from '#lib/components/ui/SplitBar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { formatCents } from '#lib/utils/format.js';
 	import {
 		actsAnchoredCollectiveCents,
 		actsMinCents,
 		computeTicketSplit
-	} from '$lib/finance/ticket-split';
-	import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	} from '#lib/finance/ticket-split.js';
+	import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	let {
 		/** The event's suggested price in cents — where the scale opens. */
@@ -47,6 +49,7 @@
 		fields: {
 			unitPriceCents: RemoteFormField<RemoteFormFieldValue>;
 			collectiveCents: RemoteFormField<RemoteFormFieldValue>;
+			coverFees: RemoteFormField<RemoteFormFieldValue>;
 		};
 		submit?: boolean;
 		/**
@@ -130,7 +133,9 @@
 		})
 	);
 
-	const actsLabel = $derived(acts.length === 1 ? acts[0] : 'The bands');
+	const actsLabel = $derived(
+		acts.length === 1 ? acts[0] : m.events_ticket_purchase_fields_acts_label()
+	);
 	// Free only when free is actually on offer. On a show with a floor, $0 is a
 	// refused amount, and labelling the (disabled) button "Get ticket" beside an
 	// error saying the minimum is $5 reads as a contradiction.
@@ -162,11 +167,16 @@
 </script>
 
 <FormField
-	label="How much are you paying?"
+	label={m.events_ticket_purchase_fields_how_much_paying_label()}
 	id="ticketAmount"
 	description={floorCents === 0
-		? `Suggested ${formatCents(suggestedUnitCents)} a ticket — pay what you can, from $0.`
-		: `Suggested ${formatCents(suggestedUnitCents)} a ticket, ${formatCents(floorCents)} minimum.`}
+		? m.events_ticket_purchase_fields_suggested_ticket_pay_what_can_body({
+				formatCents: formatCents(suggestedUnitCents)
+			})
+		: m.events_ticket_purchase_fields_suggested_ticket_minimum_body({
+				formatCents: formatCents(suggestedUnitCents),
+				formatCents2: formatCents(floorCents)
+			})}
 	issues={[]}
 >
 	<label class="input w-full items-center gap-1">
@@ -177,7 +187,7 @@
 		     above it (#994). -->
 		<input
 			id="ticketAmount"
-			aria-label="How much are you paying, per ticket"
+			aria-label={m.events_ticket_purchase_fields_aria_label()}
 			type="number"
 			step="0.01"
 			min="0"
@@ -186,7 +196,9 @@
 			value={amountDollars}
 			oninput={(e) => (typedAmount = e.currentTarget.value)}
 		/>
-		<span class="text-muted text-sm whitespace-nowrap">per ticket</span>
+		<span class="text-muted text-sm whitespace-nowrap"
+			>{m.events_ticket_purchase_fields_per_ticket_label()}</span
+		>
 	</label>
 </FormField>
 
@@ -198,7 +210,7 @@
 			size="sm"
 			onclick={() => (typedAmount = (preset / 100).toFixed(2))}
 		>
-			{preset === 0 ? 'Free' : formatCents(preset)}
+			{preset === 0 ? m.events_free_label() : formatCents(preset)}
 		</Button>
 	{/each}
 </div>
@@ -211,19 +223,22 @@
 {/if}
 
 {#if belowFloor}
-	<p class="text-sm text-error">
-		The least you can pay for this show is {formatCents(floorCents)} a ticket.
+	<p class="text-sm text-error" data-testid="amount-refused" data-reason="below-floor">
+		{m.events_ticket_purchase_fields_least_can_pay_show_ticket_text({
+			formatCents: formatCents(floorCents)
+		})}
 	</p>
 {:else if inDeadZone}
-	<p class="text-sm text-error">
-		Pay nothing, or at least {formatCents(TICKET_MIN_CHARGE_CENTS)} — below that, card fees take almost
-		all of it.
+	<p class="text-sm text-error" data-testid="amount-refused" data-reason="dead-zone">
+		{m.events_ticket_purchase_fields_pay_nothing_at_least_below_text({
+			formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+		})}
 	</p>
 {/if}
 
 {#if !isFree && !inDeadZone && !belowFloor}
 	<div class="space-y-3 border-t border-base-200 pt-4">
-		<p class="font-medium">Where should it go?</p>
+		<p class="font-medium">{m.events_ticket_purchase_fields_where_should_go_text()}</p>
 		<!-- `otherFloorCents` is the acts' **guarantee**, not the event's price
 		     floor. Passing the price floor there is the bug fixed in the music
 		     BuyPanel: it consumed the whole amount, clamped the collective's share
@@ -237,29 +252,29 @@
 			onchange={(c) => (collectiveOverride = c)}
 			otherFloorCents={actsFloorCents}
 			fixedCents={split.stripeFeeCents}
-			fixedLabel="Card processing"
-			valueLabel="The Collective"
+			fixedLabel={m.events_card_processing_label()}
+			valueLabel={m.events_ticket_purchase_fields_value_label()}
 			otherLabel={actsLabel}
 		/>
 
-		<!-- `label=""` because FormField titles itself off the field name otherwise,
-		     and "CoverFees" above a sentence that already says what the box does is
-		     noise. -->
+		<!-- `label=""`: the inline sentence already says what the box does. -->
 		<Field
-			name="coverFees"
+			field={fields.coverFees}
 			type="checkbox"
 			label=""
 			bind:value={coverFees}
-			checkboxLabel="Add {formatCents(
-				covered.feeCoveredCents
-			)} to cover card processing, so {actsLabel} and the Collective keep the full {formatCents(
-				totalCents
-			)}"
+			checkboxLabel={m.events_ticket_purchase_fields_checkbox_label_checkbox({
+				formatCents: formatCents(covered.feeCoveredCents)
+			})}
+			description={m.events_ticket_purchase_fields_acts_collective_keep_full_body({
+				actsLabel,
+				formatCents2: formatCents(totalCents)
+			})}
 		/>
 
 		{#if collectiveOverride !== null}
 			<Button type="button" variant="ghost" size="sm" onclick={() => (collectiveOverride = null)}>
-				Reset to suggested
+				{m.events_ticket_purchase_fields_reset_suggested_label()}
 			</Button>
 		{/if}
 	</div>
@@ -278,25 +293,32 @@
 
 <div class="space-y-1 border-t border-base-200 pt-4">
 	<div class="flex justify-between text-muted">
-		<span
-			>{quantity} × {formatCents(split.ticketLineUnitCents)} ticket{quantity === 1 ? '' : 's'}</span
+		<ParaglideMessage
+			message={m.events_ticket_purchase_fields_tickets_text}
+			inputs={{
+				quantity,
+				formatCents: formatCents(split.ticketLineUnitCents),
+				formatCents2: formatCents(split.ticketLineUnitCents * quantity)
+			}}
+			>{#snippet span({ children })}<span>{@render children?.()}</span>{/snippet}{#snippet span2({
+				children
+			})}<span>{@render children?.()}</span>{/snippet}</ParaglideMessage
 		>
-		<span>{formatCents(split.ticketLineUnitCents * quantity)}</span>
 	</div>
 	{#if split.contributionCents > 0}
-		<div class="flex justify-between text-muted">
-			<span>Contribution</span>
+		<div class="flex justify-between text-muted" data-testid="contribution-line">
+			<span>{m.events_ticket_purchase_fields_contribution_text()}</span>
 			<span>{formatCents(split.contributionCents)}</span>
 		</div>
 	{/if}
 	{#if coverFees && split.feeCoveredCents > 0}
 		<div class="flex justify-between text-muted">
-			<span>Card processing</span>
+			<span>{m.events_card_processing_text()}</span>
 			<span>{formatCents(split.feeCoveredCents)}</span>
 		</div>
 	{/if}
-	<div class="flex justify-between text-lg font-medium">
-		<span>Total</span>
+	<div class="flex justify-between text-lg font-medium" data-testid="purchase-total">
+		<span>{m.events_ticket_purchase_fields_total_text()}</span>
 		<span>{formatCents(split.chargeCents)}</span>
 	</div>
 </div>
@@ -304,8 +326,10 @@
 {#if submit}
 	<SubmitButton
 		label={isFree
-			? `Get ${quantity === 1 ? 'ticket' : `${quantity} tickets`}`
-			: `Pay ${formatCents(split.chargeCents)}`}
+			? m.events_ticket_purchase_fields_get_label({
+					value: quantity === 1 ? 'ticket' : `${quantity} tickets`
+				})
+			: m.events_ticket_purchase_fields_pay_label({ formatCents: formatCents(split.chargeCents) })}
 		variant="primary"
 		class="w-full"
 		disabled={inDeadZone || belowFloor}

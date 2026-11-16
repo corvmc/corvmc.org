@@ -5,15 +5,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * a real SQLite replayed from the migrations.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb, getRowCount: () => 0 }));
-vi.mock('$lib/server/production/run-of-show-service', () => ({ recomputeSetTimes: vi.fn() }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
+vi.mock('#lib/server/production/run-of-show-service.js', () => ({ recomputeSetTimes: vi.fn() }));
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: vi.fn()
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const svc = await import('./deliverables-service');
 
@@ -24,6 +24,7 @@ const exec = (sql: string) => sqlite.exec(sql);
 beforeEach(() => {
 	for (const t of [
 		'volunteer_signup',
+		'work_order_assignee',
 		'work_task',
 		'work_order',
 		'media_attachment',
@@ -31,6 +32,10 @@ beforeEach(() => {
 		'artifact_request',
 		'directory_entry',
 		'event_listing',
+		'production',
+		'project',
+		'group_position_holder',
+		'group_position',
 		'group_member'
 	])
 		exec(`delete from ${t}`);
@@ -68,9 +73,7 @@ describe('listCommitteeOpenItems', () => {
 		wo('other', { group_id: 'book', title: 'Not ours', due_at: T0 - 40 * DAY });
 		wo('gone', { group_id: 'art', title: 'Called off', cancelled_at: T0 });
 		wo('closed', { group_id: 'art', title: 'Resolved', resolved_at: T0 });
-		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s', 'soon', 'u1', 'confirmed')`
-		);
+		exec(`insert into work_order_assignee (work_order_id, user_id) values ('soon', 'u1')`);
 
 		const rows = await svc.listCommitteeOpenItems('art');
 		expect(rows.map((r) => [r.id, r.state, r.assignees.map((a) => a.name)])).toEqual([
@@ -103,7 +106,9 @@ describe('listShowDeliverables', () => {
 		wo('a', { group_id: 'art', due_at: T0 });
 		wo('b', { group_id: 'book', resolved_at: T0 });
 		wo('c', { group_id: null, done_when: 'event_published' });
-		wo('crew', { starts_at: T0, ends_at: T0 + 3600 });
+		wo('crew', {});
+		exec(`insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
+			values ('crew-shift', 'crew', ${T0}, ${T0 + 3600})`);
 		const rows = await svc.listShowDeliverables('evt');
 		expect(rows.map((r) => [r.id, r.state]).sort()).toEqual(
 			[
@@ -145,6 +150,22 @@ describe('reassignDeliverable', () => {
 		expect(await svc.getDeliverableOwner('x')).toMatchObject({ groupId: null });
 	});
 
+	// A position is its committee's (#2990): handing the item on drops the tag.
+	it('drops the position tag only when the committee changes', async () => {
+		exec(`insert into group_position (id, group_id, name) values ('designer', 'art', 'Designer')`);
+		wo('x', { group_id: 'art', position_id: 'designer' });
+		const tag = () =>
+			(
+				sqlite.prepare(`select position_id as p from work_order where id = 'x'`).get() as {
+					p: string | null;
+				}
+			).p;
+		await svc.reassignDeliverable('x', 'art');
+		expect(tag()).toBe('designer');
+		await svc.reassignDeliverable('x', 'book');
+		expect(tag()).toBeNull();
+	});
+
 	it('refuses a band, and an item that is already closed', async () => {
 		wo('x', { group_id: 'art' });
 		wo('shut', { group_id: 'art', resolved_at: T0 });
@@ -167,14 +188,37 @@ describe('listDeliverablesDueBetween', () => {
 	it('tells the active committee when nobody has the item, and only its assignees once somebody does', async () => {
 		wo('free', { group_id: 'art', title: 'Nobody yet', due_at: T0 });
 		wo('held', { group_id: 'art', title: 'Taken', due_at: T0 });
-		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s', 'held', 'u1', 'confirmed')`
-		);
+		exec(`insert into work_order_assignee (work_order_id, user_id) values ('held', 'u1')`);
 
 		const rows = await svc.listDeliverablesDueBetween(from, to);
 		const by = Object.fromEntries(rows.map((r) => [r.id, r.recipients.map((p) => p.userName)]));
 		expect(by).toEqual({ free: ['Bo'], held: ['Ada'] });
 		expect(rows[0]).toMatchObject({ groupSlug: 'art', groupName: 'Art and Merchandise Committee' });
+	});
+
+	// #2990: a tagged item waits on its position's holder, not the whole committee.
+	it("tells the position's holder in place of the committee", async () => {
+		exec(`insert into group_member (id, group_id, user_id, role, status) values
+			('m1', 'art', 'u1', 'member', 'active')`);
+		exec(`insert into group_position (id, group_id, name) values ('designer', 'art', 'Designer')`);
+		exec(`insert into group_position_holder (position_id, member_id) values ('designer', 'm1')`);
+		wo('tagged', { group_id: 'art', position_id: 'designer', due_at: T0 });
+
+		const [row] = await svc.listDeliverablesDueBetween(from, to);
+		expect(row.recipients.map((p) => p.userName)).toEqual(['Ada']);
+	});
+
+	// #2983 case 6: the event lead hears about the show's items too.
+	it("names the show's event lead", async () => {
+		exec(`insert into project (id, name, kind) values ('show', 'Friday', 'production')`);
+		exec(`update event_listing set project_id = 'show'`);
+		exec(`insert into production (id, project_id, producer_user_id) values ('pn', 'show', 'u3')`);
+		wo('poster', { group_id: 'art', due_at: T0 });
+		wo('report', { group_id: 'art', event_id: null, due_at: T0 });
+
+		const rows = await svc.listDeliverablesDueBetween(from, to);
+		const lead = Object.fromEntries(rows.map((r) => [r.id, r.lead?.userName ?? null]));
+		expect(lead).toEqual({ poster: 'Cy', report: null });
 	});
 
 	it('leaves out what is done, staff’s own work, and anything outside the band', async () => {
@@ -184,5 +228,22 @@ describe('listDeliverablesDueBetween', () => {
 		wo('later', { group_id: 'art', due_at: T0 + 2 * DAY });
 		wo('gone', { group_id: 'art', due_at: T0, cancelled_at: T0 });
 		expect(await svc.listDeliverablesDueBetween(from, to)).toEqual([]);
+	});
+
+	it('narrows to projects of the kinds asked for, naming the project', async () => {
+		exec(`delete from project`);
+		exec(`insert into project (id, name, kind) values
+			('g', 'Operating support', 'grant'), ('s', 'Friday', 'production')`);
+		wo('report', { group_id: 'art', event_id: null, project_id: 'g', due_at: T0 });
+		wo('poster', { group_id: 'art', project_id: 's', due_at: T0 });
+
+		const rows = await svc.listDeliverablesDueBetween(from, to, { projectKinds: ['grant'] });
+		expect(rows.map((r) => [r.id, r.projectName, r.eventTitle])).toEqual([
+			['report', 'Operating support', null]
+		]);
+		expect((await svc.listDeliverablesDueBetween(from, to)).map((r) => r.id).sort()).toEqual([
+			'poster',
+			'report'
+		]);
 	});
 });

@@ -1,11 +1,11 @@
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxGroupRead } from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { touchThread } from './message-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import type { ThreadNotifyPolicy, ThreadPostPolicy } from '$lib/config';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import type { ThreadNotifyPolicy, ThreadPostPolicy } from '#lib/config.js';
 
 /**
  * The threads a group's members share (#1252), several per group since #1301.
@@ -19,31 +19,44 @@ import type { ThreadNotifyPolicy, ThreadPostPolicy } from '$lib/config';
 /** What a null subject is called wherever a topic is named. */
 export const GENERAL_TOPIC = 'General';
 
+/** The subject of a group's one leadership room, made by `announcement-service`. */
+export const ANNOUNCEMENTS_TOPIC = 'Announcements';
+
 /** Every topic in one group, General first and then most recent. */
 function topicsOf(groupId: string) {
 	return and(eq(inboxThread.channel, 'group'), eq(inboxThread.groupId, groupId))!;
 }
 
 /**
- * The group's General topic, creating it on first use.
- *
- * Scoped to `subject IS NULL`, which is what keeps it from picking up a named
- * topic — before topics there was one thread per group and the lookup did not
- * have to say so.
+ * The group's General topic, if it has one. Scoped to `subject IS NULL`, which
+ * is what keeps it from picking up a named topic.
  */
-export async function getOrCreateGroupChat(groupId: string): Promise<string> {
+async function findGroupChat(groupId: string): Promise<string | undefined> {
 	const [existing] = await db
 		.select({ id: inboxThread.id })
 		.from(inboxThread)
 		.where(and(topicsOf(groupId), isNull(inboxThread.subject)))
 		.limit(1);
-	if (existing) return existing.id;
+	return existing?.id;
+}
 
-	const [created] = await db
+/**
+ * The group's General topic, creating it on first use.
+ *
+ * `idx_inbox_thread_group_general` allows one per group, so two first reads
+ * that both find nothing insert once between them, and both re-read it.
+ */
+export async function getOrCreateGroupChat(groupId: string): Promise<string> {
+	const existing = await findGroupChat(groupId);
+	if (existing) return existing;
+
+	await db
 		.insert(inboxThread)
 		.values({ channel: 'group', groupId, status: 'open' })
-		.returning({ id: inboxThread.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findGroupChat(groupId);
+	if (!id) throw new Error(`No General chat for group ${groupId}`);
+	return id;
 }
 
 export interface GroupTopic {
@@ -58,7 +71,7 @@ export interface GroupTopic {
 	/** Who may post here, and how a post reaches its readers (#1304). */
 	postPolicy: ThreadPostPolicy;
 	notifyPolicy: ThreadNotifyPolicy;
-	/** A room this reader may read but not write — the list marks it. */
+	/** The Announcements thread: publishing an announcement is its only way in. */
 	readOnly: boolean;
 	/** This reader silenced the room: no notification, and never unread. */
 	muted: boolean;
@@ -71,12 +84,7 @@ export interface GroupTopic {
  * is worse than a stale one — and the rest are newest-activity-first. The
  * General row is created on read, as it always was.
  */
-export async function listGroupTopics(
-	groupId: string,
-	userId: string,
-	/** Whether this reader may post in a `leadership` room. */
-	isLeader = false
-): Promise<GroupTopic[]> {
+export async function listGroupTopics(groupId: string, userId: string): Promise<GroupTopic[]> {
 	await getOrCreateGroupChat(groupId);
 
 	const rows = await db
@@ -118,7 +126,7 @@ export async function listGroupTopics(
 			(r.lastReadAt === null || r.lastMessageAt > r.lastReadAt),
 		postPolicy: r.postPolicy,
 		notifyPolicy: r.notifyPolicy,
-		readOnly: r.postPolicy === 'leadership' && !isLeader,
+		readOnly: r.postPolicy === 'leadership',
 		muted: r.muted === true
 	}));
 }
@@ -132,17 +140,11 @@ export class TopicNameTakenError extends Error {
 }
 
 /**
- * Open a named topic. The name is unique within the group,
- * case-insensitively: "Tour" and "tour" are a mistake every time and the list
- * cannot tell them apart. `General` is refused because a null subject is
- * already called that, and a second one would be unreachable beside it.
+ * Open a named topic, always a members' chat room. The name is unique within
+ * the group, case-insensitively. `General` and `Announcements` are refused:
+ * each names a standing room, and a second would sit unreachable beside it.
  */
-export async function createGroupTopic(
-	groupId: string,
-	subject: string,
-	/** Defaults to a chat topic, so every existing caller is unchanged. */
-	policy: { postPolicy?: ThreadPostPolicy; notifyPolicy?: ThreadNotifyPolicy } = {}
-): Promise<string> {
+export async function createGroupTopic(groupId: string, subject: string): Promise<string> {
 	const name = subject.trim();
 
 	const clash = await db
@@ -150,7 +152,8 @@ export async function createGroupTopic(
 		.from(inboxThread)
 		.where(and(topicsOf(groupId), sql`lower(${inboxThread.subject}) = lower(${name})`))
 		.limit(1);
-	if (clash.length > 0 || name.toLowerCase() === GENERAL_TOPIC.toLowerCase()) {
+	const reserved = [GENERAL_TOPIC, ANNOUNCEMENTS_TOPIC].map((n) => n.toLowerCase());
+	if (clash.length > 0 || reserved.includes(name.toLowerCase())) {
 		throw new TopicNameTakenError();
 	}
 
@@ -160,30 +163,27 @@ export async function createGroupTopic(
 			channel: 'group',
 			groupId,
 			status: 'open',
-			subject: name,
-			postPolicy: policy.postPolicy ?? 'members',
-			notifyPolicy: policy.notifyPolicy ?? 'in_app'
+			subject: name
 		})
+		.onConflictDoNothing()
 		.returning({ id: inboxThread.id });
+	// `idx_inbox_thread_group_topic` refused a name a concurrent create took.
+	if (!created) throw new TopicNameTakenError();
 	return created.id;
 }
 
 export class RoomIsReadOnlyError extends Error {
 	readonly httpStatus = 403;
 	constructor() {
-		super('Only the group’s leaders can post here.');
+		super('Post announcements from the group’s announcements page.');
 		this.name = 'RoomIsReadOnlyError';
 	}
 }
 
-/** A room's policies and whether it has gone out, for a caller about to post. */
+/** A room's policies, for a caller about to post. */
 export async function getRoomPolicy(threadId: string) {
 	const [row] = await db
-		.select({
-			postPolicy: inboxThread.postPolicy,
-			notifyPolicy: inboxThread.notifyPolicy,
-			publishedAt: inboxThread.publishedAt
-		})
+		.select({ postPolicy: inboxThread.postPolicy, notifyPolicy: inboxThread.notifyPolicy })
 		.from(inboxThread)
 		.where(eq(inboxThread.id, threadId))
 		.limit(1);
@@ -224,7 +224,7 @@ export async function getGroupChat(groupId: string, threadId?: string, userId?: 
 		.orderBy(asc(inboxMessage.createdAt), asc(inboxMessage.id));
 
 	const [topic] = await db
-		.select({ subject: inboxThread.subject })
+		.select({ subject: inboxThread.subject, postPolicy: inboxThread.postPolicy })
 		.from(inboxThread)
 		.where(eq(inboxThread.id, id))
 		.limit(1);
@@ -250,6 +250,8 @@ export async function getGroupChat(groupId: string, threadId?: string, userId?: 
 		groupName: g?.name ?? 'This group',
 		topicName: topic?.subject ?? GENERAL_TOPIC,
 		isGeneral: (topic?.subject ?? null) === null,
+		/** The Announcements thread: no composer, since publishing is the way in. */
+		readOnly: topic?.postPolicy === 'leadership',
 		muted: read?.muted === true,
 		messages: messages as GroupChatMessage[]
 	};
@@ -271,16 +273,13 @@ export async function postToGroupChat(params: {
 	body: string;
 	/** Which topic. Omitted means General, for a caller that has no topic. */
 	threadId?: string;
-	/** Whether this poster may write in a `leadership` room. */
-	isLeader?: boolean;
 }): Promise<{ messageId: string }> {
 	const threadId = params.threadId ?? (await getOrCreateGroupChat(params.groupId));
 
-	// The room decides, not the caller. A `leadership` room is what an
-	// announcement is, and "the band told us X" stops being verifiable the
-	// moment anybody can post it (#1304).
+	// The Announcements thread takes posts only from `publish()`, which owns
+	// the per-post email latch; a typed message there would bypass it (#2618).
 	const policy = await getRoomPolicy(threadId);
-	if (policy?.postPolicy === 'leadership' && !params.isLeader) throw new RoomIsReadOnlyError();
+	if (policy?.postPolicy === 'leadership') throw new RoomIsReadOnlyError();
 
 	const [message] = await db
 		.insert(inboxMessage)
@@ -293,17 +292,10 @@ export async function postToGroupChat(params: {
 		})
 		.returning({ id: inboxMessage.id });
 
-	await touchThread(threadId, params.body);
+	await touchThread(threadId, params.body, 'group');
 	// Your own message is read the moment you send it, or the sender's own
 	// badge lights for something they just wrote.
 	await markGroupChatRead(threadId, params.userId);
-
-	// A room that emails is a room that is published deliberately. Posting and
-	// publishing are one act for a chat topic and two for an announcement, so
-	// an unpublished `email` room stays silent until `publishGroupRoom` stamps
-	// it — otherwise a half-written notice mails the roster (#1304).
-	const notifiesNow = policy?.notifyPolicy !== 'email' || policy.publishedAt !== null;
-	if (!notifiesNow) return { messageId: message.id };
 
 	// The roster minus the author, resolved here rather than by the listener:
 	// on a two-person thread, forgetting to skip them means notifying somebody
@@ -338,38 +330,6 @@ export async function markGroupChatRead(threadId: string, userId: string): Promi
 }
 
 /**
- * How many of a group's topics this reader has unread.
- *
- * A count of topics, not of messages: the badge answers "how many rooms want
- * you", which is the number you can act on one at a time. Before topics this
- * was structurally 0 or 1 and read as a dot.
- */
-export async function countGroupChatUnread(groupId: string, userId: string): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(inboxThread)
-		.leftJoin(
-			inboxGroupRead,
-			and(eq(inboxGroupRead.threadId, inboxThread.id), eq(inboxGroupRead.userId, userId))
-		)
-		.where(
-			and(
-				topicsOf(groupId),
-				// An empty topic is not unread — see `listGroupTopics`.
-				isNotNull(inboxThread.lastMessageAt),
-				// A LEFT JOIN with no row is a reader who never opened it, which
-				// is unread and unmuted both.
-				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false)),
-				or(
-					isNull(inboxGroupRead.lastReadAt),
-					gt(inboxThread.lastMessageAt, inboxGroupRead.lastReadAt)
-				)
-			)
-		);
-	return row?.count ?? 0;
-}
-
-/**
  * The group a chat thread belongs to, for a guard that starts from the thread.
  *
  * Returns null for anything that is not a group chat, which keeps this from
@@ -389,7 +349,7 @@ export async function groupOfChatThread(
 
 /** Who is in the room, for the header. */
 export async function listGroupChatReaders(groupId: string, threadId?: string) {
-	const { groupMember } = await import('$lib/server/db/schema/group');
+	const { groupMember } = await import('#lib/server/db/schema/group.js');
 	const query = db
 		.select({ id: user.id, name: user.name })
 		.from(groupMember)
@@ -430,21 +390,4 @@ export async function setRoomMute(threadId: string, userId: string, muted: boole
 			target: [inboxGroupRead.threadId, inboxGroupRead.userId],
 			set: { muted }
 		});
-}
-
-/**
- * Stamp a room as published, once, and let it notify.
- *
- * The latch is the `WHERE published_at IS NULL`: a second publish returns no
- * row and emits nothing, which is what keeps the fan-out idempotent under the
- * event bus's at-least-once delivery. The same contract
- * `announcement.publish` has today.
- */
-export async function publishGroupRoom(threadId: string): Promise<boolean> {
-	const stamped = await db
-		.update(inboxThread)
-		.set({ publishedAt: new Date(), updatedAt: new Date() })
-		.where(and(eq(inboxThread.id, threadId), isNull(inboxThread.publishedAt)))
-		.returning({ id: inboxThread.id });
-	return stamped.length > 0;
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { toGenericRef } from '#lib/server/entity/refs.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -8,8 +8,8 @@ import {
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
-} from '$lib/server/authorization';
-import { itemSections } from '$lib/server/inventory/item-sections';
+} from '#lib/server/authorization.js';
+import { itemSections } from '#lib/server/inventory/item-sections.js';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -24,7 +24,7 @@ import {
 	softDeleteItem,
 	updateCategory,
 	updateItem
-} from '$lib/server/inventory/item-service';
+} from '#lib/server/inventory/item-service.js';
 import {
 	bindAssetTag,
 	createAsset as createAssetService,
@@ -33,17 +33,24 @@ import {
 	listAvailableAssets,
 	listUntaggedAssets,
 	listForm8282Obligations,
+	reopenAsset,
 	resolveForm8282,
 	setAssetStatus,
 	updateAsset
-} from '$lib/server/inventory/asset-service';
-import { listLowStock, listMovements } from '$lib/server/inventory/stock-service';
+} from '#lib/server/inventory/asset-service.js';
+import { listLowStock } from '#lib/server/inventory/stock-service.js';
+import {
+	listAssetHistory,
+	listLoanFeed,
+	listMovementFeed
+} from '#lib/server/inventory/inventory-history.js';
+import { historyArgs } from './_history';
 import {
 	fulfilSuggestion,
 	getSuggestionBrief,
 	listPlannedGear
-} from '$lib/server/suggestion/suggestion-service';
-import { contractorSpend, jobsForAsset } from '$lib/server/contractor/contractor-job-service';
+} from '#lib/server/suggestion/suggestion-service.js';
+import { contractorSpend } from '#lib/server/contractor/contractor-job-service.js';
 import {
 	acknowledgeForm8283,
 	adjustStock,
@@ -58,17 +65,21 @@ import {
 	spendByCategory,
 	spendBySource,
 	updateAcquisition
-} from '$lib/server/inventory/acquisition-service';
+} from '#lib/server/inventory/acquisition-service.js';
 import {
 	applyReceipt,
 	cancelOrder,
 	closeOrderShort,
 	createOrder,
 	getOrderById,
+	listOrdersPage,
+	listSupplierNames,
 	onOrderQuantities,
-	placeOrder
-} from '$lib/server/inventory/order-service';
-import { form8282Status } from '$lib/server/inventory/form-8282';
+	placeOrder,
+	reopenOrder
+} from '#lib/server/inventory/order-service.js';
+import { organizationNamed } from '#lib/server/party/organization-service.js';
+import { form8282Status } from '#lib/server/inventory/form-8282.js';
 import {
 	linkArticle,
 	listItemResources,
@@ -76,11 +87,11 @@ import {
 	listMemberItemResources,
 	reportDamage,
 	unlinkArticle
-} from '$lib/server/inventory/resources-service';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/inventory/resources-service.js';
+import { resolveHelpReader } from '#lib/server/help/help-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	getLoanById,
-	getLoanHistory,
 	scheduleLoan,
 	checkoutLoan,
 	requestLoan,
@@ -88,8 +99,8 @@ import {
 	returnLoan as returnLoanService,
 	listLoans,
 	listUserLoans
-} from '$lib/server/inventory/loan-service';
-import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/inventory';
+} from '#lib/server/inventory/loan-service.js';
+import { scheduleLoanSchema, checkoutLoanSchema } from '#lib/server/db/schema/inventory.js';
 import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
@@ -98,17 +109,20 @@ import {
 	assetStatuses,
 	equipmentConditions,
 	itemKinds,
+	orderStatuses,
 	inventoryListViews,
 	inventoryListViewMeta,
+	inventorySections,
 	unitsOfMeasure,
 	type AssetStatus,
 	type AcquisitionKind,
 	type ItemKind,
 	type LoanStatus,
-	DEFAULT_TIMEZONE
-} from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getDonationWishlist, isOnWishlist } from '$lib/server/inventory/wishlist-service';
+	DEFAULT_TIMEZONE,
+	clubToday
+} from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { getDonationWishlist, isOnWishlist } from '#lib/server/inventory/wishlist-service.js';
 import {
 	confirmGuestPledge,
 	fulfilPledges,
@@ -117,9 +131,10 @@ import {
 	pledgeEntry,
 	releasePledge,
 	startGuestPledge
-} from '$lib/server/inventory/pledge-service';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { allowRateLimited } from '$lib/server/rate-limit';
+} from '#lib/server/inventory/pledge-service.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -132,6 +147,15 @@ import { allowRateLimited } from '$lib/server/rate-limit';
  */
 function calendarDate(value: string | undefined): Date {
 	return value ? buildDateInTz(value, '12:00', DEFAULT_TIMEZONE) : new Date();
+}
+
+/** The bounds of a club day, for an inclusive date-range filter. */
+function dayStart(value: string): Date {
+	return buildDateInTz(value, '00:00', DEFAULT_TIMEZONE);
+}
+
+function dayEnd(value: string): Date {
+	return buildDateInTz(value, '23:59', DEFAULT_TIMEZONE);
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +175,12 @@ export const getEquipmentCategories = query(z.void(), async () => {
 	return listCategories();
 });
 
+/** Suppliers' names, offered as the order forms' supplier field is typed. */
+export const getSupplierNames = query(z.void(), async () => {
+	await requireCapability('inventory.manageOrders');
+	return listSupplierNames();
+});
+
 export const getLocations = query(z.void(), async () => {
 	await requireCapability('inventory.read');
 	return listLocations();
@@ -162,14 +192,23 @@ export const getLocationsWithCounts = query(z.void(), async () => {
 	return listLocationsWithCounts();
 });
 
-export const getItemLoanHistory = query(z.string(), async (itemId) => {
+/** An item's Loan history card, newest request first. */
+export const getItemLoanFeed = query(historyArgs, async ({ id, limit }) => {
 	await requireCapability('inventory.read');
-	return getLoanHistory(itemId);
+	return listLoanFeed(id, { limit });
 });
 
-export const getItemMovements = query(z.string(), async (itemId) => {
+/** An item's Stock movements card: every unit's and the bulk count's, with who moved it. */
+export const getItemMovementFeed = query(historyArgs, async ({ id, limit }) => {
 	await requireCapability('inventory.read');
-	return listMovements({ itemId });
+	return listMovementFeed({ itemId: id }, { limit });
+});
+
+/** A unit's History card: its movements, and the paid work on it for a `contractor.read` holder. */
+export const getAssetHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('inventory.read');
+	// Contractor and cost are `contractor.read`'s (#2071): without it the card is the ledger alone.
+	return listAssetHistory(id, { limit, withService: await can('contractor.read') });
 });
 
 export const getItemAssets = query(z.string(), async (itemId) => {
@@ -200,6 +239,7 @@ const staffItemFilters = z.object({
 	categoryId: z.string().optional(),
 	kind: z.string().optional(),
 	includeDeleted: z.boolean().optional(),
+	section: z.enum(inventorySections).optional(),
 	view: z.enum(inventoryListViews.filter((v) => v !== 'restock')).optional(),
 	page: z.number().optional()
 });
@@ -214,6 +254,7 @@ export const getStaffItemList = query(staffItemFilters, async (filters) => {
 			categoryId: filters.categoryId || undefined,
 			kind: (filters.kind || undefined) as ItemKind | undefined,
 			includeDeleted: filters.includeDeleted,
+			section: filters.section,
 			view: filters.view
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
@@ -268,11 +309,6 @@ export const getAsset = query(z.string(), async (id) => {
 	return asset;
 });
 
-export const getAssetMovements = query(z.string(), async (assetId) => {
-	await requireCapability('inventory.read');
-	return listMovements({ assetId });
-});
-
 // ---------------------------------------------------------------------------
 // Queries — Member
 // ---------------------------------------------------------------------------
@@ -304,9 +340,9 @@ export const getMemberEquipment = query(memberEquipmentFilters, async (filters) 
 
 export const getMemberEquipmentMeta = query(z.void(), async () => {
 	const currentUser = requireUser();
-	const { getBalance } = await import('$lib/server/finance/credit-service');
+	const { getBalance } = await import('#lib/server/finance/credit-service.js');
 	const { isSustainingMember: checkSustaining } =
-		await import('$lib/server/finance/subscription-service');
+		await import('#lib/server/finance/subscription-service.js');
 
 	// The local snapshot, not `getSubscription` — that is
 	// `stripe.subscriptions.list()`, a network round trip to price one loan
@@ -359,7 +395,7 @@ export const getMemberEquipmentLoans = query(
  * gave it. Phase 4 adds the manual and the report-damage button here.
  */
 export const getMemberAsset = query(z.string(), async (id) => {
-	requireUser();
+	const user = requireUser();
 	const asset = await getAssetById(id);
 	if (!asset) error(404, 'Not found');
 
@@ -382,7 +418,7 @@ export const getMemberAsset = query(z.string(), async (id) => {
 		// first paint and keyed by the same id, so a second query from the page
 		// would be a fan-out — which the custom lint rule rejects and which kit
 		// renders as `effect_update_depth_exceeded` past 2.64.
-		resources: await listMemberItemResources(asset.itemId)
+		resources: await listMemberItemResources(asset.itemId, await resolveHelpReader(user.id))
 	};
 });
 
@@ -508,6 +544,7 @@ export const createAsset = form(
 			actorId: currentUser.id
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { assetId: asset.id };
 	}
 );
@@ -593,6 +630,24 @@ export const changeAssetStatus = form(
 			actorId: currentUser.id
 		});
 		void getStaffAssetDetail(data.id).refresh();
+		void getAssetHistory({ id: data.id }).refresh();
+		return { success: true };
+	}
+);
+
+/** Out of `retired` or `lost`. Admin-only: a terminal state is the past (#2259). */
+export const reopenAssetForm = form(
+	z.object({ id: z.string().min(1), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		const actor = await requireCapability('inventory.reopen');
+		const data = raw as { id: string; reason: string };
+		try {
+			await reopenAsset(data.id, data.reason, actor.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getStaffAssetDetail(data.id).refresh();
+		void getAssetHistory({ id: data.id }).refresh();
 		return { success: true };
 	}
 );
@@ -677,6 +732,8 @@ export const receiveStock = form(
 		});
 
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
+
 		return { success: true };
 	}
 );
@@ -890,7 +947,7 @@ export const recordIntake = form(
 			// Everything this touched: the catalog's on-hand numbers, the tagging
 			// backlog it just added to, and the register the receipt now appears in.
 			void getUntaggedAssets().refresh();
-			void getRestockList().refresh();
+			refreshRestockLists();
 
 			return { success: true, ...result };
 		} catch (err) {
@@ -902,6 +959,15 @@ export const recordIntake = form(
 // ---------------------------------------------------------------------------
 // Purchase orders
 // ---------------------------------------------------------------------------
+
+/** The Orders list (#2767): every purchase order, open ones first. */
+export const getStaffOrders = query(
+	z.object({ status: z.enum(orderStatuses).optional(), page: z.number().int().min(1).optional() }),
+	async (filters) => {
+		await requireCapability('inventory.read');
+		return listOrdersPage({ status: filters.status }, { page: filters.page ?? 1, pageSize: 50 });
+	}
+);
 
 export const getOrder = query(z.string(), async (id) => {
 	await requireCapability('inventory.read');
@@ -929,19 +995,23 @@ const orderLinesSchema = z
 const orderHeader = {
 	supplierName: z.string().max(255).optional(),
 	reference: z.string().max(100).optional(),
-	expectedAt: z.string().min(1, 'When is it expected?')
+	expectedAt: z.string().min(1, 'When is it expected?'),
+	notes: z.string().max(2000).optional()
 };
 
 async function placeNewOrder(
-	header: { supplierName?: string; reference?: string; expectedAt: string },
+	header: { supplierName?: string; reference?: string; expectedAt: string; notes?: string },
 	lines: z.infer<typeof orderLinesSchema>
 ) {
 	let orderId: string;
+	const supplier = header.supplierName?.trim();
 	try {
 		orderId = await createOrder({
-			supplierName: header.supplierName || undefined,
+			// A name not on file becomes a supplier in Contacts.
+			organizationId: supplier ? await organizationNamed(supplier, 'supplier') : undefined,
 			reference: header.reference || undefined,
 			expectedAt: calendarDate(header.expectedAt),
+			notes: header.notes?.trim() || undefined,
 			createdByUserId: requireUser().id,
 			placedAt: new Date(),
 			lines
@@ -949,8 +1019,12 @@ async function placeNewOrder(
 	} catch (err) {
 		mapDomainError(err);
 	}
-	void getRestockList().refresh();
-	for (const l of lines) void getStaffItemDetail(l.itemId).refresh();
+	refreshRestockLists();
+	if (supplier) void getSupplierNames().refresh();
+	for (const l of lines) {
+		void getStaffItemDetail(l.itemId).refresh();
+		void getItemMovementFeed({ id: l.itemId }).refresh();
+	}
 	return orderId;
 }
 
@@ -963,6 +1037,7 @@ export const markOrdered = form(
 			supplierName?: string;
 			reference?: string;
 			expectedAt: string;
+			notes?: string;
 			lines: string;
 		};
 
@@ -991,6 +1066,7 @@ export const markItemOrdered = form(
 			supplierName?: string;
 			reference?: string;
 			expectedAt: string;
+			notes?: string;
 			itemId: string;
 			quantityOrdered: number;
 			unitCostCents?: number;
@@ -1017,7 +1093,7 @@ export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) =>
 	// Placing is what removes an item from the restock list, so that list has to
 	// be refreshed by name — it has no id to key on.
 	void getOrder(data.id).refresh();
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
 
@@ -1031,7 +1107,7 @@ export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
 	}
 	void getOrder(data.id).refresh();
 	// Cancelling puts the shortfall back on the shopping list.
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
 
@@ -1044,9 +1120,26 @@ export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
 		mapDomainError(err);
 	}
 	void getOrder(data.id).refresh();
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
+
+/** Out of `received` or `cancelled`. Admin-only: a terminal state is the past (#2259). */
+export const reopenOrderForm = form(
+	z.object({ id: z.string().min(1), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		await requireCapability('inventory.reopen');
+		const data = raw as { id: string; reason: string };
+		try {
+			await reopenOrder(data.id, data.reason);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getOrder(data.id).refresh();
+		refreshRestockLists();
+		return { success: true };
+	}
+);
 
 export const useStock = form(
 	z.object({
@@ -1065,6 +1158,7 @@ export const useStock = form(
 			notes: data.notes
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { success: true };
 	}
 );
@@ -1088,6 +1182,7 @@ export const correctStock = form(
 			notes: data.notes
 		});
 		void getStaffItemDetail(data.itemId).refresh();
+		void getItemMovementFeed({ id: data.itemId }).refresh();
 		return { success: true };
 	}
 );
@@ -1141,26 +1236,31 @@ export const editCategory = form(
 	}
 );
 
-export const removeCategory = form(z.object({ id: z.string() }), async (data) => {
-	await requireCapability('inventory.manageItems');
-	await deleteCategory(data.id as string);
-	void getEquipmentCategories().refresh();
-	return { success: true };
-});
+export const removeCategory = form(
+	z.object({ id: z.string() }),
+	unaudited('A catalogue grouping; the items and their records stay.', async (data) => {
+		await requireCapability('inventory.manageItems');
+		await deleteCategory(data.id as string);
+		void getEquipmentCategories().refresh();
+		return { success: true };
+	})
+);
 
 export const addLocation = form(
 	z.object({
 		name: z.string().min(1).max(100),
 		parentId: z.string().optional(),
-		notes: z.string().max(2000).optional()
+		notes: z.string().max(2000).optional(),
+		displayOrder: z.number().int().min(0).max(9999).optional()
 	}),
 	async (raw) => {
 		await requireCapability('inventory.manageItems');
-		const data = raw as { name: string; parentId?: string; notes?: string };
+		const data = raw as { name: string; parentId?: string; notes?: string; displayOrder?: number };
 		const loc = await createLocation({
 			name: data.name,
 			parentId: data.parentId || undefined,
-			notes: data.notes
+			notes: data.notes,
+			displayOrder: data.displayOrder
 		});
 		void getLocations().refresh();
 		void getLocationsWithCounts().refresh();
@@ -1196,7 +1296,7 @@ export const scheduleLoanForm = form('unchecked', async (data, issue) => {
 	const loanId = (data as { loanId: string }).loanId;
 	await scheduleLoan(loanId, {
 		itemId: result.data!.itemId,
-		scheduledPickupDate: result.data!.scheduledPickupDate
+		scheduledPickupDate: calendarDate(result.data!.scheduledPickupDate)
 	});
 	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
@@ -1226,9 +1326,10 @@ export const checkoutLoanForm = form('unchecked', async (data, issue) => {
 	}
 	const loanId = (data as { loanId: string }).loanId;
 	await checkoutLoan(loanId, {
-		dueDate: result.data!.dueDate,
+		dueDate: calendarDate(result.data!.dueDate),
 		assetId: result.data!.assetId,
-		actorId: currentUser.id
+		actorId: currentUser.id,
+		reason: result.data!.reason
 	});
 	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
@@ -1259,8 +1360,8 @@ export const createLoan = form(
 		await requestLoan(data.userId, {
 			itemId: data.itemId || undefined,
 			quantity: data.quantity ?? 1,
-			requestedPickupDate: new Date(data.requestedPickupDate),
-			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			requestedPickupDate: calendarDate(data.requestedPickupDate),
+			estimatedReturnDate: calendarDate(data.estimatedReturnDate),
 			memberNotes: data.memberNotes
 		});
 		return { success: true };
@@ -1288,8 +1389,8 @@ export const submitLoanRequest = form(
 		const loan = await requestLoan(currentUser.id, {
 			itemId: data.itemId || undefined,
 			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
-			requestedPickupDate: new Date(data.requestedPickupDate),
-			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			requestedPickupDate: calendarDate(data.requestedPickupDate),
+			estimatedReturnDate: calendarDate(data.estimatedReturnDate),
 			memberNotes: data.memberNotes
 		});
 
@@ -1321,13 +1422,20 @@ export const cancelLoan = form(z.object({ id: z.string() }), async (data) => {
 export const returnLoan = form(
 	z.object({
 		id: z.string(),
-		staffNotes: z.string().max(2000).optional()
+		staffNotes: z.string().max(2000).optional(),
+		// `''` is the "not checked" option; see `reportAssetDamage`.
+		condition: z.enum(['', ...equipmentConditions]).optional(),
+		flagNote: z.string().max(1000).optional(),
+		flagBlocksUse: z.boolean().optional()
 	}),
 	async (data) => {
 		await requireCapability('inventory.manageLoans');
 		const currentUser = requireUser();
+		const flagNote = data.flagNote?.trim();
 		await returnLoanService(data.id as string, (data.staffNotes as string) || undefined, {
-			actorId: currentUser.id
+			actorId: currentUser.id,
+			condition: data.condition || undefined,
+			flags: flagNote ? [{ note: flagNote, blocksUse: data.flagBlocksUse ?? false }] : undefined
 		});
 		void getStaffLoanDetail(data.id as string).refresh();
 		return { success: true };
@@ -1358,14 +1466,19 @@ export const getUserLoans = query(z.string(), async (userId) => {
  * things the collective stocks, and a paginated shopping list is a worse
  * shopping list.
  */
-export const getRestockList = query(z.void(), async () => {
+export const getRestockList = query(z.enum(inventorySections), async (section) => {
 	await requireCapability('inventory.report');
-	const rows = await listLowStock();
+	const rows = await listLowStock({ section });
 	return {
 		rows,
 		outCount: rows.filter((r) => r.isOut).length
 	};
 });
+
+/** One restock list per section (#2573); a stock change can move either. */
+function refreshRestockLists() {
+	for (const section of inventorySections) void getRestockList(section).refresh();
+}
 
 const spendRange = z.object({
 	from: z.string().optional(),
@@ -1384,8 +1497,9 @@ export const getSpendReport = query(spendRange, async (range) => {
 	await requireCapability('inventory.report');
 
 	const now = new Date();
-	const from = range.from ? new Date(range.from) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-	const to = range.to ? new Date(range.to) : now;
+	const yearStart = `${clubToday(now).slice(0, 4)}-01-01`;
+	const from = dayStart(range.from ?? yearStart);
+	const to = range.to ? dayEnd(range.to) : now;
 
 	// Two sources, deliberately not one. `spendByCategory` counts acquisition
 	// lines, and an acquisition means goods arrived and entered stock — a labor
@@ -1401,8 +1515,8 @@ export const getSpendReport = query(spendRange, async (range) => {
 	const servicesCents = services.reduce((sum, r) => sum + Number(r.totalCents), 0);
 
 	return {
-		from: from.toISOString().slice(0, 10),
-		to: to.toISOString().slice(0, 10),
+		from: range.from ?? yearStart,
+		to: range.to ?? clubToday(now),
 		rows: rows.map((r) => ({
 			categoryId: r.categoryId,
 			categoryName: r.categoryName,
@@ -1507,8 +1621,8 @@ export const getAcquisitions = query(
 			listAcquisitions(
 				{
 					kind: opts.kind,
-					from: opts.from ? new Date(opts.from) : undefined,
-					to: opts.to ? new Date(opts.to) : undefined,
+					from: opts.from ? dayStart(opts.from) : undefined,
+					to: opts.to ? dayEnd(opts.to) : undefined,
 					awaitingReimbursement: opts.awaitingReimbursement
 				},
 				{ page: opts.page ?? 1, pageSize: ACQUISITIONS_PAGE_SIZE }
@@ -1653,7 +1767,7 @@ export const editAcquisition = form(
  * Recording that CMC signed the donor's Form 8283.
  *
  * **This is the switch that arms Form 8282.** Until it is set, a donated unit
- * can be disposed of and `/staff/inventory/compliance` stays silent, because a
+ * can be disposed of and the Form 8282 filter on Acquisitions stays silent, because a
  * gift with no signed 8283 is not "charitable deduction property" and owes
  * nothing. The rule shipped in #302/#309 with no way to reach it.
  */
@@ -1667,8 +1781,8 @@ export const recordForm8283 = form(
 		await requireCapability('inventory.manageAcquisitions');
 		const data = raw as { id: string; signedOn: string; appraisalRef?: string };
 
-		const signedOn = new Date(data.signedOn);
-		if (Number.isNaN(signedOn.getTime())) error(400, 'That is not a date');
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(data.signedOn)) error(400, 'That is not a date');
+		const signedOn = calendarDate(data.signedOn);
 
 		try {
 			await acknowledgeForm8283(data.id, {
@@ -1728,7 +1842,7 @@ export const addAcquisitionLineForm = form(
 		// backlog both changed with it.
 		void getStaffAcquisitionDetail(data.acquisitionId).refresh();
 		void getUntaggedAssets().refresh();
-		void getRestockList().refresh();
+		refreshRestockLists();
 		return { success: true };
 	}
 );
@@ -1835,31 +1949,16 @@ export const reportAssetDamage = form(
  * lives in `CategoryOptions` instead.
  */
 export const getStaffItemDetail = query(z.string(), async (id) => {
-	const [item, assets, movements, loanHistory] = await Promise.all([
-		getItem(id),
-		getItemAssets(id),
-		getItemMovements(id),
-		getItemLoanHistory(id)
-	]);
+	// Movements and loans are the page's lazy history cards, not part of this read.
+	const [item, assets] = await Promise.all([getItem(id), getItemAssets(id)]);
 	// After the guarded reads above: `getItem` has already required `inventory.read`.
 	const sections = await itemSections(id, { canTriage: await can('inventory.manageAssets') });
-	return { item, assets, movements, loanHistory, ...sections };
+	return { item, assets, ...sections };
 });
 
-/** The staff asset detail page's one load-bearing query. */
+/** The staff asset detail page's one load-bearing query. Its history is `getAssetHistory`. */
 export const getStaffAssetDetail = query(z.string(), async (id) => {
-	// `serviceHistory` rides along rather than being its own query in the
-	// component: what a contractor was paid to do to this unit is part of its
-	// record, and a second awaited query out of the page is a serial round trip
-	// on first paint.
-	const [asset, movements, history] = await Promise.all([
-		getAsset(id),
-		getAssetMovements(id),
-		jobsForAsset(id)
-	]);
-	// After `getAsset`'s guard. Contractor and cost are `contractor.read`'s (#2071);
-	// null hides the section rather than claiming no contractor ever touched it.
-	const serviceHistory = (await can('contractor.read')) ? history : null;
+	const asset = await getAsset(id);
 
 	// Computed here rather than in the component: the rule is server-side and
 	// depends on the acquisition this unit arrived on, which the asset row only
@@ -1876,7 +1975,7 @@ export const getStaffAssetDetail = query(z.string(), async (id) => {
 		new Date()
 	);
 
-	return { asset, movements, serviceHistory, form8282, donor: acq?.donorName ?? null };
+	return { asset, form8282, donor: acq?.donorName ?? null };
 });
 
 /**

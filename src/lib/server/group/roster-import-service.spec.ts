@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ROSTER_IMPORT_MAX } from '$lib/config';
+import { ROSTER_IMPORT_MAX } from '#lib/config.js';
 
 /**
  * Staff roster import, against a real SQLite: which address lands in which
@@ -8,35 +8,34 @@ import { ROSTER_IMPORT_MAX } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order,
-// as this does. It also enforces D1's 100-bound-parameter cap per statement,
-// which SQLite itself does not.
+// Records the largest statement a batch carries, so a spec can show the chunks
+// came close to D1's 100-bound-parameter cap that the fixture enforces.
 const largestStatement = vi.hoisted(() => ({ params: 0 }));
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: (PromiseLike<unknown> & { toSQL(): { params: unknown[] } })[]) => {
-			const out = [];
-			for (const s of stmts) {
-				const n = s.toSQL().params.length;
-				if (n > 100) throw new Error(`D1 would reject ${n} bound parameters`);
-				largestStatement.params = Math.max(largestStatement.params, n);
-				out.push(await s);
+vi.mock('#lib/server/db/index.js', () => {
+	const batch = testDb.batch.bind(testDb);
+	return {
+		db: Object.assign(testDb, {
+			batch: (stmts: Parameters<typeof batch>[0]) => {
+				for (const s of stmts) {
+					const n = (s as unknown as { toSQL(): { params: unknown[] } }).toSQL().params.length;
+					largestStatement.params = Math.max(largestStatement.params, n);
+				}
+				return batch(stmts);
 			}
-			return out;
-		}
-	})
-}));
+		})
+	};
+});
 
 const emit = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
 }));
 const audit = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => audit(...a)
 }));
 

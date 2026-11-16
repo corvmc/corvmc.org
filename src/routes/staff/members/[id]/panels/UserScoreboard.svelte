@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { getUserOverview } from '$lib/remote/users.remote';
-	import { creditsToHours, formatVolunteerHours } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { getUserOverview } from '#lib/remote/users.remote.js';
+	import { creditsToHours, formatVolunteerHours } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	let { overview }: { overview: Awaited<ReturnType<typeof getUserOverview>> } = $props();
 
@@ -14,13 +15,22 @@
 	// line as links. Four also lays out as a clean 2×2 on a phone instead of
 	// leaving a stat stranded on its own row.
 	const stats = $derived([
-		{ label: 'Free hours', value: `${creditsToHours(overview.credits.free_hours)}` },
-		{ label: 'Upcoming bookings', value: String(overview.counts.upcomingReservations) },
 		{
-			label: 'Volunteer hrs (YTD)',
+			label: m.staff_members_id_panels_user_scoreboard_free_hours_label(),
+			value: `${creditsToHours(overview.credits.free_hours)}`
+		},
+		{
+			label: m.staff_members_id_panels_user_scoreboard_upcoming_bookings_label(),
+			value: String(overview.counts.upcomingReservations)
+		},
+		{
+			label: m.staff_members_id_panels_user_scoreboard_volunteer_hrs_ytd_label(),
 			value: formatVolunteerHours(overview.counts.approvedMinutesThisYear)
 		},
-		{ label: 'Lifetime paid', value: formatCents(overview.counts.lifetimePaidCents) }
+		{
+			label: m.staff_members_id_panels_user_scoreboard_lifetime_paid_label(),
+			value: formatCents(overview.counts.lifetimePaidCents)
+		}
 	]);
 </script>
 

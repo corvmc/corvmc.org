@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
 
 /**
  * The project a show's money counts toward: the project its production
- * specialises (docs/specs/production-projects-spec.md). Null for a listing that
+ * specialises (#1673). Null for a listing that
  * announces no production — a band's gig, a community night — whose money is
  * nobody's project burn.
  */

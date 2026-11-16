@@ -1,4 +1,4 @@
-import type { CreditType } from '$lib/server/db/schema/finance';
+import type { CreditType } from '#lib/server/db/schema/finance.js';
 
 // ---------------------------------------------------------------------------
 // Site
@@ -129,12 +129,11 @@ export const creditCompCeiling: Record<CreditType, number> = {
 // ---------------------------------------------------------------------------
 
 /**
- * How many days before its start a member may confirm a reservation *without* a
- * Stripe prepayment. Outside this window only a real Stripe charge (or staff)
- * can confirm. Bounds how far ahead reservations sit confirmed (the single lock
- * has finite user slots) and cuts no-shows.
+ * How far ahead a confirmed booking is issued its door code, and how far ahead
+ * the member dashboard asks for a balance owed. The lock has finite user slots,
+ * so codes are not minted for the whole calendar at once.
  */
-export const CONFIRMATION_WINDOW_DAYS = 3;
+export const BOOKING_LEAD_DAYS = 3;
 
 /**
  * Unclaimed door codes the daily lock job keeps confirmed on the lock (#2120).
@@ -142,17 +141,6 @@ export const CONFIRMATION_WINDOW_DAYS = 3;
  * fallbacks an outage can spend before members are told to call staff.
  */
 export const DOOR_CODE_POOL_SIZE = 10;
-
-/**
- * What every member surface says about a booking nobody confirmed.
- *
- * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
- * start time, so the card, the detail page and the confirmation reminder are
- * all describing one sweep. Stated once because three wordings of the same
- * policy is how two of them end up wrong.
- */
-export const UNCONFIRMED_RELEASE_NOTICE =
-	'We hold the room until your session starts. A booking that is not confirmed by then is released.';
 
 /**
  * How long an unreferenced `media` row is left alone before the sweep reaps it
@@ -165,7 +153,7 @@ export const UNCONFIRMED_RELEASE_NOTICE =
  * mid-upload. Rails' `purge_unattached` guards the same hazard.
  *
  * A day is far longer than any form takes and still bounds how long an abandoned
- * upload is billed for. See docs/specs/shipped/media-spec.md.
+ * upload is billed for. See docs/decisions/0026-uploads-are-detached-and-swept.md.
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 
@@ -179,26 +167,16 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/specs/shipped/groups-spec.md § Documents and private storage.
+ * docs/decisions/0026-uploads-are-detached-and-swept.md.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** The longest note that may ride a group document. */
 export const DOCUMENT_DESCRIPTION_MAX = 500;
 
-/** The earliest instant a member may confirm a reservation starting at `startsAt`. */
-export function confirmWindowOpensAt(startsAt: Date): Date {
-	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
-/** The latest start whose confirmation window is open at `now`. */
-export function confirmationHorizon(now: Date = new Date()): Date {
-	return new Date(now.getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
-/** Whether `now` is inside the member confirmation window for `startsAt`. */
-export function withinConfirmationWindow(startsAt: Date, now: Date = new Date()): boolean {
-	return now.getTime() >= confirmWindowOpensAt(startsAt).getTime();
+/** The latest start that is inside `BOOKING_LEAD_DAYS` at `now`. */
+export function bookingLeadHorizon(now: Date = new Date()): Date {
+	return new Date(now.getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60 * 1000);
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +199,7 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * This is the house suggestion, and it is not the deal. CMC's standing
  * arrangement is 70% of the door to the bands, but a bill with three acts on
  * three different deals has no single percentage — the deal itself lives on
- * `event_band` (see `docs/specs/project-spec.md`, the deal shape). Say "we
+ * `production_slot` (see `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
  *
  * The acts' 70% is a guarantee against the **suggested price**, not against
@@ -311,11 +289,11 @@ export function estimateLoanCost(
 export const groupKinds = ['band', 'club', 'committee'] as const;
 export type GroupKind = (typeof groupKinds)[number];
 
-/** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
+/** An announcement's title and markdown body — see docs/decisions/0023-group-announcements-are-transactional-and-batched.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
-// What to call a group kind (`groupKindLabels`) lives in `$lib/terms`.
+// What to call a group kind (`groupKindLabels`) lives in `#lib/terms.js`.
 
 /**
  * How someone gets onto the roster.
@@ -334,7 +312,7 @@ export const ANNOUNCEMENT_BODY_MAX = 10000;
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/specs/shipped/groups-spec.md`.
+ * spend their money. See `docs/decisions/0024-groups-split-the-band-table-by-purpose.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
@@ -450,7 +428,7 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
  *
  * `in_kind` and `pass_through` are exactly what a naive `sum()` gets wrong, which
  * is why they are a column rather than a convention. See
- * `docs/specs/financial-record-spec.md`.
+ * `docs/architecture/domain-model.md` (the append-only ledger).
  */
 export const financialEntryKinds = ['earned', 'spent', 'in_kind', 'pass_through'] as const;
 export type FinancialEntryKind = (typeof financialEntryKinds)[number];
@@ -580,6 +558,10 @@ export const financialSubjects = [
 	'membership',
 	'band_premium',
 	'market_vendor',
+	'donation',
+	// The giver of an in-kind gift (#2727); `metadata.giftId` tells gifts apart.
+	'organization',
+	'contact',
 	'other'
 ] as const;
 export type FinancialSubject = (typeof financialSubjects)[number];
@@ -682,6 +664,20 @@ export const inventoryListViewMeta = {
 	problems: { label: 'Open problem', capability: 'inventory.manageAssets' }
 } as const satisfies Record<InventoryListView, { label: string; capability: Capability }>;
 
+/**
+ * Staff inventory's two lists (#2573). Gear is tracked unit by unit or lent out;
+ * Supplies is what is used up. `src/lib/server/inventory/sections.ts` holds the
+ * predicate, so every list and count reads the same definition.
+ */
+export const inventorySections = ['gear', 'supplies'] as const;
+export type InventorySection = (typeof inventorySections)[number];
+
+/** Which `?show=` views each list offers. A view with no rows in a list is left off it. */
+export const inventorySectionViews = {
+	gear: ['on-loan', 'overdue', 'problems', 'on-order', 'late', 'restock'],
+	supplies: ['restock', 'on-order', 'late']
+} as const satisfies Record<InventorySection, readonly InventoryListView[]>;
+
 export const pricingTiers = ['major', 'accessory'] as const;
 export type PricingTier = (typeof pricingTiers)[number];
 export const loanStatuses = [
@@ -771,7 +767,7 @@ export const accessHoldingKindLabels: Record<AccessHoldingKind, string> = {
 export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
 export type LocalResourceStatus = (typeof localResourceStatuses)[number];
 
-/** What kind of thing went wrong. docs/specs/incident-log-spec.md */
+/** What kind of thing went wrong. docs/development/business-workflows.md §20 */
 export const incidentCategories = [
 	'noise_complaint',
 	'injury',
@@ -855,6 +851,85 @@ export const contractorJobViewLabels: Record<ContractorJobView, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Parties: the outside organizations and people CMC deals with (#2622)
+// ---------------------------------------------------------------------------
+
+/**
+ * What an organization or a person is to CMC. Rows, not a column: one business
+ * can sponsor a season and service the PA in the same year.
+ */
+export const partyRoles = [
+	'funder',
+	'sponsor',
+	'contractor',
+	'performer',
+	'vendor',
+	'press',
+	'partner',
+	'supplier',
+	'donor'
+] as const;
+export type PartyRole = (typeof partyRoles)[number];
+
+/** The Contacts list's rows (#2760): an organization, or a person with none. */
+export const contactListTypes = ['organization', 'person'] as const;
+export type ContactListType = (typeof contactListTypes)[number];
+
+/** The Contacts list's sorts; a leading `-` is descending. */
+export const contactListSorts = [
+	'name',
+	'-name',
+	'activity',
+	'-activity',
+	'task',
+	'-task'
+] as const;
+export type ContactListSort = (typeof contactListSorts)[number];
+
+/** What staff log on a party's timeline (#2622): a call, a meeting, an email or a note. */
+export const activityKinds = ['call', 'meeting', 'email', 'note'] as const;
+export type ActivityKind = (typeof activityKinds)[number];
+export const ACTIVITY_BODY_MAX = 4000;
+export const activityKindLabels: Record<ActivityKind, string> = {
+	call: 'Call',
+	meeting: 'Meeting',
+	email: 'Email',
+	note: 'Note'
+};
+
+/**
+ * How long an act's contact is kept after the act becomes a member band: long
+ * enough to answer a question about what they were paid. The daily sweep
+ * deletes it after that.
+ */
+export const CONTACT_CLAIM_RETENTION_DAYS = 365;
+
+export const partyRoleLabels: Record<PartyRole, string> = {
+	funder: 'Funder',
+	sponsor: 'Sponsor',
+	contractor: 'Contractor',
+	performer: 'Outside act',
+	vendor: 'Vendor',
+	press: 'Press',
+	partner: 'Partner',
+	supplier: 'Supplier',
+	donor: 'Donor'
+};
+
+/** The Contacts page's role filter options, one per role. */
+export const partyRoleViewLabels: Record<PartyRole, string> = {
+	funder: 'Funders',
+	sponsor: 'Sponsors',
+	contractor: 'Contractors',
+	performer: 'Outside acts',
+	vendor: 'Vendors',
+	press: 'Press',
+	partner: 'Partners',
+	supplier: 'Suppliers',
+	donor: 'Donors'
+};
+
+// ---------------------------------------------------------------------------
 // Sponsors: businesses and their sponsorship terms
 // ---------------------------------------------------------------------------
 
@@ -883,20 +958,6 @@ export const sponsorshipStatusBadge = {
 } as const satisfies Record<SponsorshipStatus, string>;
 
 // ---------------------------------------------------------------------------
-// Renewals: CMC's own permits, licenses and insurance policies (#1478)
-// ---------------------------------------------------------------------------
-
-export const renewalKinds = ['permit', 'license', 'insurance', 'other'] as const;
-export type RenewalKind = (typeof renewalKinds)[number];
-
-export const renewalKindLabels: Record<RenewalKind, string> = {
-	permit: 'Permit',
-	license: 'License',
-	insurance: 'Insurance',
-	other: 'Other'
-};
-
-// ---------------------------------------------------------------------------
 // Grants: funders, applications, awards and the reports they require
 // ---------------------------------------------------------------------------
 
@@ -904,12 +965,8 @@ export const renewalKindLabels: Record<RenewalKind, string> = {
 export const grantStatuses = ['prospect', 'applied', 'awarded', 'declined', 'closed'] as const;
 export type GrantStatus = (typeof grantStatuses)[number];
 
-/** What the list shows by default; the rest sit behind "Show closed". */
-export const openGrantStatuses = [
-	'prospect',
-	'applied',
-	'awarded'
-] as const satisfies readonly GrantStatus[];
+/** An award that was made: what a funded project counts as given. */
+export const awardedGrantStatuses = ['awarded', 'closed'] as const satisfies readonly GrantStatus[];
 
 export const grantStatusLabels: Record<GrantStatus, string> = {
 	prospect: 'Prospect',
@@ -927,13 +984,27 @@ export const grantStatusBadge = {
 	closed: 'ghost'
 } as const satisfies Record<GrantStatus, string>;
 
-export type GrantDeadlineKind = 'apply' | 'report' | 'end';
+export type GrantDeadlineKind = 'apply' | 'end';
 
 export const grantDeadlineLabels: Record<GrantDeadlineKind, string> = {
 	apply: 'Apply by',
-	report: 'Report due',
 	end: 'Award ends'
 };
+
+/**
+ * The three grant templates, each found by its stage rather than its name so
+ * staff can rename it. `application` is applied when the grant is created;
+ * the other two are offered, never applied unasked.
+ */
+export const grantStages = ['application', 'award', 'close_out'] as const;
+export type GrantStage = (typeof grantStages)[number];
+
+/**
+ * Where a grant or sponsorship stands on the Funding page (#2622), in list
+ * order. Both statuses map onto it; `closed` sits behind "Show closed".
+ */
+export const fundingStages = ['prospect', 'applied', 'active', 'closed'] as const;
+export type FundingStage = (typeof fundingStages)[number];
 
 // ---------------------------------------------------------------------------
 // Credit transaction sources
@@ -1050,6 +1121,9 @@ export const staffInboxChannels = [
 ] as const;
 export type StaffInboxChannel = (typeof staffInboxChannels)[number];
 
+/** How far back a thread's first inbound message may be to count toward first-reply times. */
+export const FIRST_RESPONSE_WINDOW_DAYS = 30;
+
 /**
  * The contact-form subject that reveals the event-tip fields.
  *
@@ -1071,11 +1145,14 @@ export const EVENT_TIP_SUBJECT = 'Event Tip';
  * all, and fall into the filter's "Other" bucket rather than being forced into
  * one of these.
  */
+/** The contact-form subject whose alert goes to `BOOKING_CONTACT_EMAIL`. */
+export const PERFORMANCE_INQUIRY_SUBJECT = 'Performance Inquiry';
+
 export const contactSubjects = [
 	'General Inquiry',
 	'Membership Questions',
 	'Practice Space',
-	'Performance Inquiry',
+	PERFORMANCE_INQUIRY_SUBJECT,
 	EVENT_TIP_SUBJECT,
 	'Volunteer Opportunities',
 	'Donations'
@@ -1241,6 +1318,36 @@ export const standingScopeConfig: Record<
 export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
+// Account removals
+// ---------------------------------------------------------------------------
+
+/** A suspension ends on a date; a ban lasts until staff lift it. */
+export const removalKinds = ['suspension', 'ban'] as const;
+export type RemovalKind = (typeof removalKinds)[number];
+export const removalKindLabels: Record<RemovalKind, string> = {
+	suspension: 'Suspension',
+	ban: 'Ban'
+};
+
+export const removalLiftReasons = ['appeal_granted', 'term_lapsed', 'staff_lifted'] as const;
+export type RemovalLiftReason = (typeof removalLiftReasons)[number];
+export const removalLiftReasonLabels: Record<RemovalLiftReason, string> = {
+	appeal_granted: 'Appeal granted',
+	term_lapsed: 'Term ended',
+	staff_lifted: 'Lifted by staff'
+};
+
+/** Why an address is on the blocklist: a ban put it there, or staff added it. */
+export const blocklistSources = ['ban', 'staff'] as const;
+export type BlocklistSource = (typeof blocklistSources)[number];
+export const blocklistSourceLabels: Record<BlocklistSource, string> = {
+	ban: 'Ban',
+	staff: 'Added by staff'
+};
+
+export const BLOCKLIST_NOTE_MAX = 500;
+
+// ---------------------------------------------------------------------------
 // Moderation appeals
 // ---------------------------------------------------------------------------
 
@@ -1256,9 +1363,13 @@ export const APPEAL_BODY_MAX = 2000;
 
 export type AppealVerdict = 'granted' | 'partly_granted' | 'denied';
 
-/** The label a human reads, derived from the two outcomes and never stored. */
-export function appealVerdict(content: AppealOutcome, standing: AppealOutcome): AppealVerdict {
-	const applicable = [content, standing].filter((o) => o !== 'not_applicable');
+/** The label a human reads, derived from the outcomes and never stored. */
+export function appealVerdict(
+	content: AppealOutcome,
+	standing: AppealOutcome,
+	account: AppealOutcome = 'not_applicable'
+): AppealVerdict {
+	const applicable = [content, standing, account].filter((o) => o !== 'not_applicable');
 	const restored = applicable.filter((o) => o === 'restored').length;
 	if (applicable.length > 0 && restored === applicable.length) return 'granted';
 	return restored > 0 ? 'partly_granted' : 'denied';
@@ -1348,7 +1459,7 @@ export const groupApplicationStatusLabels: Record<GroupApplicationStatus, string
 
 // `committee` retired 2026-09-14. A committee is a `group` and is applied to
 // through `group_application`, not signed up for — see decision 2 of
-// committees-and-roles-spec.md. The six roles that shadowed them are archived
+// docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md. The six roles that shadowed them are archived
 // in `away-from-shows` rather than deleted, because hour logs point at two.
 export const volunteerRoleGroups = ['at-shows', 'away-from-shows'] as const;
 
@@ -1374,7 +1485,10 @@ export const dutyListAnchors = [
 	'first_set',
 	'curfew',
 	'load_out',
-	'project_start'
+	'project_start',
+	'apply_by',
+	'award_start',
+	'award_end'
 ] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
@@ -1409,8 +1523,18 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	first_set: 'First set',
 	curfew: 'Curfew',
 	load_out: 'Load-out',
-	project_start: 'Project start'
+	project_start: 'Project start',
+	apply_by: 'Apply-by date',
+	award_start: 'Award start',
+	award_end: 'Award end'
 };
+
+/** Read off the grant application whose project it is; missing on any other project. */
+export const grantDutyListAnchors = [
+	'apply_by',
+	'award_start',
+	'award_end'
+] as const satisfies readonly DutyListAnchor[];
 
 /**
  * Every value `duty_list.subject` has held. Only `project` is written now:
@@ -1421,16 +1545,17 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 export const dutyListStoredSubjects = ['event', 'reservation', 'project'] as const;
 
 /**
- * The domain event that stamps a template out with nobody pressing a button,
- * found by this column rather than by name. `reservation.first` is retired with
- * the reservation subject; nothing reads it.
+ * The domain event that stamps a template out with nobody pressing a button.
+ * `reservation.first` is retired with the reservation subject; nothing reads it.
+ * A show's template is picked instead (#2387). Rules replace this column (#2389),
+ * so it takes no new values.
  */
-export const dutyListAutoApplyTriggers = ['reservation.first', 'production.created'] as const;
+export const dutyListAutoApplyTriggers = ['reservation.first'] as const;
 export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number];
 
 /**
  * The fact about a show that says a committee's work order is done
- * (docs/specs/shipped/committee-deliverables-spec.md). Closed, because each member is a
+ * (docs/decisions/0053-committees-own-deliverables-not-permissions.md). Closed, because each member is a
  * typed function in `volunteer/done-conditions.ts`; a template picks one. Adding
  * a condition is one entry here and one in that registry.
  */
@@ -1446,6 +1571,20 @@ export const workDoneConditions = [
 	'tasks_ticked'
 ] as const;
 export type WorkDoneCondition = (typeof workDoneConditions)[number];
+
+/**
+ * What opened a task on its own (#2756): the kind of record whose state calls
+ * for the work. With `work_order.source_id`, at most one open task per record.
+ */
+export const taskSources = [
+	'repair',
+	'restock',
+	'late_order',
+	'form_8282',
+	'insurance',
+	'door_payment'
+] as const;
+export type TaskSource = (typeof taskSources)[number];
 
 export const workDoneConditionLabels: Record<WorkDoneCondition, string> = {
 	production_confirmed: 'The production is confirmed',
@@ -1597,6 +1736,13 @@ export const ORIENTATION_NOTES_MAX = 1000;
 /** A card inside this window of expiry reads as "expiring soon" rather than current. */
 export const CERT_EXPIRY_WARNING_DAYS = 60;
 
+/**
+ * The "Practice space" clearance's catalog id, fixed by the migration that seeds
+ * the row. Keyed on the id rather than the name: staff may rename a catalog entry,
+ * and the booking-notice rule must not switch off when they do.
+ */
+export const PRACTICE_SPACE_CLEARANCE_ID = 'practice-space';
+
 /** How long a group invite stays valid. The invite email's footnote interpolates it. */
 export const INVITE_EXPIRY_DAYS = 7;
 
@@ -1626,12 +1772,16 @@ export const SHIFT_FEEDBACK_MIN_RATING = 1;
 export const SHIFT_FEEDBACK_MAX_RATING = 5;
 export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
 
+/** The date presets a staff list's date filter offers, and `custom` for a typed range. */
+export const listDateRanges = ['from_today', 'next_7', 'past_30', 'any', 'custom'] as const;
+export type ListDateRange = (typeof listDateRanges)[number];
+
 /**
  * Today's calendar date in club time, as YYYY-MM-DD.
  *
  * `new Date().toISOString().slice(0, 10)` is the UTC date, which is tomorrow's
  * date in club time from 5pm PT onward — a date-input defaulted that way offers
- * a day the service rejects as being in the future. Client-safe: `$lib/config`
+ * a day the service rejects as being in the future. Client-safe: `#lib/config.js`
  * carries no server imports.
  */
 export function clubToday(now: Date = new Date()): string {
@@ -1651,7 +1801,7 @@ export function formatVolunteerHours(minutes: number): string {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Ballots — see docs/specs/shipped/formal-balloting-spec.md
+// Ballots — see docs/decisions/0052-secret-ballots-count-without-a-vote-row.md
 // ---------------------------------------------------------------------------
 
 /** `group`: a committee's roster, recorded. `member`: members of record, secret. */
@@ -1795,6 +1945,8 @@ export const CLASSIFIED_NOTE_MAX = 500;
 export const CLASSIFIED_TAGS_MAX = 10;
 export const CLASSIFIED_TAG_MAX = 50;
 export const CLASSIFIED_LIFETIME_DAYS = 30;
+/** How far ahead of expiry the author is reminded to renew. */
+export const CLASSIFIED_EXPIRY_REMINDER_DAYS = 3;
 /** Open, unexpired posts one member may hold at once. */
 export const MAX_OPEN_CLASSIFIEDS = 5;
 
@@ -1847,7 +1999,7 @@ export const classifiedCategoryOptions = classifiedCategories.map((value) => ({
 /**
  * A project's lifecycle: the suggestion's, less `in_ballot`. A project exists
  * only once something is decided, and its status is what the suggestion it
- * answers reports back (docs/specs/project-spec.md).
+ * answers reports back (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md).
  */
 export const projectStatuses = [
 	'open',
@@ -1889,14 +2041,24 @@ export type ProjectView = (typeof projectViews)[number];
 /**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
- * See docs/specs/production-projects-spec.md.
+ * See docs/decisions/0011-productions-are-projects.md. A `'grant'` or
+ * `'sponsorship'` project is the work of one grant application or sponsorship,
+ * whose side table points back the same way (#2622).
  */
-export const projectKinds = ['general', 'production'] as const;
+export const projectKinds = ['general', 'production', 'grant', 'sponsorship'] as const;
 export type ProjectKind = (typeof projectKinds)[number];
+
+/** The kinds a funding side table makes: never chosen, never started from a template. */
+export const fundingProjectKinds = [
+	'grant',
+	'sponsorship'
+] as const satisfies readonly ProjectKind[];
 
 export const projectKindLabels: Record<ProjectKind, string> = {
 	general: 'General',
-	production: 'Production'
+	production: 'Production',
+	grant: 'Grant',
+	sponsorship: 'Sponsorship'
 };
 
 /**
@@ -2141,7 +2303,8 @@ export const PACKING_MAX_QUANTITY = 99;
 // ---------------------------------------------------------------------------
 
 /**
- * The five states of an instructor record — see `docs/specs/shipped/instructors-spec.md`.
+ * The five states of an instructor record — see `docs/development/business-workflows.md`
+ * (Teaching bookings).
  *
  * `requested` and `rejected` are the application; the other three are the grant.
  * Keeping them in one enum on one row is what makes the application *be* the
@@ -2204,8 +2367,9 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 //
 // A **capability** is what a guard names. A **position** is what a person
 // holds. The matrix below is the association between them; assignment — who
-// holds which position — stays in `model_has_roles`, because that is the part
-// that genuinely changes at runtime. See docs/specs/shipped/admin-vs-staff-spec.md.
+// holds which position — is data: a seat in the Operations committee
+// (`group_position.job`), or a `model_has_roles` row for `admin`.
+// See docs/decisions/0032-guards-name-capabilities.md.
 //
 // Guards name capabilities rather than roles so that re-answering "who may do
 // this" is an edit to one file instead of a hunt through several hundred call
@@ -2241,13 +2405,14 @@ export const capabilities = {
 	directory: ['readContact', 'shareContactSheet'],
 	band: ['read', 'manage', 'manageMembers', 'setTier'],
 	group: ['read', 'manage'],
-	// Reviewing what arrives on a committee, for somebody who holds no seat on
-	// it. A chair does this through `group_member.role = 'admin'`; this is the
-	// other door, and a headless committee has only this one.
-	committee: ['reviewApplications'],
-	// `uploadRecap` is also held for one show by that show's documentation crew,
-	// through a volunteer-role grant: see `grantableCapabilities`.
-	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
+	// `reviewApplications` is what arrives on a committee, for somebody with no
+	// seat on it; its chair (the chair position) is the other door. `manage` is
+	// staff oversight of committees: their positions, chair and grants (#3009).
+	// `group.manage` keeps bands and clubs.
+	committee: ['reviewApplications', 'manage'],
+	// `uploadRecap` and `checkIn` are also held for one show by its crew, through
+	// a volunteer-role grant: see `grantableCapabilities`.
+	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap', 'checkIn'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
 	// hand-made ones already on the lock, re-provisioning a booking, reading the
@@ -2275,10 +2440,13 @@ export const capabilities = {
 		'manageStock',
 		'manageOrders',
 		'manageAcquisitions',
-		'report'
+		'report',
+		// A retired or lost unit, or a received or cancelled order, back: admin-only.
+		'reopen'
 	],
 	instructor: ['read', 'review'],
-	contractor: ['read', 'manage', 'recordInvoice'],
+	// `reopen` takes a finished, called-off or refused engagement back: admin-only.
+	contractor: ['read', 'manage', 'recordInvoice', 'reopen'],
 	// Its own resource, not `moderation`: an incident report can name a member,
 	// and who may read one is a decision separate from who reviews flags.
 	// `file` is the crew's own report from a show (#1469): held for one event
@@ -2286,11 +2454,11 @@ export const capabilities = {
 	incident: ['read', 'record', 'file'],
 	sponsor: ['read', 'manage'],
 	grant: ['read', 'manage'],
-	// CMC's own permits, licenses and policies. Not `contractor`: a contractor's
-	// certificate is theirs, and it stays on their record.
-	renewal: ['read', 'manage'],
+	// Outside organizations and their people (#2622). The rows behind
+	// `grant`, `sponsor` and `contractor` records keep those guards.
+	contact: ['read', 'manage'],
 	project: ['read', 'manage'],
-	// The two halves of a show (docs/specs/production-projects-spec.md). `book`
+	// The two halves of a show (business-workflows.md §14). `book`
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
 	// crew, the door and settlement. Held by committees through a show's project.
 	// `create` opens a production, before any project exists to reach (#1675).
@@ -2303,6 +2471,9 @@ export const capabilities = {
 	// Member-wide ballots, and the staff fallback on committee ballots. Also
 	// grantable to a committee, org-wide: see `grantableCapabilities`.
 	ballot: ['manage'],
+	// One market's vendors: decide, seat, check in, take table fees. Held for
+	// that market by its vendor host, through a volunteer-role grant (#2993).
+	market: ['host'],
 	listing: ['review'],
 	// The staff music tools. Refunding a sale is `finance.refund`, not a music
 	// action: it moves money, and the treasurer is who does that.
@@ -2331,10 +2502,11 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
  * that ranking is exactly what made the help centre's role ladder hide
  * articles from anyone it had not heard of.
  *
- * A position exists when a real person holds that title. That rule is what
- * keeps this list at six rather than sixty, and its absence is what produced
- * `staff`. The registry is docs/specs/committees-and-roles-spec.md and the CMC
- * Committees and Roles proposal.
+ * A position is one job, grantable alone (#2838): a real person holds that
+ * title, or a volunteer does that job. `staff` is the union of them until it
+ * retires. `config.spec.ts` fails on a capability no job position holds.
+ * Every position but `admin` is held as a seat in the Operations committee
+ * (`jobs`, #2992); `admin` alone stays a `model_has_roles` row.
  *
  * A committee is NOT a position. Committee membership is plural, rotating and
  * domain-scoped, and it already has a table and a lifecycle: a committee is a
@@ -2345,14 +2517,33 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
 export const positionLabels = {
 	admin: 'Administrator',
 	staff: 'Staff',
+	operations_chair: 'Operations Chair',
 	technology_coordinator: 'Technology Coordinator',
 	volunteer_coordinator: 'Volunteer Coordinator',
 	site_moderator: 'Site Moderator',
-	treasurer: 'Treasurer'
+	treasurer: 'Treasurer',
+	outreach_coordinator: 'Outreach Coordinator',
+	content_editor: 'Content Editor',
+	teacher_reviewer: 'Teacher Reviewer',
+	auditor: 'Auditor'
 } as const;
 
 export type Position = keyof typeof positionLabels;
 export const positionOrder = Object.keys(positionLabels) as Position[];
+
+/** A position held as a seat in Operations: every one but `admin` (#2992). */
+export type Job = Exclude<Position, 'admin'>;
+export const jobs = positionOrder.filter((p): p is Job => p !== 'admin') as [Job, ...Job[]];
+
+export function isJob(name: string): name is Job {
+	return (jobs as readonly string[]).includes(name);
+}
+
+/**
+ * The Operations committee: the staff department. Its id is fixed so the
+ * migration, the seed and the resolver name the same row.
+ */
+export const OPERATIONS_GROUP_ID = 'operations';
 
 /** Every action of every resource — what `admin` holds. */
 export const allCapabilities = Object.fromEntries(
@@ -2384,7 +2575,9 @@ export const adminOnlyCapabilities = [
 	'credit.adjust',
 	// A terminal state is the past; leaving one is an audited admin act
 	// (docs/development/conventions.md#workflow-gates).
-	'production.reopen'
+	'production.reopen',
+	'contractor.reopen',
+	'inventory.reopen'
 ] as const satisfies readonly Capability[];
 
 /**
@@ -2433,6 +2626,12 @@ export const positions: Record<Position, Grants> = {
 	// or move credit. Everything else they could do, they still can.
 	staff: staffCapabilities,
 
+	// The chair seat of Operations: oversight of the other committees (#3009).
+	// `group.read` reaches the committee pages that oversight is done from.
+	operations_chair: {
+		committee: ['manage'],
+		group: ['read']
+	},
 	technology_coordinator: {
 		settings: ['read', 'update'],
 		// They ran the lock self-test under `settings.update` before it was split
@@ -2496,6 +2695,26 @@ export const positions: Record<Position, Grants> = {
 		// one load-bearing query.
 		event: ['read'],
 		user: ['list', 'read']
+	},
+	// The newsletter and show announcements. The campaign editor's show picker is
+	// `searchEventsForCampaign`, so no `event.read` comes with it.
+	outreach_coordinator: {
+		marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send']
+	},
+	// The public content: the local resources directory and the help articles.
+	content_editor: {
+		localResource: ['manage'],
+		help: ['read', 'manage']
+	},
+	// `user.read` opens the applicant's record beside the queue.
+	teacher_reviewer: {
+		instructor: ['read', 'review'],
+		user: ['read']
+	},
+	// `user.read` opens the member an entry names.
+	auditor: {
+		audit: ['read'],
+		user: ['read']
 	}
 };
 
@@ -2535,6 +2754,13 @@ export function hasCapability(held: readonly string[], cap: Capability): boolean
 	return held.includes(cap);
 }
 
+/** Is this string a capability in the matrix? For names written outside code, like frontmatter. */
+export function isCapability(name: string): name is Capability {
+	const dot = name.indexOf('.');
+	const actions = (capabilities as Record<string, readonly string[]>)[name.slice(0, dot)];
+	return dot > 0 && (actions?.includes(name.slice(dot + 1)) ?? false);
+}
+
 // ---------------------------------------------------------------------------
 // Capability grants: volunteer roles and committees
 // ---------------------------------------------------------------------------
@@ -2543,7 +2769,8 @@ export function hasCapability(held: readonly string[], cap: Capability): boolean
  * How a grantable capability may be carried.
  *
  * `role`: a confirmed signup on a shift in that role grants it for the shift's
- * event only, from the shift's start until `graceDays` after it ends.
+ * event only, from the shift's start (or the role's lead time before the
+ * event) until `graceDays` after it ends.
  * `committee`: `'org'` means active members hold it everywhere; `'owned'` means
  * only on records the committee owns, so a guard must name the committee.
  */
@@ -2563,12 +2790,19 @@ export const grantableCapabilities = {
 	'incident.file': { label: 'File an incident report for the show', role: { graceDays: 7 } },
 	// The door shift takes card payments for its own show, during the shift (#1630).
 	'finance.collect': { label: 'Take card payments at the door', role: { graceDays: 0 } },
+	// The door list: every attendee's name and ticket code, during the shift (#2794).
+	'event.checkIn': { label: 'Check people in at the door', role: { graceDays: 0 } },
+	// The vendor host: give the role a lead time to open it before the market (#2993).
+	'market.host': {
+		label: 'Decide vendors, check them in and take table fees',
+		role: { graceDays: 7 }
+	},
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
 	'grant.manage': { label: 'Manage grants', committee: 'org' },
-	'renewal.read': { label: 'See renewals', committee: 'org' },
-	'renewal.manage': { label: 'Manage renewals', committee: 'org' },
+	'contact.read': { label: 'See contacts', committee: 'org' },
+	'contact.manage': { label: 'Manage contacts', committee: 'org' },
 	// Powers over records a committee owns or takes part in (projects, its
 	// markets, its schedules). The guard names the record; the resolver finds the
 	// committees on it.
@@ -2593,6 +2827,9 @@ export const grantableCapabilities = {
 	// never reach one. Every active member of the holding committee runs them.
 	'ballot.manage': { label: 'Run member-wide ballots', committee: 'org' }
 } as const satisfies { readonly [C in Capability]?: GrantRule };
+
+/** The furthest ahead of its event a volunteer role's grants may start (#2993). */
+export const ROLE_GRANT_LEAD_DAYS_MAX = 90;
 
 export type GrantableCapability = keyof typeof grantableCapabilities;
 export type GrantCarrier = 'role' | 'committee';
@@ -2664,6 +2901,14 @@ export type BookerType = (typeof bookerTypes)[number];
  */
 export const eventHoldBookers = ['production', 'event_listing'] as const satisfies BookerType[];
 
+/**
+ * The one booker whose booking needs the Practice space clearance: a member's
+ * own practice time. The new-member notice, the tour and the orientation shift
+ * all key on it. Teaching (`instructor`) does not need it (#2808), nor does a
+ * band's or CMC's own hold.
+ */
+export const CLEARANCE_BOOKER = 'user' as const satisfies BookerType;
+
 export function isEventHold(bookerType: string): boolean {
 	return (eventHoldBookers as readonly string[]).includes(bookerType);
 }
@@ -2728,10 +2973,8 @@ export const attachableTypes = [
 	 * the event's public poster is not that until staff promote it.
 	 */
 	'artifact_request',
-	/** A sponsor's `logo`, shown beside its credit on an event (#583). */
-	'sponsor',
-	/** A permit, license or policy of CMC's own: its certificate, privately. */
-	'renewal'
+	/** An organization's `logo`, shown beside a sponsor's credit on an event (#583). */
+	'organization'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
@@ -2782,6 +3025,10 @@ export const eventKindLabels = {
 	market: 'Markets'
 } as const;
 
+/** The month calendar poster's sizes: two print PDFs and a social-feed PNG. */
+export const posterFormats = ['letter', 'tabloid', 'social'] as const;
+export type PosterFormat = (typeof posterFormats)[number];
+
 /**
  * Where a market vendor's application stands. `withdrawn` is terminal; a
  * decision can be reversed, a vendor's own withdrawal cannot. `no_show` is an
@@ -2789,6 +3036,7 @@ export const eventKindLabels = {
  */
 export const marketVendorStatuses = [
 	'applied',
+	'waitlisted',
 	'accepted',
 	'declined',
 	'withdrawn',
@@ -2796,12 +3044,15 @@ export const marketVendorStatuses = [
 ] as const;
 export const marketVendorStatusLabels: Record<(typeof marketVendorStatuses)[number], string> = {
 	applied: 'Applied',
+	waitlisted: 'Waitlisted',
 	accepted: 'Accepted',
 	declined: 'Declined',
 	withdrawn: 'Withdrawn',
 	no_show: 'No-show'
 };
 export type MarketVendorStatus = (typeof marketVendorStatuses)[number];
+/** The statuses a decision on an application may set. */
+export const marketVendorDecisions = ['accepted', 'waitlisted', 'declined'] as const;
 
 /** A vendor may ask for up to this many tables on one application. */
 export const MARKET_MAX_TABLES_REQUESTED = 4;
@@ -2830,7 +3081,7 @@ export type EntitySubtypeKey = MemberSubtype | EventSource | BookerType;
  * `config.ts` rather than beside the tables because `$lib/server` cannot be
  * imported from the browser, and every one of these values is read by a
  * `.svelte` file. The rendering half (icon, avatar shape) lives in
- * `$lib/components/ui/entity/registry.ts`, which carries Svelte icon
+ * `#lib/components/ui/entity/registry.js`, which carries Svelte icon
  * components and so cannot be imported by server code.
  *
  * Adding a value here without adding it to `entityKinds` fails
@@ -2855,11 +3106,20 @@ export const entityTypes = [
 	'help',
 	'classified',
 	'incident',
-	'project'
+	'project',
+	'local_resource',
+	'hour_log',
+	'work_request',
+	'group_application',
+	'market_vendor',
+	'volunteer',
+	'organization',
+	'contact',
+	'setting'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 
-// What to call each one (`entityLabels`) lives in `$lib/terms`, read from the
+// What to call each one (`entityLabels`) lives in `#lib/terms.js`, read from the
 // message catalog.
 
 /**
@@ -2869,7 +3129,7 @@ export type EntityType = (typeof entityTypes)[number];
  * instead of re-deriving the route with a nested ternary.
  *
  * Keyed by string rather than `FlagEntityType` because that type lives in
- * `$lib/server/db/schema/flag` and cannot be imported here.
+ * `#lib/server/db/schema/flag.js` and cannot be imported here.
  * `registry.spec.ts` asserts every value of it is covered.
  */
 export const flagEntityTypeToEntity: Record<string, EntityType> = {
@@ -2951,7 +3211,7 @@ export const RADIO_PRO_ATTESTATION = {
  * against each other, which meant the set of readable tiers was derived from
  * a closed table of roles — so a user holding a role that table had never
  * heard of scored below `member` and lost every article, including the ones
- * everybody can read. Positions (see docs/specs/shipped/admin-vs-staff-spec.md) are
+ * everybody can read. Positions (see docs/decisions/0032-guards-name-capabilities.md) are
  * unranked and open-ended, so they can never be ranked here again.
  *
  * `resolveHelpAudience` maps a person onto exactly one of these; a reader sees
@@ -2970,3 +3230,40 @@ export const helpAudienceLabels: Record<HelpAudience, string> = {
 	sustaining: 'Sustaining members',
 	staff: 'Staff'
 };
+
+// ---------------------------------------------------------------------------
+// Venue access (#2717)
+// ---------------------------------------------------------------------------
+
+/** A room's answer to one access question. `unknown` is not `no`: nobody has checked. */
+export const accessAnswers = ['yes', 'no', 'unknown'] as const;
+export type AccessAnswer = (typeof accessAnswers)[number];
+
+/** The fixed set of questions, in display order. Each is a `venue` column. */
+export const venueAccessFields = ['stepFreeEntry', 'accessibleRestroom', 'seating'] as const;
+export type VenueAccessField = (typeof venueAccessFields)[number];
+
+// ---------------------------------------------------------------------------
+// Interface vocabulary (#2842)
+// ---------------------------------------------------------------------------
+
+/**
+ * One word per concept: each entry is a word the interface no longer uses and
+ * the term that replaced it. `keys` limits a ban to message keys where the word
+ * names that concept, for words that are right elsewhere ("Rejected" events).
+ * scripts/message-copy.spec.ts holds the message catalog to this list, and
+ * audit-display.spec.ts the audit log's wording, under the key `audit`.
+ */
+export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
+	{ word: /\binstructors?\b/i, use: 'teacher' },
+	{
+		// A returned tip or teaching application is edited and resubmitted, not refused.
+		word: /\b(reject(s|ed|ing)?|turned down|unpublish(es|ed|ing)?)\b/i,
+		use: 'return / returned',
+		keys: /^staff_(return|local_resources|members_instructors|members_id_panels_instructor)/
+	},
+	{ word: /\bwork orders?\b/i, use: 'task' },
+	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' },
+	// A certification implies a regulating body (#2511, owner 2026-11-10).
+	{ word: /\bcertifications?\b/i, use: 'clearance' }
+];

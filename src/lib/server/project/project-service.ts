@@ -1,14 +1,17 @@
-import { db } from '$lib/server/db';
-import { project, projectCommittee } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { contractorJob } from '$lib/server/db/schema/contractor';
-import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
-import { eventListing } from '$lib/server/db/schema/event';
-import { financialEntry } from '$lib/server/db/schema/financial';
-import { production, productionExpense } from '$lib/server/db/schema/production';
-import { eventListingColumns } from '$lib/server/event/event-columns';
+import { db } from '#lib/server/db/index.js';
+import { project, projectCommittee } from '#lib/server/db/schema/project.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { workOrder, volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { acquisition, purchaseOrder, purchaseOrderLine } from '#lib/server/db/schema/inventory.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { financialEntry } from '#lib/server/db/schema/financial.js';
+import { production, productionExpense } from '#lib/server/db/schema/production.js';
+import { grantApplication } from '#lib/server/db/schema/grant.js';
+import { sponsorship } from '#lib/server/db/schema/sponsor.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { eventListingColumns } from '#lib/server/event/event-columns.js';
 import {
 	and,
 	asc,
@@ -22,30 +25,37 @@ import {
 	notInArray,
 	sql
 } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	assertListingKeepsShow,
 	assertProjectTakesListing
-} from '$lib/server/production/production-scope';
-import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
-import { placeWorkAwaitingEvent } from '$lib/server/volunteer/duty-list-service';
+} from '#lib/server/production/production-scope.js';
+import { placePendingWorkOrders } from '#lib/server/volunteer/retime-work-orders.js';
 import {
+	applyDutyList,
+	getStartableTemplate,
+	placeWorkAwaitingEvent
+} from '#lib/server/volunteer/duty-list-service.js';
+import { createShowProject } from '#lib/server/production/production-project.js';
+import { captureException } from '#lib/server/sentry.js';
+import {
+	awardedGrantStatuses,
 	contractorJobStatusesWithoutSpend,
+	creditedSponsorshipStatuses,
 	DEFAULT_TIMEZONE,
 	projectArchivedStatuses,
 	valueOfMinutesCents,
 	type ProjectCommitteeRole,
 	type ProjectKind,
 	type ProjectStatus
-} from '$lib/config';
-import { getHourValueCents } from '$lib/server/volunteer/hour-value';
-import { claimedSql } from '$lib/server/volunteer/work-order-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { ProjectField } from '$lib/types/audit';
+} from '#lib/config.js';
+import { getHourValueCents } from '#lib/server/volunteer/hour-value.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { ProjectField } from '#lib/types/audit.js';
 
 /**
- * A body of work with a budget and an owner — docs/specs/project-spec.md.
+ * A body of work with a budget and an owner — docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md.
  *
  * The container the schema kept describing and never had: a facility
  * improvement is a dozen work orders, an electrician's invoice and a purchase
@@ -78,6 +88,14 @@ export class ProjectOwnerError extends DomainError {
 	}
 }
 
+/** A parent link that would make a cycle or a second level (#2543). */
+export class ProjectParentError extends DomainError {
+	readonly httpStatus = 400;
+	constructor(message: string) {
+		super(message);
+	}
+}
+
 export interface CreateProjectInput {
 	name: string;
 	description?: string | null;
@@ -89,6 +107,8 @@ export interface CreateProjectInput {
 	/** The suggestion this answers. At most one project per suggestion. */
 	suggestionId?: string | null;
 	budgetCents?: number | null;
+	/** The festival or run this is one part of. One level deep, checked here. */
+	parentProjectId?: string | null;
 	startsAt?: Date | null;
 	endsAt?: Date | null;
 	status?: ProjectStatus;
@@ -137,7 +157,33 @@ async function assertClaimableSuggestion(suggestionId: string, exceptProjectId?:
 	}
 }
 
+/**
+ * Parents are one level deep: the parent has no parent, and the child has no
+ * children. A CHECK cannot read another row, so this is the rule's only guard
+ * beyond `project_not_own_parent`.
+ */
+async function assertParentable(projectId: string | null, parentId: string) {
+	if (projectId === parentId) throw new ProjectParentError('A project cannot be its own parent');
+	const [parent] = await db
+		.select({ parentProjectId: project.parentProjectId })
+		.from(project)
+		.where(eq(project.id, parentId))
+		.limit(1);
+	if (!parent) throw new ProjectParentError('That project does not exist');
+	if (parent.parentProjectId) {
+		throw new ProjectParentError('That project is already part of another');
+	}
+	if (!projectId) return;
+	const [child] = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(eq(project.parentProjectId, projectId))
+		.limit(1);
+	if (child) throw new ProjectParentError('A project with parts cannot be part of another');
+}
+
 export async function createProject(data: CreateProjectInput) {
+	if (data.parentProjectId) await assertParentable(null, data.parentProjectId);
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
 
@@ -150,6 +196,49 @@ export async function createProject(data: CreateProjectInput) {
 		await insert;
 	}
 	return getProjectById(id);
+}
+
+/**
+ * Create a project from a template, in one action. The Production template also
+ * makes it a show (#2387); its listing attaches when it exists, and items timed
+ * from an event wait for that (#2136). The template is read before anything is
+ * written, and a failed apply leaves the project, which can be applied to by hand.
+ */
+export async function startProject(
+	data: Omit<CreateProjectInput, 'status'>,
+	templateId?: string | null
+) {
+	if (!templateId) return createProject(data);
+	const template = await getStartableTemplate(templateId);
+
+	let row: typeof project.$inferSelect;
+	if (template.projectKind === 'production') {
+		if (data.groupId) await assertCommittee(data.groupId);
+		if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
+		const projectId = crypto.randomUUID();
+		await createShowProject({
+			productionId: crypto.randomUUID(),
+			projectId,
+			name: data.name,
+			description: data.description,
+			budgetCents: data.budgetCents,
+			suggestionId: data.suggestionId,
+			ownerGroupId: data.groupId,
+			startsAt: data.startsAt ?? null,
+			endsAt: data.endsAt ?? null,
+			createdByUserId: data.createdByUserId ?? null
+		});
+		row = await getProjectById(projectId);
+	} else {
+		row = await createProject(data);
+	}
+
+	try {
+		await applyDutyList(template.id, { kind: 'project', id: row.id }, data.createdByUserId ?? null);
+	} catch (err) {
+		captureException(err, { event: 'project.template', projectId: row.id, templateId });
+	}
+	return row;
 }
 
 /** A project's owning committee, as its `owner` row. */
@@ -180,6 +269,7 @@ function changedFields(
 	if (differs(data.groupId, ownerId)) fields.push('committee');
 	if (differs(data.suggestionId, before.suggestionId)) fields.push('suggestion');
 	if (differs(data.budgetCents, before.budgetCents)) fields.push('budget');
+	if (differs(data.parentProjectId, before.parentProjectId)) fields.push('parent');
 	if (
 		differs(data.startsAt === undefined ? undefined : day(data.startsAt), day(before.startsAt)) ||
 		differs(data.endsAt === undefined ? undefined : day(data.endsAt), day(before.endsAt))
@@ -200,6 +290,7 @@ async function ownerOf(projectId: string): Promise<string | null> {
 export async function updateProject(id: string, data: Partial<CreateProjectInput>) {
 	const before = await getProjectById(id);
 	const ownerBefore = await ownerOf(id);
+	if (data.parentProjectId) await assertParentable(id, data.parentProjectId);
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId, id);
 
@@ -219,7 +310,7 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 	// Template work stamped before the project had a start is placed now.
 	if (data.startsAt) {
 		const at = Math.floor(data.startsAt.getTime() / 1000);
-		await placePendingWorkOrders({ projectId: id }, ['project_start'], sql`${at}`);
+		await db.batch(placePendingWorkOrders({ projectId: id }, ['project_start'], sql`${at}`));
 	}
 	const after = await getProjectById(id);
 	const changed = changedFields(before, ownerBefore, data);
@@ -290,6 +381,47 @@ export async function getProjectShowId(projectId: string): Promise<string | null
 }
 
 /**
+ * A project's place in a festival or run (#2543): its parent, its children, and
+ * the projects it could be made part of. A project with children is a parent,
+ * so it is offered none; a parent's spend by child is `getProjectBurn().parts`.
+ */
+export async function getProjectFamily(id: string) {
+	const proj = await getProjectById(id);
+	const [parent, children] = await Promise.all([
+		proj.parentProjectId
+			? db
+					.select({ id: project.id, name: project.name })
+					.from(project)
+					.where(eq(project.id, proj.parentProjectId))
+					.limit(1)
+			: Promise.resolve([]),
+		db
+			.select({ id: project.id, name: project.name })
+			.from(project)
+			.where(eq(project.parentProjectId, id))
+			.orderBy(asc(project.startsAt), asc(project.name), asc(project.id))
+	]);
+	const parentOptions =
+		children.length > 0
+			? []
+			: await db
+					.select({ id: project.id, name: project.name })
+					.from(project)
+					.where(
+						and(
+							isNull(project.parentProjectId),
+							sql`${project.id} != ${id}`,
+							notInArray(project.status, [...projectArchivedStatuses])
+						)
+					)
+					.orderBy(asc(project.name));
+	// An archived parent is still the value the edit form posts back.
+	const current = parent[0] ?? null;
+	if (current && !parentOptions.some((o) => o.id === current.id)) parentOptions.unshift(current);
+	return { parent: current, children, parentOptions };
+}
+
+/**
  * The committees that may own a project.
  *
  * Here rather than in a remote module because two of them need it — the project
@@ -351,6 +483,8 @@ export async function listProjects(
 		groupId?: string;
 		unowned?: boolean;
 		kind?: ProjectKind;
+		/** Leave out shows with a listing: the Productions view lists those. */
+		exceptListedShows?: boolean;
 	} = {}
 ) {
 	const archived = [...projectArchivedStatuses];
@@ -363,6 +497,14 @@ export async function listProjects(
 				opts.archived === true ? inArray(project.status, archived) : undefined,
 				opts.archived === false ? notInArray(project.status, archived) : undefined,
 				opts.kind ? eq(project.kind, opts.kind) : undefined,
+				opts.exceptListedShows
+					? notExists(
+							db
+								.select({ one: sql`1` })
+								.from(eventListing)
+								.where(and(eq(eventListing.projectId, project.id), eq(project.kind, 'production')))
+						)
+					: undefined,
 				opts.groupId ? takesPart(opts.groupId) : undefined,
 				opts.unowned
 					? notExists(
@@ -436,7 +578,7 @@ export async function startProjectFromSuggestion(
  * One map rather than ten near-identical functions: every attachment is the
  * same statement against a different table, and the differences that would
  * justify separate functions — validation, side effects — do not exist. A work
- * order keeps its `eventId` and `assetId` when it gains a project; these are
+ * order keeps its `eventId` and its links when it gains a project; these are
  * independent anchors, not a choice between them.
  */
 const ATTACHABLE = {
@@ -546,13 +688,147 @@ export interface ProjectBurn {
 		/** The rate used, so a report built on this can cite itself. */
 		hourValueCents: number;
 	};
+	/**
+	 * What the project was given (#2622): awarded grants and running or finished
+	 * sponsorships whose `funds_project_id` names it, each listed. Beside the
+	 * spend, never netted against it: the budget is a ceiling, not a balance.
+	 */
+	funding: {
+		grantsCents: number;
+		sponsorshipsCents: number;
+		totalCents: number;
+		sources: FundingSource[];
+	};
 	/** Budget minus cash spend. Null when no budget is set — not zero. */
 	remainingCents: number | null;
+	/**
+	 * A parent's cash spend by project, its own first (#2543). Every figure
+	 * above already sums these; empty on a project with no children.
+	 */
+	parts: ProjectBurnPart[];
 }
 
+export interface ProjectBurnPart {
+	projectId: string;
+	name: string;
+	cashCents: number;
+}
+
+type OwnBurn = Omit<ProjectBurn, 'budgetCents' | 'remainingCents' | 'parts'>;
+
+export interface FundingSource {
+	kind: 'grant' | 'sponsorship';
+	id: string;
+	title: string;
+	/** The funder or sponsor, which a sponsorship's link goes to. */
+	organizationId: string;
+	organizationName: string;
+	cents: number;
+}
+
+/** Grants and sponsorships that name the project as what they pay for, and have come through. */
+async function fundingOf(projectId: string): Promise<ProjectBurn['funding']> {
+	const [grants, ships] = await Promise.all([
+		db
+			.select({
+				id: grantApplication.id,
+				title: grantApplication.title,
+				organizationId: grantApplication.organizationId,
+				organizationName: organization.name,
+				cents: grantApplication.amountAwardedCents
+			})
+			.from(grantApplication)
+			.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
+			.where(
+				and(
+					eq(grantApplication.fundsProjectId, projectId),
+					inArray(grantApplication.status, [...awardedGrantStatuses])
+				)
+			),
+		db
+			.select({
+				id: sponsorship.id,
+				title: sponsorship.title,
+				organizationId: sponsorship.organizationId,
+				organizationName: organization.name,
+				cents: sponsorship.amountCents
+			})
+			.from(sponsorship)
+			.innerJoin(organization, eq(organization.id, sponsorship.organizationId))
+			.where(
+				and(
+					eq(sponsorship.fundsProjectId, projectId),
+					inArray(sponsorship.status, [...creditedSponsorshipStatuses])
+				)
+			)
+	]);
+	const sources: FundingSource[] = [
+		...grants.map((g) => ({ ...g, kind: 'grant' as const, cents: g.cents ?? 0 })),
+		...ships.map((s) => ({ ...s, kind: 'sponsorship' as const, cents: s.cents ?? 0 }))
+	];
+	const sum = (kind: FundingSource['kind']) =>
+		sources.filter((s) => s.kind === kind).reduce((n, s) => n + s.cents, 0);
+	const grantsCents = sum('grant');
+	const sponsorshipsCents = sum('sponsorship');
+	return { grantsCents, sponsorshipsCents, totalCents: grantsCents + sponsorshipsCents, sources };
+}
+
+/**
+ * What a project has cost, and on a festival or run what its child shows have
+ * cost too. The parent's budget is the ceiling for the sum; a child's own
+ * budget stays on the child. One level deep, so the children's own burn is all.
+ */
 export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const proj = await getProjectById(projectId);
+	const own = await ownBurn(projectId);
+	const children = await db
+		.select({ id: project.id, name: project.name })
+		.from(project)
+		.where(eq(project.parentProjectId, projectId))
+		.orderBy(asc(project.startsAt), asc(project.name), asc(project.id));
+	const childBurns = await Promise.all(children.map((c) => ownBurn(c.id)));
+	const total = childBurns.reduce(addBurn, own);
 
+	return {
+		budgetCents: proj.budgetCents,
+		...total,
+		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - total.cash.totalCents,
+		parts:
+			children.length === 0
+				? []
+				: [
+						{ projectId, name: proj.name, cashCents: own.cash.totalCents },
+						...children.map((c, i) => ({
+							projectId: c.id,
+							name: c.name,
+							cashCents: childBurns[i].cash.totalCents
+						}))
+					]
+	};
+}
+
+/** Field by field. The hour rate is a rate, not an amount, so it is carried, not added. */
+function addBurn(a: OwnBurn, b: OwnBurn): OwnBurn {
+	const add = <T extends Record<string, number>>(x: T, y: T) =>
+		Object.fromEntries(Object.keys(x).map((k) => [k, x[k] + y[k]])) as T;
+	return {
+		cash: add(a.cash, b.cash),
+		show: add(a.show, b.show),
+		contributed: {
+			...add(a.contributed, b.contributed),
+			hourValueCents: a.contributed.hourValueCents
+		},
+		funding: {
+			grantsCents: a.funding.grantsCents + b.funding.grantsCents,
+			sponsorshipsCents: a.funding.sponsorshipsCents + b.funding.sponsorshipsCents,
+			totalCents: a.funding.totalCents + b.funding.totalCents,
+			sources: [...a.funding.sources, ...b.funding.sources]
+		}
+	};
+}
+
+/** One project's ledgers, without its children. */
+async function ownBurn(projectId: string): Promise<OwnBurn> {
 	// Two aggregates from one pass, over engagements on this project's work
 	// orders. Reading the donated flag rather than trusting a null cost keeps a
 	// mis-entered row out of cash spend. A declined or cancelled engagement is
@@ -614,7 +890,8 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	// orders are counted when placed: committed when written, not at settlement.
 	const [ledger] = await db
 		.select({
-			ticketRevenueCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'earned' then ${financialEntry.amountCents} else 0 end), 0)`,
+			// Net of the card fee, which is a `spent` row on the same ticket.
+			ticketRevenueCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} in ('earned', 'spent') then ${financialEntry.amountCents} else 0 end), 0)`,
 			actsPoolInCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'ticket' and ${financialEntry.kind} = 'pass_through' then ${financialEntry.amountCents} else 0 end), 0)`,
 			actPayoutsCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' then -${financialEntry.amountCents} else 0 end), 0)`,
 			guaranteeTopUpCents: sql<number>`coalesce(sum(case when ${financialEntry.subjectType} = 'production' and ${financialEntry.kind} = 'spent' then -${financialEntry.amountCents} else 0 end), 0)`
@@ -632,7 +909,7 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 		.innerJoin(production, eq(production.id, productionExpense.productionId))
 		.where(eq(production.projectId, projectId));
 
-	const hourValueCents = await getHourValueCents();
+	const [hourValueCents, funding] = await Promise.all([getHourValueCents(), fundingOf(projectId)]);
 
 	const show = {
 		ticketRevenueCents: Number(ledger?.ticketRevenueCents ?? 0),
@@ -651,7 +928,6 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const volunteerMinutes = Number(labour?.minutes ?? 0);
 
 	return {
-		budgetCents: proj.budgetCents,
 		cash: { contractorCents, purchaseOrderCents, acquisitionCents, showCents, totalCents },
 		show,
 		contributed: {
@@ -664,39 +940,20 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 			donatedGoodsCents: Number(acquired?.donatedCents ?? 0),
 			hourValueCents
 		},
-		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - totalCents
+		funding
 	};
 }
 
-/** Everything hanging off the project, for its detail page. */
+/**
+ * The orders, acquisitions and events on a project, for its detail page. Its
+ * tasks are `TaskCatalogue`'s, which reads them itself.
+ */
 export async function listProjectAttachments(projectId: string) {
-	const [workOrders, jobs, orders, acquisitions, events] = await Promise.all([
-		// `title` is the column's own rule: the work order's, else its event's, else
-		// its role's. The role join is a left join: contractor and unassigned work
-		// has none, and is still the project's.
+	const [orders, acquisitions, events] = await Promise.all([
 		db
-			.select({
-				...getTableColumns(workOrder),
-				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
-				claimed: claimedSql().mapWith(Number)
-			})
-			.from(workOrder)
-			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-			.where(eq(workOrder.projectId, projectId))
-			.orderBy(asc(workOrder.startsAt)),
-		db
-			.select({
-				...getTableColumns(contractorJob),
-				title: sql<string>`coalesce(${workOrder.title}, 'Work order')`
-			})
-			.from(contractorJob)
-			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
-			.where(eq(workOrder.projectId, projectId))
-			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
-		db
-			.select()
+			.select({ ...getTableColumns(purchaseOrder), supplierName: organization.name })
 			.from(purchaseOrder)
+			.leftJoin(organization, eq(organization.id, purchaseOrder.organizationId))
 			.where(eq(purchaseOrder.projectId, projectId))
 			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id)),
 		db
@@ -712,8 +969,6 @@ export async function listProjectAttachments(projectId: string) {
 	]);
 
 	return {
-		workOrders,
-		jobs,
 		orders,
 		acquisitions,
 		events: events.map((ev) => ({ ...ev, ref: toEventRef({ ...ev, image: ev.posterKey }) }))

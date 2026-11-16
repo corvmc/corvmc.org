@@ -1,4 +1,4 @@
-import type { DailyScope } from '$lib/server/inbox/thread-service';
+import type { DailyScope } from '#lib/server/inbox/thread-service.js';
 
 /**
  * One Daily session: the order, where you are in it, and what you did.

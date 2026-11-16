@@ -1,0 +1,5 @@
+# Committee deliverables
+
+Status: ✅ Built
+
+Responsibility apart from permission (#1701, `docs/decisions/0053-committees-own-deliverables-not-permissions.md`). A work order and its duty-list item carry an owning committee (`group_id`), a title and a `done_when` from the closed `workDoneConditions` enum. An item is done when resolved by hand, or when its condition holds and its tasks are ticked; `evaluateDone` derives it in a batch and shares its predicates with `publishBlockers` and the `closed` gate, which still gate on their own. A new show gets the `Show deliverables` template, the one marked as starting a production (#2387): nine items owned by Booking, Art and Merchandise, Communications and Production. A committee's page gains an Open items tab (take it, tick, done anyway, hand on, under `volunteer.manageShifts` read off the work order), and the production console a Deliverables card. Owning an item grants no reach. Cancelling a show calls off its open items and tells every committee that had one; two sweep reminders chase items due in three days and overdue by up to a fortnight.

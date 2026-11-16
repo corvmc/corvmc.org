@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: {} }) }));
 
 const {
@@ -20,11 +20,12 @@ const {
 	listClearanceHolders,
 	isLapsing
 } = await import('./access-service');
-const { role, modelHasRole } = await import('$lib/server/db/schema/authorization');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { group, groupMember, groupCapability } = await import('$lib/server/db/schema/group');
+const { role, modelHasRole } = await import('#lib/server/db/schema/authorization.js');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { group, groupMember, groupCapability } = await import('#lib/server/db/schema/group.js');
 const { volunteerCertification, memberCertification } =
-	await import('$lib/server/db/schema/volunteer');
+	await import('#lib/server/db/schema/volunteer.js');
+const { seatSql } = await import('#lib/server/testing/operations-seat.js');
 
 const DAY = 86_400_000;
 const now = new Date();
@@ -34,8 +35,11 @@ beforeEach(async () => {
 		'member_certification',
 		'volunteer_certification',
 		'group_capability',
+		'group_position_holder',
+		// Operations and its positions come from the migrations; keep them.
+		"group_position where group_id <> 'operations'",
 		'group_member',
-		'"group"',
+		`"group" where id <> 'operations'`,
 		'model_has_roles',
 		'roles',
 		'user'
@@ -58,12 +62,13 @@ beforeEach(async () => {
 		);
 	await testDb.insert(modelHasRole).values([
 		{ roleId: 1, userId: 'u-ada' },
-		{ roleId: 2, userId: 'u-bo' },
-		{ roleId: 3, userId: 'u-cy' },
 		{ roleId: 4, userId: 'u-di' },
+		// A job name left as a role row grants nothing (#2992).
+		{ roleId: 3, userId: 'u-di' },
 		// A deleted account holds nothing worth counting.
 		{ roleId: 1, userId: 'u-gone' }
 	]);
+	sqlite.exec(seatSql('u-bo', 'staff') + seatSql('u-cy', 'treasurer') + seatSql('u-gone', 'staff'));
 	await testDb.insert(group).values([
 		{ id: 'g-dev', kind: 'committee', name: 'Development', slug: 'development' },
 		{ id: 'g-club', kind: 'club', name: 'Jazz', slug: 'jazz' }
@@ -73,10 +78,13 @@ beforeEach(async () => {
 		{ groupId: 'g-dev', capability: 'project.manage' }
 	]);
 	await testDb.insert(groupMember).values([
-		{ id: 'gm-1', groupId: 'g-dev', userId: 'u-di', role: 'admin', status: 'active' },
+		{ id: 'gm-1', groupId: 'g-dev', userId: 'u-di', role: 'member', status: 'active' },
 		{ id: 'gm-2', groupId: 'g-dev', userId: 'u-cy', role: 'member', status: 'inactive' },
 		{ id: 'gm-3', groupId: 'g-club', userId: 'u-di', role: 'member', status: 'active' }
 	] as never);
+	// The chair is the chair position's holder (#3009).
+	sqlite.exec(`insert into group_position (id, group_id, name, is_chair) values ('p-chair', 'g-dev', 'Chair', 1);
+		insert into group_position_holder (position_id, member_id) values ('p-chair', 'gm-1')`);
 	await testDb
 		.insert(volunteerCertification)
 		.values({ id: 'vc-food', name: 'Food handler' } as never);
@@ -119,28 +127,31 @@ describe('getAccessSummary', () => {
 });
 
 describe('getPersonAccess', () => {
-	it('names the seat, chair status and committee grants, ignoring clubs and legacy roles', async () => {
+	it('names the seat, its positions and committee grants, ignoring clubs and legacy roles', async () => {
 		const access = await getPersonAccess('u-di');
 		expect(access.positions).toEqual([]);
-		expect(access.capabilities).toEqual([]);
-		expect(access.seats).toEqual([
+		expect(access.departments).toEqual([
 			{
 				groupId: 'g-dev',
 				name: 'Development',
-				chair: true,
-				grants: expect.arrayContaining(['sponsor.manage', 'project.manage'])
+				positions: ['Chair'],
+				grants: expect.arrayContaining([
+					{ capability: 'sponsor.manage', reach: 'org' },
+					{ capability: 'project.manage', reach: 'owned' }
+				])
 			}
 		]);
+		expect(access.shiftRoles).toEqual([]);
 		expect(access.clearances.map((c) => c.id)).toEqual(['mc-1']);
 	});
 
-	it("expands a position into the matrix's capabilities", async () => {
+	it('gives each position what the guards grant it', async () => {
 		const access = await getPersonAccess('u-cy');
-		expect(access.positions).toEqual(['treasurer']);
-		expect(access.capabilities).toContain('finance.refund');
-		expect(access.capabilities).not.toContain('user.setRole');
+		expect(access.positions.map((p) => p.position)).toEqual(['treasurer']);
+		expect(access.positions[0].capabilities).toContain('finance.refund');
+		expect(access.positions[0].capabilities).not.toContain('user.setRole');
 		// An inactive seat grants nothing.
-		expect(access.seats).toEqual([]);
+		expect(access.departments).toEqual([]);
 	});
 });
 

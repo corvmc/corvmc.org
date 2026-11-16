@@ -19,20 +19,21 @@
  * accept a `null` image; adding a join per row to fetch an avatar is an N+1
  * dressed as a projection.
  */
+import { reservationTrack } from '#lib/utils/reservation-actions.js';
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
-import type { BookerType } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { eventListing } from '$lib/server/db/schema/event';
-import { eventPosterKeySql } from '$lib/server/event/event-columns';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { topPositionFor } from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { memberSubtype } from '$lib/utils/entity-ref';
-import { flagEntityTypeToEntity } from '$lib/config';
-import { entityLabels } from '$lib/terms';
-import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
+import type { BookerType } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { eventPosterKeySql } from '#lib/server/event/event-columns.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { topPositionFor } from '#lib/server/authorization.js';
+import { isSustainingMemberSql } from '#lib/server/finance/subscription-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { memberSubtype } from '#lib/utils/entity-ref.js';
+import { flagEntityTypeToEntity } from '#lib/config.js';
+import { entityLabels } from '#lib/terms.js';
+import { formatDate, formatDuration, formatTimeRange } from '#lib/utils/format.js';
 import type {
 	BandRef,
 	EntityRef,
@@ -40,7 +41,7 @@ import type {
 	GenericRef,
 	MemberRef,
 	ReservationRef
-} from '$lib/types/entity';
+} from '#lib/types/entity.js';
 
 /**
  * The `user` table, or any `alias()` of it — the alias arm is what lets a query
@@ -244,7 +245,11 @@ export function reservationRefColumns(r: ReservationTable = reservation) {
 		startsAt: r.startsAt,
 		endsAt: r.endsAt,
 		bookerType: r.bookerType,
-		ownerUserId: r.createdByUserId
+		ownerUserId: r.createdByUserId,
+		// What the track reads, so a ref shows the status every other surface does.
+		paidAt: r.paidAt,
+		refundedAt: r.refundedAt,
+		cashDueCents: r.cashDueCents
 	};
 }
 
@@ -255,13 +260,29 @@ export interface ReservationRefRow {
 	endsAt: Date;
 	bookerType?: string | null;
 	ownerUserId?: string | null;
+	paidAt?: Date | null;
+	refundedAt?: Date | null;
+	cashDueCents?: number | null;
+}
+
+/** The track (#2861) where the row carries its columns; the stored status otherwise. */
+function refStatus(row: ReservationRefRow): string | null {
+	if (!row.status || !row.bookerType || row.paidAt === undefined) return row.status ?? null;
+	return reservationTrack({
+		status: row.status,
+		bookerType: row.bookerType,
+		endsAt: row.endsAt,
+		paidAt: row.paidAt,
+		refundedAt: row.refundedAt ?? null,
+		cashDueCents: row.cashDueCents ?? null
+	});
 }
 
 /**
  * A booking as a record: the slot it holds, and who can reach it.
  *
  * The title is formatted here rather than at the call site, which is safe
- * because `$lib/utils/format` pins `DEFAULT_TIMEZONE` on every formatter it
+ * because `#lib/utils/format.js` pins `DEFAULT_TIMEZONE` on every formatter it
  * builds — venue time, not the reader's and not the server's. A booking is a
  * room at an hour, so the club's clock is the only one that means anything;
  * formatting it on the server changes the string not at all.
@@ -278,7 +299,7 @@ export function toReservationRef(
 		id: row.id,
 		title: `${formatDate(row.startsAt)} · ${formatTimeRange(row.startsAt, row.endsAt)}`,
 		subtitle: formatDuration(row.startsAt, row.endsAt),
-		status: row.status ?? null,
+		status: refStatus(row),
 		// Exception-only: a member booking for themselves is the ordinary case and
 		// is absent from the registry, so it resolves to no marker.
 		subtype: row.bookerType ?? null,

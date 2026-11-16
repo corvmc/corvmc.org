@@ -1,0 +1,26 @@
+diff --git a/src/runtime/client/client.js b/src/runtime/client/client.js
+index 2d34d23ed6f20ae499b3ecd1d37fd2cd38e807ff..bb9c620a0fefdbb7080ab2e9e74e019715a7fa8d 100644
+--- a/src/runtime/client/client.js
++++ b/src/runtime/client/client.js
+@@ -7,7 +7,7 @@
+ /** @import { Query } from './remote-functions/query/instance.svelte.js' */
+ /** @import { LiveQuery } from './remote-functions/query-live/instance.svelte.js' */
+ import { DEV } from 'esm-env';
+-import { settled, tick, fork, onMount, hydrate, mount } from 'svelte';
++import { settled, tick, fork, onMount, hydrate, mount, flushSync } from 'svelte';
+ import { HttpError, Redirect, SvelteKitError, HandledHttpError } from '@sveltejs/kit/internal';
+ import { decode_pathname, strip_hash, make_trackable, normalize_path } from '../../utils/url.js';
+ import { dev_fetch, initial_fetch, lock_fetch, subsequent_fetch, unlock_fetch } from './fetcher.js';
+@@ -904,7 +904,11 @@ async function initialize(result, target, should_hydrate) {
+ 		if (style) style.remove();
+ 	}
+ 
+-	apply_navigation_result(result);
++	// Committed before mounting: under experimental async, a batch still pending
++	// when a boundary's contents first render reverts this write for them, so the
++	// render tree's `child` reads undefined and Root throws. Hydration keeps the
++	// batch open for as long as any top-level await is outstanding.
++	flushSync(() => apply_navigation_result(result));
+ 
+ 	// TODO treeshake `hydrate` in csr mode
+ 	const render = should_hydrate ? hydrate : mount;

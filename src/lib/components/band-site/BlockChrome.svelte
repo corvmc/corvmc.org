@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		IconGripVertical,
 		IconChevronUp,
@@ -9,9 +10,9 @@
 		IconArrowUpRight
 	} from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { BLOCK_LABELS } from '$lib/utils/band-site-preset';
+	import { BLOCK_LABELS } from '#lib/utils/band-site-preset.js';
 	import { BLOCK_SOURCES } from './block-editing';
-	import type { Block } from '$lib/types/band-page';
+	import type { Block } from '#lib/types/band-page.js';
 
 	/**
 	 * The control strip a block carries in the editor.
@@ -50,7 +51,7 @@
 	const source = $derived(BLOCK_SOURCES[block.type]);
 	const label = $derived(BLOCK_LABELS[block.type].label);
 	const hidden = $derived(block.hidden === true);
-	const ownerHref = $derived(source.owner ? resolve(`/band/${slug}/${source.owner}`) : null);
+	const ownerHref = $derived(source.owner ? resolve(`band/${slug}/${source.owner}`) : null);
 </script>
 
 <div
@@ -90,7 +91,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label="Move {label} up"
+			aria-label={m.band_site_band_site_block_chrome_move_up_label({ label })}
 			disabled={index === 0}
 			onclick={() => onMove(-1)}
 		>
@@ -100,7 +101,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label="Move {label} down"
+			aria-label={m.band_site_band_site_block_chrome_move_down_label({ label })}
 			disabled={index === total - 1}
 			onclick={() => onMove(1)}
 		>
@@ -109,7 +110,9 @@
 		<button
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
-			aria-label={hidden ? `Publish ${label}` : `Stop publishing ${label}`}
+			aria-label={hidden
+				? m.band_site_band_site_block_chrome_publish_label({ label })
+				: m.band_site_band_site_block_chrome_stop_publishing_label({ label })}
 			aria-pressed={!hidden}
 			onclick={onToggleHidden}
 		>
@@ -123,7 +126,7 @@
 			<button
 				type="button"
 				class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
-				aria-label="{label} settings"
+				aria-label={m.band_site_band_site_block_chrome_settings_label({ label })}
 				aria-expanded={open}
 				onclick={onToggleOpen}
 			>

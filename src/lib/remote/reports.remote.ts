@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { query } from '$app/server';
-import { requireCapability } from '$lib/server/authorization';
-import { getAnnualReport } from '$lib/server/report/annual-report-service';
-import { getCommitteeReport } from '$lib/server/report/committee-report-service';
-import { requireCommitteeMember } from '$lib/server/group/group-context';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getAnnualReport } from '#lib/server/report/annual-report-service.js';
+import { getCommitteeReport } from '#lib/server/report/committee-report-service.js';
+import { requireCommitteeMember } from '#lib/server/group/group-context.js';
 
 /**
  * The annual report, as one query.

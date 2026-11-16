@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { expectSuccessToast } from './toast';
 import { readLocalDb } from './fixtures/platform-db';
@@ -20,11 +21,7 @@ import { SEED_ITEM_ID, SEED_INTAKE_BULK_ID } from './fixtures/seed-inventory';
 const INTAKE_SERIAL = 'E2E-INTAKE-SERIAL-1';
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 test.describe('inventory intake', () => {
@@ -32,39 +29,48 @@ test.describe('inventory intake', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		// Reached from Inventory's header, which names it for what it does (#1937).
-		await page.goto('/staff/inventory');
-		await page.getByRole('link', { name: 'Receive Stock' }).click();
+		// Reached from Supplies as well as Gear: one intake files into either (#2573).
+		await page.goto('/staff/inventory/supplies');
+		await page.locator('a[href="/staff/inventory/intake"]').click();
 		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Receive Stock' })).toBeVisible();
+		// A walk-in arrival, not one posted against an order.
+		await expect(page.locator('input#lineQty_0')).toBeVisible();
+		await expect(
+			page.locator('input:is([name="purchaseOrderId"], [name^="purchaseOrderId/"])')
+		).toHaveCount(0);
 
 		// Line 1: the serialized item, two units, one tagged and one not — the
 		// mixed case the tagging queue exists for.
 		// By id: the option label is "Category → Item", so it is not the item name
 		// on its own, and the id is what the payload carries anyway.
-		await page.locator('select[name="lineItem_0"]').selectOption(SEED_ITEM_ID);
-		await page.locator('input[name="lineQty_0"]').fill('2');
-		await page.locator('input[name="lineCost_0"]').fill('25.00');
+		await page.locator('select#lineItem_0').selectOption(SEED_ITEM_ID);
+		await page.locator('input#lineQty_0').fill('2');
+		await page.locator('input#lineCost_0').fill('25.00');
 
-		await expect(page.locator('input[name="unitTag_0_0"]')).toBeVisible();
-		await page.locator('input[name="unitTag_0_0"]').fill('E2E-INTAKE-1');
+		await expect(page.locator('input#unitTag_0_0')).toBeVisible();
+		await page.locator('input#unitTag_0_0').fill('E2E-INTAKE-1');
 		// Second unit deliberately left untagged, but given a serial — that serial
 		// is how the tagging test below finds *this* unit rather than binding
 		// whatever happens to be first in a queue it shares with the fixtures.
-		await page.locator('input[name="unitSerial_0_1"]').fill(INTAKE_SERIAL);
+		await page.locator('input#unitSerial_0_1').fill(INTAKE_SERIAL);
 
 		// Line 2: a counted item, which must not expand into units.
-		await page.getByRole('button', { name: 'Add a line' }).click();
+		await page.getByTestId('add-intake-line').click();
 		// Its own fixture item, not a shared consumable: `inventory.e2e.ts` asserts
 		// those on-hand numbers absolutely, so receiving into one turns a
 		// neighbouring test red for a reason unrelated to what it checks.
-		await page.locator('select[name="lineItem_1"]').selectOption(SEED_INTAKE_BULK_ID);
-		await page.locator('input[name="lineQty_1"]').fill('12');
-		await expect(page.locator('input[name="unitTag_1_0"]')).toHaveCount(0);
+		await page.locator('select#lineItem_1').selectOption(SEED_INTAKE_BULK_ID);
+		await page.locator('input#lineQty_1').fill('12');
+		await expect(page.locator('input#unitTag_1_0')).toHaveCount(0);
 
-		await expect(page.getByText('1 will need tagging')).toBeVisible();
+		// The serialized line's two unit rows, one left untagged; the counted line adds none.
+		await expect(page.locator('input[id^="unitTag_"]')).toHaveCount(2);
+		await expect(page.locator('input#unitTag_0_1')).toHaveValue('');
 
-		await page.getByRole('button', { name: 'Record this arrival' }).click();
+		await page
+			.locator('form', { has: page.locator('input:is([name="lines"], [name^="lines/"])') })
+			.locator('button[type="submit"]')
+			.click();
 		await expectSuccessToast(page);
 
 		// It lands on the acquisition it just wrote.
@@ -92,11 +98,11 @@ test.describe('inventory intake', () => {
 		// whichever fixture unit sorted first, which another test needs untagged.
 		// A modal off the Inventory header now; the old page redirects to it.
 		await page.goto('/staff/inventory');
-		await page.getByRole('button', { name: /^Needs tagging/ }).click();
-		const queue = page.getByRole('dialog', { name: 'Needs tagging' });
+		await page.getByTestId('tagging-queue').click();
+		const queue = page.getByRole('dialog');
 		await expect(queue).toBeVisible();
 
-		const rows = queue.locator('input[name$="assetTag"]');
+		const rows = queue.locator('input:is([name$="assetTag"], [name*="assetTag/"])');
 		const before = await rows.count();
 		expect(before).toBeGreaterThan(0);
 
@@ -105,8 +111,8 @@ test.describe('inventory intake', () => {
 		// first, which another test needs untagged.
 		const card = queue.locator('li').filter({ hasText: INTAKE_SERIAL });
 
-		await card.locator('input[name$="assetTag"]').fill('E2E-TAGGED-1');
-		await card.getByRole('button', { name: 'Bind' }).click();
+		await card.locator('input:is([name$="assetTag"], [name*="assetTag/"])').fill('E2E-TAGGED-1');
+		await card.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
 		// The queue is derived from `asset_tag IS NULL`, so the row it just
@@ -118,6 +124,7 @@ test.describe('inventory intake', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inventory/tagging');
 		await page.waitForURL(/\/staff\/inventory\?tagging/, { timeout: 15000 });
-		await expect(page.getByRole('dialog', { name: 'Needs tagging' })).toBeVisible();
+		// `?tagging` is the only thing that opens a modal on arrival.
+		await expect(page.getByRole('dialog')).toBeVisible();
 	});
 });

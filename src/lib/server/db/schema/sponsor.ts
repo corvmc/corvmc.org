@@ -2,33 +2,12 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 import { sql } from 'drizzle-orm';
 import { sponsorshipStatuses } from '../../../config';
 import { eventListing } from './event';
+import { organization } from './party';
+import { project } from './project';
 
 /**
- * A business that sponsors, or might sponsor, the collective. The row outlives
- * any one term, so its history and its contact stay in one place.
- * See docs/specs/shipped/development-agreements-spec.md.
- */
-export const sponsor = sqliteTable('sponsor', {
-	id: text('id')
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	name: text('name').notNull(),
-	website: text('website'),
-	contactName: text('contact_name'),
-	contactEmail: text('contact_email'),
-	notes: text('notes'),
-	/** Archived: off the active list, with every sponsorship kept. Null is live. */
-	deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`)
-});
-
-/**
- * One term of support from a sponsor: a tier, an amount, and the dates it runs.
+ * One term of support from a sponsor organization: a tier, an amount, and the
+ * dates it runs, on a project of kind `sponsorship` that holds the work (#2622).
  * Dates are `YYYY-MM-DD` strings, a day in Corvallis with no time.
  */
 export const sponsorship = sqliteTable(
@@ -37,9 +16,16 @@ export const sponsorship = sqliteTable(
 		id: text('id')
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		sponsorId: text('sponsor_id')
+		/** The sponsor: an organization holding the `sponsor` role, which the service checks. */
+		organizationId: text('organization_id')
 			.notNull()
-			.references(() => sponsor.id, { onDelete: 'restrict' }),
+			.references(() => organization.id, { onDelete: 'restrict' }),
+		/** The project this sponsorship is, as `grant_application.project_id`. */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
+		/** What the money pays for. Null is general support. */
+		fundsProjectId: text('funds_project_id').references(() => project.id, {
+			onDelete: 'set null'
+		}),
 		title: text('title').notNull(),
 		tier: text('tier'),
 		status: text('status', { enum: sponsorshipStatuses }).notNull().default('prospect'),
@@ -54,7 +40,13 @@ export const sponsorship = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('sponsorship_sponsor_idx').on(t.sponsorId)]
+	(t) => [
+		index('sponsorship_organization_idx').on(t.organizationId),
+		uniqueIndex('uq_sponsorship_project')
+			.on(t.projectId)
+			.where(sql`project_id is not null`),
+		index('sponsorship_funds_project_idx').on(t.fundsProjectId)
+	]
 );
 
 /**
@@ -86,8 +78,6 @@ export const sponsorPlacement = sqliteTable(
 	]
 );
 
-export type Sponsor = typeof sponsor.$inferSelect;
-export type NewSponsor = typeof sponsor.$inferInsert;
 export type Sponsorship = typeof sponsorship.$inferSelect;
 export type NewSponsorship = typeof sponsorship.$inferInsert;
 export type SponsorPlacement = typeof sponsorPlacement.$inferSelect;

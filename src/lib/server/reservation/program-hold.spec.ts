@@ -3,15 +3,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** The predicate, against a real SQLite: a mocked `db` would agree either way. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { notAProgramHold } = await import('./program-hold');
-const { reservation } = await import('$lib/server/db/schema/reservation');
-const { db } = await import('$lib/server/db');
+const { reservation } = await import('#lib/server/db/schema/reservation.js');
+const { db } = await import('#lib/server/db/index.js');
 
 const ids = (rows: { id: string }[]) => rows.map((r) => r.id).sort();
 

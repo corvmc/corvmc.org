@@ -1,6 +1,6 @@
-import { getJson, putJson } from '$lib/server/kv';
-import { DomainError } from '$lib/server/domain-error';
-import { DOOR_CHECKOUT_DEFAULT_TASKS, ORIENTATION_DEFAULT_TASKS } from '$lib/config';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { DOOR_CHECKOUT_DEFAULT_TASKS, ORIENTATION_DEFAULT_TASKS } from '#lib/config.js';
 
 /** The caller asked for a config key that is not in the registry. */
 export class UnknownSiteConfigKeyError extends DomainError {
@@ -33,13 +33,21 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// `config('reservation.minAdvanceMinutes')` threw Unknown site config key.
 	// It worked only because `reservation/config.ts` supplies its own fallback.
 	'reservation.minAdvanceMinutes': 60,
+	// A member's own booking, while they hold no Practice space clearance.
+	'reservation.newMemberMinAdvanceMinutes': 4320,
 	'reservation.hourlyRateCents': 1500,
+	// A suspension's term, in days: the form's starting value and its ceiling.
+	'moderation.suspensionDefaultDays': 30,
+	'moderation.suspensionMaxDays': 90,
 	// Teaching terms. The rate is not a discount on the one above — it is what a
 	// sustaining member's contribution already buys, with the monthly cap lifted.
 	'reservation.teachingRateCents': 500,
 	'reservation.teachingMinDurationHours': 0.5,
 	'reservation.teachingMaxAdvanceDaysOneoff': 60,
 	'reservation.teachingMaxAdvanceDaysRecurring': 90,
+	// The day the outstanding-fee gate starts counting (#2748), `YYYY-MM-DD` in
+	// club time. Empty is off: no warning and no refusal.
+	'reservation.feeGateFrom': '',
 
 	// What an hour of donated time is worth, for grant applications and impact
 	// reports. This is the *impact* rate and it covers every approved hour;
@@ -66,13 +74,24 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'volunteer.orientationMinutes': 30,
 	'volunteer.orientationLeadMinutes': 10,
 	'volunteer.orientationTasks': ORIENTATION_DEFAULT_TASKS.join('\n'),
+	// Parking, house rules and anything else a first-time member reads in the
+	// first-visit email, as plain text. Empty leaves that part out.
+	'volunteer.firstVisitNotes': '',
+
+	// The volunteer role on the tasks a repair report or low stock opens (#2756).
+	// Empty leaves them with no role, unassigned on the Tasks page.
+	'inventory.repairRoleId': '',
+	'inventory.restockRoleId': '',
+	// Late purchase orders and Form 8282 filings (#2757), the same way.
+	'inventory.lateOrderRoleId': '',
+	'inventory.form8282RoleId': '',
 
 	// How many inputs the desk in the practice room can actually take.
 	//
 	// Runtime config rather than a constant because it is a fact about a piece of
 	// gear, and the gear gets replaced: a rider that over-specs the room is the
-	// thing Production asked to be able to flag ("what the room cannot do", in
-	// `committees-and-roles-spec.md`), and an answer that needs a deploy to
+	// thing Production asked to be able to flag ("what the room cannot do"),
+	// and an answer that needs a deploy to
 	// correct is one that will quietly go wrong the first time the console does.
 	// Zero disables the check rather than failing every rider.
 	'venue.consoleChannels': 16,
@@ -84,15 +103,15 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// being won by accounts registered the week it opened.
 	'ballot.memberOfRecordDays': 60,
 
-	// Only keys something reads live here. The org's name, short name, contact
-	// email and timezone were staff-editable and read by nothing: `$lib/config`
-	// holds SITE_NAME and DEFAULT_TIMEZONE, and the staff contact address is the
-	// STAFF_CONTACT_EMAIL binding. `site-config-consumers.spec.ts` fails on a key
-	// added here with no reader, which is how those four survived for so long.
+	// Only keys something reads live here: `site-config-consumers.spec.ts` fails on
+	// a key with no reader. `#lib/config.js` holds SITE_NAME and DEFAULT_TIMEZONE.
+	// `org.contactEmail` is the address the public is told to write to; the
+	// STAFF_CONTACT_EMAIL binding is where staff mail is routed, a separate thing.
 	'org.addressStreet': '6775 SW Philomath Blvd',
 	'org.addressCity': 'Corvallis',
 	'org.addressState': 'OR',
 	'org.addressZip': '97333',
+	'org.contactEmail': 'contact@corvmc.org',
 
 	'org.socialFacebook': '',
 	'org.socialInstagram': '',
@@ -197,6 +216,14 @@ export async function config<T extends string | number | boolean = string | numb
 export const getSiteConfig = config;
 
 /**
+ * The public contact address, for mail that quotes it. The fallback is what keeps a KV
+ * fault from costing a member a security notice over a detail in its footnote.
+ */
+export function contactEmail(): Promise<string> {
+	return config<string>('org.contactEmail').catch(() => String(DEFAULTS['org.contactEmail']));
+}
+
+/**
  * Every key under a prefix, defaults overlaid with whatever KV holds.
  *
  * This used to ask KV `list()` which keys existed and then fetch them one at a
@@ -240,7 +267,7 @@ export async function updateSiteConfig(
  * acceptable for a settings form and would not be for a ledger.
  */
 export async function updateSiteConfigs(
-	entries: Array<{ key: string; value: string | number }>
+	entries: Array<{ key: string; value: string | number | boolean }>
 ): Promise<void> {
 	await Promise.all(entries.map((entry) => updateSiteConfig(entry.key, entry.value)));
 }

@@ -10,12 +10,12 @@ import type { ReminderDefinition } from './types';
  */
 
 const emit = vi.fn(async () => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 let marks: { subjectId: string }[] = [];
 const insertValues = vi.fn(async (_values: unknown) => undefined);
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => ({ from: () => ({ where: async () => marks }) }),
 		insert: () => ({ values: (v: unknown) => insertValues(v) })

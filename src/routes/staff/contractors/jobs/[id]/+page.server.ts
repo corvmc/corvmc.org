@@ -1,9 +1,9 @@
 import { error, redirect } from '@sveltejs/kit';
-import { can } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { getJobById, type Engagement } from '$lib/server/contractor/contractor-job-service';
-import { workOrderHref } from '$lib/utils/work-order-href';
-import { signInHref } from '$lib/utils/sign-in';
+import { can } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getJobById, type Engagement } from '#lib/server/contractor/contractor-job-service.js';
+import { workOrderHref } from '#lib/utils/work-order-href.js';
+import { signInHref } from '#lib/utils/sign-in.js';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -21,6 +21,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	} catch (err) {
 		mapDomainError(err);
 	}
-	const page = workOrderHref({ id: job.workOrderId, projectId: job.projectId });
+	const page = workOrderHref({ id: job.workOrderId });
 	redirect(307, `${page}#engagement-${job.id}`);
 };

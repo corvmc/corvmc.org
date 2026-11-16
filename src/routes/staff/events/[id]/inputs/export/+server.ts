@@ -1,10 +1,10 @@
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
-import { getById } from '$lib/server/event/event-service';
-import { getBillInputList } from '$lib/server/band/bill-input-list-service';
-import { config } from '$lib/server/site-config/site-config-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
-import { riderInputSourceLabels, riderStandTypeLabels } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getById } from '#lib/server/event/event-service.js';
+import { getBillInputList } from '#lib/server/band/bill-input-list-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
+import { riderInputSourceLabels, riderStandTypeLabels } from '#lib/config.js';
 import { error } from '@sveltejs/kit';
 
 const COLUMNS = [

@@ -7,7 +7,6 @@
 		IconAddressBook,
 		IconTool,
 		IconPackage,
-		IconPlus,
 		IconSearch,
 		IconHelp,
 		IconMetronome,
@@ -16,20 +15,20 @@
 		IconSpeakerphone,
 		IconCheckbox
 	} from '@tabler/icons-svelte';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { childHrefsFor } from '$lib/components/layout/Nav/active-nav';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import { childHrefsFor } from '#lib/components/layout/Nav/active-nav.js';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import { getMemberLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { setMemberLayoutContext } from './layout-context';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,
@@ -61,12 +60,16 @@
 				href: resolve('/member/groups/[slug]', { slug: g.slug })
 			}));
 			return navTrail(
-				[{ items: memberNavItems(navInput) }, { title: 'My Groups', items: groups }],
+				[{ items: memberNavItems(navInput) }, { title: m.member_my_groups_title(), items: groups }],
 				page.url.pathname
 			);
 		}
 	});
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	await requireLayoutSession(page.url.pathname + page.url.search);
 	let layout = $derived(await getMemberLayout());
 
 	const panels = $derived(panelTabs(layout));
@@ -81,7 +84,6 @@
 		dashboard: IconLayoutDashboard,
 		reservations: IconMetronome,
 		events: IconCalendarEvent,
-		'events-submit': IconPlus,
 		directory: IconAddressBook,
 		classifieds: IconSpeakerphone,
 		// Matches the staff panel's Inventory glyph, so the same thing looks the
@@ -138,7 +140,7 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title={`My ${many(m.term_band)}`}
+			title={m.member_my_title({ many: many(m.term_band) })}
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
@@ -146,12 +148,12 @@
 		>
 			{#snippet action()}
 				<Button
-					href={resolve('/member/bands?create=1')}
+					href={resolve('member/bands?create=1')}
 					variant="ghost"
 					size="xs"
 					class="latched"
-					aria-label={`New ${m.term_band({ count: 1 })}`}
-					data-sveltekit-reload>New</Button
+					aria-label={m.member_aria_label({ term_band: m.term_band({ count: 1 }) })}
+					data-sveltekit-reload>{m.member_new_label()}</Button
 				>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
@@ -182,7 +184,7 @@
 		     with a panel, a club is a program with a page. No New here, because
 		     members cannot create clubs or committees. -->
 		<Nav.Group
-			title="My Groups"
+			title={m.member_my_groups_title()}
 			collapsible
 			persistKey="my-groups"
 			persistScope="member"
@@ -201,7 +203,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/groups')} label="Browse Groups">
+			<Nav.Item href={resolve('member/groups')} label={m.member_label()}>
 				{#snippet icon()}<IconSearch />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

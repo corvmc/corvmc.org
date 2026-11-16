@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AudioPurchasedEvent } from '$lib/server/event-bus/event-bus';
+import type { AudioPurchasedEvent } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * What a music sale writes, and the one figure it must not.

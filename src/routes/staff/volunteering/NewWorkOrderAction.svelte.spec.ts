@@ -1,0 +1,108 @@
+import { page } from 'vitest/browser';
+import { describe, expect, it, vi } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
+
+/**
+ * One action for work with a time and work without (#1933). These pin that the
+ * window is a checkbox that swaps Starts/Ends for a deadline, and that the role
+ * defaults still prefill the capacity.
+ */
+
+let roles = [
+	{ id: 'role-1', name: 'Booking Lead', isActive: true, defaultCapacity: 3 },
+	{ id: 'role-2', name: 'Retired Role', isActive: false },
+	{ id: 'role-3', name: 'Sound', isActive: true, defaultCapacity: 6 }
+];
+
+// Every field the form spreads, prefixed as kit prefixes a boolean checkbox.
+const fields = new Proxy(
+	{ allIssues: () => null },
+	{
+		get: (target, name: string) =>
+			name in target
+				? target[name as keyof typeof target]
+				: {
+						as: (type: string, value = '') => ({
+							type,
+							name: type === 'checkbox' ? `b:${name}` : name,
+							value
+						}),
+						issues: () => null
+					}
+	}
+);
+
+vi.mock('#lib/remote/volunteer.remote.js', () => ({
+	getVolunteerRoles: async () => roles,
+	createWorkOrder: {
+		enhance: () => ({ method: 'POST', action: '?/createWorkOrder' }),
+		fields,
+		result: undefined
+	}
+}));
+vi.mock('#lib/remote/events.remote.js', () => ({ searchEvents: async () => [] }));
+vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
+	searchWorkAssets: async () => []
+}));
+
+vi.mock('$app/navigation', () => ({
+	refreshAll: vi.fn(),
+	goto: vi.fn(),
+	beforeNavigate: vi.fn()
+}));
+
+const NewWorkOrderAction = (await import('./NewWorkOrderActionHarness.svelte')).default;
+
+const field = (name: string) =>
+	document.querySelector(
+		`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`
+	) as HTMLInputElement | null;
+
+describe('NewWorkOrderAction', () => {
+	it('opens timed, with a live role and its default capacity', async () => {
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
+		await expect.element(page.getByLabelText('Role')).toBeVisible();
+
+		expect(field('volunteerRoleId')?.value).toBe('role-1');
+		expect(document.querySelector('[role="dialog"] option[value="role-2"]')).toBeNull();
+		expect(field('b:timed')?.checked).toBe(true);
+		expect(field('startsAt')?.type).toBe('datetime-local');
+		expect(field('endsAt')).not.toBeNull();
+		expect(field('dueAt')).toBeNull();
+		expect(field('capacity')?.value).toBe('3');
+		expect(field('notes')).not.toBeNull();
+	});
+
+	it('swaps the window for a deadline when it has no set time', async () => {
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
+		await page.getByLabelText('Has a set time').click();
+
+		await expect.poll(() => field('dueAt')?.type).toBe('datetime-local');
+		expect(field('startsAt')).toBeNull();
+		expect(field('endsAt')).toBeNull();
+	});
+
+	// The select is bound; a bound value matching no option would post an empty role.
+	it('moves the capacity to the default of whichever role is picked', async () => {
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
+		const role = page.getByCss('[role="dialog"] select[name="volunteerRoleId"]');
+		await expect.poll(() => field('capacity')?.value).toBe('3');
+
+		await role.selectOptions('role-3');
+		await expect.poll(() => field('capacity')?.value).toBe('6');
+		await role.selectOptions('role-1');
+		await expect.poll(() => field('capacity')?.value).toBe('3');
+		expect(field('volunteerRoleId')?.value).toBe('role-1');
+	});
+
+	it('renders nothing when there is no live role to pick', async () => {
+		roles = [{ id: 'role-2', name: 'Retired Role', isActive: false }];
+		const { container } = await render(NewWorkOrderAction, {});
+
+		expect(container.querySelector('button')).toBeNull();
+	});
+});

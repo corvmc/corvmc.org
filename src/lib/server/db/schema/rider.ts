@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-o
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { group } from './group';
+import { inventoryItem } from './inventory';
 import {
 	riderElementKinds,
 	riderInputSources,
@@ -137,6 +138,19 @@ export const riderElement = sqliteTable(
 		providedBy: text('provided_by', { enum: riderProvidedBy }).notNull().default('band'),
 
 		notes: text('notes'),
+
+		/**
+		 * The catalog item staff matched a `venue` element to on the advance.
+		 *
+		 * Set by production, not by the band, and carried across the band's
+		 * delete-and-reinsert saves by label, as `x`/`y` are. Null falls back to
+		 * the category suggestion in `rider-stock-service.ts`: a rider `kind` and a
+		 * free-text `equipment_category` name share no vocabulary, so this link is
+		 * what makes a match certain.
+		 */
+		inventoryItemId: text('inventory_item_id').references(() => inventoryItem.id, {
+			onDelete: 'set null'
+		}),
 
 		/** Tie-break within a kind. Dense, re-derived from array position on save. */
 		sortOrder: integer('sort_order').notNull().default(0),

@@ -1,29 +1,27 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form, command } from './_remote';
 import {
 	getAllProductConfigs,
 	updateProductConfig,
 	type ProductKey
-} from '$lib/server/finance/product-config-service';
-import {
-	getConfigsByPrefix,
-	updateSiteConfigs,
-	updateSiteConfig
-} from '$lib/server/site-config/site-config-service';
-import { testConnection, credentialStatus, listDevices } from '$lib/server/lock/ultraloc-client';
-import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
-import { requireCapability } from '$lib/server/authorization';
+} from '#lib/server/finance/product-config-service.js';
+import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
+import { saveSettings } from '#lib/server/site-config/save-settings.js';
+import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
+import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
+import { getReservationConfig } from '#lib/server/reservation/config.js';
+import { requireCapability } from '#lib/server/authorization.js';
 import {
 	getOrientationSetting,
 	parseOrientationTasks
-} from '$lib/server/volunteer/orientation-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
-import { getInboxChannelConfigs } from './inbox.remote';
-import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
-import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
+} from '#lib/server/volunteer/orientation-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/feature-flags.js';
+import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
+import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Public queries (no auth)
@@ -49,19 +47,23 @@ function addressFrom(settings: OrgConfigs) {
 
 export const getSocialLinks = query(async () => socialFrom(await getConfigsByPrefix('org')));
 
-export const getOrgAddress = query(async () => addressFrom(await getConfigsByPrefix('org')));
+/** `/contact`'s one query: it shows both, and a component holds one query in flight. */
+export const getContactDetails = query(async () => {
+	const settings = await getConfigsByPrefix('org');
+	return { address: addressFrom(settings), email: String(settings.contactEmail) };
+});
+
+/** For the pages that name the address and nothing else: `ContactEmailLink` and `/programs`. */
+export const getContactEmail = query(async () =>
+	String((await getConfigsByPrefix('org')).contactEmail)
+);
 
 /**
  * The site footer's one load-bearing query.
  *
- * It used to await `getSocialLinks()` and `getOrgAddress()` side by side, which is two
- * requests for one `org` config read and — past kit 2.64 — a crash: a component holding two
- * remote queries in flight blows up in Svelte's reactivity rather than rendering
- * (JAVASCRIPT-SVELTEKIT-2H, on a page whose footer sits in every public route). One query,
- * one config read.
- *
- * `getOrgAddress` stays exported because `/contact` reads it on its own, and a page with a
- * single query is not the shape that breaks.
+ * One query, one config read: a component holding two remote queries in flight blows up in
+ * Svelte's reactivity rather than rendering (JAVASCRIPT-SVELTEKIT-2H), and this footer sits
+ * on every public route.
  */
 export const getFooterInfo = query(async () => {
 	const settings = await getConfigsByPrefix('org');
@@ -131,10 +133,8 @@ export const getIntegrationSettings = query(async () => {
 
 	// Presence, never the value, for the two that mint an access token. Both are
 	// stored now (#745 reversed), and everything this query returns is
-	// serialised to the browser, since
-	// `getStaffSettingsPage` folds it into the payload the staff route SSRs into
-	// its HTML. `clientId` and `deviceId` are not credentials and stay verbatim:
-	// see `CREDENTIALS` in `ultraloc-client.ts`.
+	// serialised to the browser. `clientId` and `deviceId` are not credentials
+	// and stay verbatim: see `CREDENTIALS` in `ultraloc-client.ts`.
 	const [clientSecret, refreshToken] = await Promise.all([
 		credentialStatus('clientSecret'),
 		credentialStatus('refreshToken')
@@ -199,93 +199,147 @@ const updateProductSchema = z.object({
 	unitAmountCents: z.string().regex(/^\d+$/, 'Amount must be a whole number of cents')
 });
 
-export const updateProduct = form(updateProductSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof updateProductSchema>;
+export const updateProduct = form(
+	updateProductSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof updateProductSchema>;
 
-	await updateProductConfig(data.key as ProductKey, {
-		name: data.name,
-		description: data.description || null,
-		unitAmountCents: parseInt(data.unitAmountCents, 10)
-	});
+		await updateProductConfig(data.key as ProductKey, {
+			name: data.name,
+			description: data.description || null,
+			unitAmountCents: parseInt(data.unitAmountCents, 10)
+		});
 
-	void getStaffSettingsPage().refresh();
+		void getPracticeSpaceSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Reservation settings
 // ---------------------------------------------------------------------------
 
-const reservationSettingsSchema = z
-	.object({
-		operatingHoursStart: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
-		operatingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
-		timeSlotMinutes: z.string().regex(/^\d+$/).transform(Number),
-		minDurationHours: z
-			.string()
-			.regex(/^\d+(\.\d+)?$/)
-			.transform(Number),
-		maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
-		bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
-		minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
-		maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
-		maxAdvanceDaysRecurring: z
-			.string()
-			.regex(/^\d+(\.\d+)?$/)
-			.transform(Number),
-		hourlyRateCents: z.string().regex(/^\d+$/).transform(Number),
-		teachingRateCents: z.string().regex(/^\d+$/).transform(Number),
-		teachingMinDurationHours: z
-			.string()
-			.regex(/^\d+(\.\d+)?$/)
-			.transform(Number),
-		teachingMaxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
-		teachingMaxAdvanceDaysRecurring: z.string().regex(/^\d+$/).transform(Number)
-	})
-	// A teaching series is Tier 2 in the generator, so it can be waitlisted behind
-	// a member's one-off. The mitigation needs no machinery — a teaching horizon
-	// longer than any member can book into means the series is already
-	// materialised before a member can reach that week — but it only holds while
-	// this stays true, so it is refused at the point of saving rather than left to
-	// drift.
-	.refine((d) => d.teachingMaxAdvanceDaysRecurring > d.maxAdvanceDaysOneoff, {
-		path: ['teachingMaxAdvanceDaysRecurring'],
-		message: 'Must exceed the member one-off window, or teachers lose their standing slots'
-	});
-
-export const updateReservationSettings = form(reservationSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof reservationSettingsSchema>;
-
-	await updateSiteConfigs([
-		{ key: 'reservation.operatingHoursStart', value: data.operatingHoursStart },
-		{ key: 'reservation.operatingHoursEnd', value: data.operatingHoursEnd },
-		{ key: 'reservation.timeSlotMinutes', value: data.timeSlotMinutes },
-		{ key: 'reservation.minDurationHours', value: data.minDurationHours },
-		{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
-		{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
-		{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
-		{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
-		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
-		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents },
-		{ key: 'reservation.teachingRateCents', value: data.teachingRateCents },
-		{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
-		{
-			key: 'reservation.teachingMaxAdvanceDaysOneoff',
-			value: data.teachingMaxAdvanceDaysOneoff
-		},
-		{
-			key: 'reservation.teachingMaxAdvanceDaysRecurring',
-			value: data.teachingMaxAdvanceDaysRecurring
-		}
-	]);
-
-	void getStaffSettingsPage().refresh();
-
-	return { success: true };
+const reservationSettingsSchema = z.object({
+	operatingHoursStart: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+	operatingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+	timeSlotMinutes: z.string().regex(/^\d+$/).transform(Number),
+	minDurationHours: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/)
+		.transform(Number),
+	maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
+	bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
+	minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
+	newMemberMinAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
+	maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
+	maxAdvanceDaysRecurring: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/)
+		.transform(Number),
+	hourlyRateCents: z.string().regex(/^\d+$/).transform(Number)
 });
+
+type ReservationSettings = z.infer<typeof reservationSettingsSchema>;
+export const updateReservationSettings = form(
+	reservationSettingsSchema,
+	writesAudit('settings.changed', async (raw, issue) => {
+		await requireCapability('settings.update');
+		const data = raw as ReservationSettings;
+
+		// A teaching series is Tier 2 in the generator, so it can be waitlisted behind
+		// a member's one-off. The teaching recurring window must outrun the member
+		// one-off window, or the series is not materialised before a member books
+		// that week. `updateTeachingTerms` checks the same pair from its side.
+		const { teachingMaxAdvanceDaysRecurring: horizon } = await getReservationConfig();
+		if (!(horizon > data.maxAdvanceDaysOneoff)) {
+			invalid(
+				issue.maxAdvanceDaysOneoff(
+					`Must be under the teaching recurring window (${horizon} days), or teachers lose their standing slots`
+				)
+			);
+		}
+
+		await saveSettings([
+			{ key: 'reservation.operatingHoursStart', value: data.operatingHoursStart },
+			{ key: 'reservation.operatingHoursEnd', value: data.operatingHoursEnd },
+			{ key: 'reservation.timeSlotMinutes', value: data.timeSlotMinutes },
+			{ key: 'reservation.minDurationHours', value: data.minDurationHours },
+			{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
+			{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
+			{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
+			{ key: 'reservation.newMemberMinAdvanceMinutes', value: data.newMemberMinAdvanceMinutes },
+			{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
+			{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
+			{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents }
+		]);
+
+		void getPracticeSpaceSettingsPage().refresh();
+
+		return { success: true };
+	})
+);
+
+// ---------------------------------------------------------------------------
+// Teaching terms — what a teacher pays for the room, set from the Teachers view
+// ---------------------------------------------------------------------------
+
+/** The four teaching terms, for the Teachers view's form. */
+export const getTeachingTerms = query(async () => {
+	await requireCapability('settings.read');
+	const config = await getReservationConfig();
+	return {
+		teachingRateCents: config.teachingRateCents,
+		teachingMinDurationHours: config.teachingMinDurationHours,
+		teachingMaxAdvanceDaysOneoff: config.teachingMaxAdvanceDaysOneoff,
+		teachingMaxAdvanceDaysRecurring: config.teachingMaxAdvanceDaysRecurring
+	};
+});
+
+const teachingTermsSchema = z.object({
+	// Dollars on the form, cents in storage.
+	teachingRate: z
+		.string()
+		.regex(/^\d+(\.\d{1,2})?$/, 'Dollars and cents, like 5.00')
+		.transform((v) => Math.round(Number(v) * 100)),
+	teachingMinDurationHours: z
+		.string()
+		.regex(/^\d+(\.\d+)?$/)
+		.transform(Number),
+	teachingMaxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
+	teachingMaxAdvanceDaysRecurring: z.string().regex(/^\d+$/).transform(Number)
+});
+
+export const updateTeachingTerms = form(
+	teachingTermsSchema,
+	writesAudit('settings.changed', async (raw, issue) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof teachingTermsSchema>;
+
+		// The other side of the check in `updateReservationSettings`.
+		const { maxAdvanceDaysOneoff } = await getReservationConfig();
+		if (!(data.teachingMaxAdvanceDaysRecurring > maxAdvanceDaysOneoff)) {
+			invalid(
+				issue.teachingMaxAdvanceDaysRecurring(
+					`Must exceed the member one-off window (${maxAdvanceDaysOneoff} days), or teachers lose their standing slots`
+				)
+			);
+		}
+
+		await saveSettings([
+			{ key: 'reservation.teachingRateCents', value: data.teachingRate },
+			{ key: 'reservation.teachingMinDurationHours', value: data.teachingMinDurationHours },
+			{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: data.teachingMaxAdvanceDaysOneoff },
+			{
+				key: 'reservation.teachingMaxAdvanceDaysRecurring',
+				value: data.teachingMaxAdvanceDaysRecurring
+			}
+		]);
+
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Organization settings
@@ -296,31 +350,37 @@ const orgSettingsSchema = z.object({
 	addressCity: z.string().trim().max(100).optional().default(''),
 	addressState: z.string().trim().max(50).optional().default(''),
 	addressZip: z.string().trim().max(20).optional().default(''),
+	contactEmail: z.string().trim().email().max(254),
 	socialFacebook: z.string().trim().max(500).optional().default(''),
 	socialInstagram: z.string().trim().max(500).optional().default('')
 });
 
-export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof orgSettingsSchema>;
+export const updateOrgSettings = form(
+	orgSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof orgSettingsSchema>;
 
-	await updateSiteConfigs([
-		{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
-		{ key: 'org.addressCity', value: data.addressCity ?? '' },
-		{ key: 'org.addressState', value: data.addressState ?? '' },
-		{ key: 'org.addressZip', value: data.addressZip ?? '' },
-		{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
-		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
-	]);
+		await saveSettings([
+			{ key: 'org.addressStreet', value: data.addressStreet ?? '' },
+			{ key: 'org.addressCity', value: data.addressCity ?? '' },
+			{ key: 'org.addressState', value: data.addressState ?? '' },
+			{ key: 'org.addressZip', value: data.addressZip ?? '' },
+			{ key: 'org.contactEmail', value: data.contactEmail },
+			{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
+			{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
+		]);
 
-	void getStaffSettingsPage().refresh();
-	// Both, not either: `/contact` reads `getOrgAddress` directly, the footer reads it only
-	// through `getFooterInfo`, and refreshing one repaints nothing for the other.
-	void getOrgAddress().refresh();
-	void getFooterInfo().refresh();
+		void getOrgSettings().refresh();
+		// All three: each public reader has its own query, and refreshing one repaints nothing
+		// for the others.
+		void getContactDetails().refresh();
+		void getContactEmail().refresh();
+		void getFooterInfo().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Volunteer hour value
@@ -335,19 +395,22 @@ const volunteerValueSchema = z.object({
 	hourValueSource: z.string().trim().min(1, 'Say where the rate came from').max(200)
 });
 
-export const updateVolunteerValueSettings = form(volunteerValueSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof volunteerValueSchema>;
+export const updateVolunteerValueSettings = form(
+	volunteerValueSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof volunteerValueSchema>;
 
-	await updateSiteConfigs([
-		{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
-		{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
-	]);
+		await saveSettings([
+			{ key: 'volunteer.hourValueCents', value: data.hourValueCents },
+			{ key: 'volunteer.hourValueSource', value: data.hourValueSource }
+		]);
 
-	void getStaffSettingsPage().refresh();
+		void getVolunteeringSettingsPage().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Orientation
@@ -358,30 +421,35 @@ const orientationSchema = z.object({
 	roleId: z.string().max(100).optional(),
 	minutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
 	leadMinutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
-	tasks: z.string().max(2000).optional()
+	tasks: z.string().max(2000).optional(),
+	firstVisitNotes: z.string().max(2000).optional()
 });
 
-export const updateOrientationSettings = form(orientationSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof orientationSchema>;
-	const minutes = Number(data.minutes);
-	if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
-	const leadMinutes = Number(data.leadMinutes);
-	if (leadMinutes > 120) error(422, 'Lead time is at most 120 minutes.');
-	// Stamped as one insert, so the count stays well under D1's bound-parameter cap.
-	const tasks = parseOrientationTasks(data.tasks ?? '');
-	if (tasks.length > 20) error(422, 'At most 20 tasks.');
+export const updateOrientationSettings = form(
+	orientationSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof orientationSchema>;
+		const minutes = Number(data.minutes);
+		if (minutes < 1 || minutes > 480) error(422, 'Between 1 and 480 minutes.');
+		const leadMinutes = Number(data.leadMinutes);
+		if (leadMinutes > 120) error(422, 'Lead time is at most 120 minutes.');
+		// Stamped as one insert, so the count stays well under D1's bound-parameter cap.
+		const tasks = parseOrientationTasks(data.tasks ?? '');
+		if (tasks.length > 20) error(422, 'At most 20 tasks.');
 
-	await updateSiteConfigs([
-		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
-		{ key: 'volunteer.orientationMinutes', value: minutes },
-		{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
-		{ key: 'volunteer.orientationTasks', value: tasks.join('\n') }
-	]);
+		await saveSettings([
+			{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
+			{ key: 'volunteer.orientationMinutes', value: minutes },
+			{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
+			{ key: 'volunteer.orientationTasks', value: tasks.join('\n') },
+			{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
+		]);
 
-	void getStaffSettingsPage().refresh();
-	return { success: true };
-});
+		void getVolunteeringSettingsPage().refresh();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Venue settings
@@ -392,22 +460,44 @@ const venueSettingsSchema = z.object({
 	checkoutTasks: z.string().max(2000).optional()
 });
 
-export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof venueSettingsSchema>;
+export const updateVenueSettings = form(
+	venueSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof venueSettingsSchema>;
 
-	const checkoutTasks = parseOrientationTasks(data.checkoutTasks ?? '');
-	if (checkoutTasks.length > 12) error(422, 'At most 12 checklist items.');
+		const checkoutTasks = parseOrientationTasks(data.checkoutTasks ?? '');
+		if (checkoutTasks.length > 12) error(422, 'At most 12 checklist items.');
 
-	await updateSiteConfigs([
-		{ key: 'venue.consoleChannels', value: data.consoleChannels },
-		{ key: 'venue.checkoutTasks', value: checkoutTasks.join('\n') }
-	]);
+		await saveSettings([
+			{ key: 'venue.consoleChannels', value: data.consoleChannels },
+			{ key: 'venue.checkoutTasks', value: checkoutTasks.join('\n') }
+		]);
 
-	void getStaffSettingsPage().refresh();
+		void getPracticeSpaceSettingsPage().refresh();
 
-	return { success: true };
+		return { success: true };
+	})
+);
+
+// The day outstanding fees start counting toward the booking limit (#2748).
+// Empty turns the limit off; older payment-due rows are never counted.
+const feeGateSettingsSchema = z.object({
+	feeGateFrom: z
+		.string()
+		.trim()
+		.regex(/^(\d{4}-\d{2}-\d{2})?$/, 'A date, or empty')
 });
+
+export const updateFeeGateSettings = form(
+	feeGateSettingsSchema,
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([{ key: 'reservation.feeGateFrom', value: data.feeGateFrom }]);
+		void getPracticeSpaceSettingsPage().refresh();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Forms — Integration settings
@@ -439,91 +529,115 @@ export const updateFeatureFlag = form(
 		flag: z.string(),
 		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
 	}),
-	async (data) => {
+	writesAudit('settings.changed', async (data) => {
 		await requireCapability('settings.update');
 		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
 			throw error(400, 'Invalid feature flag');
 		}
-		await updateSiteConfig(`feature.${data.flag}`, data.enabled);
-		void getStaffSettingsPage().refresh();
+		await saveSettings([{ key: `feature.${data.flag}`, value: data.enabled }]);
+		void getFeatureFlags().refresh();
 		return { success: true };
-	}
+	})
 );
 
 // ---------------------------------------------------------------------------
 // Subscription status sync
 // ---------------------------------------------------------------------------
 
-export const syncSubscriptions = command(async () => {
-	await requireCapability('settings.update');
-	return syncAllSubscriptions();
-});
+export const syncSubscriptions = command(
+	unaudited('Re-reads subscription state from Stripe; changes no setting.', async () => {
+		await requireCapability('settings.update');
+		return syncAllSubscriptions();
+	})
+);
 
-export const refreshCommunityStats = command(async () => {
-	await requireCapability('settings.update');
-	return refreshStats();
-});
+export const refreshCommunityStats = command(
+	unaudited('Recomputes cached counts; changes no setting.', async () => {
+		await requireCapability('settings.update');
+		return refreshStats();
+	})
+);
 
-export const updateIntegrationSettings = form(integrationSettingsSchema, async (raw) => {
-	await requireCapability('settings.update');
-	const data = raw as z.infer<typeof integrationSettingsSchema>;
+export const updateIntegrationSettings = form(
+	integrationSettingsSchema,
+	writesAudit('settings.changed', async (raw) => {
+		await requireCapability('settings.update');
+		const data = raw as z.infer<typeof integrationSettingsSchema>;
 
-	// A blank secret means "unchanged", not "clear it": the field is never
-	// rendered with its value, so an untouched one submits empty.
-	await updateSiteConfigs([
-		{ key: 'integration.utec.clientId', value: data.clientId },
-		{ key: 'integration.utec.deviceId', value: data.deviceId },
-		...(data.clientSecret
-			? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
-			: [])
-	]);
+		// A blank secret means "unchanged", not "clear it": the field is never
+		// rendered with its value, so an untouched one submits empty.
+		await saveSettings([
+			{ key: 'integration.utec.clientId', value: data.clientId },
+			{ key: 'integration.utec.deviceId', value: data.deviceId },
+			...(data.clientSecret
+				? [{ key: 'integration.utec.clientSecret', value: data.clientSecret }]
+				: [])
+		]);
 
-	void getStaffSettingsPage().refresh();
+		void getIntegrationSettings().refresh();
 
-	return { success: true };
-});
+		return { success: true };
+	})
+);
 
 /**
- * The staff settings page's one load-bearing query.
- *
- * Six tabs' worth of configuration, and every constituent is unparameterized — which is what makes
- * this composable at all: each of the mutations that used to refresh them one at a time can name
- * this wrapper with no argument.
+ * Volunteering's settings page's one load-bearing query (#2763): what an hour is
+ * worth, and the orientation shift a first booking raises.
  */
-export const getStaffSettingsPage = query(z.void(), async () => {
+export const getVolunteeringSettingsPage = query(z.void(), async () => {
 	await requireCapability('settings.read');
+	const [volunteerValue, orientation] = await Promise.all([
+		getVolunteerValueSettings(),
+		getOrientationSettings()
+	]);
+	return { volunteerValue, orientation };
+});
 
-	const [
-		products,
-		reservation,
-		org,
-		volunteerValue,
-		orientation,
-		venue,
-		integration,
-		channelConfigs,
-		featureFlags
-	] = await Promise.all([
+/** The Practice space settings page's one load-bearing query, built the same way (#2586). */
+export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
+	await requireCapability('settings.read');
+	const [products, reservation, venue] = await Promise.all([
 		getProducts(),
 		getReservationSettings(),
-		getOrgSettings(),
-		getVolunteerValueSettings(),
-		getOrientationSettings(),
-		getVenueSettings(),
-		getIntegrationSettings(),
-		getInboxChannelConfigs(),
-		getFeatureFlags()
+		getVenueSettings()
 	]);
+	return { products, reservation, venue };
+});
 
+// ---------------------------------------------------------------------------
+// Gear — the role on the tasks gear opens (#2756, #2757)
+// ---------------------------------------------------------------------------
+
+/** Gear settings' one query: each kind's role, and the roles to pick from. */
+export const getGearSettings = query(async () => {
+	await requireCapability('settings.read');
+	const [raw, roles] = await Promise.all([getConfigsByPrefix('inventory'), listVolunteerRoles()]);
 	return {
-		products,
-		reservation,
-		org,
-		volunteerValue,
-		orientation,
-		venue,
-		integration,
-		channelConfigs,
-		featureFlags
+		repairRoleId: String(raw.repairRoleId ?? ''),
+		restockRoleId: String(raw.restockRoleId ?? ''),
+		lateOrderRoleId: String(raw.lateOrderRoleId ?? ''),
+		form8282RoleId: String(raw.form8282RoleId ?? ''),
+		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
 	};
 });
+
+export const updateGearTaskRoles = form(
+	z.object({
+		// Empty leaves new tasks with no role.
+		repairRoleId: z.string().max(100).optional(),
+		restockRoleId: z.string().max(100).optional(),
+		lateOrderRoleId: z.string().max(100).optional(),
+		form8282RoleId: z.string().max(100).optional()
+	}),
+	writesAudit('settings.changed', async (data) => {
+		await requireCapability('settings.update');
+		await saveSettings([
+			{ key: 'inventory.repairRoleId', value: data.repairRoleId?.trim() ?? '' },
+			{ key: 'inventory.restockRoleId', value: data.restockRoleId?.trim() ?? '' },
+			{ key: 'inventory.lateOrderRoleId', value: data.lateOrderRoleId?.trim() ?? '' },
+			{ key: 'inventory.form8282RoleId', value: data.form8282RoleId?.trim() ?? '' }
+		]);
+		void getGearSettings().refresh();
+		return { success: true };
+	})
+);

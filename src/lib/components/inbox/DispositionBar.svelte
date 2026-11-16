@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The four ways a conversation leaves the queue: Reply, Assign, Snooze,
 	 * Resolve — same actions, same shortcuts, same order everywhere they appear.
@@ -14,9 +15,9 @@
 	 * The bar itself never writes without leaving that way back.
 	 */
 	import { IconAlarmSnooze, IconCheck, IconRotate, IconSend, IconUser } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { disposeThread } from '$lib/remote/inbox.remote';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { disposeThread } from '#lib/remote/inbox.remote.js';
+	import { useShortcut, shortcutLabel } from '#lib/useShortcut.svelte.js';
 	import { dispositionToast, undoLast } from './undo.svelte';
 	import { invalidateQueue } from './queue.svelte';
 	import SnoozeMenu from './SnoozeMenu.svelte';
@@ -125,7 +126,7 @@
 			{:else}
 				<IconSend size={16} />
 			{/if}
-			Reply
+			{m.inbox_reply_label()}
 		</Button>
 	{/if}
 
@@ -141,7 +142,7 @@
 			{:else}
 				<IconUser size={16} />
 			{/if}
-			Assign
+			{m.inbox_disposition_bar_assign_label()}
 		</Button>
 	{/if}
 
@@ -154,6 +155,7 @@
 			{#snippet children({ props })}
 				<Button
 					{...props}
+					data-testid="disposition-snooze"
 					variant={focus ? 'default' : 'ghost'}
 					{size}
 					class={focus ? 'flex-1' : ''}
@@ -164,7 +166,7 @@
 					{:else}
 						<IconAlarmSnooze size={16} />
 					{/if}
-					Snooze
+					{m.inbox_disposition_bar_snooze_label()}
 				</Button>
 			{/snippet}
 		</SnoozeMenu>
@@ -179,9 +181,14 @@
 			class={focus ? 'flex-1' : ''}
 			disabled={busy}
 			onclick={() => dispose('reopen', 'Back in the queue')}
+			data-testid="disposition-reopen"
 		>
 			<IconRotate size={16} />
-			{status === 'snoozed' ? 'Unsnooze' : awaiting ? 'Needs a reply' : 'Reopen'}
+			{status === 'snoozed'
+				? m.inbox_disposition_bar_unsnooze_label()
+				: awaiting
+					? m.inbox_disposition_bar_needs_reply_label()
+					: m.inbox_disposition_bar_reopen_label()}
 		</Button>
 	{/if}
 
@@ -192,13 +199,14 @@
 			class={focus ? 'flex-1' : ''}
 			disabled={busy}
 			onclick={() => dispose('resolve', 'Resolved')}
+			data-testid="disposition-resolve"
 		>
 			{#if resolveKeys.modHeld && resolveKeys.parsed}
 				<kbd class="kbd kbd-xs">{shortcutLabel(resolveKeys.parsed)}</kbd>
 			{:else}
 				<IconCheck size={16} />
 			{/if}
-			Resolve
+			{m.inbox_disposition_bar_resolve_label()}
 		</Button>
 	{/if}
 </div>

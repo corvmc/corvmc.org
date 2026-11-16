@@ -1,8 +1,10 @@
 import { page } from 'vitest/browser';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { forEachClockEdge } from '#lib/test/clock-edges.js';
+import '#lib/test/locators.js';
 
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -43,7 +45,7 @@ vi.mock('$lib/remote/reservations.remote', () => {
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -53,16 +55,19 @@ const CreateModal = (await import('./CreateModal.svelte')).default;
 describe('CreateModal', () => {
 	// #1688: the double-booking warning showed, but the submit stayed live.
 	it('holds the submit over a double-booking until staff tick the override', async () => {
-		await render(CreateModal);
-		await page.getByRole('button', { name: 'New Reservation' }).click();
+		const { locator } = await render(CreateModal);
+		await locator.getByRole('button').click();
 
 		// Booker type, member search, then the two time selects.
 		const combos = page.getByRole('combobox');
 		await combos.nth(2).selectOptions('17:00');
 		await combos.nth(3).selectOptions('18:00');
 
-		const submit = page.getByRole('button', { name: 'Create Reservation' });
-		const override = page.getByRole('checkbox', { name: /Book it anyway/ });
+		const dialog = page.getByRole('dialog');
+		const submit = dialog.getByCss('button[type="submit"]');
+		const override = dialog.getByCss(
+			'input[type="checkbox"]:is([name$="overrideConflicts"], [name*="overrideConflicts/"])'
+		);
 		await expect.element(override).toBeVisible();
 		await expect.element(submit).toBeDisabled();
 
@@ -70,17 +75,15 @@ describe('CreateModal', () => {
 		await expect.element(submit).toBeEnabled();
 	});
 
-	// #1984: 6pm PDT on Oct 26 is already Oct 27 in UTC.
-	describe('at 6pm club time', () => {
-		afterEach(() => vi.useRealTimers());
-
-		it('defaults the date to the club day, not the UTC day', async () => {
-			vi.useFakeTimers({ toFake: ['Date'] });
-			vi.setSystemTime(new Date('2026-10-27T01:00:00Z'));
+	// #1984: 6pm PDT on Oct 26 was already Oct 27 in UTC.
+	forEachClockEdge(
+		'defaults the date to the club day',
+		async ({ clubDate }) => {
 			await render(CreateModal);
-			await page.getByRole('button', { name: 'New Reservation' }).click();
+			await page.getByRole('button').click();
 
-			await expect.element(page.getByLabelText('Date')).toHaveValue('2026-10-26');
-		});
-	});
+			await expect.element(page.getByLabelText('Date')).toHaveValue(clubDate);
+		},
+		{ fakeTimers: true }
+	);
 });

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import { acceptGroupInvite, declineGroupInvite } from '$lib/remote/groups.remote';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { acceptGroupInvite, declineGroupInvite } from '#lib/remote/groups.remote.js';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	/**
@@ -20,18 +21,18 @@
 	// state the remote reports in-band rather than throwing.
 	function onAnswered(result: { success: boolean }, done: string) {
 		if (result.success) toast.success(done);
-		else toast.error('That invitation is no longer open.');
-		void invalidateAll();
+		else toast.error(m.groups_answer_group_invite_toast());
+		void refreshAll();
 	}
 </script>
 
 <div class="flex shrink-0 gap-2">
 	<Action
 		action={acceptGroupInvite.for(groupId)}
-		label="Accept"
-		aria-label={`Accept the invitation to ${groupName}`}
-		modalTitle="Join {groupName}"
-		submitLabel="Join"
+		label={m.groups_accept_label()}
+		aria-label={m.groups_answer_group_invite_accept_invitation_label({ groupName })}
+		modalTitle={m.groups_join_title({ groupName })}
+		submitLabel={m.groups_join_2_label()}
 		variant="primary"
 		size="sm"
 		onsuccess={(result) =>
@@ -40,17 +41,17 @@
 		{#snippet form()}
 			<input {...acceptFields.groupId.as('hidden', groupId)} />
 			<p class="text-sm">
-				You'll be on the roster, see the announcements, and can leave whenever you like.
+				{m.groups_answer_group_invite_ll_roster_see_announcements_can_text()}
 			</p>
 		{/snippet}
 	</Action>
 	<Action
 		action={declineGroupInvite.for(groupId)}
-		label="Decline"
-		aria-label={`Decline the invitation to ${groupName}`}
-		modalTitle="Decline invitation"
-		submitLabel="Decline"
-		confirm={`Decline the invitation to ${groupName}? They would have to invite you again.`}
+		label={m.groups_decline_label()}
+		aria-label={m.groups_answer_group_invite_decline_invitation_label({ groupName })}
+		modalTitle={m.groups_answer_group_invite_decline_invitation_2_title()}
+		submitLabel={m.groups_decline_label()}
+		confirm={m.groups_answer_group_invite_confirm_body({ groupName })}
 		variant="ghost"
 		size="sm"
 		onsuccess={(result) => onAnswered(result as { success: boolean }, 'Invitation declined')}

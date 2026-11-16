@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The four view tabs, and whatever the reader has saved.
 	 *
@@ -7,8 +8,8 @@
 	 * InboxChannelFilter. The toolbar's Start Daily reads the same cached entry.
 	 */
 	import { IconAlarmSnooze, IconInbox, IconInboxOff, IconLayoutList } from '@tabler/icons-svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
 	import SavedViewTabs from './SavedViewTabs.svelte';
 
 	let { view = $bindable('open'), onchange }: { view?: string; onchange?: (key: string) => void } =
@@ -34,10 +35,20 @@
 		class="w-max"
 		dense
 		tabs={[
-			{ key: 'open', label: 'Open', badge: counts.open, icon: IconInbox },
-			{ key: 'snoozed', label: 'Snoozed', badge: counts.snoozed, icon: IconAlarmSnooze },
-			{ key: 'resolved', label: 'Resolved', badge: counts.resolved, icon: IconInboxOff },
-			{ key: 'all', label: 'All', badge: counts.all, icon: IconLayoutList }
+			{ key: 'open', label: m.staff_open_label(), badge: counts.open, icon: IconInbox },
+			{
+				key: 'snoozed',
+				label: m.staff_inbox_inbox_views_snoozed_label(),
+				badge: counts.snoozed,
+				icon: IconAlarmSnooze
+			},
+			{
+				key: 'resolved',
+				label: m.staff_resolved_label(),
+				badge: counts.resolved,
+				icon: IconInboxOff
+			},
+			{ key: 'all', label: m.staff_all_label(), badge: counts.all, icon: IconLayoutList }
 		]}
 		active={view}
 		onchange={(key) => {

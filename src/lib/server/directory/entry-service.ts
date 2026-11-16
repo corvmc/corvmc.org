@@ -1,24 +1,26 @@
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
-import { db } from '$lib/server/db';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { db } from '#lib/server/db/index.js';
 import {
 	directoryEntry,
 	directoryTag,
 	type DirectoryTagKind
-} from '$lib/server/db/schema/directory';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { and, count, desc, eq, isNull } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+} from '#lib/server/db/schema/directory.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { and, asc, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { groupMember, groupSlugHistory } from '$lib/server/db/schema/group';
-import { bandSiteInsert } from '$lib/server/band/band-site-service';
-import { ensureUniqueSlug, generateSlug } from '$lib/server/utils/slug';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { DomainError } from '$lib/server/domain-error';
-import { archiveContactForClaim } from './contact-service';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import { groupMember, groupSlugHistory } from '#lib/server/db/schema/group.js';
+import { bandSiteInsert } from '#lib/server/band/band-site-service.js';
+import { ensureUniqueSlug, generateSlug } from '#lib/server/utils/slug.js';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { archiveActContactsForClaim } from './contact-service';
+import { performerFor } from '#lib/server/party/organization-service.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
  * The `directory_entry` a subject owns — created with it, and the one row every
@@ -61,12 +63,8 @@ export function groupEntryInsert(values: {
  * this code deploying is the one real way to reach it.
  */
 export async function getOrCreateGroupEntryId(groupId: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.groupId, groupId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.groupId, groupId));
+	if (existing) return existing;
 
 	const [row] = await db
 		.select({ name: group.name, bio: group.bio, avatarKey: group.avatarKey })
@@ -75,11 +73,23 @@ export async function getOrCreateGroupEntryId(groupId: string): Promise<string> 
 		.limit(1);
 	if (!row) throw new Error(`No group ${groupId} to create a directory entry for`);
 
-	const [created] = await db
+	// `idx_directory_entry_group`: two callers that both found none insert once.
+	await db
 		.insert(directoryEntry)
 		.values({ groupId, name: row.name, bio: row.bio, avatarKey: row.avatarKey })
-		.returning({ id: directoryEntry.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findEntryId(eq(directoryEntry.groupId, groupId));
+	if (!id) throw new Error(`No directory entry for group ${groupId}`);
+	return id;
+}
+
+async function findEntryId(where: SQL): Promise<string | undefined> {
+	const [row] = await db
+		.select({ id: directoryEntry.id })
+		.from(directoryEntry)
+		.where(where)
+		.limit(1);
+	return row?.id;
 }
 
 /**
@@ -94,32 +104,26 @@ export async function getOrCreateGroupEntryId(groupId: string): Promise<string> 
  * by `updateProfile` and the staff `updateUser` form.
  */
 export async function ensureUserEntry(userId: string, name: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.userId, userId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.userId, userId));
+	if (existing) return existing;
 
-	const [created] = await db
+	// 'members' rather than the column default of 'public': a new account has
+	// not chosen anything yet, and the old `user.directoryVisibility` default
+	// this replaces was 'members'. `idx_directory_entry_user` makes the hook
+	// and a profile save racing it insert once between them.
+	await db
 		.insert(directoryEntry)
-		// 'members' rather than the column default of 'public': a new account has
-		// not chosen anything yet, and the old `user.directoryVisibility` default
-		// this replaces was 'members'. Defaulting a brand-new member to the public
-		// web would be a change of policy smuggled in as a migration.
 		.values({ userId, name, visibility: 'members' })
-		.returning({ id: directoryEntry.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findEntryId(eq(directoryEntry.userId, userId));
+	if (!id) throw new Error(`No directory entry for user ${userId}`);
+	return id;
 }
 
 /** The entry id for a user, creating one from `user.name` if they somehow have none. */
 export async function getOrCreateUserEntryId(userId: string): Promise<string> {
-	const [existing] = await db
-		.select({ id: directoryEntry.id })
-		.from(directoryEntry)
-		.where(eq(directoryEntry.userId, userId))
-		.limit(1);
-	if (existing) return existing.id;
+	const existing = await findEntryId(eq(directoryEntry.userId, userId));
+	if (existing) return existing;
 
 	const [row] = await db.select({ name: user.name }).from(user).where(eq(user.id, userId)).limit(1);
 	if (!row) throw new Error(`No user ${userId} to create a directory entry for`);
@@ -221,7 +225,37 @@ export async function createExternalAct(data: CreateExternalActData): Promise<st
 		})
 		.returning({ id: directoryEntry.id });
 
+	// The act's private side: a performer organization, where its people go (#2622).
+	await performerFor(row.id);
 	return row.id;
+}
+
+/** Unowned entries: no member and no band. That pair *is* an outside act. */
+const isOutsideAct = () => and(isNull(directoryEntry.userId), isNull(directoryEntry.groupId));
+
+/** Outside acts by name, for the staff bill's search (#2782). */
+export async function searchOutsideActs(query: string) {
+	return db
+		.select({ id: directoryEntry.id, name: directoryEntry.name, hometown: directoryEntry.hometown })
+		.from(directoryEntry)
+		.where(and(isOutsideAct(), containsLiteral(directoryEntry.name, query)))
+		.orderBy(asc(directoryEntry.name), asc(directoryEntry.id))
+		.limit(10);
+}
+
+/**
+ * The outside act already on file under this name, ignoring case and spacing.
+ * The oldest wins when several match; Possible duplicates merges the rest.
+ */
+export async function findOutsideActByName(name: string): Promise<string | null> {
+	const key = name.trim().toLowerCase().replace(/\s+/g, ' ');
+	if (!key) return null;
+	const rows = await db
+		.select({ id: directoryEntry.id, name: directoryEntry.name })
+		.from(directoryEntry)
+		.where(and(isOutsideAct(), containsLiteral(directoryEntry.name, name.trim())))
+		.orderBy(asc(directoryEntry.createdAt), asc(directoryEntry.id));
+	return rows.find((r) => r.name.trim().toLowerCase().replace(/\s+/g, ' ') === key)?.id ?? null;
 }
 
 /**
@@ -244,9 +278,12 @@ export async function listExternalActs(search?: string, pagination: PaginationIn
 			name: directoryEntry.name,
 			hometown: directoryEntry.hometown,
 			links: directoryEntry.links,
-			createdAt: directoryEntry.createdAt
+			createdAt: directoryEntry.createdAt,
+			// The act's page in Contacts (#2783): its people, shows and actions.
+			organizationId: organization.id
 		})
 		.from(directoryEntry)
+		.leftJoin(organization, eq(organization.directoryEntryId, directoryEntry.id))
 		.where(where)
 		.orderBy(desc(directoryEntry.createdAt), desc(directoryEntry.id))
 		.$dynamic();
@@ -270,10 +307,10 @@ export async function listExternalActs(search?: string, pagination: PaginationIn
  * theirs to publish, but publishing it is their decision to make on their own
  * profile rather than a side effect of claiming.
  *
- * The act's `contact` row is **archived, not inherited**. The booking contact is
- * frequently a manager rather than one of the members who just joined, so
- * carrying it forward would leave a member band holding a stale private phone
- * number that nobody owns. Contact goes through the account from here.
+ * The act's performer organization is **archived, not inherited**: the band
+ * names it in `from_organization_id`, so its gigs, payments and people stay
+ * one link away, and its people get a retention horizon. The booking contact
+ * is frequently a manager rather than one of the members who just joined.
  */
 export async function claimExternalAct(entryId: string, ownerId: string) {
 	const [entry] = await db
@@ -298,12 +335,23 @@ export async function claimExternalAct(entryId: string, ownerId: string) {
 		isReservedSlug
 	);
 	const groupId = crypto.randomUUID();
+	const organizationId = await performerFor(entryId);
 
 	await db.batch([
 		// Same slug-history retirement `create()` does: a live `group.slug` always
 		// shadows a released one, so a stale redirect could only resurface later.
 		db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, slug)),
-		db.insert(group).values({ id: groupId, kind: 'band', name: entry.name, slug }),
+		db.insert(group).values({
+			id: groupId,
+			kind: 'band',
+			name: entry.name,
+			slug,
+			fromOrganizationId: organizationId
+		}),
+		db
+			.update(organization)
+			.set({ archivedAt: new Date(), updatedAt: new Date() })
+			.where(eq(organization.id, organizationId)),
 		db.insert(groupMember).values({
 			groupId,
 			userId: ownerId,
@@ -317,10 +365,9 @@ export async function claimExternalAct(entryId: string, ownerId: string) {
 		bandSiteInsert(groupId)
 	]);
 
-	// After the batch rather than in it. Archiving is bookkeeping about a record
-	// that may not exist at all, and a missing contact must not fail a claim that
-	// has already succeeded.
-	await archiveContactForClaim(entryId);
+	// After the batch rather than in it: bookkeeping that must not fail a claim
+	// that has already succeeded.
+	await archiveActContactsForClaim(organizationId);
 
 	return { groupId, slug };
 }

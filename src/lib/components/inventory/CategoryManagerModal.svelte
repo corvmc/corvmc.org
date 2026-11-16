@@ -1,16 +1,21 @@
 <script lang="ts">
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { RemoveCategoryAction } from '$lib/components/actions';
-	import { addCategory, editCategory, getEquipmentCategories } from '$lib/remote/inventory.remote';
-	import { pricingTiers } from '$lib/config';
-	import type { PricingTier } from '$lib/server/db/schema/inventory';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { RemoveCategoryAction } from '#lib/components/actions/index.js';
+	import {
+		addCategory,
+		editCategory,
+		getEquipmentCategories
+	} from '#lib/remote/inventory.remote.js';
+	import { pricingTiers } from '#lib/config.js';
+	import type { PricingTier } from '#lib/server/db/schema/inventory.js';
 
 	/**
 	 * Managing equipment categories — the table, the add/edit form, and the query behind both.
@@ -46,17 +51,19 @@
 	const categoryForm = $derived(editingCategory?.id ? (editCategory as any) : addCategory);
 </script>
 
-<Modal bind:open title="Manage Categories" maxWidth="max-w-lg">
+<Modal bind:open title={m.inventory_category_manager_modal_title()} maxWidth="max-w-lg">
 	<div class="mb-4">
 		{#if categories.length === 0}
-			<EmptyState description="No categories" />
+			<EmptyState description={m.inventory_category_manager_modal_description_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Name</th>
-					<th class="col-support">Pricing tier</th>
-					<th class="col-support cell-num">Order</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.inventory_category_manager_modal_name_label()}</th>
+					<th class="col-support">{m.inventory_category_manager_modal_pricing_tier_label()}</th>
+					<th class="col-support cell-num">{m.inventory_category_manager_modal_order_label()}</th>
+					<th class="w-px"
+						><span class="sr-only">{m.inventory_category_manager_modal_actions_label()}</span></th
+					>
 				{/snippet}
 				{#each categories as cat (cat.id)}
 					<tr>
@@ -74,7 +81,7 @@
 										name: cat.name,
 										displayOrder: cat.displayOrder,
 										pricingTier: cat.pricingTier as PricingTier
-									})}>Edit</Button
+									})}>{m.inventory_category_manager_modal_edit_label()}</Button
 							>
 							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 						</td>
@@ -85,7 +92,11 @@
 	</div>
 
 	<div class="space-y-3 border-t pt-4">
-		<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
+		<h4 class="text-sm font-semibold">
+			{(editingCategory?.id
+				? m.inventory_category_manager_modal_edit_category_title
+				: m.inventory_category_manager_modal_add_category_title)()}
+		</h4>
 		{#if !editingCategory}
 			<Button
 				type="button"
@@ -100,12 +111,14 @@
 						pricingTier: 'accessory' as PricingTier
 					})}
 			>
-				+ New Category
+				{m.inventory_category_manager_modal_new_category_label()}
 			</Button>
 		{:else}
 			<Form
 				remote={categoryForm}
-				successToast={editingCategory.id ? 'Category updated' : 'Category added'}
+				successToast={editingCategory.id
+					? m.inventory_category_manager_modal_category_updated_toast()
+					: m.inventory_category_manager_modal_category_added_toast()}
 				onsuccess={refreshCategories}
 				class="space-y-3"
 			>
@@ -114,23 +127,24 @@
 				{/if}
 				<div class="grid grid-cols-3 gap-3">
 					<Field
-						name="name"
+						field={categoryForm.fields.name}
 						type="text"
-						label="Name"
+						label={m.inventory_category_manager_modal_name_label()}
 						class="col-span-2"
 						value={editingCategory.name}
 					/>
 					<Field
-						name="displayOrder"
+						field={categoryForm.fields.displayOrder}
+						submitAs="text"
 						type="number"
-						label="Order"
+						label={m.inventory_category_manager_modal_order_label()}
 						value={editingCategory.displayOrder}
 					/>
 				</div>
 				<Field
-					name="pricingTier"
+					field={categoryForm.fields.pricingTier}
 					type="select"
-					label="Pricing Tier"
+					label={m.inventory_category_manager_modal_pricing_tier_2_label()}
 					value={editingCategory.pricingTier}
 					options={pricingTiers.map((t) => ({
 						value: t,
@@ -139,9 +153,15 @@
 				/>
 				<div class="flex gap-2">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (editingCategory = null)}
-						>Cancel</Button
+						>{m.inventory_category_manager_modal_cancel_label()}</Button
 					>
-					<SubmitButton label={editingCategory.id ? 'Save' : 'Add'} variant="primary" size="sm" />
+					<SubmitButton
+						label={editingCategory.id
+							? m.inventory_category_manager_modal_save_label()
+							: m.inventory_category_manager_modal_add_label()}
+						variant="primary"
+						size="sm"
+					/>
 				</div>
 			</Form>
 		{/if}

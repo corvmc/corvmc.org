@@ -1,5 +1,5 @@
 import { formatCents } from './format';
-import { TICKET_CONTRIBUTION_MAX_CENTS } from '$lib/config';
+import { TICKET_CONTRIBUTION_MAX_CENTS } from '#lib/config.js';
 
 /**
  * Who sells the tickets, and what that means for the price.

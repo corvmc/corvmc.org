@@ -18,15 +18,15 @@ import { user } from './db/schema/authentication';
 // columns qualified and were never affected.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
 vi.mock('./reservation/conflict-service', () => ({
 	validateBooking: vi.fn(),
 	hasConflict: vi.fn()
 }));
-vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: {} }));
 vi.mock('$app/server', () => ({ getRequestEvent: vi.fn() }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: vi.fn(),
 	getStripeProductId: vi.fn(),
 	buildSubscriptionLineItem: vi.fn()
@@ -65,6 +65,8 @@ describe('topPositionFor', () => {
 		// subquery and the predicate could never match a user id.
 		expect(rendered).toContain('mhr.user_id = "user"."id"');
 		expect(rendered).not.toMatch(/mhr\.user_id = "id"/);
+		expect(rendered).toContain('gm.user_id = "user"."id"');
+		expect(rendered).not.toMatch(/gm\.user_id = "id"/);
 	});
 
 	it('restricts to real positions, so a legacy role row cannot be returned', () => {
@@ -75,13 +77,14 @@ describe('topPositionFor', () => {
 
 		// Without the `in (…)` filter a member holding only the legacy 'member'
 		// row comes back with that name, and memberSubtype would badge them.
-		expect(rendered).toContain("r.name in ('admin', 'staff'");
+		expect(rendered).toContain("r.name = 'admin'");
+		expect(rendered).toContain("gp.job in ('admin', 'staff'");
 		expect(rendered).not.toContain("'member'");
 		expect(rendered).not.toContain("'sustaining'");
 	});
 
 	it('generates its display ladder from positionOrder', async () => {
-		const { positionOrder } = await import('$lib/config');
+		const { positionOrder } = await import('#lib/config.js');
 		const { sql: rendered } = db
 			.select({ id: user.id, role: topPositionFor(user.id) })
 			.from(user)

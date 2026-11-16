@@ -6,5 +6,7 @@ import { defineConfig } from '@inlang/paraglide-js';
 export default defineConfig({
 	outdir: './src/lib/paraglide',
 	strategy: ['baseLocale'],
-	emitReadme: false
+	emitReadme: false,
+	// The CLI defaults to emitting a .d.ts per message; the plugin does not.
+	emitTsDeclarations: false
 });

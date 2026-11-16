@@ -64,9 +64,10 @@ export const ticket = sqliteTable(
 		attendeeEmail: text('attendee_email').notNull(),
 		code: text('code').notNull().unique(),
 		status: text('status', { enum: ticketStatuses }).notNull().default('pending'),
-		// Proof of payment, per finance-spec: the purchasable stores the Stripe
-		// Payment Record ID locally. Null for comped tickets and free RSVPs,
-		// which never go through Stripe, and for tickets still `pending`.
+		// Proof of payment: Stripe is the payment ledger, and the purchasable
+		// stores the Stripe Payment Record ID locally. Null for comped tickets
+		// and free RSVPs, which never go through Stripe, and for tickets still
+		// `pending`.
 		stripePaymentRecordId: text('stripe_payment_record_id'),
 		// What this pass cost, in cents, after any member discount. 0 for comped
 		// tickets and free claims; null on rows written before this column existed.

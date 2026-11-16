@@ -1,20 +1,39 @@
-import { db } from '$lib/server/db';
-import { toGenericRef } from '$lib/server/entity/refs';
-import { and, asc, count, eq, inArray, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
+import { toGenericRef } from '#lib/server/entity/refs.js';
+import {
+	and,
+	asc,
+	count,
+	eq,
+	exists,
+	inArray,
+	isNull,
+	ne,
+	notInArray,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { placePendingWorkOrders } from './retime-work-orders';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	dutyList,
 	dutyListItem,
+	dutyListItemDependency,
 	volunteerRole,
+	volunteerShift,
 	volunteerSignup,
 	workOrder,
+	workOrderAssignee,
+	workOrderDependency,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { project } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
+} from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { grantApplication } from '#lib/server/db/schema/grant.js';
+import { group } from '#lib/server/db/schema/group.js';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
@@ -22,17 +41,18 @@ import {
 	VOLUNTEER_SHIFT_TITLE_MAX,
 	dutyListAnchorLabels,
 	eventDutyListAnchors
-} from '$lib/config';
-import type { DutyListAnchor, DutyListAutoApplyTrigger, WorkDoneCondition } from '$lib/config';
-import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
-import { chunk, chunkSize } from '$lib/server/utils/chunk';
+} from '#lib/config.js';
+import { clubInstant } from '#lib/utils/format.js';
+import type { DutyListAnchor, ProjectKind, WorkDoneCondition } from '#lib/config.js';
+import type { DutyList, DutyListItem } from '#lib/server/db/schema/volunteer.js';
+import { chunkInsert } from '#lib/server/utils/chunk.js';
 import {
 	ensureSections,
 	nextTaskOrders,
 	sectionNameKey,
 	projectSubject
-} from '$lib/server/project/project-section-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+} from '#lib/server/project/project-section-service.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 /**
  * Project templates (the `duty_list` tables): a named set of work orders,
@@ -280,12 +300,33 @@ export async function listDutyLists(opts: { includeInactive?: boolean } = {}) {
 	})) satisfies DutyListRow[];
 }
 
+/** A template a new project can start from: live, a project's, with items on it. */
+export async function getStartableTemplate(id: string): Promise<DutyList> {
+	const detail = await getDutyListDetail(id);
+	if (!detail || !detail.list.isActive || detail.list.subject !== 'project') {
+		throw new DutyListNotFoundError();
+	}
+	if (detail.items.length === 0) {
+		throw new DutyListValidationError('That template has no items on it yet.', 'templateId');
+	}
+	// A grant's project is made with its grant, never from the New project form.
+	if (detail.list.grantStage) {
+		throw new DutyListValidationError(
+			'A grant template is added when its grant is created.',
+			'templateId'
+		);
+	}
+	return detail.list;
+}
+
 export interface DutyListItemRow extends DutyListItem {
 	roleName: string;
+	/** The items in this template it waits on, by id (#2625). */
+	waitsOn: string[];
 	/** The owning committee's name, or null for staff's. */
 	groupName: string | null;
 	/** The role as a record, so the item can link to it. */
-	role: import('$lib/types/entity').GenericRef;
+	role: import('#lib/types/entity.js').GenericRef;
 }
 
 export interface DutyListDetail {
@@ -314,10 +355,13 @@ export async function getDutyListDetail(id: string): Promise<DutyListDetail | nu
 		.where(eq(dutyListItem.dutyListId, id))
 		.orderBy(asc(dutyListItem.sortOrder));
 
+	const waits = await itemEdgesOf(id);
+
 	return {
 		list,
 		items: rows.map((r) => ({
 			...r.item,
+			waitsOn: waits.get(r.item.id) ?? [],
 			roleName: r.roleName,
 			groupName: r.groupName,
 			// A duty list item *is* a role at an offset, and the role was a bare
@@ -331,7 +375,7 @@ export async function createDutyList(data: {
 	name: string;
 	description?: string | null;
 	anchor: DutyListAnchor;
-	autoApplyOn?: DutyListAutoApplyTrigger | null;
+	projectKind?: ProjectKind;
 	createdByUserId: string;
 }): Promise<DutyList> {
 	const name = data.name.trim();
@@ -344,19 +388,39 @@ export async function createDutyList(data: {
 		.limit(1);
 	if (existing) throw new DutyListNameTakenError(name);
 
-	const [row] = await db
-		.insert(dutyList)
-		.values({
-			name,
-			description: data.description?.trim() || null,
-			anchor: data.anchor,
-			subject: 'project',
-			autoApplyOn: data.autoApplyOn ?? null,
-			createdByUserId: data.createdByUserId
-		})
-		.returning();
+	// The name's unique constraint refuses a concurrent create the read missed.
+	try {
+		const insert = db
+			.insert(dutyList)
+			.values({
+				name,
+				description: data.description?.trim() || null,
+				anchor: data.anchor,
+				subject: 'project',
+				projectKind: data.projectKind ?? 'general',
+				createdByUserId: data.createdByUserId
+			})
+			.returning();
+		if (data.projectKind !== 'production') return (await insert)[0];
+		const [, [row]] = await db.batch([releaseProductionTemplate(), insert]);
+		return row;
+	} catch (err) {
+		if (isUniqueConstraintError(err)) throw new DutyListNameTakenError(name);
+		throw err;
+	}
+}
 
-	return row;
+/**
+ * One template starts a production, so marking one takes it off whichever held
+ * it. Runs first in the marking write's batch.
+ */
+function releaseProductionTemplate(exceptId?: string) {
+	return db
+		.update(dutyList)
+		.set({ projectKind: 'general', updatedAt: new Date() })
+		.where(
+			and(eq(dutyList.projectKind, 'production'), exceptId ? ne(dutyList.id, exceptId) : undefined)
+		);
 }
 
 export async function updateDutyList(
@@ -365,7 +429,7 @@ export async function updateDutyList(
 		name?: string;
 		description?: string | null;
 		anchor?: DutyListAnchor;
-		autoApplyOn?: DutyListAutoApplyTrigger | null;
+		projectKind?: ProjectKind;
 		isActive?: boolean;
 	}
 ): Promise<DutyList> {
@@ -393,10 +457,14 @@ export async function updateDutyList(
 	}
 	if (data.description !== undefined) updates.description = data.description?.trim() || null;
 	if (data.anchor !== undefined) updates.anchor = data.anchor;
-	if (data.autoApplyOn !== undefined) updates.autoApplyOn = data.autoApplyOn;
+	// A grant template stays a grant's: the editor's production box cannot move it.
+	if (data.projectKind !== undefined && !existing.grantStage)
+		updates.projectKind = data.projectKind;
 	if (data.isActive !== undefined) updates.isActive = data.isActive;
 
-	const [row] = await db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
+	const update = db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
+	if (updates.projectKind !== 'production') return (await update)[0];
+	const [, [row]] = await db.batch([releaseProductionTemplate(id), update]);
 	return row;
 }
 
@@ -435,6 +503,21 @@ export interface DutyListItemInput {
 	doneWhen?: WorkDoneCondition | null;
 }
 
+async function assertListableRole(volunteerRoleId: string): Promise<void> {
+	const [role] = await db
+		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.id, volunteerRoleId))
+		.limit(1);
+	if (!role) throw new DutyListValidationError('That role no longer exists.', 'volunteerRoleId');
+	if (!role.isActive) {
+		throw new DutyListValidationError(
+			'That role is archived — restore it before putting it on a duty list.',
+			'volunteerRoleId'
+		);
+	}
+}
+
 export async function addDutyListItem(
 	dutyListId: string,
 	input: DutyListItemInput
@@ -446,18 +529,7 @@ export async function addDutyListItem(
 		.limit(1);
 	if (!list) throw new DutyListNotFoundError();
 
-	const [role] = await db
-		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
-		.from(volunteerRole)
-		.where(eq(volunteerRole.id, input.volunteerRoleId))
-		.limit(1);
-	if (!role) throw new DutyListValidationError('That role no longer exists.', 'volunteerRoleId');
-	if (!role.isActive) {
-		throw new DutyListValidationError(
-			'That role is archived — restore it before putting it on a duty list.',
-			'volunteerRoleId'
-		);
-	}
+	await assertListableRole(input.volunteerRoleId);
 
 	const shape = validateShape(input);
 
@@ -498,7 +570,11 @@ export async function updateDutyListItem(
 	});
 
 	const updates: Partial<typeof dutyListItem.$inferInsert> = { ...shape, updatedAt: new Date() };
-	if (input.volunteerRoleId !== undefined) updates.volunteerRoleId = input.volunteerRoleId;
+	// An item kept on a role archived since is still editable; moving one onto it is not.
+	if (input.volunteerRoleId !== undefined && input.volunteerRoleId !== existing.volunteerRoleId) {
+		await assertListableRole(input.volunteerRoleId);
+		updates.volunteerRoleId = input.volunteerRoleId;
+	}
 	if (input.capacity !== undefined) updates.capacity = validateCapacity(input.capacity);
 	if (input.notes !== undefined) updates.notes = validateNotes(input.notes);
 	if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
@@ -530,13 +606,6 @@ export async function removeDutyListItem(id: string): Promise<void> {
 // Applying a list
 // ---------------------------------------------------------------------------
 
-/**
- * Column count for `chunkSize` — see `$lib/server/utils/chunk`. A six-item list
- * with eight tasks each clears D1's parameter ceiling on the task insert alone,
- * so the chunking is not optional.
- */
-const TASK_COLUMNS = 4;
-
 export interface ApplyDutyListResult {
 	workOrderIds: string[];
 	taskCount: number;
@@ -564,6 +633,8 @@ export async function projectOfEvent(eventId: string): Promise<string | null> {
 /** The times an anchor can resolve to. A null is a time not set yet. */
 interface Clock {
 	projectStartsAt: Date | null;
+	/** The dates on the project's grant application; null off a grant project. */
+	grant: { applyBy: string | null; startsOn: string | null; endsOn: string | null } | null;
 	/** The show the event anchors read, if the project has one. */
 	event: {
 		id: string;
@@ -606,11 +677,21 @@ async function loadEventClock(where: SQL): Promise<Clock['event']> {
 
 async function loadClock(subject: DutySubject): Promise<Clock | null> {
 	const [row] = await db
-		.select({ startsAt: project.startsAt })
+		.select({
+			startsAt: project.startsAt,
+			grantId: grantApplication.id,
+			applyBy: grantApplication.applyBy,
+			startsOn: grantApplication.startsOn,
+			endsOn: grantApplication.endsOn
+		})
 		.from(project)
+		.leftJoin(grantApplication, eq(grantApplication.projectId, project.id))
 		.where(eq(project.id, subject.id))
 		.limit(1);
 	if (!row) return null;
+	const grant = row.grantId
+		? { applyBy: row.applyBy, startsOn: row.startsOn, endsOn: row.endsOn }
+		: null;
 	// A festival is one project over several nights; its event anchors time
 	// from the first of them that is still on.
 	const event = await loadEventClock(
@@ -621,7 +702,12 @@ async function loadClock(subject: DutySubject): Promise<Clock | null> {
 					notInArray(eventListing.status, ['cancelled', 'rejected'])
 				)!
 	);
-	return { projectStartsAt: row.startsAt, event };
+	return { projectStartsAt: row.startsAt, grant, event };
+}
+
+/** A grant's date as an instant: the end of the working day in Corvallis. */
+export function grantDayAt(day: string): Date {
+	return clubInstant(day, '17:00');
 }
 
 /**
@@ -638,6 +724,15 @@ function resolveAnchor(
 
 	if (anchor === 'project_start') {
 		return found(clock.projectStartsAt, 'The project has no start date yet.');
+	}
+	if (anchor === 'apply_by' || anchor === 'award_start' || anchor === 'award_end') {
+		if (!clock.grant) return found(null, 'The project is not a grant.');
+		const day = {
+			apply_by: clock.grant.applyBy,
+			award_start: clock.grant.startsOn,
+			award_end: clock.grant.endsOn
+		}[anchor];
+		return found(day ? grantDayAt(day) : null, `The grant has no ${label} yet.`);
 	}
 	const event = clock.event;
 	if (!event) return found(null, 'The project has no event yet.');
@@ -688,7 +783,7 @@ export async function placeWorkAwaitingEvent(projectId: string) {
 		const { at } = resolveAnchor(anchor, clock);
 		if (!at) return [];
 		const seconds = Math.floor(at.getTime() / 1000);
-		return [placePendingWorkOrders({ eventId: event.id }, [anchor], sql`${seconds}`)];
+		return placePendingWorkOrders({ eventId: event.id }, [anchor], sql`${seconds}`);
 	});
 	await db.batch([claim, ...places] as unknown as Parameters<typeof db.batch>[0]);
 }
@@ -755,27 +850,30 @@ export async function applyDutyList(
 		return { sectionId, sortOrder };
 	};
 
-	const shiftRows: (typeof workOrder.$inferInsert)[] = [];
+	const workRows: (typeof workOrder.$inferInsert)[] = [];
+	const shiftRows: (typeof volunteerShift.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
+	// Each item's stamped task, so the template's edges can be copied onto them.
+	const stamped = new Map<string, string>();
 
 	for (const item of items) {
 		const workOrderId = crypto.randomUUID();
+		stamped.set(item.id, workOrderId);
 		const windowed = item.offsetMinutes !== null && item.durationMinutes !== null;
-		const startsAt = anchor && windowed ? addMinutes(anchor, item.offsetMinutes!) : null;
 
-		shiftRows.push({
+		// A window is a task and a shift; a deadline is a task alone (#2518).
+		workRows.push({
 			id: workOrderId,
 			volunteerRoleId: item.volunteerRoleId,
 			eventId,
 			projectId: subject.id,
-			startsAt,
-			endsAt: startsAt ? addMinutes(startsAt, item.durationMinutes!) : null,
 			dueAt:
 				anchor && item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
-			// No time to measure from yet: keep the offset so retime can place it.
+			// No time to measure from yet: the task keeps the offsets, and the
+			// shift is made when the anchor gets one (#2033).
 			pendingOffsetMinutes: anchor ? null : (item.offsetMinutes ?? item.dueOffsetMinutes),
 			pendingDurationMinutes: anchor ? null : item.durationMinutes,
-			capacity: item.capacity,
+			pendingCapacity: anchor || !windowed ? null : item.capacity,
 			notes: item.notes,
 			// A copy, like the rest: re-owning the template leaves this show alone.
 			title: item.title,
@@ -784,34 +882,54 @@ export async function applyDutyList(
 			dutyListId,
 			anchor: list.anchor,
 			...place(item.section),
-			// On the claim board, as every stamped-out shift has always been.
-			postedAt: new Date(),
-			postedByUserId: createdByUserId,
 			createdByUserId
 		});
+
+		if (anchor && windowed) {
+			const startsAt = addMinutes(anchor, item.offsetMinutes!);
+			shiftRows.push({
+				workOrderId,
+				startsAt,
+				endsAt: addMinutes(startsAt, item.durationMinutes!),
+				capacity: item.capacity,
+				anchor: list.anchor,
+				createdByUserId
+			});
+		}
 
 		item.tasks.forEach((label, i) => {
 			taskRows.push({ workOrderId, label, sortOrder: i });
 		});
 	}
 
-	// Work orders first: a task carries `work_order_id`, so the row it names has
-	// to exist. `db.batch` and not `db.transaction` — the latter is broken on D1.
-	await db.batch(
-		shiftRows.map((row) => db.insert(workOrder).values(row)) as unknown as Parameters<
-			typeof db.batch
-		>[0]
+	// The template's order between its items, as task dependencies (#2625).
+	const dependencyRows = items.flatMap((item) =>
+		item.waitsOn.flatMap((on) => {
+			const dependsOnId = stamped.get(on);
+			return dependsOnId
+				? [{ workOrderId: stamped.get(item.id)!, dependsOnId, createdByUserId }]
+				: [];
+		})
 	);
+
+	// Tasks first: a shift and a checklist item each carry `work_order_id`, so the
+	// row it names has to exist. `db.batch`, never `db.transaction` (broken on D1).
+	await db.batch([
+		...workRows.map((row) => db.insert(workOrder).values(row)),
+		...shiftRows.map((row) => db.insert(volunteerShift).values(row)),
+		...dependencyRows.map((row) => db.insert(workOrderDependency).values(row))
+	] as unknown as Parameters<typeof db.batch>[0]);
 
 	if (taskRows.length > 0) {
 		await db.batch(
-			chunk(taskRows, chunkSize(TASK_COLUMNS)).map((g) =>
-				db.insert(workTask).values(g)
-			) as unknown as Parameters<typeof db.batch>[0]
+			// A six-item list with eight tasks each passes D1's parameter cap alone.
+			chunkInsert(taskRows, (g) => db.insert(workTask).values(g)) as unknown as Parameters<
+				typeof db.batch
+			>[0]
 		);
 	}
 
-	const n = shiftRows.length;
+	const n = workRows.length;
 	const warnings = missing
 		? [`${missing} ${n === 1 ? 'Its item stays' : `All ${n} items stay`} unscheduled until then.`]
 		: [];
@@ -822,12 +940,12 @@ export async function applyDutyList(
 		details: {
 			dutyListId,
 			dutyListName: list.name,
-			tasks: shiftRows.length,
+			tasks: workRows.length,
 			...(existing > 0 ? { reappliedReason: reason! } : {})
 		}
 	});
 	return {
-		workOrderIds: shiftRows.map((r) => r.id!),
+		workOrderIds: workRows.map((r) => r.id!),
 		taskCount: taskRows.length,
 		warnings
 	};
@@ -879,24 +997,49 @@ export async function setWorkTaskDone(id: string, done: boolean, userId: string)
 }
 
 /**
- * Tick a task on a shift you are actually working.
+ * Tick a checklist item on a task you are actually on: signed up for one of its
+ * shifts, or assigned it.
  *
- * The assignment is checked in SQL, in one statement with the lookup, so there
- * is no window between deciding and writing. A cancelled signup or a called-off
- * work order is not an assignment: both drop out through the `IS NULL`s rather
- * than through a second read.
+ * Checked in SQL, in one statement with the lookup, so there is no window
+ * between deciding and writing. A cancelled sign-up or a called-off task is not
+ * being on it.
  */
 export async function setWorkTaskDoneAsAssignee(id: string, done: boolean, userId: string) {
 	const [assigned] = await db
 		.select({ id: workTask.id })
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
-		.innerJoin(
-			volunteerSignup,
-			and(eq(volunteerSignup.shiftId, workOrder.id), eq(volunteerSignup.userId, userId))
-		)
 		.where(
-			and(eq(workTask.id, id), isNull(volunteerSignup.cancelledAt), isNull(workOrder.cancelledAt))
+			and(
+				eq(workTask.id, id),
+				isNull(workOrder.cancelledAt),
+				or(
+					exists(
+						db
+							.select({ one: sql`1` })
+							.from(volunteerSignup)
+							.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+							.where(
+								and(
+									eq(volunteerShift.workOrderId, workOrder.id),
+									eq(volunteerSignup.userId, userId),
+									isNull(volunteerSignup.cancelledAt)
+								)
+							)
+					),
+					exists(
+						db
+							.select({ one: sql`1` })
+							.from(workOrderAssignee)
+							.where(
+								and(
+									eq(workOrderAssignee.workOrderId, workOrder.id),
+									eq(workOrderAssignee.userId, userId)
+								)
+							)
+					)
+				)
+			)
 		)
 		.limit(1);
 
@@ -904,24 +1047,79 @@ export async function setWorkTaskDoneAsAssignee(id: string, done: boolean, userI
 	return setWorkTaskDone(id, done, userId);
 }
 
-/** How many of a work order's tasks are ticked — the close-out card's number. */
-export async function countTasks(workOrderIds: string[]) {
-	if (workOrderIds.length === 0) return new Map<string, { total: number; done: number }>();
+// ---------------------------------------------------------------------------
+// Item dependencies (#2625)
+// ---------------------------------------------------------------------------
 
+/** Per item in the template, the items it waits on. Read by the template's id. */
+async function itemEdgesOf(dutyListId: string): Promise<Map<string, string[]>> {
 	const rows = await db
 		.select({
-			workOrderId: workTask.workOrderId,
-			total: count(),
-			done: sql<number>`sum(case when ${workTask.done} then 1 else 0 end)`
+			itemId: dutyListItemDependency.itemId,
+			dependsOnItemId: dutyListItemDependency.dependsOnItemId
 		})
-		.from(workTask)
-		.where(
-			sql`${workTask.workOrderId} in (${sql.join(
-				workOrderIds.map((id) => sql`${id}`),
-				sql`, `
-			)})`
-		)
-		.groupBy(workTask.workOrderId);
+		.from(dutyListItemDependency)
+		.innerJoin(dutyListItem, eq(dutyListItem.id, dutyListItemDependency.itemId))
+		.where(eq(dutyListItem.dutyListId, dutyListId));
+	const out = new Map<string, string[]>();
+	for (const r of rows) out.set(r.itemId, [...(out.get(r.itemId) ?? []), r.dependsOnItemId]);
+	return out;
+}
 
-	return new Map(rows.map((r) => [r.workOrderId, { total: r.total, done: Number(r.done) }]));
+/** Whether item `from` already waits on `to`, directly or through other items. */
+async function itemReaches(from: string, to: string): Promise<boolean> {
+	const rows = await db.all<{ hit: number }>(sql`
+		with recursive reach(id) as (
+			select depends_on_item_id from duty_list_item_dependency where item_id = ${from}
+			union
+			select d.depends_on_item_id from duty_list_item_dependency d join reach r on d.item_id = r.id
+		)
+		select 1 as hit from reach where id = ${to} limit 1
+	`);
+	return rows.length > 0;
+}
+
+/** The template both items are on; refused when they are on different ones. */
+async function sameTemplate(itemId: string, dependsOnItemId: string): Promise<string> {
+	if (itemId === dependsOnItemId) {
+		throw new DutyListValidationError('An item cannot wait on itself.');
+	}
+	const rows = await db
+		.select({ id: dutyListItem.id, dutyListId: dutyListItem.dutyListId })
+		.from(dutyListItem)
+		.where(or(eq(dutyListItem.id, itemId), eq(dutyListItem.id, dependsOnItemId)));
+	if (rows.length !== 2) throw new DutyListValidationError('That item does not exist.');
+	if (rows[0].dutyListId !== rows[1].dutyListId) {
+		throw new DutyListValidationError('Pick an item on the same template.');
+	}
+	return rows[0].dutyListId;
+}
+
+/**
+ * Make one template item wait on another. A loop is refused, as it is between
+ * tasks; an edge that exists is a no-op. Returns the template's id.
+ */
+export async function addItemDependency(itemId: string, dependsOnItemId: string): Promise<string> {
+	const dutyListId = await sameTemplate(itemId, dependsOnItemId);
+	if (await itemReaches(dependsOnItemId, itemId)) {
+		throw new DutyListValidationError('That item already waits on this one.');
+	}
+	await db.insert(dutyListItemDependency).values({ itemId, dependsOnItemId }).onConflictDoNothing();
+	return dutyListId;
+}
+
+export async function removeItemDependency(
+	itemId: string,
+	dependsOnItemId: string
+): Promise<string> {
+	const dutyListId = await sameTemplate(itemId, dependsOnItemId);
+	await db
+		.delete(dutyListItemDependency)
+		.where(
+			and(
+				eq(dutyListItemDependency.itemId, itemId),
+				eq(dutyListItemDependency.dependsOnItemId, dependsOnItemId)
+			)
+		);
+	return dutyListId;
 }

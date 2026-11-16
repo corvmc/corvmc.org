@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import PosterCard from './PosterCard.svelte';
-import { CDN_MARKER, transformOptions } from '$lib/utils/images';
+import { CDN_MARKER, transformOptions } from '#lib/utils/images.js';
 
 /**
  * Posters are the largest images the app serves. When Cloudflare Image
@@ -13,7 +13,7 @@ import { CDN_MARKER, transformOptions } from '$lib/utils/images';
  */
 
 const base = {
-	href: resolve('/events/1'),
+	href: resolve('events/1'),
 	title: 'Cascade Fest',
 	startsAt: new Date('2026-08-20T19:00:00Z')
 };

@@ -1,18 +1,23 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityCard } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getMemberDashboard } from '$lib/remote/users.remote';
-	import { InviteFriendAction, ReportBuildingProblemAction } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityCard } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { formatDate, formatTimeRange, formatDuration } from '#lib/utils/format.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getMemberDashboard } from '#lib/remote/users.remote.js';
+	import {
+		InviteFriendAction,
+		ReportBuildingProblemAction
+	} from '#lib/components/actions/index.js';
 	import MatchesCard from './MatchesCard.svelte';
+	import ClassifiedMatchesCard from './ClassifiedMatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
-	import { creditsToHours } from '$lib/config';
+	import { creditsToHours } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 
 	let data = $derived(await getMemberDashboard());
@@ -24,7 +29,7 @@
 	const allocatedHours = $derived(creditsToHours(data.allocatedThisMonth));
 </script>
 
-<PageHeader title="Dashboard">
+<PageHeader title={m.member_dashboard_title()}>
 	<InviteFriendAction />
 	<ReportBuildingProblemAction />
 </PageHeader>
@@ -39,11 +44,11 @@
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<!-- This week's reservations -->
 		<div class="lg:col-span-2">
-			<InfoCard title="This Week">
+			<InfoCard title={m.member_week_title()}>
 				{#if data.weekReservations.length === 0}
 					<EmptyState
-						message="No sessions booked this week."
-						actionLabel="Book a session"
+						message={m.member_no_sessions_booked_week_body()}
+						actionLabel={m.member_book_session_label()}
 						actionHref="/member/reservations"
 					/>
 				{:else}
@@ -59,7 +64,8 @@
 										<p class="line-clamp-1 text-sm font-medium">
 											{formatDate(res.startsAt)}
 											<span class="opacity-60"
-												>· {res.bandName ?? (res.notes?.trim() || 'Practice reservation')}</span
+												>· {res.bandName ??
+													(res.notes?.trim() || m.member_practice_reservation_text())}</span
 											>
 										</p>
 										<p class="text-subtle">
@@ -79,11 +85,11 @@
 		</div>
 
 		<!-- Credit balance -->
-		<InfoCard title="Practice Credits">
+		<InfoCard title={m.member_practice_credits_title()}>
 			{#if isSustaining}
 				<div class="space-y-3">
 					<p class="text-3xl font-medium">
-						{freeHours}<span class="text-base opacity-60"> hrs left</span>
+						{freeHours}<span class="text-base opacity-60"> {m.member_hrs_left_text()}</span>
 					</p>
 					<progress
 						class="progress w-full progress-primary"
@@ -91,15 +97,17 @@
 						max={data.allocatedThisMonth || 1}
 					></progress>
 					<p class="text-subtle">
-						{usedHours} of {allocatedHours} hours used this month
+						{m.member_hours_used_month_text({ usedHours, allocatedHours })}
 					</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
 					<p class="text-muted">
-						Become a sustaining member to get free practice hours each month.
+						{m.member_become_sustaining_member_get_free_text()}
 					</p>
-					<Button href="/member/membership" variant="default" size="sm">Learn More</Button>
+					<Button href="/member/membership" variant="default" size="sm"
+						>{m.member_learn_more_label()}</Button
+					>
 				</div>
 			{/if}
 		</InfoCard>
@@ -109,12 +117,14 @@
 	     ask every member and, until this card, did nothing with. -->
 	<MatchesCard matches={data.matches} />
 
+	<ClassifiedMatchesCard posts={data.classifiedMatches} />
+
 	<!-- Upcoming events -->
-	<InfoCard title="Upcoming Events">
+	<InfoCard title={m.member_upcoming_events_title()}>
 		{#if data.upcomingEvents.length === 0}
 			<EmptyState
-				message="No events on the horizon."
-				actionLabel="Browse events"
+				message={m.member_no_events_horizon_body()}
+				actionLabel={m.member_browse_events_label()}
 				actionHref="/member/events"
 			/>
 		{:else}
@@ -125,7 +135,7 @@
 			     other poster rather than letterboxing to h-32. -->
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a href={resolve(`/member/events/${evt.id}`)} class="block">
+					<a href={resolve(`member/events/${evt.id}`)} class="block">
 						<EntityCard ref={evt.ref} class="h-full transition-shadow hover:shadow-md">
 							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
 						</EntityCard>

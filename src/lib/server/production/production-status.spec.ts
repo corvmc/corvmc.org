@@ -8,21 +8,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * real SQLite, because the answers are the rows the moves leave behind.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => {
 		throw new Error('outside a request');
@@ -32,7 +26,7 @@ vi.mock('./cancellation-notice', () => ({
 	announceShowsCancelled: async () => undefined,
 	openDeliverablesOnProductions: async () => []
 }));
-vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+vi.mock('#lib/server/volunteer/show-cancellation.js', () => ({
 	cancelShiftsForProduction: async () => 0
 }));
 
@@ -82,8 +76,8 @@ function show(status: string) {
 
 function openLoadOutTask(label: string) {
 	exec(`insert into duty_list (id, name, anchor) values ('lo', 'Load-out', 'load_out')`);
-	exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, anchor)
-		values ('lo-wo', 'crew', 'evt', ${T0}, ${T0 + 3600}, 'lo', 'load_out')`);
+	exec(`insert into work_order (id, volunteer_role_id, event_id, duty_list_id, anchor)
+		values ('lo-wo', 'crew', 'evt', 'lo', 'load_out')`);
 	exec(`insert into work_task (id, work_order_id, label, sort_order, done)
 		values ('t1', 'lo-wo', '${label}', 0, 0)`);
 }

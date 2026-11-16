@@ -31,14 +31,17 @@ export const tableOrder = [
 	// References nothing; `event.venue_id` references it, so it must precede
 	// `event`. Sits with the other rootless tables rather than beside it.
 	'venue',
-	// Roots, each ahead of the children that reference it.
-	'sponsor',
+	// References venue and user; `event_listing.import_source_id` points at it.
+	'calendar_source',
+	// An outside party: references directory_entry. Parent of contractor_detail,
+	// vendor_detail, sponsorship, grant_application, contractor_job, contact,
+	// party_role, purchase_order and market_vendor. The
+	// two funding tables also reference project, which comes first.
+	'organization',
+	'contractor_detail',
+	'vendor_detail',
 	'sponsorship',
-	'funder',
 	'grant_application',
-	'grant_report',
-	// References user (the responsible staffer), set null.
-	'renewal',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',
@@ -49,19 +52,21 @@ export const tableOrder = [
 	// existing table is a rebuild in SQLite, which on D1 would take
 	// `acquisition_line` with it — so it imposes no ordering here.
 	'purchase_order',
-	// A root: references nothing. Parent of contractor_job.
-	'contractor',
 	// References `project` and `user`, so it clears after both.
 	'financial_entry',
 	// A root: no foreign key at all. `subject_id` is polymorphic, so it names
 	// reservations and signups without referencing either.
 	'reminder_sent',
+	// A root: no foreign key. `subject_id` is polymorphic, like reminder_sent's.
+	'outbox_message',
 	// The ops half of a show, and no longer downstream of the listing: nothing on
 	// it points at one since #1202. It comes first because `event_listing` now
 	// references *it*.
 	'production',
 	// Names the production it announces, so it follows one.
 	'event_listing',
+	// References event_listing and user, so it follows both.
+	'donation',
 	// Cascades from production, so it clears with it.
 	'production_expense',
 	// References event_listing and directory_entry, so it clears before both.
@@ -70,20 +75,28 @@ export const tableOrder = [
 	'sponsor_placement',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
-	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
+	// (docs/decisions/0026-uploads-are-detached-and-swept.md), so it constrains nothing else in this order.
 	'media',
 	'media_attachment',
 	'campaign',
 	'audience',
+	'subscriber',
+	// A person at a party: child of directory_entry, organization, user and
+	// subscriber, so it wipes before each.
+	'contact',
+	// What an organization or a contact is to CMC: child of both.
+	'party_role',
 	// Since band chat it also references `group` (nullable owner, null = CorvMC),
-	// which is already well above this line.
+	// which is already well above this line; and since filing (#2622) the
+	// organization and contact it was filed to.
 	'inbox_thread',
 	// Both reference event_listing; market_vendor also references inbox_thread
 	// and user, so they sit after all three.
 	'market_day',
 	'market_vendor',
 	'help_categories',
-	'subscriber',
+	// References help_categories and user; `volunteer_role.briefing_article_id` points at it.
+	'help_articles',
 	'roles',
 	'volunteer_role',
 	'volunteer_certification',
@@ -92,19 +105,29 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
+	// Both ends reference duty_list_item (#2625).
+	'duty_list_item_dependency',
 	// References volunteer_role, project and user; work_order points back at it.
 	'maintenance_schedule',
+	// A committee's positions. References only group; work_order.position_id
+	// points at it, so it precedes work_order.
+	'group_position',
 	// references volunteer_role + event + duty_list + reservation, and is
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.
 	'work_order',
-	// References contractor, user and work_order, so it follows
+	// References organization, user and work_order, so it follows
 	// all of them.
 	'contractor_job',
 	// The checklist inside one work order. References work_order and user.
 	'work_task',
 	// References user, work_order and reservation, so it follows all three.
 	'member_orientation',
+	// Both reference work_order and user.
+	'volunteer_shift',
+	'work_order_assignee',
+	// Both ends reference work_order (#2625).
+	'work_order_dependency',
 	'volunteer_signup',
 	// References reservation (the claiming booking), so it follows it.
 	'lock_fallback_code',
@@ -123,11 +146,14 @@ export const tableOrder = [
 	'directory_tag',
 	'group_slug_history',
 	'campaign_audience',
+	'campaign_send',
 	'session',
 	'audience_member',
 	'acquisition_line',
 	// References purchase_order and inventory_item, so it clears before neither.
 	'purchase_order_line',
+	// References inventory_location and user; inventory_loan points at it.
+	'inventory_kit_loan',
 	'inventory_loan',
 	// References inventory_asset, inventory_loan and user. `work_order_id` points
 	// at work_order but carries no foreign key -- the two schema modules
@@ -142,6 +168,8 @@ export const tableOrder = [
 	'group_member',
 	// Grant rows: each references only its carrier, and nothing references them.
 	'group_capability',
+	// A holder references a position and a roster row.
+	'group_position_holder',
 	// References only `user`; its choices reference it and `group`, so the pair
 	// sits together and after both.
 	'group_application',
@@ -151,6 +179,7 @@ export const tableOrder = [
 	'ticket_sale',
 	'ticket',
 	'event_rsvp',
+	'event_attendance',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
 	// The run of show: references production and event_band, so it lands after
@@ -164,7 +193,7 @@ export const tableOrder = [
 	// Group documents: child of group and user, nothing is a child of it.
 	'file',
 	// The tech rider, three deep: `rider` is a child of group and user,
-	// `rider_element` of rider and user, `rider_input` of rider_element and user.
+	// `rider_element` of rider, user and inventory_item, `rider_input` of rider_element and user.
 	// All three clear before `user`, which is why they sit here rather than
 	// beside `band_site` up top.
 	'rider',
@@ -175,14 +204,16 @@ export const tableOrder = [
 	// `packing_item` of packing_list and user.
 	'packing_list',
 	'packing_item',
-	// The private half of a party record: child of directory_entry and
-	// subscriber, so it wipes before either.
-	'contact',
+	// What a task is about: child of work_order and of each record it can name.
+	'work_order_link',
+	// A note on a party's timeline: child of organization, contact and user.
+	'activity',
 	// The contact-sheet link: child of directory_entry and user.
 	'directory_entry_link',
 	'credit_transaction',
-	'help_articles',
 	'inbox_message',
+	// An announcement: child of group, user and the message it was posted as.
+	'group_announcement',
 	'inbox_note',
 	'inbox_participant',
 	// The band inbox's per-reader cursor: child of inbox_thread and user.
@@ -201,6 +232,10 @@ export const tableOrder = [
 	'audit_log',
 	// References content_flag (one appeal per upheld report) and user.
 	'moderation_appeal',
+	// References user and content_flag (the report a removal rests on).
+	'account_removal',
+	// References account_removal and user; no FK to the blocked address's account.
+	'email_blocklist',
 	'user_block',
 	'suggestion_vote',
 	// References user and group; parent of classified_post_tag.

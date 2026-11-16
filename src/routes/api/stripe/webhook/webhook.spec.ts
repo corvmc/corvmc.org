@@ -8,24 +8,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // no synchronous crypto. This mock guards the wiring only — Node vitest cannot
 // reproduce the runtime SubtleCrypto-sync failure (Node has sync crypto).
 const mockConstructEvent = vi.fn();
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripeWebhooks: { constructEventAsync: (...args: unknown[]) => mockConstructEvent(...args) },
 	webhookCryptoProvider: {}
 }));
 
 const mockHandler = vi.fn();
-vi.mock('$lib/server/finance/webhook-handlers', () => ({
+vi.mock('#lib/server/finance/webhook-handlers.js', () => ({
 	webhookHandlerMap: {
 		'checkout.session.completed': (...args: unknown[]) => mockHandler(...args)
 	} as Record<string, (...args: unknown[]) => Promise<void>>
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { STRIPE_WEBHOOK_SECRET: 'whsec_test' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STRIPE_WEBHOOK_SECRET: 'whsec_test' })
+);
 
 const mockCaptureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...args: unknown[]) => mockCaptureException(...args)
 }));
 

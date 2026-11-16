@@ -1,5 +1,7 @@
-import { countCommitteeUnfinished } from '$lib/server/volunteer/deliverables-service';
+import { countCommitteeUnfinished } from '#lib/server/volunteer/deliverables-service.js';
 import { z } from 'zod';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -8,23 +10,27 @@ import {
 	SHORT_TEXT_MAX,
 	groupJoinPolicies,
 	type GroupApplicationStatus
-} from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
-import { getClubTotals } from '$lib/server/group/group-totals-service';
-import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
-import { allowlisted } from '$lib/server/capability/grant-rules';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
+} from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { countAttendanceByMember } from '#lib/server/event/attendance-service.js';
+import { getClubTotals } from '#lib/server/group/group-totals-service.js';
+import { setCommitteeCapabilityGrants } from '#lib/server/capability/capability-grant-service.js';
+import { allowlisted } from '#lib/server/capability/grant-rules.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireGroupRole, requireProgramRole } from '#lib/server/group/group-context.js';
+import { groupRead, programManage } from '#lib/server/group/group-read.js';
 import {
 	hasOpenApplication,
 	listForApplicant,
 	listForGroup
-} from '$lib/server/group/application-service';
-import { directoryVisibilities } from '$lib/server/db/schema/directory';
+} from '#lib/server/group/application-service.js';
+import { directoryVisibilities } from '#lib/server/db/schema/directory.js';
 import {
 	acceptInvitation,
 	declineInvitation,
+	getByIdActive,
 	getMembers,
+	getRosterMembers,
 	getUserRole,
 	invite,
 	partitionByStatus,
@@ -34,30 +40,35 @@ import {
 	updateMember,
 	updateOwnMembership,
 	BandMemberExistsError
-} from '$lib/server/band/band-service';
+} from '#lib/server/band/band-service.js';
 import {
 	createInvite as createEmailInvite,
 	listForGroup as listEmailInvites,
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
-} from '$lib/server/group/group-invite-service';
+} from '#lib/server/group/group-invite-service.js';
 import {
 	importRoster,
 	parseRosterImport,
 	RosterImportInputError
-} from '$lib/server/group/roster-import-service';
-import { resolveImageUrl } from '$lib/server/storage';
+} from '#lib/server/group/roster-import-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
 import {
 	getMuteState,
 	listForManager,
 	listPublished
-} from '$lib/server/group/announcement-service';
-import { listGroupSessions } from '$lib/server/event/event-service';
-import { listCommitteeProjectEvents, listProjects } from '$lib/server/project/project-service';
-import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { listMaintenanceSchedules } from '$lib/server/volunteer/maintenance-schedule-service';
-import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
+} from '#lib/server/group/announcement-service.js';
+import { listGroupSessions } from '#lib/server/event/event-service.js';
+import {
+	activeEventSeries,
+	type EventSeriesWithPrototype
+} from '#lib/server/reservation/recurring-series-service.js';
+import { listCommitteeProjectEvents, listProjects } from '#lib/server/project/project-service.js';
+import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listMaintenanceSchedules } from '#lib/server/volunteer/maintenance-schedule-service.js';
+import { list as listFiles, getUsage as getDocumentUsage } from '#lib/server/group/file-service.js';
+import { listPositions } from '#lib/server/group/position-service.js';
 import {
 	STAFF_GROUP_KINDS,
 	createGroup,
@@ -74,14 +85,15 @@ import {
 	setChairRole,
 	updateGroupProfile,
 	updateGroupSettings
-} from '$lib/server/group/group-service';
+} from '#lib/server/group/group-service.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * `/staff/clubs` and `/staff/committees` — the only places a club or committee is made.
  *
  * Reads name `group.read` and writes `group.manage`. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
- * staff surface at `/staff/bands`. See docs/specs/shipped/groups-spec.md.
+ * staff surface at `/staff/bands`. See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 
 const staffKind = z.enum(STAFF_GROUP_KINDS);
@@ -130,7 +142,7 @@ export const getStaffGroupPage = query(z.string(), async (id) => {
 
 	const [group, roster, coordinator, role] = await Promise.all([
 		getGroupDetail(id),
-		getMembers(id),
+		getRosterMembers(id),
 		can('committee.reviewApplications'),
 		getUserRole(id, user.id)
 	]);
@@ -176,7 +188,7 @@ export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
 	}
 	const [applications, roster] = await Promise.all([
 		group.deletedAt ? [] : listForGroup(group.id),
-		canManage ? getMembers(id) : null
+		canManage ? getRosterMembers(id) : null
 	]);
 	return {
 		committee: { id: group.id, name: group.name, slug: group.slug },
@@ -203,23 +215,26 @@ export const createStaffGroup = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
 		visibility: z.enum(directoryVisibilities)
 	}),
-	async (data) => {
-		await requireCapability('group.manage');
-		try {
-			const created = await createGroup({
-				kind: data.kind,
-				name: data.name,
-				bio: data.bio || undefined,
-				chairId: data.chairId || null,
-				joinPolicy: data.joinPolicy,
-				joinInstructions: data.joinInstructions || null,
-				visibility: data.visibility
-			});
-			return { success: true, id: created.id, slug: created.slug, kind: data.kind };
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		'Creation sets the first visibility; there is no earlier value to record.',
+		async (data) => {
+			await requireCapability('group.manage');
+			try {
+				const created = await createGroup({
+					kind: data.kind,
+					name: data.name,
+					bio: data.bio || undefined,
+					chairId: data.chairId || null,
+					joinPolicy: data.joinPolicy,
+					joinInstructions: data.joinInstructions || null,
+					visibility: data.visibility
+				});
+				return { success: true, id: created.id, slug: created.slug, kind: data.kind };
+			} catch (err) {
+				mapDomainError(err);
+			}
 		}
-	}
+	)
 );
 
 export const updateStaffGroup = form(
@@ -229,7 +244,7 @@ export const updateStaffGroup = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default(''),
 		visibility: z.enum(directoryVisibilities)
 	}),
-	async (data) => {
+	writesAudit('group.visibility_changed', async (data) => {
 		await requireCapability('group.manage');
 		try {
 			await updateGroupSettings(data.groupId, {
@@ -241,17 +256,17 @@ export const updateStaffGroup = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-	}
+	})
 );
 
-/** What a committee's active members may do. Staff only: `group.manage`. */
+/** What a committee's active members may do. Staff only: `committee.manage`. */
 export const setCommitteeGrants = form(
 	z.object({
 		groupId: z.string().min(1),
 		capabilities: z.array(z.string().min(1)).max(20).default([])
 	}),
 	async (data) => {
-		await requireCapability('group.manage');
+		await requireCapability('committee.manage');
 		try {
 			await setCommitteeCapabilityGrants(data.groupId, data.capabilities);
 		} catch (err) {
@@ -262,9 +277,11 @@ export const setCommitteeGrants = form(
 );
 
 /**
- * Make a club or committee member a chair (`admin`), or take it away. Adding a
- * chair who is not on the roster puts them on it, active. Programs have no
- * owner, so `owner` is not a value this accepts.
+ * Make a club or committee member a chair, or take it away: a club's `admin`
+ * role, a committee's chair position. Adding a chair who is not on the roster
+ * puts them on it, active. Programs have no owner, so `owner` is not a value
+ * this accepts. A committee's chair is `committee.manage`'s, a club's
+ * `group.manage`'s.
  */
 export const setStaffGroupRole = form(
 	z.object({
@@ -273,9 +290,11 @@ export const setStaffGroupRole = form(
 		role: z.enum(['admin', 'member'])
 	}),
 	async (data) => {
-		await requireCapability('group.manage');
+		requireUser();
+		const target = await getByIdActive(data.groupId);
+		const user = await requireCapability(programManage(target ?? { kind: 'club' }));
 		try {
-			await setChairRole(data.groupId, data.userId, data.role);
+			await setChairRole(data.groupId, data.userId, data.role, user.id);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
@@ -404,12 +423,24 @@ export const getMemberGroups = query(async () => {
 	};
 });
 
+function editableSeries(series: EventSeriesWithPrototype | undefined) {
+	if (!series?.prototypeEndsAt) return null;
+	return {
+		id: series.id,
+		frequencyLabel: series.frequencyLabel,
+		monthlyMode: series.monthlyMode,
+		startsAt: series.prototypeStartsAt,
+		endsAt: series.prototypeEndsAt,
+		until: series.endsAt
+	};
+}
+
 /**
  * The club page's one load-bearing query — the group, your role and the roster
  * together. A club is small by construction, so this is one read rather than a
  * tab's worth each.
  *
- * `allowStaff`, matching every other panel read: staff administer programs, and
+ * `staff`, matching every other panel read: staff administer programs, and
  * a page that renders for them with every card failing is the inconsistency
  * phase 4 set out to end.
  */
@@ -421,7 +452,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	// collapsing them would send people to a list for a slug that never existed.
 	let ctx;
 	try {
-		ctx = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		ctx = await requireGroupRole({ slug }, 'member', { staff: groupRead });
 	} catch (err) {
 		if ((err as { status?: number }).status === 403) redirect(302, '/member/groups');
 		throw err;
@@ -433,6 +464,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 	const canReviewApplications =
 		canManage ||
 		(group.kind === 'committee' && role === 'staff' && (await can('committee.reviewApplications')));
+	// `createCommitteePosition`'s guard: the chair, or `committee.manage` for a committee without one.
+	const canManagePositions =
+		group.kind === 'committee' &&
+		(canManage || (role === 'staff' && (await can('committee.manage'))));
 
 	// One round trip, per the custom/no-concurrent-remote-queries rule. Announcements
 	// belong here rather than in a query of the tab's own: a club is small by
@@ -452,13 +487,18 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		volunteerRoles,
 		projectEvents,
 		recurringWork,
-		unfinishedItems
+		unfinishedItems,
+		attendance,
+		positions
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
 		// Null for a staff non-member — no roster row, so nothing to mute.
 		getMuteState(group.id, ctx.user.id),
-		listGroupSessions(group.id),
+		listGroupSessions(group.id).then(async (rows) => ({
+			rows,
+			series: await activeEventSeries(rows.map((e) => e.recurringSeriesId))
+		})),
 		listFiles(group.id),
 		// Its own statement rather than a sum over `files`: that list is capped,
 		// and it carries the quota constants the meter renders, which a
@@ -485,7 +525,11 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			? listMaintenanceSchedules({ groupId: group.id })
 			: Promise.resolve([]),
 		// Only whether the Open items tab shows; the tab reads its own rows.
-		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0)
+		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0),
+		// Sessions each member was marked at, for the roster's count.
+		countAttendanceByMember(group.id),
+		// A committee's defined positions (#2988); a club's seat title is free text.
+		group.kind === 'committee' ? listPositions(group.id) : Promise.resolve([])
 	]);
 
 	return {
@@ -501,6 +545,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		},
 		role,
 		canManage,
+		canManagePositions,
 		// What this committee's members may do on its records; the page hides the
 		// rest, and `requireCommitteeMember` refuses it anyway.
 		grants:
@@ -512,7 +557,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		notifyAnnouncements,
 		files,
 		documentUsage,
-		sessions: sessions.map((e) => ({
+		sessions: sessions.rows.map((e) => ({
 			id: e.id,
 			title: e.title,
 			// The edit form needs to open pre-filled, so it needs what it edits.
@@ -522,12 +567,15 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			status: e.status,
 			// A session already in a series has no "Repeat" to offer.
 			repeats: !!e.recurringSeriesId,
+			// The live series, when there is one to edit the schedule of.
+			series: editableSeries(sessions.series.get(e.recurringSeriesId ?? '')),
 			// The listing half, so the edit form opens pre-filled on the fields a
 			// band gig has carried all along.
 			doorsAt: e.doorsAt,
 			tags: e.tags,
 			externalTicketUrl: e.externalTicketUrl,
 			ticketPrice: e.ticketPrice,
+			visibility: e.visibility ?? 'public',
 			// Whether this one holds the room, which is the fact that distinguishes
 			// a program's session from a listing it merely advertises. A cancelled
 			// session keeps the pointer — the reservation is cancelled beside it,
@@ -536,7 +584,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		})),
 		// Name, status and dates only. A committee member reads what their group is
 		// working on; the budget and what it has burned are a staff question, and
-		// `/staff/projects` is where that is answered.
+		// `/staff/tasks` is where that is answered.
 		projects: projects.map((project) => ({
 			id: project.id,
 			name: project.name,
@@ -565,7 +613,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		members: {
 			active: roster.active,
 			pending: roster.pending
-		}
+		},
+		attendance: Object.fromEntries(attendance) as Record<string, number>,
+		positions
 	};
 });
 
@@ -632,7 +682,11 @@ export const inviteGroupMember = form(
 	async (data) => {
 		const { user, group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
-			const member = await invite(group.id, data.userId, data.role, data.position || null, user.id);
+			// A committee's seats, the chair's included, are positions filled after joining.
+			const committee = group.kind === 'committee';
+			const position = committee ? null : data.position || null;
+			const role = committee ? 'member' : data.role;
+			const member = await invite(group.id, data.userId, role, position, user.id);
 			return { success: true, memberId: member.id };
 		} catch (err) {
 			mapDomainError(err);
@@ -652,8 +706,8 @@ export const inviteGroupByEmail = form(
 			const result = await createEmailInvite(
 				data.email,
 				group.id,
-				data.role,
-				data.position || null,
+				group.kind === 'committee' ? 'member' : data.role,
+				group.kind === 'committee' ? null : data.position || null,
 				user.id
 			);
 			return { success: true, ...result };
@@ -721,7 +775,11 @@ export const updateGroupMember = form(
 				data.memberId,
 				{
 					role: data.role,
-					position: data.position !== undefined ? data.position || null : undefined
+					// A committee seat is a defined position (`updateCommitteePosition`).
+					position:
+						group.kind !== 'committee' && data.position !== undefined
+							? data.position || null
+							: undefined
 				},
 				group.id
 			);
@@ -788,14 +846,14 @@ export const declineGroupInvite = form(z.object({ groupId: z.string().min(1) }),
  * The chairs' editor: what a program's own admins may change.
  *
  * `joinPolicy` and `visibility` come back read-only. They decide who may walk
- * in and whether the program is advertised, and the spec's argument for free
- * room time is that staff alone settle both — so they render as facts with a
+ * in and whether the program is advertised, and the argument for free room time
+ * (docs/decisions/0021-a-club-gets-a-page-not-a-panel.md) is that staff alone settle both — so they render as facts with a
  * pointer at staff, not as fields. See `updateGroupProfile`.
  */
 // `requireProgramRole`, so a band slug 404s here: a band edits at
 // `/band/{slug}/edit`, which carries a listing this form deliberately omits.
 export const getGroupEditor = query(z.string(), async (slug) => {
-	const { group } = await requireProgramRole({ slug }, 'admin', { allowStaff: true });
+	const { group } = await requireProgramRole({ slug }, 'admin', { staff: programManage });
 
 	return {
 		id: group.id,
@@ -818,7 +876,7 @@ export const updateGroupProfileForm = form(
 		joinInstructions: z.string().trim().max(LONG_TEXT_MAX).optional().default('')
 	}),
 	async (data) => {
-		// Admin and no `allowStaff`: a write, and staff have `/staff/clubs`.
+		// Admin and no `staff`: a write, and staff have `/staff/clubs`.
 		const { group } = await requireProgramRole({ slug: data.slug }, 'admin');
 		try {
 			await updateGroupProfile(group.id, {
@@ -874,4 +932,10 @@ export const getPublicGroupPage = query(z.string(), async (slug) => {
 		: [null, false];
 
 	return { group, signedIn: !!locals.user, viewerStatus, applied };
+});
+
+/** A club's or committee's History card: roster, role and grant changes. */
+export const getGroupHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('group.read');
+	return listAuditFeed({ type: 'group', id }, { limit });
 });

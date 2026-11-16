@@ -1,42 +1,52 @@
-import { captureException } from '$lib/server/sentry';
-import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
-import { sellerFor } from '$lib/server/ticket/ticket-seller';
+import { getEventRiderStock } from '#lib/server/production/rider-stock-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordFreeTicketSale, ticketSplitMetadata } from '#lib/server/finance/ticket-entries.js';
+import { sellerFor } from '#lib/server/ticket/ticket-seller.js';
 import { z } from 'zod';
-import { creditsForEvent } from '$lib/server/sponsor/credit-service';
-import { error, invalid } from '@sveltejs/kit';
+import { productionStatuses } from '#lib/server/db/schema/production.js';
+import { historyArgs } from './_history';
+import { listEventHistory } from '#lib/server/event/event-history.js';
+import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
+import { error, invalid, isHttpError } from '@sveltejs/kit';
+import { listActContacts } from '#lib/server/directory/contact-service.js';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { getEventRiderSummaries } from '$lib/server/band/rider-service';
-import { getBillInputList } from '$lib/server/band/bill-input-list-service';
-import { config } from '$lib/server/site-config/site-config-service';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireListingReader, requireListingWriter } from '$lib/server/event/listing-guard';
-import { projectOfEvent } from '$lib/server/production/production-scope';
-import { getProjectBurn, listCommittees } from '$lib/server/project/project-service';
-import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
-import { mapDomainError } from '$lib/server/errors';
-import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
-import { rsvpClosedReason } from '$lib/server/event/rsvp-availability';
-import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
-import { getProductionByEvent } from '$lib/server/production/production-service';
+import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
+import { getBillInputList } from '#lib/server/band/bill-input-list-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
+import { requireListingReader, requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
+import { projectOfEvent } from '#lib/server/production/production-scope.js';
+import { getProjectBurn, listCommittees } from '#lib/server/project/project-service.js';
+import { listShowDeliverables } from '#lib/server/volunteer/deliverables-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { listRsvpsForUser } from '#lib/server/event/rsvp-service.js';
+import { rsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
+import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import {
+	getVenueAccess,
+	holdsSpace,
+	listVenues as listLiveVenues
+} from '#lib/server/venue/venue-service.js';
+import { getProductionByEvent } from '#lib/server/production/production-service.js';
 import {
 	listEventPhotos,
 	listRecentRecaps,
 	recapClosedReason,
 	MAX_PHOTOS_PER_EVENT,
 	MAX_PHOTOS_PER_UPLOAD
-} from '$lib/server/event/event-photo-service';
-import { recapUploadAccess } from '$lib/server/event/recap-access';
-import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
-import { getSettlement } from '$lib/server/production/settlement-service';
-import { getHostShift } from '$lib/server/production/host-service';
-import { listProgramGroupOptions } from '$lib/server/group/group-service';
+} from '#lib/server/event/event-photo-service.js';
+import { recapUploadAccess } from '#lib/server/event/recap-access.js';
+import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
+import { getSettlement } from '#lib/server/production/settlement-service.js';
+import { getHostShift } from '#lib/server/production/host-service.js';
+import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
 import {
 	listRequests as listArtifactRequests,
 	requestableActs as listRequestableActs
-} from '$lib/server/production/artifact-request-service';
-import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
+} from '#lib/server/production/artifact-request-service.js';
 import {
 	bandRefColumns,
 	memberRefColumns,
@@ -45,8 +55,8 @@ import {
 	toEventRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
-import type { ReservationRef } from '$lib/types/entity';
+} from '#lib/server/entity/refs.js';
+import type { ReservationRef } from '#lib/types/entity.js';
 import {
 	create,
 	update,
@@ -70,24 +80,24 @@ import {
 	listMemberPastShows,
 	type MemberShowRow,
 	countMemberPastShows
-} from '$lib/server/event/event-service';
+} from '#lib/server/event/event-service.js';
 import {
 	getConflictDetails,
 	getValidationWarnings
-} from '$lib/server/reservation/conflict-service';
+} from '#lib/server/reservation/conflict-service.js';
 import {
 	buildDateInTz,
 	buildTimeRangeInTz,
 	formatDateInTz
-} from '$lib/server/reservation/timezone';
+} from '#lib/server/reservation/timezone.js';
 import {
 	createEventSeries,
 	getByEvent,
 	getEventSeries,
 	cancel as cancelSeries
-} from '$lib/server/reservation/recurring-series-service';
-import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
-import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
+} from '#lib/server/reservation/recurring-series-service.js';
+import { buildRRule, getOccurrences } from '#lib/server/reservation/rrule-helpers.js';
+import { RECURRING_FREQUENCIES } from '#lib/server/db/schema/recurring.js';
 import {
 	getTicketsRemaining,
 	getTicketsSold,
@@ -95,50 +105,59 @@ import {
 	getUserTickets,
 	getTicketsByPurchase,
 	createTickets,
+	recordTicketComp,
 	issueFreeTickets,
 	getEventTicketMoney,
 	type EventTicketMoney,
 	countTicketsForEmail,
 	checkIn,
+	findOtherShowForCode,
 	cancelTicket as cancelTicketService
-} from '$lib/server/ticket/ticket-service';
-import { getEventDoorTakings, isOnTheDoor, type DoorTakings } from '$lib/server/ticket/door-sale';
+} from '#lib/server/ticket/ticket-service.js';
+import { doorListTickets } from '#lib/server/ticket/door-list.js';
+import {
+	getEventDoorTakings,
+	isOnTheDoor,
+	type DoorTakings
+} from '#lib/server/ticket/door-sale.js';
 import {
 	createRsvp,
 	cancelRsvp as cancelRsvpService,
 	getUserRsvp,
 	countRsvps
-} from '$lib/server/event/rsvp-service';
-import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
-import { checkout } from '$lib/server/finance/payment-service';
-import { buildLineItem } from '$lib/server/finance/product-config-service';
-import { validateTicketSplit } from '$lib/finance/ticket-split';
-import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
-import { resolveImageUrl } from '$lib/server/storage';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { venue } from '$lib/server/db/schema/venue';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/event/rsvp-service.js';
+import { publicEventStatuses, eventStatuses } from '#lib/server/db/schema/event.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { isSustainingMember as checkSustainingMember } from '#lib/server/finance/subscription-service.js';
+import { checkout } from '#lib/server/finance/payment-service.js';
+import { buildLineItem } from '#lib/server/finance/product-config-service.js';
+import { validateTicketSplit } from '#lib/finance/ticket-split.js';
+import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '#lib/config.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, not, inArray, notInArray, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import {
 	eventListing,
 	createEventSchema,
 	eventKinds,
+	eventVisibilities,
+	type EventVisibility,
 	lineupSchema
-} from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
-import { eventSources } from '$lib/config';
+} from '#lib/server/db/schema/event.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventSources, listDateRanges } from '#lib/config.js';
 import { randomUUID } from 'crypto';
-import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
-import { getCalendarTotals } from '$lib/server/event/calendar-totals-service';
-import { formatDateShortYear } from '$lib/utils/format';
-import { renderMarkdown } from '$lib/utils/markdown';
-import { getShifts, getVolunteerRoles } from './volunteer.remote';
-import { getPublicGigGuide } from './calendar.remote';
+import { hasEventEnded } from '#lib/utils/event-time.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
+import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
+import { formatDateShortYear } from '#lib/utils/format.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
+import { getMemberGigGuide, getPublicGigGuide } from './calendar.remote';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -218,14 +237,20 @@ export const getMemberTickets = query(async () => {
 });
 
 export const getMemberEventDetail = query(z.string(), async (id) => {
+	requireUser();
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
-	if (!evt) throw error(404, 'Event not found');
-	const [remaining, lineup, isSustainingMember, seller] = await Promise.all([
+	// The public page's rule: a draft or rejected listing is not anyone's to read here.
+	if (!evt || !(publicEventStatuses as readonly string[]).includes(evt.status)) {
+		throw error(404, 'Event not found');
+	}
+	await requireListingVisible(id);
+	const [remaining, lineup, isSustainingMember, seller, access] = await Promise.all([
 		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
 		getEventLineup(id),
 		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false),
-		sellerFor(evt)
+		sellerFor(evt),
+		getVenueAccess(evt.venueId)
 	]);
 
 	// Sold is derived from remaining only when the event is both ticketed and capped;
@@ -265,6 +290,8 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
+			address: evt.address,
+			access,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts
@@ -276,8 +303,10 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			// An externally ticketed event still takes RSVPs here; the page needs
 			// the link to send members to whoever is actually selling.
 			source: evt.source,
-			externalTicketUrl: evt.externalTicketUrl
+			externalTicketUrl: evt.externalTicketUrl,
+			status: evt.status
 		},
+		isPast: hasEventEnded(evt.startsAt, evt.endsAt),
 		// Display names only — the split bar labels one side with them, and a
 		// touring act usually has no `directory_entry` to point at.
 		acts: lineup.filter((a) => a.status !== 'declined').map((a) => a.name),
@@ -323,6 +352,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	if (!(publicEventStatuses as readonly string[]).includes(evt.status)) {
 		throw error(404, 'Event not found');
 	}
+	await requireListingVisible(id);
 
 	let bandInfo: { name: string; slug: string } | null = null;
 	if (evt.groupId) {
@@ -340,6 +370,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
 	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
 	const seller = await sellerFor(evt);
+	const access = await getVenueAccess(evt.venueId);
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -358,6 +389,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
+					recapText: evt.recapText,
 					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),
 					maxPerUpload: MAX_PHOTOS_PER_UPLOAD
 				}
@@ -390,6 +422,8 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
+			address: evt.address,
+			access,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts
@@ -459,6 +493,7 @@ export const getPublicTicketPage = query(z.string(), async (id) => {
 	const evt = await getById(id);
 	if (!evt) throw error(404, 'Event not found');
 	if (evt.status !== 'published') throw error(404, 'Event not found');
+	await requireListingVisible(id);
 	// The collective sells its own shows; a premium band sells its own gig into
 	// its own account (#1203). Anything else, including a band whose payouts
 	// have lapsed, has no seller and so no ticket page.
@@ -545,16 +580,15 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 			startsAt: evt.startsAt,
 			ticketQuantity: evt.ticketQuantity
 		},
-		tickets: tickets
-			.filter((t) => t.status === 'valid' || t.status === 'checked_in')
-			.map((t) => ({
-				id: t.id,
-				attendeeName: t.attendeeName,
-				attendeeEmail: t.attendeeEmail,
-				code: t.code,
-				status: t.status,
-				checkedInAt: t.checkedInAt
-			})),
+		tickets: doorListTickets(tickets).map((t) => ({
+			id: t.id,
+			attendeeName: t.attendeeName,
+			attendeeEmail: t.attendeeEmail,
+			code: t.code,
+			status: t.status,
+			checkedInAt: t.checkedInAt,
+			cancelledAt: t.cancelledAt
+		})),
 		stats: { sold, checkedIn }
 	};
 });
@@ -571,6 +605,7 @@ const staffEventsFilters = z.object({
 	dateTo: z.string().optional(),
 	/** Only bills short of the act count their production asks for (#859). */
 	needsActs: z.boolean().optional(),
+	productionStatus: z.enum(productionStatuses).optional(),
 	page: z.number().optional()
 });
 
@@ -595,6 +630,7 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 			status: filters.status,
 			venueId: filters.venueId,
 			needsActs: filters.needsActs,
+			productionStatus: filters.productionStatus,
 			from: filters.dateFrom
 				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
 				: undefined,
@@ -641,25 +677,29 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 	};
 });
 
-/**
- * Staff: every listing, whatever its source, status or date. The moderation
- * queue is the rows badged `pending_review`; the Productions view runs the
- * shows CMC produces.
- */
 /** The Calendar page's summary counts — independent of the table's filters. */
 export const getStaffCalendarTotals = query(async () => {
 	await requireCapability('event.read');
 	return getCalendarTotals();
 });
 
+/**
+ * Staff: every listing staff may see, filtered by source, search, date range
+ * and status, with what each status option would list in the current range.
+ */
 export const getStaffCalendar = query(
-	z.object({ page: z.number().optional() }),
+	z.object({
+		source: z.enum(eventSources).optional(),
+		q: z.string().max(200).optional(),
+		range: z.enum(listDateRanges).optional(),
+		from: z.iso.date().optional(),
+		to: z.iso.date().optional(),
+		status: z.enum(eventStatuses).optional(),
+		page: z.number().int().positive().optional()
+	}),
 	async (filters) => {
 		await requireCapability('event.read');
-		const { rows, pagination } = await listStaffCalendar({
-			page: filters.page ?? 1,
-			pageSize: 50
-		});
+		const { rows, pagination, statusCounts } = await listStaffCalendar(filters);
 		return {
 			rows: rows.map((e) => ({
 				...e,
@@ -670,7 +710,8 @@ export const getStaffCalendar = query(
 				// the page renders "CMC" for that case rather than a ref to us.
 				submitter: toMemberRef(e.submitter)
 			})),
-			pagination
+			pagination,
+			statusCounts
 		};
 	}
 );
@@ -708,11 +749,52 @@ export const searchEventsForPlacement = query(z.string(), async (q) => {
 	return searchEventRows(q);
 });
 
+/** The same picker for a campaign's show (#2770). Outreach holds no `event.read`. */
+export const searchEventsForCampaign = query(z.string(), async (q) => {
+	await requireCapability('marketing.manageCampaigns');
+	return searchEventRows(q);
+});
+
+/** One show as the campaign picker's option, for a campaign started from its page (#2776). */
+export const getEventForCampaign = query(z.string(), async (id) => {
+	await requireCapability('marketing.manageCampaigns');
+	const [row] = await db
+		.select(campaignEventColumns)
+		.from(eventListing)
+		.where(eq(eventListing.id, id))
+		.limit(1);
+	return row ? campaignEventOption(row) : null;
+});
+
+const campaignEventColumns = {
+	id: eventListing.id,
+	title: eventListing.title,
+	startsAt: eventListing.startsAt,
+	visibility: eventListing.visibility
+};
+
+// The date arrives as a string because SearchSelect renders its description
+// field verbatim — and it is formatted here so it lands in club time rather
+// than whatever timezone the staffer's laptop is set to.
+function campaignEventOption(e: {
+	id: string;
+	title: string;
+	startsAt: Date;
+	visibility: EventVisibility;
+}) {
+	return {
+		id: e.id,
+		title: e.title,
+		when: formatDateShortYear(e.startsAt),
+		visibility: e.visibility
+	};
+}
+
 async function searchEventRows(q: string) {
 	if (!q || q.length < 2) return [];
 
 	const rows = await db
-		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+		.select(campaignEventColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -724,10 +806,7 @@ async function searchEventRows(q: string) {
 		.orderBy(sql`abs(${eventListing.startsAt} - unixepoch())`)
 		.limit(SEARCH_LIMIT);
 
-	// The date arrives as a string because SearchSelect renders its description
-	// field verbatim — and it is formatted here so it lands in club time rather
-	// than whatever timezone the staffer's laptop is set to.
-	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
+	return rows.map(campaignEventOption);
 }
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
@@ -857,6 +936,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		event: {
 			id: evt.id,
 			title: evt.title,
+			shortCode: evt.shortCode ?? null,
 			description: evt.description,
 			recapText: evt.recapText,
 			startsAt: evt.startsAt,
@@ -875,8 +955,10 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			posterKey: evt.posterKey,
 			source: evt.source,
 			kind: evt.kind,
+			visibility: evt.visibility ?? 'public',
 			bandId: evt.groupId,
 			location: evt.location,
+			address: evt.address,
 			venueId: evt.venueId,
 			venueName,
 			/** True with no venue set at all: that is what an event has always meant. */
@@ -1093,8 +1175,8 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues, production, photos, recurringSeries, canEditCancelled] = await Promise.all(
-		[
+	const [nearby, venues, production, photos, recurringSeries, canManage, canPublish] =
+		await Promise.all([
 			listEventsNear(detail.event.startsAt, { excludeEventId: id }),
 			venuePickerOptions(),
 			// The header's one entry reads this to name itself, and the production
@@ -1103,14 +1185,17 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			getProductionByEvent(id),
 			listEventPhotos(id),
 			getEventRecurringSeries(id),
-			// `updateEvent` admits staff alone to a cancelled listing (#2126).
-			can('event.manage')
-		]
-	);
+			// Staff alone edit a cancelled listing (#2126), cancel or delete one, and
+			// publish or unpublish. The show's committee reads the page without them,
+			// so the header hides what their guards would refuse (#2779).
+			can('event.manage'),
+			can('event.publish')
+		]);
 
 	return {
 		detail,
-		canEditCancelled,
+		canManage,
+		canPublish,
 		venues,
 		production,
 		recurringSeries,
@@ -1148,7 +1233,8 @@ export const getStaffEventPage = query(z.string(), async (id) => {
  * holds for a CMC production. It is false for a listing: staff did not book a
  * member's show, and confirming on their behalf would put a credit on the named
  * band's public profile that the band never agreed to. Consent is the whole
- * point of the pending state — see `docs/specs/shipped/event-lineup-spec.md`.
+ * point of the pending state — see
+ * `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
  *
  * So the flag follows the source, and on a listing a new link lands `pending`
  * and invites the band, exactly as when a member links it. Do not simplify this
@@ -1211,9 +1297,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// `custom/no-concurrent-remote-queries` exists to stop a page fanning them out.
 	const [
 		detail,
-		shifts,
-		advance,
-		volunteerRoles,
 		dutyLists,
 		riders,
 		production,
@@ -1223,16 +1306,10 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		requestableActs,
 		hostShift,
 		deliverables,
-		committees
+		committees,
+		riderStock
 	] = await Promise.all([
 		getStaffEventDetail(id),
-		getShifts({ eventId: id }),
-		// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
-		// applied duty list — a `dueOffsetMinutes` item, which is where the
-		// booking work lives — never reached this page. The card said a show was
-		// unstaffed while carrying six open tasks.
-		listOpenWorkOrders({ eventId: id }),
-		getVolunteerRoles(),
 		listApplicableDutyLists(),
 		// What each act on the bill says it needs. The advance checklist has always
 		// carried a task reading "Collect tech riders and stage plots"; this is the
@@ -1259,31 +1336,47 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getHostShift(id),
 		// Whose job each piece of the show is, and whether it is done (#1701).
 		listShowDeliverables(id),
-		listCommittees()
+		listCommittees(),
+		// What the bill asks CMC for, against what the catalog holds (#2724).
+		getEventRiderStock(id)
 	]);
-	// The show's budget and burn are its project's (production-projects-spec.md).
+	// The show's budget and burn are its project's (#1673).
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
 	const projectId = production?.projectId ?? null;
-	const budget = projectId ? { projectId, burn: await getProjectBurn(projectId) } : null;
+	const [budget, canBook] = await Promise.all([
+		projectId ? getProjectBurn(projectId).then((burn) => ({ projectId, burn })) : null,
+		// Booking names the event lead (#2726) and lists an act in the directory
+		// (#2780); everyone else sees who it is.
+		projectId ? can('production.book', { projectId }) : can('event.manage')
+	]);
+	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
+	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
+	const actContacts =
+		actOrgs.length === 0
+			? []
+			: await listActContacts(actOrgs, projectId).catch((err) => {
+					if (isHttpError(err, 403)) return null;
+					throw err;
+				});
 
 	return {
 		budget,
 		detail,
-		shifts,
-		// The deliverables have their own card; the advance card keeps the rest.
-		advance: advance.filter((w) => !w.groupId && !w.doneWhen),
-		volunteerRoles,
 		dutyLists,
 		riders,
+		riderStock,
 		production,
 		runOfShow,
+		actContacts,
 		settlement,
 		artifactRequests,
 		requestableActs,
 		hostShift,
 		deliverables,
-		deliverableCommittees: committees
+		deliverableCommittees: committees,
+		canSetLead: projectId ? canBook : false,
+		canBook
 	};
 });
 
@@ -1414,6 +1507,7 @@ export const updateEvent = form(
 		description: z.string().optional(),
 		tags: z.string().optional(),
 		kind: z.enum(eventKinds).optional(),
+		visibility: z.enum(eventVisibilities).optional(),
 		eventDate: z.string().optional(),
 		eventStartTime: z.string().optional(),
 		eventEndTime: z.string().optional(),
@@ -1421,6 +1515,7 @@ export const updateEvent = form(
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
 		location: z.string().max(SHORT_TEXT_MAX).optional(),
+		address: z.string().max(SHORT_TEXT_MAX).optional(),
 		venueId: z.string().optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
@@ -1432,7 +1527,7 @@ export const updateEvent = form(
 		reservationEndTime: z.string().optional(),
 		overrideConflicts: z.boolean().default(false)
 	}),
-	async (data) => {
+	writesAudit('event.visibility_changed', async (data) => {
 		const staff = await requireListingWriter(data.eventId);
 		const tz = DEFAULT_TIMEZONE;
 
@@ -1446,9 +1541,11 @@ export const updateEvent = form(
 		if (data.description !== undefined) updateParams.description = data.description || null;
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
 		if (data.kind !== undefined) updateParams.kind = data.kind;
+		if (data.visibility !== undefined) updateParams.visibility = data.visibility;
 		if (data.location !== undefined) updateParams.location = data.location || null;
+		if (data.address !== undefined) updateParams.address = data.address.trim() || null;
 		// An empty string detaches, an absent field leaves it alone — the same
-		// distinction `updateShift` draws for its own event link, and for the same
+		// distinction `updateTask` draws for its own event link, and for the same
 		// reason: a form that omits the field must not silently clear it.
 		if (data.venueId !== undefined) updateParams.venueId = data.venueId || null;
 		if (data.externalTicketUrl !== undefined) {
@@ -1526,7 +1623,7 @@ export const updateEvent = form(
 			mapDomainError(err);
 		}
 		return { success: true };
-	}
+	})
 );
 
 /**
@@ -1537,7 +1634,7 @@ export const updateEvent = form(
 export const publishEvent = form(
 	z.object({ id: z.string().min(1), reason: z.string().trim().max(1000).optional() }),
 	async (data) => {
-		await requireCapability('event.publish');
+		await requireCapability('event.publish', () => eventScope(data.id));
 		try {
 			const outcome = await publish(data.id, {
 				acknowledged: !!data.reason,
@@ -1570,7 +1667,7 @@ export const unpublishEvent = form(
 		notes: z.string().trim().max(1000).optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('event.publish');
+		const staff = await requireCapability('event.publish', () => eventScope(data.id));
 		// Band-sourced events notify the band's admins — pulling a gig silently is
 		// the one unpublish that needs a word back to whoever posted it.
 		try {
@@ -1600,7 +1697,7 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
  * only ever thrown *by* `publish`, so the way to find out was to fail.
  */
 export const getEventPublishBlockers = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 	return publishBlockers(id);
 });
 
@@ -1609,23 +1706,26 @@ export const getEventPublishBlockers = query(z.string(), async (id) => {
  * tell a mistake from a real event before it is gone.
  */
 export const getEventDeletionImpact = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 	return getDeletionImpact(id);
 });
 
-export const deleteEvent = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('event.manage');
-	try {
-		await removeEvent(data.id, staff.id);
-	} catch (err) {
-		// The ticket refusal is a business rule with a written explanation, not an
-		// internal fault. It used to be picked out by matching the word "tickets"
-		// in the message, which left `EventNotFoundError` as a 500.
-		mapDomainError(err);
-	}
-	void getStaffEvents({}).refresh();
-	return { success: true };
-});
+export const deleteEvent = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('work_order.cancelled', async (data) => {
+		const staff = await requireCapability('event.manage');
+		try {
+			await removeEvent(data.id, staff.id);
+		} catch (err) {
+			// The ticket refusal is a business rule with a written explanation, not an
+			// internal fault. It used to be picked out by matching the word "tickets"
+			// in the message, which left `EventNotFoundError` as a 500.
+			mapDomainError(err);
+		}
+		void getStaffEvents({}).refresh();
+		return { success: true };
+	})
+);
 
 export const compTickets = form(
 	z.object({
@@ -1634,7 +1734,7 @@ export const compTickets = form(
 		attendeeEmail: z.string().min(1),
 		quantity: z.string().transform(Number)
 	}),
-	async (data, issue) => {
+	writesAudit('event.tickets_comped', async (data, issue) => {
 		await requireCapability('event.manageTickets');
 
 		const issues: Parameters<typeof invalid> = [];
@@ -1654,17 +1754,24 @@ export const compTickets = form(
 			throw error(400, `Only ${remaining} ticket(s) remaining`);
 		}
 
+		const purchaseId = `comp-${crypto.randomUUID()}`;
 		await createTickets({
 			eventId: data.eventId,
-			purchaseId: `comp-${crypto.randomUUID()}`,
+			purchaseId,
 			quantity: data.quantity,
 			attendeeName: data.attendeeName,
 			attendeeEmail: data.attendeeEmail,
 			status: 'valid'
 		});
+		await recordTicketComp({
+			eventId: data.eventId,
+			purchaseId,
+			quantity: data.quantity,
+			attendeeName: data.attendeeName
+		});
 
 		return { success: true };
-	}
+	})
 );
 
 export const cancelTicket = form(
@@ -1704,6 +1811,19 @@ export const scanTicketIn = command(
 			mapDomainError(err);
 			throw err;
 		}
+	}
+);
+
+/**
+ * The show a scanned code belongs to, when it is not this one (#2797), so the
+ * door can say "that ticket is for Friday" rather than "no match". Null for an
+ * unknown code, or one on this show.
+ */
+export const identifyTicketCode = query(
+	z.object({ code: z.string().min(1).max(64), eventId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('event.manageTickets');
+		return findOtherShowForCode(data.code, data.eventId);
 	}
 );
 
@@ -1789,6 +1909,7 @@ export const claimFreeTicket = form(
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		await requireListingVisible(evt.id);
 		if (!evt.ticketingEnabled) throw error(400, 'Tickets not available');
 		if (evt.ticketPrice && evt.ticketPrice > 0) throw error(400, 'This is a paid event');
 		// Mints a real ticket row with a code and capacity, so it falls under the
@@ -1838,6 +1959,7 @@ export const rsvpToEvent = form(
 
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
+		await requireListingVisible(evt.id);
 		const closed = rsvpClosedReason(evt);
 		if (closed === 'ticketed') throw error(400, 'This event uses tickets, not RSVPs');
 		if (closed === 'past') throw error(400, 'This event has already happened');
@@ -1894,6 +2016,7 @@ export const purchaseTickets = form(
 		const evt = await getById(data.eventId);
 		if (!evt) throw error(404, 'Event not found');
 		if (evt.status !== 'published') throw error(400, 'Event is not published');
+		await requireListingVisible(evt.id);
 		if (!evt.ticketingEnabled || !evt.ticketPrice) throw error(400, 'Tickets not available');
 		// Mirrors getPublicTicketPage. This is the endpoint that actually takes
 		// money, so it repeats the check rather than trusting the page guard.
@@ -2009,22 +2132,10 @@ export const purchaseTickets = form(
 				purchase_id: purchaseId,
 				event_id: evt.id,
 				ticket_quantity: String(data.quantity),
-				// The webhook needs these to break the charge into tickets, gift, and
-				// covered fees on the receipt — the session alone can't tell them apart.
-				ticket_unit_price_cents: String(split.ticketLineUnitCents),
-				ticket_contribution_cents: String(split.contributionCents),
-				// Not read by the webhook, which takes the allocation off the ticket
-				// rows. These are for settlement, which reconciles against Stripe by
-				// event_id and should be able to see where the buyer sent the money.
-				ticket_acts_cents: String(split.actsCents),
-				ticket_collective_cents: String(split.collectiveCents)
+				...ticketSplitMetadata(split)
 			},
 			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`,
-			// The buyer pays on our own page rather than checkout.stripe.com. The
-			// two URLs above are unchanged — `checkout()` maps them onto the
-			// `return_url` / metadata pair that `elements` mode takes instead.
-			uiMode: 'elements'
+			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
 		});
 
 		// Tickets never spend credits — no CreditType applies to them — so this
@@ -2136,8 +2247,14 @@ export const getMemberEventsPage = query(z.void(), async () => {
 	const [events, tickets, guide, rsvpEventIds] = await Promise.all([
 		getMemberEvents(),
 		getMemberTickets(),
-		getPublicGigGuide({ offset: 0 }),
+		getMemberGigGuide({ offset: 0 }),
 		viewerRsvpEventIds()
 	]);
 	return { events, tickets, guide, rsvpEventIds };
+});
+
+/** An event's History card: the listing's own entries and its show's. Read as the listing is. */
+export const getEventHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireListingReader(id);
+	return listEventHistory(id, { limit });
 });

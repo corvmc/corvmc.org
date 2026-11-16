@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockWake = vi.fn();
 const mockNudge = vi.fn();
-vi.mock('$lib/server/inbox/thread-service', () => ({
+vi.mock('#lib/server/inbox/thread-service.js', () => ({
 	wakeSnoozedThreads: (...args: unknown[]) => mockWake(...args),
 	nudgeStaleAwaiting: (...args: unknown[]) => mockNudge(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 function post(auth?: string) {
 	return new Request('http://localhost/api/cron/wake-snoozed', {

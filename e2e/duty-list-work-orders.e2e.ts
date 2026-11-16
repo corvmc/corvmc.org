@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_VOL_ADVANCE_ID,
 	SEED_VOL_ADVANCE_TASK_DONE,
 	SEED_VOL_ADVANCE_TASK_OPEN,
-	SEED_VOL_ADVANCE_ROLE_NAME,
 	SEED_VOL_EVENT_ID
 } from './fixtures/seed-volunteering';
 
@@ -25,23 +25,20 @@ import {
  */
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 test.describe('duty lists — the unscheduled half', () => {
-	test('an advance work order reaches the coordinator dashboard', async ({ page }) => {
+	test('an advance work order reaches the unassigned tasks', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/volunteer');
+		// Unassigned work is a Tasks chip (#2625).
+		await page.goto('/staff/tasks');
 
-		// Scoped by the card root, not `div…last()`: that picked whichever div
-		// most recently contained the words, which became the header the moment
-		// the card gained a "Schedule →" action beside its title.
-		const card = page.locator('.card').filter({ hasText: 'Unscheduled Work Orders' });
-		await expect(card.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME })).toBeVisible();
+		await page.locator('[data-testid="task-chips"] [data-chip="unassigned"]').click();
+		await expect(page).toHaveURL(/chip=unassigned/);
+		await expect(
+			page.locator(`main table a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
+		).toBeVisible();
 	});
 
 	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
@@ -51,9 +48,10 @@ test.describe('duty lists — the unscheduled half', () => {
 		// somebody pastes lands where it says it does.
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
-		await expect(page.getByRole('heading', { name: 'Advance' })).toBeVisible();
+		await expect(page.locator('[role="tabpanel"][aria-labelledby="tab-advance"]')).toBeVisible();
+		// The show's related tasks (#2630) list it beside the shifts card.
 		await expect(
-			page.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME }).first()
+			page.locator(`[data-testid="related-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
 		).toBeVisible();
 	});
 
@@ -64,12 +62,14 @@ test.describe('duty lists — the unscheduled half', () => {
 	 */
 	test('its checklist renders, and a box stays ticked', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_ADVANCE_ID}`);
 
 		// A deadline is not a window, and the page must not print an empty range.
-		await expect(page.getByText('a time to be arranged')).toHaveCount(0);
+		// The deadline branch is the only one that renders a `<time>` there.
+		await expect(page.locator('main p.text-subtle time[datetime]')).toBeVisible();
 
-		await expect(page.getByText(SEED_VOL_ADVANCE_TASK_DONE)).toBeVisible();
+		// By its checkbox: the lazy History card also names the task (#2270).
+		await expect(page.getByLabel(SEED_VOL_ADVANCE_TASK_DONE, { exact: true })).toBeChecked();
 		const open = page.getByLabel(SEED_VOL_ADVANCE_TASK_OPEN);
 		await expect(open).not.toBeChecked();
 

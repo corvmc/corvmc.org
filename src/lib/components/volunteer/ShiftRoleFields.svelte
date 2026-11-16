@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ComponentProps } from 'svelte';
 	import ShiftFormFields from './ShiftFormFields.svelte';
-	import { getVolunteerRoles } from '$lib/remote/volunteer.remote';
+	import { getVolunteerRoles } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * `ShiftFormFields` with its role list loaded here rather than passed in.

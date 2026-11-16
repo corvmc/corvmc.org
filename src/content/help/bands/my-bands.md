@@ -1,5 +1,5 @@
 ---
-title: My Bands & Invitations
+title: My bands & invitations
 slug: my-bands
 category: bands
 summary: See the bands you belong to and respond to invitations.

@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cashReceivedReservation } from '$lib/remote/reservations.remote';
+	import { refreshAll } from '$app/navigation';
+	import { cashReceivedReservation } from '#lib/remote/reservations.remote.js';
 	const { fields } = cashReceivedReservation;
 
 	let {
@@ -27,20 +28,20 @@
 
 <Action
 	action={cashReceivedReservation}
-	label="Cash received"
-	modalTitle="Record Cash Payment"
+	label={m.actions_cash_received_label()}
+	modalTitle={m.actions_cash_received_modal_title()}
 	submitVariant="success"
-	successToast="Marked as paid"
+	successToast={m.actions_cash_received_success_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Record that cash was received for this reservation?</p>
+		<p class="text-sm">{m.actions_cash_received_record_cash_was_received_reservation_text()}</p>
 	{/snippet}
 </Action>

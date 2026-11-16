@@ -11,6 +11,18 @@ paths:
 > `gh issue list --state open --label flaky`. The backlog is GitHub Issues, not a
 > markdown file.
 
+## No flaky tests in main
+
+A flaky test is grounds for rejecting the work (owner, 2026-11-02). CI fails the E2E job on any
+test that passed only on a retry (`--fail-on-flaky-tests`), and vitest runs with no `retry`.
+
+- **Never re-run a failed job to get green.** A red that goes green on a re-run is a flake that
+  merged. Read the failure instead.
+- **A flake is diagnosed, filed, fixed, then re-queued.** File it with the `flaky` label, fix it
+  in its own PR, and re-queue the PR it blocked only once that fix has merged.
+- **A test you add or touch is deterministic**: no wall-clock races, no same-second ordering, no
+  fixed sleeps.
+
 ## If you only remember one thing
 
 **A bug fix names its class.** State the class, grep for what else has that shape, and add the
@@ -25,8 +37,9 @@ systems). Worked examples and the rest of the policy:
 
 ## Suites
 
-Three vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`),
-`server` (node, `vmForks` pool), and `storybook`. `expect.requireAssertions` is on globally, so a
+Two vitest projects in `vite.config.ts`: `client` (chromium, `*.svelte.{test,spec}.ts`) and
+`server` (node, `vmForks` pool). Storybook is gone (#2200): a component's behaviour is pinned in a
+colocated `.svelte.spec.ts`. `expect.requireAssertions` is on globally, so a
 test that asserts nothing fails.
 
 - **Scope the run.** Cost is dominated by per-file module-graph evaluation, not by assertions —
@@ -39,7 +52,8 @@ test that asserts nothing fails.
 - **A spec whose answer depends on SQL runs against a real database.** A mocked `db` agrees with a
   `WHERE` whether or not it is there, so predicates, aggregates, joins, migrations and backfills
   use `migratedSqlite()` from `$lib/server/testing/migrated-sqlite` — an in-memory SQLite with
-  every committed migration replayed — and point `vi.mock('$lib/server/db')` at its `testDb` (see
+  every committed migration replayed, behind drizzle's D1 driver so errors and `batch` behave as
+  in production — and point `vi.mock('$lib/server/db')` at its `testDb` (see
   `src/lib/server/reservation/program-hold.spec.ts`). It works in CI: `better-sqlite3` ships
   prebuilt binaries, so nothing needs compiling.
 - **A component spec asserts what a user sees or decides** — conditional copy, a choice offered
@@ -50,10 +64,8 @@ test that asserts nothing fails.
 - A spec of orchestration — which service is called, what is thrown, what is returned — mocks
   `$lib/server/db` outright. To assert only a fragment's shape, render it through
   `SQLiteSyncDialect` (see `src/lib/server/authorization.spec.ts`).
-- **Both browser-mode projects get a port of their own** — `client` via `browserPort()` and
-  `storybook` via `storybookPort()`, from the same helper. vitest's default is the fixed constant
-  63315, so without this every checkout asks for the same number _and_ the two projects ask for it
-  within a single run.
+- **The browser-mode project gets a port per checkout** — `client` via `browserPort()`. vitest's
+  default is the fixed constant 63315, so without this every checkout asks for the same number.
 - **A browser project that cannot bind reports no failure at all.** It never starts, so the summary
   is every test passing over a file count that is short:
 
@@ -70,6 +82,33 @@ test that asserts nothing fails.
   context per file and is memory-hungry by design; several worktrees running suites at once would
   each claim nearly every core until the OOM killer took one. That surfaces as `Worker exited
 unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
+
+## Date and time specs run at the clock edges
+
+`$lib/test/clock-edges` names the instants where club-time code breaks: `noon` (the control),
+`pacificEveningAfterUtcMidnight`, the spring-forward and fall-back changeovers (each bracketed by a
+`…Before` and `…After`), `monthEnd` and `yearEnd`. Each carries its `clubDate` and `clubTime`, so
+a spec asserts against those rather than a literal it worked out by hand.
+
+- `forEachClockEdge(title, fn, { fakeTimers, only, zones })` is one `it` per edge. `fakeTimers`
+  fakes `Date` at the edge and restores real timers even when `fn` throws.
+- `zones: viewerTimeZones` (UTC, the club, both ends of the date line) also sets `process.env.TZ`
+  per case; `forEachTimeZone` and `withTimeZone` do the same without the edges. Server project
+  only — the browser has no settable zone, and the `client` project runs in the machine's.
+- **Never assign `process.env.TZ` by hand mid-file.** `withTimeZone` restores it and resets
+  `@internationalized/date`'s cached zone, which otherwise builds every club-time instant in
+  whichever zone it saw first. That cache made a local LA machine fail where CI's UTC passed.
+- Changeover days are 23 or 25 hours long: "tomorrow" is `addCalendarDays(clubDate, 1)`, not
+  `at + 24h`. A spec of a relative window in milliseconds (the door, the reader) gains nothing.
+
+## Locate and assert by structure, not wording
+
+A test never matches on, or asserts, UI copy. Locate by `button[type=submit]` scoped to its dialog
+or form, then `href`, input `name`, a role with no name inside a scoped container (dialog, form,
+row), aria state, and `data-testid` last. `getByLabel` on a form field is allowed — the label is
+the accessible contract. Assert URL, value, count, visibility or a DB row.
+`custom/no-wording-locators` errors on the literal forms in specs and e2e (#2189).
+[conventions.md#locate-and-assert-by-structure](../../docs/development/conventions.md#locate-and-assert-by-structure)
 
 ## e2e
 
@@ -90,9 +129,10 @@ unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
   establish visibility for the next line. `suggestions.e2e.ts` and `volunteering.e2e.ts` keep a
   `DB_POLL` constant for this; a one-shot read is only safe once a poll in the same test has
   already seen the write.
-- **Retries do not rescue a mutating test.** `retries: 2` on CI helps a test that fails _before_ it
-  writes. One that fails _after_ has already spent the fixture row it needs, so the retry starts
-  from data the fixture never described and fails differently — and the job is red either way.
+- **Retries rescue nothing; they record.** `retries: 2` on CI exists for the trace of the failed
+  attempt (`trace: 'on-first-retry'`). A test that passes on a retry is `flaky`, and
+  `--fail-on-flaky-tests` makes that a red job. A mutating test that fails _after_ it writes has
+  spent the fixture row it needs, so its retry fails differently — red either way.
   Per-test seeding is not the escape hatch: a mid-run write is a second writer on the files the
   preview server holds. See the note at `retries` in `playwright.config.ts`.
 - A red run keeps `.wrangler/e2e-state` on purpose, and the next `e2e/prepare.ts` clears it — or

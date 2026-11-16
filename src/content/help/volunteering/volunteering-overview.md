@@ -60,7 +60,7 @@ they're what fix the briefing for the next person.
 
 After you have helped out, log the time from your volunteer **Profile**:
 
-1. Click **Log Hours**.
+1. Click **Log hours**.
 2. Pick the role, the date you worked, and how long — to the nearest quarter hour.
 3. Write a sentence about what you did. "Ran sound for the Thursday open mic"
    beats "volunteered."

@@ -1,20 +1,22 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Form, { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Form, { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import { onDestroy } from 'svelte';
@@ -28,7 +30,7 @@
 		transferOwner,
 		inviteByEmail,
 		revokeEmailInvite
-	} from '$lib/remote/bands.remote';
+	} from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 
 	// Above the awaited queries: a declaration after a top-level await is
@@ -106,8 +108,8 @@
 	}
 
 	const roleOptions = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: msg.band_role_member_label() },
+		{ value: 'admin', label: msg.band_admin_label() }
 	];
 
 	let searchTimeout: ReturnType<typeof setTimeout>;
@@ -125,7 +127,7 @@
 	function openTransferFromOwnMembership() {
 		const first = others.find((m) => m.role !== 'owner');
 		if (!first) {
-			toast.error('There is nobody else in the band to transfer ownership to.');
+			toast.error(msg.band_slug_members_there_nobody_else_band_transfer_toast());
 			return;
 		}
 		transferTarget = { userId: first.userId, name: first.member.title };
@@ -133,10 +135,10 @@
 	}
 </script>
 
-<PageHeader width="2xl" title="Members" subtitle={layout.band.name}>
+<PageHeader width="2xl" title={msg.band_members_title()} subtitle={layout.band.name}>
 	{#if canManage}
 		<Button variant="default" size="sm" onclick={() => (showInviteModal = true)}>
-			Invite Member
+			{msg.band_slug_members_invite_member_label()}
 		</Button>
 	{/if}
 </PageHeader>
@@ -153,16 +155,20 @@
 	/>
 
 	{#if isStaffOnly}
-		<Alert type="info" href={`/staff/bands/${layout.band.id}`}>
-			You're viewing this band as staff. Roster changes go through staff tools.
+		<Alert type="info" href={`/staff/groups/${layout.band.id}`}>
+			{msg.band_slug_members_re_viewing_band_as_staff_body()}
 		</Alert>
 	{/if}
 
-	<InfoCard title={me ? `Other members (${others.length})` : `Members (${others.length})`}>
+	<InfoCard
+		title={me
+			? msg.band_slug_members_other_members_title({ length: others.length })
+			: msg.band_slug_members_members_title({ length: others.length })}
+	>
 		{#if others.length === 0}
 			<EmptyState
-				title="Nobody else yet"
-				description="Invite anyone else in this band so they can book sessions and manage events."
+				title={msg.band_slug_members_nobody_else_yet_title()}
+				description={msg.band_slug_members_description_body()}
 			/>
 		{:else}
 			<div class="grid grid-cols-1 gap-2">
@@ -188,11 +194,14 @@
 									/>
 									<Action
 										action={removeMember.for(member.id)}
-										label="Remove"
+										label={msg.band_remove_label()}
 										variant="ghost"
 										size="xs"
-										confirm="Remove {member.member.title} from {layout.band.name}?"
-										successToast="Member removed"
+										confirm={msg.band_slug_members_remove_from_body({
+											title: member.member.title,
+											name: layout.band.name
+										})}
+										successToast={msg.band_slug_members_member_removed_toast()}
 										onsuccess={refreshMembers}
 									>
 										{#snippet form()}
@@ -210,7 +219,7 @@
 											showTransferModal = true;
 										}}
 									>
-										Transfer
+										{msg.band_slug_members_transfer_label()}
 									</Button>
 								{/if}
 							</div>
@@ -222,25 +231,29 @@
 	</InfoCard>
 
 	{#if pending.length > 0}
-		<InfoCard title={`Pending invitations (${pending.length})`}>
+		<InfoCard title={msg.band_slug_members_pending_invitations_title({ length: pending.length })}>
 			<div class="grid grid-cols-1 gap-2">
 				{#each pending as invite (invite.id)}
 					<Card tone="base-200">
 						<CardBody row class="py-3">
 							<EntityIdentity ref={invite.member} size="md">
 								{#snippet subtitle()}
-									Invited as {invite.role}{#if invite.position}
+									{msg.band_slug_members_invited_as_body({
+										role: invite.role
+									})}{#if invite.position}
 										&nbsp;&middot; {invite.position}{/if}
 								{/snippet}
 							</EntityIdentity>
 							{#if canManage}
 								<Action
 									action={revokeInvitation.for(invite.id)}
-									label="Revoke"
+									label={msg.band_slug_members_revoke_label()}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation for {invite.member.title}?"
-									successToast="Invitation revoked"
+									confirm={msg.band_slug_members_revoke_invitation_body({
+										title: invite.member.title
+									})}
+									successToast={msg.band_slug_members_invitation_revoked_toast()}
 									onsuccess={refreshMembers}
 								>
 									{#snippet form()}
@@ -257,7 +270,9 @@
 	{/if}
 
 	{#if canManage && pendingEmailInvites.length > 0}
-		<InfoCard title={`Awaiting signup (${pendingEmailInvites.length})`}>
+		<InfoCard
+			title={msg.band_slug_members_awaiting_signup_title({ length: pendingEmailInvites.length })}
+		>
 			<div class="grid grid-cols-1 gap-2">
 				{#each pendingEmailInvites as invite (invite.id)}
 					<Card tone="base-200">
@@ -280,19 +295,23 @@
 								size="md"
 							>
 								{#snippet subtitle()}
-									Invited as {invite.role}{#if invite.position}
-										&nbsp;&middot; {invite.position}{/if}&nbsp;&middot; by {invite.invitedByName}
+									{msg.band_slug_members_invited_as_body({
+										role: invite.role
+									})}{#if invite.position}
+										&nbsp;&middot; {invite.position}{/if}{msg.band_slug_members_by_body({
+										invitedByName: invite.invitedByName ?? ''
+									})}
 								{/snippet}
 							</EntityIdentity>
 							<div class="flex shrink-0 items-center gap-2">
-								<Badge variant="warning">awaiting signup</Badge>
+								<Badge variant="warning">{msg.band_slug_members_awaiting_signup_2_label()}</Badge>
 								<Action
 									action={revokeEmailInvite}
-									label="Revoke"
+									label={msg.band_slug_members_revoke_label()}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation for {invite.email}?"
-									successToast="Invite revoked"
+									confirm={msg.band_slug_members_revoke_invitation_2_body({ email: invite.email })}
+									successToast={msg.band_slug_members_invite_revoked_toast()}
 									onsuccess={refreshInvites}
 								>
 									{#snippet form()}
@@ -310,11 +329,11 @@
 </PageContent>
 
 <!-- Invite Member Modal -->
-<Modal title="Invite Member" bind:open={showInviteModal}>
+<Modal title={msg.band_slug_members_invite_member_title()} bind:open={showInviteModal}>
 	<TabBar
 		tabs={[
-			{ key: 'search', label: 'Search members' },
-			{ key: 'email', label: 'Invite by email' }
+			{ key: 'search', label: msg.band_slug_members_search_members_label() },
+			{ key: 'email', label: msg.band_slug_members_invite_by_email_label() }
 		]}
 		active={inviteMode}
 		onchange={(key) => (inviteMode = key as 'search' | 'email')}
@@ -324,7 +343,7 @@
 		<Form
 			remote={inviteMember}
 			onsuccess={() => {
-				toast.success('Invitation sent');
+				toast.success(msg.band_slug_members_invitation_sent_toast());
 				showInviteModal = false;
 				selectedUser = null;
 				searchQuery = '';
@@ -332,12 +351,12 @@
 			}}
 		>
 			<div class="space-y-4">
-				<Field label="Search by name or email" id="user-search">
+				<Field label={msg.band_slug_members_search_by_name_email_label()} id="user-search">
 					<input
 						id="user-search"
 						type="text"
 						class="input w-full"
-						placeholder="Start typing a name or email..."
+						placeholder={msg.band_slug_members_start_typing_name_email_placeholder()}
 						value={searchQuery}
 						oninput={onSearchInput}
 						autocomplete="off"
@@ -360,27 +379,38 @@
 						</ul>
 					{/if}
 					{#if searching}
-						<p class="mt-1 text-subtle">Searching...</p>
+						<p class="mt-1 text-subtle">{msg.band_slug_members_searching_text()}</p>
 					{/if}
 					{#if searchQuery.length >= 2 && searchResults.length === 0 && !searching && !selectedUser && looksLikeEmail}
 						<p class="mt-1 text-subtle">
-							No existing members found.
+							{msg.band_slug_members_no_existing_members_found_text()}
 							<button type="button" class="link" onclick={() => (inviteMode = 'email')}>
-								Invite {searchQuery} by email?
+								{msg.band_slug_members_invite_by_email_2_label({ searchQuery })}
 							</button>
 						</p>
 					{/if}
 				</Field>
 
 				<div class="grid grid-cols-2 gap-4">
-					<Field label="Role" name="role" type="select" value="member" options={roleOptions} />
-					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
+					<Field
+						label={msg.band_role_label()}
+						field={inviteMember.fields.role}
+						type="select"
+						value="member"
+						options={roleOptions}
+					/>
+					<Field
+						label={msg.band_slug_members_position_label()}
+						field={inviteMember.fields.position}
+						type="text"
+						placeholder={msg.band_slug_members_e_g_guitar_placeholder()}
+					/>
 				</div>
 
 				<div class="flex justify-end pt-2">
 					<SubmitButton
-						label="Send Invitation"
-						successLabel="Sent"
+						label={msg.band_slug_members_send_invitation_label()}
+						successLabel={msg.band_slug_members_sent_label()}
 						variant="primary"
 						disabled={!selectedUser}
 					/>
@@ -391,7 +421,7 @@
 		<Form
 			remote={inviteByEmail}
 			onsuccess={() => {
-				toast.success('Invitation sent');
+				toast.success(msg.band_slug_members_invitation_sent_toast());
 				showInviteModal = false;
 				searchQuery = '';
 				refreshMembers();
@@ -401,21 +431,35 @@
 			<div class="space-y-4">
 				<input {...inviteEmailFields.bandId.as('hidden', layout.band.id)} />
 				<p class="text-muted">
-					Invite someone who doesn't have a CorvMC account yet. They'll receive an email with a
-					signup link and be automatically added to your band.
+					{msg.band_slug_members_invite_someone_who_doesn_t_text()}
 				</p>
 				<Field
-					name="email"
+					field={inviteByEmail.fields.email}
 					type="email"
-					label="Email address"
+					label={msg.band_slug_members_email_address_label()}
 					value={looksLikeEmail ? searchQuery : ''}
 				/>
 				<div class="grid grid-cols-2 gap-4">
-					<Field label="Role" name="role" type="select" value="member" options={roleOptions} />
-					<Field label="Position" name="position" type="text" placeholder="e.g. Guitar" />
+					<Field
+						label={msg.band_role_label()}
+						field={inviteByEmail.fields.role}
+						type="select"
+						value="member"
+						options={roleOptions}
+					/>
+					<Field
+						label={msg.band_slug_members_position_label()}
+						field={inviteByEmail.fields.position}
+						type="text"
+						placeholder={msg.band_slug_members_e_g_guitar_placeholder()}
+					/>
 				</div>
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Send Email Invite" successLabel="Sent" variant="primary" />
+					<SubmitButton
+						label={msg.band_slug_members_send_email_invite_label()}
+						successLabel={msg.band_slug_members_sent_label()}
+						variant="primary"
+					/>
 				</div>
 			</div>
 		</Form>
@@ -423,26 +467,33 @@
 </Modal>
 
 <!-- Transfer Ownership Modal -->
-<Modal title="Transfer Ownership" bind:open={showTransferModal}>
+<Modal title={msg.band_slug_members_transfer_ownership_title()} bind:open={showTransferModal}>
 	{#if transferTarget}
 		<Form
 			remote={transferOwner}
 			onsuccess={() => {
-				toast.success('Ownership transferred');
+				toast.success(msg.band_slug_members_ownership_transferred_toast());
 				showTransferModal = false;
 				refreshMembers();
 			}}
 		>
 			<div class="space-y-4">
 				<Alert type="warning">
-					You are about to transfer ownership of <strong>{layout.band.name}</strong> to
-					<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
-					undone without the new owner's consent.
+					<ParaglideMessage
+						message={msg.band_slug_members_about_transfer_ownership_will_demoted_body}
+						inputs={{ name: layout.band.name, name2: transferTarget.name }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</Alert>
 				<input {...transferFields.bandId.as('hidden', layout.band.id)} />
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Transfer Ownership" successLabel="Transferred" variant="warning" />
+					<SubmitButton
+						label={msg.band_slug_members_transfer_ownership_label()}
+						successLabel={msg.band_slug_members_transferred_label()}
+						variant="warning"
+					/>
 				</div>
 			</div>
 		</Form>

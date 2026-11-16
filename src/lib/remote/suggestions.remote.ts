@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { toGenericRef, toMemberRef } from '$lib/server/entity/refs';
+import { toGenericRef, toMemberRef } from '#lib/server/entity/refs.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { allowRateLimited } from '$lib/server/rate-limit';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 import {
 	suggestionCategories,
 	suggestionStatuses,
@@ -16,7 +16,7 @@ import {
 	SUGGESTION_RESPONSE_MAX,
 	SUGGESTION_NOTE_MAX,
 	surfaces
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	listSuggestions,
 	getSuggestion,
@@ -35,12 +35,17 @@ import {
 	getEditRequest,
 	listPendingEdits,
 	SuggestionNotFoundError
-} from '$lib/server/suggestion/suggestion-service';
-import { createFlag, FLAG_REASON_MAX, FLAG_DESCRIPTION_MAX } from '$lib/server/flag/flag-service';
-import { getProjectForSuggestion, listCommittees } from '$lib/server/project/project-service';
-import { getSuggestionChain } from '$lib/server/project/decision-chain';
-import { listCommitteeRosters } from '$lib/server/ballot/ballot-service';
-import { getAcquisitionForSuggestion } from '$lib/server/inventory/acquisition-service';
+} from '#lib/server/suggestion/suggestion-service.js';
+import {
+	createFlag,
+	FLAG_REASON_MAX,
+	FLAG_DESCRIPTION_MAX
+} from '#lib/server/flag/flag-service.js';
+import { getProjectForSuggestion, listCommittees } from '#lib/server/project/project-service.js';
+import { getSuggestionChain } from '#lib/server/project/decision-chain.js';
+import { listCommitteeRosters } from '#lib/server/ballot/ballot-service.js';
+import { getAcquisitionForSuggestion } from '#lib/server/inventory/acquisition-service.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 const BOARD_PAGE_SIZE = 20;
 const STAFF_PAGE_SIZE = 25;
@@ -369,7 +374,7 @@ export const setSuggestionVisibility = form(
 		visibility: z.enum(suggestionVisibilities),
 		note: z.string().trim().max(SUGGESTION_NOTE_MAX).optional()
 	}),
-	async (data) => {
+	writesAudit('suggestion.visibility_changed', async (data) => {
 		const staff = await requireCapability('suggestion.review');
 		try {
 			await setVisibility(data.suggestionId, {
@@ -383,12 +388,12 @@ export const setSuggestionVisibility = form(
 		}
 		void getStaffSuggestionDetailPage(data.suggestionId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const mergeSuggestion = form(
 	z.object({ sourceId: z.string().min(1), targetId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('suggestion.merged', async (data) => {
 		const staff = await requireCapability('suggestion.review');
 		try {
 			await mergeSuggestions({ ...data, staffId: staff.id });
@@ -398,7 +403,7 @@ export const mergeSuggestion = form(
 		void getStaffSuggestionDetailPage(data.sourceId).refresh();
 		void getStaffSuggestionDetailPage(data.targetId).refresh();
 		return { targetId: data.targetId };
-	}
+	})
 );
 
 export const reviewSuggestionEdit = form(

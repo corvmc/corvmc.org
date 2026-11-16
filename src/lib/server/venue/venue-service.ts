@@ -1,10 +1,13 @@
-import { db } from '$lib/server/db';
-import { venue } from '$lib/server/db/schema/venue';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { asc, count, eq, isNull } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import type { Venue } from '$lib/server/db/schema/venue';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import type { Venue } from '#lib/server/db/schema/venue.js';
+import { venueAccessFields } from '#lib/config.js';
+import type { AccessAnswer, VenueAccessField } from '#lib/config.js';
 
 /**
  * Where a show is.
@@ -53,6 +56,9 @@ export interface VenueInput {
 	notes?: string | null;
 }
 
+/** Set on edit only: a new venue starts `unknown` on every question. */
+export type VenueAccessInput = Partial<Record<VenueAccessField, AccessAnswer>>;
+
 export async function createVenue(data: VenueInput): Promise<Venue> {
 	const slug = await ensureUniqueSlug(generateSlug(data.name), venue, venue.slug);
 	const [row] = await db
@@ -62,7 +68,10 @@ export async function createVenue(data: VenueInput): Promise<Venue> {
 	return row;
 }
 
-export async function updateVenue(id: string, data: Partial<VenueInput>): Promise<Venue> {
+export async function updateVenue(
+	id: string,
+	data: Partial<VenueInput> & VenueAccessInput
+): Promise<Venue> {
 	const existing = await getVenue(id);
 
 	// Re-slug only when the name actually moved, and exclude the row's own slug
@@ -147,23 +156,17 @@ export async function deleteVenue(id: string): Promise<void> {
 	if (n > 0) throw new VenueInUseError(n);
 
 	await db.delete(venue).where(eq(venue.id, id));
+	await recordAuditEntry({
+		action: 'venue.deleted',
+		subject: { type: 'venue', id, label: target.name },
+		details: {}
+	});
 }
 
 export async function getVenue(id: string): Promise<Venue> {
 	const [row] = await db.select().from(venue).where(eq(venue.id, id)).limit(1);
 	if (!row) throw new VenueNotFoundError();
 	return row;
-}
-
-export async function getVenueBySlug(slug: string): Promise<Venue | null> {
-	const [row] = await db.select().from(venue).where(eq(venue.slug, slug)).limit(1);
-	return row ?? null;
-}
-
-/** The practice room, or null before anybody has said which one it is. */
-export async function getPrimaryVenue(): Promise<Venue | null> {
-	const [row] = await db.select().from(venue).where(eq(venue.isPrimary, true)).limit(1);
-	return row ?? null;
 }
 
 export interface VenueWithUse extends Venue {
@@ -207,4 +210,34 @@ export async function holdsSpace(venueId: string | null | undefined): Promise<bo
 		.where(eq(venue.id, venueId))
 		.limit(1);
 	return row?.isPrimary ?? true;
+}
+
+/** One answered access question. `unknown` answers are left out. */
+export interface VenueAccessFact {
+	field: VenueAccessField;
+	answer: Exclude<AccessAnswer, 'unknown'>;
+}
+
+/**
+ * What a public listing at this venue says about access, in display order.
+ * Empty for no venue, a missing venue, or a venue nobody has checked.
+ */
+export async function getVenueAccess(
+	venueId: string | null | undefined
+): Promise<VenueAccessFact[]> {
+	if (!venueId) return [];
+	const [row] = await db
+		.select({
+			stepFreeEntry: venue.stepFreeEntry,
+			accessibleRestroom: venue.accessibleRestroom,
+			seating: venue.seating
+		})
+		.from(venue)
+		.where(eq(venue.id, venueId))
+		.limit(1);
+	if (!row) return [];
+	return venueAccessFields.flatMap((field) => {
+		const answer = row[field];
+		return answer === 'unknown' ? [] : [{ field, answer }];
+	});
 }

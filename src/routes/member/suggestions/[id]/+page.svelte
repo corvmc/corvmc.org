@@ -1,30 +1,34 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
 	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { suggestionCategories, suggestionCategoryLabels } from '#lib/config.js';
 	import {
 		getMemberSuggestionDetailPage,
 		toggleSuggestionVote,
 		flagSuggestion,
 		editSuggestion,
 		cancelSuggestionEdit
-	} from '$lib/remote/suggestions.remote';
+	} from '#lib/remote/suggestions.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	const data = $derived(await getMemberSuggestionDetailPage(id));
 	const s = $derived(data.suggestion);
 	const standing = $derived(data.standing);
@@ -50,7 +54,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={s.title} subtitle="Suggestion">
+<PageHeader width="3xl" title={s.title} subtitle={m.member_suggestions_id_subtitle_body()}>
 	{#if s.status !== 'open'}
 		<StatusBadge status={s.status} label />
 	{/if}
@@ -64,23 +68,32 @@
 	-->
 	{#if project}
 		<Alert type="success">
-			Staff started work on this: <span class="font-medium">{project.name}</span>.
+			<ParaglideMessage
+				message={m.member_suggestions_id_staff_started_work_body}
+				inputs={{ name: project.name }}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
 	<!-- A certified result is every member's to read; before that the ballot's
 	     own page is its electors', so the link waits for certification. -->
 	{#if ballots.length > 0}
-		<InfoCard title={ballots.length === 1 ? 'Ballot' : 'Ballots'}>
+		<InfoCard
+			title={ballots.length === 1
+				? m.member_suggestions_id_ballot_title()
+				: m.member_ballots_title()}
+		>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
 					<li>
 						<BallotLine
 							ballot={b}
 							href={b.status === 'certified'
-								? resolve(`/member/ballots/${b.id}`)
+								? resolve(`member/ballots/${b.id}`)
 								: b.status === 'open'
-									? resolve('/member/ballots')
+									? resolve('member/ballots')
 									: null}
 						/>
 					</li>
@@ -90,16 +103,27 @@
 	{/if}
 
 	{#if s.mergedIntoId}
-		<Alert type="info" href={resolve(`/member/suggestions/${s.mergedIntoId}`)}>
-			Merged into <span class="font-medium">{s.mergedIntoTitle ?? 'another suggestion'}</span> — the votes
-			moved across.
+		<Alert type="info" href={resolve(`member/suggestions/${s.mergedIntoId}`)}>
+			<ParaglideMessage
+				message={m.member_suggestions_id_merged_into_votes_moved_across_body}
+				inputs={{
+					mergedIntoTitle: s.mergedIntoTitle ?? m.member_suggestions_id_another_suggestion_title()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{:else if s.visibility !== 'visible'}
 		<Alert type={s.visibility === 'hidden' ? 'error' : 'warning'}>
 			<p>
-				{withheldCopy[s.visibility] ?? 'This is not on the board right now.'}
+				{withheldCopy[s.visibility] ?? m.member_suggestions_id_not_board_right_now_text()}
 				{#if s.visibilityNote}
-					Staff's note: <span class="italic">{s.visibilityNote}</span>
+					<ParaglideMessage
+						message={m.member_staff_s_note_text}
+						inputs={{ visibilityNote: s.visibilityNote }}
+						>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			</p>
 			{#if isMine && s.visibility === 'hidden'}
@@ -112,15 +136,14 @@
 		<Alert type="info">
 			<div class="flex w-full flex-wrap items-center justify-between gap-2">
 				<p>
-					Your edit is with staff. The suggestion below is still what everyone else sees until they
-					approve it.
+					{m.member_suggestions_id_edit_with_staff_suggestion_below_text()}
 				</p>
 				<Action
 					action={cancelSuggestionEdit}
-					label="Withdraw"
-					submitLabel="Withdraw edit"
-					modalTitle="Withdraw your edit?"
-					successToast="Edit withdrawn"
+					label={m.member_withdraw_label()}
+					submitLabel={m.member_suggestions_id_withdraw_edit_label()}
+					modalTitle={m.member_suggestions_id_withdraw_edit_2_title()}
+					successToast={m.member_suggestions_id_edit_withdrawn_toast()}
 					variant="ghost"
 					size="xs"
 					onsuccess={refresh}
@@ -130,14 +153,14 @@
 						<input
 							{...cancelSuggestionEdit.fields.editId.as('hidden', editState.pendingEdit?.id ?? '')}
 						/>
-						<p class="py-2">Take this edit back? You can submit a different one afterwards.</p>
+						<p class="py-2">{m.member_suggestions_id_take_edit_back_can_submit_text()}</p>
 					{/snippet}
 				</Action>
 			</div>
 		</Alert>
 	{/if}
 
-	<InfoCard title="Suggestion">
+	<InfoCard title={m.member_suggestions_id_subtitle_title()}>
 		<div class="flex items-start gap-4">
 			<Form remote={vote} class="shrink-0" onsuccess={refresh}>
 				<input {...vote.fields.suggestionId.as('hidden', s.id)} />
@@ -148,7 +171,9 @@
 					label={String(s.voteCount)}
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
 					aria-pressed={!!s.hasVoted}
-					aria-label={s.hasVoted ? 'Remove your vote' : 'Vote for this suggestion'}
+					aria-label={s.hasVoted
+						? m.member_suggestions_id_remove_vote_label()
+						: m.member_suggestions_id_vote_suggestion_label()}
 					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}
@@ -162,9 +187,12 @@
 				</Badge>
 				<p class="whitespace-pre-wrap">{s.body}</p>
 				<div class="text-muted">
-					Suggested by {s.authorName ?? 'a former member'} · {formatDateTime(s.createdAt)}
+					{m.member_suggestions_id_suggested_by_text({
+						authorName: s.authorName ?? m.member_suggestions_id_former_member_text(),
+						formatDateTime: formatDateTime(s.createdAt)
+					})}
 					{#if s.editedAt}
-						· edited {formatDateTime(s.editedAt)}
+						{m.member_suggestions_id_edited_text({ formatDateTime: formatDateTime(s.editedAt) })}
 					{/if}
 				</div>
 			</div>
@@ -172,11 +200,18 @@
 			{#if isMine && editState.canEdit && !editState.pendingEdit}
 				<Action
 					action={editSuggestion}
-					label={editState.direct ? 'Edit' : 'Request an edit'}
+					data-testid="edit-suggestion"
+					label={editState.direct
+						? m.member_edit_label()
+						: m.member_suggestions_id_request_edit_label()}
 					iconOnly
-					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
-					submitLabel={editState.direct ? 'Save' : 'Send to staff'}
-					successToast={editState.direct ? 'Updated' : 'Sent to staff'}
+					modalTitle={editState.direct
+						? m.member_suggestions_id_edit_suggestion_title()
+						: m.member_suggestions_id_request_edit_title()}
+					submitLabel={editState.direct ? m.member_save_label() : m.member_send_staff_label()}
+					successToast={editState.direct
+						? m.member_suggestions_id_updated_toast()
+						: m.member_sent_staff_toast()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -189,17 +224,25 @@
 							<!-- Say why, plainly. Being told "this needs review" without a
 							     reason reads as the site distrusting you personally. -->
 							<p class="mb-3 text-muted">
-								Other members have already voted for this, so staff check changes before they go
-								live — otherwise the words people backed could be swapped out from under them. Your
-								suggestion stays up unchanged in the meantime.
+								{m.member_suggestions_id_other_members_have_already_voted_text()}
 							</p>
 						{/if}
-						<FormField name="title" type="text" label="What should we do?" value={s.title} />
-						<FormField name="body" type="textarea" label="Tell us a bit more" value={s.body} />
 						<FormField
-							name="category"
+							field={editSuggestion.fields.title}
+							type="text"
+							label={m.member_what_should_we_do_label()}
+							value={s.title}
+						/>
+						<FormField
+							field={editSuggestion.fields.body}
+							type="textarea"
+							label={m.member_tell_us_bit_more_label()}
+							value={s.body}
+						/>
+						<FormField
+							field={editSuggestion.fields.category}
 							type="select"
-							label="Category"
+							label={m.member_category_label()}
 							value={s.category}
 							options={suggestionCategories.map((c) => ({
 								value: c,
@@ -213,11 +256,12 @@
 			{#if !isMine && s.visibility === 'visible'}
 				<Action
 					action={flag}
-					label="Flag for review"
+					data-testid="flag-suggestion"
+					label={m.member_flag_review_label()}
 					iconOnly
-					modalTitle="Flag for review"
-					submitLabel="Send report"
-					successToast="Reported — staff will take a look"
+					modalTitle={m.member_flag_review_title()}
+					submitLabel={m.member_send_report_label()}
+					successToast={m.member_reported_staff_will_take_look_toast()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -227,11 +271,18 @@
 					{#snippet form()}
 						<input {...flag.fields.suggestionId.as('hidden', s.id)} />
 						<p class="mb-3 text-muted">
-							This takes the suggestion off the board straight away while staff look at it. If they
-							don't agree with the report, it goes back up.
+							{m.member_takes_suggestion_off_board_straight_text()}
 						</p>
-						<FormField name="reason" type="text" label="What's the problem?" />
-						<FormField name="description" type="textarea" label="Anything else? (optional)" />
+						<FormField
+							field={flag.fields.reason}
+							type="text"
+							label={m.member_what_s_problem_label()}
+						/>
+						<FormField
+							field={flag.fields.description}
+							type="textarea"
+							label={m.member_anything_else_optional_label()}
+						/>
 					{/snippet}
 				</Action>
 			{/if}
@@ -239,10 +290,12 @@
 	</InfoCard>
 
 	{#if s.responseBody}
-		<InfoCard title="Official response">
+		<InfoCard title={m.member_suggestions_id_official_response_title()}>
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
-				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}
+				{s.responderName ?? m.member_suggestions_id_staff_text()}{s.responseAt
+					? ` · ${formatDateTime(s.responseAt)}`
+					: ''}
 			</p>
 		</InfoCard>
 	{/if}

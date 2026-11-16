@@ -1,9 +1,10 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
-	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
-	import { getBandAnnouncementsPage } from '$lib/remote/announcements.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import AnnouncementList from '#lib/components/groups/AnnouncementList.svelte';
+	import MuteAnnouncementsAction from '#lib/components/groups/MuteAnnouncementsAction.svelte';
+	import { getBandAnnouncementsPage } from '#lib/remote/announcements.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 
 	/**
@@ -20,7 +21,11 @@
 	const data = $derived(await getBandAnnouncementsPage(layout.band.id));
 </script>
 
-<PageHeader width="3xl" title="Announcements" subtitle="Posts to everyone on the roster.">
+<PageHeader
+	width="3xl"
+	title={m.band_slug_announcements_title()}
+	subtitle={m.band_slug_announcements_subtitle_body()}
+>
 	<!-- Null for a staff non-member, who has no roster row to mute. -->
 	{#if data.notifyAnnouncements !== null}
 		<MuteAnnouncementsAction

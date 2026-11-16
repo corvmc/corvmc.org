@@ -87,6 +87,101 @@ export async function seedAuditLog(users: SeedUser[], admin: SeedUser) {
 			details: { subscription: 'none' }
 		},
 		{
+			daysAgo: 6,
+			action: 'reservation.comped',
+			subject: subject(b),
+			details: {
+				reservationId: 'seed-comped-reservation',
+				date: 'Nov 3, 2026',
+				startTime: '6:00 PM',
+				endTime: '8:00 PM',
+				waivedCents: 3000
+			}
+		},
+		{
+			daysAgo: 6,
+			action: 'reservation.payment_reminder',
+			subject: subject(b),
+			actor: system,
+			details: {
+				reservationId: 'seed-unpaid-reservation',
+				date: '2026-11-03',
+				startTime: '18:00',
+				endTime: '20:00',
+				daysAfter: 1,
+				amountCents: 3000,
+				outcome: 'failed',
+				reason: null,
+				outboxId: null
+			}
+		},
+		{
+			daysAgo: 5,
+			action: 'clearance.granted',
+			subject: subject(b),
+			details: {
+				memberCertificationId: 'seed-clearance-grant',
+				certificationId: 'seed-sound-desk',
+				certificationName: 'Sound Desk Cleared',
+				grantedOn: '2026-11-08',
+				expiresOn: '2027-11-08'
+			}
+		},
+		{
+			daysAgo: 5,
+			action: 'orientation.waived',
+			subject: subject(b),
+			details: { reason: 'Played here for years before orientation existed' }
+		},
+		{
+			daysAgo: 4,
+			action: 'settings.changed',
+			subject: { type: 'setting', id: 'reservation', label: null },
+			details: {
+				changes: [{ key: 'reservation.feeGateFrom', from: '', to: '2026-11-01' }]
+			}
+		},
+		{
+			daysAgo: 2,
+			action: 'contact.deleted',
+			subject: { type: 'contact', id: 'seed-deleted-contact', label: 'Robin Former' },
+			details: { organizationId: null }
+		},
+		{
+			daysAgo: 2,
+			action: 'venue.deleted',
+			subject: { type: 'venue', id: 'seed-deleted-venue', label: 'Old Granary Loft' },
+			details: {}
+		},
+		{
+			daysAgo: 1,
+			action: 'music_purchase.refunded',
+			subject: { type: 'band', id: 'seed-refunded-band', label: 'Sour Cherry' },
+			details: { purchaseId: 'seed-music-refund', releaseTitle: 'Marys Peak', amountCents: 1000 }
+		},
+		{
+			daysAgo: 3,
+			action: 'band.member_removed',
+			subject: { type: 'band', id: 'seed-removed-member-band', label: 'Sour Cherry' },
+			details: {
+				memberId: 'seed-removed-member',
+				userId: 'seed-removed-user',
+				memberName: 'Jo Lark'
+			}
+		},
+		{
+			daysAgo: 4,
+			action: 'gift.recorded',
+			subject: { type: 'organization', id: 'seed-gift-org', label: 'Riverbend Print Shop' },
+			details: {
+				giftId: 'seed-gift',
+				description: 'Show posters, 200 copies',
+				valueCents: 18000,
+				occurredOn: '2026-10-30',
+				projectId: null
+			}
+		},
+		{
 			daysAgo: 7,
 			action: 'user.purged',
 			subject: { type: 'user', id: 'purged-seed-account', label: 'Casey Former' },

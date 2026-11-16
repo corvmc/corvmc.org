@@ -9,29 +9,32 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
 const grants = {
-	listGrants: vi.fn(async () => []),
 	getGrant: vi.fn(async () => ({ id: 'g1' })),
 	createGrant: vi.fn(async () => ({ id: 'g1' })),
 	updateGrant: vi.fn(async () => undefined),
 	deleteGrant: vi.fn(async () => undefined),
-	addGrantReport: vi.fn(async () => undefined),
-	updateGrantReport: vi.fn(async () => undefined),
-	deleteGrantReport: vi.fn(async () => undefined)
+	applyGrantStage: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/grant/grant-service', () => grants);
+vi.mock('#lib/server/grant/grant-service.js', () => grants);
 
 const funders = {
-	listFunders: vi.fn(async () => []),
-	createFunder: vi.fn(async () => ({ id: 'f1' })),
-	updateFunder: vi.fn(async () => undefined),
-	deleteFunder: vi.fn(async () => undefined)
+	listFunders: vi.fn(async () => [])
 };
-vi.mock('$lib/server/grant/funder-service', () => funders);
+vi.mock('#lib/server/grant/funder-service.js', () => funders);
+
+const people = {
+	withPrimaryContact: vi.fn(async <T>(rows: T[]) => rows),
+	savePrimaryContact: vi.fn(async () => undefined)
+};
+vi.mock('#lib/server/party/primary-contact.js', () => people);
+vi.mock('#lib/server/development/funding-project.js', () => ({
+	listFundableProjects: vi.fn(async () => [])
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),
@@ -62,12 +65,9 @@ const remote = (await import('./grants.remote')) as unknown as Record<
 >;
 
 const GRANT = { funderId: 'f1', title: 'Operating support', status: 'prospect' };
-const FUNDER = { name: 'Oregon Arts Commission' };
-const REPORT = { grantApplicationId: 'g1', title: 'Final report', dueOn: '2027-01-15' };
 
 type Case = { name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> };
 const CASES: Case[] = [
-	{ name: 'getGrants', cap: 'grant.read', arg: {}, spy: grants.listGrants },
 	{ name: 'getGrantDetail', cap: 'grant.read', arg: 'g1', spy: grants.getGrant },
 	{ name: 'getFunders', cap: 'grant.read', arg: undefined, spy: funders.listFunders },
 	{ name: 'createGrant', cap: 'grant.manage', arg: GRANT, spy: grants.createGrant },
@@ -78,26 +78,11 @@ const CASES: Case[] = [
 		spy: grants.updateGrant
 	},
 	{ name: 'deleteGrant', cap: 'grant.manage', arg: { id: 'g1' }, spy: grants.deleteGrant },
-	{ name: 'createFunder', cap: 'grant.manage', arg: FUNDER, spy: funders.createFunder },
 	{
-		name: 'updateFunder',
+		name: 'applyGrantStage',
 		cap: 'grant.manage',
-		arg: { id: 'f1', ...FUNDER },
-		spy: funders.updateFunder
-	},
-	{ name: 'deleteFunder', cap: 'grant.manage', arg: { id: 'f1' }, spy: funders.deleteFunder },
-	{ name: 'addGrantReport', cap: 'grant.manage', arg: REPORT, spy: grants.addGrantReport },
-	{
-		name: 'updateGrantReport',
-		cap: 'grant.manage',
-		arg: { id: 'r1', ...REPORT },
-		spy: grants.updateGrantReport
-	},
-	{
-		name: 'deleteGrantReport',
-		cap: 'grant.manage',
-		arg: { id: 'r1', grantApplicationId: 'g1' },
-		spy: grants.deleteGrantReport
+		arg: { id: 'g1', stage: 'award' },
+		spy: grants.applyGrantStage
 	}
 ];
 
@@ -132,11 +117,16 @@ describe('grant input', () => {
 				notes: null,
 				amountRequestedCents: null,
 				amountAwardedCents: null
-			})
+			}),
+			expect.anything()
 		);
-		await remote.addGrantReport({ ...REPORT, submittedOn: '' });
-		expect(grants.addGrantReport).toHaveBeenCalledWith(
-			expect.objectContaining({ submittedOn: null, notes: null })
-		);
+	});
+
+	it('names the acting staff member as the creator of the grant and its project', async () => {
+		held = new Set(['grant.read', 'grant.manage']);
+		await remote.createGrant(GRANT);
+		expect(grants.createGrant).toHaveBeenCalledWith(expect.anything(), {
+			createdByUserId: 'acting-staff'
+		});
 	});
 });

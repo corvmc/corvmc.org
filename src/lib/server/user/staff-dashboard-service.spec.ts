@@ -3,11 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Day boundaries and listing filters are SQL, so this runs against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listMemberSummary, listRoomDays, listUpcomingShows } =
 	await import('./staff-dashboard-service');
@@ -17,7 +17,15 @@ const NOW = new Date('2026-10-28T19:00:00Z');
 const s = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
 
 beforeEach(() => {
-	for (const t of ['reservation', 'event_band', 'event_listing', 'production', 'project', 'user']) {
+	for (const t of [
+		'closure',
+		'reservation',
+		'event_band',
+		'event_listing',
+		'production',
+		'project',
+		'user'
+	]) {
 		sqlite.exec(`delete from "${t}"`);
 	}
 	sqlite.exec(
@@ -33,7 +41,7 @@ describe('listRoomDays', () => {
 			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at, lock_code) values
 				${row('late-last-night', 'confirmed', '2026-10-28T05:00:00Z', '2026-10-28T06:30:00Z')},
 				${row('now', 'confirmed', '2026-10-28T18:00:00Z', '2026-10-28T20:00:00Z', "'1234'")},
-				${row('this-evening', 'scheduled', '2026-10-29T01:00:00Z', '2026-10-29T03:00:00Z')},
+				${row('this-evening', 'confirmed', '2026-10-29T01:00:00Z', '2026-10-29T03:00:00Z')},
 				${row('dropped', 'cancelled', '2026-10-28T21:00:00Z', '2026-10-28T22:00:00Z')},
 				${row('tomorrow', 'confirmed', '2026-10-29T20:00:00Z', '2026-10-29T22:00:00Z')},
 				${row('friday', 'confirmed', '2026-10-30T20:00:00Z', '2026-10-30T22:00:00Z')}`
@@ -53,6 +61,29 @@ describe('listRoomDays', () => {
 		const byId = Object.fromEntries(today.reservations.map((r) => [r.id, r]));
 		expect(byId.now.doorCodeUnconfirmed).toBe(true);
 		expect(byId['this-evening'].doorCodeUnconfirmed).toBe(false);
+	});
+
+	it('lists a closure among the bookings, in time order', async () => {
+		sqlite.exec(
+			`insert into closure (id, reason, starts_at, ends_at) values
+				('floors', 'Floors', ${s('2026-10-28T22:00:00Z')}, ${s('2026-10-29T00:00:00Z')})`
+		);
+		const [today, tomorrow] = await listRoomDays(NOW);
+		expect(today.uses.map((u) => u.id)).toEqual(['now', 'floors', 'this-evening']);
+		expect(today.closures.map((c) => c.reason)).toEqual(['Floors']);
+		expect(tomorrow.uses.map((u) => u.id)).toEqual(['tomorrow']);
+	});
+
+	it('shows a closure spanning midnight on both days, and none outside them', async () => {
+		sqlite.exec(
+			`insert into closure (id, reason, starts_at, ends_at) values
+				('overnight', 'Floors', ${s('2026-10-29T05:00:00Z')}, ${s('2026-10-29T08:00:00Z')}),
+				('yesterday', 'Past', ${s('2026-10-27T20:00:00Z')}, ${s('2026-10-27T22:00:00Z')}),
+				('friday', 'Later', ${s('2026-10-30T20:00:00Z')}, ${s('2026-10-30T22:00:00Z')})`
+		);
+		const [today, tomorrow] = await listRoomDays(NOW);
+		expect(today.closures.map((c) => c.id)).toEqual(['overnight']);
+		expect(tomorrow.closures.map((c) => c.id)).toEqual(['overnight']);
 	});
 
 	it('names who the room is held for', async () => {

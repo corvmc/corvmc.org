@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 // platform. Mocking it here — rather than importing the real one — is what lets
 // the pure halves (range arithmetic, validation, key naming) have a spec that
 // needs no R2 and no wrangler.
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	getPrivateBucket: () => {
 		throw new Error('not used in this spec');
 	}
@@ -16,7 +16,7 @@ import {
 	audioKey,
 	audioExtensionForType
 } from './audio-storage';
-import { AUDIO_MAX_UPLOAD_BYTES } from '$lib/config';
+import { AUDIO_MAX_UPLOAD_BYTES } from '#lib/config.js';
 
 /**
  * The range arithmetic is where a media endpoint actually goes wrong, and it

@@ -1,5 +1,5 @@
 ---
-title: Show Your Ticket at the Door
+title: Show your ticket at the door
 slug: ticket-check-in
 category: events-tickets
 summary: Use your ticket's QR code to check in at an event.

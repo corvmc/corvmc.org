@@ -19,9 +19,9 @@
  * fetched its own would be a second load-bearing query on a page that has one.
  */
 
-import type { BandEpk } from '$lib/types/band-page';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
-import { partitionLinks } from '$lib/utils/directory-display';
+import type { BandEpk } from '#lib/types/band-page.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import { partitionLinks } from '#lib/utils/directory-display.js';
 
 /** The band-panel routes a rung can send someone to. */
 export type EpkSectionRoute =

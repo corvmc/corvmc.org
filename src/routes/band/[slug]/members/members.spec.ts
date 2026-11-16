@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DomainError } from '$lib/server/domain-error';
-import { mockUser } from '$lib/server/db/test-factory';
+import { DomainError } from '#lib/server/domain-error.js';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -76,17 +76,16 @@ const bandServiceMock = {
 	}
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
 const hasAnyRole = vi.fn(async () => false);
-// What `requireGroupRole`'s `allowStaff` branch asks: any position, matching
-// `requireStaff()`. `hasAnyRole` is the two literal role rows and is narrower.
-const isElevated = vi.fn(async () => false);
-vi.mock('$lib/server/authorization', () => ({
+// What `requireGroupRole`'s `staff` branch asks: the capability the guard names.
+const can = vi.fn(async (_cap: unknown) => false);
+vi.mock('#lib/server/authorization.js', () => ({
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
-	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
+	can: (cap: unknown) => can(cap),
 	requireUser: () => testUser
 }));
 
@@ -105,7 +104,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable()
 	}
@@ -143,13 +142,13 @@ const {
 	leave,
 	updateMyBandMembership,
 	searchBandUsers: searchUsers
-} = (await import('$lib/remote/bands.remote')) as any;
+} = (await import('#lib/remote/bands.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	bandServiceMock.getUserRole.mockResolvedValue('owner');
 	hasAnyRole.mockResolvedValue(false);
-	isElevated.mockResolvedValue(false);
+	can.mockResolvedValue(false);
 	selectResult = [];
 });
 
@@ -162,12 +161,12 @@ describe('getBandMembersPage', () => {
 	 * The page renders an `isStaffOnly` branch — "You're viewing this band as
 	 * staff. Roster changes go through staff tools." — which could never appear:
 	 * `getBandLayout` admits a staff non-member as `userRole: 'staff'`, but this
-	 * query's member-only guard 403'd them into the error boundary first. Phase 4
-	 * passes `allowStaff`, which is what makes that branch reachable.
+	 * query's member-only guard 403'd them into the error boundary first. The
+	 * guard names `band.read`, which is what makes that branch reachable.
 	 */
-	it('admits a staff non-member read-only, rather than 403ing the page', async () => {
+	it('admits a band.read holder read-only, rather than 403ing the page', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(true);
+		can.mockImplementation(async (cap) => cap === 'band.read');
 
 		const data = await getBandMembersPage('band-1');
 
@@ -175,9 +174,9 @@ describe('getBandMembersPage', () => {
 		expect(data.emailInvites).toEqual([]);
 	});
 
-	it('still refuses someone who is neither a member nor staff', async () => {
+	it('refuses a non-member without band.read, whatever position they hold', async () => {
 		bandServiceMock.getUserRole.mockResolvedValue(null);
-		isElevated.mockResolvedValue(false);
+		can.mockImplementation(async (cap) => cap === 'audit.read');
 
 		await expect(getBandMembersPage('band-1')).rejects.toMatchObject({ status: 403 });
 	});

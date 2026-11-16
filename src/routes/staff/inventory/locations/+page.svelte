@@ -1,15 +1,16 @@
 <script lang="ts">
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getLocationsWithCounts, addLocation } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getLocationsWithCounts, addLocation } from '#lib/remote/inventory.remote.js';
 
 	/** Deep enough for any real building; a cap is also the cycle guard. */
 	const MAX_LOCATION_DEPTH = 20;
@@ -50,13 +51,12 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Locations" subtitle="Inventory" />
+<PageHeader width="3xl" title={m.staff_locations_title()} subtitle={m.staff_inventory_body()} />
 
 <PageContent width="3xl">
 	{#if data.locations.length === 0}
 		<Alert type="info" class="mb-4">
-			Nothing has a home yet. Name the rooms first — every unit you enter can then be filed as you
-			go, which is far quicker than moving them afterwards.
+			{m.staff_inventory_locations_nothing_has_home_yet_name_body()}
 		</Alert>
 	{/if}
 
@@ -65,8 +65,8 @@
 			{#if data.locations.length > 0}
 				<Table>
 					{#snippet head()}
-						<th>Location</th>
-						<th class="cell-num">Units</th>
+						<th>{m.staff_location_label()}</th>
+						<th class="cell-num">{m.staff_units_label()}</th>
 					{/snippet}
 					{#each rows as row (row.id)}
 						<tr class="hover">
@@ -85,10 +85,12 @@
 					{#if data.unassignedCount > 0}
 						<tr class="hover">
 							<td class="cell-primary">
-								<span class="font-medium">Unassigned</span>
-								<Badge variant="warning" size="xs">needs filing</Badge>
+								<span class="font-medium">{m.staff_unassigned_text()}</span>
+								<Badge variant="warning" size="xs"
+									>{m.staff_inventory_locations_needs_filing_label()}</Badge
+								>
 								<div class="text-subtle">
-									Units entered before a location existed, or saved before this page did.
+									{m.staff_inventory_locations_units_entered_before_location_exis_text()}
 								</div>
 							</td>
 							<td class="cell-num">{data.unassignedCount}</td>
@@ -99,21 +101,28 @@
 			{/if}
 		</div>
 
-		<InfoCard title="Add a location">
-			<Form remote={addLocation} successToast="Location added">
-				<Field field={fields.name} type="text" label="Name" />
+		<InfoCard title={m.staff_inventory_locations_add_location_title()}>
+			<Form remote={addLocation} successToast={m.staff_inventory_locations_success_toast()}>
+				<Field field={fields.name} type="text" label={m.staff_name_label()} />
 				<Field
 					field={fields.parentId}
 					type="select"
-					label="Inside"
+					label={m.staff_inventory_locations_inside_label()}
 					options={[
-						{ value: '', label: 'Nothing — it is its own place' },
+						{ value: '', label: m.staff_inventory_locations_nothing_its_own_place_label() },
 						...rows.map((r) => ({ value: r.id, label: r.path.join(' → ') }))
 					]}
 				/>
-				<Field field={fields.notes} type="textarea" label="Notes" />
+				<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
+				<Field
+					field={fields.displayOrder}
+					type="number"
+					label={m.staff_order_2_label()}
+					value={0}
+					min="0"
+				/>
 				<div class="mt-3">
-					<SubmitButton label="Add location" />
+					<SubmitButton label={m.staff_inventory_locations_add_location_2_label()} />
 				</div>
 			</Form>
 		</InfoCard>

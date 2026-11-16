@@ -1,17 +1,20 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import VendorCheckIn from '$lib/components/market/VendorCheckIn.svelte';
+	import VendorCheckIn from '#lib/components/market/VendorCheckIn.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const slug = $derived(page.params.slug!);
-	const eventId = $derived(page.params.eventId!);
+	const params = routeParams('slug', 'eventId');
+
+	const slug = $derived(params.slug);
+	const eventId = $derived(params.eventId);
 </script>
 
 <VendorCheckIn
 	{eventId}
 	parent={[
 		{
-			label: 'Vendors',
+			label: m.member_vendors_label(),
 			href: resolve('/member/groups/[slug]/markets/[eventId]', { slug, eventId })
 		}
 	]}

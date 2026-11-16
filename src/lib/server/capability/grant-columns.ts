@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { group, groupCapability } from '$lib/server/db/schema/group';
+import { group, groupCapability } from '#lib/server/db/schema/group.js';
 
 /** SQLite's `json_group_array` output, which is `[]` when there are no rows. */
 export function parseGrantList(value: string): string[] {

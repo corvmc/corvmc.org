@@ -1,11 +1,12 @@
-import { db } from '$lib/server/db';
-import { ticket, ticketSale, type TicketStatus } from '$lib/server/db/schema/ticket';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { ticket, ticketSale, type TicketStatus } from '#lib/server/db/schema/ticket.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { emitTicketPurchased } from './purchased-event';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -141,6 +142,29 @@ export async function createTickets(options: CreateTicketsOptions) {
 
 	const created = await db.insert(ticket).values(rows).returning();
 	return created;
+}
+
+/** Comps are money given away, so the audit log says who issued them (#2891). */
+export async function recordTicketComp(comp: {
+	eventId: string;
+	purchaseId: string;
+	quantity: number;
+	attendeeName: string;
+}) {
+	const [event] = await db
+		.select({ title: eventListing.title })
+		.from(eventListing)
+		.where(eq(eventListing.id, comp.eventId))
+		.limit(1);
+	await recordAuditEntry({
+		action: 'event.tickets_comped',
+		subject: { type: 'event', id: comp.eventId, label: event?.title ?? null },
+		details: {
+			purchaseId: comp.purchaseId,
+			quantity: comp.quantity,
+			attendeeName: comp.attendeeName
+		}
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -285,6 +309,29 @@ export async function checkIn(ticketId: string, staffUserId: string): Promise<Ch
 // Queries
 // ---------------------------------------------------------------------------
 
+/**
+ * The other show a scanned code belongs to, or null when the code is unknown or
+ * is this show's (#2797). Case-blind, as the door matches. Lets the door say
+ * which night a ticket is for rather than "no match".
+ */
+export async function findOtherShowForCode(
+	code: string,
+	eventId: string
+): Promise<{ eventTitle: string; startsAt: Date } | null> {
+	const [row] = await db
+		.select({
+			eventId: ticket.eventId,
+			eventTitle: eventListing.title,
+			startsAt: eventListing.startsAt
+		})
+		.from(ticket)
+		.innerJoin(eventListing, eq(eventListing.id, ticket.eventId))
+		.where(sql`lower(${ticket.code}) = ${code.trim().toLowerCase()}`)
+		.limit(1);
+	if (!row || row.eventId === eventId) return null;
+	return { eventTitle: row.eventTitle, startsAt: row.startsAt };
+}
+
 /** One ticket, or null. The caller that needs to know which show it is for. */
 export async function getTicketById(ticketId: string) {
 	const [row] = await db.select().from(ticket).where(eq(ticket.id, ticketId)).limit(1);
@@ -323,7 +370,8 @@ export async function getEventTickets(eventId: string, statusFilter?: TicketStat
 			checkedInAt: ticket.checkedInAt,
 			checkedInByUserId: ticket.checkedInByUserId,
 			checkedInByName: user.name,
-			createdAt: ticket.createdAt
+			createdAt: ticket.createdAt,
+			updatedAt: ticket.updatedAt
 		})
 		.from(ticket)
 		.leftJoin(user, eq(user.id, ticket.checkedInByUserId))

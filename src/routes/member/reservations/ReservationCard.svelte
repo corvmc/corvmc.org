@@ -1,88 +1,91 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		CancelReservationAction,
-		ConfirmReservationAction,
 		ConfirmWaitlistedAction
-	} from '$lib/components/actions';
-	import ReservationCardShell from '$lib/components/reservations/ReservationCardShell.svelte';
-	import ReservationSummary from '$lib/components/reservations/ReservationSummary.svelte';
-	import type { Reservation } from '$lib/server/db/schema';
+	} from '#lib/components/actions/index.js';
+	import ReservationCardShell from '#lib/components/reservations/ReservationCardShell.svelte';
+	import ReservationSummary from '#lib/components/reservations/ReservationSummary.svelte';
+	import type { Reservation } from '#lib/server/db/schema.js';
 	import { resolve } from '$app/paths';
-	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
-	import { withinConfirmationWindow } from '$lib/config';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
-	import { payForReservation } from '$lib/remote/reservations.remote';
+	import { memberPayAction, reservationTrack } from '#lib/utils/reservation-actions.js';
+	import { payForReservation } from '#lib/remote/reservations.remote.js';
 
 	let {
 		reservation,
 		onchange
-	}: { reservation: Reservation & { payableWithCredits?: boolean }; onchange?: () => void } =
-		$props();
+	}: {
+		reservation: Reservation & { payableWithCredits?: boolean; codeWithheld?: boolean };
+		onchange?: () => void;
+	} = $props();
 
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
-	// Members may only confirm (without paying) within the window; before then we
-	// show when it opens and offer paying to lock the slot in early.
-	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
 	let payAction = $derived(memberPayAction(reservation));
-	// Settles from free hours alone, so it stands in for Confirm and the pay link.
+	// Settles from free hours alone, so it stands in for the pay link.
 	let withCredits = $derived(reservation.payableWithCredits === true);
 	const creditPay = $derived(payForReservation.for(reservation.id));
 </script>
 
-<ReservationCardShell startsAt={reservation.startsAt} status={reservation.status}>
+<ReservationCardShell
+	startsAt={reservation.startsAt}
+	ended={reservation.endsAt.getTime() < Date.now()}
+	track={reservationTrack(reservation)}
+>
 	<a
 		href={resolve('/member/reservations/[id]', { id: reservation.id })}
 		class="block hover:bg-base-200/40"
 	>
 		<ReservationSummary {reservation} class="space-y-1 p-2 px-3" />
+		{#if reservation.bookerType === 'instructor'}
+			<p class="px-3 pb-1">
+				<span class="badge badge-sm" data-testid="teaching-booking"
+					>{m.member_reservations_teaching_badge_text()}</span
+				>
+			</p>
+		{/if}
 		{#if reservation.notes}
 			<!-- The one thing that tells an old booking apart from the fortnightly
 			     ones either side of it. It was on the detail page only, so a member
 			     searching their history for "Recording session" found nothing (#904). -->
 			<p class="line-clamp-2 px-3 pb-1 text-subtle">{reservation.notes}</p>
 		{/if}
+		{#if reservation.status === 'confirmed' && reservation.codeWithheld}
+			<!-- The remote held the code for a fee owed (#2874); the detail page
+			     this links to says which and offers Message staff. -->
+			<p class="px-3 pb-1 text-sm text-warning" data-testid="door-code-held">
+				{m.member_reservations_reservation_card_door_code_held_text()}
+			</p>
+		{/if}
 	</a>
-	{#if !isPast && reservation.status === 'scheduled'}
-		<!-- Hints live above the action row so they never wrap behind the buttons. -->
-		<UnconfirmedNotice
-			startsAt={reservation.startsAt}
-			release={false}
-			class="space-y-0.5 px-3 text-right text-subtle"
-		/>
-	{/if}
-
 	{#snippet actions()}
-		{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
+		{#if !isPast && ['waitlisted', 'confirmed'].includes(reservation.status)}
 			<CancelReservationAction
 				{reservation}
 				onsuccess={onchange}
 				variant="error"
-				size="xs"
+				size="md"
 				outline
 			/>
 			{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
-				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
-			{:else if reservation.status === 'scheduled' && canConfirm && !withCredits}
-				<ConfirmReservationAction {reservation} onsuccess={onchange} variant="primary" size="xs" />
+				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="md" />
 			{/if}
 		{/if}
 		{#if withCredits}
 			<Action
 				action={creditPay}
-				label="Pay with credits"
-				modalTitle="Pay with credits"
-				submitLabel="Pay with credits"
-				successToast="Paid with credits"
+				label={m.member_reservations_reservation_card_label()}
+				modalTitle={m.member_reservations_reservation_card_title()}
+				submitLabel={m.member_reservations_reservation_card_label()}
+				successToast={m.member_reservations_reservation_card_success_toast()}
 				variant="primary"
-				size="xs"
 				onsuccess={onchange}
 			>
 				{#snippet form()}
 					<input {...creditPay.fields.id.as('hidden', reservation.id)} />
 					<input {...creditPay.fields.skipPayment.as('hidden', 'on')} />
-					<p>Uses your free hours. Nothing is charged.</p>
+					<p>{m.member_reservations_reservation_card_uses_free_hours_nothing_text()}</p>
 				{/snippet}
 			</Action>
 		{:else if payAction}
@@ -91,10 +94,9 @@
 			<Button
 				href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
 				variant="primary"
-				size="xs"
 				outline
 			>
-				{payAction === 'reserve' ? 'Prepay' : 'Pay online'}
+				{m.member_pay_online_label()}
 			</Button>
 		{/if}
 	{/snippet}

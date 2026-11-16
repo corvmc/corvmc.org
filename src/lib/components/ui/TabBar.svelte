@@ -3,8 +3,8 @@
 	import type { Snippet } from 'svelte';
 	import { Tabs, DropdownMenu } from 'bits-ui';
 	import { IconChevronDown } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import ButtonGroup from '#lib/components/ui/ButtonGroup.svelte';
 
 	/** Every tabler icon shares one props shape; borrow it from a concrete icon
 	   rather than reaching into the package's un-exported `dist/types`. */
@@ -75,6 +75,7 @@
 	const asLinks = $derived(tabs.some((t) => t.href));
 
 	const activeTab = $derived(tabs.find((t) => t.key === active) ?? tabs[0]);
+	const tabKeys = $derived(tabs.map((t) => t.key));
 
 	function itemClass(key: string) {
 		// `px-2` in dense mode: five tabs have to clear a 20rem pane, and the
@@ -211,12 +212,22 @@
 	<Tabs.Root value={active} onValueChange={handleValueChange} activationMode="manual">
 		<Tabs.List>
 			<ButtonGroup class={groupClass}>
-				{#each tabs as tab (tab.key)}
+				<!--
+					Over the keys, not the tabs, and no prop spread: a trigger re-registers
+					with the root in an effect whenever `id` or `value` is read as changed,
+					and `tabs` is a new array of new objects each time it is derived. While
+					a refresh is pending that effect's write rebases the pending batch, which
+					derives `tabs` again, without end (#2433).
+				-->
+				{#each tabKeys as key (key)}
+					{@const tab = tabs.find((t) => t.key === key)!}
+					{@const iconOnly = iconOnlyProps(tab)}
 					<Tabs.Trigger
-						id="tab-{tab.key}"
-						value={tab.key}
-						class={itemClass(tab.key)}
-						{...iconOnlyProps(tab)}
+						id="tab-{key}"
+						value={key}
+						class={itemClass(key)}
+						aria-label={iconOnly['aria-label']}
+						title={iconOnly.title}
 					>
 						{@render contents(tab)}
 					</Tabs.Trigger>

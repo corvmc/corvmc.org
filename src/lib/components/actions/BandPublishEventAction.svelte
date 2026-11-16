@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { publishBandEvent } from '$lib/remote/band-events.remote';
+	import { refreshAll } from '$app/navigation';
+	import { publishBandEvent } from '#lib/remote/band-events.remote.js';
 
 	// The band panel's own events live in `band-events.remote`, guarded by
 	// `requireGroupRole({ slug }, 'admin')` and scoped to the band named by the
@@ -33,19 +34,19 @@
 
 <Action
 	action={publishBandEvent}
-	label="Publish"
-	successToast="Published"
+	label={m.actions_publish_label()}
+	successToast={m.actions_published_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Publish this event? It becomes visible on your profile and the public calendar.
+			{m.actions_band_publish_event_publish_event_becomes_visible_pro_text()}
 		</p>
 	{/snippet}
 </Action>

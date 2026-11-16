@@ -1,5 +1,5 @@
 ---
-title: Equipment Lending Library
+title: Equipment lending library
 slug: equipment-overview
 category: equipment
 summary: Browse the gear available to borrow and how lending works.
@@ -25,6 +25,6 @@ the sidebar to browse the catalog.
 - If we don't have what you're looking for, you can submit a **free-form request**
   and staff will see it.
 - Track everything you've borrowed on the
-  [My Loans](/member/help/track-equipment-loans) page.
+  [My loans](/member/help/track-equipment-loans) page.
 
 Your credit balance (used toward loan costs) is shown as a badge while you browse.

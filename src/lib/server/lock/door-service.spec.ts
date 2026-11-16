@@ -3,15 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 /** Who may use the door page, and what each attempt records, on a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/kv', () => ({ getJson: async () => null, putJson: async () => {} }));
-vi.mock('$lib/server/notification', () => ({ dispatchEmailOnly: vi.fn() }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/kv.js', () => ({ getJson: async () => null, putJson: async () => {} }));
+vi.mock('#lib/server/notification/index.js', () => ({ dispatchEmailOnly: vi.fn() }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: async () => 'Lights off\nAmps off'
 }));
 

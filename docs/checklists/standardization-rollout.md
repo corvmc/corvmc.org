@@ -17,7 +17,7 @@ because it is the only genuinely user-visible defect of the four.
 | --- | -------------------------------------------------------------------------------- | ------ | ------- |
 | 1   | **C4** Timezone → `DEFAULT_TIMEZONE` everywhere; then `DateTimeRange`/`Duration` | ✅     | cdb94b2 |
 | 2   | `DefinitionList` — 11 byte-identical copies / 9 files                            | ✅     | (next)  |
-| 3   | `Money` + route 3 fee formulas through `$lib/finance/fees` (C3, drift risk)      | ⬜     |         |
+| 3   | `Money` + route 3 fee formulas through `#lib/finance/fees.js` (C3, drift risk)   | ⬜     |         |
 | 4   | **C2** `mapDomainError` in remaining 22 files; 11 fall-through classes           | ⬜     |         |
 | 5   | Filter schemas — `page` converge dropped (not a bug); `status` gap still open    | ⏸️     |         |
 | 6   | Centralize validation limits — named kinds on unambiguous fields                 | ✅     | (next)  |

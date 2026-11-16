@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { listBandSlotTerms } from '$lib/server/production/run-of-show-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { listBandSlotTerms } from '#lib/server/production/run-of-show-service.js';
 import {
 	createBandEvent,
 	updateBandEvent,
@@ -22,17 +22,17 @@ import {
 	publish,
 	unpublish,
 	getById
-} from '$lib/server/event/event-service';
-import { lineupSchema } from '$lib/server/db/schema/event';
-import { startPortalConversation } from '$lib/server/inbox/portal-service';
-import { formatDate } from '$lib/utils/format';
-import { searchBandsByName } from '$lib/server/band/band-service';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
-import { parseGigImport, GIG_IMPORT_DEFAULT_START } from '$lib/utils/gig-import';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/event/event-service.js';
+import { eventVisibilities, lineupSchema } from '#lib/server/db/schema/event.js';
+import { startPortalConversation } from '#lib/server/inbox/portal-service.js';
+import { formatDate } from '#lib/utils/format.js';
+import { searchBandsByName } from '#lib/server/band/band-service.js';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
+import { parseGigImport, GIG_IMPORT_DEFAULT_START } from '#lib/utils/gig-import.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -46,7 +46,7 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
  * band's by passing their slug.
  */
 export const getBandEvents = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	const events = await listBandEvents(band.id);
 	const lineups = await getEventLineups(events.map((e) => e.id));
 
@@ -66,7 +66,7 @@ export const getBandEvents = query(z.string(), async (slug) => {
 
 /** Bills this band has been named on and hasn't answered. */
 export const getBandLineupInvites = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	return listBandLineupInvites(band.id);
 });
 
@@ -96,7 +96,7 @@ export const getBandEventsPage = query(z.string(), async (slug) => {
  * credit is answered.
  */
 export const getBandBookings = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 	return listBandSlotTerms(band.id);
 });
 
@@ -104,7 +104,7 @@ export const getBandBookings = query(z.string(), async (slug) => {
 export const getBandEventDetail = query(
 	z.object({ slug: z.string(), eventId: z.string() }),
 	async ({ slug, eventId }) => {
-		const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 		const evt = await getById(eventId);
 
 		if (!evt) throw error(404, 'Event not found');
@@ -123,10 +123,12 @@ export const getBandEventDetail = query(
 			doorsAt: evt.doorsAt,
 			status: evt.status,
 			location: evt.location,
+			address: evt.address,
 			tags: evt.tags,
 			externalTicketUrl: evt.externalTicketUrl,
 			ticketPrice: evt.ticketPrice,
 			posterUrl: resolveImageUrl(evt.posterKey),
+			visibility: evt.visibility ?? 'public',
 			isOwner: evt.groupId === band.id,
 			lineup
 		};
@@ -137,7 +139,7 @@ export const getBandEventDetail = query(
 export const searchBandsForLineup = query(
 	z.object({ slug: z.string().min(1), q: z.string() }),
 	async ({ slug, q }) => {
-		await requireGroupRole({ slug }, 'member', { allowStaff: true });
+		await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 		if (!q || q.trim().length < 2) return [];
 		return searchBandsByName(q.trim());
 	}
@@ -220,10 +222,12 @@ export const updateBandEventForm = form(
 		eventEndTime: z.string().optional(),
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
+		address: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
 		externalTicketUrl: z.string().optional(),
 		ticketPriceDollars: z.string().max(12).optional(),
 		lineup: z.string().optional(),
+		visibility: z.enum(eventVisibilities).optional(),
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
@@ -243,7 +247,9 @@ export const updateBandEventForm = form(
 		if (data.title !== undefined) params.title = data.title;
 		if (data.description !== undefined) params.description = data.description || null;
 		if (data.location !== undefined) params.location = data.location || null;
+		if (data.address !== undefined) params.address = data.address.trim() || null;
 		if (data.tags !== undefined) params.tags = data.tags || null;
+		if (data.visibility !== undefined) params.visibility = data.visibility;
 		if (data.externalTicketUrl !== undefined) {
 			params.externalTicketUrl = data.externalTicketUrl || null;
 		}

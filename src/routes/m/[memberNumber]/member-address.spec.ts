@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const getUserByMemberNumber = vi.fn();
-vi.mock('$lib/server/user/member-number-service', () => ({
+vi.mock('#lib/server/user/member-number-service.js', () => ({
 	getUserByMemberNumber: (...a: unknown[]) => getUserByMemberNumber(...a)
 }));
 
@@ -13,7 +13,7 @@ vi.mock('$lib/server/user/member-number-service', () => ({
 // decides the staff arm per route, so "is staff" alone cannot say which staff
 // page (if any) this person can reach.
 const positionsFor = vi.fn<() => Promise<string[]>>(async () => []);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	positionsFor: (...a: unknown[]) => positionsFor(...(a as [])),
 	capabilitySet: (held: string[]) =>
 		held.length > 0 ? ['user.read', 'user.list', 'band.read', 'event.read', 'reservation.read'] : []

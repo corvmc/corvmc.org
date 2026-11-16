@@ -1,38 +1,54 @@
-import { getShiftDetail, getShiftCancelledByName } from './work-order-service';
+import {
+	getShiftDetail,
+	getShiftCancelledByName,
+	getWorkOrderById,
+	listTaskShifts,
+	listWorkOrderAssignees
+} from './work-order-service';
 import { listClaimants, listInvitationsForShift } from './volunteer-signup-service';
-import { listFeedbackForShift } from './volunteer-feedback-service';
+import { listFeedbackForWorkOrder } from './volunteer-feedback-service';
 import { listWorkTasks } from './duty-list-service';
 import { listHourLogs } from './hour-log-service';
-import { listJobs } from '$lib/server/contractor/contractor-job-service';
-import { listFlagsForWorkOrder } from '$lib/server/inventory/work-request-service';
+import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
+import { listFlagsForWorkOrder } from '#lib/server/inventory/work-request-service.js';
 
 /**
- * Everything one work order's page shows, read through services. Unguarded:
- * the two remotes that serve it (`getStaffShiftPage`, `getProjectTaskPage`)
- * each guard first, by different rules, and then call this.
- * `null` when there is no such work order.
+ * Everything one task's page shows, read through services: the task, and each
+ * of its shifts with its own roster and invitations. Unguarded: `getTaskPage`
+ * guards first, by the project's rule or the loose task's, and then calls this.
+ * `null` when there is no such task.
  */
 export async function loadWorkOrderView(id: string) {
-	const shift = await getShiftDetail(id);
-	if (!shift) return null;
-	const [claimants, cancelledByName, feedback, tasks, invitations, engagements, reports, hours] =
+	const [detail, row] = await Promise.all([getShiftDetail(id), getWorkOrderById(id)]);
+	if (!detail || !row) return null;
+	const [shiftRows, cancelledByName, feedback, tasks, engagements, reports, hours, assignees] =
 		await Promise.all([
-			listClaimants(id),
-			shift.cancelledAt ? getShiftCancelledByName(id) : Promise.resolve(null),
-			listFeedbackForShift(id),
+			listTaskShifts(id),
+			detail.cancelledAt ? getShiftCancelledByName(id) : Promise.resolve(null),
+			listFeedbackForWorkOrder(id),
 			listWorkTasks(id),
-			// Neither holds a place, so they are apart from the claimants.
-			listInvitationsForShift(id),
 			listJobs({ workOrderId: id }),
 			listFlagsForWorkOrder(id),
-			listHourLogs({ shiftId: id }, { page: 1, pageSize: 100 })
+			listHourLogs({ workOrderId: id }, { page: 1, pageSize: 100 }),
+			listWorkOrderAssignees(id)
 		]);
+	const shifts = await Promise.all(
+		shiftRows.map(async (shift) => {
+			// Neither an invitation nor a refusal holds a place, so they are apart.
+			const [claimants, invitations] = await Promise.all([
+				listClaimants(shift.id),
+				listInvitationsForShift(shift.id)
+			]);
+			return { ...shift, claimants, invitations };
+		})
+	);
 	return {
-		shift: { ...shift, cancelledByName },
-		claimants,
+		// The task's own notes, not a shift's briefing: each shift carries its own.
+		task: { ...detail, notes: row.notes, sectionId: row.sectionId, cancelledByName },
+		shifts,
+		assignees,
 		feedback,
 		tasks,
-		invitations,
 		engagements,
 		reports,
 		hours: hours.rows
@@ -40,3 +56,4 @@ export async function loadWorkOrderView(id: string) {
 }
 
 export type WorkOrderView = NonNullable<Awaited<ReturnType<typeof loadWorkOrderView>>>;
+export type WorkOrderViewShift = WorkOrderView['shifts'][number];

@@ -2,13 +2,18 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { dutyListAnchors, workDoneConditions } from '$lib/config';
-import { listCommittees } from '$lib/server/project/project-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { eventScope } from '#lib/server/capability/record-scope.js';
+import { requireActOnTask } from '#lib/server/task/can-act.js';
+import { getTaskWorkOrderId } from '#lib/server/volunteer/deliverables-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { dutyListAnchors, workDoneConditions } from '#lib/config.js';
+
+import { listCommittees } from '#lib/server/project/project-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import {
 	addDutyListItem as addItemService,
+	addItemDependency as addItemDependencyService,
 	applyDutyList as applyService,
 	createDutyList as createService,
 	deleteDutyList as deleteService,
@@ -16,14 +21,15 @@ import {
 	listDutyLists,
 	projectOfEvent,
 	removeDutyListItem as removeItemService,
+	removeItemDependency as removeItemDependencyService,
 	setWorkTaskDone as setTaskService,
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
-} from '$lib/server/volunteer/duty-list-service';
-import { getStaffShiftPage, getVolunteerWorklist, getWorkOrderActivity } from './volunteer.remote';
-import { getProjectTaskPage } from './tasks.remote';
+} from '#lib/server/volunteer/duty-list-service.js';
+import { getTaskPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectActivity } from './projects.remote';
-import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
+import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * Project templates (the `duty_list` tables). Staff-only: read under
@@ -83,7 +89,7 @@ export const getActiveDutyLists = query(async () => {
 	return lists.filter((l) => l.itemCount > 0);
 });
 
-/** One load-bearing query for `/staff/project-templates/[id]`. */
+/** One load-bearing query for `/staff/tasks/templates/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 
@@ -108,7 +114,8 @@ export const createDutyList = form(
 	z.object({
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
-		anchor: z.enum(dutyListAnchors).default('doors')
+		anchor: z.enum(dutyListAnchors).default('doors'),
+		startsProduction: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		const staff = await requireCapability('project.manage');
@@ -117,6 +124,7 @@ export const createDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				projectKind: data.startsProduction ? 'production' : 'general',
 				createdByUserId: staff.id
 			});
 			await getDutyLists().refresh();
@@ -136,7 +144,8 @@ export const updateDutyList = form(
 		// `.optional().default(false)`, never a bare required boolean: an unchecked
 		// box is not submitted at all, and kit reports the absence as the boolean's
 		// own validation failure.
-		isActive: z.boolean().optional().default(false)
+		isActive: z.boolean().optional().default(false),
+		startsProduction: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		await requireCapability('project.manage');
@@ -145,6 +154,7 @@ export const updateDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				projectKind: data.startsProduction ? 'production' : 'general',
 				isActive: data.isActive
 			});
 			await Promise.all([getDutyLists().refresh(), getDutyListPage(data.id).refresh()]);
@@ -155,16 +165,22 @@ export const updateDutyList = form(
 	}
 );
 
-export const deleteDutyList = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('project.manage');
-	try {
-		await deleteService(data.id);
-		await getDutyLists().refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
+export const deleteDutyList = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				await deleteService(data.id);
+				await getDutyLists().refresh();
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
+		}
+	)
+);
 
 // ---------------------------------------------------------------------------
 // Item forms
@@ -249,13 +265,13 @@ export const addDutyListItem = form(
 	}
 );
 
-/** Re-own an item, retitle it, or change what says it is done. Applied shows keep their copy. */
+/** Edit an item as a whole: the same fields it was added with. Applied shows keep their copy. */
 export const updateDutyListItem = form(
-	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...ownershipShape }),
+	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
 		await requireCapability('project.manage');
 		try {
-			await updateItemService(data.id, ownershipInput(data));
+			await updateItemService(data.id, itemInput(data));
 			await getDutyListPage(data.dutyListId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -266,16 +282,53 @@ export const updateDutyListItem = form(
 
 export const removeDutyListItem = form(
 	z.object({ id: z.string().min(1), dutyListId: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('project.manage');
-		try {
-			await removeItemService(data.id);
-			await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				await removeItemService(data.id);
+				await Promise.all([getDutyListPage(data.dutyListId).refresh(), getDutyLists().refresh()]);
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
 		}
+	)
+);
+
+const itemEdge = z.object({
+	itemId: z.string().min(1),
+	dependsOnItemId: z.string().min(1, 'Pick an item')
+});
+
+/** One template item waiting on another (#2625); applying the template copies it. */
+export const addDutyListItemDependency = form(itemEdge, async (data) => {
+	await requireCapability('project.manage');
+	try {
+		const dutyListId = await addItemDependencyService(data.itemId, data.dependsOnItemId);
+		await getDutyListPage(dutyListId).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
 	}
+});
+
+export const removeDutyListItemDependency = form(
+	itemEdge,
+	unaudited(
+		'Template editing; applying a template is audited as project.duty_list_applied.',
+		async (data) => {
+			await requireCapability('project.manage');
+			try {
+				const dutyListId = await removeItemDependencyService(data.itemId, data.dependsOnItemId);
+				await getDutyListPage(dutyListId).refresh();
+				return { success: true };
+			} catch (err) {
+				mapDomainError(err);
+			}
+		}
+	)
 );
 
 // ---------------------------------------------------------------------------
@@ -290,7 +343,7 @@ export const applyDutyList = form(
 		reason: z.string().max(500).optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => eventScope(data.eventId));
 		try {
 			const projectId = await projectOfEvent(data.eventId);
 			if (!projectId) error(422, 'This event has no project to apply a template to.');
@@ -300,10 +353,6 @@ export const applyDutyList = form(
 				staff.id,
 				{ reason: data.reason }
 			);
-			// The advance items land unscheduled, which is the coordinator's queue on
-			// Today. Without this the card the apply just filled stays empty until
-			// somebody navigates.
-			await getVolunteerWorklist().refresh();
 			return {
 				workOrders: result.workOrderIds.length,
 				tasks: result.taskCount,
@@ -325,18 +374,23 @@ export const setWorkTaskDone = form(
 		done: z.boolean().optional().default(false)
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const owner = await getTaskWorkOrderId(data.id);
+		if (!owner) error(404, 'Task not found');
+		const { user } = await requireActOnTask(owner);
 		try {
-			await setTaskService(data.id, data.done, staff.id);
+			await setTaskService(data.id, data.done, user.id);
 			const projectId = await workOrderProjectId(data.shiftId);
 			// Whichever page is canonical for it; the task page's guard is the project's.
 			const workOrderId = data.shiftId;
+			// A committee seat may tick without reading the staff page; refresh only a page it reads.
 			if (!projectId) {
-				void getWorkOrderActivity({ workOrderId }).refresh();
-				await getStaffShiftPage(workOrderId).refresh();
+				if ((await can('project.read')) || (await can('volunteer.read'))) {
+					void getWorkOrderActivity({ workOrderId }).refresh();
+					await getTaskPage(workOrderId).refresh();
+				}
 			} else if (await can('project.read')) {
 				void getProjectActivity({ projectId, workOrderId }).refresh();
-				await getProjectTaskPage({ projectId, workOrderId }).refresh();
+				await getTaskPage(workOrderId).refresh();
 			}
 			return { success: true };
 		} catch (err) {

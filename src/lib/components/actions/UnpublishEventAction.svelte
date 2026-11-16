@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '../ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { unpublishEvent } from '$lib/remote/events.remote';
+	import { refreshAll } from '$app/navigation';
+	import { unpublishEvent } from '#lib/remote/events.remote.js';
 
 	const { fields } = unpublishEvent;
 
@@ -28,24 +29,24 @@
 
 <Action
 	action={unpublishEvent}
-	label="Unpublish"
-	modalTitle="Unpublish Event"
-	successToast="Reverted to draft"
+	label={m.actions_unpublish_label()}
+	modalTitle={m.actions_unpublish_event_modal_title()}
+	successToast={m.actions_unpublish_event_success_toast()}
 	{variant}
 	{size}
 	{outline}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
-		<p class="py-2">Revert this event to draft? It will no longer be visible to the public.</p>
+		<p class="py-2">{m.actions_unpublish_event_revert_event_draft_will_no_text()}</p>
 		<FormField
-			name="notes"
+			field={unpublishEvent.fields.notes}
 			type="textarea"
-			label="Reason"
-			description="Sent to whoever posted this and kept on the listing. Required for a community listing, which the poster can appeal. Leave blank for CMC events, which notify nobody."
+			label={m.actions_reason_label()}
+			description={m.actions_unpublish_event_description_body()}
 		/>
 	{/snippet}
 </Action>

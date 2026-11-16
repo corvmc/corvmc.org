@@ -12,22 +12,24 @@ import {
 	sql,
 	type SQL
 } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { eventListing } from '$lib/server/db/schema/event';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import { project } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
-	volunteerSignup,
+	workOrderAssignee,
 	workOrder,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { DomainError } from '$lib/server/domain-error';
-import type { WorkDoneCondition } from '$lib/config';
+} from '#lib/server/db/schema/volunteer.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import { evaluateDone, type DeliverableState } from './done-conditions';
 import { assertOwningCommittee } from './duty-list-service';
+import { showLeads, taskAudiences } from '#lib/server/task/task-audience.js';
 
 /**
  * A committee's deliverables: the work orders it answers for (#1701). Reads for
@@ -49,6 +51,8 @@ export interface DeliverableRow {
 	eventId: string | null;
 	eventTitle: string | null;
 	eventStartsAt: Date | null;
+	/** The project the item is on, which names a grant or sponsorship that has no show. */
+	projectName: string | null;
 	dueAt: Date | null;
 	groupId: string | null;
 	groupName: string | null;
@@ -71,6 +75,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 			eventId: workOrder.eventId,
 			eventTitle: eventListing.title,
 			eventStartsAt: eventListing.startsAt,
+			projectName: project.name,
 			dueAt: workOrder.dueAt,
 			groupId: workOrder.groupId,
 			groupName: group.name,
@@ -82,24 +87,21 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 		// Left: a committee's task may not have a role yet, and is still its deliverable.
 		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.leftJoin(project, eq(project.id, workOrder.projectId))
 		.leftJoin(group, eq(group.id, workOrder.groupId))
 		.where(where)
 		.orderBy(sql`${workOrder.dueAt} is null`, asc(workOrder.dueAt), asc(workOrder.id));
 	if (rows.length === 0) return [];
 
 	const ids = rows.map((r) => r.id);
-	const [states, signups, tasks, art] = await Promise.all([
+	const [states, assigned, tasks, art] = await Promise.all([
 		evaluateDone(rows),
+		// Who is assigned the work (#2518), never who signed up for a shift on it.
 		db
-			.select({ workOrderId: volunteerSignup.shiftId, userId: user.id, name: user.name })
-			.from(volunteerSignup)
-			.innerJoin(user, eq(user.id, volunteerSignup.userId))
-			.where(
-				and(
-					inArray(volunteerSignup.shiftId, ids),
-					inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed'])
-				)
-			)
+			.select({ workOrderId: workOrderAssignee.workOrderId, userId: user.id, name: user.name })
+			.from(workOrderAssignee)
+			.innerJoin(user, eq(user.id, workOrderAssignee.userId))
+			.where(inArray(workOrderAssignee.workOrderId, ids))
 			.orderBy(asc(user.name)),
 		db
 			.select({
@@ -123,7 +125,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 		}
 		return by;
 	};
-	const assignees = group_(signups);
+	const assignees = group_(assigned);
 	const checklist = group_(tasks);
 
 	return rows.map((r) => {
@@ -134,6 +136,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 			eventId: r.eventId,
 			eventTitle: r.eventTitle,
 			eventStartsAt: r.eventStartsAt,
+			projectName: r.projectName,
 			dueAt: r.dueAt,
 			groupId: r.groupId,
 			groupName: r.groupName,
@@ -230,7 +233,12 @@ export async function reassignDeliverable(id: string, groupId: string | null): P
 	const owner = await assertOwningCommittee(groupId);
 	const result = await db
 		.update(workOrder)
-		.set({ groupId: owner, updatedAt: new Date() })
+		.set({
+			groupId: owner,
+			// A position is its committee's: handing the item on drops the tag.
+			positionId: sql`case when ${workOrder.groupId} is ${owner} then ${workOrder.positionId} end`,
+			updatedAt: new Date()
+		})
 		.where(and(eq(workOrder.id, id), live))
 		.returning({ id: workOrder.id });
 	if (result.length === 0) throw new DeliverableNotFoundError();
@@ -318,24 +326,55 @@ export interface DueDeliverable {
 	id: string;
 	title: string;
 	dueAt: Date;
+	eventId: string | null;
 	eventTitle: string | null;
+	projectName: string | null;
 	groupName: string;
 	groupSlug: string;
-	/** Its live assignees, or the owning committee's active members when nobody has it. */
+	/**
+	 * Its live assignees; with nobody on it, its position's holders, else the
+	 * owning committee's active members (#2990).
+	 */
 	recipients: Recipient[];
+	/** The show's event lead, who hears about its items as well (#2983 case 6). */
+	lead: Recipient | null;
 }
 
-/** Committee-owned items due in `[from, to]` that are not already done, and whom to tell. */
-export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<DueDeliverable[]> {
+/**
+ * Committee-owned items due in `[from, to]` that are not already done, and whom
+ * to tell. `projectKinds` narrows it to items on projects of those kinds.
+ */
+export async function listDeliverablesDueBetween(
+	from: Date,
+	to: Date,
+	opts: { projectKinds?: readonly ProjectKind[] } = {}
+): Promise<DueDeliverable[]> {
+	const onKinds = opts.projectKinds
+		? inArray(
+				workOrder.projectId,
+				db
+					.select({ id: project.id })
+					.from(project)
+					.where(inArray(project.kind, [...opts.projectKinds]))
+			)
+		: undefined;
 	const rows = await readDeliverables(
-		and(isNotNull(workOrder.groupId), live, gte(workOrder.dueAt, from), lte(workOrder.dueAt, to))!
+		and(
+			isNotNull(workOrder.groupId),
+			live,
+			gte(workOrder.dueAt, from),
+			lte(workOrder.dueAt, to),
+			onKinds
+		)!
 	);
 	const owed = rows.filter((r) => r.state === 'open' || r.state === 'overdue');
 	if (owed.length === 0) return [];
 
 	const assigneeIds = [...new Set(owed.flatMap((r) => r.assignees.map((a) => a.userId)))];
 	const groupIds = [...new Set(owed.map((r) => r.groupId!))];
-	const [people, slugs, seats] = await Promise.all([
+	const unassigned = owed.filter((r) => r.assignees.length === 0).map((r) => r.id);
+	const eventIds = [...new Set(owed.flatMap((r) => r.eventId ?? []))];
+	const [people, slugs, routed, leads] = await Promise.all([
 		assigneeIds.length
 			? db
 					.select({ userId: user.id, userName: user.name, userEmail: user.email })
@@ -343,7 +382,8 @@ export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<
 					.where(and(inArray(user.id, assigneeIds), isNull(user.deletedAt)))
 			: Promise.resolve([]),
 		db.select({ id: group.id, slug: group.slug }).from(group).where(inArray(group.id, groupIds)),
-		committeeSeats(groupIds)
+		taskAudiences(unassigned),
+		showLeads(eventIds)
 	]);
 	const person = new Map(people.map((p) => [p.userId, p]));
 	const slugOf = new Map(slugs.map((g) => [g.id, g.slug]));
@@ -352,16 +392,15 @@ export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<
 		id: r.id,
 		title: r.title,
 		dueAt: r.dueAt!,
+		eventId: r.eventId,
 		eventTitle: r.eventTitle,
+		projectName: r.projectName,
 		groupName: r.groupName ?? '',
 		groupSlug: slugOf.get(r.groupId!) ?? '',
 		recipients:
 			r.assignees.length > 0
 				? r.assignees.flatMap((a) => person.get(a.userId) ?? [])
-				: (seats.get(r.groupId!) ?? []).map(({ userId, userName, userEmail }) => ({
-						userId,
-						userName,
-						userEmail
-					}))
+				: (routed.get(r.id)?.recipients ?? []),
+		lead: (r.eventId && leads.get(r.eventId)) || null
 	}));
 }

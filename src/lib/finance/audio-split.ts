@@ -30,7 +30,7 @@
  */
 import { computeSplit, validateSplit as validateShare, suggestedShareCents } from './split';
 import type { Split } from './split';
-import { AUDIO_PLATFORM_FEE_BPS, AUDIO_MIN_PRICE_CENTS } from '$lib/config';
+import { AUDIO_PLATFORM_FEE_BPS, AUDIO_MIN_PRICE_CENTS } from '#lib/config.js';
 
 export type AudioSplit = Split & {
 	/** What `transfer_data` sends to the band: the remainder of the division. */

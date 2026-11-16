@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, validateUpload } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { getReleaseById } from '$lib/server/audio/audio-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, validateUpload } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { getReleaseById } from '#lib/server/audio/audio-service.js';
 
 /**
  * The writer the `audio_release`/`cover` slot never had — three readers and a
@@ -19,7 +19,7 @@ async function ownedRelease(releaseId: string, userId: string | undefined) {
 	const release = await getReleaseById(releaseId);
 	if (!release) throw error(404, 'Release not found');
 	// The band is resolved from the *release*, never from a caller-supplied id.
-	await requireGroupRole({ id: release.groupId }, 'admin', { allowStaff: true });
+	await requireGroupRole({ id: release.groupId }, 'admin', { staff: 'band.manage' });
 	return release;
 }
 
@@ -52,11 +52,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		uploadedByUserId: locals.user!.id
 	});
 
-	return json({ key });
+	return Response.json({ key });
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	await ownedRelease(params.id, locals.user?.id);
 	await detachSlot('audio_release', params.id, 'cover');
-	return json({ success: true });
+	return Response.json({ success: true });
 };

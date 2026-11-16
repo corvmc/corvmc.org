@@ -1,21 +1,26 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	memberCertification,
 	volunteerCertification,
 	volunteerRole,
 	volunteerRoleCertification,
+	volunteerShift,
 	workOrder,
 	volunteerSignup
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getRequirementsForRoles } from './volunteer-certification-service';
-import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
-import type { MemberCertification } from '$lib/server/db/schema/volunteer';
+import { DomainError } from '#lib/server/errors.js';
+import { memberSubject, recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { listTrainingShifts } from './training-service';
+import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
+import type { MemberCertification } from '#lib/server/db/schema/volunteer.js';
+import { utcCalendarDate } from '#lib/utils/format.js';
 
 // ---------------------------------------------------------------------------
 // Held certifications
@@ -53,6 +58,9 @@ export class MemberCertificationNotDeletableError extends DomainError {
 }
 
 export type CertificationState = 'current' | 'expiring' | 'expired' | 'revoked';
+
+/** The club-time calendar date of an instant, `YYYY-MM-DD`. */
+const clubDateOf = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
 
 /** A calendar date at noon club time, matching how hour logs anchor dates. */
 function atNoon(dateStr: string): Date {
@@ -159,10 +167,15 @@ export async function grantCertification(data: {
 	grantedOn: string;
 	reference?: string | null;
 	notes?: string | null;
+	/** A supervised shift of this member's that counts towards this clearance. */
+	trainingSignupId?: string | null;
 	grantedByUserId: string;
 }): Promise<MemberCertification> {
 	const [cert] = await db
-		.select({ validityMonths: volunteerCertification.validityMonths })
+		.select({
+			name: volunteerCertification.name,
+			validityMonths: volunteerCertification.validityMonths
+		})
 		.from(volunteerCertification)
 		.where(eq(volunteerCertification.id, data.certificationId))
 		.limit(1);
@@ -190,7 +203,17 @@ export async function grantCertification(data: {
 		const targetMonth = m - 1 + cert.validityMonths;
 		const lastDayOfTarget = new Date(Date.UTC(y, targetMonth + 1, 0)).getUTCDate();
 		const target = new Date(Date.UTC(y, targetMonth, Math.min(d, lastDayOfTarget)));
-		expiresAt = atNoon(target.toISOString().slice(0, 10));
+		expiresAt = atNoon(utcCalendarDate(target));
+	}
+
+	if (data.trainingSignupId) {
+		const shifts = await listTrainingShifts(data.userId);
+		const evidence = shifts.find((s) => s.signupId === data.trainingSignupId);
+		if (!evidence?.certificationIds.includes(data.certificationId)) {
+			throw new MemberCertificationValidationError(
+				'That shift is not a supervised shift towards this clearance.'
+			);
+		}
 	}
 
 	const [row] = await db
@@ -202,11 +225,36 @@ export async function grantCertification(data: {
 			expiresAt,
 			grantedByUserId: data.grantedByUserId,
 			reference: data.reference?.trim() || null,
-			notes: data.notes?.trim() || null
+			notes: data.notes?.trim() || null,
+			trainingSignupId: data.trainingSignupId || null
 		})
 		.returning();
 
+	await recordAuditEntry({
+		action: 'clearance.granted',
+		subject: await memberSubject(data.userId),
+		details: {
+			memberCertificationId: row.id,
+			certificationId: data.certificationId,
+			certificationName: cert.name,
+			grantedOn: data.grantedOn,
+			expiresOn: expiresAt ? clubDateOf(expiresAt) : null
+		}
+	});
 	return row;
+}
+
+async function clearanceRef(row: MemberCertification) {
+	const [cert] = await db
+		.select({ name: volunteerCertification.name })
+		.from(volunteerCertification)
+		.where(eq(volunteerCertification.id, row.certificationId))
+		.limit(1);
+	return {
+		memberCertificationId: row.id,
+		certificationId: row.certificationId,
+		certificationName: cert?.name ?? row.certificationId
+	};
 }
 
 /**
@@ -235,38 +283,12 @@ export async function revokeCertification(
 		.returning();
 
 	if (!row) throw new MemberCertificationNotFoundError();
+	await recordAuditEntry({
+		action: 'clearance.revoked',
+		subject: await memberSubject(row.userId),
+		details: { ...(await clearanceRef(row)), reason: trimmed }
+	});
 	return row;
-}
-
-/**
- * Hard delete, for the typo case only — wrong member, wrong certification, never
- * relied on. Restricted to the same staffer on the same day, because after that
- * you cannot tell "was never true" from "is no longer true", and only the first
- * is safe to erase.
- */
-export async function deleteCertificationRecord(
-	id: string,
-	byUserId: string
-): Promise<MemberCertification> {
-	const [row] = await db
-		.select()
-		.from(memberCertification)
-		.where(eq(memberCertification.id, id))
-		.limit(1);
-
-	if (!row) throw new MemberCertificationNotFoundError();
-
-	const createdOn = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(row.createdAt);
-	if (row.grantedByUserId !== byUserId || createdOn !== clubToday()) {
-		throw new MemberCertificationNotDeletableError();
-	}
-
-	const [deleted] = await db
-		.delete(memberCertification)
-		.where(eq(memberCertification.id, id))
-		.returning();
-
-	return deleted;
 }
 
 // ---------------------------------------------------------------------------
@@ -431,39 +453,10 @@ export async function missingRequirements(
 	return required.filter((r) => !held.has(r.id));
 }
 
-/**
- * Whether each member actually held their role's clearances **on the day they
- * worked** — the audit, as opposed to the gate `claimShift` applies when a
- * shift is claimed. A card can lapse in between, and `member_certification` is
- * append-only precisely so this stays answerable. Two queries whatever the row
- * count, keyed by row id; a row whose role requires nothing has no entry.
- */
-export async function auditClearances(
-	rows: { id: string; userId: string; volunteerRoleId: string; workedOn: Date }[]
-): Promise<Map<string, { id: string; name: string }[]>> {
-	const gaps = new Map<string, { id: string; name: string }[]>();
-	if (rows.length === 0) return gaps;
-
-	const [requirements, held] = await Promise.all([
-		getRequirementsForRoles([...new Set(rows.map((r) => r.volunteerRoleId))]),
-		listHeldForGateMany([...new Set(rows.map((r) => r.userId))])
-	]);
-
-	for (const row of rows) {
-		const required = requirements.get(row.volunteerRoleId) ?? [];
-		if (required.length === 0) continue;
-		const missing = missingFrom(required, held.get(row.userId) ?? [], row.workedOn);
-		if (missing.length > 0) gaps.set(row.id, missing);
-	}
-
-	return gaps;
-}
-
-export interface ClearanceRow {
+export interface ClearanceRow extends RosterPerson {
 	/** The grant row, so the list can revoke without a second lookup. */
 	id: string;
 	userId: string;
-	member: MemberRef;
 	certificationId: string;
 	certificationName: string;
 	grantedAt: Date;
@@ -519,7 +512,7 @@ export async function listClearances(
 	const out = [...newest.values()].map((r) => ({
 		id: r.id,
 		userId: r.userId,
-		member: toMemberRef(r.member),
+		...toRosterPerson(r.member),
 		certificationId: r.certificationId,
 		certificationName: r.certificationName,
 		grantedAt: r.grantedAt,
@@ -613,12 +606,13 @@ export async function listLapsingBeforeRosteredShift(
 			certificationId: volunteerCertification.id,
 			certificationName: volunteerCertification.name,
 			expiresAt: memberCertification.expiresAt,
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt
+			startsAt: volunteerShift.startsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(
 			volunteerRoleCertification,
@@ -640,14 +634,15 @@ export async function listLapsingBeforeRosteredShift(
 			and(
 				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
 				isNull(workOrder.cancelledAt),
-				gte(workOrder.startsAt, now),
+				isNull(volunteerShift.cancelledAt),
+				gte(volunteerShift.startsAt, now),
 				isNull(memberCertification.revokedAt),
-				lte(memberCertification.grantedAt, workOrder.startsAt),
+				lte(memberCertification.grantedAt, volunteerShift.startsAt),
 				isNotNull(memberCertification.expiresAt),
-				lt(memberCertification.expiresAt, workOrder.startsAt)
+				lt(memberCertification.expiresAt, volunteerShift.startsAt)
 			)
 		)
-		.orderBy(asc(workOrder.startsAt));
+		.orderBy(asc(volunteerShift.startsAt));
 
 	return (
 		rows

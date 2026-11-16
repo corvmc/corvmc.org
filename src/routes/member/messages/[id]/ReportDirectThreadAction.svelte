@@ -1,7 +1,8 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
-	import { reportDirectThread } from '$lib/remote/direct-messages.remote';
+	import { reportDirectThread } from '#lib/remote/direct-messages.remote.js';
 
 	// A sibling of ReportContentAction rather than a use of it. The shared one
 	// posts to submitFlag, which takes its entity type and id from the browser
@@ -19,10 +20,10 @@
 
 <Action
 	action={reportDirectThread}
-	label="Report"
-	modalTitle="Report this conversation"
-	submitLabel="Submit report"
-	successToast="Report submitted — thank you"
+	label={m.member_report_label()}
+	modalTitle={m.member_messages_id_report_direct_thread_modal_title()}
+	submitLabel={m.member_messages_id_report_direct_thread_submit_label()}
+	successToast={m.member_messages_id_report_direct_thread_success_toast()}
 	variant="ghost"
 	size="sm"
 	canSubmit={reason.trim().length > 0}
@@ -36,28 +37,32 @@
 		<input {...fields.threadId.as('hidden', threadId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				Staff will be able to read this conversation so they can review it. This person will also be
-				blocked, and the conversation will close.
+				{m.member_messages_id_report_direct_thread_staff_will_able_read_text()}
 			</p>
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">Reason</span>
+				<span class="fieldset-legend"
+					>{m.member_messages_id_report_direct_thread_reason_label()}</span
+				>
 				<input
 					{...fields.reason.as('text')}
 					class="input w-full"
 					bind:value={reason}
 					maxlength="100"
-					placeholder="e.g. Harassment, spam, impersonation"
+					placeholder={m.member_messages_id_report_direct_thread_e_g_harassment_spam_placeholder()}
 				/>
 			</label>
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">Details (optional)</span>
+				<span class="fieldset-legend"
+					>{m.member_messages_id_report_direct_thread_details_optional_label()}</span
+				>
 				<textarea
 					{...fields.description.as('text')}
 					class="textarea w-full"
 					rows="3"
 					maxlength="1000"
 					bind:value={description}
-					placeholder="Anything else that would help us review this"></textarea>
+					placeholder={m.member_messages_id_report_direct_thread_anything_else_would_placeholder()}
+				></textarea>
 			</label>
 		</div>
 	{/snippet}

@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockReconcileUpcomingSync = vi.fn();
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	reconcileUpcomingSync: (...args: unknown[]) => mockReconcileUpcomingSync(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -49,5 +49,19 @@ describe('POST /api/cron/lock-sync', () => {
 		const response = await POST(req());
 
 		expect(response.status).toBe(500);
+	});
+
+	// The daily lock-access run alerts on an outage; this one stays green through it.
+	it('reports ok while the lock is offline', async () => {
+		mockReconcileUpcomingSync.mockResolvedValue({
+			confirmed: 0,
+			errors: [],
+			skipped: 'lock-offline'
+		});
+
+		const response = await POST(req());
+
+		expect(response.status).toBe(200);
+		expect(((await response.json()) as { skipped?: string }).skipped).toBe('lock-offline');
 	});
 });

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { DOCUMENT_DESCRIPTION_MAX } from '$lib/config';
-import { validatePrivateUpload } from '$lib/server/private-storage';
-import { remove, upload } from '$lib/server/group/file-service';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { DOCUMENT_DESCRIPTION_MAX } from '#lib/config.js';
+import { validatePrivateUpload } from '#lib/server/private-storage.js';
+import { remove, upload } from '#lib/server/group/file-service.js';
 
 /**
  * Group documents — the two writes.
@@ -21,7 +21,7 @@ import { remove, upload } from '$lib/server/group/file-service';
  * already awaits `getMemberGroup`, which returns its documents with everything
  * else in one round trip, and a component fetching its own list is exactly the
  * fan-out `custom/no-concurrent-remote-queries` exists to stop. `DocumentList`
- * takes its files as a prop and refreshes through `invalidateAll()`.
+ * takes its files as a prop and refreshes through `refreshAll()`.
  *
  * Both guards take an explicit `{ id }` ref. A remote function's `params`
  * describe the *calling page* and are client-manipulable, so nothing here reads
@@ -31,7 +31,7 @@ import { remove, upload } from '$lib/server/group/file-service';
 const groupIdField = z.string().min(1);
 
 /**
- * `admin`, and **without** `allowStaff`.
+ * `admin`, and **without** `staff`.
  *
  * Reads admit a staff non-member because a staff member looking at a program
  * needs to see it. Putting a document into a group's shared folder in its name

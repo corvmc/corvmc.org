@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migratedSqlite } from '../src/lib/server/testing/migrated-sqlite';
 import {
@@ -142,7 +145,29 @@ describe('d1HttpClient', () => {
 // The production deploy runs this sync after publishing, so an article it rejects
 // stops every deploy until someone fixes the article (#1757's did exactly that).
 describe('the committed help content', () => {
-	it('parses, with every capability one a committee can hold org-wide', () => {
+	it('parses, with every capability one in src/lib/config.ts', () => {
 		expect(() => readArticles()).not.toThrow();
+	});
+
+	it('refuses a capability that is not in the matrix', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'help-'));
+		writeFileSync(
+			join(dir, 'a.md'),
+			'---\ntitle: A\nslug: a\ncategory: c\nminRole: staff\ncapabilities: user.read, user.fly\n---\nBody'
+		);
+		expect(() => readArticles(dir)).toThrow(/user\.fly/);
+	});
+
+	// A staff article naming no capability is shown to every position holder
+	// (#3005). Each one here is open on purpose; a new staff article names the
+	// capability of the surface it documents instead of joining this list.
+	const OPEN_STAFF_ARTICLES = ['staff-dashboard'];
+
+	it('names a capability on every staff article outside the open list', () => {
+		const open = readArticles()
+			.filter((a) => a.meta.minRole === 'staff' && a.capabilities === null)
+			.map((a) => a.meta.slug)
+			.sort();
+		expect(open).toEqual(OPEN_STAFF_ARTICLES);
 	});
 });

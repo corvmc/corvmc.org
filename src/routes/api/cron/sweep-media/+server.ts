@@ -1,13 +1,13 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { sweepMedia } from '$lib/server/media/media-sweep-service';
-import { sweepGroupFiles } from '$lib/server/group/file-sweep';
+import * as env from '$app/env/private';
+import { sweepMedia } from '#lib/server/media/media-sweep-service.js';
+import { sweepGroupFiles } from '#lib/server/group/file-sweep.js';
 
 /**
  * Cron endpoint for reclaiming R2 objects nothing points at any more.
  *
- * This is the other half of the rule in docs/specs/shipped/media-spec.md: the write path
+ * This is the other half of the rule in docs/decisions/0026-uploads-are-detached-and-swept.md: the write path
  * never deletes an object, because no single write can see whether a sibling
  * still needs it. Without this job that rule would just be a leak.
  *
@@ -31,5 +31,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	// `cron/schedule.ts` and the docs snapshot all name it.
 	const [media, files] = await Promise.all([sweepMedia(), sweepGroupFiles()]);
 
-	return json({ ...media, ...files });
+	return Response.json({ ...media, ...files });
 };

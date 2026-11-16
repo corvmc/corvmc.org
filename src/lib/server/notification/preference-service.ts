@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { notificationPreference } from '$lib/server/db/schema/notification';
+import { db } from '#lib/server/db/index.js';
+import { notificationPreference } from '#lib/server/db/schema/notification.js';
 import { eq, and } from 'drizzle-orm';
-import { getNotificationType } from '$lib/server/db/schema/notification';
+import { getNotificationType } from '#lib/server/db/schema/notification.js';
 
 // ---------------------------------------------------------------------------
 // Notification preference service

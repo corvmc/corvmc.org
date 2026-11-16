@@ -1,12 +1,13 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { reconcileUpcomingSync } from '$lib/server/lock/lock-service';
+import * as env from '$app/env/private';
+import { reconcileUpcomingSync } from '#lib/server/lock/lock-service.js';
 
 /**
  * Confirm which upcoming door codes have reached the lock, every 15 minutes,
  * ahead of the reminder drain that sends `door_code_ready`. The daily
- * `/api/cron/lock-access` run remains the unbounded backstop.
+ * `/api/cron/lock-access` run remains the unbounded backstop, and the one that
+ * alerts on an offline lock: a skipped pass here reports ok.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const secret = env.CRON_SECRET;
@@ -20,5 +21,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	const result = await reconcileUpcomingSync();
 
 	// The Sentry check-in reads response.ok alone.
-	return json(result, { status: result.errors.length > 0 ? 500 : 200 });
+	return Response.json(result, { status: result.errors.length > 0 ? 500 : 200 });
 };

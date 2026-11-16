@@ -23,10 +23,13 @@ import {
 	inventoryItemArticle,
 	inventoryLoan,
 	inventoryLocation,
+	purchaseOrder,
+	purchaseOrderLine,
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
 import { helpArticle, helpCategory } from '../../src/lib/server/db/schema/help';
 import { account, user } from '../../src/lib/server/db/schema/authentication';
+import { organization } from '../../src/lib/server/db/schema/party';
 import { withPlatformDb } from './platform-db';
 import { SEED_STAFF_ID } from './seed-staff-user';
 import { scryptHash } from './seed-pay-reservation';
@@ -43,6 +46,7 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1';
  * shape the app never sees.
  */
 export const SEED_CATEGORY_ID = 'e2e-inv-category';
+export const SEED_CATEGORY_NAME = 'E2E Test Gear';
 export const SEED_LOCATION_ID = 'e2e010c0-0000-4000-8000-000000000001';
 
 /** A serialized item — one record per physical unit. */
@@ -89,9 +93,8 @@ export const SEED_INTAKE_BULK_NAME = 'E2E Intake Cable';
 /**
  * A second consumable, deliberately below its reorder point.
  *
- * Without one, the restock list and the dashboard's low-stock section only ever
- * render their empty states in e2e — the populated path, which is the entire
- * feature, would go untested.
+ * Without one, the restock list only ever renders its empty state in e2e — the
+ * populated path, which is the entire feature, would go untested.
  */
 export const SEED_LOW_ID = 'e2e0a11e-0000-4000-8000-000000000003';
 export const SEED_LOW_NAME = 'E2E Test Batteries';
@@ -101,6 +104,18 @@ export const SEED_LOW_REORDER_POINT = 5;
 export const SEED_LOW_REORDER_QUANTITY = 20;
 /** 6 received − 4 used = 2, against a point of 5. */
 export const SEED_LOW_ON_HAND = SEED_LOW_RECEIVED - SEED_LOW_CONSUMED;
+
+/**
+ * Below its point and owned by `inventory-orders.e2e.ts`, which orders it and
+ * receives part of the order. `SEED_LOW_*` stays untouched for the restock
+ * list's own assertions, which a placed order would change.
+ */
+export const SEED_ORDER_ITEM_ID = 'e2e0a11e-0000-4000-8000-000000000005';
+export const SEED_ORDER_ITEM_NAME = 'E2E Order Picks';
+export const SEED_ORDER_ITEM_RECEIVED = 3;
+export const SEED_ORDER_ITEM_REORDER_POINT = 10;
+export const SEED_ORDER_ITEM_REORDER_QUANTITY = 12;
+export const SEED_ORDER_SUPPLIER = 'E2E Supply Co';
 
 /**
  * A donated unit disposed of inside the three-year window, so the Form 8282
@@ -179,6 +194,7 @@ export const SEED_ARTICLE_TITLE = 'E2E How To Use The Amp';
 export const SEED_ARTICLE_SLUG = 'e2e-how-to-use-the-amp';
 
 const SEED_ACQUISITION_ID = 'e2e-inv-acquisition';
+export const SEED_ACQUISITION_SUPPLIER = 'E2E Supplier';
 const ASSET_IDS = [
 	SEED_ASSET_ID,
 	SEED_UNTAGGED_ASSET_ID,
@@ -195,7 +211,13 @@ const LOAN_IDS = [
 	SEED_RETURN_LOAN_ID,
 	SEED_CANCEL_LOAN_ID
 ];
-const ITEM_IDS = [SEED_ITEM_ID, SEED_CONSUMABLE_ID, SEED_LOW_ID, SEED_INTAKE_BULK_ID];
+const ITEM_IDS = [
+	SEED_ITEM_ID,
+	SEED_CONSUMABLE_ID,
+	SEED_LOW_ID,
+	SEED_INTAKE_BULK_ID,
+	SEED_ORDER_ITEM_ID
+];
 
 async function ensureCategory(db: DrizzleD1Database) {
 	const [existing] = await db
@@ -207,7 +229,7 @@ async function ensureCategory(db: DrizzleD1Database) {
 
 	await db.insert(equipmentCategory).values({
 		id: SEED_CATEGORY_ID,
-		name: 'E2E Test Gear',
+		name: SEED_CATEGORY_NAME,
 		displayOrder: 99,
 		pricingTier: 'major'
 	});
@@ -216,6 +238,22 @@ async function ensureCategory(db: DrizzleD1Database) {
 export async function seedInventory(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Clean slate, children first — FKs may be enforced on local D1.
+		await db.delete(purchaseOrderLine).where(inArray(purchaseOrderLine.itemId, ITEM_IDS));
+		// The order spec types this supplier, which creates it as an organization.
+		const suppliers = await db
+			.select({ id: organization.id })
+			.from(organization)
+			.where(eq(organization.name, SEED_ORDER_SUPPLIER));
+		const supplierIds = suppliers.map((o) => o.id);
+		if (supplierIds.length > 0) {
+			const orders = db
+				.select({ id: purchaseOrder.id })
+				.from(purchaseOrder)
+				.where(inArray(purchaseOrder.organizationId, supplierIds));
+			await db.delete(purchaseOrderLine).where(inArray(purchaseOrderLine.orderId, orders));
+			await db.delete(purchaseOrder).where(inArray(purchaseOrder.organizationId, supplierIds));
+			await db.delete(organization).where(inArray(organization.id, supplierIds));
+		}
 		await db.delete(stockMovement).where(inArray(stockMovement.itemId, ITEM_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.id, LOAN_IDS));
 		await db.delete(inventoryLoan).where(inArray(inventoryLoan.itemId, ITEM_IDS));
@@ -287,6 +325,16 @@ export async function seedInventory(): Promise<void> {
 				isLoanable: false,
 				reorderPoint: SEED_LOW_REORDER_POINT,
 				reorderQuantity: SEED_LOW_REORDER_QUANTITY
+			},
+			{
+				id: SEED_ORDER_ITEM_ID,
+				name: SEED_ORDER_ITEM_NAME,
+				categoryId: SEED_CATEGORY_ID,
+				kind: 'bulk',
+				unitOfMeasure: 'pack',
+				isLoanable: false,
+				reorderPoint: SEED_ORDER_ITEM_REORDER_POINT,
+				reorderQuantity: SEED_ORDER_ITEM_REORDER_QUANTITY
 			}
 		]);
 
@@ -294,7 +342,7 @@ export async function seedInventory(): Promise<void> {
 			id: SEED_ACQUISITION_ID,
 			kind: 'purchase',
 			occurredAt: now,
-			sourceName: 'E2E Supplier',
+			sourceName: SEED_ACQUISITION_SUPPLIER,
 			reference: 'E2E-0001',
 			totalCents: 100_000
 		});
@@ -364,6 +412,13 @@ export async function seedInventory(): Promise<void> {
 				itemId: SEED_LOW_ID,
 				quantity: SEED_LOW_RECEIVED,
 				unitValueCents: 1400
+			},
+			{
+				id: 'e2e-inv-line-order-picks',
+				acquisitionId: SEED_ACQUISITION_ID,
+				itemId: SEED_ORDER_ITEM_ID,
+				quantity: SEED_ORDER_ITEM_RECEIVED,
+				unitValueCents: 300
 			}
 		]);
 
@@ -531,6 +586,15 @@ export async function seedInventory(): Promise<void> {
 				id: 'e2e-inv-mv-batteries-in',
 				itemId: SEED_LOW_ID,
 				quantity: SEED_LOW_RECEIVED,
+				reason: 'receive',
+				locationId: SEED_LOCATION_ID,
+				acquisitionId: SEED_ACQUISITION_ID,
+				occurredAt: now
+			},
+			{
+				id: 'e2e-inv-mv-order-picks-in',
+				itemId: SEED_ORDER_ITEM_ID,
+				quantity: SEED_ORDER_ITEM_RECEIVED,
 				reason: 'receive',
 				locationId: SEED_LOCATION_ID,
 				acquisitionId: SEED_ACQUISITION_ID,

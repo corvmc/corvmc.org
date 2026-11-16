@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
-vi.mock('$lib/server/db', async () => {
+vi.mock('#lib/server/db/index.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
 	const { drizzle } = await import('drizzle-orm/node-sqlite');
 	const { migrate } = await import('drizzle-orm/node-sqlite/migrator');
@@ -35,7 +35,7 @@ vi.mock('$lib/server/db', async () => {
 	};
 });
 
-const { client } = (await import('$lib/server/db')) as unknown as {
+const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
 const svc = await import('./recurring-series-service');

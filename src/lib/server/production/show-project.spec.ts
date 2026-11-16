@@ -6,30 +6,23 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * shifts that follow the show's clock, and the show's money in project burn.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
-vi.mock('$lib/server/volunteer/hour-value', () => ({ getHourValueCents: async () => 3000 }));
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({ getHourValueCents: async () => 3000 }));
 vi.mock('./run-of-show-service', () => ({ recomputeSetTimes: async () => undefined }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: async () => undefined
 }));
 
-const { projectCommitteeGrantsFor } = await import('$lib/server/capability/capability-grants');
+const { projectCommitteeGrantsFor } = await import('#lib/server/capability/capability-grants.js');
 const { updateProductionDetails, transitionProduction } = await import('./production-service');
-const { getProjectBurn } = await import('$lib/server/project/project-service');
+const { getProjectBurn } = await import('#lib/server/project/project-service.js');
 
 const SHOW = 'proj-show';
 const OTHER = 'proj-other';
@@ -58,6 +51,7 @@ beforeEach(() => {
 	for (const t of [
 		'financial_entry',
 		'production_expense',
+		'volunteer_shift',
 		'work_order',
 		'duty_list',
 		'volunteer_role',
@@ -143,13 +137,20 @@ describe('shifts follow the show clock', () => {
 		exec(`insert into volunteer_role (id, name) values ('role-1', 'Sound')`);
 		exec(`insert into duty_list (id, name, anchor, subject) values
 			('dl-in', 'Load-in crew', 'load_in', 'event'), ('dl-doors', 'Door', 'doors', 'event')`);
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, anchor, cancelled_at) values
-			('wo-in', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', 'load_in', null),
-			('wo-in-cancelled', 'role-1', 'evt-1', ${T0 - 1800}, ${T0 + 1800}, 'dl-in', 'load_in', ${T0}),
-			('wo-door', 'role-1', 'evt-1', ${T0 + 7200}, ${T0 + 9000}, 'dl-doors', 'doors', null)`);
+		// Each task has one shift; the anchor is stamped on both (#2518).
+		exec(`insert into work_order (id, volunteer_role_id, event_id, duty_list_id, anchor, cancelled_at) values
+			('wo-in', 'role-1', 'evt-1', 'dl-in', 'load_in', null),
+			('wo-in-cancelled', 'role-1', 'evt-1', 'dl-in', 'load_in', ${T0}),
+			('wo-door', 'role-1', 'evt-1', 'dl-doors', 'doors', null)`);
+		exec(`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, anchor, cancelled_at) values
+			('s-in', 'wo-in', ${T0 - 1800}, ${T0 + 1800}, 'load_in', null),
+			('s-in-cancelled', 'wo-in-cancelled', ${T0 - 1800}, ${T0 + 1800}, 'load_in', ${T0}),
+			('s-door', 'wo-door', ${T0 + 7200}, ${T0 + 9000}, 'doors', null)`);
 	}
 	const at = (id: string) =>
-		sqlite.prepare(`select starts_at s, ends_at e from work_order where id = ?`).get(id) as {
+		sqlite
+			.prepare(`select starts_at s, ends_at e from volunteer_shift where work_order_id = ?`)
+			.get(id) as {
 			s: number;
 			e: number;
 		};
@@ -211,7 +212,8 @@ describe("a show's money in its project's burn", () => {
 		) =>
 			exec(`insert into financial_entry (id, amount_cents, kind, category, occurred_at, settlement, subject_type, subject_id, project_id, description)
 				values ('${id}', ${amount}, '${kind}', '${category}', ${T0}, 'stripe', '${subject}', 's', ${project ? `'${project}'` : 'null'}, 'x')`);
-		row('t-cut', 3000, 'earned', 'ticket_sales', 'ticket');
+		row('t-cut', 3059, 'earned', 'ticket_sales', 'ticket');
+		row('t-fee', -59, 'spent', 'card_fees', 'ticket');
 		row('t-pool', 7000, 'pass_through', 'act_payout', 'ticket');
 		row('p-pool', -7000, 'pass_through', 'act_payout', 'production');
 		row('p-top', -2000, 'spent', 'act_guarantee', 'production');

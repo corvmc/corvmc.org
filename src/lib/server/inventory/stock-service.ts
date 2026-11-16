@@ -1,5 +1,9 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { onOrderQuantities } from './order-service';
+import { afterStockChange } from './restock-tasks';
+import { openSourceIds } from '#lib/server/task/sourced-tasks.js';
+import { inSection } from './sections';
+import type { InventorySection } from '#lib/config.js';
 import {
 	equipmentCategory,
 	inventoryAsset,
@@ -8,9 +12,9 @@ import {
 	stockMovement,
 	STOCK_REASON_SIGN,
 	type StockReason
-} from '$lib/server/db/schema/inventory';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+} from '#lib/server/db/schema/inventory.js';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * The ledger.
@@ -22,7 +26,7 @@ import { DomainError } from '$lib/server/domain-error';
  *
  * The old `equipment.totalQuantity` was a number somebody typed, which is why
  * "how many packs of strings did we go through last quarter" was not a hard
- * question but an unanswerable one. See `docs/specs/inventory-spec.md`.
+ * question but an unanswerable one. See `docs/decisions/0045-inventory-stock-is-a-ledger.md`.
  */
 
 // ---------------------------------------------------------------------------
@@ -131,73 +135,8 @@ export function movementStatement(input: RecordMovementInput) {
 /** Write one movement on its own, when nothing else has to land with it. */
 export async function recordMovement(input: RecordMovementInput) {
 	const [row] = await movementStatement(input);
+	await afterStockChange([input.itemId]);
 	return row;
-}
-
-/**
- * Move stock between locations.
- *
- * Written as a **matched pair** — `-n` at the origin, `+n` at the destination —
- * so a transfer nets to zero in every on-hand sum without any query having to
- * remember to exclude it. The alternative (one row, filtered out everywhere)
- * puts the correctness burden on every future caller.
- */
-export async function transferStock(input: {
-	itemId: string;
-	assetId?: string | null;
-	quantity: number;
-	fromLocationId: string;
-	toLocationId: string;
-	actorId?: string | null;
-	notes?: string | null;
-}) {
-	if (input.quantity <= 0) {
-		throw new InvalidMovementError('A transfer needs a positive quantity');
-	}
-	if (input.fromLocationId === input.toLocationId) {
-		throw new InvalidMovementError('A transfer needs two different locations');
-	}
-
-	const occurredAt = new Date();
-	const base = {
-		itemId: input.itemId,
-		assetId: input.assetId ?? null,
-		reason: 'transfer' as const,
-		actorId: input.actorId ?? null,
-		occurredAt,
-		notes: input.notes ?? null
-	};
-
-	// db.batch, never db.transaction — the latter is broken on D1.
-	const rows = await db.batch([
-		db
-			.insert(stockMovement)
-			.values({
-				...base,
-				quantity: -input.quantity,
-				locationId: input.fromLocationId,
-				toLocationId: input.toLocationId
-			})
-			.returning(),
-		db
-			.insert(stockMovement)
-			.values({
-				...base,
-				quantity: input.quantity,
-				locationId: input.toLocationId,
-				toLocationId: null
-			})
-			.returning()
-	]);
-
-	if (input.assetId) {
-		await db
-			.update(inventoryAsset)
-			.set({ locationId: input.toLocationId, updatedAt: new Date() })
-			.where(eq(inventoryAsset.id, input.assetId));
-	}
-
-	return rows.flat();
 }
 
 // ---------------------------------------------------------------------------
@@ -279,23 +218,40 @@ export async function getAvailableQuantity(itemId: string): Promise<number> {
 	return Math.max(0, (await getOnHand(itemId)) - reserved);
 }
 
-export interface ListMovementsOptions {
-	itemId?: string;
-	assetId?: string;
-	limit?: number;
-}
+/** `getAvailableQuantity` for many items in three queries, for a page that reads a list. */
+export async function getAvailableQuantityMany(itemIds: string[]): Promise<Map<string, number>> {
+	if (itemIds.length === 0) return new Map();
 
-export async function listMovements(opts: ListMovementsOptions = {}) {
-	const conditions = [];
-	if (opts.itemId) conditions.push(eq(stockMovement.itemId, opts.itemId));
-	if (opts.assetId) conditions.push(eq(stockMovement.assetId, opts.assetId));
+	const [items, inService, onHand, reserved] = await Promise.all([
+		db
+			.select({ id: inventoryItem.id, kind: inventoryItem.kind })
+			.from(inventoryItem)
+			.where(and(inArray(inventoryItem.id, itemIds), isNull(inventoryItem.deletedAt))),
+		db
+			.select({ itemId: inventoryAsset.itemId, n: sql<number>`COUNT(*)` })
+			.from(inventoryAsset)
+			.where(and(inArray(inventoryAsset.itemId, itemIds), eq(inventoryAsset.status, 'in_service')))
+			.groupBy(inventoryAsset.itemId),
+		getOnHandMany(itemIds),
+		db
+			.select({
+				itemId: inventoryLoan.itemId,
+				qty: sql<number>`COALESCE(SUM(${inventoryLoan.quantity}), 0)`
+			})
+			.from(inventoryLoan)
+			.where(and(inArray(inventoryLoan.itemId, itemIds), eq(inventoryLoan.status, 'scheduled')))
+			.groupBy(inventoryLoan.itemId)
+	]);
 
-	return db
-		.select()
-		.from(stockMovement)
-		.where(conditions.length > 0 ? and(...conditions) : undefined)
-		.orderBy(desc(stockMovement.occurredAt), desc(stockMovement.createdAt), desc(stockMovement.id))
-		.limit(opts.limit ?? 100);
+	const units = new Map(inService.map((r) => [r.itemId, Number(r.n)]));
+	const held = new Map(reserved.map((r) => [r.itemId, Number(r.qty)]));
+	const out = new Map<string, number>(itemIds.map((id) => [id, 0]));
+	for (const item of items) {
+		const base =
+			item.kind === 'serialized' ? (units.get(item.id) ?? 0) : (onHand.get(item.id) ?? 0);
+		out.set(item.id, Math.max(0, base - (held.get(item.id) ?? 0)));
+	}
+	return out;
 }
 
 /**
@@ -305,7 +261,7 @@ export async function listMovements(opts: ListMovementsOptions = {}) {
  * a query the staff dashboard runs rather than something a person remembers to
  * check.
  */
-export async function listLowStock() {
+export async function listLowStock(opts: { section?: InventorySection } = {}) {
 	const onHand = db
 		.select({
 			itemId: stockMovement.itemId,
@@ -328,6 +284,7 @@ export async function listLowStock() {
 			and(
 				isNull(inventoryItem.deletedAt),
 				sql`${inventoryItem.reorderPoint} IS NOT NULL`,
+				opts.section ? inSection(opts.section) : undefined,
 				sql`COALESCE(${onHand.qty}, 0) <= ${inventoryItem.reorderPoint}`
 			)
 		)
@@ -343,7 +300,11 @@ export async function listLowStock() {
 	 * nothing could tell *"we are out"* from *"we are out but ten arrive
 	 * Thursday"*. One extra query for the whole page, not one per row.
 	 */
-	const onOrder = await onOrderQuantities(rows.map((r) => r.item.id));
+	const ids = rows.map((r) => r.item.id);
+	const [onOrder, tasks] = await Promise.all([
+		ids.length ? onOrderQuantities(ids) : new Map<string, number>(),
+		openSourceIds('restock', ids)
+	]);
 
 	return rows.map((r) => ({
 		...r.item,
@@ -367,6 +328,8 @@ export async function listLowStock() {
 			Math.max(1, r.item.reorderQuantity ?? (r.item.reorderPoint ?? 0) - Number(r.onHand)) -
 				(onOrder.get(r.item.id) ?? 0)
 		),
-		isOut: Number(r.onHand) <= 0
+		isOut: Number(r.onHand) <= 0,
+		/** Its open restock task (#2756), when one is open. */
+		taskId: tasks.get(r.item.id) ?? null
 	}));
 }

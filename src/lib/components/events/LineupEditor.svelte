@@ -1,9 +1,13 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
 
 	export type LineupChip = {
 		name: string;
 		bandId?: string;
+		/** An outside act already on file, picked from the staff bill's search. */
+		actId?: string;
 		/** Absent on chips added in this session — the server decides. */
 		status?: 'unlinked' | 'pending' | 'confirmed' | 'declined';
 	};
@@ -12,9 +16,13 @@
 		value = $bindable<LineupChip[]>([]),
 		ownerBandId,
 		readonly = false,
-		search
+		search,
+		field,
+		hint = true
 	}: {
 		value?: LineupChip[];
+		/** The remote form field the serialized bill posts as. Absent, nothing posts. */
+		field?: { as: (type: 'hidden', value: string) => Record<string, unknown> };
 		/**
 		 * Show the bill without the means to change it. Drops the reorder and
 		 * remove buttons, the typeahead, and — the part that matters — the hidden
@@ -36,27 +44,38 @@
 		 * community listing over its own `requireUser` version, since its author
 		 * may not be in a band at all.
 		 */
-		search: (q: string) => Promise<Array<{ id: string; name: string }>>;
+		search: (q: string) => Promise<Array<{ id: string; name: string; kind?: 'band' | 'act' }>>;
+		/** The line under the box on how confirmation works. */
+		hint?: boolean;
 	} = $props();
 
 	let query = $state('');
+
+	// A chip added or moved with a button fires no input event, so the
+	// enclosing form's unsaved-changes guard is told directly.
+	const form = getFormContext();
 
 	// Skipped entirely when read-only: there is no box to type in, and this is a
 	// top-level await that would otherwise fire a query per keystroke.
 	const matches = $derived(!readonly && query.trim().length >= 2 ? await search(query.trim()) : []);
 
 	/** Suggestions minus anyone already on the bill. */
-	const suggestions = $derived(matches.filter((m) => !value.some((v) => v.bandId === m.id)));
+	const suggestions = $derived(
+		matches.filter((m) => !value.some((v) => v.bandId === m.id || v.actId === m.id))
+	);
 
 	function add(chip: LineupChip) {
 		const nameKey = chip.name.trim().toLowerCase();
 		if (!nameKey) return;
 		const dupe = chip.bandId
 			? value.some((v) => v.bandId === chip.bandId)
-			: value.some((v) => v.name.trim().toLowerCase() === nameKey);
+			: chip.actId
+				? value.some((v) => v.actId === chip.actId)
+				: value.some((v) => v.name.trim().toLowerCase() === nameKey);
 		if (dupe) return;
 
 		value = [...value, { ...chip, name: chip.name.trim() }];
+		form?.changed();
 		query = '';
 	}
 
@@ -69,6 +88,7 @@
 
 	function remove(i: number) {
 		value = value.filter((_, j) => j !== i);
+		form?.changed();
 	}
 
 	function move(i: number, delta: number) {
@@ -77,10 +97,12 @@
 		const next = [...value];
 		[next[i], next[j]] = [next[j], next[i]];
 		value = next;
+		form?.changed();
 	}
 
 	function chipLabel(chip: LineupChip): string {
-		if (!chip.bandId) return 'not on CMC';
+		if (chip.actId) return msg.events_lineup_editor_outside_act_label();
+		if (!chip.bandId) return msg.events_lineup_editor_name_only_label();
 		if (chip.status === 'confirmed') return 'confirmed';
 		if (chip.status === 'declined') return 'declined';
 		return 'awaiting reply';
@@ -95,12 +117,14 @@
 
 	/** Serialized for the remote form; billingOrder is just the visual order. */
 	const serialized = $derived(
-		JSON.stringify(value.map((v, i) => ({ name: v.name, bandId: v.bandId, billingOrder: i })))
+		JSON.stringify(
+			value.map((v, i) => ({ name: v.name, bandId: v.bandId, actId: v.actId, billingOrder: i }))
+		)
 	);
 </script>
 
-{#if !readonly}
-	<input type="hidden" name="lineup" value={serialized} />
+{#if field && !readonly}
+	<input {...field.as('hidden', serialized)} />
 {/if}
 
 <div class="space-y-2">
@@ -117,7 +141,7 @@
 						size="xs"
 						disabled={i === 0}
 						onclick={() => move(i, -1)}
-						aria-label="Move {chip.name} up">↑</Button
+						aria-label={msg.events_lineup_editor_move_up_label({ name: chip.name })}>↑</Button
 					>
 					<Button
 						type="button"
@@ -125,7 +149,7 @@
 						size="xs"
 						disabled={i === value.length - 1}
 						onclick={() => move(i, 1)}
-						aria-label="Move {chip.name} down">↓</Button
+						aria-label={msg.events_lineup_editor_move_down_label({ name: chip.name })}>↓</Button
 					>
 					<Button
 						type="button"
@@ -134,7 +158,7 @@
 						class="text-error"
 						disabled={!!ownerBandId && chip.bandId === ownerBandId}
 						onclick={() => remove(i)}
-						aria-label="Remove {chip.name}">✕</Button
+						aria-label={msg.events_lineup_editor_remove_label({ name: chip.name })}>✕</Button
 					>
 				</div>
 			{/if}
@@ -142,7 +166,7 @@
 	{/each}
 
 	{#if readonly && value.length === 0}
-		<p class="text-subtle">No other bands on this bill.</p>
+		<p class="text-subtle">{msg.events_lineup_editor_no_other_bands_bill_text()}</p>
 	{/if}
 
 	{#if !readonly}
@@ -150,7 +174,7 @@
 			<input
 				type="text"
 				class="input w-full"
-				placeholder="Add a band — type any name and press Enter"
+				placeholder={msg.events_lineup_editor_placeholder()}
 				bind:value={query}
 				{onkeydown}
 			/>
@@ -159,19 +183,32 @@
 				<ul class="menu mt-1 menu-sm rounded border border-base-300 bg-base-100 p-1">
 					{#each suggestions as b (b.id)}
 						<li>
-							<button type="button" onclick={() => add({ name: b.name, bandId: b.id })}>
+							<button
+								type="button"
+								onclick={() =>
+									add(
+										b.kind === 'act'
+											? { name: b.name, actId: b.id }
+											: { name: b.name, bandId: b.id }
+									)}
+							>
 								{b.name}
-								<span class="badge badge-ghost badge-xs">on CMC</span>
+								<span class="badge badge-ghost badge-xs"
+									>{b.kind === 'act'
+										? msg.events_lineup_editor_outside_act_label()
+										: msg.events_lineup_editor_cmc_label()}</span
+								>
 							</button>
 						</li>
 					{/each}
 				</ul>
 			{/if}
 
-			<p class="mt-1 text-subtle">
-				Anyone can go on the bill. Bands with a CMC account are asked to confirm before the show
-				appears on their own profile — everyone else is listed as plain text.
-			</p>
+			{#if hint}
+				<p class="mt-1 text-subtle">
+					{msg.events_lineup_editor_anyone_can_go_bill_bands_text()}
+				</p>
+			{/if}
 		</div>
 	{/if}
 </div>

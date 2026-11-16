@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSweep = vi.fn();
-vi.mock('$lib/server/media/media-sweep-service', () => ({
+vi.mock('#lib/server/media/media-sweep-service.js', () => ({
 	sweepMedia: (...args: unknown[]) => mockSweep(...args)
 }));
 
 const mockSweepFiles = vi.fn();
-vi.mock('$lib/server/group/file-sweep', () => ({
+vi.mock('#lib/server/group/file-sweep.js', () => ({
 	sweepGroupFiles: (...args: unknown[]) => mockSweepFiles(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 function post(auth?: string) {
 	return new Request('http://localhost/api/cron/sweep-media', {

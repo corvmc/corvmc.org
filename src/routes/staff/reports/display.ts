@@ -1,4 +1,4 @@
-import type { FinancialEntryKind } from '$lib/config';
+import type { FinancialEntryKind } from '#lib/config.js';
 
 /**
  * A ledger total as the page shows it. Spend is stored negative and shown under

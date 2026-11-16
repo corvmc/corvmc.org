@@ -3,23 +3,28 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Door sales against a real SQLite, and the fake gateway standing in for Stripe. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const recordDoorTicketSale = vi.fn(async () => undefined);
 const recordFreeTicketSale = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/ticket-entries', () => ({
+vi.mock('#lib/server/finance/ticket-entries.js', () => ({
 	recordDoorTicketSale: (...a: unknown[]) => recordDoorTicketSale(...(a as [])),
 	recordFreeTicketSale: (...a: unknown[]) => recordFreeTicketSale(...(a as []))
 }));
 
-const { initStripe, stripe } = await import('$lib/server/stripe');
+const captureException = vi.fn();
+vi.mock('#lib/server/sentry.js', () => ({
+	captureException: (...a: unknown[]) => captureException(...a)
+}));
+
+const { initStripe, stripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, completeFakeTerminalPayment } =
-	await import('$lib/server/finance/gateway/fake-gateway');
+	await import('#lib/server/finance/gateway/fake-gateway.js');
 const {
 	listDoorEvents,
 	startDoorSale,
@@ -29,8 +34,11 @@ const {
 	doorSaleEventId,
 	getEventDoorTakings,
 	isOnTheDoor,
+	sweepDoorSales,
 	DoorSaleError
 } = await import('./door-sale');
+
+const { doorPaymentOf, doorPayments } = await import('#lib/door/takings.js');
 
 const NOW = new Date('2026-09-24T19:00:00Z');
 const at = (hoursFromNow: number) => Math.floor(NOW.getTime() / 1000) + hoursFromNow * 3600;
@@ -63,7 +71,7 @@ const rows = (purchaseId: string) =>
 		.all(purchaseId) as Record<string, unknown>[];
 
 beforeEach(() => {
-	for (const table of ['ticket', 'ticket_sale', 'event_listing'])
+	for (const table of ['work_order', 'donation', 'ticket', 'ticket_sale', 'event_listing'])
 		sqlite.exec(`delete from ${table}`);
 	resetFakeGateway();
 	initStripe(createFakeGateway());
@@ -153,6 +161,42 @@ describe('starting a door sale', () => {
 		expect(recordFreeTicketSale).toHaveBeenCalledWith(
 			expect.objectContaining({ purchaseId: result.purchaseId, quantity: 1 })
 		);
+	});
+
+	// Cash (#2800): checked in on the spot, split as a card is, with no intent.
+	it('takes cash, checked in on the spot under a cash purchase and with no intent', async () => {
+		const result = await start({ payment: 'cash', quantity: 2, unitPriceCents: 1000 });
+		if (result.kind !== 'cash') throw new Error('expected a cash sale');
+		expect(result).toMatchObject({ quantity: 2, chargeCents: 2000 });
+		expect(result.purchaseId).toMatch(/^cash-/);
+		const minted = rows(result.purchaseId);
+		expect(minted).toHaveLength(2);
+		expect(
+			minted.every((r) => r.status === 'checked_in' && r.stripe_payment_record_id === null)
+		).toBe(true);
+		expect((await stripe.paymentIntents.list({})).data).toHaveLength(0);
+		expect(recordDoorTicketSale).toHaveBeenCalledWith(
+			expect.objectContaining({
+				purchaseId: result.purchaseId,
+				chargeCents: 2000,
+				feeCents: 0,
+				payment: 'cash'
+			})
+		);
+		expect(await doorSaleEventId(result.purchaseId)).toBeNull();
+	});
+
+	it('takes cash under the card minimum, and lets zero in free', async () => {
+		expect((await start({ payment: 'cash', quantity: 1, unitPriceCents: 100 })).kind).toBe('cash');
+		expect((await start({ payment: 'cash', quantity: 1, unitPriceCents: 0 })).kind).toBe('free');
+	});
+
+	it('holds cash to the floor too', async () => {
+		listing('floored', 'cmc', at(1));
+		sale('floored', { price: 1000, floor: 500 });
+		await expect(
+			start({ eventId: 'floored', payment: 'cash', unitPriceCents: 400 })
+		).rejects.toBeInstanceOf(DoorSaleError);
 	});
 
 	it("refuses a band's own gig", async () => {
@@ -250,6 +294,99 @@ describe('the tap landing', () => {
 	});
 });
 
+describe('the sweep for a missed webhook', () => {
+	const tap = async () => {
+		const result = await startDoorSale({
+			eventId: 'tonight',
+			quantity: 2,
+			unitPriceCents: 1500,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		if (result.kind !== 'card') throw new Error('expected a card sale');
+		return {
+			id: result.paymentIntentId,
+			paid: completeFakeTerminalPayment(result.paymentIntentId)
+		};
+	};
+
+	it('checks in a tapped sale the webhook missed, and a re-run finds nothing new', async () => {
+		const { id, paid } = await tap();
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [id], unmatched: [] });
+		expect(rows(id).every((r) => r.status === 'checked_in')).toBe(true);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [] });
+		await fulfillDoorSale(paid); // The webhook arrives late.
+		expect(recordDoorTicketSale).toHaveBeenCalledTimes(1);
+		expect(captureException).not.toHaveBeenCalled();
+	});
+
+	it('leaves a sale the webhook already checked in', async () => {
+		const { paid } = await tap();
+		await fulfillDoorSale(paid);
+		vi.clearAllMocks();
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [] });
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
+	});
+
+	it('reports a charged intent whose tickets were cancelled, and writes nothing', async () => {
+		const { id } = await tap();
+		sqlite.prepare(`update ticket set status = 'cancelled' where purchase_id = ?`).run(id);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [id] });
+		expect(rows(id).every((r) => r.status === 'cancelled')).toBe(true);
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
+		expect(captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({ paymentIntentId: id, eventId: 'tonight' })
+		);
+	});
+
+	it('an unmatched sale opens one task at its show, never reopened once closed (#2757)', async () => {
+		const { id } = await tap();
+		sqlite.prepare(`update ticket set status = 'cancelled' where purchase_id = ?`).run(id);
+		const tasks = () =>
+			sqlite
+				.prepare(
+					`select source_id, event_id, title, resolved_at from work_order where source = 'door_payment'`
+				)
+				.all();
+
+		await sweepDoorSales();
+		await sweepDoorSales();
+		expect(tasks()).toEqual([
+			{
+				source_id: id,
+				event_id: 'tonight',
+				title: 'Attach or refund a door card sale of $30.00',
+				resolved_at: null
+			}
+		]);
+
+		sqlite.exec(`update work_order set resolved_at = unixepoch() where source = 'door_payment'`);
+		await sweepDoorSales();
+		expect(tasks()).toHaveLength(1);
+		expect(rows(id).every((r) => r.status === 'cancelled')).toBe(true);
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
+	});
+
+	it('ignores untapped door intents and intents that are not door sales', async () => {
+		await startDoorSale({
+			eventId: 'tonight',
+			quantity: 1,
+			unitPriceCents: 1500,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		const other = await stripe.paymentIntents.create({ amount: 500, currency: 'usd' });
+		completeFakeTerminalPayment(other.id);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 0, fulfilled: [], unmatched: [] });
+	});
+});
+
 describe('what the door took', () => {
 	const sell = (quantity: number, unitPriceCents: number) =>
 		startDoorSale({
@@ -263,7 +400,10 @@ describe('what the door took', () => {
 	it('is nothing for a show the door never sold', async () => {
 		expect(await getEventDoorTakings('tonight')).toEqual({
 			card: { tickets: 0, grossCents: 0 },
-			free: { tickets: 0 }
+			cash: { tickets: 0, grossCents: 0 },
+			free: { tickets: 0, grossCents: 0 },
+			donations: { count: 0, grossCents: 0 },
+			checkedIn: 0
 		});
 	});
 
@@ -279,10 +419,45 @@ describe('what the door took', () => {
 			 values ('online-1', 'tonight', '0b8e1c0a-online', 'Buyer', 'b@example.com', 'ONLINE1', 'valid', 1500)`
 		);
 
-		expect(await getEventDoorTakings('tonight')).toEqual({
+		expect(await getEventDoorTakings('tonight')).toMatchObject({
 			card: { tickets: 2, grossCents: 3000 },
 			free: { tickets: 3 }
 		});
+	});
+
+	it('counts cash sales on their own line, checked in with the rest', async () => {
+		const sellCash = (quantity: number, unitPriceCents: number) =>
+			startDoorSale({
+				eventId: 'tonight',
+				quantity,
+				unitPriceCents,
+				payment: 'cash',
+				staffUserId: 'staff-1',
+				now: NOW
+			});
+		await sellCash(2, 1000);
+		await sellCash(1, 2500);
+		const takings = await getEventDoorTakings('tonight');
+		expect(takings.cash).toEqual({ tickets: 3, grossCents: 4500 });
+		expect(takings.card).toEqual({ tickets: 0, grossCents: 0 });
+		expect(takings.checkedIn).toBe(3);
+	});
+
+	// The class (#2800): every door purchase id is read back as the method it was sold under.
+	it.each(doorPayments)('reads a %s purchase back as its method', async (payment) => {
+		const result = await startDoorSale({
+			eventId: 'tonight',
+			quantity: 1,
+			unitPriceCents: payment === 'free' ? 0 : 1500,
+			payment: payment === 'free' ? undefined : payment,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		if (result.kind === 'card')
+			await fulfillDoorSale(completeFakeTerminalPayment(result.paymentIntentId));
+		const id = result.kind === 'card' ? result.paymentIntentId : result.purchaseId;
+		expect(doorPaymentOf(id)).toBe(payment);
+		expect((await getEventDoorTakings('tonight'))[payment].tickets).toBe(1);
 	});
 
 	it('leaves out a cancelled door sale', async () => {
@@ -290,5 +465,37 @@ describe('what the door took', () => {
 		if (backedOut.kind !== 'card') throw new Error('expected a card sale');
 		await cancelDoorSale(backedOut.paymentIntentId);
 		expect((await getEventDoorTakings('tonight')).card).toEqual({ tickets: 0, grossCents: 0 });
+	});
+
+	// Gifts taken on the door phone are the show's too (#2799): paid ones only.
+	it('counts paid door donations for the show, and no other', async () => {
+		sqlite.exec(`
+			insert into donation (id, payment_intent_id, event_id, amount_cents, status) values
+				('d1', 'pi_d1', 'tonight', 500, 'paid'),
+				('d2', 'pi_d2', 'tonight', 2500, 'paid'),
+				('d3', 'pi_d3', 'tonight', 900, 'pending'),
+				('d4', 'pi_d4', 'tonight', 700, 'cancelled')
+		`);
+		listing('other', 'cmc', at(1));
+		sqlite.exec(
+			`insert into donation (id, payment_intent_id, event_id, amount_cents, status)
+			 values ('d5', 'pi_d5', 'other', 4000, 'paid')`
+		);
+		expect((await getEventDoorTakings('tonight')).donations).toEqual({
+			count: 2,
+			grossCents: 3000
+		});
+	});
+
+	// The settlement's door count is checked against this (#2801): every ticket in, however sold.
+	it('counts every ticket checked in for the show, however it was sold', async () => {
+		await sell(2, 0); // free let-ins are checked in at sale
+		sqlite.exec(
+			`insert into ticket (id, event_id, purchase_id, attendee_name, attendee_email, code, status) values
+				('on-1', 'tonight', 'pur-on', 'A', 'a@example.com', 'ON1', 'checked_in'),
+				('on-2', 'tonight', 'pur-on', 'B', 'b@example.com', 'ON2', 'valid'),
+				('on-3', 'tonight', 'pur-on', 'C', 'c@example.com', 'ON3', 'cancelled')`
+		);
+		expect((await getEventDoorTakings('tonight')).checkedIn).toBe(3);
 	});
 });

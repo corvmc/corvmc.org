@@ -12,9 +12,10 @@ import { isValidationError } from '@sveltejs/kit';
 // `confirmUnsubscribe` form performs the write.
 
 const unsubscribe = vi.fn(async () => undefined);
+const countEventAudience = vi.fn(async (_eventId: string) => 4);
 const getAudience = vi.fn(async (id: string) => ({ id, name: 'Newsletter' }));
 
-vi.mock('$lib/server/marketing/audience-service', () => ({
+vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	listAudiences: vi.fn(),
 	getAudience: (...args: unknown[]) => getAudience(...(args as [string])),
 	getAudienceBySlug: vi.fn(),
@@ -26,18 +27,19 @@ vi.mock('$lib/server/marketing/audience-service', () => ({
 	removeSubscriber: vi.fn(),
 	unsubscribe: (...args: unknown[]) => unsubscribe(...(args as [])),
 	bulkAddMembers: vi.fn(),
-	listSubscribers: vi.fn()
+	listSubscribers: vi.fn(),
+	countEventAudience: (...args: unknown[]) => countEventAudience(...(args as [string]))
 }));
 
 const verifyUnsubscribeToken = vi.fn((token: string) =>
 	token === 'good-token' ? { subscriberId: 'sub-1', audienceId: 'aud-1' } : null
 );
-vi.mock('$lib/server/marketing/unsubscribe', () => ({
+vi.mock('#lib/server/marketing/unsubscribe.js', () => ({
 	verifyUnsubscribeToken: (...args: unknown[]) => verifyUnsubscribeToken(...(args as [string])),
 	signUnsubscribeToken: vi.fn()
 }));
 
-vi.mock('$lib/server/marketing/campaign-service', () => ({
+vi.mock('#lib/server/marketing/campaign-service.js', () => ({
 	listCampaigns: vi.fn(),
 	getCampaign: vi.fn(),
 	createCampaign: vi.fn(),
@@ -50,18 +52,29 @@ vi.mock('$lib/server/marketing/campaign-service', () => ({
 }));
 
 const findOrCreateByEmail = vi.fn(async () => ({ id: 'sub-1' }));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	findOrCreateByEmail: (...a: unknown[]) => findOrCreateByEmail(...(a as []))
 }));
 
 const verifyTurnstile = vi.fn(async () => true);
-vi.mock('$lib/server/turnstile', () => ({
+vi.mock('#lib/server/turnstile.js', () => ({
 	verifyTurnstile: (...a: unknown[]) => verifyTurnstile(...(a as []))
 }));
-vi.mock('$lib/server/authorization', () => ({ requireCapability: vi.fn(async () => undefined) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
-vi.mock('$lib/server/utils/slug', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+let held = new Set<string>();
+vi.mock('#lib/server/authorization.js', () => ({
+	requireCapability: vi.fn(async () => undefined),
+	can: vi.fn(async (cap: string) => held.has(cap))
+}));
+const listCampaignSends = vi.fn(async () => ({
+	rows: [{ id: 's1', email: 'a@example.com', status: 'delivered', error: null, audience: 'News' }],
+	counts: { delivered: 1 }
+}));
+vi.mock('#lib/server/marketing/campaign-send-service.js', () => ({
+	listCampaignSends: (...a: unknown[]) => listCampaignSends(...(a as []))
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/utils/slug.js', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -176,5 +189,63 @@ describe('subscribeToAudience Turnstile failure', () => {
 		const issues = (thrown as { issues: Array<{ path: string[] }> }).issues;
 		expect(issues.some((i) => i.path?.includes('turnstileToken'))).toBe(true);
 		expect(findOrCreateByEmail).not.toHaveBeenCalled();
+	});
+});
+
+describe('getCampaignAudienceOptions (#2772)', () => {
+	it("counts the event audience as the chosen show's people", async () => {
+		const { listAudiences } = await import('#lib/server/marketing/audience-service.js');
+		vi.mocked(listAudiences).mockResolvedValue([
+			{
+				id: 'ev',
+				name: 'Event audience',
+				systemKey: 'event-interest',
+				allowOptIn: false,
+				subscriberCount: 0
+			},
+			{ id: 'nl', name: 'Newsletter', systemKey: null, allowOptIn: true, subscriberCount: 30 }
+		] as never);
+
+		const options = (await marketing.getCampaignAudienceOptions({ eventId: 'evt-1' })) as {
+			id: string;
+			subscriberCount: number;
+		}[];
+
+		expect(countEventAudience).toHaveBeenCalledWith('evt-1');
+		expect(options.map((o) => [o.id, o.subscriberCount])).toEqual([
+			['ev', 4],
+			['nl', 30]
+		]);
+	});
+});
+
+// #2777: a sent campaign lists who it went to. The addresses are subscriber
+// data, so they follow the audience pages' capability; the counts do not.
+describe('getCampaignDetail', () => {
+	const campaignService = async () =>
+		vi.mocked(await import('#lib/server/marketing/campaign-service.js'));
+
+	it('counts a sent campaign for marketing.read, and lists addresses only for audience managers', async () => {
+		(await campaignService()).getCampaign.mockResolvedValue({
+			id: 'c1',
+			sentAt: new Date()
+		} as never);
+
+		held = new Set(['marketing.read']);
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({
+			sends: { counts: { delivered: 1 }, rows: null }
+		});
+
+		held = new Set(['marketing.read', 'marketing.manageAudiences']);
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({
+			sends: { rows: [expect.objectContaining({ email: 'a@example.com' })] }
+		});
+	});
+
+	it('has no sends before the campaign goes out', async () => {
+		(await campaignService()).getCampaign.mockResolvedValue({ id: 'c1', sentAt: null } as never);
+
+		expect(await marketing.getCampaignDetail('c1')).toMatchObject({ sends: null });
+		expect(listCampaignSends).not.toHaveBeenCalled();
 	});
 });

@@ -5,7 +5,7 @@
  * `$lib/server`.
  */
 
-import type { RequestableArtifact } from '$lib/config';
+import type { RequestableArtifact } from '#lib/config.js';
 
 export interface OutstandingRequest {
 	id: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // The show's committee reads what it may write (#2002): the listing page, and
@@ -19,7 +19,7 @@ const held: Record<Persona, string[]> = {
 	outsider: []
 };
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async (cap: string) => held[persona].includes(cap)),
 	requireCapability: vi.fn(async (cap: string) => {
 		if (!held[persona].includes(cap)) throw denied();
@@ -34,13 +34,13 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 	}
 	throw denied('Not on a committee taking part in this project');
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: (projectId: string | null, cap: string) =>
 		requireProjectCommittee(projectId, cap)
 }));
 
 /** `evt-show` announces a production; `evt-gig` is a listing with none. */
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: vi.fn(async (id: string) =>
 		id === 'evt-show'
 			? { projectId: 'proj-show', productionId: 'prod-1' }
@@ -56,9 +56,11 @@ const checkRebookNeeded = vi.fn(async () => ({
 	reason: null,
 	currentReservation: null
 }));
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: () => getById(),
 	checkRebookNeeded: () => checkRebookNeeded(),
+	publishBlockers: vi.fn(async () => []),
+	getDeletionImpact: vi.fn(async () => ({ deletable: false })),
 	update: vi.fn(),
 	setEventLineup: vi.fn(),
 	listAll: vi.fn(),
@@ -73,18 +75,24 @@ vi.mock('$lib/server/event/event-service', () => ({
 }));
 
 const getByEvent = vi.fn(async () => null);
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(),
 	getByEvent: () => getByEvent(),
 	getEventSeries: vi.fn(async () => null),
 	cancel: vi.fn()
 }));
 
-const listRsvpsForEvent = vi.fn(async () => [
-	{ id: 'r1', userId: 'u1', name: 'Ada', email: 'ada@example.com', createdAt: new Date(0) }
+const listRsvpRoster = vi.fn(async () => [
+	{
+		personId: 'u1',
+		member: { type: 'member' as const, id: 'u1', title: 'Ada', subtitle: 'ada@example.com' },
+		email: 'ada@example.com',
+		memberStatus: 'member' as const,
+		rsvpedAt: new Date(0)
+	}
 ]);
-vi.mock('$lib/server/event/rsvp-service', () => ({
-	listRsvpsForEvent: () => listRsvpsForEvent(),
+vi.mock('#lib/server/event/rsvp-service.js', () => ({
+	listRsvpRoster: () => listRsvpRoster(),
 	cancelRsvp: vi.fn(),
 	createRsvp: vi.fn(),
 	getUserRsvp: vi.fn()
@@ -100,12 +108,12 @@ const getConflictDetails = vi.fn(async () => [
 	},
 	{ type: 'closure', startsAt: new Date(0), endsAt: new Date(1), label: 'HVAC' }
 ]);
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getConflictDetails: () => getConflictDetails(),
 	getValidationWarnings: vi.fn(async () => [])
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -132,14 +140,22 @@ vi.mock('$app/server', () => {
 	};
 });
 
+const listEventHistory = vi.fn(async () => ({ items: [], hasMore: false }));
+vi.mock('#lib/server/event/event-history.js', () => ({
+	listEventHistory: (...a: unknown[]) => listEventHistory(...(a as []))
+}));
+
 const {
+	getEventHistory,
+	getEventDeletionImpact,
+	getEventPublishBlockers,
 	getStaffEventPage,
 	getStaffEventDetail,
 	getEventRecurringSeries,
 	checkRebook,
 	checkConflicts
-} = (await import('$lib/remote/events.remote')) as any;
-const { getEventRsvpRoster } = (await import('$lib/remote/event-rsvp.remote')) as any;
+} = (await import('#lib/remote/events.remote.js')) as any;
+const { getEventRsvpRoster } = (await import('#lib/remote/event-rsvp.remote.js')) as any;
 const { GET: rsvpCsv } = await import('../../routes/staff/events/[id]/rsvps.csv/+server');
 
 const csv = (id: string) => rsvpCsv({ params: { id } } as never) as Promise<Response>;
@@ -177,6 +193,37 @@ describe.each([
 	});
 });
 
+describe('getEventHistory', () => {
+	it("answers the show's committee", async () => {
+		persona = 'booker';
+		await getEventHistory({ id: 'evt-show' });
+		expect(listEventHistory).toHaveBeenCalledWith('evt-show', { limit: undefined });
+	});
+
+	it('refuses someone off the committee, reading nothing', async () => {
+		persona = 'outsider';
+		await expect(getEventHistory({ id: 'evt-show' })).rejects.toMatchObject({ status: 403 });
+		expect(listEventHistory).not.toHaveBeenCalled();
+	});
+});
+
+// The event page's header actions load these at render, so a refusal fails the
+// whole page for the show's committee (#2779). Each answers whoever reads the page.
+describe.each([
+	['getEventDeletionImpact', () => getEventDeletionImpact],
+	['getEventPublishBlockers', () => getEventPublishBlockers]
+])('%s', (_name, fn) => {
+	it("answers the show's committee", async () => {
+		persona = 'booker';
+		await expect(fn()('evt-show')).resolves.toBeDefined();
+	});
+
+	it('refuses someone off the committee', async () => {
+		persona = 'outsider';
+		await expect(fn()('evt-show')).rejects.toMatchObject({ status: 403 });
+	});
+});
+
 describe('getEventRecurringSeries', () => {
 	it("answers the show's committee", async () => {
 		persona = 'booker';
@@ -194,19 +241,19 @@ describe('getEventRsvpRoster', () => {
 	it("gives the show's committee the full roster, emails included", async () => {
 		persona = 'booker';
 		const roster = await getEventRsvpRoster('evt-show');
-		expect(roster).toMatchObject({ total: 1, rows: [{ contact: 'ada@example.com' }] });
+		expect(roster).toMatchObject({ total: 1, rows: [{ email: 'ada@example.com' }] });
 	});
 
 	it('hides it from someone off the committee, reading nothing', async () => {
 		persona = 'outsider';
 		await expect(getEventRsvpRoster('evt-show')).resolves.toBeNull();
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 
 	it('hides it from a booker on a listing with no production', async () => {
 		persona = 'booker';
 		await expect(getEventRsvpRoster('evt-gig')).resolves.toBeNull();
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 });
 
@@ -224,13 +271,13 @@ describe('GET rsvps.csv', () => {
 	it('403s someone off the committee', async () => {
 		persona = 'outsider';
 		await expect(csv('evt-show')).rejects.toMatchObject({ status: 403 });
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 
 	it('403s a booker on a listing with no production', async () => {
 		persona = 'booker';
 		await expect(csv('evt-gig')).rejects.toMatchObject({ status: 403 });
-		expect(listRsvpsForEvent).not.toHaveBeenCalled();
+		expect(listRsvpRoster).not.toHaveBeenCalled();
 	});
 });
 

@@ -3,22 +3,34 @@
 	import './retro-buttons.css';
 	// After layout.css: its `panel` sublayer only outranks daisyUI's when declared later.
 	import './panel-theme.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.svg';
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
-	import { updated } from '$app/state';
-	import RadioPlayer from '$lib/components/radio/RadioPlayer.svelte';
+	import { navigating, updated } from '$app/state';
+	import { ignoreRepeatTap } from '#lib/repeat-tap.js';
+	import RadioPlayer from '#lib/components/radio/RadioPlayer.svelte';
+	import ImpersonationBanner from '#lib/components/layout/ImpersonationBanner.svelte';
 
 	let { children } = $props();
 
 	// When a new version has been deployed, force a full-page navigation so the
 	// browser fetches fresh chunks instead of failing to import stale ones
 	// ("error loading dynamically imported module").
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(({ willUnload, to, shallow }) => {
+		// A shallow goto is a tab change on the same page, where a reload would
+		// discard whatever the member has typed.
+		if (shallow) return;
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}
+	});
+
+	// Capture phase, so it runs before kit's own click handler on the body.
+	onMount(() => {
+		const onClick = (e: MouseEvent) => ignoreRepeatTap(e, navigating.to?.url);
+		window.addEventListener('click', onClick, true);
+		return () => window.removeEventListener('click', onClick, true);
 	});
 
 	onMount(() => {
@@ -68,6 +80,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 <Tooltip.Provider delayDuration={300}>
+	<ImpersonationBanner />
 	{@render children()}
 	<!--
 		The station bar lives here and nowhere else. This is the only layout that

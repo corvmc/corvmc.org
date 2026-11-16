@@ -1,10 +1,13 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { grantInstructor } from '$lib/remote/instructors.remote';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { grantInstructor, searchMembersToGrant } from '#lib/remote/instructors.remote.js';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * Grant teaching status to a member who never applied — the staffer already
@@ -18,29 +21,29 @@
 
 <Action
 	action={grantInstructor}
-	label="Add Instructor"
-	modalTitle="Add Instructor"
-	submitLabel="Grant"
-	successToast="Teaching status granted"
+	label={m.staff_members_instructors_grant_instructor_add_instructor_label()}
+	modalTitle={m.staff_members_instructors_grant_instructor_add_instructor_title()}
+	submitLabel={m.staff_grant_label()}
+	successToast={m.staff_members_instructors_grant_instructor_success_toast()}
 	variant="primary"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField name="userId" label="Member" required>
+			<FormField field={grantInstructor.fields.userId} label={m.staff_member_label()} required>
 				<SearchSelect
-					search={searchMembers}
+					search={searchMembersToGrant}
 					bind:value={member}
 					field={fields.userId}
-					placeholder="Search by name or email..."
+					placeholder={m.staff_search_by_name_email_placeholder()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				They can book the room on teaching terms immediately — there is nothing for them to accept.
-				Teaching time is charged at the member rate with the monthly cap lifted, not at the drop-in
-				rate.
+				{#await getReservationPolicy('instructor') then teaching}{m.staff_members_instructors_grant_instructor_they_can_book_roo_text(
+						{ rate: formatCents(teaching.hourlyRateCents) }
+					)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
 			</p>
 		</div>
 	{/snippet}

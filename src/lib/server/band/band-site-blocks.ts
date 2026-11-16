@@ -1,6 +1,6 @@
-import type { Block } from '$lib/server/db/schema/band-page';
-import { resolveImageUrl } from '$lib/server/storage';
-import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
+import type { Block } from '#lib/server/db/schema/band-page.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { sanitizeBio, sanitizeHtml } from '#lib/utils/markdown.js';
 
 /**
  * Prepare stored page blocks for public rendering: drop the hidden ones,

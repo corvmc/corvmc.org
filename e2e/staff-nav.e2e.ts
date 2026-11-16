@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD, SEED_TARGET_ID } from './fixtures/seed-staff-user';
 
 /**
@@ -18,14 +19,19 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD, SEED_TARGET_ID } from './fixture
  */
 
 async function loginAsStaff(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
 
 const nav = (page: Page) => page.locator('aside ul.menu').first();
+
+const navLink = (page: Page, href: string) => nav(page).locator(`a[href="${href}"]`);
+
+/** The disclosure button of the group holding `href`, hidden or not. */
+const groupToggle = (page: Page, href: string) =>
+	nav(page)
+		.locator('li')
+		.filter({ has: page.locator(`a[href="${href}"]`) })
+		.locator('button[aria-expanded]');
 
 /**
  * Collapse a group, tolerating the window before hydration.
@@ -43,8 +49,8 @@ const nav = (page: Page) => page.locator('aside ul.menu').first();
  * closed. `aria-expanded` is the same state the assertions below are about to
  * read, so this cannot pass while the click is still being lost.
  */
-async function collapseGroup(page: Page, title: string) {
-	const button = nav(page).getByRole('button', { name: title });
+async function collapseGroup(page: Page, href: string) {
+	const button = groupToggle(page, href);
 	await expect(async () => {
 		if ((await button.getAttribute('aria-expanded')) === 'true') await button.click();
 		expect(await button.getAttribute('aria-expanded')).toBe('false');
@@ -58,24 +64,14 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		for (const title of [
-			'People',
-			'Space',
-			'Events',
-			'Moderation',
-			'Outreach',
-			'Money',
-			'System'
-		]) {
-			await expect(nav(page).getByRole('button', { name: title })).toHaveAttribute(
-				'aria-expanded',
-				'true'
-			);
-		}
+		// Every section toggle, whatever the sections are called.
+		const toggles = nav(page).locator('button[aria-expanded]');
+		await expect(toggles.first()).toBeVisible();
+		await expect(nav(page).locator('button[aria-expanded="false"]')).toHaveCount(0);
 
 		// A row from each of the far ends of the list, both reachable by role.
-		await expect(nav(page).getByRole('link', { name: 'Members' })).toBeVisible();
-		await expect(nav(page).getByRole('link', { name: 'Settings' })).toBeVisible();
+		await expect(navLink(page, '/staff/members')).toBeVisible();
+		await expect(navLink(page, '/staff/system')).toBeVisible();
 
 		// Exactly one row highlights, including on a detail page.
 		await page.goto('/staff/members');
@@ -94,26 +90,20 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		await collapseGroup(page, 'Money');
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
+		await collapseGroup(page, '/staff/money');
+		await expect(navLink(page, '/staff/money')).toBeHidden();
 
 		await page.reload();
 
-		await expect(nav(page).getByRole('button', { name: 'Money' })).toHaveAttribute(
-			'aria-expanded',
-			'false'
-		);
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toHaveCount(0);
+		await expect(groupToggle(page, '/staff/money')).toHaveAttribute('aria-expanded', 'false');
+		await expect(navLink(page, '/staff/money')).toBeHidden();
 
 		// And navigating into the collapsed group opens it.
-		await page.goto('/staff/payments');
+		await page.goto('/staff/money');
 
 		// A highlighted row you cannot see is worse than no highlight at all.
-		await expect(nav(page).getByRole('button', { name: 'Money' })).toHaveAttribute(
-			'aria-expanded',
-			'true'
-		);
-		await expect(nav(page).getByRole('link', { name: 'Payments' })).toBeVisible();
+		await expect(groupToggle(page, '/staff/money')).toHaveAttribute('aria-expanded', 'true');
+		await expect(navLink(page, '/staff/money')).toBeVisible();
 	});
 
 	test('scrolls the nav itself, leaving the brand pinned', async ({ page }) => {
@@ -121,7 +111,7 @@ test.describe('staff sidebar', () => {
 		// Short enough, on a page whose collapsible is expanded, that the list
 		// cannot fit however it is laid out.
 		await page.setViewportSize({ width: 1280, height: 400 });
-		await page.goto('/staff/volunteer');
+		await page.goto('/staff/volunteering');
 
 		const list = nav(page);
 		await expect(list).toBeVisible();

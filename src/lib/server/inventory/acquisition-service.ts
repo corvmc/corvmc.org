@@ -1,28 +1,29 @@
 import {
 	syncAcquisitionInKind,
 	syncAcquisitionSpend
-} from '$lib/server/finance/in-kind-acquisition';
-import { db } from '$lib/server/db';
+} from '#lib/server/finance/in-kind-acquisition.js';
+import { db } from '#lib/server/db/index.js';
+import { afterStockChange } from './restock-tasks';
 import {
 	acquisition,
 	acquisitionLine,
 	equipmentCategory,
 	inventoryItem,
 	stockMovement
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { listFor } from '$lib/server/media/media-service';
-import { isReceiptKey } from '$lib/server/storage-keys';
+import { listFor } from '#lib/server/media/media-service.js';
+import { isReceiptKey } from '#lib/server/storage-keys.js';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
-import { createAsset, AssetTagTakenError } from './asset-service';
-import { inventoryAsset } from '$lib/server/db/schema/inventory';
-import { DomainError } from '$lib/server/domain-error';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { type AcquisitionKind } from '$lib/config';
-import type { EquipmentCondition } from '$lib/config';
-import { chunk, chunkSize } from '$lib/server/utils/chunk';
+import { createAsset, AssetTagTakenError, afterForm8282Change } from './asset-service';
+import { inventoryAsset } from '#lib/server/db/schema/inventory.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { type AcquisitionKind } from '#lib/config.js';
+import type { EquipmentCondition } from '#lib/config.js';
+import { chunk, chunkInsert } from '#lib/server/utils/chunk.js';
 
 /**
  * How stock arrives — purchase, donation or grant.
@@ -267,14 +268,6 @@ export class UnknownItemError extends DomainError {
 	}
 }
 
-/**
- * Column counts for `chunkSize` — see `$lib/server/utils/chunk`. Three numbers
- * rather than one because the row budget falls as the row gets wider.
- */
-const LINE_COLUMNS = 5;
-const ASSET_COLUMNS = 8;
-const MOVEMENT_COLUMNS = 9;
-
 export interface BulkAcquisitionResult {
 	acquisitionId: string;
 	lineCount: number;
@@ -463,28 +456,23 @@ export async function recordAcquisitionBulk(
 			suggestionId: data.suggestionId ?? null,
 			notes: data.notes ?? null
 		}),
-		...chunk(lineRows, chunkSize(LINE_COLUMNS)).map((g) => db.insert(acquisitionLine).values(g))
+		...chunkInsert(lineRows, (g) => db.insert(acquisitionLine).values(g))
 	] as unknown as Parameters<typeof db.batch>[0]);
 
 	// Assets before movements: a movement carries `asset_id`, so the row it
 	// names has to exist first.
 	if (assetRows.length > 0) {
-		for (const batch of chunk(chunk(assetRows, chunkSize(ASSET_COLUMNS)), 10)) {
-			await db.batch(
-				batch.map((g) => db.insert(inventoryAsset).values(g)) as unknown as Parameters<
-					typeof db.batch
-				>[0]
-			);
+		const inserts = chunkInsert(assetRows, (g) => db.insert(inventoryAsset).values(g));
+		for (const batch of chunk(inserts, 10)) {
+			await db.batch(batch as unknown as Parameters<typeof db.batch>[0]);
 		}
 	}
 
-	for (const batch of chunk(chunk(movementRows, chunkSize(MOVEMENT_COLUMNS)), 10)) {
-		await db.batch(
-			batch.map((g) => db.insert(stockMovement).values(g)) as unknown as Parameters<
-				typeof db.batch
-			>[0]
-		);
+	const movements = chunkInsert(movementRows, (g) => db.insert(stockMovement).values(g));
+	for (const batch of chunk(movements, 10)) {
+		await db.batch(batch as unknown as Parameters<typeof db.batch>[0]);
 	}
+	await afterStockChange(movementRows.map((r) => r.itemId));
 
 	return {
 		acquisitionId,
@@ -777,6 +765,7 @@ export async function acknowledgeForm8283(
 		.returning();
 
 	if (!row) throw new AcquisitionNotFoundError();
+	await afterForm8282Change();
 	return row;
 }
 
@@ -860,35 +849,4 @@ export async function spendBySource(from: Date, to: Date) {
 		)
 		.groupBy(key)
 		.orderBy(desc(totalCents), key);
-}
-
-/**
- * Contributed nonfinancial assets, disaggregated by category.
- *
- * The shape FASB ASU 2020-07 asks for: gifts-in-kind as their own line, broken
- * down by the type of asset contributed, with whether each was monetized or
- * utilized. Phase 3 renders it; the fields it reads have been captured since
- * Phase 1 precisely so this is a query and not an archaeology project.
- */
-export async function inKindContributions(from: Date, to: Date) {
-	return db
-		.select({
-			categoryName: equipmentCategory.name,
-			monetized: acquisition.monetized,
-			fairValueCents: sql<number>`COALESCE(SUM(${acquisitionLine.quantity} * COALESCE(${acquisitionLine.unitValueCents}, 0)), 0)`,
-			units: sql<number>`COALESCE(SUM(${acquisitionLine.quantity}), 0)`
-		})
-		.from(acquisitionLine)
-		.innerJoin(acquisition, eq(acquisitionLine.acquisitionId, acquisition.id))
-		.innerJoin(inventoryItem, eq(acquisitionLine.itemId, inventoryItem.id))
-		.innerJoin(equipmentCategory, eq(inventoryItem.categoryId, equipmentCategory.id))
-		.where(
-			and(
-				eq(acquisition.kind, 'donation'),
-				gte(acquisition.occurredAt, from),
-				lte(acquisition.occurredAt, to)
-			)
-		)
-		.groupBy(equipmentCategory.name, acquisition.monetized)
-		.orderBy(equipmentCategory.name);
 }

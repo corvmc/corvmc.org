@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
-import { verifyTurnstile } from '$lib/server/turnstile';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { localResourceStatuses } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { localResourceStatuses } from '#lib/config.js';
 import {
 	createCategory,
 	createResource,
@@ -15,7 +15,6 @@ import {
 	listCategories,
 	listPublishedByCategory,
 	listResourcesForStaff,
-	listTips,
 	publishResource,
 	rejectResource,
 	removeResource,
@@ -25,7 +24,8 @@ import {
 	LOCAL_RESOURCE_DESCRIPTION_MAX,
 	LOCAL_RESOURCE_FIELD_MAX,
 	LOCAL_RESOURCE_NAME_MAX
-} from '$lib/server/local-resource/local-resource-service';
+} from '#lib/server/local-resource/local-resource-service.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 /**
  * The local resources directory. The public list is unguarded — the service
@@ -81,12 +81,6 @@ export const getStaffLocalResources = query(
 	}
 );
 
-/** Public tips waiting on a decision (#1566), oldest first. */
-export const getLocalResourceTips = query(async () => {
-	await requireCapability('localResource.manage');
-	return { tips: await listTips() };
-});
-
 export const getStaffLocalResource = query(z.string(), async (id) => {
 	await requireCapability('localResource.manage');
 	try {
@@ -108,7 +102,8 @@ const resourceFields = {
 	description: z.string().max(LOCAL_RESOURCE_DESCRIPTION_MAX).optional(),
 	website: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
 	phone: z.string().max(40).optional(),
-	addressLine: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional()
+	addressLine: z.string().max(LOCAL_RESOURCE_FIELD_MAX).optional(),
+	displayOrder: z.number().int().min(0).max(9999).optional()
 };
 
 export const createLocalResourceForm = form(z.object(resourceFields), async (data) => {
@@ -151,12 +146,15 @@ export const rejectLocalResourceForm = form(
 	}
 );
 
-export const removeLocalResourceForm = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('localResource.manage');
-	await removeResource(data.id);
-	void getLocalResourceDirectory().refresh();
-	return { success: true };
-});
+export const removeLocalResourceForm = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited('Public resource list content: no standing, money or access changes.', async (data) => {
+		await requireCapability('localResource.manage');
+		await removeResource(data.id);
+		void getLocalResourceDirectory().refresh();
+		return { success: true };
+	})
+);
 
 const categoryFields = {
 	name: z.string().trim().min(1).max(60),
@@ -183,10 +181,10 @@ export const updateLocalResourceCategoryForm = form(
 
 export const deleteLocalResourceCategoryForm = form(
 	z.object({ id: z.string().min(1) }),
-	async (data) => {
+	unaudited('Public resource list content: no standing, money or access changes.', async (data) => {
 		await requireCapability('localResource.manage');
 		await deleteCategory(data.id);
 		void getLocalResourceCategories().refresh();
 		return { success: true };
-	}
+	})
 );

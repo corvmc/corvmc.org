@@ -1,5 +1,5 @@
 ---
-title: Manage Notification Preferences
+title: Manage notification preferences
 slug: notification-preferences
 category: getting-started
 summary: Choose which notifications you receive by email and in-app.

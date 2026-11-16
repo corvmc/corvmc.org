@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import { group } from './group';
+import { organization } from './party';
+import { contact } from './contact';
 import {
 	inboxChannels,
 	inboxThreadStatuses,
@@ -80,6 +82,15 @@ export const inboxThread = sqliteTable(
 		contactEmail: text('contact_email'),
 		contactPhone: text('contact_phone'),
 		contactExternalId: text('contact_external_id'),
+		/**
+		 * The outside party staff filed this conversation to (#2622), so it shows
+		 * on their timeline. At most one is set. Set-null: deleting the party
+		 * keeps the conversation, unfiled.
+		 */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
+		contactId: text('contact_id').references(() => contact.id, { onDelete: 'set null' }),
 		assignedToUserId: text('assigned_to_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
@@ -140,7 +151,7 @@ export const inboxThread = sqliteTable(
 		/**
 		 * Who may post, and how a post reaches its readers. Defaulted so every
 		 * row that already exists is a chat topic and nothing changes behaviour
-		 * until a caller sets them. See `$lib/config`.
+		 * until a caller sets them. See `#lib/config.js`.
 		 */
 		postPolicy: text('post_policy', { enum: threadPostPolicies }).notNull().default('members'),
 		notifyPolicy: text('notify_policy', { enum: threadNotifyPolicies }).notNull().default('in_app'),
@@ -170,6 +181,12 @@ export const inboxThread = sqliteTable(
 		index('idx_inbox_thread_assigned').on(t.assignedToUserId),
 		index('idx_inbox_thread_last_message').on(t.lastMessageAt),
 		index('idx_inbox_thread_contact_email').on(t.contactEmail),
+		index('idx_inbox_thread_organization')
+			.on(t.organizationId)
+			.where(sql`organization_id is not null`),
+		index('idx_inbox_thread_contact')
+			.on(t.contactId)
+			.where(sql`contact_id is not null`),
 		index('idx_inbox_thread_contact_phone').on(t.contactPhone),
 		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId),
 		// The band inbox's only list query: one group's threads, newest activity first.
@@ -178,7 +195,20 @@ export const inboxThread = sqliteTable(
 		// newest first.
 		index('idx_inbox_thread_group_pinned').on(t.groupId, t.pinned, t.publishedAt),
 		// The fan-out cursor: unsent published rows, across every group.
-		index('idx_inbox_thread_notified').on(t.notifiedAt)
+		index('idx_inbox_thread_notified').on(t.notifiedAt),
+		// One Announcements thread per group (#2618). Its only leadership room.
+		uniqueIndex('idx_inbox_thread_group_announcements')
+			.on(t.groupId)
+			.where(sql`${t.channel} = 'group' AND ${t.postPolicy} = 'leadership'`),
+		// One General topic per group (#2621); getOrCreateGroupChat relies on it.
+		uniqueIndex('idx_inbox_thread_group_general')
+			.on(t.groupId)
+			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NULL`),
+		// One named topic per name in a group, ignoring case, so two overlapping
+		// `createGroupTopic` calls cannot both add it.
+		uniqueIndex('idx_inbox_thread_group_topic')
+			.on(t.groupId, sql`lower(${t.subject})`)
+			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NOT NULL`)
 	]
 );
 
@@ -206,6 +236,46 @@ export const inboxMessage = sqliteTable(
 		index('idx_inbox_message_thread').on(t.threadId, t.createdAt),
 		index('idx_inbox_message_channel_id').on(t.channelMessageId)
 	]
+);
+
+/**
+ * One announcement: a draft until `publishedAt`, then the record of a post in
+ * the group's single Announcements thread (#2618). The reader sees
+ * `messageId`; the pin, the soft delete and the email latch are per post, so
+ * they live here rather than on the shared thread.
+ */
+export const groupAnnouncement = sqliteTable(
+	'group_announcement',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		body: text('body').notNull(),
+		authorUserId: text('author_user_id').references(() => user.id, { onDelete: 'set null' }),
+		/** Stored, not joined: the post outlives the account. */
+		authorName: text('author_name'),
+		pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+		/** Null while a draft. Nothing reaches a reader before it is stamped. */
+		publishedAt: integer('published_at', { mode: 'timestamp' }),
+		/** The post in the Announcements thread. Null for a draft or a withdrawn post. */
+		messageId: text('message_id').references(() => inboxMessage.id, { onDelete: 'set null' }),
+		/** The fan-out latch: `UPDATE … WHERE notified_at IS NULL`. */
+		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
+		recipientCount: integer('recipient_count'),
+		/** Soft delete. A withdrawn announcement still happened. */
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_group_announcement_group').on(t.groupId, t.pinned, t.publishedAt)]
 );
 
 export const inboxNote = sqliteTable(
@@ -406,3 +476,4 @@ export type InboxParticipant = typeof inboxParticipant.$inferSelect;
 export type InboxGroupRead = typeof inboxGroupRead.$inferSelect;
 export type InboxSavedView = typeof inboxSavedView.$inferSelect;
 export type InboxThreadTag = typeof inboxThreadTag.$inferSelect;
+export type GroupAnnouncement = typeof groupAnnouncement.$inferSelect;

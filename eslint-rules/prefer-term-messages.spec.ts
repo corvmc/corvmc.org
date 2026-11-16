@@ -44,7 +44,7 @@ describe('termForms', () => {
 		const forms = termForms(catalog, undefined);
 		expect(forms.get('band')).toBe('term_band');
 		expect(forms.get('bands')).toBe('term_band');
-		expect(forms.get('external acts')).toBe('term_external_act');
+		expect(forms.get('outside acts')).toBe('term_external_act');
 		expect([...forms.values()].every((key) => key.startsWith('term_'))).toBe(true);
 	});
 });

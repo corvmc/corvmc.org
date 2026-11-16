@@ -44,7 +44,7 @@ function chainableDelete() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn((selection?: Record<string, unknown>) => {
 			selections.push(selection);
@@ -63,7 +63,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	topPositionFor: vi.fn(() => null)
 }));
 
@@ -75,7 +75,7 @@ import {
 	countInterestsByRole,
 	VolunteerInterestValidationError
 } from './volunteer-interest-service';
-import { VOLUNTEER_MAX_INTERESTS } from '$lib/config';
+import { VOLUNTEER_MAX_INTERESTS } from '#lib/config.js';
 
 /** Render a drizzle fragment so a test can read the SQL the service built. */
 function render(fragment: unknown) {

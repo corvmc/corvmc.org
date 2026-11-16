@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Tile from '$lib/components/public/Tile.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
 	import { IconMapPin, IconPhone, IconWorld } from '@tabler/icons-svelte';
-	import { getLocalResourceDirectory } from '$lib/remote/local-resources.remote';
+	import { getLocalResourceDirectory } from '#lib/remote/local-resources.remote.js';
 
 	/**
 	 * The published directory, grouped by category. Renders nothing when empty,

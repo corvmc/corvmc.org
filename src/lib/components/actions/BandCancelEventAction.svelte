@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { cancelBandEventForm } from '$lib/remote/band-events.remote';
+	import { refreshAll } from '$app/navigation';
+	import { cancelBandEventForm } from '#lib/remote/band-events.remote.js';
 
 	// The band panel's own events live in `band-events.remote`, guarded by
 	// `requireGroupRole({ slug }, 'admin')` and scoped to the band named by the
@@ -33,19 +34,19 @@
 
 <Action
 	action={cancelBandEventForm}
-	label="Cancel Event"
-	successToast="Cancelled"
+	label={m.actions_cancel_event_label()}
+	successToast={m.actions_cancelled_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Cancel this event? The listing stays up marked as cancelled, and this cannot be undone.
+			{m.actions_band_cancel_event_cancel_event_listing_stays_up_text()}
 		</p>
 	{/snippet}
 </Action>

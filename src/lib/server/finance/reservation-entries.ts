@@ -1,4 +1,4 @@
-import { calculateCardPresentFee } from '$lib/finance/fees';
+import { calculateCardPresentFee } from '#lib/finance/fees.js';
 import { recordEntriesBestEffort, recordEntry } from './financial-entry-service';
 
 /**

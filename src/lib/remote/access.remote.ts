@@ -2,20 +2,20 @@ import { z } from 'zod';
 import { or } from 'drizzle-orm';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { containsLiteral } from '$lib/server/db/like';
+import { requireCapability } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { containsLiteral } from '#lib/server/db/like.js';
 import {
 	getAccessSummary,
 	getPersonAccess,
 	listCapabilityHolders,
 	listClearanceHolders,
 	listHoldersOfPosition
-} from '$lib/server/access/access-service';
-import { setPosition as setPositionService } from '$lib/server/access/position-service';
-import { listCertifications } from '$lib/server/volunteer/volunteer-certification-service';
-import { capabilities, positionOrder, SEARCH_LIMIT, type Capability } from '$lib/config';
+} from '#lib/server/access/access-service.js';
+import { setPosition as setPositionService } from '#lib/server/access/position-service.js';
+import { listCertifications } from '#lib/server/volunteer/volunteer-certification-service.js';
+import { capabilities, positionOrder, SEARCH_LIMIT, type Capability } from '#lib/config.js';
 
 /**
  * The access dashboard (#1942). Every read is guarded on `user.setRole`, the

@@ -1,16 +1,17 @@
-import { db } from '$lib/server/db';
-import { containsLiteral } from '$lib/server/db/like';
-import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { eq, and, or, inArray, isNull, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { DomainError } from '$lib/server/errors';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toMemberRef, type MemberRefRow } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
@@ -21,13 +22,13 @@ import {
 	VOLUNTEER_REVIEW_MINUTES_OVER,
 	volunteerHourStatusLabels,
 	type HourLogException
-} from '$lib/config';
+} from '#lib/config.js';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { flagUnclearedLogs } from './member-certification-service';
-import { chunk } from '$lib/server/utils/chunk';
-import type { VolunteerHourLog, VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
+import { chunk } from '#lib/server/utils/chunk.js';
+import type { VolunteerHourLog, VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 
 const TZ = DEFAULT_TIMEZONE;
 
@@ -90,6 +91,11 @@ export interface SubmitHoursData {
 	description: string;
 	/** The completed shift this log pre-filled from, when it did. */
 	shiftId?: string | null;
+	/**
+	 * The task the time went to, for work logged after the fact (#2518). A log
+	 * names a shift, a task, or neither: a shift already says its task.
+	 */
+	workOrderId?: string | null;
 }
 
 /**
@@ -296,6 +302,7 @@ export async function submitHours(
 			volunteerRoleId: role.id,
 			groupId,
 			shiftId: data.shiftId ?? null,
+			workOrderId: data.shiftId ? null : (data.workOrderId ?? null),
 			workedOn,
 			minutes,
 			description,
@@ -411,12 +418,21 @@ export async function withdrawHourLog(logId: string, userId: string): Promise<vo
 	if (!row) throw new HourLogNotEditableError();
 }
 
+/** Why approving a returned log needs a reason (docs/development/conventions.md#workflow-gates). */
+export const RETURNED_LOG_WARNING = 'These hours were returned to the member.';
+
+/**
+ * Approve a log. A returned one is approved only with `reason`, which goes to
+ * the audit log; without one it is refused as already reviewed.
+ */
 export async function approveHourLog(
 	logId: string,
 	staffId: string,
-	notes?: string
+	notes?: string,
+	opts: { reason?: string | null } = {}
 ): Promise<VolunteerHourLog> {
-	return review(logId, staffId, 'approved', validateReviewNotes(notes, false));
+	const reason = opts.reason?.trim() || null;
+	return review(logId, staffId, 'approved', validateReviewNotes(notes, false), reason);
 }
 
 export async function rejectHourLog(
@@ -424,26 +440,28 @@ export async function rejectHourLog(
 	staffId: string,
 	notes: string
 ): Promise<VolunteerHourLog> {
-	return review(logId, staffId, 'rejected', validateReviewNotes(notes, true));
+	return review(logId, staffId, 'rejected', validateReviewNotes(notes, true), null);
 }
 
 /**
  * Approving grants nothing. No credit_transaction is written here, deliberately
  * — volunteer hours are a record, not a currency. `hour-log-service.spec.ts`
- * asserts it. Approval takes a pending log; a return also takes an approved
- * one, since most logs count on entry and are only looked at afterwards.
+ * asserts it. Approval takes a pending log, or a returned one over a reason;
+ * a return also takes an approved one, since most logs count on entry.
  */
 async function review(
 	logId: string,
 	staffId: string,
 	status: Extract<VolunteerHourStatus, 'approved' | 'rejected'>,
-	reviewNotes: string | null
+	reviewNotes: string | null,
+	overrideReason: string | null
 ): Promise<VolunteerHourLog> {
 	const existing = await getRawLog(logId);
 	if (!existing) throw new HourLogNotFoundError();
+	const overReturn = status === 'approved' && existing.status === 'rejected' && !!overrideReason;
 	const reviewable: VolunteerHourStatus[] =
 		status === 'rejected' ? ['pending', 'approved'] : ['pending'];
-	if (!reviewable.includes(existing.status)) {
+	if (!reviewable.includes(existing.status) && !overReturn) {
 		throw new HourLogAlreadyReviewedError(existing.status);
 	}
 
@@ -459,6 +477,19 @@ async function review(
 
 	if (!row) throw new HourLogAlreadyReviewedError('reviewed');
 
+	if (overReturn) {
+		await recordAuditEntry({
+			action: 'volunteer_hours.approved_over_return',
+			subject: { type: 'user', id: row.userId },
+			details: {
+				logId: row.id,
+				workedOn: formatDateInTz(row.workedOn, TZ),
+				minutes: row.minutes,
+				warnings: [RETURNED_LOG_WARNING],
+				reason: overrideReason!
+			}
+		});
+	}
 	await announceReviewed([row], staffId, status, reviewNotes);
 
 	return row;
@@ -613,8 +644,10 @@ export interface HourLogFilters {
 	status?: VolunteerHourStatus;
 	userId?: string;
 	volunteerRoleId?: string;
-	/** The shift (work order) the hours were worked on. */
+	/** One shift's hours. */
 	shiftId?: string;
+	/** One task's hours: logs naming the task or one of its shifts. */
+	workOrderId?: string;
 	/** YYYY-MM-DD, club time. */
 	from?: string;
 	to?: string;
@@ -639,6 +672,8 @@ export interface HourLogRow {
 	description: string;
 	/** Set when the log pre-filled from a completed shift — staff scheduled it. */
 	shiftId: string | null;
+	/** Set when the log names a task rather than a shift. */
+	workOrderId: string | null;
 	status: VolunteerHourStatus;
 	reviewedByName: string | null;
 	reviewedAt: Date | null;
@@ -657,6 +692,16 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 		conditions.push(eq(volunteerHourLog.volunteerRoleId, filters.volunteerRoleId));
 	}
 	if (filters.shiftId) conditions.push(eq(volunteerHourLog.shiftId, filters.shiftId));
+	if (filters.workOrderId) {
+		conditions.push(
+			or(
+				eq(volunteerHourLog.workOrderId, filters.workOrderId),
+				sql`${volunteerHourLog.shiftId} in (
+					select s."id" from "volunteer_shift" s where s."work_order_id" = ${filters.workOrderId}
+				)`
+			)!
+		);
+	}
 	if (filters.from) {
 		conditions.push(gte(volunteerHourLog.workedOn, buildDateInTz(filters.from, '00:00', TZ)));
 	}
@@ -720,6 +765,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		minutes: row.log.minutes,
 		description: row.log.description,
 		shiftId: row.log.shiftId,
+		workOrderId: row.log.workOrderId,
 		status: row.log.status,
 		reviewedByName: row.reviewedByName,
 		reviewedAt: row.log.reviewedAt,

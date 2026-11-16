@@ -1,15 +1,16 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconMenu2, IconMusic, IconChevronDown, IconMessages } from '@tabler/icons-svelte';
 	import { page } from '$app/state';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
-	import logo from '$lib/assets/cmc-compact-logo.svg';
+	import logo from '#lib/assets/cmc-compact-logo.svg';
 	import ButtonGroup from '../ui/ButtonGroup.svelte';
 	import type { AppChrome } from './chrome';
 	import { MESSAGES_HREF } from './account-menu';
-	import { entityLabels } from '$lib/terms';
+	import { entityLabels } from '#lib/terms.js';
 
 	export interface PanelTab {
 		key: string;
@@ -139,7 +140,7 @@
 
 	<!-- Mobile brand -->
 	<span class="lg:hidden">
-		<img src={logo} alt="CorvMC" class="h-full" />
+		<img src={logo} alt={m.layout_brand_text()} class="h-full" />
 	</span>
 
 	<!-- Right: notifications + messages + account.
@@ -160,7 +161,9 @@
 			size="sm"
 			shape="circle"
 			class="relative {messagesActive ? 'latched' : ''}"
-			aria-label={chrome.messagesUnread ? `Messages, ${chrome.messagesUnread} unread` : 'Messages'}
+			aria-label={chrome.messagesUnread
+				? m.layout_messages_unread_label({ count: chrome.messagesUnread })
+				: m.layout_messages_label()}
 			aria-current={messagesActive ? 'page' : undefined}
 		>
 			<IconMessages size={20} />

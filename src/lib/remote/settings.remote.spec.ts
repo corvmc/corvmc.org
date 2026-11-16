@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { z } from 'zod';
 
 // Regression: the staff settings remote functions are directly addressable
 // endpoints (there is no +layout.server.ts backstop), and several of them —
@@ -15,7 +16,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
+	can: async () => false,
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string]))
 }));
 
@@ -32,7 +34,7 @@ const CREDENTIALS = {
 	refreshToken: 'utec-refresh-token-sentinel'
 };
 
-const getConfigsByPrefix = vi.fn(async (prefix: string) => {
+const getConfigsByPrefix = vi.fn(async (prefix: string): Promise<Record<string, unknown>> => {
 	if (prefix === 'integration.utec') {
 		return {
 			clientId: 'utec-client',
@@ -46,13 +48,17 @@ const getConfigsByPrefix = vi.fn(async (prefix: string) => {
 type ConfigWrite = { key: string; value: unknown };
 const updateSiteConfigs = vi.fn(async (_writes: ConfigWrite[]) => undefined);
 const updateSiteConfig = vi.fn(async () => undefined);
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
 }));
+// The audit row is `save-settings.spec.ts`'s; here only the write is asserted.
+vi.mock('#lib/server/site-config/save-settings.js', () => ({
+	saveSettings: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]]))
+}));
 
-vi.mock('$lib/server/volunteer/orientation-service', () => ({
+vi.mock('#lib/server/volunteer/orientation-service.js', () => ({
 	getOrientationSetting: async () => ({ roleId: '', minutes: 30, leadMinutes: 10, tasks: [] }),
 	parseOrientationTasks: (text: string) =>
 		text
@@ -60,13 +66,13 @@ vi.mock('$lib/server/volunteer/orientation-service', () => ({
 			.map((t) => t.trim())
 			.filter(Boolean)
 }));
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: async () => []
 }));
 
 const getAllProductConfigs = vi.fn(async () => []);
 const updateProductConfig = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getAllProductConfigs: () => getAllProductConfigs(),
 	updateProductConfig: (...args: unknown[]) => updateProductConfig(...(args as []))
 }));
@@ -76,7 +82,7 @@ const credentialStatus = vi.fn(async (_field: string) => ({
 	configured: true,
 	source: 'kv' as 'kv' | 'env'
 }));
-vi.mock('$lib/server/lock/ultraloc-client', () => ({
+vi.mock('#lib/server/lock/ultraloc-client.js', () => ({
 	testConnection: () => testConnection(),
 	credentialStatus: (...args: unknown[]) => credentialStatus(...(args as [string]))
 }));
@@ -85,7 +91,7 @@ vi.mock('./inbox.remote', () => ({
 	getInboxChannelConfigs: vi.fn(async () => [])
 }));
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	issueLockSelfTest: vi.fn(async () => ({ code: '1234' })),
 	revokeLockSelfTest: vi.fn(async () => undefined)
 }));
@@ -93,16 +99,16 @@ vi.mock('$lib/server/lock/lock-service', () => ({
 // `ALL_FLAGS` is the real list on purpose: `VALID_FLAGS` in settings.remote is
 // an alias of it, so mocking it out would stop this suite from catching a flag
 // that the settings page can toggle but the handler rejects.
-vi.mock('$lib/server/feature-flags', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/feature-flags')>()),
+vi.mock('#lib/server/feature-flags.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/feature-flags.js')>()),
 	getAllFeatureFlags: vi.fn(async () => ({}))
 }));
 
-vi.mock('$lib/server/finance/subscription-sync-service', () => ({
+vi.mock('#lib/server/finance/subscription-sync-service.js', () => ({
 	syncAllSubscriptions: vi.fn(async () => ({ synced: 0 }))
 }));
 
-vi.mock('$lib/server/finance/community-stats', () => ({
+vi.mock('#lib/server/finance/community-stats.js', () => ({
 	refreshCommunityStats: vi.fn(async () => undefined)
 }));
 
@@ -113,7 +119,7 @@ vi.mock('$app/server', () => ({
 		request: { headers: new Headers() }
 	}),
 	// The returned promise carries `.refresh()` because that is the shape the
-	// forms call — `void getStaffSettingsPage().refresh()` after a write. Without
+	// forms call — `void getOrgSettings().refresh()` after a write. Without
 	// it no successful submit could be exercised here, only the rejection path.
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
@@ -131,6 +137,7 @@ vi.mock('$app/server', () => ({
 		const fn = handler as unknown as Record<string, unknown>;
 		fn.__ = { type: 'form' };
 		fn.for = () => fn;
+		fn.schema = _schema;
 		return handler;
 	},
 	command: (handler: (...a: unknown[]) => unknown) => {
@@ -160,9 +167,13 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		cap: 'settings.update',
 		args: [{ minutes: '30', leadMinutes: '10' }]
 	},
+	{ name: 'getGearSettings', cap: 'settings.read' },
+	{ name: 'updateGearTaskRoles', cap: 'settings.update', args: [{}] },
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
-	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
+	{ name: 'getVolunteeringSettingsPage', cap: 'settings.read' },
+	{ name: 'getPracticeSpaceSettingsPage', cap: 'settings.read' },
+	{ name: 'getTeachingTerms', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },
 	{ name: 'getUtecDevices', cap: 'settings.read' },
 	// Not reads: each has a real-world effect. runLockSelfTest issues a working
@@ -198,9 +209,28 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		]
 	},
 	{
+		name: 'updateTeachingTerms',
+		cap: 'settings.update',
+		args: [
+			{
+				teachingRate: 500,
+				teachingMinDurationHours: 0.5,
+				teachingMaxAdvanceDaysOneoff: 60,
+				teachingMaxAdvanceDaysRecurring: 90
+			}
+		]
+	},
+	{
 		name: 'updateOrgSettings',
 		cap: 'settings.update',
-		args: [{ addressStreet: '1 Main St', addressCity: 'Corvallis', addressState: 'OR' }]
+		args: [
+			{
+				addressStreet: '1 Main St',
+				addressCity: 'Corvallis',
+				addressState: 'OR',
+				contactEmail: 'desk@example.org'
+			}
+		]
 	},
 	// Guarded all along, but unlisted here until the completeness check below
 	// went looking — so the form that flips any feature flag had no test
@@ -216,6 +246,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		args: [{ hourValueCents: 3766, hourValueSource: 'Independent Sector, Oregon, 2025' }]
 	},
 	{ name: 'updateVenueSettings', cap: 'settings.update', args: [{ consoleChannels: 16 }] },
+	{ name: 'updateFeeGateSettings', cap: 'settings.update', args: [{ feeGateFrom: '2026-12-01' }] },
 	{
 		name: 'updateIntegrationSettings',
 		cap: 'settings.update',
@@ -224,10 +255,129 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 ];
 
 /**
- * The three deliberately public queries. Everything the footer and `/contact`
+ * The deliberately public queries. Everything the footer and the public pages
  * render for a logged-out visitor, and nothing else.
  */
-const PUBLIC = ['getSocialLinks', 'getOrgAddress', 'getFooterInfo'];
+const PUBLIC = ['getSocialLinks', 'getContactDetails', 'getContactEmail', 'getFooterInfo'];
+
+describe('updateReservationSettings from the practice space page', () => {
+	const schema = (settings.updateReservationSettings as unknown as { schema: z.ZodType }).schema;
+	// What /staff/reservations/settings renders, as the browser submits it.
+	const PAGE = {
+		hourlyRateCents: '1500',
+		operatingHoursStart: '09:00',
+		operatingHoursEnd: '22:00',
+		timeSlotMinutes: '30',
+		bufferMinutes: '0',
+		minAdvanceMinutes: '60',
+		newMemberMinAdvanceMinutes: '4320',
+		minDurationHours: '1',
+		maxDurationHours: '8',
+		maxAdvanceDaysOneoff: '14',
+		maxAdvanceDaysRecurring: '17.5'
+	};
+	const stored = (teachingMaxAdvanceDaysRecurring: number) =>
+		getConfigsByPrefix.mockImplementationOnce(async () => ({ teachingMaxAdvanceDaysRecurring }));
+
+	beforeEach(() => requireCapability.mockResolvedValue(undefined));
+
+	it('accepts the fields the page renders', () => {
+		expect(schema.safeParse(PAGE).success).toBe(true);
+	});
+
+	it('writes no teaching term', async () => {
+		stored(90);
+		await settings.updateReservationSettings(schema.parse(PAGE), {});
+		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
+		expect(keys).toContain('reservation.maxAdvanceDaysOneoff');
+		expect(keys.filter((k) => k.startsWith('reservation.teaching'))).toEqual([]);
+	});
+
+	it('refuses a member one-off window that reaches the stored teaching horizon', async () => {
+		stored(14);
+		const issue = new Proxy({}, { get: (_t, k) => (m: string) => ({ path: [k], message: m }) });
+		await expect(
+			settings.updateReservationSettings(schema.parse(PAGE), issue)
+		).rejects.toBeTruthy();
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
+	});
+});
+
+describe('updateTeachingTerms from the Teachers view', () => {
+	const schema = (settings.updateTeachingTerms as unknown as { schema: z.ZodType }).schema;
+	const FORM = {
+		teachingRate: '5',
+		teachingMinDurationHours: '0.5',
+		teachingMaxAdvanceDaysOneoff: '60',
+		teachingMaxAdvanceDaysRecurring: '90'
+	};
+	const storedOneoff = (maxAdvanceDaysOneoff: number) =>
+		getConfigsByPrefix.mockImplementationOnce(async () => ({ maxAdvanceDaysOneoff }));
+
+	beforeEach(() => requireCapability.mockResolvedValue(undefined));
+
+	it('writes all four terms', async () => {
+		storedOneoff(14);
+		await settings.updateTeachingTerms(schema.parse(FORM), {});
+		expect(updateSiteConfigs.mock.calls[0][0]).toEqual([
+			{ key: 'reservation.teachingRateCents', value: 500 },
+			{ key: 'reservation.teachingMinDurationHours', value: 0.5 },
+			{ key: 'reservation.teachingMaxAdvanceDaysOneoff', value: 60 },
+			{ key: 'reservation.teachingMaxAdvanceDaysRecurring', value: 90 }
+		]);
+	});
+
+	it('refuses a recurring window that does not exceed the member one-off window', async () => {
+		storedOneoff(90);
+		const issue = new Proxy({}, { get: (_t, k) => (m: string) => ({ path: [k], message: m }) });
+		await expect(settings.updateTeachingTerms(schema.parse(FORM), issue)).rejects.toBeTruthy();
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
+	});
+});
+
+describe('updateOrgSettings contact email', () => {
+	const schema = (settings.updateOrgSettings as unknown as { schema: z.ZodType }).schema;
+
+	it.each([
+		['not an address', 'not-an-email'],
+		['blank', ''],
+		['missing', undefined]
+	])('the schema refuses a contact email that is %s', (_name, contactEmail) => {
+		expect(schema.safeParse({ contactEmail }).success).toBe(false);
+	});
+
+	it('the schema trims a valid one', () => {
+		expect(schema.parse({ contactEmail: ' desk@example.org ' })).toMatchObject({
+			contactEmail: 'desk@example.org'
+		});
+	});
+
+	it('a viewer without the capability writes nothing', async () => {
+		await expect(
+			settings.updateOrgSettings({ contactEmail: 'desk@example.org' })
+		).rejects.toThrow();
+		expect(requireCapability).toHaveBeenCalledWith('settings.update');
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
+	});
+
+	it('a staff save writes it', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateOrgSettings({ contactEmail: 'desk@example.org' });
+		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
+			key: 'org.contactEmail',
+			value: 'desk@example.org'
+		});
+	});
+
+	it('the public queries return the stored address to a logged-out visitor', async () => {
+		const stored = { contactEmail: 'desk@example.org' } as never;
+		getConfigsByPrefix.mockResolvedValueOnce(stored).mockResolvedValueOnce(stored);
+
+		expect(await settings.getContactEmail()).toBe('desk@example.org');
+		expect(await settings.getContactDetails()).toMatchObject({ email: 'desk@example.org' });
+		expect(requireCapability).not.toHaveBeenCalled();
+	});
+});
 
 describe('updateOrientationSettings', () => {
 	it('saves the lead time and the checklist, one trimmed task per line', async () => {
@@ -236,12 +386,17 @@ describe('updateOrientationSettings', () => {
 			roleId: 'role-1',
 			minutes: '30',
 			leadMinutes: '10',
-			tasks: '  Meet them at the door \n\nDoor code\n'
+			tasks: '  Meet them at the door \n\nDoor code\n',
+			firstVisitNotes: '  Park on the street.\nNo food in the room.\n'
 		});
 		expect(updateSiteConfigs).toHaveBeenCalledWith(
 			expect.arrayContaining([
 				{ key: 'volunteer.orientationLeadMinutes', value: 10 },
-				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' }
+				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' },
+				{
+					key: 'volunteer.firstVisitNotes',
+					value: 'Park on the street.\nNo food in the room.'
+				}
 			])
 		);
 	});
@@ -288,22 +443,18 @@ describe('settings.remote staff guards', () => {
 	// strings: a projection is a place a credential leaks back into by accident,
 	// and an equality assertion only catches the field name someone thought to
 	// check. Serialising the whole payload catches it under any name, at any
-	// depth, on every path that projects this object — the query, and the
-	// combined page query the staff route SSRs into its HTML.
-	it.each(['getIntegrationSettings', 'getStaffSettingsPage'])(
-		'%s serialises no U-tec credential',
-		async (name) => {
-			requireCapability.mockResolvedValue(undefined);
-			const payload = JSON.stringify(await settings[name]());
+	// depth. The Building access sidebar is the only reader now.
+	it.each(['getIntegrationSettings'])('%s serialises no U-tec credential', async (name) => {
+		requireCapability.mockResolvedValue(undefined);
+		const payload = JSON.stringify(await settings[name]());
 
-			for (const [field, sentinel] of Object.entries(CREDENTIALS)) {
-				expect(payload, `${field} reached the browser`).not.toContain(sentinel);
-			}
-			// Proves the assertions above are looking at a payload that really was
-			// built from the credential-bearing config, not an empty object.
-			expect(payload).toContain('utec-client');
+		for (const [field, sentinel] of Object.entries(CREDENTIALS)) {
+			expect(payload, `${field} reached the browser`).not.toContain(sentinel);
 		}
-	);
+		// Proves the assertions above are looking at a payload that really was
+		// built from the credential-bearing config, not an empty object.
+		expect(payload).toContain('utec-client');
+	});
 
 	// Both credentials are written now (#745 reversed): an id and its secret are
 	// one credential, and a form that can save only half of it is how the two
@@ -362,7 +513,8 @@ describe('settings.remote staff guards', () => {
 
 	it('the footer and contact queries remain public (rendered for logged-out visitors)', async () => {
 		await settings.getSocialLinks();
-		await settings.getOrgAddress();
+		await settings.getContactDetails();
+		await settings.getContactEmail();
 		await settings.getFooterInfo();
 		expect(requireCapability).not.toHaveBeenCalled();
 	});
@@ -370,7 +522,7 @@ describe('settings.remote staff guards', () => {
 	it('getFooterInfo reads the org config once and shapes both halves', async () => {
 		expect(await settings.getFooterInfo()).toEqual({
 			social: await settings.getSocialLinks(),
-			address: await settings.getOrgAddress()
+			address: ((await settings.getContactDetails()) as { address: unknown }).address
 		});
 	});
 

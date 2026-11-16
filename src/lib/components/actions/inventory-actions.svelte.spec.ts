@@ -1,10 +1,11 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '#lib/test/locators.js';
 
 // One file for every inventory action: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
-vi.mock('$lib/remote/inventory.remote', () => {
+vi.mock('#lib/remote/inventory.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -76,7 +77,7 @@ vi.mock('$lib/remote/inventory.remote', () => {
 // partial mock of this module is a missing-export error at import time rather
 // than at the call.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -90,7 +91,15 @@ const ReceiveStockAction = (await import('./ReceiveStockAction.svelte')).default
 const RecordForm8282Action = (await import('./RecordForm8282Action.svelte')).default;
 const RecordForm8283Action = (await import('./RecordForm8283Action.svelte')).default;
 
-const named = (name: string) => document.querySelector(`[role="dialog"] [name="${name}"]`);
+const named = (name: string) =>
+	document.querySelector(`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`);
+
+/** Each action's trigger is its render container's only button; dialogs portal out. */
+const openWith = async (...args: Parameters<typeof render>) => {
+	const screen = await render(...args);
+	await screen.locator.getByRole('button').click();
+	return screen;
+};
 
 /**
  * Two defaults here cannot live in the schema, and one set of fields appears
@@ -101,8 +110,7 @@ const named = (name: string) => document.querySelector(`[role="dialog"] [name="$
  */
 describe('AddItemAction', () => {
 	const open = async () => {
-		await render(AddItemAction, {});
-		await page.getByRole('button', { name: 'Add Item' }).first().click();
+		await openWith(AddItemAction, {});
 		await expect.element(page.getByLabelText('Tracked as')).toBeVisible();
 		return page.getByRole('dialog');
 	};
@@ -128,7 +136,7 @@ describe('AddItemAction', () => {
 	it('asks about reordering once the item is a count', async () => {
 		await open();
 
-		await userEvent.selectOptions(page.getByLabelText('Tracked as'), ['Bulk — a count']);
+		await userEvent.selectOptions(page.getByLabelText('Tracked as'), ['bulk']);
 
 		await expect.element(page.getByLabelText('Reorder at')).toBeVisible();
 		await expect.element(page.getByLabelText('Reorder quantity')).toBeVisible();
@@ -166,16 +174,19 @@ describe('AddItemAction', () => {
  * say so, because the box the operator typed in is not the field that submits.
  */
 describe('AdjustStockAction', () => {
-	const delta = () => document.querySelector('input[name="delta"]') as HTMLInputElement;
+	const delta = () =>
+		document.querySelector('input:is([name="delta"], [name^="delta/"])') as HTMLInputElement;
 
 	const open = async (props: Record<string, unknown> = {}) => {
-		await render(AdjustStockAction, { itemId: 'item-1', onHand: 8, ...props });
-		await page.getByRole('button', { name: 'Stocktake' }).click();
+		await openWith(AdjustStockAction, { itemId: 'item-1', onHand: 8, ...props });
 		return page.getByRole('dialog');
 	};
 
+	/** The line under the box; `data-direction` is add, remove or none. */
+	const preview = () => page.getByRole('dialog').getByTestId('stocktake-preview');
+
 	const count = async (value: string) => {
-		await userEvent.fill(page.getByLabelText('Counted on the shelf'), value);
+		await userEvent.fill(page.getByTestId('stocktake-counted'), value);
 	};
 
 	// A box pre-filled with the number being checked invites confirming the
@@ -183,7 +194,7 @@ describe('AdjustStockAction', () => {
 	it('opens with an empty box and nothing to submit', async () => {
 		await expect.element(await open()).toBeVisible();
 
-		const counted = document.querySelector('input[name="counted"]') as HTMLInputElement;
+		const counted = document.querySelector('[data-testid="stocktake-counted"]') as HTMLInputElement;
 		expect(counted.value).toBe('');
 		expect(delta().value).toBe('');
 	});
@@ -194,7 +205,8 @@ describe('AdjustStockAction', () => {
 		await count('12');
 
 		await vi.waitFor(() => expect(delta().value).toBe('4'));
-		await expect.element(page.getByText('Adding 4', { exact: false })).toBeVisible();
+		await expect.element(preview()).toHaveAttribute('data-direction', 'add');
+		await expect.element(preview()).toMatchTextContent(String(4));
 	});
 
 	// The half that is easy to get wrong by hand, and the half that doubles the
@@ -205,7 +217,8 @@ describe('AdjustStockAction', () => {
 		await count('3');
 
 		await vi.waitFor(() => expect(delta().value).toBe('-5'));
-		await expect.element(page.getByText('Removing 5', { exact: false })).toBeVisible();
+		await expect.element(preview()).toHaveAttribute('data-direction', 'remove');
+		await expect.element(preview()).toMatchTextContent(String(5));
 	});
 
 	it('submits zero, and says so, when the count matches', async () => {
@@ -214,7 +227,7 @@ describe('AdjustStockAction', () => {
 		await count('8');
 
 		await vi.waitFor(() => expect(delta().value).toBe('0'));
-		await expect.element(page.getByText('Matches the record', { exact: false })).toBeVisible();
+		await expect.element(preview()).toHaveAttribute('data-direction', 'none');
 	});
 
 	// Half a cable is a typo, not a count. Truncating keeps the ledger integral
@@ -236,45 +249,43 @@ describe('AdjustStockAction', () => {
  */
 describe('BindTagAction', () => {
 	const open = async (props: Record<string, unknown> = {}) => {
-		await render(BindTagAction, { assetId: 'asset-3', ...props });
-		await page
-			.getByRole('button', { name: props.currentTag ? 'Rebind tag' : 'Bind tag' })
-			.first()
-			.click();
+		await openWith(BindTagAction, { assetId: 'asset-3', ...props });
 		return page.getByRole('dialog');
 	};
+
+	const TAG = 'CMC-000110';
+	/** The panel above the field: one line for a bind, two for a rebind. */
+	const context = () => page.getByRole('dialog').getByTestId('bind-tag-context');
 
 	it('offers to bind when the unit wears no tag', async () => {
 		await expect.element(await open()).toBeVisible();
 
-		await expect
-			.element(page.getByText('Scan or type the tag printed on the sticker.'))
-			.toBeVisible();
-		expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain('currently wears');
+		await expect.element(context()).toBeVisible();
+		expect(context().getByCss('p').elements()).toHaveLength(1);
+		expect(context().getByCss('strong').query()).toBeNull();
 	});
 
 	// A staffer rebinding needs to know which sticker they are replacing —
 	// the unit in their hands may be one of several on the bench.
 	it('names the tag being replaced when there is one', async () => {
-		await expect.element(await open({ currentTag: 'CMC-000110' })).toBeVisible();
+		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
-		await expect.element(page.getByText('CMC-000110')).toBeVisible();
+		await expect.element(context().getByCss('strong')).toMatchTextContent(TAG);
 	});
 
 	// The reassurance is the whole reason a rebind is offered rather than a
 	// delete-and-recreate: identity is the record, not the label stuck to it.
 	it('says a rebind keeps the history attached to the unit', async () => {
-		await expect.element(await open({ currentTag: 'CMC-000110' })).toBeVisible();
+		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
-		await expect
-			.element(page.getByText('keeps every loan and repair already recorded', { exact: false }))
-			.toBeVisible();
+		// The second line is the reassurance; the first only names the tag.
+		await expect.element(context().getByCss('p').nth(1)).toBeVisible();
 	});
 
 	// Pre-filling the field would submit the tag already bound — a rebind onto
 	// itself, which reads as a save that did nothing.
 	it('opens the field empty rather than pre-filled with the tag being replaced', async () => {
-		await expect.element(await open({ currentTag: 'CMC-000110' })).toBeVisible();
+		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
 		expect((named('assetTag') as HTMLInputElement).value).toBe('');
 	});
@@ -289,11 +300,12 @@ describe('BindTagAction', () => {
  */
 describe('CreateLoanAction', () => {
 	const equipment = () =>
-		document.querySelector('[role="dialog"] select[name="itemId"]') as unknown as HTMLSelectElement;
+		document.querySelector(
+			'[role="dialog"] select:is([name="itemId"], [name^="itemId/"])'
+		) as unknown as HTMLSelectElement;
 
 	const open = async () => {
-		await render(CreateLoanAction, {});
-		await page.getByRole('button', { name: 'New Loan' }).click();
+		await openWith(CreateLoanAction, {});
 		// The whole form sits behind `await getAvailableItems()`, so wait for a field
 		// that is *not* under test.
 		await expect.element(page.getByLabelText('Quantity')).toBeVisible();
@@ -345,8 +357,7 @@ describe('CreateLoanAction', () => {
  */
 describe('MarkReimbursedAction', () => {
 	const open = async (props: Record<string, unknown> = {}) => {
-		await render(MarkReimbursedAction, { acquisitionId: 'acq-2', ...props });
-		await page.getByRole('button', { name: 'Mark reimbursed' }).first().click();
+		await openWith(MarkReimbursedAction, { acquisitionId: 'acq-2', ...props });
 		return page.getByRole('dialog');
 	};
 
@@ -393,14 +404,13 @@ describe('MarkReimbursedAction', () => {
  */
 describe('ReceiveStockAction', () => {
 	const open = async () => {
-		await render(ReceiveStockAction, { itemId: 'item-3' });
-		await page.getByRole('button', { name: 'Receive' }).click();
-		await expect.element(page.getByLabelText('How it arrived')).toBeVisible();
+		await openWith(ReceiveStockAction, { itemId: 'item-3' });
+		await expect.element(page.getByRole('dialog').getByCss('[name="kind"]')).toBeVisible();
 		return page.getByRole('dialog');
 	};
 
-	const arrivedAs = async (label: string) => {
-		await userEvent.selectOptions(page.getByLabelText('How it arrived'), [label]);
+	const arrivedAs = async (kind: string) => {
+		await userEvent.selectOptions(page.getByRole('dialog').getByCss('[name="kind"]'), [kind]);
 	};
 
 	it('opens as a purchase, which owes no disclosure', async () => {
@@ -411,13 +421,15 @@ describe('ReceiveStockAction', () => {
 		expect(named('monetized')).toBeNull();
 	});
 
-	for (const gift of ['Donation', 'Grant']) {
-		it(`asks a ${gift.toLowerCase()} how its value was arrived at`, async () => {
+	for (const gift of ['donation', 'grant']) {
+		it(`asks a ${gift} how its value was arrived at`, async () => {
 			await open();
 
 			await arrivedAs(gift);
 
-			await expect.element(page.getByLabelText('How the value was determined')).toBeVisible();
+			await expect
+				.element(page.getByRole('dialog').getByCss('[name="fairValueBasis"]'))
+				.toBeVisible();
 			// ASU 2020-07 discloses sold and utilized gifts on separate lines.
 			expect(named('monetized')).not.toBeNull();
 		});
@@ -429,7 +441,7 @@ describe('ReceiveStockAction', () => {
 	it('asks an opening balance none of it', async () => {
 		await open();
 
-		await arrivedAs('Already owned');
+		await arrivedAs('opening_balance');
 
 		await vi.waitFor(() => expect(named('fairValueBasis')).toBeNull());
 		expect(named('intendedUse')).toBeNull();
@@ -441,12 +453,15 @@ describe('ReceiveStockAction', () => {
 	// wrong caption on it puts a supplier's name in the donor column.
 	it('renames the counterparty for what it is', async () => {
 		await open();
+		const caption = () =>
+			(named('sourceName') as HTMLInputElement | null)?.labels?.[0]?.textContent?.trim();
+		const asPurchase = caption();
+		expect(asPurchase).toBeTruthy();
 
-		await expect.element(page.getByText('Supplier', { exact: true })).toBeVisible();
+		await arrivedAs('donation');
 
-		await arrivedAs('Donation');
-
-		await expect.element(page.getByText('Donor / grantor', { exact: true })).toBeVisible();
+		await vi.waitFor(() => expect(caption()).toBeTruthy());
+		await vi.waitFor(() => expect(caption()).not.toBe(asPurchase));
 	});
 
 	// Blank means the collective's own card, which is the common case — so a
@@ -466,15 +481,16 @@ describe('ReceiveStockAction', () => {
 describe('RecordForm8282Action', () => {
 	it('shows the due date as the club-time day, not the UTC day', async () => {
 		// 7pm PDT on Oct 27 is 02:00 UTC on Oct 28.
-		await render(RecordForm8282Action, {
+		await openWith(RecordForm8282Action, {
 			assetId: 'asset-1',
 			dueBy: new Date('2026-10-28T02:00:00Z')
 		});
-		await page.getByRole('button', { name: 'Record 8282' }).first().click();
+		const clubDay = '2026-10-27';
+		const utcDay = '2026-10-28';
 
 		const dialog = page.getByRole('dialog');
-		await expect.element(dialog.getByText('2026-10-27')).toBeVisible();
-		expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain('2026-10-28');
+		await expect.element(dialog.getByText(clubDay)).toBeVisible();
+		expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain(utcDay);
 	});
 });
 
@@ -487,36 +503,36 @@ describe('RecordForm8282Action', () => {
  */
 describe('RecordForm8283Action', () => {
 	const open = async (props: Record<string, unknown> = {}) => {
-		const label = props.signedOn ? 'Edit 8283' : 'Record 8283';
-		await render(RecordForm8283Action, { acquisitionId: 'acq-4', ...props });
-		await page.getByRole('button', { name: label }).first().click();
+		await openWith(RecordForm8283Action, { acquisitionId: 'acq-4', ...props });
 		return page.getByRole('dialog');
 	};
 
 	const input = (name: string) =>
-		document.querySelector(`[role="dialog"] input[name="${name}"]`) as HTMLInputElement;
+		document.querySelector(
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])`
+		) as HTMLInputElement;
 
 	// The trigger sits in a row of acquisitions. Which of the two it says is the
 	// only signal that this gift's acknowledgment is already on file.
-	it('offers to record when nothing is on file', async () => {
-		await render(RecordForm8283Action, { acquisitionId: 'acq-4' });
-
-		await expect.element(page.getByRole('button', { name: 'Record 8283' })).toBeVisible();
-	});
-
-	it('offers to edit once something is', async () => {
-		await render(RecordForm8283Action, {
+	// Which words each says is copy; that the two differ is the signal.
+	it('says something different once an acknowledgment is on file', async () => {
+		const blank = await render(RecordForm8283Action, { acquisitionId: 'acq-4' });
+		const filed = await render(RecordForm8283Action, {
 			acquisitionId: 'acq-4',
-			signedOn: new Date('2026-03-14T00:00:00Z')
+			signedOn: new Date('2026-03-14T20:00:00Z')
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Edit 8283' })).toBeVisible();
+		const record = blank.locator.getByRole('button');
+		const edit = filed.locator.getByRole('button');
+		await expect.element(record).toBeVisible();
+		await expect.element(edit).toBeVisible();
+		expect(edit.element().textContent?.trim()).not.toBe(record.element().textContent?.trim());
 	});
 
 	// A date input takes `yyyy-mm-dd` and nothing else; anything longer is
 	// rejected silently and the field renders empty.
 	it('pre-fills the date already signed', async () => {
-		await expect.element(await open({ signedOn: new Date('2026-03-14T00:00:00Z') })).toBeVisible();
+		await expect.element(await open({ signedOn: new Date('2026-03-14T20:00:00Z') })).toBeVisible();
 
 		expect(input('signedOn').value).toBe('2026-03-14');
 	});

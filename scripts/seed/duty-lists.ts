@@ -5,6 +5,7 @@ import {
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert } from './db';
+import { insertTasksWithShifts } from './shifts';
 
 /**
  * Project templates, and one show's project they have been stamped into.
@@ -146,7 +147,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		}
 	].map((i) => ({ ...i, dutyListId: 'seed-duty-standard-show' }));
 
-	await batchInsert(dutyListItem, items, 6);
+	await batchInsert(dutyListItem, items);
 
 	// Apply it to a show that has not happened yet, so its work orders are live.
 	const show = events.find(
@@ -173,7 +174,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		anchor: 'doors' as const,
 		createdByUserId: 'seed-vol-coordinator'
 	}));
-	await batchInsert(workOrder, workOrders, 8);
+	await insertTasksWithShifts(workOrders);
 
 	// The setup crew's list partly done, so the partly-worked state is rendered
 	// rather than only the empty and finished ones.
@@ -192,7 +193,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 				: {})
 		}))
 	);
-	await batchInsert(workTask, tasks, 12);
+	await batchInsert(workTask, tasks);
 
 	const deliverables = await seedShowDeliverables(byName, groups, show);
 
@@ -226,10 +227,10 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 			id: 'seed-duty-show-deliverables',
 			name: 'Show deliverables',
 			description:
-				'What each committee owes a show, and when. Stamped onto every new show; each item is done when the fact it names is true and its tasks are ticked.',
+				'What each committee owes a show, and when. Pick it on New Project to start a show; each item is done when the fact it names is true and its tasks are ticked.',
 			anchor: 'start' as const,
 			subject: 'project' as const,
-			autoApplyOn: 'production.created' as const,
+			projectKind: 'production' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		}
 	]);
@@ -277,7 +278,7 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 		sortOrder: (n + 1) * 10,
 		tasks: [...tasks]
 	}));
-	await batchInsert(dutyListItem, items, 6);
+	await batchInsert(dutyListItem, items);
 	if (!show) return 0;
 
 	const at = (minutes: number) => new Date(show.startsAt.getTime() + minutes * 60_000);
@@ -295,8 +296,7 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 			dutyListId: 'seed-duty-show-deliverables',
 			anchor: 'start' as const,
 			createdByUserId: 'seed-vol-coordinator'
-		})),
-		6
+		}))
 	);
 	// Half the advance ticked, so an item waiting on its last tasks renders.
 	await batchInsert(
@@ -311,8 +311,7 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 					? { done: true, doneAt: new Date(), doneByUserId: 'seed-vol-coordinator' }
 					: {})
 			}))
-		),
-		12
+		)
 	);
 	return items.length;
 }

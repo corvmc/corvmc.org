@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { memberRefColumns } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
 import {
 	suggestion,
 	suggestionVote,
@@ -8,24 +8,25 @@ import {
 	type SuggestionCategory,
 	type SuggestionStatus,
 	type SuggestionVisibility
-} from '$lib/server/db/schema/suggestion';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/suggestion.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, or, asc, desc, count, inArray, isNull, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/errors';
-import { domainEvents, type DomainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/errors.js';
+import { domainEvents, type DomainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
 import {
 	SUGGESTION_TITLE_MAX,
 	SUGGESTION_BODY_MAX,
 	SUGGESTION_RESPONSE_MAX,
 	SUGGESTION_NOTE_MAX,
 	suggestionStatusLabels
-} from '$lib/config';
+} from '#lib/config.js';
 import { ne } from 'drizzle-orm';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -374,7 +375,7 @@ export async function setVisibility(
 		params.visibility === 'hidden' &&
 		existing.authorUserId
 	) {
-		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		const { fileStaffAction } = await import('#lib/server/flag/flag-service.js');
 		await fileStaffAction({
 			entityType: 'suggestion',
 			entityId: suggestionId,
@@ -393,6 +394,11 @@ export async function setVisibility(
 			updatedAt: new Date()
 		})
 		.where(eq(suggestion.id, suggestionId));
+	await recordAuditEntry({
+		action: 'suggestion.visibility_changed',
+		subject: { type: 'suggestion', id: suggestionId, label: existing.title },
+		details: { from: existing.visibility, to: params.visibility }
+	});
 
 	notifyAuthor('suggestion.moderated', existing, params.staffId, {
 		suggestionId,
@@ -534,6 +540,11 @@ export async function mergeSuggestions(params: MergeParams): Promise<{ transferr
 			updatedAt: new Date()
 		})
 		.where(and(eq(suggestion.id, sourceId), isNull(suggestion.mergedIntoId)));
+	await recordAuditEntry({
+		action: 'suggestion.merged',
+		subject: { type: 'suggestion', id: targetId, label: target.title },
+		details: { mergedId: sourceId, mergedTitle: source.title, votesMoved: voters.length }
+	});
 
 	// The source's own vote rows are kept. Merge stays purely additive: nothing
 	// is destroyed, re-running is a total no-op, and the source is invisible on
@@ -821,13 +832,8 @@ export async function listPendingEdits() {
 		.orderBy(desc(suggestionEdit.createdAt), desc(suggestionEdit.id));
 }
 
-export async function countPendingEdits(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestionEdit)
-		.where(eq(suggestionEdit.status, 'pending'));
-	return row?.count ?? 0;
-}
+/** An edit waiting on staff: the review feed's predicate. */
+export const pendingEdit = () => eq(suggestionEdit.status, 'pending');
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -964,30 +970,18 @@ export async function listMergeCandidates(excludeId: string) {
 		.limit(MERGE_CANDIDATE_LIMIT);
 }
 
-/** Suggestions members cannot see while they wait. Leads the staff nav badge. */
-export async function countAwaitingModeration(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestion)
-		.where(inArray(suggestion.visibility, ['pending_review', 'under_review']));
-	return row?.count ?? 0;
-}
+/** Suggestions members cannot see while they wait: the review feed's predicate. */
+export const awaitingModeration = () =>
+	inArray(suggestion.visibility, ['pending_review', 'under_review']);
 
 /** On the board, open, and nobody has written back yet. */
-export async function countAwaitingResponse(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestion)
-		.where(
-			and(
-				eq(suggestion.visibility, 'visible'),
-				eq(suggestion.status, 'open'),
-				isNull(suggestion.responseBody),
-				isNull(suggestion.mergedIntoId)
-			)
-		);
-	return row?.count ?? 0;
-}
+export const awaitingResponse = () =>
+	and(
+		eq(suggestion.visibility, 'visible'),
+		eq(suggestion.status, 'open'),
+		isNull(suggestion.responseBody),
+		isNull(suggestion.mergedIntoId)
+	);
 
 // ---------------------------------------------------------------------------
 // Side effects

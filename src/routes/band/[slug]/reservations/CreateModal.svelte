@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
-	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
-	import { bookBandReservation } from '$lib/remote/reservations.remote';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
+	import { bookBandReservation } from '#lib/remote/reservations.remote.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import PaymentDue, { type FeeGate } from '#lib/components/reservations/booking/PaymentDue.svelte';
 
 	/**
 	 * Booking the practice space for a band.
@@ -28,7 +30,8 @@
 	let {
 		slug,
 		hasSustainingMember = false,
-		needsPhone = false
+		needsPhone = false,
+		feeGate
 	}: {
 		/** The band this books for — the ref the guard resolves. */
 		slug: string;
@@ -36,36 +39,50 @@
 		hasSustainingMember?: boolean;
 		/** The person booking has no usable number on file; staff need one to call. */
 		needsPhone?: boolean;
+		/** The booking member's own outstanding fees (#2859), not the band's. */
+		feeGate?: FeeGate;
 	} = $props();
 </script>
 
-<Action
-	action={bookBandReservation}
-	label="Book a Session"
-	modalTitle="Book a Session"
-	noFooter
-	variant="primary"
-	size="sm"
-	maxWidth="max-w-sm"
-	onsuccess={async (result) => {
-		const r = result as { waitlisted?: boolean; redirectUrl?: string } | undefined;
-		if (r?.redirectUrl) {
-			await goToCheckout(r.redirectUrl);
-		} else if (r?.waitlisted) {
-			toast.info('The first instance is waitlisted because the slot is currently booked.');
-		} else {
-			toast.success('Session booked');
-		}
-	}}
->
-	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
-	{#snippet form()}
-		<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
-		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} />
-		<ConfirmStep band />
-		<PaymentStep
-			fields={{ coverFees: bookBandReservation.fields.coverFees }}
-			submit={bookBandReservation.fields.payNow.as('submit', 'on')}
-		/>
-	{/snippet}
-</Action>
+{#if feeGate?.state === 'refuse'}
+	<PaymentDue
+		gate={feeGate}
+		label={m.band_slug_reservations_create_modal_label()}
+		data-testid="book-session"
+		size="sm"
+	>
+		{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
+	</PaymentDue>
+{:else}
+	<Action
+		action={bookBandReservation}
+		label={m.band_slug_reservations_create_modal_label()}
+		modalTitle={m.band_slug_reservations_create_modal_title()}
+		data-testid="book-session"
+		noFooter
+		variant="primary"
+		size="sm"
+		maxWidth="max-w-sm"
+		onsuccess={async (result) => {
+			const r = result as { waitlisted?: boolean; redirectUrl?: string } | undefined;
+			if (r?.redirectUrl) {
+				await goToCheckout(r.redirectUrl);
+			} else if (r?.waitlisted) {
+				toast.info(m.band_slug_reservations_create_modal_first_instance_waitliste_toast());
+			} else {
+				toast.success(m.band_slug_reservations_create_modal_session_booked_toast());
+			}
+		}}
+	>
+		{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
+		{#snippet form()}
+			<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
+			<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} bookerType="group" />
+			<ConfirmStep band />
+			<PaymentStep
+				fields={{ coverFees: bookBandReservation.fields.coverFees }}
+				submit={bookBandReservation.fields.payNow.as('submit', 'on')}
+			/>
+		{/snippet}
+	</Action>
+{/if}

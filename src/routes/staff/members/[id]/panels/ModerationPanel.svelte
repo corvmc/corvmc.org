@@ -1,15 +1,17 @@
 <script lang="ts">
-	import { getMemberStandings, restoreMemberStanding } from '$lib/remote/standing.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberStandings, restoreMemberStanding } from '#lib/remote/standing.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { getFlagsAgainstUser, getFlagsByUser } from '#lib/remote/flags.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id }: { id: string } = $props();
 
@@ -18,14 +20,20 @@
 	// sentence would be true of both and useful for neither.
 	const restrictedCopy: Record<string, { title: string; body: string }> = {
 		community_event: {
-			title: 'Community listings',
+			title: m.staff_community_listings_title(),
 			body: "This member's listings are reviewed by staff before they go on the public calendar, after a report was upheld against one of them."
 		},
 		suggestion: {
-			title: 'Suggestions',
+			title: m.staff_members_id_panels_moderation_panel_suggestions_title(),
 			body: "This member's suggestions are reviewed by staff before they go on the board, after a report was upheld against one of them."
 		}
 	};
+
+	// Not `{#await}`: a refresh would re-pend it and unmount an open Restore (#2356).
+	const standingsQuery = new Latest(() => getMemberStandings(id));
+	$effect(() => {
+		if (standingsQuery.error) throw standingsQuery.error.e;
+	});
 </script>
 
 <!--
@@ -39,15 +47,16 @@
 	because they are separate decisions: an upheld report about an event must not
 	quietly cost someone their suggestion-posting rights, or the reverse.
 -->
-{#await getMemberStandings(id) then standings}
+{#if standingsQuery.current}
+	{@const standings = standingsQuery.current}
 	{@const restricted = (['community_event', 'suggestion'] as const).filter(
 		(scope) => standings[scope].status !== 'none'
 	)}
 	{#if restricted.length === 0}
-		<InfoCard title="Standing">
+		<InfoCard title={m.staff_members_id_panels_moderation_panel_standing_title()}>
 			<EmptyState
-				title="No restrictions"
-				description="Nothing this member posts is held for review."
+				title={m.staff_members_id_panels_moderation_panel_no_restrictions_title()}
+				description={m.staff_members_id_panels_moderation_panel_nothing_member_post_body()}
 			/>
 		</InfoCard>
 	{/if}
@@ -56,23 +65,23 @@
 		<InfoCard title={restrictedCopy[scope].title}>
 			<p class="text-sm">{restrictedCopy[scope].body}</p>
 			{#if standing.reason}
-				<p class="mt-1 text-muted">Staff note: "{standing.reason}"</p>
+				<p class="mt-1 text-muted">{m.staff_staff_note_text({ reason: standing.reason })}</p>
 			{/if}
 			{#if standing.triggeringFlagId}
 				<p class="mt-1 text-sm">
-					<a class="link" href={resolve(`/staff/flags/${standing.triggeringFlagId}`)}>
-						See the report
+					<a class="link" href={resolve(`staff/flags/${standing.triggeringFlagId}`)}>
+						{m.staff_members_id_panels_moderation_panel_see_report_text()}
 					</a>
 				</p>
 			{/if}
 			<div class="mt-2">
 				<Action
 					action={restoreMemberStanding.for(scope)}
-					label="Restore"
+					label={m.staff_restore_label()}
 					variant="ghost"
 					size="sm"
-					confirm="Stop holding this member's posts here for review?"
-					successToast="Standing restored"
+					confirm={m.staff_members_id_panels_moderation_panel_confirm_body()}
+					successToast={m.staff_members_id_panels_moderation_panel_success_toast()}
 				>
 					{#snippet form()}
 						{@const f = restoreMemberStanding.for(scope).fields}
@@ -83,25 +92,36 @@
 			</div>
 		</InfoCard>
 	{/each}
-{/await}
+{/if}
 
-<RelatedList title="Reports against this member" result={getFlagsAgainstUser(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_moderation_panel_reports_against_mem_title()}
+	result={getFlagsAgainstUser(id)}
+>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
-			<EmptyState title="No reports" description="Nobody has reported this member's profile." />
+			<EmptyState
+				title={m.staff_members_id_panels_moderation_panel_no_reports_title()}
+				description={m.staff_members_id_panels_moderation_panel_nobody_has_reported_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Reason</th>
-					<th class="col-extra">Filed</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_reason_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed_label()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.reason}</a>
-							<div class="text-muted">by {f.reportedByName ?? 'Anonymous'}</div>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.reason}</a>
+							<div class="text-muted">
+								{m.staff_members_id_panels_moderation_panel_by_text({
+									reportedByName:
+										f.reportedByName ?? m.staff_members_id_panels_moderation_panel_anonymous_text()
+								})}
+							</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>
 					</tr>
@@ -111,22 +131,28 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Reports they filed" result={getFlagsByUser(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_moderation_panel_reports_they_filed_title()}
+	result={getFlagsByUser(id)}
+>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
-			<EmptyState title="None filed" description="This member has not reported anyone." />
+			<EmptyState
+				title={m.staff_members_id_panels_moderation_panel_none_filed_title()}
+				description={m.staff_members_id_panels_moderation_panel_member_has_not_repo_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>About</th>
-					<th class="col-extra">Filed</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_about_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed_label()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.entityLabel}</a>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.entityLabel}</a>
 							<div class="text-muted">{f.reason}</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>

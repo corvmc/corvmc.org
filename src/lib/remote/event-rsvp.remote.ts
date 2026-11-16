@@ -2,19 +2,19 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireUser } from '$lib/server/authorization';
-import { getById } from '$lib/server/event/event-service';
+import { requireUser } from '#lib/server/authorization.js';
+import { getById } from '#lib/server/event/event-service.js';
 import {
 	cancelRsvp,
 	createRsvp,
 	getUserRsvp,
-	listRsvpsForEvent
-} from '$lib/server/event/rsvp-service';
-import { rsvpClosedReason, type RsvpClosedReason } from '$lib/server/event/rsvp-availability';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { toMemberRef } from '$lib/server/entity/refs';
-import type { RosterRow } from '$lib/types/roster';
-import { getPublicEventDetail } from '$lib/remote/events.remote';
+	listRsvpRoster,
+	type RsvpRosterRow
+} from '#lib/server/event/rsvp-service.js';
+import { rsvpClosedReason, type RsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
+import { getPublicEventDetail } from '#lib/remote/events.remote.js';
 
 /**
  * The viewer's RSVP, for the public event page's control (#1995). It answers
@@ -35,6 +35,7 @@ export const getRsvpStatus = query(z.string().min(1), async (id): Promise<RsvpSt
 	const { locals } = getRequestEvent();
 	const evt = await getById(id);
 	if (!evt) error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 
 	const reason = rsvpClosedReason(evt);
 	const user = locals.user ?? null;
@@ -60,6 +61,7 @@ export const confirmRsvp = form(z.object({ eventId: z.string().min(1) }), async 
 	const user = requireUser();
 	const evt = await getById(data.eventId);
 	if (!evt) error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 	const reason = rsvpClosedReason(evt);
 	if (reason) error(409, closedMessages[reason]);
 
@@ -87,22 +89,14 @@ export const withdrawRsvp = form(z.object({ eventId: z.string().min(1) }), async
  */
 export const getEventRsvpRoster = query(
 	z.string().min(1),
-	async (eventId): Promise<{ total: number; rows: RosterRow[] } | null> => {
+	async (eventId): Promise<{ total: number; rows: RsvpRosterRow[] } | null> => {
 		try {
 			await requireListingWriter(eventId);
 		} catch (err) {
 			if ((err as { status?: number }).status === 403) return null;
 			throw err;
 		}
-		const rows = await listRsvpsForEvent(eventId);
-		return {
-			total: rows.length,
-			rows: rows.map((r) => ({
-				id: r.id,
-				person: toMemberRef({ id: r.userId, name: r.name, email: r.email }),
-				contact: r.email,
-				at: r.createdAt
-			}))
-		};
+		const rows = await listRsvpRoster(eventId);
+		return { total: rows.length, rows };
 	}
 );

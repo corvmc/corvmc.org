@@ -1,7 +1,9 @@
 import { z } from 'zod';
-import { allRosterRows, rosterCsv } from '$lib/server/roster/roster';
+import { allRosterRows, rosterCsv } from '#lib/server/roster/roster.js';
 import { listVolunteers, type VolunteerListRow } from './volunteer-profile-service';
-import { volunteerProfileStatuses } from '$lib/config';
+import { listLapsingBeforeRosteredShift } from './member-certification-service';
+import { volunteerProfileStatuses } from '#lib/config.js';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * The volunteers roster's filters under the keys its page writes to the URL,
@@ -12,20 +14,25 @@ export const volunteerRosterFilters = z.object({
 	q: z.string().optional(),
 	role: z.string().optional(),
 	status: z.enum(volunteerProfileStatuses).optional().catch(undefined),
-	cert: z.string().optional()
+	cert: z.string().optional(),
+	lapsing: z.enum(['1']).optional().catch(undefined)
 });
 
 export type VolunteerRosterFilters = z.infer<typeof volunteerRosterFilters>;
 
 /** Everyone the filters match, unpaginated. */
-export function listAllVolunteers(f: VolunteerRosterFilters): Promise<VolunteerListRow[]> {
+export async function listAllVolunteers(f: VolunteerRosterFilters): Promise<VolunteerListRow[]> {
+	const userIds = f.lapsing
+		? [...new Set((await listLapsingBeforeRosteredShift()).map((l) => l.userId))]
+		: undefined;
 	return allRosterRows((pagination) =>
 		listVolunteers(
 			{
 				search: f.q || undefined,
 				roleId: f.role || undefined,
 				status: f.status,
-				certificationId: f.cert || undefined
+				certificationId: f.cert || undefined,
+				userIds
 			},
 			pagination
 		)
@@ -40,6 +47,6 @@ export function volunteerRosterCsv(rows: VolunteerListRow[]): string {
 		{ header: 'hours', value: (r) => (r.minutes / 60).toFixed(2) },
 		{ header: 'phone', value: (r) => r.phone },
 		{ header: 'availability', value: (r) => r.availability },
-		{ header: 'since', value: (r) => r.since.toISOString().slice(0, 10) }
+		{ header: 'since', value: (r) => toLocalDate(r.since) }
 	]);
 }

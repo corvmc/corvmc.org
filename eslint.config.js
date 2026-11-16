@@ -1,5 +1,3 @@
-// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noClampedTieredTable from './eslint-rules/no-clamped-tiered-table.js';
@@ -8,17 +6,32 @@ import pageHeaderWidthMatchesContent from './eslint-rules/page-header-width-matc
 import noDeadDaisyuiClasses from './eslint-rules/no-dead-daisyui-classes.js';
 import noDuplicateFieldNames from './eslint-rules/no-duplicate-field-names.js';
 import noDbTransaction from './eslint-rules/no-db-transaction.js';
+import noDriverMessageMatch from './eslint-rules/no-driver-message-match.js';
+import noUnqualifiedCorrelation from './eslint-rules/no-unqualified-correlation.js';
 import stableCreatedAtOrder from './eslint-rules/stable-created-at-order.js';
+import noCheckThenInsert from './eslint-rules/no-check-then-insert.js';
 import noConcurrentRemoteQueries from './eslint-rules/no-concurrent-remote-queries.js';
 import refreshTheComposedQuery from './eslint-rules/refresh-the-composed-query.js';
 import noDomainImportsInUi from './eslint-rules/no-domain-imports-in-ui.js';
 import noContactSchemaImports from './eslint-rules/no-contact-schema-imports.js';
 import noDirectFinancialEntryWrites from './eslint-rules/no-direct-financial-entry-writes.js';
+import auditDeclared from './eslint-rules/audit-declared.js';
 import noUnwrappedRemoteMutation from './eslint-rules/no-unwrapped-remote-mutation.js';
 import noClippedRowAction from './eslint-rules/no-clipped-row-action.js';
 import definiteActionLabels from './eslint-rules/definite-action-labels.js';
+import noRawFileInput from './eslint-rules/no-raw-file-input.js';
 import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
 import preferTermMessages from './eslint-rules/prefer-term-messages.js';
+import clubTimeDates from './eslint-rules/club-time-dates.js';
+import noWordingLocators from './eslint-rules/no-wording-locators.js';
+import noSvelteElement from './eslint-rules/no-svelte-element.js';
+import noAssertedRouteParam from './eslint-rules/no-asserted-route-param.js';
+import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
+import noManualFieldName from './eslint-rules/no-manual-field-name.js';
+import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
+import requireAwaitCatch from './eslint-rules/require-await-catch.js';
+import messageKeyRole from './eslint-rules/message-key-role.js';
+import bookingTermsByBooker from './eslint-rules/booking-terms-by-booker.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -28,7 +41,7 @@ import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
+import svelteConfig from './kit.config.js';
 
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
@@ -46,21 +59,83 @@ const customPlugin = {
 		'no-dead-daisyui-classes': noDeadDaisyuiClasses,
 		'no-duplicate-field-names': noDuplicateFieldNames,
 		'stable-created-at-order': stableCreatedAtOrder,
+		'no-check-then-insert': noCheckThenInsert,
 		'no-db-transaction': noDbTransaction,
+		'no-driver-message-match': noDriverMessageMatch,
+		'booking-terms-by-booker': bookingTermsByBooker,
+		'no-unqualified-correlation': noUnqualifiedCorrelation,
 		'no-concurrent-remote-queries': noConcurrentRemoteQueries,
 		'refresh-the-composed-query': refreshTheComposedQuery,
 		'no-domain-imports-in-ui': noDomainImportsInUi,
 		'no-contact-schema-imports': noContactSchemaImports,
 		'no-direct-financial-entry-writes': noDirectFinancialEntryWrites,
 		'no-unwrapped-remote-mutation': noUnwrappedRemoteMutation,
+		'audit-declared': auditDeclared,
 		'no-clipped-row-action': noClippedRowAction,
 		'definite-action-labels': definiteActionLabels,
+		'no-raw-file-input': noRawFileInput,
 		'no-tracked-command-in-effect': noTrackedCommandInEffect,
+		'club-time-dates': clubTimeDates,
 		// Registered, not enabled: the tree has ~256 hits and every lint run is
 		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
 		// they are cleared (#2099). See docs/development/conventions.md#terminology.
-		'prefer-term-messages': preferTermMessages
+		'prefer-term-messages': preferTermMessages,
+		// Enabled below for specs and e2e (#2189).
+		'no-wording-locators': noWordingLocators,
+		'no-svelte-element': noSvelteElement,
+		'no-asserted-route-param': noAssertedRouteParam,
+		// Enabled below for shipped `.svelte` (#2099).
+		'no-literal-ui-text': noLiteralUiText,
+		'no-manual-field-name': noManualFieldName,
+		'no-interactive-await': noInteractiveAwait,
+		'require-await-catch': requireAwaitCatch,
+		'message-key-role': messageKeyRole
 	}
+};
+
+/**
+ * `$lib` is gone in kit 3, and `#lib` resolves only with the file's extension.
+ * The rest is what kit 3 deprecates in favour of something this tree already uses.
+ */
+const IMPORT_PATTERNS = [
+	{
+		regex: '^\\$lib(/|$)',
+		message: 'Import through #lib with the extension: #lib/foo.js, #lib/Foo.svelte.'
+	},
+	{
+		regex: '^#lib/(?!.*\\.(js|svelte|json|css|svg|png|jpg|webp|txt)(\\?.*)?$)',
+		message: 'A #lib import needs its extension: .js for a .ts file, /index.js for a folder.'
+	},
+	{
+		regex: '^\\$env/',
+		message: 'Deprecated in kit 3. Read variables from $app/env/private or $app/env/public.'
+	},
+	{
+		regex: '^\\$app/environment$',
+		message: 'Deprecated in kit 3. Import from $app/env.'
+	},
+	{
+		regex: '^\\$app/navigation$',
+		importNames: ['invalidateAll'],
+		message: 'Deprecated in kit 3. Use refreshAll.'
+	},
+	{
+		regex: '^\\$app/navigation$',
+		importNames: ['pushState', 'replaceState'],
+		message: 'Deprecated in kit 3. Use goto(url, { shallow: true }), with replace: true to replace.'
+	},
+	{
+		regex: '^@sveltejs/kit$',
+		importNames: ['json', 'text'],
+		message: 'Deprecated in kit 3. Use Response.json(...) or new Response(...).'
+	}
+];
+
+const GUARD_HELPERS = {
+	name: '#lib/server/authorization.js',
+	importNames: ['requireStaff', 'isStaff', 'hasRole', 'hasAnyRole'],
+	message:
+		'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/decisions/0032-guards-name-capabilities.md.'
 };
 
 export default defineConfig(
@@ -70,11 +145,6 @@ export default defineConfig(
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,
-	// @ts-expect-error -- eslint-plugin-storybook still ships ESLint 9 `RuleModule`
-	// types, which ESLint 10's `Plugin` no longer structurally accepts (its
-	// `RuleContext` dropped `parserOptions`, `getAncestors` and friends). Runtime is
-	// unaffected; drop this line when the plugin publishes ESLint 10 types.
-	storybook.configs['flat/recommended'],
 	prettier,
 	svelte.configs.prettier,
 	{
@@ -103,16 +173,16 @@ export default defineConfig(
 			// literal. (`Pathname` does not work — the rule tests assignability in
 			// both directions and `Pathname` is a strict subtype.)
 			//
-			// `ignoreGoto` / `ignoreReplaceState` are the genuine exemptions. Links get
-			// `allowAbsolute`, `allowFragment` and `allowNullish`, but `goto()` and
-			// `replaceState()` get no allowances at all, and this app's list pages
+			// `ignoreGoto` is the genuine exemption. Links get
+			// `allowAbsolute`, `allowFragment` and `allowNullish`, but `goto()`
+			// gets no allowances at all, and this app's list pages
 			// navigate by rebuilding `page.url` with new search params — a resolved
 			// route with a query string appended, which has no route id to resolve as
 			// a whole. See docs/development/template-audit.md.
-			'svelte/no-navigation-without-resolve': [
-				'error',
-				{ ignoreGoto: true, ignoreReplaceState: true }
-			],
+			'svelte/no-navigation-without-resolve': ['error', { ignoreGoto: true }],
+			// A typeless <button> submits the nearest form, which may be a parent
+			// component's (#2651). `Button.svelte` defaults to `button`; raw ones say.
+			'svelte/button-has-type': 'error',
 			// A template literal over `resolve()` makes TypeScript expand the whole
 			// typed-route union, which sits at its complexity limit (#1610).
 			'no-restricted-syntax': [
@@ -121,6 +191,18 @@ export default defineConfig(
 					selector: "TemplateLiteral > CallExpression[callee.name='resolve']",
 					message:
 						'Append a query with withQuery() from $lib/utils/with-query, not a template literal over resolve().'
+				},
+				{
+					selector:
+						"CallExpression[callee.name='goto'] > ObjectExpression > Property[key.name=/^(replaceState|invalidateAll)$/]",
+					message: 'Deprecated in kit 3. goto takes replace and refreshAll.'
+				},
+				{
+					// Kit names a remote form's fields `<key>/<form id>`, so reading a
+					// form element's FormData by bare key gets null (#2571).
+					selector: "NewExpression[callee.name='FormData'][arguments.length>0]",
+					message:
+						'Read a remote form field with formValue() from ui/Form/form-value, not FormData.get() by bare key.'
 				}
 			]
 		}
@@ -129,11 +211,7 @@ export default defineConfig(
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				// `.storybook/` sits outside SvelteKit's generated tsconfig `include`, so
-				// its components have no project and the type-aware parser refuses them.
-				// They are Storybook wiring, not app code, and typed-linting them buys
-				// nothing.
-				projectService: { allowDefaultProject: ['.storybook/*.svelte'] },
+				projectService: true,
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
 				svelteConfig
@@ -160,6 +238,11 @@ export default defineConfig(
 		rules: { '@typescript-eslint/no-explicit-any': 'off' }
 	},
 	{
+		// Tests locate by structure and assert state, not UI copy (#2189).
+		files: ['**/*.spec.ts', 'e2e/**/*.ts'],
+		rules: { 'custom/no-wording-locators': 'error' }
+	},
+	{
 		// The Form boundary applies to every theme, so this one keeps its full reach.
 		files: ['**/+page.svelte'],
 		rules: { 'custom/no-raw-form-elements': 'warn' }
@@ -184,8 +267,41 @@ export default defineConfig(
 			'custom/no-inline-alert-action': 'error',
 			'custom/page-header-width-matches-content': 'error',
 			'custom/no-concurrent-remote-queries': 'error',
-			'custom/definite-action-labels': 'error'
+			'custom/definite-action-labels': 'error',
+			'custom/no-svelte-element': 'error',
+			'custom/no-asserted-route-param': 'error',
+			'custom/no-interactive-await': 'error',
+			'custom/require-await-catch': 'error'
 		}
+	},
+	{
+		// Interface copy is read from messages/en/<area>.json (#2099). Test
+		// harnesses and fixtures are not interface. `allow` is CSS shown as an example.
+		files: ['src/**/*.svelte'],
+		ignores: ['**/*.test.svelte', '**/*Harness.svelte'],
+		rules: {
+			'custom/no-literal-ui-text': ['error', { allow: ['h1 { /* your styles here */ }'] }]
+		}
+	},
+	{
+		// A message key ends with its role (#2513); scripts/message-copy.spec.ts
+		// checks each string against the rubric for that role.
+		files: ['src/**/*.svelte', 'src/**/*.ts'],
+		ignores: ['src/lib/paraglide/**', '**/*.spec.ts'],
+		rules: { 'custom/message-key-role': 'error' }
+	},
+	{
+		// Kit 3 rejects a hand-written name in a remote form (#2196). Test
+		// harnesses mount a control without a real form around it.
+		files: ['src/**/*.svelte'],
+		ignores: ['**/*.test.svelte'],
+		rules: { 'custom/no-manual-field-name': 'error' }
+	},
+	{
+		// FileUpload is the one place the native picker lives.
+		files: ['**/*.svelte'],
+		ignores: ['src/lib/components/ui/Form/FileUpload.svelte'],
+		rules: { 'custom/no-raw-file-input': 'error' }
 	},
 	{
 		files: ['src/lib/remote/**/*.remote.ts'],
@@ -196,6 +312,13 @@ export default defineConfig(
 		rules: { 'custom/no-tracked-command-in-effect': 'error' }
 	},
 	{
+		// Workers run in UTC, so a server-built email or file is the same mistake as a
+		// template (#2509, #2537).
+		files: ['**/*.svelte', 'src/**/*.ts'],
+		ignores: ['**/*.spec.ts'],
+		rules: { 'custom/club-time-dates': 'error' }
+	},
+	{
 		// `_remote.ts` is the wrapper, so it is the one file that may import the
 		// originals. Its spec mocks the module rather than importing from it.
 		files: ['src/lib/remote/**/*.ts'],
@@ -203,20 +326,66 @@ export default defineConfig(
 		rules: { 'custom/no-unwrapped-remote-mutation': 'error' }
 	},
 	{
+		files: ['src/lib/remote/*.remote.ts'],
+		rules: { 'custom/audit-declared': 'error' }
+	},
+	{
+		files: ['src/lib/remote/**/*.ts'],
+		ignores: ['**/*.spec.ts'],
+		rules: { 'custom/booking-terms-by-booker': 'error' }
+	},
+	{
+		// Driver text is matched only in the helper; specs build errors with it.
+		files: ['src/**/*.ts'],
+		ignores: ['**/*.spec.ts', 'src/lib/server/db/constraint-errors.ts'],
+		rules: { 'custom/no-driver-message-match': 'error' }
+	},
+	{
 		files: ['src/lib/server/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
-		rules: { 'custom/no-db-transaction': 'error', 'custom/stable-created-at-order': 'error' }
+		rules: {
+			'custom/no-db-transaction': 'error',
+			'custom/stable-created-at-order': 'error',
+			'custom/no-check-then-insert': 'error',
+			'custom/no-unqualified-correlation': 'error'
+		}
 	},
 	{
 		// components/ui/ is the design system — primitives only, no domain knowledge.
-		// Stories and specs are allowed to reach for fixtures the primitive itself cannot.
+		// Specs are allowed to reach for fixtures the primitive itself cannot.
 		files: ['src/lib/components/ui/**/*.{ts,svelte}'],
-		ignores: ['**/*.spec.ts', '**/*.stories.svelte'],
+		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	},
 	{
+		// Kit 3 removes `#lib` and requires an extension on every `#lib` import (#2199).
+		// The block below repeats these patterns, because its own options replace them.
+		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts'],
+		rules: { 'no-restricted-imports': ['error', { patterns: IMPORT_PATTERNS }] }
+	},
+	{
+		// A spec on Playwright's own `test` records nothing of what the browser
+		// reported, so its flake leaves no error behind (#2433).
+		files: ['e2e/**/*.e2e.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: IMPORT_PATTERNS,
+					paths: [
+						{
+							name: '@playwright/test',
+							importNames: ['test'],
+							message: "Import test from './fixtures/test'."
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// "Holds any position" and "has this role name" are not guards: a guard
-		// names a capability, and the matrix in `$lib/config` says who holds it.
+		// names a capability, and the matrix in `#lib/config.js` says who holds it.
 		// These helpers are deleted; this stops one coming back under its old name.
 		files: ['src/**/*.{ts,svelte}'],
 		ignores: ['**/*.spec.ts'],
@@ -224,12 +393,29 @@ export default defineConfig(
 			'no-restricted-imports': [
 				'error',
 				{
+					patterns: IMPORT_PATTERNS,
+					paths: [GUARD_HELPERS]
+				}
+			]
+		}
+	},
+	{
+		// A component that reads the matrix works out access the guards may not
+		// grant, and misses committee seats and shift roles (#3023). What a person
+		// may do comes from the server's `explainAccess`.
+		files: ['src/**/*.svelte'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: IMPORT_PATTERNS,
 					paths: [
+						GUARD_HELPERS,
 						{
-							name: '$lib/server/authorization',
-							importNames: ['requireStaff', 'isStaff', 'hasRole', 'hasAnyRole'],
+							name: '#lib/config.js',
+							importNames: ['positions', 'grantsCapability', 'positionsGranting'],
 							message:
-								'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/specs/shipped/admin-vs-staff-spec.md.'
+								"Read a person's access from the server (explainAccess in #lib/server/access/why-can-act.ts), not the capability matrix."
 						}
 					]
 				}
@@ -255,10 +441,10 @@ export default defineConfig(
 				{
 					patterns: [
 						{
-							group: ['better-auth', 'better-auth/*', '$lib/server', '$lib/server/*'],
+							group: ['better-auth', 'better-auth/*', '#lib/server', '#lib/server/*'],
 							allowTypeImports: true,
 							message:
-								'config.ts is client-bundled. Build server-only things (the access controller, db access) in $lib/server instead.'
+								'config.ts is client-bundled. Build server-only things (the access controller, db access) in #lib/server instead.'
 						}
 					]
 				}

@@ -27,11 +27,15 @@ export const SEED_AUDIO_RELEASE_SLUG = 'e2e-published-record';
 export const SEED_AUDIO_TRACK_ID = 'e2e-track-published-1';
 export const SEED_AUDIO_TRACK_TITLE = 'E2E Opening Track';
 export const SEED_AUDIO_TRACK_SECONDS = 32;
+/** Two, so a count that falls back to one cannot pass for the right one. */
+export const SEED_AUDIO_RELEASE_TRACK_COUNT = 2;
+const SEED_AUDIO_SECOND_TRACK_ID = 'e2e-track-published-2';
 
-/** Owned by the publish test. */
+/** Owned by the publish test. Its one track is the count the panel test checks. */
 export const SEED_AUDIO_DRAFT_ID = 'e2e-release-draft';
 export const SEED_AUDIO_DRAFT_TITLE = 'E2E Draft Record';
 export const SEED_AUDIO_DRAFT_TRACK_ID = 'e2e-track-draft-1';
+export const SEED_AUDIO_DRAFT_TRACK_COUNT = 1;
 
 /** Owned by the delete test. */
 export const SEED_AUDIO_DELETABLE_ID = 'e2e-release-deletable';
@@ -99,12 +103,30 @@ export async function seedBandAudio(): Promise<void> {
 		]);
 
 		const tracks = [
-			{ id: SEED_AUDIO_TRACK_ID, releaseId: SEED_AUDIO_RELEASE_ID, title: SEED_AUDIO_TRACK_TITLE },
-			{ id: SEED_AUDIO_DRAFT_TRACK_ID, releaseId: SEED_AUDIO_DRAFT_ID, title: 'E2E Draft Track' },
+			{
+				id: SEED_AUDIO_TRACK_ID,
+				releaseId: SEED_AUDIO_RELEASE_ID,
+				title: SEED_AUDIO_TRACK_TITLE,
+				trackNumber: 1
+			},
+			{
+				id: SEED_AUDIO_DRAFT_TRACK_ID,
+				releaseId: SEED_AUDIO_DRAFT_ID,
+				title: 'E2E Draft Track',
+				trackNumber: 1
+			},
 			{
 				id: SEED_AUDIO_DELETABLE_TRACK_ID,
 				releaseId: SEED_AUDIO_DELETABLE_ID,
-				title: 'E2E Deletable Track'
+				title: 'E2E Deletable Track',
+				trackNumber: 1
+			},
+			// Last, so the synthesized bytes of the tracks above keep their index.
+			{
+				id: SEED_AUDIO_SECOND_TRACK_ID,
+				releaseId: SEED_AUDIO_RELEASE_ID,
+				title: 'E2E Second Track',
+				trackNumber: 2
 			}
 		];
 
@@ -118,7 +140,7 @@ export async function seedBandAudio(): Promise<void> {
 				id: track.id,
 				releaseId: track.releaseId,
 				title: track.title,
-				trackNumber: 1,
+				trackNumber: track.trackNumber,
 				durationMs: SEED_AUDIO_TRACK_SECONDS * 1000,
 				objectKey: key,
 				contentType: 'audio/wav',

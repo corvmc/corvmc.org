@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
-import { processDueCampaigns } from '$lib/server/marketing/campaign-service';
+import * as env from '$app/env/private';
+import { processDueCampaigns } from '#lib/server/marketing/campaign-service.js';
 
 /**
  * Cron endpoint for sending scheduled campaigns.
@@ -22,5 +22,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const processed = await processDueCampaigns();
-	return json({ processed });
+	return Response.json({ processed });
 };

@@ -1,14 +1,14 @@
-// Shared fixtures for isolated component tests and stories.
+// Shared fixtures for isolated component tests.
 //
 // These return plain objects matching the shapes that remote queries hand to
-// components — they let a `.svelte.spec.ts` or `.stories.svelte` render a
+// components — they let a `.svelte.spec.ts` render a
 // coupled component with no DB, auth, or server involved. Each factory takes an
 // `overrides` partial so a test can pin only the fields it asserts on.
 
-import type { EntityType } from '$lib/config';
-import type { EntityRef } from '$lib/types/entity';
+import type { EntityType } from '#lib/config.js';
+import type { EntityRef } from '#lib/types/entity.js';
 
-/** Matches the shape returned by `getMe` in `$lib/remote/layout.remote`. */
+/** Matches the shape returned by `getMe` in `#lib/remote/layout.remote.js`. */
 export function fakeUser(overrides: Partial<FakeUser> = {}): FakeUser {
 	return {
 		id: 'user-1',
@@ -48,7 +48,7 @@ export type FakeBand = {
 
 /**
  * A display reference for any entity type, with a plausible title per type so
- * a gallery story reads as real content rather than "member / band / event".
+ * a rendered card reads as real content rather than "member / band / event".
  *
  * `overrides` is loosely typed because `EntityRef` is a discriminated union —
  * the caller already picked the arm by passing `type`, and narrowing the
@@ -81,5 +81,14 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	help: { title: 'How to book the practice space', subtitle: 'Getting started', slug: 'booking' },
 	classified: { title: 'Drummer wanted for a surf trio', subtitle: 'Wanted · Musicians' },
 	incident: { title: 'Cable run across the side-stage steps', subtitle: 'Safety hazard' },
-	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' }
+	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' },
+	local_resource: { title: 'Corvallis Guitar Repair', subtitle: 'Repair shops' },
+	hour_log: { title: 'Door', subtitle: '2 hours · Mar 14' },
+	work_request: { title: 'Bass amp crackles', subtitle: 'Ampeg BA-112' },
+	group_application: { title: 'Real Book Club', subtitle: 'Club', groupId: 'club-1' },
+	market_vendor: { title: 'Riverside Records', subtitle: 'Used vinyl', eventId: 'event-1' },
+	volunteer: { title: 'Sam Rivera', subtitle: 'Door' },
+	organization: { title: 'Mid-Valley Media', subtitle: 'Press' },
+	contact: { title: 'Sam Okafor', subtitle: 'Mid-Valley Media' },
+	setting: { title: 'Reservation settings' }
 };

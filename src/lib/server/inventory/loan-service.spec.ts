@@ -28,7 +28,7 @@ let updateSetCalls: { table: unknown; values: Record<string, unknown> }[] = [];
 /** Every `db.batch([...])` in call order, so a test can prove what landed together. */
 let batchCalls: { kind: string }[][] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -58,13 +58,13 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: vi.fn().mockResolvedValue(undefined)
 	}
 }));
 
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getBalance: vi.fn().mockResolvedValue(0),
 	deductCredits: vi.fn().mockResolvedValue(undefined),
 	addCredits: vi.fn().mockResolvedValue(0),
@@ -76,15 +76,15 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 	}
 }));
 
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	recordCashPayment: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	getSubscription: vi.fn().mockResolvedValue(null),
 	isSustainingMember: vi.fn().mockResolvedValue(false)
 }));
@@ -96,7 +96,13 @@ vi.mock('./stock-service', () => ({
 }));
 
 vi.mock('./asset-service', () => ({
-	setAssetStatus: vi.fn().mockResolvedValue(undefined)
+	setAssetStatus: vi.fn().mockResolvedValue(undefined),
+	settleTerminalUnit: vi.fn().mockResolvedValue(null)
+}));
+
+const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('#lib/server/audit/audit-service.js', () => ({
+	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
 
 vi.mock('./work-request-service', () => ({
@@ -123,10 +129,10 @@ import {
 	deductCredits,
 	addCredits,
 	InsufficientCreditsError
-} from '$lib/server/finance/credit-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { setAssetStatus } from './asset-service';
+} from '#lib/server/finance/credit-service.js';
+import { recordCashPayment } from '#lib/server/finance/payment-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
 
 // ---------------------------------------------------------------------------
@@ -303,6 +309,59 @@ describe('LoanService lifecycle', () => {
 			await expect(checkoutLoan('loan-1', { dueDate: new Date() })).rejects.toThrow(
 				InvalidLoanTransitionError
 			);
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		// Warn, record, allow (#2234): scheduling is an ordering step, so a reason
+		// lets a requested loan go out, and the reason is what the audit log keeps.
+		it('checks out a requested loan over a reason and records the override', async () => {
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'requested', itemId: 'eq-1', userId: 'user-1', quantity: 1 }],
+				[{ name: 'SM58', kind: 'bulk', pricingTier: 'major' }],
+				[{ name: 'Ada' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out' }];
+
+			const result = await checkoutLoan('loan-1', {
+				dueDate: new Date('2025-07-22'),
+				reason: 'Member at the counter'
+			});
+
+			expect(result.status).toBe('checked_out');
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'equipment_loan.checked_out_unscheduled',
+				subject: { type: 'user', id: 'user-1', label: 'Ada' },
+				details: {
+					loanId: 'loan-1',
+					equipmentName: 'SM58',
+					warnings: [expect.any(String)],
+					reason: 'Member at the counter'
+				}
+			});
+		});
+
+		it('still checks stock for a requested loan, since nothing reserved it', async () => {
+			vi.mocked(getAvailableQuantity).mockResolvedValueOnce(0);
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'requested', itemId: 'eq-1', userId: 'user-1', quantity: 1 }]
+			];
+
+			await expect(
+				checkoutLoan('loan-1', { dueDate: new Date(), reason: 'Member at the counter' })
+			).rejects.toThrow(InsufficientQuantityError);
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		it('records nothing for a scheduled checkout', async () => {
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'scheduled', itemId: 'eq-1', userId: 'user-1' }],
+				[{ name: 'SM58', kind: 'bulk', pricingTier: 'major' }],
+				[{ name: 'Ada' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out' }];
+
+			await checkoutLoan('loan-1', { dueDate: new Date(), reason: 'unneeded' });
+			expect(recordAuditEntry).not.toHaveBeenCalled();
 		});
 	});
 
@@ -502,6 +561,7 @@ describe('LoanService lifecycle', () => {
 			await returnLoan('loan-1');
 
 			expect(setAssetStatus).not.toHaveBeenCalled();
+			expect(settleTerminalUnit).toHaveBeenCalledWith('as-1', null);
 		});
 
 		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {

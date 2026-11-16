@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { createEventSchema, eventKinds } from '$lib/server/db/schema/event';
-import { eventKindLabels } from '$lib/config';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
+import { createEventSchema, eventKinds } from '#lib/server/db/schema/event.js';
+import { eventKindLabels } from '#lib/config.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
 
 // #1822's rule: the create form holds what the row needs, and nothing else
 // reaches the insert — tickets, the room and repeating are set on the event page.

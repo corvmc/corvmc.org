@@ -31,7 +31,7 @@ The `prepare` script runs automatically and does three things: `svelte-kit sync`
 cp .env.example .env
 ```
 
-`.env` is read by the Vite dev server (for `$env/dynamic/private`) and by Node scripts
+`.env` is read by the Vite dev server (for `$app/env/private`) and by Node scripts
 (drizzle-kit, seeds). What each variable needs locally:
 
 | Variable                                             | Local value                                                                                                                                                    |
@@ -62,11 +62,11 @@ with tickets and RSVPs, credits, equipment, marketing data, and help articles.
 
 <a id="demo-logins"></a>
 
-**Login:** the seed creates 31 accounts with a password, all of them `password`. It prints
+**Login:** the seed creates 32 accounts with a password, all of them `password`. It prints
 the full list — with the deep links each one owns — when it finishes, and that print is the
 source of truth. `admin@corvallismusic.org` is the superuser: admin + staff + member at once.
 
-The other 30 are personas, and they come in three kinds. Reaching for the wrong kind is the
+The other 31 are personas, and they come in three kinds. Reaching for the wrong kind is the
 usual way a screen ends up looking broken when it is only unpopulated.
 
 **State fixtures** exist because a state is mutually exclusive per account. Volunteering is
@@ -74,14 +74,16 @@ gated on onboarding stage, so `none` / `blocked` / `active` need three accounts 
 be one; `/member/membership` renders differently for an active, a cancelling, a
 fee-covering and a lapsed subscriber. Each carries that one state and little else:
 
-| set                 | logins                                              |
-| ------------------- | --------------------------------------------------- |
-| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`    |
-| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@` |
-| Directory matching  | `seeker@` `bandleader@` `undecided@`                |
-| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`       |
-| Tech riders         | `rideradmin@` `ridermember@`                        |
-| Solo act            | `soloact@`                                          |
+| set                 | logins                                                    |
+| ------------------- | --------------------------------------------------------- |
+| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`          |
+| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@`       |
+| Directory matching  | `seeker@` `bandleader@` `undecided@`                      |
+| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`             |
+| Market committee    | `marketlead@` — decides and seats the Fall Makers Market  |
+| Vendor host         | `vendorhost@` — hosts the Fall Makers Market from a shift |
+| Tech riders         | `rideradmin@` `ridermember@`                              |
+| Solo act            | `soloact@`                                                |
 
 **Usage personas** (`scripts/seed/usage-personas.ts`) are the opposite shape: a goal, and
 whatever a person pursuing it would have accumulated. They exist because ordinary use is
@@ -93,15 +95,20 @@ not a state — it is a spread across features — so no state fixture could rea
 | `frontperson@` | owns the premium band Saltmarsh Radio — releases, payouts, gigs, no staff role |
 | `bandmate@`    | plays in it without owning it, so an owner-only gate has something that fails  |
 | `restricted@`  | messaging restricted by an upheld report                                       |
-| `treasurer@`   | treasurer — reaches `/staff/payments` and not `/staff/settings`                |
+| `treasurer@`   | treasurer — reaches `/staff/money/payments` and not `/staff/system`            |
 | `techcoord@`   | technology coordinator — settings and locks, not the flag queue                |
 | `moderator@`   | site moderator — flags and standing, not the money                             |
 | `shiftlead@`   | volunteer coordinator — the hour queue, not the role picker                    |
+| `outreach@`    | outreach coordinator — campaigns and audiences, not the event list             |
+| `editor@`      | content editor — local resources and help articles, nothing else               |
+| `teachers@`    | teacher reviewer — the teacher queue, not the member list                      |
+| `auditor@`     | auditor — the audit log, read only                                             |
+| `opschair@`    | Operations chair — committee oversight, nothing else                           |
 
-The last four are the only way to see the capability matrix narrow anything. `staff` holds
+The last nine are the only way to see the capability matrix narrow anything. `staff` holds
 almost everything, so a handler guarded by capability behaves identically for `admin` and
 for a position until you sign in as the position — which is also why none of them holds
-`staff` as well.
+`staff` as well. Each holds its job as a seat in the Operations committee, as production does.
 
 **Usage-style personas** (`scripts/seed/style-personas.ts`) are a third axis: not what
 somebody wants, but _how_ they use the thing. They cut across every page rather than
@@ -126,7 +133,7 @@ the `workflow-evaluation` skill. It pairs a workflow from
 **What a seed cannot carry.** Device, viewport, input method, assistive technology and
 reading pace are runtime properties, so there is no persona for them and adding one would
 be a lie. Those belong to Playwright (`page.setViewportSize`, as `staff-users.e2e.ts` does
-at 375px) and to Storybook. What the seed holds is the _residue_ a style leaves in the
+at 375px) and to the `client` browser specs. What the seed holds is the _residue_ a style leaves in the
 database, which is what the four above are.
 
 Every other seeded user has no credential account — they are the lived-in background. To
@@ -157,13 +164,12 @@ context where the proxy couldn't initialize.
 
 Feature-flagged areas (inbox, marketing, equipment, band premium/reservations/events, help
 center) are **off by default** — the flags are KV site-config keys with `false` defaults.
-Turn them on at `/staff/settings` as the admin user, or leave them off; see
+Turn them on at `/staff/system/features` as the admin user, or leave them off; see
 [feature flags in the overview](../architecture/overview.md#configuration-three-tiers).
 
 Other useful processes:
 
 ```bash
-pnpm storybook    # component workshop on :6006
 pnpm check:watch  # svelte-check in watch mode
 pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at REMOTE D1; be careful)
 ```
@@ -173,7 +179,7 @@ pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at RE
 | Command                | What runs                                                                                                                                                                                  |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**` + `e2e/**` helpers) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`)   |
-| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                                                    |
+| `pnpm test:components` | One-shot `client` browser specs                                                                                                                                                            |
 | `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173 (a worktree gets its own port), migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`, then clears the database again |
 | `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                                            |
 
@@ -214,7 +220,22 @@ Only needed when working on payment flows:
 Without this, booking still works — the checkout redirect will just fail at the Stripe
 step, and confirm-without-payment flows are fully testable.
 
-## 7. Troubleshooting
+## 7. Email locally
+
+Local runs send no email. `MAIL_DRIVER` defaults to `log`: every message goes through the
+outbox as in production, and the dev server's console prints its template, model and
+recipient instead of calling Postmark. Leave `POSTMARK_SERVER_TOKEN` blank; no token is
+needed, and a real one in `.env` is never used.
+
+To check a template's rendering against Postmark, set `MAIL_DRIVER=postmark` with a token
+for a Postmark sandbox server. Never use the production server's token locally: it
+delivers to whatever addresses the local database holds.
+
+Every send is a row in `outbox_message` (pending, sent or failed, with the last error). The
+`/api/cron/send-outbox` job retries failed rows; see
+[the outbox](../architecture/outbox.md).
+
+## 8. Troubleshooting
 
 | Symptom                                                    | Fix                                                                                                                                               |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -226,7 +247,7 @@ step, and confirm-without-payment flows are fully testable.
 | Commit mangled / files reformatted on commit               | That's lefthook's prettier `--write` pre-commit hook doing its job                                                                                |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |
 | Port 5173 busy                                             | Another dev server is in the _same_ checkout (worktrees get their own port). Stop it, or `PORT=5174 pnpm dev` (update `ORIGIN` to match)          |
-| Storybook stories fail in vitest                           | The `storybook` vitest project needs the Chromium install: `pnpm exec playwright install chromium`                                                |
+| Browser specs fail in vitest                               | The `client` vitest project needs the Chromium install : `pnpm exec playwright install chromium`                                                  |
 
 ## Where to next
 

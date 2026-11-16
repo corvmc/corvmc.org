@@ -1,5 +1,5 @@
-import { hasEventEnded } from '$lib/utils/event-time';
-import type { EventStatus } from '$lib/server/db/schema/event';
+import { hasEventEnded } from '#lib/utils/event-time.js';
+import type { EventStatus } from '#lib/server/db/schema/event.js';
 
 /** Why an event takes no RSVP, or null when it does. */
 export type RsvpClosedReason = 'unpublished' | 'cancelled' | 'past' | 'ticketed';

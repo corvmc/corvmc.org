@@ -1,5 +1,5 @@
-import { config } from '$lib/server/site-config/site-config-service';
-import { valueOfMinutesCents } from '$lib/config';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { valueOfMinutesCents } from '#lib/config.js';
 
 /**
  * What donated time was worth — **two numbers that are never added together**.

@@ -36,7 +36,7 @@ function chain(queue: () => unknown[]): unknown {
 
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn((table: unknown) => ({
@@ -60,7 +60,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { riderElement, riderInput } = await import('$lib/server/db/schema/rider');
+const { riderElement, riderInput } = await import('#lib/server/db/schema/rider.js');
 const {
 	getEventRiderSummaries,
 	numberChannels,
@@ -73,7 +73,7 @@ const {
 	RiderTooLargeError,
 	RiderNotPlaceableError
 } = await import('./rider-service');
-const { RIDER_MAX_ELEMENTS, RIDER_MAX_INPUTS_PER_ELEMENT } = await import('$lib/config');
+const { RIDER_MAX_ELEMENTS, RIDER_MAX_INPUTS_PER_ELEMENT } = await import('#lib/config.js');
 
 type Element = Parameters<typeof numberChannels>[0][number];
 

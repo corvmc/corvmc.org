@@ -2,7 +2,7 @@
 
 When building or modifying pages in this app, use the shared components and patterns described here. Every page should compose from these building blocks so the UI stays consistent.
 
-> Testing these components in isolation (stories vs. specs, mocking the server)? See [component-testing.md](./component-testing.md).
+> Testing these components in isolation (specs, mocking the server)? See [component-testing.md](./component-testing.md).
 
 > Reducing the raw utility classes still left in page templates? See
 > [template-audit.md](./template-audit.md) for the census, the findings, and the migration phases.
@@ -31,7 +31,7 @@ normal sizes back.
 Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.
 
 ```svelte
-import PageContent from '$lib/components/ui/PageContent.svelte';
+import PageContent from '#lib/components/ui/PageContent.svelte';
 ```
 
 Props:
@@ -90,6 +90,101 @@ The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 
+## Page shapes
+
+Every page is one of twelve shapes. Name the shape before building the page: it decides what the
+page opens with and how it folds on a phone. Eight shapes are in the signed-in app:
+
+| Shape         | What it is                                                   | Example                                   |
+| ------------- | ------------------------------------------------------------ | ----------------------------------------- |
+| A · List      | Filters, a true count, column tiers, a pager                 | `staff/reservations`                      |
+| B · Detail    | Header, meta row, fact grid, related sections                | `staff/events/[id]`                       |
+| C · Desk      | Sections by job, state answered first                        | `/staff`, `staff/instructors`             |
+| D · Console   | One record across many sections; reading never needs editing | `staff/events/[id]/production`            |
+| E · Card list | Only where a clause earns it                                 | `staff/events/[id]/check-in`              |
+| F · Dashboard | `StatCard`s; exempt from the list rule, not from hierarchy   | `staff/reports/volunteering`              |
+| G · Form      | One question at a time, and what submit will do              | `member/volunteer/start`                  |
+| H · Thread    | A list of conversations, and one conversation                | `member/messages`, `member/messages/[id]` |
+
+Four are on the public site:
+
+| Shape             | What it is                                | Example                |
+| ----------------- | ----------------------------------------- | ---------------------- |
+| J · Browse        | Art-directed; exempt from the panel rules | `(public)/events`      |
+| K · Public record | Art above, the detail grammar below       | `(public)/events/[id]` |
+| L · Marketing     | No records behind it                      | `(public)/programs`    |
+| N · Transact      | Money or identity, one way through        | `checkout/[id]`        |
+
+Calling a staff page a list, desk or console is a judgement from its structure, and a few pages
+could go either way. The rules for each shape are in its own section: lists in "Lists and tables",
+desks in "Section dashboards" and "The dashboard review feed", card lists in "A table, unless the
+row earns a card", detail pages in "The detail tier".
+
+### The staff panel: one list, one detail, its actions
+
+**Each object type has one list, one detail page and its action pages** (#2762). The dashboard is
+the queue of work, and each item on it links to the page where the work is done.
+
+- **One list per type.** A view that narrows a type (status, role, kind) is a filter on its list,
+  kept in the URL. A second page listing the same type folds in, and its URL redirects.
+- **One detail page per record**, whatever roles the record plays.
+- **Rows sit in four systems:** Relationships, Community, Programs and Operations, with Dashboard
+  and Inbox above and Reports and System below. Rows and sections are data, one
+  file per section in `src/routes/staff/nav-items/`; a new module joins one of the four by adding
+  its row and key to that section's file.
+- **A module's settings live on its row**, behind a Settings button in its header, or a view such
+  as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
+  spans modules: organization, features, access and the audit log.
+- **A moved page keeps its old URL as a redirect**, with a spec that names it.
+
+### Consoles
+
+**A console opens with what is done and what is not.** It is a staff page that edits one record
+across many sections: `staff/events/[id]/production` and the settings pages (System, a module's Settings) are the examples. Built as a
+long detail page, a console hides facts behind its forms; #1068 was the show time, visible only in
+edit mode.
+
+1. **Reading never requires editing.** Every fact a section owns is legible without opening its
+   form. The production console states the date, doors, show time and room in a read-only line
+   above its tabs, and leaves changing them to the listing.
+2. **A section states its own state** — done, empty or blocked — in its heading, so the page can
+   be scanned. Pass it to `InfoCard`'s `state` prop. A console split into tabs puts the same
+   state on each tab with `TabBar`'s `badge`, since a closed tab's headings are not on screen;
+   each console derives both from one `section-state.ts`, so a tab says what its headings say.
+3. **Order by the work, not the schema.** An empty section that is not due yet sits below one that
+   is.
+4. **The rows inside obey the list rule.** A lineup, a shift board or a ticket table is a list.
+
+A desk and a console are different shapes. A desk's sections are queues of other people's records,
+sorted by what is waiting. A console's sections are parts of one record, sorted by the order the
+work is done in.
+
+### How each shape folds at 390px
+
+- **A list** sheds columns by tier, merging before hiding. Its action goes full width.
+- **A detail page** only restacks. Artwork is the one element that may scale.
+- **A desk** stacks its sections in urgency order. It may merge quiet sections into one counted
+  line, but never one that hides a deadline.
+- **A console** sorts unset sections above set ones.
+- **A card list** barely changes. That is the sign the card was earned.
+- **A dashboard**, and a public record's fact band, go two-up, not one-up, so figures stay
+  comparable: every `StatCard` group sits in `StatGrid`, which is two-up at phone width.
+- **A form** drops its running summary, keeps its progress bar, and moves submit to the bottom.
+- **A marketing page's** order becomes a recommendation when stacked, so set the stacked order on
+  purpose rather than inheriting the grid's reading order.
+- **A transaction** keeps its total visible, in a sticky footer or on the button. `checkout/[id]`
+  puts it on the button (`Pay $20.00`).
+- **A thread's** two panes become two screens.
+
+### Open questions
+
+- The three-fact budget for a folded card is unmeasured at 390px.
+- Relative time ("in 2 days") suits a queue worked today, not an archival list.
+- A browse grid that is mostly generated plates, in a week with little artwork, may read worse than
+  small cards.
+- A true count needs a `count(*)` that some list services do not run. Where it is expensive, the
+  fallback is "8 of many".
+
 ## Remote functions (data.remote.ts)
 
 Pages that have forms or dynamic queries use a colocated `data.remote.ts` file with SvelteKit's `query()` and `form()` from `$app/server`. This replaces `+page.server.ts` load/actions for pages that use the `Form` component.
@@ -123,7 +218,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 
 > **Rule:** All forms in route files (`+page.svelte`) must use `Form`, `FormField`, and `SubmitButton`. Never use raw `<form>`, `<input>`, `<select>`, or manual submit handlers directly in page files — even for small inline forms.
 
-`Form` wraps a remote form with dirty tracking, status management, and toast notifications. It replaces `use:enhance`. Unsaved-changes protection is opt-in via the `guard` prop — add it to edit/settings forms where losing changes would be frustrating, but leave it off for login, modal, and quick-action forms.
+`Form` wraps a remote form with dirty tracking, status management, and toast notifications. It replaces `use:enhance`. Unsaved-changes protection is on by default: leaving a dirty form asks first. Pass `guard={false}` only where leaving mid-entry loses nothing worth asking about (sign-in, password reset). An editor not built on `Form` renders `<FormGuard dirty={() => …} />` itself.
 
 ```svelte
 <Form
@@ -143,7 +238,7 @@ When rendering multiple forms from the same remote form function, use `.for(key)
 Props:
 
 - `remote` — a remote form from `data.remote.ts`
-- `guard` — enables unsaved-changes protection (blocks navigation when form is dirty)
+- `guard` — unsaved-changes protection, default `true` (blocks navigation when the form is dirty)
 - `successToast` — toast message shown after a successful submit
 - `onsuccess` / `onfailure` — callbacks
 - `flashDuration` — how long the success/error flash sticks before the button
@@ -162,7 +257,9 @@ login page is silently dropped.
 
 ### How dirty tracking works
 
-Dirty tracking is bottom-up. Each `FormField` listens for `input` and `change` events (via event delegation on its wrapper) and notifies the `FormContext`. The Form's status moves from `idle` → `dirty` when any field fires a change. `SubmitButton` is disabled until the form is dirty, and `FormGuard` blocks navigation while there are unsaved changes.
+Dirty tracking is bottom-up. Each `FormField` listens for `input` and `change` events (via event delegation on its wrapper) and notifies the `FormContext`; the `<form>` element listens too, so a raw input or custom editor counts. A control that changes without an input event (a chip added by a button) calls `getFormContext()?.changed()`. The Form's status moves from `idle` → `dirty` when any field fires a change. `SubmitButton` is disabled until the form is dirty, and `FormGuard` blocks navigation while there are unsaved changes.
+
+Fields are disabled while a submit is pending, which drops focus. After the submit, `Form` moves focus to the first `aria-invalid` field on failure, back to where it was on success, or to the `role="alert"`/`role="status"` message when a success replaced the form with one.
 
 This means any input nested inside a `FormField` — whether it's a built-in type or custom markup via the `children` snippet — participates in change tracking automatically. No extra wiring needed.
 
@@ -217,6 +314,32 @@ dollars and submits cents from a hidden sibling registered as a number:
 all rather than zero — an absent price and a price of zero are different claims. Use it
 for every amount; do not hand-roll the dollars/cents pair.
 
+### DateTimeField
+
+A date and a start time in one field: a calendar and a time box in one popover, shown as
+"Fri, Nov 13, 2026 · 7:00 PM". It posts two hidden fields, `YYYY-MM-DD` and `HH:MM`, so a
+schema that already takes a date and a time needs no change. Use it in place of
+`datetime-local`, which Firefox renders differently. Give the caption's id through the
+`input` snippet:
+
+```svelte
+<FormField field={fields.eventDate} label="Date and start time" required>
+	{#snippet input(id)}
+		<DateTimeField
+			{id}
+			date={fields.eventDate}
+			time={fields.eventStartTime}
+			dateValue="2026-11-13"
+			timeValue="19:00"
+			timeLabel="Start time"
+		/>
+	{/snippet}
+</FormField>
+```
+
+`FileUpload` with `orientation="zone"` is one dashed drop zone that is the picker and holds
+the preview, with `hint` for the file limits under the empty label.
+
 **A remote form encodes its field names**, so a component's own `name="foo"` prop does not reach it. Take the attributes from the form instead — `<input {...myForm.fields.foo.as('hidden', value)} />` — or the field arrives as `undefined` and fails Zod with nothing on screen to show for it. This bites hardest with `SearchSelect`, whose `name` prop emits a plain attribute: bind its value and render the hidden input from the remote form yourself.
 
 ### SplitBar
@@ -233,22 +356,21 @@ an ask rather than a rake.
 	onchange={(c) => (override = c)}
 	fixedCents={split.stripeFeeCents}
 	fixedLabel="Card processing"
-	valueLabel="The Collective"
+	valueLabel="The collective"
 	otherLabel={actsLabel}
 />
 ```
 
 `value` + `onchange` rather than `$bindable`, because callers hold it as a `$derived` that
 falls back to a suggestion until the user touches it — and a derived cannot be bound to.
-Domain-free by construction, so the arithmetic lives beside it in `$lib/finance/split.ts`
+Domain-free by construction, so the arithmetic lives beside it in `#lib/finance/split.js`
 and its two adapters (`audio-split.ts`, `ticket-split.ts`), which are client-importable on
 purpose: the same module has to render the preview and produce what the server records.
 
 **Do not pass `otherFloorCents` a price floor.** It is the _other party's_ floor within the
 bar, not the sale's minimum — passing the price consumed the whole amount, clamped the
 movable share's maximum to zero, and the suggested position never appeared. The other
-party's real protection is the total the buyer named. `SplitBar.stories.svelte` covers the
-positions worth looking at, including both ends and a zero total.
+party's real protection is the total the buyer named.
 
 ### Key props
 
@@ -282,6 +404,9 @@ Props:
 - `outline` — boolean; stacks on top of `variant`, so `variant="error" outline` is an outlined
   destructive button. It is not a variant of its own.
 - `href` — renders an `<a>` instead of a `<button>`
+- `type` — `button` by default, so a `Button` never submits a form it happens to sit in (an `Action`
+  inside a page's edit form posted that form on every click, #2651). Pass `type="submit"` to
+  submit; `svelte/button-has-type` holds raw `<button>` elements to the same rule.
 - `title` — tooltip text, merged onto the button itself rather than a wrapper (nesting a button
   inside the tooltip trigger drops the control out of the accessibility tree — pinned by
   `Button.svelte.spec.ts`)
@@ -300,7 +425,7 @@ returns to this page; signed in, it is the ordinary control. A `Form` whose remo
 the same route on its own, as does an `Action` whose callback throws one, so a session that lapsed
 mid-page needs no per-action code.
 
-Build any other sign-in link with `signInHref()` from `$lib/utils/sign-in` rather than by hand: it
+Build any other sign-in link with `signInHref()` from `#lib/utils/sign-in.js` rather than by hand: it
 accepts only a same-origin return path, and `/login` re-validates whatever arrives. The return is
 where the visitor taps again — nothing is replayed and nothing writes on the way back. That covers
 server redirects too: `redirect(302, signInHref({ returnTo: here(url) }))`. #1999.
@@ -323,6 +448,11 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
 it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
 
+Children replace `label` as the idle and pending text: `<SubmitButton>Send</SubmitButton>`. Every
+`Form` component either renders the children it is given or refuses them in its props type;
+`Form/children.svelte.spec.ts` checks each export. A submit that deletes or withdraws something
+goes through an `Action` with `confirm` instead, so it asks first.
+
 For standalone async actions outside a form — and for anything needing a confirmation step or a
 form modal — use `Action`.
 
@@ -333,6 +463,7 @@ A single component that handles four patterns depending on its props: direct asy
 **Labels and modal titles are definite**: a verb and its object ("Log hours", "New suggestion",
 "Ask an act"), never "someone", "something" or "anyone". The form inside says who or what.
 `custom/definite-action-labels` enforces it on literal labels.
+Every title and label is scored against [writing.md](writing.md).
 
 ### Direct action
 
@@ -470,7 +601,7 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 <Alert type="warning">
 	Member not found.
 	{#snippet action()}
-		<a href="/member/directory" class="btn btn-sm">Back to Directory</a>
+		<a href="/member/directory" class="btn btn-sm">Back to directory</a>
 	{/snippet}
 </Alert>
 
@@ -497,7 +628,7 @@ the staff and member panels should be one of them.
 | card   | `EntityCard`                              | one record as a card — a related record, or a row in a card list         |
 | detail | `PageHeader` + a meta row + `RelatedList` | see below — **not** an identity strip                                    |
 
-All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+All of them take a single `ref: EntityRef` (`#lib/types/entity.js`) and nothing about presentation.
 
 **The card tier covers list cards too** (#1035). It was documented as "a
 related record on someone else's detail page" and used on one route, while
@@ -562,15 +693,23 @@ Three things follow:
 - **A detail page is a superset of its row.** Every fact, badge and action the row carried is on
   the page, the detail query reuses the list query's ref and label helpers, and a status that is a
   tinted rail on the row is not a plain sentence here (#1064).
+- **A record's tasks are `RelatedTasks`** (`$lib/components/task/`), given `subject={{ type, id }}`.
+  How each type finds its tasks is `src/lib/server/task/related-tasks.ts`, one resolver per type;
+  a page does not write its own task list (#2630). The card's View all opens `/staff/tasks?about=`.
+- **A record's shifts are `RelatedShifts`** (`$lib/components/volunteer/`), the same subject and
+  relations joined to `volunteer_shift`. Its rows are Volunteering's `ShiftRow` in compact form;
+  View all opens `/staff/volunteering?about=`. A page adds its own controls through `actions`.
+- **On a member page, both cards take `member`** and read `member-related.remote.ts`: the
+  viewer's own tasks, and the board's open shifts with Sign up. Each card is left off when empty.
+  Only the group and event pages use it (decision 0071).
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
 already drifted before they were merged.
 
 `EntityCard` composes it rather than redrawing it, and owns only what is genuinely card-shaped: the
-full-bleed portrait poster, its ring, and the facts/actions structure. Card actions ride the bottom
-edge (`mt-5 h-0`, outside `CardBody`), matching `member/reservations/ReservationCard.svelte`; pass
-`size="xs"`.
+full-bleed portrait poster, its ring, and the facts/actions structure. Its actions are slot 3 of
+"Card grammar", drawn by `CardActions`.
 
 **Scope: the panels only.** The public site and the directory profiles keep their own art-directed
 set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
@@ -699,8 +838,8 @@ navigates must not be announced as a button.
 
 ### Registry
 
-Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) `$lib/config`
-(`entityTypes`) and `$lib/terms` (`entityLabels`, from the message catalog). Components must not branch on `ref.type`; a branch means the
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) `#lib/config.js`
+(`entityTypes`) and `#lib/terms.js` (`entityLabels`, from the message catalog). Components must not branch on `ref.type`; a branch means the
 registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
 stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
 flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.
@@ -713,8 +852,8 @@ flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`
 - **`EntityIdentity` at `sm` renders two sibling roots with no wrapper.** `cell-primary` is
   `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
   Wrapping it silently un-truncates every list in the app; `EntityIdentity.svelte.spec.ts` pins it.
-- **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
-  `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
+- **A card's actions go in `CardActions`** (`$lib/components/ui/Card/`). It draws every button in it
+  full width at 44px whatever `size` the caller passed, so an `xs` button there is still 44px.
 
 ## BookerTypeIcon
 
@@ -752,6 +891,11 @@ Tab navigation supporting both URL-driven (links) and client-state (buttons) mod
 ```
 
 Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags and call `onchange`.
+
+Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
+that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
+`actions` (`/staff/groups/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
+An action that is the same on every tab stays in the header (`/staff/reservations`).
 
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
 `md` — for bars that outrun a phone. `dense` shrinks every tab but the active one to its `icon`,
@@ -807,13 +951,15 @@ section's work is spread across several tables, because then no page holds it: t
 coordinator's version of "what needs me" lives one row in each of five places, and finding
 it means already knowing where to look.
 
-Two sections do it the other way and should be copied rather than re-derived:
+One section does it the other way and should be copied rather than re-derived:
 
 - **`/staff/instructors`** — one query, three cards, and Applications first, with the
   reason in the source: _"the only rows on this page waiting on staff. Everything below is
   either settled or waiting on the member."_
-- **`/staff/volunteer`** — the fuller version, and the one
-  [the volunteering friction log](../reports/volunteer-workflow-findings.md) argues for.
+
+Volunteering had one too, until #2379 folded it into the Schedule: when every card's rows are
+already rows of one table, the cards become that table's filters, each with a count, and the
+cards about people become counts that link to the page holding them.
 
 The rules, so the next one does not have to re-invent them:
 
@@ -841,14 +987,14 @@ click from anywhere and each table is one click from the dashboard.
 `$lib/components/layout/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
 children, held open by the URL), `Nav.Group` (a titled section).
 
-**Every panel's rows are data — add features there, not in the template.** `staff/nav-items.ts`,
-`member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
+**Every panel's rows are data — add features there, not in the template.** `staff/nav-items/`
+(one file per section, assembled by `staff/nav-items.ts`), `member/nav-items.ts`, `band/[slug]/nav-items.ts`. Each layout holds only a `key → Icon` map and, if
 it has badges, a `badgeKey → count` map, which is what makes a renamed field on the layout query a
 type error instead of a badge that quietly stops. Anything conditional — a feature flag, a role —
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
 gating expressed as nested `{#if}`s was silently wrong twice.
 
-The panel switcher's tabs come from `$lib/components/layout/panel-tabs.ts`, not hand-built per
+The panel switcher's tabs come from `#lib/components/layout/panel-tabs.js`, not hand-built per
 layout.
 
 ```svelte
@@ -859,7 +1005,7 @@ layout.
 
 **Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
 a detail page. Pass `active` to override it. The rule lives once, in
-`$lib/components/layout/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+`#lib/components/layout/Nav/active-nav.js`: `activeNavKey(items, pathname)` picks the item with the
 longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
 `activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
 because a bare `startsWith` lets `/staff/members` claim `/staff/membersomething`; and skip any row whose
@@ -952,6 +1098,16 @@ Pass extra classes on the outer card via `class`:
 </InfoCard>
 ```
 
+`state` puts what the section amounts to after the title — a count, "1 of 4 unfilled", "Not
+written" — so a page of sections can be scanned without reading them. A console section always
+passes it (see "Consoles"), and `scripts/console-section-state.spec.ts` holds both consoles to
+that. `action` puts a control beside the title; `header` replaces the whole heading, so it takes
+no `state` and shows its own.
+
+```svelte
+<InfoCard title="Recap" state={text ? 'Published' : 'Not written'}>…</InfoCard>
+```
+
 ## DefinitionList / Fact
 
 The label/value grid on staff detail pages. Replaces the hand-written
@@ -959,8 +1115,8 @@ The label/value grid on staff detail pages. Replaces the hand-written
 that was copy-pasted into nine files.
 
 ```svelte
-import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
-from '$lib/components/ui/DefinitionList/Fact.svelte';
+import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
+from '#lib/components/ui/DefinitionList/Fact.svelte';
 
 <DefinitionList>
 	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
@@ -979,6 +1135,9 @@ from '$lib/components/ui/DefinitionList/Fact.svelte';
 - `mono` — `font-mono text-xs`, for IDs and provider record keys.
 - `wrap` — `whitespace-pre-wrap`, for free-text notes.
 - `class` — extra classes on the `<dd>`.
+
+`DefinitionList` takes `layout="strip"` for a folded card's facts: label above value, one fact per
+column, still bare `<dt>`/`<dd>` children.
 
 **`Fact` renders a bare `<dt>` + `<dd>` with no wrapper, and it must stay that
 way.** The two columns are a CSS grid declared on the `<dl>`, which only aligns
@@ -1013,6 +1172,62 @@ Horizontal bar showing a day's reservations from 9am–10pm. Highlights one "cur
 ```
 
 The `others` array is optional. Each slot's `href` makes it clickable; `label` shows on hover.
+
+## ActivityFeed
+
+Every staff history card — a record's audit entries, and any other per-record log merged with
+them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. Do not hand-build another
+"summary / actor · time" row.
+
+```svelte
+<ActivityFeedCard
+	title="History"
+	query={(limit) => getUserHistory(limit ? { userId: id, limit } : { userId: id })}
+	toRow={feedItemRow}
+	empty={{ title: 'No recorded changes' }}
+/>
+```
+
+- The query returns a `FeedPage` (`#lib/types/activity.js`): newest first, `hasMore` exact. On the
+  server, `listAuditEntriesForSubject` is the one audit read, and `mergeFeed` combines it with
+  another source's rows. The first page is read with no `limit` so a write can refresh it.
+- The card loads behind its own `pending` boundary, beside the page's one load-bearing query.
+- `toRow` maps an item to `{ summary, actor, href, context }`; a `trailing` snippet carries a
+  source's own figure at the row's end. A row from an earlier venue year shows its year.
+
+### The dashboard's own tasks
+
+**Your tasks** heads `/staff` (#2768) and `/member/volunteer`: open tasks assigned to the viewer
+and not marked done by them, plus unassigned tasks tagged for a position they hold or of a
+committee they sit on whose tagged position is vacant (#2990). Both lists filter
+on `waitingOn` in `src/lib/server/task/can-act.ts`, the list form of `canActOnTask` (#2989), so a
+row is always one its remotes accept. Overdue first, then by date. A row opens the record its
+`work_order_link` names when the viewer can open it, else the staff task page, else
+`/member/volunteer/tasks/[id]`. It comes from `getStaffDashboard` like every other section, with
+no section gate, and is hidden when empty. A source that should reach staff as work opens a task, and the
+dashboard alert list for it is retired once it does (low stock, #2756).
+
+### The dashboard review feed
+
+Everything waiting on a staff decision is one `ActivityFeed` on `/staff`, read oldest first from
+the registry in `src/lib/server/review/review-registry.ts` (#2623). A new kind of review is a
+registry entry, not a page section or a nav badge.
+
+- **One query.** The feed, its counts and the filter chips come from `getStaffDashboard`; the
+  Dashboard nav badge is `countReviewFeed`, so the two cannot disagree. Chips appear only for kinds
+  with something waiting, and the filter is `?review=<kind>` in the URL.
+- **A row links to the page where the kind is decided** through `entityHref`.
+- **A row decides in place** when its kind is in `rowDecisions` (`#lib/types/review.js`). Each
+  decision binds, in `src/routes/staff/review-decisions.ts`, to the remote form the kind's own page
+  submits, so the guard and the service are that page's. The binding's type requires an entry for
+  every declared decision. A refusal is named `return` where the record goes back to be edited and
+  resubmitted (tips, volunteer hours) and `decline` where it is final; the row uses the same word
+  as the kind's own page. A form that refuses without a written reason is asked through `Action`
+  with one reason field; the rest submit in one click. After either, the page refreshes its query
+  and `getStaffLayout`, so the row leaves and the badge drops.
+- **A kind stays link-only** when its decision needs a written reply or more than two outcomes:
+  content reports, appeals, vendor and group applications, suggestions to answer, reported
+  problems.
 
 ## EmptyState
 
@@ -1068,11 +1283,24 @@ a paginated `query()` returned.
 ### Roster
 
 A list of _people_ is a `Roster` (`$lib/components/roster/`, #1994): any query whose rows extend
-`RosterPerson` (`toRosterPerson()` in `$lib/server/roster/roster`). It owns search, paging, Clear,
+`RosterPerson` (`toRosterPerson()` in `#lib/server/roster/roster.js`). It owns search, paging, Clear,
 CSV export, "Copy emails" and the row-click side panel; the page owns its query, its filters
 (`rosterState()`, URL-backed) and its columns (`lead`, `detail`, `columns` + `cells`, `actions`,
-`panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members/volunteers`
+`panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members?role=volunteer`
 is the first.
+
+**One list, several rosters.** Members is one list (#2765) whose role and status filters
+(`?role=volunteer`, `?role=teacher`, `?status=invited`) choose a roster with its own columns,
+actions and remote. The page renders the roster the URL names (`members/views.ts`) inside a
+`{#key}`, and each roster's `rosterState()` path carries that fixed query, so its own filters are
+appended to it. The role filter is a `Select` offering only the roles the viewer can read.
+
+A short list inside a card — a band's members, a club's or committee's roster, an event's RSVPs —
+is a `RosterTable` with the same rows and snippets but no toolbar, plus a `CopyEmailsButton` in
+the card's `action`. It takes `rows`, not a promise, and has no search or paging: a list that
+needs either is a `Roster` page. Without `panel`, a row opens the viewer's own page for the person
+(`entityHref`). People with no account behind them (an email invite, a guest ticket) are not
+`RosterPerson`s and stay plain tables.
 
 ### A table, unless the row earns a card
 
@@ -1088,14 +1316,21 @@ judgement call and the three pages it cited as precedents all failed it (#1034).
    _A poster, a sleeve, a face — not an avatar beside a name._
 3. **Three or more always-visible actions**, each needing its own target.
    _Count them. A conditional action counts as zero; a dropdown holds them._
-4. **Operated standing up.** Used one-handed, away from a desk.
+4. **The phone is the primary case.** All three checks must hold:
+   1. Name who uses it and what is in their hands.
+   2. Phone sessions outnumber desktop ones on the route. A page that works on a phone is not
+      enough.
+   3. The task is done in the room — at a door, beside a shelf — not at a desk afterwards.
+
    _56px targets, one row per screen-third, no hover-only affordance._
 
 A card list passing none of the four is a table that lost its columns.
 
-Clause 4 is what actually justifies the event check-in list, which the old rule
-justified by miscounting its actions. Clause 2 is how the art-directed exemption
-above is stated, not a change to it.
+Clause 4 justifies the event check-in list (`staff/events/[id]/check-in`): a volunteer at the
+door, phone in one hand, wristbands in the other. The open shifts on `member/volunteer` are not
+settled. They are browsed on phones, but not in the room with full hands; route analytics decide
+it, by whether phone sessions outnumber desktop ones, and the list stays as cards until then.
+Clause 2 is how the art-directed exemption above is stated, not a change to it.
 
 **A page can be both.** When its rows pass clause 4 only on a phone — the staff
 reservations list is worked at a desk, and checked at the door — render the
@@ -1103,6 +1338,8 @@ table with `wide-only` and a card list with `narrow-only`. Both switch at a
 `44rem` container width, where the reservations table stops being usable, which
 is wider than any `col-*` tier. The card list carries what the
 hidden columns held, payment state included, and no hover-only tooltips (#1837).
+Beside an open record the list is at a desk, so it keeps the table and sheds columns by
+`col-*` tier instead (#2852); only the phone with nothing open gets the cards.
 
 Two rules hold whichever you pick:
 
@@ -1144,11 +1381,14 @@ reads as scrollable (#1965). It is still a fallback: tier or merge columns first
 
 ### FilterBar
 
-Toolbar layout, not filter state — pages keep their own `$state`. Search stays
-visible at every width. Primary filters go in `children` and sit inline; secondary
-ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
-A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
-the `@lg` container breakpoint instead.
+Toolbar layout, not filter state — pages keep their own `$state`. Nothing collapses:
+search, the `children` filters and Clear stay visible at every width, and on a narrow
+container they wrap onto further rows, each control sized to its content (#2614).
+Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge is
+`menuCount`; reach for it when a page's filters would fill more than a couple of rows
+on a phone, not to hide the primary ones.
+`actions` sits at the row's end, for what belongs to the current view rather than
+the page — a tabbed page's per-tab create button (`/staff/groups/*`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -1219,6 +1459,34 @@ nothing, which is the same rule the registry states for subtypes.
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.
 
+### Card grammar
+
+**A card is the table's four slots, folded.** The fold is a container query (`narrow-only` /
+`wide-only`), so a list folds when the sidebar narrows it, not only when the window does. A list
+beside an open record does not fold: it keeps the table with its `col-*` tiers hidden. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app, and
+`ReservationCard.svelte` beside it is its card.
+
+| Slot        | In a card                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 · status  | One mark, exception-only. It rides the media (see "Status rides the media"), or sits beside the title when there is none. Never a second badge. |
+| 1 · primary | Title and subline, unchanged. Still the only slot with two facts.                                                                               |
+| 2 · facts   | A labelled strip, label above value, since no header row names it.                                                                              |
+| 3 · actions | Full width, 44px, with labels, since there is no tooltip to carry them.                                                                         |
+
+Three table rules carry over: merge before you hide; another record gets its own slot as a chip;
+the budget is six facts wide and **three** folded.
+
+The facts strip is `DefinitionList layout="strip"` with `Fact`s: each label above its value, one
+fact per column.
+
+The actions are `CardActions`: equal columns, two to a row until the card is too narrow for two,
+each button full width at 44px. `EntityCard` and `ReservationCardShell` render their `actions`
+inside it. `src/card-actions.spec.ts` checks that no card's actions shrink back to `xs` or `sm`.
+
+**A card's height does not track its content.** A browse grid of records with no artwork draws a
+generated plate in the fixed tile: `PosterCard` (`$lib/components/events/`) sets the title and
+date on a pattern in the same 8.5:11 figure a poster fills, so `(public)/events` stays an even grid.
+
 ### Visibility tiers
 
 Defined in `src/routes/layout.css` as container queries. `PageContent` is an
@@ -1273,7 +1541,7 @@ the weekday earns its space.
 <tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${row.id}`)}>
 ```
 
-`rowLink` (`$lib/actions/row-link`) navigates with `goto`, ignores clicks that
+`rowLink` (`#lib/actions/row-link.js`) navigates with `goto`, ignores clicks that
 land on an interactive element, respects modifier-clicks, and doesn't hijack a
 click that ended a text selection — so cells no longer need their own
 `onclick={(e) => e.stopPropagation()}`.
@@ -1281,19 +1549,51 @@ click that ended a text selection — so cells no longer need their own
 A row that previews its record instead of leaving the list passes a function:
 `use:rowLink={() => openPanel(row)}`, with a `<Modal placement="end">` side panel holding the
 whole entry and a link on to the full record. The primary cell's control is then a `<button>`
-that opens the same panel. The three Members views are the example: each opens
+that opens the same panel. The Members rosters are the example: each opens
 `MemberRecordPanel`, the full member record, on its own default tab.
 
 Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole
 row as one button. The accessible path is the real `<a>` in the primary cell,
 which every clickable row must have.
 
+### List and detail
+
+For a list whose records are read while scanning it, the record opens in a pane beside the list
+from `lg` up, and as its own page below `lg`. `ListDetailShell` (`#lib/components/ui/`) is the
+frame. Mount it from the list's `+layout.svelte` with the list in the `list` snippet and the routed
+`[id]` page as its children, so the URL still names the open record and links, back and forward
+work unchanged. `open` is whether the route is the record's.
+
+- **`mode="panes"`** (default): both panes always from `lg`, in a padded frame; the index page
+  fills the right pane. The inboxes use it.
+- **`mode="pages"`**: each pane is a whole page — `PageHeader` plus `PageContent` — scrolling
+  itself. With nothing open the list is the full width and there is no detail pane; open, the list
+  narrows to a column beside the record, where a table keeps only its untiered columns (`col-*`
+  hides the rest) rather than switching to cards.
+  `/staff/reservations` uses it.
+
+What the list owes, in `pages` mode (`src/routes/staff/reservations/` is the example):
+
+- **Filters live in the layout**, in a class seeded from the URL and shared through context, so the
+  record's close control returns to the same view. Row links carry the filter query
+  (`withQuery`), and the list mirrors it onto the current pathname, not the index path.
+- **The open row** carries `aria-current="page"` and `bg-base-200`, and is scrolled into view.
+- **Keys**: Escape closes, Up and Down open the previous and next record in the list. The handler
+  stands down for a focused input, an open menu or an open dialog.
+- **The list header passes `documentTitle={null}`** while a record is open, so the record's header
+  names the tab. The record's close control is `lg`-only; a phone has the back crumb.
+- **One awaited query per view**: the list's query stays un-awaited, so the layout adds nothing for
+  the record's route to wait on.
+
 ### Sorting
 
-There isn't any, on purpose. No `query()` accepts a sort parameter, and a
-`Table` that knows about sorting is the first step back toward the component
-this replaced. If a page genuinely needs it, add `sort`/`dir` to _that page's_
-filter schema and give it its own header control.
+Rare, and never in `Table`: a `Table` that knows about sorting is the first step
+back toward the component this replaced. A page that needs it adds `sort` to
+_its own_ query's schema and URL state, and the query sorts before it pages.
+The header control is `SortHeader` (`#lib/components/ui/`), a `<th>` with
+`aria-sort` that reads and writes one token — the column key, `-` prefixed for
+descending (`#lib/utils/sort-token.js`). `/staff/contacts` is the example: a
+sort on a column the viewer may not see falls back to name on the server.
 
 ## StatCard
 
@@ -1311,6 +1611,19 @@ keeps daisyUI's default), `class` (outer card), `valueClass` (value line).
 Use `size="sm"` rather than hand-rolling the raw `stat` markup — the default
 value size overflows a narrow panel column once three sit in a row, and that is
 exactly why two pages rebuilt the card by hand before the prop existed.
+
+**A group of them sits in `StatGrid`**, never a hand-written grid:
+
+```svelte
+<StatGrid cols={4} class="mb-6">
+	<StatCard title="Channels" value={rider.channelCount} size="sm" />
+	…
+</StatGrid>
+```
+
+It is two-up at phone width; `cols` (2, 3, 4, 5 or 7) is the count from `lg` up, and 5 or 7
+step through three at `sm`. `scripts/stat-grid.spec.ts` fails on a `StatCard` whose nearest grid
+is not `StatGrid`. A `flex` row of two check-in counts is not a grid and is left alone.
 
 **One layer of card.** A page commits to card sections or to stat cards, never one
 inside the other. A figure inside an `InfoCard` or `Card` is `<StatCard bare …/>`,
@@ -1402,7 +1715,7 @@ there. A header without a `menu` never folds; its actions wrap onto their own li
 `OverflowMenu` is the same ••• dropdown on its own, for an overflow anywhere else.
 
 **Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
-`band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
+`band/[slug]`) passes `navTrail()` from `#lib/components/layout/nav-trail.js` into
 context, built from its own nav tree, and `PageHeader` appends the page's title as the
 last crumb (`crumb` overrides it). `/staff/members/abc` reads "People / Users / Jordan
 Martinez" without the page naming any of it. There is no back button and no `backHref`.
@@ -1451,6 +1764,27 @@ Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an 
 
 Edit/detail views remain full pages at `[id]/`.
 
+### Create forms ask only for what the record needs
+
+The create modal carries only the fields the record cannot exist without, and on success it
+redirects to the record's edit or detail page, where every other field lives. "Cannot exist
+without" means two things:
+
+- what the remote's schema refuses to accept it without, and
+- any field the edit form marks `required`. Leaving one of those out of creation makes the
+  member's first save on the edit page fail on a field they were never asked for.
+
+Never front-load optional enrichment — description, tags, lineup, poster, pricing, recurrence —
+into creation. Whether a minimally created record is visible straight away is the domain's call;
+a draft or a staff-only record makes the question moot.
+
+| Flow                 | Asks for                         | Lands on                        |
+| -------------------- | -------------------------------- | ------------------------------- |
+| Staff Create Listing | title, kind, run by, date, times | `/staff/events/[id]?edit=1`     |
+| Group New show       | name, date, starts, ends         | `/staff/events/[id]/production` |
+| Band Create Event    | title, date, start time          | `/band/[slug]/events/[id]`      |
+| Member Add a show    | title, date, start time, venue   | `/member/events/[id]/manage`    |
+
 ## CSS conventions
 
 - Buttons are `<Button variant size>` — never a raw `<button class="btn …">` or a `class="btn-ghost btn-sm"` string. The same goes for `Action`, `SubmitButton` and the `*Action` wrappers.
@@ -1488,13 +1822,14 @@ Pure display logic (link partitioning, embeddable-service ordering, the private-
 
 ## Inbox
 
-`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `InboxShell` from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
+`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `ListDetailShell` (see [List and detail](#list-and-detail)) from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
 
 Components in `src/lib/components/inbox/`:
 
-- `InboxShell` — the two-pane frame. One pane at a time below `lg`, both from `lg`; which one shows on a phone follows whether a thread is open. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
+- `ListDetailShell` (in `ui/`) — the two-pane frame, in its default `panes` mode. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
 - `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
-- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId`, not direction; see `member-portal-chat-spec.md`.
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md). Takes the thread's `channel`, which decides each body's format.
+- `MessageBody` — the only place a message body becomes HTML. On the in-app channels (`direct`, `group`, `portal`) it renders markdown through `renderMessageMarkdown`: typed HTML shows as text, images as their alt text, external links open in a new tab. Email, SMS and form channels stay plain text. `src/message-body.spec.ts` fails a component that prints or `{@html}`s a body any other way.
 - `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
 - `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.
 

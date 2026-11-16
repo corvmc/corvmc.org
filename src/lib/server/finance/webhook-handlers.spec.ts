@@ -18,7 +18,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		update: () => chainable()
@@ -34,11 +34,11 @@ const mockCreditService = {
 vi.mock('./credit-service', () => mockCreditService);
 
 const mockEmit = vi.fn();
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: mockEmit }
 }));
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	cancelAllForUser: vi.fn()
 }));
 
@@ -49,11 +49,11 @@ vi.mock('./subscription-service', () => ({
 
 const mockGetStripeProductId = vi.fn().mockResolvedValue('prod_fee');
 const fulfillDoorSale = vi.fn(async () => undefined);
-vi.mock('$lib/server/ticket/door-sale', () => ({
+vi.mock('#lib/server/ticket/door-sale.js', () => ({
 	fulfillDoorSale: (...a: unknown[]) => fulfillDoorSale(...(a as []))
 }));
 const settleReservationAtReader = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reader-payment', () => ({
+vi.mock('#lib/server/reservation/reader-payment.js', () => ({
 	settleReservationAtReader: (...a: unknown[]) => settleReservationAtReader(...(a as []))
 }));
 

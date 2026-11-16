@@ -1,8 +1,9 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { previewRecurringEvents, startEventSeries } from '$lib/remote/events.remote';
-	import { toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { previewRecurringEvents, startEventSeries } from '#lib/remote/events.remote.js';
+	import { toLocalDate, toLocalTime, formatDate } from '#lib/utils/format.js';
 
 	// Makes an existing listing the first of a series. Not on the create modal,
 	// which collects only what the row needs.
@@ -26,22 +27,18 @@
 	});
 
 	function formatOccurrence(iso: string): string {
-		return new Date(iso).toLocaleDateString(undefined, {
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(new Date(iso));
 	}
 </script>
 
 <Action
 	action={startEventSeries}
-	label="Repeat this event"
+	label={m.events_repeat_event_repeat_event_label()}
 	variant="ghost"
 	size="sm"
-	modalTitle="Repeat this event"
-	submitLabel="Repeat"
-	successToast="Series started"
+	modalTitle={m.events_repeat_event_repeat_event_title()}
+	submitLabel={m.events_repeat_event_submit_label()}
+	successToast={m.events_repeat_event_success_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
@@ -50,40 +47,39 @@
 			<FormField
 				field={fields.recurringFrequency}
 				type="select"
-				label="Frequency"
+				label={m.events_repeat_event_frequency_label()}
 				bind:value={frequency}
 				options={[
-					{ value: 'weekly', label: 'Weekly' },
-					{ value: 'biweekly', label: 'Every 2 weeks' },
-					{ value: 'monthly', label: 'Monthly' }
+					{ value: 'weekly', label: m.events_repeat_event_weekly_label() },
+					{ value: 'biweekly', label: m.events_repeat_event_every_2_weeks_label() },
+					{ value: 'monthly', label: m.events_repeat_event_monthly_label() }
 				]}
 			/>
 			{#if isMonthly}
 				<FormField
 					field={fields.monthlyMode}
 					type="select"
-					label="Monthly pattern"
+					label={m.events_repeat_event_monthly_pattern_label()}
 					bind:value={monthlyMode}
 					options={[
-						{ value: 'weekday', label: 'Same weekday each month (e.g. 2nd Tuesday)' },
-						{ value: 'monthday', label: 'Same date each month (e.g. the 15th)' }
+						{ value: 'weekday', label: m.events_repeat_event_same_weekday_each_month_e_label() },
+						{ value: 'monthday', label: m.events_repeat_event_same_date_each_month_e_label() }
 					]}
 				/>
 			{/if}
 			<FormField
 				field={fields.recurringEndsAt}
 				type="date"
-				label="Repeat until (optional)"
+				label={m.events_repeat_event_repeat_until_optional_label()}
 				bind:value={endsAt}
 			/>
 			<p class="text-muted">
-				Occurrences are created as drafts ahead of time; publish each one when ready. Each starts
-				with a copy of this event's poster.
+				{m.events_repeat_event_occurrences_created_as_drafts_ahead_text()}
 			</p>
 			{#await previewRecurringEvents(previewArgs) then preview}
 				{#if preview.dates.length > 0}
 					<div class="text-sm">
-						<p class="font-medium">Next occurrences:</p>
+						<p class="font-medium">{m.events_repeat_event_next_occurrences_text()}</p>
 						<ul class="mt-1 opacity-70">
 							{#each preview.dates as iso (iso)}
 								<li>{formatOccurrence(iso)}</li>
@@ -91,8 +87,10 @@
 						</ul>
 					</div>
 				{:else}
-					<p class="text-muted">No upcoming occurrences in the next 60 days.</p>
+					<p class="text-muted">{m.events_repeat_event_no_upcoming_occurrences_next_60_text()}</p>
 				{/if}
+			{:catch}
+				<!-- A courtesy preview: the form still submits without it. -->
 			{/await}
 		</div>
 	{/snippet}

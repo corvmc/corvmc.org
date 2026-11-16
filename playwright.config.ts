@@ -54,10 +54,10 @@ export default defineConfig({
 	// assertion windows: on 2026-08-21 four consecutive runs of #242 went red, a
 	// different test each time, every one of them passing locally in isolation.
 	// With `retries: 0` that reddens a required check, and a red required check
-	// disarms auto-merge, so the PR sits open with nothing watching it. A retried
-	// test is reported as "flaky" rather than passing quietly, so this buys the
-	// queue tolerance without hiding a test that has started to fail for real —
-	// watch the flaky count, and fix the spec when one stops being occasional.
+	// disarms auto-merge, so the PR sits open with nothing watching it. CI now
+	// runs with `--fail-on-flaky-tests` (.github/workflows/ci.yml, #2216), so a
+	// test that passes only on a retry fails the job too: the retries are kept
+	// for the trace of the failed attempt, not to turn a flake green.
 	//
 	// Know what this does *not* buy. The suite shares one database, seeded once
 	// by `e2e/prepare.ts` before Playwright starts, and most specs mutate the
@@ -175,7 +175,7 @@ export default defineConfig({
 		reuseExistingServer: !process.env.CI,
 		env: {
 			// The run's own miniflare state, seeded by e2e/prepare.ts. Read by
-			// svelte.config.js, which hands it to the adapter's platform emulation —
+			// kit.config.js, which hands it to the adapter's platform emulation —
 			// without it the preview server would open `.wrangler/state`, which
 			// `pnpm dev` and every wrangler command also use, and a second process
 			// on those SQLite files is what cost the suite a random test per run.
@@ -203,6 +203,8 @@ export default defineConfig({
 			// pinning below is what stops a real credential reaching the server at
 			// all, and this is what stops the server transacting even if one did.
 			PAYMENTS_DRIVER: 'fake',
+			// Pinned for the same reason: the outbox logs mail instead of sending it.
+			MAIL_DRIVER: 'log',
 			// Pinned empty for the same reason as STRIPE_ENV: `.env` carries a real
 			// LARAVEL_URL and MIGRATION_SECRET, and the bcrypt fallback would POST a
 			// test's password attempt to the production box. Absent, `verify` never

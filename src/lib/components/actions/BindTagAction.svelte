@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { bindTag } from '$lib/remote/inventory.remote';
+	import { refreshAll } from '$app/navigation';
+	import { bindTag } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 	import BarcodeScanner from '../ui/BarcodeScanner.svelte';
-	import { parseScan } from '$lib/utils/scan';
+	import { parseScan } from '#lib/utils/scan.js';
 
 	const { fields } = bindTag;
 
@@ -47,13 +49,16 @@
 
 <Action
 	action={bindTag}
-	label={currentTag ? 'Rebind tag' : 'Bind tag'}
-	modalTitle={currentTag ? 'Rebind the tag' : 'Bind a tag'}
-	successToast="Tag bound"
+	data-testid="bind-tag"
+	label={currentTag ? m.actions_bind_tag_rebind_tag_label() : m.actions_bind_tag_bind_tag_label()}
+	modalTitle={currentTag
+		? m.actions_bind_tag_rebind_tag_2_title()
+		: m.actions_bind_tag_bind_tag_2_title()}
+	successToast={m.actions_bind_tag_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
@@ -61,17 +66,29 @@
 		<!-- Stickers come off amps. Rebinding is ordinary: the unit keeps its id,
 		     its history and its loans, because identity is the record and not the
 		     label stuck to it. -->
-		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
+		<div class="mb-3 rounded bg-base-200 p-3 text-sm" data-testid="bind-tag-context">
 			{#if currentTag}
-				<p>This unit currently wears <strong class="font-mono">{currentTag}</strong>.</p>
+				<p>
+					<ParaglideMessage
+						message={m.actions_bind_tag_unit_currently_wears_text}
+						inputs={{ currentTag }}
+						>{#snippet strong({ children })}<strong class="font-mono">{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
+				</p>
 				<p class="mt-1 opacity-70">
-					Binding a new one keeps every loan and repair already recorded against it.
+					{m.actions_bind_tag_binding_new_one_keeps_every_text()}
 				</p>
 			{:else}
-				<p class="opacity-70">Scan or type the tag printed on the sticker.</p>
+				<p class="opacity-70">{m.actions_bind_tag_scan_type_tag_printed_sticker_text()}</p>
 			{/if}
 		</div>
-		<Field field={fields.assetTag} type="text" label="Tag" bind:value={assetTag} />
-		<BarcodeScanner onscan={handleScan} label="Scan the tag" class="mt-2" />
+		<Field
+			field={fields.assetTag}
+			type="text"
+			label={m.actions_tag_label()}
+			bind:value={assetTag}
+		/>
+		<BarcodeScanner onscan={handleScan} label={m.actions_bind_tag_scan_tag_label()} class="mt-2" />
 	{/snippet}
 </Action>

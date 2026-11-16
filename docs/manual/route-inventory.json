@@ -256,10 +256,6 @@
 		"panel": "member"
 	},
 	{
-		"route": "/member/events/submit",
-		"panel": "member"
-	},
-	{
 		"route": "/member/groups",
 		"panel": "member"
 	},
@@ -360,6 +356,14 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/markets/[eventId]",
+		"panel": "member"
+	},
+	{
+		"route": "/member/volunteer/markets/[eventId]/check-in",
+		"panel": "member"
+	},
+	{
 		"route": "/member/volunteer/profile",
 		"panel": "member"
 	},
@@ -373,6 +377,10 @@
 	},
 	{
 		"route": "/member/volunteer/start",
+		"panel": "member"
+	},
+	{
+		"route": "/member/volunteer/tasks/[workOrderId]",
 		"panel": "member"
 	},
 	{
@@ -396,19 +404,15 @@
 		"panel": "public"
 	},
 	{
+		"route": "/removed/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/reset-password",
 		"panel": "public"
 	},
 	{
 		"route": "/staff",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/access",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/audit",
 		"panel": "staff"
 	},
 	{
@@ -420,15 +424,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/bands",
+		"route": "/staff/building-access",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/bands/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/bands/acts",
+		"route": "/staff/building-access/door-poster",
 		"panel": "staff"
 	},
 	{
@@ -440,31 +440,19 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/clubs",
+		"route": "/staff/contacts",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/clubs/[id]",
+		"route": "/staff/contacts/[id]",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/committees",
+		"route": "/staff/contacts/duplicates",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/committees/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/contractors",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/contractors/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/credits",
+		"route": "/staff/contacts/people/[id]",
 		"panel": "staff"
 	},
 	{
@@ -496,15 +484,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/flags",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/flags/[id]",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/grants",
+		"route": "/staff/funding",
 		"panel": "staff"
 	},
 	{
@@ -512,7 +496,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/grants/funders",
+		"route": "/staff/groups",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/groups/[id]",
 		"panel": "staff"
 	},
 	{
@@ -536,11 +524,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inbox/daily",
+		"route": "/staff/inbox/channels",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/incidents",
+		"route": "/staff/inbox/daily",
 		"panel": "staff"
 	},
 	{
@@ -568,11 +556,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/compliance",
+		"route": "/staff/inventory/intake",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/intake",
+		"route": "/staff/inventory/kits/[id]",
 		"panel": "staff"
 	},
 	{
@@ -588,6 +576,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/orders",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/orders/[id]",
 		"panel": "staff"
 	},
@@ -600,15 +592,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/spend",
+		"route": "/staff/inventory/settings",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/keys",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/keys/door-poster",
+		"route": "/staff/inventory/supplies",
 		"panel": "staff"
 	},
 	{
@@ -621,10 +609,6 @@
 	},
 	{
 		"route": "/staff/local-resources/categories",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/local-resources/tips",
 		"panel": "staff"
 	},
 	{
@@ -652,6 +636,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/marketing/posters",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/members",
 		"panel": "staff"
 	},
@@ -660,19 +648,23 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/members/instructors",
+		"route": "/staff/moderation/blocklist",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/members/invites",
+		"route": "/staff/moderation/flags",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/members/volunteers",
+		"route": "/staff/moderation/incidents",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/members/volunteers/hours",
+		"route": "/staff/money/credits",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/money/payments",
 		"panel": "staff"
 	},
 	{
@@ -680,35 +672,7 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/payments",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/project-templates",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/project-templates/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]/budget",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]/tasks/[taskId]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/productions",
+		"route": "/staff/recurring",
 		"panel": "staff"
 	},
 	{
@@ -716,15 +680,15 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/renewals",
+		"route": "/staff/reports/annual",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/renewals/[id]",
+		"route": "/staff/reports/inventory-spend",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/reports",
+		"route": "/staff/reports/music",
 		"panel": "staff"
 	},
 	{
@@ -740,15 +704,7 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/settings",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/sponsors",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/sponsors/[id]",
+		"route": "/staff/reservations/settings",
 		"panel": "staff"
 	},
 	{
@@ -760,15 +716,55 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/venues",
+		"route": "/staff/system/access",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/audit",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/features",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/organization",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects/[id]/budget",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/recurring",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/templates",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/templates/[id]",
 		"panel": "staff"
 	},
 	{
 		"route": "/staff/venues/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer",
 		"panel": "staff"
 	},
 	{
@@ -780,15 +776,15 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/schedule",
+		"route": "/staff/volunteering",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/schedule/recurring",
+		"route": "/staff/volunteering/hours",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/shifts/[id]",
+		"route": "/staff/volunteering/settings",
 		"panel": "staff"
 	},
 	{

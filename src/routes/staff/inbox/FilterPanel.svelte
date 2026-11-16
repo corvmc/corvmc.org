@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The filters, in the main pane rather than a modal or a strip above the list.
 	 *
@@ -12,12 +13,12 @@
 	 * have already made and can see the result of.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { contactSubjects, inboxViews } from '$lib/config';
-	import { getInboxFilterCounts, getAssignableStaff } from '$lib/remote/inbox.remote';
-	import type { InboxView } from '$lib/config';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { contactSubjects, inboxViews } from '#lib/config.js';
+	import { getInboxFilterCounts, getAssignableStaff } from '#lib/remote/inbox.remote.js';
+	import type { InboxView } from '#lib/config.js';
 
 	let {
 		view = $bindable(),
@@ -57,15 +58,21 @@
 
 <div class="flex h-full min-h-0 flex-col gap-5 overflow-y-auto p-1">
 	<div class="flex items-center justify-between">
-		<h2 class="text-lg font-bold">Filter conversations</h2>
-		<Button variant="ghost" size="sm" shape="square" onclick={onclose} aria-label="Close filters">
+		<h2 class="text-lg font-bold">{m.staff_inbox_filter_panel_filter_conversations_title()}</h2>
+		<Button
+			variant="ghost"
+			size="sm"
+			shape="square"
+			onclick={onclose}
+			aria-label={m.staff_inbox_filter_panel_close_filters_label()}
+		>
 			<IconX size={18} />
 		</Button>
 	</div>
-	<p class="text-muted text-sm">The list updates as you change these.</p>
+	<p class="text-muted text-sm">{m.staff_inbox_filter_panel_list_updates_as_change_these_text()}</p>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Status" />
+		<SectionLabel label={m.staff_status_label()} />
 		<div class="flex flex-wrap gap-2">
 			{#each inboxViews as key (key)}
 				<button type="button" class={chip(view === key)} onclick={() => (view = key)}>
@@ -77,7 +84,7 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Inquiry type" />
+		<SectionLabel label={m.staff_inbox_filter_panel_inquiry_type_label()} />
 		<div class="flex flex-wrap gap-2">
 			<!-- Clicking the selected chip clears it: a facet with no "any" option
 			     is a filter you can enter and not leave. -->
@@ -88,7 +95,7 @@
 					class="{chip(subject === key)} {n === 0 && subject !== key ? 'opacity-40' : ''}"
 					onclick={() => (subject = subject === key ? '' : key)}
 				>
-					{key === 'other' ? 'Other' : key}
+					{key === 'other' ? m.staff_inbox_filter_panel_other_label() : key}
 					<span class="opacity-70">{n}</span>
 				</button>
 			{/each}
@@ -96,37 +103,39 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Assigned to" />
+		<SectionLabel label={m.staff_assigned_2_label()} />
 		<!-- Its own query. The staff list is not keyed by these filters and the
 		     queue paints without it — same reason as AssignControl. -->
-		{#await getAssignableStaff()}
-			<span class="loading loading-xs loading-spinner"></span>
-		{:then staffUsers}
-			<div class="flex flex-wrap gap-2">
-				<button type="button" class={chip(assigned === '')} onclick={() => (assigned = '')}>
-					Anyone
-				</button>
-				<button type="button" class={chip(assigned === 'mine')} onclick={() => (assigned = 'mine')}>
-					Me
-				</button>
-				<button
-					type="button"
-					class={chip(assigned === 'unassigned')}
-					onclick={() => (assigned = 'unassigned')}
-				>
-					Unassigned
-				</button>
+		<div class="flex flex-wrap items-center gap-2">
+			<button type="button" class={chip(assigned === '')} onclick={() => (assigned = '')}>
+				{m.staff_anyone_label()}
+			</button>
+			<button type="button" class={chip(assigned === 'mine')} onclick={() => (assigned = 'mine')}>
+				{m.staff_inbox_filter_panel_me_label()}
+			</button>
+			<button
+				type="button"
+				class={chip(assigned === 'unassigned')}
+				onclick={() => (assigned = 'unassigned')}
+			>
+				{m.staff_unassigned_label()}
+			</button>
+			{#await getAssignableStaff()}
+				<span class="loading loading-xs loading-spinner"></span>
+			{:then staffUsers}
 				{#each staffUsers as s (s.id)}
 					<button type="button" class={chip(assigned === s.id)} onclick={() => (assigned = s.id)}>
 						{s.name}
 					</button>
 				{/each}
-			</div>
-		{/await}
+			{:catch}
+				<!-- The chips above still filter. -->
+			{/await}
+		</div>
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Waiting longer than" />
+		<SectionLabel label={m.staff_inbox_filter_panel_waiting_longer_than_label()} />
 		<div class="flex items-center gap-3">
 			<input
 				type="range"
@@ -134,11 +143,13 @@
 				min="0"
 				max="14"
 				step="1"
-				aria-label="Waiting longer than, in days"
+				aria-label={m.staff_inbox_filter_panel_waiting_longer_than_days_label()}
 				bind:value={waitingDays}
 			/>
 			<span class="text-sm whitespace-nowrap">
-				{waitingDays === 0 ? 'Any' : `${waitingDays} day${waitingDays === 1 ? '' : 's'}`}
+				{waitingDays === 0
+					? m.staff_inbox_filter_panel_any_text()
+					: m.staff_inbox_filter_panel_days_text({ waitingDays })}
 			</span>
 		</div>
 	</div>
@@ -146,11 +157,18 @@
 	<div
 		class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4"
 	>
-		<Badge>{counts.matching} of {counts.total} match</Badge>
+		<Badge
+			>{m.staff_inbox_filter_panel_match_label({
+				matching: counts.matching,
+				total: counts.total
+			})}</Badge
+		>
 		<div class="flex gap-2">
-			<Button variant="ghost" size="sm" onclick={onreset}>Reset</Button>
-			<Button variant="default" size="sm" onclick={onsave}>Save as view</Button>
-			<Button variant="primary" size="sm" onclick={onclose}>Done</Button>
+			<Button variant="ghost" size="sm" onclick={onreset}
+				>{m.staff_inbox_filter_panel_reset_label()}</Button
+			>
+			<Button variant="default" size="sm" onclick={onsave}>{m.staff_save_as_view_label()}</Button>
+			<Button variant="primary" size="sm" onclick={onclose}>{m.staff_done_label()}</Button>
 		</div>
 	</div>
 </div>

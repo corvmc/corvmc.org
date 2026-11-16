@@ -1,13 +1,16 @@
-import { db } from '$lib/server/db';
-import { volunteerRole, volunteerHourLog } from '$lib/server/db/schema/volunteer';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
+import { volunteerRole, volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
+import { helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY
-} from '$lib/config';
-import type { VolunteerRole, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { VolunteerRole, VolunteerRoleGroup } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -63,6 +66,8 @@ interface RoleInput {
 	marketRateCents?: number | null;
 	/** Member skill tags that suit the role, for ranking the shortlist. */
 	skillMatches?: string[];
+	/** The help article read before a shift. `null` or blank clears it. */
+	briefingArticleId?: string | null;
 }
 
 const MAX_SKILL_MATCHES = 20;
@@ -168,16 +173,13 @@ function normalize(data: RoleInput) {
 
 	if (data.group !== undefined) normalized.group = data.group;
 
+	if (data.briefingArticleId !== undefined) {
+		normalized.briefingArticleId = data.briefingArticleId?.trim() || null;
+	}
+
 	if (data.isActive !== undefined) normalized.isActive = data.isActive;
 
 	return normalized;
-}
-
-// SQLite reports a unique-constraint breach as a driver error rather than
-// something typed, so match on the message the same way the rest of the app
-// would have to.
-function isUniqueViolation(err: unknown): boolean {
-	return err instanceof Error && /UNIQUE constraint failed/i.test(err.message);
 }
 
 // ---------------------------------------------------------------------------
@@ -185,7 +187,7 @@ function isUniqueViolation(err: unknown): boolean {
 // ---------------------------------------------------------------------------
 
 export async function createVolunteerRole(
-	data: RoleInput & { name: string }
+	data: Omit<RoleInput, 'briefingArticleId'> & { name: string }
 ): Promise<VolunteerRole> {
 	const values = normalize(data);
 
@@ -208,13 +210,25 @@ export async function createVolunteerRole(
 			.returning();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new VolunteerRoleNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new VolunteerRoleNameTakenError(values.name!);
 		throw err;
 	}
 }
 
+/** A named briefing must exist: the FK would otherwise surface as a 500. */
+async function assertBriefingExists(articleId: string | null | undefined) {
+	if (!articleId) return;
+	const [row] = await db
+		.select({ id: helpArticle.id })
+		.from(helpArticle)
+		.where(eq(helpArticle.id, articleId))
+		.limit(1);
+	if (!row) throw new VolunteerRoleValidationError('That help article no longer exists');
+}
+
 export async function updateVolunteerRole(id: string, data: RoleInput): Promise<VolunteerRole> {
 	const values = normalize(data);
+	await assertBriefingExists(values.briefingArticleId);
 
 	try {
 		const [row] = await db
@@ -226,7 +240,7 @@ export async function updateVolunteerRole(id: string, data: RoleInput): Promise<
 		if (!row) throw new VolunteerRoleNotFoundError();
 		return row;
 	} catch (err) {
-		if (isUniqueViolation(err)) throw new VolunteerRoleNameTakenError(values.name!);
+		if (isUniqueConstraintError(err)) throw new VolunteerRoleNameTakenError(values.name!);
 		throw err;
 	}
 }
@@ -271,6 +285,11 @@ export async function deleteVolunteerRole(id: string): Promise<VolunteerRole> {
 	const [row] = await db.delete(volunteerRole).where(eq(volunteerRole.id, id)).returning();
 
 	if (!row) throw new VolunteerRoleNotFoundError();
+	await recordAuditEntry({
+		action: 'role.deleted',
+		subject: { type: 'role', id, label: row.name },
+		details: {}
+	});
 	return row;
 }
 
@@ -299,11 +318,6 @@ export async function listVolunteerRoles(
 		.orderBy(asc(volunteerRole.displayOrder), asc(volunteerRole.name));
 
 	return rows.map((row) => ({ ...row.role, logCount: Number(row.logCount) }));
-}
-
-export async function getVolunteerRoleById(id: string): Promise<VolunteerRole | null> {
-	const [row] = await db.select().from(volunteerRole).where(eq(volunteerRole.id, id)).limit(1);
-	return row ?? null;
 }
 
 /** Used by the submit path, which may only file against a live role. */

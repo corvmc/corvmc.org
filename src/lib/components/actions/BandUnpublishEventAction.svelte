@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { unpublishBandEvent } from '$lib/remote/band-events.remote';
+	import { refreshAll } from '$app/navigation';
+	import { unpublishBandEvent } from '#lib/remote/band-events.remote.js';
 
 	// The band panel's own events live in `band-events.remote`, guarded by
 	// `requireGroupRole({ slug }, 'admin')` and scoped to the band named by the
@@ -33,19 +34,19 @@
 
 <Action
 	action={unpublishBandEvent}
-	label="Unpublish"
-	successToast="Unpublished"
+	label={m.actions_unpublish_label()}
+	successToast={m.actions_band_unpublish_event_success_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Take this event back to a draft? It stops showing publicly until you publish it again.
+			{m.actions_band_unpublish_event_take_event_back_draft_stops_text()}
 		</p>
 	{/snippet}
 </Action>

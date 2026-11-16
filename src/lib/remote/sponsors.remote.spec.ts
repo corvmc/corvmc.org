@@ -9,21 +9,18 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
 const service = {
-	listSponsors: vi.fn(async () => []),
-	getSponsor: vi.fn(async () => ({ id: 's1' })),
-	createSponsor: vi.fn(async () => ({ id: 's1' })),
+	getSponsor: vi.fn(async () => ({ id: 's1', sponsorships: [] })),
 	updateSponsor: vi.fn(async () => undefined),
-	deleteSponsor: vi.fn(async () => undefined),
 	createSponsorship: vi.fn(async () => ({ id: 'p1' })),
 	updateSponsorship: vi.fn(async () => undefined),
 	deleteSponsorship: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/sponsor/sponsor-service', () => service);
+vi.mock('#lib/server/sponsor/sponsor-service.js', () => service);
 
 const credits = {
 	listPlacementsForSponsor: vi.fn(async () => []),
@@ -33,8 +30,17 @@ const credits = {
 	setSponsorLogo: vi.fn(async () => undefined),
 	removeSponsorLogo: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/sponsor/credit-service', () => credits);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/sponsor/credit-service.js', () => credits);
+
+const people = {
+	withPrimaryContact: vi.fn(async <T>(rows: T[]) => rows),
+	savePrimaryContact: vi.fn(async () => undefined)
+};
+vi.mock('#lib/server/party/primary-contact.js', () => people);
+vi.mock('#lib/server/development/funding-project.js', () => ({
+	listFundableProjects: vi.fn(async () => [])
+}));
+vi.mock('#lib/server/storage.js', () => ({
 	validateUpload: () => null,
 	resolveImageUrl: (k: string | null) => (k ? `https://img/${k}` : null)
 }));
@@ -85,16 +91,13 @@ const PLACE = {
 const LOGO = { sponsorId: 's1', logo: new File(['x'], 'logo.png', { type: 'image/png' }) };
 
 const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> }> = [
-	{ name: 'getSponsors', cap: 'sponsor.read', arg: undefined, spy: service.listSponsors },
 	{ name: 'getSponsorDetail', cap: 'sponsor.read', arg: 's1', spy: service.getSponsor },
-	{ name: 'createSponsor', cap: 'sponsor.manage', arg: SPONSOR, spy: service.createSponsor },
 	{
 		name: 'updateSponsor',
 		cap: 'sponsor.manage',
 		arg: { id: 's1', ...SPONSOR },
 		spy: service.updateSponsor
 	},
-	{ name: 'deleteSponsor', cap: 'sponsor.manage', arg: { id: 's1' }, spy: service.deleteSponsor },
 	{ name: 'createSponsorship', cap: 'sponsor.manage', arg: SHIP, spy: service.createSponsorship },
 	{
 		name: 'updateSponsorship',
@@ -148,13 +151,24 @@ describe('sponsors.remote guards', () => {
 describe('sponsor input', () => {
 	it('stores blank optional fields as null, not empty strings', async () => {
 		held = new Set(['sponsor.read', 'sponsor.manage']);
-		await remote.createSponsor({ ...SPONSOR, website: '', notes: '' });
-		expect(service.createSponsor).toHaveBeenCalledWith(
-			expect.objectContaining({ website: null, notes: null, contactEmail: null })
+		await remote.updateSponsor({ id: 's1', ...SPONSOR, website: '', notes: '' });
+		expect(service.updateSponsor).toHaveBeenCalledWith(
+			's1',
+			expect.objectContaining({ website: null, notes: null })
+		);
+		// The person goes to the contact service, never onto the organization.
+		expect(service.updateSponsor).toHaveBeenCalledWith(
+			's1',
+			expect.not.objectContaining({ contactEmail: expect.anything() })
+		);
+		expect(people.savePrimaryContact).toHaveBeenCalledWith(
+			's1',
+			expect.objectContaining({ contactEmail: null })
 		);
 		await remote.createSponsorship({ ...SHIP, tier: '', endsOn: '' });
 		expect(service.createSponsorship).toHaveBeenCalledWith(
-			expect.objectContaining({ tier: null, endsOn: null, amountCents: null })
+			expect.objectContaining({ tier: null, endsOn: null, amountCents: null }),
+			{ createdByUserId: expect.any(String) }
 		);
 	});
 });

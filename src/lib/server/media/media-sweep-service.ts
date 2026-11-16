@@ -1,28 +1,27 @@
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import { attachableTypes, type AttachableType } from '$lib/config';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import { attachableTypes, type AttachableType } from '#lib/config.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	acquisition,
 	workRequest,
 	inventoryAsset,
 	inventoryItem
-} from '$lib/server/db/schema/inventory';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { audioRelease } from '$lib/server/db/schema/audio';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { sponsor } from '$lib/server/db/schema/sponsor';
-import { renewal } from '$lib/server/db/schema/renewal';
-import { deleteObject, objectExists } from '$lib/server/storage';
-import { deletePrivateObject, privateObjectExists } from '$lib/server/private-storage';
-import { isReceiptKey, isRenewalDocumentKey, isWithheldPosterKey } from '$lib/server/storage-keys';
-import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
+} from '#lib/server/db/schema/inventory.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { audioRelease } from '#lib/server/db/schema/audio.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { deleteObject, objectExists } from '#lib/server/storage.js';
+import { deletePrivateObject, privateObjectExists } from '#lib/server/private-storage.js';
+import { isReceiptKey, isWithheldPosterKey } from '#lib/server/storage-keys.js';
+import { MEDIA_SWEEP_GRACE_MS } from '#lib/config.js';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
 /**
- * The reaper behind the rule in docs/specs/shipped/media-spec.md:
+ * The reaper behind the rule in docs/decisions/0026-uploads-are-detached-and-swept.md:
  *
  *   An R2 object is never deleted as a side effect of deleting a row.
  *
@@ -56,11 +55,9 @@ const PARENT_TABLES = {
 	// Delivered poster art. A request cascades with its event, and a promoted
 	// poster is a second attachment, so reaping this one frees nothing in use.
 	artifact_request: artifactRequest,
-	// A sponsor's logo. Sponsors are refused deletion while they have terms, so
-	// this reaps only the logo of one deleted before it ever sponsored.
-	sponsor,
-	// A certificate, in the private bucket; pass 2 deletes it from there.
-	renewal
+	// An organization's logo. Organizations are refused deletion while records
+	// name them, so this reaps only the logo of one that never had any.
+	organization
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {
@@ -118,7 +115,7 @@ const PRIVATE_BUCKET = { exists: privateObjectExists, remove: deletePrivateObjec
  * shape is the only hint.
  */
 function belongsInPrivate(key: string): boolean {
-	return isWithheldPosterKey(key) || isReceiptKey(key) || isRenewalDocumentKey(key);
+	return isWithheldPosterKey(key) || isReceiptKey(key);
 }
 
 /**

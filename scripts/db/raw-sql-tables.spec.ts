@@ -101,14 +101,29 @@ function sqlTemplates(source: string): { body: string; line: number }[] {
 	return out;
 }
 
+/**
+ * Names a `with` clause declares in the same statement: `with recursive reach(id)
+ * as (…)` makes `from reach` a CTE, not a table, as does each `, next as (…)`.
+ */
+function cteNamesIn(sql: string): Set<string> {
+	const names = new Set<string>();
+	const cte =
+		/(?:\bwith\s+(?:recursive\s+)?|,\s*)([A-Za-z_][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s+as\s*\(/gi;
+	let m: RegExpExecArray | null;
+	while ((m = cte.exec(sql))) names.add(m[1]);
+	return names;
+}
+
 /** Table names in `from` / `join` / `into` / `update` position, comments stripped. */
 function tablesNamedIn(body: string): string[] {
 	const sql = body.replace(/--[^\n]*/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+	const ctes = cteNamesIn(sql);
 	const names: string[] = [];
 	const ref = /\b(?:from|join|into|update)\s+(["'`]?)([A-Za-z_][A-Za-z0-9_]*)\1(\s*\()?/gi;
 	let m: RegExpExecArray | null;
 	while ((m = ref.exec(sql))) {
 		if (m[3]) continue; // `from (select …)`, `from pragma_table_info(…)` — not a plain table
+		if (ctes.has(m[2])) continue;
 		names.push(m[2]);
 	}
 	return names;

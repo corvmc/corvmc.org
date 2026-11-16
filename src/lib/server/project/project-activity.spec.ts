@@ -7,13 +7,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { listActivity, activityAuditQuery } = await import('./project-activity');
+const { listActivity, activitySubjects } = await import('./project-activity');
+const { auditSubjectQuery } = await import('#lib/server/audit/audit-service.js');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';
@@ -69,9 +70,9 @@ beforeEach(() => {
 	insert('user', { id: ADA, name: 'Ada', email: 'a@example.com', email_verified: 0 });
 	insert('project', { id: PROJECT, name: 'Renovation', created_at: T0, created_by_user_id: STAFF });
 	insert('project', { id: OTHER, name: 'Other', created_at: T0 });
-	insert('work_order', { id: 'wo-1', project_id: PROJECT, title: 'Paint', capacity: 1 });
-	insert('work_order', { id: 'wo-2', project_id: PROJECT, title: 'Sand', capacity: 1 });
-	insert('work_order', { id: 'wo-x', project_id: OTHER, title: 'Elsewhere', capacity: 1 });
+	insert('work_order', { id: 'wo-1', project_id: PROJECT, title: 'Paint' });
+	insert('work_order', { id: 'wo-2', project_id: PROJECT, title: 'Sand' });
+	insert('work_order', { id: 'wo-x', project_id: OTHER, title: 'Elsewhere' });
 });
 
 const summaries = (items: { summary: string }[]) => items.map((i) => i.summary);
@@ -165,14 +166,42 @@ describe('a project', () => {
 		expect(all.items.slice(0, 3).map((i) => i.id)).toEqual(first.items.map((i) => i.id));
 	});
 
+	// `created_at` is whole seconds and `id` a random UUID, so neither orders two quick actions.
+	it('lists two entries from the same second latest-written first', async () => {
+		for (const [id, action] of [
+			['zz-resolved', 'work_order.resolved'],
+			['aa-reopened', 'work_order.reopened'],
+			['mm-cancelled', 'work_order.cancelled']
+		]) {
+			insert('audit_log', {
+				id,
+				action,
+				actor_user_id: STAFF,
+				actor_name: 'Sam Staff',
+				actor_email: 'sam@example.com',
+				subject_type: 'work_order',
+				subject_id: 'wo-1',
+				details: '{}',
+				created_at: T0 + 5
+			});
+		}
+
+		const { items } = await listActivity({ workOrderId: 'wo-1' });
+
+		expect(items.map((i) => i.id)).toEqual([
+			'audit:mm-cancelled',
+			'audit:aa-reopened',
+			'audit:zz-resolved'
+		]);
+	});
+
 	// D1 caps a statement at 100 bound parameters; the work orders are a subquery.
 	it('binds the same few parameters however many work orders the project has', async () => {
 		for (let i = 0; i < 150; i++) {
 			insert('work_order', {
 				id: `bulk-${i}`,
 				project_id: PROJECT,
-				title: `Bulk ${i}`,
-				capacity: 1
+				title: `Bulk ${i}`
 			});
 			audit('work_order', `bulk-${i}`, 'work_order.reopened', T0 + 1000 + i);
 		}
@@ -181,7 +210,9 @@ describe('a project', () => {
 
 		expect(items.filter((i) => i.task?.title.startsWith('Bulk'))).toHaveLength(150);
 		expect(hasMore).toBe(false);
-		expect(activityAuditQuery({ projectId: PROJECT }, 201).toSQL().params.length).toBeLessThan(10);
+		expect(
+			auditSubjectQuery(activitySubjects({ projectId: PROJECT }), 201).toSQL().params.length
+		).toBeLessThan(10);
 	});
 });
 

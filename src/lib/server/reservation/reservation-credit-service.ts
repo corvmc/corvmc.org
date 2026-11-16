@@ -8,13 +8,13 @@
  * This keeps reservation-specific credit rules out of the generic credit- and
  * payment-services.
  */
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { creditTransaction } from '$lib/server/db/schema/finance';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { creditTransaction } from '#lib/server/db/schema/finance.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
 import { and, eq, sql } from 'drizzle-orm';
-import * as creditService from '$lib/server/finance/credit-service';
-import { creditValueCents, creditsToHours, hoursToCredits, type BookerType } from '$lib/config';
+import * as creditService from '#lib/server/finance/credit-service.js';
+import { creditValueCents, creditsToHours, hoursToCredits, type BookerType } from '#lib/config.js';
 import { termsFor, type ReservationConfig } from './config';
 
 export interface ReservationCreditResult {
@@ -26,6 +26,16 @@ export interface ReservationCreditResult {
 	remainingCents: number;
 	/** True when a prior commit existed and nothing was deducted this call. */
 	alreadyCommitted: boolean;
+}
+
+/**
+ * The hours a reservation is charged for: its window less the tour at its
+ * start. Every price and free-hours figure for a stored row reads this, never
+ * the raw window; `billable-hours.spec.ts` enforces it.
+ */
+export function billableHours(r: { startsAt: Date; endsAt: Date; tourMinutes: number }): number {
+	const ms = r.endsAt.getTime() - r.startsAt.getTime() - r.tourMinutes * 60_000;
+	return Math.max(0, ms) / (1000 * 60 * 60);
 }
 
 /**
@@ -93,14 +103,14 @@ export function usableFreeHours(wallet: FreeHoursWallet, startsAt: Date): number
  * against the same hours, and the first one paid takes them.
  */
 export function coveredByFreeHours(
-	r: { startsAt: Date; endsAt: Date; bookerType: BookerType },
+	r: { startsAt: Date; endsAt: Date; tourMinutes: number; bookerType: BookerType },
 	wallet: FreeHoursWallet,
 	cfg: ReservationConfig
 ): boolean {
 	const freeHoursBalance = usableFreeHours(wallet, r.startsAt);
 	if (freeHoursBalance <= 0) return false;
 	const { hourlyRateCents } = termsFor(r.bookerType, cfg);
-	const durationHours = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(r);
 	return (
 		computeReservationCredit({
 			totalCents: Math.round(durationHours * hourlyRateCents),

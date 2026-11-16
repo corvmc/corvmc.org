@@ -10,13 +10,13 @@ const requireMember = vi.fn(async () => ({
 	name: 'Member',
 	stripeId: 'cus_123'
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireMember: () => requireMember()
 }));
 
 const getMemberSubscription = vi.fn(async (): Promise<unknown> => null);
-const createCheckoutSession = vi.fn(async () => 'https://checkout.stripe.com/cs_test');
-vi.mock('$lib/server/finance/subscription-service', () => ({
+const createCheckoutSession = vi.fn(async () => '/checkout/cs_test');
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	getMemberSubscription: (...args: unknown[]) => getMemberSubscription(...(args as [])),
 	createCheckoutSession: (...args: unknown[]) => createCheckoutSession(...(args as [])),
 	mapDbSubscription: vi.fn(() => null),
@@ -26,25 +26,25 @@ vi.mock('$lib/server/finance/subscription-service', () => ({
 	cancel: vi.fn(async () => undefined)
 }));
 
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getAllBalances: vi.fn(async () => ({ free_hours: 3 })),
 	getUsageSinceLastAllocation: vi.fn(async () => 1)
 }));
 
-vi.mock('$lib/server/finance/community-stats', () => ({
+vi.mock('#lib/server/finance/community-stats.js', () => ({
 	getCommunityStats: vi.fn(async () => ({}))
 }));
 
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: vi.fn(async () => ({ unitAmountCents: 500 }))
 }));
 
 const ensureStripeCustomer = vi.fn(async () => 'cus_123');
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: (...args: unknown[]) => ensureStripeCustomer(...(args as []))
 }));
 
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: vi.fn((err: unknown) => {
 		throw err;
 	})
@@ -106,7 +106,7 @@ describe('createSubscription', () => {
 		// redirect(303, url) throws a Redirect — that's the success path.
 		await expect(
 			membership.createSubscription({ amount: 25, coverFees: false })
-		).rejects.toMatchObject({ status: 303, location: 'https://checkout.stripe.com/cs_test' });
+		).rejects.toMatchObject({ status: 303, location: '/checkout/cs_test' });
 
 		expect(createCheckoutSession).toHaveBeenCalledWith(
 			expect.objectContaining({ userId: 'user-1', quantity: 5, coverFees: false })
@@ -143,5 +143,13 @@ describe('getMemberMembership', () => {
 		// caller still reading it would get `undefined` silently, so pin its
 		// absence.
 		expect(data).not.toHaveProperty('billingPortalUrl');
+	});
+
+	// The page used to link off-site to Stripe's portal; the cards now do all of it here.
+	it('has no Stripe billing portal anywhere to link off-site to', async () => {
+		const { globSync, readFileSync } = await import('node:fs');
+		const sources = globSync('src/**/*.{ts,svelte}').filter((f) => !/\.(spec|test)\./.test(f));
+		expect(sources.length).toBeGreaterThan(100);
+		expect(sources.filter((f) => readFileSync(f, 'utf8').includes('billingPortal'))).toEqual([]);
 	});
 });

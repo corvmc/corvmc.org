@@ -1,12 +1,14 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { reassignDeliverableForm } from '$lib/remote/deliverables.remote';
-	import type { getStaffEventProduction } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { reassignDeliverableForm } from '#lib/remote/deliverables.remote.js';
+	import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
+	import { deliverablesState } from './section-state';
 
 	type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
 
@@ -25,42 +27,50 @@
 	} = $props();
 
 	const owners = $derived([
-		{ value: '', label: 'Staff' },
+		{ value: '', label: m.staff_staff_label() },
 		...committees.map((c) => ({ value: c.id, label: c.name }))
 	]);
 
 	const STATE = {
-		done: { label: 'Done', variant: 'success' },
-		overdue: { label: 'Overdue', variant: 'error' },
-		open: { label: 'Open', variant: 'ghost' },
-		cancelled: { label: 'Cancelled', variant: 'ghost' }
+		done: {
+			label: m.staff_events_id_production_deliverables_card_done_label(),
+			variant: 'success'
+		},
+		overdue: { label: m.staff_overdue_label(), variant: 'error' },
+		open: { label: m.staff_open_label(), variant: 'ghost' },
+		cancelled: { label: m.staff_cancelled_label(), variant: 'ghost' }
 	} as const;
 </script>
 
 {#if items.length > 0}
-	<InfoCard title="Deliverables">
+	<InfoCard
+		title={m.staff_events_id_production_deliverables_card_title()}
+		state={deliverablesState(items)}
+	>
 		<Table>
 			{#snippet head()}
-				<th>Item</th>
-				<th>Owner</th>
-				<th>Who</th>
-				<th>Due</th>
-				<th class="w-px">State</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th>{m.staff_item_label()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_owner_label()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_who_label()}</th>
+				<th>{m.staff_due_label()}</th>
+				<th class="w-px">{m.staff_events_id_production_deliverables_card_state_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each items as item (item.id)}
 				<tr>
 					<td class="cell-primary">
 						{item.title}
 						{#if item.artAwaitingUse}
-							<div class="text-muted text-sm font-normal">Art is in; waiting for it to be used</div>
+							<div class="text-muted text-sm font-normal">
+								{m.staff_events_id_production_deliverables_card_art_waiting_use_text()}
+							</div>
 						{/if}
 					</td>
-					<td>{item.groupName ?? 'Staff'}</td>
+					<td>{item.groupName ?? m.staff_staff_text()}</td>
 					<td>
 						{item.assignees.length > 0
 							? item.assignees.map((a) => a.name).join(', ')
-							: 'Nobody yet'}
+							: m.staff_events_id_production_deliverables_card_nobody_yet_text()}
 					</td>
 					<td class="whitespace-nowrap">{item.dueAt ? formatDateShort(item.dueAt) : '—'}</td>
 					<td class="w-px">
@@ -70,20 +80,26 @@
 						{#if item.state === 'open' || item.state === 'overdue'}
 							<Action
 								action={reassignDeliverableForm.for(item.id)}
-								label="Reassign"
-								aria-label={`Reassign ${item.title}`}
-								modalTitle="Reassign"
-								submitLabel="Reassign"
+								label={m.staff_events_id_production_deliverables_card_reassign_label()}
+								aria-label={m.staff_events_id_production_deliverables_card_aria_label({
+									title: item.title
+								})}
+								modalTitle={m.staff_events_id_production_deliverables_card_reassign_title()}
+								submitLabel={m.staff_events_id_production_deliverables_card_reassign_label()}
 								variant="ghost"
 								size="xs"
-								successToast="Reassigned"
+								successToast={m.staff_events_id_production_deliverables_card_success_toast()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={item.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input
+										{...reassignDeliverableForm.for(item.id).fields.id.as('hidden', item.id)}
+									/>
+									<input
+										{...reassignDeliverableForm.for(item.id).fields.eventId.as('hidden', eventId)}
+									/>
 									<FormField
-										name="groupId"
-										label="Owner"
+										field={reassignDeliverableForm.for(item.id).fields.groupId}
+										label={m.staff_events_id_production_deliverables_card_owner_label()}
 										type="select"
 										options={owners}
 										value={item.groupId ?? ''}

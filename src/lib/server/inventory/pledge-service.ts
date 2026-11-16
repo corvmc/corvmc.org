@@ -1,9 +1,9 @@
 import { and, asc, eq, gt, inArray, or, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { inventoryItem, suggestion, user, wishlistPledge } from '$lib/server/db/schema';
-import { DomainError } from '$lib/server/domain-error';
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import type { WishlistPledgeSubject } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { inventoryItem, suggestion, user, wishlistPledge } from '#lib/server/db/schema.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
+import type { WishlistPledgeSubject } from '#lib/config.js';
 
 /** How long a pledge holds an entry before it lets go on its own. */
 export const PLEDGE_DAYS = 30;

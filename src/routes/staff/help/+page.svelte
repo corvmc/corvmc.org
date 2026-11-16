@@ -1,40 +1,41 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		getStaffHelpPage,
 		createCategory,
 		updateCategory,
 		deleteCategory,
 		setArticlesPublishedForm
-	} from '$lib/remote/help.remote';
+	} from '#lib/remote/help.remote.js';
 	const { fields: deleteFields } = deleteCategory;
 	const { fields: createCatFields } = createCategory;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { helpAudiences, helpAudienceLabels } from '$lib/config';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
+	import StaffViews from '../StaffViews.svelte';
+	import { contentViews } from '../content/views';
 
 	const data = $derived(await getStaffHelpPage());
 	const articles = $derived(data.articles);
 	const categories = $derived(data.categories);
 
 	let categoryMap = $derived(Object.fromEntries(categories.map((c) => [c.id, c.name])));
-
-	let catNameValue = $state('');
 
 	// Bulk publish: `pnpm help:sync` imports every markdown article as a draft, so
 	// without a multi-select the help centre stays empty until someone clicks
@@ -82,16 +83,18 @@
 	}
 </script>
 
-<PageHeader title="Help Articles">
+<PageHeader title={m.staff_content_title()} documentTitle={m.staff_help_title()}>
+	<StaffViews views={contentViews} active="help" />
 	<Button href="/staff/help/create" variant="default" size="sm">
-		<IconPlus size={16} /> New Article
+		<IconPlus size={16} />
+		{m.staff_new_article_label()}
 	</Button>
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->
 	<details class="collapse-arrow collapse mb-6 collapse-panel">
 		<summary class="collapse-title text-sm font-medium"
-			>Manage Categories ({categories.length})</summary
+			>{m.staff_help_manage_categories_label({ length: categories.length })}</summary
 		>
 		<div class="collapse-content">
 			<div class="space-y-2">
@@ -109,43 +112,46 @@
 							     only be corrected in the database. -->
 							<Action
 								action={editCat}
-								modalTitle="Edit category"
-								successToast="Category updated"
+								modalTitle={m.staff_help_edit_category_title()}
+								successToast={m.staff_help_category_updated_toast()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label="Edit"
+								label={m.staff_edit_label()}
 							>
 								{#snippet form()}
 									<input {...editCat.fields.id.as('hidden', cat.id)} />
 									<div class="space-y-2">
-										<FormField name="name" label="Name">
+										<FormField field={editCat.fields.name} label={m.staff_name_label()}>
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="slug" label="Slug">
+										<FormField field={editCat.fields.slug} label={m.staff_slug_label()}>
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="description" label="Description">
+										<FormField
+											field={editCat.fields.description}
+											label={m.staff_description_label()}
+										>
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="icon" label="Icon">
+										<FormField field={editCat.fields.icon} label={m.staff_help_icon_label()}>
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
 												class="input w-full input-sm"
-												placeholder="tabler-book"
+												placeholder={m.staff_help_tabler_book_placeholder()}
 											/>
 										</FormField>
-										<FormField name="minRole" label="Audience">
+										<FormField field={editCat.fields.minRole} label={m.staff_audience_label()}>
 											<Select
 												size="sm"
 												class="w-full"
@@ -156,7 +162,7 @@
 												{/each}
 											</Select>
 										</FormField>
-										<FormField name="sortOrder" label="Sort order">
+										<FormField field={editCat.fields.sortOrder} label={m.staff_sort_order_label()}>
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
 												class="input w-full input-sm"
@@ -168,17 +174,19 @@
 							</Action>
 							<Action
 								action={deleteCategory}
-								modalTitle="Confirm"
-								successToast="Category deleted"
+								modalTitle={m.staff_help_delete_category_title()}
+								successToast={m.staff_category_deleted_toast()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label="Delete"
+								label={m.staff_delete_label()}
 							>
 								{#snippet form()}
 									<input {...deleteFields.id.as('hidden', cat.id)} />
-									<p class="py-4">Delete "{cat.name}" and all its articles?</p>
+									<p class="py-4">
+										{m.staff_help_delete_all_its_articles_text({ name: cat.name })}
+									</p>
 								{/snippet}
 								<IconTrash size={14} />
 							</Action>
@@ -186,46 +194,55 @@
 					</div>
 				{/each}
 			</div>
-			<Form remote={createCategory} successToast="Category created" onsuccess={refreshData}>
+			<Form
+				remote={createCategory}
+				successToast={m.staff_help_category_created_toast()}
+				onsuccess={refreshData}
+			>
 				<div class="mt-4 flex flex-wrap items-end gap-2">
-					<FormField name="name" label="Name">
+					<FormField field={createCategory.fields.name} label={m.staff_name_label()}>
 						<input
-							name="name"
+							{...createCategory.fields.name.as('text')}
 							type="text"
 							class="input w-40 input-sm"
-							placeholder="Category name"
-							bind:value={catNameValue}
+							placeholder={m.staff_help_category_name_placeholder()}
 						/>
 					</FormField>
-					<FormField name="slug" label="Slug">
+					<FormField field={createCategory.fields.slug} label={m.staff_slug_label()}>
 						<input
-							name="slug"
+							{...createCategory.fields.slug.as('text')}
 							type="text"
 							class="input w-40 input-sm"
-							placeholder={slugFromName(catNameValue) || 'auto'}
+							placeholder={slugFromName(createCategory.fields.name.value() ?? '') ||
+								m.staff_help_auto_placeholder()}
 						/>
 					</FormField>
-					<FormField name="description" label="Description">
+					<FormField field={createCategory.fields.description} label={m.staff_description_label()}>
 						<!-- The binding, like the edit row and the hidden sortOrder beside it,
 						     rather than the raw `name=` inputs this form otherwise uses. -->
 						<input
 							{...createCatFields.description.as('text', '')}
 							class="input w-56 input-sm"
-							placeholder="What it is for"
+							placeholder={m.staff_help_what_placeholder()}
 						/>
 					</FormField>
-					<FormField name="icon" label="Icon">
-						<input name="icon" type="text" class="input w-32 input-sm" placeholder="tabler-book" />
+					<FormField field={createCategory.fields.icon} label={m.staff_help_icon_label()}>
+						<input
+							{...createCategory.fields.icon.as('text')}
+							type="text"
+							class="input w-32 input-sm"
+							placeholder={m.staff_help_tabler_book_placeholder()}
+						/>
 					</FormField>
-					<FormField name="minRole" label="Audience">
-						<Select size="sm" class="w-32" name="minRole">
+					<FormField field={createCategory.fields.minRole} label={m.staff_audience_label()}>
+						<Select size="sm" class="w-32" {...createCategory.fields.minRole.as('select')}>
 							{#each helpAudiences as audience (audience)}
 								<option value={audience}>{helpAudienceLabels[audience]}</option>
 							{/each}
 						</Select>
 					</FormField>
 					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
-					<SubmitButton label="Add" variant="primary" size="sm" />
+					<SubmitButton label={m.staff_add_label()} variant="primary" size="sm" />
 				</div>
 			</Form>
 		</div>
@@ -233,7 +250,10 @@
 
 	<!-- Articles table -->
 	{#if articles.length === 0}
-		<EmptyState message="No help articles yet. Create one to get started." />
+		<EmptyState
+			title={m.staff_help_no_articles_title()}
+			description={m.staff_help_message_body()}
+		/>
 	{:else}
 		<!--
 			Bulk publish bar. `pnpm help:sync` imports the markdown manual as drafts
@@ -242,17 +262,19 @@
 		-->
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<span class="text-muted">
-				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
+				{m.staff_help_selected_drafts_text({ length: selectedIds.length, length2: drafts.length })}
 			</span>
 			{#if drafts.length > 0}
-				<Button variant="ghost" size="xs" onclick={selectDrafts}>Select all drafts</Button>
+				<Button variant="ghost" size="xs" onclick={selectDrafts}
+					>{m.staff_help_select_all_drafts_label()}</Button
+				>
 			{/if}
 			{#if selectedIds.length > 0}
 				<Action
 					action={setArticlesPublishedForm}
-					label="Publish selected"
-					modalTitle="Publish articles"
-					successToast="Articles published"
+					label={m.staff_help_publish_selected_label()}
+					modalTitle={m.staff_help_publish_articles_title()}
+					successToast={m.staff_help_articles_published_toast()}
 					onsuccess={afterBulk}
 					variant="primary"
 					size="xs"
@@ -263,16 +285,17 @@
 						{/each}
 						<input {...bulkFields.published.as('hidden', true)} />
 						<p class="py-4">
-							Publish {selectedIds.length} article{selectedIds.length === 1 ? '' : 's'} to the member
-							help centre?
+							{m.staff_help_publish_articles_member_help_centre_text({
+								length: selectedIds.length
+							})}
 						</p>
 					{/snippet}
 				</Action>
 				<Action
 					action={unpublishSelected}
-					label="Unpublish selected"
-					modalTitle="Unpublish articles"
-					successToast="Articles unpublished"
+					label={m.staff_help_unpublish_selected_label()}
+					modalTitle={m.staff_help_unpublish_articles_title()}
+					successToast={m.staff_help_articles_unpublished_toast()}
 					onsuccess={afterBulk}
 					variant="ghost"
 					size="xs"
@@ -283,7 +306,7 @@
 						{/each}
 						<input {...unpublishSelected.fields.published.as('hidden', false)} />
 						<p class="py-4">
-							Hide {selectedIds.length} article{selectedIds.length === 1 ? '' : 's'} from members?
+							{m.staff_help_hide_articles_from_members_text({ length: selectedIds.length })}
 						</p>
 					{/snippet}
 				</Action>
@@ -296,19 +319,19 @@
 					<input
 						type="checkbox"
 						class="checkbox checkbox-sm"
-						aria-label="Select all articles"
+						aria-label={m.staff_help_select_all_articles_label()}
 						checked={allSelected}
 						onchange={toggleAll}
 					/>
 				</th>
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Article</th>
-				<th class="col-support w-px">Source</th>
-				<th class="col-extra w-px">Role</th>
-				<th class="col-support whitespace-nowrap">Updated</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_help_article_label()}</th>
+				<th class="col-support w-px">{m.staff_source_label()}</th>
+				<th class="col-extra w-px">{m.staff_role_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.staff_updated_label()}</th>
 			{/snippet}
 			{#each articles as a (a.id)}
-				{@const href = resolve(`/staff/help/${a.id}`)}
+				{@const href = resolve(`staff/help/${a.id}`)}
 				<!-- `rowLink` ignores clicks inside inputs and labels, so the select
 				     checkbox and the row-click affordance coexist. -->
 				<tr class="hover cursor-pointer" use:rowLink={href}>
@@ -316,7 +339,7 @@
 						<input
 							type="checkbox"
 							class="checkbox checkbox-sm"
-							aria-label="Select {a.title}"
+							aria-label={m.staff_help_select_label({ title: a.title })}
 							checked={selectedIds.includes(a.id)}
 							onchange={() => toggleArticle(a.id)}
 						/>

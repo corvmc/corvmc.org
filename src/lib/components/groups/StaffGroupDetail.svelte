@@ -1,48 +1,58 @@
 <script lang="ts">
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { invalidateAll } from '$app/navigation';
+	import RecordFrame from '#lib/components/ui/RecordFrame.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		deactivateGroup,
 		reactivateGroup,
 		setStaffGroupRole,
+		getGroupHistory,
 		type getStaffGroupPage
-	} from '$lib/remote/groups.remote';
+	} from '#lib/remote/groups.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AddChairAction from './AddChairAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
 	import RosterImportAction from './RosterImportAction.svelte';
+	import RosterTable from '#lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
 	import RosterImportSummary from './RosterImportSummary.svelte';
-	import type { RosterImportResult } from '$lib/types/roster-import';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+	import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;
 
 	/**
-	 * A club's or committee's staff page, shared by `/staff/clubs/[id]` and
-	 * `/staff/committees/[id]`. Each route runs its own one query and hands the
-	 * result here; `applications` is each route's own review card.
+	 * A club's or committee's staff record, as a page or a side panel. Each kind
+	 * runs its own one query and hands the result here; `applications` is each
+	 * kind's own review card.
 	 */
 	let {
 		group,
 		members,
-		applications
+		applications,
+		variant = 'page',
+		actions
 	}: {
 		group: StaffGroupPage['group'];
 		members: StaffGroupPage['members'];
 		applications?: Snippet;
+		variant?: 'page' | 'panel';
+		actions?: Snippet;
 	} = $props();
 
 	const deactivateFields = deactivateGroup.fields;
@@ -58,41 +68,44 @@
 <!-- The two facts beside
      the badge are the ones the list row carries and this page dropped —
      `getGroupDetail` has returned both all along (#1070). -->
-<PageHeader
-	width="3xl"
+<RecordFrame
+	{variant}
+	{actions}
 	title={group.name}
-	subtitle={group.kind === 'committee' ? 'Committee' : 'Club'}
+	subtitle={group.kind === 'committee'
+		? msg.groups_staff_group_detail_committee_body()
+		: msg.groups_staff_group_detail_club_body()}
 >
-	<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
-	<span class="text-muted">
-		{group.memberCount}
-		{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(group.createdAt)}
-	</span>
-	{#if !isDeactivated}
-		<AddChairAction groupId={id} />
-	{/if}
-</PageHeader>
-
-<PageContent width="3xl">
+	{#snippet header()}
+		<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
+		<span class="text-muted">
+			{msg.groups_staff_group_detail_members_since_text({
+				memberCount: group.memberCount,
+				formatDateShortYear: formatDateShortYear(group.createdAt)
+			})}
+		</span>
+		{#if !isDeactivated}
+			<AddChairAction groupId={id} />
+		{/if}
+	{/snippet}
 	{#if isDeactivated}
 		<!-- Deactivation is the normal end of a program: nothing is removed and
 		     nobody loses their place, so putting it back is one control rather
 		     than a recovery procedure. -->
-		<InfoCard title="Deactivated">
+		<InfoCard title={msg.groups_staff_group_detail_deactivated_title()}>
 			<p class="text-sm">
-				This group is hidden from the directory and its page. Its roster, its documents and its
-				history are untouched.
+				{msg.groups_staff_group_detail_group_hidden_from_directory_its_text()}
 			</p>
 			<Action
 				action={reactivateGroup}
-				label="Reactivate"
-				modalTitle="Reactivate group"
-				submitLabel="Reactivate"
-				confirm="Put {group.name} back in the directory?"
-				successToast="Reactivated"
+				label={msg.groups_staff_group_detail_reactivate_label()}
+				modalTitle={msg.groups_staff_group_detail_reactivate_group_title()}
+				submitLabel={msg.groups_staff_group_detail_reactivate_label()}
+				confirm={msg.groups_staff_group_detail_put_back_directory_body({ name: group.name })}
+				successToast={msg.groups_staff_group_detail_reactivated_toast()}
 				variant="primary"
 				size="sm"
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...reactivateFields.groupId.as('hidden', id)} />
@@ -105,59 +118,69 @@
 		<RosterImportSummary result={importResult} ondismiss={() => (importResult = null)} />
 	{/if}
 
-	<InfoCard title="Roster">
+	<InfoCard title={msg.groups_staff_group_detail_roster_title()}>
 		{#snippet action()}
-			{#if !isDeactivated}
-				<RosterImportAction groupId={id} onresult={(r) => (importResult = r)} />
-			{/if}
+			<div class="flex gap-1">
+				{#if members.active.length > 0}
+					<CopyEmailsButton emails={members.active.map((m) => m.email)} />
+				{/if}
+				{#if !isDeactivated}
+					<RosterImportAction groupId={id} onresult={(r) => (importResult = r)} />
+				{/if}
+			</div>
 		{/snippet}
 		{#if members.active.length === 0 && members.pending.length === 0}
-			<EmptyState description="No members yet" />
+			<EmptyState description={msg.groups_staff_group_detail_description_body()} />
 		{:else}
-			<Table>
-				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
-					<th class="w-px">Role</th>
-					<th>Position</th>
-					<th class="whitespace-nowrap">Joined</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+			<!-- A position, where there is one, is the name's subline (`getMembers`). -->
+			<RosterTable
+				rows={[...members.active, ...members.pending]}
+				personLabel={msg.groups_staff_group_detail_person_label()}
+			>
+				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
+				{#snippet columns()}
+					<th class="w-px">{msg.groups_staff_group_detail_role_label()}</th>
+					<th class="whitespace-nowrap">{msg.groups_staff_group_detail_joined_label()}</th>
 				{/snippet}
-				{#each [...members.active, ...members.pending] as m (m.id)}
-					<tr>
-						<td class="w-px"><StatusBadge status={m.status} /></td>
-						<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
-						<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
-						<td>{m.position ?? '—'}</td>
-						<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
-						<td class="w-px">
-							{#if !isDeactivated && m.role !== 'owner'}
-								{@const makeChair = m.role !== 'admin'}
-								<Action
-									action={setStaffGroupRole.for(m.id)}
-									label={makeChair ? 'Make chair' : 'Remove chair'}
-									aria-label={makeChair
-										? `Make ${m.member.title} a chair`
-										: `Remove ${m.member.title} as a chair`}
-									confirm={makeChair
-										? `Make ${m.member.title} a chair of ${group.name}?`
-										: `Remove ${m.member.title} as a chair? They stay on the roster.`}
-									successToast={makeChair ? 'Chair added' : 'Chair removed'}
-									variant="ghost"
-									size="xs"
-									onsuccess={() => invalidateAll()}
-								>
-									{#snippet form()}
-										<input {...roleFields.groupId.as('hidden', id)} />
-										<input {...roleFields.userId.as('hidden', m.userId)} />
-										<input {...roleFields.role.as('hidden', makeChair ? 'admin' : 'member')} />
-									{/snippet}
-								</Action>
-							{/if}
-						</td>
-					</tr>
-				{/each}
-			</Table>
+				{#snippet cells(m)}
+					<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
+					<td class="whitespace-nowrap">{formatDateShort(m.createdAt)}</td>
+				{/snippet}
+				{#snippet actions(m)}
+					{#if !isDeactivated && m.role !== 'owner'}
+						{@const makeChair = m.role !== 'admin'}
+						<Action
+							action={setStaffGroupRole.for(m.id)}
+							label={makeChair
+								? msg.groups_staff_group_detail_make_chair_label()
+								: msg.groups_staff_group_detail_remove_chair_label()}
+							aria-label={makeChair
+								? msg.groups_staff_group_detail_make_chair_2_label({ title: m.member.title })
+								: msg.groups_staff_group_detail_remove_as_chair_label({ title: m.member.title })}
+							confirm={makeChair
+								? msg.groups_staff_group_detail_make_chair_3_body({
+										title: m.member.title,
+										name: group.name
+									})
+								: msg.groups_staff_group_detail_remove_as_chair_they_stay_body({
+										title: m.member.title
+									})}
+							successToast={makeChair
+								? msg.groups_staff_group_detail_chair_added_toast()
+								: msg.groups_staff_group_detail_chair_removed_toast()}
+							variant="ghost"
+							size="xs"
+							onsuccess={() => refreshAll()}
+						>
+							{#snippet form()}
+								<input {...roleFields.groupId.as('hidden', id)} />
+								<input {...roleFields.userId.as('hidden', m.userId)} />
+								<input {...roleFields.role.as('hidden', makeChair ? 'admin' : 'member')} />
+							{/snippet}
+						</Action>
+					{/if}
+				{/snippet}
+			</RosterTable>
 		{/if}
 	</InfoCard>
 
@@ -175,12 +198,15 @@
 
 	{@render applications?.()}
 
+	<RelatedTasks subject={{ type: 'group', id }} />
+	<RelatedShifts subject={{ type: 'group', id }} />
+
 	<!-- One line each, so labelled facts rather than cards of their own (#1078). -->
 	<DefinitionList>
 		<!-- No chairs is legal: the program runs, and staff add one when appointed. -->
-		<Fact label="Chairs">
+		<Fact label={msg.groups_staff_group_detail_chairs_label()}>
 			{#if group.chairs.length === 0}
-				<span class="text-fg-2">No chairs</span>
+				<span class="text-fg-2">{msg.groups_staff_group_detail_no_chairs_text()}</span>
 			{:else}
 				<span class="flex flex-wrap gap-2">
 					{#each group.chairs as chair (chair.id)}
@@ -189,36 +215,51 @@
 				</span>
 			{/if}
 		</Fact>
-		<Fact label="Public page">
+		<Fact label={msg.groups_staff_group_detail_public_page_label()}>
 			{#if group.visibility === 'public'}
-				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}>/groups/{group.slug}</a
+				<a class="link link-primary" href={resolve(`groups/${group.slug}`)}
+					>{msg.groups_staff_group_detail_groups_text({ slug: group.slug })}</a
 				>
 			{:else}
 				<span class="text-fg-2">
-					Not listed publicly. Set visibility to Public above and it appears at
-					<code class="text-xs">/groups/{group.slug}</code>.
+					<ParaglideMessage
+						message={msg.groups_staff_group_detail_not_listed_publicly_set_visibility_text}
+						inputs={{ slug: group.slug }}
+						>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 			{/if}
 		</Fact>
 	</DefinitionList>
 
+	{#if variant === 'page'}
+		<ActivityFeedCard
+			title={msg.groups_staff_group_detail_history_title()}
+			query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
+			toRow={feedItemRow}
+			empty={{ title: msg.groups_staff_group_detail_no_recorded_changes_title() }}
+		/>
+	{/if}
+
 	{#if !isDeactivated}
-		<InfoCard title="End this program">
+		<InfoCard title={msg.groups_staff_group_detail_end_program_title()}>
 			<p class="text-sm">
-				Deactivating hides it from the directory and its public page. Nothing is deleted, no member
-				loses their place, and it can be put back.
+				{msg.groups_staff_group_detail_deactivating_hides_from_directory_text()}
 			</p>
 			<Action
 				action={deactivateGroup}
-				label="Deactivate"
-				modalTitle="Deactivate group"
-				submitLabel="Deactivate"
-				confirm="Deactivate {group.name}? Its roster and history stay intact and you can reactivate it later."
-				successToast="Deactivated"
+				label={msg.groups_staff_group_detail_deactivate_label()}
+				modalTitle={msg.groups_staff_group_detail_deactivate_group_title()}
+				submitLabel={msg.groups_staff_group_detail_deactivate_label()}
+				confirm={msg.groups_staff_group_detail_deactivate_its_roster_history_stay_body({
+					name: group.name
+				})}
+				successToast={msg.groups_staff_group_detail_deactivated_toast()}
 				variant="error"
 				size="sm"
 				outline
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...deactivateFields.groupId.as('hidden', id)} />
@@ -226,4 +267,4 @@
 			</Action>
 		</InfoCard>
 	{/if}
-</PageContent>
+</RecordFrame>

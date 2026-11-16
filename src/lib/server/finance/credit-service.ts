@@ -1,19 +1,19 @@
-import { db } from '$lib/server/db';
-import { containsLiteral } from '$lib/server/db/like';
-import { user } from '$lib/server/db/schema/authentication';
-import { creditTransaction } from '$lib/server/db/schema/finance';
+import { db } from '#lib/server/db/index.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { creditTransaction } from '#lib/server/db/schema/finance.js';
 import { eq, and, sql, gt, gte, lte, desc, or, count, type SQL } from 'drizzle-orm';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { creditTypeConfig, DEFAULT_TIMEZONE } from '$lib/config';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { creditTypeConfig, DEFAULT_TIMEZONE } from '#lib/config.js';
 import {
 	isCreditType,
 	type CreditType,
 	type Credits,
 	type TransactionSource
-} from '$lib/server/db/schema/finance';
+} from '#lib/server/db/schema/finance.js';
 
 // ---------------------------------------------------------------------------
 // Column mapping — maps credit type names to user table columns

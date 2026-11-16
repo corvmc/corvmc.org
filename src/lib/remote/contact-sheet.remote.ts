@@ -1,17 +1,20 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireCapability } from '$lib/server/authorization';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireCapability } from '#lib/server/authorization.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import {
 	getContactSheetDisclosure,
 	issueContactSheetLink,
 	saveContactSheet
-} from '$lib/server/directory/contact-sheet-service';
-import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { livePosterRequests } from '$lib/server/production/artifact-request-service';
+} from '#lib/server/directory/contact-sheet-service.js';
+import { listFor } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { livePosterRequests } from '#lib/server/production/artifact-request-service.js';
+import { listActSlotTerms } from '#lib/server/production/run-of-show-service.js';
+import { actContactNamesUnguarded } from '#lib/server/directory/contact-service.js';
+import { deliverNow } from '#lib/server/outbox/outbox-service.js';
 
 /**
  * `/act/{token}` — the one surface an external act can reach.
@@ -43,11 +46,15 @@ const tokenField = z.string().min(1);
 export const getContactSheet = query(tokenField, async (token) => {
 	try {
 		const sheet = await getContactSheetDisclosure(token);
-		const [[rider], posterAsks] = await Promise.all([
+		const [[rider], posterAsks, slots] = await Promise.all([
 			listFor('directory_entry', sheet.entryId, 'rider'),
 			// An artist's info packet: each show they have been asked to draw for.
-			livePosterRequests(sheet.entryId)
+			livePosterRequests(sheet.entryId),
+			// Keyed on the resolved entry, never on anything the request carries.
+			listActSlotTerms(sheet.entryId)
 		]);
+		const contactIds = slots.flatMap((s) => (s.contactId ? [s.contactId] : []));
+		const contacts = await actContactNamesUnguarded(sheet.entryId, contactIds);
 		return {
 			// The name is shown but never editable — staff own it, because it
 			// appears on posters and in settlement records.
@@ -58,7 +65,11 @@ export const getContactSheet = query(tokenField, async (token) => {
 			// A file, because the structured rider is keyed on `group_id` and an
 			// act with no account has no group to key it on (#863).
 			rider: rider ? { url: resolveImageUrl(rider.key), filename: rider.filename } : null,
-			posterAsks
+			posterAsks,
+			bookings: slots.map(({ contactId, ...slot }) => ({
+				...slot,
+				contactName: (contactId && contacts.get(contactId)) || null
+			}))
 		};
 	} catch (err) {
 		mapDomainError(err);
@@ -88,9 +99,9 @@ export const saveContactSheetForm = form(
 				hometown: data.hometown || null,
 				url: data.url || null,
 				contact: {
-					bookingName: data.bookingName || null,
-					bookingEmail: data.bookingEmail || null,
-					bookingPhone: data.bookingPhone || null
+					name: data.bookingName || null,
+					email: data.bookingEmail || null,
+					phone: data.bookingPhone || null
 				}
 			});
 			return { success: true };
@@ -113,9 +124,10 @@ export const sendContactSheetLink = form(
 	}),
 	async (data) => {
 		const staff = await requireCapability('directory.shareContactSheet');
-		const { token } = await issueContactSheetLink(data.entryId, data.email, staff.id);
-		// Returned rather than emailed here: the send belongs to the notification
-		// layer, and staff need the URL anyway when an act asks for it again.
-		return { success: true, token };
+		const { url, outboxId } = await issueContactSheetLink(data.entryId, data.email, staff.id);
+		// Sent before answering, so "Link sent" is what the outbox row says. The
+		// URL is returned too: staff copy it when the act asks again (#2781).
+		const delivery = await deliverNow(outboxId);
+		return { success: true, url, sent: delivery.status === 'sent' };
 	}
 );

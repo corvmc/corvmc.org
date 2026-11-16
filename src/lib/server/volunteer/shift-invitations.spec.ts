@@ -14,21 +14,20 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', async () => ({
 	db: testDb,
-	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
-vi.mock('$lib/server/volunteer/volunteer-profile-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/events', () => ({ domainEvents: { emit: vi.fn(async () => undefined) } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
 	missingRequirements: vi.fn(async () => [])
 }));
 
@@ -36,6 +35,7 @@ const svc = await import('./volunteer-signup-service');
 const { listShifts } = await import('./work-order-service');
 
 const ROLE = 'role-1';
+const TASK = 'task-1';
 const SHIFT = 'shift-1';
 const COORDINATOR = 'usr-coordinator';
 const ADA = 'usr-ada';
@@ -45,8 +45,9 @@ const CAM = 'usr-cam';
 const inHours = (n: number) => new Date(Date.now() + n * 3_600_000);
 
 async function seed(capacity = 1) {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { volunteerRole, workOrder } = await import('$lib/server/db/schema/volunteer');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { volunteerRole, volunteerShift, workOrder } =
+		await import('#lib/server/db/schema/volunteer.js');
 
 	await testDb.insert(user).values(
 		[COORDINATOR, ADA, BO, CAM].map((id) => ({
@@ -59,13 +60,18 @@ async function seed(capacity = 1) {
 	await testDb
 		.insert(volunteerRole)
 		.values({ id: ROLE, name: 'Front Desk', isActive: true } as never);
+	// A task and the one shift volunteers sign up for (#2518).
 	await testDb.insert(workOrder).values({
-		id: SHIFT,
+		id: TASK,
 		volunteerRoleId: ROLE,
+		createdByUserId: COORDINATOR
+	} as never);
+	await testDb.insert(volunteerShift).values({
+		id: SHIFT,
+		workOrderId: TASK,
 		startsAt: inHours(48),
 		endsAt: inHours(52),
 		capacity,
-		postedAt: new Date(),
 		createdByUserId: COORDINATOR
 	} as never);
 }
@@ -76,7 +82,7 @@ async function claimedCount() {
 }
 
 beforeEach(async () => {
-	for (const t of ['volunteer_signup', 'work_order', 'volunteer_role', 'user']) {
+	for (const t of ['volunteer_signup', 'volunteer_shift', 'work_order', 'volunteer_role', 'user']) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	await seed();
@@ -182,14 +188,14 @@ describe('declining', () => {
 
 describe('expiry, which is derived rather than stored', () => {
 	it('drops off the member’s list once the shift has started', async () => {
-		const { workOrder } = await import('$lib/server/db/schema/volunteer');
+		const { volunteerShift } = await import('#lib/server/db/schema/volunteer.js');
 		const { eq } = await import('drizzle-orm');
 		await svc.inviteToShift(SHIFT, ADA, COORDINATOR);
 
 		await testDb
-			.update(workOrder)
+			.update(volunteerShift)
 			.set({ startsAt: inHours(-2), endsAt: inHours(-1) })
-			.where(eq(workOrder.id, SHIFT));
+			.where(eq(volunteerShift.id, SHIFT));
 
 		expect(await svc.listInvitationsForUser(ADA)).toEqual([]);
 	});
@@ -205,9 +211,12 @@ describe('expiry, which is derived rather than stored', () => {
 	});
 
 	it('is refused outright once the shift has been called off', async () => {
-		const { workOrder } = await import('$lib/server/db/schema/volunteer');
+		const { volunteerShift } = await import('#lib/server/db/schema/volunteer.js');
 		const { eq } = await import('drizzle-orm');
-		await testDb.update(workOrder).set({ cancelledAt: new Date() }).where(eq(workOrder.id, SHIFT));
+		await testDb
+			.update(volunteerShift)
+			.set({ cancelledAt: new Date() })
+			.where(eq(volunteerShift.id, SHIFT));
 
 		await expect(svc.inviteToShift(SHIFT, ADA, COORDINATOR)).rejects.toBeInstanceOf(
 			svc.ShiftClosedError
@@ -216,6 +225,18 @@ describe('expiry, which is derived rather than stored', () => {
 });
 
 describe('inviting somebody already answered', () => {
+	// Both reads find no signup before either insert runs (#2695).
+	it('refuses the second of two overlapping invitations', async () => {
+		const results = await Promise.allSettled([
+			svc.inviteToShift(SHIFT, ADA, COORDINATOR),
+			svc.inviteToShift(SHIFT, ADA, COORDINATOR)
+		]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(svc.AlreadyOnShiftError);
+	});
+
 	it('refuses when they already hold a place', async () => {
 		await svc.claimShift(SHIFT, ADA);
 		await expect(svc.inviteToShift(SHIFT, ADA, COORDINATOR)).rejects.toBeInstanceOf(

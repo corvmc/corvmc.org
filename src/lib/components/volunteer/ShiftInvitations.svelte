@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Shifts a coordinator has asked this member to take.
 	 *
@@ -6,11 +7,11 @@
 	 * the board is addressed to everybody. Accepting lands `claimed`, not
 	 * `confirmed` — saying yes is the member's act and booking is staff's.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { acceptShiftInvitation, declineShiftInvitation } from '$lib/remote/volunteer.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { acceptShiftInvitation, declineShiftInvitation } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		invitations,
@@ -43,20 +44,28 @@
 </script>
 
 {#if invitations.length > 0}
-	<InfoCard title={invitations.length === 1 ? 'You’ve been asked' : 'You’ve been asked'}>
+	<InfoCard
+		title={invitations.length === 1
+			? m.volunteer_shift_invitations_title()
+			: m.volunteer_shift_invitations_title()}
+	>
 		<ul class="flex flex-col gap-3">
 			{#each invitations as invitation (invitation.signupId)}
 				<li class="rounded-lg border border-base-300 p-3">
 					<div class="font-medium">{invitation.eventTitle ?? invitation.roleName}</div>
 					<div class="text-subtle text-sm">
-						{invitation.startsAt ? formatDateShort(invitation.startsAt) : 'date to be set'} ·
+						{invitation.startsAt
+							? formatDateShort(invitation.startsAt)
+							: m.volunteer_shift_invitations_date_set_text()} ·
 						{timeRange(invitation.startsAt, invitation.endsAt)}
 						{#if invitation.eventTitle}
 							· {invitation.roleName}
 						{/if}
 					</div>
 					{#if invitation.invitedByName}
-						<div class="text-subtle text-xs">{invitation.invitedByName} asked</div>
+						<div class="text-subtle text-xs">
+							{m.volunteer_asked_text({ invitedByName: invitation.invitedByName })}
+						</div>
 					{/if}
 					{#if invitation.notes}
 						<p class="mt-1 text-sm">{invitation.notes}</p>
@@ -65,10 +74,10 @@
 					<div class="mt-2 flex flex-wrap gap-2">
 						<Action
 							action={acceptShiftInvitation.for(invitation.signupId)}
-							label="Yes, I can"
+							label={m.volunteer_shift_invitations_yes_i_can_label()}
 							variant="primary"
 							size="xs"
-							successToast="Taken. Staff confirm next."
+							successToast={m.volunteer_shift_invitations_taken_staff_confirm_next_toast()}
 							onsuccess={onchanged}
 						>
 							{#snippet form()}
@@ -77,10 +86,10 @@
 						</Action>
 						<Action
 							action={declineShiftInvitation.for(invitation.signupId)}
-							label="Can't make it"
+							label={m.volunteer_shift_invitations_can_t_make_label()}
 							variant="ghost"
 							size="xs"
-							successToast="Thanks for saying — they'll ask somebody else."
+							successToast={m.volunteer_shift_invitations_thanks_saying_they_ll_ask_toast()}
 							onsuccess={onchanged}
 						>
 							{#snippet form()}

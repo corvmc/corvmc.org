@@ -1,13 +1,16 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { invalid } from '@sveltejs/kit';
-import * as service from '$lib/server/sponsor/sponsor-service';
-import * as credits from '$lib/server/sponsor/credit-service';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '$lib/config';
+import * as service from '#lib/server/sponsor/sponsor-service.js';
+import * as credits from '#lib/server/sponsor/credit-service.js';
+import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { listFundableProjects } from '#lib/server/development/funding-project.js';
+import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '#lib/config.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
 const isoDay = z
@@ -28,10 +31,12 @@ function sponsorInput(d: z.infer<z.ZodObject<typeof sponsorFields>>) {
 	return {
 		name: d.name,
 		website: d.website || null,
-		contactName: d.contactName || null,
-		contactEmail: d.contactEmail || null,
 		notes: d.notes || null
 	};
+}
+
+function sponsorContact(d: z.infer<z.ZodObject<typeof sponsorFields>>) {
+	return { contactName: d.contactName || null, contactEmail: d.contactEmail || null };
 }
 
 const sponsorshipFields = {
@@ -42,7 +47,9 @@ const sponsorshipFields = {
 	amountCents: z.number().int().min(0).optional(),
 	startsOn: isoDay,
 	endsOn: isoDay,
-	notes: optionalText(LONG_TEXT_MAX)
+	notes: optionalText(LONG_TEXT_MAX),
+	/** Blank for general support. */
+	fundsProjectId: z.string().optional()
 };
 
 function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
@@ -53,19 +60,10 @@ function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
 		amountCents: d.amountCents ?? null,
 		startsOn: d.startsOn || null,
 		endsOn: d.endsOn || null,
-		notes: d.notes || null
+		notes: d.notes || null,
+		fundsProjectId: d.fundsProjectId || null
 	};
 }
-
-export const getSponsors = query(
-	z.object({ includeArchived: z.boolean().optional() }).optional(),
-	async (filters) => {
-		await requireCapability('sponsor.read');
-		return service.listSponsors(clubToday(), {
-			includeArchived: filters?.includeArchived ?? false
-		});
-	}
-);
 
 export const getSponsorDetail = query(z.string(), async (id) => {
 	await requireCapability('sponsor.read');
@@ -75,65 +73,44 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 			credits.listPlacementsForSponsor(id),
 			credits.sponsorLogoKey(id)
 		]);
-		return { ...detail, placements, logoUrl: resolveImageUrl(logoKey) };
+		// A sponsorship that already names an archived project keeps it pickable.
+		const [[withContact], projects] = await Promise.all([
+			withPrimaryContact([detail]),
+			listFundableProjects(detail.sponsorships.map((s) => s.fundsProjectId))
+		]);
+		return { ...withContact, placements, logoUrl: resolveImageUrl(logoKey), projects };
 	} catch (err) {
 		mapDomainError(err);
 	}
-});
-
-export const createSponsor = form(z.object(sponsorFields), async (data) => {
-	await requireCapability('sponsor.manage');
-	const row = await service.createSponsor(sponsorInput(data));
-	return { id: row.id };
 });
 
 export const updateSponsor = form(
 	z.object({ id: z.string().min(1), ...sponsorFields }),
 	async (data) => {
 		await requireCapability('sponsor.manage');
-		await service.updateSponsor(data.id, sponsorInput(data));
+		try {
+			await service.updateSponsor(data.id, sponsorInput(data));
+			await savePrimaryContact(data.id, sponsorContact(data));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.id).refresh();
 		return { success: true };
 	}
 );
 
-export const archiveSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.archiveSponsor(data.id);
-		await getSponsorDetail(data.id).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-export const restoreSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.restoreSponsor(data.id);
-		await getSponsorDetail(data.id).refresh();
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
-export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	try {
-		await service.deleteSponsor(data.id);
-		return { success: true };
-	} catch (err) {
-		mapDomainError(err);
-	}
-});
-
 export const createSponsorship = form(
 	z.object({ sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
-		await service.createSponsorship({ sponsorId: data.sponsorId, ...sponsorshipInput(data) });
+		const staff = await requireCapability('sponsor.manage');
+		try {
+			await service.createSponsorship(
+				{ organizationId: data.sponsorId, ...sponsorshipInput(data) },
+				{ createdByUserId: staff.id }
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
 	}
@@ -143,7 +120,11 @@ export const updateSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
 		await requireCapability('sponsor.manage');
-		await service.updateSponsorship(data.id, sponsorshipInput(data));
+		try {
+			await service.updateSponsorship(data.id, sponsorshipInput(data));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
 	}
@@ -151,12 +132,12 @@ export const updateSponsorship = form(
 
 export const deleteSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
-	async (data) => {
+	writesAudit('sponsorship.deleted', async (data) => {
 		await requireCapability('sponsor.manage');
 		await service.deleteSponsorship(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const placeSponsorship = form(
@@ -182,12 +163,12 @@ export const placeSponsorship = form(
 
 export const removePlacement = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1) }),
-	async (data) => {
+	unaudited('Sponsor display content: no standing, money or access changes.', async (data) => {
 		await requireCapability('sponsor.manage');
 		await credits.removePlacement(data.id);
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const setSponsorLogo = form(
@@ -210,9 +191,12 @@ export const setSponsorLogo = form(
 	}
 );
 
-export const removeSponsorLogo = form(z.object({ sponsorId: z.string().min(1) }), async (data) => {
-	await requireCapability('sponsor.manage');
-	await credits.removeSponsorLogo(data.sponsorId);
-	await getSponsorDetail(data.sponsorId).refresh();
-	return { success: true };
-});
+export const removeSponsorLogo = form(
+	z.object({ sponsorId: z.string().min(1) }),
+	unaudited('Sponsor display content: no standing, money or access changes.', async (data) => {
+		await requireCapability('sponsor.manage');
+		await credits.removeSponsorLogo(data.sponsorId);
+		await getSponsorDetail(data.sponsorId).refresh();
+		return { success: true };
+	})
+);

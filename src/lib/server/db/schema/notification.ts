@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
+import type { Capability } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Notification type registry
@@ -31,11 +32,16 @@ export interface NotificationTypeDef {
 	};
 	mandatory?: boolean;
 	/**
-	 * Only a staffer can receive this. Every one of these fans out over a
-	 * capability or the staff mailbox rather than over subscribers, so a member's
-	 * preference row for it was inert as well as confusing (#899).
+	 * Only holders of one of these can receive it: the capability its fan-out
+	 * names, or the one that reads the staff mailbox it goes to. Anyone else's
+	 * preference row for it would be inert as well as confusing (#899, #2985).
 	 */
-	staffOnly?: boolean;
+	forHolders?: readonly Capability[];
+	/**
+	 * Also reaches a committee seat: a task's notice goes to its position, then
+	 * its committee, before any capability holder (#2990).
+	 */
+	forSeats?: boolean;
 	/**
 	 * This type's email must never carry text a member wrote.
 	 *
@@ -153,11 +159,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		mandatory: true
 	},
 	{
-		key: 'confirmation_reminder',
+		key: 'reservation_payment_due',
 		category: 'practice-space',
-		label: 'Confirmation reminder',
-		description: 'Reminder to confirm unconfirmed reservations',
-		defaults: { email: true, inApp: true, sms: false }
+		label: 'Payment due',
+		description: 'Reminder 1, 7 and 21 days after a reservation ends unpaid',
+		defaults: { email: true, inApp: true, sms: false },
+		// Mandatory: it is a notice of a debt that holds bookings and door codes.
+		mandatory: true
 	},
 	{
 		key: 'band_invitation',
@@ -210,7 +218,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description:
 			'Notification when a generated recurring event could not reserve the practice space due to a conflict',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['event.manage']
+	},
+	{
+		key: 'recurring_rescheduled',
+		category: 'practice-space',
+		label: 'Recurring reservation changed',
+		description: 'When staff change the day, time or frequency of your recurring reservation',
+		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
 		key: 'recurring_waitlisted',
@@ -249,7 +264,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Equipment loan requested',
 		description: 'Notification when a member requests equipment',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inventory.manageLoans']
 	},
 	{
 		key: 'equipment_checked_out',
@@ -271,7 +286,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Grant or sponsorship deadline',
 		description: 'Two weeks and three days before a grant or sponsorship deadline you manage',
 		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['grant.manage', 'sponsor.manage']
 	},
 	{
 		key: 'equipment_returned',
@@ -313,7 +328,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		description: 'Forwarded contact form messages',
 		defaults: { email: true, inApp: false, sms: false },
 		mandatory: true,
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'inbox_message_received',
@@ -321,7 +336,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'New inbox message',
 		description: 'Notification when a new message arrives in the staff inbox',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'portal_message_reply',
@@ -349,6 +364,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// Email on, and this is the one that matters: a return state nobody
 		// receives is the failure the return state exists to prevent. The member
 		// would otherwise only find out by revisiting their profile.
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'instructor_status_ended',
+		category: 'volunteering',
+		label: 'Your teaching status',
+		description: 'When staff pause or end your teaching',
+		// Email on: a teacher with students booked would otherwise find out by looking.
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
@@ -398,7 +421,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Inbox conversation assigned',
 		description: 'Notification when a staff inbox conversation is assigned to you',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['inbox.read']
 	},
 	{
 		key: 'content_flagged',
@@ -406,7 +429,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Content flagged',
 		description: 'Notification when a member reports a profile for review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['moderation.reviewFlags']
 	},
 	{
 		key: 'band_lineup_invited',
@@ -431,12 +454,33 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'show_lead_assigned',
+		category: 'shows',
+		label: 'Event lead',
+		description: 'When somebody names you the event lead on a show',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'deliverable_due',
 		category: 'shows',
 		label: 'Show work due',
 		description:
 			'Three days before one of your committee’s items on a show is due, and again once it is late',
 		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'task_assigned',
+		category: 'volunteering',
+		label: 'Task assigned',
+		description: 'When somebody assigns you a task',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'task_ready',
+		category: 'volunteering',
+		label: 'Task ready',
+		description: 'When the last task one of your tasks waits on is done',
+		defaults: { email: false, inApp: true, sms: false }
 	},
 	{
 		key: 'band_event_unpublished',
@@ -454,7 +498,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// ignore it.
 		description: 'Notification when logged volunteer hours need a staff review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.reviewHours']
 	},
 	{
 		key: 'volunteer_hours_approved',
@@ -488,7 +532,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// and it belongs next to the shift rather than in their inbox.
 		description: 'Notification when somebody you invited to a shift says no',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
 	},
 	{
 		key: 'volunteer_shift_claimed',
@@ -500,7 +545,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// gets a reminder and completes afterwards.
 		description: 'Notification when a member claims a volunteer shift and needs confirming',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts']
 	},
 	{
 		key: 'volunteer_shift_confirmed',
@@ -520,7 +565,8 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// coordinator's problem and nobody else's.
 		description: 'Notification when somebody comes off a shift and their place reopens',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
 	},
 	{
 		key: 'volunteer_shift_cancelled',
@@ -570,6 +616,24 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'first_visit',
+		category: 'practice-space',
+		label: 'First visit',
+		// Sent in place of the reservation reminder for that booking.
+		description:
+			'The day before your first reservation: when to arrive, where to go, and the house rules',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'orientation_unclaimed',
+		category: 'volunteering',
+		label: 'Unstaffed orientation',
+		description: 'A day before an orientation shift that has no volunteer signed up',
+		defaults: { email: true, inApp: true, sms: false },
+		forHolders: ['volunteer.manageShifts'],
+		forSeats: true
+	},
+	{
 		key: 'community_event_submitted',
 		category: 'shows',
 		label: 'Community listing needs review',
@@ -578,7 +642,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// draft is nobody's business but theirs.
 		description: 'Notification when a member submits a community listing for review',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['listing.review']
 	},
 	{
 		key: 'local_resource_submitted',
@@ -586,7 +650,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		label: 'Local resource tip needs review',
 		description: 'Notification when someone suggests a listing for the Local Resources page',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['localResource.manage']
 	},
 	{
 		key: 'community_event_reviewed',
@@ -615,13 +679,28 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'classified_expiring',
+		category: 'people',
+		label: 'Classified post expiring',
+		description: 'Reminder three days before a classified post you made leaves the board',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'classified_moderated',
+		category: 'people',
+		label: 'Classified post reviewed',
+		// Email on: a takedown note is the author's only route back to the board.
+		description: 'Notification when staff approve, restore or take down a classified post you made',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'moderation_appeal_filed',
 		category: 'people',
 		label: 'Moderation appeal filed',
 		// In-app only: a queue item, not news. The Content Flags badge counts them.
 		description: 'Notification when a member appeals an upheld report',
 		defaults: { email: false, inApp: true, sms: false },
-		staffOnly: true
+		forHolders: ['moderation.reviewFlags']
 	},
 	{
 		key: 'moderation_appeal_decided',
@@ -680,14 +759,6 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// email belongs on the broadcast stream, not the transactional one.
 		description: 'When the result of a ballot is certified',
 		defaults: { email: false, inApp: true, sms: false }
-	},
-	{
-		key: 'renewal_expiry',
-		category: 'membership',
-		label: 'Permit, license or insurance expiring',
-		description: "Sixty and fourteen days before one of CMC's own renewals expires",
-		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
 	}
 ];
 
@@ -702,9 +773,25 @@ export function getNotificationType(key: string): NotificationTypeDef | undefine
  * preferences table listed nine staff-only types (#899). Audience is a field
  * here rather than a "(staff)" suffix on the label, so the query can act on it.
  */
-export function preferenceTypesFor(audience: 'member' | 'staff'): NotificationTypeDef[] {
-	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && (audience === 'staff' || !t.staffOnly));
+/** The switches to offer someone who holds `held`. */
+export function preferenceTypesFor(held: ReadonlySet<string>): NotificationTypeDef[] {
+	return NOTIFICATION_TYPES.filter((t) => !t.mandatory && receivable(t, held));
 }
+
+/** In `held`: the person sits on a committee, so `forSeats` types reach them. */
+export const SEAT_HOLDER = 'committee seat';
+
+/** Can someone holding `held` ever receive this type? */
+export function receivable(t: NotificationTypeDef, held: ReadonlySet<string>): boolean {
+	if (!t.forHolders) return true;
+	if (t.forSeats && held.has(SEAT_HOLDER)) return true;
+	return t.forHolders.some((c) => held.has(c));
+}
+
+/** Every capability some type is gated on, for resolving `held` once. */
+export const NOTIFICATION_CAPABILITIES: readonly Capability[] = [
+	...new Set(NOTIFICATION_TYPES.flatMap((t) => t.forHolders ?? []))
+];
 
 // ---------------------------------------------------------------------------
 // In-app notifications

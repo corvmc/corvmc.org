@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The rows of a conversation list, shared by the member's Messages and a
 	 * band's pre-filtered view of the same query (#1250).
@@ -8,9 +9,9 @@
 	 */
 	import type { ResolvedPathname } from '$app/types';
 	import { page } from '$app/state';
-	import { relativeDay } from '$lib/utils/format';
+	import { relativeDay } from '#lib/utils/format.js';
 	import { channelIcon, channelLabel } from './channels';
-	import type { UnifiedConversation } from '$lib/types/conversation';
+	import type { UnifiedConversation } from '#lib/types/conversation.js';
 
 	let {
 		rows,
@@ -30,10 +31,11 @@
 	 *
 	 * A booking enquiry is titled on the person who wrote in, not its subject —
 	 * every one of them carries the same `BAND_ENQUIRY_SUBJECT`, so titling on
-	 * that would render a band's whole inbox as one repeated line.
+	 * that would render a band's whole inbox as one repeated line. A group room
+	 * is titled by its topic, General being the one with none.
 	 */
 	function titleOf(c: UnifiedConversation): string {
-		if (c.channel === 'group') return 'Group chat';
+		if (c.channel === 'group') return c.subject ?? 'Group chat';
 		if (c.channel === 'direct') return c.counterpartName ?? 'Member';
 		if (c.channel === 'band') return c.counterpartName ?? c.subject ?? 'Booking enquiry';
 		return c.subject ?? c.counterpartName ?? 'Conversation';
@@ -60,7 +62,9 @@
 					<span class="flex items-center gap-2">
 						<span class="truncate font-medium" class:font-bold={c.unread}>{titleOf(c)}</span>
 						{#if c.pending}
-							<span class="badge shrink-0 badge-sm badge-warning">Request</span>
+							<span class="badge shrink-0 badge-sm badge-warning" data-testid="request-badge"
+								>{m.inbox_conversation_rows_request_text()}</span
+							>
 						{/if}
 						{#if showInbox && c.groupName}
 							<!-- Which inbox, on the row rather than only in the filter: a
@@ -68,7 +72,10 @@
 							<span class="badge shrink-0 badge-ghost badge-sm">{c.groupName}</span>
 						{/if}
 						{#if c.unread}
-							<span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
+							<span
+								class="size-2 shrink-0 rounded-full bg-primary"
+								title={m.inbox_conversation_rows_title_label()}
+							></span>
 						{/if}
 					</span>
 
@@ -78,7 +85,7 @@
 
 					<span class="text-subtle text-xs">
 						{c.lastMessageAt ? relativeDay(c.lastMessageAt) : '—'}
-						{#if c.status === 'resolved'}· Closed{/if}
+						{#if c.status === 'resolved'}{m.inbox_conversation_rows_closed_text()}{/if}
 					</span>
 				</span>
 			</a>

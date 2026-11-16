@@ -1,33 +1,59 @@
 import { z } from 'zod';
-import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
+import { historyArgs } from './_history';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
+import { listIncidentsFiledBy } from '#lib/server/incident/incident-service.js';
+import {
+	listAllArticles,
+	listReadableArticles,
+	resolveHelpReader
+} from '#lib/server/help/help-service.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
-import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
+import { command, form } from './_remote';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	listRoleGrants,
 	setRoleCapabilityGrants
-} from '$lib/server/capability/capability-grant-service';
-import { toEventRef } from '$lib/server/entity/refs';
+} from '#lib/server/capability/capability-grant-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
 import { getStaffLayout } from './layout.remote';
-import { getProjectTaskPage } from './tasks.remote';
+import { aboutWhere } from '#lib/server/task/related-tasks.js';
+import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import {
+	eventScope,
+	shiftScope,
+	signupScope,
+	taskScope
+} from '#lib/server/capability/record-scope.js';
+import { getProjectById } from '#lib/server/project/project-service.js';
+import { listSections } from '#lib/server/project/project-section-service.js';
+import { moveTask, requireTaskInProject } from '#lib/server/project/project-task-service.js';
+import {
+	addDependency as addDependencyService,
+	listDependencyOptions,
+	listTaskDependencies,
+	removeDependency as removeDependencyService
+} from '#lib/server/volunteer/task-dependencies.js';
 import { getProjectActivity } from './projects.remote';
-import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
-import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
-import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
-import { listAllVolunteers, volunteerRosterFilters } from '$lib/server/volunteer/volunteer-roster';
-import { rosterEmails } from '$lib/server/roster/roster';
-import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
+import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
+import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
+import { getVolunteerProfile } from '#lib/server/volunteer/volunteer-profile-service.js';
+import {
+	listAllVolunteers,
+	volunteerRosterFilters
+} from '#lib/server/volunteer/volunteer-roster.js';
+import { rosterEmails } from '#lib/server/roster/roster.js';
+import { listInterestsForUser } from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
 	getSignupForUser,
 	listSignupsForUser
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { mapDomainError } from '$lib/server/errors';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { byDueAt } from '$lib/utils/work-order-due';
-import { suggestSkills } from '$lib/server/directory/directory-service';
-import { listMyPrograms } from '$lib/server/group/group-service';
-import { renderMarkdown } from '$lib/utils/markdown';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { suggestSkills } from '#lib/server/directory/directory-service.js';
+import { listMyPrograms } from '#lib/server/group/group-service.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
 import {
 	createVolunteerRole as createRoleService,
 	updateVolunteerRole as updateRoleService,
@@ -35,7 +61,7 @@ import {
 	restoreVolunteerRole as restoreRoleService,
 	deleteVolunteerRole as deleteRoleService,
 	listVolunteerRoles
-} from '$lib/server/volunteer/volunteer-role-service';
+} from '#lib/server/volunteer/volunteer-role-service.js';
 import {
 	submitHours,
 	updateHourLog,
@@ -49,7 +75,7 @@ import {
 	getUserHourSummary,
 	flagHourLogExceptions,
 	type HourLogRow
-} from '$lib/server/volunteer/hour-log-service';
+} from '#lib/server/volunteer/hour-log-service.js';
 import {
 	getVolunteerTotals,
 	getContributedValue,
@@ -57,13 +83,13 @@ import {
 	getHoursByGroup,
 	getHoursByRole,
 	getHoursByMonth
-} from '$lib/server/volunteer/volunteer-report-service';
+} from '#lib/server/volunteer/volunteer-report-service.js';
 import {
 	getInterestsForUser,
 	setInterests,
 	listInterestedMembers,
 	countInterestsByRole
-} from '$lib/server/volunteer/volunteer-interest-service';
+} from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
 	completeVolunteerOnboarding,
 	updateVolunteerProfile as updateProfileService,
@@ -74,7 +100,7 @@ import {
 	listVolunteers,
 	stageOf,
 	type OnboardingStage
-} from '$lib/server/volunteer/volunteer-profile-service';
+} from '#lib/server/volunteer/volunteer-profile-service.js';
 import {
 	createCertification as createCertificationService,
 	updateCertification as updateCertificationService,
@@ -85,37 +111,57 @@ import {
 	getRequirementsForRole,
 	getRequirementsForRoles,
 	setRoleRequirements
-} from '$lib/server/volunteer/volunteer-certification-service';
-import { listWorkTasks, setWorkTaskDoneAsAssignee } from '$lib/server/volunteer/duty-list-service';
-import { listFinishedWorkToConfirm } from '$lib/server/inventory/work-request-service';
-import { getById } from '$lib/server/event/event-service';
+} from '#lib/server/volunteer/volunteer-certification-service.js';
+import {
+	listWorkTasks,
+	setWorkTaskDoneAsAssignee
+} from '#lib/server/volunteer/duty-list-service.js';
+import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js';
+import {
+	assignToTask as assignToTaskService,
+	getTaskChecklist,
+	handBackTask as handBackTaskService,
+	listAssignedTasksForUser,
+	markTaskDone,
+	setTaskChecklistItemDone,
+	takeTask as takeTaskService,
+	unassignFromTask as unassignFromTaskService
+} from '#lib/server/volunteer/assignee-service.js';
+import { explainTaskAct, requireActOnTask, waitsOnTask } from '#lib/server/task/can-act.js';
+import {
+	setTaskPosition as setTaskPositionService,
+	taskPositionChoices
+} from '#lib/server/task/task-position.js';
+import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
+	findOtherShowForCode,
 	getEventTickets,
 	getTicketById,
 	getTicketsSold
-} from '$lib/server/ticket/ticket-service';
+} from '#lib/server/ticket/ticket-service.js';
+import { doorListTickets } from '#lib/server/ticket/door-list.js';
 import {
 	createShift as createShiftService,
-	duplicateShift as duplicateShiftService,
-	updateShift as updateShiftService,
-	cancelShift as cancelShiftService,
+	copyShiftForward as copyShiftForwardService,
+	editShift as editShiftService,
+	editTask as editTaskService,
+	cancelOneShift as cancelOneShiftService,
+	cancelShift as cancelTaskService,
 	listShifts,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
+	getShiftById,
 	getShiftDetail,
 	workOrderProjectId,
 	createWorkOrder as createWorkOrderService,
-	scheduleWorkOrder as scheduleWorkOrderService,
+	openShift as openShiftService,
+	workOrderIdOfShift,
+	getWorkOrderById,
 	resolveWorkOrder as resolveWorkOrderService,
-	listWorkOrders,
-	listWorkOrdersByIds,
-	isScheduled,
-	isRoledShift
-} from '$lib/server/volunteer/work-order-service';
-import { listJobs } from '$lib/server/contractor/contractor-job-service';
-import { listContractors } from '$lib/server/contractor/contractor-service';
-import { contractorJobViews } from '$lib/config';
+	listWorkOrders
+} from '#lib/server/volunteer/work-order-service.js';
+import { listContractors } from '#lib/server/contractor/contractor-service.js';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -133,14 +179,13 @@ import {
 	listClaimants,
 	listOutstandingClaims,
 	listUnloggedCompletions,
-	countVolunteerWorkWaiting,
 	SignupNotFoundError
-} from '$lib/server/volunteer/volunteer-signup-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
 import {
 	submitFeedback as submitFeedbackService,
 	getFeedbackContext,
 	summarizeFeedbackByRole
-} from '$lib/server/volunteer/volunteer-feedback-service';
+} from '#lib/server/volunteer/volunteer-feedback-service.js';
 import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
@@ -151,7 +196,12 @@ import {
 	missingFrom,
 	wasHeldOn,
 	listLapsingBeforeRosteredShift
-} from '$lib/server/volunteer/member-certification-service';
+} from '#lib/server/volunteer/member-certification-service.js';
+import {
+	listCrewMates,
+	listTrainingShifts,
+	setSupervisingSignup
+} from '#lib/server/volunteer/training-service.js';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -172,9 +222,13 @@ import {
 	VOLUNTEER_NAME_MAX,
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
-	VOLUNTEER_ROLE_NAME_MAX
-} from '$lib/config';
-import type { VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
+	VOLUNTEER_ROLE_NAME_MAX,
+	ROLE_GRANT_LEAD_DAYS_MAX,
+	type Capability
+} from '#lib/config.js';
+import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
+import { clubInstant } from '#lib/utils/format.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 // Hours come off the form as a decimal (0.25 steps) and are stored as integer
 // minutes. One place does the conversion so the two can't drift.
@@ -379,20 +433,33 @@ const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
  */
 export const getShiftCandidates = query(
 	z.object({
-		shiftId: z.string().min(1),
+		workOrderId: z.string().min(1),
+		/** The shift people are asked onto; absent, Add assigns the task. */
+		shiftId: z.string().optional(),
 		scope: z.enum(['interested', 'worked', 'all']).default('interested'),
 		search: z.string().optional()
 	}),
 	async (f) => {
 		await requireCapability('volunteer.read');
 
-		const shift = await getShiftDetail(f.shiftId);
+		const task = await getShiftDetail(f.workOrderId);
 		// No role, no candidates: nobody can be put on it until it has one.
-		if (!shift?.volunteerRoleId) return { gated: false, rows: [] };
+		if (!task?.volunteerRoleId) return { gated: false, rows: [] };
+		// A shift named by the client counts only when it is on this task.
+		const target = f.shiftId ? await getShiftById(f.shiftId) : null;
+		const shift =
+			target && target.workOrderId === task.id
+				? { ...task, shiftId: target.id, startsAt: target.startsAt }
+				: { ...task, shiftId: null, startsAt: null };
 
 		const [candidates, required] = await Promise.all([
-			listShiftCandidates(f.shiftId, shift.volunteerRoleId, f.scope, f.search || undefined),
-			getRequirementsForRole(shift.volunteerRoleId)
+			listShiftCandidates(
+				{ workOrderId: task.id, shiftId: shift.shiftId },
+				task.volunteerRoleId,
+				f.scope,
+				f.search || undefined
+			),
+			getRequirementsForRole(task.volunteerRoleId)
 		]);
 
 		const held = await listHeldForGateMany(candidates.map((c) => c.userId));
@@ -463,6 +530,8 @@ const volunteerListFilters = z.object({
 	volunteerRoleId: z.string().optional(),
 	status: z.enum(volunteerProfileStatuses).optional(),
 	certificationId: z.string().optional(),
+	/** Only people whose clearance lapses before a shift they are on. */
+	lapsing: z.boolean().optional(),
 	page: z.number().optional()
 });
 
@@ -486,18 +555,20 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	//
 	// One action per row, not three: a row offering Confirm, Chase and Log Hours
 	// at once is a row that has not decided what it is for.
-	const [roster, claims, lapsing, minors] = await Promise.all([
+	// Read first when it narrows the roster; it is one query either way.
+	const lapsing = await listLapsingBeforeRosteredShift();
+	const [roster, claims, minors] = await Promise.all([
 		listVolunteers(
 			{
 				roleId: f.volunteerRoleId || undefined,
 				search: f.search || undefined,
 				status: f.status,
-				certificationId: f.certificationId || undefined
+				certificationId: f.certificationId || undefined,
+				userIds: f.lapsing ? [...new Set(lapsing.map((l) => l.userId))] : undefined
 			},
 			{ page: f.page ?? 1, pageSize: 50 }
 		),
 		listOutstandingClaims(),
-		listLapsingBeforeRosteredShift(),
 		// The "N awaiting sign-off" count, which has to read whatever the filters
 		// say; a second query beside this one is the fan-out the lint rule refuses.
 		listBlockedVolunteers()
@@ -509,6 +580,7 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	return {
 		...roster,
 		minorsWaiting: minors.length,
+		lapsingPeople: new Set(lapsing.map((l) => l.userId)).size,
 		rows: roster.rows.map((r) => ({
 			...r,
 			claim: claimByUser.get(r.userId) ?? null,
@@ -529,9 +601,9 @@ export const approveVolunteerSignup = form(
 			mapDomainError(err);
 		}
 
-		// The dashboard renders the row and the sidebar badge counts it. The roster is
-		// arg-keyed, so the people page refreshes its own.
-		await Promise.all([getVolunteerWorklist().refresh(), getStaffLayout().refresh()]);
+		// The sidebar badge counts it. The roster is arg-keyed, so the people page
+		// refreshes its own.
+		await getStaffLayout().refresh();
 		return { success: true };
 	}
 );
@@ -776,6 +848,8 @@ const hoursFormSchema = z.object({
 	// Present when the log comes from a completed shift's pre-fill; staff see
 	// those marked as scheduled in the queue and can approve with less scrutiny.
 	shiftId: z.string().optional(),
+	// The task the time went to, for work logged after the fact. Ignored beside a shift.
+	workOrderId: z.string().optional(),
 	workedOn: z.string().min(1, 'Pick the date you worked'),
 	hours: z.string().min(1, 'Enter how long you worked'),
 	description: z
@@ -794,7 +868,8 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 			workedOn: data.workedOn,
 			minutes: hoursToMinutes(data.hours),
 			description: data.description,
-			shiftId: data.shiftId || null
+			shiftId: data.shiftId || null,
+			workOrderId: data.workOrderId || null
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -887,6 +962,8 @@ export const approveVolunteerHours = form(
 	z.object({
 		id: z.string().min(1),
 		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional(),
+		/** Approving a returned log: the override's reason, for the audit log only. */
+		reason: z.string().trim().max(1000).optional(),
 		/** The work order page it was approved from, to put back in sync. Not read by the service. */
 		shiftId: z.string().min(1).optional()
 	}),
@@ -894,7 +971,7 @@ export const approveVolunteerHours = form(
 		const staff = await requireCapability('volunteer.reviewHours');
 
 		try {
-			await approveHourLog(data.id, staff.id, data.notes);
+			await approveHourLog(data.id, staff.id, data.notes, { reason: data.reason });
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -971,7 +1048,8 @@ export const logHoursForMember = form(
 					workedOn: data.workedOn,
 					minutes: hoursToMinutes(data.hours),
 					description: data.description,
-					shiftId: data.shiftId || null
+					shiftId: data.shiftId || null,
+					workOrderId: data.workOrderId || null
 				},
 				{ enteredByUserId: staff.id }
 			);
@@ -1100,7 +1178,9 @@ export const updateVolunteerRole = form(
 	roleFormSchema.extend({
 		id: z.string().min(1),
 		/** JSON, written by the tag input on the role page. Absent leaves the list alone. */
-		skillMatches: jsonArrayField(z.string().max(50), 'Invalid skills').optional()
+		skillMatches: jsonArrayField(z.string().max(50), 'Invalid skills').optional(),
+		/** Blank clears the briefing; absent leaves it alone. */
+		briefingArticleId: z.string().max(100).optional()
 	}),
 	async (data) => {
 		await requireCapability('volunteer.manageRoles');
@@ -1118,7 +1198,8 @@ export const updateVolunteerRole = form(
 				defaultCapacity: optionalCount(data.defaultCapacity),
 				isSpecializedSkill: data.isSpecializedSkill,
 				marketRateCents: rateToCents(data.marketRate),
-				skillMatches: data.skillMatches
+				skillMatches: data.skillMatches,
+				briefingArticleId: data.briefingArticleId
 			});
 		} catch (err) {
 			mapDomainError(err);
@@ -1155,18 +1236,21 @@ export const restoreVolunteerRole = form(z.object({ id: z.string().min(1) }), as
 	return { success: true };
 });
 
-export const deleteVolunteerRole = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRoles');
+export const deleteVolunteerRole = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('role.deleted', async (data) => {
+		await requireCapability('volunteer.manageRoles');
 
-	try {
-		await deleteRoleService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
+		try {
+			await deleteRoleService(data.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
 
-	await refreshRoleViews();
-	return { success: true };
-});
+		await refreshRoleViews();
+		return { success: true };
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Refresh helpers
@@ -1186,23 +1270,15 @@ async function refreshMemberViews() {
  * argument, so `getStaffVolunteerLogs({})` refreshes the empty-filter instance
  * — never the `{ status: 'pending', page: 1 }` one the queue page actually
  * subscribes to. Arg-keyed queries are refreshed by the page, which is the only
- * place that knows its own filters; see the `onsuccess` handlers on
- * /staff/volunteer and the mount refresh on /staff/reports/volunteering.
+ * place that knows its own filters; see the mount refresh on
+ * /staff/reports/volunteering.
  */
 async function refreshStaffQueue() {
-	// The dashboard renders the top of this queue with the same approve and return
-	// actions, so a review from there has to drop the row it just cleared — the exact
-	// failure `e2e/volunteering.e2e.ts` pins on the full queue, one page along.
-	//
 	// The sidebar badge counts everything waiting on a coordinator now, so a review
 	// moves it too — and a badge that only settles on the next full navigation is the
 	// kind of stale number people learn to stop trusting. Same call `inbox.remote.ts`
 	// and `community-events.remote.ts` make after their own queue writes.
-	await Promise.all([
-		getVolunteerStatusCounts().refresh(),
-		getVolunteerWorklist().refresh(),
-		getStaffLayout().refresh()
-	]);
+	await Promise.all([getVolunteerStatusCounts().refresh(), getStaffLayout().refresh()]);
 }
 
 // Role edits change the member picker, the staff table (log counts included),
@@ -1241,6 +1317,12 @@ export const getCertifications = query(async () => {
 export const getActiveCertifications = query(async () => {
 	await requireCapability('volunteer.read');
 	return listCertifications();
+});
+
+/** A member's completed supervised shifts, offered as evidence when granting. */
+export const getTrainingShifts = query(z.string().min(1), async (userId) => {
+	await requireCapability('volunteer.manageCertifications');
+	return listTrainingShifts(userId);
 });
 
 export const getMemberCertifications = query(z.string(), async (userId) => {
@@ -1282,81 +1364,105 @@ function parseValidityMonths(raw: string | undefined): number | null {
 	return parsed;
 }
 
-export const createCertification = form(certificationFormSchema, async (data) => {
-	await requireCapability('volunteer.manageCertifications');
+export const createCertification = form(
+	certificationFormSchema,
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
 
-	try {
-		await createCertificationService({
-			name: data.name,
-			description: data.description,
-			issuedBy: data.issuedBy,
-			validityMonths: parseValidityMonths(data.validityMonths),
-			displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
-			isActive: data.isActive !== 'false'
-		});
-	} catch (err) {
-		mapDomainError(err);
-	}
+			try {
+				await createCertificationService({
+					name: data.name,
+					description: data.description,
+					issuedBy: data.issuedBy,
+					validityMonths: parseValidityMonths(data.validityMonths),
+					displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : 0,
+					isActive: data.isActive !== 'false'
+				});
+			} catch (err) {
+				mapDomainError(err);
+			}
 
-	await refreshCertificationViews();
-	return { success: true };
-});
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
 
 export const updateCertification = form(
 	certificationFormSchema.extend({ id: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('volunteer.manageCertifications');
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
 
+			try {
+				await updateCertificationService(data.id, {
+					name: data.name,
+					description: data.description ?? '',
+					issuedBy: data.issuedBy ?? '',
+					validityMonths: parseValidityMonths(data.validityMonths),
+					displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
+					isActive: data.isActive !== 'false'
+				});
+			} catch (err) {
+				mapDomainError(err);
+			}
+
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const archiveCertification = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await archiveCertificationService(data.id);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const restoreCertification = form(
+	z.object({ id: z.string().min(1) }),
+	unaudited(
+		"The clearance catalog, not a member's clearance; grants and revocations are audited.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await restoreCertificationService(data.id);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			await refreshCertificationViews();
+			return { success: true };
+		}
+	)
+);
+
+export const deleteCertification = form(
+	z.object({ id: z.string().min(1) }),
+	writesAudit('clearance.deleted', async (data) => {
+		await requireCapability('volunteer.manageCertifications');
 		try {
-			await updateCertificationService(data.id, {
-				name: data.name,
-				description: data.description ?? '',
-				issuedBy: data.issuedBy ?? '',
-				validityMonths: parseValidityMonths(data.validityMonths),
-				displayOrder: data.displayOrder ? parseInt(data.displayOrder, 10) : undefined,
-				isActive: data.isActive !== 'false'
-			});
+			await deleteCertificationService(data.id);
 		} catch (err) {
 			mapDomainError(err);
 		}
-
 		await refreshCertificationViews();
 		return { success: true };
-	}
+	})
 );
-
-export const archiveCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await archiveCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
-
-export const restoreCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await restoreCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
-
-export const deleteCertification = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageCertifications');
-	try {
-		await deleteCertificationService(data.id);
-	} catch (err) {
-		mapDomainError(err);
-	}
-	await refreshCertificationViews();
-	return { success: true };
-});
 
 export const setRoleCertifications = form(
 	z.object({
@@ -1364,20 +1470,23 @@ export const setRoleCertifications = form(
 		// Clearing every requirement is legitimate, so this bottoms out empty.
 		certificationIds: z.array(z.string().min(1)).max(20).default([])
 	}),
-	async (data) => {
-		await requireCapability('volunteer.manageCertifications');
-		try {
-			await setRoleRequirements(data.roleId, data.certificationIds);
-		} catch (err) {
-			mapDomainError(err);
+	unaudited(
+		"Which clearances a role requires: catalog configuration, not a member's clearance.",
+		async (data) => {
+			await requireCapability('volunteer.manageCertifications');
+			try {
+				await setRoleRequirements(data.roleId, data.certificationIds);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			void getStaffVolunteerRolePage(data.roleId).refresh();
+			// Setup renders each role's requirements as a "needs X" chip, and reads
+			// them through its own composed query.
+			void getVolunteerRoles().refresh();
+			void getStaffVolunteerSetupPage().refresh();
+			return { success: true };
 		}
-		void getStaffVolunteerRolePage(data.roleId).refresh();
-		// Setup renders each role's requirements as a "needs X" chip, and reads
-		// them through its own composed query.
-		void getVolunteerRoles().refresh();
-		void getStaffVolunteerSetupPage().refresh();
-		return { success: true };
-	}
+	)
 );
 
 /**
@@ -1388,16 +1497,22 @@ export const setRoleCertifications = form(
 export const setVolunteerRoleGrants = form(
 	z.object({
 		roleId: z.string().min(1),
-		capabilities: z.array(z.string().min(1)).max(20).default([])
+		capabilities: z.array(z.string().min(1)).max(20).default([]),
+		/** Days before the event the grants start. The form always sends it, so a cleared box is 0. */
+		grantLeadDays: z.number().int().min(0).max(ROLE_GRANT_LEAD_DAYS_MAX).optional()
 	}),
 	async (data) => {
 		const user = await requireCapability('volunteer.manageRoles');
 		try {
-			await setRoleCapabilityGrants(data.roleId, data.capabilities, { editorId: user.id });
+			await setRoleCapabilityGrants(data.roleId, data.capabilities, {
+				editorId: user.id,
+				leadDays: data.grantLeadDays ?? 0
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getStaffVolunteerRolePage(data.roleId).refresh();
+		void getVolunteerRoleHistory({ id: data.roleId }).refresh();
 		return { success: true };
 	}
 );
@@ -1408,9 +1523,10 @@ export const grantCertification = form(
 		certificationId: z.string().min(1, 'Pick a certification'),
 		grantedOn: z.string().min(1, 'Pick the date it was granted'),
 		reference: z.string().max(CERT_REFERENCE_MAX).optional(),
-		notes: z.string().max(CERT_NOTES_MAX).optional()
+		notes: z.string().max(CERT_NOTES_MAX).optional(),
+		trainingSignupId: z.string().optional()
 	}),
-	async (data) => {
+	writesAudit('clearance.granted', async (data) => {
 		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
@@ -1420,6 +1536,7 @@ export const grantCertification = form(
 				grantedOn: data.grantedOn,
 				reference: data.reference,
 				notes: data.notes,
+				trainingSignupId: data.trainingSignupId || null,
 				grantedByUserId: staff.id
 			});
 		} catch (err) {
@@ -1428,7 +1545,7 @@ export const grantCertification = form(
 
 		void getMemberCertifications(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 export const revokeCertification = form(
@@ -1440,7 +1557,7 @@ export const revokeCertification = form(
 			.min(1, 'Give a reason — the next staffer needs to know why they are off the list')
 			.max(CERT_REVOKED_REASON_MAX)
 	}),
-	async (data) => {
+	writesAudit('clearance.revoked', async (data) => {
 		const staff = await requireCapability('volunteer.manageCertifications');
 
 		try {
@@ -1451,7 +1568,7 @@ export const revokeCertification = form(
 
 		void getMemberCertifications(data.userId).refresh();
 		return { success: true };
-	}
+	})
 );
 
 async function refreshCertificationViews() {
@@ -1468,35 +1585,40 @@ async function refreshCertificationViews() {
 // ---------------------------------------------------------------------------
 
 /**
- * Everything argless that a change to one shift's roster invalidates.
- *
- * The dashboard is in here because its whole point is that a claim waiting to be confirmed
- * is visible somewhere; a confirm that left the card showing the row it had just cleared
- * would be the same bug the hours queue documents, one page along.
+ * Everything argless that a change to one shift's roster invalidates. The Schedule
+ * is arg-keyed, so it refreshes its own from the row's `onsuccess`.
  *
  * The shift detail page is arg-keyed but the id is known here, so it comes too — the same
  * opt-in `refreshRoleViews` makes.
  */
+/** After a roster write: the badge, the member board, and the page of the shift's task. */
 async function refreshShiftViews(shiftId?: string) {
+	const workOrderId = shiftId ? await workOrderIdOfShift(shiftId) : undefined;
+	await refreshTaskViews(workOrderId);
+}
+
+/** After a task write: the badge, the member board, and the task's page. */
+async function refreshTaskViews(workOrderId?: string) {
 	await Promise.all([
-		getVolunteerWorklist().refresh(),
 		getStaffLayout().refresh(),
 		getMemberVolunteerPage().refresh(),
-		...(shiftId ? [refreshWorkOrderPage(shiftId)] : [])
+		...(workOrderId ? [refreshWorkOrderPage(workOrderId)] : [])
 	]);
 }
 
-/** Whichever page is canonical for the work order: its project's task page, or the shift page. */
+/** The task's page, and its history as that page reads it. */
 async function refreshWorkOrderPage(id: string) {
 	const projectId = await workOrderProjectId(id);
 	if (!projectId) {
 		void getWorkOrderActivity({ workOrderId: id }).refresh();
-		return getStaffShiftPage(id).refresh();
+		void getTaskWhy(id).refresh();
+		return getTaskPage(id).refresh();
 	}
-	// The task page's guard is the project's; a caller without it is not looking at it.
+	// A project task's page is guarded as the project; a caller without it is not looking at it.
 	if (await can('project.read')) {
 		void getProjectActivity({ projectId, workOrderId: id }).refresh();
-		return getProjectTaskPage({ projectId, workOrderId: id }).refresh();
+		void getTaskWhy(id).refresh();
+		return getTaskPage(id).refresh();
 	}
 }
 
@@ -1509,83 +1631,38 @@ const shiftFilters = z.object({
 });
 
 /**
- * Every staff list of shifts, Schedule included.
- *
- * Both bounds are optional, which is what lets Schedule's "Everything" window
- * absorb the old `/staff/volunteer/shifts` catalog — that page's only real
- * difference was the absence of a date range, and two queries for one question
- * is how the two pages drifted apart in the first place.
+ * Volunteering's one load-bearing query (#2625): the shifts in the window, by
+ * date, called-off ones included as a notify list. `ended` is tasks whose
+ * shifts are over, past any window; `lapsingPeople` is the clearances queue the
+ * page links out to. Tasks with no shift, and contractor work, are Tasks'.
  */
-export const getShifts = query(shiftFilters, async (f) => {
-	await requireCapability('volunteer.read');
-	return listShifts({
-		volunteerRoleId: f.volunteerRoleId || undefined,
-		eventId: f.eventId || undefined,
-		from: f.from ? new Date(f.from) : undefined,
-		to: f.to ? new Date(f.to) : undefined,
-		includeCancelled: f.includeCancelled
-	});
-});
-
-/**
- * Schedule's one load-bearing query: every work order a coordinator staffs, the
- * windowed ones inside the range and the ones with no time yet, which have no
- * date for a range to bound.
- */
-export const getSchedulePage = query(
-	shiftFilters.extend({ contractor: z.enum(contractorJobViews).optional() }),
+export const getVolunteeringPage = query(
+	shiftFilters.extend({
+		about: z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) }).optional()
+	}),
 	async (f) => {
 		await requireCapability('volunteer.read');
-		if (f.contractor) return contractorSchedule(f.contractor);
-		const [shifts, unscheduled] = await Promise.all([
+		const now = new Date();
+		// `?about=` (#2630): a record's shifts, through the same relations as its card.
+		const where = f.about ? aboutWhere(f.about) : undefined;
+		const [shifts, ended, lapsing] = await Promise.all([
 			listShifts({
 				volunteerRoleId: f.volunteerRoleId || undefined,
 				from: f.from ? new Date(f.from) : undefined,
 				to: f.to ? new Date(f.to) : undefined,
-				includeCancelled: f.includeCancelled
+				includeCancelled: f.includeCancelled,
+				where
 			}),
-			listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+			listTasksWithEndedShifts(now, where),
+			listLapsingBeforeRosteredShift(now)
 		]);
-		// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
-		// other callers, but on a schedule the next deadline is what reads first (#1966).
-		unscheduled.sort(byDueAt);
-		const ids = [...shifts, ...unscheduled].map((w) => w.id);
-		const contractorAccess = await can('contractor.read');
-		const jobs = contractorAccess ? await listJobs({ workOrderIds: ids }) : [];
-		return { shifts, unscheduled, contractors: contractorMarks(jobs), contractorAccess };
+		return {
+			shifts,
+			ended,
+			lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
+		};
 	}
 );
-
-type ScheduleJob = Awaited<ReturnType<typeof listJobs>>[number];
-
-/** Per work order, who is engaged on it and whether that is late or awaiting invoice. */
-function contractorMarks(jobs: ScheduleJob[]) {
-	const marks: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]> = {};
-	for (const j of jobs) {
-		(marks[j.job.workOrderId] ??= []).push({
-			name: j.contractor.name,
-			late: j.late,
-			awaitingInvoice: j.awaitingInvoice
-		});
-	}
-	return marks;
-}
-
-/**
- * The contractor filter: work orders with an engagement in that view, unwindowed
- * and whatever their state — work awaiting an invoice is already resolved.
- */
-async function contractorSchedule(view: (typeof contractorJobViews)[number]) {
-	await requireCapability('contractor.read');
-	const jobs = await listJobs({ view });
-	const rows = await listWorkOrdersByIds([...new Set(jobs.map((j) => j.job.workOrderId))]);
-	return {
-		shifts: rows.filter(isScheduled),
-		unscheduled: rows.filter((w) => !isScheduled(w)).sort(byDueAt),
-		contractors: contractorMarks(jobs),
-		contractorAccess: true
-	};
-}
 
 /**
  * Open shifts for the member, with the reason they can't take one attached
@@ -1638,42 +1715,30 @@ const shiftFormSchema = z.object({
 		.optional()
 });
 
-export const createShift = form(shiftFormSchema, async (data) => {
-	const staff = await requireCapability('volunteer.manageShifts');
+const notesSchema = z
+	.string()
+	.max(VOLUNTEER_SHIFT_NOTES_MAX, `Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`)
+	.optional();
 
-	try {
-		await createShiftService({
-			volunteerRoleId: data.volunteerRoleId,
-			eventId: data.eventId,
-			assetId: data.assetId,
-			title: data.title,
-			startsAt: data.startsAt,
-			endsAt: data.endsAt,
-			capacity: parseInt(data.capacity, 10),
-			notes: data.notes,
-			createdByUserId: staff.id
-		});
-	} catch (err) {
-		mapDomainError(err);
-	}
-
-	return { success: true };
-});
-
-export const updateShift = form(
-	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
+/** Edit the task alone: role, show, unit, name and notes. A shift's times are `updateShift`. */
+export const updateTask = form(
+	z.object({
+		id: z.string().min(1),
+		volunteerRoleId: z.string().optional(),
+		eventId: z.string().optional(),
+		assetId: z.string().optional(),
+		title: shiftFormSchema.shape.title,
+		notes: notesSchema
+	}),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 		try {
-			await updateShiftService(data.id, {
-				volunteerRoleId: data.volunteerRoleId,
+			await editTaskService(data.id, {
+				volunteerRoleId: data.volunteerRoleId || undefined,
 				eventId: data.eventId,
 				assetId: data.assetId,
 				title: data.title,
-				startsAt: data.startsAt,
-				endsAt: data.endsAt,
-				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
 				notes: data.notes
 			});
 		} catch (err) {
@@ -1685,13 +1750,43 @@ export const updateShift = form(
 	}
 );
 
-export const duplicateShift = form(
-	z.object({ id: z.string().min(1), offsetDays: z.number().int() }),
+/** Edit one shift: its times, places and briefing. */
+export const updateShift = form(
+	z.object({
+		shiftId: z.string().min(1),
+		startsAt: z.string().optional(),
+		endsAt: z.string().optional(),
+		capacity: z.string().optional(),
+		notes: notesSchema
+	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 		try {
-			const copy = await duplicateShiftService(data.id, data.offsetDays, staff.id);
+			await editShiftService(data.shiftId, {
+				startsAt: data.startsAt || undefined,
+				endsAt: data.endsAt || undefined,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
+/** Copy a shift forward onto the same task, N days later. */
+export const duplicateShift = form(
+	z.object({ shiftId: z.string().min(1), offsetDays: z.number().int() }),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
+
+		try {
+			const copy = await copyShiftForwardService(data.shiftId, data.offsetDays, staff.id);
+			await refreshShiftViews(copy.id);
 			return { success: true, id: copy.id };
 		} catch (err) {
 			mapDomainError(err);
@@ -1699,24 +1794,53 @@ export const duplicateShift = form(
 	}
 );
 
-export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
-	const staff = await requireCapability('volunteer.manageShifts');
+/** Call off one shift; its task stays open. Calling off the task is `cancelTask`. */
+export const cancelShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
+	const staff = await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 	try {
-		await cancelShiftService(data.id, staff.id);
+		await cancelOneShiftService(data.shiftId, staff.id);
 	} catch (err) {
 		mapDomainError(err);
 	}
 
-	await refreshWorkOrderPage(data.id);
+	await refreshShiftViews(data.shiftId);
 	return { success: true };
 });
+
+/** Call off a task and every live shift on it. */
+export const cancelTask = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
+
+	try {
+		await cancelTaskService(data.id, staff.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await refreshTaskViews(data.id);
+	return { success: true };
+});
+
+/** Take somebody off a task they were assigned. Their sign-ups on its shifts stay. */
+export const unassignFromTask = form(
+	z.object({ workOrderId: z.string().min(1), userId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('volunteer.manageRoster', () => taskScope(data.workOrderId));
+
+		const task = await requireTask(data.workOrderId);
+		await unassignFromTaskService(task, data.userId);
+
+		await refreshTaskViews(data.workOrderId);
+		return { success: true };
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Work orders — the unscheduled half
 // ---------------------------------------------------------------------------
 // Work that needs doing with nobody booked to do it. `createWorkOrder`,
-// `scheduleWorkOrder`, `resolveWorkOrder` and `listWorkOrders` were written,
+// `openShift`, `resolveWorkOrder` and `listWorkOrders` were written,
 // specced and then never exposed, so the rows `applyDutyList` stamps out from a
 // `dueOffsetMinutes` item existed and appeared nowhere. Everything here is a
 // thin pass through to a service that already exists.
@@ -1762,7 +1886,10 @@ export const createWorkOrder = form(
 			.optional()
 	}),
 	async (data, issue) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability(
+			'volunteer.manageShifts',
+			data.eventId ? () => eventScope(data.eventId!) : undefined
+		);
 		const capacity = data.capacity ? parseInt(data.capacity, 10) : 1;
 
 		if (data.timed) {
@@ -1788,9 +1915,8 @@ export const createWorkOrder = form(
 					volunteerRoleId: data.volunteerRoleId,
 					assetId: data.assetId,
 					title: data.title,
-					// A deadline, not a window — read as club wall-clock time like every
-					// other date on this layer.
-					dueAt: data.dueAt ? new Date(data.dueAt) : null,
+					// A datetime-local value has no zone: it is club wall-clock time.
+					dueAt: data.dueAt ? clubInstant(data.dueAt.slice(0, 10), data.dueAt.slice(11, 16)) : null,
 					capacity,
 					notes: data.notes,
 					createdByUserId: staff.id
@@ -1805,42 +1931,43 @@ export const createWorkOrder = form(
 	}
 );
 
-/** "We found a time for it" — which turns the work order into an ordinary shift. */
-export const scheduleWorkOrder = form(
+/** Open a shift on a task: a time volunteers can sign up for (#2518). `id` is the task's. */
+export const openShift = form(
 	z.object({
 		id: z.string().min(1),
 		startsAt: z.string().min(1, 'Pick when it starts'),
 		endsAt: z.string().min(1, 'Pick when it ends'),
-		closeReportsOnCompletion: z.boolean().default(false)
+		capacity: z.string().optional(),
+		notes: notesSchema
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts', () => taskScope(data.id));
 
 		try {
-			await scheduleWorkOrderService(data.id, {
+			await openShiftService(data.id, {
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,
-				closeReportsOnCompletion: data.closeReportsOnCompletion
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes,
+				createdByUserId: staff.id
 			});
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.id);
+		await refreshTaskViews(data.id);
 		return { success: true };
 	}
 );
 
 /**
- * The work is finished, which is not the same as anybody having turned up.
- *
- * `completeFinishedShifts` keys on `ends_at` and can never reach a row that
- * never had one, so the service completes the signups itself.
+ * Mark a task done, which is not the same as anybody having turned up. Resolves
+ * its equipment reports and stamps its assignees; sign-ups complete by the clock.
  */
 export const resolveWorkOrder = form(
 	z.object({ id: z.string().min(1), notes: z.string().max(500).optional() }),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		const { user: staff } = await requireActOnTask(data.id);
 
 		try {
 			await resolveWorkOrderService(data.id, {
@@ -1851,7 +1978,7 @@ export const resolveWorkOrder = form(
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.id);
+		await refreshTaskViews(data.id);
 		return { success: true };
 	}
 );
@@ -1864,11 +1991,11 @@ export const resolveWorkOrder = form(
  * it; the count in the banner is what it clears.
  */
 export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageShifts');
+	await requireCapability('volunteer.manageShifts', () => shiftScope(data.shiftId));
 
 	const notified = await notifySignupsOfCancellationService(data.shiftId);
 
-	void getStaffShiftPage(data.shiftId).refresh();
+	await refreshShiftViews(data.shiftId);
 	return { success: true, notified };
 });
 
@@ -1876,11 +2003,11 @@ export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }
 export const markSignupNotified = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		await markSignupNotifiedService(data.signupId);
 
-		void getStaffShiftPage(data.shiftId).refresh();
+		await refreshShiftViews(data.shiftId);
 		return { success: true };
 	}
 );
@@ -1940,7 +2067,7 @@ export const inviteMemberToShift = form(
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
 		try {
 			const result = await inviteToShiftService(data.shiftId, data.userId, staff.id);
@@ -1980,24 +2107,38 @@ export const declineShiftInvitation = form(
 	}
 );
 
+async function requireTask(id: string) {
+	const task = await getWorkOrderById(id);
+	if (!task) throw error(404, 'Task not found');
+	return task;
+}
+
+/**
+ * Put a member on a task's shift, or, on a task with no shift, assign them the
+ * task (#2518). Either way staff go over a missing profile or clearance with a
+ * recorded warning; a profile awaiting under-18 review is refused.
+ */
 export const assignShiftToMember = form(
 	z.object({
-		shiftId: z.string().min(1),
+		workOrderId: z.string().min(1),
+		shiftId: z.string().optional(),
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster', () =>
+			data.shiftId ? shiftScope(data.shiftId) : taskScope(data.workOrderId)
+		);
 
 		let warnings: string[] = [];
 		try {
-			({ warnings } = await claimShiftService(data.shiftId, data.userId, {
-				assignedByStaff: true
-			}));
+			({ warnings } = data.shiftId
+				? await claimShiftService(data.shiftId, data.userId, { assignedByStaff: true })
+				: await assignToTaskService(await requireTask(data.workOrderId), data.userId, staff.id));
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.shiftId);
+		await refreshTaskViews(data.workOrderId);
 		return { success: true, warnings };
 	}
 );
@@ -2014,7 +2155,7 @@ export const assignShiftToMember = form(
 export const releaseSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await releaseSignupService(data.signupId);
@@ -2030,7 +2171,7 @@ export const releaseSignup = form(
 export const confirmSignup = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await confirmSignupService(data.signupId);
@@ -2057,10 +2198,12 @@ export const confirmSignup = form(
 export const confirmSignups = form(
 	z.object({ shiftId: z.string().min(1), signupIds: z.array(z.string().min(1)).min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
+		// The scope is the shift's, so a signup on any other shift is skipped.
+		const onShift = new Set((await listClaimants(data.shiftId)).map((c) => c.signupId));
 		let confirmed = 0;
-		for (const signupId of data.signupIds) {
+		for (const signupId of data.signupIds.filter((id) => onShift.has(id))) {
 			try {
 				await confirmSignupService(signupId);
 				confirmed++;
@@ -2084,7 +2227,7 @@ export const confirmSignups = form(
  * Same service loop, one less thing for the list to know.
  */
 export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRoster');
+	await requireCapability('volunteer.manageRoster', () => shiftScope(data.shiftId));
 
 	const claimants = await listClaimants(data.shiftId);
 	const outstanding = claimants.filter((c) => c.status === 'claimed');
@@ -2107,10 +2250,38 @@ export const confirmShiftClaims = form(z.object({ shiftId: z.string().min(1) }),
 export const markSignupNoShow = form(
 	z.object({ signupId: z.string().min(1), shiftId: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		await requireCapability('volunteer.manageRoster', () => signupScope(data.signupId));
 
 		try {
 			await markNoShowService(data.signupId);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
+/** Staff: who on the shift this person trained under (#2720). Empty clears it. */
+export const setTrainedUnder = form(
+	z.object({
+		signupId: z.string().min(1),
+		shiftId: z.string().min(1),
+		supervisingSignupId: z.string().optional()
+	}),
+	async (data) => {
+		const staff = await requireCapability('volunteer.manageRoster', () =>
+			signupScope(data.signupId)
+		);
+
+		try {
+			await setSupervisingSignup({
+				signupId: data.signupId,
+				supervisingSignupId: data.supervisingSignupId || null,
+				actorUserId: staff.id,
+				actorIsStaff: true
+			});
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -2233,18 +2404,116 @@ export const getMyShifts = query(async () => {
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [interests, openShifts, unloggedShifts, myShifts, invitations] = await Promise.all([
+	const userId = requireUser().id;
+	const [interests, openShifts, unloggedShifts, myShifts, invitations, tasks] = await Promise.all([
 		getMyVolunteerInterests(),
 		getOpenShifts(),
 		getUnloggedShifts(),
 		getMyShifts(),
-		// Above the claim board on the page: an invitation is addressed to this
+		// Above the board on the page: an invitation is addressed to this
 		// member, where the board is addressed to everybody.
-		listInvitationsForUser(requireUser().id)
+		listInvitationsForUser(userId),
+		listAssignedTasksForUser(userId)
 	]);
 
-	return { access, interests, openShifts, unloggedShifts, myShifts, invitations };
+	const assignedTasks = tasks.filter((t) => !t.resolvedAt);
+	const unloggedTasks = tasks.filter((t) => t.resolvedAt);
+	// The role picker, only for done work whose task names no role.
+	const roles = unloggedTasks.some((t) => !t.volunteerRoleId)
+		? (await getActiveVolunteerRoles()).map((r) => ({ id: r.id, name: r.name }))
+		: [];
+
+	return {
+		access,
+		interests,
+		openShifts,
+		unloggedShifts,
+		unloggedTasks,
+		assignedTasks,
+		roles,
+		myShifts,
+		invitations
+	};
 });
+
+/**
+ * Mark a task done, as anyone `canActOnTask` admits. Resolves its equipment
+ * reports and stamps every assignee, which puts the task in their unlogged work.
+ */
+export const markMyTaskDone = form(
+	// A task with a done condition takes a reason; `resolveWorkOrder` asks for it.
+	z.object({ workOrderId: z.string().min(1), reason: z.string().max(500).optional() }),
+	async (data) => {
+		const { user } = await requireActOnTask(data.workOrderId);
+
+		try {
+			await markTaskDone(data.workOrderId, user.id, data.reason || undefined);
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await Promise.all([refreshMemberViews(), getMyTask(data.workOrderId).refresh()]);
+		return { success: true };
+	}
+);
+
+/** Take a task yourself: an unassigned one in your committee, or any a grant covers. */
+export const takeTask = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
+	const { user } = await requireActOnTask(data.workOrderId);
+	let warnings: string[] = [];
+	try {
+		({ warnings } = await takeTaskService(await requireTask(data.workOrderId), user.id));
+	} catch (err) {
+		mapDomainError(err);
+	}
+	await Promise.all([refreshTaskViews(data.workOrderId), getMyTask(data.workOrderId).refresh()]);
+	return { success: true, warnings };
+});
+
+/** Hand a task back: the caller comes off it, and it waits on the committee again. */
+export const handBackTask = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
+	const { user } = await requireActOnTask(data.workOrderId);
+	await handBackTaskService(await requireTask(data.workOrderId), user.id);
+	await refreshTaskViews(data.workOrderId);
+	return { success: true };
+});
+
+/**
+ * A task's page for whoever may act on it (#2582, #2989): its notes, due date
+ * and checklist, and which of take, hand back and mark done apply.
+ */
+export const getMyTask = query(z.string().min(1), async (workOrderId) => {
+	const { user, reason } = await requireActOnTask(workOrderId);
+	const [task, why] = await Promise.all([
+		getTaskChecklist(workOrderId),
+		explainTaskAct(user.id, workOrderId)
+	]);
+	if (!task) error(404, 'Task not found');
+	const open = task.resolvedAt === null;
+	return {
+		...task,
+		why,
+		canMarkDone: open,
+		canTake: open && reason !== 'assignee',
+		canHandBack: open && reason === 'assignee'
+	};
+});
+
+/** Tick or untick a checklist item on a task the caller may act on. */
+export const setMyTaskItemDone = form(
+	z.object({
+		workOrderId: z.string().min(1),
+		itemId: z.string().min(1),
+		// An unchecked box is not submitted, so absence reads as false.
+		done: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		const { user } = await requireActOnTask(data.workOrderId);
+		await setTaskChecklistItemDone(data.workOrderId, data.itemId, data.done, user.id);
+		await Promise.all([getMyTask(data.workOrderId).refresh(), refreshMemberViews()]);
+		return { success: true };
+	}
+);
 
 /**
  * The volunteer profile: contact info, preferred roles and the hour history.
@@ -2294,49 +2563,188 @@ export const getVolunteerInterestsPage = query(z.void(), async () => {
  */
 export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 	await requireCapability('volunteer.read');
-	const [role, requirements, feedback, skillSuggestions, grants] = await Promise.all([
+	const [role, requirements, feedback, skillSuggestions, grants, articles] = await Promise.all([
 		getVolunteerRoleDetail(id),
 		getRoleRequirements(id),
 		getFeedbackByRole(),
 		// Skill tags members already use, so the role's list is written in their words.
 		suggestSkills(''),
-		listRoleGrants(id)
+		listRoleGrants(id),
+		listAllArticles()
 	]);
 
-	return { role, requirements, feedback, skillSuggestions, grants };
+	// Drafts are offered too: a briefing is often written for the role it links to.
+	const briefingOptions = articles
+		.map((a) => ({ id: a.id, title: a.title, published: a.published }))
+		.sort((a, b) => a.title.localeCompare(b.title));
+
+	return { role, requirements, feedback, skillSuggestions, grants, briefingOptions };
 });
 
 /**
- * A work order's page, for one that belongs to no project; a project's work
- * order is served by `getProjectTaskPage` under that project's guard. Guarded
- * here, first, and read through services, so no part of the bundle leans on
- * another query's guard (#1907).
+ * A task in no project is read by staff who see either list it is on: Tasks
+ * (`project.read`) or the Schedule (`volunteer.read`).
  */
-export const getStaffShiftPage = query(z.string(), async (id) => {
-	await requireCapability('volunteer.read');
+async function requireLooseTaskReader() {
+	if (!(await can('project.read'))) await requireCapability('volunteer.read');
+}
+
+/** `project` when the task is in one; a task in a project is guarded as the project is. */
+async function guardTaskPage(id: string): Promise<{ id: string; name: string } | null> {
+	requireUser();
+	const projectId = await workOrderProjectId(id);
+	if (projectId === undefined) error(404, 'Task not found');
+	if (!projectId) {
+		await requireLooseTaskReader();
+		return null;
+	}
+	try {
+		if (!(await can('project.read'))) await requireProjectCommittee(projectId, 'project.manage');
+		const project = await getProjectById(projectId);
+		return { id: project.id, name: project.name };
+	} catch (err) {
+		mapDomainError(err);
+	}
+}
+
+/**
+ * Any task's page (#2625), in a project or not. Guarded before the view is
+ * read, so no part of the bundle leans on another query's guard (#1907).
+ */
+export const getTaskPage = query(z.string(), async (id) => {
+	const project = await guardTaskPage(id);
 	const view = await loadWorkOrderView(id);
-	if (!view) throw error(404, 'Shift not found');
-	// `volunteer.read` says nothing about contractor money (#2071): a volunteer
-	// coordinator holds it without `contractor.read`.
+	if (!view) error(404, 'Task not found');
+	// Neither guard says anything about contractor money (#2071).
 	const engagements = (await can('contractor.read')) ? view.engagements : [];
 	// Who can be engaged from this page; empty for a caller who cannot engage.
 	const contractors = (await can('contractor.manage'))
 		? (await listContractors()).map((c) => ({ id: c.id, name: c.name }))
 		: [];
-	return { ...view, engagements, contractors };
+	// Within the task's own project, or among tasks in none, which the guard above covers.
+	const [dependencies, dependencyOptions] = await Promise.all([
+		listTaskDependencies(id),
+		listDependencyOptions(id)
+	]);
+	// The project's sections, which the task's page names and moves it between.
+	const sections = project
+		? (await listSections(project.id)).map((sec) => ({ id: sec.id, name: sec.name }))
+		: [];
+	// The committee's positions the task may wait on (#2990).
+	const position = await taskPositionChoices(id);
+	return {
+		project,
+		...view,
+		engagements,
+		contractors,
+		dependencies,
+		dependencyOptions,
+		sections,
+		position
+	};
 });
 
-/** A shift page's history: the work order's audit entries and duty ticks, newest first. */
+/**
+ * Who a task waits on, and why the caller can or cannot act on it (#2994),
+ * behind the task page's own guard. Read from `waitingOn` and `canActOnTask`.
+ */
+export const getTaskWhy = query(z.string(), async (id) => {
+	await guardTaskPage(id);
+	const { id: userId } = requireUser();
+	const [viewer, waitsOn] = await Promise.all([explainTaskAct(userId, id), waitsOnTask(id)]);
+	if (!viewer) error(404, 'Task not found');
+	return { viewer, waitsOn };
+});
+
+/** A task's write: its project's committee (or staff holding `project.manage`), else the coordinator's. */
+async function guardTaskWrite(id: string) {
+	const user = requireUser();
+	const projectId = await workOrderProjectId(id);
+	if (projectId === undefined) error(404, 'Task not found');
+	if (!projectId) return requireCapability('volunteer.manageShifts', () => taskScope(id));
+	try {
+		await requireProjectCommittee(projectId, 'project.manage');
+	} catch (err) {
+		mapDomainError(err);
+	}
+	return user;
+}
+
+/** Move a project's task to a section, or to none; it goes to the end of that group. */
+export const setTaskSection = form(
+	z.object({ id: z.string().min(1), sectionId: z.string().optional() }),
+	async (data) => {
+		await guardTaskWrite(data.id);
+		const projectId = await workOrderProjectId(data.id);
+		if (!projectId) error(400, 'Only a task in a project has a section');
+		const sectionId = data.sectionId || null;
+		try {
+			const task = await requireTaskInProject(projectId, data.id);
+			if (task.sectionId === sectionId) return { success: true };
+			await moveTask(projectId, data.id, { sectionId, index: Number.MAX_SAFE_INTEGER });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshWorkOrderPage(data.id);
+		return { success: true };
+	}
+);
+
+/** Tag a task for one of its committee's positions, or clear it (#2990). */
+export const setTaskPosition = form(
+	z.object({ id: z.string().min(1), positionId: z.string().optional() }),
+	async (data) => {
+		await guardTaskWrite(data.id);
+		try {
+			await setTaskPositionService(data.id, data.positionId || null);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshWorkOrderPage(data.id);
+		return { success: true };
+	}
+);
+
+const dependencyEdge = z.object({
+	workOrderId: z.string().min(1),
+	dependsOnId: z.string().min(1, 'Pick a task')
+});
+
+/** Make a task wait on another in its project (#2625). A loop is refused. */
+export const addTaskDependency = form(dependencyEdge, async (data) => {
+	const user = await guardTaskWrite(data.workOrderId);
+	await addDependencyService({ ...data, byUserId: user.id });
+	await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
+	return { success: true };
+});
+
+export const removeTaskDependency = form(
+	dependencyEdge,
+	writesAudit('work_order.dependency_removed', async (data) => {
+		await guardTaskWrite(data.workOrderId);
+		await removeDependencyService(data);
+		await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
+		return { success: true };
+	})
+);
+
+/** A task's history, for a task in no project: its audit entries and duty ticks, newest first. */
 export const getWorkOrderActivity = query(
 	z.object({
 		workOrderId: z.string().min(1),
 		limit: z.number().int().min(1).max(ACTIVITY_MAX).optional()
 	}),
 	async ({ workOrderId, limit }) => {
-		await requireCapability('volunteer.read');
+		await requireLooseTaskReader();
 		return listActivity({ workOrderId }, { limit });
 	}
 );
+
+/** A volunteer role's History card: its capability grant changes. */
+export const getVolunteerRoleHistory = query(historyArgs, async ({ id, limit }) => {
+	await requireCapability('volunteer.read');
+	return listAuditFeed({ type: 'role', id }, { limit });
+});
 
 /**
  * Setup's one load-bearing query.
@@ -2379,6 +2787,8 @@ export const getStaffVolunteerSetupPage = query(async () => {
 export const getVolunteerReportPage = query(
 	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
 	async ({ from, to, page }) => {
+		await requireCapability('volunteer.report');
+
 		const [report, feedbackByRole, byMember, statusCounts, byGroup] = await Promise.all([
 			getVolunteerReport({ from, to }),
 			getFeedbackByRole(),
@@ -2395,113 +2805,6 @@ export const getVolunteerReportPage = query(
 		return { report, feedbackByRole, byMember, byGroup, stillInReview: statusCounts.pending };
 	}
 );
-
-// ---------------------------------------------------------------------------
-// The coordinator's dashboard
-// ---------------------------------------------------------------------------
-
-/** How far ahead the dashboard looks. Two weeks is far enough to still fill a shift. */
-const WORKLIST_HORIZON_DAYS = 14;
-/** Pending hours shown inline before the card sends you to the full queue. */
-const WORKLIST_HOURS_PREVIEW = 5;
-
-/**
- * How many rows a worklist card shows. Only the hours queue was capped, so six
- * of seven cards rendered every row they had — a dashboard is a summary and
- * each card links to the table that holds the rest (#1054).
- */
-const WORKLIST_PREVIEW = 8;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Everything waiting on a coordinator, in one query.
- *
- * `/staff/volunteer` used to open on a filtered table of hour logs, which is one of the
- * five things below and the only one that had a surface at all. The rest were spread over
- * pages you had to already know to visit — see
- * docs/reports/volunteer-workflow-findings.md#d1.
- *
- * One query rather than five, per `custom/no-concurrent-remote-queries`, and unparameterized
- * so every mutation that changes it can refresh it by name. The horizons are constants and
- * not arguments for the same reason: an argument would make the key move with the clock and
- * `refresh()` would miss.
- *
- * Note what is NOT here. The dashboard shows the top few pending hour logs and links to the
- * queue; it does not paginate, filter, or replace it. A dashboard that grows a filter bar
- * has become the table it was meant to summarise.
- */
-export const getVolunteerWorklist = query(async () => {
-	await requireCapability('volunteer.read');
-
-	const now = new Date();
-	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
-
-	const [claims, upcoming, hours, counts, lapsing, unscheduled, toConfirm, waitingCount] =
-		await Promise.all([
-			listOutstandingClaims({}, now),
-			listShifts({ from: now, to: horizon }),
-			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
-				// Flagged the same way the full queue flags them, so the reason does not
-				// appear only on the page somebody was already going to visit.
-				(result) => withExceptions(result.rows)
-			),
-			getStatusCounts(),
-			listLapsingBeforeRosteredShift(now),
-			// Work with no time on it — the advance half of a duty list, and anything
-			// a coordinator raised without a window. Every other query on this layer
-			// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
-			// these rows were created and then invisible in the whole product.
-			listWorkOrders(),
-			// Finished work orders staff did not flag to close their reports (#1544).
-			listFinishedWorkToConfirm(now),
-			// The same call the sidebar badge makes. It shares its predicates with the
-			// lists above (`unscheduledWorkWhere`), so it counts only what a card lists.
-			countVolunteerWorkWaiting(now)
-		]);
-
-	// Computed here rather than asked of the database: `listShifts` already returns both
-	// counts per row, so "which of these is short" is a filter over rows we already hold
-	// rather than another round trip.
-	// Work with no role is nobody's to fill, so it is never short of people.
-	const shortStaffed = upcoming
-		.filter(isRoledShift)
-		.filter((shift) => shift.claimed < shift.capacity)
-		.map((shift) => ({
-			id: shift.id,
-			roleName: shift.roleName,
-			volunteerRoleId: shift.volunteerRoleId,
-			eventTitle: shift.eventTitle,
-			startsAt: shift.startsAt,
-			endsAt: shift.endsAt,
-			capacity: shift.capacity,
-			claimed: shift.claimed,
-			confirmed: shift.confirmed,
-			short: shift.capacity - shift.claimed
-		}));
-
-	// Each card gets at most `WORKLIST_PREVIEW` rows and the true total beside
-	// them, which is the rule a list follows whether it is cards or a table.
-	return {
-		/** Claims on upcoming shifts nobody has confirmed. The reason the badge moved. */
-		needsConfirming: claims.slice(0, WORKLIST_PREVIEW),
-		needsConfirmingTotal: claims.length,
-		shortStaffed: shortStaffed.slice(0, WORKLIST_PREVIEW),
-		shortStaffedTotal: shortStaffed.length,
-		pendingHours: hours,
-		pendingHoursTotal: counts.pending,
-		lapsing: lapsing.slice(0, WORKLIST_PREVIEW),
-		lapsingTotal: lapsing.length,
-		/** Work orders waiting for a window, oldest first. */
-		unscheduled: unscheduled.slice(0, WORKLIST_PREVIEW),
-		unscheduledTotal: unscheduled.length,
-		/** Finished work with reports still open: "confirm fixed?", oldest finish first. */
-		toConfirm: toConfirm.slice(0, WORKLIST_PREVIEW),
-		toConfirmTotal: toConfirm.length,
-		/** What the sidebar badge counts — the same call, so the two always agree. */
-		waitingCount
-	};
-});
 
 /**
  * Shifts inside an explicit window — the Schedule page's one query.
@@ -2530,12 +2833,26 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, filedIncidents] = await Promise.all([
-		listWorkTasks(shift.shiftId),
-		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
-		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
-		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([])
-	]);
+	const grants = (cap: Capability) =>
+		shift.eventId ? can(cap, { eventId: shift.eventId }) : Promise.resolve(false);
+	const [tasks, event, crew, door, till, host, filedIncidents, briefing, crewMates] =
+		await Promise.all([
+			listWorkTasks(shift.workOrderId),
+			shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
+			grants('incident.file'),
+			grants('event.checkIn'),
+			grants('finance.collect'),
+			grants('market.host'),
+			shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
+			shift.briefingArticleId
+				? resolveHelpReader(currentUser.id).then((reader) =>
+						listReadableArticles([shift.briefingArticleId!], reader)
+					)
+				: Promise.resolve([]),
+			shift.cancelledAt || shift.shiftCancelledAt
+				? Promise.resolve([])
+				: listCrewMates(signupId, shift.shiftId)
+		]);
 
 	return {
 		shift,
@@ -2548,17 +2865,59 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 		// The night itself. The page had its *name* in a subtitle and no way to
 		// reach it, though this query already holds the whole row.
 		event: event ? toEventRef(event) : null,
-		// Offered only where there is something to check people into. A work party
-		// has no door, and a show with ticketing off has no list.
+		// Offered only where there is a list and the role grants it, which takes a
+		// confirmed signup inside the shift window (#2794).
 		checkIn:
-			event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
+			door && event && event.ticketingEnabled && !shift.cancelledAt && !shift.shiftCancelledAt
 				? { eventId: event.id, eventTitle: event.title }
 				: null,
+		// Door payments for this show, while the role grants them (#2798).
+		doorSales:
+			till && event && !shift.cancelledAt && !shift.shiftCancelledAt ? { eventId: event.id } : null,
+		// The market's vendors, while the role grants hosting it (#2993).
+		vendorHost:
+			host && event && !shift.cancelledAt && !shift.shiftCancelledAt ? { eventId: event.id } : null,
 		// Crew of a show can file an incident for it, and see only what they filed.
 		incidentEventId: crew ? shift.eventId : null,
-		filedIncidents
+		filedIncidents,
+		// The role's briefing (#2728), unless it is a draft or above this reader.
+		briefing: briefing[0] ?? null,
+		// The others on this shift, so a supervisor can mark who trained (#2720).
+		crewMates
 	};
 });
+
+/**
+ * The supervisor marks a crewmate as training under them, or stops. Only their
+ * own signup can be named; the service refuses anything else.
+ */
+export const setMyTrainee = form(
+	z.object({
+		/** The supervisor's own signup: the page's scope. */
+		mySignupId: z.string().min(1),
+		signupId: z.string().min(1),
+		trainee: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		const currentUser = requireUser();
+		const mine = await getSignupForUser(data.mySignupId, currentUser.id);
+		if (!mine) throw error(404, 'Shift not found');
+
+		try {
+			await setSupervisingSignup({
+				signupId: data.signupId,
+				supervisingSignupId: data.trainee ? data.mySignupId : null,
+				actorUserId: currentUser.id,
+				actorIsStaff: false
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await getMyShift(data.mySignupId).refresh();
+		return { success: true };
+	}
+);
 
 export const setMyWorkTaskDone = form(
 	z.object({
@@ -2589,49 +2948,85 @@ export const setMyWorkTaskDone = form(
  * a ticket stays with staff.
  */
 export const getMyShiftCheckIn = query(z.string().min(1), async (signupId) => {
-	const currentUser = requireUser();
-	const shift = await getSignupForUser(signupId, currentUser.id);
-	if (!shift?.eventId) throw error(404, 'Shift not found');
-	if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+	const eventId = await doorShiftEvent(signupId);
 
-	const event = await getById(shift.eventId);
+	const event = await getById(eventId);
 	if (!event) throw error(404, 'Event not found');
 	if (!event.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
 
 	const [tickets, sold] = await Promise.all([getEventTickets(event.id), getTicketsSold(event.id)]);
-	const live = tickets.filter((t) => t.status === 'valid' || t.status === 'checked_in');
+	const listed = doorListTickets(tickets);
 
 	return {
 		signupId,
 		event: { id: event.id, title: event.title, startsAt: event.startsAt },
-		tickets: live.map((t) => ({
+		tickets: listed.map((t) => ({
 			id: t.id,
 			attendeeName: t.attendeeName,
 			code: t.code,
-			status: t.status
+			status: t.status,
+			cancelledAt: t.cancelledAt
 		})),
-		stats: { sold, checkedIn: live.filter((t) => t.status === 'checked_in').length }
+		stats: { sold, checkedIn: listed.filter((t) => t.status === 'checked_in').length }
 	};
 });
+
+/**
+ * The show this member's door shift is for, while the role grants check-in.
+ * The scope comes from the signup, not from a ticket: the signup is already
+ * this member's, and it names the one show they are working.
+ */
+async function doorShiftEvent(signupId: string): Promise<string> {
+	const currentUser = requireUser();
+	const shift = await getSignupForUser(signupId, currentUser.id);
+	if (!shift?.eventId) throw error(404, 'Shift not found');
+	if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
+	await requireCapability('event.checkIn', { eventId: shift.eventId });
+	return shift.eventId;
+}
+
+/** Refuses a ticket from any show but the one the shift is for. */
+async function ticketOnShow(ticketId: string, eventId: string) {
+	const ticket = await getTicketById(ticketId);
+	if (!ticket) throw error(404, 'Ticket not found');
+	if (ticket.eventId !== eventId)
+		throw error(403, 'That ticket is not for the show you are working');
+}
+
+/**
+ * The scanner on the volunteer's door list (#2795): `scanTicketIn`'s answer,
+ * scoped by the signup as `checkInAsVolunteer` is.
+ */
+export const scanTicketInAsVolunteer = command(
+	z.object({ ticketId: z.string().min(1), signupId: z.string().min(1) }),
+	async (data) => {
+		const eventId = await doorShiftEvent(data.signupId);
+		await ticketOnShow(data.ticketId, eventId);
+		const currentUser = requireUser();
+		try {
+			const result = await checkInTicketService(data.ticketId, currentUser.id);
+			await getMyShiftCheckIn(data.signupId).refresh();
+			return result;
+		} catch (err) {
+			mapDomainError(err);
+			throw err;
+		}
+	}
+);
+
+/** `identifyTicketCode`, for the volunteer's door list (#2797). */
+export const identifyTicketCodeAsVolunteer = query(
+	z.object({ code: z.string().min(1).max(64), signupId: z.string().min(1) }),
+	async (data) => findOtherShowForCode(data.code, await doorShiftEvent(data.signupId))
+);
 
 export const checkInAsVolunteer = form(
 	z.object({ ticketId: z.string().min(1), signupId: z.string().min(1) }),
 	async (data) => {
 		const currentUser = requireUser();
-
-		// The scope comes from the signup, not from the ticket: the signup is
-		// already this member's, and it names the one show they are working. A
-		// volunteer rostered on Friday cannot reach Saturday's door by posting a
+		// A volunteer rostered on Friday cannot reach Saturday's door by posting a
 		// ticket id, because the ticket has to belong to Friday's show.
-		const shift = await getSignupForUser(data.signupId, currentUser.id);
-		if (!shift?.eventId) throw error(404, 'Shift not found');
-		if (shift.cancelledAt || shift.shiftCancelledAt) throw error(403, 'That shift is off');
-
-		const ticket = await getTicketById(data.ticketId);
-		if (!ticket) throw error(404, 'Ticket not found');
-		if (ticket.eventId !== shift.eventId) {
-			throw error(403, 'That ticket is not for the show you are working');
-		}
+		await ticketOnShow(data.ticketId, await doorShiftEvent(data.signupId));
 
 		try {
 			await checkInTicketService(data.ticketId, currentUser.id);

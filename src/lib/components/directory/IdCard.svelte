@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
-	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
-	import { hashPattern } from '$lib/utils/patterns';
-	import { imageSrc } from '$lib/utils/images';
+	import speakerLogo from '#lib/assets/cmc-speaker-icon.svg';
+	import { hashPattern } from '#lib/utils/patterns.js';
+	import { imageSrc } from '#lib/utils/images.js';
 	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
-	import { initials } from '$lib/utils/format';
+	import { initials } from '#lib/utils/format.js';
 
 	interface Props {
 		href: ResolvedPathname;
@@ -48,10 +49,16 @@
 
 	const flags = $derived(
 		[
-			lookingForBand && { icon: IconUserSearch, label: 'Seeking a band' },
-			availableForHire && { icon: IconBriefcase, label: 'Available for hire' },
-			teachesLessons && { icon: IconSchool, label: 'Teaches privately' },
-			openToCollaboration && { icon: IconUsersPlus, label: 'Open to collaboration' }
+			lookingForBand && { icon: IconUserSearch, label: m.directory_id_card_seeking_band_label() },
+			availableForHire && {
+				icon: IconBriefcase,
+				label: m.directory_id_card_available_hire_label()
+			},
+			teachesLessons && { icon: IconSchool, label: m.directory_id_card_teaches_privately_label() },
+			openToCollaboration && {
+				icon: IconUsersPlus,
+				label: m.directory_id_card_open_collaboration_label()
+			}
 		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
 	);
 </script>
@@ -60,9 +67,9 @@
 	<div class="id-card__header">
 		<div class="id-card__brand">
 			<img src={speakerLogo} alt="" class="id-card__logo" />
-			<span>Corvallis Music<br />Collective</span>
+			<span>{m.directory_corvallis_music_text()}<br />{m.directory_collective_text()}</span>
 		</div>
-		<div class="id-card__tag">MEMBER</div>
+		<div class="id-card__tag">{m.directory_member_text()}</div>
 	</div>
 	<div class="id-card__body">
 		<div class="id-card__photo">
@@ -113,7 +120,7 @@
 		</div>
 	</div>
 	<div class="id-card__footer">
-		<div class="id-card__since">Member since {memberSince}</div>
+		<div class="id-card__since">{m.directory_id_card_member_since_text({ memberSince })}</div>
 		{#if flags.length}
 			<div class="id-card__flags">
 				{#each flags as flag (flag.label)}

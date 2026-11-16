@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { lockMemberCode, lockFallbackCode } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { lockMemberCode, lockFallbackCode } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull } from 'drizzle-orm';
 import {
 	addLockUser,
@@ -9,7 +9,7 @@ import {
 	removeTemporaryUser,
 	generateLockCode
 } from './ultraloc-client';
-import type { LockMemberCode } from '$lib/server/db/schema/reservation';
+import type { LockMemberCode } from '#lib/server/db/schema/reservation.js';
 
 // Persistent member door codes.
 //

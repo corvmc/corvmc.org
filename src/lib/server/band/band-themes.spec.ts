@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { BAND_THEMES } from '$lib/types/band-page';
-import { themeStarterCss } from '$lib/utils/theme-starter';
+import { BAND_THEMES } from '#lib/types/band-page.js';
+import { themeStarterCss } from '#lib/utils/theme-starter.js';
 
 /**
  * The theme list and the stylesheet are two files that have to agree, and

@@ -1,12 +1,13 @@
 <!--
-	Test harness for FilterBar's menu. `@container` is what PageContent provides
-	on every real page, and FilterBar's layout is container-queried against it.
+	Test harness for FilterBar, with or without its menu. `@container` is what
+	PageContent provides on every real page, and FilterBar's layout is
+	container-queried against it.
 -->
 <script lang="ts">
 	import FilterBar from './FilterBar.svelte';
 	import Select from './Form/Select.svelte';
 
-	let { width = 1100 }: { width?: number } = $props();
+	let { width = 1100, withMenu = true }: { width?: number; withMenu?: boolean } = $props();
 	let category = $state('');
 	let tier = $state('');
 	let cleared = $state(0);
@@ -15,10 +16,18 @@
 	const activeCount = $derived((category ? 1 : 0) + menuCount);
 </script>
 
+{#snippet tierMenu()}
+	<Select size="sm" aria-label="Tier" bind:value={tier}>
+		<option value="">All tiers</option>
+		<option value="premium">Premium</option>
+	</Select>
+{/snippet}
+
 <div class="@container" style="width: {width}px">
 	<FilterBar
 		{activeCount}
 		{menuCount}
+		menu={withMenu ? tierMenu : undefined}
 		onclear={() => {
 			category = '';
 			tier = '';
@@ -32,12 +41,6 @@
 			<option value="">All categories</option>
 			<option value="amps">Amps</option>
 		</Select>
-		{#snippet menu()}
-			<Select size="sm" aria-label="Tier" bind:value={tier}>
-				<option value="">All tiers</option>
-				<option value="premium">Premium</option>
-			</Select>
-		{/snippet}
 	</FilterBar>
 	<output data-testid="cleared">{cleared}</output>
 </div>

@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { getMemberAsset } from '$lib/remote/inventory.remote';
-	import { ReportDamageAction } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberAsset } from '#lib/remote/inventory.remote.js';
+	import { ReportDamageAction } from '#lib/components/actions/index.js';
 	import { IconFileText, IconBook } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { equipmentConditionBadge, assetStatusLabels } from '$lib/config';
-	import { titleCase } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { equipmentConditionBadge, assetStatusLabels } from '#lib/config.js';
+	import { titleCase } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * Where a member lands after scanning the sticker on a piece of gear.
@@ -26,7 +29,7 @@
 	 * report-damage button are the next phase, and this page exists from the
 	 * start so the URL printed on the tag never has to change to get them.
 	 */
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const asset = $derived(await getMemberAsset(id));
 	const resources = $derived(asset.resources);
 </script>
@@ -35,28 +38,33 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	parent={{ label: 'Equipment', href: resolve('/member/equipment') }}
+	parent={{
+		label: m.member_equipment_assets_id_equipment_label(),
+		href: resolve('member/equipment')
+	}}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
 	     its condition and left with nowhere to go (#1073). The catalog owns the
 	     request form; `?request=` opens it on the right item. -->
 	{#if asset.isAvailable}
-		<Button href={resolve(`/member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
-			Ask to borrow this
+		<Button href={resolve(`member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
+			{m.member_equipment_assets_id_ask_borrow_label()}
 		</Button>
 	{:else}
-		<Button href={resolve('/member/equipment')} variant="default" size="sm" outline>
-			See what else is free
+		<Button href={resolve('member/equipment')} variant="default" size="sm" outline>
+			{m.member_equipment_assets_id_see_what_else_free_label()}
 		</Button>
 	{/if}
 </PageHeader>
 
 <PageContent width="2xl">
-	<InfoCard title={asset.assetTag ?? 'This unit'}>
+	<InfoCard title={asset.assetTag ?? m.member_equipment_assets_id_unit_title()}>
 		{#if !asset.isAvailable}
 			<Alert type="warning" class="mb-4">
-				This one is {assetStatusLabels[asset.status].toLowerCase()} right now.
+				{m.member_equipment_assets_id_one_right_now_body({
+					toLowerCase: assetStatusLabels[asset.status].toLowerCase()
+				})}
 			</Alert>
 		{/if}
 
@@ -65,16 +73,16 @@
 		{/if}
 
 		<DefinitionList>
-			<Fact label="Condition">
+			<Fact label={m.member_equipment_assets_id_condition_label()}>
 				<Badge size="sm" class={equipmentConditionBadge[asset.condition] ?? 'badge-ghost'}>
 					{titleCase(asset.condition)}
 				</Badge>
 			</Fact>
 			{#if asset.locationName}
-				<Fact label="Kept in">{asset.locationName}</Fact>
+				<Fact label={m.member_equipment_assets_id_kept_label()}>{asset.locationName}</Fact>
 			{/if}
 			{#if asset.assetTag}
-				<Fact label="Tag" mono>{asset.assetTag}</Fact>
+				<Fact label={m.member_equipment_assets_id_tag_label()} mono>{asset.assetTag}</Fact>
 			{/if}
 		</DefinitionList>
 
@@ -88,13 +96,13 @@
 	<!-- Documentation belongs to the catalog entry, not the unit: the manual for a
 	     K12.2 is the manual for all four of them. -->
 	{#if resources.manuals.length > 0 || resources.articles.length > 0}
-		<InfoCard title="How to use it" class="mt-6">
+		<InfoCard title={m.member_equipment_assets_id_how_use_title()} class="mt-6">
 			{#if resources.articles.length > 0}
 				<ul class="space-y-2">
 					{#each resources.articles as article (article.id)}
 						<li class="flex items-start gap-2">
 							<IconBook size={18} class="mt-0.5 shrink-0 opacity-60" />
-							<a class="link" href={resolve(`/member/help/${article.slug}`)}>
+							<a class="link" href={resolve(`member/help/${article.slug}`)}>
 								{article.title}
 								{#if article.summary}
 									<span class="block text-subtle">{article.summary}</span>
@@ -111,7 +119,7 @@
 						<li class="flex items-start gap-2">
 							<IconFileText size={18} class="mt-0.5 shrink-0 opacity-60" />
 							<a class="link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
-								{manual.filename ?? 'Manual'}
+								{manual.filename ?? m.member_equipment_assets_id_manual_text()}
 							</a>
 						</li>
 					{/each}

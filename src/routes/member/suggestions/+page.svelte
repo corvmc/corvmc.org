@@ -1,17 +1,18 @@
 <script lang="ts">
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import {
 		suggestionCategories,
 		suggestionStatuses,
 		suggestionCategoryLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
-	import { getSuggestionBoard } from '$lib/remote/suggestions.remote';
+	} from '#lib/config.js';
+	import { getSuggestionBoard } from '#lib/remote/suggestions.remote.js';
 	import SuggestionCard from './SuggestionCard.svelte';
 	import StandingNotice from './StandingNotice.svelte';
 	import CreateSuggestionAction from './CreateSuggestionAction.svelte';
@@ -54,7 +55,7 @@
 	}
 </script>
 
-<PageHeader title="Suggestions" subtitle="Member">
+<PageHeader title={m.member_suggestions_title()} subtitle={m.member_member_body()}>
 	<CreateSuggestionAction />
 </PageHeader>
 
@@ -65,7 +66,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search suggestions..."
+				placeholder={m.member_suggestions_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -74,50 +75,50 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.member_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each suggestionCategories as c (c)}
 				<option value={c}>{suggestionCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.member_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Any status</option>
+			<option value="">{m.member_suggestions_any_status_label()}</option>
 			{#each suggestionStatuses as s (s)}
 				<option value={s}>{suggestionStatusLabels[s]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Sort"
+			aria-label={m.member_sort_label()}
 			value={sort}
 			onchange={(e: Event) => {
 				sort = (e.currentTarget as HTMLSelectElement).value as 'top' | 'new';
 				page = 1;
 			}}
 		>
-			<option value="top">Most votes</option>
-			<option value="new">Newest</option>
+			<option value="top">{m.member_suggestions_most_votes_label()}</option>
+			<option value="new">{m.member_suggestions_newest_label()}</option>
 		</Select>
 	</FilterBar>
 
 	<DataList
 		{result}
-		emptyTitle="No suggestions yet"
-		empty="Be the first to say what the collective should do next."
+		emptyTitle={m.member_suggestions_empty_title()}
+		empty={m.member_suggestions_empty_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}

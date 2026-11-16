@@ -8,14 +8,12 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: vi.fn(async () => true) }));
+vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: vi.fn(async () => true) }));
 
-const TIP = { id: 'lr-9', name: 'Fret Shop', submitterEmail: 'fan@example.com' };
 const service = {
-	listTips: vi.fn(async () => [TIP]),
 	countPendingTips: vi.fn(async () => 4),
 	listResourcesForStaff: vi.fn(async () => []),
 	listCategories: vi.fn(async () => []),
@@ -23,7 +21,7 @@ const service = {
 	LOCAL_RESOURCE_FIELD_MAX: 200,
 	LOCAL_RESOURCE_NAME_MAX: 120
 };
-vi.mock('$lib/server/local-resource/local-resource-service', () => service);
+vi.mock('#lib/server/local-resource/local-resource-service.js', () => service);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),
@@ -52,20 +50,8 @@ beforeEach(() => {
 	held = new Set();
 });
 
-describe('getLocalResourceTips', () => {
-	it('refuses a caller without localResource.manage before reading anything', async () => {
-		await expect(remote.getLocalResourceTips()).rejects.toThrow('403');
-		expect(service.listTips).not.toHaveBeenCalled();
-	});
-
-	it('returns the pending tips to a holder', async () => {
-		held = new Set(['localResource.manage']);
-		await expect(remote.getLocalResourceTips()).resolves.toEqual({ tips: [TIP] });
-	});
-});
-
 describe('getStaffLocalResources', () => {
-	it('carries the pending tip count for the tab beside the listings', async () => {
+	it('carries the pending tip count for the status filter', async () => {
 		held = new Set(['localResource.manage']);
 		const out = await remote.getStaffLocalResources({});
 		expect(out.tipCount).toBe(4);

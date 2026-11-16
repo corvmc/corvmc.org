@@ -1,10 +1,12 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { announcedBy } from './production-service';
-import { production, productionSlot } from '$lib/server/db/schema/production';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { group } from '$lib/server/db/schema/group';
-import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
+import { production, productionSlot } from '#lib/server/db/schema/production.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { and, asc, eq, inArray, isNotNull, notInArray, type SQL } from 'drizzle-orm';
 import { assertNotTerminal } from './production-scope';
 import {
 	SLOT_MAX,
@@ -14,22 +16,22 @@ import {
 	runOfShowWarnings
 } from './run-of-show';
 
-import { DomainError } from '$lib/server/domain-error';
-import type { EventBandStatus } from '$lib/server/db/schema/event';
-import type { ActTerms } from '$lib/production/terms';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { EventBandStatus } from '#lib/server/db/schema/event.js';
+import type { ActTerms } from '#lib/production/terms.js';
 import type {
 	PublicSetTime,
 	RunOfShow,
 	RunOfShowActStatus,
 	RunOfShowSlot
-} from '$lib/types/run-of-show';
+} from '#lib/types/run-of-show.js';
 
 /**
  * The DTO's status union is spelled out in `$lib/types`, which cannot import a
  * schema. This is what stops the two drifting: adding a value to
  * `eventBandStatuses` fails here until the DTO carries it too.
  */
-import type { ProductionStatus } from '$lib/server/db/schema/production';
+import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 type _StatusesAgree = EventBandStatus extends RunOfShowActStatus ? true : never;
 const _statusesAgree: _StatusesAgree = true;
@@ -40,7 +42,7 @@ export type { SetTimeSlot, WarnableSlot } from './run-of-show';
 
 // ---------------------------------------------------------------------------
 // Run of show — who plays when, derived from one downbeat and the set lengths.
-// See `docs/specs/production-workflow-spec.md#run-of-show`.
+// See `docs/decisions/0004-set-times-are-derived-and-running-order-is-fractional.md`.
 //
 // Imports nothing from `production-service`: the arrow goes the other way,
 // since `updateProductionDetails` calls `recomputeSetTimes` when the downbeat
@@ -128,9 +130,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				techNotes: productionSlot.techNotes,
 				backlineNeeds: productionSlot.backlineNeeds,
 				hospitalityNotes: productionSlot.hospitalityNotes,
-				contactName: productionSlot.contactName,
-				contactEmail: productionSlot.contactEmail,
-				contactPhone: productionSlot.contactPhone,
+				contactId: productionSlot.contactId,
 				guaranteeCents: productionSlot.guaranteeCents,
 				percentageBps: productionSlot.percentageBps,
 				versus: productionSlot.versus,
@@ -142,7 +142,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actSlug: group.slug,
 				// An act with no CMC account still has a listing, which is what a
 				// contact sheet is sent against. Null for a slot with no credit.
-				actEntryId: directoryEntry.id
+				actEntryId: directoryEntry.id,
+				actOrganizationId: organization.id
 			})
 			.from(production)
 			.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
@@ -150,6 +151,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 			.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 			.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 			.leftJoin(group, eq(group.id, directoryEntry.groupId))
+			.leftJoin(organization, eq(organization.directoryEntryId, directoryEntry.id))
 			.where(announcedBy(eventId)),
 		db
 			.select({
@@ -179,6 +181,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actStatus: r.actStatus,
 				actSlug: r.actSlug,
 				actEntryId: r.actEntryId,
+				actOrganizationId: r.actOrganizationId,
 				sortOrder: r.sortOrder!,
 				createdAt: r.createdAt!,
 				setLengthMinutes: r.setLengthMinutes!,
@@ -190,9 +193,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				techNotes: r.techNotes,
 				backlineNeeds: r.backlineNeeds,
 				hospitalityNotes: r.hospitalityNotes,
-				contactName: r.contactName,
-				contactEmail: r.contactEmail,
-				contactPhone: r.contactPhone,
+				contactId: r.contactId,
 				terms: {
 					guaranteeCents: r.guaranteeCents,
 					percentageBps: r.percentageBps,
@@ -210,6 +211,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		actStatus: r.actStatus,
 		actSlug: r.actSlug,
 		actEntryId: r.actEntryId,
+		actOrganizationId: r.actOrganizationId,
 		sortOrder: r.sortOrder,
 		setLengthMinutes: r.setLengthMinutes,
 		changeoverMinutes: r.changeoverMinutes,
@@ -223,9 +225,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		techNotes: r.techNotes,
 		backlineNeeds: r.backlineNeeds,
 		hospitalityNotes: r.hospitalityNotes,
-		contactName: r.contactName,
-		contactEmail: r.contactEmail,
-		contactPhone: r.contactPhone,
+		contactId: r.contactId,
 		terms: r.terms
 	}));
 
@@ -420,10 +420,21 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 		await recomputeSetTimes(productionId);
 		return row.id;
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		if (/UNIQUE constraint failed/i.test(message)) throw new SlotExistsError();
+		if (isUniqueConstraintError(err)) throw new SlotExistsError();
 		throw err;
 	}
+}
+
+/** The performer organization of a set's act, if the act has one. */
+export async function slotActOrganizationId(slotId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: organization.id })
+		.from(productionSlot)
+		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
+		.innerJoin(organization, eq(organization.directoryEntryId, eventBand.directoryEntryId))
+		.where(eq(productionSlot.id, slotId))
+		.limit(1);
+	return row?.id ?? null;
 }
 
 export interface UpdateSlotInput {
@@ -435,9 +446,8 @@ export interface UpdateSlotInput {
 	techNotes?: string | null;
 	backlineNeeds?: string | null;
 	hospitalityNotes?: string | null;
-	contactName?: string | null;
-	contactEmail?: string | null;
-	contactPhone?: string | null;
+	/** One of the act's contacts; the remote checks it is. */
+	contactId?: string | null;
 }
 
 /**
@@ -633,6 +643,14 @@ export interface BandSlotTerms {
 	terms: ActTerms;
 }
 
+/** An outside act's booking: the band's view, plus its contact and what it was paid. */
+export interface ActSlotTerms extends BandSlotTerms {
+	contactId: string | null;
+	/** Null until settled; zero is a real answer for a donated set. */
+	paidCents: number | null;
+	paidAt: Date | null;
+}
+
 /**
  * The deal a band was offered, on its own page.
  *
@@ -642,6 +660,25 @@ export interface BandSlotTerms {
  * and a band reading one would be reading a guess.
  */
 export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[]> {
+	const rows = await ownSlots(eq(directoryEntry.groupId, groupId));
+	return rows.map(({ contactId: _c, paidCents: _p, paidAt: _a, ...band }) => band);
+}
+
+/**
+ * The same, for an outside act holding a contact-sheet token.
+ *
+ * Keyed on the credit's own entry, which the caller takes from the resolved
+ * token and never from the request. Shows older than `RECENT_DAYS` drop off.
+ */
+export async function listActSlotTerms(entryId: string, now = new Date()): Promise<ActSlotTerms[]> {
+	const since = now.getTime() - RECENT_DAYS * 86_400_000;
+	const rows = await ownSlots(eq(eventBand.directoryEntryId, entryId));
+	return rows.filter((r) => r.startsAt.getTime() >= since);
+}
+
+const RECENT_DAYS = 90;
+
+async function ownSlots(act: SQL): Promise<ActSlotTerms[]> {
 	const rows = await db
 		.select({
 			eventId: eventListing.id,
@@ -657,19 +694,17 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 			percentageBps: productionSlot.percentageBps,
 			versus: productionSlot.versus,
 			againstNet: productionSlot.againstNet,
-			contributed: productionSlot.contributed
+			contributed: productionSlot.contributed,
+			contactId: productionSlot.contactId,
+			paidCents: productionSlot.paidCents,
+			paidAt: productionSlot.paidAt
 		})
 		.from(productionSlot)
 		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
 		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
-		.where(
-			and(
-				eq(directoryEntry.groupId, groupId),
-				inArray(production.status, ['offered', ...PUBLISHED_STATUSES])
-			)
-		)
+		.where(and(act, inArray(production.status, ['offered', ...PUBLISHED_STATUSES])))
 		.orderBy(asc(eventListing.startsAt));
 
 	return rows.map((r) => ({
@@ -688,21 +723,9 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 			versus: r.versus,
 			againstNet: r.againstNet,
 			contributed: r.contributed
-		}
+		},
+		contactId: r.contactId,
+		paidCents: r.paidCents,
+		paidAt: r.paidAt
 	}));
-}
-
-/**
- * Which production a listing has, or null.
- *
- * Here rather than in `production-service` so a remote that only writes slots
- * needs one import, and so the arrow between the two modules stays one-way.
- */
-export async function findProductionIdForEvent(eventId: string): Promise<string | null> {
-	const [row] = await db
-		.select({ id: production.id })
-		.from(production)
-		.where(announcedBy(eventId))
-		.limit(1);
-	return row?.id ?? null;
 }

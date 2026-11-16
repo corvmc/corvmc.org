@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 import { error } from '@sveltejs/kit';
-import { can } from '$lib/server/authorization';
+import { can } from '#lib/server/authorization.js';
 
-// Regression: staff confirming/pricing a reservation on a member's behalf must key
-// free hours to the reservation OWNER, never the acting staff user. The staff
-// confirm UI previously routed through the member self-pay flow, which keyed both
-// the pricing display and the credit deduction to `currentUser.id` (the staff
-// member). Both `confirmReservation` (deduction) and `getReservationPricing`
-// (display) must use `reservation.createdByUserId`.
+// Regression: staff pricing a reservation on a member's behalf must key free
+// hours to the reservation OWNER, never the acting staff user.
+// `getReservationPricing` must use `reservation.createdByUserId`.
 
 const staffUser = mockUser({ id: 'staff-1', name: 'Staff Person', email: 'staff@example.com' });
 const ownerId = 'member-1';
@@ -28,7 +25,7 @@ function chain() {
 // Payloads passed to `db.update(...).set(...)`, in call order.
 const updateSets: Record<string, unknown>[] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({
@@ -40,7 +37,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const isStaffMock = vi.fn(async () => true);
 	return {
 		requireUser: () => staffUser,
@@ -65,15 +62,15 @@ vi.mock('$lib/server/authorization', async () => {
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
 // Owner has no free hours; the acting staff user has a big balance. If pricing keyed
 // to the wrong user, the staff balance would leak credits onto the member's booking.
 const getBalance = vi.fn(async (userId: string) => (userId === ownerId ? 0 : 100));
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance }));
 
 const commitReservationCredits = vi.fn(async (params: { userId: string; totalCents: number }) => ({
 	creditUnits: 0,
@@ -81,9 +78,9 @@ const commitReservationCredits = vi.fn(async (params: { userId: string; totalCen
 	remainingCents: params.totalCents,
 	alreadyCommitted: false
 }));
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	return {
 		// Keep the real pricing math so the pricing test reflects production behavior.
 		computeReservationCredit: actual.computeReservationCredit,
@@ -96,7 +93,7 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 });
 
 const confirm = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
 	confirm,
@@ -108,7 +105,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationConflictError: class extends Error {}
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -135,8 +132,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { confirmReservation, getReservationPricing } =
-	(await import('$lib/remote/reservations.remote')) as any;
+const { getReservationPricing } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	// requireCapabilityOrOwner short-circuits on ownership without consulting `can`,
@@ -150,113 +146,6 @@ beforeEach(() => {
 	getBalance.mockClear();
 	selectResults.length = 0;
 	updateSets.length = 0;
-});
-
-describe('staff confirm commits the owner credits, not the staff member', () => {
-	it('passes the reservation owner id to commitReservationCredits', async () => {
-		selectResults.push(
-			[
-				{
-					id: 'res-1',
-					createdByUserId: ownerId,
-					startsAt: new Date('2026-06-15T17:00:00Z'),
-					endsAt: new Date('2026-06-15T18:00:00Z'),
-					status: 'scheduled'
-				}
-			],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		// The `form` mock exposes the raw handler, so call it with parsed data.
-		await confirmReservation({ id: 'res-1' }, undefined);
-
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-		const arg = commitReservationCredits.mock.calls[0][0];
-		expect(arg.userId).toBe(ownerId);
-		expect(arg.userId).not.toBe(staffUser.id);
-	});
-});
-
-describe('confirmation window gating', () => {
-	const DAY = 24 * 60 * 60 * 1000;
-	// currentUser is staffUser; making them the OWNER lets us test the member path.
-	function scheduledRow(startsAt: Date) {
-		return {
-			id: 'res-w',
-			createdByUserId: staffUser.id,
-			startsAt,
-			endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
-			status: 'scheduled'
-		};
-	}
-
-	it('blocks a member confirming more than 3 days out', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		selectResults.push([scheduledRow(new Date(Date.now() + 10 * DAY))]);
-
-		await expect(confirmReservation({ id: 'res-w' }, undefined)).rejects.toMatchObject({
-			status: 400
-		});
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-	});
-
-	it('allows a member confirming within 3 days', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		selectResults.push(
-			[scheduledRow(new Date(Date.now() + 2 * DAY))],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		await confirmReservation({ id: 'res-w' }, undefined);
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-	});
-
-	it('lets staff confirm outside the window', async () => {
-		// `can` defaults to true in this suite.
-		selectResults.push(
-			[{ ...scheduledRow(new Date(Date.now() + 10 * DAY)), createdByUserId: ownerId }],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		await confirmReservation({ id: 'res-w' }, undefined);
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-	});
-});
-
-describe('staff comp choice on confirm', () => {
-	function scheduledRow() {
-		return {
-			id: 'res-c',
-			createdByUserId: ownerId,
-			startsAt: new Date('2026-06-15T17:00:00Z'),
-			endsAt: new Date('2026-06-15T18:00:00Z'),
-			status: 'scheduled'
-		};
-	}
-
-	it('comp=on waives payment without committing the owner credits', async () => {
-		selectResults.push([scheduledRow()]);
-
-		await confirmReservation({ id: 'res-c', comp: 'on' }, undefined);
-
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-		expect(confirm).toHaveBeenCalledWith('res-c');
-		expect(updateSets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
-	});
-
-	it('rejects comp from a non-staff owner', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		// Owned by the acting (non-staff) user, within the confirmation window.
-		selectResults.push([
-			{ ...scheduledRow(), createdByUserId: staffUser.id, startsAt: new Date(Date.now() + 60_000) }
-		]);
-
-		await expect(confirmReservation({ id: 'res-c', comp: 'on' }, undefined)).rejects.toMatchObject({
-			status: 403
-		});
-		expect(confirm).not.toHaveBeenCalled();
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-	});
 });
 
 describe('getReservationPricing keys free hours to the reservation owner', () => {

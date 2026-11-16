@@ -38,8 +38,8 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -78,22 +78,25 @@ const hasConflict = vi.fn(async () => conflict);
 // `hasConflict` is in `conflict-service`. Mocking only the first left the real
 // conflict check running, which reaches for KV and fails with a message about
 // initialization rather than about the room.
-vi.mock('$lib/server/reservation/reservation-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-service.js')>();
 	return { ...actual, staffCreate: (...a: unknown[]) => staffCreate(...(a as [])) };
 });
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	hasConflict: (...a: unknown[]) => hasConflict(...(a as []))
 }));
 
-vi.mock('$lib/server/storage', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
-vi.mock('$lib/server/media/media-service', () => ({ attachToSlot: vi.fn(), detachSlot: vi.fn() }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
+vi.mock('#lib/server/media/media-service.js', () => ({
+	attachToSlot: vi.fn(),
+	detachSlot: vi.fn()
+}));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { createGroupEvent } = await import('./event-service');
-const { ReservationConflictError } = await import('$lib/server/reservation/reservation-service');
+const { ReservationConflictError } = await import('#lib/server/reservation/reservation-service.js');
 
 function rowsFor(table: string) {
 	return inserts.filter((i) => i.table === table).flatMap((i) => i.rows);
@@ -149,6 +152,14 @@ describe('without a room booking', () => {
 		const [evt] = rowsFor('event_listing');
 		expect(evt).toMatchObject({ status: 'published' });
 		expect(evt.publishedAt).toBeInstanceOf(Date);
+	});
+
+	it.each(['club', 'committee'])("writes a %s's session as a meeting, not a show", async (kind) => {
+		groupRows = [{ kind }];
+		await createGroupEvent(params());
+
+		const [evt] = rowsFor('event_listing');
+		expect(evt).toMatchObject({ kind: 'meeting' });
 	});
 
 	it('writes the group its event_group row', async () => {
@@ -238,7 +249,7 @@ describe('holding the room', () => {
  * #714. The remotes guard with `requireProgramRole`, but free room time is an
  * invariant of the data rather than of one endpoint: a band that reaches this
  * creator by any route gets a `confirmed` reservation nobody is billed for, and
- * `docs/specs/shipped/groups-spec.md` rests the whole design on that being impossible.
+ * `docs/decisions/0024-groups-split-the-band-table-by-purpose.md` rests the design on that being impossible.
  */
 describe('a band is not a program', () => {
 	it('refuses a band group before anything is written', async () => {

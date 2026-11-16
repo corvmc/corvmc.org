@@ -23,7 +23,7 @@ function chainable(op?: string) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		update: vi.fn(() => chainable('update')),
@@ -42,9 +42,9 @@ vi.mock('$lib/server/db', () => ({
 const inserted = () => writes.find((w) => w.op === 'insert')?.value;
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 let editorHolds = true;
-vi.mock('$lib/server/authorization', () => ({ positionsGrant: vi.fn(async () => editorHolds) }));
+vi.mock('#lib/server/authorization.js', () => ({ positionsGrant: vi.fn(async () => editorHolds) }));
 const editor = { editorId: 'staff-1' };
 
 const {
@@ -141,6 +141,24 @@ describe('setRoleCapabilityGrants', () => {
 		// An emptied list is a delete with nothing to insert.
 		expect(writes.map((w) => w.op)).toEqual(['update', 'delete']);
 		expect(batches[0]).toHaveLength(2);
+	});
+
+	it('sets the lead time, and audits a change to it alone (#2993)', async () => {
+		selectResults = [[{ name: 'Vendor host', leadDays: 0 }], [{ capability: 'market.host' }]];
+		await setRoleCapabilityGrants('role-1', ['market.host'], { ...editor, leadDays: 30 });
+		expect(writes[0]).toMatchObject({ op: 'update', value: { grantLeadDays: 30 } });
+		expect(recordAuditEntry).toHaveBeenCalledWith(
+			expect.objectContaining({
+				details: { added: [], removed: [], leadDays: { from: 0, to: 30 } }
+			})
+		);
+	});
+
+	it('keeps the stored lead time when none is given', async () => {
+		selectResults = [[{ name: 'Vendor host', leadDays: 30 }], [{ capability: 'market.host' }]];
+		await setRoleCapabilityGrants('role-1', ['market.host'], editor);
+		expect(writes[0]).toMatchObject({ op: 'update', value: { grantLeadDays: 30 } });
+		expect(recordAuditEntry).not.toHaveBeenCalled();
 	});
 
 	it('404s for a missing role', async () => {

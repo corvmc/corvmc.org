@@ -7,7 +7,7 @@ import { readFileSync, globSync } from 'node:fs';
  * hold in place of `uq_event_production`, and the refusal to strand a show.
  */
 const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return {
 		...migratedSqlite({ foreignKeys: true }),
 		// The schema as it stood before the column went: `production_id` still there.
@@ -16,19 +16,13 @@ const { sqlite, testDb, legacySqlite } = await vi.hoisted(async () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: Object.assign(testDb, {
-		batch: async (stmts: PromiseLike<unknown>[]) => {
-			const out = [];
-			for (const s of stmts) out.push(await s);
-			return out;
-		}
-	}),
-	// better-sqlite3 reports `changes` where D1 reports `meta.changes`.
-	getRowCount: (r: { changes?: number }) => r?.changes ?? 0
+vi.mock('#lib/server/db/index.js', async () => ({
+	db: testDb,
+	getRowCount: (await import('#lib/server/db/row-count.js')).getRowCount
 }));
 
-const { attachToProject, detachFromProject } = await import('$lib/server/project/project-service');
+const { attachToProject, detachFromProject } =
+	await import('#lib/server/project/project-service.js');
 const { createProduction, ProductionExistsError } = await import('./production-service');
 const { ProductionListingTakenError, ListingAnnouncesShowError, projectOfEvent } =
 	await import('./production-scope');

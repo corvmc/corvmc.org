@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Toaster } from 'svelte-sonner';
-	import SiteHeader from '$lib/components/public/layout/SiteHeader.svelte';
-	import SiteFooter from '$lib/components/public/layout/SiteFooter.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import SignedInProvider from '$lib/components/ui/SignedInProvider.svelte';
-	import { getMe } from '$lib/remote/layout.remote';
+	import SiteHeader from '#lib/components/public/layout/SiteHeader.svelte';
+	import SiteFooter from '#lib/components/public/layout/SiteFooter.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import SignedInProvider from '#lib/components/ui/SignedInProvider.svelte';
+	import { getMe } from '#lib/remote/layout.remote.js';
 
 	let { children } = $props();
 

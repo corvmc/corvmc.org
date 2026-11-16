@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { recordForm8282 } from '$lib/remote/inventory.remote';
+	import { refreshAll } from '$app/navigation';
+	import { recordForm8282 } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import { toLocalDate } from '$lib/utils/format';
+	import { toLocalDate } from '#lib/utils/format.js';
 
 	const { fields } = recordForm8282;
 
@@ -29,36 +31,38 @@
 
 <Action
 	action={recordForm8282}
-	label="Record 8282"
-	modalTitle="Record what happened"
-	successToast="Recorded"
+	label={m.actions_record_form8282_record_8282_label()}
+	modalTitle={m.actions_record_form8282_modal_title()}
+	successToast={m.actions_recorded_toast()}
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', assetId)} />
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
-				This unit was donated and disposed of within three years, so the IRS may require Form 8282 —
-				filed within 125 days of the disposal, with a copy to the donor{#if dueBy}, by
-					<strong>{toLocalDate(dueBy)}</strong>{/if}.
+				{m.actions_record_form8282_unit_was_donated_disposed_within_text()}{#if dueBy}<ParaglideMessage
+						message={m.actions_record_form8282_by_text}
+						inputs={{ toLocalDate: toLocalDate(dueBy) }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>{/if}.
 			</p>
 			<!-- The system cannot decide this. Whether it is reportable turns on
 			     whether the donor filed a Form 8283 that CMC signed, which is a fact
 			     about paperwork rather than about stock. -->
 			<p class="mt-1 opacity-70">
-				Record either that it was filed, or that no filing was needed and why. Check with whoever
-				prepares the return if you are unsure — this note is the only record.
+				{m.actions_record_form8282_record_either_was_filed_no_text()}
 			</p>
 		</div>
 		<Field
 			field={fields.note}
 			type="textarea"
-			label="What happened"
-			description="e.g. “Filed 2026-09-02, copy posted to the donor” or “No 8283 was ever signed, so no filing due”."
+			label={m.actions_record_form8282_what_happened_label()}
+			description={m.actions_record_form8282_description_body()}
 		/>
 	{/snippet}
 </Action>

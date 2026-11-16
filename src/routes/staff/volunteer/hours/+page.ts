@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-/** The hours queue is a Members → Volunteers view (#2075). Filters ride along. */
+/** The hour-log queue is part of Volunteering (#2765). Filters ride along. */
 export function load({ url }) {
-	redirect(308, `/staff/members/volunteers/hours${url.search}`);
+	redirect(308, `/staff/volunteering/hours${url.search}`);
 }

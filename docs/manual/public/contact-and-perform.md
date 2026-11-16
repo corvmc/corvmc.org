@@ -19,7 +19,7 @@ questions.
 ## Applying to perform
 
 Want to play a show at CorvMC? Use the contact form and choose the
-performance-related subject (you can also reach it from the **Apply to Perform**
+performance-related subject (you can also reach it from the **Apply to perform**
 link on the [Programs](programs-overview.md) page). Tell us about your act, links to
 your music, and your availability, and we'll follow up.
 

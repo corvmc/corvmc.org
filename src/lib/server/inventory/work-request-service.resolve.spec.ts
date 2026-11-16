@@ -21,7 +21,7 @@ function chain(queue: () => unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(() => (selectResults.length > 0 ? selectResults.shift()! : []))),
 		update: vi.fn(() => ({
@@ -39,7 +39,7 @@ vi.mock('./asset-service', () => ({
 }));
 
 const emit = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 
 const { resolveFlagsForWorkOrder } = await import('./work-request-service');
 

@@ -1,4 +1,4 @@
-import { grantRuleFor, type Capability } from '$lib/config';
+import { grantRuleFor, type Capability } from '#lib/config.js';
 
 /**
  * What a guard is acting on, when it is acting on something.

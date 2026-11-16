@@ -1,8 +1,9 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import StatusBadge, { labels } from './StatusBadge.svelte';
+import StatusBadge, { labels, statusLabel } from './StatusBadge.svelte';
 import StatusBadgeHarness from './StatusBadge.test.svelte';
+import '#lib/test/locators.js';
 import '../../../routes/layout.css';
 
 /**
@@ -16,7 +17,7 @@ describe('StatusBadge accessibility', () => {
 	it('names the icon-only form', async () => {
 		await render(StatusBadge, { status: 'no_show' });
 		const el = document.querySelector('[role="img"]');
-		expect(el?.getAttribute('aria-label')).toBe('No show');
+		expect(el?.getAttribute('aria-label')).toBe(statusLabel('no_show'));
 	});
 
 	it('uses the humanised label, not the raw enum value', async () => {
@@ -32,7 +33,7 @@ describe('StatusBadge accessibility', () => {
 	it('does not double up the name when the label is already visible', async () => {
 		await render(StatusBadge, { status: 'no_show', label: true });
 		expect(document.querySelector('[role="img"]')).toBeNull();
-		expect(document.body.textContent).toContain('No show');
+		expect(document.body.textContent).toContain(statusLabel('no_show'));
 	});
 
 	it('still names a status it has no mapping for', async () => {
@@ -43,6 +44,26 @@ describe('StatusBadge accessibility', () => {
 	});
 });
 
+// A table column squeezes the badge; a pill of fixed height cannot hold two lines.
+describe('StatusBadge labelled', () => {
+	const widthIn = async (width: number) => {
+		const host = document.createElement('div');
+		host.style.width = `${width}px`;
+		document.body.appendChild(host);
+		await render(StatusBadge, {
+			target: host,
+			props: { status: 'no_show', label: true, text: 'Several words of label' }
+		});
+		const rendered = host.querySelector('.badge')!.getBoundingClientRect().width;
+		host.remove();
+		return rendered;
+	};
+
+	it('stays on one line in a column narrower than its label', async () => {
+		expect(await widthIn(60)).toBe(await widthIn(600));
+	});
+});
+
 /**
  * `responsive` keeps the word at desk widths and drops to the glyph below the
  * col-extra tier (48rem container), where the reservations table runs out of
@@ -50,21 +71,24 @@ describe('StatusBadge accessibility', () => {
  * glyph has to keep a name and show its tooltip when the row holds focus.
  */
 describe('StatusBadge responsive', () => {
+	const NO_SHOW = statusLabel('no_show');
+	const glyph = () => page.getByRole('img', { name: NO_SHOW });
+	const badge = () => page.getByCss('.badge');
 	const tooltipOpacity = () => {
-		const tip = page.getByRole('img', { name: 'No show' }).element();
+		const tip = glyph().element();
 		return getComputedStyle(tip, '::before').opacity;
 	};
 
 	it('shows the labelled badge at 48rem and up', async () => {
 		await render(StatusBadgeHarness, { width: 800 });
-		await expect.element(page.getByText('No show')).toBeVisible();
-		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
+		await expect.element(badge()).toBeVisible();
+		expect(glyph().elements()).toHaveLength(0);
 	});
 
 	it('goes icon-only below 48rem and keeps an accessible name', async () => {
 		await render(StatusBadgeHarness, { width: 700 });
-		await expect.element(page.getByRole('img', { name: 'No show' })).toBeVisible();
-		await expect.element(page.getByText('No show', { exact: true })).not.toBeVisible();
+		await expect.element(glyph()).toBeVisible();
+		await expect.element(badge()).not.toBeVisible();
 	});
 
 	it('opens the tooltip when the row holds keyboard focus', async () => {
@@ -78,7 +102,7 @@ describe('StatusBadge responsive', () => {
 
 	it('leaves the plain labelled badge alone without the prop', async () => {
 		await render(StatusBadgeHarness, { width: 700, responsive: false });
-		await expect.element(page.getByText('No show')).toBeVisible();
-		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
+		await expect.element(badge()).toBeVisible();
+		expect(glyph().elements()).toHaveLength(0);
 	});
 });

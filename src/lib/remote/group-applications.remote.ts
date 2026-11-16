@@ -1,23 +1,23 @@
 import { z } from 'zod';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { can, requireUser } from '$lib/server/authorization';
-import { requireApplicationReviewer } from '$lib/server/group/group-context';
+import { mapDomainError } from '#lib/server/errors.js';
+import { can, requireUser } from '#lib/server/authorization.js';
+import { requireApplicationReviewer } from '#lib/server/group/group-context.js';
 import {
 	getMemberGroup,
 	getMemberGroups,
 	getStaffCommitteePage,
 	getStaffCommittees,
 	getStaffGroupPage
-} from '$lib/remote/groups.remote';
-import { APPLICATION_ANSWER_MAX } from '$lib/config';
+} from '#lib/remote/groups.remote.js';
+import { APPLICATION_ANSWER_MAX } from '#lib/config.js';
 import {
 	acceptApplication,
 	declineApplication,
 	markContacted,
 	submitApplication,
 	withdrawApplication
-} from '$lib/server/group/application-service';
+} from '#lib/server/group/application-service.js';
 
 /**
  * Applying to a `by_application` group, and a reviewer answering.

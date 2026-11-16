@@ -1,14 +1,14 @@
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { getRider } from '$lib/server/band/rider-service';
-import { getMembers } from '$lib/server/band/band-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { getRider } from '#lib/server/band/rider-service.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
 import {
 	riderElementKindLabels,
 	riderInputSourceLabels,
 	riderProvidedByLabels,
 	riderStandTypeLabels
-} from '$lib/config';
+} from '#lib/config.js';
 
 const COLUMNS = [
 	'channel',
@@ -31,7 +31,7 @@ const COLUMNS = [
  * **A `+server.ts` rather than a remote function**, for the reason the volunteer
  * export gives: a download needs `Content-Disposition` and a `query()` returns a
  * value rather than a response. So the guard is not the remote-function boundary
- * here and `requireGroupRole` is the first statement — `allowStaff`, because a
+ * here and `requireGroupRole` is the first statement — `staff`, because a
  * staffer advancing a show needs this more than the band does.
  *
  * The `slug` is a real route param rather than a client-supplied header, which
@@ -44,7 +44,7 @@ const COLUMNS = [
  */
 export const GET: RequestHandler = async ({ params }) => {
 	const { group: band } = await requireGroupRole({ slug: params.slug }, 'member', {
-		allowStaff: true
+		staff: 'band.read'
 	});
 
 	const [rider, members] = await Promise.all([getRider(band.id), getMembers(band.id)]);

@@ -15,8 +15,8 @@
  * media.corvmc.org address for any key it is given and cannot tell which bucket
  * the key came from.
  */
-import { getPrivateBucket } from '$lib/server/private-storage';
-import { AUDIO_MAX_UPLOAD_BYTES } from '$lib/config';
+import { getPrivateBucket } from '#lib/server/private-storage.js';
+import { AUDIO_MAX_UPLOAD_BYTES } from '#lib/config.js';
 
 /**
  * What a band may upload.

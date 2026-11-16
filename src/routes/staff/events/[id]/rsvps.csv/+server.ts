@@ -1,11 +1,10 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { getById } from '$lib/server/event/event-service';
-import { listRsvpsForEvent } from '$lib/server/event/rsvp-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
-
-const COLUMNS = ['name', 'email', 'rsvped_at'];
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { getById } from '#lib/server/event/event-service.js';
+import { listRsvpRoster } from '#lib/server/event/rsvp-service.js';
+import { rosterCsv } from '#lib/server/roster/roster.js';
+import { csvResponse } from '#lib/server/report/csv.js';
 
 /**
  * An event's RSVPs as CSV. A `+server.ts` because a download needs a
@@ -17,11 +16,9 @@ export const GET: RequestHandler = async ({ params }) => {
 	const evt = await getById(params.id);
 	if (!evt) error(404, 'Event not found');
 
-	const rows = await listRsvpsForEvent(evt.id);
-	const csv = toCsv(
-		rows.map((r) => ({ name: r.name, email: r.email, rsvped_at: r.createdAt.toISOString() })),
-		COLUMNS
-	);
+	const csv = rosterCsv(await listRsvpRoster(evt.id), [
+		{ header: 'rsvped_at', value: (r) => r.rsvpedAt.toISOString() }
+	]);
 	const slug = evt.title
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, '-')

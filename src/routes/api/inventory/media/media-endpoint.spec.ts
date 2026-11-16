@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * Which bucket each slot lands in.
@@ -10,21 +10,21 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
  */
 
 const uploadFile = vi.fn(async () => undefined);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: (...a: unknown[]) => uploadFile(...(a as []))
 }));
 
 const putPrivateObject = vi.fn(
 	async (_key: string, _body: ArrayBuffer, _type: string) => undefined
 );
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	putPrivateObject: (...a: unknown[]) =>
 		putPrivateObject(...(a as Parameters<typeof putPrivateObject>))
 }));
 
 const record = vi.fn(async () => ({ id: 'media-1' }));
 const attach = vi.fn(async () => undefined);
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	record: (...a: unknown[]) => record(...(a as [])),
 	attach: (...a: unknown[]) => attach(...(a as []))
 }));
@@ -33,9 +33,9 @@ vi.mock('$lib/server/media/media-service', () => ({
 // positions actually grant.
 let heldPositions: Position[] = ['staff'];
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {

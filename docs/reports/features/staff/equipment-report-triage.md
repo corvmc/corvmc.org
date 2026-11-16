@@ -1,0 +1,5 @@
+# Equipment report triage
+
+Status: ✅ /staff/inventory/problems
+
+The staff half of a member's damage report. `work_request` rows raised from `/member/equipment/assets/[id]` land in Inventory's Reported Problems queue (#1840; on the flags surface until then, #552) — one table component shared with Content Flags, separate guards (`inventory.manageAssets`). Stages are derived: untriaged, in a work order, resolved, dismissed. Staff dismiss a report or send it to a work order (an open one on the unit, or a new one with a role), which sweeps every other untriaged report on the unit with it; resolving the work order closes them all, and so does a scheduled work order finishing by the clock. Each reporter is told once that it was fixed (`equipment_report_resolved`, email on). A building problem that is no unit — a running toilet, a dead light — is the same `work_request` with a free-text `location` and no asset, reported from "Report a building problem" on the member dashboard; it takes nothing out of service and sweeps no other report with it. Inventory → Reported Problems in the sidebar

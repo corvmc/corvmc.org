@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock env vars
-vi.mock('$env/dynamic/private', () => ({
-	env: {
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({
 		R2_PUBLIC_URL: 'https://pub.example.com',
 		R2_TRANSFORM_URL: ''
-	}
-}));
+	})
+);
 
 import {
 	initStorage,
@@ -18,7 +18,7 @@ import {
 	validateUpload,
 	MAX_SIZE_BYTES
 } from './storage';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 /** A key as `withheldPosterKey` builds one — the private bucket's, not this one's. */
 const WITHHELD = 'events/posters/withheld/evt-1-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg';

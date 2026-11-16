@@ -26,7 +26,7 @@ const ALLOWED = new Set([
 	// The barrel: drizzle-kit reads it to see the table at all, so a migration
 	// cannot be generated without this line. That is exactly why the lint rule
 	// matches the imported *symbol* rather than only the module path — banning
-	// the path alone would leave `from '$lib/server/db/schema'` wide open.
+	// the path alone would leave `from '#lib/server/db/schema.js'` wide open.
 	'src/lib/server/db/schema/index.ts',
 	'src/lib/server/directory/contact-service.spec.ts',
 	'src/lib/server/directory/contact-boundary.spec.ts'
@@ -83,12 +83,22 @@ describe('the contact table has one access path', () => {
 		const unguarded = exports.filter((name) => {
 			const body = src.slice(src.indexOf(`export async function ${name}`));
 			const end = body.indexOf('\n}\n');
-			return !/requireCapability\('directory\.\w+'\)/.test(body.slice(0, end));
+			return !/requireCapability\('(directory|contact)\.\w+'\)/.test(body.slice(0, end));
 		});
 
-		// The two deliberate exceptions, each named so that using one looks like
-		// what it is: the token path has no session to check, and the archive runs
-		// inside an already-guarded claim.
-		expect(unguarded.sort()).toEqual(['archiveContactForClaim', 'writeContactUnguarded']);
+		// The deliberate exceptions, each named so that using one looks like what
+		// it is: the token path, public applications and the retention cron have
+		// no session to check, the archive runs inside an already-guarded claim, and
+		// the people count runs inside a sponsor or funder delete guarded by its role,
+		// and a vendor's primary contact addresses mail a market decider sends.
+		expect(unguarded.sort()).toEqual([
+			'actContactNamesUnguarded',
+			'archiveActContactsForClaim',
+			'countOrganizationPeopleUnguarded',
+			'primaryContactsUnguarded',
+			'recordApplicantUnguarded',
+			'sweepExpiredContacts',
+			'writeActContactUnguarded'
+		]);
 	});
 });

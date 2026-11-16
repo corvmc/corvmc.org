@@ -2,8 +2,8 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
-import { requireUser } from '$lib/server/authorization';
-import { requireFeature } from '$lib/server/feature-flags';
+import { requireUser } from '#lib/server/authorization.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
 import {
 	startDirectThread,
 	replyToDirectThread,
@@ -11,38 +11,38 @@ import {
 	declineDirectThread,
 	getDirectThread,
 	counterpartOf
-} from '$lib/server/inbox/direct-service';
-import { getPortalThread } from '$lib/server/inbox/portal-service';
-import { getGroupChat } from '$lib/server/inbox/group-chat-service';
-import { getBandThread } from '$lib/server/inbox/band-service';
+} from '#lib/server/inbox/direct-service.js';
+import { getPortalThread } from '#lib/server/inbox/portal-service.js';
+import { getGroupChat } from '#lib/server/inbox/group-chat-service.js';
+import { getBandThread } from '#lib/server/inbox/band-service.js';
 import {
 	listUnifiedConversations,
 	groupOfThread,
 	type InboxScope
-} from '$lib/server/inbox/unified-service';
-import { listForUser } from '$lib/server/band/band-service';
+} from '#lib/server/inbox/unified-service.js';
+import { listForUser } from '#lib/server/band/band-service.js';
 import {
 	blockUser,
 	unblockUser,
 	listBlockedBy,
 	getMessagingState,
 	setAcceptsDirectMessages
-} from '$lib/server/moderation/moderation-service';
+} from '#lib/server/moderation/moderation-service.js';
 import { getMemberLayout } from './layout.remote';
-import { ADULT_AGE_YEARS } from '$lib/utils/age';
+import { ADULT_AGE_YEARS } from '#lib/utils/age.js';
 import {
 	MAX_PENDING_SENT_REQUESTS,
 	MAX_UNRESOLVED_REPORTS,
 	DIRECT_MESSAGE_BODY_MAX
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	createFlag,
 	countUnresolvedReportsBy,
 	FLAG_REASON_MAX,
 	FLAG_DESCRIPTION_MAX
-} from '$lib/server/flag/flag-service';
-import { updateStatus } from '$lib/server/inbox/thread-service';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/flag/flag-service.js';
+import { updateStatus } from '#lib/server/inbox/thread-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
 
 // ---------------------------------------------------------------------------
 // Member↔member conversations
@@ -332,7 +332,7 @@ export const unblockMember = form(z.object({ userId: z.string().min(1) }), async
 /**
  * Report a conversation to staff.
  *
- * Uses the existing content-flag system — same table, same `/staff/flags`
+ * Uses the existing content-flag system — same table, same `/staff/moderation/flags`
  * queue, same resolve flow. It is a separate remote from `submitFlag` only
  * because a conversation report has two requirements the shared path must not
  * inherit: the reporter has to be in the conversation, and reporting has to
@@ -417,7 +417,8 @@ export const getMyMessagingStanding = query(async () => {
  * Writes `user.acceptsDirectMessages` and nothing else, which is the whole
  * reason this needs no guard: the preference is theirs outright, and it lives
  * nowhere near `member_standing`. A restricted member may still set it, and
- * setting it cannot lift the restriction — see `docs/specs/shipped/member-standing-spec.md`.
+ * setting it cannot lift the restriction — see
+ * `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
  */
 export const setMyMessaging = form(z.object({ enabled: z.enum(['on', 'off']) }), async (data) => {
 	const user = requireUser();

@@ -1,5 +1,5 @@
 ---
-title: Premium Band Pages
+title: Premium band pages
 slug: premium-band-pages
 category: band-pages
 summary: What a Premium band subscription unlocks.

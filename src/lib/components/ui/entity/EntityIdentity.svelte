@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import EntityAvatar from './EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import {
@@ -12,7 +12,7 @@
 		toneFor
 	} from './registry';
 	import { getEntityViewer } from './context';
-	import { entityHref } from '$lib/utils/entity-href';
+	import { entityHref } from '#lib/utils/entity-href.js';
 
 	/**
 	 * One record's identity: its glyph or avatar, its name, the qualifiers that
@@ -128,10 +128,17 @@
 			plus half an x-height, not to the middle of the line. One line tall,
 			topped to the line box, centring its contents puts the glyph's centre on
 			the line's centre exactly — and keeps it inline, so the anchor stays
-			`block truncate` and the cell-primary contract holds.
+			`block truncate` and the cell-primary contract holds. No daisyUI
+			`tooltip`: its hidden ::before overflows a short name, and Firefox then
+			ellipsises the line and hides the glyph (#2633).
 		-->
-		<span class="tooltip mr-1 inline-flex h-[1lh] items-center align-top" data-tip={glyph.label}>
-			<glyph.icon size={14} />
+		<span
+			role="img"
+			aria-label={glyph.label}
+			title={glyph.label}
+			class="mr-1 inline-flex h-[1lh] items-center align-top"
+		>
+			<glyph.icon size={14} aria-hidden="true" />
 		</span>
 	{/if}{ref.title}
 {/snippet}
@@ -151,15 +158,17 @@
 
 {#snippet titleRow()}
 	<div class="flex flex-wrap items-baseline gap-2">
-		{#if heading}
-			<!--
-				`truncate` on the inner element, never on the heading: `layout.css`
-				sets `text-wrap: balance` on h1–h6 unlayered, and unlayered CSS beats
-				every @layer, so nowrap silently fails to apply there.
-			-->
-			<svelte:element this={`h${heading}`} class="min-w-0 font-semibold {titleSize}">
-				{@render titleText()}
-			</svelte:element>
+		<!--
+			`truncate` on the inner element, never on the heading: `layout.css`
+			sets `text-wrap: balance` on h1–h6 unlayered, and unlayered CSS beats
+			every @layer, so nowrap silently fails to apply there.
+		-->
+		{#if heading === 2}
+			<h2 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h2>
+		{:else if heading === 3}
+			<h3 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h3>
+		{:else if heading === 4}
+			<h4 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h4>
 		{:else}
 			{@render titleText()}
 		{/if}

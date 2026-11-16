@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { imageSrc } from '$lib/utils/images';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	type Photo = { id: string; url: string | null; altText: string | null; caption: string | null };
 
@@ -17,7 +18,12 @@
 </script>
 
 {#if shown.length > 0}
-	<ProfileSection title="Photos" note={shown.length > 1 ? `${shown.length} available` : undefined}>
+	<ProfileSection
+		title={m.directory_profile_press_photo_title()}
+		note={shown.length > 1
+			? m.directory_profile_press_photo_note_body({ length: shown.length })
+			: undefined}
+	>
 		<div class="photos" class:photos--single={shown.length === 1}>
 			{#each shown as photo (photo.id)}
 				{@const shot = imageSrc(photo.url!, 'gallery')}

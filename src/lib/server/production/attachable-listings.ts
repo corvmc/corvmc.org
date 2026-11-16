@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, ne, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 
 export interface AttachableListing {
 	id: string;

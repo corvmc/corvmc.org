@@ -1,22 +1,23 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { db } from '$lib/server/db';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { MemberRef } from '$lib/types/entity';
-import { create as createGroupRow, deactivate, reactivate } from '$lib/server/band/band-service';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/domain-error';
-import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
-import { openApplicationCount } from '$lib/server/group/application-service';
-import { activeGroup, deactivatedGroup } from '$lib/server/group/group-totals-service';
-import type { GroupKind, GroupJoinPolicy } from '$lib/config';
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { create as createGroupRow, deactivate, reactivate } from '#lib/server/band/band-service.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { groupGrantsColumn } from '#lib/server/capability/grant-columns.js';
+import { openApplicationCount } from '#lib/server/group/application-service.js';
+import { activeGroup, deactivatedGroup } from '#lib/server/group/group-totals-service.js';
+import type { GroupKind, GroupJoinPolicy } from '#lib/config.js';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { leadsGroup, rosterRole, setChairHolder } from '#lib/server/group/chair.js';
 
 /**
  * Clubs and committees — the staff-run half of the groups module.
@@ -37,7 +38,7 @@ import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
  * free room time (phase 9) safe to grant by kind — the abuse case, spin up a fake club and collect free room
  * time, is closed structurally rather than by a check someone has to remember.
  *
- * See docs/specs/shipped/groups-spec.md.
+ * See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 
 /** Kinds this module governs. A band is created by its own member, not here. */
@@ -99,7 +100,8 @@ export class NotOnRosterError extends DomainError {
 }
 
 /**
- * Each group's chairs: its active admins, by name. One read for a whole page
+ * Each group's chairs: a club's active admins, a committee's chair position
+ * holders, by name. One read for a whole page
  * of groups. A program with none is legal and maps to an empty list.
  */
 async function chairsByGroup(groupIds: string[]): Promise<Map<string, MemberRef[]>> {
@@ -110,11 +112,7 @@ async function chairsByGroup(groupIds: string[]): Promise<Map<string, MemberRef[
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(
-			and(
-				inArray(groupMember.groupId, groupIds),
-				eq(groupMember.role, 'admin'),
-				eq(groupMember.status, 'active')
-			)
+			and(inArray(groupMember.groupId, groupIds), leadsGroup(), eq(groupMember.status, 'active'))
 		)
 		.orderBy(user.name, user.id);
 	for (const r of rows) chairs.get(r.groupId)?.push(toMemberRef(r.chair));
@@ -343,7 +341,7 @@ export async function listPublicGroups(kinds?: readonly StaffGroupKind[]) {
  */
 export async function getUserGroupStatus(groupId: string, userId: string) {
 	const [row] = await db
-		.select({ status: groupMember.status, role: groupMember.role })
+		.select({ status: groupMember.status, role: rosterRole() })
 		.from(groupMember)
 		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
 		.limit(1);
@@ -431,8 +429,8 @@ export interface UpdateGroupProfile {
  * What a program's own chairs may change about it.
  *
  * Deliberately not `joinPolicy` or `visibility`: those decide who may walk in
- * and whether the program is advertised, and the spec's own argument for free
- * room time is that only staff decide who runs a program and on what terms.
+ * and whether the program is advertised, and the argument for free room time
+ * (docs/decisions/0024-groups-split-the-band-table-by-purpose.md) is that only staff decide who runs a program and on what terms.
  * `updateGroupSettings` is their one writer.
  */
 // `name` and `bio` are mirrored onto `directory_entry` for the same reason
@@ -481,6 +479,15 @@ export interface UpdateGroupSettings {
  */
 export async function updateGroupSettings(groupId: string, settings: UpdateGroupSettings) {
 	const writes = [];
+	const [before] =
+		settings.visibility === undefined
+			? []
+			: await db
+					.select({ name: group.name, visibility: directoryEntry.visibility })
+					.from(group)
+					.leftJoin(directoryEntry, eq(directoryEntry.groupId, group.id))
+					.where(eq(group.id, groupId))
+					.limit(1);
 
 	const groupUpdates: Record<string, unknown> = {};
 	if (settings.joinPolicy !== undefined) groupUpdates.joinPolicy = settings.joinPolicy;
@@ -504,14 +511,28 @@ export async function updateGroupSettings(groupId: string, settings: UpdateGroup
 	if (writes.length === 0) return;
 	// `db.batch`, never `db.transaction` — the latter is broken on D1.
 	await db.batch(writes as [(typeof writes)[number], ...typeof writes]);
+
+	if (before?.visibility && settings.visibility && before.visibility !== settings.visibility) {
+		await recordAuditEntry({
+			action: 'group.visibility_changed',
+			subject: { type: 'group', id: groupId, label: before.name },
+			details: { from: before.visibility, to: settings.visibility }
+		});
+	}
 }
 
 /**
- * Staff make a program member a chair (`admin`) or take it away (`member`).
- * Adding a chair who is not on the roster inserts them active: appointed, not
- * invited. Demoting someone who is not on it is a 404. Never writes `owner`.
+ * Staff make a program member a chair or take it away. A club's chair is its
+ * `admin` role; a committee's is its chair position, which this fills or
+ * vacates (#3009). Adding a chair who is not on the roster inserts them
+ * active: appointed, not invited. Demoting someone not on it is a 404.
  */
-export async function setChairRole(groupId: string, userId: string, role: 'admin' | 'member') {
+export async function setChairRole(
+	groupId: string,
+	userId: string,
+	role: 'admin' | 'member',
+	actorId: string | null = null
+) {
 	const [target] = await db
 		.select({ id: group.id, kind: group.kind, name: group.name })
 		.from(group)
@@ -523,19 +544,24 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
 	}
 
 	const [existing] = await db
-		.select({ id: groupMember.id, role: groupMember.role, name: user.name })
+		.select({ id: groupMember.id, role: rosterRole(), name: user.name })
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId))
 		.where(and(eq(groupMember.groupId, groupId), eq(groupMember.userId, userId)))
 		.limit(1);
+	const committee = target.kind === 'committee';
 
 	let memberName = existing?.name ?? null;
 	if (existing) {
 		if (existing.role === role) return;
-		await db
-			.update(groupMember)
-			.set({ role, updatedAt: new Date() })
-			.where(eq(groupMember.id, existing.id));
+		if (committee) {
+			await setChairHolder(groupId, existing.id, role === 'admin', actorId);
+		} else {
+			await db
+				.update(groupMember)
+				.set({ role, updatedAt: new Date() })
+				.where(eq(groupMember.id, existing.id));
+		}
 	} else {
 		if (role !== 'admin') throw new NotOnRosterError();
 		const [person] = await db
@@ -545,7 +571,13 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
 			.limit(1);
 		if (!person) throw new NotOnRosterError();
 		memberName = person.name;
-		await db.insert(groupMember).values({ groupId, userId, role, status: 'active' });
+		// `band_member_band_user_unique`: a concurrent add of the same person is a no-op.
+		const [added] = await db
+			.insert(groupMember)
+			.values({ groupId, userId, role: committee ? 'member' : role, status: 'active' })
+			.onConflictDoNothing()
+			.returning({ id: groupMember.id });
+		if (committee && added) await setChairHolder(groupId, added.id, true, actorId);
 	}
 
 	await recordAuditEntry({
@@ -563,8 +595,8 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
  * group cannot also tell the service how to let them in.
  *
  * A self-join always produces `role: 'member'` — owners and admins cannot
- * self-assign — and the `unique(groupId, userId)` index makes a double-click
- * idempotent rather than a second row.
+ * self-assign. Two overlapping joins both pass the roster check; the
+ * `unique(groupId, userId)` index turns the second into `AlreadyOnRosterError`.
  */
 export async function joinGroup(groupId: string, userId: string) {
 	const [row] = await db
@@ -589,14 +621,19 @@ export async function joinGroup(groupId: string, userId: string) {
 	if (existing) throw new AlreadyOnRosterError();
 
 	const status = 'active' as const;
-	await db.insert(groupMember).values({
-		groupId,
-		userId,
-		role: 'member',
-		status,
-		// Nobody invited them.
-		invitedById: null
-	});
+	const [joined] = await db
+		.insert(groupMember)
+		.values({
+			groupId,
+			userId,
+			role: 'member',
+			status,
+			// Nobody invited them.
+			invitedById: null
+		})
+		.onConflictDoNothing()
+		.returning({ id: groupMember.id });
+	if (!joined) throw new AlreadyOnRosterError();
 
 	return { status };
 }

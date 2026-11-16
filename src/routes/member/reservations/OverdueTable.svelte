@@ -1,11 +1,12 @@
 <script lang="ts">
-	import Table from '$lib/components/ui/Table.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { rowLink } from '$lib/actions/row-link';
-	import { formatCents, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
-	import type { Reservation } from '$lib/server/db/schema';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { formatCents, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
+	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import type { Reservation } from '#lib/server/db/schema.js';
 
 	/**
 	 * Past sessions still owed (#2117). The time range stacks under the date so
@@ -16,9 +17,9 @@
 
 <Table zebra={false}>
 	{#snippet head()}
-		<th>Date</th>
-		<th class="cell-num">Amount due</th>
-		<th class="w-px"><span class="sr-only">Actions</span></th>
+		<th>{m.member_date_label()}</th>
+		<th class="cell-num">{m.member_reservations_overdue_table_amount_due_label()}</th>
+		<th class="w-px"><span class="sr-only">{m.member_actions_label()}</span></th>
 	{/snippet}
 	{#each reservations as reservation (reservation.id)}
 		{@const href = resolve('/member/reservations/[id]', { id: reservation.id })}
@@ -42,7 +43,7 @@
 						size="xs"
 						outline
 					>
-						Pay online
+						{m.member_pay_online_label()}
 					</Button>
 				{/if}
 			</td>

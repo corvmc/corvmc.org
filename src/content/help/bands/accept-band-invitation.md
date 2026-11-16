@@ -1,5 +1,5 @@
 ---
-title: Accept or Decline a Band Invitation
+title: Accept or decline a band invitation
 slug: accept-band-invitation
 category: bands
 summary: Respond to an invitation to join a band.

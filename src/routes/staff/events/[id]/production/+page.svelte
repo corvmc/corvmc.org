@@ -1,57 +1,55 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getStaffEventProduction } from '$lib/remote/events.remote';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import {
-		formatDateShort,
-		formatDateTime,
-		formatTime,
-		formatTimeRange,
-		fullDate,
-		toLocalDate,
-		toLocalDateTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { getStaffEventProduction } from '#lib/remote/events.remote.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { formatDateTime, formatTime, fullDate, toLocalDate } from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { goto } from '$app/navigation';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
-	import { createShift } from '$lib/remote/volunteer.remote';
-	import { listActInDirectory } from '$lib/remote/external-acts.remote';
-	import { applyDutyList } from '$lib/remote/duty-lists.remote';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import { listActInDirectory } from '#lib/remote/external-acts.remote.js';
+	import { applyDutyList } from '#lib/remote/duty-lists.remote.js';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 	import {
 		createProduction,
 		updateProduction,
-		setProductionProducer,
+		setShowLead,
+		searchShowLeadCandidates,
 		openHostShift
-	} from '$lib/remote/productions.remote';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	} from '#lib/remote/productions.remote.js';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
-	import { isTerminalProduction } from '$lib/production/status';
+	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
 	import DeliverablesCard from './DeliverablesCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
+	import RiderStockPanel from './RiderStockPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
+	import { tabBadges } from './section-state';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { replaceState } from '$app/navigation';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 
 	/**
 	 * Everything the page needs, in one round trip rather than four.
@@ -67,21 +65,10 @@
 	 * is dead time on every visit — and it is what
 	 * `e2e/staff-event-reserve-space.e2e.ts` was intermittently timing out
 	 * against on CI once #235 grew it from three queries to four.
-	 *
-	 * Shifts leave out the cancelled ones: this card answers "is this show
-	 * staffed", and a called-off shift is not staffing. The shift list is where
-	 * you go to see what was called off.
 	 */
 	const loaded = $derived(await getStaffEventProduction(id));
 
-	const shifts = $derived(loaded.shifts);
-	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
-	// Work orders with no window — the advance half of an applied duty list. They
-	// are a separate list rather than rows in the table below because they have no
-	// time to sort by and no confirmed/capacity story worth printing: what a
-	// producer wants from them is what is still open and by when.
-	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
 	const productionLocked = $derived(
@@ -96,8 +83,6 @@
 
 	const evt = $derived(loaded.detail.event);
 
-	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
-
 	/**
 	 * Only a show CMC produces has a production.
 	 *
@@ -106,34 +91,7 @@
 	 * `/staff/events/[id]` rather than rendering an empty shell.
 	 */
 	$effect(() => {
-		if (evt.source !== 'cmc') void goto(resolve(`/staff/events/${id}`), { replaceState: true });
-	});
-
-	/**
-	 * Volunteers arrive when the doors do, not at downbeat, so a shift scheduled
-	 * from this page starts at `doorsAt` when the event has one. The end falls
-	 * back to the picked role's own default length for an event with no end time
-	 * — only community listings are allowed one, but they are allowed one.
-	 */
-	let shiftRoleId = $state('');
-	const shiftStart = $derived(toLocalDateTime(evt.doorsAt ?? evt.startsAt));
-	const shiftEnd = $derived.by(() => {
-		if (evt.endsAt) return toLocalDateTime(evt.endsAt);
-		const role = volunteerRoles.find((r) => r.id === shiftRoleId);
-		const minutes = role?.defaultDurationMinutes ?? 4 * 60;
-		return toLocalDateTime(new Date((evt.doorsAt ?? evt.startsAt).getTime() + minutes * 60_000));
-	});
-	const shiftCapacity = $derived(
-		String(volunteerRoles.find((r) => r.id === shiftRoleId)?.defaultCapacity ?? 1)
-	);
-
-	// The select has no placeholder option, so a bound value matching nothing
-	// leaves nothing selected — which posts an empty role instead of the one on
-	// screen. Guarded so it seeds once and never clobbers an actual choice.
-	$effect(() => {
-		if (shiftRoleId) return;
-		const first = volunteerRoles.find((r) => r.isActive);
-		if (first) shiftRoleId = first.id;
+		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replace: true });
 	});
 
 	// ── Tabs ──────────────────────────────────────────────────────────────
@@ -151,28 +109,35 @@
 		visited.add(tab);
 	});
 
-	// `replaceState` (shallow routing) rather than `goto(..., { replaceState })`,
-	// which is what the filter bars use. A tab change is not a navigation, but
-	// `goto` is one, and `FormGuard` hooks `beforeNavigate`: with the production form
-	// dirty, every tab click would cancel the navigation and pop "You have
-	// unsaved changes", whose <dialog> then swallows pointer events for the whole
-	// page. Shallow routing rewrites the address bar and nothing else, which is
-	// all mirroring local state wants.
+	// Shallow, unlike the filter bars. A tab change is not a navigation, and
+	// `FormGuard` hooks `beforeNavigate`: with the production form dirty, a real
+	// navigation would be cancelled and pop "You have unsaved changes", whose
+	// <dialog> then swallows pointer events for the whole page.
 	$effect(() => {
 		const href = withQuery(
-			resolve(`/staff/events/${id}/production`),
+			resolve(`staff/events/${id}/production`),
 			tab === 'overview' ? '' : `tab=${tab}`
 		);
 		if (location.pathname + location.search !== href) {
-			replaceState(href, {});
+			void goto(href, { shallow: true, replace: true });
 		}
 	});
 
-	const tabs = $derived(TAB_KEYS.map((key) => ({ key, label: TAB_LABELS[key] })));
+	const badges = $derived(tabBadges(loaded));
+	const tabs = $derived(
+		TAB_KEYS.map((key) => ({ key, label: TAB_LABELS[key], badge: badges[key] }))
+	);
 
 	// ── Production form state ─────────────────────────────────────────────
 	const productionFields = updateProduction.fields;
-	const producerFields = setProductionProducer.fields;
+	const leadFields = setShowLead.fields;
+	// The picker's pick, seeded with the saved lead whenever the record reloads.
+	let leadId = $state('');
+	let leadName = $state('');
+	$effect(() => {
+		leadId = productionRecord?.producerUserId ?? '';
+		leadName = productionRecord?.producerName ?? '';
+	});
 
 	// One date for all five times: the listing already refuses to span two dates,
 	// so five date fields would be five chances to disagree with each other.
@@ -191,11 +156,13 @@
 <PageHeader
 	width="3xl"
 	title={evt.title}
-	subtitle="Production"
+	subtitle={m.staff_production_body()}
 	crumb="Production"
 	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
 >
-	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost">View listing</Button>
+	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost"
+		>{m.staff_events_id_production_view_listing_label()}</Button
+	>
 </PageHeader>
 <PageContent width="3xl">
 	<!-- When and where, read-only: the question the console is opened to answer
@@ -204,10 +171,22 @@
 		<StatusBadge status={evt.status} />
 		<span>{fullDate(evt.startsAt)}</span>
 		<span>
-			{#if evt.doorsAt}Doors {formatTime(evt.doorsAt)} ·{/if}
-			Show {formatEventTimeRange(evt.startsAt, evt.endsAt)}
+			{#if evt.doorsAt}{m.staff_events_id_production_doors_text({
+					formatTime: formatTime(evt.doorsAt)
+				})}{/if}
+			{m.staff_events_id_production_show_text({
+				formatEventTimeRange: formatEventTimeRange(evt.startsAt, evt.endsAt)
+			})}
 		</span>
-		<span>{evt.venueName ?? evt.location ?? 'The practice space'}</span>
+		<span
+			>{evt.venueName ?? evt.location ?? m.staff_events_id_production_practice_space_text()}</span
+		>
+		{#if productionRecord?.producer}
+			<span class="flex items-center gap-1" data-testid="event-lead">
+				{m.staff_events_id_production_lead_text()}
+				<EntityChip ref={productionRecord.producer} />
+			</span>
+		{/if}
 	</p>
 
 	<div bind:this={tabBarEl}>
@@ -233,7 +212,7 @@
 			guide is not a production, and most of them never become one.
 		-->
 			{#if productionRecord}
-				<InfoCard title="Production">
+				<InfoCard title={m.staff_production_title()} testid="production-record">
 					{#snippet header(title)}
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
@@ -244,52 +223,62 @@
 						</div>
 					{/snippet}
 
-					<!--
-					Who is running the night, as a claim rather than a picker, and its own
-					form rather than a field on the one below: taking a job is a single
-					act that should not wait on a Save, and there is no list of candidates
-					a picker could offer — the capability matrix names no production lead.
-				-->
 					{#if productionRecord.closedAt}
 						<!-- `updatedAt` is not this date: it moves on any later write. -->
 						<p class="text-muted text-sm">
-							Closed {formatDateTime(productionRecord.closedAt)}{productionRecord.closedByName
-								? ` by ${productionRecord.closedByName}`
-								: ''}
+							{productionRecord.closedByName
+								? m.staff_events_id_production_closed_by_text({
+										date: formatDateTime(productionRecord.closedAt),
+										name: productionRecord.closedByName
+									})
+								: m.staff_events_id_production_closed_text({
+										date: formatDateTime(productionRecord.closedAt)
+									})}
 						</p>
 					{/if}
 					{#if productionLocked}
 						<p class="text-muted text-sm">
-							This show is {productionRecord.status}, so it is read-only.
+							{m.staff_events_id_production_show_so_read_only_text({
+								status: productionRecord.status
+							})}
 						</p>
 					{/if}
 					<!-- A terminal show is the past. Disabled here for clarity; the server refuses
 					     the writes either way. -->
 					<fieldset disabled={productionLocked} class="contents">
-						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">Producer</span>
-							<!-- The person running the night, reachable. It was their name as
-						     a bare string. -->
-							{#if productionRecord.producer}
+						<!-- One named person, appointed by booking, who then runs the show
+						     through `production.run` (#2726). Its own form: naming a lead
+						     should not wait on the Save below. -->
+						<div class="flex flex-col gap-2">
+							<span class="text-muted">{m.staff_events_id_production_lead_text()}</span>
+							{#if loaded.canSetLead}
+								<Form
+									remote={setShowLead}
+									successToast={m.staff_events_id_production_lead_saved_toast()}
+									class="flex flex-col gap-2"
+								>
+									<input {...leadFields.id.as('hidden', productionRecord.id)} />
+									<input {...leadFields.eventId.as('hidden', evt.id)} />
+									<MemberPicker
+										field={leadFields.leadUserId}
+										label={m.staff_events_id_production_lead_label()}
+										placeholder={m.staff_events_id_production_lead_search_placeholder()}
+										search={(q) => searchShowLeadCandidates({ eventId: evt.id, q })}
+										bind:value={leadId}
+										bind:name={leadName}
+									/>
+									{#if leadId !== (productionRecord.producerUserId ?? '')}
+										<SubmitButton
+											label={m.staff_events_id_production_lead_save_label()}
+											size="sm"
+										/>
+									{/if}
+								</Form>
+							{:else if productionRecord.producer}
 								<EntityChip ref={productionRecord.producer} />
 							{:else}
-								<span class="font-medium">Nobody yet</span>
+								<span class="font-medium">{m.staff_events_id_production_no_lead_text()}</span>
 							{/if}
-							<Form remote={setProductionProducer} successToast="Producer updated">
-								<input {...producerFields.id.as('hidden', productionRecord.id)} />
-								<input {...producerFields.eventId.as('hidden', evt.id)} />
-								<input
-									{...producerFields.producer.as(
-										'hidden',
-										productionRecord.producerUserId ? 'none' : 'me'
-									)}
-								/>
-								<SubmitButton
-									label={productionRecord.producerUserId ? 'Hand it back' : 'I am producing this'}
-									variant="ghost"
-									size="xs"
-								/>
-							</Form>
 						</div>
 
 						<!-- Who runs the night, which is not always who booked it. A shift
@@ -297,28 +286,32 @@
 					     it through the same pipeline as any other volunteer, so the
 					     handover carries confirmation and hours with it (#932). -->
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">Host</span>
+							<span class="text-muted">{m.staff_events_id_production_host_text()}</span>
 							{#if hostShift && hostShift.hosts.length > 0}
-								{#each hostShift.hosts as host (host.signupId)}
+								{#each hostShift.hosts as host (host.userId)}
 									<span class="font-medium">{host.name}</span>
 									<StatusBadge status={host.status} />
 								{/each}
 							{:else if hostShift}
-								<span class="font-medium">Shift open, nobody on it</span>
-								<a
-									class="link text-sm"
-									href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
+								<span class="font-medium"
+									>{m.staff_events_id_production_shift_open_nobody_text()}</span
 								>
-									Find somebody
+								<a class="link text-sm" href={resolve(`staff/tasks/${hostShift.workOrderId}`)}>
+									{m.staff_events_id_production_find_somebody_text()}
 								</a>
 							{:else}
-								<!-- "No host yet", not "Nobody yet": the Producer line above
-							     already says that, and `productions.e2e.ts` reads it by
-							     text — two matches make its locator ambiguous. -->
-								<span class="font-medium">No host yet</span>
-								<Form remote={openHostShift} successToast="Host shift opened">
+								<!-- Names the host, so it never reads as the event lead's line. -->
+								<span class="font-medium">{m.staff_events_id_production_no_host_yet_text()}</span>
+								<Form
+									remote={openHostShift}
+									successToast={m.staff_events_id_production_host_shift_opened_toast()}
+								>
 									<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
-									<SubmitButton label="Open a host shift" variant="ghost" size="xs" />
+									<SubmitButton
+										label={m.staff_events_id_production_open_host_shift_label()}
+										variant="ghost"
+										size="xs"
+									/>
 								</Form>
 							{/if}
 						</div>
@@ -326,7 +319,7 @@
 						<Form
 							remote={updateProduction}
 							guard
-							successToast="Production updated"
+							successToast={m.staff_events_id_production_production_updated_toast()}
 							onsuccess={() => void getStaffEventProduction(id).refresh()}
 						>
 							<input {...productionFields.id.as('hidden', productionRecord.id)} />
@@ -340,15 +333,35 @@
 							<FormField
 								field={productionFields.loadInDate}
 								type="date"
-								label="Show date"
+								label={m.staff_events_id_production_show_date_label()}
 								bind:value={productionDate}
 							/>
 							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-								<FormField field={productionFields.loadInTime} type="time" label="Load-in" />
-								<FormField field={productionFields.soundcheckTime} type="time" label="Soundcheck" />
-								<FormField field={productionFields.firstSetTime} type="time" label="First set" />
-								<FormField field={productionFields.curfewTime} type="time" label="Curfew" />
-								<FormField field={productionFields.loadOutTime} type="time" label="Load-out by" />
+								<FormField
+									field={productionFields.loadInTime}
+									type="time"
+									label={m.staff_events_id_production_load_label()}
+								/>
+								<FormField
+									field={productionFields.soundcheckTime}
+									type="time"
+									label={m.staff_soundcheck_label()}
+								/>
+								<FormField
+									field={productionFields.firstSetTime}
+									type="time"
+									label={m.staff_events_id_production_first_set_label()}
+								/>
+								<FormField
+									field={productionFields.curfewTime}
+									type="time"
+									label={m.staff_events_id_production_curfew_label()}
+								/>
+								<FormField
+									field={productionFields.loadOutTime}
+									type="time"
+									label={m.staff_events_id_production_load_out_by_label()}
+								/>
 							</div>
 							<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
 							<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
@@ -361,35 +374,35 @@
 							<FormField
 								field={productionFields.actsWanted}
 								type="select"
-								label="Bands wanted"
+								label={m.staff_events_id_production_bands_wanted_label()}
 								value={productionRecord.actsWanted?.toString() ?? ''}
 								options={[
-									{ value: '', label: 'No target set' },
+									{ value: '', label: m.staff_events_id_production_no_target_set_label() },
 									...Array.from({ length: 8 }, (_, i) => ({
 										value: String(i + 1),
 										label: `${i + 1} ${i === 0 ? 'band' : 'bands'}`
 									}))
 								]}
-								description="How many the bill should end up with. Leave it unset if nobody has decided."
+								description={m.staff_events_id_production_how_many_bill_should_end_body()}
 							/>
 
 							<FormField
 								field={productionFields.billingNotes}
-								label="Billing"
-								description="What the bands were told about the money, in their words."
+								label={m.staff_events_id_production_billing_label()}
+								description={m.staff_events_id_production_what_bands_were_told_about_body()}
 							/>
 							<FormField
 								field={productionFields.hospitalityNotes}
-								label="Hospitality"
-								description="Green room, food, parking — what the advance promised."
+								label={m.staff_hospitality_label()}
+								description={m.staff_events_id_production_green_room_food_parking_what_body()}
 							/>
 							<FormField
 								field={productionFields.internalNotes}
-								label="Internal notes"
-								description="Staff only. Never shown to a band."
+								label={m.staff_events_id_production_internal_notes_label()}
+								description={m.staff_events_id_production_staff_only_never_shown_band_body()}
 							/>
 
-							<SubmitButton label="Save production" />
+							<SubmitButton label={m.staff_events_id_production_save_production_label()} />
 						</Form>
 					</fieldset>
 				</InfoCard>
@@ -398,13 +411,20 @@
 				     used to point back at the event page, so a first-timer who came
 				     here was sent where they had just been, with nothing on screen
 				     naming the button (#976). -->
-				<InfoCard title="Production">
+				<InfoCard
+					title={m.staff_production_title()}
+					state={m.staff_production_state_not_opened_label()}
+				>
 					<p class="text-muted">
-						No production record yet. Open one to plan load-in, soundcheck and curfew.
+						{m.staff_events_id_production_no_production_record_yet_open_text()}
 					</p>
 					<Form remote={createProduction} class="mt-3">
 						<input {...createProduction.fields.eventId.as('hidden', id)} />
-						<SubmitButton label="Open a production" variant="primary" size="sm" />
+						<SubmitButton
+							label={m.staff_events_id_production_open_production_label()}
+							variant="primary"
+							size="sm"
+						/>
 					</Form>
 				</InfoCard>
 			{/if}
@@ -438,12 +458,14 @@
 			documents.
 		-->
 			{#if riders.length > 0}
-				<InfoCard title="Tech riders">
+				<InfoCard title={m.staff_events_id_production_tech_riders_title()}>
 					{#snippet header(title)}
 						<div class="flex items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
 							{#if ridersMissing > 0}
-								<Badge variant="warning">{ridersMissing} not in yet</Badge>
+								<Badge variant="warning"
+									>{m.staff_events_id_production_not_yet_label({ ridersMissing })}</Badge
+								>
 							{/if}
 						</div>
 					{/snippet}
@@ -457,42 +479,69 @@
 									     column, so it cannot be asked at all — and the old copy
 									     blamed the act for it (#974). -->
 									{#if act.entryId}
-										<span class="text-sm text-base-content/60">Nothing sent yet</span>
-									{:else}
-										<span class="text-sm text-base-content/60">Not in the directory yet</span>
-										<Action
-											action={listActInDirectory.for(act.id)}
-											label="Add to the directory"
-											variant="ghost"
-											size="xs"
-											modalTitle="Add {act.name} to the directory?"
-											submitLabel="Add to the directory"
-											successToast="{act.name} can be asked now"
-											onsuccess={() => getStaffEventProduction(id).refresh()}
+										<span class="text-sm text-base-content/60"
+											>{m.staff_events_id_production_nothing_sent_yet_text()}</span
 										>
-											{#snippet form()}
-												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
-												<p class="text-sm">
-													This records <strong>{act.name}</strong> as an external act — no page, no membership,
-													nothing members can see. It is what makes them askable for a rider, and gives
-													them a link to answer on.
-												</p>
-											{/snippet}
-										</Action>
+									{:else}
+										<span class="text-sm text-base-content/60"
+											>{m.staff_events_id_production_not_directory_yet_text()}</span
+										>
+										{#if loaded.canBook}
+											<Action
+												action={listActInDirectory.for(act.id)}
+												label={m.staff_events_id_production_add_directory_label()}
+												variant="ghost"
+												size="xs"
+												modalTitle={m.staff_events_id_production_add_directory_2_title({
+													name: act.name
+												})}
+												submitLabel={m.staff_events_id_production_add_directory_label()}
+												successToast={m.staff_events_id_production_can_asked_now_toast({
+													name: act.name
+												})}
+												onsuccess={() => getStaffEventProduction(id).refresh()}
+											>
+												{#snippet form()}
+													<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
+													<p class="text-sm">
+														<ParaglideMessage
+															message={m.staff_events_id_production_records_as_external_act_no_text}
+															inputs={{ name: act.name }}
+															>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+																>{/snippet}</ParaglideMessage
+														>
+													</p>
+												{/snippet}
+											</Action>
+										{/if}
 									{/if}
 								{:else}
 									{#if act.channelCount > 0}
-										<Badge>{act.channelCount} ch</Badge>
+										<Badge
+											>{m.staff_events_id_production_ch_label({
+												channelCount: act.channelCount
+											})}</Badge
+										>
 									{/if}
 									{#if act.phantomCount > 0}
-										<Badge>{act.phantomCount} × +48V</Badge>
+										<Badge
+											>{m.staff_events_id_production_48v_label({
+												phantomCount: act.phantomCount
+											})}</Badge
+										>
 									{/if}
 									{#if act.venueProvidedCount > 0}
-										<Badge variant="info">{act.venueProvidedCount} from us</Badge>
+										<Badge variant="info"
+											>{m.staff_events_id_production_from_us_label({
+												venueProvidedCount: act.venueProvidedCount
+											})}</Badge
+										>
 									{/if}
 									{#if act.uploadCount > 0}
 										<Badge variant="ghost"
-											>{act.uploadCount} file{act.uploadCount === 1 ? '' : 's'}</Badge
+											>{m.staff_events_id_production_files_label({
+												uploadCount: act.uploadCount
+											})}</Badge
 										>
 									{/if}
 								{/if}
@@ -506,14 +555,14 @@
 											variant="ghost"
 											size="sm"
 										>
-											Rider
+											{m.staff_events_id_production_rider_label()}
 										</Button>
 										<Button
 											href={resolve('/band/[slug]/packing', { slug: act.slug })}
 											variant="ghost"
 											size="sm"
 										>
-											Packing
+											{m.staff_events_id_production_packing_label()}
 										</Button>
 									</div>
 								{/if}
@@ -524,10 +573,15 @@
 					     count and it is the show that has to fit it (#818). -->
 					<div class="mt-2 border-t border-base-300 pt-2">
 						<Button href={resolve('/staff/events/[id]/inputs', { id })} variant="ghost" size="sm">
-							Input list for the whole bill
+							{m.staff_events_id_production_input_list_whole_bill_label()}
 						</Button>
 					</div>
 				</InfoCard>
+				<RiderStockPanel
+					eventId={evt.id}
+					check={loaded.riderStock}
+					onchange={() => getStaffEventProduction(id).refresh()}
+				/>
 			{/if}
 
 			<!--
@@ -537,135 +591,45 @@
 			and the second reading is how a calendar of events reaches production with
 			nothing booked. CMC does not staff a show it isn't producing.
 		-->
-			<InfoCard title="Volunteer Shifts">
-				{#snippet header(title)}
-					<div class="flex items-center justify-between gap-2">
-						<CardTitle>{title}</CardTitle>
-						<div class="flex items-center gap-1">
-							{#if dutyLists.length > 0}
-								<Action
-									action={applyDutyList}
-									label="Apply template"
-									variant="ghost"
-									size="sm"
-									modalTitle="Apply a template to {evt.title}"
-									submitLabel="Apply"
-									successToast="Work orders created"
-									onsuccess={(r) => {
-										toastWarnings(r);
-										void getStaffEventProduction(id).refresh();
-									}}
-								>
-									{#snippet form()}
-										<input type="hidden" name="eventId" value={evt.id} />
-										<FormField
-											name="dutyListId"
-											label="Template"
-											type="select"
-											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
-										/>
-										<FormField name="reason" label="Reason, if applying again" type="text" />
-									{/snippet}
-								</Action>
-							{/if}
-							{#if liveVolunteerRoles.length > 0}
-								<Action
-									action={createShift}
-									label="Schedule a shift"
-									variant="ghost"
-									size="sm"
-									modalTitle="Schedule a shift for {evt.title}"
-									submitLabel="Create"
-									successToast="Shift scheduled"
-									onsuccess={() => getStaffEventProduction(id).refresh()}
-								>
-									{#snippet form()}
-										<!--
-									The event is the one thing this form already knows, so it is
-									locked rather than offered as a picker.
-								-->
-										<ShiftFormFields
-											form={createShift}
-											roles={liveVolunteerRoles}
-											bind:roleId={shiftRoleId}
-											lockedEvent={{ id: evt.id, title: evt.title }}
-											startsAt={shiftStart}
-											endsAt={shiftEnd}
-											capacity={shiftCapacity}
-										/>
-									{/snippet}
-								</Action>
-							{/if}
-						</div>
-					</div>
+			<RelatedTasks subject={{ type: 'event', id: evt.id }} />
+
+			<RelatedShifts subject={{ type: 'event', id: evt.id }}>
+				{#snippet actions(refresh)}
+					{#if dutyLists.length > 0}
+						<Action
+							action={applyDutyList}
+							label={m.staff_apply_template_label()}
+							variant="ghost"
+							size="sm"
+							modalTitle={m.staff_events_id_production_apply_template_title({
+								title: evt.title
+							})}
+							submitLabel={m.staff_apply_label()}
+							successToast={m.staff_events_id_production_work_orders_created_toast()}
+							onsuccess={(r) => {
+								toastWarnings(r);
+								refresh();
+								void getStaffEventProduction(id).refresh();
+							}}
+						>
+							{#snippet form()}
+								<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
+								<FormField
+									field={applyDutyList.fields.dutyListId}
+									label={m.staff_template_label()}
+									type="select"
+									options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
+								/>
+								<FormField
+									field={applyDutyList.fields.reason}
+									label={m.staff_reason_if_applying_again_label()}
+									type="text"
+								/>
+							{/snippet}
+						</Action>
+					{/if}
 				{/snippet}
-
-				{#if advance.length > 0}
-					<div class="mb-4">
-						<h3 class="mb-2 text-sm font-semibold">Advance</h3>
-						<ul class="flex flex-col gap-1 text-sm">
-							{#each advance as order (order.id)}
-								<li class="flex flex-wrap items-baseline justify-between gap-2">
-									<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
-										{order.roleName}
-									</a>
-									<span class="text-subtle whitespace-nowrap">
-										{#if order.dueAt}
-											due {formatDateShort(order.dueAt)}
-										{:else}
-											no deadline
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-
-				{#if shifts.length === 0 && advance.length === 0}
-					<EmptyState
-						title="No volunteer shifts"
-						description="Nobody is scheduled to work this show yet."
-					/>
-				{:else if shifts.length > 0}
-					<Table>
-						{#snippet head()}
-							<th>Role</th>
-							<th class="whitespace-nowrap">When</th>
-							<th class="cell-num">Confirmed</th>
-						{/snippet}
-
-						{#each shifts as shift (shift.id)}
-							<tr class="hover">
-								<td class="cell-primary">
-									<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
-										>{shift.roleName}</a
-									>
-								</td>
-								<td class="whitespace-nowrap">
-									{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
-								</td>
-								<!--
-								Confirmed, not "filled". Only a confirmed signup gets the day-before
-								reminder and completes afterwards, so a show whose shifts are all
-								claimed and none confirmed is not staffed
-								(docs/reports/volunteer-workflow-findings.md#a3).
-							-->
-								<td class="cell-num whitespace-nowrap">
-									<span class:text-warning={shift.confirmed < shift.capacity}>
-										{shift.confirmed}/{shift.capacity}
-									</span>
-									{#if shift.claimed > shift.confirmed}
-										<Badge variant="warning" size="xs" class="ml-1">
-											+{shift.claimed - shift.confirmed}
-										</Badge>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					</Table>
-				{/if}
-			</InfoCard>
+			</RelatedShifts>
 		</div>
 	{/if}
 
@@ -677,7 +641,12 @@
 			class:hidden={tab !== 'runOfShow'}
 		>
 			<fieldset disabled={productionLocked} class="contents">
-				<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
+				<RunOfShowPanel
+					{runOfShow}
+					actContacts={loaded.actContacts}
+					eventId={id}
+					showDate={productionDate}
+				/>
 			</fieldset>
 		</div>
 	{/if}

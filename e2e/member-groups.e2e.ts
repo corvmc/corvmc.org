@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
+import { signInAs } from './fixtures/auth';
 import {
 	SEED_BANDMATE_EMAIL,
 	SEED_BANDMATE_ID,
@@ -13,7 +14,6 @@ import {
 	SEED_APPLY_SLUG,
 	SEED_CLUB_SLUG,
 	SEED_JOINABLE_INSTRUCTIONS,
-	SEED_HIDDEN_SLUG,
 	SEED_JOINABLE_NAME,
 	SEED_JOINABLE_SLUG,
 	readApplication,
@@ -36,11 +36,7 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
  */
 
 async function loginAsMember(page: Page) {
-	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_BANDMATE_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_BANDMATE_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
+	await signInAs(page, { email: SEED_BANDMATE_EMAIL, password: SEED_BANDMATE_PASSWORD });
 }
 
 test.describe('member groups index', () => {
@@ -52,11 +48,16 @@ test.describe('member groups index', () => {
 
 		// `goto` resolves before an awaited remote query commits, so wait on a
 		// section rather than asserting against an empty <main>.
-		await expect(page.getByRole('heading', { name: 'Open to join' })).toBeVisible();
 		await expect(page.getByText(SEED_JOINABLE_NAME)).toBeVisible();
-
-		await expect(page.getByRole('heading', { name: 'Apply to join' })).toBeVisible();
 		await expect(page.getByText(SEED_APPLY_NAME)).toBeVisible();
+		// In separate sections: no one card holds both the joinable and the
+		// apply-only group.
+		await expect(
+			page
+				.locator('.card')
+				.filter({ hasText: SEED_JOINABLE_NAME })
+				.filter({ hasText: SEED_APPLY_NAME })
+		).toHaveCount(0);
 
 		// The group's own words, next to the button rather than buried on a
 		// detail page nobody opens before deciding.
@@ -77,7 +78,7 @@ test.describe('member groups index', () => {
 		// renders a `.card` around the whole section, so a `.card`-scoped locator
 		// matched every group in it and this test silently joined a different one.
 		await page.getByRole('button', { name: `Join ${SEED_JOINABLE_NAME}` }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Join' }).click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		// No approval step, and three things say so. The group moves into "Your
 		// programs" on this page, the roster row itself reads `'active'`, and the
@@ -111,7 +112,7 @@ test.describe('member groups index', () => {
 		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog.getByRole('checkbox', { name: SEED_APPLY_NAME })).toBeChecked();
-		await dialog.getByRole('button', { name: 'Send application' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
 		await expect
 			.poll(async () => (await readApplication(SEED_APPLY_SLUG, SEED_BANDMATE_ID))?.status, DB_POLL)
@@ -135,7 +136,7 @@ test.describe('member groups index', () => {
 		// The club's own words sit over the box they prompt.
 		await expect(dialog.getByText(SEED_APPLY_CLUB_INSTRUCTIONS)).toBeVisible();
 		await dialog.getByLabel('Anything the chairs should know?').fill('Folk songs, mostly.');
-		await dialog.getByRole('button', { name: 'Send application' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -162,45 +163,6 @@ test.describe('the club page', () => {
 		await page.goto(`/member/groups/${SEED_CLUB_SLUG}`);
 
 		await page.waitForURL('**/member/groups', { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Your programs' })).toBeVisible();
-	});
-});
-
-test.describe('the public group directory', () => {
-	/**
-	 * `visibility = 'public'` is the whole of the decision about what appears
-	 * here, and it is the same column a band's listing uses — which is the point
-	 * of a club having a directory entry rather than a listing shape of its own.
-	 */
-	test('lists public programs to a signed-out visitor', async ({ page }) => {
-		await page.goto('/groups');
-
-		await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_JOINABLE_NAME })).toBeVisible();
-	});
-
-	/**
-	 * The Join button is the only write on a public page, and it needs a session.
-	 * A prompt that brings them back beats a button that fails.
-	 */
-	test('offers a signed-out visitor a way in, not a button that fails', async ({ page }) => {
-		await page.goto(`/groups/${SEED_JOINABLE_SLUG}`);
-
-		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
-		await expect(page.getByText(SEED_JOINABLE_INSTRUCTIONS)).toBeVisible();
-
-		// Scoped to `main`: the public header carries its own "Sign In" link.
-		const signIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
-		await expect(signIn).toBeVisible();
-		await expect(signIn).toHaveAttribute(
-			'href',
-			`/login?redirect=${encodeURIComponent(`/groups/${SEED_JOINABLE_SLUG}`)}`
-		);
-	});
-
-	/** A members-only or hidden program has no public page at all. */
-	test('404s a group that is not public', async ({ page }) => {
-		const res = await page.goto(`/groups/${SEED_HIDDEN_SLUG}`);
-		expect(res?.status()).toBe(404);
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 	});
 });

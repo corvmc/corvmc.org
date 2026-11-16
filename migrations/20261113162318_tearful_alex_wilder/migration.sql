@@ -1,0 +1,1 @@
+ALTER TABLE `rider_element` ADD `inventory_item_id` text REFERENCES inventory_item(id) ON DELETE SET NULL;

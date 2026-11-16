@@ -3,17 +3,20 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	activeNavKey,
+	activeSystemKey,
 	allStaffNavItems,
-	childHrefsFor,
 	filterNavItems,
 	filterNavSections,
+	inSystemPanel,
 	sectionHasKey,
+	staffNavBottom,
 	staffNavSections,
 	staffNavTop,
+	systemNavItems,
 	type StaffNavItem,
 	type StaffNavKey
 } from './nav-items';
-import { capabilities, positions, positionOrder, grantsCapability, surfaces } from '$lib/config';
+import { capabilities, positions, positionOrder, grantsCapability, surfaces } from '#lib/config.js';
 
 /**
  * The staff sidebar's two long-standing defects were both invisible in the
@@ -52,59 +55,83 @@ describe('activeNavKey', () => {
 		['/staff/members', 'users'],
 		['/staff/members/abc', 'users'],
 		['/staff/ballots/abc', 'ballots'],
-		['/staff/clubs', 'clubs'],
-		['/staff/clubs/abc', 'clubs'],
-		['/staff/committees', 'committees'],
-		['/staff/committees/abc', 'committees'],
-		['/staff/volunteer', 'volunteer'],
+		['/staff/groups', 'groups'],
+		['/staff/groups/abc', 'groups'],
+		// Volunteering owns the rest of the path (#2379, #2625).
+		['/staff/volunteering', 'volunteer-schedule'],
+		['/staff/volunteer', 'volunteer-schedule'],
 		['/staff/members/volunteers', 'users'],
-		['/staff/volunteer/roles', 'volunteer'],
-		// Shift detail lost its own row when the catalog folded into Schedule; it
-		// falls back to the section parent like clearances does.
-		['/staff/volunteer/shifts/abc', 'volunteer'],
+		['/staff/volunteer/roles', 'volunteer-schedule'],
+		// Every task's page, and Recurring, are Tasks views (#2625).
+		['/staff/tasks/abc', 'projects'],
+		['/staff/tasks/recurring', 'projects'],
+		['/staff/tasks/projects/abc', 'projects'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
 		// page you navigate to rather than a section of its own.
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
-		['/staff/projects/productions', 'projects'],
-		['/staff/sponsors', 'sponsors'],
-		['/staff/sponsors/abc', 'sponsors'],
-		['/staff/grants', 'grants'],
-		['/staff/grants/abc', 'grants'],
-		['/staff/renewals', 'renewals'],
-		['/staff/renewals/abc', 'renewals'],
-		['/staff/grants/funders', 'grants'],
-		['/staff/inventory', 'equipment'],
-		['/staff/inventory/abc', 'equipment'],
-		['/staff/inventory/intake', 'equipment'],
-		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
-		['/staff/inventory/orders/abc', 'equipment'],
-		['/staff/inventory/spend', 'inventory-spend'],
-		['/staff/inventory/compliance', 'inventory-compliance'],
-		// Loans left Inventory's children for a row of its own; its URL did not move.
-		['/staff/inventory/loans', 'equipment-loans'],
-		['/staff/inventory/loans/abc', 'equipment-loans'],
+		// Venues is an Events view; a venue's page lights Events (#2766).
+		['/staff/venues/abc', 'calendar'],
+		['/staff/contacts', 'contacts'],
+		['/staff/contacts/abc', 'contacts'],
+		['/staff/funding', 'funding'],
+		// A sponsor's page is its Contacts page now (#2764); old links redirect.
+		['/staff/sponsors', 'contacts'],
+		['/staff/sponsors/abc', 'contacts'],
+		['/staff/grants', 'funding'],
+		['/staff/grants/abc', 'funding'],
+		['/staff/grants/funders', 'funding'],
+		['/staff/inventory', 'gear'],
+		['/staff/inventory/abc', 'gear'],
+		['/staff/inventory/intake', 'gear'],
+		// Gear and Supplies split the list (#2573); Supplies is the longer match.
+		['/staff/inventory/supplies', 'supplies'],
+		// Orders and Acquisitions are Gear's lists (#2767), with their records.
+		['/staff/inventory/orders', 'gear'],
+		['/staff/inventory/orders/abc', 'gear'],
+		['/staff/inventory/spend', 'reports'],
+		['/staff/inventory/acquisitions', 'gear'],
+		['/staff/inventory/acquisitions/abc', 'gear'],
+		['/staff/inventory/loans', 'gear'],
+		['/staff/inventory/loans/abc', 'gear'],
 		['/staff/reservations/abc', 'reservations'],
 		['/staff/recurring/abc', 'reservations'],
-		['/staff/inventory/problems', 'equipment-reports'],
-		['/staff/inventory/problems/abc', 'equipment-reports'],
-		['/staff/contractors', 'contractors'],
-		['/staff/contractors/abc', 'contractors'],
-		['/staff/incidents', 'incidents'],
-		['/staff/incidents/abc', 'incidents'],
-		['/staff/reports/volunteering', 'volunteer-report'],
-		['/staff/members/volunteers/hours', 'users'],
+		['/staff/inventory/problems', 'gear'],
+		['/staff/inventory/problems/abc', 'gear'],
+		['/staff/contractors', 'contacts'],
+		['/staff/contractors/abc', 'contacts'],
+		// Records keep their addresses under the row they moved to (#2393).
+		['/staff/moderation', 'moderation'],
+		['/staff/moderation/flags', 'moderation'],
+		['/staff/moderation/incidents', 'moderation'],
+		['/staff/flags/abc', 'moderation'],
+		['/staff/incidents/abc', 'moderation'],
+		['/staff/reports', 'reports'],
+		['/staff/reports/annual', 'reports'],
+		['/staff/reports/volunteering', 'reports'],
+		['/staff/reports/inventory-spend', 'reports'],
+		['/staff/volunteering/hours', 'volunteer-schedule'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
-		['/staff/help', 'help'],
-		['/staff/marketing/campaigns/new', 'campaigns'],
-		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
-		['/staff/help/create', 'help'],
-		['/staff/local-resources', 'local-resources'],
-		['/staff/local-resources/categories', 'local-resources'],
-		['/staff/settings', 'settings'],
-		['/staff/audit', 'audit']
+		['/staff/money', 'payments'],
+		['/staff/money/payments', 'payments'],
+		['/staff/money/credits', 'payments'],
+		['/staff/content', 'content'],
+		['/staff/help', 'content'],
+		['/staff/marketing', 'outreach'],
+		['/staff/marketing/campaigns', 'outreach'],
+		['/staff/marketing/audiences/abc', 'outreach'],
+		['/staff/marketing/campaigns/new', 'outreach'],
+		['/staff/marketing/campaigns/abc/edit', 'outreach'],
+		['/staff/help/create', 'content'],
+		['/staff/local-resources', 'content'],
+		['/staff/local-resources/categories', 'content'],
+		// The System row opens its own panel (#2763); module settings light their module.
+		['/staff/system', 'settings'],
+		['/staff/system/audit', 'settings'],
+		['/staff/inbox/channels', 'inbox'],
+		['/staff/volunteering/settings', 'volunteer-schedule']
 	];
 
 	it.each(cases)('lights exactly one row for %s', (path, key) => {
@@ -143,26 +170,36 @@ describe('the nav tree', () => {
 	});
 
 	it('folds the volunteer and instructor rosters into Members (#2074)', () => {
-		const volunteer = allStaffNavItems().find((i) => i.key === 'volunteer')!;
-		expect(volunteer.children).toBeUndefined();
-		expect(childHrefsFor(volunteer)).toEqual(['/staff/volunteer']);
 		const members = allStaffNavItems().find((i) => i.key === 'users')!;
 		expect(filterNavItems([members], ['volunteer.read'])).toHaveLength(1);
 		expect(filterNavItems([members], ['instructor.read'])).toHaveLength(1);
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
-	it('folds Productions into Projects (#2101)', () => {
-		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
-		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(1);
-		expect(filterNavItems([projects], ['event.read'])).toHaveLength(0);
+	it('keeps the volunteer badge and gate on Volunteering (#2379, #2625)', () => {
+		const schedule = allStaffNavItems().find((i) => i.key === 'volunteer-schedule')!;
+		expect(schedule.badgeKey).toBe('volunteerPending');
+		expect(filterNavItems([schedule], ['volunteer.read'])).toHaveLength(1);
+		expect(allStaffNavItems().some((i) => i.href === '/staff/volunteer')).toBe(false);
 	});
 
-	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
-		const planning = staffNavSections.find((s) => s.key === 'planning')!;
-		const keys = planning.items.map((i) => i.key);
-		expect(keys.indexOf('project-templates')).toBe(keys.indexOf('projects') + 1);
-		expect(activeNavKey('/staff/project-templates/abc')).toBe('project-templates');
+	it('folds Productions and Venues into Events (#2766)', () => {
+		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
+		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(0);
+		expect(allStaffNavItems().some((i) => i.href === '/staff/venues')).toBe(false);
+	});
+
+	it('folds Bands, Clubs and Committees into Groups (#2086)', () => {
+		const groups = allStaffNavItems().find((i) => i.key === 'groups')!;
+		expect(filterNavItems([groups], ['band.read'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['group.read'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['committee.reviewApplications'])).toHaveLength(1);
+		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
+	});
+
+	it('reaches Project Templates through Tasks (#2385, #2625)', () => {
+		expect(activeNavKey('/staff/tasks/templates')).toBe('projects');
+		expect(activeNavKey('/staff/tasks/templates/abc')).toBe('projects');
 	});
 
 	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
@@ -173,66 +210,79 @@ describe('the nav tree', () => {
 		}
 	});
 
-	it('puts the resource tips queue under Local Resources, with its pending count', () => {
-		expect(staffNavTop.map((i) => i.key)).not.toContain('resource-tips');
-		const parent = allStaffNavItems().find((i) => i.key === 'local-resources');
-		expect(parent?.badgeKey).toBe('resourceTipsPending');
-		const tips = parent?.children?.find((i) => i.key === 'resource-tips');
-		expect(tips).toMatchObject({
-			href: '/staff/local-resources/tips',
-			badgeKey: 'resourceTipsPending',
-			capability: 'localResource.manage'
-		});
-		expect(activeNavKey('/staff/local-resources/tips')).toBe('resource-tips');
-		expect(activeNavKey('/staff/local-resources')).toBe('local-resources');
+	// Submissions waiting on a decision are one badge, on the review feed (#2623).
+	it('badges only the Dashboard, Inbox and Volunteering', () => {
+		const badged = allStaffNavItems()
+			.filter((i) => i.badgeKey)
+			.map((i) => [i.key, i.badgeKey]);
+		expect(badged).toEqual([
+			['dashboard', 'reviewWaiting'],
+			['inbox', 'inboxUnread'],
+			['volunteer-schedule', 'volunteerPending']
+		]);
 	});
 
-	// The #1788 regrouping: each row in the section that owns what it is about.
-	it('groups rows by what they are about', () => {
-		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
-		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('people')).toEqual(['users', 'bands', 'clubs', 'committees', 'volunteer']);
-		expect(keys('planning')).toEqual([
+	it('holds Help articles and Local resources in one Content row (#2765)', () => {
+		const content = allStaffNavItems().find((i) => i.key === 'content');
+		expect(content?.children).toBeUndefined();
+		expect(activeNavKey('/staff/help/abc')).toBe('content');
+		expect(activeNavKey('/staff/local-resources/abc')).toBe('content');
+	});
+
+	// The four systems (#2762, #2763), with Reports and System below them.
+	it('groups rows into the four systems', () => {
+		const keys = (key: string) =>
+			staffNavSections.find((s) => s.key === key)!.items.map((i) => i.key);
+		expect(staffNavSections.map((s) => s.title)).toEqual([
+			'Relationships',
+			'Community',
+			'Programs',
+			'Operations'
+		]);
+		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox']);
+		expect(keys('relationships')).toEqual(['contacts', 'outreach', 'funding']);
+		expect(keys('community')).toEqual([
+			'users',
+			'groups',
 			'suggestions',
 			'ballots',
+			'moderation',
+			'classifieds',
+			'content'
+		]);
+		expect(keys('programs')).toEqual(['calendar', 'reservations', 'music']);
+		expect(keys('operations')).toEqual([
 			'projects',
-			'project-templates',
-			'volunteer-schedule'
+			'volunteer-schedule',
+			'gear',
+			'supplies',
+			'payments'
 		]);
-		// Recurring work is a Schedule view (#2087).
-		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
-		expect(keys('space')).toEqual([
-			'reservations',
-			'equipment',
-			'equipment-loans',
-			'renewals',
-			'keys'
-		]);
-		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
-		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
-		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
-		expect(keys('money')).toContain('grants');
-		expect(keys('reports')).toEqual([
-			'reports',
-			'volunteer-report',
-			'inventory-spend',
-			// A record of when stock arrived; each item's page shows its own (#1841).
-			'inventory-acquisitions'
-		]);
-		expect(keys('system')).toContain('help');
-		expect(keys('events')).toEqual(['calendar']);
+		expect(staffNavBottom.map((i) => i.key)).toEqual(['reports', 'settings']);
+		// Recurring work is a Tasks setting (#2087, #2767); Building access a
+		// Practice space view (#2766).
+		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
+		expect(activeNavKey('/staff/building-access')).toBe('reservations');
+	});
+
+	it('names rows by what they hold (#2763)', () => {
+		const label = (key: StaffNavKey) => allStaffNavItems().find((i) => i.key === key)!.label;
+		expect(label('gear')).toBe('Equipment');
+		expect(label('music')).toBe('Music');
+		expect(label('payments')).toBe('Money');
+		expect(label('settings')).toBe('System');
 	});
 
 	// A show's door takings are on its staff page (#1809); the till is reached from there.
 	it('has no Door Sales row', () => {
 		const hrefs = allStaffNavItems().map((i) => i.href);
 		expect(hrefs.some((h) => h.includes('/member/volunteer/door'))).toBe(false);
-		expect(allStaffNavItems().map((i) => i.label)).not.toContain('Door Sales');
+		expect(allStaffNavItems().map((i) => i.key)).not.toContain('door-sales');
 	});
 
 	it('finds the owning section for every row', () => {
 		for (const item of allStaffNavItems()) {
-			if (staffNavTop.some((t) => t.key === item.key)) continue;
+			if ([...staffNavTop, ...staffNavBottom].some((t) => t.key === item.key)) continue;
 			const owners = staffNavSections.filter((s) => sectionHasKey(s, item.key));
 			expect(owners).toHaveLength(1);
 		}
@@ -245,32 +295,61 @@ describe('route coverage', () => {
 	 * the page that owns it, and each still resolves to a highlighted parent.
 	 */
 	const unlinked = new Set([
-		// The full hour-log queue, a Members → Volunteers view (#2075).
-		'/staff/members/volunteers/hours',
-		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
+		// The full hour-log queue, reached from Volunteering's header (#2765).
+		'/staff/volunteering/hours',
+		// Roles and clearances: reached from Volunteering's header (#1791).
 		'/staff/volunteer/roles',
-		// Members views, reached from its tab bar (#2074).
-		'/staff/members/volunteers',
-		'/staff/members/instructors',
-		'/staff/members/invites',
-		'/staff/projects/productions', // a Projects view (#2101)
-		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
+		'/staff/tasks/projects', // a Tasks view (#2625)
+		'/staff/tasks/templates', // a Tasks setting, from its header (#2767)
+		'/staff/tasks/recurring', // a Tasks setting, from its header (#2767)
+		// Content's views, reached from its tab bar (#2765).
+		'/staff/help',
+		'/staff/local-resources',
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
-		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it
-		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
+		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
+		'/staff/inventory/intake', // a session started from Gear or Supplies, not a list (#1838)
+		// Gear's lists (#2573, #2767).
+		'/staff/inventory/loans',
+		'/staff/inventory/problems',
+		'/staff/inventory/orders',
+		'/staff/inventory/acquisitions',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
-		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
-		'/staff/keys/door-poster', // a print page from Key Holders' header (#2120)
-		// Reached from Bands, which links to it in its header. Not its own row on
-		// purpose: an external act is the same staff job as a band — who is
-		// playing here — and one of them can turn into the other, so splitting
-		// them in the nav would imply two jobs where there is one.
-		'/staff/bands/acts',
+		'/staff/recurring', // a Practice space view (#2766)
+		'/staff/building-access', // a Practice space view (#2766)
+		'/staff/building-access/door-poster', // a print page from Booking codes (#2120)
+		'/staff/reservations/settings', // reached from Practice space's header (#2586)
+		'/staff/inventory/settings', // reached from Gear's header (#2756)
+		// Moderation views, reached from its tab bar (#2393).
+		'/staff/moderation/flags',
+		'/staff/moderation/incidents',
+		'/staff/moderation/blocklist',
+		// Outreach views, reached from its tab bar (#2394).
+		'/staff/marketing/campaigns',
+		'/staff/marketing/audiences',
+		'/staff/marketing/posters',
+		// Payments views, reached from its tab bar (#2395).
+		'/staff/money/payments',
+		'/staff/money/credits',
+		// Reports views, reached from its tab bar (#2396).
+		'/staff/reports/annual',
+		'/staff/reports/volunteering',
+		'/staff/reports/inventory-spend',
+		'/staff/reports/music',
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.
-		'/staff/inbox/daily'
+		'/staff/inbox/daily',
+		// Contacts' duplicate view (#2622), reached from the Contacts header.
+		'/staff/contacts/duplicates',
+		// The System panel's rows, in its own sidebar (#2763).
+		'/staff/system/organization',
+		'/staff/system/features',
+		'/staff/system/access',
+		'/staff/system/audit',
+		// Module settings, reached from their module's header (#2763).
+		'/staff/inbox/channels',
+		'/staff/volunteering/settings'
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {
@@ -391,9 +470,9 @@ describe('filterNavSections', () => {
 	it('gives a treasurer a narrower panel, with Money in it', () => {
 		const held = everyCapability.filter((c) => grantsCapability(positions.treasurer, c as never));
 		const kept = filterNavSections(staffNavSections, held);
-		const keys = kept.map((s) => s.key);
-		expect(keys).toContain('money');
-		expect(keys.length).toBeLessThan(staffNavSections.length);
+		const rows = kept.flatMap((s) => s.items.map((i) => i.key));
+		expect(rows).toContain('payments');
+		expect(rows.length).toBeLessThan(staffNavSections.flatMap((s) => s.items).length);
 	});
 });
 
@@ -415,6 +494,48 @@ describe('surfaces switched off in code (#2116)', () => {
 			expect(keys()).toEqual(expect.arrayContaining(['ballots', 'classifieds']));
 		} finally {
 			Object.assign(surfaces, saved);
+		}
+	});
+});
+
+describe('the System panel (#2763)', () => {
+	it('holds only what spans modules', () => {
+		expect(systemNavItems.map((i) => i.key)).toEqual([
+			'organization',
+			'features',
+			'access',
+			'audit'
+		]);
+	});
+
+	it.each(systemNavItems.map((i) => [i.key, i] as const))(
+		'lights %s on its own page',
+		(key, row) => {
+			expect(activeSystemKey(row.href)).toBe(key);
+			expect(activeSystemKey(`${row.href}/x`)).toBe(key);
+			expect(inSystemPanel(row.href)).toBe(true);
+		}
+	);
+
+	it('swaps the sidebar only inside the panel', () => {
+		expect(inSystemPanel('/staff/system')).toBe(true);
+		expect(inSystemPanel('/staff/systemic')).toBe(false);
+		expect(inSystemPanel('/staff/settings')).toBe(false);
+	});
+
+	it('gates every row on a real capability someone holds', () => {
+		for (const item of systemNavItems) {
+			expect(everyCapability).toContain(item.capability);
+			expect(positionOrder.some((p) => grantsCapability(positions[p], item.capability!))).toBe(
+				true
+			);
+		}
+	});
+
+	it("offers the System row to a holder of any one of its rows' capabilities", () => {
+		for (const item of systemNavItems) {
+			const kept = filterNavItems(staffNavBottom, [item.capability!]).map((i) => i.key);
+			expect(kept, item.key).toContain('settings');
 		}
 	});
 });

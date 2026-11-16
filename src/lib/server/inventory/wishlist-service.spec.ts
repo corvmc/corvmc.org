@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * is public — so what it must never carry matters as much as what it shows.
  */
 
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+vi.mock('#lib/server/suggestion/suggestion-service.js', () => ({
 	listPlannedGear: vi.fn()
 }));
 vi.mock('./stock-service', () => ({
@@ -17,7 +17,7 @@ vi.mock('./pledge-service', async (orig) => ({
 }));
 
 const { getDonationWishlist } = await import('./wishlist-service');
-const { listPlannedGear } = await import('$lib/server/suggestion/suggestion-service');
+const { listPlannedGear } = await import('#lib/server/suggestion/suggestion-service.js');
 const { listLowStock } = await import('./stock-service');
 const { listLivePledges } = await import('./pledge-service');
 

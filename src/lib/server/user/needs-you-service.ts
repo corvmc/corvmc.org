@@ -1,14 +1,16 @@
 import { resolve } from '$app/paths';
-import { sortNeedsYou, type NeedsYouItem } from '$lib/types/needs-you';
-import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
+import { sortNeedsYou, type NeedsYouItem } from '#lib/types/needs-you.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
 	listUnloggedCompletions,
 	listSignupsForUser
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { listUserLoans } from '$lib/server/inventory/loan-service';
-import { countPendingRequests } from '$lib/server/inbox/direct-service';
-import { getMemberSubscription } from '$lib/server/finance/subscription-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listUserLoans } from '#lib/server/inventory/loan-service.js';
+import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
+import { getMemberSubscription } from '#lib/server/finance/subscription-service.js';
+import { listShowsLedBy } from '#lib/server/production/show-lead-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
+import { shiftNeedsYouItems } from './shift-needs-you';
 
 /**
  * What the member has to do something about, and when it stops being possible.
@@ -36,35 +38,33 @@ export interface NeedsYouInput {
 export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]> {
 	const now = input.now ?? new Date();
 
-	const [unlogged, signups, loans, messageRequests, subscription] = await Promise.all([
+	const [unlogged, signups, loans, messageRequests, subscription, led] = await Promise.all([
 		listUnloggedCompletions(input.userId).catch(() => []),
 		listSignupsForUser(input.userId, { limit: 20 }).catch(() => []),
 		listUserLoans(input.userId, ['checked_out']).catch(() => ({ rows: [] })),
 		countPendingRequests(input.userId).catch(() => 0),
-		getMemberSubscription(input.userId).catch(() => null)
+		getMemberSubscription(input.userId).catch(() => null),
+		listShowsLedBy(input.userId, now).catch(() => [])
 	]);
 
 	const items: NeedsYouItem[] = [];
 
 	items.push(...reservationNeedsYouItems(input.reservations, now));
 
-	for (const s of signups) {
-		// `startsAt` is nullable: a work order can exist before it is scheduled.
-		// An unscheduled shift has no clock, so it is not a deadline.
-		if (s.shiftCancelledAt || !s.startsAt) continue;
-		if (s.startsAt <= now) continue;
-		if (s.status !== 'claimed' && s.status !== 'confirmed') continue;
+	// The show this member is event lead for, until it has been on a while (#2726).
+	for (const show of led) {
 		items.push({
-			id: `volunteer-shift-soon:${s.signupId}`,
-			kind: 'volunteer-shift-soon',
-			title: `You are on ${s.roleName}`,
-			detail: s.eventTitle ?? undefined,
-			href: resolve(`/member/volunteer/shifts/${s.signupId}`),
-			label: 'Open',
-			dueAt: s.startsAt,
-			rank: 1
+			id: `show-lead:${show.productionId}`,
+			kind: 'show-lead',
+			title: `You are the event lead for ${show.title}`,
+			href: resolve(`staff/events/${show.eventId}/production`),
+			label: 'Open console',
+			dueAt: show.startsAt,
+			rank: 0
 		});
 	}
+
+	items.push(...shiftNeedsYouItems(signups, now));
 
 	for (const c of unlogged) {
 		if (!c.endsAt) continue;
@@ -74,8 +74,8 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `volunteer-hours-unlogged:${c.signupId}`,
 			kind: 'volunteer-hours-unlogged',
 			title: `Log your hours for ${c.roleName}`,
-			href: resolve('/member/volunteer/profile'),
-			label: 'Log Hours',
+			href: resolve('member/volunteer/profile'),
+			label: 'Log hours',
 			dueAt: new Date(c.endsAt.getTime() + VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000),
 			rank: 2
 		});
@@ -87,7 +87,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `loan-due:${loan.id}`,
 			kind: 'loan-due',
 			title: `Return ${loan.equipmentName ?? 'the gear you borrowed'}`,
-			href: resolve('/member/equipment/loans'),
+			href: resolve('member/equipment/loans'),
 			label: 'See the loan',
 			dueAt: loan.dueDate,
 			rank: 3
@@ -100,7 +100,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			kind: 'membership-ending',
 			title: 'Your sustaining membership ends',
 			detail: 'Practice hours stop resetting after that date',
-			href: resolve('/member/membership'),
+			href: resolve('member/membership'),
 			label: 'Membership',
 			dueAt: new Date(subscription.creditsResetAt),
 			rank: 4
@@ -118,7 +118,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 				input.pendingInviteCount === 1
 					? 'A band has invited you'
 					: `${input.pendingInviteCount} bands have invited you`,
-			href: resolve('/member/bands'),
+			href: resolve('member/bands'),
 			label: 'Answer',
 			dueAt: null,
 			rank: 10
@@ -133,7 +133,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 				messageRequests === 1
 					? 'Somebody asked to message you'
 					: `${messageRequests} people asked to message you`,
-			href: resolve('/member/messages'),
+			href: resolve('member/messages'),
 			label: 'Read',
 			dueAt: null,
 			rank: 11
@@ -145,8 +145,8 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: 'profile-incomplete',
 			kind: 'profile-incomplete',
 			title: 'Add your instruments or a short bio',
-			detail: 'So other members can find you in the directory',
-			href: resolve('/member/profile'),
+			detail: "You're not listed in the directory until you do",
+			href: resolve('member/profile'),
 			label: 'Edit profile',
 			dueAt: null,
 			rank: 12

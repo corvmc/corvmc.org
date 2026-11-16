@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { getCalendarTotals, calendarWindows } = await import('./calendar-totals-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { eventListing } = await import('$lib/server/db/schema/event');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { eventListing } = await import('#lib/server/db/schema/event.js');
 
 // Wednesday 14 Oct 2026, 11:00 in Corvallis (PDT, UTC-7).
 const NOW = new Date('2026-10-14T18:00:00Z');

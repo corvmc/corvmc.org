@@ -1,24 +1,27 @@
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
-import { clubToday, type Capability } from '$lib/config';
+import { z } from 'zod';
+import { clubToday, type Capability } from '#lib/config.js';
 import {
 	capabilitySet,
 	committeeCapabilitiesFor,
 	positionsFor,
 	requireUser
-} from '$lib/server/authorization';
-import { listLowStock } from '$lib/server/inventory/stock-service';
-import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
-import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
+} from '#lib/server/authorization.js';
+import { listShortStaffedShifts } from '#lib/server/volunteer/work-order-service.js';
+import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
 	listMemberSummary,
 	listRoomDays,
 	listUpcomingShows
-} from '$lib/server/user/staff-dashboard-service';
-import { countStaffQueues } from '$lib/server/user/staff-queue-counts';
-import { addIsoDays } from '$lib/utils/deadline';
+} from '#lib/server/user/staff-dashboard-service.js';
+import { listMyWork } from '#lib/server/task/my-work.js';
+import { countReviewFeed, listReviewFeed } from '#lib/server/review/review-registry.js';
+import { reviewKinds } from '#lib/types/review.js';
+import { FEED_MAX, feedLimit } from '#lib/types/activity.js';
+import { addIsoDays } from '#lib/utils/deadline.js';
 
-/** A glance at this week's short shifts; the two-week view is /staff/volunteer. */
+/** A glance at this week's short shifts; the two-week view is the Schedule. */
 const SHIFT_HORIZON_DAYS = 7;
 /** Each list is capped: the dashboard is a glance, and its link opens the whole thing. */
 const CAP = 5;
@@ -35,6 +38,12 @@ async function deadlinesFor(holds: (c: Capability) => boolean) {
 	return rows.map((d) => ({ ...d, overdue: d.on < today }));
 }
 
+/** The review feed's filter and how many rows the page has asked for (Show more raises it). */
+const dashboardArgs = z.object({
+	kind: z.enum(reviewKinds).optional(),
+	limit: z.number().int().min(1).max(FEED_MAX).optional()
+});
+
 const capped = <T>(rows: T[] | null) =>
 	rows ? { rows: rows.slice(0, CAP), total: rows.length } : null;
 
@@ -46,7 +55,7 @@ const capped = <T>(rows: T[] | null) =>
  * capability its own page guards on. A section the viewer cannot read is
  * `null`, not empty, so the page can tell "nothing today" from "not yours".
  */
-export const getStaffDashboard = query(async () => {
+export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) => {
 	const me = requireUser();
 	const [positions, seat] = await Promise.all([
 		positionsFor(me.id),
@@ -56,22 +65,26 @@ export const getStaffDashboard = query(async () => {
 	if (capabilities.length === 0) error(403, 'Not permitted');
 	const holds = (c: Capability) => capabilities.includes(c);
 
-	const [room, shows, queues, lowStock, shortShifts, deadlines, members] = await Promise.all([
-		holds('reservation.read') ? listRoomDays() : null,
-		holds('event.read') ? listUpcomingShows() : null,
-		countStaffQueues(),
-		holds('inventory.report') ? listLowStock() : null,
-		holds('volunteer.read') ? listShortStaffedShifts(SHIFT_HORIZON_DAYS) : null,
-		deadlinesFor(holds),
-		holds('user.list') ? listMemberSummary() : null
-	]);
+	const [myWork, room, shows, review, reviewCounts, shortShifts, deadlines, members] =
+		await Promise.all([
+			// Every row is one `canActOnTask` admits, so it needs no section gate (#2989).
+			listMyWork(me.id),
+			holds('reservation.read') ? listRoomDays() : null,
+			holds('event.read') ? listUpcomingShows() : null,
+			// Each kind is read only for a viewer who may decide it.
+			listReviewFeed(capabilities, { kind, limit: feedLimit(limit) }),
+			countReviewFeed(capabilities),
+			holds('volunteer.read') ? listShortStaffedShifts(SHIFT_HORIZON_DAYS) : null,
+			deadlinesFor(holds),
+			holds('user.list') ? listMemberSummary() : null
+		]);
 
 	return {
 		capabilities,
+		myWork: capped(myWork),
 		room,
 		shows,
-		queues,
-		lowStock: capped(lowStock),
+		review: { ...review, counts: reviewCounts },
 		shortShifts: capped(shortShifts),
 		deadlines: capped(deadlines),
 		members

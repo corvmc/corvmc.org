@@ -1,6 +1,6 @@
 import { and, notInArray, sql, type SQL } from 'drizzle-orm';
-import { eventHoldBookers } from '$lib/config';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { eventHoldBookers } from '#lib/config.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 
 /**
  * Not a program's free hold — the room CMC or a committee took, rather than a

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
-import { mockUser } from '$lib/server/db/test-factory';
-import { can } from '$lib/server/authorization';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { can } from '#lib/server/authorization.js';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Regression: `getReservations({ forUser })` rejected staff along with
@@ -25,7 +25,7 @@ const actingUser = mockUser({ id: 'user-1', name: 'Acting', email: 'acting@examp
 const rows: unknown[] = [];
 /** What the list was ordered by, so a test can tell newest-first from oldest-first. */
 const orderByArgs: unknown[] = [];
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			const c: Record<string, unknown> = {
@@ -45,8 +45,8 @@ vi.mock('$lib/server/db', () => ({
 
 // `can` is simulated against the real matrix for whatever `heldPositions` says.
 let heldPositions: Position[] = [];
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	return {
 		can: vi.fn(async (cap: Capability) =>
 			heldPositions.some((p) => config.grantsCapability(config.positions[p], cap))
@@ -58,14 +58,14 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance: vi.fn(async () => 0) }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance: vi.fn(async () => 0) }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -91,7 +91,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getReservations } = (await import('$lib/remote/reservations.remote')) as any;
+const { getReservations } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	rows.length = 0;

@@ -1,20 +1,21 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { page as pageState } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { formatDate, relativeDay } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { formatDate, relativeDay } from '#lib/utils/format.js';
 	import {
 		classifiedKinds,
 		classifiedCategories,
@@ -26,8 +27,8 @@
 		type ClassifiedKind,
 		type ClassifiedCategory,
 		type ClassifiedTagKind
-	} from '$lib/config';
-	import { getClassifiedBoard } from '$lib/remote/classifieds.remote';
+	} from '#lib/config.js';
+	import { getClassifiedBoard } from '#lib/remote/classifieds.remote.js';
 	import CreateClassifiedAction from './CreateClassifiedAction.svelte';
 
 	type TabKey = 'board' | 'mine';
@@ -75,15 +76,15 @@
 	}
 </script>
 
-<PageHeader title="Classifieds" subtitle="Community">
+<PageHeader title={m.member_classifieds_title()} subtitle={m.member_community_body()}>
 	<CreateClassifiedAction />
 </PageHeader>
 
 <PageContent>
 	<TabBar
 		tabs={[
-			{ key: 'board', label: 'Board' },
-			{ key: 'mine', label: 'Your posts' }
+			{ key: 'board', label: m.member_classifieds_board_label() },
+			{ key: 'mine', label: m.member_classifieds_posts_label() }
 		]}
 		active={tab}
 		onchange={(k) => {
@@ -96,7 +97,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search posts..."
+				placeholder={m.member_classifieds_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -105,34 +106,34 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Post type"
+			aria-label={m.member_classifieds_post_type_label()}
 			value={kindFilter}
 			onchange={(e: Event) => {
 				kindFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Any type</option>
+			<option value="">{m.member_classifieds_any_type_label()}</option>
 			{#each classifiedKinds as k (k)}
 				<option value={k}>{classifiedKindLabels[k]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.member_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each classifiedCategories as c (c)}
 				<option value={c}>{classifiedCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		{#if tagValue}
-			<Badge size="sm" variant="outline">Tagged {tagValue}</Badge>
+			<Badge size="sm" variant="outline">{m.member_classifieds_tagged_label({ tagValue })}</Badge>
 		{/if}
 	</FilterBar>
 
@@ -142,20 +143,26 @@
 
 	<DataList
 		{result}
-		empty={tab === 'mine' ? 'You have not posted anything yet' : 'Nothing on the board right now'}
+		empty={tab === 'mine'
+			? m.member_classifieds_have_not_posted_anything_yet_body()
+			: m.member_classifieds_nothing_board_right_now_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Post</th>
-					<th>Posted by</th>
-					<th class="col-support">Tags</th>
-					<th class="col-extra whitespace-nowrap">{tab === 'mine' ? 'Expires' : 'Posted'}</th>
+					<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+					<th>{m.member_classifieds_post_label()}</th>
+					<th>{m.member_classifieds_posted_by_label()}</th>
+					<th class="col-support">{m.member_tags_label()}</th>
+					<th class="col-extra whitespace-nowrap"
+						>{tab === 'mine'
+							? m.member_classifieds_expires_label()
+							: m.member_classifieds_posted_label()}</th
+					>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/member/classifieds/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`member/classifieds/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.displayStatus} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>

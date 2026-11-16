@@ -1,36 +1,40 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
 	import {
 		addAcquisitionLineForm,
 		getStaffAcquisitionDetail,
 		editAcquisition
-	} from '$lib/remote/inventory.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { RecordForm8283Action, MarkReimbursedAction } from '$lib/components/actions';
+	} from '#lib/remote/inventory.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field, FileUpload, MoneyField } from '#lib/components/ui/Form/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { RecordForm8283Action, MarkReimbursedAction } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
-	import { formatCents, formatDateShort, toLocalDate } from '$lib/utils/format';
+	import { formatCents, formatDateShort, toLocalDate } from '#lib/utils/format.js';
 	import {
 		acquisitionKinds,
 		acquisitionKindLabels,
 		stockReasonLabels,
 		type AcquisitionKind
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import { toast } from 'svelte-sonner';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One acquisition: what arrived, from whom, for how much, and the paperwork.
@@ -47,7 +51,7 @@
 	 */
 	const { fields } = editAcquisition;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffAcquisitionDetail(id));
 
 	/**
@@ -72,8 +76,6 @@
 	let donorName = $state('');
 	let paidByUserId = $state('');
 	let paidByName = $state('');
-	let uploading = $state(false);
-
 	// Seeded from the record once, so the picker shows who is already on the row
 	// without clobbering a choice the staffer has started making.
 	$effect(() => {
@@ -83,41 +85,29 @@
 		paidByName = data.paidByName ?? '';
 	});
 
-	async function uploadReceipt(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function uploadReceipt(file: File) {
+		const body = new FormData();
+		body.append('file', file);
+		body.append('slot', 'receipt');
+		body.append('attachableId', id);
 
-		uploading = true;
-		try {
-			const body = new FormData();
-			body.append('file', file);
-			body.append('slot', 'receipt');
-			body.append('attachableId', id);
-
-			const res = await fetch('/api/inventory/media', { method: 'POST', body });
-			if (!res.ok) {
-				const detail = (await res.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(detail?.message ?? 'Upload failed');
-			}
-			await getStaffAcquisitionDetail(id).refresh();
-			toast.success('Receipt attached');
-		} catch (err) {
-			toast.error((err as Error).message);
-		} finally {
-			uploading = false;
-			input.value = '';
+		const res = await fetch('/api/inventory/media', { method: 'POST', body });
+		if (!res.ok) {
+			const detail = (await res.json().catch(() => null)) as { message?: string } | null;
+			throw new Error(detail?.message ?? 'Upload failed');
 		}
+		await getStaffAcquisitionDetail(id).refresh();
+		toast.success(m.staff_inventory_acquisitions_id_toast());
 	}
 </script>
 
 <PageHeader
 	width="3xl"
-	subtitle="Acquisition"
+	subtitle={m.staff_acquisition_body()}
 	title={`${acquisitionKindLabels[data.kind]} — ${formatDateShort(data.occurredAt)}`}
 >
 	{#if data.awaitingReimbursement}
-		<Badge variant="warning">Awaiting reimbursement</Badge>
+		<Badge variant="warning">{m.staff_awaiting_reimbursement_label()}</Badge>
 	{/if}
 </PageHeader>
 
@@ -128,8 +118,15 @@
 		<Alert type="warning" class="mb-4">
 			<div>
 				<p>
-					<strong>{data.paidByName}</strong> fronted
-					{formatCents(data.totalCents ?? data.linesTotalCents)} for this and has not been paid back.
+					<ParaglideMessage
+						message={m.staff_inventory_acquisitions_id_fronted_has_not_been_paid_text}
+						inputs={{
+							paidByName: data.paidByName ?? '',
+							formatCents: formatCents(data.totalCents ?? data.linesTotalCents)
+						}}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 				<div class="mt-3">
 					<MarkReimbursedAction
@@ -143,9 +140,13 @@
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<Form remote={editAcquisition} guard successToast="Acquisition updated">
+		<Form
+			remote={editAcquisition}
+			guard
+			successToast={m.staff_inventory_acquisitions_id_acquisition_updated_toast()}
+		>
 			<input {...fields.id.as('hidden', id)} />
-			<InfoCard title="Details">
+			<InfoCard title={m.staff_details_title()}>
 				<!--
 					Kind and date are editable because both are guessed at entry, and a
 					stocktake guesses them a few hundred times. A wrong kind is the
@@ -158,14 +159,14 @@
 					<Field
 						field={fields.kind}
 						type="select"
-						label="How it arrived"
+						label={m.staff_how_arrived_label()}
 						bind:value={kind}
 						options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 					/>
 					<Field
 						field={fields.occurredAt}
 						type="date"
-						label="When it arrived"
+						label={m.staff_when_arrived_label()}
 						value={toLocalDate(data.occurredAt)}
 					/>
 				</div>
@@ -173,48 +174,48 @@
 					<Field
 						field={fields.sourceName}
 						type="text"
-						label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+						label={kind === 'purchase' ? m.staff_supplier_label() : m.staff_donor_grantor_label()}
 						value={data.sourceName ?? ''}
 					/>
 				{/if}
 				<Field
 					field={fields.reference}
 					type="text"
-					label="Reference / receipt no."
+					label={m.staff_reference_receipt_no_label()}
 					value={data.reference ?? ''}
 				/>
 
 				<MoneyField
 					field={fields.totalCents}
-					label="Receipt total"
+					label={m.staff_receipt_total_label()}
 					value={data.totalCents}
-					description="What the paperwork says, including tax and postage the lines do not carry. Wins over the itemisation where the two disagree."
+					description={m.staff_inventory_acquisitions_id_what_paperwork_says_includin_body()}
 				/>
 
 				{#if isGift}
 					<MoneyField
 						field={fields.fairValueCents}
-						label="Total fair value"
+						label={m.staff_inventory_acquisitions_id_total_fair_value_label()}
 						value={data.fairValueCents}
 					/>
 					<Field
 						field={fields.fairValueBasis}
 						type="text"
-						label="How the value was determined"
-						description="Required for the gifts-in-kind disclosure — e.g. comparable sales, appraisal."
+						label={m.staff_inventory_acquisitions_id_how_value_was_determined_label()}
+						description={m.staff_inventory_acquisitions_id_required_gifts_kind_disclosu_body()}
 						value={data.fairValueBasis ?? ''}
 					/>
 					<Field
 						field={fields.intendedUse}
 						type="text"
-						label="Intended use"
+						label={m.staff_inventory_acquisitions_id_intended_use_label()}
 						value={data.intendedUse ?? ''}
 					/>
 					<Field
 						field={fields.monetized}
 						type="checkbox"
-						label="Sold rather than used"
-						checkboxLabel="The collective converted this gift to cash"
+						label={m.staff_inventory_acquisitions_id_sold_rather_than_used_label()}
+						checkboxLabel={m.staff_inventory_acquisitions_id_checkbox_label_checkbox()}
 						value={data.monetized}
 					/>
 				{/if}
@@ -224,7 +225,7 @@
 						field={fields.donorUserId}
 						bind:value={donorUserId}
 						bind:name={donorName}
-						label="Donated by"
+						label={m.staff_donated_by_label()}
 					/>
 				</div>
 
@@ -236,11 +237,16 @@
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label="Paid by, and owed it back (leave blank for a gift or a collective card)"
+						label={m.staff_inventory_acquisitions_id_paid_by_owed_back_leave_label()}
 					/>
 				</div>
 
-				<Field field={fields.notes} type="textarea" label="Notes" value={data.notes ?? ''} />
+				<Field
+					field={fields.notes}
+					type="textarea"
+					label={m.staff_notes_label()}
+					value={data.notes ?? ''}
+				/>
 
 				<div class="mt-3">
 					<SubmitButton>
@@ -253,34 +259,40 @@
 		</Form>
 
 		<div class="space-y-6">
-			<InfoCard title="Record" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_record_title()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="Kind">{acquisitionKindLabels[data.kind]}</Fact>
-					<Fact label="Occurred">{formatDateShort(data.occurredAt)}</Fact>
-					<Fact label="Source">{data.donorName ?? '—'}</Fact>
+					<Fact label={m.staff_kind_label()}>{acquisitionKindLabels[data.kind]}</Fact>
+					<Fact label={m.staff_inventory_acquisitions_id_occurred_label()}
+						>{formatDateShort(data.occurredAt)}</Fact
+					>
+					<Fact label={m.staff_source_label()}>{data.donorName ?? '—'}</Fact>
 					{#if data.fulfils}
 						<!-- What a member asked for, and where it came from. The request
 						     sat at Planned after the thing was on the shelf (#603). -->
-						<Fact label="Fulfils">
-							<a class="link" href={resolve(`/staff/suggestions/${data.fulfils.id}`)}>
+						<Fact label={m.staff_inventory_acquisitions_id_fulfils_label()}>
+							<a class="link" href={resolve(`staff/suggestions/${data.fulfils.id}`)}>
 								{data.fulfils.title}
 							</a>
 						</Fact>
 					{/if}
-					<Fact label="Lines total">
+					<Fact label={m.staff_inventory_acquisitions_id_lines_total_label()}>
 						{formatCents(data.linesTotalCents)}
 						{#if data.totalCents != null && data.totalCents !== data.linesTotalCents}
 							<span class="text-subtle">
-								— receipt says {formatCents(data.totalCents)}
+								{m.staff_inventory_acquisitions_id_receipt_says_text({
+									formatCents: formatCents(data.totalCents)
+								})}
 							</span>
 						{/if}
 					</Fact>
 					{#if data.paidByName}
-						<Fact label="Paid by">
+						<Fact label={m.staff_inventory_acquisitions_id_paid_by_label()}>
 							{data.paidByName}
 							{#if data.reimbursedAt}
 								<span class="text-subtle">
-									— reimbursed {formatDateShort(data.reimbursedAt)}
+									{m.staff_inventory_acquisitions_id_reimbursed_text({
+										formatDateShort: formatDateShort(data.reimbursedAt)
+									})}
 								</span>
 							{/if}
 						</Fact>
@@ -289,20 +301,22 @@
 			</InfoCard>
 
 			{#if data.kind === 'donation'}
-				<InfoCard title="Form 8283">
+				<InfoCard title={m.staff_inventory_acquisitions_id_form_8283_title()}>
 					{#if data.acknowledgedAt}
 						<DefinitionList>
-							<Fact label="Signed">{formatDateShort(data.acknowledgedAt)}</Fact>
-							<Fact label="Appraisal">{data.appraisalRef ?? '—'}</Fact>
+							<Fact label={m.staff_inventory_acquisitions_id_signed_label()}
+								>{formatDateShort(data.acknowledgedAt)}</Fact
+							>
+							<Fact label={m.staff_inventory_acquisitions_id_appraisal_label()}
+								>{data.appraisalRef ?? '—'}</Fact
+							>
 						</DefinitionList>
 					{:else}
 						<!-- Said plainly, because the consequence is silence rather than an
 						     error: with no 8283 recorded, disposing of this gift raises no
 						     Form 8282 warning at all. -->
 						<p class="text-subtle">
-							Nothing recorded. A donor claiming over $5,000 asks the collective to sign their Form
-							8283 — until that is recorded here, disposing of this gift will raise no Form 8282
-							warning.
+							{m.staff_inventory_acquisitions_id_nothing_recorded_donor_claim_text()}
 						</p>
 					{/if}
 					<div class="mt-3">
@@ -316,9 +330,9 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Receipts">
+			<InfoCard title={m.staff_inventory_acquisitions_id_receipts_title()}>
 				{#if data.receipts.length === 0}
-					<EmptyState description="Nothing attached yet" />
+					<EmptyState description={m.staff_inventory_acquisitions_id_nothing_attached_yet_body()} />
 				{:else}
 					<ul class="space-y-2">
 						{#each data.receipts as receipt (receipt.attachmentId)}
@@ -330,39 +344,37 @@
 									target="_blank"
 									rel="noopener external"
 								>
-									{receipt.filename ?? 'Receipt'}
+									{receipt.filename ?? m.staff_inventory_acquisitions_id_receipt_text()}
 								</a>
 							</li>
 						{/each}
 					</ul>
 				{/if}
 				<div class="mt-4">
-					<label class="btn btn-ghost btn-sm">
+					<FileUpload
+						upload={uploadReceipt}
+						accept=".pdf,image/*"
+						showPreview={false}
+						variant="ghost"
+					>
 						<IconUpload size={16} />
-						{uploading ? 'Uploading…' : 'Attach a receipt'}
-						<input
-							type="file"
-							class="hidden"
-							accept=".pdf,image/*"
-							onchange={uploadReceipt}
-							disabled={uploading}
-						/>
-					</label>
+						{m.staff_inventory_acquisitions_id_attach_receipt_text()}
+					</FileUpload>
 				</div>
 			</InfoCard>
 		</div>
 	</div>
 
-	<InfoCard title="What arrived" class="mb-6">
+	<InfoCard title={m.staff_what_arrived_title()} class="mb-6">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<Action
 					action={addAcquisitionLineForm}
-					label="Add a line"
-					modalTitle="Add a line"
-					submitLabel="Add"
-					successToast="Line added"
+					label={m.staff_add_line_label()}
+					modalTitle={m.staff_add_line_title()}
+					submitLabel={m.staff_add_label()}
+					successToast={m.staff_inventory_acquisitions_id_line_added_toast()}
 					variant="ghost"
 					size="xs"
 				>
@@ -372,7 +384,7 @@
 							<Field
 								field={addLineFields.itemId}
 								type="select"
-								label="What it was"
+								label={m.staff_what_was_label()}
 								options={itemOptions}
 								required
 							/>
@@ -380,15 +392,14 @@
 								<Field
 									field={addLineFields.quantity}
 									type="number"
-									label="How many"
+									label={m.staff_inventory_acquisitions_id_how_many_label()}
 									value={1}
 									required
 								/>
-								<MoneyField field={addLineFields.unitValueCents} label="Each" />
+								<MoneyField field={addLineFields.unitValueCents} label={m.staff_each_label()} />
 							</div>
 							<p class="text-subtle">
-								Adding a line receives the stock now — a serialized item becomes one unit per
-								quantity, anything else a receive movement.
+								{m.staff_inventory_acquisitions_id_adding_line_receives_stock_n_text()}
 							</p>
 						</div>
 					{/snippet}
@@ -398,20 +409,20 @@
 
 		{#if data.lines.length === 0}
 			<EmptyState
-				description="Nothing itemised yet. The receipt above is the record; add the lines from it when someone can read them."
+				description={m.staff_inventory_acquisitions_id_nothing_itemised_yet_receipt_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Item</th>
-					<th class="cell-num">Quantity</th>
-					<th class="cell-num">Unit value</th>
-					<th class="cell-num">Line total</th>
+					<th>{m.staff_item_label()}</th>
+					<th class="cell-num">{m.staff_quantity_label()}</th>
+					<th class="cell-num">{m.staff_unit_value_label()}</th>
+					<th class="cell-num">{m.staff_inventory_acquisitions_id_line_total_label()}</th>
 				{/snippet}
 				{#each data.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/inventory/${line.itemId}`)}>
+							<a class="font-medium" href={resolve(`staff/inventory/${line.itemId}`)}>
 								{line.item.name}
 							</a>
 						</td>
@@ -425,7 +436,7 @@
 					</tr>
 				{/each}
 				<tr class="font-medium">
-					<td>Total</td>
+					<td>{m.staff_total_text()}</td>
 					<td class="cell-num"></td>
 					<td class="cell-num"></td>
 					<td class="cell-num">{formatCents(data.linesTotalCents)}</td>
@@ -434,18 +445,20 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Stock it wrote">
+	<InfoCard title={m.staff_inventory_acquisitions_id_stock_wrote_title()}>
 		{#if data.movements.length === 0}
 			<!-- Worth showing rather than hiding: an acquisition whose lines wrote no
 			     movements is paperwork with no stock behind it. -->
-			<EmptyState description="No stock movements were written against this acquisition" />
+			<EmptyState
+				description={m.staff_inventory_acquisitions_id_no_stock_movements_were_writ_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Item</th>
-					<th>What happened</th>
-					<th class="cell-num">Quantity</th>
+					<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+					<th>{m.staff_item_label()}</th>
+					<th>{m.staff_what_happened_label()}</th>
+					<th class="cell-num">{m.staff_quantity_label()}</th>
 				{/snippet}
 				{#each data.movements as movement (movement.id)}
 					<tr>

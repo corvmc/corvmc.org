@@ -1,5 +1,4 @@
 // Reservation
-export { default as ConfirmReservationAction } from './ConfirmReservationAction.svelte';
 export { default as ConfirmWaitlistedAction } from './ConfirmWaitlistedAction.svelte';
 export { default as CompleteReservationAction } from './CompleteReservationAction.svelte';
 export { default as CancelReservationAction } from './CancelReservationAction.svelte';
@@ -11,6 +10,7 @@ export { default as PayReservationAction } from './PayReservationAction.svelte';
 
 // Series
 export { default as CancelSeriesAction } from './CancelSeriesAction.svelte';
+export { default as EditScheduleAction } from './EditScheduleAction.svelte';
 
 // Band
 export { default as CreateBandAction } from './CreateBandAction.svelte';
@@ -39,6 +39,7 @@ export { default as RemoveCategoryAction } from './RemoveCategoryAction.svelte';
 export { default as CreateLoanAction } from './CreateLoanAction.svelte';
 export { default as CancelLoanAction } from './CancelLoanAction.svelte';
 export { default as MarkReturnedAction } from './MarkReturnedAction.svelte';
+export { default as CheckOutKitAction } from './CheckOutKitAction.svelte';
 
 // Event
 export { default as PublishEventAction } from './PublishEventAction.svelte';
@@ -79,4 +80,9 @@ export { default as ReportContentAction } from './ReportContentAction.svelte';
 export { default as ReportEventAction } from './ReportEventAction.svelte';
 
 // Cross-domain
+export { default as ReopenAction } from './ReopenAction.svelte';
 export { default as ActivateToggleAction } from './ActivateToggleAction.svelte';
+
+// Tasks and projects
+export { default as NewTaskAction } from './NewTaskAction.svelte';
+export { default as NewProjectAction } from './NewProjectAction.svelte';

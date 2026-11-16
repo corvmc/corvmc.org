@@ -2,6 +2,9 @@ import { Marked } from 'marked';
 // Default-import + destructure: `xss` is CJS, and Vite's SSR module runner
 // can't statically resolve all of its named exports.
 import xssModule from 'xss';
+import type { inboxChannels } from '#lib/config.js';
+
+type InboxChannel = (typeof inboxChannels)[number];
 
 const { FilterXSS, getDefaultWhiteList } = xssModule as unknown as typeof import('xss');
 
@@ -56,6 +59,36 @@ const bioFilter = new FilterXSS({
 	stripIgnoreTagBody: ['script', 'style']
 });
 
+// Message bodies are typed by members, so they get the tightest list here: no
+// img, no style, no class, and only http(s)/mailto/tel/relative hrefs (js-xss's
+// default URL check). Raw HTML never reaches this filter, because the renderer
+// below escapes it, so this is the second wall rather than the only one.
+const messageFilter = new FilterXSS({
+	whiteList: {
+		p: [],
+		br: [],
+		hr: [],
+		strong: [],
+		em: [],
+		del: [],
+		code: [],
+		pre: [],
+		blockquote: [],
+		ul: [],
+		ol: ['start'],
+		li: [],
+		h1: [],
+		h2: [],
+		h3: [],
+		h4: [],
+		h5: [],
+		h6: [],
+		a: ['href', 'target', 'rel']
+	},
+	stripIgnoreTag: true,
+	stripIgnoreTagBody: ['script', 'style']
+});
+
 export interface Heading {
 	id: string;
 	text: string;
@@ -86,6 +119,30 @@ const renderer = {
 
 const marked = new Marked({ renderer });
 
+const escapeHtml = (text: string) =>
+	text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+
+// A message keeps its line breaks, shows typed HTML as text, and shows an
+// image as its alt text: a message cannot load a remote resource.
+const messageMarked = new Marked({
+	breaks: true,
+	renderer: {
+		html: ({ text }) => escapeHtml(text),
+		image: ({ text }) => escapeHtml(text),
+		link({ href, tokens }) {
+			const text = this.parser.parseInline(tokens);
+			const external = /^[a-z][a-z0-9+.-]*:/i.test(href);
+			const attrs = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+			return `<a href="${escapeHtml(href)}"${attrs}>${text}</a>`;
+		}
+	}
+});
+
 export function sanitizeHtml(html: string): string {
 	return htmlFilter.process(html);
 }
@@ -101,6 +158,23 @@ export function sanitizeBio(html: string | null | undefined): string {
 
 export function renderMarkdown(content: string): string {
 	return sanitizeHtml(marked.parse(content) as string);
+}
+
+// Every party on these writes in the app. The rest carry text from outside
+// (email, SMS, a public form), where `*` and `#` are just characters.
+const markdownChannels: ReadonlySet<string> = new Set<InboxChannel>(['portal', 'direct', 'group']);
+
+/** Whether a message on this channel was written as markdown. */
+export function messageBodyIsMarkdown(channel: InboxChannel): boolean {
+	return markdownChannels.has(channel);
+}
+
+/**
+ * The one way a chat or inbox message body becomes HTML. Components reach it
+ * only through `MessageBody.svelte`; `message-body.spec.ts` holds that line.
+ */
+export function renderMessageMarkdown(body: string): string {
+	return messageFilter.process(messageMarked.parse(body) as string);
 }
 
 type TextToken = { type: string; text?: string; raw?: string; tokens?: TextToken[] };

@@ -98,12 +98,12 @@ association, not independent parties that transact with it.
 ## Role 3 — Governance
 
 **Ours.** Committees exist as `group` rows; `by_application` and `requested` both exist.
-[`admin-vs-staff-spec.md`](../specs/shipped/admin-vs-staff-spec.md) designs capabilities-not-tiers
+[A decision record](../decisions/0032-guards-name-capabilities.md) sets capabilities-not-tiers
 and states the guard: "a committee guard reads `group_member`, not the role table, and the
 two are independent." Announcements and files are phases 5+. **Designed, largely unbuilt.**
 
 **Them.** GrowthZone advertises "centralized governance and distributed control" — which
-is precisely the sentence `admin-vs-staff-spec.md` is reaching for. MemberClicks does the
+is precisely the sentence the capabilities decision record is reaching for. MemberClicks does the
 same at $4,500/year.
 
 **Verdict: they are ahead, because theirs ships and ours is a spec.** But the design has
@@ -175,7 +175,7 @@ links" stops being a nag when the payoff is that other members hear you.
 ## Role 5 — Identity and claiming
 
 **Ours.** An external act is a `directory_entry` with both `userId` and `groupId` null.
-`groups-spec.md` justifies keeping the record on three grounds — marketing material on
+[The record](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md) keeps it on three grounds — marketing material on
 hand, a contact record, and a promotion path — and makes promotion **one statement**:
 create a `group`, set `directory_entry.groupId`, insert the owner row, one `db.batch`.
 "Nothing merges, no identity columns move, and every event they ever played is still
@@ -319,7 +319,7 @@ Paid downloads need storage the public cannot address by key. There is **one** R
 today (`R2_BUCKET` → `corvmc`), served publicly at `media.corvmc.org`.
 
 `R2_PRIVATE` / `corvmc-private` — "no custom domain and no public access" — is designed in
-[groups-spec.md](../specs/shipped/groups-spec.md) and unbuilt. **Three unrelated features wait on
+the groups module and unbuilt. **Three unrelated features wait on
 it:** group documents (that spec), contractor invoices (whose schema comment says outright
 that an invoice with hourly rates "has no business being addressable by key… revisit when a
 private bucket exists"), and now digital sales. That shared dependency raises its priority

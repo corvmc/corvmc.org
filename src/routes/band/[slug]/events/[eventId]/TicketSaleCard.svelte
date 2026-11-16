@@ -1,19 +1,20 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getBandTicketSale,
 		openBandTicketSaleForm,
 		closeBandTicketSaleForm
-	} from '$lib/remote/band-ticket-sale.remote';
-	import { BAND_TICKET_PLATFORM_FEE_BPS } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
+	} from '#lib/remote/band-ticket-sale.remote.js';
+	import { BAND_TICKET_PLATFORM_FEE_BPS } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	let { slug, eventId }: { slug: string; eventId: string } = $props();
@@ -37,76 +38,96 @@
 <Card>
 	<CardBody>
 		<CardTitle>
-			Sell tickets through CMC
+			{m.band_slug_events_event_id_ticket_sale_card_sell_tickets_thro_title()}
 			{#if sale.onSale && !sale.blocker}
-				<Badge variant="success" size="sm">On sale</Badge>
+				<Badge variant="success" size="sm"
+					>{m.band_slug_events_event_id_ticket_sale_card_sale_label()}</Badge
+				>
 			{:else if sale.onSale}
-				<Badge variant="warning" size="sm">Paused</Badge>
+				<Badge variant="warning" size="sm"
+					>{m.band_slug_events_event_id_ticket_sale_card_paused_label()}</Badge
+				>
 			{/if}
 		</CardTitle>
 
 		{#if sale.blocker === 'not_premium'}
 			<Alert type="info" href={resolve('/band/[slug]/subscription', { slug })}>
-				Selling tickets through the collective is part of the premium plan.
+				{m.band_slug_events_event_id_ticket_sale_card_selling_tickets_t_body()}
 			</Alert>
 		{:else if sale.blocker === 'no_payouts'}
 			<Alert type="warning" href={resolve('/band/[slug]/music/payouts', { slug })}>
-				Finish setting up payouts first. Ticket money goes straight to your own Stripe account.
+				{m.band_slug_events_event_id_ticket_sale_card_finish_setting_up_body()}
 			</Alert>
 		{/if}
 
 		{#if sale.onSale}
 			<p class="text-muted">
-				{sale.sold} sold{sale.quantity ? ` of ${sale.quantity}` : ''}, suggested {formatCents(
-					sale.priceCents ?? 0
-				)}. Cancelling the gig refunds every buyer.
+				{sale.quantity
+					? m.band_slug_events_event_id_ticket_sale_card_sold_of_text({
+							sold: sale.sold,
+							quantity: sale.quantity,
+							price: formatCents(sale.priceCents ?? 0)
+						})
+					: m.band_slug_events_event_id_ticket_sale_card_sold_text({
+							sold: sale.sold,
+							price: formatCents(sale.priceCents ?? 0)
+						})}
 			</p>
 		{:else}
 			<p class="text-muted">
-				Buyers pay on the collective's site and the money lands in your own Stripe account. The
-				collective suggests {suggested}% for itself; buyers see the split and can move it, down to
-				nothing.
+				{m.band_slug_events_event_id_ticket_sale_card_buyers_pay_collec_text({ suggested })}
 			</p>
 		{/if}
 
 		{#if !sale.blocker}
-			<Form remote={openBandTicketSaleForm} successToast="Tickets saved" onsuccess={refresh}>
+			<Form
+				remote={openBandTicketSaleForm}
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_saved_toast()}
+				onsuccess={refresh}
+			>
 				<input {...openFields.slug.as('hidden', slug)} />
 				<input {...openFields.eventId.as('hidden', eventId)} />
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<FormField
 						field={openFields.priceDollars}
-						label="Suggested price ($)"
+						label={m.band_slug_events_event_id_ticket_sale_card_suggested_price_label()}
 						value={dollars(sale.priceCents)}
 						placeholder="12.00"
 						required
 					/>
 					<FormField
 						field={openFields.floorDollars}
-						label="Least a buyer may pay ($)"
+						label={m.band_slug_events_event_id_ticket_sale_card_least_buyer_may_p_label()}
 						value={sale.onSale ? dollars(sale.priceFloorCents) || '0' : '0'}
-						description="0 lets people pay what they can."
+						description={m.band_slug_events_event_id_ticket_sale_card_0_lets_people_pay_body()}
 					/>
 					<FormField
 						field={openFields.quantity}
-						label="Capacity"
+						label={m.band_slug_events_event_id_ticket_sale_card_capacity_label()}
 						value={sale.quantity ? String(sale.quantity) : ''}
-						description="Blank for no limit."
+						description={m.band_slug_events_event_id_ticket_sale_card_blank_no_limit_body()}
 					/>
 				</div>
-				<SubmitButton label={sale.onSale ? 'Save ticket terms' : 'Put tickets on sale'} />
+				<SubmitButton
+					label={sale.onSale
+						? m.band_slug_events_event_id_ticket_sale_card_save_ticket_terms_label()
+						: m.band_slug_events_event_id_ticket_sale_card_put_tickets_sale_label()}
+				/>
 			</Form>
 		{/if}
 
 		{#if sale.onSale}
 			<Form
 				remote={closeBandTicketSaleForm}
-				successToast="Tickets taken off sale"
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_taken_off_toast()}
 				onsuccess={refresh}
 			>
 				<input {...closeFields.slug.as('hidden', slug)} />
 				<input {...closeFields.eventId.as('hidden', eventId)} />
-				<SubmitButton variant="ghost" label="Stop selling" />
+				<SubmitButton
+					variant="ghost"
+					label={m.band_slug_events_event_id_ticket_sale_card_stop_selling_label()}
+				/>
 			</Form>
 		{/if}
 	</CardBody>

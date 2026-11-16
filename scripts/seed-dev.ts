@@ -28,16 +28,20 @@ import { db, dispose } from './seed/db';
 import { deleteAll } from './seed/teardown';
 import { pendingSites } from './seed/pending';
 import { seedRoles, seedUsers, seedAdminUser, seedUserRoles } from './seed/users';
+import { seedOperations } from './seed/operations';
 import { seedReservations, seedClosures, seedLockAccess } from './seed/reservations';
 import { seedEvents } from './seed/events';
 import { findRoomConflicts, resetRoom } from './seed/room';
 import { seedVenues } from './seed/venues';
+import { seedPartnerCalendars } from './seed/partner-calendars';
 import { seedSponsors } from './seed/sponsors';
 import { seedGrants } from './seed/grants';
-import { seedRenewals } from './seed/renewals';
+import { seedContacts } from './seed/contacts';
+import { seedPartyActivity } from './seed/party-activity';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
+import { seedCommitteePositions, seedPositionTaggedTasks } from './seed/committee-positions';
 import { seedBallots } from './seed/ballots';
 import {
 	GROUP_INVITEE_PERSONA,
@@ -68,7 +72,7 @@ import { seedNotifications, seedNotificationPreferences } from './seed/notificat
 import { seedCreditTransactions } from './seed/credits';
 import { seedMarketing } from './seed/marketing';
 import { seedEquipment, seedItemArticles } from './seed/equipment';
-import { seedHelp } from './seed/help';
+import { seedHelp, seedRoleBriefings } from './seed/help';
 import { seedInbox } from './seed/inbox';
 import { seedDirectMessages } from './seed/direct-messages';
 import { seedBandEnquiries } from './seed/band-enquiries';
@@ -78,28 +82,33 @@ import { seedAuditLog } from './seed/audit';
 import { seedContractors } from './seed/contractors';
 import { seedLocalResources } from './seed/local-resources';
 import { seedEquipmentReports } from './seed/equipment-reports';
+import { seedSourcedTasks } from './seed/sourced-tasks';
 import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
+import { seedFundedProjects, seedFundingWork } from './seed/funding';
 import { seedOrientation } from './seed/orientation';
+import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
 	seedVolunteerInterests,
 	seedCertifications,
 	seedWorkOrders,
-	seedVolunteerHours
+	seedVolunteerHours,
+	seedTasksAndShifts
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedBannedPersona } from './seed/banned-persona';
+import { seedFeeGatePersonas } from './seed/fee-gate-personas';
 import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
 import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
 import { seedModerationAppeals } from './seed/moderation-appeals';
 import { seedClassifieds } from './seed/classifieds';
 import { seedWishlistPledges } from './seed/wishlist-pledges';
-import { postSeededWorkOrders, seedProjects } from './seed/projects';
+import { seedProjects } from './seed/projects';
 import { seedProjectCommittees } from './seed/show-project';
 import { seedMaintenanceSchedules } from './seed/maintenance';
 import { seedAudio } from './seed/audio';
@@ -109,6 +118,7 @@ import { seedBandTicketSale } from './seed/band-ticket-sale';
 import { seedDoorSales } from './seed/door-sales';
 import { seedEventRecaps } from './seed/event-recaps';
 import { seedMarket } from './seed/market';
+import { seedVendorHost } from './seed/vendor-host';
 
 async function main() {
 	// The one room's ledger, shared by every seeder that books it. Reset here
@@ -125,6 +135,8 @@ async function main() {
 	await deleteAll();
 
 	const roles = await seedRoles();
+	// Before anyone is given a job: a job is a seat in it (#2992).
+	await seedOperations();
 	const adminUser = await seedAdminUser();
 	const users = await seedUsers(20);
 	await seedUserRoles(users, adminUser, roles);
@@ -138,7 +150,6 @@ async function main() {
 	const venues = await seedVenues(events);
 	const sponsors = await seedSponsors(events);
 	const grants = await seedGrants();
-	const renewals = await seedRenewals(adminUser.id);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -163,6 +174,8 @@ async function main() {
 	// for the reason `seedGroupLeaders` gives.
 	const groupLeaders = await seedGroupLeaders(roles);
 	const groups = await seedGroups(allUsers, groupLeaders);
+	// After the groups: it reads each committee's roster back.
+	const committeePositions = await seedCommitteePositions();
 	// After the bands and before the entries, which is the only window that works:
 	// it reads `pendingTags` to point each persona at data the bulk seed actually
 	// produced, and `seedDirectoryEntries` is what gives these accounts a listing
@@ -181,6 +194,8 @@ async function main() {
 	const groupApplications = await seedGroupApplications(groups, allUsers);
 	const bandEvents = await seedBandEvents(bands, allUsers, usage ? [usage.band] : []);
 	await seedCommunityEvents(users, adminUser);
+	// After the venues, whose rows the feeds belong to.
+	const partnerFeeds = await seedPartnerCalendars(adminUser);
 	await seedCmcEventLineups(events, bands);
 	const recapPhotos = await seedEventRecaps(events, adminUser.id);
 	// After the bill, because a production is the ops record for a night that
@@ -221,6 +236,11 @@ async function main() {
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
+	// After the stock, orders, disposals and contractors whose state opens them.
+	const sourcedTasks = await seedSourcedTasks();
+	const contacts = await seedContacts();
+	// After the contacts: it writes notes and follow-ups on the Arts Center.
+	const partyActivity = await seedPartyActivity(adminUser.id);
 	const localResources = await seedLocalResources(adminUser.id);
 	const incidents = await seedIncidents(adminUser, users[0]);
 	const memberInvites = await seedMemberInvites(adminUser, users[0], users[1]);
@@ -248,6 +268,7 @@ async function main() {
 	const groupChats = await seedGroupChats([...bands, ...groups], [...allUsers, ...groupLeaders]);
 	const flags = await seedContentFlags(allUsers, bands, bandEvents);
 	const volunteerRoles = await seedVolunteerRoles();
+	const roleBriefings = await seedRoleBriefings();
 	// Profiles first, and everything downstream is seeded against the members who
 	// actually finished onboarding. Hours or a shift signup belonging to somebody
 	// with no profile would be invisible to them — /member/volunteer would bounce
@@ -277,6 +298,8 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events, groups);
+	// After the committees and the role catalog: the grant templates name both.
+	const fundingWork = await seedFundingWork();
 	// After the duty lists and the reservations both: it seeds a list of its own
 	// and hangs work orders off bookings that already exist.
 	const orientation = await seedOrientation(volunteerRoles, allUsers);
@@ -284,6 +307,7 @@ async function main() {
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const bannedPersona = await seedBannedPersona(roles, adminUser);
+	const feeGatePersonas = await seedFeeGatePersonas(roles);
 	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
 	// After the suggestions and community listings, whose upheld reports it appeals.
 	const appeals = await seedModerationAppeals(allUsers, adminUser);
@@ -294,6 +318,8 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// After the projects it names: the seeded award and season pay for two of them.
+	await seedFundedProjects();
 	// After the committees and every show exist: Booking and Production on each show.
 	const projectCommittees = await seedProjectCommittees();
 	const maintenance = await seedMaintenanceSchedules(adminUser.id, users[0]?.id);
@@ -308,15 +334,20 @@ async function main() {
 	// reaches both features, and the promote path has a real rider to aim at.
 	const packing = await seedPacking(riders.structuredBandId);
 	const market = await seedMarket(adminUser);
+	// After the market and the volunteer roles: its host works the market's shift.
+	const vendorHost = await seedVendorHost(roles, volunteerRoles, market);
 	// After `seedAudio`, whose Connect accounts decide which band may sell (#1203).
 	const bandSale = await seedBandTicketSale();
 	// After the volunteer personas: the active one works tonight's door shift.
 	const doorSales = await seedDoorSales(adminUser.id, 'seed-vol-active');
 	// After orientation and groups: the member-wide roll reads both.
 	const ballots = await seedBallots(groups, adminUser);
-	// Last of all: posts every work order the seeders above wrote, as the
-	// backfill migration did in production.
-	const postedWorkOrders = await postSeededWorkOrders(projects.unpostedWorkOrderIds);
+	// After every seeder that writes shifts: a task with both an assignee and a shift (#2518).
+	const tasksAndShifts = await seedTasksAndShifts();
+	// After every seeder that writes committee tasks (#2990).
+	const positionTagged = await seedPositionTaggedTasks();
+	// Last: its backfill reads every booking and orientation seeded above.
+	const practiceSpace = await seedPracticeSpaceClearance(volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -329,16 +360,37 @@ async function main() {
 	console.log(`  ${reservations.length} reservations`);
 	console.log(`  ${events.length} CMC events`);
 	console.log(`  ${venues.venues} venues, one of them ours`);
+	console.log(
+		`  ${partnerFeeds.feeds} partner calendar feeds, ${partnerFeeds.imported} imported shows`
+	);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
-	console.log(`  ${renewals.renewals} permits, licenses and policies`);
+	console.log(
+		`  ${fundingWork.owners} grant and sponsorship projects owned, ${fundingWork.tasks} tasks on them`
+	);
+	console.log(
+		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates) and ${contacts.people} people with no organization`
+	);
+	console.log(
+		`  ${partyActivity.notes} contact notes, ${partyActivity.tasks} follow-up tasks, ${partyActivity.threads} emails`
+	);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
+	console.log(
+		`  ${committeePositions.positions} committee positions, ${committeePositions.holders} holders (one shared, two vacant)`
+	);
+	console.log(`  ${positionTagged} committee tasks tagged for a position`);
 	console.log(
 		`  ${dutyLists.lists} duty lists (one on the show's own clock), ${dutyLists.workOrders} work orders applied to a show`
 	);
 	console.log(
 		`  ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
+	);
+	console.log(
+		`  ${practiceSpace.holders} Practice space clearances; orientation role ${practiceSpace.orientationRoleId ?? 'unset'}`
+	);
+	console.log(
+		`  ${tasksAndShifts.shifts} shifts, ${tasksAndShifts.assignees} task assignees, ${tasksAndShifts.taskHours} hour log naming a task`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(
@@ -375,7 +427,7 @@ async function main() {
 			`  ${eq.acquisitions} acquisitions, ${eq.orders} purchase orders, ${eq.movements} stock movements, ${eq.loans} loans`
 	);
 	console.log(
-		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear`
+		`  ${help.categories} help categories, ${help.articles} help articles, ${itemArticles.links} linked to gear, ${roleBriefings.linked} role briefings`
 	);
 	console.log(
 		`  ${contractors.contractors} contractors, ${contractors.jobs} contractor jobs (1 overdue, 1 unit at the shop, 1 lapsed certificate)`
@@ -384,7 +436,12 @@ async function main() {
 		`  ${localResources.categories} local resource categories, ${localResources.resources} listings (1 pending, 1 returned, 1 removed)`
 	);
 	console.log(
-		`  ${equipmentReports.reports} equipment reports in every triage stage, ${equipmentReports.workOrders} work order raised from them`
+		`  ${equipmentReports.reports} equipment reports, ${equipmentReports.workOrders} tasks raised from them`
+	);
+	console.log(
+		`  Tasks records opened: ${Object.entries(sourcedTasks)
+			.map(([k, n]) => `${n} ${k}`)
+			.join(', ')}`
 	);
 	console.log(
 		`  ${incidents.incidents} incidents, ${incidents.notes} incident notes (1 member linked, 1 reopened), ${crewIncidents.filings} crew filing awaiting review`
@@ -416,6 +473,9 @@ async function main() {
 	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);
 	console.log(`  ${bannedPersona.users} banned persona (banned@, cannot sign in)`);
 	console.log(
+		`  ${feeGatePersonas.users} outstanding-fee personas (fees-one@ and fees-two@ refused; counting from ${feeGatePersonas.cutoff})`
+	);
+	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
 	);
 	console.log(`  ${classifieds.posts} classifieds (every state, one posted as a band)`);
@@ -423,14 +483,12 @@ async function main() {
 	console.log(
 		`  ${projects.projects} projects (1 over budget, 1 answering a suggestion, 1 festival over ${projects.events} nights)`
 	);
-	console.log(
-		`  ${projects.sections} task-list sections on the facility project (1 empty); ${postedWorkOrders} work orders posted to the claim board`
-	);
+	console.log(`  ${projects.sections} task-list sections on the facility project (1 empty)`);
 	console.log(
 		`  ${projectCommittees} project committee rows (owners, and Booking and Production on each show)`
 	);
 	console.log(
-		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's)`
+		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's, 2 renewals)`
 	);
 	console.log(
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`
@@ -466,11 +524,16 @@ async function main() {
 	console.log(
 		`  1 show at the door tonight, 2 door sales in — /member/volunteer/door (event ${doorSales.eventId}; volunteer@corvallismusic.org works the door shift)`
 	);
+	console.log(
+		vendorHost
+			? `  1 vendor host on the Fall Makers Market — vendorhost@corvallismusic.org, /member/volunteer/markets/${vendorHost.eventId}`
+			: '  no vendor host — the Vendor host role is missing'
+	);
 	console.log('\n  Tech rider demo logins (all `password`):');
 	console.log('    rideradmin@corvallismusic.org   admin — can edit anyone’s corner');
 	console.log('    ridermember@corvallismusic.org  member — own corner only');
 	console.log('\n  Volunteer demo logins (all `password`):');
-	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer page');
+	console.log('    coordinator@corvallismusic.org  staff — every /staff/volunteer/** page');
 	console.log('    volunteer@corvallismusic.org    active volunteer — /member/volunteer');
 	console.log('    newcomer@corvallismusic.org     no profile — /member/volunteer/start');
 	console.log('    minor@corvallismusic.org        blocked — /member/volunteer/blocked');
@@ -528,7 +591,7 @@ async function main() {
 	console.log('\n  Volunteer deep links:');
 	console.log('    /member/volunteer/feedback/seed-vol-signup-feedback');
 	console.log('    /member/volunteer/shifts/seed-vol-signup-door   (checklist + door list)');
-	console.log('    /staff/volunteer/shifts/seed-vol-shift-cancelled');
+	console.log('    /staff/tasks/seed-vol-shift-cancelled');
 
 	console.log('\n  Premium band pages available at:');
 	for (const b of premiumBands) {

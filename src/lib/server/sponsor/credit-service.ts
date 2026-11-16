@@ -1,13 +1,15 @@
-import { db } from '$lib/server/db';
-import { sponsor, sponsorship, sponsorPlacement } from '$lib/server/db/schema/sponsor';
-import { eventListing } from '$lib/server/db/schema/event';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import { and, desc, eq } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { uploadFile } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { creditedSponsorshipStatuses, type SponsorshipStatus } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { sponsorship, sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { OrganizationLacksRoleError, requireRole } from '#lib/server/party/organization-service.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import { and, desc, eq, inArray } from 'drizzle-orm';
+import { DomainError } from '#lib/server/domain-error.js';
+import { uploadFile } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { creditedSponsorshipStatuses, type SponsorshipStatus } from '#lib/config.js';
 import { SponsorNotFoundError, SponsorshipNotFoundError } from './sponsor-service';
 
 export class PlacementEmptyError extends DomainError {
@@ -67,11 +69,30 @@ export async function creditsForEvent(
 	eventId: string,
 	surface: CreditSurface
 ): Promise<SponsorCredit[]> {
-	const rows = await db
+	return creditsForEvents([eventId], surface);
+}
+
+// D1 binds at most 100 parameters a statement; the join's own take a few.
+const EVENT_CHUNK = 90;
+
+/** Who any of several events credits on one surface, each sponsor once. */
+export async function creditsForEvents(
+	eventIds: string[],
+	surface: CreditSurface
+): Promise<SponsorCredit[]> {
+	const rows: CreditRow[] = [];
+	for (let i = 0; i < eventIds.length; i += EVENT_CHUNK) {
+		rows.push(...(await creditRows(eventIds.slice(i, i + EVENT_CHUNK))));
+	}
+	return toCredits(rows, surface);
+}
+
+function creditRows(eventIds: string[]) {
+	return db
 		.select({
-			sponsorId: sponsor.id,
-			name: sponsor.name,
-			website: sponsor.website,
+			sponsorId: organization.id,
+			name: organization.name,
+			website: organization.website,
 			status: sponsorship.status,
 			onEventPage: sponsorPlacement.onEventPage,
 			inCampaign: sponsorPlacement.inCampaign,
@@ -79,18 +100,17 @@ export async function creditsForEvent(
 		})
 		.from(sponsorPlacement)
 		.innerJoin(sponsorship, eq(sponsorship.id, sponsorPlacement.sponsorshipId))
-		.innerJoin(sponsor, eq(sponsor.id, sponsorship.sponsorId))
+		.innerJoin(organization, eq(organization.id, sponsorship.organizationId))
 		.leftJoin(
 			mediaAttachment,
 			and(
-				eq(mediaAttachment.attachableType, 'sponsor'),
-				eq(mediaAttachment.attachableId, sponsor.id),
+				eq(mediaAttachment.attachableType, 'organization'),
+				eq(mediaAttachment.attachableId, organization.id),
 				eq(mediaAttachment.slot, 'logo')
 			)
 		)
 		.leftJoin(media, eq(media.id, mediaAttachment.mediaId))
-		.where(eq(sponsorPlacement.eventId, eventId));
-	return toCredits(rows, surface);
+		.where(inArray(sponsorPlacement.eventId, eventIds));
 }
 
 /** Every event a sponsor's terms are placed on, newest show first. */
@@ -109,7 +129,7 @@ export async function listPlacementsForSponsor(sponsorId: string) {
 		.from(sponsorPlacement)
 		.innerJoin(sponsorship, eq(sponsorship.id, sponsorPlacement.sponsorshipId))
 		.innerJoin(eventListing, eq(eventListing.id, sponsorPlacement.eventId))
-		.where(eq(sponsorship.sponsorId, sponsorId))
+		.where(eq(sponsorship.organizationId, sponsorId))
 		.orderBy(desc(eventListing.startsAt));
 }
 
@@ -164,7 +184,7 @@ export async function sponsorLogoKey(sponsorId: string): Promise<string | null> 
 		.innerJoin(media, eq(media.id, mediaAttachment.mediaId))
 		.where(
 			and(
-				eq(mediaAttachment.attachableType, 'sponsor'),
+				eq(mediaAttachment.attachableType, 'organization'),
 				eq(mediaAttachment.attachableId, sponsorId),
 				eq(mediaAttachment.slot, 'logo')
 			)
@@ -178,17 +198,17 @@ export async function setSponsorLogo(
 	file: { buffer: ArrayBuffer; contentType: string; filename: string | null },
 	uploadedByUserId: string
 ): Promise<void> {
-	const [row] = await db
-		.select({ id: sponsor.id })
-		.from(sponsor)
-		.where(eq(sponsor.id, sponsorId))
-		.limit(1);
-	if (!row) throw new SponsorNotFoundError();
+	try {
+		await requireRole(sponsorId, 'sponsor');
+	} catch (err) {
+		if (err instanceof OrganizationLacksRoleError) throw new SponsorNotFoundError();
+		throw err;
+	}
 
 	const key = mediaKey('sponsors/logos', sponsorId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
 	await replaceSlot({
-		attachableType: 'sponsor',
+		attachableType: 'organization',
 		attachableId: sponsorId,
 		slot: 'logo',
 		key,
@@ -200,5 +220,5 @@ export async function setSponsorLogo(
 }
 
 export async function removeSponsorLogo(sponsorId: string): Promise<void> {
-	await detachSlot('sponsor', sponsorId, 'logo');
+	await detachSlot('organization', sponsorId, 'logo');
 }

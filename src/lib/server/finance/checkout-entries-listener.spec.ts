@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const recorded: unknown[][] = [];
-// A show's ledger rows name its project (production-projects-spec.md); resolving
+// A show's ledger rows name its project (#1673); resolving
 // one is a read with its own home, so here it is a fixed answer.
 vi.mock('./show-project', () => ({
 	showProjectIdForEvent: async (eventId: string | null) => (eventId ? 'proj-show' : null),
@@ -27,7 +27,8 @@ const ticketSession = (over: Record<string, unknown> = {}) =>
 			event_id: 'evt-1',
 			purchase_id: 'tkt-1',
 			ticket_acts_cents: '700',
-			ticket_collective_cents: '300'
+			// The split's share is after the fee; the ledger earns before it.
+			ticket_collective_cents: '241'
 		},
 		...over
 	}) as never;
@@ -79,12 +80,12 @@ describe('a ticket sale', () => {
 
 		expect(of('earned', 'fee_coverage')[0]).toMatchObject({ amountCents: 61 });
 		expect(of('spent', 'card_fees')[0]).toMatchObject({ amountCents: -61 });
+		expect(of('earned', 'ticket_sales')[0]).toMatchObject({ amountCents: 300 });
 		// The collective keeps its full 30% when the buyer covers the card.
-		const collective = 300 + 61 - 61;
-		expect(collective).toBe(300);
+		expect(rows().reduce((s, r) => s + (r.amountCents as number), 0)).toBe(1000);
 	});
 
-	it('writes no zero rows for a share nobody took', async () => {
+	it('earns the card fee it pays when the acts take the whole share (#2731)', async () => {
 		await handleCheckoutEntries(
 			ticketSession({
 				metadata: {
@@ -97,8 +98,9 @@ describe('a ticket sale', () => {
 				}
 			})
 		);
-		expect(of('earned', 'ticket_sales')).toHaveLength(0);
+		expect(of('earned', 'ticket_sales')[0]).toMatchObject({ amountCents: 59 });
 		expect(of('pass_through')[0]).toMatchObject({ amountCents: 941 });
+		expect(rows().reduce((s, r) => s + (r.amountCents as number), 0)).toBe(941);
 	});
 });
 

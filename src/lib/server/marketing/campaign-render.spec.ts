@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
+import * as render from './campaign-render';
+
+const CONTACT = 'contact@corvmc.org';
+const renderCampaignPreview = (markdown: string) => render.renderCampaignPreview(markdown, CONTACT);
+const renderCampaignForSend = (markdown: string, name: string | null, unsubscribeUrl: string) =>
+	render.renderCampaignForSend(markdown, name, unsubscribeUrl, CONTACT);
 
 const MARKDOWN = '# Real Book Club\n\nFirst Thursday of the month. **Bring a chart.**';
 
@@ -231,5 +236,18 @@ describe('preheader (#747)', () => {
 	it('keeps separate blocks from running together', () => {
 		const html = renderCampaignForSend('# Real Book Club\n\nFirst Thursday.', 'Maya', UNSUB);
 		expect(preheaderOf(html)).toBe('Real Book Club First Thursday.');
+	});
+});
+
+describe('the footer address', () => {
+	it('follows the contact email setting on a send and in a preview', () => {
+		const sent = render.renderCampaignForSend('Hi', 'Maya', '#', 'hello@example.org');
+		const preview = render.renderCampaignPreview('Hi', 'hello@example.org');
+
+		for (const html of [sent, preview]) {
+			expect(html).toContain('href="mailto:hello@example.org"');
+			expect(html).not.toContain('contact@corvmc.org');
+			expect(html).not.toContain('{{CONTACT_EMAIL}}');
+		}
 	});
 });

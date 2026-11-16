@@ -1,6 +1,7 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		riderElementKindLabels,
 		riderElementKindOptions,
@@ -12,9 +13,9 @@
 		riderStandTypeOptions,
 		RIDER_MAX_ELEMENTS,
 		RIDER_MAX_INPUTS_PER_ELEMENT
-	} from '$lib/config';
-	import type { RiderElementRowState } from '$lib/types/rider';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	} from '#lib/config.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { safeFieldPrefix } from './field-names';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';
@@ -57,25 +58,27 @@
 		 * Taken from the form rather than emitted as `name="elements"`: a remote
 		 * form encodes its field names, so a child component's plain `name` never
 		 * reaches it and the field arrives as `undefined` with nothing on screen
-		 * to show for it. The editor-state inputs below keep plain names because
-		 * they are *meant* not to arrive — Zod strips them as unknown.
+		 * to show for it. The editor-state inputs below carry ids, not names: they
+		 * are meant not to arrive.
 		 */
 		field?: RemoteFormField<RemoteFormFieldValue>;
 		/**
-		 * Distinguishes the editor-state field names when two editors share a page.
-		 * Sanitised below — callers pass a user id, which is not a legal field name.
+		 * Distinguishes the editor-state ids when two editors share a page.
+		 * Sanitised below — callers pass a user id.
 		 */
 		idPrefix?: string;
 		readonly?: boolean;
 	} = $props();
 
-	// Callers pass a user id, which is never a legal field name. `field-names.ts`
-	// says why, and its spec is what keeps the answer right.
+	// Callers pass a user id; `field-names.ts` makes it a safe id prefix.
 	const safePrefix = $derived(safeFieldPrefix(idPrefix));
 
 	const monitorOptions = $derived([
-		{ value: '', label: 'No preference' },
-		...roster.map((m) => ({ value: m.userId, label: `${m.name}’s mix` }))
+		{ value: '', label: msg.rider_rider_elements_editor_no_preference_label() },
+		...roster.map((m) => ({
+			value: m.userId,
+			label: msg.rider_rider_elements_editor_s_mix_label({ name: m.name })
+		}))
 	]);
 
 	const rowId = () => crypto.randomUUID();
@@ -167,11 +170,7 @@
 
 <!--
 	Editor state, not form fields — only the hidden field below posts. The rows
-	still carry names because a `Field` label is bound to its input by name, and
-	the names are underscored rather than hyphenated for a hard reason: SvelteKit
-	parses every submitted name into a schema path against
-	`/^[a-zA-Z_$]\w*(\.[a-zA-Z_$]\w*|\[\d+\])*$/`, and a hyphen fails it — the
-	submit dies with `Invalid path` as a 500 before Zod ever runs.
+	carry ids, not names: a remote form rejects a name its fields did not hand out.
 -->
 {#if field && !readonly}
 	<input {...field.as('hidden', serialized)} />
@@ -182,26 +181,26 @@
 		<div class="rounded-box border border-base-300 p-4">
 			<div class="grid gap-3 md:grid-cols-[1fr_2fr_1fr_auto]">
 				<Field
-					name="{safePrefix}_kind_{index}"
+					id="{safePrefix}_kind_{index}"
 					type="select"
-					label="What it is"
+					label={msg.rider_rider_elements_editor_what_label()}
 					options={riderElementKindOptions}
 					bind:value={element.kind}
 					{readonly}
 					display={riderElementKindLabels[element.kind]}
 				/>
 				<Field
-					name="{safePrefix}_label_{index}"
+					id="{safePrefix}_label_{index}"
 					type="text"
-					label="Name it"
-					placeholder="e.g. Fender Twin"
+					label={msg.rider_rider_elements_editor_name_label()}
+					placeholder={msg.rider_rider_elements_editor_e_g_fender_twin_placeholder()}
 					bind:value={element.label}
 					{readonly}
 				/>
 				<Field
-					name="{safePrefix}_provided_{index}"
+					id="{safePrefix}_provided_{index}"
 					type="select"
-					label="Who brings it"
+					label={msg.rider_rider_elements_editor_who_brings_label()}
 					options={riderProvidedByOptions}
 					bind:value={element.providedBy}
 					{readonly}
@@ -214,7 +213,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Move {element.label || 'item'} up"
+							aria-label={msg.rider_rider_elements_editor_move_up_label({
+								value: element.label || 'item'
+							})}
 							disabled={index === 0}
 							onclick={() => moveElement(index, -1)}
 						>
@@ -225,7 +226,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Move {element.label || 'item'} down"
+							aria-label={msg.rider_rider_elements_editor_move_down_label({
+								value: element.label || 'item'
+							})}
 							disabled={index === elements.length - 1}
 							onclick={() => moveElement(index, 1)}
 						>
@@ -236,7 +239,9 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label="Remove {element.label || 'item'}"
+							aria-label={msg.rider_rider_elements_editor_remove_label({
+								value: element.label || 'item'
+							})}
 							onclick={() => removeElement(index)}
 						>
 							<IconTrash size={16} />
@@ -246,10 +251,10 @@
 			</div>
 
 			<Field
-				name="{safePrefix}_notes_{index}"
+				id="{safePrefix}_notes_{index}"
 				type="text"
-				label="Anything the engineer should know"
-				placeholder="Optional"
+				label={msg.rider_rider_elements_editor_anything_engineer_should_know_label()}
+				placeholder={msg.rider_rider_elements_editor_optional_placeholder()}
 				bind:value={element.notes}
 				{readonly}
 				display={text(element.notes) || '—'}
@@ -258,13 +263,12 @@
 
 			{#if element.kind === 'monitor'}
 				<p class="mt-3 text-xs text-base-content/60">
-					A monitor takes no channel on the desk, so it has no inputs — it is here so the mix count
-					is right and the stage plot has something to draw.
+					{msg.rider_rider_elements_editor_monitor_takes_no_channel_desk_text()}
 				</p>
 			{:else}
 				<div class="mt-4 border-t border-base-300 pt-3">
 					<div class="mb-2 flex items-center justify-between">
-						<span class="text-xs font-medium">Inputs</span>
+						<span class="text-xs font-medium">{msg.rider_rider_elements_editor_inputs_text()}</span>
 						{#if !readonly}
 							<Button
 								type="button"
@@ -273,58 +277,59 @@
 								disabled={element.inputs.length >= RIDER_MAX_INPUTS_PER_ELEMENT}
 								onclick={() => addInput(element)}
 							>
-								<IconPlus size={14} /> Add input
+								<IconPlus size={14} />
+								{msg.rider_rider_elements_editor_add_input_label()}
 							</Button>
 						{/if}
 					</div>
 
 					{#if element.inputs.length === 0}
 						<p class="text-xs text-base-content/60">
-							No channels yet. A guitar amp usually needs one mic; a kit needs several.
+							{msg.rider_rider_elements_editor_no_channels_yet_guitar_amp_text()}
 						</p>
 					{/if}
 
 					{#each element.inputs as input, j (input.rowId)}
 						<div class="mb-2 grid gap-2 md:grid-cols-[2fr_1fr_2fr_1fr_1fr_auto]">
 							<Field
-								name="{safePrefix}_inlabel_{index}_{j}"
+								id="{safePrefix}_inlabel_{index}_{j}"
 								type="text"
-								label="Input"
-								placeholder="e.g. Kick in"
+								label={msg.rider_rider_elements_editor_input_label()}
+								placeholder={msg.rider_rider_elements_editor_e_g_kick_placeholder()}
 								bind:value={input.label}
 								{readonly}
 							/>
 							<Field
-								name="{safePrefix}_insource_{index}_{j}"
+								id="{safePrefix}_insource_{index}_{j}"
 								type="select"
-								label="Via"
+								label={msg.rider_rider_elements_editor_via_label()}
 								options={riderInputSourceOptions}
 								bind:value={input.source}
 								{readonly}
 								display={riderInputSourceLabels[input.source]}
 							/>
 							<Field
-								name="{safePrefix}_inmic_{index}_{j}"
+								id="{safePrefix}_inmic_{index}_{j}"
 								type="text"
-								label="Preferred mic/DI"
-								placeholder="Optional — the house may have better"
+								label={msg.rider_rider_elements_editor_preferred_mic_di_label()}
+								placeholder={msg.rider_rider_elements_editor_optional_house_may_have_better_placeholder()}
 								bind:value={input.micPref}
 								{readonly}
 								display={text(input.micPref) || '—'}
 							/>
 							<Field
-								name="{safePrefix}_instand_{index}_{j}"
+								id="{safePrefix}_instand_{index}_{j}"
 								type="select"
-								label="Stand"
+								label={msg.rider_rider_elements_editor_stand_label()}
 								options={riderStandTypeOptions}
 								bind:value={input.stand}
 								{readonly}
 								display={riderStandTypeLabels[input.stand ?? 'none']}
 							/>
 							<Field
-								name="{safePrefix}_inmix_{index}_{j}"
+								id="{safePrefix}_inmix_{index}_{j}"
 								type="select"
-								label="Monitor"
+								label={msg.rider_rider_elements_editor_monitor_label()}
 								options={monitorOptions}
 								bind:value={input.monitorMixUserId}
 								{readonly}
@@ -333,15 +338,13 @@
 							<div class="flex items-end gap-1 pb-1">
 								<!--
 									`label` is explicit because `FormField` falls back to a
-									capitalised `name` — and these names are editor-state ids, so
-									the fallback rendered "Seed-rider-member_inphantom_0_0" above
-									the box.
+									capitalised id, which here is an editor-state id.
 								-->
 								<Field
-									name="{safePrefix}_inphantom_{index}_{j}"
+									id="{safePrefix}_inphantom_{index}_{j}"
 									type="checkbox"
-									label="Power"
-									checkboxLabel="+48V"
+									label={msg.rider_rider_elements_editor_power_label()}
+									checkboxLabel={msg.rider_rider_elements_editor_checkbox_label_checkbox()}
 									bind:value={input.phantom}
 									{readonly}
 									display={input.phantom ? '+48V' : 'No'}
@@ -352,7 +355,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Move {input.label || 'input'} up"
+										aria-label={msg.rider_rider_elements_editor_move_up_label({
+											value: input.label || 'input'
+										})}
 										disabled={j === 0}
 										onclick={() => moveInput(element, j, -1)}
 									>
@@ -363,7 +368,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Move {input.label || 'input'} down"
+										aria-label={msg.rider_rider_elements_editor_move_down_label({
+											value: input.label || 'input'
+										})}
 										disabled={j === element.inputs.length - 1}
 										onclick={() => moveInput(element, j, 1)}
 									>
@@ -374,7 +381,9 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label="Remove {input.label || 'input'}"
+										aria-label={msg.rider_rider_elements_editor_remove_label({
+											value: input.label || 'input'
+										})}
 										onclick={() => removeInput(element, j)}
 									>
 										<IconTrash size={14} />
@@ -394,11 +403,12 @@
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
 				<Button type="button" variant="ghost" size="sm" disabled={atLimit} onclick={addElement}>
-					<IconPlus size={16} /> Add something to the stage
+					<IconPlus size={16} />
+					{msg.rider_rider_elements_editor_add_something_stage_label()}
 				</Button>
 				{#if atLimit}
 					<span class="text-xs text-base-content/60">
-						{RIDER_MAX_ELEMENTS} is the limit for one corner.
+						{msg.rider_rider_elements_editor_limit_one_corner_text({ RIDER_MAX_ELEMENTS })}
 					</span>
 				{/if}
 			</div>

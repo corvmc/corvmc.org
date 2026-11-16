@@ -1,16 +1,17 @@
 <script lang="ts">
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		claimPackingItem,
 		releasePackingItem,
 		assignPackingItem,
 		setPackingItemPacked
-	} from '$lib/remote/packing.remote';
-	import { packingCategoryLabels, type PackingCategory } from '$lib/config';
-	import type { PackingListView } from '$lib/server/band/packing-service';
+	} from '#lib/remote/packing.remote.js';
+	import { packingCategoryLabels, type PackingCategory } from '#lib/config.js';
+	import type { PackingListView } from '#lib/server/band/packing-service.js';
 	import { IconCheck, IconPackage } from '@tabler/icons-svelte';
 
 	/**
@@ -55,7 +56,7 @@
 	});
 
 	const assignOptions = $derived([
-		{ value: '', label: 'Nobody yet' },
+		{ value: '', label: msg.band_nobody_yet_label() },
 		...roster.map((m) => ({ value: m.userId, label: m.name }))
 	]);
 </script>
@@ -74,15 +75,21 @@
 							<span class="font-medium" class:line-through={item.packed}>{item.label}</span>
 							{#if item.quantity > 1}<Badge size="sm">×{item.quantity}</Badge>{/if}
 							{#if item.packed}
-								<Badge variant="success" size="sm"><IconCheck size={12} /> In the van</Badge>
+								<Badge variant="success" size="sm"
+									><IconCheck size={12} /> {msg.band_van_label()}</Badge
+								>
 							{/if}
 						</div>
 						<p class="mt-0.5 text-xs text-base-content/60">
-							{#if item.ownerName}{item.ownerName}'s{:else}The band's{/if}
+							{#if item.ownerName}{msg.band_slug_packing_load_in_list_s_text({
+									ownerName: item.ownerName
+								})}{:else}{msg.band_slug_packing_load_in_list_band_s_text()}{/if}
 							{#if item.notes}
 								· {item.notes}{/if}
 							{#if item.packed && item.packedByName}
-								· ticked by {item.packedByName}{/if}
+								{msg.band_slug_packing_load_in_list_ticked_by_text({
+									packedByName: item.packedByName
+								})}{/if}
 						</p>
 					</div>
 
@@ -97,27 +104,37 @@
 								<Form
 									remote={releasePackingItem.for(item.id)}
 									guard
-									successToast="Handed back"
+									successToast={msg.band_slug_packing_load_in_list_handed_back_toast()}
 									onsuccess={onchanged}
 								>
 									<input {...releasePackingItem.for(item.id).fields.bandId.as('hidden', bandId)} />
 									<input {...releasePackingItem.for(item.id).fields.itemId.as('hidden', item.id)} />
-									<SubmitButton label="Not me" variant="ghost" size="xs" />
+									<SubmitButton
+										label={msg.band_slug_packing_load_in_list_not_me_label()}
+										variant="ghost"
+										size="xs"
+									/>
 								</Form>
 							{/if}
 						{:else if isOnRoster}
 							<Form
 								remote={claimPackingItem.for(item.id)}
 								guard
-								successToast="You're bringing it"
+								successToast={msg.band_slug_packing_load_in_list_re_bringing_toast()}
 								onsuccess={onchanged}
 							>
 								<input {...claimPackingItem.for(item.id).fields.bandId.as('hidden', bandId)} />
 								<input {...claimPackingItem.for(item.id).fields.itemId.as('hidden', item.id)} />
-								<SubmitButton label="I'll bring it" variant="secondary" size="xs" />
+								<SubmitButton
+									label={msg.band_slug_packing_load_in_list_i_ll_bring_label()}
+									variant="secondary"
+									size="xs"
+								/>
 							</Form>
 						{:else}
-							<Badge variant="warning" size="sm">Nobody has this</Badge>
+							<Badge variant="warning" size="sm"
+								>{msg.band_slug_packing_load_in_list_nobody_has_label()}</Badge
+							>
 						{/if}
 
 						{#if isOnRoster}
@@ -125,14 +142,18 @@
 							<Form
 								remote={packForm}
 								guard
-								successToast={item.packed ? 'Taken back out' : 'In the van'}
+								successToast={item.packed
+									? msg.band_slug_packing_load_in_list_taken_back_out_toast()
+									: msg.band_van_toast()}
 								onsuccess={onchanged}
 							>
 								<input {...packForm.fields.bandId.as('hidden', bandId)} />
 								<input {...packForm.fields.itemId.as('hidden', item.id)} />
 								<input {...packForm.fields.packed.as('hidden', item.packed ? '0' : '1')} />
 								<SubmitButton
-									label={item.packed ? 'Take out' : 'Pack it'}
+									label={item.packed
+										? msg.band_slug_packing_load_in_list_take_out_label()
+										: msg.band_slug_packing_load_in_list_pack_label()}
 									variant={item.packed ? 'ghost' : 'primary'}
 									size="xs"
 								/>
@@ -143,18 +164,27 @@
 					{#if canManage}
 						<!-- The admin path: put it on somebody, or take it off them. -->
 						{@const assignForm = assignPackingItem.for(item.id)}
-						<Form remote={assignForm} guard successToast="Reassigned" onsuccess={onchanged}>
+						<Form
+							remote={assignForm}
+							guard
+							successToast={msg.band_slug_packing_load_in_list_reassigned_toast()}
+							onsuccess={onchanged}
+						>
 							<input {...assignForm.fields.bandId.as('hidden', bandId)} />
 							<input {...assignForm.fields.itemId.as('hidden', item.id)} />
 							<div class="flex items-end gap-2">
 								<Field
 									field={assignForm.fields.toUserId}
 									type="select"
-									label="Assign to"
+									label={msg.band_slug_packing_load_in_list_assign_label()}
 									options={assignOptions}
 									value={item.assignedUserId ?? ''}
 								/>
-								<SubmitButton label="Set" variant="ghost" size="xs" />
+								<SubmitButton
+									label={msg.band_slug_packing_load_in_list_set_label()}
+									variant="ghost"
+									size="xs"
+								/>
 							</div>
 						</Form>
 					{/if}
@@ -166,7 +196,7 @@
 	<div class="rounded-box border border-dashed border-base-300 p-8 text-center">
 		<IconPackage size={32} class="mx-auto mb-2 text-base-content/30" />
 		<p class="text-sm text-base-content/60">
-			Nothing on the list yet. Add what you bring below and it shows up here.
+			{msg.band_slug_packing_load_in_list_nothing_list_yet_add_what_text()}
 		</p>
 	</div>
 {/each}

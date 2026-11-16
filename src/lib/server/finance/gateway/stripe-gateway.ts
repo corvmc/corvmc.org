@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import type { PaymentGateway } from './types';
 
 let _stripe: Stripe | null = null;

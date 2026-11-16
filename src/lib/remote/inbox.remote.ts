@@ -2,12 +2,22 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireCapability, requireUser, listUsersWithCapability } from '$lib/server/authorization';
-import { getUserContact } from '$lib/server/user/user-service';
-import { dispatch } from '$lib/server/notification/dispatcher';
-import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
-import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import {
+	can,
+	requireCapability,
+	requireUser,
+	listUsersWithCapability
+} from '#lib/server/authorization.js';
+import { fileThread, threadFiling } from '#lib/server/party/thread-filing.js';
+import { getOrganization, listOrganizations } from '#lib/server/party/organization-service.js';
+import { findPersonByEmail, getPerson } from '#lib/server/directory/contact-service.js';
+import { getPartyTimeline } from './contacts.remote';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getUserContact } from '#lib/server/user/user-service.js';
+import { dispatch } from '#lib/server/notification/dispatcher.js';
+import { handleContactForm } from '#lib/server/inbox/inbound-handlers.js';
+import { getStaffLayout, getMemberLayout } from '#lib/remote/layout.remote.js';
 import {
 	listThreads,
 	getThread,
@@ -23,21 +33,22 @@ import {
 	addThreadTag,
 	removeThreadTag,
 	getDailyScope
-} from '$lib/server/inbox/thread-service';
-import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
+} from '#lib/server/inbox/thread-service.js';
+import type { ListThreadsFilters } from '#lib/server/inbox/thread-service.js';
 import {
 	getAllChannelConfigs,
 	getEnabledChannels,
 	updateChannelConfig as updateChannelConfigSvc
-} from '$lib/server/inbox/channel-config-service';
-import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
-import { testMetaConnection as testMetaConnectionSvc } from '$lib/server/inbox/meta-client';
+} from '#lib/server/inbox/channel-config-service.js';
+import { addOutboundMessage, addNote } from '#lib/server/inbox/message-service.js';
+import { firstResponseByChannel } from '#lib/server/inbox/response-time-service.js';
+import { testMetaConnection as testMetaConnectionSvc } from '#lib/server/inbox/meta-client.js';
 import {
 	listSavedViews,
 	createSavedView,
 	deleteSavedView
-} from '$lib/server/inbox/saved-view-service';
-import { jsonObjectField } from '$lib/utils/zod-json';
+} from '#lib/server/inbox/saved-view-service.js';
+import { jsonObjectField } from '#lib/utils/zod-json.js';
 import {
 	listPortalThreads,
 	countOpenPortalThreads,
@@ -47,11 +58,12 @@ import {
 	replyToPortalThread,
 	markPortalThreadRead,
 	MAX_OPEN_PORTAL_THREADS
-} from '$lib/server/inbox/portal-service';
-import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '$lib/config';
-import type { InboxView } from '$lib/config';
+} from '#lib/server/inbox/portal-service.js';
+import { submitContactFormSchema } from '#lib/server/db/schema/inbox.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '#lib/config.js';
+import type { InboxView } from '#lib/config.js';
+import { unaudited } from '#lib/server/audit/declared.js';
 
 // ---------------------------------------------------------------------------
 // Public forms
@@ -181,9 +193,15 @@ export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) =
 	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
+// First-reply times ride on the counts: the same mutations refresh both, and
+// the tabs have already awaited this entry by the time the empty pane reads it.
 export const getInboxThreadCounts = query(z.void(), async () => {
 	await requireCapability('inbox.read');
-	return countThreadsByStatus();
+	const [counts, firstResponse] = await Promise.all([
+		countThreadsByStatus(),
+		firstResponseByChannel()
+	]);
+	return { ...counts, firstResponse };
 });
 
 export const getInboxThread = query(z.string(), async (id) => {
@@ -306,6 +324,79 @@ export const getInboxThreadContext = query(z.string().min(1), async (id) => {
 	return context;
 });
 
+/**
+ * Where a staff conversation is filed (#2622), and the person on file with its
+ * address when it is not. Null for a band thread or a viewer without
+ * `contact.read`, so the Inbox shows nothing about it.
+ */
+export const getThreadFiling = query(z.string().min(1), async (threadId) => {
+	await requireCapability('inbox.read');
+	if (!(await can('contact.read'))) return null;
+	try {
+		const filing = await threadFiling(threadId);
+		if (filing.groupId) return null;
+		const [canFile, filed] = await Promise.all([
+			Promise.all([can('contact.manage'), can('inbox.reply')]).then((c) => c.every(Boolean)),
+			filing.organizationId
+				? getOrganization(filing.organizationId).then((o) => ({
+						type: 'organization' as const,
+						id: o.id,
+						name: o.name
+					}))
+				: filing.contactId
+					? getPerson(filing.contactId).then((p) => ({
+							type: 'contact' as const,
+							id: p.id,
+							name: p.name ?? p.email ?? ''
+						}))
+					: null
+		]);
+		const match = filed ? null : await findPersonByEmail(filing.contactEmail);
+		const organizations = canFile ? await listOrganizations({ includeArchived: false }) : [];
+		return {
+			filed,
+			suggestion: match && {
+				id: match.id,
+				name: match.name ?? filing.contactEmail ?? '',
+				organizationName: match.organizationName
+			},
+			organizations: organizations.map((o) => ({ id: o.id, name: o.name })),
+			canFile
+		};
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+/** File a staff conversation to an organization or a person, or unfile it. */
+export const fileThreadForm = form(
+	z.object({
+		threadId: z.string().min(1),
+		organizationId: z.string().optional(),
+		contactId: z.string().optional()
+	}),
+	async ({ threadId, organizationId, contactId }) => {
+		await requireCapability('inbox.reply');
+		await requireCapability('contact.manage');
+		const party = organizationId
+			? { type: 'organization' as const, id: organizationId }
+			: contactId
+				? { type: 'contact' as const, id: contactId }
+				: null;
+		if (party?.type === 'organization') await getOrganization(party.id);
+		if (party?.type === 'contact') await getPerson(party.id);
+		const before = await threadFiling(threadId);
+		await fileThread(threadId, party);
+		void getThreadFiling(threadId).refresh();
+		if (party) void getPartyTimeline(party).refresh();
+		if (before.organizationId)
+			void getPartyTimeline({ type: 'organization', id: before.organizationId }).refresh();
+		if (before.contactId)
+			void getPartyTimeline({ type: 'contact', id: before.contactId }).refresh();
+		return { success: true };
+	}
+);
+
 const tagSchema = z.object({
 	threadId: z.string().min(1),
 	tag: z.string().trim().min(1).max(40)
@@ -317,11 +408,17 @@ export const addInboxThreadTag = command(tagSchema, async ({ threadId, tag }) =>
 	void getInboxThreadContext(threadId).refresh();
 });
 
-export const removeInboxThreadTag = command(tagSchema, async ({ threadId, tag }) => {
-	await requireCapability('inbox.reply');
-	await removeThreadTag(threadId, tag);
-	void getInboxThreadContext(threadId).refresh();
-});
+export const removeInboxThreadTag = command(
+	tagSchema,
+	unaudited(
+		'Inbox filing: a tag on a thread, not a change to any record.',
+		async ({ threadId, tag }) => {
+			await requireCapability('inbox.reply');
+			await removeThreadTag(threadId, tag);
+			void getInboxThreadContext(threadId).refresh();
+		}
+	)
+);
 
 const assignSchema = z.object({
 	threadId: z.string().min(1),
@@ -484,11 +581,14 @@ export const saveInboxView = form(savedViewSchema, async (data) => {
 	return { success: true };
 });
 
-export const removeInboxView = command(z.string().min(1), async (id) => {
-	const staff = await requireCapability('inbox.read');
-	await deleteSavedView(staff.id, id);
-	void getInboxSavedViews().refresh();
-});
+export const removeInboxView = command(
+	z.string().min(1),
+	unaudited('A saved inbox filter, not a change to any record.', async (id) => {
+		const staff = await requireCapability('inbox.read');
+		await deleteSavedView(staff.id, id);
+		void getInboxSavedViews().refresh();
+	})
+);
 
 // ---------------------------------------------------------------------------
 // Channel configuration

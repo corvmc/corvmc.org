@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends RosterPerson, S extends Record<string, unknown>">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A list of people (#1994): any query returning `RosterPerson` rows. The roster
 	 * owns search, paging, Clear, export, "copy emails" and the side panel; the page
@@ -6,35 +7,33 @@
 	 * `rosterState()`, so it lives in the URL.
 	 */
 	import { untrack, type Snippet } from 'svelte';
-	import { toast } from 'svelte-sonner';
-	import { IconCopy, IconDownload } from '@tabler/icons-svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import type { Pagination } from '$lib/types/pagination';
-	import type { RosterPerson } from '$lib/types/roster';
+	import { IconDownload } from '@tabler/icons-svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import type { Pagination } from '#lib/types/pagination.js';
+	import type { RosterPerson } from '#lib/types/roster.js';
 	import type { RosterState } from './roster-state.svelte';
+	import RosterTable from './RosterTable.svelte';
+	import CopyEmailsButton from './CopyEmailsButton.svelte';
 
 	let {
 		roster,
 		result,
-		empty = 'No one here yet.',
-		searchPlaceholder = 'Search...',
-		personLabel = 'Name',
+		empty = m.roster_roster_empty_body(),
+		searchPlaceholder = m.roster_roster_search_placeholder(),
+		personLabel = m.roster_name_label(),
 		filters,
 		menu,
 		summary,
 		bulk,
+		toolbar,
 		exportPath,
 		emails,
 		lead,
-		leadLabel = 'Status',
+		leadLabel = m.roster_status_label(),
 		leadHead,
 		detail,
 		aside,
@@ -59,6 +58,8 @@
 		summary?: Snippet<[number]>;
 		/** Page-supplied bulk actions, beside export. */
 		bulk?: Snippet;
+		/** The view's own actions, such as its create button, at the end of the filter row. */
+		toolbar?: Snippet;
 		/** A resolved `+server.ts` path; the current filters are appended. */
 		exportPath?: string;
 		/** Every matching address, not just this page's. */
@@ -93,48 +94,9 @@
 	}
 
 	const exportHref = $derived(exportPath ? withQuery(exportPath, roster.query) : null);
-
-	let copying = $state(false);
-	async function copyEmails() {
-		if (!emails) return;
-		copying = true;
-		try {
-			const list = await emails();
-			if (list.length === 0) {
-				toast.info('No email addresses');
-				return;
-			}
-			await navigator.clipboard.writeText(list.join(', '));
-			toast.success(`Copied ${list.length} ${list.length === 1 ? 'address' : 'addresses'}`);
-		} catch {
-			toast.error("Couldn't copy");
-		} finally {
-			copying = false;
-		}
-	}
-
-	// An id, not the row: the panel re-reads it from the refreshed list.
-	let selectedId = $state<string | null>(null);
-	const panelState = $state({ open: false });
-
-	function openPanel(row: T) {
-		selectedId = row.personId;
-		panelState.open = true;
-	}
-
-	const recordHref = (row: T) => resolve(`/staff/members/${row.personId}`);
-
-	// Email has its own column, so the name cell drops the
-	// ref's subtitle (which is the email) rather than printing it twice.
-	const nameOnly = (row: T) => ({ ...row.member, subtitle: null });
-
-	async function copyEmail(email: string) {
-		await navigator.clipboard.writeText(email);
-		toast.success('Email copied');
-	}
 </script>
 
-<FilterBar activeCount={roster.activeCount} onclear={clear} {menu}>
+<FilterBar activeCount={roster.activeCount} onclear={clear} {menu} actions={toolbar}>
 	{#snippet search()}
 		<SearchInput
 			bind:value={searchText}
@@ -156,20 +118,17 @@
 			{:else}
 				{pagination.total}
 			{/if}
+		{:catch}
+			<!-- DataList takes this rejection to the boundary. -->
 		{/await}
 	</div>
 	<div class="flex flex-wrap items-center gap-1">
 		{@render bulk?.()}
-		{#if emails}
-			<Button variant="ghost" size="sm" onclick={copyEmails} disabled={copying}>
-				<IconCopy size={16} />
-				Copy emails
-			</Button>
-		{/if}
+		{#if emails}<CopyEmailsButton {emails} />{/if}
 		{#if exportHref}
 			<Button href={exportHref} rel="external" download variant="ghost" size="sm">
 				<IconDownload size={16} />
-				Export
+				{m.roster_roster_export_label()}
 			</Button>
 		{/if}
 	</div>
@@ -177,81 +136,19 @@
 
 <DataList {result} {empty} onpage={(p) => (roster.values.page = p)}>
 	{#snippet children(rows)}
-		<Table>
-			{#snippet head()}
-				{#if lead}
-					<th class="w-px">
-						{#if leadHead}{@render leadHead(rows)}{:else}<span class="sr-only">{leadLabel}</span
-							>{/if}
-					</th>
-				{/if}
-				<th>{personLabel}</th>
-				<th>Email</th>
-				{@render columns?.()}
-				{#if actions}<th class="w-px"><span class="sr-only">Actions</span></th>{/if}
-			{/snippet}
-
-			{#each rows as row (row.personId)}
-				<tr
-					class={[
-						'hover cursor-pointer',
-						// Dims every cell but the actions, which keep their tone.
-						tone?.(row) === 'muted' && actions && '[&>td:not(:last-child)]:opacity-60',
-						tone?.(row) === 'muted' && !actions && '[&>td]:opacity-60'
-					]}
-					use:rowLink={panel ? () => openPanel(row) : recordHref(row)}
-				>
-					{#if lead}<td class="w-px">{@render lead(row)}</td>{/if}
-
-					<!-- `min-w-48`: a long secondary cell could otherwise leave the name two letters. -->
-					<td class="cell-primary min-w-48">
-						<span class="flex items-center gap-2">
-							{#if panel}
-								<!-- The keyboard path to the panel, which a row cannot be. -->
-								<button type="button" class="min-w-0 text-left" onclick={() => openPanel(row)}>
-									<EntityIdentity ref={nameOnly(row)} avatar link={false} />
-								</button>
-							{:else}
-								<EntityIdentity ref={nameOnly(row)} avatar />
-							{/if}
-							{@render aside?.(row)}
-						</span>
-						{@render detail?.(row)}
-					</td>
-
-					<td class="min-w-0">
-						{#if row.email}
-							{@const email = row.email}
-							<span class="flex items-center gap-1">
-								<span class="truncate">{email}</span>
-								<Button
-									variant="ghost"
-									size="xs"
-									shape="square"
-									class="border-transparent"
-									aria-label="Copy email"
-									title="Copy email"
-									onclick={() => copyEmail(email)}
-								>
-									<IconCopy size={14} />
-								</Button>
-							</span>
-						{/if}
-					</td>
-
-					{@render cells?.(row)}
-
-					{#if actions}<td class="w-px">{@render actions(row)}</td>{/if}
-				</tr>
-			{/each}
-		</Table>
-
-		{@const chosen = panel ? rows.find((r) => r.personId === selectedId) : undefined}
-		{#if panel && chosen}
-			<!-- Keyed, so a second person's panel starts fresh rather than on the last one's tab. -->
-			{#key chosen.personId}
-				{@render panel(chosen, panelState)}
-			{/key}
-		{/if}
+		<RosterTable
+			{rows}
+			{personLabel}
+			{lead}
+			{leadLabel}
+			{leadHead}
+			{detail}
+			{aside}
+			{tone}
+			{columns}
+			{cells}
+			{actions}
+			{panel}
+		/>
 	{/snippet}
 </DataList>

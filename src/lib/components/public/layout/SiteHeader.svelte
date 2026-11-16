@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Logo from '$lib/components/ui/Logo.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import Logo from '#lib/components/ui/Logo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	let { user }: { user: { name: string } | null } = $props();
 
@@ -15,11 +16,11 @@
 	);
 
 	const links = [
-		{ href: resolve('/events'), label: 'Events' },
-		{ href: resolve('/directory'), label: 'Directory' },
-		{ href: resolve('/programs'), label: 'Programs' },
-		{ href: resolve('/membership'), label: 'Membership' },
-		{ href: resolve('/about'), label: 'About' }
+		{ href: resolve('events'), label: m.public_events_label() },
+		{ href: resolve('directory'), label: m.public_directory_label() },
+		{ href: resolve('programs'), label: m.public_programs_label() },
+		{ href: resolve('membership'), label: m.public_site_header_membership_label() },
+		{ href: resolve('about'), label: m.public_about_label() }
 	];
 
 	function isActive(href: string): boolean {
@@ -37,28 +38,32 @@
 			style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto"
 		>
 			<!-- Logo -->
-			<a href={resolve('/')} class="row-span-2 flex items-center" style="height: 72px">
+			<a href={resolve('')} class="row-span-2 flex items-center" style="height: 72px">
 				<Logo soundLines={false} class="h-full w-auto" />
 			</a>
 
 			<!-- Title -->
 			<div class="text-2xl font-bold" style="color: var(--cmc-teal); grid-row: 1; grid-column: 2">
-				Corvallis Music Collective
+				{m.public_site_header_corvallis_music_collective_text()}
 			</div>
 
 			<!-- Actions -->
 			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
-					<Button href="/member" variant="default" size="sm">My Account</Button>
+					<Button href="/member" variant="default" size="sm"
+						>{m.public_site_header_my_account_label()}</Button
+					>
 				{:else}
-					<Button href={signInLink} variant="default" size="sm">Sign In</Button>
+					<Button href={signInLink} variant="default" size="sm"
+						>{m.public_site_header_sign_label()}</Button
+					>
 				{/if}
 				<Button
 					variant="ghost"
 					size="sm"
 					class="lg:hidden"
 					onclick={() => (menuOpen = !menuOpen)}
-					aria-label="Toggle menu"
+					aria-label={m.public_site_header_aria_label()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -92,14 +97,14 @@
 					</a>
 				{/each}
 				<Button
-					href={resolve('/contribute')}
+					href={resolve('contribute')}
 					variant="default"
 					size="sm"
 					outline
 					class="ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
-					Contribute
+					{m.public_contribute_2_label()}
 				</Button>
 			</nav>
 		</div>
@@ -111,7 +116,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: resolve('/contribute'), label: 'Contribute' }, { href: resolve('/contact'), label: 'Contact' }] as link (link.href)}
+				{#each [...links, { href: resolve('contribute'), label: m.public_contribute_2_label() }, { href: resolve('contact'), label: m.public_contact_label() }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

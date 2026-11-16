@@ -1,10 +1,11 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { setStaffGroupRole } from '$lib/remote/groups.remote';
-	import { invalidateAll } from '$app/navigation';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { setStaffGroupRole } from '#lib/remote/groups.remote.js';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * Staff add a chair to a club or committee: any member, on the roster or not.
@@ -20,30 +21,30 @@
 
 <Action
 	action={setStaffGroupRole}
-	label="Add chair"
-	modalTitle="Add chair"
-	submitLabel="Add chair"
-	successToast="Chair added"
+	label={m.groups_add_chair_add_chair_label()}
+	modalTitle={m.groups_add_chair_add_chair_title()}
+	submitLabel={m.groups_add_chair_add_chair_label()}
+	successToast={m.groups_add_chair_success_toast()}
 	variant="ghost"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">
 			<input {...fields.groupId.as('hidden', groupId)} />
 			<input {...fields.role.as('hidden', 'admin')} />
 
-			<FormField name="userId" label="Member" required>
+			<FormField field={setStaffGroupRole.fields.userId} label={m.groups_member_label()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}
 					field={fields.userId}
-					placeholder="Search by name or email..."
+					placeholder={m.groups_search_by_name_email_placeholder()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				Chairs run the program: they manage its roster, positions, announcements and applications.
+				{m.groups_add_chair_chairs_run_program_they_manage_text()}
 			</p>
 		</div>
 	{/snippet}

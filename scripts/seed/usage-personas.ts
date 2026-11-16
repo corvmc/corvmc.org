@@ -9,6 +9,8 @@ import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { suggestion, suggestionVote } from '../../src/lib/server/db/schema/suggestion';
 import { ticket } from '../../src/lib/server/db/schema/ticket';
 import { insertBandWithOwner } from './bands';
+import { seatInOperations } from './operations';
+import { isJob } from '../../src/lib/config';
 import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingSites, pendingTags } from './pending';
@@ -67,7 +69,7 @@ export const USAGE_PERSONAS = [
 		name: 'Beatriz Okonkwo',
 		memberNumber: 64,
 		/** "I reconcile what came in." */
-		job: 'treasurer — /staff/payments, but not /staff/settings',
+		job: 'treasurer — /staff/money, but not /staff/system',
 		roles: ['member', 'treasurer'] as const
 	},
 	{
@@ -96,6 +98,51 @@ export const USAGE_PERSONAS = [
 		/** "I fill Saturday's shifts." */
 		job: 'volunteer coordinator — the hour queue, not the role picker',
 		roles: ['member', 'volunteer_coordinator'] as const
+	},
+	{
+		id: 'seed-use-outreach',
+		email: 'outreach@corvallismusic.org',
+		name: 'Marisol Adeyemi',
+		memberNumber: 68,
+		/** "I send the newsletter and announce the shows." */
+		job: 'outreach coordinator — campaigns and audiences, not the event list',
+		roles: ['member', 'outreach_coordinator'] as const
+	},
+	{
+		id: 'seed-use-editor',
+		email: 'editor@corvallismusic.org',
+		name: 'Pavel Achterberg',
+		memberNumber: 69,
+		/** "I keep the local resources list and the help articles current." */
+		job: 'content editor — local resources and help articles, nothing else',
+		roles: ['member', 'content_editor'] as const
+	},
+	{
+		id: 'seed-use-teachers',
+		email: 'teachers@corvallismusic.org',
+		name: 'Ingrid Mbeki',
+		memberNumber: 94,
+		/** "I review who applies to teach." */
+		job: 'teacher reviewer — the teacher queue, not the member list',
+		roles: ['member', 'teacher_reviewer'] as const
+	},
+	{
+		id: 'seed-use-auditor',
+		email: 'auditor@corvallismusic.org',
+		name: 'Rowan Castellanos',
+		memberNumber: 95,
+		/** "I answer who changed what." */
+		job: 'auditor — the audit log, read only',
+		roles: ['member', 'auditor'] as const
+	},
+	{
+		id: 'seed-use-opschair',
+		email: 'opschair@corvallismusic.org',
+		name: 'Esme Thorvaldsen',
+		memberNumber: 96,
+		/** "I look after the committees: their positions, chairs and grants." */
+		job: 'Operations chair — committee oversight, nothing else',
+		roles: ['member', 'operations_chair'] as const
 	}
 ] as const;
 
@@ -149,6 +196,10 @@ export async function seedUsagePersonas(roles: SeedRole[]) {
 			updatedAt: createdAt
 		});
 		for (const name of p.roles) {
+			if (isJob(name)) {
+				await seatInOperations(p.id, name);
+				continue;
+			}
 			const id = roleId(name);
 			if (id) await db.insert(modelHasRole).values({ roleId: id, userId: p.id });
 		}
@@ -295,7 +346,7 @@ export async function seedUsagePersonaLife(
 			amount: allocated,
 			balanceAfter: allocated,
 			source: 'monthly_allocation' as const,
-			description: 'Monthly free hours allocation',
+			description: 'Monthly credit allocation',
 			metadata: {},
 			createdAt: ago(21)
 		},
@@ -325,56 +376,52 @@ export async function seedUsagePersonaLife(
 	const walkUpStart = new Date(Math.floor(Date.now() / halfHour) * halfHour);
 	const walkUp = holdRoom(walkUpStart, new Date(walkUpStart.getTime() + 3 * 3_600_000), 'regular');
 
-	const reservations = await batchInsert(
-		reservation,
-		[
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'completed' as const,
-				...tuesday[-7],
-				notes: 'Drum practice',
-				creditsUsed: 4,
-				cashDueCents: 0,
-				paidAt: null
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'confirmed' as const,
-				...tuesday[0],
-				notes: 'Drum practice',
-				creditsUsed: 1,
-				cashDueCents: Math.round(1.5 * HOURLY_RATE_CENTS),
-				lockCode: '4417',
-				lockAccessId: '620014',
-				lockSyncedAt: ago(0)
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'scheduled' as const,
-				...tuesday[7],
-				notes: 'Drum practice',
-				creditsUsed: null,
-				cashDueCents: 2 * HOURLY_RATE_CENTS
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'confirmed' as const,
-				...walkUp,
-				notes: 'Walk-up session',
-				creditsUsed: 1,
-				cashDueCents: 2 * HOURLY_RATE_CENTS
-			}
-		],
-		8
-	);
+	const reservations = await batchInsert(reservation, [
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'completed' as const,
+			...tuesday[-7],
+			notes: 'Drum practice',
+			creditsUsed: 4,
+			cashDueCents: 0,
+			paidAt: null
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...tuesday[0],
+			notes: 'Drum practice',
+			creditsUsed: 1,
+			cashDueCents: Math.round(1.5 * HOURLY_RATE_CENTS),
+			lockCode: '4417',
+			lockAccessId: '620014',
+			lockSyncedAt: ago(0)
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...tuesday[7],
+			notes: 'Drum practice',
+			creditsUsed: null,
+			cashDueCents: 2 * HOURLY_RATE_CENTS
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...walkUp,
+			notes: 'Walk-up session',
+			creditsUsed: 1,
+			cashDueCents: 2 * HOURLY_RATE_CENTS
+		}
+	]);
 
 	// --- a ticket to something coming up, and a stub from one that happened ---
 	const upcoming = events.find((e) => e.startsAt > new Date() && e.status === 'published');
@@ -414,8 +461,7 @@ export async function seedUsagePersonaLife(
 			createdAt: ago(40)
 		});
 	}
-	// 17 bound parameters a row × 5 = 85, under D1's 100.
-	if (ticketRows.length) await batchInsert(ticket, ticketRows, 5);
+	if (ticketRows.length) await batchInsert(ticket, ticketRows);
 
 	// --- something borrowed, something given back ----------------------------
 	const items = await db
@@ -424,36 +470,32 @@ export async function seedUsagePersonaLife(
 		.where(eq(inventoryItem.isLoanable, true))
 		.limit(2);
 	const loans = items.length
-		? await batchInsert(
-				inventoryLoan,
-				[
-					{
-						id: randomUUID(),
-						itemId: items[0].id,
-						userId: regular.id,
-						quantity: 1,
-						requestedPickupDate: ago(9),
-						estimatedReturnDate: ago(2),
-						checkedOutAt: ago(9),
-						dueDate: ago(2),
-						status: 'checked_out' as const,
-						memberNotes: 'For the Tuesday sessions.'
-					},
-					{
-						id: randomUUID(),
-						itemId: items[items.length - 1].id,
-						userId: regular.id,
-						quantity: 1,
-						requestedPickupDate: ago(60),
-						estimatedReturnDate: ago(50),
-						checkedOutAt: ago(60),
-						returnedAt: ago(51),
-						dueDate: ago(50),
-						status: 'returned' as const
-					}
-				],
-				5
-			)
+		? await batchInsert(inventoryLoan, [
+				{
+					id: randomUUID(),
+					itemId: items[0].id,
+					userId: regular.id,
+					quantity: 1,
+					requestedPickupDate: ago(9),
+					estimatedReturnDate: ago(2),
+					checkedOutAt: ago(9),
+					dueDate: ago(2),
+					status: 'checked_out' as const,
+					memberNotes: 'For the Tuesday sessions.'
+				},
+				{
+					id: randomUUID(),
+					itemId: items[items.length - 1].id,
+					userId: regular.id,
+					quantity: 1,
+					requestedPickupDate: ago(60),
+					estimatedReturnDate: ago(50),
+					checkedOutAt: ago(60),
+					returnedAt: ago(51),
+					dueDate: ago(50),
+					status: 'returned' as const
+				}
+			])
 		: [];
 
 	// --- what they think we should fix ---------------------------------------
@@ -480,51 +522,43 @@ export async function seedUsagePersonaLife(
 	});
 
 	// --- the bell ------------------------------------------------------------
-	await batchInsert(
-		notification,
-		[
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				type: 'reservation_reminder',
-				title: 'Your practice room booking is tomorrow',
-				body: 'Tuesday, 6:00–8:00 PM. Your door code is in the reservation.',
-				href: '/member/reservations',
-				readAt: null,
-				createdAt: ago(1)
-			},
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				type: 'ticket_confirmation',
-				title: 'Your ticket is confirmed',
-				href: '/member/tickets',
-				readAt: ago(4),
-				createdAt: ago(4)
-			}
-		],
-		7
-	);
-	await batchInsert(
-		notificationPreference,
-		[
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				notificationType: 'reservation_reminder',
-				emailEnabled: true,
-				inAppEnabled: true
-			},
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				notificationType: 'ticket_confirmation',
-				emailEnabled: false,
-				inAppEnabled: true
-			}
-		],
-		7
-	);
+	await batchInsert(notification, [
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			type: 'reservation_reminder',
+			title: 'Your practice room booking is tomorrow',
+			body: 'Tuesday, 6:00–8:00 PM. Your door code is in the reservation.',
+			href: '/member/reservations',
+			readAt: null,
+			createdAt: ago(1)
+		},
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			type: 'ticket_confirmation',
+			title: 'Your ticket is confirmed',
+			href: '/member/tickets',
+			readAt: ago(4),
+			createdAt: ago(4)
+		}
+	]);
+	await batchInsert(notificationPreference, [
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			notificationType: 'reservation_reminder',
+			emailEnabled: true,
+			inAppEnabled: true
+		},
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			notificationType: 'ticket_confirmation',
+			emailEnabled: false,
+			inAppEnabled: true
+		}
+	]);
 
 	return {
 		reservations: reservations.length,

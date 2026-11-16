@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The volunteer's own shift, on the night.
 	 *
@@ -6,47 +7,63 @@
 	 * signup rather than a capability: being rostered on the work is the right
 	 * predicate for recording that the work is done.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import ShiftProgress from '$lib/components/volunteer/ShiftProgress.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import ShiftProgress from '#lib/components/volunteer/ShiftProgress.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import FileIncidentAction from './FileIncidentAction.svelte';
 	import { goto } from '$app/navigation';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { page } from '$app/state';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateLong, formatDateTime, formatTimeRange } from '$lib/utils/format';
-	import { incidentCategoryLabels } from '$lib/config';
-	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '$lib/remote/volunteer.remote';
+	import { formatDateLong, formatDateTime, formatTimeRange } from '#lib/utils/format.js';
+	import { incidentCategoryLabels } from '#lib/config.js';
+	import {
+		getMyShift,
+		setMyWorkTaskDone,
+		setMyTrainee,
+		cancelMySignup
+	} from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
+	import { withQuery } from '#lib/utils/with-query.js';
 
-	const signupId = $derived(page.params.signupId!);
+	const params = routeParams('signupId');
+
+	const doorSalesHref = (eventId: string) =>
+		withQuery(resolve('/member/volunteer/door'), new URLSearchParams({ event: eventId }));
+
+	const signupId = $derived(params.signupId);
 	const data = $derived(await getMyShift(signupId));
 
 	const doneCount = $derived(data.tasks.filter((t) => t.done).length);
 	const calledOff = $derived(!!data.shift.shiftCancelledAt || !!data.shift.cancelledAt);
+	// Someone already under another supervisor is staff's to move (#2720).
+	const trainees = $derived(data.crewMates.filter((c) => !c.trainedUnderOther));
 </script>
 
 <PageHeader
 	width="2xl"
-	title={data.shift.roleName}
-	subtitle={data.shift.eventTitle ?? 'Volunteer shift'}
+	title={shiftLabel(data.shift)}
+	subtitle={shiftRoleSuffix(data.shift) ??
+		data.shift.eventTitle ??
+		m.member_volunteer_shifts_signup_id_subtitle_body()}
 />
 <PageContent width="2xl">
 	{#if calledOff}
 		<Alert type="warning">
 			{data.shift.shiftCancelledAt
-				? 'This shift was called off. There is nothing to turn up for.'
-				: 'You dropped out of this shift.'}
+				? m.member_volunteer_shifts_signup_id_shift_was_called_off_there_body()
+				: m.member_volunteer_shifts_signup_id_dropped_out_shift_body()}
 		</Alert>
 	{/if}
 
@@ -63,16 +80,12 @@
 		</Card>
 	{/if}
 
-	<InfoCard title="When">
+	<InfoCard title={m.member_when_title()}>
 		<p class="font-medium">
-			{#if data.shift.startsAt && data.shift.endsAt}
-				{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
-					data.shift.startsAt,
-					data.shift.endsAt
-				)}
-			{:else}
-				A time still to be arranged.
-			{/if}
+			{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
+				data.shift.startsAt,
+				data.shift.endsAt
+			)}
 		</p>
 		{#if data.shift.notes}
 			<p class="mt-2 text-muted">{data.shift.notes}</p>
@@ -83,38 +96,83 @@
 		     stood than the row you clicked (#1066). -->
 		{#if !calledOff}
 			<div class="mt-3">
-				<ShiftProgress status={data.shift.status} notes={null} />
+				<ShiftProgress
+					status={data.shift.status}
+					notes={null}
+					startsAt={data.shift.startsAt}
+					endsAt={data.shift.endsAt}
+				/>
 			</div>
 		{/if}
 	</InfoCard>
 
+	{#if data.briefing && !calledOff}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_briefing_title()}>
+			<a class="link font-medium" href={resolve(`member/help/${data.briefing.slug}`)}>
+				{data.briefing.title}
+			</a>
+			{#if data.briefing.summary}
+				<p class="mt-1 text-muted">{data.briefing.summary}</p>
+			{/if}
+		</InfoCard>
+	{/if}
+
 	{#if data.checkIn && !calledOff}
-		<InfoCard title="On the door">
-			<p class="text-muted">Mark people arrived as they come in. The list is this show's only.</p>
+		<InfoCard title={m.member_volunteer_shifts_signup_id_door_title()}>
+			<p class="text-muted">
+				{m.member_volunteer_shifts_signup_id_mark_people_arrived_as_the_text()}
+			</p>
 			<div class="mt-3">
 				<Button
-					href={resolve(`/member/volunteer/shifts/${signupId}/check-in`)}
+					href={resolve(`member/volunteer/shifts/${signupId}/check-in`)}
 					variant="primary"
 					size="sm"
 				>
-					Check people in
+					{m.member_volunteer_shifts_signup_id_check_people_label()}
 				</Button>
 			</div>
 		</InfoCard>
 	{/if}
 
-	<InfoCard title="Checklist">
+	{#if data.doorSales && !calledOff}
+		<InfoCard title={m.member_volunteer_door_door_sales_title()}>
+			<Button href={doorSalesHref(data.doorSales.eventId)} variant="primary" size="sm">
+				{m.member_volunteer_shifts_signup_id_take_door_payments_label()}
+			</Button>
+		</InfoCard>
+	{/if}
+
+	{#if data.vendorHost && !calledOff}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_market_vendors_title()}>
+			<Button
+				href={resolve('/member/volunteer/markets/[eventId]', {
+					eventId: data.vendorHost.eventId
+				})}
+				variant="primary"
+				size="sm"
+			>
+				{m.member_volunteer_shifts_signup_id_review_vendors_label()}
+			</Button>
+		</InfoCard>
+	{/if}
+
+	<InfoCard title={m.member_volunteer_shifts_signup_id_checklist_title()}>
 		{#snippet header(title)}
 			<CardTitle>
 				{title}
 				{#if data.tasks.length > 0}
-					<span class="text-muted font-normal">· {doneCount} of {data.tasks.length}</span>
+					<span class="text-muted font-normal"
+						>{m.member_volunteer_shifts_signup_id_text_title({
+							doneCount,
+							length: data.tasks.length
+						})}</span
+					>
 				{/if}
 			</CardTitle>
 		{/snippet}
 
 		{#if data.tasks.length === 0}
-			<EmptyState message="Nothing on the list for this shift." />
+			<EmptyState message={m.member_volunteer_shifts_signup_id_message_body()} />
 		{:else}
 			<!-- Ticking submits on change: a checklist behind a Save button is a
 			     checklist people forget to save. -->
@@ -125,10 +183,10 @@
 							remote={setMyWorkTaskDone.for(task.id)}
 							onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
 						>
-							<input type="hidden" name="id" value={task.id} />
-							<input type="hidden" name="signupId" value={signupId} />
+							<input {...setMyWorkTaskDone.for(task.id).fields.id.as('hidden', task.id)} />
+							<input {...setMyWorkTaskDone.for(task.id).fields.signupId.as('hidden', signupId)} />
 							<FormField
-								name="done"
+								field={setMyWorkTaskDone.for(task.id).fields.done}
 								type="checkbox"
 								checkboxLabel={task.label}
 								value={task.done}
@@ -142,13 +200,44 @@
 		{/if}
 	</InfoCard>
 
+	{#if trainees.length > 0}
+		<InfoCard title={m.member_volunteer_shifts_signup_id_trainees_title()}>
+			<ul class="flex flex-col gap-2" data-testid="shift-trainees">
+				{#each trainees as mate (mate.signupId)}
+					{@const mark = setMyTrainee.for(mate.signupId)}
+					<li class="flex flex-wrap items-center justify-between gap-2">
+						<EntityIdentity ref={mate.member} size="sm" />
+						<Form
+							remote={mark}
+							onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
+						>
+							<input {...mark.fields.mySignupId.as('hidden', signupId)} />
+							<input {...mark.fields.signupId.as('hidden', mate.signupId)} />
+							<FormField
+								field={mark.fields.trainee}
+								type="checkbox"
+								checkboxLabel={m.member_volunteer_shifts_signup_id_trainee_checkbox()}
+								value={mate.trainedUnderMe}
+							/>
+						</Form>
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
+
 	{#if data.incidentEventId}
-		<InfoCard title="Incidents" state={data.filedIncidents.length}>
+		<InfoCard
+			title={m.member_volunteer_shifts_signup_id_incidents_title()}
+			state={data.filedIncidents.length}
+		>
 			{#snippet action()}
 				<FileIncidentAction eventId={data.incidentEventId!} {signupId} />
 			{/snippet}
 			{#if data.filedIncidents.length === 0}
-				<p class="text-muted">If something goes wrong on the night, report it here for staff.</p>
+				<p class="text-muted">
+					{m.member_volunteer_shifts_signup_id_if_something_goes_wrong_ni_text()}
+				</p>
 			{:else}
 				<ul class="flex flex-col gap-3">
 					{#each data.filedIncidents as i (i.id)}
@@ -173,29 +262,28 @@
 	<div class="flex flex-wrap gap-2">
 		{#if data.shift.status === 'completed'}
 			<Button
-				href={resolve(`/member/volunteer/feedback/${signupId}`)}
+				href={resolve(`member/volunteer/feedback/${signupId}`)}
 				variant="default"
 				size="sm"
 				outline
 			>
-				How did it go?
+				{m.member_how_did_go_label()}
 			</Button>
 		{:else if !calledOff}
 			<Action
 				action={cancelMySignup.for(signupId)}
-				label="Drop out"
+				label={m.member_volunteer_shifts_signup_id_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Drop out of this shift?"
-				submitLabel="Drop out"
-				successToast="Dropped. The place is back on the board."
-				onsuccess={() => goto(resolve('/member/volunteer'))}
+				modalTitle={m.member_volunteer_shifts_signup_id_modal_title()}
+				submitLabel={m.member_volunteer_shifts_signup_id_label()}
+				successToast={m.member_volunteer_shifts_signup_id_success_toast()}
+				onsuccess={() => goto(resolve('member/volunteer'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="signupId" value={signupId} />
+					<input {...cancelMySignup.for(signupId).fields.signupId.as('hidden', signupId)} />
 					<p class="text-sm">
-						Notice isn't a no-show. The place goes back on the board for someone else, and nothing
-						is held against you for telling us.
+						{m.member_volunteer_shifts_signup_id_notice_isn_t_no_show_text()}
 					</p>
 				{/snippet}
 			</Action>

@@ -1,18 +1,24 @@
-import { completedJobEntries, lateInvoiceEntries } from '$lib/server/finance/contractor-entries';
-import { entriesStatement } from '$lib/server/finance/financial-entry-service';
-import { db } from '$lib/server/db';
-import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
-import type { ContractorJob } from '$lib/server/db/schema/contractor';
-import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
-import { volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
+import {
+	bookedForJob,
+	completedJobEntries,
+	lateInvoiceEntries
+} from '#lib/server/finance/contractor-entries.js';
+import { entriesStatement, listForSubject } from '#lib/server/finance/financial-entry-service.js';
+import { db } from '#lib/server/db/index.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { contractorDetail, organization } from '#lib/server/db/schema/party.js';
+import type { ContractorJob } from '#lib/server/db/schema/contractor.js';
+import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { assetStatusChange, setAssetStatus } from '$lib/server/inventory/asset-service';
-import { prepareResolveWorkOrder } from '$lib/server/volunteer/work-order-service';
+import { DomainError } from '#lib/server/domain-error.js';
+import { assetStatusChange, setAssetStatus } from '#lib/server/inventory/asset-service.js';
+import { prepareResolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
 import { getContractorById } from './contractor-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { RecordEntryInput } from '$lib/server/finance/financial-entry-service';
-import type { ContractorJobStatus, ContractorJobView } from '$lib/config';
+import { linkedIdSql, linkedTo, linkInserts } from '#lib/server/task/work-order-link.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { RecordEntryInput } from '#lib/server/finance/financial-entry-service.js';
+import type { ContractorJobStatus, ContractorJobView } from '#lib/config.js';
 
 /**
  * One contractor's engagement on a work order, from "we asked them" to the
@@ -44,16 +50,23 @@ export class ContractorJobStateError extends DomainError {
 /** Statuses an engagement does not leave. */
 const TERMINAL: ContractorJobStatus[] = ['completed', 'cancelled', 'declined', 'no_show'];
 
+/** Who a job names, as every read returns it. */
+const contractorRef = {
+	id: organization.id,
+	name: organization.name,
+	archivedAt: organization.archivedAt
+};
+
 /** The engagement with its work order's fields beside it, as every read returns it. */
 const engagementSelect = {
 	job: contractorJob,
 	// A work order's own title, else its role's: one made here always has a title.
 	title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Work order')`,
-	assetId: workOrder.assetId,
+	assetId: linkedIdSql('assetId'),
 	projectId: workOrder.projectId,
 	workOrderResolvedAt: workOrder.resolvedAt,
 	workOrderCancelledAt: workOrder.cancelledAt,
-	contractorName: contractor.name
+	contractorName: organization.name
 };
 
 interface EngagementRow {
@@ -117,13 +130,14 @@ export interface CreateJobInput {
  */
 export async function createJob(data: CreateJobInput): Promise<Engagement> {
 	// Archiving is meant to stop new work, not just tidy the picker.
+	// Also the role check SQLite cannot make: only a contractor can be engaged.
 	const who = await getContractorById(data.contractorId);
 	if (who.archivedAt) {
 		throw new ContractorJobStateError('That contractor has been archived');
 	}
 
 	const engagement = {
-		contractorId: data.contractorId,
+		organizationId: data.contractorId,
 		scheduledFor: data.scheduledFor ?? null,
 		expectedBackAt: data.expectedBackAt ?? null,
 		quotedCents: data.quotedCents ?? null,
@@ -163,12 +177,11 @@ export async function createJob(data: CreateJobInput): Promise<Engagement> {
 		db.insert(workOrder).values({
 			id: workOrderId,
 			title,
-			assetId: data.assetId ?? null,
 			projectId: data.projectId ?? null,
 			volunteerRoleId: null,
-			postedAt: null,
 			createdByUserId: data.requestedByUserId ?? null
 		}),
+		...linkInserts(workOrderId, { assetId: data.assetId }),
 		db.insert(contractorJob).values({ ...engagement, id: jobId, workOrderId })
 	]);
 	const asked = await getJobById(jobId);
@@ -290,16 +303,6 @@ export async function completeJob(
 		.where(eq(contractorJob.id, id))
 		.returning();
 
-	const entries = completedJobEntries({
-		jobId: id,
-		title: job.title,
-		projectId: job.projectId,
-		occurredAt: completedAt,
-		costCents: isDonated ? null : costCents,
-		isDonated,
-		fairValueCents
-	});
-
 	const backFromRepair =
 		job.assetId &&
 		opts.returnToService !== false &&
@@ -312,8 +315,25 @@ export async function completeJob(
 
 	const resolution =
 		!job.workOrderResolvedAt && !job.workOrderCancelledAt
-			? await prepareResolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId })
+			? await prepareResolveWorkOrder(job.workOrderId, {
+					resolvedByUserId: opts.actorId,
+					recordReason: `Contractor job completed: ${job.title}`
+				})
 			: null;
+
+	// Against what is already booked: a reopened job completes again (#2259).
+	const entries = completedJobEntries(
+		{
+			jobId: id,
+			title: job.title,
+			projectId: job.projectId,
+			occurredAt: completedAt,
+			costCents: isDonated ? null : costCents,
+			isDonated,
+			fairValueCents
+		},
+		bookedForJob(await listForSubject('contractor_job', id))
+	);
 
 	// The engagement, what it cost, the unit and the work order are one event:
 	// as separate awaits, a failure part-way left a paid, completed job beside a
@@ -391,6 +411,42 @@ async function closeUnworked(id: string, status: 'declined' | 'no_show') {
 	return { ...job, ...row };
 }
 
+/**
+ * Take a finished, called-off or refused engagement back, behind the admin-only
+ * `contractor.reopen`: a terminal state is the past. It goes to `booked` when
+ * it had a date, else `asked`. Its ledger rows stay; completing it again books
+ * only the difference. The unit and the work order are left as they are.
+ */
+export async function reopenJob(id: string, reason: string): Promise<Engagement> {
+	const why = reason.trim();
+	if (!why) throw new ContractorJobStateError('Say why it is being reopened');
+	const job = await getJobById(id);
+	if (!TERMINAL.includes(job.status)) {
+		throw new ContractorJobStateError(`This job is ${job.status}, not closed`);
+	}
+	const to: ContractorJobStatus = job.scheduledFor ? 'booked' : 'asked';
+
+	const [row] = await db
+		.update(contractorJob)
+		.set({ status: to, completedAt: null, updatedAt: new Date() })
+		.where(and(eq(contractorJob.id, id), eq(contractorJob.status, job.status)))
+		.returning();
+	if (!row) throw new ContractorJobStateError('This job changed while you were looking at it');
+
+	await recordAuditEntry({
+		action: 'contractor_job.reopened',
+		subject: { type: 'work_order', id: job.workOrderId, label: job.title },
+		details: {
+			engagementId: job.id,
+			contractorName: job.contractorName,
+			from: job.status,
+			to,
+			reason: why
+		}
+	});
+	return { ...job, ...row };
+}
+
 /** The invoice, arriving after the work — the common order of events. */
 export async function recordInvoice(
 	id: string,
@@ -448,7 +504,7 @@ export async function getJobById(id: string): Promise<Engagement> {
 		.select(engagementSelect)
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.where(eq(contractorJob.id, id))
 		.limit(1);
@@ -469,7 +525,7 @@ function jobRowQuery(now: Date) {
 	return db
 		.select({
 			...engagementSelect,
-			contractor,
+			contractor: contractorRef,
 			assetTag: inventoryAsset.assetTag,
 			itemName: inventoryItem.name,
 			late: inView('late', now),
@@ -478,13 +534,13 @@ function jobRowQuery(now: Date) {
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
-		.leftJoin(inventoryAsset, eq(workOrder.assetId, inventoryAsset.id))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, linkedIdSql('assetId')))
 		.leftJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id));
 }
 
 type JobRow = EngagementRow & {
-	contractor: typeof contractor.$inferSelect;
+	contractor: { id: string; name: string; archivedAt: Date | null };
 	assetTag: string | null;
 	itemName: string | null;
 	late: number;
@@ -555,8 +611,8 @@ export async function listJobs(
 			and(
 				opts.view ? engagementViewWhere(opts.view, now) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
-				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
-				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined,
+				opts.contractorId ? eq(contractorJob.organizationId, opts.contractorId) : undefined,
+				opts.assetId ? linkedTo('assetId', opts.assetId) : undefined,
 				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined,
 				opts.workOrderIds ? inArray(contractorJob.workOrderId, opts.workOrderIds) : undefined
 			)
@@ -570,21 +626,6 @@ export async function listJobs(
 	return rows.map(toJobRow);
 }
 
-/** How many engagements each filter holds, in one pass. */
-export async function countJobsByView(now: Date = new Date()) {
-	const count = (view: ContractorJobView) =>
-		sql<number>`coalesce(sum(case when ${engagementViewWhere(view, now) ?? sql`1`} then 1 else 0 end), 0)`;
-	const [row] = await db
-		.select({
-			open: count('open'),
-			late: count('late'),
-			'awaiting-invoice': count('awaiting-invoice'),
-			all: sql<number>`count(*)`
-		})
-		.from(contractorJob);
-	return row ?? { open: 0, late: 0, 'awaiting-invoice': 0, all: 0 };
-}
-
 /** Booked and past the date they promised. */
 export async function listOverdueJobs(now: Date = new Date()) {
 	return listJobs({ view: 'late', now });
@@ -593,12 +634,12 @@ export async function listOverdueJobs(now: Date = new Date()) {
 /** This unit's service history, newest first. Drives the asset page's panel. */
 export async function jobsForAsset(assetId: string) {
 	const rows = await db
-		.select({ ...engagementSelect, contractor })
+		.select({ ...engagementSelect, contractor: contractorRef })
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
-		.where(eq(workOrder.assetId, assetId))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
+		.where(linkedTo('assetId', assetId))
 		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
 	return rows.map(({ contractor: who, ...engagement }) => ({
 		job: flatten(engagement),
@@ -621,12 +662,12 @@ export async function jobsForAsset(assetId: string) {
 export async function contractorSpend(from: Date, to: Date) {
 	return db
 		.select({
-			trade: contractor.trade,
+			trade: contractorDetail.trade,
 			jobCount: sql<number>`COUNT(*)`,
 			totalCents: sql<number>`COALESCE(SUM(COALESCE(${contractorJob.costCents}, 0)), 0)`
 		})
 		.from(contractorJob)
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(contractorDetail, eq(contractorJob.organizationId, contractorDetail.organizationId))
 		.where(
 			and(
 				eq(contractorJob.status, 'completed'),
@@ -635,7 +676,7 @@ export async function contractorSpend(from: Date, to: Date) {
 				sql`${contractorJob.completedAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
 		)
-		.groupBy(contractor.trade)
+		.groupBy(contractorDetail.trade)
 		.orderBy(desc(sql`COALESCE(SUM(COALESCE(${contractorJob.costCents}, 0)), 0)`));
 }
 

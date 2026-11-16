@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What a Daily session would cover, before you commit to it.
 	 *
@@ -7,10 +8,10 @@
 	 * a week" is a set with a shape, and a session with a shape feels finishable.
 	 */
 	import { IconPlayerPlay } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import type { DailyScope } from '$lib/server/inbox/thread-service';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import type { DailyScope } from '#lib/server/inbox/thread-service.js';
 
 	let {
 		scope,
@@ -39,9 +40,18 @@
 	// apart from them rather than as a fourth row that breaks the sum.
 	const rows = $derived(
 		[
-			{ label: 'Unanswered by you', count: scope.unanswered },
-			{ label: 'They replied and are waiting', count: scope.replied },
-			{ label: 'Snoozed threads that came back', count: scope.returned }
+			{
+				label: m.staff_inbox_daily_daily_start_card_unanswered_by_label(),
+				count: scope.unanswered
+			},
+			{
+				label: m.staff_inbox_daily_daily_start_card_they_replied_waiting_label(),
+				count: scope.replied
+			},
+			{
+				label: m.staff_inbox_daily_daily_start_card_snoozed_threads_came_back_label(),
+				count: scope.returned
+			}
 		].filter((r) => r.count > 0)
 	);
 </script>
@@ -49,10 +59,13 @@
 <Card>
 	<CardBody class="gap-5">
 		<div class="flex flex-col gap-1">
-			<h1 class="text-2xl font-bold">Daily · {scope.threadIds.length} conversations</h1>
+			<h1 class="text-2xl font-bold">
+				{m.staff_inbox_daily_daily_start_card_daily_conversations_title({
+					length: scope.threadIds.length
+				})}
+			</h1>
 			<p class="text-muted">
-				One at a time. Every thread gets a decision — reply, assign, snooze or resolve — before the
-				next appears.
+				{m.staff_inbox_daily_daily_start_card_one_at_time_every_thread_text()}
 			</p>
 		</div>
 
@@ -67,22 +80,29 @@
 
 		{#if scope.longWaiting}
 			<p class="text-muted text-sm">
-				{scope.longWaiting} of these {scope.longWaiting === 1 ? 'has' : 'have'} been waiting over a week.
+				{m.staff_inbox_daily_daily_start_card_these_have_been_waiting_o_text({
+					longWaiting: scope.longWaiting
+				})}
 			</p>
 		{/if}
 
 		{#if alreadyDone}
 			<p class="text-subtle text-sm">
-				You already finished a Daily today. These arrived since, or you skipped them.
+				{m.staff_inbox_daily_daily_start_card_already_finished_daily_to_text()}
 			</p>
 		{/if}
 
 		<div class="flex flex-wrap items-center gap-3">
 			<Button variant="primary" onclick={onstart}>
-				<IconPlayerPlay size={18} /> Start
+				<IconPlayerPlay size={18} />
+				{m.staff_start_label()}
 			</Button>
-			<span class="text-subtle text-sm">Roughly {minutes} minutes</span>
-			<Button variant="ghost" size="sm" class="ml-auto" onclick={oncancel}>Not now</Button>
+			<span class="text-subtle text-sm"
+				>{m.staff_inbox_daily_daily_start_card_roughly_minutes_text({ minutes })}</span
+			>
+			<Button variant="ghost" size="sm" class="ml-auto" onclick={oncancel}
+				>{m.staff_inbox_daily_daily_start_card_not_now_label()}</Button
+			>
 		</div>
 	</CardBody>
 </Card>

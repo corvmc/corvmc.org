@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import type { PressQuote } from '$lib/types/band-page';
+	import type { PressQuote } from '#lib/types/band-page.js';
 
 	/**
 	 * What other people have said, and what the act has done.
@@ -18,7 +19,7 @@
 </script>
 
 {#if hasAny}
-	<ProfileSection title="Press">
+	<ProfileSection title={m.directory_profile_press_box_title()}>
 		{#if shownQuotes.length > 0}
 			<div class="press__quotes">
 				{#each shownQuotes as quote (quote.quote)}

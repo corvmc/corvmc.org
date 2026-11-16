@@ -1,183 +1,277 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// A chainable proxy that records calls and resolves to `selectResult`, so the
-// assertions are about the query built rather than what a stub returns.
-let selectResult: unknown[] = [];
-let chainCalls: { method: string; args: unknown[] }[] = [];
+/**
+ * A grant application is a project (#2622). Against a real SQLite with every
+ * migration replayed, so the stage templates are the ones production has: the
+ * project, its owner, the stamped tasks and their dates are all rows a mocked
+ * `db` would agree with either way.
+ */
 
-function chainable() {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(selectResult);
-			}
-			return (...args: unknown[]) => {
-				chainCalls.push({ method: String(prop), args });
-				return proxy;
-			};
-		}
-	});
-	return proxy;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: vi.fn(() => chainable()),
-		insert: vi.fn(() => chainable()),
-		update: vi.fn(() => chainable()),
-		delete: vi.fn(() => chainable())
-	}
-}));
-
-const { grantDeadline, grantDeadlineItems, withDeadlines, getGrant, GrantNotFoundError } =
-	await import('./grant-service');
-const { deleteFunder, FunderInUseError } = await import('./funder-service');
-
-const TODAY = '2026-09-23';
-
-const base = {
-	status: 'prospect' as const,
-	applyBy: null,
-	endsOn: null
-};
-
-const report = (dueOn: string, submittedOn: string | null = null) => ({ dueOn, submittedOn });
-
-beforeEach(() => {
-	selectResult = [];
-	chainCalls = [];
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
+	return migratedSqlite({ foreignKeys: true });
 });
 
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+
+const {
+	grantDeadline,
+	grantDeadlineItems,
+	grantStageOffers,
+	createGrant,
+	updateGrant,
+	deleteGrant,
+	getGrant,
+	applyGrantStage
+} = await import('./grant-service');
+const { FundedProjectError } = await import('#lib/server/development/funding-project.js');
+const { grantDayAt } = await import('#lib/server/volunteer/duty-list-service.js');
+const { grantStages } = await import('#lib/config.js');
+
+const TODAY = '2026-09-23';
+const base = { status: 'prospect' as const, applyBy: null, endsOn: null };
+
+const all = <T>(query: string, ...args: unknown[]) => sqlite.prepare(query).all(...args) as T[];
+const one = <T>(query: string, ...args: unknown[]) => sqlite.prepare(query).get(...args) as T;
+
+beforeEach(() => {
+	for (const t of [
+		'audit_log',
+		'work_task',
+		'work_order',
+		'project_section',
+		'project_committee',
+		'grant_application',
+		'project',
+		'party_role',
+		'organization',
+		'group_capability',
+		'"group"'
+	]) {
+		sqlite.exec(`delete from ${t}`);
+	}
+	sqlite.exec(`update duty_list set is_active = 1 where grant_stage is not null`);
+	sqlite.exec(`insert into organization (id, name) values ('oac', 'Oregon Arts Commission')`);
+	sqlite.exec(`insert into party_role (id, organization_id, role) values ('r1', 'oac', 'funder')`);
+});
+
+function committees() {
+	sqlite.exec(
+		`insert into "group" (id, name, slug, kind) values
+			('dev', 'Development Committee', 'development-committee', 'committee'),
+			('board', 'Board', 'board', 'committee'),
+			('band', 'A Band', 'a-band', 'band')`
+	);
+	sqlite.exec(
+		`insert into group_capability (group_id, capability) values
+			('board', 'grant.manage'), ('dev', 'grant.manage'), ('band', 'grant.manage')`
+	);
+}
+
+const input = (over: Record<string, unknown> = {}) => ({
+	organizationId: 'oac',
+	title: 'Operating support',
+	status: 'prospect' as const,
+	...over
+});
+
+type Task = { title: string; due_at: number | null; pending: number | null; section: string };
+const tasks = (projectId: string) =>
+	all<Task>(
+		`select wo.title, wo.due_at, wo.pending_offset_minutes pending, s.name section
+		 from work_order wo join project_section s on s.id = wo.section_id
+		 where wo.project_id = ? order by wo.sort_order`,
+		projectId
+	);
+
 describe('grantDeadline', () => {
-	it('is the application deadline for a prospect', () => {
-		expect(grantDeadline({ ...base, applyBy: '2026-10-01' }, [], TODAY)).toEqual({
+	it('is the apply-by date for a prospect and the award end once awarded', () => {
+		expect(grantDeadline({ ...base, applyBy: '2026-10-01' }, TODAY)).toEqual({
 			kind: 'apply',
 			on: '2026-10-01',
 			overdue: false
 		});
+		expect(
+			grantDeadline({ ...base, status: 'awarded', endsOn: '2026-09-01' }, TODAY)
+		).toMatchObject({ kind: 'end', overdue: true });
 	});
 
-	it('has none while an application awaits a decision', () => {
-		expect(grantDeadline({ ...base, status: 'applied', applyBy: '2026-10-01' }, [], TODAY)).toBe(
-			null
-		);
+	it('has none while applied, declined or closed', () => {
+		for (const status of ['applied', 'declined', 'closed'] as const) {
+			expect(grantDeadline({ status, applyBy: '2026-10-01', endsOn: '2027-01-01' }, TODAY)).toBe(
+				null
+			);
+		}
 	});
 
-	it('is the earliest unsubmitted report once awarded', () => {
-		const awarded = { ...base, status: 'awarded' as const, endsOn: '2027-06-30' };
-		const reports = [
-			report('2026-08-01', '2026-07-28'),
-			report('2027-01-15'),
-			report('2026-12-01')
-		];
-		expect(grantDeadline(awarded, reports, TODAY)).toEqual({
-			kind: 'report',
-			on: '2026-12-01',
-			overdue: false
-		});
-	});
-
-	it('falls back to the award period ending when every report is in', () => {
-		const awarded = { ...base, status: 'awarded' as const, endsOn: '2027-06-30' };
-		expect(grantDeadline(awarded, [report('2026-08-01', '2026-08-01')], TODAY)?.kind).toBe('end');
-	});
-
-	it('keeps a missed report as the deadline, overdue', () => {
-		const awarded = { ...base, status: 'awarded' as const, endsOn: '2027-06-30' };
-		expect(grantDeadline(awarded, [report('2026-09-01')], TODAY)).toEqual({
-			kind: 'report',
-			on: '2026-09-01',
-			overdue: true
-		});
-	});
-
-	it('still chases an unsubmitted report after the grant is closed out', () => {
-		expect(grantDeadline({ ...base, status: 'closed' }, [report('2026-09-01')], TODAY)?.kind).toBe(
-			'report'
-		);
-		expect(grantDeadline({ ...base, status: 'closed' }, [], TODAY)).toBeNull();
-		expect(grantDeadline({ ...base, status: 'declined', applyBy: '2026-10-01' }, [], TODAY)).toBe(
-			null
-		);
+	it('names each deadline as its own reminder subject', () => {
+		expect(grantDeadlineItems({ ...base, id: 'g1', applyBy: '2026-11-01' })).toEqual([
+			{ kind: 'apply', on: '2026-11-01', subjectId: 'apply:g1', title: 'Apply by' }
+		]);
 	});
 });
 
-describe('grantDeadlineItems', () => {
-	const r = (id: string, dueOn: string, submittedOn: string | null = null) => ({
-		id,
-		title: `Report ${id}`,
-		dueOn,
-		submittedOn
+describe('the stage templates', () => {
+	it('exist for every stage, each with tasks, from the migration alone', () => {
+		const rows = all<{ grant_stage: string; items: number; project_kind: string }>(
+			`select d.grant_stage, d.project_kind, count(i.id) items
+			 from duty_list d join duty_list_item i on i.duty_list_id = d.id
+			 where d.grant_stage is not null group by d.id`
+		);
+		expect(rows.map((r) => r.grant_stage).sort()).toEqual([...grantStages].sort());
+		expect(rows.every((r) => r.items > 0 && r.project_kind === 'grant')).toBe(true);
 	});
 
-	it('names every deadline an award owes, not just the soonest', () => {
-		const items = grantDeadlineItems(
-			{ ...base, id: 'g1', status: 'awarded', endsOn: '2027-06-30' },
-			[r('r1', '2026-12-01'), r('r2', '2027-07-15'), r('r3', '2026-10-01', '2026-09-30')]
+	it('carry help text on every task', () => {
+		const bare = one<{ n: number }>(
+			`select count(*) n from duty_list_item i join duty_list d on d.id = i.duty_list_id
+			 where d.grant_stage is not null and (i.notes is null or i.notes = '')`
 		);
-		expect(items).toEqual([
-			{ kind: 'report', on: '2026-12-01', subjectId: 'report:r1', title: 'Report r1' },
-			{ kind: 'report', on: '2027-07-15', subjectId: 'report:r2', title: 'Report r2' },
-			{ kind: 'end', on: '2027-06-30', subjectId: 'end:g1', title: 'Award ends' }
+		expect(bare.n).toBe(0);
+	});
+});
+
+describe('createGrant', () => {
+	it('opens a grant project owned by the Development committee', async () => {
+		committees();
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }), { createdByUserId: null });
+
+		const project = one<{ kind: string; name: string }>(
+			`select kind, name from project where id = ?`,
+			grant.projectId
+		);
+		expect(project).toEqual({ kind: 'grant', name: 'Operating support' });
+		expect(
+			all(`select group_id, role from project_committee where project_id = ?`, grant.projectId)
+		).toEqual([{ group_id: 'dev', role: 'owner' }]);
+	});
+
+	it('stamps the application template, timed back from the apply-by date', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		const stamped = tasks(grant.projectId!);
+
+		expect(stamped.length).toBeGreaterThan(0);
+		expect(stamped.every((t) => t.section === 'Application' && t.pending === null)).toBe(true);
+		const deadline = grantDayAt('2026-12-01').getTime() / 1000;
+		const last = stamped[stamped.length - 1];
+		expect(last.due_at).toBe(deadline - 86_400);
+		expect(stamped.every((t) => t.due_at! <= deadline)).toBe(true);
+	});
+
+	it('leaves the project unowned when no committee holds grant.manage', async () => {
+		const grant = await createGrant(input());
+		expect(
+			one<{ n: number }>(
+				`select count(*) n from project_committee where project_id = ?`,
+				grant.projectId
+			).n
+		).toBe(0);
+	});
+
+	it('stamps nothing when staff have switched the template off', async () => {
+		sqlite.exec(`update duty_list set is_active = 0 where grant_stage = 'application'`);
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		expect(tasks(grant.projectId!)).toEqual([]);
+	});
+});
+
+describe('updateGrant', () => {
+	it('places tasks waiting on the apply-by date and renames the project', async () => {
+		const grant = await createGrant(input());
+		expect(tasks(grant.projectId!).every((t) => t.due_at === null && t.pending !== null)).toBe(
+			true
+		);
+
+		await updateGrant(grant.id, input({ title: 'Spring cycle', applyBy: '2026-12-01' }));
+
+		const placed = tasks(grant.projectId!);
+		expect(placed.every((t) => t.due_at !== null && t.pending === null)).toBe(true);
+		expect(one(`select name from project where id = ?`, grant.projectId)).toEqual({
+			name: 'Spring cycle'
+		});
+	});
+});
+
+describe('deleteGrant', () => {
+	it('takes the project and its tasks with it', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		await deleteGrant(grant.id);
+		expect(one<{ n: number }>(`select count(*) n from project`).n).toBe(0);
+		expect(one<{ n: number }>(`select count(*) n from work_order`).n).toBe(0);
+		expect(one<{ n: number }>(`select count(*) n from grant_application`).n).toBe(0);
+	});
+
+	// #2891: the funder's audit log keeps the grant that was deleted.
+	it('records the deletion against the funder', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		await deleteGrant(grant.id);
+		const row = one<{ action: string; subject_id: string; subject_label: string; details: string }>(
+			`select action, subject_id, subject_label, details from audit_log where action = 'grant.deleted'`
+		);
+		expect(row).toMatchObject({ subject_id: 'oac', subject_label: 'Oregon Arts Commission' });
+		expect(JSON.parse(row.details)).toEqual({ grantId: grant.id, title: expect.any(String) });
+	});
+});
+
+describe('grantStageOffers', () => {
+	const none = new Set<never>();
+
+	it('offers the award tasks once awarded, and the close-out from a month before the end', () => {
+		const awarded = { status: 'awarded' as const, endsOn: '2027-06-30' };
+		expect(grantStageOffers(awarded, none, TODAY)).toEqual(['award']);
+		expect(grantStageOffers({ ...awarded, endsOn: '2026-10-20' }, none, TODAY)).toEqual([
+			'award',
+			'close_out'
 		]);
 	});
 
-	it('keeps only outstanding reports once closed, and only apply-by for a prospect', () => {
-		expect(
-			grantDeadlineItems({ ...base, id: 'g1', status: 'closed', endsOn: '2026-06-30' }, [
-				r('r1', '2026-10-01')
-			]).map((d) => d.kind)
-		).toEqual(['report']);
-		expect(
-			grantDeadlineItems({ ...base, id: 'g1', applyBy: '2026-11-01' }, [r('r1', '2026-10-01')])
-		).toEqual([{ kind: 'apply', on: '2026-11-01', subjectId: 'apply:g1', title: 'Apply by' }]);
-	});
-
-	it('owes nothing while applied or after a refusal', () => {
-		for (const status of ['applied', 'declined'] as const) {
-			expect(
-				grantDeadlineItems({ ...base, id: 'g1', status, applyBy: '2026-11-01' }, [
-					r('r1', '2026-10-01')
-				])
-			).toEqual([]);
-		}
+	it('offers nothing already on the project, and nothing before an award', () => {
+		const ending = { status: 'awarded' as const, endsOn: '2026-10-01' };
+		expect(grantStageOffers(ending, new Set(['award', 'close_out'] as const), TODAY)).toEqual([]);
+		expect(grantStageOffers({ status: 'applied', endsOn: '2026-10-01' }, none, TODAY)).toEqual([]);
 	});
 });
 
-describe('withDeadlines', () => {
-	const app = (id: string, over: Record<string, unknown>) => ({
-		id,
-		title: id,
-		funderName: id,
-		...base,
-		...over
+describe('the grant page', () => {
+	it('names the earliest open task as the next step', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		const { nextTask } = await getGrant(grant.id, TODAY);
+		expect(nextTask?.title).toBe(tasks(grant.projectId!)[0].title);
+
+		sqlite.exec(`update work_order set resolved_at = 1 where project_id = '${grant.projectId}'`);
+		expect((await getGrant(grant.id, TODAY)).nextTask).toBeNull();
 	});
 
-	it('sorts by next deadline with undated rows last, attaching each its reports', () => {
-		const rows = withDeadlines(
-			[
-				app('undated', { status: 'applied' }),
-				app('later', { applyBy: '2026-12-01' }),
-				app('sooner', { status: 'awarded' })
-			],
-			[{ grantApplicationId: 'sooner', ...report('2026-10-01') }],
-			TODAY
+	it('offers the award tasks until they are applied, then stops', async () => {
+		const grant = await createGrant(input({ status: 'awarded', startsOn: '2026-10-01' }));
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual(['award']);
+
+		sqlite.exec(
+			`insert or ignore into user (id, name, email, email_verified) values ('staff-1', 'Staff', 's@x.test', 1)`
 		);
-		expect(rows.map((r) => r.id)).toEqual(['sooner', 'later', 'undated']);
-		expect(rows[0].deadline?.kind).toBe('report');
+		await applyGrantStage(grant.id, 'award', 'staff-1');
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual([]);
+		expect(tasks(grant.projectId!).some((t) => t.section === 'Award')).toBe(true);
+	});
+
+	it('does not offer a stage whose template is switched off', async () => {
+		sqlite.exec(`update duty_list set is_active = 0 where grant_stage = 'award'`);
+		const grant = await createGrant(input({ status: 'awarded' }));
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual([]);
 	});
 });
 
-describe('getGrant', () => {
-	it('throws a not-found domain error for an unknown id', async () => {
-		await expect(getGrant('nope', TODAY)).rejects.toBeInstanceOf(GrantNotFoundError);
+describe('the funded project', () => {
+	it('refuses a grant or sponsorship project as what the money pays for', async () => {
+		const other = await createGrant(input({ title: 'Other' }));
+		await expect(createGrant(input({ fundsProjectId: other.projectId }))).rejects.toBeInstanceOf(
+			FundedProjectError
+		);
 	});
-});
 
-describe('deleteFunder', () => {
-	it('refuses while applications still name the funder', async () => {
-		selectResult = [{ n: 1 }];
-		await expect(deleteFunder('f1')).rejects.toBeInstanceOf(FunderInUseError);
-		expect(chainCalls.some((c) => c.method === 'returning')).toBe(false);
+	it('takes an ordinary project', async () => {
+		sqlite.exec(`insert into project (id, name) values ('fair', 'Repair fair 2027')`);
+		const grant = await createGrant(input({ fundsProjectId: 'fair' }));
+		expect(grant.fundsProjectId).toBe('fair');
 	});
 });

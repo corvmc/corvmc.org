@@ -5,24 +5,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * SQLite: the merge is a set of `WHERE`s over two rows and their audiences.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
-	db: new Proxy(testDb, {
-		get: (target, prop, receiver) =>
-			prop === 'batch'
-				? async (queries: PromiseLike<unknown>[]) => {
-						for (const q of queries) await q;
-					}
-				: Reflect.get(target, prop, receiver)
-	})
-}));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { moveLinkedSubscriberEmail } = await import('./subscriber-service');
-const { subscriber, audience, audienceMember } = await import('$lib/server/db/schema/marketing');
-const { user } = await import('$lib/server/db/schema/authentication');
+const { subscriber, audience, audienceMember } = await import('#lib/server/db/schema/marketing.js');
+const { user } = await import('#lib/server/db/schema/authentication.js');
 const { eq } = await import('drizzle-orm');
 
 const MEMBER = 'usr-member';

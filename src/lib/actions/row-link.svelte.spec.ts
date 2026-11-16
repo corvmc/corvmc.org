@@ -14,14 +14,14 @@ describe('rowLink', () => {
 
 	it('navigates on a click in a plain cell', async () => {
 		await render(RowLinkHarness);
-		await page.getByText('Name cell').click();
+		await page.getByTestId('cell').click();
 		expect(goto).toHaveBeenCalledWith('/row');
 	});
 
 	it('runs a callback in place of navigating', async () => {
 		const open = vi.fn();
 		await render(RowLinkHarness, { to: open });
-		await page.getByText('Name cell').click();
+		await page.getByTestId('cell').click();
 		expect(open).toHaveBeenCalledOnce();
 		expect(goto).not.toHaveBeenCalled();
 	});
@@ -30,15 +30,15 @@ describe('rowLink', () => {
 	// pointer events, and the click lands on the cell behind it.
 	it('opens the row actions menu instead of navigating', async () => {
 		await render(RowLinkHarness);
-		await page.getByRole('button', { name: 'Row actions' }).click();
+		await page.getByRole('button').click();
 		expect(goto).not.toHaveBeenCalled();
-		await expect.element(page.getByText('Menu body')).toBeVisible();
+		await expect.element(page.getByTestId('menu-body')).toBeVisible();
 	});
 
 	it('leaves a click inside the open menu alone', async () => {
 		await render(RowLinkHarness);
-		await page.getByRole('button', { name: 'Row actions' }).click();
-		await page.getByText('Menu body').click();
+		await page.getByRole('button').click();
+		await page.getByTestId('menu-body').click();
 		expect(goto).not.toHaveBeenCalled();
 	});
 });

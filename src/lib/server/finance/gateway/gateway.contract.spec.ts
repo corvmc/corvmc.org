@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type Stripe from 'stripe';
 import type { PaymentGateway } from './types';
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { STRIPE_SECRET_KEY: 'sk_test_contract_spec' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STRIPE_SECRET_KEY: 'sk_test_contract_spec' })
+);
 
 const {
 	createFakeGateway,
@@ -184,7 +184,7 @@ describe('fake gateway behaviour', () => {
 	});
 
 	it('mints a client secret for an elements session, keyed to that session', async () => {
-		// `ui_mode: 'elements'` is what `checkout({ uiMode: 'elements' })` sends,
+		// `ui_mode: 'elements'` is what `checkout()` sends,
 		// and the client secret is the only thing the Payment Element can be
 		// initialised from. A fake that returned a constant here would let a page
 		// mount against the wrong session and never notice.

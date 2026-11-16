@@ -1,5 +1,5 @@
 import { BRAND } from './brand';
-import type { NotificationCategoryKey } from '$lib/server/db/schema/notification';
+import type { NotificationCategoryKey } from '#lib/server/db/schema/notification.js';
 
 // ---------------------------------------------------------------------------
 // Notification categories

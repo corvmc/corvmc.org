@@ -1,9 +1,10 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createBandEventForm } from '$lib/remote/band-events.remote';
+	import { createBandEventForm } from '#lib/remote/band-events.remote.js';
 
 	const fields = createBandEventForm.fields;
 
@@ -21,17 +22,17 @@
 -->
 <Action
 	action={createBandEventForm}
-	label="Create Event"
-	modalTitle="Create Event"
+	label={m.band_slug_events_create_event_modal_create_event_label()}
+	modalTitle={m.band_slug_events_create_event_modal_create_event_title()}
 	maxWidth="max-w-md"
-	submitLabel="Create Event"
-	successToast="Event created"
+	submitLabel={m.band_slug_events_create_event_modal_create_event_label()}
+	successToast={m.band_slug_events_create_event_modal_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		// `Action` types its success payload as unknown; the remote returns
 		// `{ eventId }` on create.
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/band/${bandSlug}/events/${eventId}`));
+		if (eventId) goto(resolve(`band/${bandSlug}/events/${eventId}`));
 	}}
 >
 	{#snippet form()}
@@ -42,18 +43,22 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="Title"
-				placeholder="e.g. Live at The Venue"
+				label={m.band_title_label()}
+				placeholder={m.band_e_g_live_at_venue_placeholder()}
 				maxlength="200"
 				required
 			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.eventDate} type="date" label="Date" required />
-				<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
+				<FormField field={fields.eventDate} type="date" label={m.band_date_label()} required />
+				<FormField
+					field={fields.eventStartTime}
+					type="time"
+					label={m.band_start_time_label()}
+					required
+				/>
 			</div>
 			<p class="text-muted">
-				Saved as a draft. The end time, venue, bill, poster and tickets are filled in on the event's
-				page next.
+				{m.band_slug_events_create_event_modal_saved_as_draft_end_time_text()}
 			</p>
 		</div>
 	{/snippet}

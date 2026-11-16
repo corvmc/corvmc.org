@@ -5,8 +5,8 @@
 	// It also needs a viewer in context to derive links at all.
 	import EntityIdentity from './EntityIdentity.svelte';
 	import EntityViewer from './EntityViewer.svelte';
-	import { capabilities as CAPS } from '$lib/config';
-	import type { EntityRef, Panel } from '$lib/types/entity';
+	import { capabilities as CAPS } from '#lib/config.js';
+	import type { EntityRef, Panel } from '#lib/types/entity.js';
 
 	let {
 		ref,

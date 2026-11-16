@@ -1,15 +1,16 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { createAnnouncement, updateAnnouncement } from '$lib/remote/announcements.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { refreshAll } from '$app/navigation';
+	import { createAnnouncement, updateAnnouncement } from '#lib/remote/announcements.remote.js';
 
 	/**
 	 * Write a post, or edit one.
 	 *
 	 * Mount-agnostic: it takes its group as a prop and knows nothing about either
 	 * route, because the same component is the band panel's composer and the club
-	 * page's. See docs/specs/shipped/groups-spec.md § One implementation, two mount points.
+	 * page's. See docs/decisions/0021-a-club-gets-a-page-not-a-panel.md.
 	 *
 	 * Writing is not publishing. What this saves is a draft — the roster hears
 	 * nothing until somebody presses Publish — which is why the submit button
@@ -33,14 +34,14 @@
 {#if editing && post}
 	<Action
 		action={updateAnnouncement.for(post.id)}
-		label="Edit"
+		label={m.groups_edit_label()}
 		iconOnly={false}
-		modalTitle="Edit announcement"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.groups_announcement_composer_edit_announcement_title()}
+		submitLabel={m.groups_save_label()}
+		successToast={m.groups_saved_toast()}
 		variant="ghost"
 		size="xs"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -49,16 +50,16 @@
 				<FormField
 					field={updateFields.title}
 					type="text"
-					label="Title"
+					label={m.groups_announcement_composer_title_label()}
 					value={post.title}
 					required
 				/>
 				<FormField
 					field={updateFields.body}
 					type="textarea"
-					label="Body"
+					label={m.groups_announcement_composer_body_label()}
 					value={post.body}
-					description="Markdown. Links, lists and **bold** work."
+					description={m.groups_announcement_composer_markdown_links_lists_bold_work_body()}
 					required
 				/>
 			</div>
@@ -67,13 +68,14 @@
 {:else}
 	<Action
 		action={createAnnouncement}
-		label="New announcement"
-		modalTitle="New announcement"
-		submitLabel="Save draft"
-		successToast="Draft saved"
+		data-testid="new-announcement"
+		label={m.groups_announcement_composer_new_announcement_label()}
+		modalTitle={m.groups_announcement_composer_new_announcement_title()}
+		submitLabel={m.groups_announcement_composer_save_draft_label()}
+		successToast={m.groups_announcement_composer_draft_saved_toast()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -81,15 +83,15 @@
 				<FormField
 					field={createFields.title}
 					type="text"
-					label="Title"
-					placeholder="August jam moved to the 27th"
+					label={m.groups_announcement_composer_title_label()}
+					placeholder={m.groups_announcement_composer_placeholder()}
 					required
 				/>
 				<FormField
 					field={createFields.body}
 					type="textarea"
-					label="Body"
-					description="Markdown. Nobody is notified until you publish."
+					label={m.groups_announcement_composer_body_label()}
+					description={m.groups_announcement_composer_markdown_nobody_notified_until_body()}
 					required
 				/>
 			</div>

@@ -1,22 +1,22 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { requireCommitteeMember } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { listProjects } from '$lib/server/project/project-service';
+import { requireCapability } from '#lib/server/authorization.js';
+import { scheduleScope } from '#lib/server/capability/record-scope.js';
+import { requireCommitteeMember } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listProjects } from '#lib/server/project/project-service.js';
 import {
 	createMaintenanceSchedule as createService,
 	getScheduleGroupId,
 	listMaintenanceSchedules,
 	retireMaintenanceSchedule as retireService,
 	updateMaintenanceSchedule as updateService
-} from '$lib/server/volunteer/maintenance-schedule-service';
-import { searchAssetOptions } from '$lib/server/inventory/asset-service';
-import { getVolunteerWorklist } from './volunteer.remote';
+} from '#lib/server/volunteer/maintenance-schedule-service.js';
+import { searchAssetOptions } from '#lib/server/inventory/asset-service.js';
 import { getMemberGroup } from './groups.remote';
 
 /**
@@ -68,7 +68,9 @@ export const createRecurringWork = form(
 		assetId: z.string().optional()
 	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageRecurring');
+		const staff = await requireCapability('volunteer.manageRecurring', {
+			projectId: data.projectId || null
+		});
 		try {
 			await createService({
 				name: data.name,
@@ -84,7 +86,7 @@ export const createRecurringWork = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		await Promise.all([getRecurringWorkPage().refresh(), getVolunteerWorklist().refresh()]);
+		await getRecurringWorkPage().refresh();
 		return { success: true };
 	}
 );
@@ -100,7 +102,7 @@ export const updateRecurringWork = form(
 		projectId: z.union([z.literal(''), z.uuid()]).optional()
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageRecurring');
+		await requireCapability('volunteer.manageRecurring', () => scheduleScope(data.id));
 		try {
 			await updateService(data.id, {
 				name: data.name,
@@ -118,7 +120,7 @@ export const updateRecurringWork = form(
 );
 
 export const retireRecurringWork = form(z.object({ id: z.string().min(1) }), async (data) => {
-	await requireCapability('volunteer.manageRecurring');
+	await requireCapability('volunteer.manageRecurring', () => scheduleScope(data.id));
 	try {
 		await retireService(data.id);
 	} catch (err) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The door list, for the person on the door.
 	 *
@@ -7,27 +8,36 @@
 	 * and cancelling a ticket stays with staff. The show is decided by the
 	 * signup, so this page cannot be pointed at another night.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { page } from '$app/state';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { resolve } from '$app/paths';
-	import { checkInAsVolunteer, getMyShiftCheckIn } from '$lib/remote/volunteer.remote';
+	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import {
+		checkInAsVolunteer,
+		getMyShiftCheckIn,
+		identifyTicketCodeAsVolunteer,
+		scanTicketInAsVolunteer
+	} from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const signupId = $derived(page.params.signupId!);
+	const params = routeParams('signupId');
+
+	const signupId = $derived(params.signupId);
 	const data = $derived(await getMyShiftCheckIn(signupId));
 
 	let search = $state('');
 
+	// Cancelled tickets show only to a search, which says why one will not go in (#2797).
 	const matching = $derived(
 		data.tickets.filter((t) => {
-			if (!search.trim()) return true;
+			if (!search.trim()) return t.status !== 'cancelled';
 			const q = search.trim().toLowerCase();
 			return t.attendeeName.toLowerCase().includes(q) || t.code.toLowerCase().includes(q);
 		})
@@ -36,17 +46,39 @@
 
 <PageHeader
 	width="2xl"
-	title="Check-in"
+	title={m.member_volunteer_shifts_signup_id_check_in_check_title()}
 	subtitle={data.event.title}
-	parent={{ label: 'Shift', href: resolve('/member/volunteer/shifts/[signupId]', { signupId }) }}
+	parent={{
+		label: m.member_volunteer_shifts_signup_id_check_in_shift_label(),
+		href: resolve('/member/volunteer/shifts/[signupId]', { signupId })
+	}}
 />
 <PageContent width="2xl">
 	<div class="flex gap-4">
-		<StatCard title="Checked in" value={data.stats.checkedIn} size="sm" class="p-4" />
-		<StatCard title="Tickets sold" value={data.stats.sold} size="sm" class="p-4" />
+		<StatCard
+			title={m.member_volunteer_shifts_signup_id_check_in_checked_title()}
+			value={data.stats.checkedIn}
+			size="sm"
+			class="p-4"
+		/>
+		<StatCard
+			title={m.member_volunteer_shifts_signup_id_check_in_tickets_sold_title()}
+			value={data.stats.sold}
+			size="sm"
+			class="p-4"
+		/>
 	</div>
 
-	<SearchInput bind:value={search} placeholder="Search by name or code" />
+	<DoorScanner
+		tickets={data.tickets}
+		checkIn={(ticketId) => scanTicketInAsVolunteer({ ticketId, signupId })}
+		identify={(code) => identifyTicketCodeAsVolunteer({ code, signupId })}
+	/>
+
+	<SearchInput
+		bind:value={search}
+		placeholder={m.member_volunteer_shifts_signup_id_check_in_placeholder()}
+	/>
 
 	<div class="space-y-2">
 		{#each matching as ticket (ticket.id)}
@@ -56,26 +88,36 @@
 						<p class="truncate font-medium">{ticket.attendeeName}</p>
 						<p class="font-mono text-subtle text-sm">{ticket.code}</p>
 					</div>
-					{#if ticket.status === 'checked_in'}
-						<StatusBadge status="checked_in" />
+					{#if ticket.status === 'checked_in' || ticket.status === 'cancelled'}
+						<StatusBadge status={ticket.status} />
 					{:else}
 						<!-- 44px on purpose: tapped a hundred times in a row, standing
 						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 						<Form
 							remote={checkInAsVolunteer.for(ticket.id)}
-							successToast="Checked in"
+							successToast={m.member_volunteer_shifts_signup_id_check_in_checked_toast()}
 							class="inline"
 						>
-							<input type="hidden" name="ticketId" value={ticket.id} />
-							<input type="hidden" name="signupId" value={signupId} />
-							<SubmitButton label="Check in" variant="primary" class="min-h-11" />
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.ticketId.as('hidden', ticket.id)}
+							/>
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.signupId.as('hidden', signupId)}
+							/>
+							<SubmitButton
+								label={m.member_volunteer_shifts_signup_id_check_in_check_2_label()}
+								variant="primary"
+								class="min-h-11"
+							/>
 						</Form>
 					{/if}
 				</CardBody>
 			</Card>
 		{:else}
 			<p class="py-8 text-center text-muted">
-				{search ? 'Nobody matches that.' : 'No tickets to check in.'}
+				{search
+					? m.member_volunteer_shifts_signup_id_check_in_nobody_matches_text()
+					: m.member_volunteer_shifts_signup_id_check_in_no_tickets_check_text()}
 			</p>
 		{/each}
 	</div>

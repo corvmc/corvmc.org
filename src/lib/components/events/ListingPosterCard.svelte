@@ -1,10 +1,14 @@
 <script lang="ts">
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 	import { toast } from 'svelte-sonner';
-	import { responseErrorMessage } from '$lib/api';
-	import { imageSrc } from '$lib/utils/images';
-	import { useTemplateFlyerAsPoster } from '$lib/remote/productions.remote';
+	import { responseErrorMessage } from '#lib/api.js';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { useTemplateFlyerAsPoster } from '#lib/remote/productions.remote.js';
+	import { printEventPoster } from '#lib/remote/event-poster.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * A listing's poster: upload one, or draw the template flyer as one. Both are
@@ -22,68 +26,86 @@
 
 	let { eventId, posterUrl, cancelled, uploadWhileCancelled = false, onchange }: Props = $props();
 
-	async function upload(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function upload(file: File) {
 		const formData = new FormData();
 		formData.append('poster', file);
+		const res = await fetch(`/api/events/${eventId}/poster`, { method: 'POST', body: formData });
+		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
+		toast.success(m.events_listing_poster_card_toast());
+		onchange();
+	}
+
+	let printing = $state(false);
+
+	/** Render the Letter PDF on the server, then hand it to the browser as a download. */
+	async function downloadPrintPoster() {
+		printing = true;
 		try {
-			const res = await fetch(`/api/events/${eventId}/poster`, { method: 'POST', body: formData });
-			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-			toast.success('Poster updated');
-			onchange();
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to upload poster');
+			const { file, filename } = await printEventPoster({ eventId });
+			const a = document.createElement('a');
+			a.href = file;
+			a.download = filename;
+			a.click();
+		} catch (e) {
+			const err = e as { body?: { message?: string } };
+			toast.error(err.body?.message ?? m.events_listing_poster_card_print_failed_toast());
+		} finally {
+			printing = false;
 		}
 	}
 </script>
 
-<InfoCard title="Poster">
+<InfoCard title={m.events_listing_poster_card_title()}>
 	{#if posterUrl}
 		{@const poster = imageSrc(posterUrl, 'poster')}
 		<img
 			src={poster.src}
 			srcset={poster.srcset}
 			sizes={poster.sizes}
-			alt="Event poster"
+			alt={m.events_listing_poster_card_alt_text()}
 			class="max-h-64 rounded object-contain"
 		/>
 	{:else}
-		<p class="text-muted">No poster uploaded</p>
+		<p class="text-muted">{m.events_listing_poster_card_no_poster_uploaded_text()}</p>
 	{/if}
 
 	{#if !cancelled || uploadWhileCancelled}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<!-- A bare file input, not a FormField: the upload posts on change to an
-			     endpoint, with no form around it to submit. -->
-			<input
-				type="file"
+			<!-- The poster is drawn above at its own size, so no preview here. -->
+			<FileUpload
+				{upload}
 				accept="image/jpeg,image/png,image/webp"
-				aria-label="Upload a poster"
-				onchange={upload}
-				class="file-input file-input-sm"
+				showPreview={false}
+				emptyLabel={posterUrl
+					? m.events_listing_poster_card_replace_poster_title()
+					: m.events_listing_poster_card_upload_poster_title()}
+				aria-label={m.events_listing_poster_card_upload_poster_label()}
 			/>
 			{#if !cancelled}
 				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
 				<Action
 					action={useTemplateFlyerAsPoster}
-					label="Use the template flyer"
+					label={m.events_listing_poster_card_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Use the template flyer?"
-					submitLabel="Make the poster"
-					successToast="Poster updated"
+					modalTitle={m.events_listing_poster_card_modal_title()}
+					submitLabel={m.events_listing_poster_card_submit_label()}
+					successToast={m.events_listing_poster_card_toast()}
 					onsuccess={onchange}
 				>
 					{#snippet form()}
-						<input type="hidden" name="eventId" value={eventId} />
+						<input {...useTemplateFlyerAsPoster.fields.eventId.as('hidden', eventId)} />
 						<p class="text-sm">
-							A flyer is drawn from the title, date, doors, venue, bill and price, and it replaces
-							the current poster. It is a snapshot: after editing the event, run this again.
+							{m.events_listing_poster_card_flyer_drawn_from_title_date_text()}
 						</p>
 					{/snippet}
 				</Action>
+				{#if posterUrl}
+					<!-- The uploaded image above a details footer, as a Letter PDF; nothing is stored. -->
+					<Button variant="ghost" size="sm" disabled={printing} onclick={downloadPrintPoster}>
+						{m.events_listing_poster_card_print_label()}
+					</Button>
+				{/if}
 			{/if}
 		</div>
 	{/if}

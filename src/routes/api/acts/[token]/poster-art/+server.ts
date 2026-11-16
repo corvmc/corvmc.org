@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { resolveContactSheetToken } from '$lib/server/directory/contact-sheet-service';
+import { resolveContactSheetToken } from '#lib/server/directory/contact-sheet-service.js';
 import {
 	deliverPosterArt,
 	PosterRequestNotFoundError
-} from '$lib/server/production/artifact-request-service';
+} from '#lib/server/production/artifact-request-service.js';
 
 /**
  * An artist's poster art, against one of their own asks. A route rather than a
@@ -37,5 +37,5 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		if (err instanceof PosterRequestNotFoundError) throw error(404, err.message);
 		throw err;
 	}
-	return json({ success: true });
+	return Response.json({ success: true });
 };

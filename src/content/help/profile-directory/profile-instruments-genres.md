@@ -1,5 +1,5 @@
 ---
-title: Add Instruments & Genres
+title: Add instruments & genres
 slug: profile-instruments-genres
 category: profile-directory
 summary: Tag what you play and the styles you're into so others can find you.

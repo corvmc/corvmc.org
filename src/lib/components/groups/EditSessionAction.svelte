@@ -1,8 +1,10 @@
 <script lang="ts">
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { updateGroupSession } from '$lib/remote/group-events.remote';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
+	import { updateGroupSession } from '#lib/remote/group-events.remote.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 	/**
 	 * Move, rename, or change what a session does with the room.
@@ -29,6 +31,7 @@
 			tags: string | null;
 			externalTicketUrl: string | null;
 			ticketPrice: number | null;
+			visibility: string;
 		};
 		onchanged: () => void;
 	} = $props();
@@ -61,11 +64,11 @@
 
 <Action
 	action={updateGroupSession.for(session.id)}
-	label="Edit"
-	aria-label={`Edit ${session.title}`}
-	modalTitle="Edit session"
-	submitLabel="Save"
-	successToast="Session updated"
+	label={m.groups_edit_label()}
+	aria-label={m.groups_edit_session_aria_label({ title: session.title })}
+	modalTitle={m.groups_edit_session_modal_title()}
+	submitLabel={m.groups_save_label()}
+	successToast={m.groups_edit_session_success_toast()}
 	variant="ghost"
 	size="xs"
 	onsuccess={onchanged}
@@ -78,7 +81,7 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="What is it"
+				label={m.groups_what_label()}
 				value={session.title}
 				required
 			/>
@@ -86,19 +89,31 @@
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label="Details"
+				label={m.groups_details_label()}
 				value={session.description ?? ''}
-				description="Optional. Shown on the event page."
+				description={m.groups_optional_shown_event_page_body()}
 			/>
 
-			<FormField field={fields.sessionDate} type="date" label="Date" value={start[0]} required />
+			<FormField
+				field={fields.sessionDate}
+				type="date"
+				label={m.groups_date_label()}
+				value={start[0]}
+				required
+			/>
 
 			<div class="grid grid-cols-2 gap-3">
-				<FormField field={fields.startTime} type="time" label="Starts" value={start[1]} required />
+				<FormField
+					field={fields.startTime}
+					type="time"
+					label={m.groups_starts_label()}
+					value={start[1]}
+					required
+				/>
 				<FormField
 					field={fields.endTime}
 					type="time"
-					label="Ends"
+					label={m.groups_ends_label()}
 					value={end ? end[1] : ''}
 					required
 				/>
@@ -107,33 +122,35 @@
 			<FormField
 				field={fields.reserveRoom}
 				type="checkbox"
-				label="Hold the practice room"
+				label={m.groups_hold_practice_room_label()}
 				value={session.reservesRoom}
-				description="Free for a program — no credits are spent. Unticking gives the room back without calling the session off."
+				description={m.groups_edit_session_free_program_no_credits_spent_body()}
 			/>
 
 			<FormField
 				field={fields.doorsTime}
 				type="time"
-				label="Doors"
+				label={m.groups_doors_label()}
 				value={doors ?? ''}
-				description="Optional. When people can turn up."
+				description={m.groups_optional_when_people_can_turn_body()}
 			/>
 
 			<FormField
 				field={fields.tags}
 				type="text"
-				label="Tags"
+				label={m.groups_tags_label()}
 				value={session.tags ?? ''}
-				placeholder="jazz, jam, all ages"
-				description="Optional. Comma separated — how the gig guide filters."
+				placeholder={m.groups_jazz_jam_all_ages_placeholder()}
+				description={m.groups_optional_comma_separated_how_gig_body()}
 			/>
+
+			<VisibilityField field={fields.visibility} value={session.visibility} hasGroup />
 
 			<FormField
 				field={fields.posterFile}
 				type="file"
-				label="Poster"
-				description="Optional. Replaces the current one."
+				label={m.groups_poster_label()}
+				description={m.groups_edit_session_optional_replaces_current_one_body()}
 				accept="image/jpeg,image/png,image/webp"
 			/>
 
@@ -141,24 +158,23 @@
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label="Price"
+					label={m.groups_price_label()}
 					value={centsToDollars(session.ticketPrice)}
 					placeholder="10.00"
-					description="Optional. Leave blank if it's free."
+					description={m.groups_optional_leave_blank_if_s_body()}
 				/>
 				<FormField
 					field={fields.externalTicketUrl}
 					type="text"
-					label="Tickets at"
+					label={m.groups_tickets_at_label()}
 					value={session.externalTicketUrl ?? ''}
-					placeholder="https://"
-					description="Optional. Where people buy."
+					placeholder={m.groups_https_placeholder()}
+					description={m.groups_optional_where_people_buy_body()}
 				/>
 			</div>
 
 			<p class="text-subtle">
-				Moving a session moves the room it holds. If the new time is taken, the save is refused
-				rather than double-booking.
+				{m.groups_edit_session_moving_session_moves_room_holds_text()}
 			</p>
 		</div>
 	{/snippet}

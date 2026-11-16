@@ -4,7 +4,7 @@
  * tested and reused on both client and server.
  */
 import { detectPlatform } from './link-platform';
-import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
+import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
 
 /** Services that belong in the icon-only "Listen on" ribbon / the Listen tabs. */
 export const STREAMING_PLATFORMS = [

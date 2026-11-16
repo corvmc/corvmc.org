@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import {
 		getUser,
 		getRoleCatalog,
@@ -9,26 +11,39 @@
 		reactivateUser,
 		purgeUser,
 		banUser,
-		unbanUser
-	} from '$lib/remote/users.remote';
-	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
+		unbanUser,
+		suspendUser,
+		liftSuspension,
+		resendRemovalNotice,
+		getUserRemovals
+	} from '#lib/remote/users.remote.js';
+	import { positionLabels, removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
+	import { getUserDirectoryProfile } from '#lib/remote/directory.remote.js';
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import ViewAsMember from '../ViewAsMember.svelte';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
-	import { summarizeAuditEntry } from '$lib/utils/audit-display';
+	import {
+		formatDateTimeShort,
+		formatDateShortYear,
+		formatHistoryTime
+	} from '#lib/utils/format.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { toast } from 'svelte-sonner';
+	import { Latest } from '#lib/latest.svelte.js';
+	import WhyCanAct from '#lib/components/access/WhyCanAct.svelte';
+	import { getPersonAccessWhy } from '#lib/remote/why-can-act.remote.js';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -37,12 +52,16 @@
 	const { fields: purgeFields } = purgeUser;
 	const { fields: banFields } = banUser;
 	const { fields: unbanFields } = unbanUser;
+	const { fields: suspendFields } = suspendUser;
+	const { fields: liftFields } = liftSuspension;
+	const { fields: resendFields } = resendRemovalNotice;
 
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
 	function refreshAccount() {
 		// One refresh: the page reads both halves through `getUserPage`.
 		void getUserPage(id).refresh();
+		void getUserRemovals(id).refresh();
 	}
 
 	// Reactivation resumes a subscription cancelled at period end, but a period
@@ -52,9 +71,21 @@
 	function onReactivated(result?: unknown) {
 		refreshAccount();
 		if ((result as { subscription?: string } | undefined)?.subscription === 'lapsed') {
-			toast.warning('Membership lapsed while the account was closed — it needs a new checkout.');
+			toast.warning(m.staff_members_id_panels_account_panel_toast());
 		}
 	}
+
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-edit (#2356).
+	const roleCatalog = new Latest(() => getRoleCatalog());
+	$effect(() => {
+		if (roleCatalog.error) throw roleCatalog.error.e;
+	});
+
+	// Why this person can act (#2994): positions, committee seats, shift roles.
+	const why = new Latest(() => getPersonAccessWhy(id));
+	$effect(() => {
+		if (why.error) throw why.error.e;
+	});
 </script>
 
 <!--
@@ -64,23 +95,42 @@
 	the picker from a caller who may edit the profile but not the roles: without
 	that they would submit a role set they cannot change and land on a 403.
 -->
-{#await getRoleCatalog() then catalog}
-	{@const roleOptions = catalog.roles.map((r) => ({ id: String(r.id), label: r.name }))}
+<ViewAsMember {id} />
+
+{#if roleCatalog.current}
+	{@const catalog = roleCatalog.current}
+	{@const roleOptions = catalog.roles.map((r) => ({
+		id: String(r.id),
+		label: (positionLabels as Record<string, string>)[r.name] ?? r.name
+	}))}
 	{@const initialRoles = catalog.roles
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
-{/await}
+{/if}
+
+{#if why.current}
+	<WhyCanAct why={why.current} />
+{/if}
 
 <EmailChangeCard {id} email={member.email} />
 
-<RelatedList title="Directory profile" result={getUserDirectoryProfile(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_account_panel_directory_profile_title()}
+	result={getUserDirectoryProfile(id)}
+>
 	{#snippet children(data)}
 		{#if !data.profile}
-			<EmptyState title="No profile" description="This account has no directory profile row." />
+			<EmptyState
+				title={m.staff_members_id_panels_account_panel_no_profile_title()}
+				description={m.staff_members_id_panels_account_panel_account_has_no_directo_body()}
+			/>
 		{:else}
 			<DefinitionList>
-				<Fact label="Visibility" class="flex items-center gap-2">
+				<Fact
+					label={m.staff_members_id_panels_account_panel_visibility_label()}
+					class="flex items-center gap-2"
+				>
 					<Badge
 						size="sm"
 						variant={data.profile.directoryVisibility === 'hidden' ? 'ghost' : 'info'}
@@ -88,15 +138,24 @@
 						{data.profile.directoryVisibility}
 					</Badge>
 					{#if !data.complete}
-						<span class="opacity-60">Profile incomplete</span>
+						<span class="opacity-60"
+							>{m.staff_members_id_panels_account_panel_profile_incomplete_text()}</span
+						>
 					{/if}
 				</Fact>
 
-				<Fact label="Tagline">{data.profile.tagline || '—'}</Fact>
+				<Fact label={m.staff_members_id_panels_account_panel_tagline_label()}
+					>{data.profile.tagline || '—'}</Fact
+				>
 
-				<Fact label="Hometown">{data.profile.hometown || '—'}</Fact>
+				<Fact label={m.staff_members_id_panels_account_panel_hometown_label()}
+					>{data.profile.hometown || '—'}</Fact
+				>
 
-				<Fact label="Instruments" class="flex flex-wrap gap-1">
+				<Fact
+					label={m.staff_members_id_panels_account_panel_instruments_label()}
+					class="flex flex-wrap gap-1"
+				>
 					{#each data.profile.instruments as i (i)}
 						<Badge size="sm">{i}</Badge>
 					{:else}
@@ -104,7 +163,10 @@
 					{/each}
 				</Fact>
 
-				<Fact label="Genres" class="flex flex-wrap gap-1">
+				<Fact
+					label={m.staff_members_id_panels_account_panel_genres_label()}
+					class="flex flex-wrap gap-1"
+				>
 					{#each data.profile.genres as g (g)}
 						<Badge size="sm">{g}</Badge>
 					{:else}
@@ -112,19 +174,30 @@
 					{/each}
 				</Fact>
 
-				<Fact label="Open to" class="flex flex-wrap gap-1">
-					{#if data.profile.lookingForBand}<Badge size="sm">Looking for a band</Badge>{/if}
-					{#if data.profile.availableForHire}<Badge size="sm">For hire</Badge>{/if}
-					{#if data.profile.teachesLessons}<Badge size="sm">Teaches privately</Badge>{/if}
-					{#if data.profile.openToCollaboration}<Badge size="sm">Collaboration</Badge>{/if}
+				<Fact
+					label={m.staff_members_id_panels_account_panel_open_label()}
+					class="flex flex-wrap gap-1"
+				>
+					{#if data.profile.lookingForBand}<Badge size="sm"
+							>{m.staff_members_id_panels_account_panel_looking_band_label()}</Badge
+						>{/if}
+					{#if data.profile.availableForHire}<Badge size="sm"
+							>{m.staff_members_id_panels_account_panel_hire_label()}</Badge
+						>{/if}
+					{#if data.profile.teachesLessons}<Badge size="sm"
+							>{m.staff_members_id_panels_account_panel_teaches_privately_label()}</Badge
+						>{/if}
+					{#if data.profile.openToCollaboration}<Badge size="sm"
+							>{m.staff_members_id_panels_account_panel_collaboration_label()}</Badge
+						>{/if}
 					{#if !data.profile.lookingForBand && !data.profile.availableForHire && !data.profile.teachesLessons && !data.profile.openToCollaboration}
 						—
 					{/if}
 				</Fact>
 			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
-					View public profile
+				<Button href={resolve(`member/directory/members/${id}`)} variant="ghost" size="sm">
+					{m.staff_members_id_panels_account_panel_view_public_profile_label()}
 				</Button>
 			</div>
 		{/if}
@@ -135,28 +208,37 @@
 	Read-only. Revoking a session would be a new mutation, and the one lever staff
 	already have for cutting off access — deactivation — deletes them all.
 -->
-<RelatedList title="Sign-in activity" result={getUserSessions(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_account_panel_sign_activity_title()}
+	result={getUserSessions(id)}
+>
 	{#snippet children(data)}
 		<p class="mb-3 text-muted">
-			Last sign-in: {data.lastLoginAt ? formatDateTimeShort(data.lastLoginAt) : 'never on record'}
+			{m.staff_members_id_panels_account_panel_last_sign_text({
+				value: data.lastLoginAt
+					? formatDateTimeShort(data.lastLoginAt)
+					: m.staff_members_id_panels_account_panel_never_record_text()
+			})}
 		</p>
 		{#if data.sessions.length === 0}
 			<EmptyState
-				title="No active sessions"
-				description="They are signed out everywhere, or their sessions have expired."
+				title={m.staff_members_id_panels_account_panel_no_active_sessions_title()}
+				description={m.staff_members_id_panels_account_panel_they_signed_out_everyw_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Started</th>
-					<th class="col-support">IP</th>
-					<th class="col-extra">Expires</th>
+					<th>{m.staff_started_label()}</th>
+					<th class="col-support">{m.staff_members_id_panels_account_panel_ip_label()}</th>
+					<th class="col-extra">{m.staff_expires_label()}</th>
 				{/snippet}
 				{#each data.sessions as s (s.id)}
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="font-medium whitespace-nowrap">{formatDateTimeShort(s.createdAt)}</div>
-							<div class="truncate text-muted">{s.userAgent ?? 'Unknown device'}</div>
+							<div class="truncate text-muted">
+								{s.userAgent ?? m.staff_members_id_panels_account_panel_unknown_device_text()}
+							</div>
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(s.expiresAt)}</td>
@@ -168,25 +250,65 @@
 </RelatedList>
 
 <!-- Staff changes to this account, newest first. Reads only; nothing here edits the log. -->
-<RelatedList title="History" result={getUserHistory(id)}>
-	{#snippet children(entries)}
-		{#if entries.length === 0}
-			<EmptyState
-				title="No recorded changes"
-				description="Role, profile, credit and account changes made by staff show up here."
-			/>
+<ActivityFeedCard
+	title={m.staff_history_title()}
+	query={(limit) => getUserHistory(limit ? { userId: id, limit } : { userId: id })}
+	toRow={feedItemRow}
+	empty={{
+		title: m.staff_no_recorded_changes_title(),
+		description: m.staff_members_id_panels_account_panel_role_profile_credit_ac_body()
+	}}
+/>
+
+<!-- Each row is one removal; it rests on the report linked beside it. -->
+<RelatedList
+	title={m.staff_members_id_panels_account_panel_removals_title()}
+	result={getUserRemovals(id)}
+>
+	{#snippet children(rows)}
+		{#if rows.length === 0}
+			<EmptyState title={m.staff_members_id_panels_account_panel_no_removals_title()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Change</th>
+					<th class="cell-primary">{m.staff_reason_label()}</th>
+					<th class="col-support">{m.staff_status_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_account_panel_removal_report_label()}</th
+					>
 				{/snippet}
-				{#each entries as entry (entry.id)}
+				{#each rows as r (r.id)}
 					<tr>
 						<td class="cell-primary">
-							<div>{summarizeAuditEntry(entry)}</div>
-							<div class="text-muted">
-								{entry.actorName} · {formatDateTimeShort(entry.createdAt)}
+							<div class="flex items-center gap-2 font-medium">
+								<Badge size="sm" variant={r.kind === 'ban' ? 'error' : 'warning'}
+									>{removalKindLabels[r.kind]}</Badge
+								>
+								{m.staff_members_id_panels_account_panel_removal_by_text({
+									date: formatDateShortYear(r.createdAt),
+									name:
+										r.actorName ?? m.staff_members_id_panels_account_panel_removed_account_text()
+								})}
 							</div>
+							<div class="text-muted whitespace-pre-line">{r.reason}</div>
+						</td>
+						<td class="col-support">
+							{#if r.liftedAt}
+								{m.staff_members_id_panels_account_panel_removal_lifted_text({
+									reason: r.liftReason ? removalLiftReasonLabels[r.liftReason] : '—',
+									date: formatDateShortYear(r.liftedAt)
+								})}
+							{:else if r.endsAt}
+								{m.staff_members_id_panels_account_panel_removal_ends_text({
+									date: formatDateShortYear(r.endsAt)
+								})}
+							{:else}
+								{m.staff_members_id_panels_account_panel_removal_open_text()}
+							{/if}
+						</td>
+						<td class="col-extra">
+							<a class="link" href={resolve(`staff/flags/${r.flagId}`)}
+								>{m.staff_members_id_panels_account_panel_removal_report_text()}</a
+							>
 						</td>
 					</tr>
 				{/each}
@@ -195,35 +317,50 @@
 	{/snippet}
 </RelatedList>
 
-<InfoCard title="Details" class="bg-base-200 shadow-none">
+<InfoCard title={m.staff_details_title()} class="bg-base-200 shadow-none">
 	<DefinitionList>
-		<Fact label="User ID" mono>{member.id}</Fact>
+		<Fact label={m.staff_members_id_panels_account_panel_user_id_label()} mono>{member.id}</Fact>
 
-		<Fact label="Member no.">{member.memberNumber ?? '—'}</Fact>
+		<Fact label={m.staff_members_id_panels_account_panel_member_no_label()}
+			>{member.memberNumber ?? '—'}</Fact
+		>
 
 		<!-- Nothing is gated on this, so "not confirmed" is not a restriction and
 		     should not read like one. Every account predating #757 shows it. -->
-		<Fact label="Email confirmed">
+		<Fact label={m.staff_members_id_panels_account_panel_email_confirmed_label()}>
 			{#if member.emailVerified}
-				Yes
+				{m.staff_yes_text()}
 			{:else}
-				<span class="text-muted">Not yet — full access either way</span>
+				<span class="text-muted"
+					>{m.staff_members_id_panels_account_panel_not_yet_full_access_ei_text()}</span
+				>
 			{/if}
 		</Fact>
 
-		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
+		<Fact label={m.staff_members_id_panels_account_panel_stripe_id_label()} mono
+			>{member.stripeId ?? '—'}</Fact
+		>
 
-		<Fact label="Joined">{new Date(member.createdAt).toLocaleString()}</Fact>
+		<Fact label={m.staff_joined_label()}>{formatHistoryTime(new Date(member.createdAt))}</Fact>
 
 		{#if member.deletedAt}
-			<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
+			<Fact label={m.staff_deactivated_label()}
+				>{formatHistoryTime(new Date(member.deletedAt))}</Fact
+			>
 		{/if}
 
 		{#if member.bannedAt}
-			<Fact label="Banned">
-				{new Date(member.bannedAt).toLocaleString()} by {member.bannedByName ?? 'a removed account'}
+			<Fact label={m.staff_members_id_panels_account_panel_banned_label()}>
+				{m.staff_members_id_panels_account_panel_by_text({
+					formatHistoryTime: formatHistoryTime(new Date(member.bannedAt)),
+					bannedByName:
+						member.bannedByName ?? m.staff_members_id_panels_account_panel_removed_account_text()
+				})}
 			</Fact>
-			<Fact label="Ban reason" class="whitespace-pre-line">{member.banReason}</Fact>
+			<Fact
+				label={m.staff_members_id_panels_account_panel_ban_reason_label()}
+				class="whitespace-pre-line">{member.banReason}</Fact
+			>
 		{/if}
 	</DefinitionList>
 </InfoCard>
@@ -231,10 +368,10 @@
 {#snippet banAction()}
 	<Action
 		action={banUser}
-		label="Ban"
-		modalTitle="Ban {member.name}"
-		submitLabel="Ban"
-		successToast="Member banned"
+		label={m.staff_members_id_panels_account_panel_ban_label()}
+		modalTitle={m.staff_members_id_panels_account_panel_modal_title({ name: member.name })}
+		submitLabel={m.staff_members_id_panels_account_panel_ban_label()}
+		successToast={m.staff_members_id_panels_account_panel_member_banned_toast()}
 		variant="error"
 		size="sm"
 		onsuccess={refreshAccount}
@@ -242,30 +379,105 @@
 		{#snippet form()}
 			<input {...banFields.id.as('hidden', id)} />
 			<p class="pb-4">
-				A ban deactivates the account the same way, and records who banned them and why. It stays
-				deactivated until a staffer lifts the ban.
+				{m.staff_members_id_panels_account_panel_ban_deactivates_accoun_text()}
 			</p>
 			<FormField
 				field={banFields.reason}
 				type="textarea"
-				label="Reason"
-				description="Staff-only. What they did, for whoever reviews this later."
+				label={m.staff_reason_label()}
+				description={m.staff_members_id_panels_account_panel_staff_only_what_they_d_body()}
 				required
 			/>
 		{/snippet}
 	</Action>
 {/snippet}
 
-<InfoCard title="Danger Zone" class="mt-6 border border-error/30 bg-error/5 shadow-none">
-	{#if member.bannedAt}
+{#snippet resendAction()}
+	<Action
+		action={resendRemovalNotice}
+		label={m.staff_members_id_panels_account_panel_resend_notice_label()}
+		submitLabel={m.staff_members_id_panels_account_panel_resend_notice_label()}
+		successToast={m.staff_members_id_panels_account_panel_notice_sent_toast()}
+		variant="ghost"
+		size="sm"
+	>
+		{#snippet form()}
+			<input {...resendFields.id.as('hidden', id)} />
+			<p class="py-4">{m.staff_members_id_panels_account_panel_resend_notice_text()}</p>
+		{/snippet}
+	</Action>
+{/snippet}
+
+{#snippet suspendAction()}
+	<Action
+		action={suspendUser}
+		label={m.staff_members_id_panels_account_panel_suspend_label()}
+		modalTitle={m.staff_members_id_panels_account_panel_suspend_title({ name: member.name })}
+		submitLabel={m.staff_members_id_panels_account_panel_suspend_label()}
+		successToast={m.staff_members_id_panels_account_panel_member_suspended_toast()}
+		variant="warning"
+		size="sm"
+		onsuccess={refreshAccount}
+	>
+		{#snippet form()}
+			<input {...suspendFields.id.as('hidden', id)} />
+			<p class="pb-4">{m.staff_members_id_panels_account_panel_suspend_effects_text()}</p>
+			<FormField
+				field={suspendFields.days}
+				type="number"
+				label={m.staff_members_id_panels_account_panel_suspend_days_label()}
+				value={member.suspensionDefaultDays}
+				min={1}
+				required
+			/>
+			<FormField
+				field={suspendFields.reason}
+				type="textarea"
+				label={m.staff_reason_label()}
+				description={m.staff_members_id_panels_account_panel_staff_only_what_they_d_body()}
+				required
+			/>
+		{/snippet}
+	</Action>
+{/snippet}
+
+<InfoCard
+	title={m.staff_members_id_panels_account_panel_danger_zone_title()}
+	class="mt-6 border border-error/30 bg-error/5 shadow-none"
+>
+	{#if member.suspendedUntil}
 		<p class="mb-3 text-muted">
-			This account is banned. Lifting the ban restores access; the reason above is cleared with it.
+			{m.staff_members_id_panels_account_panel_suspended_until_text({
+				date: formatDateShortYear(new Date(member.suspendedUntil))
+			})}
+		</p>
+		<div class="flex gap-2">
+			<Action
+				action={liftSuspension}
+				label={m.staff_members_id_panels_account_panel_lift_suspension_label()}
+				successToast={m.staff_members_id_panels_account_panel_suspension_lifted_toast()}
+				variant="success"
+				size="sm"
+				onsuccess={onReactivated}
+			>
+				{#snippet form()}
+					<input {...liftFields.id.as('hidden', id)} />
+					<p class="py-4">
+						{m.staff_members_id_panels_account_panel_lift_suspension_text({ name: member.name })}
+					</p>
+				{/snippet}
+			</Action>
+			{@render resendAction()}
+		</div>
+	{:else if member.bannedAt}
+		<p class="mb-3 text-muted">
+			{m.staff_members_id_panels_account_panel_account_banned_lifting_text()}
 		</p>
 		<div class="flex gap-2">
 			<Action
 				action={unbanUser}
-				label="Lift ban"
-				successToast="Ban lifted"
+				label={m.staff_members_id_panels_account_panel_lift_ban_label()}
+				successToast={m.staff_members_id_panels_account_panel_ban_lifted_toast()}
 				variant="success"
 				size="sm"
 				onsuccess={onReactivated}
@@ -273,42 +485,52 @@
 				{#snippet form()}
 					<input {...unbanFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Lift the ban on <strong>{member.name}</strong> and restore their access?
+						<ParaglideMessage
+							message={m.staff_members_id_panels_account_panel_lift_ban_restore_their_text}
+							inputs={{ name: member.name }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/snippet}
 			</Action>
+			{#if member.hasOpenRemoval}{@render resendAction()}{/if}
 		</div>
 	{:else if member.deletedAt}
 		<p class="mb-3 text-muted">
-			This account is deactivated. Reactivate it to restore access, or permanently delete it.
+			{m.staff_members_id_panels_account_panel_account_deactivated_re_text()}
 		</p>
 		<div class="flex gap-2">
 			<Action
 				action={reactivateUser}
-				label="Reactivate"
-				successToast="Account reactivated"
+				label={m.staff_members_id_panels_account_panel_reactivate_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_reactivated_toast()}
 				variant="success"
 				size="sm"
 				onsuccess={onReactivated}
 			>
 				{#snippet form()}
 					<input {...reactivateFields.id.as('hidden', id)} />
-					<p class="py-4">Reactivate this account?</p>
+					<p class="py-4">{m.staff_members_id_panels_account_panel_reactivate_account_text()}</p>
 				{/snippet}
 			</Action>
 			<Action
 				action={purgeUser}
-				label="Delete permanently"
-				successToast="Account deleted"
+				label={m.staff_members_id_panels_account_panel_delete_permanently_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_deleted_toast()}
 				variant="error"
 				size="sm"
-				onsuccess={() => goto(resolve('/staff/members'))}
+				onsuccess={() => goto(resolve('staff/members'))}
 			>
 				{#snippet form()}
 					<input {...purgeFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Permanently delete <strong>{member.name}</strong>? This cannot be undone. The account
-						must own no bands.
+						<ParaglideMessage
+							message={m.staff_members_id_panels_account_panel_permanently_delete_can_text}
+							inputs={{ name: member.name }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/snippet}
 			</Action>
@@ -316,19 +538,21 @@
 		</div>
 	{:else}
 		<p class="mb-3 text-muted">
-			Deactivating signs this member out, hides them from the directory, cancels all of their future
-			reservations, and cancels their membership subscription at the end of its current period.
-			Reactivating restores their access, but <strong
-				>the cancelled reservations are not restored</strong
+			<ParaglideMessage
+				message={m.staff_members_id_panels_account_panel_deactivating_signs_mem_text}
+				inputs={{
+					staff_members_id_panels_account_panel_cancelled_reservations:
+						m.staff_members_id_panels_account_panel_cancelled_reservations_text()
+				}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
 			>
-			— they would have to be rebooked. The subscription resumes if they are reactivated before the period
-			ends; after that it needs a new checkout.
 		</p>
 		<div class="flex gap-2">
 			<Action
 				action={deactivateUser}
-				label="Deactivate"
-				successToast="Account deactivated"
+				label={m.staff_deactivate_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_deactivated_toast()}
 				variant="error"
 				size="sm"
 				onsuccess={refreshAccount}
@@ -336,12 +560,11 @@
 				{#snippet form()}
 					<input {...deactivateFields.id.as('hidden', id)} />
 					<p class="py-4">
-						Deactivate this account? All future reservations will be cancelled, and reactivating
-						will not bring them back. Their membership subscription ends with its current period
-						unless the account is reactivated first.
+						{m.staff_members_id_panels_account_panel_deactivate_account_all_text()}
 					</p>
 				{/snippet}
 			</Action>
+			{@render suspendAction()}
 			{@render banAction()}
 		</div>
 	{/if}

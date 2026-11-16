@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { userBlock, type UserBlockSource } from '$lib/server/db/schema/moderation';
-import { user } from '$lib/server/db/schema/authentication';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { isMinor } from '$lib/utils/age';
+import { db } from '#lib/server/db/index.js';
+import { userBlock, type UserBlockSource } from '#lib/server/db/schema/moderation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { isMinor } from '#lib/utils/age.js';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import type { SQL, SQLWrapper } from 'drizzle-orm';
 
@@ -126,7 +126,7 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 //
 // Only the second is theirs to change. Keeping them apart is why neither of the
 // first two needs to record who set it — see
-// `docs/specs/shipped/member-standing-spec.md`.
+// `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
 //
 // The third is the newest and the reason #556 exists. Being under 18 is a fact
 // about who a member is, not a judgement about what they did, and it used to be
@@ -134,13 +134,6 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 // to staff reading the card and to the member reading the notice, from somebody
 // restricted for abusing DMs. It is derived rather than stored as a
 // restriction, so it lifts itself on their eighteenth birthday.
-
-/** May this member start new conversations? Restriction and age; a preference doesn't stop them replying. */
-export async function canInitiateMessages(userId: string): Promise<boolean> {
-	if (await isMessagingAgeRestricted(userId)) return false;
-	const { status } = await getStanding(userId, 'messaging');
-	return status === 'none';
-}
 
 /**
  * Is this member under the age at which the collective opens messaging?

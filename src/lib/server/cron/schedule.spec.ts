@@ -8,21 +8,26 @@ const env = { ORIGIN: 'https://corvmc.test', CRON_SECRET: 'test-secret' };
 const ALL_ENDPOINTS = [
 	'/api/cron/auto-complete',
 	'/api/cron/cancel-stale-tickets',
-	'/api/cron/cancel-unconfirmed',
 	'/api/cron/expire-waitlisted',
 	'/api/cron/wake-snoozed',
+	'/api/cron/lift-lapsed-removals',
 	'/api/cron/reminders',
 	'/api/cron/generate-recurring-reservations',
 	'/api/cron/lock-access',
 	'/api/cron/lock-sync',
 	'/api/cron/send-campaigns',
+	'/api/cron/send-outbox',
 	'/api/cron/complete-shifts',
 	'/api/cron/sweep-media',
 	'/api/cron/schedule-radio',
 	'/api/cron/sweep-audio-purchases',
 	'/api/cron/sweep-incidents',
+	'/api/cron/sweep-contacts',
+	'/api/cron/open-tasks',
 	'/api/cron/sweep-audit-log',
-	'/api/cron/reconcile-ledger'
+	'/api/cron/import-partner-calendars',
+	'/api/cron/reconcile-ledger',
+	'/api/cron/sweep-door-sales'
 ];
 
 function okFetcher() {
@@ -85,8 +90,11 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/sweep-audio-purchases',
 			// Seven-year incident retention (#1468). Owns no media.
 			'/api/cron/sweep-incidents',
+			'/api/cron/sweep-contacts',
+			'/api/cron/open-tasks',
 			// 24-month audit retention (#1376), after the sweep that writes audit rows.
 			'/api/cron/sweep-audit-log',
+			'/api/cron/import-partner-calendars',
 			// Last: it reaps what every job above may have deleted, and nothing
 			// downstream reads its result.
 			'/api/cron/sweep-media'
@@ -238,23 +246,36 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(8);
+		expect(fetcher).toHaveBeenCalledTimes(9);
 		const requests = fetcher.mock.calls.map(([request]: [Request]) => request);
 		expect(requests.map((r) => r.url)).toEqual([
 			'https://corvmc.test/api/cron/auto-complete',
 			'https://corvmc.test/api/cron/complete-shifts',
-			'https://corvmc.test/api/cron/cancel-unconfirmed',
 			'https://corvmc.test/api/cron/expire-waitlisted',
 			'https://corvmc.test/api/cron/wake-snoozed',
+			'https://corvmc.test/api/cron/lift-lapsed-removals',
 			'https://corvmc.test/api/cron/lock-sync',
 			'https://corvmc.test/api/cron/reminders',
-			'https://corvmc.test/api/cron/schedule-radio'
+			'https://corvmc.test/api/cron/schedule-radio',
+			'https://corvmc.test/api/cron/sweep-door-sales'
 		]);
 		for (const request of requests) {
 			expect(request.method).toBe('POST');
 			expect(request.headers.get('authorization')).toBe('Bearer test-secret');
 		}
 		expect(results.every((r) => r.ok)).toBe(true);
+	});
+
+	// Kit 3 answers a POST with no Origin and no content type 403, before hooks or
+	// the route run. Only a production build applies the rule, so nothing else sees it.
+	it('sends a content type, or kit refuses the job as a cross-site form post', async () => {
+		const fetcher = okFetcher();
+
+		await runScheduledJobs('*/15 * * * *', env, fetcher);
+
+		for (const [request] of fetcher.mock.calls as [Request][]) {
+			expect(request.headers.get('content-type')).toBe('application/json');
+		}
 	});
 
 	it('awaits jobs sequentially, not in parallel', async () => {
@@ -283,16 +304,17 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(8);
+		expect(fetcher).toHaveBeenCalledTimes(9);
 		expect(results).toEqual([
 			{ path: '/api/cron/auto-complete', ok: false, error: 'boom' },
 			{ path: '/api/cron/complete-shifts', ok: true, status: 200 },
-			{ path: '/api/cron/cancel-unconfirmed', ok: true, status: 200 },
 			{ path: '/api/cron/expire-waitlisted', ok: true, status: 200 },
 			{ path: '/api/cron/wake-snoozed', ok: true, status: 200 },
+			{ path: '/api/cron/lift-lapsed-removals', ok: true, status: 200 },
 			{ path: '/api/cron/lock-sync', ok: true, status: 200 },
 			{ path: '/api/cron/reminders', ok: true, status: 200 },
-			{ path: '/api/cron/schedule-radio', ok: true, status: 200 }
+			{ path: '/api/cron/schedule-radio', ok: true, status: 200 },
+			{ path: '/api/cron/sweep-door-sales', ok: true, status: 200 }
 		]);
 	});
 
@@ -307,6 +329,7 @@ describe('runScheduledJobs', () => {
 
 		expect(results.map((r) => ({ ok: r.ok, status: r.status }))).toEqual([
 			{ ok: false, status: 401 },
+			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
@@ -335,18 +358,20 @@ describe('runScheduledJobs', () => {
 			{ slug: 'auto-complete', status: 'ok', checkInId: 'ci-1' },
 			{ slug: 'complete-shifts', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'complete-shifts', status: 'ok', checkInId: 'ci-2' },
-			{ slug: 'cancel-unconfirmed', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'cancel-unconfirmed', status: 'ok', checkInId: 'ci-3' },
 			{ slug: 'expire-waitlisted', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-4' },
+			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' },
 			{ slug: 'wake-snoozed', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-5' },
+			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-4' },
+			{ slug: 'lift-lapsed-removals', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'lift-lapsed-removals', status: 'ok', checkInId: 'ci-5' },
 			{ slug: 'lock-sync', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'lock-sync', status: 'ok', checkInId: 'ci-6' },
 			{ slug: 'reminders', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'reminders', status: 'ok', checkInId: 'ci-7' },
 			{ slug: 'schedule-radio', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-8' }
+			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-8' },
+			{ slug: 'sweep-door-sales', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'sweep-door-sales', status: 'ok', checkInId: 'ci-9' }
 		]);
 	});
 
@@ -374,6 +399,7 @@ describe('runScheduledJobs', () => {
 			'ok',
 			'ok',
 			'ok',
+			'ok',
 			'ok'
 		]);
 		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
@@ -387,7 +413,8 @@ describe('runScheduledJobs', () => {
 
 		await runScheduledJobs('*/5 * * * *', env, fetcher, checkIn);
 
-		expect(checkIn).toHaveBeenCalledTimes(2);
+		// An opening and a closing check-in per job on this trigger.
+		expect(checkIn).toHaveBeenCalledTimes(2 * CRON_SCHEDULE['*/5 * * * *'].length);
 		expect(checkIn.mock.calls[1][0]).toEqual({
 			slug: 'send-campaigns',
 			status: 'ok',

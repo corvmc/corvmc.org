@@ -6,16 +6,18 @@ import {
 	uniqueIndex,
 	check,
 	unique,
-	primaryKey
+	primaryKey,
+	type AnySQLiteColumn
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
+import { helpArticle } from './help';
 import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project, projectSection } from './project';
 import { reservation } from './reservation';
-import { group } from './group';
+import { group, groupPosition } from './group';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -44,8 +46,11 @@ import {
 	ORIENTATION_WAIVED_REASON_MAX,
 	dutyListAnchors,
 	dutyListAutoApplyTriggers,
+	projectKinds,
+	grantStages,
 	dutyListStoredSubjects,
-	workDoneConditions
+	workDoneConditions,
+	taskSources
 } from '../../../config';
 
 // ---------------------------------------------------------------------------
@@ -257,6 +262,22 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.notNull()
 		.default(sql`'[]'`),
 
+	/**
+	 * The help article a volunteer reads before a shift in this role: the door
+	 * safety policy, the bar's ID rules (#2728). Shown on the shift page and the
+	 * door screen only while it is published and the reader may open it.
+	 */
+	briefingArticleId: text('briefing_article_id').references(() => helpArticle.id, {
+		onDelete: 'set null'
+	}),
+
+	/**
+	 * How many days before its event this role's grants start (#2993). Zero
+	 * opens them at the shift's start; a vendor host deciding applications
+	 * weeks ahead needs more. Constant default, so the ADD COLUMN needs no backfill.
+	 */
+	grantLeadDays: integer('grant_lead_days').notNull().default(0),
+
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`(unixepoch())`),
@@ -285,21 +306,13 @@ export const volunteerRoleCapability = sqliteTable(
 );
 
 /**
- * A **work order**: a triaged, scoped piece of work for a role — "two Front
- * Desk, Saturday 6–10pm", or "re-cone the bass cab, whenever".
+ * A **work order**, which the interface calls a **task**: the work itself —
+ * "re-cone the bass cab", "door crew for Saturday". The CMMS term is deliberate
+ * (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md): a `work_request`
+ * is what someone noticed, a work order is what staff decided to do about it.
  *
- * The CMMS term, adopted deliberately (docs/specs/project-spec.md#vocabulary): a
- * `work_request` is what someone noticed, a work order is what staff have
- * decided to do about it — or work nobody requested at all. Its scheduled
- * state is a **shift**: where an interest says someone *would* do a job, a
- * shift is the job on a particular evening, and member-facing copy keeps that
- * word. Staff create them; members claim them. A standing weekly slot is
- * made by duplicating last week's; recurring facility work is a
- * `maintenanceSchedule`, which writes one occurrence at a time.
- *
- * Renamed from `volunteer_shift`. Index and check names keep the old prefix:
- * SQLite carries them through `RENAME TO` for free, and renaming them would
- * turn a one-line ALTER into a table rebuild for no gain.
+ * The times volunteers show up are its shifts (`volunteerShift`, #2518), and
+ * who staff put on it are its assignees.
  */
 export const workOrder = sqliteTable(
 	'work_order',
@@ -309,21 +322,11 @@ export const workOrder = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 
 		// Restrict, like the hour log's: a worked shift is history, and deleting
-		// the role out from under it would rewrite the past.
-		//
-		// Null for work no volunteer does: a contractor's, or a task nobody has
-		// been put on yet. Anything posted to the claim board has one (the CHECK
-		// below), and a signup can only be made where one exists.
+		// the role out from under it would rewrite the past. Null for work no
+		// volunteer does, such as a contractor's. `openShift` refuses a task
+		// without one, so every shift's task has a role.
 		volunteerRoleId: text('volunteer_role_id').references(() => volunteerRole.id, {
 			onDelete: 'restrict'
-		}),
-
-		// When staff opened this to volunteers. The one assignment fact that
-		// cannot be derived from signups or engagements: it exists before anybody
-		// claims. Null is not on the claim board.
-		postedAt: integer('posted_at', { mode: 'timestamp' }),
-		postedByUserId: text('posted_by_user_id').references(() => user.id, {
-			onDelete: 'set null'
 		}),
 
 		// Optional. Most shifts hang off a show, but work parties and gear repair
@@ -340,39 +343,14 @@ export const workOrder = sqliteTable(
 		// role", which is what every shift did before this column existed.
 		title: text('title'),
 
-		// Nullable, because an unscheduled row is a bare work order: work that
-		// needs doing with nobody booked to do it yet. Setting a window turns it
-		// into an ordinary claimable shift; the two are the same row in two states.
-		//
-		// Every forward-looking query filters `starts_at >= now` or orders by it,
-		// and `NULL >= x` is NULL in SQLite — so unscheduled work falls out of the
-		// member list, the reminder cron and the feedback cron on its own, with no
-		// query changed. That is load-bearing: assert it rather than trust it.
-		startsAt: integer('starts_at', { mode: 'timestamp' }),
-		endsAt: integer('ends_at', { mode: 'timestamp' }),
+		// What the work is about (an amp, a booking, a funder) is a
+		// `work_order_link` row, not a column here (#2622).
 
-		// What the work is about, when it is about a thing. Null for an ordinary
-		// shift — nobody staffs the front desk on behalf of an amp.
-		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
-
-		// The body of work this belongs to, when it belongs to one. A third
-		// optional anchor beside `eventId` and `assetId`, not a replacement for
-		// either: a work order can be *in* the renovation and *at* Saturday's
-		// doors. Set-null, so deleting a project never deletes the record that
-		// four people worked it.
+		// The body of work this belongs to, when it belongs to one. An optional
+		// anchor beside `eventId`, not a replacement for it: a work order can be
+		// *in* the renovation and *at* Saturday's doors. Set-null, so deleting a
+		// project never deletes the record that four people worked it.
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
-
-		// The booking this staffs, when it staffs one — a member's first rehearsal
-		// wants somebody there to show them around. A fourth optional anchor, and
-		// like the other three it neither excludes nor is excluded by them: there
-		// is deliberately no "at most one anchor" CHECK, because a work order can
-		// be *in* the renovation and *at* Thursday's booking.
-		//
-		// Set-null for the reason the others give: deleting the subject must not
-		// delete the record that somebody worked it.
-		reservationId: text('reservation_id').references(() => reservation.id, {
-			onDelete: 'set null'
-		}),
 
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
@@ -403,10 +381,17 @@ export const workOrder = sqliteTable(
 		// duration) and its length. Placing it, once the time is set, clears both.
 		pendingOffsetMinutes: integer('pending_offset_minutes'),
 		pendingDurationMinutes: integer('pending_duration_minutes'),
+		// Places for the shift this task will get, where the work said how many: a
+		// window waiting for its time, a recurring occurrence. `openShift` reads it.
+		pendingCapacity: integer('pending_capacity'),
 
 		// This is a member's orientation shift. Stamped, so clearing a list's
 		// trigger or deleting the list cannot orphan a booked orientation.
 		isOrientation: integer('is_orientation', { mode: 'boolean' }).notNull().default(false),
+
+		// The show's host task, opened by `openHostShift`. One per event, held by
+		// `work_order_event_host_idx` so two producers opening it at once get one.
+		isHost: integer('is_host', { mode: 'boolean' }).notNull().default(false),
 
 		// The recurring schedule this occurrence belongs to. Closing it — resolved
 		// or called off — is what writes the next one; see `maintenanceSchedule`.
@@ -414,9 +399,6 @@ export const workOrder = sqliteTable(
 			() => maintenanceSchedule.id,
 			{ onDelete: 'set null' }
 		),
-
-		/** How many people are needed. Claims beyond this are refused. */
-		capacity: integer('capacity').notNull().default(1),
 
 		/** "Meet at the side door" — anything the claimant needs to know. */
 		notes: text('notes'),
@@ -433,9 +415,8 @@ export const workOrder = sqliteTable(
 		}),
 
 		// Whether the *work* is finished, which is not whether anyone turned up.
-		// `completeFinishedShifts()` promotes a signup once the clock runs out —
-		// that says the volunteer worked and earns their hours. A session can end
-		// with the amp still broken, so closure lives here and nowhere else.
+		// The clock completes sign-ups on a shift; a shift can end with the amp
+		// still broken, so closure lives here, set only by marking the task done.
 		//
 		// A timestamp rather than a status enum, matching `cancelledAt` here and
 		// `retiredAt` / `deletedAt` / `revokedAt` across the schema. Open work is
@@ -446,22 +427,25 @@ export const workOrder = sqliteTable(
 		}),
 		resolutionNotes: text('resolution_notes'),
 
-		// Staff's call, made when scheduling: does the clock running out mean the
-		// attached equipment reports are fixed? Off, a finished work order waits on
-		// the coordinator's Today worklist to be confirmed instead (#1544).
-		closeReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-
 		// The committee answerable for this work (#1701). Null is staff's, as it
 		// always was. Set-null like `maintenance_schedule.group_id`: a disbanded
 		// committee's items fall back to staff. Responsibility only — it grants
 		// nothing and narrows nothing.
 		groupId: text('group_id').references(() => group.id, { onDelete: 'set null' }),
 
+		// The department position this waits on (#2990), within `groupId`'s
+		// committee. Set-null: a deleted position hands the task to its department.
+		positionId: text('position_id').references(() => groupPosition.id, { onDelete: 'set null' }),
+
 		// Which fact about the show says it is done, evaluated in code by
 		// `done-conditions.ts`. Never stored as true: the state is derived.
 		doneWhen: text('done_when', { enum: workDoneConditions }),
+
+		// The record whose state opened this task, for work the app finds rather
+		// than staff type (#2756): a unit's repair, an item's restock. The source
+		// closes it; `uq_work_order_open_source` keeps one open per record.
+		source: text('source', { enum: taskSources }),
+		sourceId: text('source_id'),
 
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -475,14 +459,11 @@ export const workOrder = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		// The member's "what's coming up" list and the reminder cron both scan
-		// forward from now over live shifts.
-		index('volunteer_shift_upcoming_idx')
-			.on(t.startsAt)
-			.where(sql`cancelled_at IS NULL`),
-		index('volunteer_shift_role_idx').on(t.volunteerRoleId),
-		index('volunteer_shift_event_idx').on(t.eventId),
-		index('volunteer_shift_asset_idx').on(t.assetId),
+		index('work_order_role_idx').on(t.volunteerRoleId),
+		index('work_order_event_idx').on(t.eventId),
+		uniqueIndex('work_order_event_host_idx')
+			.on(t.eventId)
+			.where(sql`is_host = 1`),
 		index('work_order_project_idx').on(t.projectId),
 		// At most one open occurrence per schedule, stated by the database: this is
 		// what makes generate-on-close unable to pile up duplicates.
@@ -491,31 +472,134 @@ export const workOrder = sqliteTable(
 			.where(
 				sql`maintenance_schedule_id is not null and resolved_at is null and cancelled_at is null`
 			),
-		// The orientation cascade: "which live work orders staff this booking".
-		index('work_order_reservation_idx').on(t.reservationId),
+		uniqueIndex('uq_work_order_open_source')
+			.on(t.source, t.sourceId)
+			.where(
+				sql`source is not null and source_id is not null and resolved_at is null and cancelled_at is null`
+			),
+		// A record's related tasks, done ones included (#2630).
+		index('work_order_group_idx').on(t.groupId),
+		index('work_order_position_idx').on(t.positionId),
+		index('work_order_schedule_idx').on(t.maintenanceScheduleId),
 		// A committee's Open items queue.
 		index('work_order_group_open_idx')
 			.on(t.groupId, t.dueAt)
-			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`),
-		// The coordinator's queue: work that needs somebody on it.
-		index('volunteer_shift_unscheduled_idx')
-			.on(t.createdAt)
-			.where(sql`starts_at is null and resolved_at is null and cancelled_at is null`),
-		// Either both ends are set or neither is — a half-scheduled shift is a bug,
-		// not a work order.
-		//
-		// Compare null-ness rather than writing `(a is null and b is null) or
-		// b > a`: that form leaves `starts_at` set and `ends_at` null evaluating to
-		// `false OR NULL` = NULL, and SQLite passes a CHECK that returns NULL. Only
-		// an explicit false rejects. `(x is null)` always yields 0 or 1, so this
-		// cannot leak — same shape as `member_certification_revoked_has_reason`.
-		check(
-			'volunteer_shift_ends_after_start',
-			sql`(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)`
-		),
-		check('volunteer_shift_capacity_positive', sql`capacity > 0`),
-		// Posting is what puts work on the claim board, and claiming needs a role.
-		check('work_order_posted_has_role', sql`posted_at is null or volunteer_role_id is not null`)
+			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`)
+	]
+);
+
+/**
+ * A time volunteers show up for a task (#2518). A task has zero or more shifts;
+ * work with no time is a task with none, so both ends are NOT NULL here.
+ * Creating a shift is what opens it to volunteers. The role stays on the task.
+ */
+export const volunteerShift = sqliteTable(
+	'volunteer_shift',
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// Cascade: a shift is a time on a task. Services cancel tasks rather than
+		// delete them, so this fires only on a hard delete.
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+
+		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
+		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+
+		/** How many people are needed. Sign-ups beyond this are refused. */
+		capacity: integer('capacity').notNull().default(1),
+
+		// Copied from the task at stamp time; retime reads it, never the list's (#2033).
+		anchor: text('anchor', { enum: dutyListAnchors }),
+
+		/** "Meet at the side door" — anything the volunteer needs to know. */
+		notes: text('notes'),
+
+		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
+		cancelledByUserId: text('cancelled_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// The board, the reminder cron and the completion cron scan forward from now.
+		index('volunteer_shift_upcoming_idx')
+			.on(t.startsAt)
+			.where(sql`cancelled_at IS NULL`),
+		index('volunteer_shift_work_order_idx').on(t.workOrderId),
+		check('volunteer_shift_end_after_start', sql`ends_at > starts_at`),
+		check('volunteer_shift_places_positive', sql`capacity > 0`)
+	]
+);
+
+/**
+ * Who staff or a committee have put on a task (#2518). Assignment is not a
+ * sign-up: it has no capacity, reminder, feedback or clock-driven completion.
+ * `completedAt` is stamped when the task is marked done.
+ */
+export const workOrderAssignee = sqliteTable(
+	'work_order_assignee',
+	{
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		assignedByUserId: text('assigned_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		assignedAt: integer('assigned_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		completedAt: integer('completed_at', { mode: 'timestamp' })
+	},
+	(t) => [
+		primaryKey({ columns: [t.workOrderId, t.userId] }),
+		// A member's Assigned tasks list.
+		index('work_order_assignee_user_idx').on(t.userId)
+	]
+);
+
+/**
+ * A task waiting on another (#2625): the budget follows the narrative. A
+ * graph, not a tree, and never a cycle, which the service refuses on write.
+ * Blocked is derived on read from the open tasks a task waits on; nothing
+ * here stores it. Task to task only: "about that record" is a different link.
+ */
+export const workOrderDependency = sqliteTable(
+	'work_order_dependency',
+	{
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		dependsOnId: text('depends_on_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		primaryKey({ columns: [t.workOrderId, t.dependsOnId] }),
+		// "Needed for": the tasks waiting on this one.
+		index('work_order_dependency_depends_on_idx').on(t.dependsOnId),
+		check('work_order_dependency_not_self', sql`work_order_id <> depends_on_id`)
 	]
 );
 
@@ -535,7 +619,7 @@ export const volunteerSignup = sqliteTable(
 
 		shiftId: text('shift_id')
 			.notNull()
-			.references(() => workOrder.id, { onDelete: 'cascade' }),
+			.references(() => volunteerShift.id, { onDelete: 'cascade' }),
 
 		userId: text('user_id')
 			.notNull()
@@ -576,6 +660,13 @@ export const volunteerSignup = sqliteTable(
 		// ring the ones who need ringing and mark those by hand.
 		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
 
+		// The signup this person trained under (#2720). The service holds it to
+		// another member on the same shift; a foreign key cannot say that.
+		supervisingSignupId: text('supervising_signup_id').references(
+			(): AnySQLiteColumn => volunteerSignup.id,
+			{ onDelete: 'set null' }
+		),
+
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`),
@@ -615,7 +706,12 @@ export const volunteerHourLog = sqliteTable(
 		// logged from memory. Staff can approve one of these with less scrutiny —
 		// they already knew the person was rostered. Set-null, not cascade:
 		// deleting a shift must not delete the hours somebody actually worked.
-		shiftId: text('shift_id').references(() => workOrder.id, { onDelete: 'set null' }),
+		shiftId: text('shift_id').references(() => volunteerShift.id, { onDelete: 'set null' }),
+
+		// The task this time went to, when it was logged for one rather than for a
+		// shift: committee work is logged after the fact (#2518). A log may name a
+		// shift, a task, or neither. Set-null, matching `shiftId`.
+		workOrderId: text('work_order_id').references(() => workOrder.id, { onDelete: 'set null' }),
 
 		// The program this time was given to — a committee or a club. Nullable:
 		// most volunteering is for CMC at large and names no program.
@@ -680,6 +776,7 @@ export const volunteerHourLog = sqliteTable(
 		index('volunteer_hour_log_worked_on_idx').on(t.workedOn),
 		// The by-role rollup and the delete guard.
 		index('volunteer_hour_log_role_idx').on(t.volunteerRoleId),
+		index('volunteer_hour_log_work_order_idx').on(t.workOrderId),
 		// Backstop only — the service enforces the tighter VOLUNTEER_MAX_MINUTES_PER_LOG.
 		check('volunteer_minutes_positive', sql`minutes > 0 AND minutes <= 1440`)
 	]
@@ -920,6 +1017,11 @@ export const memberCertification = sqliteTable(
 		reference: text('reference'),
 		notes: text('notes'),
 
+		/** The supervised shift offered as evidence at grant time (#2720). */
+		trainingSignupId: text('training_signup_id').references(() => volunteerSignup.id, {
+			onDelete: 'set null'
+		}),
+
 		// Pulled early. The window it covered is still history, which is why this
 		// is a timestamp rather than a delete.
 		revokedAt: integer('revoked_at', { mode: 'timestamp' }),
@@ -1072,6 +1174,15 @@ export const dutyList = sqliteTable(
 		// null` is a syntax error nobody would find until CI.
 		autoApplyOn: text('auto_apply_on', { enum: dutyListAutoApplyTriggers }),
 
+		// `production`: picking this template starts a show, and it is the checklist
+		// every other way of opening a show stamps (#2387). Those have nobody to ask,
+		// so the index below holds it to one template.
+		projectKind: text('project_kind', { enum: projectKinds }).notNull().default('general'),
+
+		// A grant template's stage: `application` is stamped when a grant is created,
+		// the others are offered on the grant. One template per stage.
+		grantStage: text('grant_stage', { enum: grantStages }),
+
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -1090,7 +1201,13 @@ export const dutyList = sqliteTable(
 		// would otherwise collide with every other.
 		uniqueIndex('uq_duty_list_auto_apply')
 			.on(t.autoApplyOn)
-			.where(sql`auto_apply_on is not null`)
+			.where(sql`auto_apply_on is not null`),
+		uniqueIndex('uq_duty_list_production')
+			.on(t.projectKind)
+			.where(sql`project_kind = 'production'`),
+		uniqueIndex('uq_duty_list_grant_stage')
+			.on(t.grantStage)
+			.where(sql`grant_stage is not null`)
 	]
 );
 
@@ -1183,12 +1300,34 @@ export const dutyListItem = sqliteTable(
 );
 
 /**
+ * A template item waiting on another in the same template (#2625). Applying the
+ * template copies each edge onto the tasks it stamps, as `work_order_dependency`.
+ * Never a cycle, which the service refuses on write.
+ */
+export const dutyListItemDependency = sqliteTable(
+	'duty_list_item_dependency',
+	{
+		itemId: text('item_id')
+			.notNull()
+			.references(() => dutyListItem.id, { onDelete: 'cascade' }),
+		dependsOnItemId: text('depends_on_item_id')
+			.notNull()
+			.references(() => dutyListItem.id, { onDelete: 'cascade' })
+	},
+	(t) => [
+		primaryKey({ columns: [t.itemId, t.dependsOnItemId] }),
+		index('duty_list_item_dependency_depends_on_idx').on(t.dependsOnItemId),
+		check('duty_list_item_dependency_not_self', sql`item_id <> depends_on_item_id`)
+	]
+);
+
+/**
  * Recurring facility work — a monthly deep clean, a quarterly PA check.
  *
  * **Generate-on-close**, not a window materializer: the next work order is
  * written only when the open one is resolved or called off, due `intervalDays`
  * after that close. Nothing is scheduled ahead, so it cannot drift or pile up
- * unclosed duplicates. See docs/specs/project-spec.md#recurring-work.
+ * unclosed duplicates. See docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md.
  */
 export const maintenanceSchedule = sqliteTable(
 	'maintenance_schedule',
@@ -1321,6 +1460,10 @@ export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
 export type VolunteerProfile = typeof volunteerProfile.$inferSelect;
 export type WorkOrder = typeof workOrder.$inferSelect;
+/** A task: the work. Its times are `VolunteerShift` rows. */
+export type Task = WorkOrder;
+export type VolunteerShift = typeof volunteerShift.$inferSelect;
+export type WorkOrderAssignee = typeof workOrderAssignee.$inferSelect;
 export type VolunteerSignup = typeof volunteerSignup.$inferSelect;
 export type VolunteerShiftFeedback = typeof volunteerShiftFeedback.$inferSelect;
 export type VolunteerCertification = typeof volunteerCertification.$inferSelect;

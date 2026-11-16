@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { lockFallbackCode, reservation } from '$lib/server/db/schema/reservation';
+import { db } from '#lib/server/db/index.js';
+import { lockFallbackCode, reservation } from '#lib/server/db/schema/reservation.js';
 import { and, asc, count, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
 import {
 	addLockUser,
@@ -9,11 +9,11 @@ import {
 	generateLockCode,
 	LOCK_GRACE_MINUTES
 } from './ultraloc-client';
-import { getJson, putJson } from '$lib/server/kv';
-import { dispatchEmailOnly } from '$lib/server/notification';
-import { env } from '$env/dynamic/private';
-import { DOOR_CODE_POOL_SIZE } from '$lib/config';
-import type { LockFallbackCode } from '$lib/server/db/schema/reservation';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { dispatchEmailOnly } from '#lib/server/notification/index.js';
+import * as env from '$app/env/private';
+import { clubToday, DOOR_CODE_POOL_SIZE } from '#lib/config.js';
+import type { LockFallbackCode } from '#lib/server/db/schema/reservation.js';
 
 // The door-code pool (#2120). The lock checks codes locally, so a code minted
 // while it is online still opens the door during an outage — which is exactly
@@ -159,7 +159,7 @@ export async function settleBookingCode(reservationId: string, errors: string[])
 /** One email a day while the pool is empty, not one per page load. */
 async function alertPoolEmpty(now: Date): Promise<void> {
 	try {
-		const today = now.toISOString().slice(0, 10);
+		const today = clubToday(now);
 		if ((await getJson<string>(POOL_EMPTY_ALERT_KEY)) === today) return;
 		await putJson(POOL_EMPTY_ALERT_KEY, today, 2 * 24 * 60 * 60);
 
@@ -174,7 +174,7 @@ async function alertPoolEmpty(now: Date): Promise<void> {
 						text: 'A member with a booking needed a door code and none was left. Members are being told to call staff. The daily lock job mints more once the lock is online.'
 					}
 				],
-				cta: { url: '/staff/keys', label: 'See door codes' }
+				cta: { url: '/staff/building-access', label: 'See door codes' }
 			}
 		});
 	} catch (err) {

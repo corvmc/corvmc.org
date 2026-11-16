@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { Heading } from '$lib/utils/markdown';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Heading } from '#lib/utils/markdown.js';
 
 	let { headings }: { headings: Heading[] } = $props();
 
@@ -28,7 +29,9 @@
 
 {#if headings.length > 0}
 	<nav class="space-y-1 text-sm">
-		<p class="mb-2 text-subtle font-semibold tracking-wide uppercase">On this page</p>
+		<p class="mb-2 text-subtle font-semibold tracking-wide uppercase">
+			{m.help_table_of_contents_page_text()}
+		</p>
 		{#each headings as heading (heading.id)}
 			<a
 				href="#{heading.id}"

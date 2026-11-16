@@ -13,6 +13,7 @@ import {
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
 import { batchInsert, db } from './db';
+import { seedOrganizations } from './parties';
 import { type SeedUser } from './types';
 import { randomUUID } from 'crypto';
 import { eq, inArray } from 'drizzle-orm';
@@ -20,17 +21,14 @@ import { eq, inArray } from 'drizzle-orm';
 export async function seedEquipment(users: SeedUser[]) {
 	console.log('Seeding inventory...');
 
-	const categories = await db
-		.insert(equipmentCategory)
-		.values([
-			{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
-			{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' },
-			{ id: randomUUID(), name: 'Consumables', displayOrder: 5, pricingTier: 'accessory' }
-		])
-		.returning();
+	const categories = await batchInsert(equipmentCategory, [
+		{ id: randomUUID(), name: 'Guitars', displayOrder: 0, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Amplifiers', displayOrder: 1, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Microphones', displayOrder: 2, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Drum Hardware', displayOrder: 3, pricingTier: 'major' },
+		{ id: randomUUID(), name: 'Cables & Accessories', displayOrder: 4, pricingTier: 'accessory' },
+		{ id: randomUUID(), name: 'Consumables', displayOrder: 5, pricingTier: 'accessory' }
+	]);
 
 	const catByName = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 
@@ -38,16 +36,16 @@ export async function seedEquipment(users: SeedUser[]) {
 	// two deep rather than one flat list of compound names.
 	const mainRoom = { id: randomUUID(), name: 'Main room', parentId: null, displayOrder: 0 };
 	const storage = { id: randomUUID(), name: 'Storage closet', parentId: null, displayOrder: 1 };
-	const locations = await batchInsert(
-		inventoryLocation,
-		[
-			mainRoom,
-			storage,
-			{ id: randomUUID(), name: 'Stage left rack', parentId: mainRoom.id, displayOrder: 0 },
-			{ id: randomUUID(), name: 'Supply shelf', parentId: storage.id, displayOrder: 0 }
-		],
-		4
-	);
+	const offsiteKit = { id: randomUUID(), name: 'Offsite kit', parentId: null, displayOrder: 2 };
+	const locations = await batchInsert(inventoryLocation, [
+		mainRoom,
+		storage,
+		{ id: randomUUID(), name: 'Stage left rack', parentId: mainRoom.id, displayOrder: 0 },
+		{ id: randomUUID(), name: 'Supply shelf', parentId: storage.id, displayOrder: 0 },
+		offsiteKit,
+		// Nested, so a kit checkout has a case inside the case to pick up (#2725).
+		{ id: randomUUID(), name: 'Offsite mic case', parentId: offsiteKit.id, displayOrder: 0 }
+	]);
 	const locByName = Object.fromEntries(locations.map((l) => [l.name, l.id]));
 
 	/**
@@ -55,120 +53,127 @@ export async function seedEquipment(users: SeedUser[]) {
 	 * cable-drawer case (`bulk` *and* returnable) or the two-axis model is never
 	 * actually tried locally.
 	 */
-	const items = await batchInsert(
-		inventoryItem,
-		[
-			{
-				id: randomUUID(),
-				name: 'Fender Stratocaster',
-				description: 'Sunburst finish, maple neck.',
-				categoryId: catByName['Guitars'],
-				kind: 'serialized' as const,
-				isLoanable: true,
-				resourceId: 'EQ-001'
-			},
-			{
-				id: randomUUID(),
-				name: 'Gibson Les Paul Standard',
-				description: 'Cherry burst. Donated.',
-				categoryId: catByName['Guitars'],
-				kind: 'serialized' as const,
-				isLoanable: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Fender Blues Deluxe',
-				description: '40W tube combo.',
-				categoryId: catByName['Amplifiers'],
-				kind: 'serialized' as const,
-				isLoanable: true
-			},
-			{
-				id: randomUUID(),
-				name: 'QSC K12.2 Powered Speaker',
-				description: '2000W powered PA speaker.',
-				categoryId: catByName['Amplifiers'],
-				kind: 'serialized' as const,
-				isLoanable: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Shure SM58',
-				description: 'Cardioid dynamic vocal mic.',
-				categoryId: catByName['Microphones'],
-				kind: 'serialized' as const,
-				isLoanable: true
-			},
-			{
-				id: randomUUID(),
-				name: 'AKG P420 Condenser',
-				description: 'Multi-pattern large-diaphragm condenser.',
-				categoryId: catByName['Microphones'],
-				kind: 'serialized' as const,
-				isLoanable: true
-			},
-			// Counted, but it comes back — the case a single asset/consumable enum
-			// could not express.
-			{
-				id: randomUUID(),
-				name: 'XLR Cable (25ft)',
-				description: 'Neutrik ends.',
-				categoryId: catByName['Cables & Accessories'],
-				kind: 'bulk' as const,
-				unitOfMeasure: 'each' as const,
-				isLoanable: true,
-				reorderPoint: 6,
-				reorderQuantity: 12
-			},
-			{
-				id: randomUUID(),
-				name: 'Boom Mic Stand',
-				categoryId: catByName['Drum Hardware'],
-				kind: 'bulk' as const,
-				isLoanable: true,
-				reorderPoint: 2,
-				reorderQuantity: 4
-			},
-			// Counted and consumed — a consumable is derived from exactly this
-			// pair, never stored as its own flag.
-			{
-				id: randomUUID(),
-				name: "D'Addario EXL110 Strings",
-				description: 'Regular light, 10–46.',
-				categoryId: catByName['Consumables'],
-				kind: 'bulk' as const,
-				unitOfMeasure: 'pack' as const,
-				gtin: '019954141042',
-				isLoanable: false,
-				reorderPoint: 4,
-				reorderQuantity: 12
-			},
-			{
-				id: randomUUID(),
-				name: 'Vic Firth 5A Drumsticks',
-				categoryId: catByName['Consumables'],
-				kind: 'bulk' as const,
-				unitOfMeasure: 'pair' as const,
-				gtin: '750795000159',
-				isLoanable: false,
-				reorderPoint: 3,
-				reorderQuantity: 10
-			},
-			{
-				id: randomUUID(),
-				name: '9V Batteries',
-				categoryId: catByName['Consumables'],
-				kind: 'bulk' as const,
-				unitOfMeasure: 'box' as const,
-				isLoanable: false,
-				// Deliberately seeded below its reorder point so the low-stock
-				// surface has something to show without anyone arranging it.
-				reorderPoint: 5,
-				reorderQuantity: 20
-			}
-		],
-		4
-	);
+	const items = await batchInsert(inventoryItem, [
+		{
+			id: randomUUID(),
+			name: 'Fender Stratocaster',
+			description: 'Sunburst finish, maple neck.',
+			categoryId: catByName['Guitars'],
+			kind: 'serialized' as const,
+			isLoanable: true,
+			resourceId: 'EQ-001'
+		},
+		{
+			id: randomUUID(),
+			name: 'Gibson Les Paul Standard',
+			description: 'Cherry burst. Donated.',
+			categoryId: catByName['Guitars'],
+			kind: 'serialized' as const,
+			isLoanable: true
+		},
+		{
+			id: randomUUID(),
+			name: 'Fender Blues Deluxe',
+			description: '40W tube combo.',
+			categoryId: catByName['Amplifiers'],
+			kind: 'serialized' as const,
+			isLoanable: true
+		},
+		{
+			id: randomUUID(),
+			name: 'QSC K12.2 Powered Speaker',
+			description: '2000W powered PA speaker.',
+			categoryId: catByName['Amplifiers'],
+			kind: 'serialized' as const,
+			isLoanable: true
+		},
+		{
+			id: randomUUID(),
+			name: 'Shure SM58',
+			description: 'Cardioid dynamic vocal mic.',
+			categoryId: catByName['Microphones'],
+			kind: 'serialized' as const,
+			isLoanable: true
+		},
+		{
+			id: randomUUID(),
+			name: 'AKG P420 Condenser',
+			description: 'Multi-pattern large-diaphragm condenser.',
+			categoryId: catByName['Microphones'],
+			kind: 'serialized' as const,
+			isLoanable: true
+		},
+		// Counted, but it comes back — the case a single asset/consumable enum
+		// could not express.
+		{
+			id: randomUUID(),
+			name: 'XLR Cable (25ft)',
+			description: 'Neutrik ends.',
+			categoryId: catByName['Cables & Accessories'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'each' as const,
+			isLoanable: true,
+			reorderPoint: 6,
+			reorderQuantity: 12
+		},
+		{
+			id: randomUUID(),
+			name: 'Boom Mic Stand',
+			categoryId: catByName['Drum Hardware'],
+			kind: 'bulk' as const,
+			isLoanable: true,
+			reorderPoint: 2,
+			reorderQuantity: 4
+		},
+		// Counted and consumed — a consumable is derived from exactly this
+		// pair, never stored as its own flag.
+		{
+			id: randomUUID(),
+			name: "D'Addario EXL110 Strings",
+			description: 'Regular light, 10–46.',
+			categoryId: catByName['Consumables'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'pack' as const,
+			gtin: '019954141042',
+			isLoanable: false,
+			reorderPoint: 4,
+			reorderQuantity: 12
+		},
+		{
+			id: randomUUID(),
+			name: 'Vic Firth 5A Drumsticks',
+			categoryId: catByName['Consumables'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'pair' as const,
+			gtin: '750795000159',
+			isLoanable: false,
+			reorderPoint: 3,
+			reorderQuantity: 10
+		},
+		{
+			id: randomUUID(),
+			name: '9V Batteries',
+			categoryId: catByName['Consumables'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'box' as const,
+			isLoanable: false,
+			// Deliberately seeded below its reorder point so the low-stock
+			// surface has something to show without anyone arranging it.
+			reorderPoint: 5,
+			reorderQuantity: 20
+		},
+		// Low with nothing on order, so it carries an open restock task (#2756).
+		{
+			id: randomUUID(),
+			name: 'Gaffer Tape',
+			categoryId: catByName['Consumables'],
+			kind: 'bulk' as const,
+			unitOfMeasure: 'each' as const,
+			isLoanable: false,
+			reorderPoint: 3,
+			reorderQuantity: 6
+		}
+	]);
 
 	const itemByName = Object.fromEntries(items.map((i) => [i.name, i]));
 	const now = new Date();
@@ -417,6 +422,15 @@ export async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Stage left rack']
 	});
 	received(purchase, 'XLR Cable (25ft)', 12, 1_800, { locationId: locByName['Stage left rack'] });
+	// The offsite kit: lent as one set to a show off site.
+	received(grant, 'QSC K12.2 Powered Speaker', 2, 48_000, {
+		units: [{ tag: 'CMC-000201' }, { tag: 'CMC-000202' }],
+		locationId: locByName['Offsite kit']
+	});
+	received(purchase, 'Shure SM58', 2, 11_900, {
+		units: [{ tag: 'CMC-000203' }, { tag: 'CMC-000204' }],
+		locationId: locByName['Offsite mic case']
+	});
 	received(purchase, 'Boom Mic Stand', 4, 3_500, { locationId: locByName['Storage closet'] });
 	received(restock, "D'Addario EXL110 Strings", 12, 700, { locationId: locByName['Supply shelf'] });
 	received(restock, 'Vic Firth 5A Drumsticks', 10, 1_100, {
@@ -456,6 +470,7 @@ export async function seedEquipment(users: SeedUser[]) {
 	});
 	received(openingBalance, 'XLR Cable (25ft)', 8, null);
 	received(openingBalance, 'Boom Mic Stand', 3, null);
+	received(openingBalance, 'Gaffer Tape', 2, null);
 
 	/**
 	 * A receipt's total and the lines it is made of must agree.
@@ -479,9 +494,9 @@ export async function seedEquipment(users: SeedUser[]) {
 
 	// Acquisitions first: `acquisition_line` and `inventory_asset` both point at
 	// them. This insert used to sit above, before the lines existed to total.
-	await batchInsert(acquisition, acquisitionRows, 4);
-	await batchInsert(acquisitionLine, lines, 4);
-	await batchInsert(inventoryAsset, assets, 4);
+	await batchInsert(acquisition, acquisitionRows);
+	await batchInsert(acquisitionLine, lines);
+	await batchInsert(inventoryAsset, assets);
 
 	const assetByTag = Object.fromEntries(
 		assets.filter((a) => a.assetTag).map((a) => [a.assetTag, a])
@@ -556,10 +571,25 @@ export async function seedEquipment(users: SeedUser[]) {
 	 * The late one is what the list's "Order late" view flags; the draft proves a
 	 * shopping list still counts as missing until it is actually sent.
 	 */
+	const supplier = {
+		sweetwater: randomUUID(),
+		troubadour: randomUUID(),
+		hardware: randomUUID()
+	};
+	await seedOrganizations([
+		{
+			id: supplier.sweetwater,
+			name: 'Sweetwater',
+			roles: ['supplier'],
+			website: 'https://www.sweetwater.com'
+		},
+		{ id: supplier.troubadour, name: 'Troubadour Music', roles: ['supplier'] },
+		{ id: supplier.hardware, name: 'Corvallis Hardware', roles: ['supplier'] }
+	]);
 	const placedOrder = {
 		id: randomUUID(),
 		status: 'placed' as const,
-		supplierName: 'Sweetwater',
+		organizationId: supplier.sweetwater,
 		reference: 'SW-4472880',
 		placedAt: new Date(now.getTime() - 4 * day),
 		expectedAt: new Date(now.getTime() + 3 * day),
@@ -569,7 +599,7 @@ export async function seedEquipment(users: SeedUser[]) {
 	const lateOrder = {
 		id: randomUUID(),
 		status: 'placed' as const,
-		supplierName: 'Troubadour Music',
+		organizationId: supplier.troubadour,
 		reference: 'TM-9912',
 		placedAt: new Date(now.getTime() - 21 * day),
 		expectedAt: new Date(now.getTime() - 5 * day),
@@ -579,21 +609,21 @@ export async function seedEquipment(users: SeedUser[]) {
 	const draftOrder = {
 		id: randomUUID(),
 		status: 'draft' as const,
-		supplierName: 'Corvallis Hardware',
+		organizationId: supplier.hardware,
 		createdByUserId: staffId,
 		notes: 'Not sent yet.'
 	};
 	const receivedOrder = {
 		id: randomUUID(),
 		status: 'received' as const,
-		supplierName: 'Sweetwater',
+		organizationId: supplier.sweetwater,
 		reference: 'SW-4471902',
 		placedAt: new Date(now.getTime() - 26 * day),
 		expectedAt: new Date(now.getTime() - 21 * day),
 		createdByUserId: staffId
 	};
 
-	await batchInsert(purchaseOrder, [placedOrder, lateOrder, draftOrder, receivedOrder], 4);
+	await batchInsert(purchaseOrder, [placedOrder, lateOrder, draftOrder, receivedOrder]);
 
 	const orderLines: (typeof purchaseOrderLine.$inferInsert)[] = [
 		// Partly delivered: six of ten arrived, four still out. This is the state
@@ -639,7 +669,7 @@ export async function seedEquipment(users: SeedUser[]) {
 			quantityReceived: 12
 		}
 	];
-	await batchInsert(purchaseOrderLine, orderLines, 4);
+	await batchInsert(purchaseOrderLine, orderLines);
 
 	// The receipt that closed the received order — the link the detail page
 	// renders as "what arrived".
@@ -731,7 +761,7 @@ export async function seedEquipment(users: SeedUser[]) {
 		}
 	];
 
-	const loans = await batchInsert(inventoryLoan, loanRows, 3);
+	const loans = await batchInsert(inventoryLoan, loanRows);
 
 	// The two open checkouts have left the building; the returned cable loan went
 	// out and came back. Written here so on-hand reflects what is physically in
@@ -776,7 +806,7 @@ export async function seedEquipment(users: SeedUser[]) {
 		.where(eq(inventoryAsset.id, blues.id!));
 
 	// Disposed of 40 days ago: donated, inside the three-year window, and nobody
-	// has recorded a Form 8282 outcome — so it shows on /staff/inventory/compliance
+	// has recorded a Form 8282 outcome — so it shows on the Form 8282 filter of /staff/inventory/acquisitions
 	// with roughly 85 of the 125 days left.
 	const donatedDisposal = assets.find((a) => a.assetTag === 'CMC-000110');
 	if (donatedDisposal) {
@@ -849,7 +879,7 @@ export async function seedEquipment(users: SeedUser[]) {
 		});
 	}
 
-	await batchInsert(stockMovement, movements, 4);
+	await batchInsert(stockMovement, movements);
 
 	return {
 		categories: categories.length,

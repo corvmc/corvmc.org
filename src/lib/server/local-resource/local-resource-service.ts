@@ -1,14 +1,14 @@
-import { db } from '$lib/server/db';
-import { localResource, localResourceCategory } from '$lib/server/db/schema/local-resource';
+import { db } from '#lib/server/db/index.js';
+import { localResource, localResourceCategory } from '#lib/server/db/schema/local-resource.js';
 import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import type { LocalResourceStatus } from '$lib/config';
-import { domainEvents, type DomainEvents } from '$lib/server/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { LocalResourceStatus } from '#lib/config.js';
+import { domainEvents, type DomainEvents } from '#lib/server/event-bus/index.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * The local resources directory: a public, staff-curated list of music
- * businesses and services. docs/specs/shipped/local-resources-spec.md
+ * businesses and services. docs/decisions/0028-local-resources-are-their-own-table.md
  */
 
 export const LOCAL_RESOURCE_NAME_MAX = 120;
@@ -143,8 +143,20 @@ export async function listPublishedByCategory() {
 // Staff: listings
 // ---------------------------------------------------------------------------
 
-/** Pending first — the review queue — then everything else by name. */
+/**
+ * Pending first — the review queue — then everything else by name. Filtered to
+ * pending, it is the tips queue (#1566): oldest first, so nothing waits behind
+ * newer tips.
+ */
 export async function listResourcesForStaff(filters: { status?: LocalResourceStatus } = {}) {
+	const order =
+		filters.status === 'pending'
+			? [asc(localResource.createdAt), asc(localResource.id)]
+			: [
+					sql`case ${localResource.status} when 'pending' then 0 when 'rejected' then 1 else 2 end`,
+					asc(localResource.name),
+					asc(localResource.id)
+				];
 	return db
 		.select({
 			id: localResource.id,
@@ -152,6 +164,7 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 			status: localResource.status,
 			website: localResource.website,
 			categoryName: localResourceCategory.name,
+			submitterEmail: localResource.submitterEmail,
 			createdAt: localResource.createdAt
 		})
 		.from(localResource)
@@ -162,32 +175,12 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 				filters.status ? eq(localResource.status, filters.status) : undefined
 			)
 		)
-		.orderBy(
-			sql`case ${localResource.status} when 'pending' then 0 when 'rejected' then 1 else 2 end`,
-			asc(localResource.name),
-			asc(localResource.id)
-		);
+		.orderBy(...order);
 }
 
 /** Only a public tip is ever `pending`: staff listings publish as they save. */
-const pendingTip = () => and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
-
-/** The tips queue (#1566): oldest first, so nothing waits behind newer tips. */
-export async function listTips() {
-	return db
-		.select({
-			id: localResource.id,
-			name: localResource.name,
-			categoryName: localResourceCategory.name,
-			website: localResource.website,
-			submitterEmail: localResource.submitterEmail,
-			createdAt: localResource.createdAt
-		})
-		.from(localResource)
-		.innerJoin(localResourceCategory, eq(localResourceCategory.id, localResource.categoryId))
-		.where(pendingTip())
-		.orderBy(asc(localResource.createdAt), asc(localResource.id));
-}
+export const pendingTip = () =>
+	and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
 
 export async function countPendingTips(): Promise<number> {
 	const [row] = await db.select({ value: count() }).from(localResource).where(pendingTip());
@@ -237,12 +230,27 @@ export async function submitTip(
 	return row;
 }
 
+/**
+ * Whether the person who sent a tip hears about this move. They hear the
+ * decision on it, and a later listing after a return. Taking a listed tip down
+ * is staff upkeep, not an answer to the tip (#2789).
+ */
+export function tellsSubmitter(from: LocalResourceStatus, to: LocalResourceStatus): boolean {
+	return from !== to && (from === 'pending' || to === 'published');
+}
+
 function announceReview(
-	before: { id: string; name: string; submitterEmail: string | null },
+	before: {
+		id: string;
+		name: string;
+		status: LocalResourceStatus;
+		submitterEmail: string | null;
+	},
 	published: boolean,
 	staffNote: string | null
 ) {
 	if (!before.submitterEmail) return;
+	if (!tellsSubmitter(before.status, published ? 'published' : 'rejected')) return;
 	announce('local_resource.reviewed', {
 		resourceId: before.id,
 		name: before.name,
@@ -293,7 +301,7 @@ export async function publishResource(id: string, staffUserId: string) {
 		})
 		.where(eq(localResource.id, id))
 		.returning();
-	if (before.status !== 'published') announceReview(before, true, null);
+	announceReview(before, true, null);
 	return row;
 }
 
@@ -339,7 +347,8 @@ export async function listCategories() {
 			id: localResourceCategory.id,
 			name: localResourceCategory.name,
 			displayOrder: localResourceCategory.displayOrder,
-			listings: sql<number>`(select count(*) from ${localResource} where ${localResource.categoryId} = ${localResourceCategory.id})`
+			// Nested so drizzle qualifies the columns; this query has no join to make it.
+			listings: sql<number>`${sql`(select count(*) from ${localResource} where ${localResource.categoryId} = ${localResourceCategory.id})`}`
 		})
 		.from(localResourceCategory)
 		.orderBy(asc(localResourceCategory.displayOrder), asc(localResourceCategory.name));

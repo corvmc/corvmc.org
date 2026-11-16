@@ -1,28 +1,33 @@
 <script lang="ts">
-	import Button from '$lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
-	import { fullDate, formatTime } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { getPublicEventDetail } from '$lib/remote/events.remote';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import EventFacts from '#lib/components/events/EventFacts.svelte';
+	import ReportEventAction from '#lib/components/actions/ReportEventAction.svelte';
+	import { formatTime } from '#lib/utils/format.js';
+	import { ticketingMode, isFreeEvent as isFree } from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { placeLine } from '#lib/utils/place.js';
+	import { getPublicEventDetail } from '#lib/remote/events.remote.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
+	import RecapText from '#lib/components/events/RecapText.svelte';
 	import MarketVendors from './MarketVendors.svelte';
 	import SponsorCredit from './SponsorCredit.svelte';
 	import RsvpControl from './RsvpControl.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getPublicEventDetail(page.params.id!));
+	const params = routeParams('id');
+
+	let data = $derived(await getPublicEventDetail(params.id));
 
 	const evt = $derived(data.event);
 	// Descriptions are rich text (legacy rows contain HTML), so sanitize before
@@ -31,8 +36,6 @@
 	const mode = $derived(ticketingMode(evt));
 	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
-
-	const price = $derived(priceDisplay(evt));
 
 	const capacityKnown = $derived(
 		evt.ticketingEnabled && evt.ticketQuantity != null && data.sold != null
@@ -48,7 +51,7 @@
 		id: evt.id,
 		title: evt.title,
 		description: evt.description,
-		location: evt.location,
+		location: placeLine(evt),
 		startsAt: evt.startsAt,
 		endsAt: evt.endsAt
 	});
@@ -63,13 +66,15 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
+	// The poster's tape already shows the primary tag.
+	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
 
 	// A cancelled show stays on the guide so the people who already had the date
 	// find out. Everything transactional comes off; the facts stay.
 	const isCancelled = $derived(evt.status === 'cancelled');
 
 	const isBandEvent = $derived(evt.source === 'band');
-	const bandHref = $derived(evt.bandSlug ? resolve(`/directory/bands/${evt.bandSlug}`) : null);
+	const bandHref = $derived(evt.bandSlug ? resolve(`directory/bands/${evt.bandSlug}`) : null);
 
 	// /tickets only exists for events we sell — it 404s otherwise, so anything
 	// else follows the off-site seller (or the band, or the listing).
@@ -81,7 +86,7 @@
 		evt.ticketingEnabled ? undefined : (evt.externalTicketUrl ?? undefined)
 	);
 	const ticketsHref = $derived(
-		evt.ticketingEnabled ? resolve(`/events/${evt.id}/tickets`) : (bandHref ?? resolve('/events'))
+		evt.ticketingEnabled ? resolve(`events/${evt.id}/tickets`) : (bandHref ?? resolve('events'))
 	);
 </script>
 
@@ -98,29 +103,32 @@
 
 <section class="px-6 py-10">
 	<div class="mx-auto max-w-4xl">
-		<PageHeader title={evt.title} parent={{ label: 'Events', href: resolve('/events') }}>
+		<PageHeader
+			title={evt.title}
+			parent={{ label: m.public_events_label(), href: resolve('events') }}
+		>
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
 					<summary class="btn gap-1 btn-ghost btn-sm">
 						<IconCalendarPlus size={18} />
-						Add to calendar
+						{m.public_events_id_add_calendar_label()}
 					</summary>
 					<ul class="menu dropdown-content dropdown-panel w-48">
 						<li>
 							<a
 								href={googleCalendarUrl(calendarEvt)}
 								target="_blank"
-								rel="external noopener noreferrer">Google Calendar</a
+								rel="external noopener noreferrer">{m.public_events_id_google_calendar_text()}</a
 							>
 						</li>
 						<li>
 							<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-								>Apple / Outlook (.ics)</a
+								>{m.public_events_id_apple_outlook_ics_text()}</a
 							>
 						</li>
 					</ul>
 				</details>
-				<ShareButton title="Copy link to this event" />
+				<ShareButton title={m.public_events_id_title()} />
 				{#if data.canReport}
 					<ReportEventAction eventId={evt.id} eventTitle={evt.title} />
 				{/if}
@@ -147,9 +155,9 @@
 			</div>
 
 			<div class="edet__main">
-				{#if tagList.length > 0}
+				{#if stickerTags.length > 0}
 					<div class="edet__tags">
-						{#each tagList as tag (tag)}
+						{#each stickerTags as tag (tag)}
 							<span class="sticker {tagToStickerColor(tag)}">{tag}</span>
 						{/each}
 					</div>
@@ -161,7 +169,7 @@
 				{#if isCancelled}
 					<div class="edet__cancelled" role="status">
 						<IconAlertTriangle size={18} />
-						<span>This event has been cancelled.</span>
+						<span>{m.public_events_id_event_has_been_cancelled_text()}</span>
 					</div>
 				{/if}
 
@@ -172,7 +180,7 @@
 						{#each evt.lineup as act, i (act.id)}
 							{#if i > 0}<span aria-hidden="true"> · </span>{/if}
 							{#if act.slug}
-								<a href={resolve(`/directory/bands/${act.slug}`)} class="link">{act.name}</a>
+								<a href={resolve(`directory/bands/${act.slug}`)} class="link">{act.name}</a>
 							{:else if act.externalUrl}
 								<!-- An external act: no CMC page exists for it, so its name
 								     points at the presence it chose. `rel` because this leaves
@@ -194,7 +202,7 @@
 					</p>
 				{:else if isBandEvent && evt.bandName}
 					<p class="edet__byline">
-						by
+						{m.public_events_id_by_text()}
 						{#if bandHref}
 							<a href={bandHref} class="link">{evt.bandName}</a>
 						{:else}
@@ -203,97 +211,7 @@
 					</p>
 				{/if}
 
-				<div class="edet__facts">
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><rect x="3" y="5" width="18" height="16" rx="2" /><path
-									d="M3 9h18M8 3v4M16 3v4"
-								/></svg
-							>
-							Date
-						</span>
-						<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
-					</div>
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
-							>
-							Time
-						</span>
-						<span class="edet__fact-value">
-							{formatEventTimeRange(evt.startsAt, evt.endsAt)}
-							{#if evt.doorsAt}
-								<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span
-								>
-							{/if}
-						</span>
-					</div>
-					{#if evt.location}
-						<div class="edet__fact">
-							<span class="edet__fact-label">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.8"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									style="width:13px;height:13px"
-									><path d="M12 21s-7-5.686-7-11a7 7 0 0 1 14 0c0 5.314-7 11-7 11Z" /><circle
-										cx="12"
-										cy="10"
-										r="2.5"
-									/></svg
-								>
-								Location
-							</span>
-							<span class="edet__fact-value">{evt.location}</span>
-						</div>
-					{/if}
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><path
-									d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
-								/><path d="M13 6v12" /></svg
-							>
-							Price
-						</span>
-						<span class="edet__fact-value">
-							{price.label}
-							{#if price.suggested}
-								<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
-							{/if}
-						</span>
-					</div>
-				</div>
+				<EventFacts {evt} />
 
 				<!--
 					The running order, and only once the production is confirmed with a
@@ -320,9 +238,18 @@
 				{#if capacityKnown}
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
-							<span>{data.sold} of {evt.ticketQuantity} claimed</span>
+							<span
+								>{m.public_events_id_claimed_text({
+									sold: data.sold ?? '',
+									ticketQuantity: evt.ticketQuantity ?? ''
+								})}</span
+							>
 							{#if lowAvailability}
-								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
+								<Badge variant="warning"
+									>{isFreeEvent
+										? m.public_events_id_almost_full_label()
+										: m.public_events_id_selling_fast_label()}</Badge
+								>
 							{/if}
 						</div>
 						<progress
@@ -335,21 +262,29 @@
 
 				<div class="edet__ctas">
 					{#if isCancelled}
-						<span class="text-base font-medium text-fg-2">Tickets and RSVPs are closed.</span>
+						<span class="text-base font-medium text-fg-2"
+							>{m.public_events_id_tickets_rsvps_closed_text()}</span
+						>
 					{:else if data.isPast}
-						<span class="text-base font-medium text-fg-2">This event has ended.</span>
+						<span class="text-base font-medium text-fg-2"
+							>{m.public_events_id_event_has_ended_text()}</span
+						>
 					{:else if mode === 'platform'}
 						{#if soldOut}
 							<Button variant="default" size="lg" disabled
-								>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+								>{isFreeEvent ? m.public_full_label() : m.public_events_id_sold_out_label()}</Button
 							>
 						{:else}
 							<Button href={ticketsHref} variant="primary" size="lg">
-								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
+								{isFreeEvent
+									? m.public_events_id_get_free_ticket_label()
+									: m.public_events_id_get_tickets_2_label()}
 							</Button>
 							{#if data.remaining !== null}
 								<span class="text-muted"
-									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
+									>{(isFreeEvent
+										? m.public_events_id_spots_remaining_text
+										: m.public_tickets_remaining_text)({ remaining: data.remaining })}</span
 								>
 							{/if}
 						{/if}
@@ -362,12 +297,14 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								variant="primary"
-								size="lg">Get Tickets ↗</Button
+								size="lg">{m.public_events_id_get_tickets_label()}</Button
 							>
 						{/if}
 						<RsvpControl eventId={evt.id} eventTitle={evt.title} external={mode === 'external'} />
 						{#if data.rsvpCount > 0}
-							<span class="text-muted">{data.rsvpCount} going</span>
+							<span class="text-muted"
+								>{m.public_events_id_going_text({ rsvpCount: data.rsvpCount })}</span
+							>
 						{/if}
 					{/if}
 				</div>
@@ -382,7 +319,7 @@
 
 		{#if data.recapHtml}
 			<section class="edet__recap">
-				<SectionLabel label="Recap" />
+				<SectionLabel label={m.public_events_id_recap_label()} />
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized markdown (renderMarkdown) -->
 				<div class="edet__recap-body">{@html data.recapHtml}</div>
 			</section>
@@ -394,11 +331,16 @@
 
 		{#if data.recapUpload}
 			<RecapUpload eventId={evt.id} recap={data.recapUpload} />
+			<RecapText
+				eventId={evt.id}
+				text={data.recapUpload.recapText}
+				closedReason={data.recapUpload.closedReason}
+			/>
 		{/if}
 
 		{#if data.upcoming.length > 0}
 			<section class="edet__more">
-				<SectionLabel label="More shows" />
+				<SectionLabel label={m.public_events_id_more_shows_label()} />
 				<div class="edet__more-grid">
 					{#each data.upcoming as e (e.id)}
 						{@const eTags = parseTags(e.tags)}

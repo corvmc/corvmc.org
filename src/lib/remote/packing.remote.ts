@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { getMembers } from '$lib/server/band/band-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getMembers } from '#lib/server/band/band-service.js';
 import {
 	getPackingList,
 	saveOwnItems,
@@ -16,9 +16,9 @@ import {
 	resetPacked,
 	promoteOwnItems,
 	PackingAlreadyClaimedError
-} from '$lib/server/band/packing-service';
-import { packingItemsDraftSchema } from '$lib/types/packing';
-import { PACKING_NOTES_MAX } from '$lib/config';
+} from '#lib/server/band/packing-service.js';
+import { packingItemsDraftSchema } from '#lib/types/packing.js';
+import { PACKING_NOTES_MAX } from '#lib/config.js';
 
 /**
  * The band packing list — see `/band/[slug]/packing`.
@@ -26,7 +26,7 @@ import { PACKING_NOTES_MAX } from '$lib/config';
  * **Three verbs, three guards, and the split is in the signatures rather than a
  * role check**: `savePackingItems` takes no owner, `claimPackingItem` no
  * assignee. Packing and resetting are guarded at `member` on purpose — not an
- * oversight to tighten later. Rationale: docs/specs/shipped/packing-list-spec.md
+ * oversight to tighten later. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 
 const bandIdField = z.string().min(1);
@@ -56,7 +56,7 @@ function parseItems(raw: string) {
  *
  * `custom/no-concurrent-remote-queries` rules out fanning queries out of the
  * component, and past kit 2.64 that stops the page rendering at all.
- * `allowStaff` lets a staffer advancing a show read what a band brings; it
+ * `staff` lets a staffer advancing a show read what a band brings; it
  * returns `role: 'staff'`, so `isOnRoster` is false and they cannot tick a box.
  */
 export const getBandPackingPage = query(bandIdField, async (bandId) => {
@@ -64,7 +64,7 @@ export const getBandPackingPage = query(bandIdField, async (bandId) => {
 		user,
 		group: band,
 		role
-	} = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
+	} = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
 
 	const canManage = role === 'owner' || role === 'admin';
 

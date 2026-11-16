@@ -29,7 +29,7 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -57,6 +57,9 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
+const { recordAuditEntry } = vi.hoisted(() => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
+
 import {
 	createVolunteerRole,
 	updateVolunteerRole,
@@ -72,7 +75,7 @@ import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY
-} from '$lib/config';
+} from '#lib/config.js';
 
 const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, displayOrder: 0 };
 
@@ -225,6 +228,21 @@ describe('VolunteerRoleService', () => {
 			expect(role).toEqual(ROLE);
 		});
 
+		// #2891: the audit log keeps the name of the role that was deleted.
+		it('records the deletion in the audit log, and only a real one', async () => {
+			recordAuditEntry.mockClear();
+			selectResult = [{ count: 0 }];
+			await deleteVolunteerRole(ROLE.id);
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'role.deleted',
+				subject: { type: 'role', id: ROLE.id, label: ROLE.name },
+				details: {}
+			});
+			deleteResult = [];
+			await expect(deleteVolunteerRole('missing')).rejects.toThrow();
+			expect(recordAuditEntry).toHaveBeenCalledOnce();
+		});
+
 		it('throws when the role is gone', async () => {
 			selectResult = [{ count: 0 }];
 			deleteResult = [];
@@ -301,5 +319,34 @@ describe('skill matches (#1445)', () => {
 		await updateVolunteerRole(ROLE.id, { name: 'Sound / FOH' });
 
 		expect(updateSets.at(-1)).not.toHaveProperty('skillMatches');
+	});
+});
+
+describe('briefing article (#2728)', () => {
+	beforeEach(() => {
+		updateSets = [];
+		updateResult = [ROLE];
+		selectResult = [];
+		selectResultQueue = [];
+	});
+
+	it('links an article that exists', async () => {
+		selectResult = [{ id: 'art-1' }];
+		await updateVolunteerRole(ROLE.id, { briefingArticleId: 'art-1' });
+
+		expect(updateSets.at(-1)).toMatchObject({ briefingArticleId: 'art-1' });
+	});
+
+	it('refuses an article that does not exist, before writing', async () => {
+		await expect(updateVolunteerRole(ROLE.id, { briefingArticleId: 'gone' })).rejects.toThrow(
+			VolunteerRoleValidationError
+		);
+		expect(updateSets).toEqual([]);
+	});
+
+	it('clears the link on a blank choice', async () => {
+		await updateVolunteerRole(ROLE.id, { briefingArticleId: '' });
+
+		expect(updateSets.at(-1)).toMatchObject({ briefingArticleId: null });
 	});
 });

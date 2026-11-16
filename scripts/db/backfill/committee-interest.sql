@@ -1,9 +1,8 @@
 -- The volunteer-role interest rows, as committee applications.
 --
--- `committees-and-roles-spec.md` decision 2 retires the `committee` bucket in
--- `volunteerRoleGroups` and says these rows "are the first applications and
--- should be migrated, not dropped — they are people who already put their hand
--- up". This is that migration; the roles themselves go in a later pass, once
+-- `docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md` decision 2
+-- retires the `committee` bucket in `volunteerRoleGroups`, and these rows
+-- become the first applications rather than being dropped. This is that migration; the roles themselves go in a later pass, once
 -- these have landed.
 --
 -- One application per person carrying every committee they named, which is the

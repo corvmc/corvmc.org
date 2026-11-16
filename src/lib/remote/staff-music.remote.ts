@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
 import {
 	listAllReleases,
 	radioPoolStats,
@@ -11,11 +11,12 @@ import {
 	salesTotals,
 	setRadioExclusion,
 	withholdRelease
-} from '$lib/server/audio/staff-audio-service';
-import { getRadioNow, getRecentlyPlayed } from '$lib/server/audio/radio-service';
-import { refundPurchase } from '$lib/server/audio/purchase-service';
-import { mapDomainError } from '$lib/server/errors';
-import { LONG_TEXT_MAX } from '$lib/config';
+} from '#lib/server/audio/staff-audio-service.js';
+import { getRadioNow, getRecentlyPlayed } from '#lib/server/audio/radio-service.js';
+import { refundPurchase } from '#lib/server/audio/purchase-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { LONG_TEXT_MAX } from '#lib/config.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 
 /**
  * Staff music tools.
@@ -29,47 +30,38 @@ import { LONG_TEXT_MAX } from '$lib/config';
  * `music.moderate`, and a refund is `finance.refund`.
  */
 
-/** The one load-bearing query for /staff/music. */
+/** The one load-bearing query for /staff/music: the radio card and the releases table. */
 export const getStaffMusicPage = query(async () => {
 	await requireCapability('music.read');
 
-	const [
-		releases,
-		pool,
-		sales,
-		purchases,
-		radioEnabled,
-		audioEnabled,
-		now,
-		recent,
-		canModerate,
-		canRefund
-	] = await Promise.all([
+	const [releases, pool, radioEnabled, audioEnabled, now, recent, canModerate] = await Promise.all([
 		listAllReleases(),
 		radioPoolStats(),
-		salesTotals(),
-		recentSales(),
 		isFeatureEnabled('cmcRadio'),
 		isFeatureEnabled('bandAudio'),
 		getRadioNow(),
 		getRecentlyPlayed(15),
 		// UI only: which controls to offer. The forms below are the guards.
-		can('music.moderate'),
-		can('finance.refund')
+		can('music.moderate')
 	]);
 
-	return {
-		releases,
-		pool,
-		sales,
-		purchases,
-		radioEnabled,
-		audioEnabled,
-		now,
-		recent,
-		canModerate,
-		canRefund
-	};
+	return { releases, pool, radioEnabled, audioEnabled, now, recent, canModerate };
+});
+
+/** One release's recent sales, for its detail panel on /staff/music (#2766). */
+export const getStaffReleaseSales = query(z.string().min(1), async (releaseId) => {
+	await requireCapability('music.read');
+	const [purchases, canRefund] = await Promise.all([
+		recentSales(50, releaseId),
+		can('finance.refund')
+	]);
+	return { purchases, canRefund };
+});
+
+/** Sales across every band: the Music report (#2766). */
+export const getMusicSalesReport = query(async () => {
+	await requireCapability('music.read');
+	return salesTotals();
 });
 
 /**
@@ -149,7 +141,7 @@ export const setRadioExclusionForm = form(
  */
 export const refundPurchaseForm = form(
 	z.object({ purchaseId: z.string().min(1) }),
-	async ({ purchaseId }) => {
+	writesAudit('music_purchase.refunded', async ({ purchaseId }) => {
 		await requireCapability('finance.refund');
 		try {
 			await refundPurchase(purchaseId);
@@ -158,5 +150,5 @@ export const refundPurchaseForm = form(
 		}
 		void getStaffMusicPage().refresh();
 		return { success: true };
-	}
+	})
 );

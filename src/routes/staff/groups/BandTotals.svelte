@@ -1,0 +1,19 @@
+<script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatGrid from '#lib/components/ui/StatGrid.svelte';
+	import { getStaffBandTotals } from '#lib/remote/bands.remote.js';
+
+	const totals = await getStaffBandTotals();
+	const stats = $derived([
+		{ title: m.staff_groups_band_totals_active_bands_title(), value: totals.active },
+		{ title: m.staff_premium_title(), value: totals.premium },
+		{ title: m.staff_groups_band_totals_new_30_days_title(), value: totals.newBands }
+	]);
+</script>
+
+<StatGrid cols={3} class="mb-4">
+	{#each stats as stat (stat.title)}
+		<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
+	{/each}
+</StatGrid>

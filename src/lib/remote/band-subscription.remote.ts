@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
@@ -12,7 +12,7 @@ import {
 	cancelBandSubscription,
 	resumeBandSubscription,
 	getBandPremiumPricing
-} from '$lib/server/band/band-subscription-service';
+} from '#lib/server/band/band-subscription-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -23,7 +23,7 @@ export const getBandSubscriptionInfo = query(z.string(), async (slug) => {
 	// whole Stripe subscription record to any signed-in account that knew a slug.
 	// Membership, not ownership: the page renders read-only for a non-owner
 	// member today and this is not the change that takes that away.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { allowStaff: true });
+	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
 
 	const [subscription, pricing] = await Promise.all([
 		getBandSubscription(band.id),

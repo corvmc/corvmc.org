@@ -1,5 +1,5 @@
-import { resolveImageUrl } from '$lib/server/storage';
-import type { CalendarEntry } from '$lib/types/calendar';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import type { CalendarEntry } from '#lib/types/calendar.js';
 import type { EventRow } from './event-service';
 
 /**

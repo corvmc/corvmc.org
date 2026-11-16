@@ -28,30 +28,10 @@ concurrency:
 # time of writing were E2E 14.8m and Unit tests 15.1m, against medians of 4.8m
 # and 2.4m. These bound a hang; they are not a performance budget, and a job
 # that starts timing out is reporting a real regression rather than a limit set
-# too tight.
+# too tight. A timed-out job with no steps never started on its runner; see
+# `.claude/commands/queue-triage.md`.
 
 jobs:
-  lint:
-    name: Lint (full)
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/install
-      # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
-      # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
-      # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
-      # from runes mode), which ESLint refuses to serialize. ESLint is ~200s of this
-      # job's ~250s, so this only caches the small half.
-      - uses: actions/cache@v6
-        with:
-          path: node_modules/.cache/prettier
-          key: prettier-cache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            prettier-cache-${{ runner.os }}-
-      - run: pnpm lint
-
   lint-changed:
     name: Lint (changed)
     # Everything except a push to `main`, which the full `lint` job above covers. This
@@ -62,7 +42,9 @@ jobs:
     # right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Typed ESLint costs ~1s a file here, so a tree-wide PR (#2374: 1,684 files) needs
+    # far more than 10 minutes; a normal PR is unaffected. See #2399.
+    timeout-minutes: 45
     # A phase PR into an integration branch is diffed against that branch, not
     # against `main`. `github.base_ref` is the PR's base and is empty for
     # `merge_group`, whose ref is built from main — so the fallback keeps the
@@ -81,14 +63,21 @@ jobs:
   check:
     name: Svelte Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The message catalog (#2099) took a run from ~4.5 to 7-10 minutes, past
+    # the old 10-minute cap on a slow runner.
+    timeout-minutes: 15
+    # The `src` pass reaches Node's ~4 GB default heap; the runner has 16 GB.
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
       # Two svelte-check passes: `src`, which the generated tsconfig includes, and
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
-      # `eslint-rules/`, `.storybook/` and the root configs, none of which the
+      # `eslint-rules/` and the root configs, none of which the
       # generated one has ever covered. `pnpm check` chains both.
+      # The `src` pass needs more than Node's ~4 GB default heap (#2848); the
+      # runner has 16 GB.
       - run: pnpm check
 
   # `unit` and `e2e` were one `Test` job that ran them back to back. They share
@@ -101,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
-      # The `client` and `storybook` vitest projects run in real chromium.
+      # The `client` vitest project runs in real chromium.
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
@@ -163,7 +152,9 @@ jobs:
       # grown to 64s went unnoticed for months.
       - run: pnpm test:e2e:prepare
       # Builds the app and serves it via playwright.config.ts's webServer.
-      - run: pnpm test:e2e:run
+      # `--fail-on-flaky-tests`: a test that passes only on a retry fails the job
+      # (#2216). The retries stay so the failed attempt leaves a trace.
+      - run: pnpm test:e2e:run -- --fail-on-flaky-tests
       # The failure log names an `error-context.md` per failed test and, on a
       # retry, a trace. Without this step every one of those paths pointed at a
       # file that was deleted with the runner, so a red E2E could only be
@@ -233,9 +224,9 @@ jobs:
     name: Track main going red
     # `always()` so this still runs when a dependency failed — that is the entire
     # point. `lint-changed` is absent from `needs` because it does not run on
-    # push at all.
+    # push at all; `Lint (full)` runs in lint-full.yml and tracks its own issue.
     if: always() && github.event_name == 'push'
-    needs: [lint, check, unit, e2e, schema-drift, docs]
+    needs: [check, unit, e2e, schema-drift, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -273,7 +264,8 @@ jobs:
           if [ -z "$failed" ]; then
             # A green push closes everything the red ones opened. Comment first:
             # a bare close loses which run vindicated it.
-            jq -r '.[].number' <<<"$open_issues" | while read -r n; do
+            jq -r '.[] | select(.title != "main is red: Lint (full)") | .number' \
+              <<<"$open_issues" | while read -r n; do
               [ -n "$n" ] || continue
               gh issue comment "$n" --body "Green again on \`${SHA:0:7}\` — ${RUN_URL}"
               gh issue close "$n" --reason completed

@@ -55,7 +55,7 @@ const requireProgramRole = vi.fn(async (ref: { id?: string }) => {
 	if (ctx.group.kind === 'band') throw httpError(404, 'Group not found');
 	return ctx;
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) =>
 		requireGroupRole(...(a as Parameters<typeof requireGroupRole>)),
 	requireProgramRole: (...a: unknown[]) =>
@@ -64,7 +64,7 @@ vi.mock('$lib/server/group/group-context', () => ({
 
 const createEventSeries = vi.fn(async () => ({ id: 'series-1' }));
 const getByEvent = vi.fn(async (): Promise<{ id: string } | null> => null);
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as [])),
 	getByEvent: (...a: unknown[]) => getByEvent(...(a as []))
 }));
@@ -77,7 +77,7 @@ const service = {
 	cancelGroupSession: vi.fn(async () => undefined),
 	updateGroupSession: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	createGroupEvent: (...a: unknown[]) => service.createGroupEvent(...(a as [])),
 	getById: (...a: unknown[]) => service.getById(...(a as [])),
 	publish: (...a: unknown[]) => service.publish(...(a as [])),
@@ -86,7 +86,7 @@ vi.mock('$lib/server/event/event-service', () => ({
 	updateGroupSession: (...a: unknown[]) => service.updateGroupSession(...(a as []))
 }));
 
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}

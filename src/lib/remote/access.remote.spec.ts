@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { type Capability, type Position } from '$lib/config';
+import { type Capability, type Position } from '#lib/config.js';
 
 /** The access dashboard shows and changes who may do what, so every remote is admin-only. */
 
 let currentUser: { id: string } | null = { id: 'u-admin' };
 let heldPositions: Position[] = ['admin'];
 
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -30,16 +30,16 @@ const service = {
 	listClearanceHolders: vi.fn(async (_id: string) => []),
 	listHoldersOfPosition: vi.fn(async (_p: string) => [])
 };
-vi.mock('$lib/server/access/access-service', () => service);
+vi.mock('#lib/server/access/access-service.js', () => service);
 const setPositionService = vi.fn(async (_input: unknown) => ({ added: ['staff'], removed: [] }));
-vi.mock('$lib/server/access/position-service', () => ({
+vi.mock('#lib/server/access/position-service.js', () => ({
 	setPosition: (input: unknown) => setPositionService(input)
 }));
-vi.mock('$lib/server/volunteer/volunteer-certification-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-certification-service.js', () => ({
 	listCertifications: vi.fn(async () => [])
 }));
 const dbSelect = vi.fn();
-vi.mock('$lib/server/db', () => ({ db: { select: dbSelect } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: dbSelect } }));
 
 vi.mock('$app/server', () => {
 	const mark = <T extends object>(fn: T, type: string) => Object.assign(fn, { __: { type } });

@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { inboxChannelConfig } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxChannelConfig } from '#lib/server/db/schema/inbox.js';
 import { eq } from 'drizzle-orm';
-import { staffInboxChannels, isAlwaysEnabledChannel, type StaffInboxChannel } from '$lib/config';
-import type { InboxChannel } from '$lib/server/db/schema/inbox';
+import { staffInboxChannels, isAlwaysEnabledChannel, type StaffInboxChannel } from '#lib/config.js';
+import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
 
 export interface ChannelConfigRow {
 	channel: StaffInboxChannel;
@@ -71,18 +71,11 @@ export async function updateChannelConfig(
 	// store a disabled flag that every read ignores, which reads as a bug later.
 	if (isAlwaysEnabledChannel(channel)) return;
 
-	const [existing] = await db
-		.select()
-		.from(inboxChannelConfig)
-		.where(eq(inboxChannelConfig.channel, channel))
-		.limit(1);
-
-	if (existing) {
-		await db
-			.update(inboxChannelConfig)
-			.set({ enabled, updatedAt: new Date() })
-			.where(eq(inboxChannelConfig.channel, channel));
-	} else {
-		await db.insert(inboxChannelConfig).values({ channel, enabled });
-	}
+	await db
+		.insert(inboxChannelConfig)
+		.values({ channel, enabled })
+		.onConflictDoUpdate({
+			target: inboxChannelConfig.channel,
+			set: { enabled, updatedAt: new Date() }
+		});
 }

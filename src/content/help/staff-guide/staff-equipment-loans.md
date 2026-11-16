@@ -1,9 +1,10 @@
 ---
-title: Approve Loans & Record Returns
+title: Approve loans & record returns
 slug: staff-equipment-loans
 category: staff-guide
 summary: Work through loan requests, check gear out, and check it back in.
 minRole: staff
+capabilities: inventory.read
 sortOrder: 11
 ---
 
@@ -26,4 +27,4 @@ the duration, replacement cost, and any fee to collect.
 ## Related
 
 - [Manage the equipment catalog](/member/help/staff-equipment-catalog)
-- Members track their side from [My Loans](/member/help/track-equipment-loans).
+- Members track their side from [My loans](/member/help/track-equipment-loans).

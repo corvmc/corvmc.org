@@ -11,9 +11,9 @@ import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
 import {
 	listCommunityEventsForUser,
 	listRejectedForUser,
@@ -29,16 +29,20 @@ import {
 	deleteCommunityEventDraft,
 	approveSubmission,
 	rejectSubmission
-} from '$lib/server/event/community-event-service';
-import { getById, getEventLineup } from '$lib/server/event/event-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { searchBandsByName } from '$lib/server/band/band-service';
-import { communityEventSchema, lineupSchema } from '$lib/server/db/schema/event';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/event/community-event-service.js';
+import { getById, getEventLineup } from '#lib/server/event/event-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
+import { searchBandsByName } from '#lib/server/band/band-service.js';
+import {
+	communityEventSchema,
+	eventVisibilities,
+	lineupSchema
+} from '#lib/server/db/schema/event.js';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { getStaffLayout } from './layout.remote';
 
 // ---------------------------------------------------------------------------
@@ -103,10 +107,12 @@ export const getMyListing = query(z.string(), async (eventId) => {
 		endsAt: evt.endsAt,
 		doorsAt: evt.doorsAt,
 		location: evt.location,
+		address: evt.address,
 		tags: evt.tags,
 		externalTicketUrl: evt.externalTicketUrl,
 		ticketPrice: evt.ticketPrice,
 		posterUrl: resolveImageUrl(evt.posterKey),
+		visibility: evt.visibility ?? 'public',
 		reviewNotes: evt.reviewNotes,
 		lineup,
 		standing
@@ -170,45 +176,24 @@ function buildRange(date: string, startTime: string, endTime: string | undefined
 // Member forms
 // ---------------------------------------------------------------------------
 
+/**
+ * The Add a show modal: only what a listing needs to exist. The venue is here
+ * because the manage form will not save without one (#2176); everything else
+ * is set through `updateListing` on the manage page this lands on.
+ */
 export const createListing = form(
-	communityEventSchema.extend({ posterFile: z.instanceof(File).optional() }),
-	async (data, issue) => {
+	communityEventSchema.pick({ title: true, eventDate: true, eventStartTime: true }).extend({
+		location: z.string().trim().min(1, 'Venue is required').max(500)
+	}),
+	async (data) => {
 		const user = requireUser();
-
-		const ticketPrice = dollarsToCents(data.ticketPriceDollars);
-		if (ticketPrice === undefined) {
-			invalid(issue.ticketPriceDollars('Enter a price like 10.00, or leave blank'));
-		}
-
-		const poster = readPosterFile(data.posterFile);
-		if (poster) {
-			const reason = validateUpload(poster);
-			if (reason) invalid(issue.posterFile(reason));
-		}
-
-		const tz = DEFAULT_TIMEZONE;
-		const { startsAt, endsAt } = buildRange(
-			data.eventDate,
-			data.eventStartTime,
-			data.eventEndTime || undefined,
-			tz
-		);
-		const doorsAt = data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null;
 
 		try {
 			const evt = await createCommunityEvent({
 				createdByUserId: user.id,
 				title: data.title,
-				description: data.description || undefined,
-				startsAt,
-				endsAt,
-				doorsAt,
-				location: data.location || undefined,
-				tags: data.tags || undefined,
-				externalTicketUrl: data.externalTicketUrl || undefined,
-				ticketPrice,
-				lineup: parseLineupField(data.lineup),
-				posterFile: await toPosterParam(poster)
+				startsAt: buildDateInTz(data.eventDate, data.eventStartTime, DEFAULT_TIMEZONE),
+				location: data.location
 			});
 
 			void getMyListings().refresh();
@@ -222,6 +207,7 @@ export const createListing = form(
 export const updateListing = form(
 	communityEventSchema.extend({
 		eventId: z.string().min(1),
+		visibility: z.enum(eventVisibilities).exclude(['group']).optional(),
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
@@ -256,9 +242,11 @@ export const updateListing = form(
 				// a wrong doors time rather than only how they omit one.
 				doorsAt: data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null,
 				location: data.location || null,
+				address: data.address?.trim() || null,
 				tags: data.tags || null,
 				externalTicketUrl: data.externalTicketUrl || null,
 				ticketPrice,
+				visibility: data.visibility,
 				lineup: parseLineupField(data.lineup),
 				posterFile: await toPosterParam(poster)
 			});
@@ -374,7 +362,7 @@ export const rejectListing = form(
 		// and repainted nothing — no route renders it. `getStaffCalendar` would be
 		// no better: it is keyed on its filters, so refreshing one argument shape
 		// leaves the shape the page actually asked for untouched. The list repaints
-		// from the caller's `invalidateAll()`, which is what the Turn down action
+		// from the caller's `refreshAll()`, which is what the Turn down action
 		// on the detail page already does.
 		void getStaffLayout().refresh();
 		return { success: true };

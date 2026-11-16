@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { getReservationPolicy } from '$lib/remote/reservations.remote';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+
+	/** `instructor` shows the teaching terms (#2808). */
+	let { bookerType = 'user' }: { bookerType?: 'user' | 'instructor' } = $props();
 
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
 	function fmtHour(hhmm: string): string {
@@ -29,7 +35,7 @@
 </script>
 
 <div class="overflow-hidden rounded-lg border-[2.5px] border-base-300 bg-base-200">
-	{#await getReservationPolicy()}
+	{#await getReservationPolicy(bookerType)}
 		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
 			{#each ['Rate', 'Hours', 'Length', 'Notice'] as label (label)}
 				<div class="px-4 py-3 text-center">
@@ -43,36 +49,51 @@
 	{:then policy}
 		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Rate</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_rate_text()}</span
+				>
 				<span class="block text-lg font-bold">{fmtRate(policy.hourlyRateCents)}</span>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Hours</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_hours_text()}</span
+				>
 				<span class="block text-lg font-bold"
 					>{fmtHour(policy.operatingHoursStart)} – {fmtHour(policy.operatingHoursEnd)}</span
 				>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Length</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_length_text()}</span
+				>
 				<span class="block text-lg font-bold"
-					>{policy.minDurationHours} – {policy.maxDurationHours} hrs</span
+					>{msg.reservations_booking_policy_hrs_text({
+						minDurationHours: policy.minDurationHours,
+						maxDurationHours: policy.maxDurationHours
+					})}</span
 				>
 			</div>
 			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60">Notice</span>
+				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+					>{msg.reservations_booking_policy_notice_text()}</span
+				>
 				<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
 			</div>
 		</div>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
-	<details class="border-t-[2.5px] border-base-300">
-		<summary
-			class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
-		>
-			Booking Policy
-		</summary>
-		<div class="space-y-1 px-4 pb-3 text-muted">
-			<p>Payment is due at reservation start time via cash in person or card online.</p>
-			<p>If you have specific needs for equipment or space, note them in the reservation form.</p>
-		</div>
-	</details>
+	{#if bookerType === 'user'}
+		<details class="border-t-[2.5px] border-base-300">
+			<summary
+				class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
+			>
+				{msg.reservations_booking_policy_booking_policy_label()}
+			</summary>
+			<div class="space-y-1 px-4 pb-3 text-muted">
+				<p>{msg.reservations_booking_policy_payment_due_at_reservation_start_text()}</p>
+				<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment_text()}</p>
+			</div>
+		</details>
+	{/if}
 </div>

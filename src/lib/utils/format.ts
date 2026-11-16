@@ -17,8 +17,9 @@
  * the rendered hour with no error.
  */
 
+import { CalendarDateTime } from '@internationalized/date';
 import { differenceInCalendarDays, isSameWeek } from 'date-fns';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Venue-time primitives
@@ -249,6 +250,22 @@ export function formatDateTimeShort(d: Date): string {
 }
 
 /**
+ * A history row's time: "May 13, 2:30 PM" in the current venue year, with the
+ * year added before it. History is kept for years, and a bare month misdates it.
+ */
+export function formatHistoryTime(d: Date, now = new Date()): string {
+	if (venueParts(d).year === venueParts(now).year) return formatDateTimeShort(d);
+	return venue(d, {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true
+	});
+}
+
+/**
  * Humanise a snake_case enum value: `admin_adjustment` → "Admin adjustment".
  *
  * The fallback for every enum→label map, so a value someone forgets to add
@@ -289,6 +306,17 @@ export function formatDateShortYear(d: Date): string {
 // Time formatting
 // ---------------------------------------------------------------------------
 
+/** An instant's venue date as a date field's value: "2026-07-03". */
+export function venueDateInput(d: Date): string {
+	const { year, month, day } = venueParts(d);
+	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** An instant's venue clock as a time field's value: "19:30". */
+export function venueTimeInput(d: Date): string {
+	return venue(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, 'en-GB');
+}
+
 /** Time only: "2:30 PM" */
 export function formatTime(d: Date): string {
 	return venue(d, { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -299,6 +327,13 @@ export function formatTimeRange(startsAt: Date, endsAt: Date): string {
 	return `${formatTime(startsAt)} – ${formatTime(endsAt)}`;
 }
 
+/** A time range, with dates when it runs across days, which a bare range would hide. */
+export function formatSpan(startsAt: Date, endsAt: Date): string {
+	return toLocalDate(startsAt) === toLocalDate(endsAt)
+		? formatTimeRange(startsAt, endsAt)
+		: `${formatDateTimeShort(startsAt)} – ${formatDateTimeShort(endsAt)}`;
+}
+
 /** Date → local date string for date inputs: "2026-05-13" */
 export function toLocalDate(d: Date): string {
 	return venue(d, { year: 'numeric', month: '2-digit', day: '2-digit' }, 'en-CA');
@@ -307,6 +342,18 @@ export function toLocalDate(d: Date): string {
 /** Date → local 24h time for time inputs: "14:30" */
 export function toLocalTime(d: Date): string {
 	return venue(d, { hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB');
+}
+
+/**
+ * The instant a club wall-clock date and time name: "2026-05-13" + "19:00".
+ *
+ * The inverse of `toLocalDate`/`toLocalTime`. `new Date(\`${date}T${time}\`)`
+ * reads the pair in the runtime's zone, which in the browser is the viewer's.
+ */
+export function clubInstant(date: string, time: string): Date {
+	const [year, month, day] = date.split('-').map(Number);
+	const [hour, minute] = time.split(':').map(Number);
+	return new CalendarDateTime(year, month, day, hour, minute).toDate(DEFAULT_TIMEZONE);
 }
 
 /**
@@ -341,6 +388,20 @@ export function formatDuration(startsAt: Date, endsAt: Date): string {
 	const raw = durationHours(startsAt, endsAt);
 	const h = Number.isInteger(raw) ? raw : Number(raw.toFixed(1));
 	return `${h} hour${h === 1 ? '' : 's'}`;
+}
+
+/** An elapsed span in its largest whole-ish unit: "40 min", "3 hr", "2 days". */
+export function formatElapsed(seconds: number): string {
+	const unit = (n: number, u: 'minute' | 'hour' | 'day') =>
+		new Intl.NumberFormat('en-US', {
+			style: 'unit',
+			unit: u,
+			unitDisplay: u === 'day' ? 'long' : 'short',
+			maximumFractionDigits: n < 10 ? 1 : 0
+		}).format(n);
+	if (seconds < 3_600) return unit(Math.max(1, Math.round(seconds / 60)), 'minute');
+	if (seconds < 172_800) return unit(seconds / 3_600, 'hour');
+	return unit(seconds / 86_400, 'day');
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +502,20 @@ export function formatPaymentBreakdown(
 /** "May 3, 2026" — month, day, year without weekday */
 export function formatMonthDayYear(d: Date): string {
 	return venue(d, { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+/** "May 3" — long month and day, for a date whose year the context gives. */
+export function formatMonthDay(d: Date): string {
+	return venue(d, { month: 'long', day: 'numeric' });
+}
+
+/**
+ * "2026-05-13" for a date-only value stored as UTC midnight. Not for an
+ * instant: its UTC day is tomorrow in club time from 5pm on (use `toLocalDate`).
+ */
+export function utcCalendarDate(d: Date): string {
+	// eslint-disable-next-line custom/club-time-dates -- the one sanctioned UTC day
+	return d.toISOString().slice(0, 10);
 }
 
 /** "May 2026" — the section header a long history is cut on. */

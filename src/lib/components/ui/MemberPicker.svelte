@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	import Button from './Button.svelte';
 
 	/**
@@ -15,8 +16,8 @@
 	 */
 	let {
 		field,
-		label = 'Member',
-		placeholder = 'Search by name or email...',
+		label = m.ui_member_picker_label(),
+		placeholder = m.ui_search_by_name_email_placeholder(),
 		value = $bindable(''),
 		name = $bindable(''),
 		search: searchFn
@@ -68,7 +69,7 @@
 			onclick={() => {
 				value = '';
 				name = '';
-			}}>Change</Button
+			}}>{m.ui_change_label()}</Button
 		>
 	</div>
 {:else}

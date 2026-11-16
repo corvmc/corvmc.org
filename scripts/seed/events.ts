@@ -6,7 +6,7 @@ import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { recurringSeries } from '../../src/lib/server/db/schema/recurring';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { buildSeedRRule as seedRRule } from '../seed-rrule';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { EVENT_TAGS_POOL, EVENT_TITLES } from './pools';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
@@ -33,7 +33,8 @@ async function attachSeedPoster(
 		.values({ key, contentType: 'image/jpeg', byteSize: 180_000, altText })
 		.returning();
 
-	await db.insert(mediaAttachment).values(
+	await batchInsert(
+		mediaAttachment,
 		eventIds.map((id) => ({
 			mediaId: row.id,
 			attachableType: 'event_listing' as const,
@@ -228,7 +229,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const eventId = crypto.randomUUID();
 		let held: { reservationId: string; productionId: string; projectId: string } | undefined;
 		if (random() < 0.75) {
-			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'scheduled');
+			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'confirmed');
 		}
 
 		const [e] = await db
@@ -421,7 +422,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				hour,
 				hour + duration,
 				creator.id,
-				'scheduled'
+				'confirmed'
 			);
 			const [inst] = await db
 				.insert(eventListing)
