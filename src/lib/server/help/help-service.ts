@@ -1,7 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { helpCategory, helpArticle } from '#lib/server/db/schema/help.js';
-import { eq, and, or, sql, inArray, isNull, asc, exists, type SQL } from 'drizzle-orm';
+import { eq, and, or, not, sql, inArray, isNull, asc, exists, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
+import { unlinkHelpArticles } from '#lib/utils/markdown.js';
 import { SEARCH_LIMIT, helpAudiences, surfaces, type HelpAudience } from '#lib/config.js';
 import {
 	capabilitySet,
@@ -115,6 +116,16 @@ function surfaceIsOn(): SQL {
 		.map(([name]) => name);
 	const none = isNull(helpArticle.surface);
 	return on.length > 0 ? or(none, inArray(helpArticle.surface, on))! : none;
+}
+
+/** Slugs of the articles an off surface hides: links to them must not render. */
+export async function listSwitchedOffSlugs(): Promise<Set<string>> {
+	if (Object.values(surfaces).every(Boolean)) return new Set();
+	const rows = await db
+		.select({ slug: helpArticle.slug })
+		.from(helpArticle)
+		.where(not(surfaceIsOn()));
+	return new Set(rows.map((r) => r.slug));
 }
 
 /** Stored values that read as the top tier, where an article's capabilities gate it. */
@@ -231,7 +242,8 @@ export async function getArticleBySlug(slug: string, reader: HelpReader) {
 			and(eq(helpArticle.slug, slug), eq(helpArticle.published, true), articleVisibleTo(reader))
 		)
 		.limit(1);
-	return article ?? null;
+	if (!article) return null;
+	return { ...article, content: unlinkHelpArticles(article.content, await listSwitchedOffSlugs()) };
 }
 
 /**
