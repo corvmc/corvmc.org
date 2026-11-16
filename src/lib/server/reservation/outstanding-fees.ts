@@ -5,7 +5,7 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { getReservationConfig } from './config';
-import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
+import { owesMoneySql, paymentDueSql } from './payment-due';
 import { buildDateInTz } from './timezone';
 
 /**
@@ -103,7 +103,7 @@ export async function listFeesEndedBetween(from: Date, until: Date, cutoff: Date
 				gte(reservation.startsAt, cutoff),
 				gte(reservation.endsAt, from),
 				lt(reservation.endsAt, until),
-				confirmedUnpaidSql()
+				owesMoneySql()
 			)
 		)
 		.orderBy(asc(reservation.endsAt))

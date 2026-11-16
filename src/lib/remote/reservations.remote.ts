@@ -1,5 +1,6 @@
 import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
 import { listPaymentRemindersSent } from '#lib/server/reservation/payment-reminder.js';
+import { payableStatusSql } from '#lib/server/reservation/payment-due.js';
 import {
 	recordReservationCash,
 	recordReservationCredit
@@ -524,14 +525,9 @@ export const getBandReservationDetail = query(
 				res.status === 'confirmed',
 			// The member checkout takes this row — it authorizes on
 			// `createdByUserId`, and a band booking is in its booker's own list —
-			// so the booker gets the link the member page has. The condition is
-			// `getReservationPayment`'s own, restated rather than re-derived:
-			// confirmed with a balance still owed.
-			canPay:
-				isBooker &&
-				res.status === 'confirmed' &&
-				!res.paidAt &&
-				(res.cashDueCents == null || res.cashDueCents > 0)
+			// so the booker gets the link the member page has, on
+			// `getReservationPayment`'s own gate.
+			canPay: isBooker && isAwaitingPayment(res)
 		};
 	}
 );
@@ -1302,7 +1298,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
-		.where(and(eq(reservation.id, opts.reservationId), eq(reservation.status, 'confirmed')));
+		.where(and(eq(reservation.id, opts.reservationId), payableStatusSql()));
 
 	return { remainingCents: 0, settled: true };
 }
@@ -1883,7 +1879,7 @@ export const payForReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { isBooker, backPath } = await requireReservationPayer(row);
-		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (!isAwaitingPayment(row)) throw error(400, 'Not eligible for payment');
 		// Spending free hours is the booker's call; a bandmate only pays.
 		if (data.skipPayment === 'on' && !isBooker) throw error(403, 'Not your reservation');
 
@@ -1948,7 +1944,7 @@ export const payReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { backPath } = await requireReservationPayer(row);
-		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		if (!isAwaitingPayment(row)) throw error(400, 'Not eligible for payment');
 
 		// No window gate: free hours settle a covered session before the next
 		// reset at any time, and anything else is a real charge (#2060).
@@ -2080,7 +2076,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 	return { success: true };
 });
 
-/** Staff: comp a scheduled or confirmed reservation (waive payment — no credits used). */
+/** Staff: comp a confirmed or completed reservation (waive payment — no credits used). */
 export const compReservation = form(
 	z.object({ id: z.string() }),
 	writesAudit('reservation.comped', async (data, _issue) => {

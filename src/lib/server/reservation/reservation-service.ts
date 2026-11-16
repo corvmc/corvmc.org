@@ -11,6 +11,7 @@ import {
 	desc,
 	asc,
 	count,
+	isNull,
 	isNotNull,
 	inArray,
 	notInArray,
@@ -22,7 +23,8 @@ import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
 import { insertReservation } from './insert-reservation';
 import { heldBySameBooker } from './same-booker-hold';
-import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
+import { owesMoneySql, paymentDueSql, payableStatusSql } from './payment-due';
+import { isPayableStatus } from '#lib/utils/reservation-actions.js';
 import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -401,7 +403,7 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 }
 
 /**
- * Waive what a confirmed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
+ * Waive what a confirmed or completed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
  * member's "Pay online" link, which `getReservationPayment` gates on.
  */
 export async function comp(reservationId: string): Promise<void> {
@@ -411,13 +413,13 @@ export async function comp(reservationId: string): Promise<void> {
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
 	if (!row) throw new ReservationNotFoundError();
-	if (row.status !== 'confirmed')
+	if (!isPayableStatus(row.status))
 		throw new ReservationStateError(`Cannot comp a reservation with status "${row.status}"`);
 
 	await db
 		.update(reservation)
 		.set({ cashDueCents: 0, updatedAt: new Date() })
-		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
+		.where(and(eq(reservation.id, reservationId), payableStatusSql()));
 	await recordReservationAudit(reservationId, (when) => ({
 		action: 'reservation.comped',
 		details: { ...when, waivedCents: row.cashDueCents ?? 0 }
@@ -712,8 +714,8 @@ export async function markNoShow(reservationId: string): Promise<void> {
 }
 
 /**
- * Staff records cash payment for a confirmed (cash-owed) reservation
- * and completes it in one action. Returns the Stripe payment record ID for
+ * Staff records cash payment for a reservation still owing, confirmed or
+ * already completed, and completes it in one action. Returns the Stripe payment record ID for
  * bookkeeping.
  */
 export async function recordCashAndComplete(
@@ -729,7 +731,7 @@ export async function recordCashAndComplete(
 			cashDueCents: 0,
 			updatedAt: new Date()
 		})
-		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
+		.where(and(eq(reservation.id, reservationId), payableStatusSql(), isNull(reservation.paidAt)));
 
 	if (getRowCount(result) === 0) {
 		const [row] = await db
@@ -739,7 +741,7 @@ export async function recordCashAndComplete(
 			.limit(1);
 
 		if (!row) throw new ReservationNotFoundError();
-		throw new ReservationStateError(`Expected status "confirmed", got "${row.status}"`);
+		throw new ReservationStateError(`Nothing owed on a reservation with status "${row.status}"`);
 	}
 }
 
@@ -760,7 +762,7 @@ export async function autoCompleteExpired(): Promise<number> {
 			and(
 				eq(reservation.status, 'confirmed'),
 				lt(reservation.endsAt, now),
-				or(isNotNull(reservation.stripePaymentRecordId), not(confirmedUnpaidSql()))
+				or(isNotNull(reservation.stripePaymentRecordId), not(owesMoneySql()))
 			)
 		);
 	return getRowCount(result);

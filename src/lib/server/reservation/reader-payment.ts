@@ -9,6 +9,8 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
 import { terminalReaderId } from '#lib/server/finance/terminal-service.js';
 import { recordReservationCardPresent } from '#lib/server/finance/reservation-entries.js';
+import { payableStatusSql } from './payment-due';
+import { owesMoney, type PayableReservation } from '#lib/utils/reservation-actions.js';
 
 /** `metadata.type` on the intent, which is what the webhook dispatches on. */
 export const READER_PAYMENT_TYPE = 'reader_reservation';
@@ -46,23 +48,17 @@ export class ReaderNotConfiguredError extends DomainError {
 	}
 }
 
-interface PayableRow {
-	status: string;
-	paidAt: Date | null;
-	cashDueCents: number | null;
+interface PayableRow extends PayableReservation {
 	startsAt: Date;
 	endsAt: Date;
 }
 
 /**
- * Owed and on the day: `confirmed` with money still due, from two hours
- * before the start until the end. `cashDueCents: 0` without `paidAt`
- * is credit-settled, which owes nothing.
+ * Owed (`owesMoney`) and on the day: from two hours before the start until
+ * the end.
  */
 export function readerPayable(row: PayableRow, now = new Date()): boolean {
-	if (row.paidAt) return false;
-	const owed = row.status === 'confirmed' && (row.cashDueCents == null || row.cashDueCents > 0);
-	if (!owed) return false;
+	if (!owesMoney(row)) return false;
 	const t = now.getTime();
 	return t >= row.startsAt.getTime() - OPENS_BEFORE_START_MS && t < row.endsAt.getTime();
 }
@@ -270,13 +266,7 @@ export async function settleReservationAtReader(intent: Stripe.PaymentIntent): P
 			stripePaymentRecordId: intent.id,
 			updatedAt: paidAt
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				eq(reservation.status, 'confirmed'),
-				isNull(reservation.paidAt)
-			)
-		)
+		.where(and(eq(reservation.id, reservationId), payableStatusSql(), isNull(reservation.paidAt)))
 		.returning({ userId: reservation.createdByUserId });
 
 	if (flipped.length === 0) {
