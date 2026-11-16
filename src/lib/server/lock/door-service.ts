@@ -1,6 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { doorAccess, reservation } from '#lib/server/db/schema/reservation.js';
-import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -12,6 +12,7 @@ import {
 } from '#lib/config.js';
 import { operateDoor, type OperateOptions } from './door-command-service';
 import { claimPoolCode, poolCodeFor, settleBookingCode } from './fallback-code-service';
+import { bandIdsFor } from './door-audience';
 
 // The back-door page (#2120). Who: the booker, or any active member of the
 // band it was booked for — the same rule as paying for it (#2095). When: from
@@ -40,15 +41,6 @@ export interface DoorBooking {
 	startsAt: Date;
 	endsAt: Date;
 	bandName: string | null;
-}
-
-/** Bands the member belongs to, as the booker id a group booking carries. */
-async function bandIdsFor(userId: string): Promise<string[]> {
-	const rows = await db
-		.select({ id: groupMember.groupId })
-		.from(groupMember)
-		.where(and(eq(groupMember.userId, userId), eq(groupMember.status, 'active')));
-	return rows.map((r) => r.id);
 }
 
 /** Booked by the member, or for a band they are an active member of. */

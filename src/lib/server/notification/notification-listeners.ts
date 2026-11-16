@@ -19,6 +19,8 @@ import { quoteForPlainText } from './email/normalize-model';
 import { captureException } from '#lib/server/sentry.js';
 import { sendPaymentReminder } from '#lib/server/reservation/payment-reminder.js';
 import { claimPoolCode } from '#lib/server/lock/fallback-code-service.js';
+import { bandmatesOn } from '#lib/server/lock/door-audience.js';
+import { alreadySentFor, markAllSent } from '#lib/server/reminders/sent-marks.js';
 import { listUsersWithCapability } from '#lib/server/authorization.js';
 import { taskNoticeRecipients } from '#lib/server/task/task-audience.js';
 import { applicationNotice } from '#lib/server/group/application-reviewers.js';
@@ -158,6 +160,23 @@ function whenDetails(
 		{ label: 'Date', value: clubDay(date) },
 		{ label: 'Time', value: `${clubTime(startTime)} – ${clubTime(endTime)}` }
 	];
+}
+
+/** One mark per recipient, so a re-run of the notice sends nobody theirs twice. */
+const DOOR_CODE_RECIPIENT = 'door_code_ready:recipient';
+
+/**
+ * The booker and every active member of the booking band (#2120), less anyone
+ * already sent this booking's notice. Someone who joins the band later is not
+ * sent it; `/door` shows them the code.
+ */
+async function doorCodeRecipientsOwed(reservationId: string, bookerId: string) {
+	const everyone = [...new Set([bookerId, ...(await bandmatesOn(reservationId))])];
+	const sent = await alreadySentFor(
+		DOOR_CODE_RECIPIENT,
+		everyone.map((u) => `${reservationId}:${u}`)
+	);
+	return everyone.filter((u) => !sent.has(`${reservationId}:${u}`));
 }
 
 export function registerAllNotificationListeners(): void {
@@ -452,56 +471,58 @@ export function registerAllNotificationListeners(): void {
 	// --- Door code ready: sending it claims the booking's pool code (#2120) ---
 	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
 		const held = await claimPoolCode(event.reservationId);
-		if (!held) {
-			// The pool is empty, and claiming alerted staff.
-			await dispatch({
-				type: 'door_code_ready',
-				userId: event.userId,
-				userEmail: event.userEmail,
-				title: 'Call staff to get in',
-				body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
-				href: '/member/reservations',
-				email: {
-					recipientName: event.userName,
-					subject: `Call staff to get in on ${clubDay(event.date)}`,
-					preview_text: `There is no door code for your booking on ${clubDay(event.date)}.`,
-					heading: 'Call staff to get in',
-					paragraphs: [
-						{
-							text: 'There is no door code for this booking. Call staff before you arrive and they will let you in.'
-						}
-					],
-					details: whenDetails(event.date, event.startTime, event.endTime),
-					cta: { label: 'View my reservations' }
-				}
-			});
-			return;
-		}
-		await dispatch({
-			type: 'door_code_ready',
-			userId: event.userId,
-			userEmail: event.userEmail,
-			title: 'Your door code is ready',
-			body: `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`,
-			href: '/member/reservations',
-			email: {
-				recipientName: event.userName,
-				subject: `Your door code for ${clubDay(event.date)}`,
-				preview_text: `Your door code for ${clubDay(event.date)}.`,
-				heading: 'Your door code is ready',
-				paragraphs: [
-					{
-						text: 'Check in on the door page by the back door. If the door does not open, enter this code on the keypad.'
+		const userIds = await doorCodeRecipientsOwed(event.reservationId, event.userId);
+		if (userIds.length === 0) return;
+		const when = `${clubDay(event.date)} from ${clubTime(event.startTime)} to ${clubTime(event.endTime)}`;
+		const notice = held
+			? {
+					title: 'Your door code is ready',
+					email: {
+						subject: `Your door code for ${clubDay(event.date)}`,
+						preview_text: `Your door code for ${clubDay(event.date)}.`,
+						heading: 'Your door code is ready',
+						paragraphs: [
+							{
+								text: 'Check in on the door page by the back door. If the door does not open, enter this code on the keypad.'
+							}
+						],
+						details: [
+							{ label: 'Door code', value: held.code },
+							...whenDetails(event.date, event.startTime, event.endTime)
+						],
+						footnote: 'It stops working shortly after your booking ends.',
+						cta: { label: 'View my reservations' }
 					}
-				],
-				details: [
-					{ label: 'Door code', value: held.code },
-					...whenDetails(event.date, event.startTime, event.endTime)
-				],
-				footnote: 'It stops working shortly after your booking ends.',
-				cta: { label: 'View my reservations' }
-			}
+				}
+			: // The pool is empty, and claiming alerted staff.
+				{
+					title: 'Call staff to get in',
+					email: {
+						subject: `Call staff to get in on ${clubDay(event.date)}`,
+						preview_text: `There is no door code for your booking on ${clubDay(event.date)}.`,
+						heading: 'Call staff to get in',
+						paragraphs: [
+							{
+								text: 'There is no door code for this booking. Call staff before you arrive and they will let you in.'
+							}
+						],
+						details: whenDetails(event.date, event.startTime, event.endTime),
+						cta: { label: 'View my reservations' }
+					}
+				};
+		await dispatchBatch({
+			type: 'door_code_ready',
+			userIds,
+			title: notice.title,
+			body: when,
+			href: '/member/reservations',
+			email: notice.email
 		});
+		await markAllSent(
+			DOOR_CODE_RECIPIENT,
+			'reservation',
+			userIds.map((u) => `${event.reservationId}:${u}`)
+		);
 	});
 
 	// --- A session ended still payment due (#2876); audits every attempt ---
