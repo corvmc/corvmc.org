@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getStaffCategories, createArticle } from '#lib/remote/help.remote.js';
+	import { generateSlug } from '#lib/utils/slug.js';
 	const { fields } = createArticle;
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -18,17 +19,7 @@
 
 	let contentValue = $state('');
 
-	// Mirrors `generateSlug` on the server: spaces and punctuation are dropped,
-	// not hyphenated.
-	function slugify(t: string) {
-		return t
-			.toLowerCase()
-			.replace(/[^a-z0-9-]+/g, '')
-			.replace(/-{2,}/g, '-')
-			.replace(/^-|-$/g, '');
-	}
-
-	let autoSlug = $derived(slugify(createArticle.fields.title.value() ?? ''));
+	let autoSlug = $derived(generateSlug(createArticle.fields.title.value() ?? ''));
 </script>
 
 <PageHeader width="3xl" title={m.staff_new_article_title()} subtitle={m.staff_help_body()} />
