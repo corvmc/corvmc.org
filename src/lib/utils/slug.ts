@@ -1,11 +1,8 @@
 /**
- * Generate a URL-friendly slug from a string.
- *
- * Lowercases, then **drops** anything that isn't a letter, digit or hyphen —
- * slug generation never introduces a hyphen of its own. 'Rock & Roll' is
- * `rockroll`, not `rock-roll`. Hyphens already in the source survive, with runs
- * collapsed and the ends trimmed, so 'Sun-Ra' stays `sun-ra`. Pure, so a form
- * can preview the address the server will store.
+ * A URL-friendly slug: lowercased, with anything not a letter, digit or hyphen
+ * dropped rather than hyphenated ('Rock & Roll' is `rockroll`). Typed hyphens
+ * survive, runs collapsed and ends trimmed ('Sun-Ra' stays `sun-ra`). Pure, so
+ * a form can preview the address the server will store.
  */
 export function generateSlug(name: string): string {
 	return name
