@@ -515,7 +515,12 @@ describe('surfaces switched off in code (#2116)', () => {
 
 describe('the System panel (#2763)', () => {
 	it('holds only what spans modules', () => {
-		expect(systemNavItems.map((i) => i.key)).toEqual(['organization', 'access', 'payments', 'audit']);
+		expect(systemNavItems.map((i) => i.key)).toEqual([
+			'organization',
+			'access',
+			'payments',
+			'audit'
+		]);
 	});
 
 	it.each(systemNavItems.map((i) => [i.key, i] as const))(
