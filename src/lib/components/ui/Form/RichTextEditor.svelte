@@ -3,8 +3,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { untrack } from 'svelte';
 	import { browser } from '$app/env';
-	import { Editor } from '@tiptap/core';
-	import StarterKit from '@tiptap/starter-kit';
+	import type { Editor } from '@tiptap/core';
 	import {
 		IconBold,
 		IconItalic,
@@ -39,31 +38,42 @@
 	// plain (non-reactive) variable.
 	let lastApplied: string | null = null;
 
+	// tiptap is imported here, not at the top: a static import puts it in the
+	// JavaScript every route that can show this editor preloads (#3158).
 	$effect(() => {
 		if (!browser || !element) return;
-		lastApplied = untrack(() => value) ?? '';
-		const ed = new Editor({
-			element,
-			extensions: [StarterKit.configure({ heading: { levels: [3] } })],
-			content: untrack(() => value) || '',
-			editorProps: {
-				attributes: {
-					class: 'prose prose-sm max-w-none min-h-32 px-3 py-2 focus:outline-none'
-				}
-			},
-			onUpdate: ({ editor }) => {
-				value = editor.getHTML();
-				lastApplied = value;
-				// Notify the surrounding FormField/Form so dirty tracking fires.
-				element?.dispatchEvent(new Event('input', { bubbles: true }));
-			},
-			onTransaction: () => {
-				tick++;
+		const el = element;
+		let ed: Editor | undefined;
+		let cancelled = false;
+		void Promise.all([import('@tiptap/core'), import('@tiptap/starter-kit')]).then(
+			([{ Editor }, { default: StarterKit }]) => {
+				if (cancelled) return;
+				lastApplied = untrack(() => value) ?? '';
+				ed = new Editor({
+					element: el,
+					extensions: [StarterKit.configure({ heading: { levels: [3] } })],
+					content: untrack(() => value) || '',
+					editorProps: {
+						attributes: {
+							class: 'prose prose-sm max-w-none min-h-32 px-3 py-2 focus:outline-none'
+						}
+					},
+					onUpdate: ({ editor }) => {
+						value = editor.getHTML();
+						lastApplied = value;
+						// Notify the surrounding FormField/Form so dirty tracking fires.
+						el.dispatchEvent(new Event('input', { bubbles: true }));
+					},
+					onTransaction: () => {
+						tick++;
+					}
+				});
+				editor = ed;
 			}
-		});
-		editor = ed;
+		);
 		return () => {
-			ed.destroy();
+			cancelled = true;
+			ed?.destroy();
 			editor = undefined;
 		};
 	});
