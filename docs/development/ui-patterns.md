@@ -69,7 +69,7 @@ When `<Form>` must wrap both the header (for SubmitButton) and the body fields, 
 ```svelte
 <Form remote={updateItem} successToast="Saved">
 	<PageHeader title={item.name}>
-		<SubmitButton />
+		<SubmitButton label="Save" />
 	</PageHeader>
 	<PageContent width="3xl">
 		<InfoCard title="Info">
@@ -447,6 +447,9 @@ Status-aware submit button that reads from `FormContext`. Shows spinner while pe
 
 Place inside a `<Form>`. `variant` sets the idle colour; the success/error flash overrides it while
 it lasts, so a destructive `variant="error"` submit still reads as success once it lands.
+
+Every `SubmitButton` names its action: `label` or children is required, and there is no default
+text. "Save" fits an edit form; a submit that sends, books or withdraws says so (#2804, #2839).
 
 Children replace `label` as the idle and pending text: `<SubmitButton>Send</SubmitButton>`. Every
 `Form` component either renders the children it is given or refuses them in its props type;
@@ -1696,8 +1699,8 @@ They are not interchangeable: neither can do the other's job.
 Page title with breadcrumbs, optional subtitle, and right-side action slot.
 
 ```svelte
-<PageHeader title="Edit User">
-	<SubmitButton shortcut="mod+s" />
+<PageHeader title="Edit user">
+	<SubmitButton label="Save" shortcut="mod+s" />
 </PageHeader>
 ```
 

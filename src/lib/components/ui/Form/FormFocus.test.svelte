@@ -13,5 +13,5 @@
 <Form {action} flashDuration={20}>
 	<FormField name="first" label="First" />
 	<FormField name="second" label="Second" aria-invalid="true" />
-	<SubmitButton />
+	<SubmitButton label="Send" />
 </Form>

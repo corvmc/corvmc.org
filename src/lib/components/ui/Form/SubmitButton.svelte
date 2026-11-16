@@ -12,7 +12,7 @@
 		shortcut,
 		icon,
 		children,
-		label = m.ui_form_submit_button_label(),
+		label,
 		continueLabel = m.ui_form_submit_button_continue_label(),
 		successLabel = m.ui_form_submit_button_success_label(),
 		errorLabel = m.ui_error_label(),
@@ -21,12 +21,20 @@
 		class: className = '',
 		disabled = false,
 		...rest
-	}: {
+	}: (
+		| {
+				/** Verb + object naming what the submit does. */
+				label: string;
+				children?: never;
+		  }
+		| {
+				/** The idle and pending text, in place of `label`. */
+				children: Snippet;
+				label?: string;
+		  }
+	) & {
 		shortcut?: string;
 		icon?: Snippet;
-		/** The idle and pending text, in place of `label`. */
-		children?: Snippet;
-		label?: string;
 		continueLabel?: string;
 		successLabel?: string;
 		errorLabel?: string;

@@ -25,7 +25,7 @@
 		{#each Object.entries(values) as [name, value] (name)}
 			<input type="hidden" {name} {value} />
 		{/each}
-		<Form.SubmitButton />
+		<Form.SubmitButton label="Book" />
 	</Form.Step>
 	<ConfirmStep {bookerType} />
 	<!-- The payment step's place: with none, Continue turns into a submit mid-click. -->
