@@ -7,7 +7,7 @@ import { mockUser } from '#lib/server/db/test-factory.js';
 // what, as in `events.remote.listing-guard.spec.ts`.
 // ---------------------------------------------------------------------------
 
-type Persona = 'staff' | 'reader' | 'booker' | 'outsider';
+type Persona = 'staff' | 'reader' | 'booker' | 'dealer' | 'outsider';
 let persona: Persona = 'staff';
 
 const denied = (msg = 'Not permitted') => Object.assign(new Error(`403: ${msg}`), { status: 403 });
@@ -16,6 +16,8 @@ const held: Record<Persona, string[]> = {
 	staff: ['event.read', 'event.manage'],
 	reader: ['event.read'],
 	booker: [],
+	// `production.book` is org-wide (#2959): the deal-maker reads every show's listing.
+	dealer: ['production.book'],
 	outsider: []
 };
 
@@ -29,7 +31,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: string) => {
-	if (persona === 'booker' && projectId === 'proj-show' && cap === 'production.book') {
+	if (persona === 'booker' && projectId === 'proj-show' && cap === 'production.run') {
 		return { user: mockUser({ id: 'booker-1' }), groups: [], via: 'committee' };
 	}
 	throw denied('Not on a committee taking part in this project');
@@ -190,6 +192,12 @@ describe.each([
 		persona = 'booker';
 		await expect(fn()('evt-gig')).rejects.toMatchObject({ status: 403 });
 		expect(requireProjectCommittee).not.toHaveBeenCalled();
+	});
+
+	it("lets an org-wide production.book holder read a show's listing, and no other", async () => {
+		persona = 'dealer';
+		await expect(fn()('evt-show')).rejects.toMatchObject({ status: 404 });
+		await expect(fn()('evt-gig')).rejects.toMatchObject({ status: 403 });
 	});
 });
 

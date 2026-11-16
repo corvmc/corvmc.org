@@ -88,6 +88,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 				'finance.read',
 				'production.book',
 				'production.create',
+				'production.run',
 				'project.manage',
 				'volunteer.manageRecurring',
 				'volunteer.manageShifts'
@@ -147,7 +148,13 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null,
 			positions: [],
 			memberCount: 2,
-			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
+			// The show work its deliverables need: the description and the poster (#2959).
+			capabilityGrants: [
+				'finance.read',
+				'production.run',
+				'project.manage',
+				'volunteer.manageShifts'
+			],
 			announcements: [],
 			leaderFromPool: true
 		},
@@ -163,6 +170,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			// `event.manage` decides and seats vendors for the market its project owns (#2834).
 			capabilityGrants: [
 				'finance.read',
+				'production.run',
 				'project.manage',
 				'volunteer.manageShifts',
 				'event.manage'

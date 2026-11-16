@@ -236,6 +236,13 @@ person's positions, committee seats and live shift roles with what each gives, a
 Each spec checks the explanation against its guard, so a new way of holding a capability has to
 be added to both.
 
+A committee's `'owned'` grants reach a project it is on: named in `project_committee`, or owning
+a live task in it (#2959, decision
+[0086](../decisions/0086-production-capabilities-by-consequence.md)). On a show that reach covers
+`production.run`, the show's own work. What binds CMC to someone outside it (the deal, the
+lineup, cancelling) is `production.book`, which is org-wide. `explainAccess` lists each
+committee's projects and how it is on them.
+
 ## Seven models that recur
 
 Naming these is the point of the document: each is implemented more than once, and
@@ -372,7 +379,8 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 | `ballot.group_id`          | a member-wide ballot, where set it is a committee ballot |
 
 A project's committees are rows in `project_committee`, each with a role, and a project with none
-is staff's, the same as a null above. `project` itself has no committee column.
+is staff's, the same as a null above. `project` itself has no committee column. A committee that
+owns a live task in the project is on it too, for its grants' reach (#2959).
 
 Group announcements (`group_announcement`, posted to the group's one Announcements thread) and `event_group` are the same
 idea without the null: a band posting to its roster and a committee posting to its members

@@ -7,7 +7,6 @@ import { requireCapability } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
 import {
-	currentProduction,
 	projectOfArtifactRequest,
 	projectOfEvent,
 	projectOfExpense,
@@ -63,15 +62,15 @@ import {
 import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 
 /**
- * Productions are guarded on the two halves of a show
- * (docs/decisions/0011-productions-are-projects.md): `production.book` for acts, offers,
- * deals and billing, `production.run` for the run of show, the advance, crew,
- * the door and settlement. A committee taking part in the show's project holds
- * them through its grants; staff hold both. The project is always read off the
- * record being written, never off the `eventId` a form carries for refreshing.
+ * Productions are guarded by what an action commits CMC to (#2959, decision
+ * 0086). `production.book` is what binds CMC to someone outside it: the deal
+ * terms, offering and confirming the lineup, cancelling, and naming the lead.
+ * It is org-wide. `production.run` is the show's own work, with `'owned'` reach
+ * for every committee on the show. The project is always read off the record
+ * being written, never off the `eventId` a form carries for refreshing.
  */
 
-/** Which half of the show moves a production to each status. */
+/** Which capability moves a production to each status. */
 const STATUS_OWNER: Record<ProductionStatus, 'production.book' | 'production.run'> = {
 	draft: 'production.book',
 	offered: 'production.book',
@@ -81,41 +80,6 @@ const STATUS_OWNER: Record<ProductionStatus, 'production.book' | 'production.run
 	settled: 'production.run',
 	closed: 'production.run'
 };
-
-const BOOK_FIELDS = ['actsWanted', 'billingNotes'] as const;
-const RUN_FIELDS = [
-	'loadInAt',
-	'soundcheckAt',
-	'firstSetAt',
-	'curfewAt',
-	'loadOutBy',
-	'hospitalityNotes',
-	'internalNotes'
-] as const;
-type DetailField = (typeof BOOK_FIELDS)[number] | (typeof RUN_FIELDS)[number];
-
-function same(a: unknown, b: unknown): boolean {
-	if (a instanceof Date || b instanceof Date) {
-		return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
-	}
-	return (a ?? null) === (b ?? null);
-}
-
-/**
- * The details form posts every field, each carrying its current value, so a
- * field equal to the stored row is untouched. Ask for the half that changed,
- * or both; an unchanged save still needs one of them.
- */
-async function guardDetails(productionId: string, next: Partial<Record<DetailField, unknown>>) {
-	const projectId = await projectOfProduction(productionId);
-	const current = projectId ? await currentProduction(productionId) : null;
-	const changed = (fields: readonly DetailField[]) =>
-		fields.some((f) => next[f] !== undefined && !same(next[f], current?.[f]));
-	const book = changed(BOOK_FIELDS);
-	const run = changed(RUN_FIELDS);
-	if (book) await requireProjectCommittee(projectId, 'production.book');
-	if (run || !book) await requireProjectCommittee(projectId, 'production.run');
-}
 
 /** A cleared datetime-local field arrives as '' rather than null. */
 function optionalMoment(date?: string, time?: string): Date | null {
@@ -220,6 +184,8 @@ export const updateProduction = form(
 		...momentFields
 	}),
 	async (data) => {
+		// Every field is the show's own work, billing notes and acts wanted included (#2959).
+		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
 		const next = {
 			loadInAt: optionalMoment(data.loadInDate, data.loadInTime),
 			soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
@@ -236,7 +202,6 @@ export const updateProduction = form(
 			hospitalityNotes: data.hospitalityNotes || null,
 			internalNotes: data.internalNotes || null
 		};
-		await guardDetails(data.id, next);
 		try {
 			await updateService(data.id, next);
 			await getStaffEventProduction(data.eventId).refresh();
@@ -821,10 +786,7 @@ export const dropArtifactRequest = form(
 export const usePosterArtWithFooter = form(
 	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		await requireProjectCommittee(
-			await projectOfArtifactRequest(data.requestId),
-			'production.book'
-		);
+		await requireProjectCommittee(await projectOfArtifactRequest(data.requestId), 'production.run');
 		try {
 			await useArtWithFooter(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();
@@ -857,10 +819,7 @@ export const useTemplateFlyerAsPoster = form(
 export const usePosterArt = form(
 	z.object({ requestId: z.string().min(1), eventId: z.string().min(1) }),
 	async (data) => {
-		await requireProjectCommittee(
-			await projectOfArtifactRequest(data.requestId),
-			'production.book'
-		);
+		await requireProjectCommittee(await projectOfArtifactRequest(data.requestId), 'production.run');
 		try {
 			await promotePosterArt(data.requestId);
 			await getStaffEventProduction(data.eventId).refresh();

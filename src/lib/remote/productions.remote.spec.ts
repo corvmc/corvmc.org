@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Who may do what on a show (docs/decisions/0011-productions-are-projects.md), as a
- * matrix: every write, against Booking, Production, a committee on some other
- * show, the treasurer and staff. The committee guard is faked here from the
- * persona's grants; its resolution against `project_committee` has its own
- * spec. What this file pins is which half each write names, and that the
- * project is read off the record, never off the request.
+ * Who may do what on a show (docs/decisions/0086-production-capabilities-by-consequence.md),
+ * as a matrix: every write, against Booking, Production, a committee on some
+ * other show, the treasurer and staff. The committee guard is faked here from
+ * the persona's grants; its resolution against the show's committees has its
+ * own spec. What this file pins is which capability each write names, and that
+ * the project is read off the record, never off the request.
  */
 
 type Persona = 'booking' | 'production' | 'otherShow' | 'treasurer' | 'staff';
@@ -14,7 +14,7 @@ const SHOW = 'proj-show';
 
 /** What each persona's committee grants on the show's project. */
 const COMMITTEE_GRANTS: Record<Persona, string[]> = {
-	booking: ['production.book', 'event.publish'],
+	booking: ['production.run', 'event.publish'],
 	production: ['production.run'],
 	otherShow: [],
 	treasurer: [],
@@ -34,9 +34,9 @@ const POSITION_GRANTS: Record<Persona, string[]> = {
 		'event.manage'
 	]
 };
-/** What each persona's committee grants org-wide, with no record in hand (#1675). */
+/** What each persona's committee grants org-wide, with no record in hand (#1675, #2959). */
 const ORG_GRANTS: Record<Persona, string[]> = {
-	booking: ['production.create'],
+	booking: ['production.create', 'production.book'],
 	production: [],
 	otherShow: [],
 	treasurer: [],
@@ -83,8 +83,7 @@ const scope = vi.hoisted(() => ({
 	projectOfSlot: vi.fn(async (id: string) => (id === 'slot-1' ? 'proj-show' : 'proj-other')),
 	projectOfExpense: vi.fn(async () => 'proj-show'),
 	projectOfEvent: vi.fn(async () => ({ projectId: 'proj-show', productionId: 'prod-1' })),
-	projectOfArtifactRequest: vi.fn(async () => 'proj-show'),
-	currentProduction: vi.fn(async () => currentRow)
+	projectOfArtifactRequest: vi.fn(async () => 'proj-show')
 }));
 vi.mock('#lib/server/production/production-scope.js', () => scope);
 
@@ -94,8 +93,6 @@ const service = {
 	transitionProduction: vi.fn(async () => ({ moved: true, warnings: [] as string[] })),
 	reopenProduction: vi.fn()
 };
-/** The stored row `updateProduction` compares a submission against. */
-let currentRow: Record<string, unknown> = {};
 vi.mock('#lib/server/production/production-service.js', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
@@ -350,17 +347,17 @@ const WRITES: Write[] = [
 	{
 		name: 'usePosterArt',
 		args: [{ requestId: 'req-1', eventId: 'evt-1' }],
-		capability: BOOK
+		capability: RUN
 	},
 	{
 		name: 'usePosterArtWithFooter',
 		args: [{ requestId: 'req-1', eventId: 'evt-1' }],
-		capability: BOOK
+		capability: RUN
 	},
 	{
 		name: 'useTemplateFlyerAsPoster',
 		args: [{ eventId: 'evt-1' }],
-		capability: BOOK
+		capability: RUN
 	},
 	{
 		name: 'recordActPayout',
@@ -419,7 +416,6 @@ const allSpies = () =>
 beforeEach(() => {
 	vi.clearAllMocks();
 	persona = 'staff';
-	currentRow = {};
 });
 
 describe('the production matrix', () => {
@@ -500,15 +496,26 @@ describe('the production matrix', () => {
 		expect(listings.create).not.toHaveBeenCalled();
 	});
 
-	it('refuses Booking on a slot of a show its committee is not part of', async () => {
-		persona = 'booking';
+	it('refuses show work on a slot of a show the committee is not on', async () => {
+		persona = 'production';
 		await expect(
-			submit(productions.setRunOfShowTerms, {
-				eventId: 'evt-1',
-				slotId: 'slot-other'
-			})
+			submit(productions.removeRunOfShowSlot, { eventId: 'evt-1', slotId: 'slot-other' })
 		).rejects.toMatchObject({ status: 403 });
 		expect(scope.projectOfSlot).toHaveBeenCalledWith('slot-other');
+		expect(runOfShow.removeSlot).not.toHaveBeenCalled();
+	});
+
+	// The deal is org-wide (#2959): no show widens or narrows who may make it.
+	it('lets Booking set the deal on any show, and refuses Production on its own', async () => {
+		persona = 'booking';
+		await submit(productions.setRunOfShowTerms, { eventId: 'evt-1', slotId: 'slot-other' });
+		expect(runOfShow.setSlotTerms).toHaveBeenCalled();
+
+		vi.clearAllMocks();
+		persona = 'production';
+		await expect(
+			submit(productions.setRunOfShowTerms, { eventId: 'evt-1', slotId: 'slot-1' })
+		).rejects.toMatchObject({ status: 403 });
 		expect(runOfShow.setSlotTerms).not.toHaveBeenCalled();
 	});
 
@@ -549,7 +556,7 @@ describe('advancing a show', () => {
 		['offered', 'booking', true],
 		['confirmed', 'booking', true],
 		['cancelled', 'booking', true],
-		['completed', 'booking', false],
+		['completed', 'booking', true],
 		['completed', 'production', true],
 		['settled', 'production', true],
 		['closed', 'production', true],
@@ -627,63 +634,27 @@ describe('reopening a show', () => {
 	});
 });
 
-describe('the details form asks for the half that changed', () => {
+describe('the details form is show work (#2959)', () => {
 	const base = { id: 'prod-1', eventId: 'evt-1' };
 
-	it('lets Booking change the billing notes, and refuses Production', async () => {
-		currentRow = { billingNotes: 'old' };
-		persona = 'booking';
-		await submit(productions.updateProduction, {
-			...base,
-			billingNotes: 'new'
-		});
+	it.each([
+		['production', { billingNotes: 'new' }],
+		['booking', { loadInDate: '2031-04-17', loadInTime: '18:00' }]
+	] as const)('lets %s, on the show, change any field', async (who, fields) => {
+		persona = who;
+		await submit(productions.updateProduction, { ...base, ...fields });
 		expect(service.updateProductionDetails).toHaveBeenCalled();
+	});
 
-		vi.clearAllMocks();
-		persona = 'production';
+	it('refuses a committee not on the show', async () => {
+		persona = 'otherShow';
 		await expect(
 			submit(productions.updateProduction, { ...base, billingNotes: 'new' })
 		).rejects.toMatchObject({ status: 403 });
 		expect(service.updateProductionDetails).not.toHaveBeenCalled();
 	});
-
-	it('lets Production move load-in, and refuses Booking', async () => {
-		currentRow = { loadInAt: null };
-		const moved = { ...base, loadInDate: '2031-04-17', loadInTime: '18:00' };
-		persona = 'production';
-		await submit(productions.updateProduction, moved);
-		expect(service.updateProductionDetails).toHaveBeenCalled();
-
-		vi.clearAllMocks();
-		persona = 'booking';
-		await expect(submit(productions.updateProduction, moved)).rejects.toMatchObject({
-			status: 403
-		});
-	});
-
-	it('does not count a field posted back unchanged', async () => {
-		currentRow = { billingNotes: 'same', hospitalityNotes: 'rider' };
-		persona = 'booking';
-		await submit(productions.updateProduction, {
-			...base,
-			billingNotes: 'changed',
-			hospitalityNotes: 'rider'
-		});
-		expect(service.updateProductionDetails).toHaveBeenCalled();
-	});
-
-	it('needs both halves when both change', async () => {
-		currentRow = { billingNotes: 'a', hospitalityNotes: 'b' };
-		const both = { ...base, billingNotes: 'x', hospitalityNotes: 'y' };
-		persona = 'booking';
-		await expect(submit(productions.updateProduction, both)).rejects.toMatchObject({
-			status: 403
-		});
-		persona = 'staff';
-		await submit(productions.updateProduction, both);
-		expect(service.updateProductionDetails).toHaveBeenCalledTimes(1);
-	});
 });
+
 describe('run of show validation', () => {
 	// The CHECK makes a zero-length set unrepresentable, so the schema has to
 	// refuse it before the service ever sees one.

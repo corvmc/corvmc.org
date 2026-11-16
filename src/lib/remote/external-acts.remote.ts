@@ -48,7 +48,7 @@ export const searchAskableListings = query(z.string().max(SHORT_TEXT_MAX), async
 export const searchBillActs = query(
 	z.object({ eventId: z.string().min(1), q: z.string().max(SHORT_TEXT_MAX) }),
 	async ({ eventId, q }) => {
-		await requireListingWriter(eventId);
+		await requireListingWriter(eventId, 'production.book');
 		if (q.trim().length < 2) return [];
 		const [bands, acts] = await Promise.all([
 			searchBandsByName(q.trim()),
@@ -146,7 +146,7 @@ export const listActInDirectory = form(
 		// The show's booking committee lists its own bill's acts (#2780).
 		const eventId = await getCreditEventId(data.eventBandId);
 		if (!eventId) error(404, 'Not found');
-		await requireListingWriter(eventId);
+		await requireListingWriter(eventId, 'production.book');
 		try {
 			const entryId = await listCreditInDirectory(data.eventBandId);
 			return { success: true, entryId };

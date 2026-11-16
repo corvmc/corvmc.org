@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNull, notInArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { project, projectCommittee } from '#lib/server/db/schema/project.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { production } from '#lib/server/db/schema/production.js';
 import { TERMINAL_PRODUCTION_STATUSES } from '#lib/production/status.js';
@@ -14,7 +14,7 @@ import {
 	workOrder,
 	workOrderAssignee
 } from '#lib/server/db/schema/volunteer.js';
-import { grantRuleFor, type Capability } from '#lib/config.js';
+import { grantRuleFor, type Capability, type ProjectCommitteeRole } from '#lib/config.js';
 import { allowlisted, type CommitteeGrant } from '#lib/server/capability/grant-rules.js';
 
 export {
@@ -52,24 +52,44 @@ export async function committeeGrantsFor(userId: string): Promise<CommitteeGrant
 	}));
 }
 
+/** A deliverable: a live task a committee owns in a project (decision 0053). */
+const liveDeliverable = and(
+	isNotNull(workOrder.groupId),
+	isNotNull(workOrder.projectId),
+	isNull(workOrder.cancelledAt)
+);
+
 /**
- * The caller's active seats on live committees taking part in `projectId`,
- * each with what it grants. `'owned'` reach, resolved: a seat here may use its
+ * How a committee is on a project: named on it, or owning one of its
+ * deliverables, which puts it on the show (#2959).
+ */
+export type OnProjectVia = ProjectCommitteeRole | 'deliverable';
+
+/**
+ * The caller's active seats on live committees on `projectId` (see
+ * `OnProjectVia`), each with what it grants. `'owned'` reach, resolved: a seat here may use its
  * committee's grants on this project whatever role the committee plays.
  */
 export async function projectCommitteeGrantsFor(
 	userId: string,
 	projectId: string
 ): Promise<Array<CommitteeGrant & { slug: string }>> {
+	const named = db
+		.select({ id: projectCommittee.groupId })
+		.from(projectCommittee)
+		.where(eq(projectCommittee.projectId, projectId));
+	const owning = db
+		.select({ id: workOrder.groupId })
+		.from(workOrder)
+		.where(and(liveDeliverable, eq(workOrder.projectId, projectId)));
 	const rows = await db
 		.select({ groupId: group.id, slug: group.slug, capability: groupCapability.capability })
-		.from(projectCommittee)
-		.innerJoin(group, eq(group.id, projectCommittee.groupId))
+		.from(group)
 		.innerJoin(groupMember, eq(groupMember.groupId, group.id))
 		.innerJoin(groupCapability, eq(groupCapability.groupId, group.id))
 		.where(
 			and(
-				eq(projectCommittee.projectId, projectId),
+				or(inArray(group.id, named), inArray(group.id, owning)),
 				eq(groupMember.userId, userId),
 				eq(groupMember.status, 'active'),
 				eq(group.kind, 'committee'),
@@ -87,6 +107,49 @@ export async function projectCommitteeGrantsFor(
 		slug: seat.slug,
 		capabilities: allowlisted(seat.caps, 'committee')
 	}));
+}
+
+export interface CommitteeOnProject {
+	groupId: string;
+	projectId: string;
+	projectName: string;
+	via: OnProjectVia;
+}
+
+/**
+ * Every project these committees are on, and how: what
+ * `projectCommitteeGrantsFor` reads, from the committee's side, for
+ * `explainAccess`. A committee named on a project is listed once, by its role.
+ */
+export async function projectsOfCommittees(groupIds: string[]): Promise<CommitteeOnProject[]> {
+	if (groupIds.length === 0) return [];
+	const [named, owning] = await Promise.all([
+		db
+			.select({
+				groupId: projectCommittee.groupId,
+				projectId: project.id,
+				projectName: project.name,
+				via: projectCommittee.role
+			})
+			.from(projectCommittee)
+			.innerJoin(project, eq(project.id, projectCommittee.projectId))
+			.where(inArray(projectCommittee.groupId, groupIds)),
+		db
+			.selectDistinct({
+				groupId: sql<string>`${workOrder.groupId}`,
+				projectId: project.id,
+				projectName: project.name
+			})
+			.from(workOrder)
+			.innerJoin(project, eq(project.id, workOrder.projectId))
+			.where(and(liveDeliverable, inArray(workOrder.groupId, groupIds)))
+	]);
+	const key = (r: { groupId: string; projectId: string }) => `${r.groupId}:${r.projectId}`;
+	const seen = new Set(named.map(key));
+	return [
+		...named.map((r) => ({ ...r, via: r.via as OnProjectVia })),
+		...owning.filter((r) => !seen.has(key(r))).map((r) => ({ ...r, via: 'deliverable' as const }))
+	];
 }
 
 /**
