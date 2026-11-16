@@ -27,7 +27,6 @@ const {
 	grantMemberCode,
 	revokeMemberCode,
 	listMemberCodes,
-	hasActiveMemberCode,
 	reconcileMemberCodeSync
 } = await import('./member-code-service');
 
@@ -235,19 +234,6 @@ describe('listMemberCodes', () => {
 			['mc-1', 'Jordan'],
 			['mc-2', null]
 		]);
-	});
-});
-
-describe('hasActiveMemberCode', () => {
-	it('is true for a member holding a live standing code', async () => {
-		memberCode('mc-1');
-		expect(await hasActiveMemberCode('user-1')).toBe(true);
-	});
-
-	it("is false for a revoked code or another member's code", async () => {
-		memberCode('mc-1', { revokedAt: T0 });
-		memberCode('mc-2', { userId: 'user-2', lockAccessId: '200' });
-		expect(await hasActiveMemberCode('user-1')).toBe(false);
 	});
 });
 

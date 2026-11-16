@@ -12,7 +12,7 @@
 
 <InfoCard title={m.components_door_check_in_title()}>
 	<p class="text-muted">{m.components_door_check_in_scan_text()}</p>
-	<Button href={resolve('/door')} variant="primary" outline={!now} class="mt-2">
+	<Button href={resolve('door')} variant="primary" outline={!now} class="mt-2">
 		{m.components_door_check_in_open_label()}
 	</Button>
 </InfoCard>

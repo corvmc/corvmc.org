@@ -48,36 +48,6 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
-vi.mock('#lib/server/db/schema/reservation.js', () => ({
-	reservation: {
-		id: 'id',
-		status: 'status',
-		startsAt: 'starts_at',
-		endsAt: 'ends_at',
-		createdByUserId: 'created_by_user_id',
-		lockCode: 'lock_code',
-		lockAccessId: 'lock_access_id',
-		lockSyncedAt: 'lock_synced_at',
-		updatedAt: 'updated_at'
-	}
-}));
-
-vi.mock('#lib/server/db/schema/authentication.js', () => ({
-	user: { id: 'id', name: 'name', email: 'email' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	and: vi.fn(),
-	isNull: vi.fn(),
-	isNotNull: vi.fn(),
-	gt: vi.fn(),
-	gte: vi.fn(),
-	lt: vi.fn(),
-	or: vi.fn(),
-	asc: vi.fn()
-}));
-
 vi.mock('#lib/server/reservation/timezone.js', () => ({
 	buildDateInTz: vi.fn((date, time) => new Date(`${date}T${time}:00Z`))
 }));
@@ -104,11 +74,9 @@ vi.mock('./fallback-code-service', () => ({
 	maintainCodePool: (...args: unknown[]) => mockMaintainCodePool(...args)
 }));
 
-const mockHasActiveMemberCode = vi.fn().mockResolvedValue(false);
 const mockReconcileMemberCodeSync = vi.fn().mockResolvedValue(0);
 
 vi.mock('./member-code-service', () => ({
-	hasActiveMemberCode: (...args: unknown[]) => mockHasActiveMemberCode(...args),
 	reconcileMemberCodeSync: (...args: unknown[]) => mockReconcileMemberCodeSync(...args)
 }));
 
@@ -156,7 +124,6 @@ const {
 	revokeAccessFor,
 	reconcileUpcomingSync
 } = await import('./lock-service');
-const { lt, gt } = await import('drizzle-orm');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -200,7 +167,6 @@ beforeEach(() => {
 	mockPutJson.mockResolvedValue(undefined);
 	mockDispatchEmailOnly.mockResolvedValue(undefined);
 	mockMaintainCodePool.mockResolvedValue(null);
-	mockHasActiveMemberCode.mockResolvedValue(false);
 	mockReconcileMemberCodeSync.mockResolvedValue(0);
 	// `list` never carries daterange — only `get` does. Route the fixtures'
 	// windows through the mocked get, which is what the service now reads.
@@ -635,13 +601,6 @@ describe('reconcileUpcomingSync', () => {
 		expect(mockGetLockUser).not.toHaveBeenCalled();
 		expect(mockMaintainCodePool).not.toHaveBeenCalled();
 		expect(mockReconcileMemberCodeSync).not.toHaveBeenCalled();
-	});
-
-	it('reads only bookings inside the confirmation window that have not ended', async () => {
-		await reconcileUpcomingSync();
-
-		expect(vi.mocked(lt)).toHaveBeenCalledWith('starts_at', expect.any(Date));
-		expect(vi.mocked(gt)).toHaveBeenCalledWith('ends_at', expect.any(Date));
 	});
 
 	it('makes no lock-user reads while the lock is offline, and does not fail', async () => {

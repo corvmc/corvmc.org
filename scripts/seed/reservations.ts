@@ -335,17 +335,14 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 	);
 	const upcoming = confirmed.find((r) => r.startsAt.getTime() > Date.now());
 
-	await db.insert(lockFallbackCode).values([
+	await batchInsert(lockFallbackCode, [
 		// Ready on the lock: one short of depth, so a local job run mints one.
 		...Array.from({ length: DOOR_CODE_POOL_SIZE - 1 }, (_, i) => ({
 			code: code(),
 			pooled: true,
 			lockAccessId: lockId(),
 			syncedAt: ptDate(-5 + (i % 3), 9)
-		}))
-	]);
-	// Two inserts: D1 caps one statement at 100 bound parameters.
-	await db.insert(lockFallbackCode).values([
+		})),
 		// Minted during an outage: not confirmed on the lock yet.
 		{ code: code(), pooled: true, lockAccessId: lockId() },
 		// The break-glass code from before the pool: burned once the pool has stock.
@@ -383,7 +380,7 @@ export async function seedLockAccess(users: SeedUser[], reservations: SeedReserv
 	// was shown, then a re-entry worked and check-out locked up.
 	if (past) {
 		const at = (min: number) => new Date(past.startsAt.getTime() + min * 60_000);
-		await db.insert(doorAccess).values([
+		await batchInsert(doorAccess, [
 			{
 				reservationId: past.id,
 				userId: past.createdByUserId,

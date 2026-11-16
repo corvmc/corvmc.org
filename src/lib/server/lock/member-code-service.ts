@@ -152,23 +152,6 @@ export async function listMemberCodes(): Promise<
 }
 
 /**
- * Whether this member already holds a standing code.
- *
- * Provisioning skips them: a member who can already open the door does not need
- * a second code per booking, and every code not issued is one less user on the
- * lock's finite table.
- */
-export async function hasActiveMemberCode(userId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: lockMemberCode.id })
-		.from(lockMemberCode)
-		.where(and(eq(lockMemberCode.userId, userId), isNull(lockMemberCode.revokedAt)))
-		.limit(1);
-
-	return Boolean(row);
-}
-
-/**
  * Confirm standing codes that have reached the lock.
  *
  * Same reason reservations need it: the `add` is queued in U-tec's cloud and

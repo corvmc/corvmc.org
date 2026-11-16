@@ -10,7 +10,7 @@
 	 * secret, so the poster never needs reprinting. A printed code must hold an
 	 * absolute URL, so the path is joined to the origin.
 	 */
-	const href = $derived(new URL(resolve('/door'), page.url.origin).href);
+	const href = $derived(new URL(resolve('door'), page.url.origin).href);
 	// 'Q' error correction survives the weather on an outside door.
 	const svg = $derived(
 		new QRCode({ content: href, width: 512, height: 512, padding: 2, ecl: 'Q', join: true }).svg()
