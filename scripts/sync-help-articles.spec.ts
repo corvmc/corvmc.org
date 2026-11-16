@@ -30,7 +30,8 @@ function d1Over(sqlite: ReturnType<typeof migratedSqlite>['sqlite']) {
 const article = (slug: string, over: Partial<StaticArticle['meta']> = {}): StaticArticle => ({
 	meta: { title: `T ${slug}`, slug, category: 'getting-started', minRole: 'member', ...over },
 	body: `Body of ${slug}`,
-	capabilities: null
+	capabilities: null,
+	surface: null
 });
 
 function setup() {
@@ -145,7 +146,7 @@ describe('d1HttpClient', () => {
 // The production deploy runs this sync after publishing, so an article it rejects
 // stops every deploy until someone fixes the article (#1757's did exactly that).
 describe('the committed help content', () => {
-	it('parses, with every capability one in src/lib/config.ts', () => {
+	it('parses, with every capability and surface one in src/lib/config.ts', () => {
 		expect(() => readArticles()).not.toThrow();
 	});
 
@@ -156,6 +157,24 @@ describe('the committed help content', () => {
 			'---\ntitle: A\nslug: a\ncategory: c\nminRole: staff\ncapabilities: user.read, user.fly\n---\nBody'
 		);
 		expect(() => readArticles(dir)).toThrow(/user\.fly/);
+	});
+
+	it('refuses a surface that is not in surfaces', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'help-'));
+		writeFileSync(
+			join(dir, 'a.md'),
+			'---\ntitle: A\nslug: a\ncategory: c\nsurface: clasifieds\n---\nBody'
+		);
+		expect(() => readArticles(dir)).toThrow(/clasifieds/);
+	});
+
+	it('reads a surface it knows', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'help-'));
+		writeFileSync(
+			join(dir, 'a.md'),
+			'---\ntitle: A\nslug: a\ncategory: c\nsurface: ballots\n---\nBody'
+		);
+		expect(readArticles(dir)[0].surface).toBe('ballots');
 	});
 
 	// A staff article naming no capability is shown to every position holder

@@ -10,7 +10,10 @@ visitors**, **members**, **band managers**, and **staff**. Check items off as ar
   CommonMark body. A `minRole: staff` article also names `capabilities:`, the capability of the
   page it documents (comma-separated, any one admits); only their holders read it, and admin holds
   all. One naming none is shown to every position holder, and
-  `scripts/sync-help-articles.spec.ts` lists those. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
+  `scripts/sync-help-articles.spec.ts` lists those. An article documenting a surface in
+  `surfaces` (`src/lib/config.ts`) names it as `surface:`; while that surface is off, no reader
+  sees the article in listings, search or by its link, and a name that is not a surface fails the
+  sync. `pnpm help:sync` upserts them into the local Help DB as `source='static'` and
   auto-creates categories; every production deploy does the same remotely. A new article lands
   as a draft, and appears at `/member/help` once staff publish it.
 - **Public-site** articles live under [`public/`](public) here — the in-app KB (`/member/help`) is

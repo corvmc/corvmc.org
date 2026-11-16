@@ -4,6 +4,7 @@ slug: ballots
 category: suggestions
 summary: How committee and member-wide votes work, who can vote, and what stays secret.
 minRole: member
+surface: ballots
 sortOrder: 1
 ---
 

@@ -29,6 +29,11 @@ export const surfaces: Record<'classifieds' | 'ballots', boolean> = {
 };
 export type Surface = keyof typeof surfaces;
 
+/** Is this string a key of `surfaces`? For names written outside code, like frontmatter. */
+export function isSurface(name: string): name is Surface {
+	return Object.hasOwn(surfaces, name);
+}
+
 // ---------------------------------------------------------------------------
 // Pagination
 // ---------------------------------------------------------------------------
