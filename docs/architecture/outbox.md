@@ -24,7 +24,8 @@ delivery at-least-once.
 - **`email`**: a Postmark template send (recipient, alias, model, reply-to, tag). Sent in
   batches of 500 with a result per message, so one refused recipient fails only its own row.
   A group announcement writes one per recipient, under `group_announcement`, in the same
-  batch as its recipient count.
+  batch as its recipient count. A ballot notice writes one per recipient through
+  `queueEmails`, under `ballot_opened` or `ballot_result` and the ballot's id.
 - **`html_email`**: an email rendered here rather than from a template (recipient, subject,
   HTML, tag), sent on the transactional stream. A campaign's test copy is one (#2771).
 - **`inbox_reply`**: an outbound message on an inbox thread. The `inbox_message` row is filed
@@ -66,4 +67,3 @@ or lost rather than recorded:
 | Module                                         | Sends                                                                                                                                                                           |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/lib/server/marketing/campaign-service.ts` | Campaign broadcasts. Each recipient's result, and each audience member skipped as unsubscribed or suppressed, is recorded in `campaign_send` (#2777, #2914); nothing is retried |
-| `src/lib/server/ballot/ballot-fanout.ts`       | Ballot fan-out                                                                                                                                                                  |

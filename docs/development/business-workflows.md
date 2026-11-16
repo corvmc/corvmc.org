@@ -2998,7 +2998,8 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
   - `getTally` refuses until `closes_at`.
   - `certifyBallot` snapshots `certified_result`.
   - `setElectorOverride` audits `ballot.elector_overridden`.
-- **Fan-out:** `ballot-fanout.ts`, from the `ballot.opened` and `ballot.certified` events.
+- **Fan-out:** `ballot-fanout.ts`, from the `ballot.opened` and `ballot.certified` events. Each
+  email is an outbox row (#2971).
 - **The chain:** `src/lib/server/project/decision-chain.ts` (`startProjectFromBallot`,
   `getProjectOrigin`, `getSuggestionChain`, `getBallotChain`), with the form in `projects.remote.ts`.
 
