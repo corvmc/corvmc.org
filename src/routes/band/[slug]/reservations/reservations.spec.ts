@@ -10,6 +10,7 @@ const mockBand = {
 	id: 'band-1',
 	name: 'The Velvet Underground',
 	slug: 'the-velvet-underground',
+	kind: 'band',
 	bio: 'NYC band',
 	ownerId: 'user-owner',
 	avatarKey: null,
