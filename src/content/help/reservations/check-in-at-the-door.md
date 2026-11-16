@@ -1,5 +1,5 @@
 ---
-title: Check In at the Back Door
+title: Check in at the back door
 slug: check-in-at-the-door
 category: reservations
 summary: How to get into the practice space for your booking, and lock up after.
