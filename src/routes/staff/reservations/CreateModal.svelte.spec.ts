@@ -26,7 +26,7 @@ vi.mock('#lib/remote/reservations.remote.js', () => {
 		searchBands: vi.fn(async () => [
 			{
 				id: 'club-1',
-				name: 'Real Book Club',
+				name: 'Real Book Readers',
 				kind: 'club',
 				ownerId: null,
 				ownerName: null,
