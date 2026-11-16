@@ -3,6 +3,7 @@ import { db } from '#lib/server/db/index.js';
 import { eventListing, eventStatuses, type EventStatus } from '#lib/server/db/schema/event.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { venue } from '#lib/server/db/schema/venue.js';
+import { production } from '#lib/server/db/schema/production.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate } from '#lib/server/db/paginate.js';
@@ -100,12 +101,16 @@ export async function listStaffCalendar(f: StaffCalendarFilters = {}, now = new 
 			bandName: group.name,
 			bandSlug: group.slug,
 			// Left, so a deleted account does not take the event off the list.
-			submitter: memberRefColumns()
+			submitter: memberRefColumns(),
+			// The listing's production, 1:1 through its project, so a row links to
+			// it (#3112).
+			productionStatus: production.status
 		})
 		.from(eventListing)
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
+		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(where)
 		// `id` breaks a tie, so two shows at one time keep their order across pages.
 		.orderBy(order, asc(eventListing.id))

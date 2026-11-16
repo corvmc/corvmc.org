@@ -61,9 +61,9 @@ parties and monthly deep cleans need advertising as much as a show does, so they
 listings too."_ A work party gets a row here for exactly the reason a gig does — it
 needs advertising — not because the table models occasions in general.
 
-The surfaces already read it that way: Productions (`/staff/events?view=productions`) is `source='cmc'` at every
-status including draft, where a show is built; `/staff/events` is the public gig guide
-staff moderate. Both read the same table, at different layers.
+The surfaces read it that way: Productions (`/staff/productions`) lists `production` rows at
+every status, each linking to its listing, and Calendar (`/staff/events`) lists every
+`event_listing` staff may see, each with a production linking back (#3112).
 
 Three layers, not two:
 

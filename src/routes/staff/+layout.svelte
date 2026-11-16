@@ -43,7 +43,8 @@
 		IconKey,
 		IconAlertTriangle,
 		IconHelp,
-		IconMapPin
+		IconMapPin,
+		IconTicket
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
@@ -135,6 +136,7 @@
 		incidents: IconAlertTriangle,
 		projects: IconFolders,
 		calendar: IconCalendarMonth,
+		productions: IconTicket,
 		moderation: IconFlag,
 		suggestions: IconBulb,
 		classifieds: IconSpeakerphone,

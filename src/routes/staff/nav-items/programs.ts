@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type ProgramsNavKey = 'reservations' | 'gear' | 'clubs' | 'music';
+export type ProgramsNavKey = 'reservations' | 'gear' | 'clubs' | 'music' | 'productions';
 
 /** What CMC offers (#3112). */
 export const programs: StaffNavSection = {
@@ -40,6 +40,14 @@ export const programs: StaffNavSection = {
 			capability: 'music.read',
 			label: 'Music',
 			href: resolve('staff/music')
+		},
+		// The events CMC runs, from draft to closed (#3112). Each row links to its
+		// listing on the Calendar; the record pages stay under `/staff/events`.
+		{
+			key: 'productions',
+			capability: 'event.read',
+			label: 'Productions',
+			href: resolve('staff/productions')
 		}
 	]
 };

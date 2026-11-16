@@ -57,13 +57,14 @@ Everything else is in four groups, each answering one question:
   sponsorships), **Marketing** (**Campaigns** and **Audiences**) and **Content** (opens its own
   sidebar: **Help articles** and **Local resources**).
 - **Community**, members and what they post — **Members** (member accounts, roles, and credits;
-  volunteers and teachers are role filters), **Bands**, **Events** (creating and running events,
-  ticketing and check-in, with productions, venues and vendor applications as views, and
-  **Print poster** in its header), **Moderation** (**Content flags** and **Blocklist**) and
+  volunteers and teachers are role filters), **Bands**, **Calendar** (every event, with
+  ticketing and check-in, venues and vendor applications as views, and **Print poster** in its
+  header), **Moderation** (**Content flags** and **Blocklist**) and
   **Classifieds**.
 - **Programs**, what CMC offers — **Practice space** (**Reservations** and **Recurring series**,
   with **Building access** in its settings), **Equipment** (with **Supplies** as one of its
-  tabs), **Clubs** and **Music**.
+  tabs), **Clubs**, **Music** and **Productions** (the events CMC runs, from draft to
+  closed).
 - **Governance**, how CMC runs itself — **Tasks**, **Shifts**, **Committees**, **Incidents**,
   **Suggestions** and **Ballots**. Every task, in a project or not, is on **Tasks**, with
   **Projects** beside it and **Recurring work** and **Templates** in its header. A task can wait

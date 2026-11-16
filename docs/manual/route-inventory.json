@@ -672,6 +672,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/productions",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/recurring",
 		"panel": "staff"
 	},
