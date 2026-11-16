@@ -79,6 +79,8 @@ const helpScope: Record<string, HelpRule[]> = {
 	'return / returned': [],
 	// "Session" stays for a program's meetings, which only the chairs' article covers.
 	reservation: [{ files: /^(?!.*\/staff-program-chairs\.md$)/ }],
+	// Staff articles keep "outside act" and the production console's per-act wording.
+	band: [{ files: /^(?!.*\/staff-guide\/)/ }],
 	// "Listing" stays for directory and resource entries, so outside the event
 	// articles only a listing named as an event's counts.
 	event: [
