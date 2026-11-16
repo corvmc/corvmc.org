@@ -90,7 +90,7 @@ export const sendBandReply = form(sendBandReplySchema, async (data, issue) => {
 
 	void getBandConversation({ slug: ctx.group.slug, threadId: data.threadId }).refresh();
 	void getBandLayout(ctx.group.slug).refresh();
-	return { success: true };
+	return { success: true, delivery: result.delivery };
 });
 
 const setBandConversationStatusSchema = z.object({

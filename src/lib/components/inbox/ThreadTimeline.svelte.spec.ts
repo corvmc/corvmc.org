@@ -1,5 +1,6 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
+import { createRawSnippet } from 'svelte';
 import { render } from 'vitest-browser-svelte';
 import ThreadTimeline from './ThreadTimeline.svelte';
 
@@ -177,5 +178,43 @@ describe('ThreadTimeline — body format', () => {
 		const bubble = document.querySelector('.chat-bubble');
 		expect(bubble?.querySelector('strong')).toBeNull();
 		expect(bubble?.textContent).toContain('***');
+	});
+});
+
+describe('ThreadTimeline — a reply that has not gone (#2971)', () => {
+	const retry = createRawSnippet((id: () => string) => ({
+		render: () => `<button data-retry="${id()}">x</button>`
+	}));
+	const reply = (delivery: { status: 'pending' | 'failed'; error: string | null } | null) => [
+		{ ...messages[1], delivery }
+	];
+	const footer = () => document.querySelector('[data-testid="reply-unsent"]');
+
+	it('shows a refused reply’s error and offers to send it again', async () => {
+		await render(ThreadTimeline, {
+			channel: 'web',
+			messages: reply({ status: 'pending', error: '406 Inactive recipient' }),
+			retry
+		});
+
+		expect(footer()?.textContent).toContain('406 Inactive recipient');
+		expect(footer()?.querySelector('[data-retry="m2"]')).not.toBeNull();
+	});
+
+	it('offers no retry for a reply still being sent', async () => {
+		await render(ThreadTimeline, {
+			channel: 'web',
+			messages: reply({ status: 'pending', error: null }),
+			retry
+		});
+
+		expect(footer()).not.toBeNull();
+		expect(document.querySelector('[data-retry]')).toBeNull();
+	});
+
+	it('marks a sent reply with nothing', async () => {
+		await render(ThreadTimeline, { channel: 'web', messages: reply(null), retry });
+
+		expect(footer()).toBeNull();
 	});
 });

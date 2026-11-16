@@ -40,7 +40,7 @@ import {
 	getEnabledChannels,
 	updateChannelConfig as updateChannelConfigSvc
 } from '#lib/server/inbox/channel-config-service.js';
-import { addOutboundMessage, addNote } from '#lib/server/inbox/message-service.js';
+import { addOutboundMessage, addNote, retryReply } from '#lib/server/inbox/message-service.js';
 import { firstResponseByChannel } from '#lib/server/inbox/response-time-service.js';
 import { testMetaConnection as testMetaConnectionSvc } from '#lib/server/inbox/meta-client.js';
 import {
@@ -254,7 +254,7 @@ export const replyToThread = form(replySchema, async (data) => {
 	const thread = await getThread(data.threadId);
 	if (!thread) throw error(404, 'Thread not found');
 
-	await addOutboundMessage({
+	const { delivery } = await addOutboundMessage({
 		threadId: data.threadId,
 		body: data.body,
 		authorUserId: staff.id,
@@ -274,7 +274,22 @@ export const replyToThread = form(replySchema, async (data) => {
 	// the nav badge — so the badge has to be recounted here as well.
 	void getInboxUnreadCount().refresh();
 	void getStaffLayout().refresh();
-	return { success: true };
+	return { success: true, delivery };
+});
+
+const retryReplySchema = z.object({
+	threadId: z.string().min(1),
+	messageId: z.string().min(1)
+});
+
+/** Send a reply that has not gone, now. The thread shows how it went. */
+export const retryInboxReply = form(retryReplySchema, async (data) => {
+	await requireCapability('inbox.reply');
+	if (!(await getThread(data.threadId))) throw error(404, 'Thread not found');
+
+	const delivery = await retryReply(data.threadId, data.messageId);
+	void getInboxThread(data.threadId).refresh();
+	return { success: true, delivery };
 });
 
 const noteSchema = z.object({

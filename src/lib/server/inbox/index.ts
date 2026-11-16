@@ -26,7 +26,6 @@ export {
 	handleMetaInbound,
 	handleMetaEcho
 } from './inbound-handlers';
-export { dispatchReply } from './channel-dispatcher';
 export {
 	getAllChannelConfigs,
 	getChannelConfig,

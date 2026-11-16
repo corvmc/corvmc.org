@@ -28,6 +28,7 @@ import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '#lib/server/db/schema/inbox.js';
 import type { PaginationInput } from '#lib/server/db/paginate.js';
 import { paginate } from '#lib/server/db/paginate.js';
+import { withDelivery } from './reply-status';
 import { z } from 'zod';
 import { contactSubjects, inboxThreadStatuses } from '#lib/config.js';
 import type { InboxView } from '#lib/config.js';
@@ -455,11 +456,12 @@ export async function getThread(id: string) {
 
 	if (!thread) return null;
 
-	const messages = await db
+	const rows = await db
 		.select()
 		.from(inboxMessage)
 		.where(eq(inboxMessage.threadId, id))
 		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
+	const messages = await withDelivery(rows);
 
 	const notes = await db
 		.select({

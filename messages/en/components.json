@@ -912,6 +912,8 @@
 	"inbox_thread_timeline_contact_text": "Contact",
 	"inbox_thread_timeline_corvmc_text": "CorvMC",
 	"inbox_thread_timeline_no_messages_conversation_yet_text": "No messages in this conversation yet.",
+	"inbox_thread_timeline_not_sent_text": "Not sent",
+	"inbox_thread_timeline_sending_text": "Sending",
 	"inbox_thread_timeline_staff_text": "Staff",
 	"inbox_thread_timeline_text": "You",
 	"inventory_category_manager_modal_actions_label": "Actions",

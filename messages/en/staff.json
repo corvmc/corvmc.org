@@ -1073,6 +1073,7 @@
 	"staff_inbox_filter_panel_waiting_longer_than_label": "Waiting longer than",
 	"staff_inbox_filter_panel_waiting_longer_than_days_label": "Waiting longer than, in days",
 	"staff_inbox_id_aria_label": "Back to the inbox",
+	"staff_inbox_id_send_again_label": "Send again",
 	"staff_inbox_id_assign_control_loading_assignees_text": "Loading assignees…",
 	"staff_inbox_id_assign_control_success_toast": "Assignment updated",
 	"staff_inbox_id_assign_control_update_label": "Update",

@@ -35,6 +35,7 @@ vi.mock('#lib/server/db/index.js', () => {
 					}
 				})
 			}),
+			batch: async (statements: unknown[]) => statements,
 			update: () => ({
 				set: (values: Record<string, unknown>) => ({
 					where: () => {
@@ -51,8 +52,9 @@ const mockEmit = vi.fn();
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...(args as [])) }
 }));
-vi.mock('./channel-dispatcher', () => ({
-	dispatchReply: vi.fn().mockResolvedValue('sent-message-id')
+vi.mock('#lib/server/outbox/outbox-service.js', () => ({
+	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null })),
+	retryNow: vi.fn()
 }));
 
 const { addInboundMessage, addOutboundMessage, recordOutboundMessage, findMessageByChannelId } =
@@ -69,9 +71,9 @@ const openThread = {
 	subject: 'General Inquiry'
 };
 
-/** The three selects `addOutboundMessage` runs: the thread, then two inbound-id reads. */
+/** The one select `addOutboundMessage` runs before its batch: the thread. */
 function queueOutboundReads(thread: Record<string, unknown>) {
-	selectQueue = [[thread], [], []];
+	selectQueue = [[thread]];
 }
 
 beforeEach(() => {

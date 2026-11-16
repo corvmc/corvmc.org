@@ -413,13 +413,12 @@ export async function handleMetaEcho(params: MetaEchoParams) {
 }
 
 /**
- * Deliver a staff member's emailed reply to the contact and record it on the
- * thread. `addOutboundMessage` does both halves in the right order, so the
- * thread never shows a reply that was not actually sent.
+ * File a staff member's emailed reply on the thread and send it to the contact
+ * through the outbox, which retries a refused send and shows it as not sent.
  *
- * Both failure paths fall back to a note rather than throwing: the webhook route
- * answers 200 unconditionally, so Postmark never retries, and without a note the
- * staff member's text would be gone with nothing to show for it.
+ * An empty body, or a reply that cannot be filed at all, becomes a note rather
+ * than a throw: the webhook route answers 200 unconditionally, so Postmark
+ * never retries, and without a note the text would be gone.
  */
 async function relayStaffReply(params: {
 	threadId: string;

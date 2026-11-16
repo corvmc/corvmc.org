@@ -15,14 +15,21 @@ const SEND_FUNCTIONS = [
 	'sendBroadcastBatch',
 	'sendInboxReply',
 	'sendTemplatedEmails',
-	'sendHtmlEmails'
+	'sendHtmlEmails',
+	'dispatchReply'
 ];
 
-/** The client, its barrel and the outbox: where sending is the job. */
+/**
+ * The client, its barrel, the outbox, and the outbox's transport for
+ * `inbox_reply` rows (the channel dispatcher and its one caller): where
+ * sending is the job.
+ */
 const SENDERS = new Set([
 	'src/lib/server/notification/email/postmark-client.ts',
 	'src/lib/server/notification/email/index.ts',
-	'src/lib/server/outbox/outbox-service.ts'
+	'src/lib/server/outbox/outbox-service.ts',
+	'src/lib/server/inbox/channel-dispatcher.ts',
+	'src/lib/server/inbox/reply-delivery.ts'
 ]);
 
 /**
@@ -32,8 +39,7 @@ const SENDERS = new Set([
 const NOT_YET_ON_THE_OUTBOX = new Set([
 	'src/lib/server/marketing/campaign-service.ts',
 	'src/lib/server/group/announcement-fanout.ts',
-	'src/lib/server/ballot/ballot-fanout.ts',
-	'src/lib/server/inbox/channel-dispatcher.ts'
+	'src/lib/server/ballot/ballot-fanout.ts'
 ]);
 
 /** Each value import's specifiers and module, skipping `import type`. */
@@ -70,6 +76,9 @@ describe('mail goes through the outbox', () => {
 			sendsDirectly(`import {\n\tfoo,\n\tsendTemplateBatch as s\n} from '#x/index.js';`)
 		).toEqual(['sendTemplateBatch']);
 		expect(sendsDirectly(`import { ServerClient } from 'postmark';`)).toEqual(['postmark']);
+		expect(sendsDirectly(`export { dispatchReply } from './channel-dispatcher';`)).toEqual([
+			'dispatchReply'
+		]);
 		expect(sendsDirectly(`import type { TemplatedEmail } from './postmark-client';`)).toEqual([]);
 	});
 

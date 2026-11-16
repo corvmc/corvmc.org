@@ -16,6 +16,7 @@
 	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
 	import { useInboxToolbar } from '../toolbar.svelte';
 	import DetailsPanel from './DetailsPanel.svelte';
 	import DispositionBar from '#lib/components/inbox/DispositionBar.svelte';
@@ -33,6 +34,7 @@
 		getInboxThread,
 		getInboxEnabledChannels,
 		replyToThread,
+		retryInboxReply,
 		addThreadNote,
 		assignThread,
 		getAssignableStaff
@@ -156,7 +158,16 @@
 			channel={t.channel}
 			notes={t.notes}
 			contactName={t.contactName}
-		/>
+		>
+			{#snippet retry(messageId)}
+				{@const retryForm = retryInboxReply.for(messageId)}
+				<Form remote={retryForm}>
+					<input {...retryForm.fields.threadId.as('hidden', t.id)} />
+					<input {...retryForm.fields.messageId.as('hidden', messageId)} />
+					<SubmitButton label={m.staff_inbox_id_send_again_label()} variant="ghost" size="xs" />
+				</Form>
+			{/snippet}
+		</ThreadTimeline>
 	</div>
 
 	<!--
