@@ -2249,7 +2249,8 @@ restore crew shifts or retract a cancellation notice.
    show, the advance, the door take, expenses, poster art, and the listing's description and
    times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
    `project_committee`, or one owning a live deliverable on the show's project. Staff and the
-   event lead hold it too. `production.book` is what binds CMC outside it: the deal terms
+   event lead hold it too. The committees granted it are Booking, Production, Art and
+   Merchandise, and Communications. `production.book` is what binds CMC outside it: the deal terms
    (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
    `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
