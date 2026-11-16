@@ -17,8 +17,6 @@
 		createLocalResourceForm
 	} from '#lib/remote/local-resources.remote.js';
 	import ResourceFields from './ResourceFields.svelte';
-	import StaffViews from '../StaffViews.svelte';
-	import { contentViews } from '../content/views';
 	import { urlState, oneOf } from '#lib/urlState.svelte.js';
 	import { localResourceStatuses } from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
@@ -32,13 +30,7 @@
 	const { fields } = createLocalResourceForm;
 </script>
 
-<PageHeader
-	title={m.staff_content_title()}
-	documentTitle={m.staff_local_resources_title()}
-	subtitle={m.staff_outreach_body()}
->
-	<StaffViews views={contentViews} active="resources" />
-</PageHeader>
+<PageHeader title={m.staff_local_resources_title()} subtitle={m.staff_outreach_body()} />
 
 <PageContent>
 	<FilterBar activeCount={f.status ? 1 : 0} onclear={() => (f.status = '')}>
