@@ -39,7 +39,6 @@
 		IconContract,
 		IconArrowLeft,
 		IconBuilding,
-		IconToggleRight,
 		IconKey,
 		IconAlertTriangle,
 		IconMapPin
@@ -141,7 +140,6 @@
 		funding: IconContract,
 		settings: IconSettings,
 		organization: IconBuilding,
-		features: IconToggleRight,
 		access: IconKey,
 		audit: IconHistory
 	};
