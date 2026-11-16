@@ -3234,5 +3234,12 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 	{ word: /\bwork orders?\b/i, use: 'task' },
 	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' },
 	// A certification implies a regulating body (#2511, owner 2026-11-10).
-	{ word: /\bcertifications?\b/i, use: 'clearance' }
+	{ word: /\bcertifications?\b/i, use: 'clearance' },
+	{ word: /\bturn(s|ed|ing)? down\b/i, use: 'decline / declined' },
+	// Volunteers sign up for shifts; tasks are assigned (#2518).
+	{ word: /\bsign(s|ed|ing)? up for (a |the |this |your )?tasks?\b/i, use: 'shift' },
+	// "Session" is right for a group's meeting, not for time in the practice space.
+	{ word: /\bsessions?\b/i, use: 'reservation', keys: /(^|_)reservations?_/ },
+	// "Listing" stays for directory and local-resource entries.
+	{ word: /\blistings?\b/i, use: 'event', keys: /^(staff_)?events_/ }
 ];
