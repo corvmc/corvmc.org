@@ -1,10 +1,12 @@
 import {
 	and,
+	asc,
 	count,
 	desc,
 	eq,
 	gte,
 	inArray,
+	isNotNull,
 	lte,
 	or,
 	sql,
@@ -150,10 +152,13 @@ export async function listAuditEntriesForSubject(
 export interface AuditLogFilters {
 	action?: AuditAction;
 	/**
-	 * Matched against the actor's stored name and email and the subject's stored
-	 * label, so a purged staffer or a deleted record is still findable.
+	 * Matched against the actor's stored name and email, the subject's stored
+	 * label and every text value in the details, so a purged staffer, a deleted
+	 * record or a second record the entry names (a bandmate, a setting) is findable.
 	 */
 	search?: string;
+	/** Entries this user made, as opposed to the search, which also finds entries about them. */
+	actorId?: string;
 	/** An event's show rows are its production's, so `event` takes both. */
 	subjectType?: AuditSubjectType;
 	/** `YYYY-MM-DD`, whole days in the collective's time zone, inclusive. */
@@ -258,6 +263,24 @@ function relatedRef(
 	return booking?.id ? toReservationRef(booking) : null;
 }
 
+/** Values only, so a search for a key name such as `memberName` does not match every row that has one. */
+function detailsContain(term: string): SQL {
+	return sql`exists (select 1 from json_tree(${auditLog.details}) where type = 'text' and ${containsLiteral(sql.raw('value'), term)})`;
+}
+
+/** Everyone with an entry to their name, for the log's actor filter. A purged actor has no id to filter by. */
+export async function listAuditActors(): Promise<{ id: string; name: string }[]> {
+	const actors = db
+		.selectDistinct({ id: auditLog.actorUserId })
+		.from(auditLog)
+		.where(isNotNull(auditLog.actorUserId));
+	return db
+		.select({ id: user.id, name: user.name })
+		.from(user)
+		.where(inArray(user.id, actors))
+		.orderBy(asc(user.name), asc(user.id));
+}
+
 /** Every subject's entries, newest first. A purged subject or actor renders its stored label, unlinked. */
 export async function listAuditEntries(
 	filters: AuditLogFilters,
@@ -272,13 +295,15 @@ export async function listAuditEntries(
 				: eq(auditLog.subjectType, filters.subjectType)
 		);
 	}
+	if (filters.actorId) conditions.push(eq(auditLog.actorUserId, filters.actorId));
 	const search = filters.search?.trim();
 	if (search) {
 		conditions.push(
 			or(
 				containsLiteral(auditLog.actorName, search),
 				containsLiteral(auditLog.actorEmail, search),
-				containsLiteral(auditLog.subjectLabel, search)
+				containsLiteral(auditLog.subjectLabel, search),
+				detailsContain(search)
 			)!
 		);
 	}

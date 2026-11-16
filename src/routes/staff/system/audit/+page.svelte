@@ -11,7 +11,7 @@
 	import Table from '#lib/components/ui/Table.svelte';
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import { getAuditLog } from '#lib/remote/audit.remote.js';
+	import { getAuditActors, getAuditLog } from '#lib/remote/audit.remote.js';
 	import type { AuditAction, AuditSubjectType } from '#lib/types/audit.js';
 	import {
 		auditActionGroups,
@@ -30,6 +30,7 @@
 	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
 	let searchText = $state(initial.search);
 	let searchQuery = $state(initial.search);
+	let actor = $state(initial.actor);
 	let action = $state<AuditAction | ''>(initial.action);
 	let subjectType = $state<AuditSubjectType | ''>(initial.subjectType);
 	let dateFrom = $state(initial.from);
@@ -41,6 +42,7 @@
 			path,
 			auditQuerySearch({
 				search: searchQuery,
+				actor,
 				action,
 				subjectType,
 				from: dateFrom,
@@ -57,6 +59,7 @@
 		getAuditLog({
 			action: action || undefined,
 			search: searchQuery || undefined,
+			actorId: actor || undefined,
 			subjectType: subjectType || undefined,
 			from: dateFrom || undefined,
 			to: dateTo || undefined,
@@ -66,6 +69,7 @@
 
 	const activeFilterCount = $derived(
 		(searchQuery ? 1 : 0) +
+			(actor ? 1 : 0) +
 			(action ? 1 : 0) +
 			(subjectType ? 1 : 0) +
 			(dateFrom ? 1 : 0) +
@@ -75,6 +79,7 @@
 	function clearFilters() {
 		searchText = '';
 		searchQuery = '';
+		actor = '';
 		action = '';
 		subjectType = '';
 		dateFrom = '';
@@ -96,6 +101,20 @@
 				}}
 			/>
 		{/snippet}
+		<Select
+			size="sm"
+			aria-label={m.staff_audit_actor_label()}
+			value={actor}
+			onchange={(e: Event) => {
+				actor = (e.currentTarget as HTMLSelectElement).value;
+				page = 1;
+			}}
+		>
+			<option value="">{m.staff_audit_all_actors_label()}</option>
+			{#each await getAuditActors() as person (person.id)}
+				<option value={person.id}>{person.name}</option>
+			{/each}
+		</Select>
 		<Select
 			size="sm"
 			aria-label={m.staff_audit_action_label()}

@@ -4,6 +4,8 @@ import type { AuditAction, AuditSubjectType } from '#lib/types/audit.js';
 /** The audit log's filters, as `/staff/system/audit` keeps them in its query string (#2826). */
 export interface AuditQuery {
 	search: string;
+	/** A user id: entries they made, unlike `search`, which also finds entries about them. */
+	actor: string;
 	action: AuditAction | '';
 	subjectType: AuditSubjectType | '';
 	from: string;
@@ -23,6 +25,7 @@ export function parseAuditQuery(params: Pick<URLSearchParams, 'get'>): AuditQuer
 	const page = Number(params.get('page'));
 	return {
 		search: (params.get('q') ?? '').slice(0, 200),
+		actor: (params.get('actor') ?? '').slice(0, 64),
 		action: pick(auditActions, params.get('action')),
 		subjectType: pick(auditSubjectTypes, params.get('type')),
 		from: day(params.get('from')),
@@ -35,6 +38,7 @@ export function parseAuditQuery(params: Pick<URLSearchParams, 'get'>): AuditQuer
 export function auditQuerySearch(q: AuditQuery): string {
 	const pairs: [string, string][] = [];
 	if (q.search) pairs.push(['q', q.search]);
+	if (q.actor) pairs.push(['actor', q.actor]);
 	if (q.action) pairs.push(['action', q.action]);
 	if (q.subjectType) pairs.push(['type', q.subjectType]);
 	if (q.from) pairs.push(['from', q.from]);
