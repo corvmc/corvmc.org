@@ -56,7 +56,6 @@ import { seedProductions } from './fixtures/seed-productions';
 import { seedTicketPurchase } from './fixtures/seed-ticket-purchase';
 import { seedRsvp } from './fixtures/seed-rsvp';
 import { seedVolunteering } from './fixtures/seed-volunteering';
-import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedGroups } from './fixtures/seed-groups';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
 import { seedEventsSplit } from './fixtures/seed-events-split';
@@ -134,7 +133,6 @@ await seedInboxAwaiting();
 // After the staff fixture: both programs are led by the staff user, and the
 // committee's applicant is its role target.
 await seedGroups();
-await seedFeatureFlags();
 // Before the sweep, not after. It writes its own `directory_entry` rows — one
 // public, one members-only — and the sweep only claims users that have none, as
 // its own note says: "a fixture that needs a public member sets its own entry".

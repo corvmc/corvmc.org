@@ -728,10 +728,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/system/features",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/system/organization",
 		"panel": "staff"
 	},

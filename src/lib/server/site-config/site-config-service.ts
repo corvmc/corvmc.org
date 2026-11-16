@@ -17,9 +17,8 @@ const KV_PREFIX = 'site-config:';
 // Defaults — used when no KV entry exists for a key
 // ---------------------------------------------------------------------------
 
-// Exported so `feature-flags.spec.ts` can assert every FeatureFlag has a
-// default here and vice versa — the two lists drifting is what left the
-// Content Flags toggle throwing a 400.
+// Exported so `feature-flags.spec.ts` can assert no `feature.*` key comes back:
+// feature switches are code config (`surfaces` in `#lib/config.js`).
 export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.operatingHoursStart': '09:00',
 	'reservation.operatingHoursEnd': '22:00',
@@ -119,16 +118,7 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'integration.utec.clientId': '',
 	'integration.utec.clientSecret': '',
 	'integration.utec.deviceId': '',
-	'integration.utec.refreshToken': '',
-
-	// Flags gate the member, band and public surfaces only — the staff panel
-	// always shows every feature — so they all start off.
-	'feature.directMessages': false,
-	'feature.bandAudio': false,
-	'feature.cmcRadio': false
-	// A flag missing from here makes `config()` *throw* `Unknown site config key`
-	// rather than return false, which is why registering it in both places is one
-	// step and `feature-flags.spec.ts` asserts the set both ways.
+	'integration.utec.refreshToken': ''
 };
 
 export type SiteConfigKey = keyof typeof DEFAULTS;
@@ -142,12 +132,9 @@ export type SiteConfigKey = keyof typeof DEFAULTS;
  *
  * Longer than KV's 60-second default because these change on a staff form
  * submit rather than on a request. Note this stacks on top of the isolate memo
- * below, so a memoized key's worst-case staleness is the sum of the two, not
- * the larger — which is why the exempt prefix stays on KV's default (60s is
- * also the floor; KV rejects less).
+ * below, so a key's worst-case staleness is the sum of the two, not the larger.
  */
 const KV_CACHE_TTL_SECONDS = 300;
-const KV_CACHE_TTL_EXEMPT_SECONDS = 60;
 
 /**
  * How long this isolate may serve a config value from memory.
@@ -158,17 +145,6 @@ const KV_CACHE_TTL_EXEMPT_SECONDS = 60;
  * changed value takes up to this long to reach every colo.
  */
 const MEMO_TTL_MS = 60_000;
-
-/**
- * Feature flags are exempt from the memo, and it is staleness that decides it
- * rather than read cost. Nobody watches a room rate take effect; a staff member
- * who toggles a flag and sees nothing happen does, and reads it as a bug.
- *
- * This does not make a flag instant — KV's own edge cache was always in front
- * of it. What the exemption buys is that flags keep the ~60s they already had
- * instead of compounding a second cache on top.
- */
-const MEMO_EXEMPT_PREFIX = 'feature.';
 
 type ConfigValue = string | number | boolean;
 
@@ -184,18 +160,14 @@ export function clearSiteConfigMemo(): void {
 
 /** The stored override for a key, or null when nothing has been written. */
 async function readStored(key: string): Promise<ConfigValue | null> {
-	const memoizable = !key.startsWith(MEMO_EXEMPT_PREFIX);
-
-	if (memoizable) {
-		const hit = memo.get(key);
-		if (hit && hit.expiresAt > Date.now()) return hit.value;
-	}
+	const hit = memo.get(key);
+	if (hit && hit.expiresAt > Date.now()) return hit.value;
 
 	const value = await getJson<ConfigValue>(`${KV_PREFIX}${key}`, {
-		cacheTtl: memoizable ? KV_CACHE_TTL_SECONDS : KV_CACHE_TTL_EXEMPT_SECONDS
+		cacheTtl: KV_CACHE_TTL_SECONDS
 	});
 
-	if (memoizable) memo.set(key, { value, expiresAt: Date.now() + MEMO_TTL_MS });
+	memo.set(key, { value, expiresAt: Date.now() + MEMO_TTL_MS });
 
 	return value;
 }

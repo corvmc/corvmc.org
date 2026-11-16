@@ -39,7 +39,6 @@
 		IconContract,
 		IconArrowLeft,
 		IconBuilding,
-		IconToggleRight,
 		IconKey,
 		IconAlertTriangle,
 		IconHelp,
@@ -147,7 +146,6 @@
 		funding: IconContract,
 		settings: IconSettings,
 		organization: IconBuilding,
-		features: IconToggleRight,
 		access: IconKey,
 		audit: IconHistory,
 		help: IconHelp

@@ -120,3 +120,4 @@ A page or less. Link the issue and the PRs.
 | 0086 | [Production capabilities are cut by consequence](0086-production-capabilities-by-consequence.md)                               | 2026-11-15 | Accepted              |
 | 0087 | [Bands, clubs and committees are listed apart](0087-bands-clubs-and-committees-are-listed-apart.md)                            | 2026-11-15 | Accepted              |
 | 0088 | [The staff nav answers four questions](0088-the-staff-nav-answers-four-questions.md)                                           | 2026-11-16 | Accepted              |
+| 0089 | [Feature switches are code config](0089-feature-switches-are-code-config.md)                                                   | 2026-11-16 | Accepted              |

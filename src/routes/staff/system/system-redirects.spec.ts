@@ -36,7 +36,7 @@ describe('old addresses', () => {
 	it.each([
 		['/staff/settings', '/staff/system'],
 		['/staff/settings?tab=organization', '/staff/system/organization'],
-		['/staff/settings?tab=features', '/staff/system/features'],
+		['/staff/settings?tab=features', '/staff/system'],
 		['/staff/settings?tab=access', '/staff/system/access'],
 		['/staff/settings?tab=inbox', '/staff/inbox/channels'],
 		['/staff/settings?tab=subscriptions', '/staff/members'],

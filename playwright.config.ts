@@ -203,6 +203,10 @@ export default defineConfig({
 			// pinning below is what stops a real credential reaching the server at
 			// all, and this is what stops the server transacting even if one did.
 			PAYMENTS_DRIVER: 'fake',
+			// Read at build time by `surfaces` in src/lib/config.ts. Messaging and
+			// band audio are off in production but their specs walk them; the
+			// production build never sets this.
+			VITE_E2E_SURFACES: 'directMessages,bandAudio',
 			// Pinned for the same reason: the outbox logs mail instead of sending it.
 			MAIL_DRIVER: 'log',
 			// Pinned empty for the same reason as STRIPE_ENV: `.env` carries a real

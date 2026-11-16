@@ -19,7 +19,6 @@ import {
 } from '#lib/server/volunteer/orientation-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import { listCommitteePositions } from '#lib/server/group/position-service.js';
-import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/feature-flags.js';
 import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
 import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
 import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
@@ -501,35 +500,6 @@ const integrationSettingsSchema = z.object({
 	clientSecret: z.string().trim(),
 	deviceId: z.string().trim()
 });
-
-// ---------------------------------------------------------------------------
-// Feature flags
-// ---------------------------------------------------------------------------
-
-export const getFeatureFlags = query(async () => {
-	await requireCapability('settings.read');
-	return getAllFeatureFlags();
-});
-
-// Kept as an alias rather than a second hand-maintained list: the two drifted
-// apart and `contentFlags` was missing here, so the settings toggle 400'd.
-const VALID_FLAGS: FeatureFlag[] = ALL_FLAGS;
-
-export const updateFeatureFlag = form(
-	z.object({
-		flag: z.string(),
-		enabled: z.enum(['true', 'false']).transform((v) => v === 'true')
-	}),
-	writesAudit('settings.changed', async (data) => {
-		await requireCapability('settings.update');
-		if (!VALID_FLAGS.includes(data.flag as FeatureFlag)) {
-			throw error(400, 'Invalid feature flag');
-		}
-		await saveSettings([{ key: `feature.${data.flag}`, value: data.enabled }]);
-		void getFeatureFlags().refresh();
-		return { success: true };
-	})
-);
 
 // ---------------------------------------------------------------------------
 // Subscription status sync

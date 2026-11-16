@@ -297,10 +297,7 @@ export const SETTING_LABELS: Record<string, string> = {
 	'integration.utec.clientId': 'U-tec client ID',
 	'integration.utec.clientSecret': 'U-tec client secret',
 	'integration.utec.deviceId': 'U-tec device ID',
-	'integration.utec.refreshToken': 'U-tec refresh token',
-	'feature.directMessages': 'Direct messages feature',
-	'feature.bandAudio': 'Band music feature',
-	'feature.cmcRadio': 'CMC Radio feature'
+	'integration.utec.refreshToken': 'U-tec refresh token'
 };
 
 /** The fields a product edit records, as `product.<key>.<field>`. */

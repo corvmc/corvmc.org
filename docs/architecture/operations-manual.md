@@ -216,7 +216,7 @@ Three places hold configuration; know which is which before changing anything:
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `wrangler.toml [vars]` | Non-secret deploy-time config (URLs, sender identity, Postmark message streams, Turnstile **site** key, `LARAVEL_URL`) | Edit the file, deploy                        |
 | Worker secrets         | Everything sensitive (table below)                                                                                     | `wrangler secret put NAME`, or bulk (below)  |
-| KV site config         | Runtime settings + feature flags (`site-config:*` keys)                                                                | Staff settings UI, or `wrangler kv` directly |
+| KV site config         | Runtime settings (`site-config:*` keys)                                                                                | Staff settings UI, or `wrangler kv` directly |
 
 Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored), fill in,
 **delete the `_README` key** (or wrangler creates a secret literally named `_README`), then
@@ -669,4 +669,4 @@ Failure signatures by symptom:
 | Sign-in failures for old accounts           | Sentry `auth.bcrypt_migration` events; is the legacy Laravel server up? (see §6)                                                                                   |
 | Emails not arriving                         | Postmark activity stream (transactional vs broadcast), then Sentry.                                                                                                |
 | Site-wide 500s right after a deploy         | `wrangler tail`; consider `wrangler rollback`; check whether a migration ran.                                                                                      |
-| Feature "missing" in production             | Feature flag in KV site config (`feature.*`) — staff settings UI.                                                                                                  |
+| Feature "missing" in production             | Its switch in `surfaces` (`src/lib/config.ts`) is off. Turning it on is a code change and a deploy.                                                                |

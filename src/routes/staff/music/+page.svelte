@@ -62,15 +62,7 @@
 
 <PageContent width="full">
 	{#if !audioEnabled}
-		<Alert type="info">
-			<ParaglideMessage
-				message={m.staff_music_music_storefront_switched_off_so_body}
-				inputs={{ staff_music_settings_features: m.staff_music_settings_features_body() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('staff/system/features')}
-						>{@render children?.()}</a
-					>{/snippet}</ParaglideMessage
-			>
-		</Alert>
+		<Alert type="info">{m.staff_music_music_storefront_switched_off_so_body()}</Alert>
 	{/if}
 
 	<Card>
@@ -118,13 +110,7 @@
 			{:else}
 				<p>
 					<Badge variant="ghost">{m.staff_music_off_label()}</Badge>
-					<ParaglideMessage
-						message={m.staff_music_switch_station_when_pool_above_text}
-						inputs={{ staff_music_settings_features: m.staff_music_settings_features_text() }}
-						>{#snippet a({ children })}<a class="link" href={resolve('staff/system/features')}
-								>{@render children?.()}</a
-							>{/snippet}</ParaglideMessage
-					>
+					{m.staff_music_switch_station_when_pool_above_text()}
 				</p>
 			{/if}
 
