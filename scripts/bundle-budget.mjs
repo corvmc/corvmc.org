@@ -12,14 +12,10 @@ export const ENTRY_BUDGET_KB = 150;
 export const ROUTE_BUDGET_KB = 520;
 /**
  * Routes already over ROUTE_BUDGET_KB, each capped where it stood (#3158). The
- * /about pages load the whole message catalog and the staff lists load the
- * rich-text editor; lower or delete a line as those are split out.
+ * staff lists load the rich-text editor; lower or delete a line as it is split out.
  * @type {Record<string, number>}
  */
 export const KNOWN_HEAVY_KB = {
-	'/(public)/about': 710,
-	'/(public)/about/privacy': 710,
-	'/(public)/about/bylaws': 710,
 	'/staff/clubs': 600,
 	'/staff/bands': 600,
 	'/staff/committees': 600,
