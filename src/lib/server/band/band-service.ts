@@ -792,6 +792,55 @@ export async function invite(
 }
 
 /**
+ * Tell a band's admins that someone joined through an invitation. Both ways of
+ * answering one call it, so admins hear the same thing whichever way the
+ * invitation was taken (#3051). It never throws.
+ */
+export async function announceJoin(bandId: string, userId: string): Promise<void> {
+	try {
+		const [bandRow] = await db
+			.select({ name: group.name })
+			.from(group)
+			.where(eq(group.id, bandId))
+			.limit(1);
+		const [joinedUser] = await db
+			.select({ name: user.name })
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
+
+		const adminUsers = await db
+			.select({ id: user.id, name: user.name, email: user.email })
+			.from(groupMember)
+			.innerJoin(user, eq(user.id, groupMember.userId))
+			.where(
+				and(
+					eq(groupMember.groupId, bandId),
+					leadsGroup(),
+					eq(groupMember.status, 'active'),
+					ne(groupMember.userId, userId)
+				)
+			);
+
+		if (bandRow && joinedUser) {
+			await domainEvents.emit('band.invitation_accepted', {
+				bandId,
+				bandName: bandRow.name,
+				acceptedByUserId: userId,
+				acceptedByName: joinedUser.name,
+				bandAdmins: adminUsers.map((u) => ({
+					userId: u.id,
+					userName: u.name,
+					userEmail: u.email
+				}))
+			});
+		}
+	} catch (err) {
+		captureException(err, { event: 'band.invitation_accepted' });
+	}
+}
+
+/**
  * Invitations are keyed by `(bandId, userId)` — the pair the unique constraint
  * already enforces — not by `group_member.id`. The UI only ever knows the band
  * (`listForUser` selects `id: band.id`), so keying on the row id meant the
@@ -830,51 +879,8 @@ export async function acceptInvitation(
 		return existing?.status === 'active' ? { status: 'already_active' } : { status: 'not_found' };
 	}
 
-	// Emit domain event (fire-and-forget)
-	Promise.resolve().then(async () => {
-		try {
-			const [bandRow] = await db
-				.select({ name: group.name })
-				.from(group)
-				.where(eq(group.id, row.groupId))
-				.limit(1);
-			const [acceptedUser] = await db
-				.select({ name: user.name })
-				.from(user)
-				.where(eq(user.id, userId))
-				.limit(1);
-
-			// Get band admins/owners to notify (single join query)
-			const adminUsers = await db
-				.select({ id: user.id, name: user.name, email: user.email })
-				.from(groupMember)
-				.innerJoin(user, eq(user.id, groupMember.userId))
-				.where(
-					and(
-						eq(groupMember.groupId, row.groupId),
-						leadsGroup(),
-						eq(groupMember.status, 'active'),
-						ne(groupMember.userId, userId)
-					)
-				);
-
-			if (bandRow && acceptedUser) {
-				await domainEvents.emit('band.invitation_accepted', {
-					bandId: row.groupId,
-					bandName: bandRow.name,
-					acceptedByUserId: userId,
-					acceptedByName: acceptedUser.name,
-					bandAdmins: adminUsers.map((u) => ({
-						userId: u.id,
-						userName: u.name,
-						userEmail: u.email
-					}))
-				});
-			}
-		} catch (err) {
-			captureException(err, { event: 'band.invitation_accepted' });
-		}
-	});
+	// Fire-and-forget: the accept has landed whether or not the notice goes.
+	Promise.resolve().then(() => announceJoin(row.groupId, userId));
 
 	return { status: 'accepted', bandId: row.groupId };
 }

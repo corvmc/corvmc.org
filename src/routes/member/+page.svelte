@@ -17,6 +17,7 @@
 	import MatchesCard from './MatchesCard.svelte';
 	import ClassifiedMatchesCard from './ClassifiedMatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
+	import JoinedBandsCard from './JoinedBandsCard.svelte';
 	import { creditsToHours } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 
@@ -38,6 +39,8 @@
 	     the profile nudge and the unconfirmed-booking warnings were three
 	     regions of this page; the quick links below them were the sidebar
 	     again (#1245). -->
+	<!-- Before the actions: a bandmate's booking can be one of them. -->
+	<JoinedBandsCard bands={data.joinedBands} />
 	<NeedsYouCard items={data.needsYou} />
 
 	<!-- Reservations + Credits grid -->

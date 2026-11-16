@@ -5,7 +5,7 @@ import { groupMember, group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, gt, desc, isNull, sql } from 'drizzle-orm';
 import { SEARCH_LIMIT } from '#lib/config.js';
-import { BandMemberExistsError, invite } from '#lib/server/band/band-service.js';
+import { announceJoin, BandMemberExistsError, invite } from '#lib/server/band/band-service.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
@@ -138,9 +138,11 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 			groupId: groupInvite.groupId,
 			role: groupInvite.role,
 			position: groupInvite.position,
-			invitedById: groupInvite.invitedById
+			invitedById: groupInvite.invitedById,
+			groupKind: group.kind
 		})
 		.from(groupInvite)
+		.leftJoin(group, eq(group.id, groupInvite.groupId))
 		.where(
 			and(
 				eq(groupInvite.email, normalizedEmail),
@@ -171,6 +173,9 @@ export async function resolvePendingInvites(userId: string, email: string): Prom
 				.where(eq(groupInvite.id, inv.id));
 
 			resolved++;
+			// The same notice an in-app accept sends. Only a new roster row earns
+			// it: the unique-constraint branch below is someone already there.
+			if (inv.groupKind === 'band') await announceJoin(inv.groupId, userId);
 		} catch (err: unknown) {
 			// Unique constraint = already on the roster, just mark accepted
 			if (isUniqueConstraintError(err)) {
@@ -224,6 +229,49 @@ export async function listInvitesForEmail(email: string) {
 		)
 		.orderBy(desc(groupInvite.createdAt), desc(groupInvite.id))
 		.limit(SEARCH_LIMIT);
+}
+
+/** How long a band joined through an emailed invitation stays on the dashboard. */
+export const JOINED_BY_INVITE_DAYS = 14;
+
+/**
+ * The bands this member joined through an emailed invitation in the last
+ * `JOINED_BY_INVITE_DAYS`, still on the roster. Signup redeems the invitation
+ * with no answer from the member, so this is the only place they learn of it.
+ */
+export async function listBandsJoinedByInvite(userId: string, email: string, now = new Date()) {
+	const since = new Date(now.getTime() - JOINED_BY_INVITE_DAYS * 86_400_000);
+	const rows = await db
+		.select({
+			id: group.id,
+			name: group.name,
+			slug: group.slug,
+			invitedByName: user.name,
+			joinedAt: groupInvite.acceptedAt
+		})
+		.from(groupInvite)
+		.innerJoin(group, eq(group.id, groupInvite.groupId))
+		.innerJoin(
+			groupMember,
+			and(
+				eq(groupMember.groupId, groupInvite.groupId),
+				eq(groupMember.userId, userId),
+				eq(groupMember.status, 'active')
+			)
+		)
+		.leftJoin(user, eq(user.id, groupInvite.invitedById))
+		.where(
+			and(
+				eq(groupInvite.email, email.toLowerCase().trim()),
+				eq(groupInvite.status, 'accepted'),
+				gt(groupInvite.acceptedAt, since),
+				eq(group.kind, 'band'),
+				isNull(group.deletedAt)
+			)
+		)
+		.orderBy(desc(groupInvite.acceptedAt), group.name);
+	// Two accepted invitations to one band is one band; the newest wins.
+	return rows.filter((r, i) => rows.findIndex((o) => o.id === r.id) === i);
 }
 
 export async function listForGroup(groupId: string) {

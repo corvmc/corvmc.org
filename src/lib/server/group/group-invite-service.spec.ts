@@ -21,6 +21,8 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 const {
 	createInvite,
 	resolvePendingInvites,
+	listBandsJoinedByInvite,
+	JOINED_BY_INVITE_DAYS,
 	listForGroup,
 	listInvitesForEmail,
 	revoke,
@@ -309,6 +311,90 @@ describe('resolvePendingInvites', () => {
 			['inv-ok', 'accepted']
 		]);
 		consoleSpy.mockRestore();
+	});
+
+	// The class: a way onto a band roster through an invitation that tells the
+	// band's admins nothing, where answering in the app does (#3051).
+	it("announces the join to the band's admins, as an in-app accept does", async () => {
+		member('user-1', 'alice@test.com');
+		member('admin-1');
+		sqlite.exec(
+			`insert into group_member (id, group_id, user_id, role, status) values ('gm-a', 'band-1', 'admin-1', 'admin', 'active')`
+		);
+		invitation('inv-1', { role: 'admin' });
+
+		await resolvePendingInvites('user-1', 'alice@test.com');
+
+		expect(emitted).toEqual([
+			[
+				'band.invitation_accepted',
+				{
+					bandId: 'band-1',
+					bandName: 'Group band-1',
+					acceptedByUserId: 'user-1',
+					acceptedByName: 'Name user-1',
+					bandAdmins: [
+						{ userId: 'admin-1', userName: 'Name admin-1', userEmail: 'admin-1@example.com' }
+					]
+				}
+			]
+		]);
+	});
+
+	it('announces nothing for someone already on the roster, or for a club', async () => {
+		member('user-1', 'alice@test.com');
+		band('club-1', { kind: 'club' });
+		sqlite.exec(
+			`insert into group_member (id, group_id, user_id, role, status) values ('gm', 'band-1', 'user-1', 'member', 'active')`
+		);
+		invitation('inv-1');
+		invitation('inv-2', { groupId: 'club-1' });
+
+		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(2);
+		expect(emitted).toEqual([]);
+	});
+});
+
+describe('listBandsJoinedByInvite', () => {
+	beforeEach(() => {
+		member('user-1', 'alice@test.com');
+	});
+
+	function joined(id: string, groupId: string, acceptedAt: number, rosterStatus = 'active') {
+		invitation(id, { groupId, status: 'accepted' });
+		sqlite.prepare(`update group_invite set accepted_at = ? where id = ?`).run(acceptedAt, id);
+		sqlite
+			.prepare(
+				`insert into group_member (id, group_id, user_id, role, status) values (?, ?, 'user-1', 'member', ?)`
+			)
+			.run(`gm-${id}`, groupId, rosterStatus);
+	}
+
+	it('names the band and who invited the member', async () => {
+		joined('inv-1', 'band-1', T0 - DAY);
+
+		const rows = await listBandsJoinedByInvite('user-1', 'Alice@Test.com');
+
+		expect(rows).toEqual([
+			{
+				id: 'band-1',
+				name: 'Group band-1',
+				slug: 'band-1',
+				invitedByName: 'Name inviter-1',
+				joinedAt: new Date((T0 - DAY) * 1000)
+			}
+		]);
+	});
+
+	it('leaves out old joins, bands since left, and clubs', async () => {
+		band('band-old');
+		band('band-left');
+		band('club-1', { kind: 'club' });
+		joined('inv-old', 'band-old', T0 - (JOINED_BY_INVITE_DAYS + 1) * DAY);
+		joined('inv-left', 'band-left', T0 - DAY, 'pending');
+		joined('inv-club', 'club-1', T0 - DAY);
+
+		expect(await listBandsJoinedByInvite('user-1', 'alice@test.com')).toEqual([]);
 	});
 });
 
