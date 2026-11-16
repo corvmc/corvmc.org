@@ -214,3 +214,35 @@ export async function countUnifiedUnread(userId: string, access: GroupAccess): P
 
 	return row?.count ?? 0;
 }
+
+/**
+ * One group's open, unread threads, split by kind: its chat, which every
+ * member reads, and its enquiries, which only owners and admins do. The band
+ * Messages row adds the halves the viewer's role may read (#3136). A muted
+ * room asks for no unread dot, so it counts for nothing here.
+ */
+export async function countGroupInboxUnread(
+	userId: string,
+	groupId: string
+): Promise<{ chat: number; enquiries: number }> {
+	const [row] = await db
+		.select({
+			chat: sql<number>`COALESCE(SUM(CASE WHEN ${inboxThread.channel} = 'group' THEN 1 ELSE 0 END), 0)`,
+			enquiries: sql<number>`COALESCE(SUM(CASE WHEN ${inboxThread.channel} = 'band' THEN 1 ELSE 0 END), 0)`
+		})
+		.from(inboxThread)
+		.leftJoin(
+			inboxGroupRead,
+			and(eq(inboxGroupRead.threadId, inboxThread.id), eq(inboxGroupRead.userId, userId))
+		)
+		.where(
+			and(
+				eq(inboxThread.groupId, groupId),
+				inArray(inboxThread.channel, ['group', 'band'] as const),
+				eq(inboxThread.status, 'open'),
+				or(isNull(inboxGroupRead.muted), eq(inboxGroupRead.muted, false)),
+				groupUnread
+			)
+		);
+	return { chat: Number(row?.chat ?? 0), enquiries: Number(row?.enquiries ?? 0) };
+}

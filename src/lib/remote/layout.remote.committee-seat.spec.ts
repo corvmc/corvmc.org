@@ -40,7 +40,8 @@ vi.mock('#lib/server/inbox/group-chat-service.js', () => ({
 }));
 vi.mock('#lib/server/inbox/unified-service.js', () => ({
 	countUnifiedUnread: vi.fn(async () => 0),
-	countUnifiedUnreadFor: vi.fn(async () => 0)
+	countUnifiedUnreadFor: vi.fn(async () => 0),
+	countGroupInboxUnread: vi.fn(async () => ({ chat: 0, enquiries: 0 }))
 }));
 vi.mock('#lib/server/inbox/direct-service.js', () => ({
 	countPendingRequests: vi.fn(async () => 0)

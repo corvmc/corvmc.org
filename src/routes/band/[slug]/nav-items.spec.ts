@@ -1,136 +1,79 @@
 import { describe, it, expect } from 'vitest';
 import {
 	activeBandNavKey,
-	bandNavChrome,
 	bandNavFooter,
 	bandNavItems,
-	bandNavMain,
-	type BandNavInput
+	bandNavSections,
+	bandNavTop,
+	sectionHasKey,
+	type BandNavInput,
+	type BandNavKey
 } from './nav-items';
 
 /**
- * The band panel's nav gating has been wrong twice in the same file, both times
- * because a role check that read `userRole === 'owner'` also caught admins and
- * staff — `getBandLayout` returns `role ?? 'staff'`, so those two are the same
- * shape as a real role. This pins the whole matrix.
+ * The band panel's nav gating has been wrong twice, both times because a role
+ * check read `userRole === 'owner'` — `getBandLayout` returns `role ?? 'staff'`,
+ * so admins and staff are the same shape as a real role. This pins the matrix.
  */
+const base: BandNavInput = {
+	slug: 'the-velvet-underground',
+	bandId: 'band-1',
+	tier: 'free',
+	userRole: 'member',
+	isStaff: false,
+	memberCount: 3,
+	features: {}
+};
+
+const roles = ['owner', 'admin', 'member', 'staff'] as const;
+const asRole = (userRole: string, overrides: Partial<BandNavInput> = {}): BandNavInput => ({
+	...base,
+	userRole,
+	isStaff: userRole === 'staff',
+	...overrides
+});
+
 function keysFor(overrides: Partial<BandNavInput> = {}): string[] {
-	return bandNavItems({
-		slug: 'the-velvet-underground',
-		bandId: 'band-1',
-		tier: 'free',
-		userRole: 'member',
-		isStaff: false,
-		features: {},
-		...overrides
-	}).map((i) => i.key);
+	return bandNavItems({ ...base, ...overrides }).map((i) => i.key);
 }
 
 describe('bandNavItems', () => {
-	it('gives every role Dashboard, Members and Events', () => {
-		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			const keys = keysFor({ userRole, isStaff: userRole === 'staff' });
-			expect(keys).toContain('dashboard');
-			expect(keys).toContain('members');
-			expect(keys).toContain('events');
+	it('gives every role Dashboard, Members, Events and Messages', () => {
+		for (const userRole of roles) {
+			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
+			expect(keys).toEqual(expect.arrayContaining(['dashboard', 'members', 'events', 'messages']));
 		}
 	});
 
-	/**
-	 * The rider is deliberately the one panel page with no role gate at all,
-	 * staff included. Its whole premise is that the member who owns the amp is
-	 * the one who can say what it needs, so a nav that hid it from plain members
-	 * would defeat the feature — and this is the assertion that fails first if
-	 * somebody "tidies" it in behind `isOwnerOrAdmin` with the rows above it.
-	 */
-	it('gives the tech rider to every role, including staff', () => {
-		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			expect(keysFor({ userRole, isStaff: userRole === 'staff' })).toContain('rider');
+	// The rider's premise is that the member who owns the amp says what it
+	// needs, so a nav that hid it from plain members would defeat it.
+	it('gives the tech rider and packing list to every role, including staff', () => {
+		for (const userRole of roles) {
+			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
+			expect(keys).toEqual(expect.arrayContaining(['rider', 'packing']));
 		}
 	});
 
-	// The reported bug: an admin could not reach the band's address at all,
-	// because the whole Settings entry was gated on owner.
 	it('gives Settings to an owner and an admin, but not a plain member', () => {
 		expect(keysFor({ userRole: 'owner' })).toContain('settings');
 		expect(keysFor({ userRole: 'admin' })).toContain('settings');
 		expect(keysFor({ userRole: 'member' })).not.toContain('settings');
 	});
 
-	// Answering a booking enquiry commits the act to a date and a price, so it
-	// draws the same line Press Kit and Edit Profile do. A staff non-member is
-	// excluded for the same reason they are excluded from Settings: they are not
-	// the act, and `requireGroupRole(..., 'admin')` refuses them anyway.
-	// One row for two inboxes now, so the row itself is no longer the gate: it
-	// goes to everyone who has a room to read, and the page draws the Enquiries
-	// section only for an owner or admin. `requireGroupRole` in
-	// `band-messages.remote.ts` is what refuses the rest, as it always was.
-	it('gives Messages to everyone in the band, and to staff reading it', () => {
-		for (const userRole of ['owner', 'admin', 'member'] as const) {
-			expect(keysFor({ userRole }), userRole).toContain('messages');
-		}
-		expect(keysFor({ userRole: 'staff', isStaff: true })).toContain('messages');
-	});
-
-	it('no longer offers Chat as a row of its own', () => {
-		for (const userRole of ['owner', 'member'] as const) {
-			expect(keysFor({ userRole }), userRole).not.toContain('chat');
-		}
-	});
-
-	// The badge is what makes an unanswered enquiry visible from anywhere in the
-	// panel; a row that lost its key would go quiet rather than break.
-	// Two counts behind one row, and they are not interchangeable: enquiries
-	// are admins only, chat is the band's own room and every member reads it.
-	it('carries no badge key at all, the sidebar having no badged row', () => {
-		const items = bandNavItems({
-			slug: 'the-velvet-underground',
-			bandId: 'band-1',
-			tier: 'free',
-			userRole: 'owner',
-			isStaff: false,
-			features: {}
-		});
-		// The sidebar badges nothing now. Messages was the only row that ever
-		// carried one, and it moved to the topbar, which draws its own from
-		// `chrome.messagesUnread`.
-		expect(items.every((i) => !('badgeKey' in i))).toBe(true);
-	});
-
-	it('keeps Messages resolvable without drawing it in the sidebar', () => {
-		const chromeInput = {
-			slug: 'the-velvet-underground',
-			bandId: 'band-1',
-			tier: 'free',
-			userRole: 'member',
-			isStaff: false,
-			features: {}
-		};
-		const sidebar = [...bandNavMain(chromeInput), ...bandNavFooter(chromeInput)].map((i) => i.key);
-		expect(sidebar).not.toContain('messages');
-
-		// Still a destination: without it `/band/x/messages/**` lights no row and
-		// the route-coverage spec strands every page under it on Dashboard.
-		expect(bandNavItems(chromeInput).map((i) => i.key)).toContain('messages');
-		expect(activeBandNavKey(chromeInput, '/band/the-velvet-underground/messages')).toBe('messages');
+	// The topbar icon's count spans every inbox the viewer reads, so only the
+	// row can say this band has something waiting (#3136).
+	it('badges the Messages row and no other', () => {
+		const badged = bandNavItems(asRole('owner')).filter((i) => i.badgeKey);
+		expect(badged.map((i) => [i.key, i.badgeKey])).toEqual([['messages', 'inboxUnread']]);
 	});
 
 	it('offers no View Live Site row, the editor carrying that link', () => {
-		const premiumOwner = {
-			slug: 'the-velvet-underground',
-			bandId: 'band-1',
-			tier: 'premium',
-			userRole: 'owner',
-			isStaff: false,
-			features: { bandAudio: true }
-		};
-		expect(bandNavItems(premiumOwner).map((i) => i.key)).not.toContain('live-site');
-		// It was the only external row; nothing else in the panel leaves the app.
-		expect(bandNavItems(premiumOwner).every((i) => i.href.startsWith('/'))).toBe(true);
+		const items = bandNavItems(asRole('owner', { tier: 'premium', features: { bandAudio: true } }));
+		expect(items.every((i) => i.href.startsWith('/'))).toBe(true);
 	});
 
 	it('sends a staff non-member to staff tools instead of Settings', () => {
-		const keys = keysFor({ userRole: 'staff', isStaff: true });
+		const keys = bandNavItems(asRole('staff')).map((i) => i.key);
 		expect(keys).not.toContain('settings');
 		expect(keys).toContain('staff-tools');
 	});
@@ -139,23 +82,16 @@ describe('bandNavItems', () => {
 		expect(keysFor({ userRole: 'member' })).not.toContain('staff-tools');
 	});
 
-	// Music is flag-gated, and unlike Settings it is gated on the *flag only* —
-	// every member of the band can see the discography, and the page itself
-	// decides who may change it. The pairing worth pinning is that the flag being
-	// off hides the row from an owner too, since that is the switch staff will
-	// actually use before the storefront launches.
-	it('shows Music to every role once bandAudio is on, and to none while it is off', () => {
-		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			const isStaff = userRole === 'staff';
-			expect(keysFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('music');
-			expect(keysFor({ userRole, isStaff })).not.toContain('music');
+	it('shows Releases to every role once bandAudio is on, and to none while it is off', () => {
+		for (const userRole of roles) {
+			expect(
+				bandNavItems(asRole(userRole, { features: { bandAudio: true } })).map((i) => i.key)
+			).toContain('music');
+			expect(bandNavItems(asRole(userRole)).map((i) => i.key)).not.toContain('music');
 		}
 	});
 
-	// Payouts is banking setup, so it is narrower than Music above it: every
-	// member can see the discography, only owner and admin can reach the bank
-	// details Stripe is asking for.
-	it('keeps Payouts to owner and admin, while Music stays open to members', () => {
+	it('keeps Payouts to owner and admin, while Releases stays open to members', () => {
 		const on = { features: { bandAudio: true } };
 		for (const userRole of ['owner', 'admin']) {
 			expect(keysFor({ ...on, userRole })).toContain('payouts');
@@ -165,49 +101,24 @@ describe('bandNavItems', () => {
 		expect(member).not.toContain('payouts');
 	});
 
-	it('hides Payouts with the flag off, even from an owner', () => {
-		expect(keysFor({ userRole: 'owner' })).not.toContain('payouts');
-	});
-
-	// Written when `bandPremium` was still a flag, to pin that being premium was
-	// not itself enough to reach Releases. The flag has launched and gone, so the
-	// stand-in is the tier — which must still not open this row on its own.
 	it('does not let the premium tier stand in for bandAudio', () => {
 		expect(keysFor({ userRole: 'owner', tier: 'premium' })).not.toContain('music');
 	});
 
-	// Billing really is owner-only on the server, so this gate stays as it was.
-	// The point of the test is that widening Settings did not widen this.
 	it('keeps Subscription owner-only', () => {
 		expect(keysFor({ userRole: 'owner' })).toContain('subscription');
 		expect(keysFor({ userRole: 'admin' })).not.toContain('subscription');
 		expect(keysFor({ userRole: 'member' })).not.toContain('subscription');
 	});
 
-	// The `bandReservations` flag was retired on main; band booking is on for
-	// every member now, so this asserts presence rather than gating.
-	it('shows Reservations to every band member', () => {
-		for (const userRole of ['owner', 'admin', 'member']) {
-			expect(keysFor({ userRole })).toContain('reservations');
+	it('shows Reservations and Announcements to every role', () => {
+		for (const userRole of roles) {
+			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
+			expect(keys).toEqual(expect.arrayContaining(['reservations', 'announcements']));
 		}
 	});
 
-	/**
-	 * Every member reads announcements; only owner and admin post, and the page
-	 * gates that rather than the nav — a member who cannot see the entry cannot
-	 * read what the band told them, which is backwards. The `announcements` flag
-	 * that used to gate this row is retired and the module is launched, so the
-	 * row is unconditional.
-	 */
-	it('shows Announcements to every role', () => {
-		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			expect(keysFor({ userRole, isStaff: userRole === 'staff' })).toContain('announcements');
-		}
-	});
-
-	// `bandPremium` used to be half of this gate. It launched, so tier is the
-	// whole of it now — which is what the free-band case below is here to pin.
-	it('shows the page editor only to an admin of a premium band', () => {
+	it('shows the page editor only to an owner or admin of a premium band', () => {
 		const on = { tier: 'premium' };
 		expect(keysFor({ ...on, userRole: 'admin' })).toContain('page-editor');
 		expect(keysFor({ ...on, userRole: 'owner' })).toContain('page-editor');
@@ -215,71 +126,133 @@ describe('bandNavItems', () => {
 		expect(keysFor({ userRole: 'admin' })).not.toContain('page-editor');
 	});
 
-	it('offers Edit Profile to owners and admins only', () => {
-		expect(keysFor({ userRole: 'owner' })).toContain('edit');
-		expect(keysFor({ userRole: 'admin' })).toContain('edit');
-		expect(keysFor({ userRole: 'member' })).not.toContain('edit');
-		expect(keysFor({ userRole: 'staff', isStaff: true })).not.toContain('edit');
+	it('offers Edit Profile and Press Kit to owners and admins on every tier', () => {
+		for (const tier of ['free', 'premium']) {
+			for (const userRole of ['owner', 'admin']) {
+				expect(keysFor({ tier, userRole })).toEqual(expect.arrayContaining(['edit', 'press-kit']));
+			}
+		}
 	});
 
-	it('offers Press Kit to owners and admins on every tier', () => {
-		// The whole point of the free press kit: it must not follow the band site.
-		// Asserted on both tiers so a future gate on this row fails here rather
-		// than in the wild.
-		expect(keysFor({ userRole: 'owner' })).toContain('press-kit');
-		expect(keysFor({ userRole: 'admin' })).toContain('press-kit');
-		expect(keysFor({ userRole: 'admin', tier: 'premium' })).toContain('press-kit');
-	});
-
-	it('withholds Press Kit from members and non-member staff', () => {
-		expect(keysFor({ userRole: 'member' })).not.toContain('press-kit');
-		expect(keysFor({ userRole: 'staff', isStaff: true })).not.toContain('press-kit');
+	it('withholds Edit Profile and Press Kit from members and non-member staff', () => {
+		for (const userRole of ['member', 'staff']) {
+			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
+			expect(keys).not.toContain('edit');
+			expect(keys).not.toContain('press-kit');
+		}
 	});
 
 	it('points Staff tools at the band id, not its slug', () => {
-		const item = bandNavItems({
-			slug: 'the-velvet-underground',
-			bandId: 'band-1',
-			tier: 'free',
-			userRole: 'staff',
-			isStaff: true,
-			features: {}
-		}).find((i) => i.key === 'staff-tools');
-
+		const item = bandNavItems(asRole('staff')).find((i) => i.key === 'staff-tools');
 		expect(item?.href).toBe('/staff/bands/band-1');
 	});
 });
 
-describe('activeBandNavKey', () => {
-	const input: BandNavInput = {
-		slug: 'the-velvet-underground',
-		bandId: 'band-1',
-		tier: 'premium',
-		userRole: 'owner',
-		isStaff: false,
-		features: {}
-	};
+// #3129: rows grouped by the question each answers, as the staff nav is.
+describe('bandNavSections', () => {
+	const full = asRole('owner', { tier: 'premium', features: { bandAudio: true } });
 
-	it('lights the section a detail page belongs to', () => {
-		// This lit nothing at all before — `NavItem` matched exactly.
+	it('groups an owner of a premium band into five sections', () => {
+		const shape = bandNavSections(full).map((s) => [s.key, s.items.map((i) => i.key)]);
+		expect(shape).toEqual([
+			['schedule', ['reservations', 'events']],
+			['band', ['members', 'announcements', 'messages']],
+			['profile', ['edit', 'press-kit', 'page-editor']],
+			['stage', ['rider', 'packing']],
+			['music', ['music', 'payouts']]
+		]);
+	});
+
+	it('drops a section the viewer can see no row of', () => {
+		const keys = bandNavSections(asRole('member')).map((s) => s.key);
+		expect(keys).toEqual(['schedule', 'band', 'stage']);
+	});
+
+	// Rendered as separate lists, so a row in two would draw twice and a row in
+	// none could not be reached.
+	it.each(roles)('places every %s row in exactly one zone', (userRole) => {
+		const input = asRole(userRole, { tier: 'premium', features: { bandAudio: true } });
+		const zones = [
+			bandNavTop(input),
+			...bandNavSections(input).map((s) => s.items),
+			bandNavFooter(input)
+		].map((items) => items.map((i) => i.key));
+		const all = zones.flat();
+		expect(new Set(all).size).toBe(all.length);
+		expect(all.toSorted()).toEqual(
+			bandNavItems(input)
+				.map((i) => i.key)
+				.toSorted()
+		);
+	});
+
+	it('says which section holds the active row', () => {
+		const [schedule, band] = bandNavSections(full);
+		expect(sectionHasKey(schedule, 'events')).toBe(true);
+		expect(sectionHasKey(band, 'events')).toBe(false);
+		expect(sectionHasKey(band, null)).toBe(false);
+	});
+});
+
+// #3134: a band of one sees every row, with the ones that need a second member muted.
+describe('a new band', () => {
+	const quietKeys = (memberCount: number): BandNavKey[] =>
+		bandNavItems(asRole('owner', { memberCount }))
+			.filter((i) => i.quiet)
+			.map((i) => i.key);
+
+	it('mutes Announcements while the owner is the only member', () => {
+		expect(quietKeys(1)).toEqual(['announcements']);
+	});
+
+	it('mutes nothing once a second member joins', () => {
+		expect(quietKeys(2)).toEqual([]);
+	});
+
+	it('hides no row from a band of one', () => {
+		expect(keysFor({ userRole: 'owner', memberCount: 1 })).toEqual(keysFor({ userRole: 'owner' }));
+	});
+});
+
+describe('the foot', () => {
+	const premium = { tier: 'premium', features: { bandAudio: true } };
+
+	it('puts billing and settings at the foot, and nothing else', () => {
+		expect(bandNavFooter(asRole('owner', premium)).map((i) => i.key)).toEqual([
+			'subscription',
+			'settings'
+		]);
+	});
+
+	it('keeps an admin out of billing but not out of settings', () => {
+		expect(bandNavFooter(asRole('admin', premium)).map((i) => i.key)).toEqual(['settings']);
+	});
+
+	it('leaves a plain member nothing to administer', () => {
+		expect(bandNavFooter(asRole('member', premium))).toEqual([]);
+	});
+
+	it('sends a staff non-member to staff tools, at the foot', () => {
+		expect(bandNavFooter(asRole('staff', premium)).map((i) => i.key)).toEqual(['staff-tools']);
+	});
+
+	it('leads with Dashboard alone', () => {
+		expect(bandNavTop(asRole('owner')).map((i) => i.key)).toEqual(['dashboard']);
+	});
+});
+
+describe('activeBandNavKey', () => {
+	const input = asRole('owner', { tier: 'premium' });
+
+	it('lights the row a detail page belongs to', () => {
 		expect(activeBandNavKey(input, '/band/the-velvet-underground/events/abc')).toBe('events');
 		expect(activeBandNavKey(input, '/band/the-velvet-underground/press-kit')).toBe('press-kit');
-		// The EPK editor used to sit at `/page-editor/epk` and is the reason this
-		// function exists. It now 308s to the press kit, so the old path must not
-		// light the premium row on its way there.
 		expect(activeBandNavKey(input, '/band/the-velvet-underground/page-editor')).toBe('page-editor');
+		expect(activeBandNavKey(input, '/band/the-velvet-underground/messages/abc')).toBe('messages');
 	});
 
 	it('lights the dashboard only on the band root', () => {
 		expect(activeBandNavKey(input, '/band/the-velvet-underground')).toBe('dashboard');
-	});
-
-	it('never picks View Live Site, whose href leaves the origin', () => {
-		// The layout fills that href in; it is empty in the data, and an empty
-		// prefix would otherwise match every path.
-		for (const path of ['/band/the-velvet-underground', '/band/the-velvet-underground/members']) {
-			expect(activeBandNavKey(input, path)).not.toBe('live-site');
-		}
 	});
 
 	it('lights nothing for another band', () => {
@@ -287,68 +260,16 @@ describe('activeBandNavKey', () => {
 	});
 
 	it('falls back to the dashboard for a row the viewer cannot see', () => {
-		// Settings is not in a plain member's nav, so the band root is the longest
-		// href that still matches. The page guards itself; the nav simply has
-		// nothing better to highlight.
-		const member: BandNavInput = { ...input, userRole: 'member' };
+		const member = asRole('member', { tier: 'premium' });
 		expect(activeBandNavKey(member, '/band/the-velvet-underground/settings')).toBe('dashboard');
 	});
 
 	it('resolves every visible row to its own key, for every role', () => {
-		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			const forRole = { ...input, userRole, isStaff: userRole === 'staff' };
+		for (const userRole of roles) {
+			const forRole = asRole(userRole, { tier: 'premium' });
 			for (const item of bandNavItems(forRole)) {
 				expect(activeBandNavKey(forRole, item.href)).toBe(item.key);
 			}
 		}
-	});
-});
-
-// Two zones, the shape the member panel uses: what the band does, then what it
-// administers, with a spacer between them. The split is the whole point, so
-// what matters is that nothing falls between the two.
-describe('the two zones', () => {
-	const base = {
-		slug: 'the-velvet-underground',
-		bandId: 'band-1',
-		tier: 'premium',
-		isStaff: false,
-		features: { bandAudio: true }
-	};
-
-	it('puts billing and settings at the foot, and nothing else', () => {
-		const footer = bandNavFooter({ ...base, userRole: 'owner' }).map((i) => i.key);
-		expect(footer).toEqual(['subscription', 'settings']);
-	});
-
-	it('keeps an admin out of billing but not out of settings', () => {
-		expect(bandNavFooter({ ...base, userRole: 'admin' }).map((i) => i.key)).toEqual(['settings']);
-	});
-
-	it('leaves a plain member nothing to administer', () => {
-		// The spacer then simply reaches the bottom, which is the right empty
-		// state for a zone rather than a heading with no rows under it.
-		expect(bandNavFooter({ ...base, userRole: 'member' })).toEqual([]);
-	});
-
-	it('sends a staff non-member to staff tools, at the foot', () => {
-		const footer = bandNavFooter({ ...base, userRole: 'staff', isStaff: true });
-		expect(footer.map((i) => i.key)).toEqual(['staff-tools']);
-	});
-
-	// The zones are rendered separately, so a row in neither is a page with no
-	// way to reach it — invisible in either list read on its own.
-	it.each(['owner', 'admin', 'member', 'staff'])('loses no row for %s', (userRole) => {
-		const input = { ...base, userRole, isStaff: userRole === 'staff' };
-		expect([...bandNavMain(input), ...bandNavFooter(input), ...bandNavChrome(input)]).toEqual(
-			bandNavItems(input)
-		);
-	});
-
-	it('leads with Dashboard and never ends on an admin row', () => {
-		const main = bandNavMain({ ...base, userRole: 'owner' }).map((i) => i.key);
-		expect(main[0]).toBe('dashboard');
-		expect(main).not.toContain('settings');
-		expect(main).not.toContain('subscription');
 	});
 });
