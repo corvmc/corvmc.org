@@ -12,7 +12,7 @@
 
 <ul class="menu">
 	<NavItem
-		href={resolve('staff/money')}
+		href={resolve('staff/inventory')}
 		label="Payments"
 		{starred}
 		onstar={starrable ? () => (starred = !starred) : undefined}

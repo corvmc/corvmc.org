@@ -112,9 +112,10 @@ A page or less. Link the issue and the PRs.
 | 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                             | 2026-11-13 | Accepted              |
 | 0079 | [A festival is a parent project](0079-a-festival-is-a-parent-project.md)                                                       | 2026-11-13 | Accepted              |
 | 0080 | [Payment reminders derive from the fee gate](0080-payment-reminders-derive-from-the-fee-gate.md)                               | 2026-11-13 | Accepted              |
-| 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Accepted              |
+| 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Superseded by 0088    |
 | 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                           | 2026-11-13 | Accepted              |
 | 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                               | 2026-11-13 | Accepted              |
 | 0085 | [Committees are departments, and a duty grants the duty](0085-committees-are-departments.md)                                   | 2026-11-14 | Amended by 0086       |
 | 0086 | [Production capabilities are cut by consequence](0086-production-capabilities-by-consequence.md)                               | 2026-11-15 | Accepted              |
 | 0087 | [Bands, clubs and committees are listed apart](0087-bands-clubs-and-committees-are-listed-apart.md)                            | 2026-11-15 | Accepted              |
+| 0088 | [The staff nav answers four questions](0088-the-staff-nav-answers-four-questions.md)                                           | 2026-11-16 | Accepted              |

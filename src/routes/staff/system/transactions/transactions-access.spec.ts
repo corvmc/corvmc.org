@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getStaffCredits, getStaffPayments } from '#lib/remote/users.remote.js';
-import { filterNavSections, staffNavSections } from '../nav-items';
-import { visibleViews } from '../views';
-import { moneyViews } from './views';
+import { filterNavItems, systemNavItems } from '../../nav-items';
+import { visibleViews } from '../../views';
+import { transactionViews } from './views';
 import { load as bare } from './+page.server';
-import { load as oldPayments } from '../payments/+page';
-import { load as oldCredits } from '../credits/+page';
+import { load as oldPayments } from '../../payments/+page';
+import { load as oldCredits } from '../../credits/+page';
+import { load as oldMoney } from '../../money/[...rest]/+page';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
@@ -28,7 +29,7 @@ beforeEach(() => {
 const run = async (load: unknown, url: string) =>
 	(load as (e: unknown) => unknown)({
 		url: new URL(url),
-		route: { id: '/staff/money' },
+		route: { id: '/staff/system/transactions' },
 		request: new Request(url)
 	});
 
@@ -42,11 +43,11 @@ describe('tabs', () => {
 		[[CREDIT], ['credits']],
 		[[], []]
 	])('holding %j shows %j', (held, keys) => {
-		expect(visibleViews(moneyViews, held).map((v) => v.key)).toEqual(keys);
+		expect(visibleViews(transactionViews, held).map((v) => v.key)).toEqual(keys);
 	});
 
 	it.each([[FINANCE], [CREDIT]])('offers the row to a holder of only %s', (cap) => {
-		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
+		const rows = filterNavItems(systemNavItems, [cap]);
 		expect(rows.map((r) => r.key)).toContain('payments');
 	});
 });
@@ -69,21 +70,37 @@ describe('remotes', () => {
 
 describe('addresses', () => {
 	it.each([
-		[[FINANCE, CREDIT], '/staff/money/payments?x=1'],
-		[[CREDIT], '/staff/money/credits?x=1'],
-		[[], '/staff/money/payments?x=1']
+		[[FINANCE, CREDIT], '/staff/system/transactions/payments?x=1'],
+		[[CREDIT], '/staff/system/transactions/credits?x=1'],
+		[[], '/staff/system/transactions/payments?x=1']
 	])('bare parent, holding %j, goes to %s', async (held, location) => {
 		auth.held = held;
-		await expect(run(bare, 'http://x/staff/money?x=1')).rejects.toMatchObject({
+		await expect(run(bare, 'http://x/staff/system/transactions?x=1')).rejects.toMatchObject({
 			status: 307,
 			location
 		});
 	});
 
 	it.each([
-		[oldPayments, 'http://x/staff/payments?q=a', '/staff/money/payments?q=a'],
-		[oldCredits, 'http://x/staff/credits', '/staff/money/credits']
-	])('old address 308s', async (load, url, location) => {
-		await expect(run(load, url)).rejects.toMatchObject({ status: 308, location });
+		[oldPayments, 'http://x/staff/payments?q=a', {}, '/staff/system/transactions/payments?q=a'],
+		[oldCredits, 'http://x/staff/credits', {}, '/staff/system/transactions/credits'],
+		[oldMoney, 'http://x/staff/money?q=a', { rest: '' }, '/staff/system/transactions?q=a'],
+		[
+			oldMoney,
+			'http://x/staff/money/settings',
+			{ rest: 'settings' },
+			'/staff/system/transactions/settings'
+		]
+	])('old address %#: 308s', async (load, url, params, location) => {
+		const event = {
+			url: new URL(url),
+			params,
+			route: { id: '/staff/money' },
+			request: new Request(url)
+		};
+		await expect((async () => (load as (e: unknown) => unknown)(event))()).rejects.toMatchObject({
+			status: 308,
+			location
+		});
 	});
 });

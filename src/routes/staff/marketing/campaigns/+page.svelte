@@ -14,14 +14,14 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import StaffViews from '../../StaffViews.svelte';
-	import { outreachViews } from '../views';
+	import { marketingViews } from '../views';
 
 	let statusFilter = $state('');
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_marketing_campaigns_title()}>
-	<StaffViews views={outreachViews} active="campaigns" />
+<PageHeader title={m.staff_marketing_title()} documentTitle={m.staff_marketing_campaigns_title()}>
+	<StaffViews views={marketingViews} active="campaigns" />
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">

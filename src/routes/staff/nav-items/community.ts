@@ -1,9 +1,9 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type CommunityNavKey =
-	'users' | 'groups' | 'suggestions' | 'ballots' | 'moderation' | 'classifieds' | 'content';
+export type CommunityNavKey = 'users' | 'groups' | 'calendar' | 'moderation' | 'classifieds';
 
+/** Members and what they post (#3112). */
 export const community: StaffNavSection = {
 	key: 'community',
 	title: 'Community',
@@ -16,36 +16,31 @@ export const community: StaffNavSection = {
 			label: 'Members',
 			href: resolve('staff/members')
 		},
-		// Clubs are in Programs and committees in Operations (#3027). The key stays
-		// `groups`, which starred rows store.
+		// The key stays `groups`, which starred rows store.
 		{
 			key: 'groups',
 			capability: 'band.read',
 			label: 'Bands',
 			href: resolve('staff/bands')
 		},
+		// Every listing, with Productions, Venues and vendor applications as views
+		// (#2766). A venue's own page stays under `/staff/venues` and lights this row.
 		{
-			key: 'suggestions',
-			capability: 'suggestion.read',
-			label: 'Suggestions',
-			href: resolve('staff/suggestions')
+			key: 'calendar',
+			capability: 'event.read',
+			label: 'Events',
+			href: resolve('staff/events'),
+			also: [resolve('staff/venues')]
 		},
-		{
-			key: 'ballots',
-			capability: 'ballot.manage',
-			surface: 'ballots',
-			label: 'Ballots',
-			href: resolve('staff/ballots')
-		},
-		// Flags, Incidents and Blocklist are its views, each with its own gate (#2393).
-		// Their records keep their addresses, which notifications link to.
+		// Flags and Blocklist are its views, each with its own gate (#2393). Flag
+		// records keep their addresses, which notifications link to.
 		{
 			key: 'moderation',
 			capability: 'moderation.reviewFlags',
-			alsoFor: ['incident.read', 'user.ban'],
+			alsoFor: ['user.ban'],
 			label: 'Moderation',
 			href: resolve('staff/moderation'),
-			also: [resolve('staff/flags'), resolve('staff/incidents')]
+			also: [resolve('staff/flags')]
 		},
 		{
 			key: 'classifieds',
@@ -53,15 +48,6 @@ export const community: StaffNavSection = {
 			surface: 'classifieds',
 			label: 'Classifieds',
 			href: resolve('staff/classifieds')
-		},
-		// Help articles and Local resources are its views, each with its own gate (#2765).
-		{
-			key: 'content',
-			capability: 'help.read',
-			alsoFor: ['localResource.manage'],
-			label: 'Content',
-			href: resolve('staff/content'),
-			also: [resolve('staff/help'), resolve('staff/local-resources')]
 		}
 	]
 };

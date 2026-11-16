@@ -13,11 +13,11 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getStaffPayments } from '#lib/remote/users.remote.js';
-	import StaffViews from '../../StaffViews.svelte';
-	import { moneyViews } from '../views';
+	import StaffViews from '../../../StaffViews.svelte';
+	import { transactionViews } from '../views';
 	import { formatDateTimeShort, formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import SettingsLink from '../../SettingsLink.svelte';
+	import SettingsLink from '../../../SettingsLink.svelte';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -59,9 +59,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_payments_title()}>
-	<StaffViews views={moneyViews} active="payments" />
-	<SettingsLink href={resolve('staff/money/settings')} />
+<PageHeader title={m.staff_transactions_title()}>
+	<StaffViews views={transactionViews} active="payments" />
+	<SettingsLink href={resolve('staff/system/transactions/settings')} />
 </PageHeader>
 <PageContent>
 	<p class="mb-4 text-sm text-base-content/60">

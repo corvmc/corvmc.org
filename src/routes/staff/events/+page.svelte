@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 	import { eventView } from './views';
 	import CreateListingAction from './CreateListingAction.svelte';
+	import PrintPosterAction from './PrintPosterAction.svelte';
 	import EventList from './EventList.svelte';
 	import ProductionList from './ProductionList.svelte';
 	import VenueList from './VenueList.svelte';
@@ -16,6 +17,7 @@
 
 <PageHeader title={m.staff_events_title()}>
 	{#if view === 'listings'}
+		<PrintPosterAction />
 		<CreateListingAction />
 	{/if}
 </PageHeader>

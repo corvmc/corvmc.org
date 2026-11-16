@@ -102,7 +102,7 @@
 	const refresh = () => void getVolunteeringPage(args).refresh();
 </script>
 
-<PageHeader title={m.staff_volunteering_title()}>
+<PageHeader title={m.staff_shifts_title()}>
 	<Button href={resolve('staff/volunteering/hours')} variant="ghost" size="sm">
 		{m.staff_volunteering_hour_logs_label()}
 	</Button>

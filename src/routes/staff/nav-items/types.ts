@@ -1,25 +1,25 @@
 import type { Capability, Surface } from '#lib/config.js';
 import type { NavNode } from '#lib/components/layout/Nav/active-nav.js';
 import type { TopNavKey } from './top';
-import type { RelationshipsNavKey } from './relationships';
+import type { OutreachNavKey } from './outreach';
 import type { CommunityNavKey } from './community';
 import type { ProgramsNavKey } from './programs';
-import type { OperationsNavKey } from './operations';
+import type { GovernanceNavKey } from './governance';
 import type { BottomNavKey } from './bottom';
 import type { SystemNavKey } from './system';
 
 /** Each file in this folder names its own keys, so adding a row edits only that file. */
 export type StaffNavKey =
 	| TopNavKey
-	| RelationshipsNavKey
+	| OutreachNavKey
 	| CommunityNavKey
 	| ProgramsNavKey
-	| OperationsNavKey
+	| GovernanceNavKey
 	| BottomNavKey
 	| SystemNavKey;
 
-/** The four systems (#2762). Reports and System sit below them, outside any section. */
-export type StaffNavSectionKey = 'relationships' | 'community' | 'programs' | 'operations';
+/** The four sections (#3112). Reports and System sit below them, outside any section. */
+export type StaffNavSectionKey = 'outreach' | 'community' | 'programs' | 'governance';
 
 /**
  * Field names on `getStaffLayout()`'s return. Items name a count rather than

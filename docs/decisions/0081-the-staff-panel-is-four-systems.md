@@ -1,7 +1,7 @@
 # 0081 The staff panel is four systems
 
 - **Date:** 2026-11-13
-- **Status:** Accepted
+- **Status:** Superseded by [0088](0088-the-staff-nav-answers-four-questions.md)
 - **Issue:** [#2763](https://github.com/corvmc/corvmc.org/issues/2763), parent
   [#2762](https://github.com/corvmc/corvmc.org/issues/2762)
 

@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { StaffNavItem } from './types';
 
-export type TopNavKey = 'dashboard' | 'inbox';
+export type TopNavKey = 'dashboard';
 
 /** Rows above the first section header. */
 export const staffNavTop: StaffNavItem[] = [
@@ -15,13 +15,5 @@ export const staffNavTop: StaffNavItem[] = [
 		href: resolve('staff'),
 		exact: true,
 		badgeKey: 'reviewWaiting'
-	},
-	// Channels is its settings view (#2763).
-	{
-		key: 'inbox',
-		capability: 'inbox.read',
-		label: 'Inbox',
-		href: resolve('staff/inbox'),
-		badgeKey: 'inboxUnread'
 	}
 ];

@@ -10,7 +10,7 @@ sortOrder: 13
 
 ## Audiences
 
-**Staff → Outreach → Audiences** holds the lists you send campaigns to. There
+**Staff → Marketing → Audiences** holds the lists you send campaigns to. There
 are two kinds, and the difference is who decides who's on them.
 
 ## Built-in audiences

@@ -2,7 +2,7 @@
  * The staff panel's sidebar, as data.
  *
  * As data, `childHrefsFor` derives what `Nav.Collapsible` would otherwise take
- * as a hand-maintained list of routes, and the grouping into the four systems
+ * as a hand-maintained list of routes, and the grouping into the four sections
  * can be read in one screen and asserted, which `nav-items.spec.ts` does.
  *
  * Rows carry a `capability`. `getStaffLayout` still redirects anyone holding no
@@ -27,10 +27,10 @@ import {
 } from '#lib/components/layout/Nav/active-nav.js';
 import type { StaffNavItem, StaffNavKey, StaffNavSection } from './nav-items/types';
 import { staffNavTop } from './nav-items/top';
-import { relationships } from './nav-items/relationships';
+import { outreach } from './nav-items/outreach';
 import { community } from './nav-items/community';
 import { programs } from './nav-items/programs';
-import { operations } from './nav-items/operations';
+import { governance } from './nav-items/governance';
 import { staffNavBottom } from './nav-items/bottom';
 import { systemNavItems } from './nav-items/system';
 
@@ -45,12 +45,12 @@ export type { SystemNavKey } from './nav-items/system';
 export { staffNavTop, staffNavBottom, systemNavItems };
 
 /**
- * The four systems (#2762): who the Collective deals with, its members and
- * what they do together, what it runs for them, and the work and money behind
- * it. A new module joins one of them, in its file under `nav-items/`. Row keys
- * predate the regrouping and stay, because starred rows store them.
+ * The four sections (#3112), each one question: outward to the public and
+ * outside parties, members and what they post, what CMC offers, and how CMC
+ * runs itself. A new module joins one of them, in its file under `nav-items/`.
+ * Row keys predate the regrouping and stay, because starred rows store them.
  */
-export const staffNavSections: StaffNavSection[] = [relationships, community, programs, operations];
+export const staffNavSections: StaffNavSection[] = [outreach, community, programs, governance];
 
 /** Whether a path is in the System panel, which has its own sidebar. */
 export function inSystemPanel(pathname: string): boolean {
@@ -94,9 +94,9 @@ function mainNav(): StaffNavItem[] {
  * The nav the viewer can actually use.
  *
  * A row survives when the viewer holds its `capability`, or when it names none.
- * A parent whose own capability passes keeps only the children that also pass —
- * and a parent with no surviving children is dropped, because a Collapsible
- * that opens onto nothing reads as a broken row rather than an empty one.
+ * A parent whose own capability passes keeps only the children that also pass.
+ * With none left it renders as a plain row: a Collapsible that opens onto
+ * nothing reads as broken, and the parent's own page is still theirs.
  *
  * Sections empty themselves out the same way and disappear with their last row.
  *
@@ -111,7 +111,10 @@ export function filterNavItems(items: StaffNavItem[], held: readonly string[]): 
 		if (allowed.length > 0 && !allowed.some((c) => hasCapability(held, c))) return [];
 		if (!item.children) return [item];
 		const children = filterNavItems(item.children, held);
-		return children.length > 0 ? [{ ...item, children }] : [];
+		if (children.length > 0) return [{ ...item, children }];
+		const flat = { ...item };
+		delete flat.children;
+		return [flat];
 	});
 }
 

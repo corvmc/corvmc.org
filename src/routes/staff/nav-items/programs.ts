@@ -1,21 +1,13 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type ProgramsNavKey = 'calendar' | 'reservations' | 'clubs' | 'music';
+export type ProgramsNavKey = 'reservations' | 'gear' | 'clubs' | 'music';
 
+/** What CMC offers (#3112). */
 export const programs: StaffNavSection = {
 	key: 'programs',
 	title: 'Programs',
 	items: [
-		// Every listing, with Productions, Venues and vendor applications as views
-		// (#2766). A venue's own page stays under `/staff/venues` and lights this row.
-		{
-			key: 'calendar',
-			capability: 'event.read',
-			label: 'Events',
-			href: resolve('staff/events'),
-			also: [resolve('staff/venues')]
-		},
 		{
 			// Reservations (closures a type filter) and Recurring series are its
 			// views (#2766); a series' own page lights it too.
@@ -24,6 +16,14 @@ export const programs: StaffNavSection = {
 			label: 'Practice space',
 			href: resolve('staff/reservations'),
 			also: [resolve('staff/recurring')]
+		},
+		// Items, Supplies, loans, problems, orders and acquisitions are its lists
+		// (#2573, #2767, #3112). The key stays `gear`, which starred rows store.
+		{
+			key: 'gear',
+			capability: 'inventory.read',
+			label: 'Equipment',
+			href: resolve('staff/inventory')
 		},
 		// A club is a program staff run with its chairs (#3027).
 		{

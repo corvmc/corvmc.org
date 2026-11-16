@@ -1019,7 +1019,7 @@ ending leaves its reports open, and the task waits on the Schedule's ended-shift
 Each kind of app-opened task waits on a committee position set on its module's settings page
 (#2940): repair, restock, late order and Form 8282 on `/staff/inventory/settings`
 (`inventory.*PositionId`), lapsing insurance on `/staff/contacts/settings`
-(`contractor.insurancePositionId`), unmatched door payments on `/staff/money/settings`
+(`contractor.insurancePositionId`), unmatched door payments on `/staff/system/transactions/settings`
 (`finance.doorPaymentPositionId`). The task takes the position and its committee
 (`work_order.position_id`, `group_id`), so its holders see it under "Your tasks" and hear about it.
 A position on a deleted committee, or none, leaves the task unassigned on the Tasks page.
@@ -2710,8 +2710,8 @@ Accepted vendors are listed on the event page.
 ### The story
 
 Whoever ran the night tells staff something went wrong — a neighbour called, a drummer fell on
-the stairs, the lobby window was found cracked. A staffer records it from the Incidents view of
-Moderation, `/staff/moderation/incidents` (`/staff/incidents` redirects there; a record stays at
+the stairs, the lobby window was found cracked. A staffer records it from Governance → Incidents,
+`/staff/incidents` (`/staff/moderation/incidents` redirects there; a record is at
 `/staff/incidents/[id]`): when, where, what kind, a one-line summary and the account, optionally
 linking a member who was involved. Follow-ups are notes under it. Staff resolve it with a
 resolution, and reopen it if it comes back. Reading back is the list's status, kind and text

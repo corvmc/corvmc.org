@@ -7,8 +7,6 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Select from '#lib/components/ui/Form/Select.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import StaffViews from '../../StaffViews.svelte';
-	import { outreachViews } from '../views';
 
 	// Last month through six ahead, as `YYYY-MM` in club time.
 	const [year, monthNow] = clubToday().split('-').map(Number);
@@ -39,13 +37,7 @@
 	const size = $derived(formats.find((f) => f.value === poster.format) ?? formats[0]);
 </script>
 
-<PageHeader
-	title={m.staff_outreach_title()}
-	documentTitle={m.staff_calendar_poster_title()}
-	width="2xl"
->
-	<StaffViews views={outreachViews} active="posters" />
-</PageHeader>
+<PageHeader title={m.staff_calendar_poster_title()} width="2xl" />
 <PageContent width="2xl">
 	<div class="flex flex-wrap items-end justify-between gap-3">
 		<div class="flex flex-wrap items-end gap-3">

@@ -500,6 +500,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/events/poster",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/flags/[id]",
 		"panel": "staff"
 	},
@@ -537,6 +541,10 @@
 	},
 	{
 		"route": "/staff/inbox/daily",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/incidents",
 		"panel": "staff"
 	},
 	{
@@ -644,10 +652,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/marketing/posters",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/members",
 		"panel": "staff"
 	},
@@ -661,22 +665,6 @@
 	},
 	{
 		"route": "/staff/moderation/flags",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/moderation/incidents",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/money/credits",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/money/payments",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/money/settings",
 		"panel": "staff"
 	},
 	{
@@ -745,6 +733,18 @@
 	},
 	{
 		"route": "/staff/system/organization",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/transactions/credits",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/transactions/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/system/transactions/settings",
 		"panel": "staff"
 	},
 	{

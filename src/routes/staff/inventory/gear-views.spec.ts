@@ -6,14 +6,14 @@ import { gearViews } from './views';
 // Gear's lists (#2573, #2767), each behind its remotes' gate.
 describe('Gear tabs', () => {
 	it.each([
-		[['inventory.read'], ['items', 'orders']],
+		[['inventory.read'], ['items', 'supplies', 'orders']],
 		[
 			['inventory.read', 'inventory.manageLoans'],
-			['items', 'loans', 'orders']
+			['items', 'supplies', 'loans', 'orders']
 		],
 		[
 			['inventory.read', 'inventory.manageAssets', 'inventory.manageAcquisitions'],
-			['items', 'problems', 'orders', 'acquisitions']
+			['items', 'supplies', 'problems', 'orders', 'acquisitions']
 		]
 	])('holding %j shows %j', (held, keys) => {
 		expect(visibleViews(gearViews, held).map((v) => v.key)).toEqual(keys);

@@ -10,7 +10,7 @@ sortOrder: 12
 
 ## Campaigns
 
-**Staff → Outreach → Campaigns** lists your email campaigns with their subject,
+**Staff → Marketing → Campaigns** lists your email campaigns with their subject,
 status (Draft, Scheduled, Sent), recipient count, and date.
 
 ## Creating a campaign

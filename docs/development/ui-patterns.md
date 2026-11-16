@@ -128,13 +128,14 @@ the queue of work, and each item on it links to the page where the work is done.
 - **One list per type.** A view that narrows a type (status, role, kind) is a filter on its list,
   kept in the URL. A second page listing the same type folds in, and its URL redirects.
 - **One detail page per record**, whatever roles the record plays.
-- **Rows sit in four systems:** Relationships, Community, Programs and Operations, with Dashboard
-  and Inbox above and Reports and System below. Rows and sections are data, one
-  file per section in `src/routes/staff/nav-items/`; a new module joins one of the four by adding
-  its row and key to that section's file.
+- **Rows sit in four sections, each one question** (decision 0088): Outreach (outward, to the
+  public and outside parties), Community (members and what they post), Programs (what CMC
+  offers) and Governance (how CMC runs itself), with Dashboard above and Reports and System
+  below. Rows and sections are data, one file per section in `src/routes/staff/nav-items/`; a new
+  module joins the section whose question it answers by adding its row and key to that file.
 - **A module's settings live on its row**, behind a Settings button in its header, or a view such
   as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
-  spans modules: organization, features, access and the audit log.
+  spans modules: organization, features, access, transactions and the audit log.
 - **A moved page keeps its old URL as a redirect**, with a spec that names it.
 
 ### Consoles
@@ -1395,7 +1396,7 @@ Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge
 `menuCount`; reach for it when a page's filters would fill more than a couple of rows
 on a phone, not to hide the primary ones.
 `actions` sits at the row's end, for what belongs to the current view rather than
-the page — a tabbed page's per-tab create button (`/staff/moderation/incidents`).
+the page — a tabbed page's per-tab create button (`/staff/inventory/loans`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

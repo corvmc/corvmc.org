@@ -46,34 +46,35 @@ needs a written reply or more than two choices.
 
 ## What's in the sidebar
 
-Two rows sit on their own at the top:
+**Dashboard** sits on its own at the top. It is the view described above, and its badge counts
+everything waiting for your review.
 
-- **Dashboard** — The view described above. The badge counts everything waiting for your review.
-- **Inbox** — Contact-form and channel messages. The badge counts unresolved threads.
+Everything else is in four groups, each answering one question:
 
-Everything else is grouped by what it's for:
-
-- **Relationships** — **Contacts** (outside organizations, with funders, sponsors and
-  contractors among them), **Outreach** (**Campaigns**, **Audiences** and **Posters**) and
-  **Funding** (grant applications and sponsorships).
-- **Community** — **Members** (member accounts, roles, and credits; volunteers and teachers are
-  role filters), **Bands**, **Suggestions**, **Ballots**, **Moderation** (**Content flags**,
-  **Incidents** and **Blocklist**), **Classifieds** and **Content** (**Help articles** and
-  **Local resources**).
-- **Programs** — **Events** (creating and running events, ticketing and check-in, with
-  productions, venues and vendor applications as views), **Practice space** (**Reservations** and
-  **Recurring series**, with **Building access** in its settings), **Clubs** and **Music**.
-- **Operations** — **Tasks**, **Committees**, **Volunteering**, **Equipment**, **Supplies** and
-  **Money** (**Payments** and **Credit transactions**). Every task, in a project or not, is on
-  **Tasks**, with **Projects** beside it and **Recurring work** and **Templates** in its header.
-  A task can wait on others: set it on the task's page under **Waits on**. It shows as
-  **Blocked** on the table until they are done, and the project's **Task graph** draws the
-  order. Volunteer shifts are **Volunteering**, whose badge counts understaffed shifts in the
-  next seven days and tasks with ended shifts.
+- **Outreach**, outward to the public and outside parties — **Inbox** (contact-form and channel
+  messages; the badge counts unresolved threads), **Contacts** (outside organizations, with
+  funders, sponsors and contractors among them), **Funding** (grant applications and
+  sponsorships), **Marketing** (**Campaigns** and **Audiences**) and **Content** (**Help
+  articles**, with **Local resources** beneath it).
+- **Community**, members and what they post — **Members** (member accounts, roles, and credits;
+  volunteers and teachers are role filters), **Bands**, **Events** (creating and running events,
+  ticketing and check-in, with productions, venues and vendor applications as views, and
+  **Print poster** in its header), **Moderation** (**Content flags** and **Blocklist**) and
+  **Classifieds**.
+- **Programs**, what CMC offers — **Practice space** (**Reservations** and **Recurring series**,
+  with **Building access** in its settings), **Equipment** (with **Supplies** as one of its
+  tabs), **Clubs** and **Music**.
+- **Governance**, how CMC runs itself — **Tasks**, **Shifts**, **Committees**, **Incidents**,
+  **Suggestions** and **Ballots**. Every task, in a project or not, is on **Tasks**, with
+  **Projects** beside it and **Recurring work** and **Templates** in its header. A task can wait
+  on others: set it on the task's page under **Waits on**. It shows as **Blocked** on the table
+  until they are done, and the project's **Task graph** draws the order. Volunteer shifts are
+  **Shifts**, whose badge counts understaffed shifts in the next seven days and tasks with ended
+  shifts.
 
 Below the groups, **Reports** holds the annual, volunteering, inventory spend and music
 reports, and **System** opens the site-wide settings: **Organization**, **Features**,
-**Access** and **Audit log**.
+**Access**, **Transactions** (**Payments** and **Credit transactions**) and **Audit log**.
 
 Click a group's heading to collapse it, and the sidebar remembers your choice next time. Opening a
 page inside a group you collapsed re-opens that group, so you can always see where you are.

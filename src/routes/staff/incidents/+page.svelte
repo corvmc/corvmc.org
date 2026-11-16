@@ -19,8 +19,6 @@
 	} from '#lib/config.js';
 	import { getIncidentLog } from '#lib/remote/incidents.remote.js';
 	import RecordIncidentAction from './RecordIncidentAction.svelte';
-	import StaffViews from '../../StaffViews.svelte';
-	import { moderationViews } from '../views';
 
 	let searchText = $state('');
 	let searchDebounced = $state('');
@@ -52,9 +50,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_moderation_title()} documentTitle={m.staff_incidents_title()}>
-	<StaffViews views={moderationViews} active="incidents" />
-</PageHeader>
+<PageHeader title={m.staff_incidents_title()} />
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}

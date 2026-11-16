@@ -10,7 +10,7 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import { getMoneySettings, updateMoneyTaskPositions } from '#lib/remote/settings.remote.js';
 
-	// Money's own settings (#2940): the position on unmatched door payment tasks.
+	// Transactions' own settings (#2940): the position on unmatched door payment tasks.
 	const settings = $derived(await getMoneySettings());
 	const options = $derived([
 		{ value: '', label: m.staff_settings_none_label() },
@@ -18,7 +18,7 @@
 	]);
 </script>
 
-<PageHeader width="2xl" title={m.staff_money_settings_title()} />
+<PageHeader width="2xl" title={m.staff_transactions_settings_title()} />
 
 <PageContent width="2xl">
 	<Form remote={updateMoneyTaskPositions} successToast={m.staff_task_positions_saved_toast()}>

@@ -59,7 +59,7 @@ Reservations header and opens it.
 
 **Settings** in the header opens the space's own settings: **Pricing**, **Booking rules**,
 **Operating hours**, **The room** and **Outstanding fees**. New-member orientation is on
-**Settings** in the **Staff → Volunteering** header.
+**Settings** in the **Staff → Shifts** header.
 
 ## Closures
 

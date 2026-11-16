@@ -80,7 +80,7 @@ supplying, and — the number that actually matters during the advance — how m
 
 ## Staffing it
 
-Roles first: **Roles** on **Staff → Volunteering**. A role is a job description, not a permission.
+Roles first: **Roles** on **Staff → Shifts**. A role is a job description, not a permission.
 Two fields on a role's page are worth getting right before a festival, because they are what let
 the weekend be reported afterwards as contributed services rather than just hours: mark a role as
 a **Specialized skill** where it is one, and give it a **Market rate ($/hr)**.
@@ -115,7 +115,7 @@ checklists are ticked off.
 
 ### The fortnight before
 
-**Staff → Volunteering** is the whole job: confirm the claims under **Pending assignments**, and
+**Staff → Shifts** is the whole job: confirm the claims under **Pending assignments**, and
 fill the shifts under **Understaffed shifts** with **Find volunteers**, which lists who to ask.
 Under-18 sign-ups wait on the dashboard's **Waiting for review**. A count only appears when
 something is waiting on you, so no counts means an empty queue.
@@ -134,7 +134,7 @@ legitimately hold somebody 10–1 and somebody else 1–4.
 
 ## Afterwards
 
-Hours members log count on entry; the few that need a look wait on **Volunteering → Hour logs**.
+Hours members log count on entry; the few that need a look wait on **Shifts → Hour logs**.
 You can log hours on somebody's behalf with
 no 90-day limit — those land approved and stamped with your name — which is what makes "ask staff
 to add anything older" a real instruction rather than a dead end.
