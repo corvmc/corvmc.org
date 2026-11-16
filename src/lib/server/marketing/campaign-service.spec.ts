@@ -679,7 +679,8 @@ describe('executeSend', () => {
 		await deliverOutbox();
 		expect(sentTo()).toHaveLength(600);
 		expect(pending()).toHaveLength(0);
-	});
+		// ~0.5s alone; 1,200 rows written and claimed. The bound is for a loaded machine.
+	}, 30_000);
 
 	// #2777: a sent campaign showed only a count.
 	it('records each recipient with its audience and what Postmark answered', async () => {
