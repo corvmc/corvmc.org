@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { frequencyOptions } from '#lib/frequency-options.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -49,11 +50,7 @@
 				type="select"
 				label={m.events_repeat_event_frequency_label()}
 				bind:value={frequency}
-				options={[
-					{ value: 'weekly', label: m.events_repeat_event_weekly_label() },
-					{ value: 'biweekly', label: m.events_repeat_event_every_2_weeks_label() },
-					{ value: 'monthly', label: m.events_repeat_event_monthly_label() }
-				]}
+				options={frequencyOptions()}
 			/>
 			{#if isMonthly}
 				<FormField

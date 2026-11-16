@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	export interface EditableSeries {
 		id: string;
-		/** `describeFrequency`'s key: "Weekly", "Every 2 weeks" or "Monthly". */
+		/** `describeFrequency`'s key: "Weekly", "Every other week" or "Monthly". */
 		frequencyLabel: string;
 		monthlyMode: 'weekday' | 'monthday' | null;
 		/** A session of the current schedule; its weekday and times seed the form. */
@@ -13,6 +13,7 @@
 </script>
 
 <script lang="ts">
+	import { frequencyOptions } from '#lib/frequency-options.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import Badge from '../ui/Badge.svelte';
@@ -87,7 +88,7 @@
 		endTime: venueTimeInput(series.endsAt),
 		frequency: (series.frequencyLabel === 'Monthly'
 			? 'monthly'
-			: series.frequencyLabel === 'Every 2 weeks'
+			: series.frequencyLabel === 'Every other week'
 				? 'biweekly'
 				: 'weekly') as 'weekly' | 'biweekly' | 'monthly',
 		monthlyMode: series.monthlyMode ?? 'weekday',
@@ -101,11 +102,6 @@
 	let monthlyMode = $state<'weekday' | 'monthday'>(initial.monthlyMode);
 	let until = $state(initial.until);
 
-	const frequencyOptions = [
-		{ value: 'weekly', label: m.actions_edit_schedule_weekly_label() },
-		{ value: 'biweekly', label: m.actions_edit_schedule_biweekly_label() },
-		{ value: 'monthly', label: m.actions_edit_schedule_monthly_label() }
-	];
 	const monthlyModeOptions = [
 		{ value: 'weekday', label: m.actions_edit_schedule_same_weekday_label() },
 		{ value: 'monthday', label: m.actions_edit_schedule_same_date_label() }
@@ -171,7 +167,7 @@
 				field={fields.frequency}
 				type="select"
 				label={m.actions_edit_schedule_frequency_label()}
-				options={frequencyOptions}
+				options={frequencyOptions()}
 				bind:value={frequency}
 				required
 			/>

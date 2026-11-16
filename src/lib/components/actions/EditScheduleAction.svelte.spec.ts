@@ -53,7 +53,7 @@ const EditScheduleAction = (await import('./EditScheduleAction.svelte')).default
 // A Tuesday, 19:00–21:00 club time.
 const series = {
 	id: 'ser-1',
-	frequencyLabel: 'Every 2 weeks',
+	frequencyLabel: 'Every other week',
 	monthlyMode: null,
 	startsAt: clubInstant('2026-06-16', '19:00'),
 	endsAt: clubInstant('2026-06-16', '21:00'),

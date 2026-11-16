@@ -17,7 +17,7 @@ booking each one by hand.
 When booking, choose a **Frequency**:
 
 - **Weekly** — Same day and time every week.
-- **Biweekly** — Every other week.
+- **Every other week** — Same day and time every two weeks.
 - **Monthly** — Either by weekday (e.g. "the second Tuesday") or by calendar day
   (e.g. "the 15th").
 

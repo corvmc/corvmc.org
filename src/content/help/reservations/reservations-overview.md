@@ -20,7 +20,7 @@ sidebar to see your bookings and make new ones with **Reserve space**.
 - **My reservations** — **Upcoming** and **All** tabs switch between your upcoming
   reservations and your full history. Each card shows the date, time, duration,
   and status.
-- **My recurring reservations** — Your standing weekly, biweekly or monthly
+- **My recurring reservations** — Your standing weekly, every-other-week or monthly
   bookings. Without a sustaining membership this is **Recurring reservations**,
   with a link to learn more.
 

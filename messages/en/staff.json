@@ -1388,7 +1388,7 @@
 	"staff_inventory_loans_id_loan_id_label": "Loan ID",
 	"staff_inventory_loans_id_loan_no_actions_available_text": "This loan is {#strong}{status}{/strong}. No actions available.",
 	"staff_inventory_loans_id_mark_as_checked_out_title": "Mark checked out",
-	"staff_inventory_loans_id_mark_as_returned_title": "Mark as returned",
+	"staff_inventory_loans_id_mark_as_returned_title": "Mark returned",
 	"staff_inventory_loans_id_member_notes_title": "Member notes",
 	"staff_inventory_loans_id_modal_title": "Check out without scheduling?",
 	"staff_inventory_loans_id_no_unit_item_service_so_text": "No unit of this item is in service, so there is nothing to hand over.",

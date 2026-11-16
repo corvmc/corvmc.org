@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { frequencyOptions } from '#lib/frequency-options.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -22,12 +23,6 @@
 	// value is the checkbox's own; this is not a second source of truth for it.
 	let recurring = $state(false);
 	let frequency = $state('');
-
-	const frequencyOptions = [
-		{ value: 'weekly', label: m.groups_every_week_label() },
-		{ value: 'biweekly', label: m.groups_every_other_week_label() },
-		{ value: 'monthly', label: m.groups_every_month_label() }
-	];
 
 	// "Third Thursday" versus "the 17th". Only a monthly series has the choice.
 	const monthlyModeOptions = [
@@ -94,7 +89,7 @@
 						field={fields.recurringFrequency}
 						type="select"
 						label={m.groups_how_often_label()}
-						options={frequencyOptions}
+						options={frequencyOptions()}
 						bind:value={frequency}
 						required
 					/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { frequencyOptions } from '#lib/frequency-options.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { BookerType } from '#lib/config.js';
 	import { untrack } from 'svelte';
@@ -304,7 +305,7 @@
 					>{m.reservations_booking_date_time_step_frequency_title()}</legend
 				>
 				<div class="flex gap-1">
-					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly_label() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly_label() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly_label() }] as opt (opt.value)}
+					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, ...frequencyOptions()] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
 							<!-- One-time posts nothing: kit refuses a radio with an empty value. -->
 							<input

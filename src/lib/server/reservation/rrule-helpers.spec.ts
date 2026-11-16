@@ -311,11 +311,11 @@ describe('describeFrequency', () => {
 		expect(describeFrequency(rruleString)).toBe('Weekly');
 	});
 
-	it('returns "Every 2 weeks" for a biweekly rule', () => {
+	it('returns "Every other week" for a biweekly rule', () => {
 		const start = new Date('2026-05-12T17:00:00.000Z');
 		const rruleString = buildRRule(start, 'biweekly');
 
-		expect(describeFrequency(rruleString)).toBe('Every 2 weeks');
+		expect(describeFrequency(rruleString)).toBe('Every other week');
 	});
 
 	it('returns "Monthly" for a monthly rule', () => {

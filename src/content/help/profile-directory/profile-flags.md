@@ -31,7 +31,7 @@ Then tick the ones that apply:
 ## How they're used
 
 These flags appear on your directory card and help others quickly see how to work
-with you. They are also the directory's filters — **Looking for band**,
+with you. They are also the directory's filters — **Looking for a band**,
 **Available for hire**, **Teaches privately** and **Open to collaboration** — so
 members looking specifically for, say, a teacher or a hired player can find you.
 

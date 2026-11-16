@@ -179,7 +179,7 @@ export function describeFrequency(rruleString: string): string {
 	const rule = parseRRule(rruleString);
 
 	if (rule.freq === 'monthly') return 'Monthly';
-	if (rule.freq === 'weekly' && rule.interval === 2) return 'Every 2 weeks';
+	if (rule.freq === 'weekly' && rule.interval === 2) return 'Every other week';
 	if (rule.freq === 'weekly') return 'Weekly';
 
 	return `Every ${rule.interval} weeks`;
