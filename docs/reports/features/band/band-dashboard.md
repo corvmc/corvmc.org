@@ -2,4 +2,4 @@
 
 Status: ✅ +page.svelte
 
-Stat cards, upcoming reservations list
+Next steps (invite a member, reserve practice space) while the band has one member, stat cards, upcoming reservations list

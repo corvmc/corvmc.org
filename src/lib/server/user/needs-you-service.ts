@@ -12,6 +12,8 @@ import { listShowsLedBy } from '#lib/server/production/show-lead-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 import { shiftNeedsYouItems } from './shift-needs-you';
 import { bandInviteNeedsYouItems, type InviteNeedingYou } from './band-invite-needs-you';
+import { bandSetupNeedsYouItems } from './band-setup-needs-you';
+import { listForUser as listBandsForUser } from '#lib/server/band/band-service.js';
 
 /**
  * What the member has to do something about, and when it stops being possible.
@@ -39,13 +41,14 @@ export interface NeedsYouInput {
 export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]> {
 	const now = input.now ?? new Date();
 
-	const [unlogged, signups, loans, messageRequests, subscription, led] = await Promise.all([
+	const [unlogged, signups, loans, messageRequests, subscription, led, bands] = await Promise.all([
 		listUnloggedCompletions(input.userId).catch(() => []),
 		listSignupsForUser(input.userId, { limit: 20 }).catch(() => []),
 		listUserLoans(input.userId, ['checked_out']).catch(() => ({ rows: [] })),
 		countPendingRequests(input.userId).catch(() => 0),
 		getMemberSubscription(input.userId).catch(() => null),
-		listShowsLedBy(input.userId, now).catch(() => [])
+		listShowsLedBy(input.userId, now).catch(() => []),
+		listBandsForUser(input.userId, ['band']).catch(() => [])
 	]);
 
 	const items: NeedsYouItem[] = [];
@@ -140,6 +143,8 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			rank: 12
 		});
 	}
+
+	items.push(...bandSetupNeedsYouItems(bands));
 
 	return sortNeedsYou(items);
 }

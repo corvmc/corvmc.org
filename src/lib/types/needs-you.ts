@@ -17,7 +17,8 @@ export type NeedsYouKind =
 	| 'membership-ending'
 	| 'band-invitation'
 	| 'message-request'
-	| 'profile-incomplete';
+	| 'profile-incomplete'
+	| 'band-no-members';
 
 export interface NeedsYouItem {
 	/**
