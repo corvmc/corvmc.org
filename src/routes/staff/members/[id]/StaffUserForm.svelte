@@ -43,7 +43,7 @@
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
-				<SubmitButton shortcut="mod+s" variant="primary" size="sm">
+				<SubmitButton label={m.staff_save_label()} shortcut="mod+s" variant="primary" size="sm">
 					{#snippet icon()}
 						<IconDeviceFloppy size={16} />
 					{/snippet}

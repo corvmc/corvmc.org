@@ -285,7 +285,7 @@
 				</FormField>
 
 				<div class="mt-2 flex justify-end">
-					<SubmitButton shortcut="mod+s">
+					<SubmitButton label={m.staff_save_label()} shortcut="mod+s">
 						{#snippet icon()}
 							<IconDeviceFloppy size={20} />
 						{/snippet}

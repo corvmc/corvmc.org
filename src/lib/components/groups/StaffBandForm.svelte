@@ -68,7 +68,7 @@
 			{#if isDeactivated}
 				<Badge variant="error" size="md">{m.staff_deactivated_label()}</Badge>
 			{/if}
-			<SubmitButton shortcut="mod+s" size="sm">
+			<SubmitButton label={m.staff_save_label()} shortcut="mod+s" size="sm">
 				{#snippet icon()}
 					<IconDeviceFloppy size={20} />
 				{/snippet}
