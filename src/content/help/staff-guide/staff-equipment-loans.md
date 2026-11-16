@@ -16,13 +16,15 @@ and page through results. Each shows the member, item, dates, status, and any fe
 ## Approving and checking out
 
 1. Open a pending request.
-2. Review the dates and assign the specific item.
-3. Approve it and record the **check-out**.
+2. Under **Schedule pickup**, choose the item in **Assign equipment**, set the **Pickup date**
+   and choose **Schedule**. **Check out without scheduling** skips this, with a reason.
+3. When the member collects it, under **Mark checked out**, set the **Due date**, scan or
+   select the unit, and choose **Check out**.
 
 ## Recording returns
 
-When gear comes back, open the loan and record the **check-in**. The page tracks
-the duration, replacement cost, and any fee to collect.
+When gear comes back, open the loan and choose **Mark returned**, noting the unit's
+**Condition**. The page tracks the dates, the daily rate, and any charge to collect.
 
 ## Related
 

@@ -2,7 +2,7 @@
 title: Members overview
 slug: staff-users-overview
 category: staff-guide
-summary: Find members, read the tier badges, and open a user's details.
+summary: Find members, filter the list, and open a user's details.
 minRole: staff
 capabilities: user.list
 sortOrder: 1
@@ -11,22 +11,22 @@ sortOrder: 1
 ## The Members page
 
 **Staff → Members** lists every account. Search by name or email and page through
-results.
+results. Filter by **Role** (Volunteer or Teacher) and by status (**Active**,
+**Deactivated** or **All statuses**). The filter menu also narrows by **Sustaining member**,
+**In a band**, **Staff position** and **Teacher**.
 
 ## Reading the list
 
-Tier badges flag who's who:
-
-- **Admin** — Full administrative access.
-- **Staff** — Operational access to the staff panel.
-- **Sustaining Member** — Active paying member.
+The **Membership** column shows **Sustaining** for an active paying member, and Free for
+everyone else.
 
 ## Quick actions
 
-Each row has a menu to:
-
-- **View details** — Open the [user detail page](/member/help/staff-edit-user).
-- **Copy email** — Grab the address.
+- Open a row to see the member beside the list. **Open record** there goes to the
+  [user detail page](/member/help/staff-edit-user).
+- **Copy emails** copies the addresses of everyone the filters show; **Export** downloads
+  them.
+- **Invite member** emails an invitation to someone without an account.
 
 ## Related
 

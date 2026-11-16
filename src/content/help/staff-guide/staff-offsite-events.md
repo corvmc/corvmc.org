@@ -17,12 +17,12 @@ coordinator**, who owns the staffing.
 
 ## First: one project for the whole thing
 
-**Staff → Tasks → New project.** A project is the container — one budget, one owner, one place the burn
+**New project** on **Staff → Tasks → Projects**. A project is the container — one budget, one owner, one place the burn
 adds up across every night. A festival is one project and several events; a produced show is one
 project and one event; a facility improvement is one project and none.
 
-Attaching things to it is done from the project's own page: pick the kind and paste the row's id,
-copied from that row's page. There is no "add to project" button on the event side yet.
+Attaching things to it is done from the project's **Budget** page: under **Attach to project**,
+pick the kind and paste the row's id, copied from that row's page. There is no "add to project" button on the event side yet.
 
 ## Two days means two events
 
@@ -36,15 +36,14 @@ Make them from **Staff → Events → Create event**:
   room hold is what keeps members from booking the practice space, and a show in a park has no
   reason to take it. Picking an off-site venue hides the toggle.
 - **Set the venue afterwards.** The create form has no location field. Open the event at
-  **Staff → Events → _the event_** and put the venue in **Location** on the inline edit form.
-  Until you do, the event page's Space Reservation card will keep asking you to hold a room you
-  do not want.
+  **Staff → Events → _the event_** and put the venue in **Venue** on the edit form. Until you
+  do, the event page's **Room hold** card will keep asking you to hold a room you do not want.
 - **Ticketing off**, unless CMC is genuinely selling something. A free stage needs none of it, and
   leaving it off means no check-in tool and no ticket ledger to reconcile afterwards.
 
 ## The bill
 
-The lineup editor is on the **event** page, not the production console. Up to **12 acts per
+The lineup editor is the **Bill** card on the **event** page, not the production console. Up to **12 acts per
 event** — a long day across two events gives you twenty-four, which is usually enough.
 
 - The **order** is the bill: the top of the list is the headliner.
@@ -54,8 +53,8 @@ event** — a long day across two events gives you twenty-four, which is usually
   act** is just a name; it needs no account and never has to make one.
 
 **Set times live in the run of show**, on the production console's **Run of show** tab
-(**Staff → Events → _the event_ → Production**). It needs a production for the event, opened from
-the **Overview** tab, which is also where the **first set** time and the curfew go.
+(**Manage production** on the event's page). It needs a production for the event, opened with
+**Open a production**; the **Overview** tab is where the **First set** time and the **Curfew** go.
 
 - **Build from the bill** copies the lineup into the running order. Each set has a length and a
   changeover after it, and the start times are worked out from the first set, so moving a set up or
@@ -71,7 +70,7 @@ the **Overview** tab, which is also where the **first set** time and the curfew 
 The slot note on the bill stays free text. Use it for how an act is billed ("Direct support"), not
 for its time. The run of show holds the times.
 
-**Riders** are on the production console (**Staff → Events → _the event_ → Production**), as a
+**Riders** are on the production console's **Advance** tab, under **Tech riders**, as a
 read-only summary per act: how many channels, how many need phantom power, how much of it we are
 supplying, and — the number that actually matters during the advance — how many acts have sent
 **nothing**. Outside acts show "ask them directly", because they have no CMC page to send one from.
@@ -81,17 +80,17 @@ supplying, and — the number that actually matters during the advance — how m
 
 ## Staffing it
 
-Roles first: **Staff → Volunteer → Setup**. A role is a job description, not a permission. Two
-fields there are worth getting right before a festival, because they are what let the weekend be
-reported afterwards as contributed services rather than just hours: mark a role as a
-**specialized skill** where it is one, and give it a **market rate**.
+Roles first: **Roles** on **Staff → Volunteering**. A role is a job description, not a permission.
+Two fields on a role's page are worth getting right before a festival, because they are what let
+the weekend be reported afterwards as contributed services rather than just hours: mark a role as
+a **Specialized skill** where it is one, and give it a **Market rate ($/hr)**.
 
-Clearances live on the same screen, and they are checked **as of the shift's own date** — so a
+Clearances live on the same **Roles** page, and they are checked **as of the shift's own date** — so a
 card that expires between Saturday and Sunday blocks Sunday and not Saturday.
 
 ### Build a project template
 
-**Staff → Planning → Project Templates.** A template is a reusable set of tasks, stamped
+**Staff → Tasks → Templates.** A template is a reusable set of tasks, stamped
 into a project and timed from it, so the same template serves every show.
 
 - **Anchor it to the event start** for a festival stage. The anchor reads the project's earliest
@@ -107,18 +106,19 @@ into a project and timed from it, so the same template serves every show.
 
 ### Apply it once per day
 
-From each event's **Production** page: **Apply template**. It lands in the show's project.
+From each event's production console (**Manage production**): **Apply template**. It lands in the show's project.
 Applying the same template to the same project again asks for a reason, which is recorded.
 
 The advance tasks land with no window. They show up on **Staff → Tasks** under
-the **No set time** chip, and on the event's production page under **Advance** — that is where their
+the **No set time** chip, and on the production console's **Advance** tab — that is where their
 checklists are ticked off.
 
 ### The fortnight before
 
-**Staff → Volunteer** is the whole job: confirm the claims, fill the short shifts from the
-shortlist beside each one, clear any under-18 sign-ups. A card only appears when something is
-waiting on you, so an empty page means an empty queue.
+**Staff → Volunteering** is the whole job: confirm the claims under **Pending assignments**, and
+fill the shifts under **Understaffed shifts** with **Find volunteers**, which lists who to ask.
+Under-18 sign-ups wait on the dashboard's **Waiting for review**. A count only appears when
+something is waiting on you, so no counts means an empty queue.
 
 **Confirmed is the number that matters, not claimed.** Only a confirmed volunteer gets the
 day-before reminder and completes afterwards. A shift showing three claims and no confirmations is
@@ -134,12 +134,12 @@ legitimately hold somebody 10–1 and somebody else 1–4.
 
 ## Afterwards
 
-Hours members log count on entry; the few that need a look wait on **Members → Volunteers →
-Hours**. You can log hours on somebody's behalf with
+Hours members log count on entry; the few that need a look wait on **Volunteering → Hour logs**.
+You can log hours on somebody's behalf with
 no 90-day limit — those land approved and stamped with your name — which is what makes "ask staff
 to add anything older" a real instruction rather than a dead end.
 
-Then **Staff → Volunteer → Report** for the date range, and its CSV export for anything that has
+Then **Staff → Reports → Volunteering** for the date range, and its **Export CSV** for anything that has
 to leave the app. The report prices the time two ways and they are **not parts of one total**:
 _impact value_ covers every approved hour at the Independent Sector rate, and _contributed
 services_ covers only the specialized roles at their own rates. The specialized hours are counted
@@ -148,5 +148,5 @@ rather than valued.
 
 ## Related
 
-- [Events, ticketing & check-in](/staff/help/staff-events)
-- [Approve loans & record returns](/staff/help/staff-equipment-loans)
+- [Events, ticketing & check-in](/member/help/staff-events)
+- [Approve loans & record returns](/member/help/staff-equipment-loans)

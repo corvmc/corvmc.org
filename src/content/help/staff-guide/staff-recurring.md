@@ -10,19 +10,19 @@ sortOrder: 6
 
 ## Recurring series
 
-**Staff → Recurring** lists members' standing reservation series. Filter by
+**Staff → Practice space → Recurring series** lists standing reservation series. Filter by
 **Active**, **Cancelled**, or **All**, and page through results.
 
 ## What you see
 
-Each row shows the member, the schedule pattern, the start date, when it was
-created, and its status.
+Each row shows its status, the schedule pattern and time, the booker, and the start date.
+Open a row for the series' own page.
 
 ## Actions
 
-- **Cancel a series** — Stop future occurrences from being generated. Individual
-  reservations already booked are handled like normal
-  [reservations](/member/help/staff-managing-reservations).
+- **Cancel series** — the next reservation is cancelled and later ones are removed. Any
+  already paid for are cancelled and refunded instead. Other bookings are handled like
+  normal [reservations](/member/help/staff-managing-reservations).
 
 ## Good to know
 

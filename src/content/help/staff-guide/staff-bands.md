@@ -10,8 +10,8 @@ sortOrder: 9
 
 ## The bands list
 
-**Staff → Bands** lists every band. Search by name and filter by **Active** or
-**Deactivated**. Each row shows the owner, member count, and creation date.
+**Staff → Bands** lists every band. Search by name, filter by **Active** or
+**Deactivated**, and by **Free** or **Premium** tier. Each row shows the owner, member count, and creation date.
 
 ## Band detail
 
@@ -21,8 +21,8 @@ Open a band to:
 - **Deactivate** or **reactivate** it (soft delete — data is preserved).
 - Manage **members**: change roles for non-owners, remove members, revoke invites,
   and transfer ownership.
-- Review **platform invites** awaiting signup and **recent reservations**.
-- Invite members by email or from existing members.
+- Review invites **Awaiting signup** and **Recent reservations**.
+- Invite members with **Invite by email**, or with **Invite member** to search existing members.
 
 ## When to deactivate
 

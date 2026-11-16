@@ -8,8 +8,8 @@ capabilities: project.read
 sortOrder: 21
 ---
 
-Permits, licenses and insurance policies are recurring work. They live on **Staff → Tasks**,
-in the **Recurring** view, beside the deep clean and the PA check.
+Permits, licenses and insurance policies are recurring work. They live under **Recurring work** in the
+**Staff → Tasks** header, beside the deep clean and the PA check.
 
 ## Adding one
 
@@ -21,11 +21,11 @@ Choose **New recurring work** and fill in:
 - **First due date**: about a month before the expiry date on the certificate.
 - **Notes**: who issues it and the permit, license or policy number.
 
-Then open the task and assign the person who renews it.
+Then open the task (**View task** on the recurring work) and assign the person who renews it.
 
 ## Renewing
 
-When the renewal comes through, resolve the task. The next one is written straight away,
+When the renewal comes through, choose **Mark done** on the task. The next one is written straight away,
 due one term after you closed it. Check its due date against the new certificate and move it if
 the expiry date differs.
 

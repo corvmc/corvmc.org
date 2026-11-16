@@ -11,24 +11,26 @@ sortOrder: 5
 ## The reservation detail page
 
 Open a reservation from the list to manage it fully. The page shows the member,
-the slot on a day timeline, the amount and hourly rate, and a payment-status badge
-(Paid, Cash due, Comped, No-show, Refunded, Cancelled).
+the slot on a day timeline, and a status badge (Waitlisted, Booked, Paid, Payment due,
+Covered, No-show, Cancelled or Refunded). The **Payment** card shows the amount and hourly
+rate, with a note when it matters: Cash due, Paid with credits, Comped or Unpaid.
 
 ## Payment actions
 
-Depending on the reservation's state, you can:
+Depending on the reservation's state, the **Payment** card offers:
 
-- **Cash received** — Record an in-person cash payment.
+- **Record cash payment** — Record an in-person cash payment.
 - **Comp** — Waive the charge (e.g. a goodwill or staff booking).
-- **Refund** — Reverse a payment that was made.
+- **Refund** — Reverse a payment that was made. Tick **Also cancel reservation** to cancel
+  the booking with it.
 
-Status actions (**Confirm**, **Complete**, **No-show**, **Cancel** with a reason)
-are here too, alongside the payment controls.
+Status actions (**Complete**, **No-show**, **Cancel reservation** with a reason) are in the
+page header.
 
 ## Tips
 
-- Use the day-timeline navigation to move between adjacent reservations.
-- Copy the reservation ID when you need to reference it elsewhere.
+- Use **Prev** and **Next** beside the date to move between adjacent reservations.
+- Copy the **Stripe record** when you need to find the payment in Stripe.
 
 ## Related
 
