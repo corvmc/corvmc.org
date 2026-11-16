@@ -12,7 +12,7 @@
 	import { resolve } from '$app/paths';
 	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
 	import { oneOf } from '#lib/urlState.svelte.js';
-	import CreateGroupAction from '#lib/components/groups/CreateGroupAction.svelte';
+	import NewClubAction from './NewClubAction.svelte';
 	import { getStaffGroups, getStaffClubTotals } from '#lib/remote/groups.remote.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -90,7 +90,7 @@
 		<option value="">{m.staff_all_statuses_label()}</option>
 	</Select>
 	{#snippet actions()}
-		<CreateGroupAction />
+		<NewClubAction />
 	{/snippet}
 </FilterBar>
 

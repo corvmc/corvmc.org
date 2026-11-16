@@ -175,6 +175,12 @@ const EXPORTS = [
 		svc.createGroup
 	],
 	[
+		'createStaffGroup',
+		{ kind: 'committee', name: 'Booking', ...settings },
+		'committee.manage',
+		svc.createGroup
+	],
+	[
 		'updateStaffGroup',
 		{ groupId: 'group-1', ...settings },
 		'group.manage',
@@ -344,7 +350,8 @@ describe('the committee pages', () => {
 		heldPositions = [...held];
 		expect(await groups.getStaffCommittees(undefined)).toEqual({
 			committees: [{ id: 'group-1', openApplications: 1 }],
-			canManage
+			canManage,
+			canCreate: canManage
 		});
 		expect(svc.listGroups).toHaveBeenCalledWith({ kinds: ['committee'] }, expect.anything());
 	});
@@ -386,6 +393,24 @@ describe('the committee pages', () => {
 				expect(await outcome(remote, input), `${position} on ${remote}`).toBe('allowed');
 			}
 		}
+	});
+
+	// #3045: the button showed on `group.read` while the submit needed another
+	// capability. For every position that opens the page, the two agree.
+	it('offers New committee to exactly the positions whose submit succeeds', async () => {
+		const input = { kind: 'committee', name: 'Booking', ...settings };
+		const offered: string[] = [];
+		for (const position of positionOrder) {
+			heldPositions = [position];
+			if ((await outcome('getStaffCommittees', undefined)) !== 'allowed') continue;
+			const { canCreate } = (await groups.getStaffCommittees(undefined)) as {
+				canCreate: boolean;
+			};
+			expect(await outcome('createStaffGroup', input), position).toBe(canCreate ? 'allowed' : 403);
+			if (canCreate) offered.push(position);
+		}
+		expect(offered).toEqual(expect.arrayContaining(['admin', 'operations_chair']));
+		expect(offered).not.toContain('volunteer_coordinator');
 	});
 
 	it('refuses a treasurer, and 404s a club', async () => {
