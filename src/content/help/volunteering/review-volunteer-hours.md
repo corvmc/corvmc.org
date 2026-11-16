@@ -10,40 +10,43 @@ sortOrder: 2
 
 ## What needs you today
 
-**Planning → Schedule** opens with a row of counts above the table. Each is something
-waiting on a person, and a count you cannot see has nothing in it. Four narrow the table:
+**Operations → Volunteering** opens with a row of counts above the table. Each is something
+waiting on a person, and a count you cannot see has nothing in it. Three narrow the table:
 
 - **Pending assignments** — shifts with claims nobody has confirmed. This is the one to clear
   first: confirming is what turns a claim into a booking, and until you do it they get no
-  reminder. Confirm a whole shift from its row, or one person at a time on the shift page.
-- **Understaffed shifts** — shifts with fewer people confirmed than they need. **Add** on the
-  row opens the shift, which shows who said they would help with that role, when they said
-  they were free, and whether their clearances cover _that shift's date_ — plus a search box
-  for anybody else.
-- **Unscheduled tasks** — work with no time yet. **Schedule** on the row gives it a
-  window; the tick closes it as done.
-- **Unverified Repairs** — finished repairs whose equipment reports are still open.
-  **Verify** closes them and tells each reporter.
+  reminder. **Confirm** on a shift's row confirms everyone on it, or confirm one person at a
+  time on the shift page.
+- **Understaffed shifts** — shifts with fewer people confirmed than they need. **Find
+  volunteers** on the row opens **Who to ask** beneath it: who said they would help with that
+  role, when they said they were free, and whether their clearances cover _that shift's date_
+  — plus a search box for anybody else.
+- **Tasks with ended shifts** — open tasks whose last shift is over. **Mark done** closes the
+  task, resolves its equipment reports and tells each reporter; **Open shift** gives it
+  another one.
 
-Two are about people, and open the page that holds them:
+One is about people, and opens the page that holds them:
 
-- **Unreviewed Hours** — the logs that need a look, in **Members → Volunteers → Hours**.
 - **Expiring clearances** — somebody rostered for a date their clearance does not reach,
-  shown as a filter on **Members → Volunteers**. Not the same list as _Who's cleared_: this
+  shown as a filter on **Members**. Not the same list as **View cleared volunteers**: this
   one has a deadline.
 
-The count beside **Schedule** in the sidebar is claims, unscheduled work, unverified repairs
-and unreviewed hours added up.
+Work with no shift and nobody on it is on **Operations → Tasks**, under the **Unassigned**
+filter; **No set time** narrows that to volunteer work. On each row, **Open shift** gives the
+task a time, **Assign** opens it to put somebody on it, and **Mark done** closes it.
+
+The count beside **Volunteering** in the sidebar is understaffed shifts in the next seven days
+and tasks with ended shifts, added up. Hours waiting for review are on **Hour logs**.
 
 ## The hours queue
 
 Hours members log count straight away. Only three kinds wait on the **Pending** tab of
-**Members → Volunteers → Hours**, each marked with why:
+**Volunteering → Hour logs**:
 
-- **No clearance** — the role needs a clearance the member did not hold on the date worked.
-- **Specialized skill** — the role is valued at a market rate, so approving it records an
-  in-kind contribution in the finances.
-- **Long entry** — a single log of more than 8 hours.
+- the role needs a clearance the member did not hold on the date worked;
+- the role is a **Specialized skill**, valued at a market rate, so approving it records an
+  in-kind contribution in the finances;
+- a single log of more than 8 hours.
 
 For each log you get the member, the role, the date, the hours, and their
 description of what they did. Approve or return from the row.
@@ -65,7 +68,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log hours** on this page, or in the Schedule's header, is how you do that. It is also how
+anything older. **Log hours** on this page, or on **Volunteering**, is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.
@@ -75,33 +78,33 @@ to you. You typing it in is the review.
 
 ## Scheduling shifts
 
-**Planning → Schedule** is the next two weeks, grouped by day — the view for "who is on
-tonight". Its **Everything** window is the whole catalog, past included, for finding one.
+**Volunteering** shows the **Next 14 days**, grouped by day — the view for "who is on
+tonight". Its **Any date** window is the whole catalog, past included, for finding one.
 
 Create a shift from a role (times and headcount prefill from the role's defaults), and
 duplicate it forward to make a standing weekly slot — there is no recurrence to configure.
 
-Every list shows **confirmed of capacity**, with anything merely claimed called out beside
+Every list shows confirmed places out of capacity, with unconfirmed claims called out beside
 it. Those are different things: only confirmed people get the day-before reminder, so a
 shift showing three claims and no confirmations is not staffed.
 
 **Add** in a shift's **Who to ask** column puts a member on it yourself, for the person who
 tells you in person or by text. They go on confirmed. If their role needs a clearance they
-do not hold on that date, the button reads **Blocked** and names what is missing — grant it
-from their member page and try again.
+do not hold on that date, the row names what is missing; adding them anyway is recorded on the
+shift's log.
 
 **Remove** is for somebody who gave you notice; their place reopens straight away. That is
 not the same as **Mark no-show**, which is for somebody who was booked and simply did not
 turn up, and only one of the two is worth remembering next time.
 
 When a shift is called off, its roster stays put — that is who you have to tell. The shift
-page turns into a notify list: **Notify all** emails everybody still on it, and **Mark as
+page turns into a notify list: **Notify all** emails everybody still on it, and **Mark
 notified** is for the ones you already rang.
 
-A role can require clearances (**Roles**, in the Schedule's header) before its
+A role can require clearances (**Roles**, on **Volunteering**) before its
 shifts can be claimed. Requirements are checked against the shift's date, so a
-lapsing card is caught before it matters. **People**'s clearance filter shows
-who holds one today. Grant and revoke from the member's page, which lists what
+lapsing card is caught before it matters. The **Clearance** filter on **Members**
+shows who holds one today. Grant and revoke from the member's page, which lists what
 they hold and when it runs out. Revoking keeps the record of the period it
 covered, which is the point.
 
@@ -118,7 +121,7 @@ are free, and whether they are cleared for that date. Its three filters widen th
 who have worked the role before, and then to everybody; searching it finds anyone at all,
 which is the person who walked up to the desk and is on no list.
 
-**Members → Volunteers** is the full list when you do: everyone who signed up, with their
+**Members**, with **Role** set to **Volunteer**, is the full list when you do: everyone who signed up, with their
 roles and their availability note. Each row carries the one thing outstanding about that
 person — a claim of theirs to confirm, a clearance to chase, a sign-off to approve, or otherwise
 a way to log hours on their behalf. Filter by role to see how deep the bench is, or by
@@ -134,15 +137,15 @@ several people at once.
 
 ## Managing roles
 
-**Roles**, in the Schedule's header, holds both halves of what volunteering is made of: the roles
+**Roles**, on **Volunteering**, holds both halves of what volunteering is made of: the roles
 members pick from on the left, the clearances that gate some of them on the right. A role
 is a name plus a job description in markdown — the description is what members read when
 deciding whether to help, so write what the job actually involves rather than a label.
 Clicking a role opens its own page, which is where you change it, set what it requires,
 schedule shifts against it and read how they went.
 
-**Group** decides which of the three headings a role appears under — at shows,
-away from shows, or committees. It is presentation only; nothing else depends
+**Group** decides which of the two headings a role appears under — **At shows** or
+**Away from shows**. It is presentation only; nothing else depends
 on it.
 
 **Archive** a role you are not using. It disappears from the member's submit
