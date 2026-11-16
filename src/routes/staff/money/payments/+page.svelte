@@ -16,6 +16,9 @@
 	import StaffViews from '../../StaffViews.svelte';
 	import { moneyViews } from '../views';
 	import { formatDateTimeShort, formatCents } from '#lib/utils/format.js';
+	import { resolve } from '$app/paths';
+	import { hasCapability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -55,10 +58,17 @@
 		dateTo = '';
 		page = 1;
 	}
+
+	const caps = $derived((await getStaffLayout()).capabilities);
 </script>
 
 <PageHeader title={m.staff_payments_title()}>
 	<StaffViews views={moneyViews} active="payments" />
+	{#if hasCapability(caps, 'settings.read')}
+		<Button variant="ghost" size="sm" href={resolve('staff/money/settings')}>
+			{m.staff_money_settings_label()}
+		</Button>
+	{/if}
 </PageHeader>
 <PageContent>
 	<p class="mb-4 text-sm text-base-content/60">

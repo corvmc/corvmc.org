@@ -975,12 +975,17 @@ one on the same unit or a new one — and every other untriaged report on that u
 ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
 (#2518). The "close reports on completion" option and its listener are gone.
 
-Repair, restock, late order and Form 8282 tasks take the role set per kind on
-`/staff/inventory/settings` (`inventory.*RoleId`); with none, a task waits unassigned on
-the Tasks page. `work_order.source` and `source_id` record which record opened a task, and
+Each kind of app-opened task waits on a committee position set on its module's settings page
+(#2940): repair, restock, late order and Form 8282 on `/staff/inventory/settings`
+(`inventory.*PositionId`), lapsing insurance on `/staff/contacts/settings`
+(`contractor.insurancePositionId`), unmatched door payments on `/staff/money/settings`
+(`finance.doorPaymentPositionId`). The task takes the position and its committee
+(`work_order.position_id`, `group_id`), so its holders see it under "Your tasks" and hear about it.
+A position on a deleted committee, or none, leaves the task unassigned on the Tasks page.
+`sourcePosition` reads the settings through a full `Record<TaskSource, …>`, so a new kind needs
+one. `work_order.source` and `source_id` record which record opened a task, and
 `uq_work_order_open_source` keeps one open per record. The daily `/api/cron/open-tasks` sweep
 runs the same rules over every record, which also covered records that predate #2756 and #2757.
-Insurance and unmatched door payment tasks have no role setting and wait unassigned.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,

@@ -448,6 +448,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/contacts/settings",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/events",
 		"panel": "staff"
 	},
@@ -657,6 +661,10 @@
 	},
 	{
 		"route": "/staff/money/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/money/settings",
 		"panel": "staff"
 	},
 	{
