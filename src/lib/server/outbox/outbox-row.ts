@@ -10,7 +10,8 @@ export interface OutboxSubject {
 export type OutboxPayload =
 	| { kind: 'email'; payload: TemplatedEmail }
 	| { kind: 'html_email'; payload: HtmlEmail }
-	| { kind: 'inbox_reply'; payload: { messageId: string } };
+	| { kind: 'inbox_reply'; payload: { messageId: string } }
+	| { kind: 'campaign_email'; payload: { campaignSendId: string } };
 
 /** An outbox row's values, id included, for a caller that inserts it inside its own batch. */
 export function outboxRow(message: OutboxPayload, subject?: OutboxSubject) {

@@ -20,23 +20,24 @@ const SEND_FUNCTIONS = [
 ];
 
 /**
- * The client, its barrel, the outbox, and the outbox's transport for
- * `inbox_reply` rows (the channel dispatcher and its one caller): where
- * sending is the job.
+ * The client, its barrel, the outbox, and the outbox's transports for
+ * `inbox_reply` rows (the channel dispatcher and its one caller) and
+ * `campaign_email` rows: where sending is the job.
  */
 const SENDERS = new Set([
 	'src/lib/server/notification/email/postmark-client.ts',
 	'src/lib/server/notification/email/index.ts',
 	'src/lib/server/outbox/outbox-service.ts',
 	'src/lib/server/inbox/channel-dispatcher.ts',
-	'src/lib/server/inbox/reply-delivery.ts'
+	'src/lib/server/inbox/reply-delivery.ts',
+	'src/lib/server/marketing/campaign-delivery.ts'
 ]);
 
 /**
- * Senders not yet moved to the outbox. A path list that only shrinks: moving
- * one deletes its line, and adding one needs a reason in review. #2839 tracks it.
+ * Senders not yet moved to the outbox: none since #2971. Adding one needs a
+ * reason in review.
  */
-const NOT_YET_ON_THE_OUTBOX = new Set(['src/lib/server/marketing/campaign-service.ts']);
+const NOT_YET_ON_THE_OUTBOX = new Set<string>([]);
 
 /** Each value import's specifiers and module, skipping `import type`. */
 function valueImports(source: string): { names: string[]; from: string }[] {

@@ -1205,10 +1205,12 @@ RFC 8058 one-click POST to the same URL only ever leaves the named audience.
   several targeted audiences keeps the lowest-sorted audience id, so the audience their
   unsubscribe token names does not depend on row order.
 - **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`) →
-  `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML into the
-  campaign layout, a hand-maintained TS constant in `marketing/campaign-layout.ts` kept
-  identical to the Postmark-hosted transactional layout, and sends via the Postmark client
-  (`notification/email/postmark-client.ts`, broadcast stream).
+  `processDueCampaigns()` → `executeSend(campaignId)` — claims the campaign and queues one
+  `campaign_send` row and one outbox row per recipient (#2971). The outbox's
+  `campaign-delivery.ts` renders each copy into the campaign layout, a hand-maintained TS
+  constant in `marketing/campaign-layout.ts` kept identical to the Postmark-hosted
+  transactional layout, and sends it on the broadcast stream; see
+  [outbox.md](../architecture/outbox.md).
 - **Unsubscribe:** `/unsubscribe` route under `(public)`, links signed with
   `MARKETING_UNSUBSCRIBE_SECRET` (see `marketing/unsubscribe` service code).
 
@@ -2899,7 +2901,7 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   it on the public event page, in blasts about that event, or both. `creditsForEvent` in
   `credit-service.ts` reads it, and `toCredits` credits only an `active` or `ended` term, naming
   each sponsor once. `getPublicEventDetail` renders the result through `SponsorCredit.svelte`.
-  `executeSend` and the stored preview append `withSponsorCredit` below the body of any
+  `campaign-delivery.ts` and the stored preview append `withSponsorCredit` below the body of any
   campaign with an `eventId`. Both use `SPONSOR_CREDIT_LEAD` from `src/lib/utils/sponsor-credit.ts`.
   The credit is read when the campaign renders, so a placement added after drafting still goes out.
 - A sponsor's logo is a `media_attachment` (`sponsor`, slot `logo`), swept like any other.

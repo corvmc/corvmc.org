@@ -18,13 +18,7 @@ import { renderCampaignPreview, renderCampaignForSend } from './campaign-render'
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { withSponsorCredit } from '#lib/utils/sponsor-credit.js';
-import { signUnsubscribeToken } from './unsubscribe';
-import {
-	sendBroadcastBatch,
-	type BroadcastMessage,
-	type SendResult
-} from '#lib/server/notification/email/index.js';
-import { chunkInsert } from '#lib/server/utils/chunk.js';
+import { chunk, chunkInsert } from '#lib/server/utils/chunk.js';
 import * as env from '$app/env/public';
 import { DomainError } from '#lib/server/domain-error.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
@@ -32,8 +26,8 @@ import { formatDateShortYear } from '#lib/utils/format.js';
 import { audiencesBeyondVisibility } from '#lib/utils/audience-reach.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { outboxMessage } from '#lib/server/db/schema/outbox.js';
-import { htmlEmailRow } from '#lib/server/outbox/outbox-row.js';
-import { deliverNow, type Delivery } from '#lib/server/outbox/outbox-service.js';
+import { htmlEmailRow, outboxRow } from '#lib/server/outbox/outbox-row.js';
+import { deliverDueSoon, deliverNow, type Delivery } from '#lib/server/outbox/outbox-service.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -94,7 +88,7 @@ export function deriveCampaignStatus(
  * The body with a credit for the show's sponsors (#583), read when it renders:
  * a placement added after drafting still reaches the send.
  */
-async function credited(markdown: string, eventId: string | null | undefined) {
+export async function creditedBody(markdown: string, eventId: string | null | undefined) {
 	if (!eventId) return markdown;
 	return withSponsorCredit(markdown, await creditsForEvent(eventId, 'campaign'));
 }
@@ -114,7 +108,7 @@ export async function createCampaign(data: {
 		throw new CampaignValidationError('Too many audiences (max 20)');
 
 	const htmlBody = renderCampaignPreview(
-		await credited(data.markdownBody, data.eventId),
+		await creditedBody(data.markdownBody, data.eventId),
 		await contactEmail()
 	);
 
@@ -171,7 +165,7 @@ export async function updateCampaign(
 	if (data.eventId !== undefined) updates.eventId = data.eventId;
 	if (data.markdownBody !== undefined || data.eventId !== undefined) {
 		updates.htmlBody = renderCampaignPreview(
-			await credited(
+			await creditedBody(
 				data.markdownBody ?? existing.markdownBody,
 				data.eventId !== undefined ? data.eventId : existing.eventId
 			),
@@ -494,8 +488,20 @@ export async function getRecipientsForCampaign(campaignId: string): Promise<{
 // ---------------------------------------------------------------------------
 
 /**
- * Execute the actual send for a campaign. Resolves recipients,
- * renders per-recipient emails, and sends via Postmark broadcast stream.
+ * Recipients written per `db.batch`: about 22 statements, each one recipient's
+ * `campaign_send` row and its outbox row written together, so a large audience
+ * is many small batches rather than one D1 has to hold at once.
+ */
+const RECIPIENTS_PER_BATCH = 250;
+
+/** One Postmark broadcast call's worth, sent as soon as the send is queued. */
+const FIRST_DELIVERY = 500;
+
+/**
+ * Send a campaign: claim it, then queue one `campaign_send` row and one
+ * outbox row per recipient (#2971). The outbox renders and sends them on the
+ * broadcast stream, the first 500 at once and the rest from the cron, 200 a
+ * run, so no single invocation renders or sends the whole audience.
  */
 export async function executeSend(campaignId: string): Promise<number> {
 	const row = await getCampaignRaw(campaignId);
@@ -503,106 +509,67 @@ export async function executeSend(campaignId: string): Promise<number> {
 	if (row.sentAt) throw new CampaignStateError('Campaign already sent');
 
 	const { recipients, skipped } = await getRecipientsForCampaign(campaignId);
-	if (recipients.length === 0) {
-		// Mark as sent with 0 recipients
-		await db
-			.update(campaign)
-			.set({ sentAt: new Date(), recipientCount: 0, updatedAt: new Date() })
-			.where(eq(campaign.id, campaignId));
-		await recordSends(campaignId, [], [], skipped);
-		return 0;
-	}
 
-	// PUBLIC_SITE_URL, not a marketing-only alias: unsubscribe links and the RFC
-	// 8058 List-Unsubscribe header have to point at the environment actually
-	// sending the mail, or a staging send hands recipients production links.
-	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
-	const markdown = await credited(row.markdownBody, row.eventId);
-	const contact = await contactEmail();
-
-	const messages: BroadcastMessage[] = recipients.map((r) => {
-		const unsubscribeUrl = `${baseUrl}/unsubscribe/${signUnsubscribeToken(r.subscriberId, r.audienceId)}`;
-		const htmlBody = renderCampaignForSend(markdown, r.name, unsubscribeUrl, contact);
-		return {
-			to: r.email,
-			subject: row.subject,
-			htmlBody,
-			tag: 'campaign',
-			metadata: { campaignId },
-			// One-click unsubscribe (RFC 8058) — required for Gmail/Yahoo bulk
-			// senders. The List-Unsubscribe-Post header makes mail clients POST
-			// the same URL the footer link points at.
-			headers: [
-				{ Name: 'List-Unsubscribe', Value: `<${unsubscribeUrl}>` },
-				{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }
-			]
-		};
-	});
-
-	// Claimed before the batch, not after. sendBroadcastBatch chunks and rethrows
-	// from whichever chunk failed, so a mid-batch throw has already delivered to
-	// the earlier ones — and a row still matching processDueCampaigns' predicate
-	// (scheduledFor <= now AND sentAt IS NULL) would be re-sent to the whole list
-	// by the next cron tick. At-most-once is the right trade for a broadcast; the
-	// throw still reaches Sentry and the caller (#988).
-	await db
+	// Claimed before anything is queued, and only once: a second cron tick or a
+	// Send now racing the cron finds it taken. At-most-once is the right trade
+	// for a broadcast (#988).
+	const claimed = await db
 		.update(campaign)
-		.set({
-			sentAt: new Date(),
-			recipientCount: recipients.length,
-			updatedAt: new Date()
-		})
-		.where(eq(campaign.id, campaignId));
+		.set({ sentAt: new Date(), recipientCount: recipients.length, updatedAt: new Date() })
+		.where(and(eq(campaign.id, campaignId), isNull(campaign.sentAt)))
+		.returning({ id: campaign.id });
+	if (claimed.length === 0) throw new CampaignStateError('Campaign already sent');
 
-	let results: SendResult[];
-	let thrown: unknown = null;
-	try {
-		results = await sendBroadcastBatch(messages);
-	} catch (err) {
-		thrown = err;
-		const error = err instanceof Error ? err.message : String(err);
-		results = recipients.map(() => ({ ok: false, error }));
-	}
-	await recordSends(campaignId, recipients, results, skipped);
-	if (thrown) throw thrown;
-
+	await queueSends(campaignId, recipients, skipped);
+	if (recipients.length > 0) await deliverDueSoon(FIRST_DELIVERY);
 	return recipients.length;
 }
 
 /**
- * One row per recipient, so the campaign page can say who it went to and what
- * happened (#2777), and one per member left out, with why (#2914).
+ * One `campaign_send` row per recipient, so the campaign page can say who it
+ * went to and what happened (#2777), and one per member left out, with why
+ * (#2914). A recipient's row is `pending` and its outbox row, filed under it,
+ * holds whether it was sent; `listCampaignSends` reads the two together.
  */
-async function recordSends(
+async function queueSends(
 	campaignId: string,
 	recipients: { subscriberId: string; audienceId: string; email: string }[],
-	results: SendResult[],
 	skipped: { subscriberId: string; audienceId: string; email: string; skip: RecipientSkip }[]
 ): Promise<void> {
-	const rows: (typeof campaignSend.$inferInsert)[] = recipients.map((r, i) => {
-		const result = results[i] ?? { ok: false as const, error: 'No response' };
-		return {
+	const now = new Date();
+	for (const group of chunk(recipients, RECIPIENTS_PER_BATCH)) {
+		const sends = group.map((r) => ({
+			id: crypto.randomUUID(),
 			campaignId,
 			subscriberId: r.subscriberId,
 			audienceId: r.audienceId,
 			email: r.email,
-			status: result.ok ? ('sent' as const) : ('failed' as const),
-			providerMessageId: result.ok ? result.messageId : null,
-			error: result.ok ? null : result.error
-		};
-	});
-	for (const r of skipped) {
-		rows.push({
-			campaignId,
-			subscriberId: r.subscriberId,
-			audienceId: r.audienceId,
-			email: r.email,
-			status: r.skip === 'suppressed' ? 'skipped_suppressed' : 'skipped_unsubscribed',
-			providerMessageId: null,
-			error: null
-		});
+			status: 'pending' as const
+		}));
+		const outbox = sends.map((s) => ({
+			...outboxRow(
+				{ kind: 'campaign_email', payload: { campaignSendId: s.id } },
+				{ type: 'campaign_send', id: s.id }
+			),
+			nextAttemptAt: now,
+			createdAt: now
+		}));
+		const statements = [
+			...chunkInsert(sends, (rows) => db.insert(campaignSend).values(rows)),
+			...chunkInsert(outbox, (rows) => db.insert(outboxMessage).values(rows))
+		];
+		await db.batch(statements as [(typeof statements)[number], ...typeof statements]);
 	}
-	const inserts = chunkInsert(rows, (group) => db.insert(campaignSend).values(group));
+
+	const left = skipped.map((r) => ({
+		campaignId,
+		subscriberId: r.subscriberId,
+		audienceId: r.audienceId,
+		email: r.email,
+		status:
+			r.skip === 'suppressed' ? ('skipped_suppressed' as const) : ('skipped_unsubscribed' as const)
+	}));
+	const inserts = chunkInsert(left, (rows) => db.insert(campaignSend).values(rows));
 	if (inserts.length > 0) await db.batch(inserts as [(typeof inserts)[number], ...typeof inserts]);
 }
 
@@ -626,7 +593,7 @@ export async function sendTestCopy(
 
 	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 	const htmlBody = renderCampaignForSend(
-		await credited(row.markdownBody, row.eventId),
+		await creditedBody(row.markdownBody, row.eventId),
 		to.name,
 		`${baseUrl}/unsubscribe/test`,
 		await contactEmail()

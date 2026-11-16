@@ -28,6 +28,8 @@ interface PostmarkEventPayload {
 	Type?: string;
 	TypeCode?: number;
 	Inactive?: boolean;
+	/** What the send set on the message; a campaign's copy carries its `campaignSendId`. */
+	Metadata?: Record<string, string>;
 }
 
 // Permanent bounce types that should suppress the address. Anything else
@@ -58,7 +60,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					: null;
 	if (sendStatus && payload.MessageID) {
 		try {
-			await recordSendEvent(payload.MessageID, sendStatus);
+			await recordSendEvent(payload.MessageID, sendStatus, payload.Metadata?.campaignSendId);
 		} catch (err) {
 			console.error('[webhooks/postmark/events] campaign send update failed:', err);
 			if (import.meta.env.DEV) throw err;
