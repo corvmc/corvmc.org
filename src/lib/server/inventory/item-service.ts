@@ -223,9 +223,13 @@ export interface CreateItemData {
 	reorderPoint?: number;
 	reorderQuantity?: number;
 	resourceId?: string;
+	notes?: string;
+}
+
+/** Set from the item's edit form only. */
+export interface UpdateItemData extends Partial<CreateItemData> {
 	/** A clearance borrowers should hold; empty clears it. */
 	clearanceId?: string;
-	notes?: string;
 }
 
 export async function createItem(data: CreateItemData) {
@@ -250,7 +254,7 @@ export async function createItem(data: CreateItemData) {
 	return row;
 }
 
-export async function updateItem(id: string, data: Partial<CreateItemData>) {
+export async function updateItem(id: string, data: UpdateItemData) {
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.name !== undefined) updates.name = data.name;
 	if (data.description !== undefined) updates.description = data.description || null;
