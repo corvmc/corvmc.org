@@ -1323,3 +1323,21 @@ export async function getUserRole(bandId: string, userId: string): Promise<Group
 	}
 	return row.role as GroupRole;
 }
+
+/** Whether the band said it has no one to invite (#3127): its setup step then counts as done. */
+export async function isInviteStepDismissed(bandId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ at: group.inviteStepDismissedAt })
+		.from(group)
+		.where(eq(group.id, bandId))
+		.limit(1);
+	return !!row?.at;
+}
+
+/** A one-person project dismisses the invite step. Idempotent: a second dismissal keeps the first time. */
+export async function dismissInviteStep(bandId: string): Promise<void> {
+	await db
+		.update(group)
+		.set({ inviteStepDismissedAt: new Date(), updatedAt: new Date() })
+		.where(and(eq(group.id, bandId), isNull(group.inviteStepDismissedAt)));
+}

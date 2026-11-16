@@ -37,4 +37,6 @@ export interface BandSetupStep {
 	key: BandSetupKey;
 	done: boolean;
 	href: ResolvedPathname;
+	/** Offers Dismiss: only the invite step, for a one-person project (#3127). */
+	dismissible?: boolean;
 }

@@ -41,16 +41,12 @@ export interface BandNavInput {
 	tier: string;
 	userRole: string;
 	isStaff: boolean;
-	/** Active members, the owner included. A band of one has not started yet (#3134). */
-	memberCount: number;
 	features: { bandAudio?: boolean };
 }
 
 export interface BandNavItem extends NavNode<BandNavKey> {
 	label: string;
 	badgeKey?: BandNavBadgeKey;
-	/** Shown, but muted: the row has nothing in it for this band yet (#3134). */
-	quiet?: boolean;
 }
 
 export interface BandNavSection {
@@ -98,8 +94,7 @@ export function bandNavSections(input: BandNavInput): BandNavSection[] {
 		{
 			key: 'announcements',
 			label: 'Announcements',
-			href: resolve('/band/[slug]/announcements', { slug }),
-			quiet: input.memberCount <= 1
+			href: resolve('/band/[slug]/announcements', { slug })
 		},
 		// A row again (#3136): the topbar icon's badge counts every inbox the
 		// viewer reads, so it cannot say whether this band has an enquiry.
@@ -111,11 +106,14 @@ export function bandNavSections(input: BandNavInput): BandNavSection[] {
 		}
 	];
 
-	// Press kit is free on every tier and kept apart from the profile: the
-	// profile is what the public sees, the press kit what a venue is sent.
-	const profile: BandNavItem[] = isOwnerOrAdmin
+	// Every member reads the profile and press kit; only owners and admins edit
+	// them, which each page and each write remote decides. The press kit is kept
+	// apart from the profile: one is what the public sees, the other what a venue
+	// is sent.
+	const isMember = isOwnerOrAdmin || input.userRole === 'member';
+	const profile: BandNavItem[] = isMember
 		? [
-				{ key: 'edit', label: 'Edit profile', href: resolve('/band/[slug]/edit', { slug }) },
+				{ key: 'edit', label: 'Band profile', href: resolve('/band/[slug]/edit', { slug }) },
 				{ key: 'press-kit', label: 'Press kit', href: resolve('/band/[slug]/press-kit', { slug }) }
 			]
 		: [];

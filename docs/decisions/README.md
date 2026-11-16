@@ -30,94 +30,95 @@ A page or less. Link the issue and the PRs.
 
 ## Records
 
-| #    | Record                                                                                                                         | Date       | Status                |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------ | ---------- | --------------------- |
-| 0001 | [Specs live on issues](0001-specs-live-on-issues.md)                                                                           | 2026-11-10 | Accepted              |
-| 0002 | [A ticket row is one entry pass](0002-a-ticket-row-is-one-entry-pass.md)                                                       | 2026-05-14 | Accepted              |
-| 0003 | [A production is a child of its listing](0003-a-production-is-a-child-of-its-listing.md)                                       | 2026-08-02 | Accepted              |
-| 0004 | [Set times are derived and running order is fractional](0004-set-times-are-derived-and-running-order-is-fractional.md)         | 2026-08-02 | Accepted              |
-| 0005 | [Lineup credits need the band's consent](0005-lineup-credits-need-the-bands-consent.md)                                        | 2026-08-12 | Accepted              |
-| 0006 | [Listings publish first and are moderated after](0006-listings-publish-first-and-are-moderated-after.md)                       | 2026-08-13 | Accepted              |
-| 0007 | [The canonical event URL holds the general view](0007-the-canonical-event-url-holds-the-general-view.md)                       | 2026-08-28 | Accepted              |
-| 0008 | [A ticket price is a sliding scale](0008-ticket-price-is-a-sliding-scale.md)                                                   | 2026-09-03 | Accepted              |
-| 0009 | [Market vendor contact lives on the inbox thread](0009-market-vendor-contact-lives-on-the-inbox-thread.md)                     | 2026-09-23 | Superseded by 0073    |
-| 0010 | [Poster art is an artifact request](0010-poster-art-is-an-artifact-request.md)                                                 | 2026-09-23 | Accepted              |
-| 0011 | [Productions are projects](0011-productions-are-projects.md)                                                                   | 2026-09-29 | Amended by 0086       |
-| 0012 | [Partner feeds import as community listings](0012-partner-feeds-import-as-community-listings.md)                               | 2026-11-02 | Accepted              |
-| 0013 | [Stripe is the payment ledger](0013-stripe-is-the-payment-ledger.md)                                                           | 2026-05-12 | Accepted              |
-| 0014 | [Recurring reservations clone a prototype](0014-recurring-reservations-clone-a-prototype.md)                                   | 2026-05-15 | Accepted              |
-| 0015 | [Instructors rent the room](0015-instructors-rent-the-room.md)                                                                 | 2026-08-31 | Accepted              |
-| 0016 | [A local financial record](0016-a-local-financial-record.md)                                                                   | 2026-09-08 | Accepted              |
-| 0017 | [Payments run against a fake gateway](0017-payments-run-against-a-fake-gateway.md)                                             | 2026-09-11 | Accepted              |
-| 0018 | [Door sales on one Tap to Pay phone](0018-door-sales-on-one-tap-to-pay-phone.md)                                               | 2026-09-22 | Accepted              |
-| 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                             | 2026-09-23 | Amended by 0067       |
-| 0020 | [Staff comp credits up to a ceiling](0020-staff-comp-credits-up-to-a-ceiling.md)                                               | 2026-09-23 | Accepted              |
-| 0021 | [A club gets a page, not a panel](0021-a-club-gets-a-page-not-a-panel.md)                                                      | 2026-08-08 | Accepted              |
-| 0022 | [External acts are staff records with private contacts](0022-external-acts-are-staff-records-with-private-contacts.md)         | 2026-08-08 | Superseded by 0074    |
-| 0023 | [Group announcements are transactional and batched](0023-group-announcements-are-transactional-and-batched.md)                 | 2026-08-08 | Accepted              |
-| 0024 | [Groups split the band table by purpose](0024-groups-split-the-band-table-by-purpose.md)                                       | 2026-08-08 | Accepted              |
-| 0025 | [Every band gets a subdomain; premium gets its own domain](0025-every-band-gets-a-subdomain-premium-gets-a-domain.md)          | 2026-08-10 | Accepted              |
-| 0026 | [Uploads are detached and swept, never deleted inline](0026-uploads-are-detached-and-swept.md)                                 | 2026-08-28 | Accepted              |
-| 0027 | [Band music sells files, and the radio plays a timetable](0027-band-music-sells-files-and-the-radio-plays-a-timetable.md)      | 2026-09-03 | Accepted              |
-| 0028 | [Local resources are their own table](0028-local-resources-are-their-own-table.md)                                             | 2026-09-08 | Accepted              |
-| 0029 | [One durable packing list per band](0029-one-durable-packing-list-per-band.md)                                                 | 2026-09-08 | Accepted              |
-| 0030 | [One application mechanism for clubs and committees](0030-one-application-mechanism-for-clubs-and-committees.md)               | 2026-09-29 | Accepted              |
-| 0031 | [The audit log records intent, best-effort and append-only](0031-audit-log-records-intent.md)                                  | 2026-08-03 | Accepted              |
-| 0032 | [Guards name capabilities, positions hold them](0032-guards-name-capabilities.md)                                              | 2026-08-03 | Accepted              |
-| 0033 | [Staff propose a login email change and the new mailbox confirms it](0033-staff-propose-email-changes.md)                      | 2026-08-03 | Accepted              |
-| 0034 | [Member conversations share the staff inbox](0034-member-conversations-share-the-staff-inbox.md)                               | 2026-08-12 | Accepted              |
-| 0035 | [Direct message refusals look alike](0035-direct-message-refusals-look-alike.md)                                               | 2026-08-16 | Accepted              |
-| 0036 | [One report takes a suggestion off the board](0036-one-report-takes-a-suggestion-off-the-board.md)                             | 2026-08-16 | Accepted              |
-| 0037 | [Suggestion edits lock at the first outside vote](0037-suggestion-edits-lock-at-the-first-outside-vote.md)                     | 2026-08-16 | Accepted              |
-| 0038 | [Member standing is one table keyed by scope](0038-member-standing-is-one-table-keyed-by-scope.md)                             | 2026-08-17 | Accepted              |
-| 0039 | [Moderation appeals hang off the upheld report](0039-moderation-appeals-hang-off-the-upheld-report.md)                         | 2026-08-18 | Accepted              |
-| 0040 | [Reports are module-owned over a shared kit](0040-reports-are-module-owned.md)                                                 | 2026-08-27 | Accepted              |
-| 0041 | [Band enquiries are threads the band owns](0041-band-enquiries-are-threads-the-band-owns.md)                                   | 2026-09-04 | Accepted              |
-| 0042 | [A committed manifest keeps cron monitors in step with the schedule](0042-cron-monitor-manifest.md)                            | 2026-09-29 | Accepted              |
-| 0043 | [Asset tags are bound, not generated](0043-asset-tags-are-bound-not-generated.md)                                              | 2026-08-27 | Accepted              |
-| 0044 | [Form 8282 is the only inventory tax check](0044-form-8282-is-the-only-inventory-tax-check.md)                                 | 2026-08-27 | Accepted              |
-| 0045 | [Inventory stock is a ledger](0045-inventory-stock-is-a-ledger.md)                                                             | 2026-08-27 | Amended by 0070       |
-| 0046 | [Serialization is not a capitalization threshold](0046-serialization-is-not-a-capitalization-threshold.md)                     | 2026-08-27 | Accepted              |
-| 0047 | [Certifications are an append-only catalog](0047-certifications-are-an-append-only-catalog.md)                                 | 2026-08-08 | Accepted              |
-| 0048 | [Volunteer hours are a record, not a currency](0048-volunteer-hours-are-a-record.md)                                           | 2026-08-08 | Accepted              |
-| 0049 | [A committee is a group, chaired by its admins](0049-a-committee-is-a-group-chaired-by-admins.md)                              | 2026-08-28 | Amended by 0085       |
-| 0050 | [A project is a budgeted body of work that events point at](0050-a-project-is-a-budgeted-body-of-work.md)                      | 2026-09-02 | Accepted              |
-| 0051 | [Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md)                                               | 2026-09-02 | Amended by 0065       |
-| 0052 | [Secret ballots keep a counter, not a row per vote](0052-secret-ballots-count-without-a-vote-row.md)                           | 2026-09-24 | Accepted              |
-| 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)              | 2026-09-29 | Amended by 0085, 0086 |
-| 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                      | 2026-10-13 | Accepted              |
-| 0055 | [Space training is a clearance and sets booking notice](0055-space-training-is-a-clearance-and-sets-booking-notice.md)         | 2026-11-11 | Accepted              |
-| 0056 | [A task is the work, and a shift is when volunteers show up](0056-a-task-is-the-work-a-shift-is-when.md)                       | 2026-11-10 | Accepted              |
-| 0057 | [The day before a first visit](0057-the-day-before-a-first-visit.md)                                                           | 2026-11-11 | Accepted              |
-| 0058 | [A first booking holds unbilled tour time](0058-a-first-booking-holds-unbilled-tour-time.md)                                   | 2026-11-11 | Accepted              |
-| 0059 | [The Practice space page runs the space](0059-the-practice-space-page-runs-the-space.md)                                       | 2026-11-11 | Accepted              |
-| 0060 | [A month poster groups by who made the event](0060-a-month-poster-groups-by-who-made-the-event.md)                             | 2026-11-12 | Superseded by 0061    |
-| 0061 | [A month poster is a printable list of public events](0061-a-month-poster-is-a-printable-list-of-public-events.md)             | 2026-11-12 | Accepted              |
-| 0062 | [A print poster is the social image above a details footer](0062-a-print-poster-is-the-social-image-above-a-details-footer.md) | 2026-11-12 | Accepted              |
-| 0063 | [Renewals are recurring work](0063-renewals-are-recurring-work.md)                                                             | 2026-11-12 | Accepted              |
-| 0064 | [A group has one Announcements thread](0064-a-group-has-one-announcements-thread.md)                                           | 2026-11-12 | Accepted              |
-| 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                           | 2026-11-12 | Accepted              |
-| 0066 | [One review feed on the dashboard](0066-one-review-feed-on-the-dashboard.md)                                                   | 2026-11-12 | Accepted              |
-| 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                | 2026-11-13 | Accepted              |
-| 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                       | 2026-11-13 | Accepted              |
-| 0069 | [Tasks link to what they are about, and a party has one timeline](0069-a-party-has-one-timeline.md)                            | 2026-11-13 | Accepted              |
-| 0070 | [A supplier is an organization](0070-a-supplier-is-an-organization.md)                                                         | 2026-11-13 | Accepted              |
-| 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted              |
-| 0072 | [A schedule change replaces the series](0072-a-schedule-change-replaces-the-series.md)                                         | 2026-11-13 | Accepted              |
-| 0073 | [A market vendor is an organization](0073-a-market-vendor-is-an-organization.md)                                               | 2026-11-13 | Accepted              |
-| 0074 | [An act is a performer organization](0074-an-act-is-a-performer-organization.md)                                               | 2026-11-13 | Accepted              |
-| 0075 | [A listing says who may see it](0075-a-listing-says-who-may-see-it.md)                                                         | 2026-11-13 | Accepted              |
-| 0076 | [Classifieds follow-ups derive from what is stored](0076-classifieds-follow-ups-derive-from-what-is-stored.md)                 | 2026-11-13 | Accepted              |
-| 0077 | [A removal is a record of an upheld report](0077-a-removal-is-a-record-of-an-upheld-report.md)                                 | 2026-11-13 | Accepted              |
-| 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                             | 2026-11-13 | Accepted              |
-| 0079 | [A festival is a parent project](0079-a-festival-is-a-parent-project.md)                                                       | 2026-11-13 | Accepted              |
-| 0080 | [Payment reminders derive from the fee gate](0080-payment-reminders-derive-from-the-fee-gate.md)                               | 2026-11-13 | Accepted              |
-| 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                     | 2026-11-13 | Superseded by 0088    |
-| 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                           | 2026-11-13 | Accepted              |
-| 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                               | 2026-11-13 | Accepted              |
-| 0084 | [Owing is decided by money](0084-owing-is-decided-by-money.md)                                                                 | 2026-11-14 | Accepted              |
-| 0085 | [Committees are departments, and a duty grants the duty](0085-committees-are-departments.md)                                   | 2026-11-14 | Amended by 0086       |
-| 0086 | [Production capabilities are cut by consequence](0086-production-capabilities-by-consequence.md)                               | 2026-11-15 | Accepted              |
-| 0087 | [Bands, clubs and committees are listed apart](0087-bands-clubs-and-committees-are-listed-apart.md)                            | 2026-11-15 | Accepted              |
-| 0088 | [The staff nav answers four questions](0088-the-staff-nav-answers-four-questions.md)                                           | 2026-11-16 | Accepted              |
-| 0089 | [Feature switches are code config](0089-feature-switches-are-code-config.md)                                                   | 2026-11-16 | Accepted              |
+| #    | Record                                                                                                                             | Date       | Status                |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------- |
+| 0001 | [Specs live on issues](0001-specs-live-on-issues.md)                                                                               | 2026-11-10 | Accepted              |
+| 0002 | [A ticket row is one entry pass](0002-a-ticket-row-is-one-entry-pass.md)                                                           | 2026-05-14 | Accepted              |
+| 0003 | [A production is a child of its listing](0003-a-production-is-a-child-of-its-listing.md)                                           | 2026-08-02 | Accepted              |
+| 0004 | [Set times are derived and running order is fractional](0004-set-times-are-derived-and-running-order-is-fractional.md)             | 2026-08-02 | Accepted              |
+| 0005 | [Lineup credits need the band's consent](0005-lineup-credits-need-the-bands-consent.md)                                            | 2026-08-12 | Accepted              |
+| 0006 | [Listings publish first and are moderated after](0006-listings-publish-first-and-are-moderated-after.md)                           | 2026-08-13 | Accepted              |
+| 0007 | [The canonical event URL holds the general view](0007-the-canonical-event-url-holds-the-general-view.md)                           | 2026-08-28 | Accepted              |
+| 0008 | [A ticket price is a sliding scale](0008-ticket-price-is-a-sliding-scale.md)                                                       | 2026-09-03 | Accepted              |
+| 0009 | [Market vendor contact lives on the inbox thread](0009-market-vendor-contact-lives-on-the-inbox-thread.md)                         | 2026-09-23 | Superseded by 0073    |
+| 0010 | [Poster art is an artifact request](0010-poster-art-is-an-artifact-request.md)                                                     | 2026-09-23 | Accepted              |
+| 0011 | [Productions are projects](0011-productions-are-projects.md)                                                                       | 2026-09-29 | Amended by 0086       |
+| 0012 | [Partner feeds import as community listings](0012-partner-feeds-import-as-community-listings.md)                                   | 2026-11-02 | Accepted              |
+| 0013 | [Stripe is the payment ledger](0013-stripe-is-the-payment-ledger.md)                                                               | 2026-05-12 | Accepted              |
+| 0014 | [Recurring reservations clone a prototype](0014-recurring-reservations-clone-a-prototype.md)                                       | 2026-05-15 | Accepted              |
+| 0015 | [Instructors rent the room](0015-instructors-rent-the-room.md)                                                                     | 2026-08-31 | Accepted              |
+| 0016 | [A local financial record](0016-a-local-financial-record.md)                                                                       | 2026-09-08 | Accepted              |
+| 0017 | [Payments run against a fake gateway](0017-payments-run-against-a-fake-gateway.md)                                                 | 2026-09-11 | Accepted              |
+| 0018 | [Door sales on one Tap to Pay phone](0018-door-sales-on-one-tap-to-pay-phone.md)                                                   | 2026-09-22 | Accepted              |
+| 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                                 | 2026-09-23 | Amended by 0067       |
+| 0020 | [Staff comp credits up to a ceiling](0020-staff-comp-credits-up-to-a-ceiling.md)                                                   | 2026-09-23 | Accepted              |
+| 0021 | [A club gets a page, not a panel](0021-a-club-gets-a-page-not-a-panel.md)                                                          | 2026-08-08 | Accepted              |
+| 0022 | [External acts are staff records with private contacts](0022-external-acts-are-staff-records-with-private-contacts.md)             | 2026-08-08 | Superseded by 0074    |
+| 0023 | [Group announcements are transactional and batched](0023-group-announcements-are-transactional-and-batched.md)                     | 2026-08-08 | Accepted              |
+| 0024 | [Groups split the band table by purpose](0024-groups-split-the-band-table-by-purpose.md)                                           | 2026-08-08 | Accepted              |
+| 0025 | [Every band gets a subdomain; premium gets its own domain](0025-every-band-gets-a-subdomain-premium-gets-a-domain.md)              | 2026-08-10 | Accepted              |
+| 0026 | [Uploads are detached and swept, never deleted inline](0026-uploads-are-detached-and-swept.md)                                     | 2026-08-28 | Accepted              |
+| 0027 | [Band music sells files, and the radio plays a timetable](0027-band-music-sells-files-and-the-radio-plays-a-timetable.md)          | 2026-09-03 | Accepted              |
+| 0028 | [Local resources are their own table](0028-local-resources-are-their-own-table.md)                                                 | 2026-09-08 | Accepted              |
+| 0029 | [One durable packing list per band](0029-one-durable-packing-list-per-band.md)                                                     | 2026-09-08 | Accepted              |
+| 0030 | [One application mechanism for clubs and committees](0030-one-application-mechanism-for-clubs-and-committees.md)                   | 2026-09-29 | Accepted              |
+| 0031 | [The audit log records intent, best-effort and append-only](0031-audit-log-records-intent.md)                                      | 2026-08-03 | Accepted              |
+| 0032 | [Guards name capabilities, positions hold them](0032-guards-name-capabilities.md)                                                  | 2026-08-03 | Accepted              |
+| 0033 | [Staff propose a login email change and the new mailbox confirms it](0033-staff-propose-email-changes.md)                          | 2026-08-03 | Accepted              |
+| 0034 | [Member conversations share the staff inbox](0034-member-conversations-share-the-staff-inbox.md)                                   | 2026-08-12 | Accepted              |
+| 0035 | [Direct message refusals look alike](0035-direct-message-refusals-look-alike.md)                                                   | 2026-08-16 | Accepted              |
+| 0036 | [One report takes a suggestion off the board](0036-one-report-takes-a-suggestion-off-the-board.md)                                 | 2026-08-16 | Accepted              |
+| 0037 | [Suggestion edits lock at the first outside vote](0037-suggestion-edits-lock-at-the-first-outside-vote.md)                         | 2026-08-16 | Accepted              |
+| 0038 | [Member standing is one table keyed by scope](0038-member-standing-is-one-table-keyed-by-scope.md)                                 | 2026-08-17 | Accepted              |
+| 0039 | [Moderation appeals hang off the upheld report](0039-moderation-appeals-hang-off-the-upheld-report.md)                             | 2026-08-18 | Accepted              |
+| 0040 | [Reports are module-owned over a shared kit](0040-reports-are-module-owned.md)                                                     | 2026-08-27 | Accepted              |
+| 0041 | [Band enquiries are threads the band owns](0041-band-enquiries-are-threads-the-band-owns.md)                                       | 2026-09-04 | Accepted              |
+| 0042 | [A committed manifest keeps cron monitors in step with the schedule](0042-cron-monitor-manifest.md)                                | 2026-09-29 | Accepted              |
+| 0043 | [Asset tags are bound, not generated](0043-asset-tags-are-bound-not-generated.md)                                                  | 2026-08-27 | Accepted              |
+| 0044 | [Form 8282 is the only inventory tax check](0044-form-8282-is-the-only-inventory-tax-check.md)                                     | 2026-08-27 | Accepted              |
+| 0045 | [Inventory stock is a ledger](0045-inventory-stock-is-a-ledger.md)                                                                 | 2026-08-27 | Amended by 0070       |
+| 0046 | [Serialization is not a capitalization threshold](0046-serialization-is-not-a-capitalization-threshold.md)                         | 2026-08-27 | Accepted              |
+| 0047 | [Certifications are an append-only catalog](0047-certifications-are-an-append-only-catalog.md)                                     | 2026-08-08 | Accepted              |
+| 0048 | [Volunteer hours are a record, not a currency](0048-volunteer-hours-are-a-record.md)                                               | 2026-08-08 | Accepted              |
+| 0049 | [A committee is a group, chaired by its admins](0049-a-committee-is-a-group-chaired-by-admins.md)                                  | 2026-08-28 | Amended by 0085       |
+| 0050 | [A project is a budgeted body of work that events point at](0050-a-project-is-a-budgeted-body-of-work.md)                          | 2026-09-02 | Accepted              |
+| 0051 | [Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md)                                                   | 2026-09-02 | Amended by 0065       |
+| 0052 | [Secret ballots keep a counter, not a row per vote](0052-secret-ballots-count-without-a-vote-row.md)                               | 2026-09-24 | Accepted              |
+| 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)                  | 2026-09-29 | Amended by 0085, 0086 |
+| 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                          | 2026-10-13 | Accepted              |
+| 0055 | [Space training is a clearance and sets booking notice](0055-space-training-is-a-clearance-and-sets-booking-notice.md)             | 2026-11-11 | Accepted              |
+| 0056 | [A task is the work, and a shift is when volunteers show up](0056-a-task-is-the-work-a-shift-is-when.md)                           | 2026-11-10 | Accepted              |
+| 0057 | [The day before a first visit](0057-the-day-before-a-first-visit.md)                                                               | 2026-11-11 | Accepted              |
+| 0058 | [A first booking holds unbilled tour time](0058-a-first-booking-holds-unbilled-tour-time.md)                                       | 2026-11-11 | Accepted              |
+| 0059 | [The Practice space page runs the space](0059-the-practice-space-page-runs-the-space.md)                                           | 2026-11-11 | Accepted              |
+| 0060 | [A month poster groups by who made the event](0060-a-month-poster-groups-by-who-made-the-event.md)                                 | 2026-11-12 | Superseded by 0061    |
+| 0061 | [A month poster is a printable list of public events](0061-a-month-poster-is-a-printable-list-of-public-events.md)                 | 2026-11-12 | Accepted              |
+| 0062 | [A print poster is the social image above a details footer](0062-a-print-poster-is-the-social-image-above-a-details-footer.md)     | 2026-11-12 | Accepted              |
+| 0063 | [Renewals are recurring work](0063-renewals-are-recurring-work.md)                                                                 | 2026-11-12 | Accepted              |
+| 0064 | [A group has one Announcements thread](0064-a-group-has-one-announcements-thread.md)                                               | 2026-11-12 | Accepted              |
+| 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                               | 2026-11-12 | Accepted              |
+| 0066 | [One review feed on the dashboard](0066-one-review-feed-on-the-dashboard.md)                                                       | 2026-11-12 | Accepted              |
+| 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                    | 2026-11-13 | Accepted              |
+| 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                           | 2026-11-13 | Accepted              |
+| 0069 | [Tasks link to what they are about, and a party has one timeline](0069-a-party-has-one-timeline.md)                                | 2026-11-13 | Accepted              |
+| 0070 | [A supplier is an organization](0070-a-supplier-is-an-organization.md)                                                             | 2026-11-13 | Accepted              |
+| 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                                 | 2026-11-13 | Accepted              |
+| 0072 | [A schedule change replaces the series](0072-a-schedule-change-replaces-the-series.md)                                             | 2026-11-13 | Accepted              |
+| 0073 | [A market vendor is an organization](0073-a-market-vendor-is-an-organization.md)                                                   | 2026-11-13 | Accepted              |
+| 0074 | [An act is a performer organization](0074-an-act-is-a-performer-organization.md)                                                   | 2026-11-13 | Accepted              |
+| 0075 | [A listing says who may see it](0075-a-listing-says-who-may-see-it.md)                                                             | 2026-11-13 | Accepted              |
+| 0076 | [Classifieds follow-ups derive from what is stored](0076-classifieds-follow-ups-derive-from-what-is-stored.md)                     | 2026-11-13 | Accepted              |
+| 0077 | [A removal is a record of an upheld report](0077-a-removal-is-a-record-of-an-upheld-report.md)                                     | 2026-11-13 | Accepted              |
+| 0078 | [A show names one event lead](0078-a-show-names-one-event-lead.md)                                                                 | 2026-11-13 | Accepted              |
+| 0079 | [A festival is a parent project](0079-a-festival-is-a-parent-project.md)                                                           | 2026-11-13 | Accepted              |
+| 0080 | [Payment reminders derive from the fee gate](0080-payment-reminders-derive-from-the-fee-gate.md)                                   | 2026-11-13 | Accepted              |
+| 0081 | [The staff panel is four systems](0081-the-staff-panel-is-four-systems.md)                                                         | 2026-11-13 | Superseded by 0088    |
+| 0082 | [A reservation shows one status track](0082-a-reservation-shows-one-status-track.md)                                               | 2026-11-13 | Accepted              |
+| 0083 | [Door cash is a ticket sale](0083-door-cash-is-a-ticket-sale.md)                                                                   | 2026-11-13 | Accepted              |
+| 0084 | [Owing is decided by money](0084-owing-is-decided-by-money.md)                                                                     | 2026-11-14 | Accepted              |
+| 0085 | [Committees are departments, and a duty grants the duty](0085-committees-are-departments.md)                                       | 2026-11-14 | Amended by 0086       |
+| 0086 | [Production capabilities are cut by consequence](0086-production-capabilities-by-consequence.md)                                   | 2026-11-15 | Accepted              |
+| 0087 | [Bands, clubs and committees are listed apart](0087-bands-clubs-and-committees-are-listed-apart.md)                                | 2026-11-15 | Accepted              |
+| 0088 | [The staff nav answers four questions](0088-the-staff-nav-answers-four-questions.md)                                               | 2026-11-16 | Accepted              |
+| 0089 | [Feature switches are code config](0089-feature-switches-are-code-config.md)                                                       | 2026-11-16 | Accepted              |
+| 0090 | [The band nav is sectioned and the dashboard is a to-do list](0090-the-band-nav-is-sectioned-and-the-dashboard-is-a-to-do-list.md) | 2026-11-16 | Accepted              |

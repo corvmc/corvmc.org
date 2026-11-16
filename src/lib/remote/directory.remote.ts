@@ -741,8 +741,9 @@ export const getMemberProfileEditor = query(z.void(), async () => {
 // `requireBandRole`: this editor writes `directoryVisibility`, and for a club
 // or committee that setting is staff's — `updateStaffGroup` is its one writer.
 // A club leader reaching a band-shaped form was the second, conflicting path.
+// Every member reads it; `saveBandProfile` below is what stays owner/admin.
 export const getBandProfile = query(z.string(), async (slug) => {
-	const { group: band } = await requireBandRole({ slug }, 'admin');
+	const { group: band } = await requireBandRole({ slug }, 'member');
 	return getBandProfileForEdit(band.id);
 });
 
@@ -798,6 +799,7 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 
 /** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
 export const getBandProfileEditor = query(z.string(), async (slug) => {
+	const { role } = await requireBandRole({ slug }, 'member');
 	// The instrument suggestions ride along for the "what we're looking for"
 	// field. Deliberately the same vocabulary members tag themselves with — a
 	// free-text field here would let a band ask for something no member has ever
@@ -807,7 +809,9 @@ export const getBandProfileEditor = query(z.string(), async (slug) => {
 		getGenreSuggestions(),
 		getInstrumentSuggestions()
 	]);
-	return { profile, genreSuggestions, instrumentSuggestions };
+	// Presentation only: the page shows a plain member the read view.
+	const canEdit = role === 'owner' || role === 'admin';
+	return { profile, genreSuggestions, instrumentSuggestions, canEdit };
 });
 
 // ---------------------------------------------------------------------------

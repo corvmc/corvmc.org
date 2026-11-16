@@ -101,7 +101,8 @@ describe('bandSetupSteps', () => {
 	const fresh = {
 		slug: 'porchlights',
 		memberCount: 1,
-		invitesPending: 0,
+		invitesSent: 0,
+		inviteDismissed: false,
 		hasReservation: false,
 		hasProfile: false,
 		hasEvent: false
@@ -115,9 +116,25 @@ describe('bandSetupSteps', () => {
 		expect(done(fresh)).toEqual([]);
 	});
 
-	it('ticks inviting once someone has been asked, before they answer', () => {
-		expect(done({ ...fresh, invitesPending: 1 })).toEqual(['invite']);
+	it('ticks inviting once an invite is sent, before anyone answers', () => {
+		expect(done({ ...fresh, invitesSent: 1 })).toEqual(['invite']);
 		expect(done({ ...fresh, memberCount: 2 })).toEqual(['invite']);
+	});
+
+	// #3127: a one-person project has no one to invite.
+	it('offers Dismiss on the open invite step and counts a dismissal as done', () => {
+		const invite = (input: typeof fresh) => bandSetupSteps(input).find((s) => s.key === 'invite');
+		expect(invite(fresh)?.dismissible).toBe(true);
+		expect(invite({ ...fresh, inviteDismissed: true })).toMatchObject({
+			done: true,
+			dismissible: false
+		});
+		expect(invite({ ...fresh, invitesSent: 1 })?.dismissible).toBe(false);
+	});
+
+	it('offers Dismiss on no step but inviting', () => {
+		const others = bandSetupSteps(fresh).filter((s) => s.key !== 'invite');
+		expect(others.every((s) => !s.dismissible)).toBe(true);
 	});
 
 	it('ticks each step from its own fact', () => {

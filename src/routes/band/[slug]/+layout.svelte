@@ -77,7 +77,6 @@
 		tier: layout.band.tier,
 		userRole: layout.userRole,
 		isStaff: layout.isStaff,
-		memberCount: layout.band.memberCount,
 		features: layout.features
 	});
 
@@ -115,8 +114,6 @@
 		label={item.label}
 		active={activeKey === item.key}
 		badge={item.badgeKey ? layout[item.badgeKey] : undefined}
-		class={item.quiet ? 'text-base-content/50' : undefined}
-		data-quiet={item.quiet || undefined}
 	>
 		{#snippet icon()}<Icon />{/snippet}
 	</Nav.Item>

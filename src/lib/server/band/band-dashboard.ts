@@ -116,7 +116,10 @@ export function bandUpcoming(
 export interface SetupInput {
 	slug: string;
 	memberCount: number;
-	invitesPending: number;
+	/** Invites sent, answered or not. */
+	invitesSent: number;
+	/** The band said it has no one to invite. */
+	inviteDismissed: boolean;
 	hasReservation: boolean;
 	/** The press kit's logo and bio rungs, both done. */
 	hasProfile: boolean;
@@ -124,16 +127,19 @@ export interface SetupInput {
 }
 
 /**
- * A new band's first four steps (#3134). Inviting counts as done once someone
- * has been asked: the answer is theirs, and it shows under the band's to-dos.
+ * A new band's first four steps (#3134). Inviting is done once an invite is
+ * sent, since the answer is the invitee's, or once a one-person project
+ * dismisses the step (#3127).
  */
 export function bandSetupSteps(input: SetupInput): BandSetupStep[] {
 	const { slug } = input;
+	const invited = input.memberCount > 1 || input.invitesSent > 0;
 	return [
 		{
 			key: 'invite',
-			done: input.memberCount > 1 || input.invitesPending > 0,
-			href: resolve('/band/[slug]/members', { slug })
+			done: invited || input.inviteDismissed,
+			href: resolve('/band/[slug]/members', { slug }),
+			dismissible: !invited && !input.inviteDismissed
 		},
 		{
 			key: 'reserve',

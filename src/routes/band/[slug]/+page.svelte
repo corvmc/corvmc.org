@@ -1,16 +1,13 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import * as env from '$app/env/public';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import AddressCard from '#lib/components/ui/AddressCard.svelte';
 	import PressKitProgress from '#lib/components/band/PressKitProgress.svelte';
-	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import { formatDate, relativeDay } from '#lib/utils/format.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { getBandDashboard } from '#lib/remote/band-dashboard.remote.js';
@@ -22,11 +19,6 @@
 	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
 	const now = new Date();
-
-	// The address the band hands out. Below the work rather than leading (#3128).
-	const address = $derived(
-		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
-	);
 
 	// The page's one load-bearing query: to-dos, the schedule, setup and the press kit.
 	const dashboard = $derived(await getBandDashboard(band.id));
@@ -104,7 +96,7 @@
 	</InfoCard>
 
 	{#if dashboard.setup}
-		<SetupSteps steps={dashboard.setup} />
+		<SetupSteps slug={band.slug} steps={dashboard.setup} />
 	{:else if dashboard.pressKit}
 		<PressKitProgress
 			slug={band.slug}
@@ -114,11 +106,5 @@
 			next={dashboard.pressKit.next}
 			compact
 		/>
-	{/if}
-
-	{#if address}
-		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
-			{m.band_slug_address_card_text()}
-		</AddressCard>
 	{/if}
 </PageContent>
