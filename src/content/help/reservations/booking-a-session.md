@@ -1,5 +1,5 @@
 ---
-title: Book a practice session
+title: Reserve practice space
 slug: booking-a-session
 category: reservations
 summary: How to reserve practice time at the studio.
@@ -7,7 +7,7 @@ minRole: member
 sortOrder: 1
 ---
 
-## Booking a session
+## Making a reservation
 
 1. Open **Reservations** from the sidebar and start a new booking.
 2. Pick a **date**, then choose a **start time** from the available slots.
@@ -27,7 +27,7 @@ automatically.
 
 ## After you book
 
-- Some bookings require payment before the session — see
+- Some bookings must be paid for in advance — see
   [pay for a reservation](/member/help/pay-for-reservation).
 - Need to change plans? See [cancel or change a reservation](/member/help/cancel-reservation).
 

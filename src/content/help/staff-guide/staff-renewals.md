@@ -21,11 +21,11 @@ Choose **New recurring work** and fill in:
 - **First due date**: about a month before the expiry date on the certificate.
 - **Notes**: who issues it and the permit, license or policy number.
 
-Then open the work order and assign the person who renews it.
+Then open the task and assign the person who renews it.
 
 ## Renewing
 
-When the renewal comes through, resolve the work order. The next one is written straight away,
+When the renewal comes through, resolve the task. The next one is written straight away,
 due one term after you closed it. Check its due date against the new certificate and move it if
 the expiry date differs.
 

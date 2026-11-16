@@ -29,7 +29,7 @@ visible), **unpublish** it back to a draft, remove the poster, or **cancel** it.
 Published events show up for the community.
 
 If your band is only credited on someone else's bill — the **guest** tag on the
-events list — you can see the listing but not change it. Ask the band that
+events list — you can see the event but not change it. Ask the band that
 created it.
 
 Members who aren't admins see the same page, read-only.

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { keyRole } from '../eslint-rules/message-key-role.js';
+import { sourceFiles } from './lib/source-files';
 import { retiredTerms } from '../src/lib/config.js';
 import {
 	catalogs,
@@ -63,6 +64,78 @@ describe('message catalog', () => {
 
 		expect(Object.fromEntries(fresh), 'fix the string (docs/development/writing.md)').toEqual({});
 		expect(Object.fromEntries(stale), `delete these from ${ALLOW}`).toEqual({});
+	});
+});
+
+/**
+ * A key scope names messages, and help has no keys, so each scoped term says
+ * where it applies to help prose: `[]` skips it, `files` limits it to articles,
+ * `word` narrows what counts. The spec fails on a scoped term with no entry.
+ */
+type HelpRule = { files?: RegExp; word?: RegExp };
+const helpScope: Record<string, HelpRule[]> = {
+	// The return flow (tips, teaching applications) has no article. "Unpublish" is a
+	// live label for events, releases and articles; "turned down" is checked unscoped.
+	'return / returned': [],
+	// "Session" stays for a program's meetings, which only the chairs' article covers.
+	reservation: [{ files: /^(?!.*\/staff-program-chairs\.md$)/ }],
+	// "Listing" stays for directory and resource entries, so outside the event
+	// articles only a listing named as an event's counts.
+	event: [
+		{ files: /\/(events-tickets\/|band-events|staff-events|staff-offsite-events)/ },
+		{ word: /\b(event|gig|show) listings?\b/i }
+	]
+};
+
+/**
+ * The prose a help article publishes, one paragraph per entry so a term wrapped
+ * across lines still matches: title, summary and body, minus code spans and link
+ * targets. `_` is a word character, so `_Book a Session_` would hide its words
+ * from `\b`; outside code and URLs it is only emphasis.
+ */
+function helpProse(source: string): string[] {
+	const [, front = '', body = source] = source.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/) ?? [];
+	const shown = front.split('\n').filter((l) => /^(title|summary):/.test(l));
+	return [...shown, ...body.split(/\n\s*\n/)].map((block) =>
+		block
+			.replace(/`[^`]*`/g, '')
+			.replace(/\]\([^)]*\)/g, ']')
+			.replace(/[_\s]+/g, ' ')
+	);
+}
+
+function around(text: string, word: RegExp): string | undefined {
+	const hit = word.exec(text);
+	return hit ? text.slice(Math.max(0, hit.index - 30), hit.index + hit[0].length + 30) : undefined;
+}
+
+describe('help articles', () => {
+	const files = sourceFiles(['src/content/help/**/*.md'], new Set());
+
+	it('finds help articles to check', () => {
+		expect(files.length).toBeGreaterThan(50);
+	});
+
+	it('decide where each key-scoped retired term applies', () => {
+		const scoped = retiredTerms.filter(({ keys }) => keys).map(({ use }) => use);
+		expect(scoped.filter((use) => !(use in helpScope))).toEqual([]);
+	});
+
+	it('use no retired term (retiredTerms in src/lib/config.ts)', () => {
+		const found = files.flatMap((file) => {
+			const blocks = helpProse(readFileSync(file, 'utf8'));
+			return retiredTerms.flatMap(({ word, use, keys }) =>
+				(keys ? (helpScope[use] ?? []) : [{} as HelpRule])
+					.filter((rule) => !rule.files || rule.files.test(file))
+					.flatMap((rule) =>
+						blocks
+							.map((block) => around(block, rule.word ?? word))
+							.filter((hit) => hit !== undefined)
+							.map((hit) => `${file}: "…${hit.trim()}…" (use ${use})`)
+					)
+			);
+		});
+		expect([...new Set(found)]).toEqual([]);
 	});
 });
 

@@ -14,7 +14,7 @@ at-a-glance view of your week and quick links to the things you do most.
 
 ## What's on it
 
-- **Quick links** — Jump straight to _Book a Session_, _Browse Events_, or
+- **Quick links** — Jump straight to _Reserve space_, _Browse Events_, or
   _Manage Membership_.
 - **This week** — A summary of your upcoming reservations for the next seven days.
 - **Practice credits** — If you're a sustaining member, your remaining credits
@@ -28,6 +28,6 @@ at-a-glance view of your week and quick links to the things you do most.
 New here? A good first pass:
 
 1. Fill out your [profile](/member/help/your-profile) so other members can find you.
-2. [Book your first practice session](/member/help/booking-a-session).
+2. [Book your first reservation](/member/help/booking-a-session).
 3. Explore [becoming a sustaining member](/member/help/become-a-sustaining-member)
    to unlock practice credits.

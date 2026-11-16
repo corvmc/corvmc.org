@@ -34,12 +34,12 @@ the scene finds out. Use **Add a show** on the Events page.
 
 This is for shows at **other venues** — a gig, a house show, a festival. It is
 not for booking the CMC space; that's a
-[practice session booking](/member/help/booking-a-session).
+[practice space reservation](/member/help/booking-a-session).
 
 A few things worth knowing:
 
 - **You start with the name, date, start time and venue.** Everything else —
-  description, who's playing, poster, tickets — goes on the listing's page,
+  description, who's playing, poster, tickets — goes on the event's page,
   which opens once you save.
 - **Nothing goes public until you publish it.** Saving gives you a draft only
   you can see, so you can come back and finish it later.
@@ -49,22 +49,22 @@ A few things worth knowing:
   to wherever tickets are actually sold, but the money doesn't come through us —
   we'd have no way to get it to whoever is putting the show on.
 - **Naming a band that's on the site asks them to confirm.** They show as a
-  plain credit until they do, and the listing never appears on their profile
+  plain credit until they do, and the event never appears on their profile
   without their say-so.
 - **If the show gets cancelled**, mark it cancelled rather than deleting it. It
   stays on the calendar marked cancelled until its date passes, so anyone who
   already had the date finds out.
 
-### If your listing is reviewed first
+### If your event is reviewed first
 
 Most people publish straight to the calendar. If a report about one of your
-listings is upheld by staff, your later listings are checked before they go up —
+events is upheld by staff, your later events are checked before they go up —
 the button will say **Submit for review** instead of **Publish**, and you'll
-hear back either way. If a listing is turned down you'll get the reason, and you
+hear back either way. If an event is declined you'll get the reason, and you
 can fix it and submit it again. Staff can restore direct publishing.
 
 ## Tipping us off without an account
 
-Don't have an account, or don't want to write the whole listing? Use the
+Don't have an account, or don't want to write the event up yourself? Use the
 [contact form](/contact) and pick **Event Tip** as the subject. A few optional
 fields appear for the show, date, venue and a link, and it lands with staff.

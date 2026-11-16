@@ -11,10 +11,10 @@ sortOrder: 8
 ## Managing events
 
 **Staff → Events** lists events by date with status, tags, and space-reservation
-info. Create a new one with **Create Listing**, or open an event to manage it. Creating asks only
+info. Create a new one with **Create event**, or open an event to manage it. Creating asks only
 for the title, kind, date and times; the event's page opens next, with its edit form open, for
-everything else. A listing has no production until someone opens one: **Staff → Productions →
-New Production** attaches one to a show already on the calendar, or makes the listing and its
+everything else. An event has no production until someone opens one: **Staff → Productions →
+New Production** attaches one to a show already on the calendar, or makes the event and its
 production together.
 
 ## On the event detail page
@@ -33,7 +33,7 @@ production together.
 A CMC show's **Manage production** button opens its console, which is back-of-house only: the
 production record (status, event lead, host), deliverables, artifact requests and tech riders,
 volunteer shifts, the run of show, and the budget and settlement. Anything the public sees is
-edited on the event page; **View listing** on the console takes you back there.
+edited on the event page; **View event** on the console takes you back there.
 
 Booking names the show's **event lead** on the console. The lead can run the show from the console
 and sees it on their member dashboard.

@@ -13,7 +13,7 @@ Your profile has a set of toggles that tell other members what you're open to.
 Turn on the ones that apply:
 
 - **Looking for a band** — You want to join or form a band.
-- **Available for hire** — You'll play paid gigs or sessions.
+- **Available for hire** — You'll take paid gigs or studio work.
 - **Teaches privately** — You offer instruction. Anywhere: your front room, over a video call,
   another town. It is something you say about yourself and nobody checks it.
 

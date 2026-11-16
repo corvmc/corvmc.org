@@ -10,18 +10,18 @@ sortOrder: 2
 ## Recurring reservations
 
 If you practice on a regular schedule, set up a recurring reservation instead of
-booking each session by hand.
+booking each one by hand.
 
 ## How it works
 
-When booking a session, choose a recurrence:
+When booking, choose a recurrence:
 
 - **Weekly** — Same day and time every week.
 - **Bi-weekly** — Every other week.
 - **Monthly** — Either by weekday (e.g. "the second Tuesday") or by calendar day
   (e.g. "the 15th").
 
-Sessions are created in advance within the booking window. You can cancel an
+Reservations are created in advance within the booking window. You can cancel an
 individual occurrence without ending the whole series.
 
 ## Eligibility

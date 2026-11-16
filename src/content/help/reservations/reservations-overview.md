@@ -14,7 +14,7 @@ sidebar to see your bookings and make new ones.
 
 ## The Reservations page
 
-- **Active / All tabs** — Switch between your upcoming sessions and your full
+- **Active / All tabs** — Switch between your upcoming reservations and your full
   history.
 - **Reservation cards** — Each shows the date, time, duration, and status.
 - **Search** — Filter your reservations when the list gets long.
@@ -33,7 +33,7 @@ sidebar to see your bookings and make new ones.
 
 ## How-tos
 
-- [Book a practice session](/member/help/booking-a-session)
+- [Reserve practice space](/member/help/booking-a-session)
 - [Set up a recurring booking](/member/help/recurring-reservations)
 - [Pay for a reservation](/member/help/pay-for-reservation)
 - [Cancel or change a reservation](/member/help/cancel-reservation)

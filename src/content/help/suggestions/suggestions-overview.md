@@ -52,7 +52,7 @@ Staff set a status and, where it needs one, write a public response.
 | **Declined**    | We are not doing it, and the response says why |
 
 A declined suggestion stays on the board with its reason attached. Knowing why
-something was turned down is worth more than the post quietly disappearing.
+something was declined is worth more than the post quietly disappearing.
 
 ## Editing your own post
 

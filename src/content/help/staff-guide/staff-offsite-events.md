@@ -30,7 +30,7 @@ copied from that row's page. There is no "add to project" button on the event si
 and the end only rolls past midnight when it is earlier than the start — so a 9pm–1am show works
 and a Saturday-noon-to-Sunday-night one does not. Create one event per day.
 
-Make them from **Staff → Events → Create Listing**:
+Make them from **Staff → Events → Create event**:
 
 - **Do not tick _Reserve practice space_** in the event's edit form for an off-site show. The
   room hold is what keeps members from booking the practice space, and a show in a park has no
@@ -91,7 +91,7 @@ card that expires between Saturday and Sunday blocks Sunday and not Saturday.
 
 ### Build a project template
 
-**Staff → Planning → Project Templates.** A template is a reusable set of work orders, stamped
+**Staff → Planning → Project Templates.** A template is a reusable set of tasks, stamped
 into a project and timed from it, so the same template serves every show.
 
 - **Anchor it to the event start** for a festival stage. The anchor reads the project's earliest
@@ -110,7 +110,7 @@ into a project and timed from it, so the same template serves every show.
 From each event's **Production** page: **Apply template**. It lands in the show's project.
 Applying the same template to the same project again asks for a reason, which is recorded.
 
-The advance work orders land with no window. They show up on **Staff → Tasks** under
+The advance tasks land with no window. They show up on **Staff → Tasks** under
 the **No set time** chip, and on the event's production page under **Advance** — that is where their
 checklists are ticked off.
 

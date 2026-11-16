@@ -74,7 +74,7 @@ through one grant from start to finish.
 | Prospect | Not yet applied              | Apply by       |
 | Applied  | Waiting on the funder        | none           |
 | Awarded  | Money awarded, award running | Award end      |
-| Declined | Turned down                  | none           |
+| Declined | Not funded                   | none           |
 | Closed   | Finished                     | none           |
 
 Keep **Requested** and **Awarded** separate: funders often award less than was asked.
