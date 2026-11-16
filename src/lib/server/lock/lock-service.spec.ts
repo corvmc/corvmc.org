@@ -969,11 +969,27 @@ describe('revokeAccessFor', () => {
 			lockAccessId: '333'
 		});
 		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('U-tec 503'));
+		mockGetLockUser.mockResolvedValueOnce({ ...activeUser, id: 333 });
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(revokeAccessFor('res-1')).resolves.toBe(false);
 		expect(lockCols('res-1')).toMatchObject({ lock_code: '4242', lock_access_id: '333' });
 		consoleSpy.mockRestore();
+	});
+
+	// A cancel racing a provision can send two deletes for one user (#3156).
+	it('counts a delete that fails on a user already gone as removed', async () => {
+		booking('res-1', {
+			status: 'cancelled',
+			startsAt: START,
+			lockCode: '4242',
+			lockAccessId: '333'
+		});
+		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('U-tec: no such user'));
+		mockGetLockUser.mockResolvedValueOnce(null);
+
+		await expect(revokeAccessFor('res-1')).resolves.toBe(true);
+		expect(lockCols('res-1').lock_code).toBeNull();
 	});
 });
 
