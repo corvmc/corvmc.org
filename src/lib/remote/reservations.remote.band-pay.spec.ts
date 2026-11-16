@@ -206,7 +206,7 @@ beforeEach(() => {
 describe('a band booking, paid by someone who did not book it', () => {
 	it('refuses a non-member on the pay page before any charge', async () => {
 		currentUser = outsider;
-		const e = await settle(getReservationPayment('res-1'));
+		const e = await settle(getReservationPayment({ id: 'res-1' }));
 		expect(isHttpError(e) && e.status).toBe(403);
 
 		const p = await settle(payReservation({ reservationId: 'res-1', coverFees: false }));
@@ -224,7 +224,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 	});
 
 	it("quotes a bandmate the booker's free hours, resolving the band from the row", async () => {
-		const data = await getReservationPayment('res-1');
+		const data = await getReservationPayment({ id: 'res-1' });
 		expect(requireGroupRole).toHaveBeenCalledWith({ id: band.id }, 'member');
 		expect(getFreeHoursWallet).toHaveBeenCalledWith(booker.id);
 		expect(getFreeHoursWallet).not.toHaveBeenCalledWith(bandmate.id);
@@ -246,6 +246,44 @@ describe('a band booking, paid by someone who did not book it', () => {
 		// Two hours at $15, one covered by the booker's free hours.
 		expect(opts.lineItems[0].price_data.unit_amount).toBe(1500);
 		expect(opts.successUrl).toContain('/band/the-band/reservations');
+	});
+});
+
+// #3131: paying keeps the payer in the panel they opened the pay page from.
+describe('the panel a band booking is paid from', () => {
+	const pay = (panel?: 'member' | 'band') =>
+		settle(payReservation({ reservationId: 'res-1', coverFees: false, panel }));
+	const urls = () => {
+		const opts = checkout.mock.calls[0][0] as any;
+		return { success: opts.successUrl as string, cancel: opts.cancelUrl as string };
+	};
+
+	it('returns the booker to the band panel when they paid from it', async () => {
+		currentUser = booker;
+		await pay('band');
+		expect(urls().success).toContain('/band/the-band/reservations?paid=res-1');
+		expect(urls().cancel).toMatch(/\/band\/the-band\/reservations\/res-1\/pay$/);
+	});
+
+	it('returns the booker to the member panel when they paid from it', async () => {
+		currentUser = booker;
+		await pay('member');
+		expect(urls().success).toContain('/member/reservations?paid=res-1');
+		expect(urls().cancel).toMatch(/\/member\/reservations\/res-1\/pay$/);
+	});
+
+	it('quotes the booker on the band pay page with a way back to the band', async () => {
+		currentUser = booker;
+		const data = await getReservationPayment({ id: 'res-1', panel: 'band' });
+		expect(data.backPath).toBe('/band/the-band/reservations');
+	});
+
+	it('keeps a solo booking in the member panel, without a band lookup', async () => {
+		currentUser = booker;
+		rows.set(reservation, [{ ...bandRow(), bookerType: 'user', bookerId: booker.id }]);
+		const data = await getReservationPayment({ id: 'res-1', panel: 'band' });
+		expect(data.backPath).toBe('/member/reservations');
+		expect(requireGroupRole).not.toHaveBeenCalled();
 	});
 });
 

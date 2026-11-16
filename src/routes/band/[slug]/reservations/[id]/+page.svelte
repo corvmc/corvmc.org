@@ -12,7 +12,6 @@
 	import Form from '#lib/components/ui/Form/index.js';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDollars } from '#lib/utils/format.js';
 	import {
 		cancelBandReservation,
 		getBandReservationDetail
@@ -20,6 +19,8 @@
 	import { resolve } from '$app/paths';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
+	import ReservationCharges from '#lib/components/reservations/ReservationCharges.svelte';
+	import ReservationPaymentState from '#lib/components/reservations/ReservationPaymentState.svelte';
 
 	const params = routeParams('slug', 'id');
 
@@ -33,9 +34,6 @@
 	const res = $derived(await getBandReservationDetail({ slug, reservationId: params.id }));
 
 	const cancel = $derived(cancelBandReservation.for(res.id));
-	const durationLabel = $derived(
-		m.band_slug_reservations_id_hours_label({ durationHours: res.durationHours })
-	);
 </script>
 
 <PageHeader width="md" title={m.band_slug_reservations_id_session_title()} />
@@ -64,54 +62,29 @@
 		{#if res.notes}
 			<Fact label={m.band_notes_label()} wrap>{res.notes}</Fact>
 		{/if}
-		<Fact label={m.band_slug_reservations_id_rate_label()}
-			>{m.band_slug_reservations_id_hour_text({
-				formatDollars: formatDollars(res.hourlyRateCents),
-				durationLabel
-			})}</Fact
-		>
-		{#if res.creditsUsed}
-			<Fact label={m.band_slug_reservations_id_free_hours_applied_label()}>{res.creditsUsed}</Fact>
-		{/if}
-		<Fact label={m.band_slug_reservations_id_total_label()} class="font-medium"
-			>${formatDollars(res.totalCents)}</Fact
-		>
+		<ReservationCharges
+			hourlyRateCents={res.hourlyRateCents}
+			durationHours={res.durationHours}
+			totalCents={res.totalCents}
+			creditsUsed={res.creditsUsed}
+		/>
 	</DefinitionList>
 
-	<!-- Where the money stands, in a sentence. A three-row grid and one line of
-	     prose is not a section; it was an `InfoCard` titled "Payment" around a
-	     hand-written `<dl>` (#1077). -->
-	<p>
-		{#if res.track === 'refunded'}
-			{m.band_slug_reservations_id_refunded_text()}
-		{:else if res.track === 'paid'}
-			{m.band_slug_reservations_id_paid_full_text()}
-		{:else if res.track === 'covered'}
-			{m.band_slug_reservations_id_settled_nothing_owed_at_door_text()}
-		{:else if res.trackDetail === 'cash_due'}
-			<span class="font-medium"
-				>{m.band_slug_reservations_id_due_at_door_text({
-					formatDollars: formatDollars(res.cashDueCents ?? 0)
-				})}</span
-			>
-		{:else if res.trackDetail === 'unpriced'}
-			{m.band_slug_reservations_id_not_yet_paid_text()}
-		{/if}
-	</p>
+	<ReservationPaymentState
+		track={res.track}
+		trackDetail={res.trackDetail}
+		cashDueCents={res.cashDueCents}
+	/>
 
 	{#if res.canPay}
-		<!-- The checkout takes this row: it authorizes on `createdByUserId`, and a
-		     band booking appears in its booker's own list. Only the booker saw
-		     what was owed and no way to settle it (#1077). -->
-		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
+		<!-- The band's own pay page, so checkout returns the payer here (#3131). -->
+		<Button
+			href={resolve('/band/[slug]/reservations/[id]/pay', { slug, id: res.id })}
+			variant="primary"
+			class="w-full"
+		>
 			{m.band_slug_reservations_id_pay_session_label()}
 		</Button>
-	{:else if !res.isBooker && (res.track === 'booked' || res.track === 'payment_due')}
-		<!-- Whoever booked pays, from their own reservation page; the act sees
-		     what it owes without being handed someone else's checkout. -->
-		<p class="text-subtle">
-			{m.band_slug_reservations_id_booked_session_can_settle_text({ title: res.bookedBy.title })}
-		</p>
 	{/if}
 
 	{#if res.status === 'confirmed'}
@@ -154,7 +127,7 @@
 				{m.band_slug_reservations_id_code_issued_but_door_hasn_text()}
 			</p>
 		{:else}
-			<p class="text-muted">{m.band_slug_reservations_id_door_code_appears_here_day_text()}</p>
+			<p class="text-muted">{m.reservations_door_code_pending_text()}</p>
 		{/if}
 	{/if}
 

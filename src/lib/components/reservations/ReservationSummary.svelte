@@ -1,13 +1,9 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { formatDistanceToNow } from 'date-fns';
-	import {
-		formatMonthDayYear,
-		formatTimeRange,
-		formatDateShortYear,
-		formatDuration
-	} from '#lib/utils/format.js';
+	import { formatMonthDayYear, formatTimeRange, formatDuration } from '#lib/utils/format.js';
 	import { reservationTrack } from '#lib/utils/reservation-actions.js';
+	import ReservationMoneyLine from './ReservationMoneyLine.svelte';
 
 	let {
 		reservation,
@@ -81,28 +77,14 @@
 				})
 			})}
 		</p>
-	{:else if reservation.price === 0}
-		<p class="text-muted">{m.reservations_reservation_summary_covered_by_credits_text()}</p>
 	{:else if reservation.price != null}
-		<p class="text-muted">
-			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
-			<!-- The card's badge names the track; this adds only the date it lacks. -->
-			{#if track === 'refunded' && reservation.refundedAt}
-				· {m.reservations_reservation_summary_refunded_text({
-					formatDateShortYear: formatDateShortYear(reservation.refundedAt)
-				})}
-			{:else if track === 'paid' && reservation.paidAt}
-				· {m.reservations_reservation_summary_paid_text({
-					formatDateShortYear: formatDateShortYear(reservation.paidAt)
-				})}
-			{:else if track === 'booked'}
-				<!-- Stays date-fns: a distance between two instants has no timezone to
-				     get wrong. -->
-				· {m.reservations_reservation_summary_due_text({
-					formatDistanceToNow: formatDistanceToNow(reservation.startsAt, { addSuffix: true })
-				})}
-			{/if}
-		</p>
+		<ReservationMoneyLine
+			price={reservation.price}
+			{track}
+			startsAt={reservation.startsAt}
+			paidAt={reservation.paidAt ?? null}
+			refundedAt={reservation.refundedAt ?? null}
+		/>
 	{/if}
 	{#if member?.name}
 		<p class="text-muted">{member.name}</p>

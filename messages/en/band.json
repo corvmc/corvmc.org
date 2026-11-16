@@ -513,37 +513,16 @@
 	"band_slug_press_kit_title": "Press kit",
 	"band_slug_reservations_description_body": "Book the practice space and it'll show up here for the whole band.",
 	"band_slug_reservations_id_booked_by_label": "Booked by",
-	"band_slug_reservations_id_booked_session_can_settle_text": "{title} booked this reservation and can settle it.",
 	"band_slug_reservations_id_cancel_session_label": "Cancel this reservation",
 	"band_slug_reservations_id_cancelled_label": "Cancelled",
 	"band_slug_reservations_id_code_issued_but_door_hasn_text": "The code is issued but the door hasn't confirmed it yet. It should be ready before the reservation starts — check back here, and get in touch if it still isn't showing.",
 	"band_slug_reservations_id_door_code_title": "Door code",
-	"band_slug_reservations_id_door_code_appears_here_day_text": "The door code appears here on the day of the reservation.",
-	"band_slug_reservations_id_due_at_door_text": "${formatDollars} due at the door.",
 	"band_slug_reservations_id_enter_code_door_keypad_works_text": "Enter this code on the door keypad. It works for the length of the reservation, for whoever on the band gets there first.",
-	"band_slug_reservations_id_free_hours_applied_label": "Credits applied",
-	"band_slug_reservations_id_hour_text": "${formatDollars}/hour · {durationLabel}",
-	"band_slug_reservations_id_hours_label": [
-		{
-			"declarations": ["input durationHours", "local durationHoursPlural = durationHours: plural"],
-			"selectors": ["durationHoursPlural"],
-			"match": {
-				"durationHoursPlural=one": "{durationHours} hour",
-				"durationHoursPlural=*": "{durationHours} hours"
-			}
-		}
-	],
 	"band_slug_reservations_id_no_reason_was_recorded_text": "No reason was recorded.",
-	"band_slug_reservations_id_not_yet_paid_text": "Not yet paid.",
-	"band_slug_reservations_id_paid_full_text": "Paid in full.",
 	"band_slug_reservations_id_pay_session_label": "Pay for this reservation",
-	"band_slug_reservations_id_rate_label": "Rate",
-	"band_slug_reservations_id_refunded_text": "Refunded.",
 	"band_slug_reservations_id_session_title": "Reservation",
 	"band_slug_reservations_id_session_s_code_hasn_t_body": "This reservation's code hasn't reached the door and we don't have a backup to give you right now. Don't wait outside — {#a}get in touch{/a} and someone will let the band in.",
-	"band_slug_reservations_id_settled_nothing_owed_at_door_text": "Settled — nothing owed at the door.",
 	"band_slug_reservations_id_toast": "Reservation cancelled",
-	"band_slug_reservations_id_total_label": "Total",
 	"band_slug_reservations_id_we_couldn_t_confirm_session_text": "We couldn't confirm this reservation's usual code reached the door, so this one will get the band in for now. Staff know about it. If it doesn't work, call us rather than waiting outside.",
 	"band_slug_reservations_message_body": "No past reservations.",
 	"band_slug_reservations_no_upcoming_sessions_title": "No upcoming reservations",

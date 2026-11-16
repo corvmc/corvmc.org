@@ -168,19 +168,32 @@ import { writesAudit } from '#lib/server/audit/declared.js';
  * Paying moves nothing: free hours, overdue and reminders stay with
  * `createdByUserId`. `backPath` is where the payer returns afterwards.
  */
-async function requireReservationPayer(row: {
-	createdByUserId: string;
-	bookerType: BookerType;
-	bookerId: string;
-}): Promise<{ isBooker: boolean; backPath: string }> {
+async function requireReservationPayer(
+	row: { id: string; createdByUserId: string; bookerType: BookerType; bookerId: string },
+	panel: PayPanel = 'member'
+): Promise<{ isBooker: boolean; backPath: string; payPath: string }> {
 	const currentUser = requireUser();
-	if (row.createdByUserId === currentUser.id) {
-		return { isBooker: true, backPath: '/member/reservations' };
+	const isBooker = row.createdByUserId === currentUser.id;
+	// The panel only picks where the payer returns to; the band is still the row's.
+	if (isBooker && (panel === 'member' || row.bookerType !== 'group')) {
+		return {
+			isBooker,
+			backPath: '/member/reservations',
+			payPath: `/member/reservations/${row.id}/pay`
+		};
 	}
 	if (row.bookerType !== 'group') throw error(403, 'Not your reservation');
 	const { group: band } = await requireGroupRole({ id: row.bookerId }, 'member');
-	return { isBooker: false, backPath: `/band/${band.slug}/reservations` };
+	return {
+		isBooker,
+		backPath: `/band/${band.slug}/reservations`,
+		payPath: `/band/${band.slug}/reservations/${row.id}/pay`
+	};
 }
+
+/** The panel a pay page was opened from, which it returns the payer to (#3131). */
+const payPanel = z.enum(['member', 'band']).default('member');
+type PayPanel = z.infer<typeof payPanel>;
 
 type Person = { id: string; email: string; name: string | null };
 
@@ -196,44 +209,47 @@ async function bookerOf(row: { createdByUserId: string }, payer: Person): Promis
 	return { id: row.createdByUserId, ...b };
 }
 
-export const getReservationPayment = query(z.string(), async (id) => {
-	const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
+export const getReservationPayment = query(
+	z.object({ id: z.string(), panel: payPanel }),
+	async ({ id, panel }) => {
+		const [row] = await db.select().from(reservation).where(eq(reservation.id, id)).limit(1);
 
-	if (!row) throw error(404, 'Reservation not found');
-	const { backPath } = await requireReservationPayer(row);
-	// Shared with the member UI's pay links, so the two cannot drift (#1952).
-	if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
+		if (!row) throw error(404, 'Reservation not found');
+		const { backPath } = await requireReservationPayer(row, panel);
+		// Shared with the member UI's pay links, so the two cannot drift (#1952).
+		if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
 
-	// Resolved for who is booking. Reading the config directly quoted an
-	// instructor the $15 drop-in rate on the page they pay from.
-	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationHours = billableHours(row);
-	const totalCents = Math.round(durationHours * hourlyRateCents);
-	// The booker's, whoever pays. Zero for a session on or after the next reset.
-	const freeHoursBalance = usableFreeHours(
-		await getFreeHoursWallet(row.createdByUserId),
-		row.startsAt
-	);
+		// Resolved for who is booking. Reading the config directly quoted an
+		// instructor the $15 drop-in rate on the page they pay from.
+		const { hourlyRateCents } = await getBookingTerms(row.bookerType);
+		const durationHours = billableHours(row);
+		const totalCents = Math.round(durationHours * hourlyRateCents);
+		// The booker's, whoever pays. Zero for a session on or after the next reset.
+		const freeHoursBalance = usableFreeHours(
+			await getFreeHoursWallet(row.createdByUserId),
+			row.startsAt
+		);
 
-	return {
-		reservation: {
-			id: row.id,
-			startsAt: row.startsAt,
-			endsAt: row.endsAt,
-			notes: row.notes
-		},
-		durationHours,
-		totalCents,
-		hourlyRateCents,
-		freeHoursBalance,
-		// Committed settlement state — when cashDueCents is non-null the credits
-		// are locked in and the page must show the stored remainder, not a
-		// re-projection from the live balance.
-		cashDueCents: row.cashDueCents,
-		creditsUsedHours: row.creditsUsed,
-		backPath
-	};
-});
+		return {
+			reservation: {
+				id: row.id,
+				startsAt: row.startsAt,
+				endsAt: row.endsAt,
+				notes: row.notes
+			},
+			durationHours,
+			totalCents,
+			hourlyRateCents,
+			freeHoursBalance,
+			// Committed settlement state — when cashDueCents is non-null the credits
+			// are locked in and the page must show the stored remainder, not a
+			// re-projection from the live balance.
+			cashDueCents: row.cashDueCents,
+			creditsUsedHours: row.creditsUsed,
+			backPath
+		};
+	}
+);
 
 /**
  * Owner-only detail view for a single reservation — backs the member detail
@@ -286,6 +302,9 @@ export const getReservationDetail = query(z.string(), async (id) => {
 		durationHours,
 		totalCents,
 		hourlyRateCents,
+		// The money facts the band panel shows for the same booking (#3131).
+		track: reservationTrack(row),
+		trackDetail: trackDetail(row),
 		fallbackCode,
 		// Whether they are at the door right now. Without it a booking with no
 		// working code reads "check back before your session" while they stand
@@ -359,7 +378,8 @@ export const getBandReservations = query(
 				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
 				refundedAt: reservation.refundedAt,
-				cashDueCents: reservation.cashDueCents
+				cashDueCents: reservation.cashDueCents,
+				tourMinutes: reservation.tourMinutes
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -385,7 +405,8 @@ export const getBandReservations = query(
 				bookerType: reservation.bookerType,
 				paidAt: reservation.paidAt,
 				refundedAt: reservation.refundedAt,
-				cashDueCents: reservation.cashDueCents
+				cashDueCents: reservation.cashDueCents,
+				tourMinutes: reservation.tourMinutes
 			})
 			.from(reservation)
 			.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -405,6 +426,11 @@ export const getBandReservations = query(
 			{ page: pastPage }
 		);
 
+		// What the member's own list shows for the same booking (#3131): the stored
+		// remainder once committed, the full rate before.
+		const { hourlyRateCents } = await getBookingTerms('group');
+		const priceOf = (r: (typeof upcoming)[number]) =>
+			(r.cashDueCents ?? Math.round(billableHours(r) * hourlyRateCents)) / 100;
 		// Any member may pay what the band owes (#2095); staff take payment elsewhere.
 		const canPayRow = (r: (typeof upcoming)[number]) => role !== 'staff' && isAwaitingPayment(r);
 		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
@@ -413,6 +439,7 @@ export const getBandReservations = query(
 			// The one status the card shows, as staff read it (#2861).
 			track: reservationTrack(r.ref, now),
 			bookedBy: toMemberRef(r.bookedBy),
+			price: priceOf(r),
 			canCancel: cancellable && canCancelRow(r.createdByUserId),
 			canPay: canPayRow(r)
 		});
@@ -523,11 +550,9 @@ export const getBandReservationDetail = query(
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&
 				res.status === 'confirmed',
-			// The member checkout takes this row — it authorizes on
-			// `createdByUserId`, and a band booking is in its booker's own list —
-			// so the booker gets the link the member page has, on
-			// `getReservationPayment`'s own gate.
-			canPay: isBooker && isAwaitingPayment(res)
+			// The list's rule: any member may pay what the band owes (#2095), from
+			// the band's own pay page; staff take payment elsewhere.
+			canPay: role !== 'staff' && isAwaitingPayment(res)
 		};
 	}
 );
@@ -1934,7 +1959,8 @@ export const payForReservation = form(
 export const payReservation = form(
 	z.object({
 		reservationId: z.string().min(1),
-		coverFees: z.boolean().default(false)
+		coverFees: z.boolean().default(false),
+		panel: payPanel
 	}),
 	async (data, _issue) => {
 		const currentUser = requireUser();
@@ -1947,7 +1973,7 @@ export const payReservation = form(
 			.limit(1);
 
 		if (!row) throw error(404, 'Reservation not found');
-		const { backPath } = await requireReservationPayer(row);
+		const { backPath, payPath } = await requireReservationPayer(row, data.panel);
 		if (!isAwaitingPayment(row)) throw error(400, 'Not eligible for payment');
 
 		// No window gate: free hours settle a covered session before the next
@@ -1958,7 +1984,7 @@ export const payReservation = form(
 			payer: currentUser,
 			coverFees: data.coverFees,
 			successUrl: `${url.origin}${backPath}?paid=${row.id}`,
-			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
+			cancelUrl: `${url.origin}${payPath}`
 		});
 
 		redirect(303, 'paid' in result ? backPath : result.checkoutUrl);
