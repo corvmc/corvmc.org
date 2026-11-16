@@ -9,19 +9,26 @@ sortOrder: 1
 
 ## Your dashboard
 
-The dashboard is the first thing you see when you sign in. It gives you an
-at-a-glance view of your week and quick links to the things you do most.
+The dashboard is the first thing you see when you sign in. It shows what is
+waiting on you and what is coming up this week.
 
 ## What's on it
 
-- **Quick links** — Jump straight to _Reserve space_, _Browse Events_, or
-  _Manage Membership_.
-- **This week** — A summary of your upcoming reservations for the next seven days.
-- **Practice credits** — If you're a sustaining member, your remaining credits
-  for the month are shown here.
-- **Upcoming events** — A carousel of shows and community events you can attend.
-- **Band invitations** — If someone has invited you to a band, a badge appears so
-  you can accept or decline.
+- **Pending actions** — Things waiting on you, soonest deadline first: band
+  invitations, a booking to pay for, a shift you are on, gear to return, a
+  message request. It only appears when there is something in it.
+- **New bands** — Bands you joined through an emailed invitation when you
+  signed up.
+- **Reservations this week** — Your reservations for the week, or
+  **Reserve space** when there are none.
+- **Practice credits** — If you're a sustaining member, the hours you have left
+  this month. Otherwise, **Learn more** about sustaining membership.
+- **Find your people** — Members and bands whose profiles match what you are
+  looking for.
+- **Upcoming events** — Shows and community events you can attend.
+
+At the top, **Invite a friend** sends someone an invitation to join, and
+**Report building problem** tells staff about something broken in the space.
 
 ## Next steps
 

@@ -12,11 +12,12 @@ sortOrder: 2
 Your **Membership** page is where all of this lives. No separate site, no
 second login:
 
-- **Your contribution** — change the amount, or turn fee coverage on and off.
+- **Contribution** — **Modify amount** changes the amount, or turns fee
+  coverage on and off.
 - **Payment methods** — add a card, pick which one gets billed, remove one you
   no longer use.
 - **Billing history** — every charge, with a receipt and a PDF.
-- **Cancel** — at the bottom of your contribution card.
+- **Cancel membership** — on your **Contribution** card.
 
 ## Cards
 
@@ -35,11 +36,12 @@ four digits, so we can show you which card is on file.
 
 If you cancel, your benefits — including your practice credits — continue
 until the end of the current billing period. If you change your mind before
-then, **Resume** on the same page picks it back up without starting over.
+then, **Resume membership** on the same page picks it back up without starting
+over.
 
 ## Receipts
 
-Every charge appears under **Billing History** with a receipt you can open and a
+Every charge appears under **Billing history** with a receipt you can open and a
 PDF you can download. A copy is also emailed to you when each payment is
 processed.
 

@@ -16,8 +16,9 @@ reachable.
 
 ## Sending a first message
 
-From **Messages**, press **Message a Member** and search for them by name. You
-can reach anyone you can already see in the directory.
+From **Messages**, press **Message a member**, search for them by name, and
+choose **Send request**. You can reach anyone you can already see in the
+directory. The button only shows while your own direct messages are on.
 
 Your first message goes as a **request**. It is one message — you cannot send
 again until they accept — and it stays out of their notifications until they do.
@@ -48,7 +49,7 @@ only ever exposes the thread you were actually in.
 
 ## Blocking
 
-Inside any open conversation you can block the other person. Blocking works both
+Inside any open conversation, **Block** blocks the other person. Blocking works both
 ways from a single action — neither of you can start something new — and it
 takes effect on sending, replying, and accepting.
 
@@ -56,12 +57,14 @@ It deliberately does **not** hide the conversation from you. If you blocked
 someone because of what they said, you still need to be able to read it to
 report it.
 
-Manage everyone you have blocked from **Account** → the messaging section, where
-you can also unblock. Unblocking is immediate and leaves no record.
+Everyone you have blocked is listed under **Blocked members** in the **Direct
+messages** section of **Account**, each with **Unblock**. Unblocking is immediate
+and leaves no record.
 
 ## Turning messages off
 
-Also in **Account**: a switch that stops other members starting conversations
+Also in the **Direct messages** section of **Account**: **Allow direct messages**,
+with **Turn off** and **Turn on**. Off stops other members starting conversations
 with you at all. Existing conversations keep working, and staff can always reach
 you — this is about unsolicited messages from members, not about being
 contactable.

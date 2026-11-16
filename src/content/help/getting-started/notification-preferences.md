@@ -14,9 +14,10 @@ reminders, and band invitations. You control how you hear about each type.
 
 ## Adjusting them
 
-1. Open **Account** from the sidebar.
-2. Find the **Notifications** section. Each notification type has its own row.
-3. For each type, toggle whether you want it delivered by **email**, **in-app**,
+1. Select your picture at the top right, then **Account**.
+2. Find the **Notification preferences** section. Each notification type has its
+   own row.
+3. For each type, toggle whether you want it delivered by **Email**, **In-app**,
    or both.
 4. Changes save as you make them.
 

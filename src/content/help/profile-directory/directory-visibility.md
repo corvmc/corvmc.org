@@ -9,8 +9,8 @@ sortOrder: 5
 
 ## Visibility levels
 
-Your **Profile** page has a visibility setting that controls who can find your
-listing in the directory:
+**Directory visibility**, in the **Visibility** section of your **Profile** page,
+controls who can find your listing in the directory:
 
 - **Public** — Anyone, including visitors who aren't signed in, can see your
   profile.

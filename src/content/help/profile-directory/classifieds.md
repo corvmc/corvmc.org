@@ -18,10 +18,10 @@ now, in their own words.
 
 ## Posting
 
-Press **New post**, choose Wanted, Offered or Trade and a category, then write a
-title and the details.
+Press **New post**, choose a **Type** (Wanted, Offered or Trade) and a
+**Category**, then write a **Title** and the **Details**.
 
-- **Tags** for instruments, genres and skills make your post easier to find.
+- **Instruments**, **Genres** and **Skills** tags make your post easier to find.
   Anyone who clicks a tag sees every post that shares it.
 - **Post as** appears if you own or run a band. The post then shows the band as
   well as you.
@@ -45,7 +45,7 @@ check the condition of gear, or settle disputes between members. Meet somewhere
 public, or at the space during staffed hours, and try gear before you pay.
 
 Gear posts follow the same rules as every other post. A misleading or suspicious
-listing can be reported with the flag, and staff review it the same way.
+listing can be reported with the flag (**Report**), and staff review it the same way.
 
 ## How long a post lasts
 
@@ -61,7 +61,7 @@ reach them.
 
 ## Reports
 
-If a post breaks the rules, use the flag on it. A reported post comes off the
+If a post breaks the rules, use the flag (**Report**) on it. A reported post comes off the
 board while staff look. If staff agree, it stays down, and the author sees a note
 saying what to change. When the author edits it, it goes back to staff for
 another look. Posts are never deleted by moderation.

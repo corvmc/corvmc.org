@@ -10,21 +10,26 @@ sortOrder: 0
 ## Membership at CorvMC
 
 A free account lets you use the basics. **Sustaining membership** is a recurring
-contribution that supports the space and unlocks extra benefits. Open
-**Membership** from the sidebar to manage yours.
+contribution that supports the space and unlocks extra benefits. Select your
+picture at the top right, then **Membership**, to manage yours.
 
 ## On the membership page
 
-- **Your status** — Whether you're a sustaining member and your contribution
-  amount.
-- **Credit balance** — Your practice credits and monthly allocation.
-- **Benefits & sliding scale** — What membership includes and the contribution
-  options.
+As a sustaining member you see:
+
+- **Contribution** — Your monthly amount and next bill, with **Modify amount**
+  and **Cancel membership**.
+- **Payment methods** — The cards on file and which one is billed.
+- **Billing history** — Every charge, with a receipt and a PDF.
+- **Credits** — Your practice credits and monthly allocation.
+- **Sustaining member benefits** — What membership includes.
 - **Community impact** — How contributions support the collective.
-- **Billing** — A link to the secure portal to manage your subscription.
+
+If you are not a sustaining member yet, the page shows the benefits, the
+**Contribution amount** sliding scale, and **Become a sustaining member**.
 
 ## How-tos
 
 - [Become a sustaining member](/member/help/become-a-sustaining-member)
-- [Manage billing via the Stripe portal](/member/help/manage-billing)
+- [Manage your billing](/member/help/manage-billing)
 - [Understand benefits, sliding scale & credits](/member/help/membership-benefits)

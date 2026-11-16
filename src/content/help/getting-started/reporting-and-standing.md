@@ -11,7 +11,7 @@ sortOrder: 7
 
 Most things members write are reportable from the thing itself — a member or
 band profile, an event on the gig guide, a suggestion, or a message
-someone sent you. Look for the report action on the page.
+someone sent you. Look for **Report** on the page.
 
 Tell us what is wrong rather than that something is wrong. "The date is wrong"
 is a correction; "this is not their band" is a different problem with a
