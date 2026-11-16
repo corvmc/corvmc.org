@@ -178,6 +178,8 @@
 	"staff_clearance_granted_by_text": " by {name}",
 	"staff_clearance_no_expiry_text": " · no expiry",
 	"staff_clearance_revoked_text": " · revoked: {reason}",
+	"staff_clearance_cleared_through_text": "Cleared through {band}",
+	"staff_clearance_bandmate_holds_text": "{name} holds the Practice space clearance",
 	"staff_cleared_label": "Cleared",
 	"staff_cleared_toast": "Cleared",
 	"staff_closed_label": "Closed",
