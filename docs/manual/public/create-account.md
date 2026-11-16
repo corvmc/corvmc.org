@@ -20,9 +20,10 @@ On the same page, switch to **Register** to create a free account:
 
 ## Joining from a band invite
 
-If a band invited you by email, opening that invite link brings you to the sign-in
-page pre-filled with the invitation details. Register or sign in with that email and
-the band invitation will be waiting for you to accept.
+If a band invited you by email, opening that invite link brings you to the sign-up
+page with the invitation details. The email field shows the address the invite went to
+and cannot be changed, so the account you create joins the band. To use another
+address, ask for a new invite sent to it.
 
 ## After signing in
 

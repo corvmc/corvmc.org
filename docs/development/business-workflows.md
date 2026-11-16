@@ -532,7 +532,8 @@ premium subscription that unlocks a public band microsite.
   `resolvePendingInvites(userId, email)` once per session (tracked in the in-memory
   `resolvedSessions` set) — any `groupInvite` rows matching the user's email become real
   band memberships. This is why "invite someone with no account" just works after they
-  register.
+  register. The signup page sends the link's token as `x-invite-token`, and `beforeAuth`
+  in `src/lib/server/auth.ts` refuses a sign-up whose email is not the live invite's.
 - **Accept/decline:** `acceptInvitation()` / `declineInvitation()` in `band-service.ts`
   (accept emits `band.invitation_accepted`, which notifies band admins).
 - **Roles/ownership:** `transferOwnership()` (another `db.batch` — demote old owner,
