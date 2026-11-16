@@ -4,6 +4,7 @@ slug: classifieds
 category: profile-directory
 summary: Post what you are looking for or what you can offer, and answer other members' posts.
 minRole: member
+surface: classifieds
 sortOrder: 7
 ---
 

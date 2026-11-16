@@ -18,7 +18,7 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { eq, and, notInArray } from 'drizzle-orm';
 import { databaseIdFromWrangler } from '../drizzle.config';
 import { helpCategory, helpArticle } from '../src/lib/server/db/schema/help';
-import { helpAudiences, isCapability } from '../src/lib/config';
+import { helpAudiences, isCapability, isSurface } from '../src/lib/config';
 
 const CONTENT_DIR = join(import.meta.dirname, '../src/content/help');
 
@@ -33,6 +33,8 @@ interface ArticleFrontmatter {
 	 * staff, any one also admits a reader under `minRole`.
 	 */
 	capabilities?: string;
+	/** A key of `surfaces`: hidden from every reader while that surface is off. */
+	surface?: string;
 	sortOrder?: number;
 }
 
@@ -81,6 +83,14 @@ function capabilitiesOf(file: string, raw?: string): string[] | null {
 	return caps.length > 0 ? caps : null;
 }
 
+/** A surface that does not exist would hide the article forever: a typo, and it fails the sync. */
+function surfaceOf(file: string, raw?: string): string | null {
+	const name = (raw ?? '').trim();
+	if (!name) return null;
+	if (!isSurface(name)) throw new Error(`${file}: "${name}" is not a surface in src/lib/config.ts`);
+	return name;
+}
+
 function findMarkdownFiles(dir: string): string[] {
 	const files: string[] = [];
 	for (const entry of readdirSync(dir)) {
@@ -98,6 +108,7 @@ export interface StaticArticle {
 	meta: ArticleFrontmatter;
 	body: string;
 	capabilities: string[] | null;
+	surface: string | null;
 }
 
 export function readArticles(dir = CONTENT_DIR): StaticArticle[] {
@@ -105,7 +116,13 @@ export function readArticles(dir = CONTENT_DIR): StaticArticle[] {
 	console.log(`Found ${files.length} markdown file(s) in ${dir}`);
 	return files.map((file) => {
 		const { meta, body } = parseFrontmatter(readFileSync(file, 'utf-8'));
-		return { meta, body, capabilities: capabilitiesOf(relative(dir, file), meta.capabilities) };
+		const name = relative(dir, file);
+		return {
+			meta,
+			body,
+			capabilities: capabilitiesOf(name, meta.capabilities),
+			surface: surfaceOf(name, meta.surface)
+		};
 	});
 }
 
@@ -197,7 +214,7 @@ export async function syncHelpArticles(db: HelpSyncDb, articles: StaticArticle[]
 	// member unpublished, nor silently publish a draft the moment its markdown
 	// changes.
 	const syncedSlugs: string[] = [];
-	for (const { meta, body, capabilities } of articles) {
+	for (const { meta, body, capabilities, surface } of articles) {
 		const categoryId = categoryIdMap.get(meta.category)!;
 		syncedSlugs.push(meta.slug);
 
@@ -217,6 +234,7 @@ export async function syncHelpArticles(db: HelpSyncDb, articles: StaticArticle[]
 					content: body,
 					minRole: audienceOf(meta.minRole),
 					capabilities,
+					surface,
 					sortOrder: meta.sortOrder ?? 0,
 					updatedAt: new Date()
 				})
@@ -232,6 +250,7 @@ export async function syncHelpArticles(db: HelpSyncDb, articles: StaticArticle[]
 				source: 'static',
 				minRole: audienceOf(meta.minRole),
 				capabilities,
+				surface,
 				published: false,
 				sortOrder: meta.sortOrder ?? 0
 			});

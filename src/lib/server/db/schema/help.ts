@@ -44,6 +44,8 @@ export const helpArticle = sqliteTable(
 		 * For a staff article documenting a page a committee can be granted (#1638).
 		 */
 		capabilities: text('capabilities', { mode: 'json' }).$type<string[]>(),
+		/** A key of `surfaces`: the article is hidden from everyone while that surface is off. */
+		surface: text('surface'),
 		published: integer('published', { mode: 'boolean' }).notNull().default(false),
 		sortOrder: integer('sort_order').notNull().default(0),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {

@@ -14,6 +14,7 @@ import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
 
 import { seatSql } from '#lib/server/testing/operations-seat.js';
+import { surfaces } from '#lib/config.js';
 
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 const CONTENT_DIR = join(import.meta.dirname, '..', '..', '..', 'content', 'help');
@@ -81,6 +82,11 @@ beforeAll(() => {
 			('a-purge', 'c-staff', 'Purge an Account', 'staff-purge', 'purge body', 'staff', 1, '["user.purge"]'),
 			('a-welcome', 'c-member', 'Welcome', 'welcome', 'hello', 'member', 1, NULL),
 			('a-draft', 'c-member', 'Door Policy', 'door-policy', 'draft', 'member', 0, NULL);
+
+		INSERT INTO help_categories (id, name, slug, min_role) VALUES
+			('c-votes', 'Votes', 'votes', 'member');
+		INSERT INTO help_articles (id, category_id, title, slug, content, min_role, published, surface) VALUES
+			('a-ballots', 'c-votes', 'Ballots', 'ballots', 'ballot body', 'member', 1, 'ballots');
 	`);
 }, 30_000);
 
@@ -223,6 +229,30 @@ describe('listReadableArticles, for an article another record links to (#2728)',
 	});
 });
 
+describe('an article naming a switched-off surface', () => {
+	it.each(['u-member', 'u-admin'])('is hidden from %s on every read path', async (user) => {
+		expect(surfaces.ballots).toBe(false);
+		const reader = await resolveHelpReader(user);
+		expect(await getArticleBySlug('ballots', reader)).toBeNull();
+		expect(await searchArticles('ballot', reader)).toEqual([]);
+		expect(await listArticlesByCategory('c-votes', reader)).toEqual([]);
+		expect(await listReadableArticles(['a-ballots'], reader)).toEqual([]);
+		expect((await listNonEmptyCategories(reader)).map((c) => c.slug)).not.toContain('votes');
+	});
+
+	it('reads as any other article once the surface is on', async () => {
+		surfaces.ballots = true;
+		try {
+			const reader = await resolveHelpReader('u-member');
+			expect((await getArticleBySlug('ballots', reader))?.id).toBe('a-ballots');
+			expect((await searchArticles('ballot', reader)).map((r) => r.id)).toEqual(['a-ballots']);
+			expect((await listNonEmptyCategories(reader)).map((c) => c.slug)).toContain('votes');
+		} finally {
+			surfaces.ballots = false;
+		}
+	});
+});
+
 describe('the shipped frontmatter', () => {
 	it.each([['staff-guide/staff-sponsors-grants.md', 'sponsor.read, grant.read']])(
 		'%s names the capabilities that gate its page',
@@ -231,4 +261,12 @@ describe('the shipped frontmatter', () => {
 			expect(raw).toMatch(new RegExp(`^capabilities: ${caps.replaceAll('.', '\\.')}$`, 'm'));
 		}
 	);
+
+	it.each([
+		['profile-directory/classifieds.md', 'classifieds'],
+		['suggestions/ballots.md', 'ballots']
+	])('%s names the switched-off surface it documents', (file, surface) => {
+		const raw = readFileSync(join(CONTENT_DIR, file), 'utf-8');
+		expect(raw).toMatch(new RegExp(`^surface: ${surface}$`, 'm'));
+	});
 });

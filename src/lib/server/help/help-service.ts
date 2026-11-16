@@ -1,8 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { helpCategory, helpArticle } from '#lib/server/db/schema/help.js';
-import { eq, and, or, sql, inArray, asc, exists, type SQL } from 'drizzle-orm';
+import { eq, and, or, sql, inArray, isNull, asc, exists, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
-import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '#lib/config.js';
+import { SEARCH_LIMIT, helpAudiences, surfaces, type HelpAudience } from '#lib/config.js';
 import {
 	capabilitySet,
 	committeeCapabilitiesFor,
@@ -105,6 +105,18 @@ function admittedByCapability(reader: HelpReader): SQL | undefined {
 	return sql`exists (select 1 from json_each(${helpArticle.capabilities}) where value in (select value from json_each(${held})))`;
 }
 
+/**
+ * Articles whose surface is on, or that name none. Read at call time, so a spec
+ * can switch a surface on; an off surface hides its article from every reader.
+ */
+function surfaceIsOn(): SQL {
+	const on = Object.entries(surfaces)
+		.filter(([, enabled]) => enabled)
+		.map(([name]) => name);
+	const none = isNull(helpArticle.surface);
+	return on.length > 0 ? or(none, inArray(helpArticle.surface, on))! : none;
+}
+
 /** Stored values that read as the top tier, where an article's capabilities gate it. */
 const STAFF_TIER = accessibleAudiences('staff').filter(
 	(a) => !accessibleAudiences('sustaining').includes(a)
@@ -116,7 +128,7 @@ const STAFF_TIER = accessibleAudiences('staff').filter(
  *
  * A staff-tier article that names capabilities is for their holders only; one
  * naming none is for every position holder. Below staff, capabilities only add
- * readers (a committee granted `sponsor.read`).
+ * readers (a committee granted `sponsor.read`). A switched-off surface hides all.
  */
 export function articleVisibleTo(reader: HelpReader): SQL {
 	const tiers = accessibleAudiences(reader.audience);
@@ -132,7 +144,7 @@ export function articleVisibleTo(reader: HelpReader): SQL {
 				)!
 			: inArray(helpArticle.minRole, tiers);
 	const byCapability = admittedByCapability(reader);
-	return byCapability ? or(byTier, byCapability)! : byTier;
+	return and(surfaceIsOn(), byCapability ? or(byTier, byCapability)! : byTier)!;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +193,7 @@ export async function listNonEmptyCategories(reader: HelpReader) {
 		.where(
 			or(
 				and(inArray(helpCategory.minRole, audiences), hasArticle(articleVisibleTo(reader))),
-				byCapability ? hasArticle(byCapability) : undefined
+				byCapability ? hasArticle(and(surfaceIsOn(), byCapability)!) : undefined
 			)
 		)
 		.orderBy(asc(helpCategory.sortOrder), asc(helpCategory.name));
