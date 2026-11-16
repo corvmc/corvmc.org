@@ -424,6 +424,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/bands",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/bands/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/building-access",
 		"panel": "staff"
 	},
@@ -440,6 +448,22 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/clubs",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/clubs/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/committees",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/committees/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/contacts",
 		"panel": "staff"
 	},
@@ -453,6 +477,10 @@
 	},
 	{
 		"route": "/staff/contacts/people/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contacts/settings",
 		"panel": "staff"
 	},
 	{
@@ -493,14 +521,6 @@
 	},
 	{
 		"route": "/staff/grants/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/groups",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/groups/[id]",
 		"panel": "staff"
 	},
 	{
@@ -665,6 +685,10 @@
 	},
 	{
 		"route": "/staff/money/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/money/settings",
 		"panel": "staff"
 	},
 	{

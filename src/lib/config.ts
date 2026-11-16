@@ -2805,12 +2805,16 @@ export const grantableCapabilities = {
 	'event.publish': { label: "Publish its projects' draft events", committee: 'owned' },
 	'event.manage': { label: 'Decide vendor applications for its markets', committee: 'owned' },
 	'finance.read': { label: 'See its own numbers', committee: 'owned' },
+	// What commits CMC to someone outside it (#2959): org-wide, so no show a
+	// committee works on widens who may make the deal.
 	'production.book': {
-		label: 'Book its shows: bands, offers, deals and billing',
-		committee: 'owned'
+		label: 'Set deals, confirm lineups and cancel shows',
+		committee: 'org'
 	},
+	// The show's own work, for every committee on the show: named on its project
+	// or owning one of its deliverables (#2959).
 	'production.run': {
-		label: 'Run its shows: run of show, advance, crew, door and settlement',
+		label: 'Work on its shows: times, run of show, advance, expenses, poster and description',
 		committee: 'owned'
 	},
 	// Org-wide: no project exists until the production does, so `'owned'` could
@@ -3258,5 +3262,12 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 	{ word: /\bwork orders?\b/i, use: 'task' },
 	{ word: /\bfree (practice )?hours?\b/i, use: 'credits' },
 	// A certification implies a regulating body (#2511, owner 2026-11-10).
-	{ word: /\bcertifications?\b/i, use: 'clearance' }
+	{ word: /\bcertifications?\b/i, use: 'clearance' },
+	{ word: /\bturn(s|ed|ing)? down\b/i, use: 'decline / declined' },
+	// Volunteers sign up for shifts; tasks are assigned (#2518).
+	{ word: /\bsign(s|ed|ing)? up for (a |the |this |your )?tasks?\b/i, use: 'shift' },
+	// "Session" is right for a group's meeting, not for time in the practice space.
+	{ word: /\bsessions?\b/i, use: 'reservation', keys: /(^|_)reservations?_/ },
+	// "Listing" stays for directory and local-resource entries.
+	{ word: /\blistings?\b/i, use: 'event', keys: /^(staff_)?events_/ }
 ];

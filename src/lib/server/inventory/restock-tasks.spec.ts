@@ -11,7 +11,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
-const settings: Record<string, string> = { 'inventory.restockRoleId': '' };
+const settings: Record<string, string> = { 'inventory.restockPositionId': '' };
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: async (key: string) => settings[key] ?? ''
 }));
@@ -24,7 +24,7 @@ const { listLowStock } = await import('./stock-service');
 interface TaskRow {
 	id: string;
 	title: string;
-	volunteer_role_id: string | null;
+	position_id: string | null;
 	resolved_at: number | null;
 	resolution_notes: string | null;
 }
@@ -38,14 +38,14 @@ beforeEach(() => {
 	sqlite.exec(`
 		delete from work_order_link; delete from work_order; delete from purchase_order_line;
 		delete from purchase_order; delete from stock_movement; delete from inventory_item;
-		delete from equipment_category; delete from volunteer_role;
+		delete from equipment_category; delete from group_position; delete from "group";
 		insert into equipment_category (id, name, pricing_tier) values ('c', 'Strings', 'minor');
 		insert into inventory_item (id, name, category_id, kind, reorder_point)
 			values ('strings', 'Bass strings', 'c', 'bulk', 5);
 		insert into stock_movement (id, item_id, quantity, reason, occurred_at, created_at)
 			values ('m0', 'strings', 8, 'receive', 0, 0);
 	`);
-	settings['inventory.restockRoleId'] = '';
+	settings['inventory.restockPositionId'] = '';
 });
 
 describe('restock tasks', () => {
@@ -53,18 +53,19 @@ describe('restock tasks', () => {
 		await consumeStock({ itemId: 'strings', quantity: 3 });
 		await consumeStock({ itemId: 'strings', quantity: 1 });
 		expect(open()).toHaveLength(1);
-		expect(open()[0]).toMatchObject({ title: 'Restock Bass strings', volunteer_role_id: null });
+		expect(open()[0]).toMatchObject({ title: 'Restock Bass strings', position_id: null });
 		expect(sqlite.prepare(`select item_id from work_order_link`).all()).toEqual([
 			{ item_id: 'strings' }
 		]);
 		expect((await listLowStock())[0].taskId).toBe(open()[0].id);
 	});
 
-	it('take the role the setting names', async () => {
-		sqlite.exec(`insert into volunteer_role (id, name) values ('buyer', 'Buyer')`);
-		settings['inventory.restockRoleId'] = 'buyer';
+	it('wait on the position the setting names', async () => {
+		sqlite.exec(`insert into "group" (id, kind, name, slug, join_policy) values ('gear', 'committee', 'Gear', 'gear', 'invite_only');
+			insert into group_position (id, group_id, name) values ('buyer', 'gear', 'Buyer')`);
+		settings['inventory.restockPositionId'] = 'buyer';
 		await consumeStock({ itemId: 'strings', quantity: 3 });
-		expect(open()[0].volunteer_role_id).toBe('buyer');
+		expect(open()[0].position_id).toBe('buyer');
 	});
 
 	it('close when stock is back above the point', async () => {

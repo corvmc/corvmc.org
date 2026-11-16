@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 import type { StaffNavSection } from './types';
 
-export type ProgramsNavKey = 'calendar' | 'reservations' | 'music';
+export type ProgramsNavKey = 'calendar' | 'reservations' | 'clubs' | 'music';
 
 export const programs: StaffNavSection = {
 	key: 'programs',
@@ -24,6 +24,13 @@ export const programs: StaffNavSection = {
 			label: 'Practice space',
 			href: resolve('staff/reservations'),
 			also: [resolve('staff/recurring'), resolve('staff/building-access')]
+		},
+		// A club is a program staff run with its chairs (#3027).
+		{
+			key: 'clubs',
+			capability: 'group.read',
+			label: 'Clubs',
+			href: resolve('staff/clubs')
 		},
 		// The radio's state and every release (#2766); its sales totals are a
 		// Reports view and each release's sales are on its panel. `music.read`:

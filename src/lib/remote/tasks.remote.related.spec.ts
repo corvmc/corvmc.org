@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
+import { linkSubjectTypes } from '#lib/utils/related-tasks.js';
 
 /**
  * `getRelatedTasks` (#2630) checks the record's own read guard, then the Tasks
@@ -109,6 +110,21 @@ describe('getRelatedTasks', () => {
 		}
 		granted = new Set(['project.read', 'inventory.read', 'reservation.read', 'contact.read']);
 		for (const type of ['asset', 'reservation', 'contact']) {
+			await expect(getRelatedTasks({ type, id: 'x' })).resolves.not.toBeNull();
+		}
+	});
+
+	// Every record a task can be made from has a read guard of its own: the
+	// fallback, any session, would let New task link a record its maker cannot read.
+	it.each(linkSubjectTypes)('refuses %s to a viewer holding only project.read', async (type) => {
+		granted = new Set(['project.read']);
+		requireOrganizationReader.mockRejectedValueOnce(Object.assign(new Error(), { status: 403 }));
+		await expect(getRelatedTasks({ type, id: 'x' })).rejects.toMatchObject({ status: 403 });
+	});
+
+	it("guards an incident and a thread with each one's read capability (#2758)", async () => {
+		granted = new Set(['project.read', 'incident.read', 'inbox.read']);
+		for (const type of ['incident', 'thread']) {
 			await expect(getRelatedTasks({ type, id: 'x' })).resolves.not.toBeNull();
 		}
 	});

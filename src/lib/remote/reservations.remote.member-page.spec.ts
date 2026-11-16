@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '#lib/server/db/test-factory.js';
 import { noticeFor } from '#lib/server/reservation/conflict-service.js';
 import { getByUserId } from '#lib/server/instructor/instructor-service.js';
+import { listBookableBands } from '#lib/server/reservation/bookable-bands.js';
 
 // ---------------------------------------------------------------------------
 // The member reservations page carries the first-booking rules (#2747) only
@@ -46,6 +47,10 @@ vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) =>
 
 vi.mock('#lib/server/instructor/instructor-service.js', () => ({
 	getByUserId: vi.fn(async () => null)
+}));
+
+vi.mock('#lib/server/reservation/bookable-bands.js', () => ({
+	listBookableBands: vi.fn(async () => [])
 }));
 
 vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance: vi.fn(async () => 0) }));
@@ -119,5 +124,33 @@ describe('getMemberReservationsPage teaching', () => {
 		for (const status of [null, 'requested', 'rejected', 'paused', 'retired']) {
 			expect(await asStatus(status)).toBe(false);
 		}
+	});
+});
+
+// The For choices: bands come from `listBookableBands` (its own spec pins the guard parity),
+// Teaching from the instructor's status, and both for the member asking.
+describe('getMemberReservationsPage booking choices', () => {
+	beforeEach(() => {
+		vi.mocked(noticeFor).mockResolvedValue({ minutes: 60, newMember: false, tourMinutes: 0 });
+	});
+
+	it("offers the member's own bands and Teaching", async () => {
+		const bands = [{ slug: 'duo', name: 'Duo', hasSustainingMember: true }];
+		vi.mocked(listBookableBands).mockResolvedValue(bands);
+		vi.mocked(getByUserId).mockResolvedValue({ id: 'ins-1', status: 'active' } as never);
+
+		const { booking } = await getMemberReservationsPage();
+
+		expect(listBookableBands).toHaveBeenCalledWith(actingUser.id);
+		expect(booking).toEqual({ isSustaining: false, isInstructor: true, bands });
+	});
+
+	it('offers neither to a member of no band who does not teach', async () => {
+		vi.mocked(listBookableBands).mockResolvedValue([]);
+		vi.mocked(getByUserId).mockResolvedValue(null as never);
+
+		const { booking } = await getMemberReservationsPage();
+
+		expect(booking).toEqual({ isSustaining: false, isInstructor: false, bands: [] });
 	});
 });

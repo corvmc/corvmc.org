@@ -75,6 +75,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'reservation.comped': ['Reservations', 'Reservation comped'],
 	'reservation.refunded': ['Reservations', 'Reservation refunded'],
 	'reservation.payment_reminder': ['Reservations', 'Payment reminder'],
+	'reservation.cleared_through_band': ['Reservations', 'Cleared through a band'],
 	'event.visibility_changed': ['Events and shows', 'Event visibility changed'],
 	'event.published_over_warnings': ['Events and shows', 'Event published over warnings'],
 	'event.emailed_beyond_visibility': ['Events and shows', 'Event emailed past its visibility'],
@@ -112,6 +113,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'purchase_order.reopened': ['Equipment', 'Purchase order reopened'],
 	'inventory_asset.reopened': ['Equipment', 'Equipment back in service'],
 	'equipment_loan.checked_out_unscheduled': ['Equipment', 'Loan checked out unscheduled'],
+	'equipment_loan.requested_without_clearance': ['Equipment', 'Loan requested without clearance'],
 	'kit_loan.checked_out_incomplete': ['Equipment', 'Kit checked out incomplete'],
 	'kit_loan.returned_incomplete': ['Equipment', 'Kit checked in incomplete'],
 	'band.deactivated': ['Programs and access', 'Band deactivated'],
@@ -309,6 +311,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			if (d.outcome === 'sent') return `${head}: sent`;
 			const why = d.reason ? ` (${PAYMENT_REMINDER_REASONS[d.reason] ?? d.reason})` : '';
 			return `${head}: ${d.outcome}${why}`;
+		}
+		case 'reservation.cleared_through_band': {
+			const d = entry.details;
+			return `Booked ${slot(d)}, cleared through ${d.groupName}: ${d.bandmateName} holds the clearance`;
 		}
 		case 'clearance.granted': {
 			const d = entry.details;
@@ -519,6 +525,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Put the unit back in service from ${word(assetStatusLabels, entry.details.from)}: “${entry.details.reason}”`;
 		case 'equipment_loan.checked_out_unscheduled':
 			return `Checked out ${entry.details.equipmentName ?? 'a loan'} without scheduling it: “${entry.details.reason}”`;
+		case 'equipment_loan.requested_without_clearance':
+			return `Requested ${entry.details.equipmentName ?? 'a loan'}: ${entry.details.warnings.join(' ')}`;
 		case 'kit_loan.checked_out_incomplete':
 			return `Checked out ${entry.details.locationName} without ${entry.details.leftBehind.join(', ')}`;
 		case 'kit_loan.returned_incomplete':

@@ -149,6 +149,13 @@
 		<Button variant="ghost" href={resolve('staff/contacts/duplicates')}>
 			{m.staff_contacts_duplicates_label()}
 		</Button>
+	{/if}
+	{#if data.canSettings}
+		<Button variant="ghost" href={resolve('staff/contacts/settings')}>
+			{m.staff_contacts_settings_label()}
+		</Button>
+	{/if}
+	{#if data.people}
 		<Action
 			action={createOrganization}
 			label={m.staff_contacts_add_organization_label()}

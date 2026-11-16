@@ -64,7 +64,11 @@ export const getContactsPage = query(
 		await requireUser();
 		const visible = await visibleRoles();
 		if (visible !== 'all' && visible.length === 0) error(403, 'Forbidden');
-		const [staff, tasks] = await Promise.all([can('contact.read'), can('project.read')]);
+		const [staff, tasks, settings] = await Promise.all([
+			can('contact.read'),
+			can('project.read'),
+			can('settings.read')
+		]);
 		// The notes need `contact.read`; the task, the Tasks table's own `project.read`.
 		const sortable = { name: true, activity: staff, task: tasks };
 		const requested = filters.sort ?? 'name';
@@ -107,7 +111,8 @@ export const getContactsPage = query(
 			})),
 			pagination: list.pagination,
 			contractorWarnings: warnings,
-			canAddContractor: addContractor
+			canAddContractor: addContractor,
+			canSettings: settings
 		};
 	}
 );

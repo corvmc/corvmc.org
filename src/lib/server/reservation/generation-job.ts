@@ -16,6 +16,7 @@ import { formatDateInTz, formatTimeInTz } from './timezone';
 import { announceConfirmed, staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
 import { insertReservation } from './insert-reservation';
+import { heldBySameBooker } from './same-booker-hold';
 import { listingHoldBooker } from './event-hold';
 import { attachExisting } from '#lib/server/media/media-service.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -288,6 +289,20 @@ async function processSeries(
 				});
 			}
 
+			continue;
+		}
+
+		// The booker already holds this time through another booking: a duplicate,
+		// so nothing is written and nobody is told (#3031).
+		const duplicate = await heldBySameBooker({
+			bookerType: prototype.bookerType,
+			bookerId: prototype.bookerId,
+			startsAt: occStart,
+			endsAt: occEnd,
+			excludeSeriesId: series.id
+		});
+		if (duplicate) {
+			skipped++;
 			continue;
 		}
 

@@ -32,6 +32,7 @@ import { resolve } from '$app/paths';
 import { surfaces } from '#lib/config.js';
 import type { EntityRef, Panel, Viewer } from '#lib/types/entity.js';
 import { withQuery } from './with-query';
+import { staffGroupHref } from './group-href';
 
 type Candidate = { panel: Panel; href: string };
 
@@ -70,7 +71,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		}
 
 		case 'band': {
-			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`staff/groups/${id}`) });
+			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`staff/bands/${id}`) });
 			// Every band route below the staff panel is keyed by slug.
 			if (ref.slug) {
 				if (inBand(id)) out.push({ panel: 'band', href: resolve(`band/${ref.slug}`) });
@@ -229,7 +230,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		// Both are decided on the record they belong to.
 		case 'group_application':
 			if (ref.groupId && (can('group.read') || can('committee.reviewApplications')))
-				out.push({ panel: 'staff', href: resolve(`staff/groups/${ref.groupId}`) });
+				out.push({ panel: 'staff', href: staffGroupHref(ref.groupKind ?? 'club', ref.groupId) });
 			break;
 		case 'market_vendor':
 			if (ref.eventId && can('event.manage'))

@@ -18,9 +18,10 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
-	import CreateModal from './CreateModal.svelte';
+	import BookingDialog, {
+		bookersFor
+	} from '#lib/components/reservations/booking/BookingDialog.svelte';
 	import FirstBookingRules from './FirstBookingRules.svelte';
-	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import OverdueTable from './OverdueTable.svelte';
 	import { Tabs } from 'bits-ui';
@@ -80,9 +81,6 @@
 	let paidAttempts = $state(0);
 	let awaitingPayment = $state(false);
 
-	const creditData = $derived(await pageData.then((d) => d.membership));
-	const isSustaining = $derived(creditData.isSustainingMember);
-
 	// Staff can't follow up on a booking they can't call about, so the wizard
 	// collects a number inline when the member has none on file.
 	const contact = $derived(await pageData.then((d) => d.contact));
@@ -93,6 +91,7 @@
 	// undone.
 	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
 	const feeGate = $derived(await pageData.then((d) => d.feeGate));
+	const bookers = $derived(bookersFor(await pageData.then((d) => d.booking)));
 
 	// Null for a member who holds the Practice space clearance.
 	const firstBooking = $derived(await pageData.then((d) => d.firstBooking));
@@ -162,17 +161,13 @@
 </script>
 
 <PageHeader title={m.member_reservations_reserve_practice_space_title()}>
-	<CreateModal
-		{isSustaining}
+	<BookingDialog
+		{bookers}
 		{feeGate}
 		needsPhone={contact.needsPhone}
 		onbooked={refreshReservations}
+		data-testid="book-space"
 	/>
-	{#if isInstructor}
-		<!-- A separate button rather than a mode: teaching time has its own rate,
-		     duration floor and advance window, and settles at the door. -->
-		<TeachingCreateModal {feeGate} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
-	{/if}
 </PageHeader>
 <PageContent>
 	{#if awaitingPayment}
@@ -233,7 +228,7 @@
 							</section>
 						{/if}
 					{:catch}
-						<!-- `creditData` takes this rejection to the boundary. -->
+						<!-- `contact` takes this rejection to the boundary. -->
 					{/await}
 					<div class="card-grid">
 						{#each await activeReservations as reservation (reservation.id)}
@@ -287,7 +282,7 @@
 							</div>
 						{/if}
 					{:catch}
-						<!-- `creditData` takes this rejection to the boundary. -->
+						<!-- `contact` takes this rejection to the boundary. -->
 					{/await}
 				{/if}
 			</Tabs.Content>

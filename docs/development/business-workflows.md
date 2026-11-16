@@ -38,6 +38,28 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 3. Announces it: `reservation.created`, then `reservation.confirmed` from
    `announceConfirmed()`. That is the only announcement the booking gets.
 
+**Who the booking is for (#3029).** One booking form, `BookingDialog.svelte` in
+`src/lib/components/reservations/booking/`, serves `/member/reservations` and
+`/band/[slug]/reservations`. Its **For** field lists Me, each band the member may book for
+(`listBookableBands()` in `reservation/bookable-bands.ts`: a live band with an active roster row,
+the rows `requireGroupRole(…, 'member')` admits) and Teaching for an active instructor. It shows
+only when there is more than one choice; the band page opens it on that band. The choice picks
+the remote, and each keeps its own guard, terms and settlement:
+
+- **Me:** `bookAndPayReservation`, `bookerType: 'user'`, member terms; a recurring series needs
+  the member's sustaining membership.
+- **A band:** `bookBandReservation`, `bookerType: 'group'`, guarded by
+  `requireGroupRole({ slug }, 'member')`. Book leaves it owed, payable by any member of the band;
+  Pay ahead sets `payNow` and charges the booker after their own free hours (#2095). A recurring
+  series needs at least one active bandmate with a sustaining membership.
+- **Teaching:** `bookInstructorReservation`, `bookerType: 'instructor'`, teaching terms (see
+  [Teaching bookings](#teaching-bookings)); no payment step for now (#3025).
+
+Clubs and committees are not offered: their bookings are program holds, free room time that
+`notAProgramHold()` keeps off a member's own list. Changing For restarts the date step, since
+notice, duration floor, pricing and the recurring option follow the booker. A band booking
+appears on the booker's own list with the band's name (`groupName` on `getReservations`).
+
 **Booking rules.** The room's facts are `ReservationConfig` in
 `src/lib/server/reservation/config.ts`, each a `reservation.*` site-config key with a default:
 30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
@@ -46,18 +68,27 @@ bookings up to 14 days ahead.
 **New-member notice (#2565).** A member's own booking (`CLEARANCE_BOOKER`, `bookerType: 'user'`) needs
 `reservation.newMemberMinAdvanceMinutes` of notice (default 4320, 3 days) while they hold no
 current **Practice space** clearance, so someone can be found to show them around. With the
-clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
+clearance, or while no orientation role (`volunteer.orientationRoleId`) is set and so nobody runs
+a tour (#2752), it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
 `validateBooking()` (given the member's `userId` by `create()` and `createWaitlisted()`) and the
 picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it, so the picker
 never offers a start the server refuses. The picker says why in one line. Above the picker, the member
-reservations page lists the first-booking rules to a member without the clearance: the notice
-and, while an orientation role is set, the tour length and that it is free (`firstBooking` on
-`getMemberReservationsPage`, #2747); a cleared member sees nothing. Band, teaching and
+reservations page lists the first-booking rules to a member without the clearance while an
+orientation role is set: the notice, and the tour length and that it is free (`firstBooking` on
+`getMemberReservationsPage`, #2747); a cleared member, or anyone while no role is set, sees nothing. Band, teaching and
 event bookings keep the room minimum, and `staffCreate()` checks neither. Teaching bookings need
 neither the clearance nor the tour, and raise no orientation shift (#2808): the notice, the tour,
 the orientation listener and the first-visit and orientation reminders all key on
 `CLEARANCE_BOOKER` in `config.ts`, and `clearance-booker.spec.ts` fails a clearance reader that
-names a booker type of its own. A teacher sees two strips on the reservations page, practice
+names a booker type of its own. **Cleared through a bandmate (#3028).** Whether a member is
+cleared is `practiceSpaceClearance()` in `volunteer/practice-space-clearance.ts`, or its SQL form
+`clearedForPracticeSpaceSql()` for list reads: their own current clearance, or an active roster
+place in a live band (`group.kind = 'band'`, not deactivated) where another active member holds
+one. Holding the clearance is enough; the bandmate need not have booked. Every reader above goes
+through it, and `clearance-booker.spec.ts` fails one that reads the member's own row alone. The
+band path writes no `member_certification` row, so it lasts only while both roster places do. A
+booking cleared that way gets one `reservation.cleared_through_band` audit entry naming the band
+and bandmate, and the member's staff record shows "Cleared through {band}" on the Clearances card. A teacher sees two strips on the reservations page, practice
 terms and teaching terms (`getReservationPolicy('instructor')`), and teaching bookings carry a
 Teaching badge in the list. The clearance is
 granted when an orientation is completed or waived — see
@@ -309,7 +340,8 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
 - **Notices:** an application emails every holder of `instructor.review`. Every staff transition
   tells the member: approve, send back and grant through `instructor.application_reviewed`, pause
   and retire through `instructor.status_ended`. The staff note is never sent to the teacher.
-- **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
+- **Booking:** Teaching under **For** on the booking form (#3029) submits
+  `bookInstructorReservation` in `reservations.remote.ts`, which calls
   `requireInstructor()`, which matches `status = 'active'` only, and books with
   `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
   `reservation/config.ts` gives that booker type `reservation.teaching*` terms: $5/hr (the rate a
@@ -338,7 +370,8 @@ Sustaining members can make a booking repeat (weekly, biweekly, monthly). The fi
 occurrence is a normal reservation that acts as the **prototype**; a nightly job clones it
 forward into concrete rows. If an occurrence collides with an existing booking, it's
 created as **waitlisted** instead; when the blocking reservation cancels, the waitlisted
-one is offered the slot with a 24-hour window to confirm.
+one is offered the slot with a 24-hour window to confirm. A booker never waits behind
+themselves: a slot the same booker already holds is a duplicate and is refused, not waitlisted.
 
 ### Code path
 
@@ -347,12 +380,16 @@ one is offered the slot with a 24-hour window to confirm.
   `create()` in `src/lib/server/reservation/recurring-series-service.ts` with the prototype
   reservation id and an RRULE built by `buildRRule()` in `rrule-helpers.ts`. If the first
   slot itself conflicts, the booking is created via `createWaitlisted()` instead of failing.
+  `createWaitlisted()` throws `DuplicateBookingError` ("You already have this time booked")
+  when the same booker (`booker_type` + `booker_id`) already holds a row overlapping the slot,
+  `heldBySameBooker()` in `same-booker-hold.ts` (#3031).
 - **Daily generation:** cron `generate-recurring-reservations` → `generateRecurring()` in
   `src/lib/server/reservation/generation-job.ts`. Events are expanded **before**
   reservations (recurring events book their own space reservations, which the reservation
   pass must treat as hard blocks — see the doc comment in that file). Occurrences that
   can't be booked emit `reservation.recurring_skipped` / `reservation.recurring_waitlisted`
-  events so the member hears about it. The generation window is ~2.5 weeks
+  events so the member hears about it. An occurrence the same booker already holds through
+  another booking is skipped silently, with no row written. The generation window is ~2.5 weeks
   (`reservation.maxAdvanceDaysRecurring` config, default 17.5). It is longer than the 14-day
   one-off window on purpose: an occurrence is already booked before any one-off booking can
   reach its day. An instance already generated for a day, cancelled ones included, is never
@@ -365,7 +402,7 @@ one is offered the slot with a 24-hour window to confirm.
 - **Changing the schedule:** `reschedule()` in `recurring-series-reschedule.ts`, from
   **Edit schedule** on the member's recurring list or the staff series page. It writes a new
   series whose prototype is the first session of the new schedule (waitlisted if that slot is
-  booked; refused if it falls on a closure or show), sets `cancelledAt` and `supersededBy` on
+  booked; refused if it falls on a closure or show, or on the booker's own other booking), sets `cancelledAt` and `supersededBy` on
   the old one, and generates the new window at once. Old bookings before the change day stand.
   From that day an untouched one is deleted (the old prototype is cancelled instead); one that
   is paid, has a door code or is referenced is kept and listed for the booker to keep or
@@ -559,7 +596,7 @@ premium subscription that unlocks a public band microsite.
 
 ### Clubs and committees
 
-Staff create clubs and committees from `/staff/groups` (`createStaffGroup`, `group.manage`), and
+Staff create clubs and committees from `/staff/clubs` and `/staff/committees` (`createStaffGroup`, `group.manage`), and
 appoint their chairs; a program has admins and no owner. Staff alone set a program's `joinPolicy` and
 listing visibility (`updateStaffGroup`). Members find programs on `/member/groups` and use one
 tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `open` programs take
@@ -999,12 +1036,17 @@ one on the same unit or a new one — and every other untriaged report on that u
 ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
 (#2518). The "close reports on completion" option and its listener are gone.
 
-Repair, restock, late order and Form 8282 tasks take the role set per kind on
-`/staff/inventory/settings` (`inventory.*RoleId`); with none, a task waits unassigned on
-the Tasks page. `work_order.source` and `source_id` record which record opened a task, and
+Each kind of app-opened task waits on a committee position set on its module's settings page
+(#2940): repair, restock, late order and Form 8282 on `/staff/inventory/settings`
+(`inventory.*PositionId`), lapsing insurance on `/staff/contacts/settings`
+(`contractor.insurancePositionId`), unmatched door payments on `/staff/money/settings`
+(`finance.doorPaymentPositionId`). The task takes the position and its committee
+(`work_order.position_id`, `group_id`), so its holders see it under "Your tasks" and hear about it.
+A position on a deleted committee, or none, leaves the task unassigned on the Tasks page.
+`sourcePosition` reads the settings through a full `Record<TaskSource, …>`, so a new kind needs
+one. `work_order.source` and `source_id` record which record opened a task, and
 `uq_work_order_open_source` keeps one open per record. The daily `/api/cron/open-tasks` sweep
 runs the same rules over every record, which also covered records that predate #2756 and #2757.
-Insurance and unmatched door payment tasks have no role setting and wait unassigned.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
@@ -1212,6 +1254,11 @@ Contact-form ('web') threads reply **by email** — the submitter gave us their 
 the reply carries a plus-addressed `Reply-To` so their response threads back into the same
 conversation. The thread stays `channel: 'web'`; that provenance is what the staff UI shows,
 and re-labelling it `email` would let unrelated mail from the same address merge into it.
+
+Follow-up work on a conversation is a task (#2758). The details strip carries the thread's
+Related tasks card; its New task links the task to the thread (`work_order_link.inbox_thread_id`)
+and to the person or organization the thread is filed to, for a viewer with `contact.read`. The
+thread and the task keep their own status: resolving one leaves the other open.
 
 ### Code path
 
@@ -1830,11 +1877,18 @@ So:
   worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
-- **The dashboard:** `listOutstandingClaims` and
-  `countVolunteerWorkWaiting` in the signup service, `listShortStaffedShifts` in the shift
-  service, and `listLapsingBeforeRosteredShift` in the certification service — composed by
-  `getVolunteerWorklist`. The sidebar badge reads `countVolunteerWorkWaiting` too, so the
-  number on the nav and the rows on the page cannot disagree.
+- **What is waiting:** no one query composes the volunteer queue; three readers each take
+  the part they show.
+  - `getStaffDashboard` in `staff-dashboard.remote.ts` lists `listShortStaffedShifts` from
+    `work-order-service.ts` for a viewer holding `volunteer.read`.
+  - `countStaffQueues` in `user/staff-queue-counts.ts` gives the sidebar's Volunteering badge
+    from `countVolunteerWorkWaiting` in the signup service: shifts in the next week short of
+    bookings plus tasks whose shifts have ended, by the same predicates as the page's chips.
+    Claims and hour logs waiting on a decision are the review feed's count, not this one.
+  - `getStaffVolunteers` in `volunteer.remote.ts` (the roster) indexes
+    `listOutstandingClaims` and `listLapsingBeforeRosteredShift` by member, so each row carries
+    its unconfirmed claim and its lapsing clearance, and the lapsing filter narrows the roster
+    to those members.
 - **Certifications:** `volunteer-certification-service.ts` (catalog),
   `member-certification-service.ts` (held; append-only, `expiresAt` stamped at grant time
   from `validityMonths` and never computed on read).
@@ -1905,23 +1959,24 @@ Both carry the anchor. An item with only `dueOffsetMinutes` stamps a task with a
 work belongs to is which role's work order its tasks are on, and the offset says when.
 
 Applying is `applyDutyList(id, subject, createdByUserId)` in
-`volunteer/duty-list-service.ts`, where the subject is a `DutySubject` union rather than a bare
-id, so an event id cannot reach the reservation branch. Both subjects load into one
-`TimedSubject` shape, because a booking and a show are both a window with a start and an end,
-which is everything an offset needs. Offsets are plain instant arithmetic from a real anchor —
-`doorsAt ?? startsAt`, `startsAt`, or `endsAt` — so DST needs no handling here, unlike
-`duplicateShift`, which shifts a wall-clock date and does. Writes go through `db.batch` with
-the task insert chunked to stay under D1's 100 bound parameters. A second apply to the same
-subject is refused by name rather than deduplicated, because doubling a roster looks exactly
-like the first apply from the outside.
+`volunteer/duty-list-service.ts`. The subject is a `DutySubject`, which names a project only:
+`{ kind: 'project', id, eventId? }`. There is no reservation branch. `loadClock` reads the
+project's start, its grant dates when it is a grant project, and one show's times: the
+`eventId` given, or else the project's earliest show that is not cancelled or rejected.
+`projectOfEvent` finds the project a show's work belongs to, its own or its production's.
+Offsets are plain instant arithmetic from a real anchor (`doorsAt ?? startsAt`, a listing or
+production time, or a grant date at 17:00 club time), so DST needs no handling here, unlike
+`duplicateShift`, which shifts a wall-clock date and does. An anchor with no time yet is a
+warning, not a refusal: its items land unscheduled. Writes go through `db.batch` with the task
+insert chunked to stay under D1's 100 bound parameters. A second apply of the same template to
+the same project needs a reason, which is audited; without one (as from a listener) it is
+refused by name, because doubling a roster looks exactly like the first apply from the outside.
 
-`duty_list.subject` is a column of its own rather than something read off the anchor: `start`
-and `end` resolve for both kinds, and only `doors` is show-shaped. So the illegal state is the
-_pair_ `(reservation, doors)`, refused when a list is **saved** as well as when it is applied.
-The `doorsAt ?? startsAt` fallback exists because not every show sets a doors time — but a show
-without one still has doors, and a rehearsal has no such concept, so taking the same fallback
-would quietly turn "fifteen minutes before doors" into something else and read as correct on
-every screen.
+`duty_list.subject` is only ever written as `project` now. `event` lists were backfilled to it
+and `reservation` lists, which were orientation, became a setting (#2034);
+`dutyListStoredSubjects` keeps both values for the column type. The `doorsAt ?? startsAt`
+fallback exists because not every show sets a doors time, but a show without one still has
+doors.
 
 For an event, the event is the parent and there is no separate one. Work parties and monthly
 deep cleans get their own event listings — they need advertising as much as a show does — so
@@ -1936,7 +1991,9 @@ from April's.
 > `grantPracticeSpaceClearance` in `volunteer/practice-space-clearance.ts`: an append-only
 > `member_certification` row, skipped when a current one exists, carrying the waive reason as
 > its note. Until a member holds it, their own booking needs 3 days' notice, which is the time
-> the orientation shift has to find a volunteer.
+> the orientation shift has to find a volunteer. **Since #3028** a member active in a live band
+> where another active member holds it counts as cleared too, with no row of their own (see
+> [New-member notice](#1-reservation-booking-confirmation-and-payment)).
 > **Since #2568** that booking starts `volunteer.orientationMinutes` earlier for the tour, at no
 > charge, so the shift raised at its start covers the tour without cutting into the session. The migration that added it backfilled every
 > member with a `completed` booking of their own (not a staff hold) and every completed or
@@ -1951,8 +2008,8 @@ from April's.
 >   else every holder of `volunteer.manageShifts` (#2990), in-app
 >   and email, linking to the shift (or to the short-staffed schedule for several). Keyed by
 >   shift and start, so a moved shift is owed the alert again.
-> - `first_visit` — a member's own confirmed booking starting within 24 hours while they hold
->   no Practice space clearance. It says when to arrive (the orientation shift's start), the
+> - `first_visit` — a member's own confirmed booking starting within 24 hours while they are
+>   not cleared for the room, own clearance or a bandmate's. It says when to arrive (the orientation shift's start), the
 >   address (`org.addressStreet`, `org.addressCity`), that the door code arrives separately and
 >   opens at the reservation's start, and staff's plain-text notes
 >   (`volunteer.firstVisitNotes`, Volunteering → Settings → Orientation; empty leaves them out). It replaces
@@ -1976,7 +2033,9 @@ and `'reservation.first'` is the only trigger there is.
 `reservation/reservation-service.ts` — from the service, not from the five booking remotes,
 where a sixth would be forgotten — and **after** the post-insert race re-check, so a booking
 that gets compensated away never announces itself. `orientation-listener.ts` checks the booking
-is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), then applies.
+is a member's (`bookerType === 'user'`), that they are not cleared (`practiceSpaceClearance`,
+recording a bandmate's clearance when that is what cleared it, #3028), and that it is their
+first (`priorBookingCount`), then applies.
 
 A booking that came off the **waitlist** announces itself too, from
 `announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race
@@ -2039,6 +2098,9 @@ publish and close-out gates (`event/show-readiness.ts`), and a deliverable never
   tab on `/member/groups/[slug]`, `listShowDeliverables` for a show's Deliverables card,
   `reassignDeliverable` to hand an item to another committee. The remote is
   `deliverables.remote.ts`, guarded by `requireCommitteeMember(groupId, 'volunteer.manageShifts')`.
+- **Reach:** owning a live (not cancelled) deliverable on a project puts the committee on it, so
+  its `'owned'` grants reach that project as if it were named in `project_committee`
+  (`projectCommitteeGrantsFor`, #2959). A person's access page lists each project and how.
 - **Cancellation:** cancelling a show reads its committees' open items first, cancels them, and
   notifies each committee that had one (`production/cancellation-notice.ts`).
 - **Reminders:** `deliverable_due_3d` and `deliverable_overdue` in the reminders registry, over
@@ -2202,13 +2264,16 @@ restore crew shifts or retract a cancellation notice.
    rows are deleted and the call answers `ProductionExistsError`. There is no
    `production.event_id`; `announcedBy(eventId)` finds a listing's production through
    `event_listing.project_id`.
-2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`: a member
-   of a committee taking part in the show whose grants carry the capability, or staff.
-   `production.book` covers the bill, the deal, billing and poster art; `production.run`
-   covers times, run of show, the door take, expenses and the advance. `advanceProduction`
-   asks for `book` to move to `draft`, `offered`, `confirmed` or `cancelled` and `run` for
-   the rest. `updateProduction` compares each field with the stored row and asks only for
-   the capability whose fields changed.
+2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`, cut by
+   what an action commits CMC to ([0086](../decisions/0086-production-capabilities-by-consequence.md)).
+   `production.run` is the show's own work: times and notes (`updateProduction`), run of
+   show, the advance, the door take, expenses, poster art, and the listing's description and
+   times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
+   `project_committee`, or one owning a live deliverable on the show's project. Staff and the
+   event lead hold it too. `production.book` is what binds CMC outside it: the deal terms
+   (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
+   `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
+   `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
 3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
 4. **Overview** tab → `updateProduction` (times and notes) and
@@ -2266,7 +2331,7 @@ restore crew shifts or retract a cancellation notice.
 11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
     `poster_art`, and the artist uploads on `/act/{token}` through
     `/api/acts/{token}/poster-art` → `deliverPosterArt`, which attaches the file to the
-    **request**, slot `poster`. `usePosterArt` (`production.book`) → `promotePosterArt`
+    **request**, slot `poster`. `usePosterArt` (`production.run`) → `promotePosterArt`
     points the listing's poster slot at the same media row. `usePosterArtWithFooter` and
     `useTemplateFlyerAsPoster` render a 1080×1350 PNG with `renderFlyer`
     (`src/lib/server/poster/flyer.ts`, on `@cf-wasm/og`) and replace the slot; a flyer is a
@@ -2679,6 +2744,11 @@ The account is written once and later facts are notes, so the record reads the w
 Recording an incident changes nothing on the linked member's account, and that member cannot see
 it.
 
+Follow-up work, such as a repair after a hazard, is a task made from the incident's Related tasks
+card (#2758). It links to the incident (`work_order_link.incident_id`), starts on the show it
+happened at, and links the involved member's contact record when one is kept and the viewer has
+`contact.read`. The incident and the task keep their own status.
+
 ### Code path
 
 - **Read:** `getIncidentLog` and `getIncidentDetail` in `incidents.remote.ts`, behind
@@ -2746,12 +2816,20 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
 - **Sponsors:** `getSponsorDetail` in `sponsors.remote.ts`, guarded by `sponsor.read`, calls
   `getSponsor` in `sponsor-service.ts` with `clubToday()`.
   `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
-  `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
-  an organization without the `sponsor` role.
+  `sponsor.manage`; `createSponsorship` refuses an organization without the `sponsor` role.
+- **Retiring a sponsor or funder (#1615):** it is archived, not deleted. `archiveOrganization`
+  in `contacts.remote.ts`, guarded by `contact.manage`, calls `setOrganizationArchived`, which
+  stamps `organization.archivedAt`. An archived organization leaves the lists and pickers
+  (`listOrganizations` without `includeArchived`); a grant or sponsorship that already names it
+  keeps it, and `getGrantDetail` keeps an archived funder pickable on the application that names
+  it. `deleteOrganization` exists for a row that
+  should never have been made: `deleteUnusedOrganization` deletes only an organization with no
+  role, person, record, link or act listing, so a sponsor or funder is never deleted while it
+  holds that role.
 - **Grants:** `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
   `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect and the
-  award's end once awarded. Writes are guarded by `grant.manage`; a funder with applications
-  cannot be deleted, and `createGrant` refuses an organization without the `funder` role.
+  award's end once awarded. Writes are guarded by `grant.manage`; `createGrant` refuses an
+  organization without the `funder` role. A funder is archived, not deleted, as a sponsor is.
 - **The project (#2622):** `createGrant` and `createSponsorship` write the project, its `owner`
   row and the side-table row in one batch, through `funding-project.ts` in
   `src/lib/server/development/`. The owner is the live committee holding `grant.manage` or
@@ -2979,7 +3057,7 @@ several committees and answers the board's two questions.
 A reviewer answers for each group separately. They can mark the applicant contacted, accept, or
 decline with a reason the applicant sees. The reviewers are the group's owner and admins, of any
 kind. For committees only, holders of `committee.reviewApplications` (the volunteer coordinator)
-can also review, from the Committees view of `/staff/groups`. Accepting **invites** the applicant, who then accepts
+can also review, from `/staff/committees`. Accepting **invites** the applicant, who then accepts
 the invitation like any other. The applicant sees each decision and its reason on
 `/member/groups`. They can withdraw while a choice is still open, and can apply again once
 nothing is open for that group.
@@ -3002,8 +3080,8 @@ nothing is open for that group.
   - `getMemberGroup` and `getStaffGroupPage` return `applications` to a viewer the guard would
     admit, and `ApplicationsCard` renders them.
   - `getMemberGroups` returns `applied`, the applicant's latest choice per group.
-  - `getStaffCommittees` counts open applications per committee on the Committees view, and
-    `getStaffCommitteePage` lists them on `/staff/groups/[id]` for a capability holder.
+  - `getStaffCommittees` counts open applications per committee on `/staff/committees`, and
+    `getStaffCommitteePage` lists them on `/staff/committees/[id]` for a capability holder.
 - `joinGroupForm` / `joinGroup()` serve `open` groups only, and throw `ApplyInsteadError` for a
   `by_application` group.
 

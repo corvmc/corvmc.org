@@ -1,7 +1,8 @@
 /**
  * Deterministic docs-drift detector. No LLM, no dependencies — runs with bare `node`.
  *
- * Three kinds of signal:
+ * Three kinds of signal (plus a fourth integrity check, `checkDocSymbols`: a backticked code
+ * symbol in a living doc must still name something in src, scripts or migrations):
  *   1. Help-content INTEGRITY (hard errors): frontmatter parses, slugs are unique,
  *      every seeded `static` slug has a backing file, and every internal
  *      `/member/help/<slug>` link resolves. Mirrors scripts/sync-help-articles.ts.
@@ -221,6 +222,65 @@ export function checkDocIndexes() {
 	return errors;
 }
 
+/** Living docs whose backticked code symbols must still exist in the code. */
+export const SYMBOL_CHECKED_DOCS = ['docs/development/business-workflows.md'];
+const SYMBOL_ROOTS = ['src', 'scripts', 'migrations'];
+const SYMBOL_SOURCE = /\.(ts|js|mjs|svelte|sql)$/;
+
+/**
+ * Named in a checked doc on purpose though no code defines it, each with why.
+ * @type {Record<string, string>}
+ */
+export const SYMBOL_ALLOWLIST = {
+	setMemberStanding: 'named as deleted in #1528, to explain why no staff form restricts directly'
+};
+
+/**
+ * The code-symbol-shaped spans in a doc: a backticked camelCase or PascalCase name, with any
+ * call parentheses dropped. Paths, dotted names, SQL and prose in backticks do not match.
+ *
+ * @param {string} doc
+ * @returns {string[]}
+ */
+export function codeSymbolsIn(doc) {
+	const out = new Set();
+	for (const m of doc.matchAll(/`([^`\n]+)`/g)) {
+		const name = m[1].trim().replace(/\(.*\)$/, '');
+		if (/^(?:[a-z][a-z0-9]*[A-Z]\w*|[A-Z][a-z0-9]+[A-Z]\w*)$/.test(name)) out.add(name);
+	}
+	return [...out];
+}
+
+/** @param {string} dir @param {Set<string>} into */
+function collectTokens(dir, into) {
+	for (const entry of readdirSync(dir)) {
+		if (entry === 'node_modules' || entry.startsWith('.')) continue;
+		const full = join(dir, entry);
+		if (statSync(full).isDirectory()) collectTokens(full, into);
+		else if (SYMBOL_SOURCE.test(entry)) {
+			for (const m of readFileSync(full, 'utf-8').matchAll(/[A-Za-z_$][\w$]*/g)) into.add(m[0]);
+		}
+	}
+}
+
+/**
+ * A backticked symbol in a living doc that names nothing in the code is a passage describing
+ * code that has since changed. Matching is by token, so a symbol mentioned anywhere counts.
+ */
+export function checkDocSymbols() {
+	const tokens = new Set();
+	for (const root of SYMBOL_ROOTS) if (existsSync(root)) collectTokens(root, tokens);
+	const errors = [];
+	for (const file of SYMBOL_CHECKED_DOCS) {
+		for (const name of codeSymbolsIn(readFileSync(file, 'utf-8'))) {
+			if (!tokens.has(name) && !(name in SYMBOL_ALLOWLIST)) {
+				errors.push(`${file}: \`${name}\` names nothing in ${SYMBOL_ROOTS.join(', ')}`);
+			}
+		}
+	}
+	return errors;
+}
+
 function checkRouteDrift() {
 	const current = listRoutes();
 	const snapshot = readSnapshot();
@@ -246,10 +306,11 @@ function main() {
 	const help = checkHelpContent();
 	const docIndexErrors = checkDocIndexes();
 	const catalog = readCatalog();
+	const symbolErrors = checkDocSymbols();
 	const routes = checkRouteDrift();
 
 	const report = {
-		integrityErrors: [...help.errors, ...docIndexErrors, ...catalog.errors],
+		integrityErrors: [...help.errors, ...docIndexErrors, ...catalog.errors, ...symbolErrors],
 		routeAdded: routes.added.map((r) => (typeof r === 'string' ? r : r.route)),
 		routeRemoved: routes.removed.map((r) => (typeof r === 'string' ? r : r.route)),
 		snapshotMissing: routes.snapshotMissing,

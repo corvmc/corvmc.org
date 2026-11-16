@@ -23,7 +23,9 @@ export const linkTargets = [
 	'contactId',
 	'assetId',
 	'reservationId',
-	'itemId'
+	'itemId',
+	'incidentId',
+	'inboxThreadId'
 ] as const;
 export type LinkTarget = (typeof linkTargets)[number];
 

@@ -1,4 +1,4 @@
-import type { EntityType } from '#lib/config.js';
+import type { EntityType, GroupKind } from '#lib/config.js';
 
 /**
  * A reference to one record, shaped for display.
@@ -21,6 +21,8 @@ interface BaseRef {
 	 * `entityHref` and renders the same way.
 	 */
 	id: string | null;
+	/** Which list the record sits under (#3027). */
+	groupKind?: GroupKind | null;
 	/** The distinctive line. On a chip this is the entire payload. */
 	title: string;
 	/**

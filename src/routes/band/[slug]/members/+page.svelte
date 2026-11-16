@@ -155,7 +155,7 @@
 	/>
 
 	{#if isStaffOnly}
-		<Alert type="info" href={`/staff/groups/${layout.band.id}`}>
+		<Alert type="info" href={`/staff/bands/${layout.band.id}`}>
 			{msg.band_slug_members_re_viewing_band_as_staff_body()}
 		</Alert>
 	{/if}

@@ -7,7 +7,9 @@
 	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import BandReservationCard from '#lib/components/reservations/BandReservationCard.svelte';
 	import { getBandReservationsPage } from '#lib/remote/reservations.remote.js';
-	import CreateModal from './CreateModal.svelte';
+	import BookingDialog, {
+		bookersFor
+	} from '#lib/components/reservations/booking/BookingDialog.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -22,7 +24,7 @@
 	let pastPage = $state(1);
 	const page_ = $derived(await getBandReservationsPage({ slug: params.slug, pastPage }));
 	const data = $derived(page_.reservations);
-	const membership = $derived(page_.membership);
+	const bookers = $derived(bookersFor(page_.booking));
 	const contact = $derived(page_.contact);
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
@@ -48,11 +50,12 @@
 </script>
 
 <PageHeader width="2xl" title={m.band_slug_reservations_reservations_title()} subtitle={band.name}>
-	<CreateModal
-		slug={band.slug}
-		hasSustainingMember={membership.hasSustainingMember}
+	<BookingDialog
+		{bookers}
+		initial={band.slug}
 		needsPhone={contact.needsPhone}
 		feeGate={page_.feeGate}
+		data-testid="book-session"
 	/>
 </PageHeader>
 <PageContent width="2xl">

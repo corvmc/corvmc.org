@@ -127,6 +127,16 @@ export async function listPositionsHeld(userId: string) {
 		.orderBy(asc(group.name), asc(groupPosition.name));
 }
 
+/** Every position on a live committee, by committee then name: what a task may wait on. */
+export async function listCommitteePositions() {
+	return db
+		.select({ id: groupPosition.id, name: groupPosition.name, groupName: group.name })
+		.from(groupPosition)
+		.innerJoin(group, eq(group.id, groupPosition.groupId))
+		.where(and(eq(group.kind, 'committee'), isNull(group.deletedAt)))
+		.orderBy(asc(group.name), asc(groupPosition.name));
+}
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------

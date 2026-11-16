@@ -38,6 +38,7 @@ import {
 import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
+import { practiceSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
 import { getVolunteerProfile } from '#lib/server/volunteer/volunteer-profile-service.js';
 import {
 	listAllVolunteers,
@@ -1325,9 +1326,22 @@ export const getTrainingShifts = query(z.string().min(1), async (userId) => {
 	return listTrainingShifts(userId);
 });
 
+/** What the member holds, and the band that clears them when they hold none (#3028). */
 export const getMemberCertifications = query(z.string(), async (userId) => {
 	await requireCapability('volunteer.read');
-	return listCertificationsForUser(userId);
+	const [records, cleared] = await Promise.all([
+		listCertificationsForUser(userId),
+		practiceSpaceClearance(userId)
+	]);
+	const clearedThrough =
+		cleared?.via === 'band'
+			? {
+					groupId: cleared.groupId,
+					groupName: cleared.groupName,
+					bandmateName: cleared.bandmateName
+				}
+			: null;
+	return { records, clearedThrough };
 });
 
 /** The member's own — what they hold, and what it unlocks. */

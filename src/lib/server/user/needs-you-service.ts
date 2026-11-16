@@ -11,6 +11,7 @@ import { getMemberSubscription } from '#lib/server/finance/subscription-service.
 import { listShowsLedBy } from '#lib/server/production/show-lead-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 import { shiftNeedsYouItems } from './shift-needs-you';
+import { bandInviteNeedsYouItems, type InviteNeedingYou } from './band-invite-needs-you';
 
 /**
  * What the member has to do something about, and when it stops being possible.
@@ -25,7 +26,7 @@ export interface NeedsYouInput {
 	userId: string;
 	/** Already fetched by the dashboard query; passed in rather than re-read. */
 	reservations: ReservationNeedingYou[];
-	pendingInviteCount: number;
+	pendingInvites: InviteNeedingYou[];
 	profileComplete: boolean;
 	now?: Date;
 }
@@ -110,20 +111,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 	// Below here: real, but on nobody's clock. They sort after everything dated
 	// however long they have been waiting — an invitation with no expiry is not
 	// more urgent than a room you lose on Friday.
-	if (input.pendingInviteCount > 0) {
-		items.push({
-			id: 'band-invitation',
-			kind: 'band-invitation',
-			title:
-				input.pendingInviteCount === 1
-					? 'A band has invited you'
-					: `${input.pendingInviteCount} bands have invited you`,
-			href: resolve('member/bands'),
-			label: 'Answer',
-			dueAt: null,
-			rank: 10
-		});
-	}
+	items.push(...bandInviteNeedsYouItems(input.pendingInvites));
 
 	if (messageRequests > 0) {
 		items.push({

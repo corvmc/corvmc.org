@@ -18,14 +18,11 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import ClubTotals from './ClubTotals.svelte';
-	import GroupKindFilter from './GroupKindFilter.svelte';
-	import GroupRecordPanel from './[id]/GroupRecordPanel.svelte';
-	import { withQuery } from '#lib/utils/with-query.js';
-	import { groupViewQuery } from './views';
+	import GroupRecordPanel from '#lib/components/groups/GroupRecordPanel.svelte';
 
 	// A club is the opposite of a band: staff create it and appoint its chairs.
 	// Active by default, so the table shows the clubs the counts above count.
-	const view = rosterState(withQuery(resolve('staff/groups'), groupViewQuery('club')), {
+	const view = rosterState(resolve('staff/clubs'), {
 		status: oneOf(['active', 'deactivated', ''] as const, 'active')
 	});
 	const f = view.values;
@@ -79,7 +76,6 @@
 			}}
 		/>
 	{/snippet}
-	<GroupKindFilter view="club" />
 	<Select
 		size="sm"
 		aria-label={m.staff_status_label()}

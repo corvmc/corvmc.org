@@ -44,6 +44,7 @@ export const tableOrder = [
 	'grant_application',
 	'equipment_category',
 	'inventory_location',
+	'volunteer_certification',
 	'inventory_item',
 	'inventory_asset',
 	'acquisition',
@@ -99,7 +100,6 @@ export const tableOrder = [
 	'help_articles',
 	'roles',
 	'volunteer_role',
-	'volunteer_certification',
 	// References user. Ahead of work_order because the shift now carries
 	// `duty_list_id` — provenance for the list that stamped it out.
 	'duty_list',
@@ -204,8 +204,6 @@ export const tableOrder = [
 	// `packing_item` of packing_list and user.
 	'packing_list',
 	'packing_item',
-	// What a task is about: child of work_order and of each record it can name.
-	'work_order_link',
 	// A note on a party's timeline: child of organization, contact and user.
 	'activity',
 	// The contact-sheet link: child of directory_entry and user.
@@ -265,6 +263,9 @@ export const tableOrder = [
 	// References user only; parent of incident_note.
 	'incident',
 	'incident_note',
+	// What a task is about: child of work_order and of each record it can name,
+	// incident and inbox_thread among them.
+	'work_order_link',
 	// References user only; its subject id is bare text.
 	'wishlist_pledge',
 	// These reference ballot, which sits beside suggestion above; two reference ballot_option.

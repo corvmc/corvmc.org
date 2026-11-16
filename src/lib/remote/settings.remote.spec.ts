@@ -71,6 +71,10 @@ vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: async () => []
 }));
 
+vi.mock('#lib/server/group/position-service.js', () => ({
+	listCommitteePositions: async () => []
+}));
+
 const getAllProductConfigs = vi.fn(async () => []);
 const updateProductConfig = vi.fn(async () => undefined);
 vi.mock('#lib/server/finance/product-config-service.js', () => ({
@@ -169,7 +173,11 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 		args: [{ minutes: '30', leadMinutes: '10' }]
 	},
 	{ name: 'getGearSettings', cap: 'settings.read' },
-	{ name: 'updateGearTaskRoles', cap: 'settings.update', args: [{}] },
+	{ name: 'updateGearTaskPositions', cap: 'settings.update', args: [{}] },
+	{ name: 'getContactsSettings', cap: 'settings.read' },
+	{ name: 'updateContactsTaskPositions', cap: 'settings.update', args: [{}] },
+	{ name: 'getMoneySettings', cap: 'settings.read' },
+	{ name: 'updateMoneyTaskPositions', cap: 'settings.update', args: [{}] },
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getVolunteeringSettingsPage', cap: 'settings.read' },

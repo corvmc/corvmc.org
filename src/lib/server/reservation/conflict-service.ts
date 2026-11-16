@@ -7,7 +7,7 @@ import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
-import { holdsPracticeSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
+import { practiceSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
 import { config as siteConfig } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
@@ -64,23 +64,25 @@ type SlotConfig = Awaited<ReturnType<typeof getReservationConfig>>;
 
 export interface BookingNotice {
 	minutes: number;
-	/** The new-member minimum applies: no current Practice space clearance. */
+	/** The new-member minimum applies: not cleared for the room, own or through a band. */
 	newMember: boolean;
 	/** Minutes held before the requested start for the tour; 0 when none. */
 	tourMinutes: number;
 }
 
 /**
- * The tour a new member's booking starts with: the orientation length, while
- * an orientation role is set. With no role nobody runs a tour, so none is held.
+ * The tour length a new member's booking waits for, or null while no
+ * orientation role is set: nobody runs one, so neither the new-member notice
+ * nor the tour applies (decision 0055, #2752).
  */
-async function tourMinutes(): Promise<number> {
+async function orientationTour(): Promise<number | null> {
 	const [roleId, minutes] = await Promise.all([
 		siteConfig('volunteer.orientationRoleId'),
 		siteConfig('volunteer.orientationMinutes')
 	]);
+	if (!String(roleId).trim()) return null;
 	const n = Number(minutes);
-	return String(roleId).trim() && n > 0 ? n : 0;
+	return n > 0 ? n : 0;
 }
 
 /**
@@ -93,12 +95,11 @@ export async function noticeFor(
 	who: { userId: string | null; bookerType?: BookerType }
 ): Promise<BookingNotice> {
 	const own = (who.bookerType ?? CLEARANCE_BOOKER) === CLEARANCE_BOOKER && who.userId !== null;
-	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
-		return {
-			minutes: config.newMemberMinAdvanceMinutes,
-			newMember: true,
-			tourMinutes: await tourMinutes()
-		};
+	if (own && !(await practiceSpaceClearance(who.userId!))) {
+		const tourMinutes = await orientationTour();
+		if (tourMinutes !== null) {
+			return { minutes: config.newMemberMinAdvanceMinutes, newMember: true, tourMinutes };
+		}
 	}
 	return { minutes: config.minAdvanceMinutes, newMember: false, tourMinutes: 0 };
 }

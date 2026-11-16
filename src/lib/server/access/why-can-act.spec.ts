@@ -36,16 +36,20 @@ const scopes: (CapabilityScope | undefined)[] = [
 	{ groupId: 'booking' },
 	{ groupId: 'sound' },
 	{ eventId: 'soon' },
-	{ eventId: 'later' }
+	{ eventId: 'later' },
+	// Named on the show, owning a deliverable on it, and a cancelled deliverable (#2959).
+	{ projectId: 'show' },
+	{ projectId: 'poster-show' },
+	{ projectId: 'dropped-show' }
 ];
 
 /** Does the explanation account for `cap` under `scope`, the way each guard route reads it? */
 function covers(why: AccessExplanation, cap: Capability, scope?: CapabilityScope): boolean {
 	if (why.positions.some((p) => p.capabilities.includes(cap))) return true;
+	const reaches = (d: AccessExplanation['departments'][number]) =>
+		d.groupId === scope?.groupId || d.projects.some((p) => p.projectId === scope?.projectId);
 	const byDepartment = why.departments.some((d) =>
-		d.grants.some(
-			(g) => g.capability === cap && (g.reach === 'org' || d.groupId === scope?.groupId)
-		)
+		d.grants.some((g) => g.capability === cap && (g.reach === 'org' || reaches(d)))
 	);
 	if (byDepartment) return true;
 	return why.shiftRoles.some((r) => r.eventId === scope?.eventId && r.capabilities.includes(cap));
@@ -67,7 +71,11 @@ beforeEach(() => {
 			('m3', 'sound', 'cy', 'member', 'inactive');
 		insert into group_capability (group_id, capability) values
 			('booking', 'sponsor.read'), ('booking', 'volunteer.manageShifts'),
-			('sound', 'grant.read');
+			('sound', 'grant.read'), ('sound', 'production.run'), ('booking', 'production.book');
+		insert into project (id, name, kind) values
+			('show', 'Friday show', 'production'), ('poster-show', 'Saturday show', 'production'),
+			('dropped-show', 'Sunday show', 'production');
+		insert into project_committee (project_id, group_id, role) values ('show', 'booking', 'booking');
 		insert into group_position (id, group_id, name, is_chair) values
 			('chair', 'booking', 'Chair', 1), ('booker', 'booking', 'Booker', 0);
 		insert into group_position_holder (position_id, member_id) values
@@ -80,6 +88,10 @@ beforeEach(() => {
 			('host', 'market.host'), ('host', 'event.checkIn');
 		insert into work_order (id, volunteer_role_id, event_id) values
 			('host-soon', 'host', 'soon'), ('host-later', 'host', 'later');
+		insert into work_order (id, volunteer_role_id, project_id, group_id, cancelled_at) values
+			('poster', 'host', 'poster-show', 'sound', null),
+			('poster-2', 'host', 'poster-show', 'sound', null),
+			('dropped', 'host', 'dropped-show', 'sound', 1);
 		insert into work_order_assignee (work_order_id, user_id) values
 			('host-soon', 'ben'), ('host-later', 'ben');
 	`);
@@ -94,6 +106,8 @@ afterEach(() => {
 		'volunteer_role_capability',
 		'volunteer_role',
 		'event_listing',
+		'project_committee',
+		'project',
 		'group_position_holder',
 		'group_capability',
 		'group_member'
@@ -109,6 +123,16 @@ describe('explainAccess', () => {
 		const why = await explainAccess('ana', NOW);
 		expect(why.departments.map((d) => [d.groupId, d.positions])).toEqual([
 			['booking', ['Chair', 'Booker']]
+		]);
+	});
+
+	it('lists the projects a committee is on, named or by a live deliverable, once each', async () => {
+		const [ana, ben] = await Promise.all([explainAccess('ana', NOW), explainAccess('ben', NOW)]);
+		expect(ana.departments[0].projects).toEqual([
+			{ projectId: 'show', name: 'Friday show', via: 'booking' }
+		]);
+		expect(ben.departments[0].projects).toEqual([
+			{ projectId: 'poster-show', name: 'Saturday show', via: 'deliverable' }
 		]);
 	});
 

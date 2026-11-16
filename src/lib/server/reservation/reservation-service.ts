@@ -21,6 +21,7 @@ import {
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
 import { insertReservation } from './insert-reservation';
+import { heldBySameBooker } from './same-booker-hold';
 import { confirmedUnpaidSql, paymentDueSql } from './payment-due';
 import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
@@ -45,6 +46,15 @@ export class ReservationConflictError extends DomainError {
 	constructor() {
 		super('Time slot is not available');
 		this.name = 'ReservationConflictError';
+	}
+}
+
+/** The booker already holds this time: a duplicate, not a slot to wait for (#3031). */
+export class DuplicateBookingError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('You already have this time booked');
+		this.name = 'DuplicateBookingError';
 	}
 }
 
@@ -239,6 +249,10 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 	}
 	const tourMinutes = validation.tourMinutes ?? 0;
 	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
+
+	if (await heldBySameBooker({ bookerType, bookerId, startsAt, endsAt })) {
+		throw new DuplicateBookingError();
+	}
 
 	const row = await insertReservation({
 		bookerType,

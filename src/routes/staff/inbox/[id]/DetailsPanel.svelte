@@ -19,6 +19,7 @@
 	import AssignControl from './AssignControl.svelte';
 	import ThreadTags from './ThreadTags.svelte';
 	import ThreadFiling from './ThreadFiling.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import { channelLabel } from '#lib/components/inbox/channels.js';
 	import { formatDate, formatDateTime } from '#lib/utils/format.js';
 	import { errorMessage } from '#lib/error-message.js';
@@ -180,6 +181,8 @@
 				threadId={thread.id}
 				assignedToUserId={thread.assignedToUserId}
 			/>
+
+			<RelatedTasks subject={{ type: 'thread', id: thread.id }} />
 		{/if}
 	</div>
 </details>

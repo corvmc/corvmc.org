@@ -12,16 +12,19 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
-	config: async (key: string) => (key === 'inventory.repairRoleId' ? 'tech' : '')
+	config: async (key: string) => (key === 'inventory.repairPositionId' ? 'tech' : '')
 }));
 
 const { raiseFlag, reportBuildingProblem, sendUntriagedToRepair } =
 	await import('./work-request-service');
 
 const tasks = () =>
-	sqlite
-		.prepare(`select id, title, volunteer_role_id, source from work_order order by rowid`)
-		.all() as { id: string; title: string; volunteer_role_id: string | null; source: string }[];
+	sqlite.prepare(`select id, title, position_id, source from work_order order by rowid`).all() as {
+		id: string;
+		title: string;
+		position_id: string | null;
+		source: string;
+	}[];
 const reports = () =>
 	sqlite.prepare(`select id, work_order_id from work_request order by rowid`).all() as {
 		id: string;
@@ -32,9 +35,10 @@ beforeEach(() => {
 	sqlite.exec(`
 		delete from work_order_link; delete from work_request; delete from work_order;
 		delete from stock_movement; delete from inventory_asset; delete from inventory_item;
-		delete from equipment_category; delete from volunteer_role; delete from "user";
+		delete from equipment_category; delete from group_position; delete from "group"; delete from "user";
 		insert into "user" (id, name, email) values ('m', 'Member', 'm@example.com');
-		insert into volunteer_role (id, name) values ('tech', 'Tech');
+		insert into "group" (id, kind, name, slug, join_policy) values ('gear', 'committee', 'Gear', 'gear', 'invite_only');
+		insert into group_position (id, group_id, name) values ('tech', 'gear', 'Tech');
 		insert into equipment_category (id, name, pricing_tier) values ('amps', 'Amps', 'major');
 		insert into inventory_item (id, name, category_id, kind) values ('item', 'Bass amp', 'amps', 'serialized');
 		insert into inventory_asset (id, item_id, asset_tag, condition) values ('unit', 'item', 'A-7', 'good');
@@ -45,13 +49,13 @@ const report = (note: string) =>
 	raiseFlag({ assetId: 'unit', note, reportedByUserId: 'm', blocksUse: false });
 
 describe('repair tasks', () => {
-	it('a report opens a task linked to its unit, in the configured role', async () => {
+	it('a report opens a task linked to its unit, for the configured position', async () => {
 		const flag = await report('Crackles');
 		expect(tasks()).toEqual([
 			{
 				id: flag.workOrderId,
 				title: 'Repair Bass amp (A-7)',
-				volunteer_role_id: 'tech',
+				position_id: 'tech',
 				source: 'repair'
 			}
 		]);

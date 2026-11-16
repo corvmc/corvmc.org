@@ -5,6 +5,8 @@ import { organization } from './party';
 import { contact } from './contact';
 import { inventoryAsset, inventoryItem } from './inventory';
 import { reservation } from './reservation';
+import { incident } from './incident';
+import { inboxThread } from './inbox';
 
 /**
  * What a task is about (#2622): one row per record, one nullable column per
@@ -33,6 +35,11 @@ export const workOrderLink = sqliteTable(
 		}),
 		// A stocked item rather than one unit of it: restock work (#2756).
 		itemId: text('item_id').references(() => inventoryItem.id, { onDelete: 'cascade' }),
+		// Follow-up work made from an incident or an Inbox thread (#2758).
+		incidentId: text('incident_id').references(() => incident.id, { onDelete: 'cascade' }),
+		inboxThreadId: text('inbox_thread_id').references(() => inboxThread.id, {
+			onDelete: 'cascade'
+		}),
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)
@@ -55,9 +62,15 @@ export const workOrderLink = sqliteTable(
 		uniqueIndex('idx_work_order_link_item')
 			.on(t.itemId, t.workOrderId)
 			.where(sql`item_id is not null`),
+		uniqueIndex('idx_work_order_link_incident')
+			.on(t.incidentId, t.workOrderId)
+			.where(sql`incident_id is not null`),
+		uniqueIndex('idx_work_order_link_inbox_thread')
+			.on(t.inboxThreadId, t.workOrderId)
+			.where(sql`inbox_thread_id is not null`),
 		check(
 			'work_order_link_one_target',
-			sql`(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) = 1`
+			sql`(organization_id is not null) + (contact_id is not null) + (asset_id is not null) + (reservation_id is not null) + (item_id is not null) + (incident_id is not null) + (inbox_thread_id is not null) = 1`
 		)
 	]
 );

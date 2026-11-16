@@ -42,10 +42,12 @@ const READERS: Record<string, string> = {
 	'volunteer.orientationTasks': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.firstVisitNotes': 'src/lib/server/reminders/registry.ts',
 
-	'inventory.repairRoleId': 'src/lib/server/task/sourced-tasks.ts',
-	'inventory.restockRoleId': 'src/lib/server/task/sourced-tasks.ts',
-	'inventory.lateOrderRoleId': 'src/lib/server/task/sourced-tasks.ts',
-	'inventory.form8282RoleId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.repairPositionId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.restockPositionId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.lateOrderPositionId': 'src/lib/server/task/sourced-tasks.ts',
+	'inventory.form8282PositionId': 'src/lib/server/task/sourced-tasks.ts',
+	'contractor.insurancePositionId': 'src/lib/server/task/sourced-tasks.ts',
+	'finance.doorPaymentPositionId': 'src/lib/server/task/sourced-tasks.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 	'venue.checkoutTasks': 'src/lib/server/lock/door-service.ts',

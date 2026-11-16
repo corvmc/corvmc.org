@@ -48,7 +48,7 @@ describe('entityHref', () => {
 		});
 
 		it('gives the staff record in the staff panel', () => {
-			expect(entityHref(ref, them('staff'))).toBe('/staff/groups/band-1');
+			expect(entityHref(ref, them('staff'))).toBe('/staff/bands/band-1');
 		});
 
 		it('gives the directory entry in the member panel', () => {
@@ -169,12 +169,17 @@ describe('entityHref', () => {
 
 		it.each([
 			['work_request', '/staff/inventory/problems/work_request-1'],
-			['group_application', '/staff/groups/club-1'],
+			['group_application', '/staff/clubs/club-1'],
 			['market_vendor', '/staff/events/event-1/vendors'],
 			['volunteer', '/staff/members?role=volunteer&status=blocked'],
 			['local_resource', '/staff/local-resources?status=pending']
 		] as const)('links a %s to where it is decided', (type, href) => {
 			expect(entityHref(fakeRef(type), staff)).toBe(href);
+		});
+
+		it('links a committee application to the committee', () => {
+			const ref = fakeRef('group_application', { groupKind: 'committee' });
+			expect(entityHref(ref, staff)).toBe('/staff/committees/club-1');
 		});
 
 		it('has no page for an application whose group is unknown', () => {
@@ -187,7 +192,7 @@ describe('entityHref', () => {
 			const ref = fakeRef('band', { id: 'band-1', slug: null });
 			expect(entityHref(ref, viewer())).toBeNull();
 			expect(entityHref(ref, viewer({ isStaff: true, panel: 'staff' }))).toBe(
-				'/staff/groups/band-1'
+				'/staff/bands/band-1'
 			);
 		});
 	});

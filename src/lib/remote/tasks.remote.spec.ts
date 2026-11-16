@@ -124,6 +124,46 @@ describe('New task', () => {
 		sqlite.exec(`delete from work_order_link; delete from organization`);
 	});
 
+	it('links a task made from a thread or an incident to it and the people it names (#2758)', async () => {
+		sqlite.exec(`
+			insert into "user" (id, name, email) values ('usr-nia', 'Nia', 'nia@example.com');
+			insert into organization (id, name) values ('org-arts', 'Arts Council');
+			insert into contact (id, user_id, name, source) values ('ct-nia', 'usr-nia', 'Nia', 'staff_entered');
+			insert into inbox_thread (id, channel, organization_id) values ('th-1', 'email', 'org-arts');
+			insert into incident (id, occurred_at, category, summary, description, reported_by_name, involved_user_id)
+				values ('inc-1', 0, 'injury', 'Fell', 'Tripped on a cable', 'Door', 'usr-nia');
+		`);
+		const links = (id: string) =>
+			sqlite
+				.prepare(
+					`select inbox_thread_id, incident_id, organization_id, contact_id from work_order_link
+						where work_order_id = ? order by inbox_thread_id is null, incident_id is null`
+				)
+				.all(id);
+		const fromThread = (await remotes.createCatalogueTaskForm({
+			title: 'Call back',
+			aboutType: 'thread',
+			aboutId: 'th-1'
+		})) as { id: string };
+		expect(links(fromThread.id)).toEqual([
+			{ inbox_thread_id: 'th-1', incident_id: null, organization_id: null, contact_id: null },
+			{ inbox_thread_id: null, incident_id: null, organization_id: 'org-arts', contact_id: null }
+		]);
+		const fromIncident = (await remotes.createCatalogueTaskForm({
+			title: 'Tape the cable down',
+			aboutType: 'incident',
+			aboutId: 'inc-1'
+		})) as { id: string };
+		expect(links(fromIncident.id)).toEqual([
+			{ inbox_thread_id: null, incident_id: 'inc-1', organization_id: null, contact_id: null },
+			{ inbox_thread_id: null, incident_id: null, organization_id: null, contact_id: 'ct-nia' }
+		]);
+		sqlite.exec(`
+			delete from work_order_link; delete from incident; delete from inbox_thread;
+			delete from contact; delete from organization; delete from "user" where id = 'usr-nia';
+		`);
+	});
+
 	it('refuses a project the caller does not manage, and writes nothing', async () => {
 		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
 		await expect(

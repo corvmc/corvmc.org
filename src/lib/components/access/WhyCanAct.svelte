@@ -48,6 +48,20 @@
 					<div class="text-sm">
 						{d.positions.length > 0 ? d.positions.join(', ') : m.access_why_member_text()}
 					</div>
+					<!-- Where its own-records grants reach: named on a project, or owning a task in it (#2959). -->
+					{#if d.projects.length > 0 && d.grants.some((g) => g.reach === 'owned')}
+						<div class="text-sm" data-testid="why-projects">
+							{m.access_why_on_projects_text({
+								projects: d.projects
+									.map((p) =>
+										p.via === 'deliverable'
+											? m.access_why_project_by_task_text({ name: p.name })
+											: p.name
+									)
+									.join(', ')
+							})}
+						</div>
+					{/if}
 					<ul class="text-muted text-sm">
 						<li>{m.access_why_tasks_text()}</li>
 						{#each d.grants as g (g.capability)}

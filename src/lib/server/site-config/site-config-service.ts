@@ -78,13 +78,15 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// first-visit email, as plain text. Empty leaves that part out.
 	'volunteer.firstVisitNotes': '',
 
-	// The volunteer role on the tasks a repair report or low stock opens (#2756).
-	// Empty leaves them with no role, unassigned on the Tasks page.
-	'inventory.repairRoleId': '',
-	'inventory.restockRoleId': '',
-	// Late purchase orders and Form 8282 filings (#2757), the same way.
-	'inventory.lateOrderRoleId': '',
-	'inventory.form8282RoleId': '',
+	// The committee position each kind of app-opened task waits on (#2940), set
+	// on its module's settings page. Empty leaves the task with no position,
+	// unassigned on the Tasks page.
+	'inventory.repairPositionId': '',
+	'inventory.restockPositionId': '',
+	'inventory.lateOrderPositionId': '',
+	'inventory.form8282PositionId': '',
+	'contractor.insurancePositionId': '',
+	'finance.doorPaymentPositionId': '',
 
 	// How many inputs the desk in the practice room can actually take.
 	//

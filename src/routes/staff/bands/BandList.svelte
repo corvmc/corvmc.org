@@ -17,11 +17,10 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import BandTotals from './BandTotals.svelte';
-	import GroupKindFilter from './GroupKindFilter.svelte';
-	import GroupRecordPanel from './[id]/GroupRecordPanel.svelte';
+	import GroupRecordPanel from '#lib/components/groups/GroupRecordPanel.svelte';
 
 	// Deactivated bands are hidden until the filter asks for them.
-	const view = rosterState(resolve('staff/groups'), {
+	const view = rosterState(resolve('staff/bands'), {
 		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
 		tier: oneOf(['', 'free', 'premium'] as const, '')
 	});
@@ -65,7 +64,6 @@
 		view.clear();
 	}}
 >
-	<GroupKindFilter view="band" />
 	{#snippet search()}
 		<SearchInput
 			bind:value={searchText}

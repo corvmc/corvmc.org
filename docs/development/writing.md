@@ -50,9 +50,12 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
   [conventions.md#interface-copy](conventions.md#interface-copy)).
 - **Mechanical checks** — T4, T5, T6, L1's trailing "?", L3's word cap and sentence case on
   titles, labels and checkboxes — run over the message catalog in `scripts/message-copy.spec.ts`;
-  the bare-pronoun half of T7 is not yet checked. T9's retired words (`instructor` for teacher;
-  reject, turned down and unpublish for a returned tip or teaching application) are listed in
-  `retiredTerms` in `src/lib/config.ts`, and the same spec fails a catalog string that uses one. A proper noun that keeps its capitals goes in
+  the bare-pronoun half of T7 is not yet checked. T9's retired words are listed in `retiredTerms` in
+  `src/lib/config.ts`: instructor (teacher), work order (task), free hours (credits),
+  certification (clearance), turned down (decline), signing up for a task (shift), and, under
+  their own keys, session for a reservation, listing for an event, and reject or unpublish for a
+  returned tip or teaching application. The same spec fails a catalog string that uses one, and
+  `audit-display.spec.ts` holds the audit log to the list. A proper noun that keeps its capitals goes in
   `PROPER_NOUNS` in `scripts/lib/message-copy.ts`. L1's
   "someone/something" half is lint: `custom/definite-action-labels`.
 - **Judgement checks** — T1, T2, T3, T8, T9 — are for review. When writing or reviewing a page,

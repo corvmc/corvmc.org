@@ -12,8 +12,12 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+// Guarded on `contact.read`; the lookup itself is the contact service's own spec.
+vi.mock('#lib/server/directory/contact-service.js', () => ({
+	findPersonByUser: async (userId: string) => (userId === 'nia' ? 'nia-person' : null)
+}));
 
-const { newTaskPrefill, relatedTasks, relatedTaskWhere, resolvingTypes } =
+const { linksFor, newTaskPrefill, relatedTasks, relatedTaskWhere, resolvingTypes } =
 	await import('./related-tasks');
 const { listTaskCatalogue } = await import('#lib/server/volunteer/task-catalogue.js');
 
@@ -23,6 +27,8 @@ const at = (hours: number) => Math.floor(NOW.getTime() / 1000) + hours * 3600;
 beforeEach(() => {
 	for (const table of [
 		'work_order_link',
+		'incident',
+		'inbox_thread',
 		'contractor_job',
 		'grant_application',
 		'organization',
@@ -171,6 +177,57 @@ describe('linked records (#2622)', () => {
 	});
 });
 
+describe('incidents and Inbox threads (#2758)', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into organization (id, name) values ('arts', 'Arts Council');
+			insert into incident (id, occurred_at, category, summary, description, reported_by_name, event_id, involved_user_id) values
+				('spill', ${at(-2)}, 'safety_hazard', 'Spill', 'Spilled drink', 'Door', 'fri', 'nia'),
+				('noise', ${at(-2)}, 'noise_complaint', 'Noise', 'Loud', 'Door', null, null);
+			insert into inbox_thread (id, channel, organization_id) values ('ask', 'email', 'arts');
+			insert into work_order (id, title) values ('mop', 'Mop'), ('reply', 'Call back');
+			insert into work_order_link (id, work_order_id, incident_id) values ('l1', 'mop', 'spill');
+			insert into work_order_link (id, work_order_id, inbox_thread_id) values ('l2', 'reply', 'ask');
+		`);
+	});
+
+	it('lists the tasks made from each record', async () => {
+		expect(ids(await relatedTasks({ type: 'incident', id: 'spill' }, { now: NOW }))).toEqual([
+			{ key: 'about', ids: ['mop'] }
+		]);
+		expect(ids(await relatedTasks({ type: 'thread', id: 'ask' }, { now: NOW }))).toEqual([
+			{ key: 'about', ids: ['reply'] }
+		]);
+	});
+
+	it("starts an incident's task at its show, linked to the incident", async () => {
+		expect(await newTaskPrefill({ type: 'incident', id: 'spill' })).toEqual({
+			eventId: 'fri',
+			about: { type: 'incident', id: 'spill' }
+		});
+		expect(await newTaskPrefill({ type: 'incident', id: 'noise' })).toEqual({
+			about: { type: 'incident', id: 'noise' }
+		});
+		expect(await newTaskPrefill({ type: 'thread', id: 'ask' })).toEqual({
+			about: { type: 'thread', id: 'ask' }
+		});
+	});
+
+	it('links the parties the record names, for a viewer who reads contacts', async () => {
+		expect(await linksFor({ type: 'thread', id: 'ask' }, { people: true })).toEqual({
+			inboxThreadId: 'ask',
+			contactId: null,
+			organizationId: 'arts'
+		});
+		expect(await linksFor({ type: 'incident', id: 'spill' }, { people: true })).toEqual({
+			incidentId: 'spill',
+			contactId: 'nia-person'
+		});
+		expect(await linksFor({ type: 'thread', id: 'ask' })).toEqual({ inboxThreadId: 'ask' });
+		expect(await linksFor({ type: 'incident', id: 'spill' })).toEqual({ incidentId: 'spill' });
+	});
+});
+
 describe('relatedTaskWhere', () => {
 	it('narrows the Tasks table to every relation at once', async () => {
 		const where = relatedTaskWhere({ type: 'event', id: 'sat' }) ?? undefined;
@@ -195,11 +252,13 @@ describe('the registry', () => {
 				'equipment',
 				'event',
 				'group',
+				'incident',
 				'organization',
 				'project',
 				'recurring_work',
 				'reservation',
-				'role'
+				'role',
+				'thread'
 			].sort()
 		);
 		for (const type of resolvingTypes) expect(relatedSubjectTypes).toContain(type);

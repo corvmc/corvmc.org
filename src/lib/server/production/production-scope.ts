@@ -1,12 +1,7 @@
 import { and, eq, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
-import {
-	production,
-	productionExpense,
-	productionSlot,
-	type Production
-} from '#lib/server/db/schema/production.js';
+import { production, productionExpense, productionSlot } from '#lib/server/db/schema/production.js';
 import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { isTerminalProduction } from '#lib/production/status.js';
@@ -26,12 +21,6 @@ export async function projectOfProduction(productionId: string): Promise<string 
 		.where(eq(production.id, productionId))
 		.limit(1);
 	return row?.projectId ?? null;
-}
-
-/** The stored row, for a guard comparing a submission against it. Null when there is none. */
-export async function currentProduction(productionId: string): Promise<Production | null> {
-	const [row] = await db.select().from(production).where(eq(production.id, productionId)).limit(1);
-	return row ?? null;
 }
 
 export async function projectOfSlot(slotId: string): Promise<string | null> {

@@ -116,11 +116,13 @@ two worth knowing:
 
 A task links to the records it is about through `work_order_link` (#2622): one row per link,
 one nullable column per kind of record (`organization_id`, `contact_id`, `asset_id`,
-`reservation_id`), exactly one set, each a cascading foreign key with its own partial index. A
+`reservation_id`, `item_id`, `incident_id`, `inbox_thread_id`), exactly one set, each a cascading foreign key with its own partial index. A
 new kind of target is one nullable column and its index. Columns that code acts on stay on
 `work_order`: `project_id`, `event_id`, `volunteer_role_id`, `group_id`, `duty_list_id`,
 `maintenance_schedule_id`. Reads go through `src/lib/server/task/work-order-link.ts`, and the
-related-tasks registry finds an organization's, contact's, unit's or booking's tasks with it.
+related-tasks registry finds an organization's, contact's, unit's, item's, booking's, incident's
+or Inbox thread's tasks with it. A task made from an incident or a thread also links the people
+it names (#2758); the record and the task keep independent status.
 
 ## Inside the social vertical
 
@@ -235,6 +237,13 @@ person's positions, committee seats and live shift roles with what each gives, a
 `waitsOnTask` and `explainTaskAct` say who a task waits on and why a viewer can or cannot act.
 Each spec checks the explanation against its guard, so a new way of holding a capability has to
 be added to both.
+
+A committee's `'owned'` grants reach a project it is on: named in `project_committee`, or owning
+a live task in it (#2959, decision
+[0086](../decisions/0086-production-capabilities-by-consequence.md)). On a show that reach covers
+`production.run`, the show's own work. What binds CMC to someone outside it (the deal, the
+lineup, cancelling) is `production.book`, which is org-wide. `explainAccess` lists each
+committee's projects and how it is on them.
 
 ## Seven models that recur
 
@@ -372,7 +381,8 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 | `ballot.group_id`          | a member-wide ballot, where set it is a committee ballot |
 
 A project's committees are rows in `project_committee`, each with a role, and a project with none
-is staff's, the same as a null above. `project` itself has no committee column.
+is staff's, the same as a null above. `project` itself has no committee column. A committee that
+owns a live task in the project is on it too, for its grants' reach (#2959).
 
 Group announcements (`group_announcement`, posted to the group's one Announcements thread) and `event_group` are the same
 idea without the null: a band posting to its roster and a committee posting to its members
