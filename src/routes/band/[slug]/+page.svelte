@@ -14,6 +14,7 @@
 	import AddressCard from '#lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import PressKitCard from './PressKitCard.svelte';
+	import NextSteps from './NextSteps.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { errorMessage } from '#lib/error-message.js';
 	import { getPressKitProgress } from '#lib/remote/press-kit.remote.js';
@@ -38,6 +39,8 @@
 
 <PageHeader title={m.band_slug_dashboard_title()} subtitle={band.name} />
 <PageContent>
+	<NextSteps slug={band.slug} memberCount={band.memberCount} canManage={isOwnerOrAdmin} />
+
 	{#if address}
 		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
 			{m.band_slug_put_flyer_bio_goes_s_text({ name: band.name })}
