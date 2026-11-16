@@ -38,6 +38,10 @@ async function addCard(page: Page, cardNumber: string) {
 	);
 	await dialog.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])').fill(cardNumber);
 	await dialog.locator('button[type=submit]').click();
+	// The new row renders with the submit's refreshed queries, before `Form`
+	// runs `onsuccess` and the modal closes. A click in that gap lands on the
+	// closing modal, so the next step waits for it to go (#3046).
+	await expect(dialog).toHaveCount(0);
 }
 
 const readCardOnUser = async () => {
