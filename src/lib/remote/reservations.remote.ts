@@ -148,6 +148,7 @@ import {
 } from '#lib/server/reservation/recurring-series-service.js';
 import { getMembers } from '#lib/server/band/band-service.js';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { listBookableBands } from '#lib/server/reservation/bookable-bands.js';
 import { paginate } from '#lib/server/db/paginate.js';
 import { ensureContactPhone } from '#lib/server/user/user-service.js';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
@@ -1096,27 +1097,6 @@ export const getMembershipStatus = query(async () => {
 		creditsResetAt: freeHoursResetAt(sub)?.toISOString() ?? null,
 		hoursPerReset: sub?.hoursPerReset ?? 0
 	};
-});
-
-/** Band: check if any active band member has a sustaining membership. */
-export const getBandMembershipStatus = query(z.string(), async (slug) => {
-	// `staff` to match `getBandReservations`, which it is composed with in
-	// `getBandReservationsPage`. Without it the composed query admitted staff on
-	// its first read and 403'd them on its second, taking the whole page down —
-	// exactly what the comment on that first read says must not happen.
-	const { group: band } = await requireGroupRole({ slug }, 'member', { staff: 'band.read' });
-	const members = await getMembers(band.id);
-	const activeUserIds = members.filter((m) => m.status === 'active').map((m) => m.userId);
-
-	if (activeUserIds.length === 0) return { hasSustainingMember: false };
-
-	const [sustaining] = await db
-		.select({ id: user.id })
-		.from(user)
-		.where(and(inArray(user.id, activeUserIds), sql`subscription is not null`))
-		.limit(1);
-
-	return { hasSustainingMember: sustaining != null };
 });
 
 // ===========================================================================
@@ -2248,6 +2228,8 @@ type ReservationWithPrice = Reservation & {
 	creditsAvailable: boolean;
 	/** Free hours cover all of it and `payForReservation` would settle it now. */
 	payableWithCredits: boolean;
+	/** The band a group booking is for; null for every other booker. */
+	groupName: string | null;
 };
 export const getReservations = query(
 	z
@@ -2293,6 +2275,8 @@ export const getReservations = query(
 			.where(and(...filters.filter((f): f is SQL => Boolean(f))))
 			.orderBy(newestFirst ? desc(reservation.startsAt) : reservation.startsAt);
 
+		const groupNames = await groupNamesFor(rows);
+
 		// Staff reading a member's list keep the codes; the member owing a fee does not (#2874).
 		const forSelf = !forUser || forUser === locals.user.id;
 		const now = new Date();
@@ -2335,11 +2319,23 @@ export const getReservations = query(
 				...withholdDoorCode(value, held, now),
 				price: netCents / 100,
 				creditsAvailable,
-				payableWithCredits
+				payableWithCredits,
+				groupName: value.bookerType === 'group' ? (groupNames.get(value.bookerId) ?? null) : null
 			};
 		});
 	}
 );
+
+/** The name a band booking is marked with on its booker's own list. */
+async function groupNamesFor(rows: Reservation[]): Promise<Map<string, string>> {
+	const ids = [...new Set(rows.filter((r) => r.bookerType === 'group').map((r) => r.bookerId))];
+	if (ids.length === 0) return new Map();
+	const named = await db
+		.select({ id: group.id, name: group.name })
+		.from(group)
+		.where(inArray(group.id, ids));
+	return new Map(named.map((g) => [g.id, g.name]));
+}
 
 export const getRecurringReservations = query(
 	z
@@ -2396,9 +2392,8 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
 /**
  * The band reservations page's one load-bearing query.
  *
- * The schedule, whether the band has a sustaining member (which sets the rate the booking form
- * quotes) and the booking contact are all first paint, and the page awaited the three side by
- * side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
+ * The schedule, the booking form's choices and the booking contact are all first paint, and the
+ * page awaited them side by side. Past kit 2.64 that renders the error boundary instead of the page; assembled here it is
  * one request. Each callee re-guards — `getBandReservations` resolves the band from this slug
  * through `requireGroupRole`, the boundary that stops one band reading another's schedule.
  */
@@ -2406,14 +2401,15 @@ export const getBandReservationsPage = query(
 	z.object({ slug: z.string(), pastPage: z.number().int().min(1).default(1) }),
 	async ({ slug, pastPage }) => {
 		// The fee gate reads the booking member's own fees, not the band's (#2748).
-		const [reservations, membership, contact, feeGate] = await Promise.all([
+		const currentUser = requireUser();
+		const [reservations, contact, feeGate, booking] = await Promise.all([
 			getBandReservations({ slug, pastPage }),
-			getBandMembershipStatus(slug),
 			getBookingContact(),
-			getFeeGate(requireUser().id)
+			getFeeGate(currentUser.id),
+			bookingChoices(currentUser.id)
 		]);
 
-		return { reservations, membership, contact, feeGate };
+		return { reservations, contact, feeGate, booking };
 	}
 );
 
@@ -2463,6 +2459,27 @@ export const getStaffReservationsPage = query(staffReservationsPageSchema, async
 });
 
 /**
+ * Who the booking form offers under For, besides the member: each band they
+ * may book for, and Teaching for an active instructor. Each booking remote
+ * re-checks its own guard; this only decides what is offered.
+ *
+ * A boolean rather than the instructor record keeps `applicationNote`, which is
+ * staff-only, off a member-facing DTO.
+ */
+async function bookingChoices(userId: string) {
+	const [membership, instructor, bands] = await Promise.all([
+		getMembershipStatus(),
+		getInstructorByUserId(userId),
+		listBookableBands(userId)
+	]);
+	return {
+		isSustaining: membership.isSustainingMember,
+		isInstructor: instructor?.status === 'active',
+		bands
+	};
+}
+
+/**
  * The member reservations page's one load-bearing query.
  *
  * Unparameterized, so `refreshReservations()` can name it with no argument — it replaces four
@@ -2474,20 +2491,16 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// Joined into the page query rather than fetched by the component that needs
 	// it: a second remote query fanned out of a child is the waterfall this
 	// query exists to collapse.
-	const [active, all, membership, contact, instructor, notice, feeGate] = await Promise.all([
+	const [active, all, membership, contact, booking, notice, feeGate] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
-		getInstructorByUserId(currentUser.id),
+		bookingChoices(currentUser.id),
 		getReservationConfig().then((config) => viewerNotice(config, 'user')),
 		getFeeGate(currentUser.id)
 	]);
 
-	// The booking surface only ever asks whether teaching terms are available, and
-	// `requireInstructor` is what actually authorizes the booking. Sending a
-	// boolean rather than the record keeps `applicationNote` — staff-only — off a
-	// member-facing DTO by construction rather than by remembering to omit it.
 	return {
 		active,
 		// Kept in `all` as well: this is what is owed, All is the history. The
@@ -2496,7 +2509,8 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 		all,
 		membership,
 		contact,
-		isInstructor: instructor?.status === 'active',
+		isInstructor: booking.isInstructor,
+		booking,
 		// Null once the member holds the Practice space clearance.
 		firstBooking: notice.newMember
 			? { noticeMinutes: notice.minutes, tourMinutes: notice.tourMinutes }

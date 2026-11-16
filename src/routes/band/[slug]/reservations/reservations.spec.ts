@@ -216,7 +216,6 @@ vi.mock('$app/server', () => ({
 const {
 	bookBandReservation: bookReservation,
 	cancelBandReservation,
-	getBandMembershipStatus,
 	getBandReservations,
 	getBandReservationDetail
 } = (await import('#lib/remote/reservations.remote.js')) as any;
@@ -676,35 +675,6 @@ describe('getBandReservationDetail', () => {
 		});
 
 		expect((await getBandReservationDetail(detailArgs)).canCancel).toBe(false);
-	});
-});
-
-describe('getBandMembershipStatus', () => {
-	// Source queries the DB directly for an active member whose `subscription is not null`.
-	// `selectResult` represents that query's result: a non-empty array means a sustaining
-	// member was found.
-	it('returns hasSustainingMember true when an active member has a subscription', async () => {
-		selectResult = [{ id: 'user-owner' }];
-
-		const result = await getBandMembershipStatus('the-velvet-underground');
-
-		expect(result.hasSustainingMember).toBe(true);
-	});
-
-	it('returns hasSustainingMember false when no active member has a subscription', async () => {
-		selectResult = [];
-
-		const result = await getBandMembershipStatus('the-velvet-underground');
-
-		expect(result.hasSustainingMember).toBe(false);
-	});
-
-	it('returns hasSustainingMember false when no active members exist', async () => {
-		bandServiceMock.getMembers.mockResolvedValueOnce([{ userId: 'user-1', status: 'inactive' }]);
-
-		const result = await getBandMembershipStatus('the-velvet-underground');
-
-		expect(result.hasSustainingMember).toBe(false);
 	});
 });
 
