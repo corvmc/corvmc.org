@@ -1,10 +1,10 @@
 {
+  "id": "1db2707c-6184-4714-977d-454f2d01cb75",
+  "prevIds": [
+    "a330bfc4-d537-4744-8aa4-9c988bc06970"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "a330bfc4-d537-4744-8aa4-9c988bc06970",
-  "prevIds": [
-    "81ad3d9a-2d37-49df-a0be-741ebe5ef3c7"
-  ],
   "ddl": [
     {
       "name": "account",
