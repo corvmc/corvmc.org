@@ -72,7 +72,8 @@ test.describe('staff events split', () => {
 	// address lands there.
 	test('Productions holds productions and no listings', async ({ page }) => {
 		await page.goto('/staff/events?view=productions');
-		await expect(page).toHaveURL(/\/staff\/productions\?/);
+		// The redirect adds `via`, and the page drops it once it hydrates (#3167).
+		await expect(page).toHaveURL(/\/staff\/productions(?:[?#]|$)/);
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toHaveCount(0);
