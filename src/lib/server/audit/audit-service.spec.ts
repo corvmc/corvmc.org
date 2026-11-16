@@ -345,6 +345,22 @@ describe('listAuditEntries', () => {
 		expect((await listAuditEntries({ from: '2026-09-02', to: '2026-09-09' })).rows).toEqual([]);
 	});
 
+	// #3061: created_at is whole seconds, so the day's last minute belongs to it.
+	it("keeps an entry from the to day's last minute", async () => {
+		await seed();
+		const id = (
+			sqlite.prepare(`select id from audit_log where action = 'user.reactivated'`).get() as {
+				id: string;
+			}
+		).id;
+		// 23:59:30 Pacific (PDT) on Sep 1.
+		sqlite
+			.prepare(`update audit_log set created_at = ? where id = ?`)
+			.run(Date.parse('2026-09-02T06:59:30Z') / 1000, id);
+		expect(ids(await listAuditEntries({ to: '2026-09-01' }))).toEqual([id]);
+		expect((await listAuditEntries({ from: '2026-09-02', to: '2026-09-02' })).rows).toEqual([]);
+	});
+
 	it('paginates server-side', async () => {
 		await seed();
 		const { rows, pagination } = await listAuditEntries({}, { page: 2, pageSize: 1 });

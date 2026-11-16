@@ -2,11 +2,11 @@ import { db } from '#lib/server/db/index.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { creditTransaction } from '#lib/server/db/schema/finance.js';
-import { eq, and, sql, gt, gte, lte, desc, or, count, type SQL } from 'drizzle-orm';
+import { eq, and, sql, gt, gte, desc, or, count, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import type { MemberRef } from '#lib/types/entity.js';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { rangeCondition } from '#lib/server/report/range.js';
 import { creditTypeConfig, DEFAULT_TIMEZONE } from '#lib/config.js';
 import {
 	isCreditType,
@@ -365,13 +365,8 @@ function buildTransactionFilters(filters: CreditTransactionFilters): SQL[] {
 		conditions.push(eq(creditTransaction.source, filters.source));
 	}
 
-	if (filters.from) {
-		conditions.push(gte(creditTransaction.createdAt, buildDateInTz(filters.from, '00:00', TZ)));
-	}
-
-	if (filters.to) {
-		conditions.push(lte(creditTransaction.createdAt, buildDateInTz(filters.to, '23:59', TZ)));
-	}
+	const dates = rangeCondition(creditTransaction.createdAt, filters, TZ);
+	if (dates) conditions.push(dates);
 
 	return conditions;
 }

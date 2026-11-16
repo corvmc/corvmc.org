@@ -3,11 +3,12 @@ import { containsLiteral } from '#lib/server/db/like.js';
 import { volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
-import { eq, and, or, inArray, isNull, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, inArray, isNull, desc, count, sql, type SQL } from 'drizzle-orm';
 import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
 import { memberRefColumns, toMemberRef, type MemberRefRow } from '#lib/server/entity/refs.js';
 import type { MemberRef } from '#lib/types/entity.js';
 import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { rangeCondition } from '#lib/server/report/range.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
@@ -702,12 +703,8 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 			)!
 		);
 	}
-	if (filters.from) {
-		conditions.push(gte(volunteerHourLog.workedOn, buildDateInTz(filters.from, '00:00', TZ)));
-	}
-	if (filters.to) {
-		conditions.push(lte(volunteerHourLog.workedOn, buildDateInTz(filters.to, '23:59', TZ)));
-	}
+	const dates = rangeCondition(volunteerHourLog.workedOn, filters, TZ);
+	if (dates) conditions.push(dates);
 	if (filters.search) {
 		conditions.push(
 			or(containsLiteral(user.name, filters.search), containsLiteral(user.email, filters.search))!
