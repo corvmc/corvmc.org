@@ -1,4 +1,4 @@
-import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
+import { handleErrorWithSentry } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
 import { dev } from '$app/env';
 import * as env from '$app/env/public';
@@ -95,6 +95,9 @@ export function isFrameworkControlFlow(error: unknown): boolean {
 	return body !== undefined && status >= 400;
 }
 
+const sentryEnabled =
+	!dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(globalThis.location?.href);
+
 Sentry.init({
 	beforeSend(event, hint) {
 		if (isStaleChunkError(hint?.originalException)) return null;
@@ -118,8 +121,7 @@ Sentry.init({
 	// beforeSend only sees error events, while transactions, logs, and session
 	// replays ship through channels it never touches. The origin is fixed for the
 	// life of the page, so one check at init is complete.
-	enabled:
-		!dev && env.PUBLIC_SENTRY_ENVIRONMENT !== 'ci' && !isLocalOrigin(globalThis.location?.href),
+	enabled: sentryEnabled,
 
 	tracesSampleRate: 1.0,
 
@@ -129,14 +131,24 @@ Sentry.init({
 
 	// If the entire session is not sampled, use the below sample rate to sample
 	// sessions when an error occurs.
-	replaysOnErrorSampleRate: 1.0,
-
-	// If you don't want to use Session Replay, just remove the line below:
-	integrations: [replayIntegration()]
+	replaysOnErrorSampleRate: 1.0
 
 	// No `enableLogs` / `sendDefaultPii`: SDK 11 removed both. Logs ship by
 	// default, and `dataCollection`'s defaults collect what sendDefaultPii did.
 });
+
+// Replay is over half of what Sentry adds to the app entry. Imported from its
+// own module after `load`, it downloads after the page has painted and hydrated
+// instead of ahead of both; the sample rates passed to init above still apply.
+// `scripts/bundle-budget.mjs` fails the build if it lands back in the entry.
+if (sentryEnabled && typeof window !== 'undefined') {
+	const addReplay = () =>
+		import('#lib/sentry-replay.js').then(({ replayIntegration }) =>
+			Sentry.addIntegration(replayIntegration())
+		);
+	if (document.readyState === 'complete') void addReplay();
+	else window.addEventListener('load', () => void addReplay(), { once: true });
+}
 
 // A new deploy replaces the immutable chunk files, so a tab opened before the
 // deploy fails to lazy-load a route module ("error loading dynamically imported
