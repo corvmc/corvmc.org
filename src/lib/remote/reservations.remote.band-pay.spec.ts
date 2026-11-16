@@ -69,7 +69,8 @@ const requireGroupRole = vi.fn(async (ref: { id?: string; slug?: string }) => {
 	return { user: currentUser, group: band, role: 'member' };
 });
 vi.mock('#lib/server/group/group-context.js', () => ({
-	requireGroupRole: (...a: unknown[]) => requireGroupRole(...(a as [{ id?: string }]))
+	requireGroupRole: (...a: unknown[]) => requireGroupRole(...(a as [{ id?: string }])),
+	requireBandRole: (...a: unknown[]) => requireGroupRole(...(a as [{ id?: string }]))
 }));
 
 vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
