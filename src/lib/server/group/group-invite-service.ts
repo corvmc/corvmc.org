@@ -128,6 +128,55 @@ export async function createInvite(
 	return { type: 'group_invite', id: row.id };
 }
 
+export type InviteOutcome = {
+	kind: 'member' | 'email';
+	/** The user id or the email address, as the caller sent it. */
+	recipient: string;
+	sent: boolean;
+	/** A domain error's message; absent for a sent invite or an unexpected fault. */
+	reason?: string;
+};
+
+/**
+ * One invitation per recipient, each through the single-recipient path, so
+ * every row, dedupe and email is what a lone invite would produce. One
+ * recipient failing does not stop the rest: its outcome says why instead.
+ */
+export async function inviteSeveral(
+	groupId: string,
+	recipients: { userIds: string[]; emails: string[] },
+	role: 'admin' | 'member',
+	position: string | null,
+	invitedById: string
+): Promise<InviteOutcome[]> {
+	const work = [
+		...[...new Set(recipients.userIds)].map((id) => ({ kind: 'member' as const, recipient: id })),
+		...[...new Set(recipients.emails.map((e) => e.toLowerCase().trim()))].map((e) => ({
+			kind: 'email' as const,
+			recipient: e
+		}))
+	];
+	const outcomes: InviteOutcome[] = [];
+	for (const item of work) {
+		try {
+			if (item.kind === 'member') {
+				await invite(groupId, item.recipient, role, position, invitedById);
+			} else {
+				await createInvite(item.recipient, groupId, role, position, invitedById);
+			}
+			outcomes.push({ ...item, sent: true });
+		} catch (err) {
+			if (err instanceof DomainError) {
+				outcomes.push({ ...item, sent: false, reason: err.message });
+			} else {
+				captureException(err, { event: 'group_invite.batch', groupId });
+				outcomes.push({ ...item, sent: false });
+			}
+		}
+	}
+	return outcomes;
+}
+
 export async function resolvePendingInvites(userId: string, email: string): Promise<number> {
 	const normalizedEmail = email.toLowerCase().trim();
 	const now = new Date();

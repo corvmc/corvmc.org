@@ -134,7 +134,7 @@ vi.mock('$app/server', () => ({
 
 const {
 	getBandMembersPage,
-	inviteMember,
+	inviteSeveral,
 	removeMember,
 	revokeInvitation,
 	updateMemberRemote,
@@ -186,35 +186,56 @@ describe('getBandMembersPage', () => {
 // Remote form handlers
 // ---------------------------------------------------------------------------
 
-describe('inviteMember', () => {
-	it('calls invite with correct params', async () => {
-		const result = await inviteMember({
-			bandId: 'band-1',
-			userId: 'user-3',
-			role: 'member',
-			position: 'Guitar'
-		});
+// `issue.userIds(...)` as kit builds it: whatever is called, `invalid()` throws.
+const issue = new Proxy({}, { get: () => (message: string) => ({ message }) });
 
-		expect(bandServiceMock.invite).toHaveBeenCalledWith(
-			'band-1',
-			'user-3',
-			'member',
-			'Guitar',
-			'user-owner'
-		);
-		expect(result.success).toBe(true);
+describe('inviteSeveral', () => {
+	const batch = (userIds: string[]) => ({
+		bandId: 'band-1',
+		userIds,
+		emails: [],
+		role: 'member',
+		position: 'Keys'
 	});
 
-	it('sends null position when empty', async () => {
-		await inviteMember({ bandId: 'band-1', userId: 'user-3', role: 'admin', position: '' });
+	it('invites each person through the single-recipient service', async () => {
+		const result = await inviteSeveral(batch(['user-3', 'user-4']), issue);
 
+		expect(bandServiceMock.invite).toHaveBeenCalledTimes(2);
 		expect(bandServiceMock.invite).toHaveBeenCalledWith(
 			'band-1',
-			'user-3',
-			'admin',
-			null,
+			'user-4',
+			'member',
+			'Keys',
 			'user-owner'
 		);
+		expect(result.outcomes.map((o: { sent: boolean }) => o.sent)).toEqual([true, true]);
+	});
+
+	it('reports a duplicate against its person and still invites the rest', async () => {
+		bandServiceMock.invite.mockRejectedValueOnce(
+			new bandServiceMock.BandMemberExistsError('already invited')
+		);
+
+		const result = await inviteSeveral(batch(['user-3', 'user-4']), issue);
+
+		expect(bandServiceMock.invite).toHaveBeenCalledTimes(2);
+		expect(result.outcomes).toEqual([
+			expect.objectContaining({ recipient: 'user-3', sent: false }),
+			expect.objectContaining({ recipient: 'user-4', sent: true })
+		]);
+	});
+
+	it('refuses an empty batch without calling the service', async () => {
+		await expect(inviteSeveral(batch([]), issue)).rejects.toBeDefined();
+		expect(bandServiceMock.invite).not.toHaveBeenCalled();
+	});
+
+	it('refuses a plain member', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+
+		await expect(inviteSeveral(batch(['user-3']), issue)).rejects.toMatchObject({ status: 403 });
+		expect(bandServiceMock.invite).not.toHaveBeenCalled();
 	});
 });
 

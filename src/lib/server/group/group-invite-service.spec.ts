@@ -20,6 +20,7 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 
 const {
 	createInvite,
+	inviteSeveral,
 	resolvePendingInvites,
 	listBandsJoinedByInvite,
 	JOINED_BY_INVITE_DAYS,
@@ -239,6 +240,77 @@ describe('createInvite', () => {
 				invitedByName: 'Name inviter-1',
 				role: 'member'
 			})
+		]);
+	});
+});
+
+describe('inviteSeveral', () => {
+	it('makes one row per recipient, members and addresses together', async () => {
+		member('user-a');
+		member('user-b');
+
+		const outcomes = await inviteSeveral(
+			'band-1',
+			{ userIds: ['user-a', 'user-b'], emails: ['New@Example.com', 'new@example.com'] },
+			'member',
+			'Drums',
+			'inviter-1'
+		);
+
+		expect(outcomes.every((o) => o.sent)).toBe(true);
+		expect(outcomes).toHaveLength(3);
+		expect(roster()).toEqual([
+			expect.objectContaining({ user_id: 'user-a', status: 'pending', position: 'Drums' }),
+			expect.objectContaining({ user_id: 'user-b', status: 'pending', position: 'Drums' })
+		]);
+		expect(invites()).toEqual([
+			expect.objectContaining({ email: 'new@example.com', position: 'Drums' })
+		]);
+	});
+
+	it('reports a recipient already on the roster and still sends the rest', async () => {
+		member('user-a');
+		member('user-b');
+		await inviteSeveral('band-1', { userIds: ['user-a'], emails: [] }, 'member', null, 'inviter-1');
+
+		const outcomes = await inviteSeveral(
+			'band-1',
+			{ userIds: ['user-a', 'user-b'], emails: ['user-a@example.com'] },
+			'member',
+			null,
+			'inviter-1'
+		);
+
+		const byRecipient = Object.fromEntries(outcomes.map((o) => [o.recipient, o]));
+		expect(byRecipient['user-a']).toMatchObject({ sent: false, reason: expect.any(String) });
+		expect(byRecipient['user-a@example.com']).toMatchObject({
+			sent: false,
+			reason: expect.any(String)
+		});
+		expect(byRecipient['user-b']).toMatchObject({ sent: true });
+		expect(roster()).toHaveLength(2);
+	});
+
+	it('records an unexpected fault against its recipient without failing the batch', async () => {
+		member('user-a');
+		member('user-broken');
+		sqlite.exec(
+			`create temp trigger group_member_fails before insert on group_member
+			 when new.user_id = 'user-broken' begin select raise(abort, 'disk on fire'); end`
+		);
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const outcomes = await inviteSeveral(
+			'band-1',
+			{ userIds: ['user-broken', 'user-a'], emails: [] },
+			'member',
+			null,
+			'inviter-1'
+		);
+
+		expect(outcomes).toEqual([
+			{ kind: 'member', recipient: 'user-broken', sent: false },
+			{ kind: 'member', recipient: 'user-a', sent: true }
 		]);
 	});
 });
