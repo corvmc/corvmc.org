@@ -207,7 +207,7 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 - **Member got two "Reservation confirmed" emails** → something other than a transition
   into `confirmed` called `announceConfirmed()`; the settle paths must not (#2502).
 - **Member got no door code for tomorrow's booking** → read the staff reservation's Door
-  access card. No code there and none sent: the booker owes a fee or holds a standing code (see
+  access card. No code there and none sent: the booker owes a fee, or holds a standing code on a booking of their own (see
   [Door codes](#door-codes)). A "call staff" notice went out: the pool was empty, and staff were
   emailed. **Read out a code** on the card claims one from the pool once it has stock.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
@@ -302,7 +302,8 @@ locally, so a code already on it opens the door while the lock is offline.
 - **Claim.** A booking claims a code when its `door_code_ready` notice is sent, a day before it
   starts, and the notice carries the code (`claimPoolCode` in the notification listener). A
   claimed code counts as revealed. One live code per booking (a unique index). The reminder
-  waits while the booker owes a fee and skips a booker who holds a standing code
+  waits while the booker owes a fee and skips a booker who holds a standing code, except on a
+  band booking, which claims one so a bandmate who arrives first has a code on `/door`
   (`doorCodeHolds` in `src/lib/server/reminders/registry.ts`); an unpaid teaching booking will
   wait there too (#3025).
 - **Empty pool.** The claim returns nothing and emails staff once a day (`lock_pool_empty`); the

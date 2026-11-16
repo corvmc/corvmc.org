@@ -61,8 +61,9 @@ beforeEach(() => {
 	standing.ids = new Set();
 });
 
-const booking = (id: string, userId: string) => ({
+const booking = (id: string, userId: string, bookerType: 'user' | 'group' = 'user') => ({
 	id,
+	bookerType,
 	startsAt: new Date('2026-06-15T18:00:00Z'),
 	endsAt: new Date('2026-06-15T20:00:00Z'),
 	userId,
@@ -125,5 +126,20 @@ describe('door_code_ready', () => {
 		standing.ids = new Set(['u-key']);
 
 		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-member']);
+	});
+
+	// A bandmate who arrives first has no standing code of their own (#2120).
+	it('is sent for a band booking whose booker holds a standing code', async () => {
+		rows = [booking('res-band', 'u-key', 'group'), booking('res-own', 'u-key')];
+		standing.ids = new Set(['u-key']);
+
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-band']);
+	});
+
+	it('still waits on a fee for a band booking (#2859)', async () => {
+		rows = [booking('res-band', 'u-owing', 'group')];
+		owing.ids = new Set(['u-owing']);
+
+		expect(await definition().due(NOW)).toEqual([]);
 	});
 });
