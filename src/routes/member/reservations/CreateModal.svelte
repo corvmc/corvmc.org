@@ -58,6 +58,8 @@
 			} else {
 				if (r?.waitlisted) {
 					toast.info(m.member_first_instance_waitlisted_because_slot_toast());
+				} else {
+					toast.success(m.member_reservations_create_modal_booked_toast());
 				}
 				onbooked?.();
 			}

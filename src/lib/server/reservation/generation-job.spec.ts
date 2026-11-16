@@ -75,15 +75,22 @@ function booking(
 	id: string,
 	startsAt: Date,
 	endsAt: Date,
-	opts: { status?: string; hardHold?: boolean; seriesId?: string | null; notes?: string } = {}
+	opts: {
+		status?: string;
+		hardHold?: boolean;
+		seriesId?: string | null;
+		notes?: string;
+		booker?: string;
+	} = {}
 ) {
 	sqlite
 		.prepare(
 			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at, hard_hold, recurring_series_id, notes)
-			 values (?, 'user', 'user-1', 'user-1', ?, ?, ?, ?, ?, ?)`
+			 values (?, 'user', ?, 'user-1', ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			id,
+			opts.booker ?? 'user-1',
 			opts.status ?? 'confirmed',
 			secs(startsAt),
 			secs(endsAt),
@@ -258,7 +265,7 @@ describe('generateRecurringReservations', () => {
 
 	it.each(['cancelled', 'waitlisted'])('is not blocked by a %s hard hold', async (status) => {
 		reservationSeries();
-		booking('show-hold', OCC1, OCC1_END, { hardHold: true, status });
+		booking('show-hold', OCC1, OCC1_END, { hardHold: true, status, booker: 'listing-1' });
 
 		expect((await generateRecurringReservations()).instancesCreated).toBe(1);
 	});
@@ -294,7 +301,9 @@ describe('generateRecurringReservations', () => {
 
 	it('creates waitlisted instances when a regular reservation conflicts', async () => {
 		reservationSeries();
-		booking('someone-else', new Date(OCC1.getTime() + HOUR), new Date(OCC1_END.getTime() + HOUR));
+		booking('someone-else', new Date(OCC1.getTime() + HOUR), new Date(OCC1_END.getTime() + HOUR), {
+			booker: 'user-2'
+		});
 
 		const result = await generateRecurringReservations();
 
@@ -309,6 +318,19 @@ describe('generateRecurringReservations', () => {
 			'reservation.recurring_waitlisted',
 			expect.objectContaining({ seriesId: 'series-1', reason: 'Time slot is currently booked' })
 		);
+	});
+
+	// #3031: two live series for one booker on one slot used to pair every
+	// confirmed occurrence with a waitlisted copy.
+	it('writes nothing for an occurrence the same booker already holds', async () => {
+		reservationSeries();
+		booking('mine', OCC1, OCC1_END, { seriesId: null });
+
+		const result = await generateRecurringReservations();
+
+		expect(result).toMatchObject({ instancesCreated: 0, instancesWaitlisted: 0 });
+		expect(generated()).toEqual([]);
+		expect(mockEmit).not.toHaveBeenCalled();
 	});
 });
 
