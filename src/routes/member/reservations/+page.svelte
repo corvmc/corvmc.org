@@ -81,8 +81,6 @@
 	let paidAttempts = $state(0);
 	let awaitingPayment = $state(false);
 
-	const creditData = $derived(await pageData.then((d) => d.membership));
-
 	// Staff can't follow up on a booking they can't call about, so the wizard
 	// collects a number inline when the member has none on file.
 	const contact = $derived(await pageData.then((d) => d.contact));
@@ -230,7 +228,7 @@
 							</section>
 						{/if}
 					{:catch}
-						<!-- `creditData` takes this rejection to the boundary. -->
+						<!-- `contact` takes this rejection to the boundary. -->
 					{/await}
 					<div class="card-grid">
 						{#each await activeReservations as reservation (reservation.id)}
@@ -284,7 +282,7 @@
 							</div>
 						{/if}
 					{:catch}
-						<!-- `creditData` takes this rejection to the boundary. -->
+						<!-- `contact` takes this rejection to the boundary. -->
 					{/await}
 				{/if}
 			</Tabs.Content>
