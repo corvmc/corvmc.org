@@ -265,7 +265,7 @@
 			{@render staffNav()}
 		{/if}
 	{/snippet}
-	<ErrorToastBoundary>
+	<ErrorToastBoundary showPending={false}>
 		<!-- `getStaffLayout` redirects anyone without the role, so reaching this
 		     markup is itself the proof that the viewer is staff. -->
 		<EntityViewer
