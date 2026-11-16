@@ -48,6 +48,7 @@
 	let selectedEquipmentName = $state('');
 	let selectedPricingTier = $state<PricingTier>('major');
 	let isFreeForm = $state(false);
+	let selectedMissingClearance = $state<string | null>(null);
 
 	let pickupDateValue = $state('');
 	let returnDateValue = $state('');
@@ -60,8 +61,14 @@
 		return estimateLoanCost(pickup, returnDate, selectedPricingTier, meta.isSustainingMember);
 	});
 
-	function openRequest(itemId: string, name: string, pricingTier: string) {
+	function openRequest(
+		itemId: string,
+		name: string,
+		pricingTier: string,
+		missingClearance: string | null = null
+	) {
 		selectedEquipmentId = itemId;
+		selectedMissingClearance = missingClearance;
 		selectedEquipmentName = name;
 		selectedPricingTier = (pricingTier as PricingTier) ?? 'major';
 		isFreeForm = false;
@@ -83,12 +90,13 @@
 		const match = equipment.find((r) => r.id === wanted);
 		if (!match) return;
 		opened = true;
-		openRequest(match.id, match.name, match.pricingTier);
+		openRequest(match.id, match.name, match.pricingTier, match.missingClearance);
 	});
 
 	function openFreeFormRequest() {
 		selectedEquipmentId = undefined;
 		selectedEquipmentName = '';
+		selectedMissingClearance = null;
 		isFreeForm = true;
 		pickupDateValue = '';
 		returnDateValue = '';
@@ -189,7 +197,7 @@
 										variant="default"
 										size="xs"
 										disabled={eq.availableQuantity <= 0}
-										onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
+										onclick={() => openRequest(eq.id, eq.name, eq.pricingTier, eq.missingClearance)}
 									>
 										{m.member_equipment_request_label()}
 									</Button>
@@ -219,14 +227,25 @@
 >
 	<Form
 		remote={submitRequest}
-		onsuccess={() => {
-			toast.success(m.member_equipment_toast());
+		onsuccess={(result) => {
+			if (result?.missingClearance) {
+				toast.warning(
+					m.member_equipment_clearance_missing_toast({ clearance: result.missingClearance })
+				);
+			} else {
+				toast.success(m.member_equipment_toast());
+			}
 			showRequestModal = false;
 			goto(resolve('member/equipment/loans'));
 		}}
 	>
 		{#if !isFreeForm}
 			<input {...fields.itemId.as('hidden', selectedEquipmentId!)} />
+		{/if}
+		{#if selectedMissingClearance}
+			<div role="note" class="rounded-lg bg-warning/10 px-4 py-3 text-sm">
+				{m.member_equipment_clearance_needed_text({ clearance: selectedMissingClearance })}
+			</div>
 		{/if}
 		<div
 			oninput={(e: Event) => {

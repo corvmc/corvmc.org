@@ -1096,7 +1096,9 @@ returns its readiness warnings unpublished until acknowledged with a reason, and
 
 So do approving a returned volunteer hour log (`approveHourLog`, which writes
 `volunteer_hours.approved_over_return`) and checking out a requested equipment loan without
-scheduling it (`checkoutLoan`, which writes `equipment_loan.checked_out_unscheduled`). Some
+scheduling it (`checkoutLoan`, which writes `equipment_loan.checked_out_unscheduled`), and
+requesting a loan of an item whose clearance the member did not hold on the pickup date
+(`requestLoan`, which writes `equipment_loan.requested_without_clearance`). Some
 refusals look like ordering but are kept on purpose, and each says why at the throw. Opening a
 ballot whose certifier's account is gone is one: the reference is broken, and the draft edit is
 the fix. Editing or sending a scheduled campaign is another: unscheduling is the reversal, and the

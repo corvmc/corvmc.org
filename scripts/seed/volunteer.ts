@@ -13,6 +13,7 @@ import {
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
+import { inventoryItem } from '../../src/lib/server/db/schema/inventory';
 import { and, asc, count, eq, gt, isNotNull, isNull, notInArray } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 import { insertTasksWithShifts } from './shifts';
@@ -400,6 +401,13 @@ export async function seedCertifications(users: any[], roles: any[]) {
 			displayOrder: 30
 		}
 	]);
+
+	// The PA speaker names the desk clearance, so a loan request from a member
+	// without it shows the warning (#2953). Equipment is seeded before this.
+	await db
+		.update(inventoryItem)
+		.set({ clearanceId: deskCert.id })
+		.where(eq(inventoryItem.name, 'QSC K12.2 Powered Speaker'));
 
 	// Sound Engineering requires the desk clearance, so the member shift board
 	// has a visibly gated role out of the box.

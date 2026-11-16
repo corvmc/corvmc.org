@@ -226,6 +226,12 @@ export interface CreateItemData {
 	notes?: string;
 }
 
+/** Set from the item's edit form only. */
+export interface UpdateItemData extends Partial<CreateItemData> {
+	/** A clearance borrowers should hold; empty clears it. */
+	clearanceId?: string;
+}
+
 export async function createItem(data: CreateItemData) {
 	const [row] = await db
 		.insert(inventoryItem)
@@ -248,7 +254,7 @@ export async function createItem(data: CreateItemData) {
 	return row;
 }
 
-export async function updateItem(id: string, data: Partial<CreateItemData>) {
+export async function updateItem(id: string, data: UpdateItemData) {
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (data.name !== undefined) updates.name = data.name;
 	if (data.description !== undefined) updates.description = data.description || null;
@@ -259,6 +265,7 @@ export async function updateItem(id: string, data: Partial<CreateItemData>) {
 	if (data.reorderPoint !== undefined) updates.reorderPoint = data.reorderPoint ?? null;
 	if (data.reorderQuantity !== undefined) updates.reorderQuantity = data.reorderQuantity ?? null;
 	if (data.resourceId !== undefined) updates.resourceId = data.resourceId || null;
+	if (data.clearanceId !== undefined) updates.clearanceId = data.clearanceId || null;
 	if (data.notes !== undefined) updates.notes = data.notes || null;
 
 	// `kind` is deliberately not updatable: flipping a serialized item to bulk

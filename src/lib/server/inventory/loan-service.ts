@@ -28,6 +28,8 @@ import { captureException } from '#lib/server/sentry.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { PricingTier, LoanStatus } from '#lib/config.js';
 import { DomainError } from '#lib/server/domain-error.js';
+import { missingCertifications } from '#lib/server/volunteer/member-certification-service.js';
+import { volunteerCertification } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -219,13 +221,27 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 	}
 
 	let estimatedCostCents: number | null = null;
+	let missingClearance: { id: string; name: string } | null = null;
 	if (data.itemId) {
 		const [item] = await db
-			.select({ pricingTier: equipmentCategory.pricingTier })
+			.select({
+				pricingTier: equipmentCategory.pricingTier,
+				clearanceId: inventoryItem.clearanceId
+			})
 			.from(inventoryItem)
 			.innerJoin(equipmentCategory, eq(inventoryItem.categoryId, equipmentCategory.id))
 			.where(eq(inventoryItem.id, data.itemId))
 			.limit(1);
+
+		// Warn, record, allow (docs/development/conventions.md#workflow-gates): the
+		// loan is created either way, and staff see what was missing on it.
+		if (item?.clearanceId) {
+			[missingClearance = null] = await missingCertifications(
+				userId,
+				[item.clearanceId],
+				data.requestedPickupDate
+			);
+		}
 
 		if (item) {
 			const sustaining = await isSustainingMember(userId);
@@ -248,6 +264,7 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 			estimatedReturnDate: data.estimatedReturnDate,
 			estimatedCostCents,
 			memberNotes: data.memberNotes ?? null,
+			missingClearanceId: missingClearance?.id ?? null,
 			status: 'requested'
 		})
 		.returning();
@@ -268,6 +285,19 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 		equipmentName = item?.name ?? null;
 	}
 
+	if (missingClearance) {
+		await recordAuditEntry({
+			action: 'equipment_loan.requested_without_clearance',
+			subject: { type: 'user', id: userId, label: member?.name ?? null },
+			details: {
+				loanId: loan.id,
+				equipmentName,
+				clearanceId: missingClearance.id,
+				warnings: [loanClearanceWarning(missingClearance.name)]
+			}
+		});
+	}
+
 	Promise.resolve().then(async () => {
 		try {
 			await domainEvents.emit('equipment.loan_requested', {
@@ -284,7 +314,12 @@ export async function requestLoan(userId: string, data: RequestLoanData) {
 		}
 	});
 
-	return loan;
+	return { ...loan, missingClearanceName: missingClearance?.name ?? null };
+}
+
+/** The warning a loan carries when its member lacked the item's clearance on the pickup date. */
+export function loanClearanceWarning(clearanceName: string) {
+	return `Member did not hold the ${clearanceName} clearance on the pickup date.`;
 }
 
 export interface ScheduleLoanData {
@@ -684,6 +719,7 @@ export async function getLoanById(id: string) {
 			categoryName: equipmentCategory.name,
 			pricingTier: equipmentCategory.pricingTier,
 			assetTag: inventoryAsset.assetTag,
+			missingClearanceName: volunteerCertification.name,
 			member: memberRefColumns()
 		})
 		.from(inventoryLoan)
@@ -691,6 +727,10 @@ export async function getLoanById(id: string) {
 		.leftJoin(inventoryItem, eq(inventoryLoan.itemId, inventoryItem.id))
 		.leftJoin(equipmentCategory, eq(inventoryItem.categoryId, equipmentCategory.id))
 		.leftJoin(inventoryAsset, eq(inventoryLoan.assetId, inventoryAsset.id))
+		.leftJoin(
+			volunteerCertification,
+			eq(inventoryLoan.missingClearanceId, volunteerCertification.id)
+		)
 		.where(eq(inventoryLoan.id, id))
 		.limit(1);
 
@@ -703,6 +743,7 @@ export async function getLoanById(id: string) {
 		categoryName: row.categoryName,
 		pricingTier: row.pricingTier,
 		assetTag: row.assetTag,
+		missingClearanceName: row.missingClearanceName,
 		member: toMemberRef(row.member),
 		isOverdue:
 			row.loan.status === 'checked_out' && row.loan.dueDate != null && row.loan.dueDate < new Date()

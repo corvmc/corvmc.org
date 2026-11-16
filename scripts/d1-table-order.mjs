@@ -44,6 +44,7 @@ export const tableOrder = [
 	'grant_application',
 	'equipment_category',
 	'inventory_location',
+	'volunteer_certification',
 	'inventory_item',
 	'inventory_asset',
 	'acquisition',
@@ -99,7 +100,6 @@ export const tableOrder = [
 	'help_articles',
 	'roles',
 	'volunteer_role',
-	'volunteer_certification',
 	// References user. Ahead of work_order because the shift now carries
 	// `duty_list_id` — provenance for the list that stamped it out.
 	'duty_list',
