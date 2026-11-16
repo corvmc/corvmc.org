@@ -9,15 +9,16 @@ sortOrder: 1
 
 ## Making a reservation
 
-1. Open **Reservations** from the sidebar and start a new booking.
-2. Pick a **date**, then choose a **start time** from the available slots.
-3. Set the **duration**. The form enforces the minimum and maximum lengths and
-   shows the cost as you adjust it.
-4. Add **notes** if there's anything staff should know.
-5. Confirm your booking.
+1. Open **Practice space** from the sidebar and choose **Reserve space**.
+2. Pick a date, then choose a **Start time** from the available slots.
+3. Choose an **End time**. Only lengths within the booking policy are offered.
+4. Add **Notes (optional)** if there's anything staff should know, and choose
+   **Continue**.
+5. Review the price and choose **Reserve space**.
 
-If the time you want is on a waitlist, you'll be able to reserve a spot and
-[confirm it later](/member/help/confirm-waitlisted) when it opens.
+If a slot in a [recurring booking](/member/help/recurring-reservations) is already
+taken, that reservation is waitlisted and you can
+[confirm it later](/member/help/confirm-waitlisted) if it opens.
 
 ## Cost & credits
 
@@ -34,7 +35,7 @@ automatically.
 ## Tips
 
 - Weekday mornings tend to have the best availability.
-- If you're a band owner or admin, you can
+- If you're in a band, the **For** field lets you
   [book on behalf of your band](/member/help/book-band-session).
 - Practice at the same time every week? Set up a
   [recurring booking](/member/help/recurring-reservations).

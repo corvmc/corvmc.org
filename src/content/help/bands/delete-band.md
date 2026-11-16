@@ -9,8 +9,8 @@ sortOrder: 11
 
 ## Deleting a band
 
-Only the **owner** can delete a band. The option lives in the band's **Settings**
-page, in the danger zone.
+Only the **owner** can delete a band. **Delete band** is on the band's
+**Settings** page, under **Danger zone**.
 
 ## What happens
 

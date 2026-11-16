@@ -16,7 +16,9 @@ its status.
 ## What you can do
 
 - Review what's coming up and who booked it.
-- **Cancel** an upcoming or confirmed reservation (owners and admins).
+- **Cancel reservation** on a confirmed one. Whoever booked it can cancel it, and
+  owners and admins can cancel any of them.
+- **Pay online** for one that is still owed — any member of the band can.
 - Check status badges to see what's confirmed, completed, or cancelled.
 
 ## Related

@@ -17,13 +17,14 @@ plans and what's included.
 ## What you get
 
 - A **custom band page** at your subdomain, replacing the directory profile.
-- **Your own domain** — connect `theband.com` from the band's Settings page and
-  we'll give you the DNS records to add.
-- A **block-based page editor** with 14 block types (hero, bio, links, members,
-  events, gallery, embeds, press, achievements, contact, tech rider, merch, and
-  more).
+- **Your own domain** — connect `theband.com` under **Custom domain** on the
+  band's **Settings** page and we'll give you the DNS records to add.
+- A **block-based page editor** with 13 blocks (hero, bio, links, embed, events,
+  members, gallery, press, achievements, tech rider, merch, custom HTML and
+  contact).
 - **Themes** plus optional **custom CSS**.
-- An **Electronic Press Kit (EPK)** for booking and press contacts.
+- More in your [press kit](/member/help/electronic-press-kit), which every band
+  has: **unlimited press photos** instead of one, and a **Video** section.
 - **Media hosting** for gallery images, hero art, stage plots, and tech riders.
 
 ## Getting started

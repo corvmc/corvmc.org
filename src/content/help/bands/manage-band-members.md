@@ -9,9 +9,10 @@ sortOrder: 5
 
 ## The Members page
 
-The **Members** page opens with **your membership** — your role in the band, the
-details you control, and the way out. Below that is everyone else, with any
-pending and platform invitations after them.
+The **Members** page opens with **Your membership** — your role in the band, the
+details you control, and the way out. Below that is **Other members**, then
+**Pending invitations** and, for owners and admins, invitations **Awaiting
+signup**.
 
 ## Your own membership
 
@@ -26,10 +27,10 @@ Two things are yours to set, whatever your role:
 
 ## What owners and admins can do
 
-- **Edit a member** — Change their role between **Member** and **Admin**, and
-  set what they play.
-- **Remove a member** — Take someone off the roster.
-- **Revoke an invitation** — Cancel a pending or email invite that hasn't been
+- **Edit** a member — Change their **Role** between **Member** and **Admin**, and
+  set their **Instrument / role**.
+- **Remove** a member — Take someone off the roster.
+- **Revoke** an invitation — Cancel a pending or email invite that hasn't been
   accepted.
 
 Nobody can change somebody else's stage name.
@@ -38,8 +39,8 @@ Nobody can change somebody else's stage name.
 
 - **Owner** — One per band; full control, including deletion and
   [ownership transfer](/member/help/transfer-leave-band).
-- **Admin** — Manages members and books on behalf of the band.
-- **Member** — Views the schedule and band info.
+- **Admin** — Edits the band profile, its events, and its members.
+- **Member** — Views the schedule and band info, and books for the band.
 
 ## Related
 

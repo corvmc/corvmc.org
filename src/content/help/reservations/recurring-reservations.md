@@ -14,10 +14,10 @@ booking each one by hand.
 
 ## How it works
 
-When booking, choose a recurrence:
+When booking, choose a **Frequency**:
 
 - **Weekly** — Same day and time every week.
-- **Bi-weekly** — Every other week.
+- **Biweekly** — Every other week.
 - **Monthly** — Either by weekday (e.g. "the second Tuesday") or by calendar day
   (e.g. "the 15th").
 
@@ -32,5 +32,6 @@ unlocks it.
 
 ## Managing a series
 
-Your standing series appear in the **Recurring** section of the Reservations page.
-From there you can review the schedule and cancel a series you no longer need.
+Your standing series appear under **My recurring reservations** on the **Practice
+space** page. From there you can review the schedule, change it with **Edit
+schedule**, and end a series you no longer need with **Cancel series**.

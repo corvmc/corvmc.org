@@ -9,11 +9,11 @@ sortOrder: 4
 
 ## Choosing a theme
 
-The **Page editor**'s style panel — the **Style** button opens it — has a theme
-dropdown: a default theme plus genre-based ones. Pick the one that fits your
+The **Page editor**'s style panel — the **Style** button opens it — has a
+**Theme** dropdown: a default theme plus genre-based ones. Pick the one that fits your
 band's look and it applies across all your blocks.
 
-Underneath the dropdown you can read exactly what that theme does. That box is
+Underneath the dropdown, **What this theme does** shows exactly that. That box is
 the theme's own CSS, and it is read-only for as long as the theme is what is
 styling your page.
 

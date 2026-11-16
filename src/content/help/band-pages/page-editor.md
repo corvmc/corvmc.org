@@ -10,7 +10,7 @@ sortOrder: 2
 ## The page editor
 
 Premium bands get a block-based editor for their custom public page. Open it from
-the band's **Page editor**. The page comes with every block already on it, in a
+**Page editor** in the band's sidebar. The page comes with every block already on it, in a
 sensible order — you arrange them, configure each one, and hide the ones you have
 nothing for.
 
@@ -38,4 +38,4 @@ nothing for.
 - [Fill in your press kit](/member/help/electronic-press-kit)
 
 The editor _is_ your page — full width, with each block's controls sitting on
-the block itself. **View site** opens the published version in a new tab.
+the block itself. **View site →** opens the published version in a new tab.

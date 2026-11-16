@@ -9,18 +9,21 @@ sortOrder: 2
 
 ## Band invitations
 
-When a band invites you, you'll see it in two places: a badge on your
-**Dashboard**, and the **Invitations** section of the **Bands** page.
+When a band invites you, your **Dashboard** shows it under **Pending actions**,
+and the **My bands** page lists it under **Pending invitations**.
 
 ## Responding
 
-1. Open **Bands** from the sidebar.
-2. Find the invitation in the **Invitations** section.
+1. On your **Dashboard**, choose **Answer** beside the invitation. It opens
+   **My bands**.
+2. Find the band under **Pending invitations**.
 3. Choose **Accept** to join, or **Decline** if you'd rather not.
 
-Once you accept, the band appears in **My Bands** and you can open its dashboard.
+Once you accept, the band appears under **My bands** in the sidebar and you can open
+its dashboard.
 
 ## Invited by email?
 
-If you were invited before you had an account, the invitation is waiting after you
-sign up with that email — accept it from the Bands page once you're in.
+If you were invited before you had an account, signing up with that email puts you
+in the band — there is nothing to accept. Your **Dashboard** lists it under
+**New bands** for two weeks.
