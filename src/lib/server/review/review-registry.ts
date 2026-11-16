@@ -38,7 +38,13 @@ import { untriagedRequest } from '#lib/server/inventory/work-request-service.js'
 import { openStaffApplication } from '#lib/server/group/application-service.js';
 import { appliedVendor } from '#lib/server/market/market-service.js';
 import { captureException } from '#lib/server/sentry.js';
-import { hasCapability, surfaces, type Capability, type Surface } from '#lib/config.js';
+import {
+	hasCapability,
+	surfaces,
+	type Capability,
+	type GroupKind,
+	type Surface
+} from '#lib/config.js';
 import type { EntityRef } from '#lib/types/entity.js';
 import type { FeedPage } from '#lib/types/activity.js';
 import { mergeFeedOldestFirst } from '#lib/types/activity.js';
@@ -54,6 +60,7 @@ interface Row {
 	summary: string | null;
 	/** The record the decision is made on, when it is not the row itself. */
 	refId?: string | null;
+	groupKind?: GroupKind | null;
 }
 
 /**
