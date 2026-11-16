@@ -1,17 +1,13 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
-	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import Form from '#lib/components/ui/Form/index.js';
-	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
-	import Modal from '#lib/components/ui/Modal.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -19,12 +15,12 @@
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import InviteMembersModal from './InviteMembersModal.svelte';
+	import TransferOwnershipModal from './TransferOwnershipModal.svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		getBandMembersPage,
 		removeMember,
 		revokeInvitation,
-		transferOwner,
 		revokeEmailInvite
 	} from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
@@ -35,7 +31,6 @@
 	const { fields: removeFields } = removeMember;
 	const { fields: revokeFields } = revokeInvitation;
 	const { fields: revokeEmailFields } = revokeEmailInvite;
-	const { fields: transferFields } = transferOwner;
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -75,16 +70,20 @@
 
 	let showInviteModal = $state(false);
 	let showTransferModal = $state(false);
-	let transferTarget = $state<{ userId: string; name: string } | null>(null);
+	let transferTarget = $state<string | null>(null);
+	const transferCandidates = $derived(
+		others
+			.filter((m) => m.role !== 'owner')
+			.map((m) => ({ userId: m.userId, name: m.member.title }))
+	);
 
 	/** An owner transferring away is how they become able to leave. */
 	function openTransferFromOwnMembership() {
-		const first = others.find((m) => m.role !== 'owner');
-		if (!first) {
+		if (transferCandidates.length === 0) {
 			toast.error(msg.band_slug_members_there_nobody_else_band_transfer_toast());
 			return;
 		}
-		transferTarget = { userId: first.userId, name: first.member.title };
+		transferTarget = null;
 		showTransferModal = true;
 	}
 </script>
@@ -169,7 +168,7 @@
 										variant="ghost"
 										size="xs"
 										onclick={() => {
-											transferTarget = { userId: member.userId, name: member.member.title };
+											transferTarget = member.userId;
 											showTransferModal = true;
 										}}
 									>
@@ -291,36 +290,11 @@
 	}}
 />
 
-<!-- Transfer Ownership Modal -->
-<Modal title={msg.band_slug_members_transfer_ownership_title()} bind:open={showTransferModal}>
-	{#if transferTarget}
-		<Form
-			remote={transferOwner}
-			onsuccess={() => {
-				toast.success(msg.band_slug_members_ownership_transferred_toast());
-				showTransferModal = false;
-				refreshMembers();
-			}}
-		>
-			<div class="space-y-4">
-				<Alert type="warning">
-					<ParaglideMessage
-						message={msg.band_slug_members_about_transfer_ownership_will_demoted_body}
-						inputs={{ name: layout.band.name, name2: transferTarget.name }}
-						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-							>{/snippet}</ParaglideMessage
-					>
-				</Alert>
-				<input {...transferFields.bandId.as('hidden', layout.band.id)} />
-				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />
-				<div class="flex justify-end pt-2">
-					<SubmitButton
-						label={msg.band_slug_members_transfer_ownership_label()}
-						successLabel={msg.band_slug_members_transferred_label()}
-						variant="warning"
-					/>
-				</div>
-			</div>
-		</Form>
-	{/if}
-</Modal>
+<TransferOwnershipModal
+	bind:open={showTransferModal}
+	bandId={layout.band.id}
+	bandName={layout.band.name}
+	candidates={transferCandidates}
+	selectedId={transferTarget}
+	onsuccess={refreshMembers}
+/>
