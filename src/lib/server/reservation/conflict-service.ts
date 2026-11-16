@@ -71,16 +71,18 @@ export interface BookingNotice {
 }
 
 /**
- * The tour a new member's booking starts with: the orientation length, while
- * an orientation role is set. With no role nobody runs a tour, so none is held.
+ * The tour length a new member's booking waits for, or null while no
+ * orientation role is set: nobody runs one, so neither the new-member notice
+ * nor the tour applies (decision 0055, #2752).
  */
-async function tourMinutes(): Promise<number> {
+async function orientationTour(): Promise<number | null> {
 	const [roleId, minutes] = await Promise.all([
 		siteConfig('volunteer.orientationRoleId'),
 		siteConfig('volunteer.orientationMinutes')
 	]);
+	if (!String(roleId).trim()) return null;
 	const n = Number(minutes);
-	return String(roleId).trim() && n > 0 ? n : 0;
+	return n > 0 ? n : 0;
 }
 
 /**
@@ -94,11 +96,10 @@ export async function noticeFor(
 ): Promise<BookingNotice> {
 	const own = (who.bookerType ?? CLEARANCE_BOOKER) === CLEARANCE_BOOKER && who.userId !== null;
 	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
-		return {
-			minutes: config.newMemberMinAdvanceMinutes,
-			newMember: true,
-			tourMinutes: await tourMinutes()
-		};
+		const tourMinutes = await orientationTour();
+		if (tourMinutes !== null) {
+			return { minutes: config.newMemberMinAdvanceMinutes, newMember: true, tourMinutes };
+		}
 	}
 	return { minutes: config.minAdvanceMinutes, newMember: false, tourMinutes: 0 };
 }
