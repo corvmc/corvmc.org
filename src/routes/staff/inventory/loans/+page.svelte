@@ -7,12 +7,12 @@
 	import Table from '#lib/components/ui/Table.svelte';
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
 	import Select from '#lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
 	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatCents, titleCase } from '#lib/utils/format.js';
+	import { formatDateShort, formatCents } from '#lib/utils/format.js';
 	import { loanStatuses } from '#lib/config.js';
 	import { CheckOutKitAction, CreateLoanAction } from '#lib/components/actions/index.js';
 	import KitLoanList from './KitLoanList.svelte';
@@ -100,7 +100,7 @@
 			>
 				<option value="">{m.staff_all_statuses_label()}</option>
 				{#each loanStatuses as s (s)}
-					<option value={s}>{titleCase(s)}</option>
+					<option value={s}>{statusLabel(s)}</option>
 				{/each}
 			</Select>
 		{/if}

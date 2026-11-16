@@ -66,6 +66,25 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
   score each new or changed title and label against the table and fix every failure before
   shipping. A 4–6 word title needs a reason in the PR.
 
+## One word per action
+
+One action is one status value or one remote form, and it has one word (#2970). Its button,
+modal title, toast, status label and filter option all use that word, inflected: "Return",
+"Return {name}", "Returned".
+
+- The words live in `actionWords` in `src/lib/action-words.ts`, one row per action, listing the
+  message keys that show it on each surface. `src/lib/action-words.spec.ts` fails when a mapped
+  string lacks its row's word, or names a key the catalog does not define.
+- `actionStatusSets` lists the status sets the table covers: equipment loans, tips, teaching
+  applications and the two "looking for" profile flags. Every value in a listed set needs a row,
+  so a new status in one of them fails the spec until it gets a row.
+- In a set marked `badge`, screens label the value with `statusLabel` from `StatusBadge`, so the
+  spec checks that label too. A filter over such a set uses `statusLabel` for its options rather
+  than formatting the enum itself.
+- A form that leads to a status set by another form as well (approve, resume and reinstate all
+  make a teacher active) gets its own row, keyed by its verb.
+- When adding a status to a covered set, or a new set, add the rows in the same PR.
+
 Sources: [GOV.UK, writing for user interfaces](https://www.gov.uk/service-manual/design/writing-for-user-interfaces);
 [NN/g, microcontent](https://www.nngroup.com/articles/microcontent-how-to-write-headlines-page-titles-and-subject-lines/);
 [NN/g, layer-cake scanning](https://www.nngroup.com/articles/layer-cake-pattern-scanning/).
