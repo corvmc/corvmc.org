@@ -218,8 +218,6 @@ async function main() {
 	const notifications = await seedNotifications(allUsers);
 	const preferences = await seedNotificationPreferences(allUsers);
 	await seedCreditTransactions(allUsers);
-	// After credits so the adjustments it records sit beside real ledger rows.
-	const audit = await seedAuditLog(users, adminUser);
 	// The upcoming show the event-scoped blast is about (#857).
 	const upcomingShow = events.find((e) => e.status === 'published' && e.startsAt >= new Date());
 	const marketing = await seedMarketing(allUsers, upcomingShow?.id);
@@ -277,6 +275,12 @@ async function main() {
 	const activeVolunteers = volunteerProfiles.active;
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
+	// After credits, bookings, bands, loans and clearances, so each row that
+	// names one names a real one.
+	const audit = await seedAuditLog(users, adminUser, {
+		reservations,
+		deskCert: certifications.deskCert
+	});
 	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
 	const equipmentReports = await seedEquipmentReports(
 		users.slice(1, 4),
