@@ -54,7 +54,7 @@ async function stripeBalanceCents(range: RangeFilter): Promise<{
 	const params = {
 		created: {
 			gte: Math.floor(range.from.getTime() / 1000),
-			lte: Math.floor(range.to.getTime() / 1000)
+			lt: Math.floor(range.to.getTime() / 1000)
 		},
 		limit: 100
 	};

@@ -88,6 +88,16 @@ export function nextDay(dateStr: string): string {
 }
 
 /**
+ * The exclusive end of a club day: midnight club time on the day after.
+ *
+ * Compare with `<`. Timestamps are stored in whole seconds, so an inclusive
+ * `<= 23:59` bound drops 23:59:01–23:59:59 from both days (#3061, #3067).
+ */
+export function startOfNextDay(dateStr: string, tz: string): Date {
+	return buildDateInTz(nextDay(dateStr), '00:00', tz);
+}
+
+/**
  * Build the start and end instants for a range entered as one date plus a start
  * and an end time.
  *

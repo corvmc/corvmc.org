@@ -37,7 +37,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 /** The roster row that defines ownership — see `band-service.ts`. */
 const ownerMember = alias(groupMember, 'owner_member');
 import { eventListing } from '#lib/server/db/schema/event.js';
-import { formatDateInTz, buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { formatDateInTz, buildDateInTz, startOfNextDay } from '#lib/server/reservation/timezone.js';
 import { describeFrequency, monthlyModeOf } from '#lib/server/reservation/rrule-helpers.js';
 import { getLockStatus } from '#lib/server/lock/lock-service.js';
 import { closuresOverlapping } from '#lib/server/reservation/closure-timeline.js';
@@ -606,7 +606,7 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 	const tz = DEFAULT_TIMEZONE;
 	const dayStr = formatDateInTz(row.startsAt, tz);
 	const dayStart = buildDateInTz(dayStr, '00:00', tz);
-	const dayEnd = buildDateInTz(dayStr, '23:59', tz);
+	const dayEnd = startOfNextDay(dayStr, tz);
 
 	const sameDayReservations = await db
 		.select({

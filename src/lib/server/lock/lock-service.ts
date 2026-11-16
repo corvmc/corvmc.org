@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { buildDateInTz, startOfNextDay } from '#lib/server/reservation/timezone.js';
 import {
 	createTemporaryUser,
 	removeTemporaryUser,
@@ -357,9 +357,7 @@ function provisioningWindow(now = new Date()): { start: Date; end: Date } {
 	const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
 	return {
 		start: buildDateInTz(todayStr, '00:00', tz),
-		end: new Date(
-			buildDateInTz(todayStr, '23:59', tz).getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60_000
-		)
+		end: new Date(startOfNextDay(todayStr, tz).getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60_000)
 	};
 }
 
