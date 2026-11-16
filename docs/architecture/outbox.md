@@ -27,7 +27,10 @@ delivery at-least-once.
   HTML, tag), sent on the transactional stream. A campaign's test copy is one (#2771).
 - **`inbox_reply`**: an outbound message on an inbox thread. The `inbox_message` row is filed
   with the save; the outbox dispatches it on the thread's channel and stamps the channel's id
-  on it.
+  on it. Every reply typed here takes this path (`addOutboundMessage`: staff inbox, band
+  enquiries, a staff reply sent by email) and is sent at once, so the author sees the result.
+  A reply that has not gone shows as not sent on the thread, with the error, and
+  `retryReply` sends it again. `reply-delivery.ts` is the only caller of `dispatchReply`.
 
 `subject_type` and `subject_id` name the record a message belongs to (`market_vendor`,
 `directory_entry_link`, `inbox_message`), so that record's page can read the newest row with
@@ -63,4 +66,3 @@ or lost rather than recorded:
 | `src/lib/server/marketing/campaign-service.ts` | Campaign broadcasts. Each recipient's result, and each audience member skipped as unsubscribed or suppressed, is recorded in `campaign_send` (#2777, #2914); nothing is retried |
 | `src/lib/server/group/announcement-fanout.ts`  | Group announcement fan-out                                                                                                                                                      |
 | `src/lib/server/ballot/ballot-fanout.ts`       | Ballot fan-out                                                                                                                                                                  |
-| `src/lib/server/inbox/channel-dispatcher.ts`   | Inbox replies typed in the staff inbox                                                                                                                                          |

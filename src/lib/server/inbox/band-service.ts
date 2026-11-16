@@ -6,6 +6,8 @@ import { paginate } from '#lib/server/db/paginate.js';
 import { BAND_ENQUIRY_SUBJECT } from '#lib/config.js';
 import { findOrCreateThread, reopenThread } from './thread-service';
 import { addInboundMessage, addOutboundMessage } from './message-service';
+import { withDelivery } from './reply-status';
+import type { Delivery } from '#lib/server/outbox/outbox-service.js';
 
 /**
  * Everything a band is allowed to do with the enquiries its booking form
@@ -141,7 +143,7 @@ export async function getBandThread(threadId: string, groupId: string) {
 
 	if (!thread) return null;
 
-	const messages = await db
+	const rows = await db
 		.select({
 			id: inboxMessage.id,
 			direction: inboxMessage.direction,
@@ -153,7 +155,7 @@ export async function getBandThread(threadId: string, groupId: string) {
 		.where(eq(inboxMessage.threadId, threadId))
 		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
 
-	return { ...thread, messages };
+	return { ...thread, messages: await withDelivery(rows) };
 }
 
 export interface BandEnquiryParams {
@@ -203,7 +205,7 @@ export async function replyToBandThread(params: {
 	userId: string;
 	userName: string;
 	body: string;
-}): Promise<{ messageId: string } | null> {
+}): Promise<{ messageId: string; delivery: Delivery } | null> {
 	const [thread] = await db
 		.select({ id: inboxThread.id, status: inboxThread.status })
 		.from(inboxThread)
@@ -220,8 +222,8 @@ export async function replyToBandThread(params: {
 
 	if (thread.status === 'snoozed') await reopenThread(thread.id);
 
-	// Sends the email as a side effect and throws if it cannot, so a reply the
-	// booker never received is never recorded as one the band sent.
+	// Filed with its outbox row and sent at once. A refused send stays on the
+	// thread as not sent, and the outbox retries it.
 	const message = await addOutboundMessage({
 		threadId: thread.id,
 		body: params.body,
@@ -231,7 +233,7 @@ export async function replyToBandThread(params: {
 
 	await markBandThreadRead(thread.id, params.groupId, params.userId);
 
-	return { messageId: message.id };
+	return { messageId: message.id, delivery: message.delivery };
 }
 
 /**

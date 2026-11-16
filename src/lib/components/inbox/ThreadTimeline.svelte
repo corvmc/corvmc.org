@@ -8,7 +8,8 @@
 	 * than messages: no bubble, no card, just an indented annotation — a note is a
 	 * margin scribble on the conversation, not a turn in it.
 	 */
-	import { IconNote } from '@tabler/icons-svelte';
+	import type { Snippet } from 'svelte';
+	import { IconAlertTriangle, IconNote } from '@tabler/icons-svelte';
 	import { formatDateTime } from '#lib/utils/format.js';
 	import type { inboxChannels } from '#lib/config.js';
 	import MessageBody from './MessageBody.svelte';
@@ -20,6 +21,8 @@
 		authorName: string | null;
 		authorUserId?: string | null;
 		createdAt: Date;
+		/** Set while an outbound reply has not gone: its outbox row is pending or failed. */
+		delivery?: { status: 'pending' | 'sent' | 'failed'; error: string | null } | null;
 	};
 
 	type Note = {
@@ -34,7 +37,8 @@
 		channel,
 		notes = [],
 		contactName,
-		viewerUserId
+		viewerUserId,
+		retry
 	}: {
 		messages: Message[];
 		/** The thread's channel, which decides whether bodies are markdown. */
@@ -54,6 +58,8 @@
 		 * read as ours. A 'peer' message has no org side, so it lands left.
 		 */
 		viewerUserId?: string | null;
+		/** A control that sends an unsent reply again, given the message id. */
+		retry?: Snippet<[string]>;
 	} = $props();
 
 	// No direction fallback when viewerUserId is set: a message with no author
@@ -111,6 +117,25 @@
 				<div class="chat-bubble {own ? 'chat-bubble-primary' : ''}">
 					<MessageBody body={msg.body} {channel} />
 				</div>
+				{#if msg.delivery && msg.delivery.status !== 'sent'}
+					<div
+						class="chat-footer mt-1 flex flex-wrap items-center gap-2"
+						data-testid="reply-unsent"
+					>
+						{#if msg.delivery.error || msg.delivery.status === 'failed'}
+							<span class="flex items-center gap-1 text-xs text-error">
+								<IconAlertTriangle size={13} />
+								{m.inbox_thread_timeline_not_sent_label()}
+							</span>
+							{#if msg.delivery.error}
+								<span class="text-muted text-xs">{msg.delivery.error}</span>
+							{/if}
+							{@render retry?.(msg.id)}
+						{:else}
+							<span class="text-muted text-xs">{m.inbox_thread_timeline_sending_label()}</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		{:else}
 			{@const note = entry.note}

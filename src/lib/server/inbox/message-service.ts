@@ -1,12 +1,13 @@
 import { db } from '#lib/server/db/index.js';
 import { inboxThread, inboxMessage, inboxNote } from '#lib/server/db/schema/inbox.js';
-import { eq, sql, desc, and, asc } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
+import { replyDeliveries } from './reply-status';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { messagePreview } from './thread-service';
 import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
-import { dispatchReply } from './channel-dispatcher';
 import { outboxMessage } from '#lib/server/db/schema/outbox.js';
 import { outboxRow, type OutboxSubject } from '#lib/server/outbox/outbox-row.js';
+import { deliverNow, retryNow, type Delivery } from '#lib/server/outbox/outbox-service.js';
 
 export interface AddInboundMessageParams {
 	threadId: string;
@@ -158,18 +159,6 @@ export async function addInboundMessage(params: AddInboundMessageParams) {
 	return message;
 }
 
-/**
- * In-Reply-To / References must hold RFC 5322 msg-ids. Older rows (and every
- * outbound row) store Postmark's internal GUID instead, which no mail client
- * can thread on — drop those rather than emit a malformed header. Thread
- * routing does not depend on this; the signed Reply-To address does that.
- */
-function normalizeMessageId(raw: string | null | undefined): string | null {
-	const value = raw?.trim();
-	if (!value || !value.includes('@')) return null;
-	return value.startsWith('<') && value.endsWith('>') ? value : `<${value}>`;
-}
-
 export interface AddOutboundMessageParams {
 	threadId: string;
 	body: string;
@@ -267,47 +256,11 @@ function announceOutbound(thread: Thread, messageId: string, authorUserId: strin
 	});
 }
 
-/** Everything the channel needs to send `body` as a reply on `thread`. */
-async function replyParams(thread: Thread, body: string, staffName: string) {
-	// The last inbound message does two jobs: its id threads the email reply, and
-	// its timestamp is what tells the Meta channels whether the 24-hour messaging
-	// window is still open.
-	const [lastInbound] = await db
-		.select({ channelMessageId: inboxMessage.channelMessageId, createdAt: inboxMessage.createdAt })
-		.from(inboxMessage)
-		.where(and(eq(inboxMessage.threadId, thread.id), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(desc(inboxMessage.createdAt), desc(inboxMessage.id))
-		.limit(1);
-
-	// Build References chain from all inbound message IDs
-	const inboundIds = await db
-		.select({ channelMessageId: inboxMessage.channelMessageId })
-		.from(inboxMessage)
-		.where(and(eq(inboxMessage.threadId, thread.id), eq(inboxMessage.direction, 'inbound')))
-		.orderBy(inboxMessage.createdAt, asc(inboxMessage.id));
-
-	const references =
-		inboundIds
-			.map((m) => normalizeMessageId(m.channelMessageId))
-			.filter(Boolean)
-			.join(' ') || null;
-
-	return {
-		channel: thread.channel,
-		threadId: thread.id,
-		groupId: thread.groupId,
-		body,
-		staffName,
-		contactName: thread.contactName,
-		contactEmail: thread.contactEmail,
-		contactPhone: thread.contactPhone,
-		contactExternalId: thread.contactExternalId,
-		subject: thread.subject,
-		lastInboundMessageId: normalizeMessageId(lastInbound?.channelMessageId),
-		lastInboundAt: lastInbound?.createdAt ?? null,
-		references
-	};
-}
+/** The outbox row a reply was filed with, keyed by the message. */
+const replySubject = (messageId: string): OutboxSubject => ({
+	type: 'inbox_message',
+	id: messageId
+});
 
 /**
  * A reply filed now and sent by the outbox: the statements to put in the
@@ -327,7 +280,7 @@ export async function queuedReplyStatements(
 	const messageId = crypto.randomUUID();
 	const outbox = outboxRow(
 		{ kind: 'inbox_reply', payload: { messageId } },
-		params.subject ?? { type: 'inbox_message', id: messageId }
+		params.subject ?? replySubject(messageId)
 	);
 	return {
 		thread,
@@ -360,55 +313,40 @@ export function announceQueuedReply(
 }
 
 /**
- * The outbox's sender for a queued reply: dispatch on the thread's channel and
- * stamp the channel's id on the message. Throws when the channel refuses.
+ * A reply typed here: filed with its outbox row in one batch, then sent at
+ * once so the author sees how it went. A refused send leaves the message on
+ * the thread with its outbox row pending, which the cron retries and
+ * `retryReply` sends again.
  */
-export async function deliverQueuedReply(messageId: string): Promise<string | null> {
-	const [row] = await db
-		.select({ message: inboxMessage, thread: inboxThread })
-		.from(inboxMessage)
-		.innerJoin(inboxThread, eq(inboxThread.id, inboxMessage.threadId))
-		.where(eq(inboxMessage.id, messageId))
-		.limit(1);
-	if (!row) throw new Error(`Message ${messageId} not found`);
-
-	const channelMessageId =
-		(await dispatchReply(
-			await replyParams(row.thread, row.message.body, row.message.authorName ?? '')
-		)) ?? null;
-	if (channelMessageId) {
-		await db.update(inboxMessage).set({ channelMessageId }).where(eq(inboxMessage.id, messageId));
-	}
-	return channelMessageId;
+export async function addOutboundMessage(
+	params: AddOutboundMessageParams
+): Promise<{ id: string; delivery: Delivery }> {
+	const queued = await queuedReplyStatements(params);
+	await db.batch([...queued.statements]);
+	announceQueuedReply(queued, params.authorUserId);
+	return { id: queued.messageId, delivery: await deliverNow(queued.outboxId) };
 }
 
-export async function addOutboundMessage(params: AddOutboundMessageParams) {
-	const [thread] = await db
-		.select()
-		.from(inboxThread)
-		.where(eq(inboxThread.id, params.threadId))
+/**
+ * Send a reply on `threadId` that has not gone, now. Null when there is none
+ * to send: it went, it is not on that thread, or a sender holds it.
+ */
+export async function retryReply(threadId: string, messageId: string): Promise<Delivery | null> {
+	const [message] = await db
+		.select({ id: inboxMessage.id })
+		.from(inboxMessage)
+		.where(
+			and(
+				eq(inboxMessage.id, messageId),
+				eq(inboxMessage.threadId, threadId),
+				eq(inboxMessage.direction, 'outbound')
+			)
+		)
 		.limit(1);
-
-	if (!thread) throw new Error(`Thread ${params.threadId} not found`);
-
-	let channelMessageId: string | null;
-
-	try {
-		channelMessageId =
-			(await dispatchReply(await replyParams(thread, params.body, params.authorName))) ?? null;
-	} catch (err) {
-		console.error('[inbox] Failed to dispatch reply:', err);
-		throw err;
-	}
-
-	return recordOutboundMessage({
-		threadId: params.threadId,
-		body: params.body,
-		authorName: params.authorName,
-		authorUserId: params.authorUserId,
-		channelMessageId,
-		thread
-	});
+	if (!message) return null;
+	const latest = (await replyDeliveries([messageId])).get(messageId);
+	if (!latest || latest.status === 'sent') return null;
+	return retryNow(latest.outboxId);
 }
 
 export async function addNote(params: { threadId: string; authorUserId: string; body: string }) {

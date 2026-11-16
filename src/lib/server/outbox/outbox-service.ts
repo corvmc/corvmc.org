@@ -102,7 +102,7 @@ async function send(rows: OutboxMessage[]): Promise<Map<string, SendResult>> {
 	const replies = rows.filter((row) => row.kind === 'inbox_reply');
 	if (replies.length === 0) return results;
 	// Loaded on demand: every notification sender imports this module, and none needs the inbox.
-	const { deliverQueuedReply } = await import('#lib/server/inbox/message-service.js');
+	const { deliverQueuedReply } = await import('#lib/server/inbox/reply-delivery.js');
 	for (const r of replies) {
 		try {
 			const id = await deliverQueuedReply(String(r.payload.messageId));
