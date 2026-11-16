@@ -126,7 +126,7 @@
 							recurringFrequency === 'weekly'
 								? 'Weekly'
 								: recurringFrequency === 'biweekly'
-									? 'Every 2 weeks'
+									? 'Every other week'
 									: 'Monthly';
 						scheduleLabel = formatScheduleLabel(
 							freqLabel,

@@ -548,7 +548,7 @@ export function formatScheduleLabel(
 	const dayName = venue(startsAt, { weekday: 'long' });
 
 	if (frequencyLabel === 'Weekly') return `Every ${dayName}`;
-	if (frequencyLabel === 'Every 2 weeks') return `Every other ${dayName}`;
+	if (frequencyLabel === 'Every other week') return `Every other ${dayName}`;
 	if (frequencyLabel === 'Monthly') {
 		const dayOfMonth = venueParts(startsAt).day;
 		if (monthlyMode === 'monthday') {

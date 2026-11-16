@@ -32,7 +32,7 @@ Anything left over is due at the door.
 ## Recurring band reservations
 
 If your band practices on a schedule, pick a **Frequency** (**Weekly**,
-**Biweekly** or **Monthly**) when booking. Recurring bookings are a
+**Every other week** or **Monthly**) when booking. Recurring bookings are a
 [sustaining-member benefit](/member/help/recurring-reservations), and at least
 one active member of the band needs a sustaining membership.
 
