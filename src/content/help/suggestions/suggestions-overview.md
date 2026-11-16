@@ -21,8 +21,8 @@ one on the board can be counted, argued with, and answered in public.
 
 Press **New suggestion**, give it a **Title**, pick a **Category** and write it up.
 
-- **Website & Tools**, **Gear & Equipment**, **Events & Programming**,
-  **The Space**, **Policy**, **Other**.
+- **Website & tools**, **Gear & equipment**, **Events & programming**,
+  **The space**, **Policy**, **Other**.
 - Write the problem, not just the fix. "The practice room gets too hot in
   August" gets somewhere; "buy a fan" narrows it to one answer before anyone has
   weighed in.

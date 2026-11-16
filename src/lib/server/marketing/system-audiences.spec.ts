@@ -106,7 +106,7 @@ describe('SYSTEM_AUDIENCES registry', () => {
 
 	it('gives every entry a name and description for the staff UI', () => {
 		for (const key of keys) {
-			expect(SYSTEM_AUDIENCES[key].name.length, key).toBeGreaterThan(0);
+			expect(SYSTEM_AUDIENCES[key].label.length, key).toBeGreaterThan(0);
 			expect(SYSTEM_AUDIENCES[key].description.length, key).toBeGreaterThan(0);
 		}
 	});

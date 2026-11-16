@@ -16,16 +16,16 @@ type Channel = (typeof inboxChannels)[number];
 /**
  * How each inbox channel is named and drawn. Single source of truth: the list
  * and detail pages previously kept their own copies and disagreed about `web`
- * ("Web" in one, "Contact Form" in the other).
+ * ("Web" in one, "Contact form" in the other).
  */
 export const channelLabels: Record<Channel, string> = {
 	email: 'Email',
 	sms: 'SMS',
-	web: 'Contact Form',
-	portal: 'Member Portal',
-	direct: 'Direct Message',
-	band: 'Booking Enquiry',
-	group: 'Group Chat',
+	web: 'Contact form',
+	portal: 'Member portal',
+	direct: 'Direct message',
+	band: 'Booking enquiry',
+	group: 'Group chat',
 	instagram: 'Instagram',
 	messenger: 'Messenger'
 };

@@ -165,7 +165,17 @@ describe('rubric checks', () => {
 		expect(failures('title', 'Upcoming Shifts')).toEqual(['SC']);
 		expect(failures('label', 'One-Time Donation')).toEqual(['SC']);
 		expect(failures('checkbox', 'Email Me Replies')).toEqual(['SC']);
-		expect(failures('body', 'Sign Out')).toEqual([]);
+		expect(failures('placeholder', 'e.g. The Velvet Underground')).toEqual([]);
+	});
+
+	it('holds a fragment in any other role to sentence case, and prose to no Title Case run', () => {
+		expect(failures('text', 'Total This Month')).toEqual(['SC']);
+		expect(failures('body', 'Content Flag')).toEqual(['SC']);
+		expect(failures('body', 'Use Message a Member above to start one.')).toEqual(['SC']);
+		expect(failures('text', 'Use {#strong}Reserve Space{/strong} at the top.')).toEqual(['SC']);
+		expect(failures('body', 'Use Edit to reserve the practice space.')).toEqual([]);
+		expect(failures('body', 'Shown as “Based In” on your profile.')).toEqual([]);
+		expect(failures('text', 'Events at the Collective')).toEqual([]);
 	});
 
 	it('lets proper nouns, acronyms, placeholders and new sentences keep capitals', () => {
