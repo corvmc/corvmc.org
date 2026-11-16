@@ -75,7 +75,7 @@ describe('BookingDialog', () => {
 		await open({ bookers });
 
 		await expect.element(forSelect()).toHaveValue('user');
-		const offered = [...(forSelect().element() as HTMLSelectElement).options].map((o) => o.value);
+		const offered = [...forSelect().element().querySelectorAll('option')].map((o) => o.value);
 		expect(offered).toEqual(['user', 'group:duo', 'group:trio', 'instructor']);
 		expect(submitsTo()).toBe('?/user');
 	});
