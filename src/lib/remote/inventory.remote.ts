@@ -121,7 +121,7 @@ import {
 	DEFAULT_TIMEZONE,
 	clubToday
 } from '#lib/config.js';
-import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { buildDateInTz, startOfNextDay } from '#lib/server/reservation/timezone.js';
 import { getDonationWishlist, isOnWishlist } from '#lib/server/inventory/wishlist-service.js';
 import {
 	confirmGuestPledge,
@@ -156,8 +156,9 @@ function dayStart(value: string): Date {
 	return buildDateInTz(value, '00:00', DEFAULT_TIMEZONE);
 }
 
+/** Exclusive: the next day's midnight, so the services compare with `<`. */
 function dayEnd(value: string): Date {
-	return buildDateInTz(value, '23:59', DEFAULT_TIMEZONE);
+	return startOfNextDay(value, DEFAULT_TIMEZONE);
 }
 
 // ---------------------------------------------------------------------------

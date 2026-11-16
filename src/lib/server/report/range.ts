@@ -1,5 +1,5 @@
 import { and, gte, lt, type SQL, type SQLWrapper } from 'drizzle-orm';
-import { buildDateInTz, nextDay } from '#lib/server/reservation/timezone.js';
+import { buildDateInTz, startOfNextDay } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 /**
@@ -35,7 +35,7 @@ export function rangeCondition(
 	// Before the next day's midnight, not up to 23:59: timestamps are stored in
 	// whole seconds, so `<= 23:59` drops 23:59:01–23:59:59 from both days.
 	if (range.to) {
-		conditions.push(lt(column, buildDateInTz(nextDay(range.to), '00:00', timezone)));
+		conditions.push(lt(column, startOfNextDay(range.to, timezone)));
 	}
 
 	return conditions.length > 0 ? and(...conditions) : undefined;
@@ -48,6 +48,8 @@ export function rangeCondition(
  * that hands the range to several services cannot: each owns its own column and
  * some take a bounded `{ from, to }` rather than a condition. Resolving once
  * here keeps the club-time conversion in one place.
+ *
+ * `to` is exclusive — the next day's midnight — so consumers compare with `<`.
  */
 export function rangeInstants(
 	range: ReportRange,
@@ -55,6 +57,6 @@ export function rangeInstants(
 ): { from?: Date; to?: Date } {
 	return {
 		from: range.from ? buildDateInTz(range.from, '00:00', timezone) : undefined,
-		to: range.to ? buildDateInTz(range.to, '23:59', timezone) : undefined
+		to: range.to ? startOfNextDay(range.to, timezone) : undefined
 	};
 }

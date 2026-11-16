@@ -88,7 +88,8 @@ import {
 import {
 	buildDateInTz,
 	buildTimeRangeInTz,
-	formatDateInTz
+	formatDateInTz,
+	startOfNextDay
 } from '#lib/server/reservation/timezone.js';
 import {
 	createEventSeries,
@@ -634,7 +635,7 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 			from: filters.dateFrom
 				? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE)
 				: undefined,
-			to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined
+			to: filters.dateTo ? startOfNextDay(filters.dateTo, DEFAULT_TIMEZONE) : undefined
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
 	);

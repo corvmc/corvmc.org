@@ -1,6 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { financialEntry, type FinancialEntry } from '#lib/server/db/schema/financial.js';
-import { and, asc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt, sql, sum } from 'drizzle-orm';
 import { captureException } from '#lib/server/sentry.js';
 import type {
 	FinancialCategory,
@@ -87,13 +87,14 @@ export async function recordEntriesBestEffort(inputs: RecordEntryInput[]): Promi
 	}
 }
 
+/** Half-open, `[from, to)`: `to` is the first instant not counted. */
 export interface RangeFilter {
 	from: Date;
 	to: Date;
 }
 
 const inRange = (r: RangeFilter) =>
-	and(gte(financialEntry.occurredAt, r.from), lte(financialEntry.occurredAt, r.to));
+	and(gte(financialEntry.occurredAt, r.from), lt(financialEntry.occurredAt, r.to));
 
 const asCents = (v: string | null) => Number(v ?? 0);
 

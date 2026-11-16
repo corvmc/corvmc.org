@@ -15,7 +15,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { listFor } from '#lib/server/media/media-service.js';
 import { isReceiptKey } from '#lib/server/storage-keys.js';
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError, afterForm8282Change } from './asset-service';
 import { inventoryAsset } from '#lib/server/db/schema/inventory.js';
@@ -590,7 +590,7 @@ export async function listAcquisitions(
 	const filters = [
 		opts.kind ? eq(acquisition.kind, opts.kind) : undefined,
 		opts.from ? gte(acquisition.occurredAt, opts.from) : undefined,
-		opts.to ? lte(acquisition.occurredAt, opts.to) : undefined,
+		opts.to ? lt(acquisition.occurredAt, opts.to) : undefined,
 		// Owed, not merely unpaid: an acquisition nobody fronted is not a debt.
 		opts.awaitingReimbursement
 			? and(isNotNull(acquisition.paidByUserId), isNull(acquisition.reimbursedAt))
@@ -815,7 +815,7 @@ export async function spendByCategory(from: Date, to: Date, kind: AcquisitionKin
 			and(
 				eq(acquisition.kind, kind),
 				gte(acquisition.occurredAt, from),
-				lte(acquisition.occurredAt, to)
+				lt(acquisition.occurredAt, to)
 			)
 		)
 		.groupBy(equipmentCategory.id, equipmentCategory.name)
@@ -844,7 +844,7 @@ export async function spendBySource(from: Date, to: Date) {
 			and(
 				eq(acquisition.kind, 'purchase'),
 				gte(acquisition.occurredAt, from),
-				lte(acquisition.occurredAt, to)
+				lt(acquisition.occurredAt, to)
 			)
 		)
 		.groupBy(key)

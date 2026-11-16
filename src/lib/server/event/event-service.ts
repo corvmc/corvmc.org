@@ -104,7 +104,7 @@ import {
 	formatDateFull,
 	formatDateInTz,
 	buildDateInTz,
-	nextDay
+	startOfNextDay
 } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 import { formatCents } from '#lib/utils/format.js';
@@ -1645,7 +1645,7 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 export async function getShowTonight(now = new Date()): Promise<EventRow | null> {
 	const today = formatDateInTz(now, DEFAULT_TIMEZONE);
 	const dayStart = buildDateInTz(today, '00:00', DEFAULT_TIMEZONE);
-	const dayEnd = buildDateInTz(nextDay(today), '00:00', DEFAULT_TIMEZONE);
+	const dayEnd = startOfNextDay(today, DEFAULT_TIMEZONE);
 
 	const [row] = await db
 		.select(eventListingColumns)
@@ -1716,7 +1716,7 @@ export async function listAll(
 		opts.status ? eq(eventListing.status, opts.status) : undefined,
 		opts.venueId ? eq(eventListing.venueId, opts.venueId) : undefined,
 		opts.from ? gte(eventListing.startsAt, opts.from) : undefined,
-		opts.to ? lte(eventListing.startsAt, opts.to) : undefined,
+		opts.to ? lt(eventListing.startsAt, opts.to) : undefined,
 		opts.needsActs ? shortOfActsSql : undefined,
 		opts.productionStatus ? productionStatusSql(opts.productionStatus) : undefined,
 		not(and(eq(eventListing.source, 'community'), eq(eventListing.status, 'draft'))!)
