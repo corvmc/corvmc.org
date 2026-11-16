@@ -1806,11 +1806,18 @@ So:
   worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
-- **The dashboard:** `listOutstandingClaims` and
-  `countVolunteerWorkWaiting` in the signup service, `listShortStaffedShifts` in the shift
-  service, and `listLapsingBeforeRosteredShift` in the certification service — composed by
-  `getVolunteerWorklist`. The sidebar badge reads `countVolunteerWorkWaiting` too, so the
-  number on the nav and the rows on the page cannot disagree.
+- **What is waiting:** no one query composes the volunteer queue; three readers each take
+  the part they show.
+  - `getStaffDashboard` in `staff-dashboard.remote.ts` lists `listShortStaffedShifts` from
+    `work-order-service.ts` for a viewer holding `volunteer.read`.
+  - `countStaffQueues` in `user/staff-queue-counts.ts` gives the sidebar's Volunteering badge
+    from `countVolunteerWorkWaiting` in the signup service: shifts in the next week short of
+    bookings plus tasks whose shifts have ended, by the same predicates as the page's chips.
+    Claims and hour logs waiting on a decision are the review feed's count, not this one.
+  - `getStaffVolunteers` in `volunteer.remote.ts` (the roster) indexes
+    `listOutstandingClaims` and `listLapsingBeforeRosteredShift` by member, so each row carries
+    its unconfirmed claim and its lapsing clearance, and the lapsing filter narrows the roster
+    to those members.
 - **Certifications:** `volunteer-certification-service.ts` (catalog),
   `member-certification-service.ts` (held; append-only, `expiresAt` stamped at grant time
   from `validityMonths` and never computed on read).
@@ -1881,23 +1888,24 @@ Both carry the anchor. An item with only `dueOffsetMinutes` stamps a task with a
 work belongs to is which role's work order its tasks are on, and the offset says when.
 
 Applying is `applyDutyList(id, subject, createdByUserId)` in
-`volunteer/duty-list-service.ts`, where the subject is a `DutySubject` union rather than a bare
-id, so an event id cannot reach the reservation branch. Both subjects load into one
-`TimedSubject` shape, because a booking and a show are both a window with a start and an end,
-which is everything an offset needs. Offsets are plain instant arithmetic from a real anchor —
-`doorsAt ?? startsAt`, `startsAt`, or `endsAt` — so DST needs no handling here, unlike
-`duplicateShift`, which shifts a wall-clock date and does. Writes go through `db.batch` with
-the task insert chunked to stay under D1's 100 bound parameters. A second apply to the same
-subject is refused by name rather than deduplicated, because doubling a roster looks exactly
-like the first apply from the outside.
+`volunteer/duty-list-service.ts`. The subject is a `DutySubject`, which names a project only:
+`{ kind: 'project', id, eventId? }`. There is no reservation branch. `loadClock` reads the
+project's start, its grant dates when it is a grant project, and one show's times: the
+`eventId` given, or else the project's earliest show that is not cancelled or rejected.
+`projectOfEvent` finds the project a show's work belongs to, its own or its production's.
+Offsets are plain instant arithmetic from a real anchor (`doorsAt ?? startsAt`, a listing or
+production time, or a grant date at 17:00 club time), so DST needs no handling here, unlike
+`duplicateShift`, which shifts a wall-clock date and does. An anchor with no time yet is a
+warning, not a refusal: its items land unscheduled. Writes go through `db.batch` with the task
+insert chunked to stay under D1's 100 bound parameters. A second apply of the same template to
+the same project needs a reason, which is audited; without one (as from a listener) it is
+refused by name, because doubling a roster looks exactly like the first apply from the outside.
 
-`duty_list.subject` is a column of its own rather than something read off the anchor: `start`
-and `end` resolve for both kinds, and only `doors` is show-shaped. So the illegal state is the
-_pair_ `(reservation, doors)`, refused when a list is **saved** as well as when it is applied.
-The `doorsAt ?? startsAt` fallback exists because not every show sets a doors time — but a show
-without one still has doors, and a rehearsal has no such concept, so taking the same fallback
-would quietly turn "fifteen minutes before doors" into something else and read as correct on
-every screen.
+`duty_list.subject` is only ever written as `project` now. `event` lists were backfilled to it
+and `reservation` lists, which were orientation, became a setting (#2034);
+`dutyListStoredSubjects` keeps both values for the column type. The `doorsAt ?? startsAt`
+fallback exists because not every show sets a doors time, but a show without one still has
+doors.
 
 For an event, the event is the parent and there is no separate one. Work parties and monthly
 deep cleans get their own event listings — they need advertising as much as a show does — so
@@ -2728,12 +2736,20 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
 - **Sponsors:** `getSponsorDetail` in `sponsors.remote.ts`, guarded by `sponsor.read`, calls
   `getSponsor` in `sponsor-service.ts` with `clubToday()`.
   `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
-  `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
-  an organization without the `sponsor` role.
+  `sponsor.manage`; `createSponsorship` refuses an organization without the `sponsor` role.
+- **Retiring a sponsor or funder (#1615):** it is archived, not deleted. `archiveOrganization`
+  in `contacts.remote.ts`, guarded by `contact.manage`, calls `setOrganizationArchived`, which
+  stamps `organization.archivedAt`. An archived organization leaves the lists and pickers
+  (`listOrganizations` without `includeArchived`); a grant or sponsorship that already names it
+  keeps it, and `getGrantDetail` keeps an archived funder pickable on the application that names
+  it. `deleteOrganization` exists for a row that
+  should never have been made: `deleteUnusedOrganization` deletes only an organization with no
+  role, person, record, link or act listing, so a sponsor or funder is never deleted while it
+  holds that role.
 - **Grants:** `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
   `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect and the
-  award's end once awarded. Writes are guarded by `grant.manage`; a funder with applications
-  cannot be deleted, and `createGrant` refuses an organization without the `funder` role.
+  award's end once awarded. Writes are guarded by `grant.manage`; `createGrant` refuses an
+  organization without the `funder` role. A funder is archived, not deleted, as a sponsor is.
 - **The project (#2622):** `createGrant` and `createSponsorship` write the project, its `owner`
   row and the side-table row in one batch, through `funding-project.ts` in
   `src/lib/server/development/`. The owner is the live committee holding `grant.manage` or
