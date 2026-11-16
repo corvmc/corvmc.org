@@ -206,7 +206,7 @@
 							<td class="cell-primary">
 								<a
 									class="font-medium link-hover"
-									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
+									href={resolve('/staff/committees/[id]', { id: seat.groupId })}>{seat.name}</a
 								>
 								<div class="text-muted">
 									{seat.positions.length > 0 ? seat.positions.join(', ') : m.staff_member_text()}

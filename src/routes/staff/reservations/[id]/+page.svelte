@@ -227,7 +227,7 @@
 				<header class="flex justify-between">
 					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
-						<Button href="/staff/groups/{r.bandId}" variant="default" size="sm"
+						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm"
 							>{m.staff_reservations_id_view_band_label()}</Button
 						>
 					{:else if isEventHold(r.bookerType) && r.eventId}

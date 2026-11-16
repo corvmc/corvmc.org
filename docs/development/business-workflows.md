@@ -543,7 +543,7 @@ premium subscription that unlocks a public band microsite.
 
 ### Clubs and committees
 
-Staff create clubs and committees from `/staff/groups` (`createStaffGroup`, `group.manage`), and
+Staff create clubs and committees from `/staff/clubs` and `/staff/committees` (`createStaffGroup`, `group.manage`), and
 appoint their chairs; a program has admins and no owner. Staff alone set a program's `joinPolicy` and
 listing visibility (`updateStaffGroup`). Members find programs on `/member/groups` and use one
 tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `open` programs take
@@ -3004,7 +3004,7 @@ several committees and answers the board's two questions.
 A reviewer answers for each group separately. They can mark the applicant contacted, accept, or
 decline with a reason the applicant sees. The reviewers are the group's owner and admins, of any
 kind. For committees only, holders of `committee.reviewApplications` (the volunteer coordinator)
-can also review, from the Committees view of `/staff/groups`. Accepting **invites** the applicant, who then accepts
+can also review, from `/staff/committees`. Accepting **invites** the applicant, who then accepts
 the invitation like any other. The applicant sees each decision and its reason on
 `/member/groups`. They can withdraw while a choice is still open, and can apply again once
 nothing is open for that group.
@@ -3027,8 +3027,8 @@ nothing is open for that group.
   - `getMemberGroup` and `getStaffGroupPage` return `applications` to a viewer the guard would
     admit, and `ApplicationsCard` renders them.
   - `getMemberGroups` returns `applied`, the applicant's latest choice per group.
-  - `getStaffCommittees` counts open applications per committee on the Committees view, and
-    `getStaffCommitteePage` lists them on `/staff/groups/[id]` for a capability holder.
+  - `getStaffCommittees` counts open applications per committee on `/staff/committees`, and
+    `getStaffCommitteePage` lists them on `/staff/committees/[id]` for a capability holder.
 - `joinGroupForm` / `joinGroup()` serve `open` groups only, and throw `ApplyInsteadError` for a
   `by_application` group.
 

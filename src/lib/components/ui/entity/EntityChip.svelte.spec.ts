@@ -95,7 +95,7 @@ describe('EntityChip', () => {
 			await render(Harness, { ref: fakeRef('band', { id: 'band-1', slug: 'vu' }) });
 			await chipLink().hover();
 			// The icon-only Button in the preview: it needs a name of its own.
-			const go = page.getByCss('[data-link-preview-content] a.btn[href="/staff/groups/band-1"]');
+			const go = page.getByCss('[data-link-preview-content] a.btn[href="/staff/bands/band-1"]');
 			await expect.element(go).toBeVisible();
 			expect(go.element().getAttribute('aria-label')).toBeTruthy();
 		});

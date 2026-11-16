@@ -33,6 +33,7 @@ export const permanentRedirectSources: readonly string[] = [
 	'/staff/flags/equipment/[id]',
 	'/staff/grants/funders',
 	'/staff/groups',
+	'/staff/groups/[id]',
 	'/staff/groups/bands',
 	'/staff/groups/clubs',
 	'/staff/groups/committees',
