@@ -1,123 +1,124 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import PageHeader from '#lib/components/ui/PageHeader.svelte';
-	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import BandReservationCard from '#lib/components/reservations/BandReservationCard.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
-	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import { getBandUpcoming } from '#lib/remote/bands.remote.js';
-	import { getBandLayoutContext } from './layout-context';
 	import { resolve } from '$app/paths';
 	import * as env from '$app/env/public';
-	import StatCard from '#lib/components/ui/StatCard.svelte';
-	import StatGrid from '#lib/components/ui/StatGrid.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import AddressCard from '#lib/components/ui/AddressCard.svelte';
+	import PressKitProgress from '#lib/components/band/PressKitProgress.svelte';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
-	import PressKitCard from './PressKitCard.svelte';
-	import NextSteps from './NextSteps.svelte';
-	import Alert from '#lib/components/ui/Alert.svelte';
-	import { errorMessage } from '#lib/error-message.js';
-	import { getPressKitProgress } from '#lib/remote/press-kit.remote.js';
-	import { retryQuery } from '#lib/utils/retry-query.js';
+	import { formatDate, relativeDay } from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { getBandDashboard } from '#lib/remote/band-dashboard.remote.js';
+	import { getBandLayoutContext } from './layout-context';
+	import SetupSteps from './SetupSteps.svelte';
 
-	// The layout above already holds this; re-awaiting it here was a second remote query
-	// in flight in this component. See `layout-context.ts`.
+	// The layout already holds this; see `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-
 	const band = $derived(layout.band);
-	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
+	const now = new Date();
 
-	// Every band has this, free. Settings was the only place it appeared, framed
-	// as a value to change; here it is the address they hand out.
+	// The address the band hands out. Below the work rather than leading (#3128).
 	const address = $derived(
 		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
 	);
 
-	let upcoming = $derived(getBandUpcoming(band.id));
+	// The page's one load-bearing query: to-dos, the schedule, setup and the press kit.
+	const dashboard = $derived(await getBandDashboard(band.id));
 </script>
 
 <PageHeader title={m.band_slug_dashboard_title()} subtitle={band.name} />
 <PageContent>
-	<NextSteps slug={band.slug} memberCount={band.memberCount} canManage={isOwnerOrAdmin} />
+	<!-- What the band owes or has to answer, first; absent when there is none. -->
+	{#if dashboard.todos.length > 0}
+		<InfoCard
+			title={m.band_slug_pending_actions_title()}
+			state={dashboard.todos.length}
+			testid="band-todos"
+		>
+			<ul class="flex flex-col divide-y divide-base-300">
+				{#each dashboard.todos as item (item.id)}
+					<li
+						class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+						data-kind={item.kind}
+					>
+						<div class="min-w-0">
+							<p class="font-medium">{item.title}</p>
+							{#if item.detail}
+								<p class="text-subtle text-sm">{item.detail}</p>
+							{/if}
+						</div>
+						<div class="flex w-max items-center gap-3">
+							{#if item.dueAt}
+								<span class="text-sm whitespace-nowrap" class:text-error={item.dueAt < now}>
+									{relativeDay(item.dueAt)}
+								</span>
+							{/if}
+							<Button href={item.href} size="sm">{item.label}</Button>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
+
+	<InfoCard title={m.band_slug_upcoming_title()} testid="band-upcoming">
+		{#snippet action()}
+			<div class="flex gap-3 text-sm">
+				<a
+					href={resolve('/band/[slug]/reservations', { slug: band.slug })}
+					class="link link-primary">{m.band_slug_all_reservations_text()}</a
+				>
+				<a href={resolve('/band/[slug]/events', { slug: band.slug })} class="link link-primary"
+					>{m.band_slug_all_events_text()}</a
+				>
+			</div>
+		{/snippet}
+
+		{#if dashboard.upcoming.length === 0}
+			<EmptyState title={m.band_slug_upcoming_empty_title()} />
+		{:else}
+			<ul class="flex flex-col divide-y divide-base-300">
+				{#each dashboard.upcoming as row (row.id)}
+					<li class="py-2 first:pt-0 last:pb-0" data-kind={row.kind}>
+						<a href={row.href} class="flex items-center justify-between gap-3 hover:underline">
+							<div class="min-w-0">
+								<p class="truncate font-medium">
+									{row.title ?? m.band_slug_reservation_text()}
+								</p>
+								<p class="text-subtle text-sm">
+									{formatDate(row.startsAt)} · {formatEventTimeRange(row.startsAt, row.endsAt)}
+								</p>
+							</div>
+							<StatusBadge status={row.status} label />
+						</a>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</InfoCard>
+
+	{#if dashboard.setup}
+		<SetupSteps steps={dashboard.setup} />
+	{:else if dashboard.pressKit}
+		<PressKitProgress
+			slug={band.slug}
+			sections={dashboard.pressKit.sections}
+			done={dashboard.pressKit.done}
+			total={dashboard.pressKit.total}
+			next={dashboard.pressKit.next}
+			compact
+		/>
+	{/if}
 
 	{#if address}
 		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
-			{m.band_slug_put_flyer_bio_goes_s_text({ name: band.name })}
+			{m.band_slug_address_card_text()}
 		</AddressCard>
 	{/if}
-
-	{#if isOwnerOrAdmin}
-		<svelte:boundary>
-			<PressKitCard slug={band.slug} />
-
-			{#snippet failed(_error, reset)}
-				<Alert type="warning" reset={() => retryQuery(getPressKitProgress(band.slug), reset)}>
-					{m.band_slug_press_kit_progress_didn_t_body()}
-				</Alert>
-			{/snippet}
-		</svelte:boundary>
-	{/if}
-
-	<!-- Band overview -->
-	<StatGrid cols={2}>
-		<StatCard title={m.band_members_title()} value={band.memberCount} size="sm" />
-		<StatCard
-			title={m.band_slug_role_title()}
-			value={layout.userRole}
-			size="sm"
-			valueClass="capitalize"
-		/>
-	</StatGrid>
-
-	<!-- Upcoming reservations. The only thing on this page that waits: everything
-	     above comes from `bandLayout`, which is already resolved, and awaiting
-	     one list at the top left the whole dashboard a spinner (#1051). -->
-	<section>
-		{#await upcoming}
-			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">{m.band_slug_upcoming_sessions_title()}</h2>
-			</div>
-			<div class="flex justify-center py-8">
-				<span class="loading loading-lg loading-spinner"></span>
-			</div>
-		{:then sessions}
-			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">
-					{m.band_slug_upcoming_sessions_title()}
-					{#if sessions.length > 0}
-						<span class="font-normal text-base-content/60">({sessions.length})</span>
-					{/if}
-				</h2>
-				<a href={resolve(`band/${band.slug}/reservations`)} class="link text-sm link-primary">
-					{m.band_slug_view_all_text()}
-				</a>
-			</div>
-
-			{#if sessions.length === 0}
-				<EmptyState message={m.band_slug_message_body()} />
-			{:else}
-				<div class="flex flex-col gap-2">
-					{#each sessions as res (res.id)}
-						<BandReservationCard reservation={res} slug={band.slug} />
-					{/each}
-				</div>
-			{/if}
-		{:catch error}
-			<h2 class="mb-3 text-lg font-semibold">{m.band_slug_upcoming_sessions_title()}</h2>
-			<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-		{/await}
-	</section>
-
-	<!-- Quick links -->
-	<div class="flex gap-3">
-		<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
-			>{m.band_slug_manage_members_label()}</Button
-		>
-		{#if isOwnerOrAdmin}
-			<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-				>{m.band_slug_edit_band_profile_label()}</Button
-			>
-		{/if}
-	</div>
 </PageContent>

@@ -1,4 +1,3 @@
-import { reservationTrack } from '#lib/utils/reservation-actions.js';
 import { listPositionsHeld } from '#lib/server/group/position-service.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
@@ -13,7 +12,7 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
-import { eq, and, desc, gte } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	listAll,
@@ -28,13 +27,7 @@ import {
 	claimableBandSlug
 } from '#lib/server/band/band-address-service.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
-import {
-	memberRefColumns,
-	reservationRefColumns,
-	toBandRef,
-	toMemberRef,
-	toReservationRef
-} from '#lib/server/entity/refs.js';
+import { toBandRef } from '#lib/server/entity/refs.js';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -174,46 +167,6 @@ export const getBandEmailInvites = query(z.string(), async (bandId) => {
 // ===========================================================================
 // Queries — Band-context (member-facing)
 // ===========================================================================
-
-export const getBandUpcoming = query(z.string(), async (bandId) => {
-	// `staff`, like every band-panel read below it. `getBandLayout` admits a
-	// staff non-member and reports `userRole: 'staff'`, but the member-only guard
-	// these carried 403'd them — so staff rendered the panel frame and every card
-	// inside it failed.
-	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
-	const now = new Date();
-	const rows = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			notes: reservation.notes,
-			ref: reservationRefColumns(),
-			bookedBy: memberRefColumns()
-		})
-		.from(reservation)
-		.leftJoin(user, eq(user.id, reservation.createdByUserId))
-		// One rule across every reservation list: a booking is upcoming until its
-		// slot ends, cancellations included.
-		.where(
-			and(
-				eq(reservation.bookerType, 'group'),
-				eq(reservation.bookerId, bandId),
-				gte(reservation.endsAt, now)
-			)
-		)
-		.orderBy(reservation.startsAt)
-		.limit(10);
-
-	return rows.map((r) => ({
-		...r,
-		ref: toReservationRef(r.ref, band),
-		// The one status the card shows, as staff read it (#2861).
-		track: reservationTrack(r.ref, now),
-		bookedBy: toMemberRef(r.bookedBy)
-	}));
-});
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
 	await requireGroupRole({ id: bandId }, 'member', { staff: 'band.read' });
