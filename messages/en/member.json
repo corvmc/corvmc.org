@@ -94,6 +94,7 @@
 	"member_bands_invitation_declined_toast": "Invitation declined",
 	"member_bands_invitation_no_longer_available_toast": "That invitation is no longer available.",
 	"member_bands_invited_as_text": "Invited as {role}",
+	"member_bands_invited_by_text": "{invitedByName} invited you as {role}",
 	"member_bands_member_text": "member",
 	"member_bands_members_text": "members",
 	"member_bands_my_bands_title": "My bands",

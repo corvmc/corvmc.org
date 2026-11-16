@@ -15,7 +15,12 @@ import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { requireCapability, requireUser } from '#lib/server/authorization.js';
-import { listAll, listForUser, partitionByStatus } from '#lib/server/band/band-service.js';
+import {
+	listAll,
+	listForUser,
+	listPendingInvites,
+	partitionByStatus
+} from '#lib/server/band/band-service.js';
 import { getBandTotals } from '#lib/server/band/band-totals-service.js';
 import {
 	memberRefColumns,
@@ -246,9 +251,10 @@ export const getMemberBands = query(async () => {
 	// rather than pending roster rows, so none of them reached this page — an
 	// invitation that lapsed before the invitee followed the link was invisible
 	// everywhere (#906).
-	const [bands, invites] = await Promise.all([
+	const [bands, invites, pending] = await Promise.all([
 		listForUser(currentUser.id, ['band']),
-		listInvitesForEmail(currentUser.email)
+		listInvitesForEmail(currentUser.email),
+		listPendingInvites(currentUser.id, ['band'])
 	]);
 
 	const serialize = (b: (typeof bands)[number]) => ({
@@ -265,7 +271,12 @@ export const getMemberBands = query(async () => {
 	// where a third status goes missing without anything failing.
 	const byStatus = partitionByStatus(bands);
 	return {
-		pending: byStatus.pending.map(serialize),
+		pending: pending.map((p) => ({
+			id: p.id,
+			name: p.name,
+			role: p.role,
+			invitedByName: p.invitedByName
+		})),
 		active: byStatus.active.map(serialize),
 		emailInvites: invites
 			.filter((i) => i.groupKind === 'band')
