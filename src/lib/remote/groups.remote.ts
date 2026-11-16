@@ -91,7 +91,8 @@ import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
 /**
  * `/staff/clubs` and `/staff/committees` — the only places a club or committee is made.
  *
- * Reads name `group.read` and writes `group.manage`. Bands are deliberately
+ * Reads name `group.read` and writes `group.manage`, but committee oversight is
+ * `committee.manage`'s. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
  * staff surface at `/staff/bands`. See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
@@ -171,14 +172,19 @@ async function requireCommitteeAccess() {
 	);
 }
 
-/** `/staff/committees`: every committee, each with its open applications counted. */
+/**
+ * `/staff/committees`: every committee, each with its open applications counted.
+ * `canCreate` names `createStaffGroup`'s committee guard, so the button and the
+ * submit agree (#3045).
+ */
 export const getStaffCommittees = query(async () => {
 	await requireCommitteeAccess();
-	const [page, canManage] = await Promise.all([
+	const [page, canManage, canCreate] = await Promise.all([
 		listGroups({ kinds: ['committee'] }, { page: 1, pageSize: 50 }),
-		can('group.read')
+		can('group.read'),
+		can(createCapability('committee'))
 	]);
-	return { committees: page.rows, canManage };
+	return { committees: page.rows, canManage, canCreate };
 });
 
 /**
@@ -208,6 +214,11 @@ export const getStaffCommitteePage = query(z.string().min(1), async (id) => {
 // Forms
 // ---------------------------------------------------------------------------
 
+/** A committee is made under committee oversight; a club under `group.manage` (#3045). */
+function createCapability(kind: (typeof STAFF_GROUP_KINDS)[number]) {
+	return kind === 'committee' ? 'committee.manage' : 'group.manage';
+}
+
 export const createStaffGroup = form(
 	z.object({
 		kind: staffKind,
@@ -225,7 +236,7 @@ export const createStaffGroup = form(
 	unaudited(
 		'Creation sets the first visibility; there is no earlier value to record.',
 		async (data) => {
-			await requireCapability('group.manage');
+			await requireCapability(createCapability(data.kind));
 			try {
 				const created = await createGroup({
 					kind: data.kind,

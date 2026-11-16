@@ -24,7 +24,7 @@
 
 <FilterBar>
 	{#snippet actions()}
-		{#if data.canManage}
+		{#if data.canCreate}
 			<CreateGroupAction kind="committee" />
 		{/if}
 	{/snippet}
