@@ -14,11 +14,6 @@ const LITERAL = /\blabel(?:\s*[:=]\s*)(['"`])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
 const MAP = /\b(\w*(?:Labels|LABELS))\b[^=;\n]*=\s*\{/g;
 const MAP_VALUE = /:\s*(['"`])((?:(?!\1)[^\\\n]|\\.)*)\1/g;
 
-/** Maps whose values a committed migration also wrote; each goes with its data fix. */
-const EXEMPT_MAPS = new Set([
-	'positionLabels' // #3093: Operations seat names
-]);
-
 const files = sourceFiles(['src/**/*.{ts,svelte}'], new Set()).filter(
 	(f) => !/\.(spec|test)\.|\.test\.svelte$/.test(f)
 );
@@ -28,15 +23,13 @@ const lineOf = (source: string, index: number) => source.slice(0, index).split('
 
 /** The text of each label map's object literal, from its `{` to the brace that closes it. */
 function mapBodies(source: string): { start: number; body: string }[] {
-	return [...source.matchAll(MAP)]
-		.filter((m) => !EXEMPT_MAPS.has(m[1]))
-		.map((m) => {
-			const start = m.index + m[0].length;
-			let depth = 1;
-			let i = start;
-			while (depth && i < source.length) depth += { '{': 1, '}': -1 }[source[i++]] ?? 0;
-			return { start, body: source.slice(start, i) };
-		});
+	return [...source.matchAll(MAP)].map((m) => {
+		const start = m.index + m[0].length;
+		let depth = 1;
+		let i = start;
+		while (depth && i < source.length) depth += { '{': 1, '}': -1 }[source[i++]] ?? 0;
+		return { start, body: source.slice(start, i) };
+	});
 }
 
 describe('label literals', () => {

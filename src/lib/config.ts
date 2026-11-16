@@ -2487,14 +2487,14 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
 export const positionLabels = {
 	admin: 'Administrator',
 	staff: 'Staff',
-	operations_chair: 'Operations Chair',
-	technology_coordinator: 'Technology Coordinator',
-	volunteer_coordinator: 'Volunteer Coordinator',
-	site_moderator: 'Site Moderator',
+	operations_chair: 'Operations chair',
+	technology_coordinator: 'Technology coordinator',
+	volunteer_coordinator: 'Volunteer coordinator',
+	site_moderator: 'Site moderator',
 	treasurer: 'Treasurer',
-	outreach_coordinator: 'Outreach Coordinator',
-	content_editor: 'Content Editor',
-	teacher_reviewer: 'Teacher Reviewer',
+	outreach_coordinator: 'Outreach coordinator',
+	content_editor: 'Content editor',
+	teacher_reviewer: 'Teacher reviewer',
 	auditor: 'Auditor'
 } as const;
 
