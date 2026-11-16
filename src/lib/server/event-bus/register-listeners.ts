@@ -53,19 +53,26 @@ async function registerAuditGroup(): Promise<void> {
 }
 
 /**
- * `provisionOnConfirm` and `revokeAccessFor` never throw: emittery runs listeners together, so one
- * that rejected would also reject the confirmation email's emit.
+ * After the response: a U-tec add is three calls and a 3 s settle, which held every booking
+ * ~9 s (#3141). Neither throws, and the daily lock job backs both up.
  */
 async function registerLockListeners(): Promise<void> {
 	const { provisionOnConfirm, revokeAccessFor } = await import('#lib/server/lock/lock-service.js');
+	const { afterResponse } = await import('#lib/server/after-response.js');
 
-	domainEvents.on('reservation.confirmed', async ({ data: event }) => {
-		await provisionOnConfirm(event.reservationId);
-	});
+	domainEvents.on('reservation.confirmed', ({ data: event }) =>
+		afterResponse(() => provisionOnConfirm(event.reservationId), {
+			listener: 'lock.provisionOnConfirm',
+			reservationId: event.reservationId
+		})
+	);
 
-	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
-		await revokeAccessFor(event.reservationId);
-	});
+	domainEvents.on('reservation.cancelled', ({ data: event }) =>
+		afterResponse(() => revokeAccessFor(event.reservationId), {
+			listener: 'lock.revokeAccessFor',
+			reservationId: event.reservationId
+		})
+	);
 }
 
 /**
