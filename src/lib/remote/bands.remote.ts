@@ -21,6 +21,12 @@ import {
 	partitionByStatus
 } from '#lib/server/band/band-service.js';
 import { getBandTotals } from '#lib/server/band/band-totals-service.js';
+import {
+	MAX_BAND_SLUG_LENGTH,
+	SlugUnavailableError,
+	claimableBandSlug
+} from '#lib/server/band/band-address-service.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { toBandRef } from '#lib/server/entity/refs.js';
 import {
 	getByIdWithDetails,
@@ -473,15 +479,29 @@ export const revokeStaffEmailInvite = form(
 export const createBand = form(
 	z.object({
 		name: z.string().min(1, 'Band name is required').max(255),
-		bio: z.string().max(LONG_TEXT_MAX).optional().default('')
+		bio: z.string().max(LONG_TEXT_MAX).optional().default(''),
+		// Blank derives the address from the name, as it always did.
+		slug: z.string().trim().max(MAX_BAND_SLUG_LENGTH).optional().default('')
 	}),
-	async (data) => {
+	async (data, issue) => {
 		const currentUser = requireUser();
-		const band = await create(currentUser.id, {
-			name: data.name,
-			bio: data.bio || undefined
-		});
-		return { success: true, slug: band.slug };
+		let slug: string | undefined;
+		try {
+			if (data.slug) slug = await claimableBandSlug(data.slug);
+			const band = await create(currentUser.id, {
+				name: data.name,
+				bio: data.bio || undefined,
+				...(slug ? { slug } : {})
+			});
+			return { success: true, slug: band.slug };
+		} catch (err) {
+			if (err instanceof SlugUnavailableError) invalid(issue.slug(err.message));
+			// Another band took the address between the check and the insert.
+			if (slug && isUniqueConstraintError(err)) {
+				invalid(issue.slug('That address was just taken. Try another.'));
+			}
+			throw err;
+		}
 	}
 );
 

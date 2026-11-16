@@ -83,6 +83,8 @@
 	"member_ballots_no_ballots_yet_title": "No ballots",
 	"member_bands_accepted_label": "Accepted",
 	"member_bands_band_created_toast": "Band created",
+	"member_bands_address_label": "Address",
+	"member_bands_address_preview_body": "The band's page will be at {address}.",
 	"member_bands_band_name_label": "Band name",
 	"member_bands_create_band_label": "Create band",
 	"member_bands_create_band_title": "Create band",

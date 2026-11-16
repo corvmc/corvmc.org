@@ -4,6 +4,7 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { createAudience } from '#lib/remote/marketing.remote.js';
 	import { Field } from '../ui/Form';
+	import { generateSlug } from '#lib/utils/slug.js';
 
 	let {
 		variant = 'primary',
@@ -27,13 +28,7 @@
 
 	$effect(() => {
 		if (!slugManuallyEdited && name) {
-			// Mirrors `generateSlug` on the server: spaces and punctuation are
-			// dropped, not hyphenated.
-			slug = name
-				.toLowerCase()
-				.replace(/[^a-z0-9-]+/g, '')
-				.replace(/-{2,}/g, '-')
-				.replace(/^-|-$/g, '');
+			slug = generateSlug(name);
 		}
 	});
 </script>

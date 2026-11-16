@@ -16,6 +16,9 @@
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Button from '#lib/components/ui/Button.svelte';
+	import * as env from '$app/env/public';
+	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
+	import { generateSlug } from '#lib/utils/slug.js';
 	import {
 		createBand,
 		acceptInvite,
@@ -54,6 +57,15 @@
 	// The effect only ever opens, never closes, so a user's own click cannot be
 	// undone by a later URL settle.
 	let showCreateModal = $state(false);
+
+	// The address is shown and editable before the band exists (#3134). Blank
+	// takes the name's address, which the server derives by the same rule. Above
+	// the await for the reason given for `showCreateModal`.
+	let addressInput = $state('');
+	const baseDomain = baseDomainFromSiteUrl(env.PUBLIC_SITE_URL);
+	const address = $derived(
+		generateSlug(addressInput) || generateSlug(createBand.fields.name.value() ?? '')
+	);
 
 	$effect(() => {
 		if (page.url.searchParams.has('create')) showCreateModal = true;
@@ -202,6 +214,7 @@
 		onsuccess={(result) => {
 			toast.success(m.member_bands_band_created_toast());
 			showCreateModal = false;
+			addressInput = '';
 			if (result?.slug) goto(resolve(`band/${result.slug}`));
 		}}
 	>
@@ -213,6 +226,24 @@
 				placeholder={m.member_bands_e_g_velvet_underground_placeholder()}
 				required
 			/>
+
+			<FormField
+				field={createBand.fields.slug}
+				label={m.member_bands_address_label()}
+				description={address
+					? m.member_bands_address_preview_body({ address: `${address}.${baseDomain}` })
+					: undefined}
+			>
+				{#snippet input(id)}
+					<input
+						{id}
+						{...createBand.fields.slug.as('text')}
+						bind:value={addressInput}
+						placeholder={generateSlug(createBand.fields.name.value() ?? '')}
+						class="input w-full"
+					/>
+				{/snippet}
+			</FormField>
 
 			<FormField
 				field={createBand.fields.bio}

@@ -61,6 +61,23 @@ export function assertValidBandSlug(slug: string): void {
 	if (isReservedSlug(slug)) throw new SlugUnavailableError('That address is reserved.');
 }
 
+/**
+ * The address a new band asked for, normalized and checked (#3134). Throws
+ * `SlugUnavailableError` when it is invalid, reserved or held by another band,
+ * a soft-deleted one included, since `band.slug` is globally unique.
+ */
+export async function claimableBandSlug(requested: string): Promise<string> {
+	const slug = normalizeBandSlug(requested);
+	assertValidBandSlug(slug);
+	const [taken] = await db
+		.select({ id: group.id })
+		.from(group)
+		.where(eq(group.slug, slug))
+		.limit(1);
+	if (taken) throw new SlugUnavailableError('That address is already taken.');
+	return slug;
+}
+
 export type SlugResolution =
 	| { kind: 'current'; slug: string }
 	/** `slug` is the band's CURRENT address — where the requested one should redirect. */
