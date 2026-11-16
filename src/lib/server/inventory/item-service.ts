@@ -223,6 +223,8 @@ export interface CreateItemData {
 	reorderPoint?: number;
 	reorderQuantity?: number;
 	resourceId?: string;
+	/** A clearance borrowers should hold; empty clears it. */
+	clearanceId?: string;
 	notes?: string;
 }
 
@@ -259,6 +261,7 @@ export async function updateItem(id: string, data: Partial<CreateItemData>) {
 	if (data.reorderPoint !== undefined) updates.reorderPoint = data.reorderPoint ?? null;
 	if (data.reorderQuantity !== undefined) updates.reorderQuantity = data.reorderQuantity ?? null;
 	if (data.resourceId !== undefined) updates.resourceId = data.resourceId || null;
+	if (data.clearanceId !== undefined) updates.clearanceId = data.clearanceId || null;
 	if (data.notes !== undefined) updates.notes = data.notes || null;
 
 	// `kind` is deliberately not updatable: flipping a serialized item to bulk

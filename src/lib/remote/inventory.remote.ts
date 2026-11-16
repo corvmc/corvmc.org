@@ -135,6 +135,8 @@ import {
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { allowRateLimited } from '#lib/server/rate-limit.js';
 import { unaudited } from '#lib/server/audit/declared.js';
+import { listCertifications } from '#lib/server/volunteer/volunteer-certification-service.js';
+import { missingCertifications } from '#lib/server/volunteer/member-certification-service.js';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -319,13 +321,23 @@ const memberEquipmentFilters = z.object({
 });
 
 export const getMemberEquipment = query(memberEquipmentFilters, async (filters) => {
-	requireUser();
+	const currentUser = requireUser();
 	const { rows } = await listItems({
 		search: filters.search || undefined,
 		categoryId: filters.categoryId || undefined,
 		loanableOnly: true
 	});
+	// As of today; the request itself checks the pickup date and records the result.
+	const missing = new Map(
+		(
+			await missingCertifications(
+				currentUser.id,
+				rows.flatMap((e) => (e.clearanceId ? [e.clearanceId] : []))
+			)
+		).map((c) => [c.id, c.name])
+	);
 	return rows.map((e) => ({
+		missingClearance: e.clearanceId ? (missing.get(e.clearanceId) ?? null) : null,
 		id: e.id,
 		name: e.name,
 		description: e.description,
@@ -438,6 +450,7 @@ const editItemSchema = z.object({
 	reorderPoint: z.number().int().min(0).optional(),
 	reorderQuantity: z.number().int().min(1).optional(),
 	resourceId: z.string().max(100).optional(),
+	clearanceId: z.string().max(64).optional(),
 	notes: z.string().max(2000).optional()
 });
 
@@ -1394,7 +1407,7 @@ export const submitLoanRequest = form(
 			memberNotes: data.memberNotes
 		});
 
-		return { success: true, loanId: loan.id };
+		return { success: true, loanId: loan.id, missingClearance: loan.missingClearanceName };
 	}
 );
 
@@ -1953,7 +1966,11 @@ export const getStaffItemDetail = query(z.string(), async (id) => {
 	const [item, assets] = await Promise.all([getItem(id), getItemAssets(id)]);
 	// After the guarded reads above: `getItem` has already required `inventory.read`.
 	const sections = await itemSections(id, { canTriage: await can('inventory.manageAssets') });
-	return { item, assets, ...sections };
+	// The edit form's clearance choices: live ones, and the item's own even if archived.
+	const clearances = (await listCertifications({ includeInactive: true }))
+		.filter((c) => c.isActive || c.id === item.clearanceId)
+		.map((c) => ({ id: c.id, name: c.name }));
+	return { item, assets, clearances, ...sections };
 });
 
 /** The staff asset detail page's one load-bearing query. Its history is `getAssetHistory`. */

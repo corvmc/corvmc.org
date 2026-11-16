@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "81ad3d9a-2d37-49df-a0be-741ebe5ef3c7",
+  "id": "a330bfc4-d537-4744-8aa4-9c988bc06970",
   "prevIds": [
-    "f679dfa0-be2f-40c2-b176-412e468d3996"
+    "81ad3d9a-2d37-49df-a0be-741ebe5ef3c7"
   ],
   "ddl": [
     {
@@ -5056,6 +5056,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "clearance_id",
+      "entityType": "columns",
+      "table": "inventory_item"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "image_url",
       "entityType": "columns",
       "table": "inventory_item"
@@ -5457,6 +5467,16 @@
       "default": null,
       "generated": null,
       "name": "staff_notes",
+      "entityType": "columns",
+      "table": "inventory_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "missing_clearance_id",
       "entityType": "columns",
       "table": "inventory_loan"
     },
@@ -17647,6 +17667,21 @@
     },
     {
       "columns": [
+        "clearance_id"
+      ],
+      "tableTo": "volunteer_certification",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_item_clearance_id_volunteer_certification_id_fk",
+      "entityType": "fks",
+      "table": "inventory_item"
+    },
+    {
+      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -17762,6 +17797,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_inventory_loan_kit_loan_id_inventory_kit_loan_id_fk",
+      "entityType": "fks",
+      "table": "inventory_loan"
+    },
+    {
+      "columns": [
+        "missing_clearance_id"
+      ],
+      "tableTo": "volunteer_certification",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_loan_missing_clearance_id_volunteer_certification_id_fk",
       "entityType": "fks",
       "table": "inventory_loan"
     },

@@ -105,6 +105,11 @@ vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
 
+const missingCertifications = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
+vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
+	missingCertifications: (...args: unknown[]) => missingCertifications(...args)
+}));
+
 vi.mock('./work-request-service', () => ({
 	hasBlockingFlag: vi.fn().mockResolvedValue(false),
 	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1' })
@@ -214,7 +219,7 @@ describe('LoanService lifecycle', () => {
 				requestedPickupDate: new Date('2025-07-15'),
 				estimatedReturnDate: new Date('2025-07-20')
 			});
-			expect(result).toEqual(loan);
+			expect(result).toMatchObject(loan);
 		});
 
 		it('checks availability when an item is named', async () => {
@@ -228,6 +233,65 @@ describe('LoanService lifecycle', () => {
 					estimatedReturnDate: new Date('2025-07-20')
 				})
 			).rejects.toThrow(InsufficientQuantityError);
+		});
+
+		it('records nothing when the member holds the item clearance on the pickup date', async () => {
+			insertResult = [{ id: 'loan-1', status: 'requested' }];
+			selectResultQueue = [[{ pricingTier: 'major', clearanceId: 'cert-pa' }]];
+			missingCertifications.mockResolvedValue([]);
+			const pickup = new Date('2025-07-15T19:00:00Z');
+
+			const result = await requestLoan('user-1', {
+				itemId: 'eq-1',
+				requestedPickupDate: pickup,
+				estimatedReturnDate: new Date('2025-07-20')
+			});
+
+			expect(missingCertifications).toHaveBeenCalledWith('user-1', ['cert-pa'], pickup);
+			expect(result.missingClearanceName).toBeNull();
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		it('creates the loan, warns and records when the member lacks the clearance on the pickup date', async () => {
+			const loan = { id: 'loan-1', status: 'requested' };
+			insertResult = [loan];
+			selectResultQueue = [
+				[{ pricingTier: 'major', clearanceId: 'cert-pa' }],
+				[{ name: 'Test User', email: 'test@example.com' }],
+				[{ name: 'PA system' }]
+			];
+			missingCertifications.mockResolvedValue([{ id: 'cert-pa', name: 'PA operation' }]);
+			const { db } = await import('#lib/server/db/index.js');
+
+			const result = await requestLoan('user-1', {
+				itemId: 'eq-1',
+				requestedPickupDate: new Date('2025-07-15'),
+				estimatedReturnDate: new Date('2025-07-20')
+			});
+
+			expect(result).toMatchObject({ id: 'loan-1', missingClearanceName: 'PA operation' });
+			const values = vi.mocked(db.insert).mock.results[0].value.values;
+			expect(values).toHaveBeenCalledWith(
+				expect.objectContaining({ missingClearanceId: 'cert-pa' })
+			);
+			expect(recordAuditEntry).toHaveBeenCalledWith(
+				expect.objectContaining({
+					action: 'equipment_loan.requested_without_clearance',
+					details: expect.objectContaining({ loanId: 'loan-1', clearanceId: 'cert-pa' })
+				})
+			);
+		});
+
+		it('skips the check for an item that names no clearance', async () => {
+			insertResult = [{ id: 'loan-1', status: 'requested' }];
+			selectResultQueue = [[{ pricingTier: 'major', clearanceId: null }]];
+
+			await requestLoan('user-1', {
+				itemId: 'eq-1',
+				requestedPickupDate: new Date('2025-07-15'),
+				estimatedReturnDate: new Date('2025-07-20')
+			});
+			expect(missingCertifications).not.toHaveBeenCalled();
 		});
 
 		it('allows free-form requests without an item', async () => {

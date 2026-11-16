@@ -74,6 +74,10 @@
 	{#if loan.isOverdue}
 		<Badge variant="error" size="md">{m.staff_overdue_label()}</Badge>
 	{/if}
+	{#if loan.missingClearanceName}
+		<Badge variant="warning" size="md">{m.staff_inventory_loans_id_missing_clearance_label()}</Badge
+		>
+	{/if}
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
@@ -101,6 +105,12 @@
 				</Fact>
 
 				<Fact label={m.staff_quantity_label()}>{loan.quantity}</Fact>
+
+				{#if loan.missingClearanceName}
+					<Fact label={m.staff_inventory_loans_id_missing_clearance_label()} class="text-warning"
+						>{loan.missingClearanceName}</Fact
+					>
+				{/if}
 
 				<Fact label={m.staff_inventory_loans_id_requested_pickup_label()}
 					>{formatDate(loan.requestedPickupDate)}</Fact

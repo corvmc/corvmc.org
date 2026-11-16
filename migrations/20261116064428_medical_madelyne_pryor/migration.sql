@@ -1,0 +1,2 @@
+ALTER TABLE `inventory_item` ADD `clearance_id` text REFERENCES volunteer_certification(id) ON DELETE SET NULL;--> statement-breakpoint
+ALTER TABLE `inventory_loan` ADD `missing_clearance_id` text REFERENCES volunteer_certification(id) ON DELETE SET NULL;

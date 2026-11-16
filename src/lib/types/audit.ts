@@ -74,6 +74,7 @@ export const auditActions = [
 	'purchase_order.reopened',
 	'inventory_asset.reopened',
 	'equipment_loan.checked_out_unscheduled',
+	'equipment_loan.requested_without_clearance',
 	'kit_loan.checked_out_incomplete',
 	'kit_loan.returned_incomplete',
 	'project.edited',
@@ -364,6 +365,13 @@ export interface AuditDetailsByAction {
 		equipmentName: string | null;
 		warnings: string[];
 		reason: string;
+	};
+	/** The subject is the borrower. Requested without the item's clearance on the pickup date (#2953). */
+	'equipment_loan.requested_without_clearance': {
+		loanId: string;
+		equipmentName: string | null;
+		clearanceId: string;
+		warnings: string[];
 	};
 	/** The subject is the borrower. Units in the location that did not go out, and why (#2725). */
 	'kit_loan.checked_out_incomplete': {

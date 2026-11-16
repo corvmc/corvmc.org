@@ -223,6 +223,8 @@
 	"member_equipment_request_2_title": "Request: {selectedEquipmentName}",
 	"member_equipment_submit_request_label": "Submit request",
 	"member_equipment_toast": "Request submitted! Staff will confirm your pickup.",
+	"member_equipment_clearance_needed_text": "Borrowing this needs the {clearance} clearance. You can still request it.",
+	"member_equipment_clearance_missing_toast": "Requested without the {clearance} clearance",
 	"member_events_add_show_add_show_label": "Add event",
 	"member_events_add_show_add_show_title": "Add event",
 	"member_events_add_show_e_g_paper_wolves_at_placeholder": "e.g. Paper Wolves at The Whiteside",
