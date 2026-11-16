@@ -4,13 +4,13 @@ import { sourceFiles } from './lib/source-files';
 
 /**
  * "Owes money" is `owesMoneySql` / `paymentDueSql` in SQL (decision
- * 0080) and `owesMoney` in TypeScript (#2991). A query that compares
- * `cashDueCents` to zero itself is a second definition, and drifts on refunds,
+ * 0080) and `owesMoney` in TypeScript (#2991). Code that compares
+ * `cashDueCents` to zero itself, in SQL or in a row check, is a second definition, and drifts on refunds,
  * event holds and never-priced bookings. Checking `cashDueCents` for null to
  * mean "nothing committed yet" is a different question and passes.
  */
 const OWN_RULE =
-	/\b(gt|gte|ne)\(\s*(reservation|r)\.cashDueCents\b|\$\{reservation\.cashDueCents\}\s*[<>!]/;
+	/\b(gt|gte|ne)\(\s*(reservation|r)\.cashDueCents\b|\$\{reservation\.cashDueCents\}\s*[<>!]|\.cashDueCents\s*(>|>=|!==?)\s*0\b/;
 
 const ALLOWED = new Set(['src/lib/server/reservation/payment-due.ts']);
 
@@ -27,7 +27,8 @@ describe('one rule for owing money', () => {
 		for (const own of [
 			'gt(reservation.cashDueCents, 0),',
 			'or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),',
-			'sql`${reservation.cashDueCents} > 0`'
+			'sql`${reservation.cashDueCents} > 0`',
+			'(res.cashDueCents == null || res.cashDueCents > 0)'
 		])
 			expect(decidesOwing(own), own).toBe(true);
 		for (const other of [

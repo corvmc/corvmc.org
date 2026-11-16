@@ -102,7 +102,9 @@ beforeEach(() => {
 describe('when a booking can be paid at the reader', () => {
 	const base = {
 		status: 'confirmed' as const,
+		bookerType: 'user',
 		paidAt: null,
+		refundedAt: null,
 		cashDueCents: null,
 		startsAt: new Date(NOW.getTime() + HOUR),
 		endsAt: new Date(NOW.getTime() + 3 * HOUR)
@@ -118,11 +120,12 @@ describe('when a booking can be paid at the reader', () => {
 		).toBe(false);
 	});
 
-	it('needs something owed: not paid, not credit-settled, not cancelled', () => {
+	it('needs something owed: not paid, credit-settled, cancelled or refunded', () => {
 		expect(readerPayable({ ...base, status: 'confirmed', cashDueCents: 700 }, NOW)).toBe(true);
 		expect(readerPayable({ ...base, status: 'confirmed', cashDueCents: 0 }, NOW)).toBe(false);
 		expect(readerPayable({ ...base, paidAt: NOW }, NOW)).toBe(false);
 		expect(readerPayable({ ...base, status: 'cancelled' }, NOW)).toBe(false);
+		expect(readerPayable({ ...base, refundedAt: NOW }, NOW)).toBe(false);
 	});
 });
 
