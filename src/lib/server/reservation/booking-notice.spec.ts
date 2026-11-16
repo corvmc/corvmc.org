@@ -138,6 +138,24 @@ describe('new-member notice', () => {
 		expect(result.code).toBe('NEW_MEMBER_NOTICE');
 	});
 
+	// #3028: a bandmate's clearance clears the member while both are active in the band.
+	it('lets a member cleared through a bandmate book 2 hours out', async () => {
+		sqlite.exec(
+			`delete from group_member; delete from "group";
+			 insert into user (id, name, email) values ('u-mate', 'Mate', 'mate@x.test');
+			 insert into "group" (id, kind, name, slug) values ('g-1', 'band', 'Static', 'static');
+			 insert into group_member (id, group_id, user_id, role, status) values
+				('gm-1', 'g-1', 'u-new', 'member', 'active'), ('gm-2', 'g-1', 'u-mate', 'owner', 'active');`
+		);
+		await waiveOrientation('u-mate', { waivedByUserId: 'u-staff', reason: 'Knows the room' });
+
+		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
+		expect(notice).toEqual({ minutes: 60, newMember: false, tourMinutes: 0 });
+		const row = await create(own('u-new', TWO_HOURS));
+		expect(row.status).toBe('confirmed');
+		expect(grants('u-new')).toEqual([]);
+	});
+
 	it('lets staff book an uncleared member 1 hour out', async () => {
 		const row = await staffCreate({ ...own('u-new', ONE_HOUR), staffUserId: 'u-staff' });
 		expect(row.status).toBe('confirmed');

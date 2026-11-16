@@ -132,7 +132,8 @@
 	outside the profile <Form>: inside it their triggers submit the account.
 -->
 {#if certifications.current}
-	{@const held = certifications.current}
+	{@const held = certifications.current.records}
+	{@const through = certifications.current.clearedThrough}
 	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications_title()}>
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
@@ -141,6 +142,16 @@
 			</div>
 		{/snippet}
 
+		{#if through}
+			<div class="mb-3" data-testid="cleared-through-band">
+				<div class="font-medium">
+					{m.staff_clearance_cleared_through_text({ band: through.groupName })}
+				</div>
+				<div class="text-subtle">
+					{m.staff_clearance_bandmate_holds_text({ name: through.bandmateName })}
+				</div>
+			</div>
+		{/if}
 		{#if held.length === 0}
 			<EmptyState
 				title={m.staff_members_id_panels_volunteer_panel_nothing_record_title()}

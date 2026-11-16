@@ -75,6 +75,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'reservation.comped': ['Reservations', 'Reservation comped'],
 	'reservation.refunded': ['Reservations', 'Reservation refunded'],
 	'reservation.payment_reminder': ['Reservations', 'Payment reminder'],
+	'reservation.cleared_through_band': ['Reservations', 'Cleared through a band'],
 	'event.visibility_changed': ['Events and shows', 'Event visibility changed'],
 	'event.published_over_warnings': ['Events and shows', 'Event published over warnings'],
 	'event.emailed_beyond_visibility': ['Events and shows', 'Event emailed past its visibility'],
@@ -309,6 +310,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			if (d.outcome === 'sent') return `${head}: sent`;
 			const why = d.reason ? ` (${PAYMENT_REMINDER_REASONS[d.reason] ?? d.reason})` : '';
 			return `${head}: ${d.outcome}${why}`;
+		}
+		case 'reservation.cleared_through_band': {
+			const d = entry.details;
+			return `Booked ${slot(d)}, cleared through ${d.groupName}: ${d.bandmateName} holds the clearance`;
 		}
 		case 'clearance.granted': {
 			const d = entry.details;

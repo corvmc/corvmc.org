@@ -32,7 +32,7 @@ import {
 	listFirstVisitsBetween,
 	listUnclaimedOrientationsBetween
 } from '#lib/server/volunteer/orientation-reminders.js';
-import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
+import { clearedForPracticeSpaceSql } from '#lib/server/volunteer/practice-space-clearance.js';
 import {
 	getFeeGateCutoff,
 	listFeesEndedBetween,
@@ -270,7 +270,7 @@ async function reservationsStartingWithin(ms: number, now: Date) {
 				lt(reservation.startsAt, new Date(now.getTime() + ms)),
 				or(
 					ne(reservation.bookerType, CLEARANCE_BOOKER),
-					holdsPracticeSpaceClearanceSql(reservation.createdByUserId, now)
+					clearedForPracticeSpaceSql(reservation.createdByUserId, now)
 				),
 				sql`not exists (select 1 from ${reminderSent} where ${reminderSent.reminderKey} = ${FIRST_VISIT} and ${reminderSent.subjectId} = ${reservation.id})`
 			)

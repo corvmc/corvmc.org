@@ -7,7 +7,7 @@ import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
-import { holdsPracticeSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
+import { practiceSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
 import { config as siteConfig } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ type SlotConfig = Awaited<ReturnType<typeof getReservationConfig>>;
 
 export interface BookingNotice {
 	minutes: number;
-	/** The new-member minimum applies: no current Practice space clearance. */
+	/** The new-member minimum applies: not cleared for the room, own or through a band. */
 	newMember: boolean;
 	/** Minutes held before the requested start for the tour; 0 when none. */
 	tourMinutes: number;
@@ -95,7 +95,7 @@ export async function noticeFor(
 	who: { userId: string | null; bookerType?: BookerType }
 ): Promise<BookingNotice> {
 	const own = (who.bookerType ?? CLEARANCE_BOOKER) === CLEARANCE_BOOKER && who.userId !== null;
-	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
+	if (own && !(await practiceSpaceClearance(who.userId!))) {
 		const tourMinutes = await orientationTour();
 		if (tourMinutes !== null) {
 			return { minutes: config.newMemberMinAdvanceMinutes, newMember: true, tourMinutes };

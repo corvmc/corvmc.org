@@ -11,6 +11,7 @@ export const auditActions = [
 	'reservation.comped',
 	'reservation.refunded',
 	'reservation.payment_reminder',
+	'reservation.cleared_through_band',
 	'clearance.granted',
 	'clearance.revoked',
 	'orientation.waived',
@@ -161,6 +162,16 @@ export interface AuditDetailsByAction {
 		outcome: 'sent' | 'skipped' | 'failed';
 		reason: 'undeliverable' | null;
 		outboxId: string | null;
+	};
+	/**
+	 * The subject is the member who booked with no clearance of their own; the
+	 * band and bandmate are what cleared the booking (#3028).
+	 */
+	'reservation.cleared_through_band': ReservationWhen & {
+		groupId: string;
+		groupName: string;
+		bandmateUserId: string;
+		bandmateName: string;
 	};
 	/** The subject is the member. Dates are `YYYY-MM-DD` in club time. */
 	'clearance.granted': ClearanceRef & { grantedOn: string; expiresOn: string | null };

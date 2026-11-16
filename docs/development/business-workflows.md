@@ -58,7 +58,15 @@ event bookings keep the room minimum, and `staffCreate()` checks neither. Teachi
 neither the clearance nor the tour, and raise no orientation shift (#2808): the notice, the tour,
 the orientation listener and the first-visit and orientation reminders all key on
 `CLEARANCE_BOOKER` in `config.ts`, and `clearance-booker.spec.ts` fails a clearance reader that
-names a booker type of its own. A teacher sees two strips on the reservations page, practice
+names a booker type of its own. **Cleared through a bandmate (#3028).** Whether a member is
+cleared is `practiceSpaceClearance()` in `volunteer/practice-space-clearance.ts`, or its SQL form
+`clearedForPracticeSpaceSql()` for list reads: their own current clearance, or an active roster
+place in a live band (`group.kind = 'band'`, not deactivated) where another active member holds
+one. Holding the clearance is enough; the bandmate need not have booked. Every reader above goes
+through it, and `clearance-booker.spec.ts` fails one that reads the member's own row alone. The
+band path writes no `member_certification` row, so it lasts only while both roster places do. A
+booking cleared that way gets one `reservation.cleared_through_band` audit entry naming the band
+and bandmate, and the member's staff record shows "Cleared through {band}" on the Clearances card. A teacher sees two strips on the reservations page, practice
 terms and teaching terms (`getReservationPolicy('instructor')`), and teaching bookings carry a
 Teaching badge in the list. The clearance is
 granted when an orientation is completed or waived — see
@@ -1912,7 +1920,9 @@ from April's.
 > `grantPracticeSpaceClearance` in `volunteer/practice-space-clearance.ts`: an append-only
 > `member_certification` row, skipped when a current one exists, carrying the waive reason as
 > its note. Until a member holds it, their own booking needs 3 days' notice, which is the time
-> the orientation shift has to find a volunteer.
+> the orientation shift has to find a volunteer. **Since #3028** a member active in a live band
+> where another active member holds it counts as cleared too, with no row of their own (see
+> [New-member notice](#1-reservation-booking-confirmation-and-payment)).
 > **Since #2568** that booking starts `volunteer.orientationMinutes` earlier for the tour, at no
 > charge, so the shift raised at its start covers the tour without cutting into the session. The migration that added it backfilled every
 > member with a `completed` booking of their own (not a staff hold) and every completed or
@@ -1927,8 +1937,8 @@ from April's.
 >   else every holder of `volunteer.manageShifts` (#2990), in-app
 >   and email, linking to the shift (or to the short-staffed schedule for several). Keyed by
 >   shift and start, so a moved shift is owed the alert again.
-> - `first_visit` — a member's own confirmed booking starting within 24 hours while they hold
->   no Practice space clearance. It says when to arrive (the orientation shift's start), the
+> - `first_visit` — a member's own confirmed booking starting within 24 hours while they are
+>   not cleared for the room, own clearance or a bandmate's. It says when to arrive (the orientation shift's start), the
 >   address (`org.addressStreet`, `org.addressCity`), that the door code arrives separately and
 >   opens at the reservation's start, and staff's plain-text notes
 >   (`volunteer.firstVisitNotes`, Volunteering → Settings → Orientation; empty leaves them out). It replaces
@@ -1952,7 +1962,9 @@ and `'reservation.first'` is the only trigger there is.
 `reservation/reservation-service.ts` — from the service, not from the five booking remotes,
 where a sixth would be forgotten — and **after** the post-insert race re-check, so a booking
 that gets compensated away never announces itself. `orientation-listener.ts` checks the booking
-is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), then applies.
+is a member's (`bookerType === 'user'`), that they are not cleared (`practiceSpaceClearance`,
+recording a bandmate's clearance when that is what cleared it, #3028), and that it is their
+first (`priorBookingCount`), then applies.
 
 A booking that came off the **waitlist** announces itself too, from
 `announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race

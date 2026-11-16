@@ -1,6 +1,7 @@
 import { domainEvents } from '#lib/server/event-bus/index.js';
 import { CLEARANCE_BOOKER } from '#lib/config.js';
 import { priorBookingCount } from '#lib/server/reservation/reservation-service.js';
+import { practiceSpaceClearance, recordClearedThroughBand } from './practice-space-clearance';
 import {
 	cancelOrientationFor,
 	completeOrientation,
@@ -26,6 +27,11 @@ export function registerOrientationListeners(): void {
 			// first visit — the same rule `isFirstReservationSql` states, checked
 			// first because it is the cheapest and rules out most bookings.
 			if (event.bookerType !== CLEARANCE_BOOKER) return;
+
+			// A cleared member needs no tour, own clearance or a bandmate's (#3028).
+			const cleared = await practiceSpaceClearance(event.userId);
+			if (cleared?.via === 'band') await recordClearedThroughBand(event, cleared);
+			if (cleared) return;
 
 			const prior = await priorBookingCount(
 				event.userId,
