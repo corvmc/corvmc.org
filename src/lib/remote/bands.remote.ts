@@ -49,6 +49,7 @@ import {
 import { bandTiers } from '#lib/server/db/schema/band-site.js';
 import {
 	createInvite as createEmailInviteService,
+	inviteSeveral as inviteSeveralService,
 	listForGroup as listEmailInvitesForGroup,
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
@@ -589,20 +590,6 @@ export const deleteBand = form(z.object({ bandId: bandIdField }), async (data) =
 	return { success: true };
 });
 
-export const inviteMember = form(
-	z.object({
-		bandId: bandIdField,
-		userId: z.string().min(1, 'User is required'),
-		role: z.enum(['admin', 'member']),
-		position: z.string().max(100).optional().default('')
-	}),
-	async (data) => {
-		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-		const member = await invite(band.id, data.userId, data.role, data.position || null, user.id);
-		return { success: true, memberId: member.id };
-	}
-);
-
 export const removeMember = form(
 	z.object({
 		bandId: bandIdField,
@@ -731,31 +718,38 @@ export const leave = form(z.object({ bandId: bandIdField }), async (data) => {
 	return { success: true };
 });
 
-export const inviteByEmail = form(
+/** Upper bound on one batch: a band's line-up, not a mailing list. */
+const INVITE_BATCH_MAX = 20;
+
+/**
+ * Several invitations from one send, members and addresses mixed. Each goes
+ * through the single-recipient service, and each recipient's outcome comes
+ * back, so a duplicate or a fault on one does not fail the rest.
+ */
+export const inviteSeveral = form(
 	z.object({
 		bandId: bandIdField,
-		email: z.string().email('Valid email required'),
+		userIds: z.array(z.string().min(1)).max(INVITE_BATCH_MAX).default([]),
+		emails: z.array(z.string().email()).max(INVITE_BATCH_MAX).default([]),
 		role: z.enum(['admin', 'member']),
 		position: z.string().max(100).optional().default('')
 	}),
 	async (data, issue) => {
 		const { user, group: band } = await requireGroupRole({ id: data.bandId }, 'admin');
-		try {
-			const result = await createEmailInviteService(
-				data.email,
-				band.id,
-				data.role,
-				data.position || null,
-				user.id
-			);
-			return { success: true, ...result };
-		} catch (err) {
-			// Already a member / already invited is an ordinary state, not a fault.
-			// Thrown, it reached Sentry as a 500 and showed the admin only a
-			// generic toast (JAVASCRIPT-SVELTEKIT-2D).
-			if (err instanceof BandMemberExistsError) invalid(issue.email(err.message));
-			throw err;
+		if (data.userIds.length + data.emails.length === 0) {
+			invalid(issue.userIds('Add at least one person'));
 		}
+		if (data.userIds.length + data.emails.length > INVITE_BATCH_MAX) {
+			invalid(issue.userIds(`At most ${INVITE_BATCH_MAX} people at once`));
+		}
+		const outcomes = await inviteSeveralService(
+			band.id,
+			{ userIds: data.userIds, emails: data.emails },
+			data.role,
+			data.position || null,
+			user.id
+		);
+		return { outcomes };
 	}
 );
 

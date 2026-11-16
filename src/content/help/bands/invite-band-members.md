@@ -2,19 +2,25 @@
 title: Invite band members
 slug: invite-band-members
 category: bands
-summary: Add members to your band by search or by email.
+summary: Add several members to your band at once, by search or by email.
 minRole: member
 sortOrder: 4
 ---
 
 ## Inviting members
 
-From the band's **Members** page (owners and admins), you can invite people two
-ways:
+From the band's **Members** page (owners and admins), choose **Invite members**
+and add everyone you want to invite before sending:
 
-- **Existing members** — Search the directory by name and send an invitation.
-- **By email** — Invite someone who doesn't have an account yet. They'll get an
-  invite and can join after signing up with that email.
+- **Existing members** — Type a name and pick it from the list. When only one
+  member matches, pressing Enter adds them.
+- **By email** — Type the address of someone without an account and press Enter.
+  They get an invite and can join after signing up with that email.
+
+The role and position you choose apply to everyone on the list. Each person gets
+their own invitation. If one can't be sent — they are already in the band, for
+example — the others still go out, and the modal lists who was not invited and
+why.
 
 ## What happens next
 
