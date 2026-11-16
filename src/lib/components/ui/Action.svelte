@@ -38,6 +38,7 @@
 		confirm,
 		modalTitle,
 		form: formSnippet,
+		lead,
 		body,
 		trigger,
 		submitLabel,
@@ -89,6 +90,11 @@
 		confirm?: string;
 		modalTitle?: string;
 		form?: Snippet<[{ close: () => void }]>;
+		/**
+		 * Above the form and outside it, so it survives `action` changing: a
+		 * choice that picks which remote form the dialog submits goes here.
+		 */
+		lead?: Snippet;
 		body?: Snippet<[{ close: () => void; run: () => void; status: Status }]>;
 		trigger?: Snippet<[TriggerProps]>;
 		submitLabel?: string;
@@ -322,43 +328,49 @@
 					</div>
 				</div>
 			{/if}
+			{#if lead}
+				<div class="mb-4 {askingDiscard ? 'hidden' : ''}">{@render lead()}</div>
+			{/if}
 			<!-- RemoteForm actions always submit through <Form> so `run()` (callback-only)
-			     is never involved. `confirm`, when set, renders as a lead-in above the fields. -->
-			<Form
-				class="space-y-4 {askingDiscard ? 'hidden' : ''}"
-				remote={remoteAction}
-				{successToast}
-				onsuccess={handleFormSuccess}
-				onfailure={onfailure ? handleFormFailure : undefined}
-				ondirtychange={(dirty) => (formDirty = dirty)}
-			>
-				{#if confirm}
-					<p class="py-4">{confirm}</p>
-				{/if}
-				{@render formSnippet?.({ close })}
-				{#if !noFooter}
-					<!-- Enter "clicks" the first submit in the DOM, so that is the plain one;
+			     is never involved. `confirm`, when set, renders as a lead-in above the fields.
+			     Keyed: a step reads its form's fields once, so another remote needs new steps. -->
+			{#key remoteAction}
+				<Form
+					class="space-y-4 {askingDiscard ? 'hidden' : ''}"
+					remote={remoteAction}
+					{successToast}
+					onsuccess={handleFormSuccess}
+					onfailure={onfailure ? handleFormFailure : undefined}
+					ondirtychange={(dirty) => (formDirty = dirty)}
+				>
+					{#if confirm}
+						<p class="py-4">{confirm}</p>
+					{/if}
+					{@render formSnippet?.({ close })}
+					{#if !noFooter}
+						<!-- Enter "clicks" the first submit in the DOM, so that is the plain one;
 					     `order-last` puts it back on the right. -->
-					<div
-						class="flex justify-end gap-2 pt-2"
-						onclickcapture={(e) =>
-							(addAnother = !!(e.target as Element).closest('[data-add-another]'))}
-					>
-						<div class="order-last">
-							<SubmitButton
-								label={submitLabel ?? label}
-								variant={submitVariant ?? variant}
-								disabled={!canSubmit}
-							/>
+						<div
+							class="flex justify-end gap-2 pt-2"
+							onclickcapture={(e) =>
+								(addAnother = !!(e.target as Element).closest('[data-add-another]'))}
+						>
+							<div class="order-last">
+								<SubmitButton
+									label={submitLabel ?? label}
+									variant={submitVariant ?? variant}
+									disabled={!canSubmit}
+								/>
+							</div>
+							{#if addAnotherLabel}
+								<Button type="submit" variant="ghost" disabled={!canSubmit} data-add-another>
+									{addAnotherLabel}
+								</Button>
+							{/if}
 						</div>
-						{#if addAnotherLabel}
-							<Button type="submit" variant="ghost" disabled={!canSubmit} data-add-another>
-								{addAnotherLabel}
-							</Button>
-						{/if}
-					</div>
-				{/if}
-			</Form>
+					{/if}
+				</Form>
+			{/key}
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">

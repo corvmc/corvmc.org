@@ -560,6 +560,10 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `modalTitle` — title for the modal (callback modal and form modal modes)
 - `body` — snippet rendered inside the modal, as-is. **Callback-modal mode only** — it takes precedence over the RemoteForm branch, so passing it alongside a RemoteForm action silently breaks the form.
 - `form` — snippet rendered inside the `<Form>` wrapper in form-modal mode. Receives `{ close }`.
+  The `<Form>` is keyed on `action`, so a different remote form remounts its steps and fields.
+- `lead` — snippet above the `<Form>` and outside it, in form-modal mode. For a choice that picks
+  which remote form the dialog submits, such as **For** on `BookingDialog`: outside the form it
+  posts nothing, and kit refuses a name the remote did not hand out.
 - `submitLabel` — override the submit button label in the modal (defaults to `label`)
 - `submitVariant` — colour of the modal's submit button (defaults to the trigger's `variant`)
 - `canSubmit` — boolean that gates the submit button in callback modal mode (default `true`). Ignored in form-modal mode where Zod handles validation.

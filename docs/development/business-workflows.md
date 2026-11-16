@@ -38,6 +38,28 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 3. Announces it: `reservation.created`, then `reservation.confirmed` from
    `announceConfirmed()`. That is the only announcement the booking gets.
 
+**Who the booking is for (#3029).** One booking form, `BookingDialog.svelte` in
+`src/lib/components/reservations/booking/`, serves `/member/reservations` and
+`/band/[slug]/reservations`. Its **For** field lists Me, each band the member may book for
+(`listBookableBands()` in `reservation/bookable-bands.ts`: a live band with an active roster row,
+the rows `requireGroupRole(…, 'member')` admits) and Teaching for an active instructor. It shows
+only when there is more than one choice; the band page opens it on that band. The choice picks
+the remote, and each keeps its own guard, terms and settlement:
+
+- **Me:** `bookAndPayReservation`, `bookerType: 'user'`, member terms; a recurring series needs
+  the member's sustaining membership.
+- **A band:** `bookBandReservation`, `bookerType: 'group'`, guarded by
+  `requireGroupRole({ slug }, 'member')`. Book leaves it owed, payable by any member of the band;
+  Pay ahead sets `payNow` and charges the booker after their own free hours (#2095). A recurring
+  series needs at least one active bandmate with a sustaining membership.
+- **Teaching:** `bookInstructorReservation`, `bookerType: 'instructor'`, teaching terms (see
+  [Teaching bookings](#teaching-bookings)); no payment step for now (#3025).
+
+Clubs and committees are not offered: their bookings are program holds, free room time that
+`notAProgramHold()` keeps off a member's own list. Changing For restarts the date step, since
+notice, duration floor, pricing and the recurring option follow the booker. A band booking
+appears on the booker's own list with the band's name (`groupName` on `getReservations`).
+
 **Booking rules.** The room's facts are `ReservationConfig` in
 `src/lib/server/reservation/config.ts`, each a `reservation.*` site-config key with a default:
 30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
@@ -288,7 +310,8 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
 - **Notices:** an application emails every holder of `instructor.review`. Every staff transition
   tells the member: approve, send back and grant through `instructor.application_reviewed`, pause
   and retire through `instructor.status_ended`. The staff note is never sent to the teacher.
-- **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
+- **Booking:** Teaching under **For** on the booking form (#3029) submits
+  `bookInstructorReservation` in `reservations.remote.ts`, which calls
   `requireInstructor()`, which matches `status = 'active'` only, and books with
   `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
   `reservation/config.ts` gives that booker type `reservation.teaching*` terms: $5/hr (the rate a
