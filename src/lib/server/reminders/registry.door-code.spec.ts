@@ -53,12 +53,18 @@ beforeEach(() => {
 	owing.ids = new Set();
 });
 
-const synced = (id: string, userId: string) => ({
+const synced = (id: string, userId: string, extra: Record<string, unknown> = {}) => ({
 	id,
 	lockCode: '482913',
 	startsAt: new Date('2026-06-15T18:00:00Z'),
 	endsAt: new Date('2026-06-15T20:00:00Z'),
+	status: 'confirmed',
+	bookerType: 'user',
+	paidAt: null,
+	refundedAt: null,
+	cashDueCents: null,
 	userId,
+	...extra,
 	userName: 'Robin',
 	userEmail: `${userId}@example.com`
 });
@@ -120,6 +126,15 @@ describe('door_code_ready', () => {
 			'res-owing',
 			'res-clear'
 		]);
+	});
+
+	it('is withheld from unpaid teaching time, and owed once it is paid (#3025)', async () => {
+		const teaching = { bookerType: 'instructor' };
+		rows = [synced('res-teach', 'u-teach', teaching), synced('res-member', 'u-member')];
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-member']);
+
+		rows = [synced('res-teach', 'u-teach', { ...teaching, paidAt: NOW })];
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-teach']);
 	});
 
 	it('stays owed for a booking starting within a day, however long ago the code synced', async () => {

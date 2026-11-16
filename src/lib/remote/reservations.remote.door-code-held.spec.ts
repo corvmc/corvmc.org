@@ -219,3 +219,44 @@ describe('staff detail', () => {
 		expect(detail.reservation.lockCode).toBe('482913');
 	});
 });
+
+describe('teaching time (#3025)', () => {
+	const teaching = { bookerType: 'instructor' as const, bookerId: 'instr-1' };
+	beforeEach(async () => {
+		await testDb
+			.insert(reservation)
+			.values(bookings('cleared', teaching).map((r) => ({ ...r, id: `teach-${r.id}` })));
+		as('cleared');
+	});
+
+	it('holds both codes while unpaid, and records no reveal', async () => {
+		const synced = await remote.getReservationDetail('teach-cleared-synced');
+		expect(synced.reservation.lockCode).toBeNull();
+		expect(synced.reservation.codeWithheld).toBe(true);
+		expect(synced.paymentDueOn).toBeNull();
+		expect((await remote.getReservationDetail('teach-cleared-live')).fallbackCode).toBeNull();
+		expect(revealed('teach-cleared-live')).toBeNull();
+
+		const rows = await remote.getReservations({ includeTerminal: true });
+		const row = (id: string) => rows.find((r: { id: string }) => r.id === id);
+		expect(row('teach-cleared-synced').lockCode).toBeNull();
+		// The member's own booking beside it is unaffected.
+		expect(row('cleared-synced').lockCode).toBe('482913');
+	});
+
+	it('releases both once paid', async () => {
+		sqlite.exec(`update reservation set paid_at = 1, cash_due_cents = 0 where id like 'teach-%'`);
+		const synced = await remote.getReservationDetail('teach-cleared-synced');
+		expect(synced.reservation.lockCode).toBe('482913');
+		expect((await remote.getReservationDetail('teach-cleared-live')).fallbackCode).toBe(
+			BREAK_GLASS
+		);
+	});
+
+	it('keeps the code for staff', async () => {
+		as('staff');
+		const rows = await remote.getReservations({ forUser: 'cleared', includeTerminal: true });
+		const synced = rows.find((r: { id: string }) => r.id === 'teach-cleared-synced');
+		expect(synced.lockCode).toBe('482913');
+	});
+});

@@ -5,15 +5,18 @@
 <script lang="ts">
 	import * as Form from '#lib/components/ui/Form/index.js';
 	import type { RemoteForm } from '$app/server';
+	import type { BookerType } from '#lib/config.js';
 	import ConfirmStep from './ConfirmStep.svelte';
 
 	let {
 		remote,
-		values
+		values,
+		bookerType
 	}: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a mocked remote form
 		remote: RemoteForm<any, any>;
 		values: Record<string, string>;
+		bookerType?: BookerType;
 	} = $props();
 </script>
 
@@ -24,7 +27,7 @@
 		{/each}
 		<Form.SubmitButton />
 	</Form.Step>
-	<ConfirmStep />
+	<ConfirmStep {bookerType} />
 	<!-- The payment step's place: with none, Continue turns into a submit mid-click. -->
 	<Form.Step><span></span></Form.Step>
 </Form.Root>

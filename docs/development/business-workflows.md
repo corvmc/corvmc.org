@@ -53,7 +53,8 @@ the remote, and each keeps its own guard, terms and settlement:
   Pay ahead sets `payNow` and charges the booker after their own free hours (#2095). A recurring
   series needs at least one active bandmate with a sustaining membership.
 - **Teaching:** `bookInstructorReservation`, `bookerType: 'instructor'`, teaching terms (see
-  [Teaching bookings](#teaching-bookings)); no payment step for now (#3025).
+  [Teaching bookings](#teaching-bookings)). Book leaves it owed; Pay ahead sets `payNow` and
+  charges the teacher at the teaching rate after their own free hours (#3025).
 
 Clubs and committees are not offered: their bookings are program holds, free room time that
 `notAProgramHold()` keeps off a member's own list. Changing For restarts the date step, since
@@ -320,6 +321,14 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
   (`updateTeachingTerms` in `settings.remote.ts`); the recurring window must exceed the member
   one-off window, checked from both forms. Credits apply. A teaching series needs no sustaining membership, and `cancelAllForUser()` cancels only
   `bookerType: 'user'` series when a subscription ends.
+- **Paying and the door code (#3025):** paying ahead is optional, as for a band. Book leaves the
+  booking owed and the teacher pays it later from their reservations list (`payForReservation` /
+  `payReservation`; the teacher is the row's `createdByUserId`). Until it is paid, or covered by
+  free hours, it gets no door code: `doorCodeWithheld()` in `reservation/door-code-gate.ts`
+  holds the code on the member list and detail page, the break-glass code, and the
+  `door_code_ready` notice, which carries no sent-mark, so the first reminder drain after payment
+  sends it. The lock is still provisioned; staff surfaces still show the code. Member and band
+  bookings are unaffected.
 - **Listing:** `/directory/instructors` (public) and `/member/directory/instructors` list active
   instructors who are accepting students and have not hidden their directory listing, through
   `instructor-directory-service.ts`. Approval creates no directory entry, so a teacher who never

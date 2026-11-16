@@ -147,9 +147,13 @@
 				/>
 			{:else if booker.kind === 'instructor'}
 				<!-- Teaching has no sustaining gate, so the recurring option is always
-				     offered. No payment step: `bookInstructorReservation` takes none. -->
+				     offered. Pay ahead is optional; unpaid teaching gets no door code. -->
 				<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
-				<ConfirmStep bookerType="instructor" payAhead={false} />
+				<ConfirmStep bookerType="instructor" />
+				<PaymentStep
+					fields={{ coverFees: bookInstructorReservation.fields.coverFees }}
+					submit={bookInstructorReservation.fields.payNow.as('submit', 'on')}
+				/>
 			{:else}
 				<DateTimeStep isSustaining={booker.isSustaining} {needsPhone} {reloadToken} />
 				<ConfirmStep submitLabel={m.reservations_booking_booking_dialog_submit_label()} />

@@ -745,6 +745,7 @@
 	"member_reservations_id_door_code_title": "Door code",
 	"member_reservations_id_door_code_issued_but_door_text": "Your door code is issued but the door hasn't confirmed it yet. It should be ready before your reservation — check back here, and get in touch if it still isn't showing.",
 	"member_reservations_id_door_code_will_appear_here_text": "Your door code will appear here before your reservation.",
+	"member_reservations_id_door_code_after_payment_body": "Your door code shows here once this booking is paid.",
 	"member_reservations_id_due_text": "${formatDollars} due",
 	"member_reservations_id_due_at_door_text": "${formatDollars} due at door",
 	"member_reservations_id_enter_code_door_keypad_get_text": "Enter this code on the door keypad to get in. It works for the length of your reservation.",

@@ -74,7 +74,7 @@ vi.mock('#lib/server/group/group-context.js', () => ({
 
 vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
-	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 })),
+	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500, teachingRateCents: 500 })),
 	getBookingTerms: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
@@ -148,6 +148,10 @@ vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	ReservationValidationError: class extends Error {}
 }));
 
+vi.mock('#lib/server/instructor/instructor-context.js', () => ({
+	requireInstructor: vi.fn(async (userId: string) => ({ id: 'instr-1', userId, status: 'active' }))
+}));
+
 vi.mock('#lib/server/user/user-service.js', () => ({
 	ensureContactPhone: vi.fn(async () => true)
 }));
@@ -178,7 +182,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { payReservation, getReservationPayment, bookBandReservation } =
+const { payReservation, getReservationPayment, bookBandReservation, bookInstructorReservation } =
 	(await import('#lib/remote/reservations.remote.js')) as any;
 
 async function settle(p: Promise<unknown>): Promise<unknown> {
@@ -278,6 +282,35 @@ describe('bookBandReservation with a pay step', () => {
 	it('takes no payment when booked without the pay step', async () => {
 		currentUser = booker;
 		const r = await bookBandReservation({ ...booking, payNow: undefined });
+		expect(r).toMatchObject({ reservationId: 'res-1', waitlisted: false });
+		expect(commitReservationCredits).not.toHaveBeenCalled();
+		expect(checkout).not.toHaveBeenCalled();
+	});
+});
+
+describe('bookInstructorReservation with a pay step (#3025)', () => {
+	const booking = {
+		date: dateStr,
+		startTime: '09:00',
+		endTime: '11:00',
+		coverFees: false,
+		payNow: 'on'
+	};
+
+	it('charges the teaching rate after the instructor’s own free hours', async () => {
+		currentUser = booker;
+		const r = await bookInstructorReservation(booking);
+		expect(r).toMatchObject({ reservationId: 'res-1', redirectUrl: '/checkout/cs_test_session' });
+		expect(commitReservationCredits).toHaveBeenCalledWith(
+			expect.objectContaining({ userId: booker.id, hourlyRateCents: 500 })
+		);
+		// Two hours at $5, one covered by the booker's free hours.
+		expect((checkout.mock.calls[0][0] as any).lineItems[0].price_data.unit_amount).toBe(500);
+	});
+
+	it('takes no payment when booked without the pay step', async () => {
+		currentUser = booker;
+		const r = await bookInstructorReservation({ ...booking, payNow: undefined });
 		expect(r).toMatchObject({ reservationId: 'res-1', waitlisted: false });
 		expect(commitReservationCredits).not.toHaveBeenCalled();
 		expect(checkout).not.toHaveBeenCalled();
