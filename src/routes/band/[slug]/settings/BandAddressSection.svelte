@@ -14,6 +14,7 @@
 	import { changeBandAddress } from '#lib/remote/band-address.remote.js';
 	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 	import { isReservedSlug } from '#lib/reserved-slugs.js';
+	import { generateSlug } from '#lib/utils/slug.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
@@ -26,16 +27,8 @@
 	let showChange = $state(false);
 	let draft = $state('');
 
-	// A local mirror of `normalizeBandSlug` for the preview only — the server's
-	// copy stays authoritative. The service module cannot be imported here; it
-	// pulls in the database.
-	const normalized = $derived(
-		draft
-			.toLowerCase()
-			.replace(/[^a-z0-9-]+/g, '')
-			.replace(/-{2,}/g, '-')
-			.replace(/^-|-$/g, '')
-	);
+	// The rule `normalizeBandSlug` applies on the server, for the preview only.
+	const normalized = $derived(generateSlug(draft));
 	const reserved = $derived(normalized.length > 0 && isReservedSlug(normalized));
 </script>
 

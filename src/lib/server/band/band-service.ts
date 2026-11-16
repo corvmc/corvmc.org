@@ -74,6 +74,8 @@ import {
 export interface CreateBandData {
 	name: string;
 	bio?: string;
+	/** An address already checked by `claimableBandSlug`. Omitted, it is derived from the name. */
+	slug?: string;
 	/**
 	 * Staff's to set, and only at creation from `/staff/clubs`. Omitted — which
 	 * is every band, since a band is self-created — leaves the column defaults:
@@ -260,8 +262,9 @@ const ownerMember = alias(groupMember, 'owner_member');
  */
 export async function create(ownerId: string | null, data: CreateBandData) {
 	const kind = data.kind ?? 'band';
-	const baseSlug = generateSlug(data.name);
-	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
+	const slug =
+		data.slug ??
+		(await ensureUniqueSlug(generateSlug(data.name), group, group.slug, undefined, isReservedSlug));
 
 	const bandId = crypto.randomUUID();
 	const firstMemberId = crypto.randomUUID();
