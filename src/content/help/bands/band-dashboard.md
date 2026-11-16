@@ -14,8 +14,8 @@ can do here depends on your role in the band.
 
 ## On the page
 
-- **Overview** — Member count, your role, and the band's upcoming sessions.
-- **Upcoming sessions** — The band's next reservations and their status.
+- **Overview** — Member count, your role, and the band's upcoming reservations.
+- **Upcoming reservations** — The next ones on the calendar and their status.
 - **Quick links** — Owners and admins get shortcuts to manage members and edit the
   profile.
 

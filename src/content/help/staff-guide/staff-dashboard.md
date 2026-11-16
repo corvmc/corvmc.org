@@ -29,7 +29,7 @@ coordinator's permission.
 ## Waiting for review
 
 **Waiting for review** lists everything that needs a staff decision, oldest first: suggestions,
-event listings, classified posts, resource tips, content reports and appeals, reported problems,
+events, classified posts, resource tips, content reports and appeals, reported problems,
 group and vendor applications, volunteer hours, shift claims and volunteers under 18. You see only
 the kinds your role can decide. The buttons above the list narrow it to one kind and show how many
 of each are waiting.
@@ -37,7 +37,7 @@ of each are waiting.
 Some rows can be decided in place:
 
 - **Approve** decides the row in one click.
-- **Decline** asks for a reason first when the member is told why, as for listings, posts, tips
+- **Decline** asks for a reason first when the member is told why, as for events, posts, tips
   and hours.
 
 A decided row leaves the list, and the Dashboard badge counts one fewer. Content reports, appeals,

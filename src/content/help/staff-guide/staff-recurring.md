@@ -21,7 +21,7 @@ created, and its status.
 ## Actions
 
 - **Cancel a series** — Stop future occurrences from being generated. Individual
-  sessions already booked are handled like normal
+  reservations already booked are handled like normal
   [reservations](/member/help/staff-managing-reservations).
 
 ## Good to know

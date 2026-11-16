@@ -28,7 +28,7 @@ events.
 
 Everything lives in the sidebar of your member area:
 
-- **Dashboard** — your home base, with this week's sessions and quick links.
+- **Dashboard** — your home base, with this week's reservations and quick links.
 - **Reservations** — book and manage practice time.
 - **Events** — upcoming shows and your tickets.
 - **Directory** — find other members and bands.

@@ -20,7 +20,7 @@ waiting on a person, and a count you cannot see has nothing in it. Four narrow t
   row opens the shift, which shows who said they would help with that role, when they said
   they were free, and whether their clearances cover _that shift's date_ — plus a search box
   for anybody else.
-- **Unscheduled Work Orders** — work with no time yet. **Schedule** on the row gives it a
+- **Unscheduled tasks** — work with no time yet. **Schedule** on the row gives it a
   window; the tick closes it as done.
 - **Unverified Repairs** — finished repairs whose equipment reports are still open.
   **Verify** closes them and tells each reporter.

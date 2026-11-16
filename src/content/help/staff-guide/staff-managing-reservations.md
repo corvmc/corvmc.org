@@ -25,16 +25,16 @@ view.
 
 ## Payment due
 
-**Payment due** lists sessions that ended with money still owed, plus upcoming confirmed
+**Payment due** lists reservations that ended with money still owed, plus upcoming confirmed
 bookings not yet paid. Choosing it sets the date to Any date. A red dot on the Status
-filter means at least one ended session still owes money.
+filter means at least one ended reservation still owes money.
 
-A session that ended owing money shows **Cash received** and **No-show** on its row.
+A reservation that ended owing money shows **Cash received** and **No-show** on its row.
 
 ## Actions
 
 - **Confirm**: approve a waitlisted reservation.
-- **Complete**: mark a session done after it happens.
+- **Complete**: mark a reservation done after it happens.
 - **No-show**: flag when the member did not arrive.
 - **Cancel**: cancel with an optional reason.
 

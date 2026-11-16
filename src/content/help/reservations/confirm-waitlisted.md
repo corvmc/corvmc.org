@@ -2,7 +2,7 @@
 title: Confirm a waitlisted reservation
 slug: confirm-waitlisted
 category: reservations
-summary: Lock in a session when a waitlisted slot opens up.
+summary: Lock in a reservation when a waitlisted slot opens up.
 minRole: member
 sortOrder: 3
 ---

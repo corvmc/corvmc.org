@@ -2,17 +2,17 @@
 title: Pay for a reservation
 slug: pay-for-reservation
 category: reservations
-summary: How to pay for a booked session and what payment options exist.
+summary: How to pay for a reservation and what payment options exist.
 minRole: member
 sortOrder: 4
 ---
 
-## Paying for a session
+## Paying for a reservation
 
 When a reservation has a balance due, its card shows the amount and a way to pay.
 Open the reservation and choose to pay.
 
-1. From **Reservations**, open the session with a balance.
+1. From **Reservations**, open the reservation with a balance.
 2. Review the amount and hourly rate.
 3. Complete payment by card through the secure checkout.
 
@@ -32,7 +32,7 @@ current amount due.
 ### Paying at the card reader
 
 When the space has a card reader by the practice room door, you can pay for your
-session there yourself, from two hours before it starts until it ends.
+reservation there yourself, from two hours before it starts until it ends.
 
 1. Open the reservation on your phone. The sticker on the reader links to
    **Reservations**.

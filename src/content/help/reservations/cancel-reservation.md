@@ -2,7 +2,7 @@
 title: Cancel or change a reservation
 slug: cancel-reservation
 category: reservations
-summary: How to cancel a session and what the cancellation policy is.
+summary: How to cancel a reservation and what the cancellation policy is.
 minRole: member
 sortOrder: 6
 ---
@@ -10,7 +10,7 @@ sortOrder: 6
 ## Cancelling
 
 1. Open **Reservations** from the sidebar.
-2. Find the upcoming session and open it.
+2. Find the upcoming reservation and open it.
 3. Choose to cancel and confirm.
 
 ## Cancellation policy
@@ -20,7 +20,7 @@ cancellations may incur a fee, and no-shows may be charged in full.
 
 ## Changing a booking
 
-To move a session, cancel the existing one and
+To move a reservation, cancel the existing one and
 [book the new time](/member/help/booking-a-session). If you booked a
 [recurring series](/member/help/recurring-reservations), you can cancel a single
 occurrence without ending the whole series.

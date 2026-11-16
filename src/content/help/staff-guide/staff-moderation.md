@@ -10,8 +10,8 @@ sortOrder: 18
 
 ## Two queues under Moderation
 
-**Content Flags** is reports members have filed — on a profile, a band, an event
-listing, a suggestion, or a conversation. **Suggestions** is the member idea
+**Content Flags** is reports members have filed — on a profile, a band, an event,
+a suggestion, or a conversation. **Suggestions** is the member idea
 board and its review work. Both carry a count in the sidebar.
 
 ## The flag queue
@@ -34,8 +34,8 @@ Two outcomes:
 Leave a note either way. It is what the next staffer reads when the same name
 comes up again.
 
-For an event listing, upholding offers to **unpublish** it in the same step. Do
-that rather than deleting: an unpublished listing is editable, so the member can
+For an event, upholding offers to **unpublish** it in the same step. Do
+that rather than deleting: an unpublished event is editable, so the member can
 fix it and put it back, and the record of what happened survives.
 
 ## Deciding what an upheld report costs
@@ -46,16 +46,16 @@ Taking the post down does not have to mean restricting the member. A first
 offense that was plainly a misunderstanding is a takedown and nothing else.
 
 When you do restrict someone, it is **scoped to the area it happened in** —
-event listings, suggestions, or messaging. An upheld report about a gig listing
-puts their listings through review; it does not touch their suggestions and it
+events, suggestions, or messaging. An upheld report about an event
+puts their events through review; it does not touch their suggestions and it
 does not touch their messages. Resist the urge to restrict everything: the scope
 is the whole reason there is one table and not one flag on the user.
 
-| Scope              | Restricted                                  | Off entirely  |
-| ------------------ | ------------------------------------------- | ------------- |
-| **Event listings** | Listings go to review before publishing     | Not available |
-| **Suggestions**    | Posts go to review before appearing         | Not available |
-| **Messaging**      | Reply-only — cannot start new conversations | Available     |
+| Scope           | Restricted                                  | Off entirely  |
+| --------------- | ------------------------------------------- | ------------- |
+| **Events**      | Events go to review before publishing       | Not available |
+| **Suggestions** | Posts go to review before appearing         | Not available |
+| **Messaging**   | Reply-only — cannot start new conversations | Available     |
 
 Standing lives on the member's record — **Members → the member → Moderation** —
 where you can also see every report for and against them. Restore from the same

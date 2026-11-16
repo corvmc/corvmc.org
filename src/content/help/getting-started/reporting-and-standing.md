@@ -10,7 +10,7 @@ sortOrder: 7
 ## Reporting
 
 Most things members write are reportable from the thing itself — a member or
-band profile, an event listing on the gig guide, a suggestion, or a message
+band profile, an event on the gig guide, a suggestion, or a message
 someone sent you. Look for the report action on the page.
 
 Tell us what is wrong rather than that something is wrong. "The date is wrong"
@@ -31,22 +31,22 @@ notification service.
 
 Two separate things can happen, and they are decided separately.
 
-**The post.** It may come down or be turned down. For an event listing that is
-not the end of it — a turned-down listing is editable and you can put it back up
+**The post.** It may come down or be declined. For an event that is
+not the end of it — a declined event is editable and you can put it back up
 once it is fixed.
 
 **Your standing.** Staff may put your future posts through review first. This is
-scoped to where it happened: a report upheld about a gig listing affects your
-gig listings. It does not touch your suggestions, and it does not touch your
+scoped to where it happened: a report upheld about an event affects your
+events. It does not touch your suggestions, and it does not touch your
 messages. Being restricted in one place is not being restricted everywhere.
 
 What review looks like depends on the area:
 
-| Area               | Restricted means                                                  |
-| ------------------ | ----------------------------------------------------------------- |
-| **Event listings** | Your listings are checked before they go on the calendar          |
-| **Suggestions**    | Your suggestions are checked before they appear on the board      |
-| **Messages**       | You can reply to conversations you are in, but not start new ones |
+| Area            | Restricted means                                                  |
+| --------------- | ----------------------------------------------------------------- |
+| **Events**      | Your events are checked before they go on the calendar            |
+| **Suggestions** | Your suggestions are checked before they appear on the board      |
+| **Messages**    | You can reply to conversations you are in, but not start new ones |
 
 Messaging is the one that can also be switched off entirely.
 
