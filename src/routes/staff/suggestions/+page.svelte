@@ -185,7 +185,8 @@
 	</DataList>
 
 	{#if tab === 'review'}
-		{#await pendingEditsPromise then pendingEdits}
+		<svelte:boundary>
+			{@const pendingEdits = await pendingEditsPromise}
 			{#if pendingEdits.length > 0}
 				<h2 class="text-muted font-medium">{m.staff_suggestions_edits_waiting_approval_title()}</h2>
 				<!-- These sit apart from the two lists above: the suggestion itself is
@@ -215,9 +216,10 @@
 					{/each}
 				</Table>
 			{/if}
-		{:catch}
-			<!-- DataList takes this rejection to the boundary. -->
-		{/await}
+			{#snippet failed()}
+				<!-- DataList takes this rejection to the boundary. -->
+			{/snippet}
+		</svelte:boundary>
 	{/if}
 
 	{#if tab === 'review'}

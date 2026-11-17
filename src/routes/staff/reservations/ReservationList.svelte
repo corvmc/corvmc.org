@@ -374,7 +374,8 @@
 								</td>
 
 								<td class="col-support cell-num">
-									{#await hourlyRates then rates}
+									<svelte:boundary>
+										{@const rates = await hourlyRates}
 										{#if isEventHold(r.bookerType)}
 											<span class="opacity-40">—</span>
 										{:else}
@@ -390,9 +391,10 @@
 												)}
 											</span>
 										{/if}
-									{:catch}
-										<!-- DataList takes this rejection to the boundary. -->
-									{/await}
+										{#snippet failed()}
+											<!-- DataList takes this rejection to the boundary. -->
+										{/snippet}
+									</svelte:boundary>
 								</td>
 
 								<td class="col-support w-px">

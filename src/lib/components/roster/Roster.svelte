@@ -112,15 +112,17 @@
 
 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
 	<div class="text-subtle text-sm">
-		{#await result then { pagination }}
+		<svelte:boundary>
+			{@const { pagination } = await result}
 			{#if summary}
 				{@render summary(pagination.total)}
 			{:else}
 				{pagination.total}
 			{/if}
-		{:catch}
-			<!-- DataList takes this rejection to the boundary. -->
-		{/await}
+			{#snippet failed()}
+				<!-- DataList takes this rejection to the boundary. -->
+			{/snippet}
+		</svelte:boundary>
 	</div>
 	<div class="flex flex-wrap items-center gap-1">
 		{@render bulk?.()}
