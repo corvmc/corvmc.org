@@ -16,7 +16,12 @@ import {
 	formatSlotTime,
 	formatTime
 } from '#lib/utils/format.js';
-import { LOCK_GRACE_MINUTES, doorCodeWindow } from '#lib/utils/door-code-window.js';
+import {
+	EARLY_OPEN_MINUTES,
+	LOCK_GRACE_MINUTES,
+	doorCodeWindow
+} from '#lib/utils/door-code-window.js';
+import { roomBookedBefore } from '#lib/server/reservation/room-booked-before.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement } from '#lib/server/group/announcement-fanout.js';
 import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
@@ -441,8 +446,8 @@ export function registerAllNotificationListeners(): void {
 					...(event.address ? [{ text: `The space is at ${event.address}.` }] : []),
 					{
 						text: event.tourTime
-							? 'Your door code comes in a separate email. It works from the start of your reservation; until then, the person showing you around lets you in.'
-							: 'Your door code comes in a separate email. It works from the start of your reservation.'
+							? `Your door code comes in a separate email. It works from ${EARLY_OPEN_MINUTES} minutes before your reservation; until then, the person showing you around lets you in.`
+							: `Your door code comes in a separate email. It works from ${EARLY_OPEN_MINUTES} minutes before your reservation.`
 					}
 				],
 				...(event.notes ? { body_plain: event.notes } : {}),
@@ -457,10 +462,12 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Door code ready (the lock has confirmed it) ---
 	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
-		const win = doorCodeWindow({
-			startsAt: clubInstant(event.date, event.startTime),
-			endsAt: clubInstant(event.date, event.endTime)
-		});
+		const startsAt = clubInstant(event.date, event.startTime);
+		const win = doorCodeWindow({ startsAt, endsAt: clubInstant(event.date, event.endTime) });
+		// Read at send time, so a booking made since the code was issued counts (#3181).
+		const bookedUntil = (await roomBookedBefore([{ id: event.reservationId, startsAt }])).get(
+			event.reservationId
+		);
 		await dispatch({
 			type: 'door_code_ready',
 			userId: event.userId,
@@ -474,7 +481,10 @@ export function registerAllNotificationListeners(): void {
 				preview_text: `The lock has your code for ${clubDay(event.date)}.`,
 				heading: 'Your door code is ready',
 				paragraphs: [
-					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' }
+					{ text: 'The door lock has confirmed your code. Enter it on the keypad to get in.' },
+					...(bookedUntil
+						? [{ text: `The room is booked until ${formatTime(bookedUntil)} before you.` }]
+						: [])
 				],
 				details: [
 					{ label: 'Door code', value: event.code },

@@ -96,7 +96,12 @@
 			<DoorCodeHeld dueOn={res.paymentDueOn} bookerName={res.bookedBy.title} />
 		{:else if res.lockCode && res.lockSyncedAt}
 			<InfoCard title={m.band_slug_reservations_id_door_code_title()}>
-				<DoorCode code={res.lockCode} startsAt={res.startsAt} endsAt={res.endsAt}>
+				<DoorCode
+					code={res.lockCode}
+					startsAt={res.startsAt}
+					endsAt={res.endsAt}
+					bookedUntil={res.bookedUntil}
+				>
 					<p class="text-muted">
 						{m.band_slug_reservations_id_enter_code_door_keypad_works_text()}
 					</p>

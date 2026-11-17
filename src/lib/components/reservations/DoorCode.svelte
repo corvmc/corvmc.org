@@ -9,6 +9,8 @@
 	 * rejects a code outside its window, so before the window the code carries
 	 * the time it opens, and after it the digits are gone. `children` is the
 	 * keypad instruction, dropped with the digits once the window is over.
+	 * `bookedUntil` is the end of a booking that runs into the early-open
+	 * minutes (#3181); the code still works, so it is stated, not enforced.
 	 */
 	let {
 		code,
@@ -17,6 +19,7 @@
 		kind = 'own',
 		size = 'lg',
 		now,
+		bookedUntil = null,
 		children
 	}: {
 		code: string;
@@ -25,11 +28,17 @@
 		kind?: 'own' | 'fallback';
 		size?: 'sm' | 'md' | 'lg';
 		now?: Date;
+		bookedUntil?: Date | null;
 		children?: Snippet;
 	} = $props();
 
 	const win = $derived(doorCodeWindow({ startsAt, endsAt }, kind, now));
 	const opensAt = $derived(formatTime(win.opensAt));
+	const bookedBefore = $derived(
+		bookedUntil
+			? m.reservations_door_code_booked_before_text({ time: formatTime(bookedUntil) })
+			: null
+	);
 </script>
 
 {#if size === 'sm'}
@@ -42,6 +51,9 @@
 				<span class="text-muted"
 					>· {m.reservations_door_code_works_from_text({ time: opensAt })}</span
 				>
+			{/if}
+			{#if bookedBefore}
+				<span class="block text-warning" data-door-code-booked-before>{bookedBefore}</span>
 			{/if}
 		{/if}
 	</span>
@@ -59,6 +71,9 @@
 			</p>
 			{#if win.phase === 'before'}
 				<p class="font-medium">{m.reservations_door_code_works_from_text({ time: opensAt })}</p>
+			{/if}
+			{#if bookedBefore}
+				<p class="text-warning" data-door-code-booked-before>{bookedBefore}</p>
 			{/if}
 			{@render children?.()}
 		{/if}

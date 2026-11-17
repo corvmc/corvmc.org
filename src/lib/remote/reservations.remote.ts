@@ -108,6 +108,8 @@ import {
 	withholdDoorCode
 } from '#lib/server/reservation/outstanding-fees.js';
 import { doorCodeWithheld } from '#lib/server/reservation/door-code-gate.js';
+import { roomBookedBefore } from '#lib/server/reservation/room-booked-before.js';
+import { doorCodeWindow } from '#lib/utils/door-code-window.js';
 import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
 import {
@@ -285,9 +287,12 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	const paymentDueOn = await doorCodeHeldSince(row.createdByUserId);
 	const held = paymentDueOn !== null || doorCodeWithheld(row);
 	const fallbackCode = held ? null : await revealFallbackCodeFor(row);
+	const bookedBefore = held ? new Map<string, Date>() : await roomBookedBefore([row]);
 
 	return {
 		reservation: withholdDoorCode(row, held),
+		/** Another booking runs into the early-open minutes until this time (#3181). */
+		bookedUntil: bookedBefore.get(row.id) ?? null,
 		/** The oldest fee's start while the door code is held for one. */
 		paymentDueOn,
 		/** The booking as a record, for the detail page's identity (#1061). */
@@ -511,6 +516,7 @@ export const getBandReservationDetail = query(
 		const held = heldSince !== null || doorCodeWithheld(res);
 		const door = withholdDoorCode(res, held);
 		const fallbackCode = held ? null : await revealFallbackCodeFor(res);
+		const bookedBefore = held ? new Map<string, Date>() : await roomBookedBefore([res]);
 
 		return {
 			id: res.id,
@@ -545,6 +551,7 @@ export const getBandReservationDetail = query(
 			// page shows the digits only once the lock has confirmed them (#780).
 			lockSyncedAt: res.lockSyncedAt,
 			fallbackCode,
+			bookedUntil: bookedBefore.get(res.id) ?? null,
 			inAccessWindow: isInAccessWindow(res),
 			canCancel:
 				(bandAdmin || isBooker) &&
@@ -2337,6 +2344,17 @@ export const getReservations = query(
 		const forSelf = !forUser || forUser === locals.user.id;
 		const now = new Date();
 		const held = forSelf && (await doorCodeHeldSince(locals.user.id, now)) !== null;
+		// Only the codes the card shows: confirmed, on the lock, window not over.
+		const bookedBefore = held
+			? new Map<string, Date>()
+			: await roomBookedBefore(
+					rows.filter(
+						(r) =>
+							r.status === 'confirmed' &&
+							r.lockSyncedAt &&
+							doorCodeWindow(r, 'own', now).phase !== 'over'
+					)
+				);
 
 		// `price` is the full room rate. We deliberately do NOT project a credit
 		// discount onto uncommitted bookings here: free hours are only applied at
@@ -2373,6 +2391,7 @@ export const getReservations = query(
 
 			return {
 				...withholdDoorCode(value, held || (forSelf && doorCodeWithheld(value)), now),
+				bookedUntil: bookedBefore.get(value.id) ?? null,
 				price: netCents / 100,
 				creditsAvailable,
 				payableWithCredits,
