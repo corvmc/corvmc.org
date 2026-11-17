@@ -1041,7 +1041,9 @@ remembers the choice, namespaced by `persistScope` (default `staff`). Groups alw
 the server and on the first client paint — the stored state is read in `onMount` — because a
 collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
 _collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
-group opens it and keeps it open.
+group opens it and keeps it open. A collapsed group shows its `badge` on the header; the staff
+layout passes `sectionBadge(section, badges)`, the sum of its rows' counts, so Inbox's unread count
+stays visible under a collapsed Outreach.
 
 **Starred rows.** `Nav.Item` and `Nav.Collapsible` take `starred` and `onstar`; passing `onstar`
 adds a star toggle over the end of the row, shown on hover or focus. `nav-stars.ts` stores the keys

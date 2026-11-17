@@ -37,4 +37,11 @@ describe('Productions', () => {
 		await expect(call({})).resolves.toMatchObject({ rows: [] });
 		expect(list).toHaveBeenCalledOnce();
 	});
+
+	it('passes the date range through to the list', async () => {
+		auth.held = ['event.read'];
+		const filters = { range: 'custom', from: '2026-12-01', to: '2026-12-31' };
+		await call({ ...filters, page: 2 });
+		expect(list).toHaveBeenCalledWith(filters, { page: 2, pageSize: 50 });
+	});
 });

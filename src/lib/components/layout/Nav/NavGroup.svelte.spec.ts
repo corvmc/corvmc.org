@@ -99,6 +99,26 @@ describe('NavGroup', () => {
 		expect(readCollapsed('staff', 'people')).toBe(false);
 	});
 
+	it('shows its rows\u2019 summed badge on the header only while collapsed', async () => {
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people', badge: 7 });
+		const badge = page.getByTestId('nav-group-badge');
+
+		await expect.element(badge).not.toBeInTheDocument();
+		await header().click();
+		await expect.element(badge).toBeVisible();
+		expect(Number(badge.element().textContent)).toBe(7);
+		await header().click();
+		await expect.element(badge).not.toBeInTheDocument();
+	});
+
+	it('shows no header badge when the rows sum to zero', async () => {
+		writeCollapsed('staff', 'people', true);
+		await render(NavGroupHarness, { collapsible: true, persistKey: 'people', badge: 0 });
+
+		await expect.element(header()).toHaveAttribute('aria-expanded', 'false');
+		await expect.element(page.getByTestId('nav-group-badge')).not.toBeInTheDocument();
+	});
+
 	it('keeps each panel\u2019s record to itself', async () => {
 		await render(NavGroupHarness, {
 			collapsible: true,
