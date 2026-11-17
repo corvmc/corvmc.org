@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
-	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
-	import Alert from '#lib/components/ui/Alert.svelte';
-	import { errorMessage } from '#lib/error-message.js';
+	import type { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+
+	type Policy = Awaited<ReturnType<typeof getReservationPolicy>>;
 
 	/** `instructor` shows the teaching terms (#2808). */
-	let { bookerType = 'user' }: { bookerType?: 'user' | 'instructor' } = $props();
+	let { policy, bookerType = 'user' }: { policy: Policy; bookerType?: 'user' | 'instructor' } =
+		$props();
 
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
 	function fmtHour(hhmm: string): string {
@@ -35,54 +36,39 @@
 </script>
 
 <div class="overflow-hidden rounded-lg border-[2.5px] border-base-300 bg-base-200">
-	{#await getReservationPolicy(bookerType)}
-		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
-			{#each ['Rate', 'Hours', 'Length', 'Notice'] as label (label)}
-				<div class="px-4 py-3 text-center">
-					<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-						>{label}</span
-					>
-					<div class="mx-auto mt-1 h-6 w-16 skeleton"></div>
-				</div>
-			{/each}
+	<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
+		<div class="px-4 py-3 text-center">
+			<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+				>{msg.reservations_booking_policy_rate_text()}</span
+			>
+			<span class="block text-lg font-bold">{fmtRate(policy.hourlyRateCents)}</span>
 		</div>
-	{:then policy}
-		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
-			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_rate_text()}</span
-				>
-				<span class="block text-lg font-bold">{fmtRate(policy.hourlyRateCents)}</span>
-			</div>
-			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_hours_text()}</span
-				>
-				<span class="block text-lg font-bold"
-					>{fmtHour(policy.operatingHoursStart)} – {fmtHour(policy.operatingHoursEnd)}</span
-				>
-			</div>
-			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_length_text()}</span
-				>
-				<span class="block text-lg font-bold"
-					>{msg.reservations_booking_policy_hrs_text({
-						minDurationHours: policy.minDurationHours,
-						maxDurationHours: policy.maxDurationHours
-					})}</span
-				>
-			</div>
-			<div class="px-4 py-3 text-center">
-				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_notice_text()}</span
-				>
-				<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
-			</div>
+		<div class="px-4 py-3 text-center">
+			<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+				>{msg.reservations_booking_policy_hours_text()}</span
+			>
+			<span class="block text-lg font-bold"
+				>{fmtHour(policy.operatingHoursStart)} – {fmtHour(policy.operatingHoursEnd)}</span
+			>
 		</div>
-	{:catch error}
-		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-	{/await}
+		<div class="px-4 py-3 text-center">
+			<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+				>{msg.reservations_booking_policy_length_text()}</span
+			>
+			<span class="block text-lg font-bold"
+				>{msg.reservations_booking_policy_hrs_text({
+					minDurationHours: policy.minDurationHours,
+					maxDurationHours: policy.maxDurationHours
+				})}</span
+			>
+		</div>
+		<div class="px-4 py-3 text-center">
+			<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
+				>{msg.reservations_booking_policy_notice_text()}</span
+			>
+			<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
+		</div>
+	</div>
 	{#if bookerType === 'user'}
 		<details class="border-t-[2.5px] border-base-300">
 			<summary

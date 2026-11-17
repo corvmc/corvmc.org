@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { tick, type Component } from 'svelte';
 import OuterBoundary from '#lib/components/ui/OuterBoundary.test.svelte';
-import BookingPolicy from '#lib/components/reservations/BookingPolicy.svelte';
 import VolunteerBlocked from './member/volunteer/blocked/+page.svelte';
 import CommitteeNumbers from './member/groups/[slug]/CommitteeNumbers.svelte';
 import PublicInstructors from './(public)/directory/instructors/+page.svelte';
@@ -25,7 +24,6 @@ vi.mock('#lib/remote/volunteer.remote.js', () => ({
 vi.mock('#lib/remote/reports.remote.js', () => ({ getCommitteeNumbers: refused }));
 vi.mock('#lib/remote/instructors.remote.js', () => ({ getPublicInstructors: refused }));
 vi.mock('#lib/remote/duty-lists.remote.js', () => ({ getDutyLists: refused, createDutyList: {} }));
-vi.mock('#lib/remote/reservations.remote.js', () => ({ getReservationPolicy: refused }));
 vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 vi.mock('#lib/remote/billing.remote.js', () => ({
 	getBandBilling: refused,
@@ -86,7 +84,6 @@ describe('a block whose query fails', () => {
 	it.each([
 		['committee numbers', CommitteeNumbers, { groupId: 'g' }],
 		['public teachers', PublicInstructors, {}],
-		['booking policy', BookingPolicy, {}],
 		['band billing card', BandBillingCard, { slug: 'b' }]
 	])('%s says so in place', async (_name, page, props) => {
 		const { container } = await mount(page, props);

@@ -991,6 +991,14 @@ if it's broadly useful.
   `transfer_reactions`) to the captured batch unconditionally, and `Batch#merge` still unlinks
   the batch it absorbs.
 
+- **`svelte@5.57.3`, second hunk** — `each()` (`src/internal/client/dom/blocks/each.js`) reads
+  whether the server rendered its `{:else}` from `node`. When the `{#each}` sits under `$.async`
+  (it reads an awaited declaration or an `await` expression), `node` is the async wrapper's `[`
+  comment, not the block's own `[!`, so an empty list always reads as a mismatch: hydration
+  removes the server's fallback and renders it again. On `/member/reservations` that replaced
+  paragraph was the LCP element, holding it at about 3.9 s with server rendering on (#3183). The
+  patch reads the marker from `hydrate_node`, as `if()` does. Unfixed upstream as of 5.57.3.
+
 ### Analytics and reporting tools
 
 Which vendor owns which question, so this is not re-litigated per feature. The governing rule
