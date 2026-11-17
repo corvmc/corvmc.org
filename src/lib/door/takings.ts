@@ -1,5 +1,5 @@
 /**
- * How a door ticket was paid, read from its purchase id: decision 0018 keys a
+ * How a door ticket was paid, read from its purchase id: door sales (#612) key a
  * door sale on its purchase, so the method needs no column. Every reader of
  * the door's takings goes through this table, so a new method is a new key
  * here and a new line everywhere the takings are shown.

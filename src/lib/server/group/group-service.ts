@@ -38,7 +38,7 @@ import { leadsGroup, rosterRole, setChairHolder } from '#lib/server/group/chair.
  * free room time (phase 9) safe to grant by kind — the abuse case, spin up a fake club and collect free room
  * time, is closed structurally rather than by a check someone has to remember.
  *
- * See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
+ * See docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages.
  */
 
 /** Kinds this module governs. A band is created by its own member, not here. */
@@ -430,7 +430,7 @@ export interface UpdateGroupProfile {
  *
  * Deliberately not `joinPolicy` or `visibility`: those decide who may walk in
  * and whether the program is advertised, and the argument for free room time
- * (docs/decisions/0024-groups-split-the-band-table-by-purpose.md) is that only staff decide who runs a program and on what terms.
+ * (docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages) is that only staff decide who runs a program and on what terms.
  * `updateGroupSettings` is their one writer.
  */
 // `name` and `bio` are mirrored onto `directory_entry` for the same reason

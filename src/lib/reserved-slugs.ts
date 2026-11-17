@@ -55,7 +55,7 @@ export const RESERVED_SLUGS = new Set([
 	'donate',
 	'corvmc',
 	'cmc',
-	// Group vocabulary, reserved ahead of the groups module (docs/decisions/0024-groups-split-the-band-table-by-purpose.md).
+	// Group vocabulary, reserved ahead of the groups module (docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages).
 	// A word is free to reserve while nothing holds it and impossible to reclaim
 	// afterwards, so these land before the first group exists rather than after.
 	// `class`/`classes` are here even though classes are out of scope, for that

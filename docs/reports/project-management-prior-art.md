@@ -2,7 +2,7 @@
 
 > Prior-art survey behind the `project` entity — five product categories, what each
 > contributes, and the counter-evidence. Companion to
-> `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md` (the decision) and `docs/architecture/domain-model.md` (where projects sit).
+> `docs/architecture/domain-model.md#where-event_listing-sits` (where projects sit).
 >
 > **Status: complete.** Surveyed 2026-09-02.
 
@@ -250,9 +250,9 @@ Already half-designed, and the schema anticipated it. From `duty_list`'s comment
 > Facility and Booking own their own lists, and a list you need a deploy to change
 > is not owned by them.
 
-`docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md` establishes a committee
+`docs/architecture/domain-model.md#ownership-is-a-roster-row` establishes a committee
 as a `group` row — six committees, each with a chair. And
-the capabilities design (`docs/decisions/0032-guards-name-capabilities.md`) states the guard mechanism outright: **"a committee guard
+the capabilities design (`docs/architecture/overview.md#roles`) states the guard mechanism outright: **"a committee guard
 reads `group_member`, not the role table, and the two are independent."** So a
 committee-scoped view needs no role work and is not blocked on the admin/staff split.
 

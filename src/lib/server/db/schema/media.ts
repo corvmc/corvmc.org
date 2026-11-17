@@ -53,7 +53,7 @@ export type MediaSlot = (typeof mediaSlots)[number];
  * strands every gallery object it had. Here the object's lifetime is decided by
  * how many `media_attachment` rows point at it, and by nothing else.
  *
- * See docs/decisions/0026-uploads-are-detached-and-swept.md.
+ * See docs/architecture/domain-model.md#already-unified-references.
  */
 export const media = sqliteTable(
 	'media',

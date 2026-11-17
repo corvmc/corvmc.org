@@ -40,7 +40,7 @@ const { completeOrientation, waiveOrientation } =
 	await import('#lib/server/volunteer/orientation-service.js');
 const { buildDateInTz } = await import('./timezone');
 
-// An orientation role is set unless a test says otherwise: decision 0055 uses
+// An orientation role is set unless a test says otherwise: #2565 uses
 // the 3-day notice only while the orientation shift is on (#2752).
 const withRole = async (key: string) =>
 	key === 'volunteer.orientationRoleId' ? 'role-orientation' : '';

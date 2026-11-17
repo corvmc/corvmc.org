@@ -7,7 +7,7 @@ import { ballotChoice, ballotParticipation } from '#lib/server/db/schema/ballot.
 /**
  * The storage half of "secret but auditable": nothing in the schema lets a
  * `ballot_choice` counter be joined back to the member who incremented it.
- * docs/decisions/0052-secret-ballots-count-without-a-vote-row.md has the reasoning.
+ * docs/development/business-workflows.md#23-formal-ballots-a-frozen-roll-a-secret-or-recorded-vote-a-certified-result has the reasoning.
  */
 
 function referencedTables(table: SQLiteTable): string[] {

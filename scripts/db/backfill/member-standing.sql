@@ -21,7 +21,7 @@
 -- `source` is not carried across. It was three copies of one fact: a member row
 -- becomes a preference (below), a report row is identified by
 -- `triggering_flag_id`, and anything else was staff. See
--- `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
+-- `docs/development/business-workflows.md#11-moderation-reports-standing-and-the-suggestion-board`.
 
 -- Community listings. `requires_review = 0` can only mean staff restored it, so
 -- the row is kept as a cleared standing rather than dropped — "we looked at this

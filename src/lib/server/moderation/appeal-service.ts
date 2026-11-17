@@ -19,7 +19,7 @@ import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
 import { restoreStanding } from './standing-service';
 
-// The rules are in docs/decisions/0039-moderation-appeals-hang-off-the-upheld-report.md. Appeals
+// The rules are in docs/development/business-workflows.md#11-moderation-reports-standing-and-the-suggestion-board. Appeals
 // contest an upheld report and nothing else. A removal rests on one, so it is contested here too.
 
 // ---------------------------------------------------------------------------

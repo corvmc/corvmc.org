@@ -40,7 +40,7 @@ export function monthBounds(month: string): { from: Date; to: Date } {
  * A month's public listings in date order, and the sponsors their event pages
  * credit. Public means published, `visibleTo` the public, not a committee's,
  * and not a meeting unless a club holds it. A club's meeting prints at
- * members visibility too, its default: decision 0061 keeps club sessions on
+ * members visibility too, its default: the month poster (#2605) keeps club sessions on
  * the poster. Partner-feed imports are left out: no member made them.
  */
 export async function monthCalendar(month: string): Promise<MonthCalendar> {

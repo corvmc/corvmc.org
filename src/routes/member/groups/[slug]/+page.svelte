@@ -62,7 +62,7 @@
 	 * a band member keeps coming back to band-shaped work with money attached. A
 	 * club is a subscription to a program: its value arrives by notification and
 	 * on the calendar, and this page is where you come for the archive and the
-	 * roster. See docs/decisions/0021-a-club-gets-a-page-not-a-panel.md.
+	 * roster. See docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages.
 	 *
 	 * Announcements, Documents and Sessions are phases 7, 8 and 9, and all three
 	 * are now built.
@@ -95,7 +95,7 @@
 	const members = $derived(data.members);
 
 	/**
-	 * Announcements lead, per docs/decisions/0021-a-club-gets-a-page-not-a-panel.md: the archive
+	 * Announcements lead, per docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages: the archive
 	 * is what you come back for, where Overview is what you read once. It is also
 	 * the default tab, so `?tab=` names the other three and the bare URL is the
 	 * post list.

@@ -98,12 +98,12 @@ association, not independent parties that transact with it.
 ## Role 3 — Governance
 
 **Ours.** Committees exist as `group` rows; `by_application` and `requested` both exist.
-[A decision record](../decisions/0032-guards-name-capabilities.md) sets capabilities-not-tiers
+[The roles section](../architecture/overview.md#roles) sets capabilities-not-tiers
 and states the guard: "a committee guard reads `group_member`, not the role table, and the
 two are independent." Announcements and files are phases 5+. **Designed, largely unbuilt.**
 
 **Them.** GrowthZone advertises "centralized governance and distributed control" — which
-is precisely the sentence the capabilities decision record is reaching for. MemberClicks does the
+is precisely the sentence the capabilities design is reaching for. MemberClicks does the
 same at $4,500/year.
 
 **Verdict: they are ahead, because theirs ships and ours is a spec.** But the design has
@@ -175,7 +175,7 @@ links" stops being a nag when the payoff is that other members hear you.
 ## Role 5 — Identity and claiming
 
 **Ours.** An external act is a `directory_entry` with both `userId` and `groupId` null.
-[The record](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md) keeps it on three grounds — marketing material on
+[The bands workflow](../development/business-workflows.md#4-bands-creation-invitations-premium-pages) keeps it on three grounds — marketing material on
 hand, a contact record, and a promotion path — and makes promotion **one statement**:
 create a `group`, set `directory_entry.groupId`, insert the owner row, one `db.batch`.
 "Nothing merges, no identity columns move, and every event they ever played is still

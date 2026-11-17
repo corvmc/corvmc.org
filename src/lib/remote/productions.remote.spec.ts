@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Who may do what on a show (docs/decisions/0086-production-capabilities-by-consequence.md),
+ * Who may do what on a show (docs/architecture/domain-model.md#ownership-is-a-roster-row),
  * as a matrix: every write, against Booking, Production, a committee on some
  * other show, the treasurer and staff. The committee guard is faked here from
  * the persona's grants; its resolution against the show's committees has its

@@ -148,8 +148,8 @@ BASE_REF=origin/feature/<slug> pnpm lint:changed
 Only when the feature is complete and its member-facing surfaces work.
 
 Work the nine-phase checklist's finishing steps first — seed data, the feature's file in `docs/reports/features/`,
-`pnpm docs:routes && pnpm docs:check` if a route moved, and the feature's decision record in
-`docs/decisions/`. Then:
+`pnpm docs:routes && pnpm docs:check` if a route moved, and a "Not X, because Y (#n)" line in the
+living doc for each plausible alternative the feature rejected. Then:
 
 ```bash
 gh pr create --base main --title "<spec>: <the feature>"
