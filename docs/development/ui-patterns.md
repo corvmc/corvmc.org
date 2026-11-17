@@ -86,7 +86,9 @@ When `<Form>` must wrap both the header (for SubmitButton) and the body fields, 
 
 ### Loading and error states
 
-The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in a `<svelte:boundary>` with default pending (spinner) and failed (Alert with Retry) snippets. Pages **do not** need to add their own boundary, pending, or failed snippets — the layout handles it.
+The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in `ErrorToastBoundary`, with a failed snippet (Alert with Retry) for client-side errors. Pages **do not** need to add their own boundary or failed snippet — the layout handles it.
+
+The staff layout passes `showPending={false}`, so the server awaits the page's queries and sends its content, and an error during the server render reaches `+error.svelte` with its status. The member and band layouts still render a spinner in place of the page until their pages are checked for server rendering (#3158). `src/routes/layout-boundary-ssr.spec.ts` fails a layout that brings the spinner back, and lists the layouts not yet switched.
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 
