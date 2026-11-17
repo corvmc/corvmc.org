@@ -538,7 +538,10 @@ describe('door code ready', () => {
 	});
 
 	it('adds nothing when no booking overlaps', async () => {
-		const count = () => mockDispatch.mock.calls.at(-1)[0].email.paragraphs.length;
+		const count = () => {
+			const { calls } = mockDispatch.mock;
+			return calls[calls.length - 1][0].email.paragraphs.length;
+		};
 		await emit('reservation.door_code_ready', ready);
 		const without = count();
 		mockRoomBookedBefore.mockResolvedValueOnce(
