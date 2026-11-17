@@ -30,6 +30,15 @@
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { getMemberVolunteerPage, markMyTaskDone } from '#lib/remote/volunteer.remote.js';
 
+	// Takes the task off the list until the server answers. A task that asks for
+	// a reason keeps its dialog instead, so a refused reason shows under its field.
+	const dropTask = (workOrderId: string) => () => [
+		getMemberVolunteerPage().withOverride((p) => ({
+			...p,
+			assignedTasks: p.assignedTasks.filter((t) => t.workOrderId !== workOrderId)
+		}))
+	];
+
 	const pageData = $derived(await getMemberVolunteerPage());
 
 	function toDateInput(date: Date): string {
@@ -176,6 +185,7 @@
 										modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
 										submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
 										successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
+										updates={task.closesItself ? undefined : dropTask(task.workOrderId)}
 									>
 										{#snippet form()}
 											<input

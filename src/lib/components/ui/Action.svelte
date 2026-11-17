@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import type { RemoteForm } from '$app/server';
+	import type { RemoteForm, RemoteQueryUpdate } from '$app/server';
 	import { toast } from 'svelte-sonner';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';
@@ -59,6 +59,7 @@
 		onaddanother,
 		onsuccess,
 		onfailure,
+		updates,
 		...rest
 	}: {
 		/**
@@ -130,6 +131,8 @@
 		onaddanother?: (result?: unknown) => void;
 		onsuccess?: (result?: unknown) => void;
 		onfailure?: (error?: unknown) => void;
+		/** Form-modal mode: passed to `Form`, for an optimistic override. */
+		updates?: () => RemoteQueryUpdate[];
 		[key: string]: unknown;
 	} = $props();
 
@@ -341,6 +344,7 @@
 					{successToast}
 					onsuccess={handleFormSuccess}
 					onfailure={onfailure ? handleFormFailure : undefined}
+					{updates}
 					ondirtychange={(dirty) => (formDirty = dirty)}
 				>
 					{#if confirm}

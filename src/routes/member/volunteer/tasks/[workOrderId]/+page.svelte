@@ -28,6 +28,11 @@
 	const params = routeParams('workOrderId');
 
 	const workOrderId = $derived(params.workOrderId);
+	// Shows the task done until the server answers. Only `resolvedAt`: the dialog
+	// stays open on the Action, so a refusal still shows in it.
+	const showDone = () => [
+		getMyTask(workOrderId).withOverride((t) => ({ ...t, resolvedAt: new Date() }))
+	];
 	const task = $derived(await getMyTask(workOrderId));
 
 	const doneCount = $derived(task.items.filter((i) => i.done).length);
@@ -76,6 +81,7 @@
 			modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
 			submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
 			successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
+			updates={showDone}
 		>
 			{#snippet form()}
 				<input
