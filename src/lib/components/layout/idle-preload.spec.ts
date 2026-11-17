@@ -16,7 +16,9 @@ describe('connectionAllowsPreload', () => {
 
 describe('linkPaths', () => {
 	const root = (hrefs: string[]) =>
-		({ querySelectorAll: () => hrefs.map((href) => ({ href })) }) as unknown as ParentNode;
+		({ querySelectorAll: () => hrefs.map((href) => ({ href })) }) as unknown as Parameters<
+			typeof linkPaths
+		>[0];
 
 	it('keeps same-origin pathnames once, without query or hash', () => {
 		const paths = linkPaths(

@@ -2,6 +2,8 @@ import { preloadCode } from '$app/navigation';
 import { match } from '$app/paths';
 
 type Connection = { saveData?: boolean; effectiveType?: string };
+/** Structural, not `ParentNode`: workers-types redefines the DOM's node types. */
+type LinkRoot = { querySelectorAll(selector: string): Iterable<unknown> };
 
 /** False when the connection asks for less data: Save-Data, or 2g and slower. */
 export function connectionAllowsPreload(connection: Connection | undefined): boolean {
@@ -10,7 +12,7 @@ export function connectionAllowsPreload(connection: Connection | undefined): boo
 }
 
 /** Same-origin pathnames of the links inside `root`, each once. */
-export function linkPaths(root: ParentNode, origin: string): string[] {
+export function linkPaths(root: LinkRoot, origin: string): string[] {
 	const paths = new Set<string>();
 	for (const a of root.querySelectorAll('a[href]')) {
 		const url = new URL((a as HTMLAnchorElement).href, origin);
