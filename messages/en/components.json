@@ -1149,6 +1149,8 @@
 	"reservations_booking_payment_due_body": "Your reservation on {date} still has a payment due. New reservations and door codes resume once staff record it as paid.",
 	"reservations_booking_payment_due_text": "Your reservation on {date} still has a payment due. New reservations and door codes resume once staff record it as paid.",
 	"reservations_booking_payment_due_subject_text": "Payment due for {date} reservation",
+	"reservations_door_code_works_from_text": "Works from {time}",
+	"reservations_door_code_expired_text": "Expired",
 	"reservations_door_code_held_band_body": "{name} has a payment due. The door code shows here once staff record it as paid.",
 	"reservations_booking_fee_notice_staff_body": "Payment due on this member's past reservations.",
 	"reservations_booking_fee_notice_view_label": "View",

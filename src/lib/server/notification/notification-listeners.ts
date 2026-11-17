@@ -9,7 +9,14 @@ import {
 	PERFORMANCE_INQUIRY_SUBJECT,
 	hourLogExceptionLabels
 } from '#lib/config.js';
-import { formatCents, formatDateLong, formatSlotTime, formatTime } from '#lib/utils/format.js';
+import {
+	clubInstant,
+	formatCents,
+	formatDateLong,
+	formatSlotTime,
+	formatTime
+} from '#lib/utils/format.js';
+import { LOCK_GRACE_MINUTES, doorCodeWindow } from '#lib/utils/door-code-window.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement } from '#lib/server/group/announcement-fanout.js';
 import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
@@ -450,6 +457,10 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Door code ready (the lock has confirmed it) ---
 	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
+		const win = doorCodeWindow({
+			startsAt: clubInstant(event.date, event.startTime),
+			endsAt: clubInstant(event.date, event.endTime)
+		});
 		await dispatch({
 			type: 'door_code_ready',
 			userId: event.userId,
@@ -467,9 +478,10 @@ export function registerAllNotificationListeners(): void {
 				],
 				details: [
 					{ label: 'Door code', value: event.code },
+					{ label: 'Works from', value: formatTime(win.opensAt) },
 					...whenDetails(event.date, event.startTime, event.endTime)
 				],
-				footnote: 'It works from your start time until shortly after your booking ends.',
+				footnote: `It stops working ${LOCK_GRACE_MINUTES} minutes after your booking ends.`,
 				cta: { label: 'View my reservations' }
 			}
 		});

@@ -20,6 +20,7 @@
 	import ReservationCharges from '#lib/components/reservations/ReservationCharges.svelte';
 	import ReservationPaymentState from '#lib/components/reservations/ReservationPaymentState.svelte';
 	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import DoorCode from '#lib/components/reservations/DoorCode.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -91,20 +92,27 @@
 			<Alert type="info">{m.member_reservations_id_door_code_after_payment_body()}</Alert>
 		{:else if res.lockCode && res.lockSyncedAt}
 			<InfoCard title={m.member_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-muted">
-					{m.member_reservations_id_enter_code_door_keypad_get_text()}
-				</p>
+				<DoorCode code={res.lockCode} startsAt={res.startsAt} endsAt={res.endsAt}>
+					<p class="text-muted">
+						{m.member_reservations_id_enter_code_door_keypad_get_text()}
+					</p>
+				</DoorCode>
 			</InfoCard>
 		{:else if data.fallbackCode}
 			<!-- Their own code has not reached the lock, and they are due in now.
 			     The break-glass code was synced long ago, so it opens the door
 			     even while the lock is offline. -->
 			<InfoCard title={m.member_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
-				<p class="text-muted">
-					{m.member_reservations_id_we_couldn_t_confirm_usual_text()}
-				</p>
+				<DoorCode
+					code={data.fallbackCode}
+					startsAt={res.startsAt}
+					endsAt={res.endsAt}
+					kind="fallback"
+				>
+					<p class="text-muted">
+						{m.member_reservations_id_we_couldn_t_confirm_usual_text()}
+					</p>
+				</DoorCode>
 			</InfoCard>
 		{:else if data.inAccessWindow}
 			<!-- Their session is running and nothing here opens the door: no
