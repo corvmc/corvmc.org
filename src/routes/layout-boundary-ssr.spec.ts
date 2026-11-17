@@ -11,7 +11,7 @@ const layouts = import.meta.glob<string>('./**/+layout.svelte', {
 });
 
 /** Sections not yet switched to server rendering. #3158 removes them one at a time. */
-const CLIENT_RENDERED = ['./member/+layout.svelte', './band/[slug]/+layout.svelte'];
+const CLIENT_RENDERED = ['./band/[slug]/+layout.svelte'];
 
 const boundaryTags = (source: string) => source.match(/<ErrorToastBoundary\b[^>]*>/g) ?? [];
 const rendersSpinner = (source: string) =>
@@ -22,7 +22,11 @@ const rendersSpinner = (source: string) =>
 describe('layout boundaries', () => {
 	it('finds the panel layouts', () => {
 		expect(Object.keys(layouts)).toEqual(
-			expect.arrayContaining(['./staff/+layout.svelte', ...CLIENT_RENDERED])
+			expect.arrayContaining([
+				'./staff/+layout.svelte',
+				'./member/+layout.svelte',
+				...CLIENT_RENDERED
+			])
 		);
 		expect(boundaryTags(layouts['./staff/+layout.svelte'])).not.toHaveLength(0);
 	});

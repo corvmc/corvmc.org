@@ -21,7 +21,6 @@
 	import NoBandsCard from './NoBandsCard.svelte';
 	import { getMemberLayoutContext } from './layout-context';
 	import { creditsToHours } from '#lib/config.js';
-	import { resolve } from '$app/paths';
 
 	// The layout already holds the member's bands; a second query would race it.
 	const layout = getMemberLayoutContext();
@@ -143,12 +142,11 @@
 			     and the row stays even (#1047). It also crops 2:3 like every
 			     other poster rather than letterboxing to h-32. -->
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				<!-- The card's title is the link to the event. -->
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a href={resolve(`member/events/${evt.id}`)} class="block">
-						<EntityCard ref={evt.ref} class="h-full transition-shadow hover:shadow-md">
-							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
-						</EntityCard>
-					</a>
+					<EntityCard ref={evt.ref} class="h-full">
+						<p class="text-subtle">{formatDate(evt.startsAt)}</p>
+					</EntityCard>
 				{/each}
 			</div>
 		{/if}
