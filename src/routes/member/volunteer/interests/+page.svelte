@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Latest } from '#lib/latest.svelte.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -50,7 +51,7 @@
 />
 
 <PageContent width="md">
-	<svelte:boundary>
+	<ErrorToastBoundary showPending={false}>
 		{@const loaded = pageData.current ?? (await getVolunteerInterestsPage().catch(() => undefined))}
 		{#if loaded}
 			{@const { step: me, roles: roleOptions, interests: myInterests } = loaded}
@@ -103,5 +104,5 @@
 				</CardBody>
 			</Card>
 		{/if}
-	</svelte:boundary>
+	</ErrorToastBoundary>
 </PageContent>

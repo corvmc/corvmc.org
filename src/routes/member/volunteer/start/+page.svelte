@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Latest } from '#lib/latest.svelte.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '#lib/paraglide/messages.js';
 	/**
@@ -37,7 +38,7 @@
 />
 
 <PageContent width="md">
-	<svelte:boundary>
+	<ErrorToastBoundary showPending={false}>
 		{@const me = step.current ?? (await getVolunteerStartStep().catch(() => undefined))}
 		{#if me}
 			<InfoCard title={m.member_volunteer_start_about_title()}>
@@ -74,5 +75,5 @@
 				</Form>
 			</InfoCard>
 		{/if}
-	</svelte:boundary>
+	</ErrorToastBoundary>
 </PageContent>
