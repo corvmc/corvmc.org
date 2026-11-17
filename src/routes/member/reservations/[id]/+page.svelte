@@ -92,7 +92,12 @@
 			<Alert type="info">{m.member_reservations_id_door_code_after_payment_body()}</Alert>
 		{:else if res.lockCode && res.lockSyncedAt}
 			<InfoCard title={m.member_reservations_id_door_code_title()}>
-				<DoorCode code={res.lockCode} startsAt={res.startsAt} endsAt={res.endsAt}>
+				<DoorCode
+					code={res.lockCode}
+					startsAt={res.startsAt}
+					endsAt={res.endsAt}
+					bookedUntil={data.bookedUntil}
+				>
 					<p class="text-muted">
 						{m.member_reservations_id_enter_code_door_keypad_get_text()}
 					</p>

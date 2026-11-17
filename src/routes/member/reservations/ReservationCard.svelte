@@ -21,6 +21,8 @@
 		reservation: Reservation & {
 			payableWithCredits?: boolean;
 			codeWithheld?: boolean;
+			/** A booking before this one runs into its early-open minutes until then. */
+			bookedUntil?: Date | null;
 			/** The band a group booking is for. */
 			groupName?: string | null;
 		};
@@ -75,6 +77,7 @@
 						code={reservation.lockCode}
 						startsAt={reservation.startsAt}
 						endsAt={reservation.endsAt}
+						bookedUntil={reservation.bookedUntil}
 						size="sm"
 					/>
 				{:else}
