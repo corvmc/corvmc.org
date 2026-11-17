@@ -624,6 +624,7 @@
 	"band_slug_subscription_monthly_title": "Monthly",
 	"band_slug_subscription_months_free_label": "{yearlyMonthsFree} months free",
 	"band_slug_subscription_no_card_saved_act_renewals_text": "No card is saved for this band. Renewals will fail until one is.",
+	"band_slug_subscription_no_billing_account_text": "This band has no billing account, so there is no card to manage.",
 	"band_slug_subscription_own_domain_keep_using_text": "{#span}✓{/span} Your own domain — or keep using {slug}.{baseDomain}",
 	"band_slug_subscription_page_arrives_already_built_reorder_text": "{#span}✓{/span} A page that arrives already built — reorder its blocks and hide what you don't need",
 	"band_slug_subscription_premium_band_page_title": "Premium band page",

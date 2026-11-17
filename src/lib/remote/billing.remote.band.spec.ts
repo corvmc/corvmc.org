@@ -98,7 +98,8 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getBandBilling, finishBandAddCard, forgetBandCard } = await import('./billing.remote');
+const { getBandBilling, startBandAddCard, finishBandAddCard, forgetBandCard } =
+	await import('./billing.remote');
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -126,10 +127,20 @@ describe('band billing', () => {
 		await expect(getBandBilling('ninety-proof')).rejects.toMatchObject({ status: 403 });
 	});
 
-	it('400s an act with no billing account rather than guessing one', async () => {
+	it('reports an act with no billing account rather than failing or guessing one', async () => {
 		setCustomer(null);
 
-		await expect(getBandBilling('ninety-proof')).rejects.toMatchObject({ status: 400 });
+		await expect(getBandBilling('ninety-proof')).resolves.toMatchObject({
+			hasAccount: false,
+			cards: []
+		});
+		expect(mockListCards).not.toHaveBeenCalled();
+	});
+
+	it('still refuses to add a card with no account to add it to', async () => {
+		setCustomer(null);
+
+		await expect(startBandAddCard('ninety-proof')).rejects.toMatchObject({ status: 400 });
 	});
 
 	it('saves a confirmed card against the band and no user', async () => {

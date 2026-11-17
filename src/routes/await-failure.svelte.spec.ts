@@ -9,6 +9,7 @@ import PublicInstructors from './(public)/directory/instructors/+page.svelte';
 import ProjectTemplates from './staff/tasks/templates/+page.svelte';
 import InboxIndex from './staff/inbox/+page.svelte';
 import Daily from './staff/inbox/daily/+page.svelte';
+import BandBillingCard from './band/[slug]/subscription/BandBillingCard.svelte';
 import { session } from './staff/inbox/daily/session.svelte';
 
 // A query that refuses, shaped like a remote: thenable, with `refresh`.
@@ -25,6 +26,11 @@ vi.mock('#lib/remote/reports.remote.js', () => ({ getCommitteeNumbers: refused }
 vi.mock('#lib/remote/instructors.remote.js', () => ({ getPublicInstructors: refused }));
 vi.mock('#lib/remote/duty-lists.remote.js', () => ({ getDutyLists: refused, createDutyList: {} }));
 vi.mock('#lib/remote/reservations.remote.js', () => ({ getReservationPolicy: refused }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
+vi.mock('#lib/remote/billing.remote.js', () => ({
+	getBandBilling: refused,
+	startBandAddCard: refused
+}));
 vi.mock('#lib/remote/inbox.remote.js', () => ({
 	getInboxThreads: refused,
 	getInboxThread: refused,
@@ -80,7 +86,8 @@ describe('a block whose query fails', () => {
 	it.each([
 		['committee numbers', CommitteeNumbers, { groupId: 'g' }],
 		['public teachers', PublicInstructors, {}],
-		['booking policy', BookingPolicy, {}]
+		['booking policy', BookingPolicy, {}],
+		['band billing card', BandBillingCard, { slug: 'b' }]
 	])('%s says so in place', async (_name, page, props) => {
 		const { container } = await mount(page, props);
 

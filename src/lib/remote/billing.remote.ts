@@ -178,8 +178,8 @@ export const forgetCard = command(
 // mirror-onto-user step: the card is the band's, which is the whole of #1098.
 // ---------------------------------------------------------------------------
 
-/** The band's customer, and the caller's right to act for it. */
-async function requireBandCustomer(slug: string): Promise<string> {
+/** The band's customer, or null when it has none, after the caller's right to act for it. */
+async function findBandCustomer(slug: string): Promise<string | null> {
 	const { group: band } = await requireGroupRole({ slug }, 'admin');
 
 	const [row] = await db
@@ -188,15 +188,32 @@ async function requireBandCustomer(slug: string): Promise<string> {
 		.where(eq(bandSite.groupId, band.id))
 		.limit(1);
 
-	if (!row?.stripeCustomerId) error(400, 'This band has no billing account yet.');
-	return row.stripeCustomerId;
+	return row?.stripeCustomerId || null;
+}
+
+/** The band's customer, and the caller's right to act for it. */
+async function requireBandCustomer(slug: string): Promise<string> {
+	const customerId = await findBandCustomer(slug);
+	if (!customerId) error(400, 'This band has no billing account yet.');
+	return customerId;
 }
 
 export const getBandBilling = query(z.string(), async (slug) => {
-	const customerId = await requireBandCustomer(slug);
+	const customerId = await findBandCustomer(slug);
+	// A band comped by staff, or whose checkout never made a customer, has no
+	// card to show or replace. The plan above the card still renders (#3140).
+	if (!customerId) {
+		return {
+			hasAccount: false as const,
+			available: true as const,
+			driver: paymentDriver(),
+			cards: []
+		};
+	}
 
 	try {
 		return {
+			hasAccount: true as const,
 			available: true as const,
 			driver: paymentDriver(),
 			cards: await listCards(customerId)
@@ -205,7 +222,12 @@ export const getBandBilling = query(z.string(), async (slug) => {
 		// Same reasoning as `getBilling`: a Stripe outage makes the card list
 		// unknown, not empty, and must not take the subscription page with it.
 		captureException(err);
-		return { available: false as const, driver: paymentDriver(), cards: [] };
+		return {
+			hasAccount: true as const,
+			available: false as const,
+			driver: paymentDriver(),
+			cards: []
+		};
 	}
 });
 
