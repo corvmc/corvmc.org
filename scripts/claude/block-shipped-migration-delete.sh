@@ -97,7 +97,7 @@ dirs=$expanded
 # would otherwise slip past. It takes every shipped migration with it, so treat the
 # whole tree as the target. A command that named only snapshots is not that case.
 if [ -z "$paths" ] &&
-	printf '%s\n' "$rm_segments" | grep -qE '(^|[^A-Za-z0-9_/.-])migrations/?([[:space:]]|$)'; then
+	grep -qE '(^|[^A-Za-z0-9_/.-])migrations/?([[:space:]]|$)' <<<"$rm_segments"; then
 	dirs=$(git -C "$repo_root" ls-tree --name-only origin/main migrations/ 2>/dev/null)
 fi
 
