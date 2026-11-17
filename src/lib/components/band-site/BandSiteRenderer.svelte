@@ -16,7 +16,7 @@
 	import { blockIsEmpty, type BandSiteEdit } from './block-editing';
 	import { dndzone, SOURCES, TRIGGERS } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -94,6 +94,12 @@
 	} = $props();
 
 	const epk = $derived(config?.epk ?? null);
+
+	// In the editor this page sits inside the editor's own <form>. The HTML parser
+	// drops a form inside a form, so a server-rendered contact form there would
+	// stop the editor hydrating. It joins the preview once mounted instead.
+	let mounted = $state(false);
+	onMount(() => (mounted = true));
 
 	// `prepareBlocksForRender` already drops hidden blocks for the public site,
 	// but the page editor's live preview hands us the array it is editing, so the
@@ -431,7 +437,7 @@
 						{/if}
 					</div>
 				{/if}
-				{#if showForm}
+				{#if showForm && (!edit || mounted)}
 					<BandContactForm slug={params.slug} bandName={band.name} />
 				{/if}
 			</div>
