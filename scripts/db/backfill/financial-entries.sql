@@ -5,7 +5,7 @@
 --
 -- Run AFTER the live write paths are deployed: a backfill written before the
 -- writers settle gets written twice. See
--- docs/decisions/0016-a-local-financial-record.md.
+-- docs/architecture/domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money.
 --
 -- D1 has no transactions, so idempotence is the safety property. Every insert
 -- is guarded on `NOT EXISTS` against the subject it describes, so a second run

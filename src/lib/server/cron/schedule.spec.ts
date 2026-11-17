@@ -7,6 +7,7 @@ const env = { ORIGIN: 'https://corvmc.test', CRON_SECRET: 'test-secret' };
 
 const ALL_ENDPOINTS = [
 	'/api/cron/auto-complete',
+	'/api/cron/lock-job-requested',
 	'/api/cron/cancel-stale-tickets',
 	'/api/cron/expire-waitlisted',
 	'/api/cron/wake-snoozed',

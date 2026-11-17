@@ -52,7 +52,7 @@ export async function committeeGrantsFor(userId: string): Promise<CommitteeGrant
 	}));
 }
 
-/** A deliverable: a live task a committee owns in a project (decision 0053). */
+/** A deliverable: a live task a committee owns in a project (#1701). */
 const liveDeliverable = and(
 	isNotNull(workOrder.groupId),
 	isNotNull(workOrder.projectId),

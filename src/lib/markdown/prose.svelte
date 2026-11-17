@@ -4,10 +4,13 @@
 	export let title = '';
 	/** @type {string} */
 	export let description = '';
+	// Read `m` here, not in the template: this file compiles in legacy mode, where a
+	// template read of `m` deep-reads the namespace and bundles every message.
+	const pageTitle = (/** @type {string} */ t) => m.layout_page_title({ title: t });
 </script>
 
 <svelte:head>
-	<title>{m.layout_page_title({ title })}</title>
+	<title>{pageTitle(title)}</title>
 	{#if description}
 		<meta name="description" content={description} />
 	{/if}

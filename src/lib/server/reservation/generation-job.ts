@@ -635,7 +635,7 @@ export async function copyListing(
 	// phase 4 nothing in a request path deletes an object — cancelling detaches,
 	// and the sweep only reclaims what no attachment points at — so sharing is
 	// now the safe option rather than the dangerous one, and a 52-week series
-	// holds one JPEG instead of 52. See docs/decisions/0026-uploads-are-detached-and-swept.md.
+	// holds one JPEG instead of 52. See docs/architecture/domain-model.md#already-unified-references.
 	if (prototype.posterKey) {
 		try {
 			const attached = await attachExisting(

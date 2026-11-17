@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	await uploadFile(buffer, key, file.type);
 
 	// Records the object and releases the old one. Nothing here deletes: see
-	// docs/decisions/0026-uploads-are-detached-and-swept.md.
+	// docs/architecture/domain-model.md#already-unified-references.
 	await replaceSlot({
 		attachableType: 'group',
 		attachableId: bandId,

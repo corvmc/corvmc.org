@@ -50,6 +50,8 @@
 	} = $props();
 
 	const formCtx = getFormContext()!;
+	// A booking can take seconds to answer: the submit shows it and takes no second press.
+	const pending = $derived(formCtx.status === 'pending');
 
 	const activeStep = $derived(reservation ? 0 : 1);
 
@@ -302,9 +304,10 @@
 				>
 			{/if}
 			{#if band}
-				<Button type="submit" variant="primary"
-					>{m.reservations_booking_confirm_step_book_session_label()}</Button
-				>
+				<Button type="submit" variant="primary" disabled={pending}>
+					{#if pending}<span class="loading loading-sm loading-spinner"></span>{/if}
+					{m.reservations_booking_confirm_step_book_session_label()}
+				</Button>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
 						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button
@@ -315,9 +318,14 @@
 				     it's the submitter. Named for the dialog it finishes, and primary
 				     even beside Pay Ahead — booking is the action, paying early is the
 				     option (#1027). -->
-				<Button {...formCtx.fields.skipPayment.as('submit', 'on')} variant="primary"
-					>{submitLabel}</Button
+				<Button
+					{...formCtx.fields.skipPayment.as('submit', 'on')}
+					variant="primary"
+					disabled={pending}
 				>
+					{#if pending}<span class="loading loading-sm loading-spinner"></span>{/if}
+					{submitLabel}
+				</Button>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
 						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button

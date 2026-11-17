@@ -4,9 +4,9 @@ import type { PageServerLoad } from './$types';
 
 /**
  * Tasks needs `project.read`; a staffer holding only `event.manage` goes to
- * Productions on Events (#2766). Navigation only: each view's remotes guard for themselves.
+ * Productions (#2766, #3112). Navigation only: each view's remotes guard for themselves.
  */
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user || (await can('project.read'))) return;
-	if (await can('event.manage')) redirect(307, '/staff/events?view=productions');
+	if (await can('event.manage')) redirect(307, '/staff/productions');
 };

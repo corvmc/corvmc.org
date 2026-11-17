@@ -1,17 +1,16 @@
 import type { Capability } from '#lib/config.js';
 
 /**
- * Events is one list (#2766) whose view filter chooses which rows it shows:
- * every listing, the CMC shows by production, the venues, or every market's
- * vendor applications. Listings are the unfiltered list.
+ * The Calendar (#2766, #3112) is one list whose view filter chooses which rows
+ * it shows: every listing, the venues, or every market's vendor applications.
+ * Listings are the unfiltered list. Productions is a list of its own.
  */
-export const eventViews = ['listings', 'productions', 'venues', 'vendors'] as const;
+export const eventViews = ['listings', 'venues', 'vendors'] as const;
 export type EventView = (typeof eventViews)[number];
 
 /** The capability each view's remotes or actions guard on. */
 export const eventViewCapability: Record<EventView, Capability> = {
 	listings: 'event.read',
-	productions: 'event.manage',
 	venues: 'event.read',
 	vendors: 'event.manage'
 };

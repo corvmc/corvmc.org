@@ -227,7 +227,9 @@ status=$?
 if [ "$status" -ne 0 ]; then
 	# The report prints absolute paths into the temp tree; the directory names are
 	# what a person can act on.
-	if printf '%s' "$report" | grep -q 'Non-commutative migrations detected'; then
+	# A here-string, not `printf | grep -q`: under pipefail the writer's SIGPIPE, once
+	# grep has matched and gone, would read as "no match" and fail open (#3169).
+	if grep -q 'Non-commutative migrations detected' <<<"$report"; then
 		pair=$(printf '%s' "$report" | grep -oE 'migrations/[0-9]{14}_[A-Za-z0-9_.-]+' | sort -u)
 		fork_message 'drizzle-kit check reports these as siblings:' "$pair"
 		exit 2

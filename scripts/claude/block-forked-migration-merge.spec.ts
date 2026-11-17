@@ -68,18 +68,15 @@ beforeAll(() => {
 afterAll(() => rmSync(repo, { recursive: true, force: true }));
 
 function run(command: string, checkBin?: string): { code: number; stderr: string } {
-	try {
-		execFileSync('bash', [script], {
-			cwd: repo,
-			input: JSON.stringify({ tool_input: { command } }),
-			env: { ...process.env, ...(checkBin ? { DRIZZLE_KIT_BIN: checkBin } : {}) },
-			stdio: ['pipe', 'pipe', 'pipe']
-		});
-		return { code: 0, stderr: '' };
-	} catch (e) {
-		const err = e as { status: number; stderr: Buffer };
-		return { code: err.status, stderr: err.stderr.toString() };
-	}
+	// `spawnSync`, so a fail-open exit 0 still hands back the note saying which branch
+	// it took. #3169 failed here with an empty stderr and nothing to go on.
+	const result = spawnSync('bash', [script], {
+		cwd: repo,
+		input: JSON.stringify({ tool_input: { command } }),
+		env: { ...process.env, ...(checkBin ? { DRIZZLE_KIT_BIN: checkBin } : {}) },
+		encoding: 'utf8'
+	});
+	return { code: result.status ?? 0, stderr: result.stderr };
 }
 
 describe('block-forked-migration-merge', () => {
@@ -90,6 +87,26 @@ describe('block-forked-migration-merge', () => {
 	it('names the offending pair, which is what a person can act on', () => {
 		const { stderr } = run('gh pr merge 123 --auto', forkingCheck);
 		expect(stderr).toContain('20260102000000_branch_only');
+	});
+
+	it('blocks however much drizzle-kit prints after naming the fork', () => {
+		// #3169: `printf | grep -q` under pipefail. grep exits on the first match, the
+		// writer takes SIGPIPE on the rest, and the fork was filed as "not a fork". A
+		// report longer than a pipe buffer makes that race certain rather than rare.
+		const verbose = join(repo, 'verbose-check.sh');
+		writeFileSync(
+			verbose,
+			`#!/usr/bin/env bash\n` +
+				`echo ' Non-commutative migrations detected  Found 1 conflict across 2 migrations'\n` +
+				`echo '  ├── migrations/20260101000000_on_main'\n` +
+				`echo '  └── migrations/20260102000000_branch_only'\n` +
+				`for i in $(seq 20000); do echo "  detail line $i"; done\n` +
+				`exit 1\n`
+		);
+		chmodSync(verbose, 0o755);
+		const { code, stderr } = run('gh pr merge 123 --auto', verbose);
+		expect(stderr.slice(0, 200)).not.toContain('not evaluated');
+		expect(code).toBe(2);
 	});
 
 	it('tells you to check whether somebody already landed the change', () => {

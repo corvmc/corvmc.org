@@ -29,7 +29,7 @@ export const governance: StaffNavSection = {
 			also: [resolve('staff/volunteer')],
 			badgeKey: 'volunteerPending'
 		},
-		// Committees work as departments (decision 0085), listed apart (#3027).
+		// Committees work as departments (#2983), listed apart (#3027).
 		{
 			key: 'committees',
 			capability: 'committee.manage',

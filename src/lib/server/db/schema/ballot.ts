@@ -21,7 +21,7 @@ export interface BallotCertifiedResult {
 }
 
 /**
- * One question, one choice per elector. See docs/decisions/0052-secret-ballots-count-without-a-vote-row.md.
+ * One question, one choice per elector. See docs/development/business-workflows.md#23-formal-ballots-a-frozen-roll-a-secret-or-recorded-vote-a-certified-result.
  *
  * Lifecycle is derived from timestamps: draft until `opened_at`, closed once
  * `closes_at` passes, final once `certified_at` or `cancelled_at` is set.

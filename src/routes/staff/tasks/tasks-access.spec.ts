@@ -30,11 +30,11 @@ describe('/staff/tasks', () => {
 		await expect(run(tasks.load)).resolves.toBeUndefined();
 	});
 
-	it('sends an event.manage-only staffer to Productions on Events', async () => {
+	it('sends an event.manage-only staffer to Productions', async () => {
 		held = ['event.manage'];
 		await expect(run(tasks.load)).rejects.toMatchObject({
 			status: 307,
-			location: '/staff/events?view=productions'
+			location: '/staff/productions'
 		});
 	});
 });

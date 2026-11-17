@@ -373,7 +373,7 @@ describe('withdraw / unpublish / delete', () => {
 		await deleteCommunityEventDraft('evt-1', OWNER);
 
 		// The object is detached, not deleted — this path cannot tell whether
-		// another event still points at it. See docs/decisions/0026-uploads-are-detached-and-swept.md.
+		// another event still points at it. See docs/architecture/domain-model.md#already-unified-references.
 		expect(detachSlot).toHaveBeenCalledWith('event_listing', 'evt-1', 'poster');
 		expect(deleteObject).not.toHaveBeenCalled();
 		expect(deleteCalled).toHaveBeenCalled();

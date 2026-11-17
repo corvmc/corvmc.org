@@ -15,8 +15,8 @@ import { organization } from './party';
 // stock arriving, which is why cost lives here rather than on `acquisition`
 // or `purchase_order`.
 //
-// See `docs/decisions/0051-contractor-work-has-its-own-tables.md` and
-// `docs/decisions/0054-a-work-order-is-the-task.md`.
+// See `docs/development/business-workflows.md#contractors-paid-repairs-and-building-work` and
+// `docs/development/business-workflows.md#projects-and-work-orders`.
 // ---------------------------------------------------------------------------
 
 /**

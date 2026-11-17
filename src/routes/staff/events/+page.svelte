@@ -7,7 +7,6 @@
 	import CreateListingAction from './CreateListingAction.svelte';
 	import PrintPosterAction from './PrintPosterAction.svelte';
 	import EventList from './EventList.svelte';
-	import ProductionList from './ProductionList.svelte';
 	import VenueList from './VenueList.svelte';
 	import VendorList from './VendorList.svelte';
 
@@ -15,7 +14,7 @@
 	const view = $derived(eventView(page.url.searchParams));
 </script>
 
-<PageHeader title={m.staff_events_title()}>
+<PageHeader title={m.staff_calendar_title()}>
 	{#if view === 'listings'}
 		<PrintPosterAction />
 		<CreateListingAction />
@@ -24,9 +23,7 @@
 
 <PageContent>
 	{#key view}
-		{#if view === 'productions'}
-			<ProductionList />
-		{:else if view === 'venues'}
+		{#if view === 'venues'}
 			<VenueList />
 		{:else if view === 'vendors'}
 			<VendorList />

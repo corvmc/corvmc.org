@@ -216,9 +216,7 @@ only stamps `refundedAt`, which `reservationTrack` reads ahead of `paidAt`.
 
 ### The status track
 
-A reservation is shown with one status, its track (#2861,
-[decision 0082](../decisions/0082-a-reservation-shows-one-status-track.md),
-[0084](../decisions/0084-owing-is-decided-by-money.md)). It is derived from
+A reservation is shown with one status, its track (#2861, #3003). It is derived from
 `status` and the payment columns and never stored. Staff and members read the same words.
 
 | Track       | Rule, first match wins                                                          |
@@ -238,7 +236,11 @@ A reservation is shown with one status, its track (#2861,
 - Payment due is `paymentDueSql`: the staff filter, the dot, the member's Payment due list and
   the fee gate read it. An upcoming booking that owes cash at the session reads Booked.
 - `completed` is stored and not shown. A completed booking reads Paid, Payment due or Covered:
-  owing is decided by money ([decision 0084](../decisions/0084-owing-is-decided-by-money.md)).
+  owing is decided by money (#3003). Not reopening the booking to confirmed when it owes,
+  because the stored status records what happened to the session and payment is read from the
+  payment columns (#3003).
+- Not a stored track, because Booked becomes Payment due when the session ends, and a stored
+  value would need a job to keep it true (#2861).
 - Covered does not say whether credits or a comp settled it. `trackDetail` does, on the staff
   reservation page; a comp is also a `reservation.comped` audit row.
 - A reservation ref (`toReservationRef`) carries the track as its status.
@@ -253,6 +255,8 @@ before the track opens Booked) and `/staff/reservations/[id]`
 (detail plus every action).
 Two things differ from the member path:
 
+- Not a Resolve modal beside the filters, because two lists of the same rows can disagree
+  (#2586).
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
   booking" with "outside operating hours" into one flag — see #563; a double-booking
@@ -285,7 +289,8 @@ Two things differ from the member path:
   than five weeks get none. Each stage sends once per reservation; a session paid, comped or
   refunded drops out before its next stage. With no **Count from** set none are sent. The email
   names the date and amount, links to the reservation's pay page, and says new reservations and
-  door codes are held. It is mandatory: no notification preference turns it off (#2981). It does
+  door codes are held. It is mandatory: no notification preference turns it off, because a
+  member who turned it off would learn of the fee only when a booking was refused (#2981). It does
   not copy staff. Every attempt writes a `reservation.payment_reminder` audit row on the member,
   with its outcome: `sent` (with the outbox row), `skipped` (account removed)
   or `failed` (the outbox refused it; the stage stays owed for the next pass). The staff
@@ -299,7 +304,20 @@ surfaces cannot drift in what they do — only in who may do it.
 
 An **instructor** is a member staff have granted teaching terms in the practice room
 (`instructor` table, one row per user). CMC rents the room to the teacher and records nothing
-about students. Decision: [Instructors rent the room](../decisions/0015-instructors-rent-the-room.md).
+about students (#2540).
+
+- Not enrolment, lesson records or payouts, because students are not a party to anything CMC
+  records, and taking their fees would need Stripe Connect (#2540).
+- Not a teaching rate below the member rate, because it would be the cheapest rehearsal in the
+  building (#2540).
+- Not replacing or deriving `teachesLessons`, because either turns a member's description of
+  their own life into a staff decision (#2540).
+- Not a separate `teaching.` config prefix, because it adds a second config read on a hot path
+  and a second place to look for the rate (#2540).
+- Not a filter on the member directory, because the instructor directory has a different
+  reader, card and predicate (#2540).
+- Not an appeal for a declined application, because appeals contest behaviour calls and an
+  application is a proposal returned with a reason (#2540).
 
 - **Status:** `requested` and `rejected` are the application, `active`, `paused` and `retired`
   the grant (`instructorStatuses` in `src/lib/config.ts`). A member applies from
@@ -343,7 +361,12 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
 
 ## 2. Recurring reservations and the waitlist
 
-Decision: [Recurring reservations clone a prototype](../decisions/0014-recurring-reservations-clone-a-prototype.md)
+- Not booking fields on the series, because every booker type's fields would be copied onto
+  the series table and kept in step with `reservation` (#2540).
+- Not monthly on a fixed date for a booking, because the 15th falls on a different weekday each
+  month (#2540).
+- Not skipping cancelled occurrences in the existence check, because re-running the job would
+  recreate an occurrence the member cancelled (#2540).
 
 ### The story
 
@@ -389,7 +412,11 @@ themselves: a slot the same booker already holds is a duplicate and is refused, 
   is paid, has a door code or is referenced is kept and listed for the booker to keep or
   cancel, so nothing is refunded in bulk. A staff edit emits
   `reservation.recurring_rescheduled` to the booker. `previewReschedule()` shows the new
-  sessions with the conflict generation would meet, and what is removed or kept.
+  sessions with the conflict generation would meet, and what is removed or kept. Not an edit
+  of the series row in place, because generated bookings would no longer match their rule and
+  the history would be gone. Not every old booking left in place, because the member would hold
+  both schedules. Not every old booking cancelled, because paid sessions would be refunded
+  (#2719).
 - **Changing an event series' schedule:** `rescheduleEventSeries()` in
   `event-series-reschedule.ts`, from the same **Edit schedule** on a program's session row or
   the staff event page's series bar. Guarded by `requireSeriesWriter()`: `event.manage`, a
@@ -435,7 +462,7 @@ that replaced it), `reservation` rows
 
 ## 3. Membership: signup, subscription, monthly credits
 
-Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment-ledger.md)
+Stripe is the payment ledger: see [the overview](../architecture/overview.md).
 
 ### The story
 
@@ -483,8 +510,9 @@ authorities. A holder of `credit.adjust` (admin only) adds or deducts any amount
 `admin_adjustment`. A holder of `credit.comp` alone (staff) may only add, up to
 `creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 credits (2 hours), and no
 equipment credits. A comp is written as `staff_comp`, so the ledger shows it apart. A refused
-amount comes back as a field issue on `amount`, not a 403. Decision:
-[Staff comp credits up to a ceiling](../decisions/0020-staff-comp-credits-up-to-a-ceiling.md).
+amount comes back as a field issue on `amount`, not a 403. Not `credit.adjust` for staff,
+because deductions and unbounded additions stay an admin act. Not a per-period cap, because
+every comp is in the ledger with its source and reason, which the treasurer reads (#579).
 
 ### Data touched
 
@@ -506,11 +534,26 @@ Subscription/Invoice objects.
 
 ## 4. Bands: creation, invitations, premium pages
 
-Records: [groups split the band table](../decisions/0024-groups-split-the-band-table-by-purpose.md) ·
-[band addresses](../decisions/0025-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
-[a club gets a page](../decisions/0021-a-club-gets-a-page-not-a-panel.md) ·
-[announcements](../decisions/0023-group-announcements-are-transactional-and-batched.md) ·
-[an act is a performer organization](../decisions/0074-an-act-is-a-performer-organization.md)
+- Not a polymorphic roster over bands and programs, because it needs a purge helper on every
+  delete path and a discriminator branch in every query (#247).
+- Not a profile table split by entity type, because promoting an external act to a band would
+  move name, bio and avatar between tables (#247).
+- Not `unique(kind, slug)`, because a slug alone would no longer resolve a group (#247).
+- Not group kinds as booker types, because they copy `kind` and miss the next kind added (#247).
+- Not subdomains as the premium feature, because they cost nothing and the free tier needs an
+  address to hand out (#2558).
+- Not HTTP validation for custom hostnames, because the live site would be down between the DNS
+  change and the certificate (#2558).
+- Not a 301 for a released address, because a cached permanent redirect cannot be taken back
+  when another band claims the slug (#2558).
+- Not `ensureUniqueSlug` for a chosen address, because an owner who asked for `theneons` should
+  hear it is taken, not get `theneons-2` (#2558).
+- Not a panel for every group, because a club member mostly receives. Not member sections on the
+  public `/groups/{slug}` page, because private documents would sit on a public, cacheable
+  route (#326).
+- Not one contact per act, because an act's manager and its tour manager are different people.
+  Not the act's people moved to the band on claim, because the booking contact is often a
+  manager, not a member (#2622).
 
 ### The story
 
@@ -599,8 +642,17 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   event. The listener in `announcement-fanout.ts` latches on the row's `notified_at`, reads
   recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
   thread, not the author), inserts in-app rows in chunks, and writes one outbox `email` row per
-  recipient, sent on the transactional stream (#2971). See
-  [0064](../decisions/0064-a-group-has-one-announcements-thread.md).
+  recipient, sent on the transactional stream (#2971).
+  - Not one thread per group for everything, because it removes named topics and turns
+    announcements into chat messages (#2618).
+  - Not per-post state on `inbox_message`, because pin, soft delete and the email latch are not
+    message concerns (#2618).
+  - Not `dispatch()` in a loop, because it breaks on the subrequest ceiling and fails part-way
+    without a record (#333).
+  - Not one notification type per kind of group, because the preferences page would show
+    several identical rows for one choice (#333).
+  - Not the broadcast stream, or honouring `suppressedAt`, because a marketing opt-out would
+    silence a group the member chose to join (#333).
 - **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
   `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against
   the file's own group with `requireGroupRole(…, 'member', { staff: groupRead })` and answers
@@ -647,9 +699,23 @@ need `event.read`. Its actions are Send contact sheet (`directory.shareContactSh
 
 ## 5. Events and tickets
 
-Decisions: [a ticket row is one entry pass](../decisions/0002-a-ticket-row-is-one-entry-pass.md) ·
-[a ticket price is a sliding scale](../decisions/0008-ticket-price-is-a-sliding-scale.md) ·
-[the canonical event URL holds the general view](../decisions/0007-the-canonical-event-url-holds-the-general-view.md)
+- Not a `ticket_order` table beside `ticket`, because it would hold a quantity and a status the
+  ticket rows already answer (#2553).
+- Not `pending` tickets counted toward capacity, because an abandoned checkout would hold seats
+  nobody paid for (#2553).
+- Not a "request a free ticket" flow, because it makes a buyer ask a person for permission to
+  afford a show. The sliding scale makes free an outcome (#2553).
+- Not a member discount, because half off a pay-what-you-can price is a discount off nothing
+  (#2553).
+- Not Stripe Connect payouts to acts for a collective sale, because a touring band should not
+  need a Stripe account to be paid. An act is paid the way a contractor is (#2553).
+- Not the acts' guarantee anchored on the gross paid, because every generous buyer would raise
+  the acts' floor and cap what they could send to the collective (#2553).
+- Not staff event pages split by source, because moderation covers CMC's own shows too, and a
+  source-scoped page cannot show a member's listing duplicating a CMC show (#2553).
+- Not the production console at `/staff/events/[id]`, because `entity-href` sends every event
+  reference there, and a volunteer coordinator following a shift would land on the most
+  privileged view (#2553).
 
 ### The story
 
@@ -661,14 +727,16 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
+  is **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
   (a community draft is its author's alone), filtered by source, search, date range and status
   with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
   soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
-  badge; the dashboard feed collects the ones waiting for review. Its Productions view
-  (`/staff/events?view=productions`) is the CMC work index, `source='cmc'` at every status via
-  `getStaffEvents` → `listAll()`, filterable by production status. A published CMC show is on
-  both. Venues and every market's vendor applications are the list's other views (#2766).
+  badge; the dashboard feed collects the ones waiting for review. A listing with a production
+  links to it. **Productions** (`/staff/productions`, #3112) is a list of its own:
+  `getStaffProductions` → `listProductions()`, every `production` row from draft to closed,
+  listed or not, filterable by production status and short-of-acts. Each row opens its listing,
+  or its project when it has none. Venues and every market's vendor applications are the
+  Calendar's other views (#2766).
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
   every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
   else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
@@ -736,10 +804,19 @@ events use RSVP instead.
 ### Door sales
 
 A card or cash payment taken at the door. Cards are taken on the CMC phone, which runs the
-`door-app/` shell over `/member/volunteer/door` ([door-app.md](door-app.md); decisions:
-[Door sales on one Tap to Pay phone](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md),
-[Door cash is a ticket sale](../decisions/0083-door-cash-is-a-ticket-sale.md)). Cash is
-recorded from any browser.
+`door-app/` shell over `/member/volunteer/door` ([door-app.md](door-app.md); #612, #2800).
+Cash is recorded from any browser.
+
+- Not cash kept off the app and reconciled only through Cash counted, because check-ins and the
+  Door sales card would undercount the night, and the acts' share of cash would follow a
+  different rule from cards (#2800).
+- Not Cash counted split on top of recorded sales, because recorded sales are already in the
+  pool and the acts would be paid twice (#2800).
+- Not a `payment_method` column on `ticket`, because the purchase id already carries it (#2800).
+- Not the `/checkout/[id]` Payment Element page, because it is card-not-present and opened by a
+  buyer (#612).
+- Not a `door_ticket` Stripe product, because one show's revenue would split across two
+  products (#612).
 
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
@@ -807,10 +884,25 @@ space-holding events.
 
 ## 6. Inventory, gear and consumables
 
-Decisions: [stock is a ledger](../decisions/0045-inventory-stock-is-a-ledger.md),
-[asset tags are bound](../decisions/0043-asset-tags-are-bound-not-generated.md),
-[no capitalization threshold](../decisions/0046-serialization-is-not-a-capitalization-threshold.md),
-[Form 8282 is the only tax check](../decisions/0044-form-8282-is-the-only-inventory-tax-check.md)
+- Not a cached on-hand counter, because that counter was the defect the ledger removed. If
+  profiling ever needs one, it follows `creditTransaction`: a cached column reconciled by cron,
+  with the ledger canonical (#286).
+- Not one `kind` enum covering returnability, because cables are counted and returnable and
+  strings are counted and not (#286).
+- Not a lending product (Cheqroom, myTurn, Snipe-IT), because loans settle against membership
+  and credits, which an outside system cannot see without a sync (#286).
+- Not a monetary threshold for serialization, because value and tracking do not correlate: a
+  $200 microphone needs its own row, and a $1,500 cable order is not one asset (#302).
+- Not a `NOT NULL` asset tag, because gear entered before the tag roll arrives would need
+  placeholders, which collide in a unique column (#286).
+- Not GS1 Digital Link, because its syntax needs a paid GS1 company prefix (#286).
+- Not a remote function for `/a/[tag]`, because a scan is navigation and a phone should get a
+  302 from the server (#286).
+- Not a flag on every donated disposal, because CMC has never signed a Form 8283, so every flag
+  would be false. Not an in-kind disclosure screen or Schedule M, because CMC has neither
+  requirement (#302).
+- Not a supplier select of its own on a purchase order, because a new shop would mean leaving
+  the form for Contacts first. A supplier is an organization (#2622).
 
 ### The story
 
@@ -1036,7 +1128,11 @@ and a remote `form()` that fails validation runs no handler at all.
 
 ### Contractors: paid repairs and building work
 
-Decision: [Contractor work has its own tables](../decisions/0051-contractor-work-has-its-own-tables.md)
+- Not `purchase_order` for contractor work, because its lines name a catalog item and
+  receiving records an acquisition (#2562).
+- Not `acquisition`, because an acquisition means goods entered stock. Contractor spend is
+  reported beside equipment spend (#2562).
+- Not the name `vendor`, because it means a market vendor (#2562).
 
 A contractor is somebody the collective pays: an `organization` holding the `contractor` role
 (#2622), with a `contractor_detail` row for trade, licence and `insurance_expires_at`, a bare date
@@ -1291,9 +1387,25 @@ thread and the task keep their own status: resolving one leaves the other open.
 
 ## 9. The gig guide and community listings
 
-Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
-[lineup credits need the band's consent](../decisions/0005-lineup-credits-need-the-bands-consent.md) ·
-[partner feeds import as community listings](../decisions/0012-partner-feeds-import-as-community-listings.md)
+- Not a pre-approval queue for every listing, because a queue nobody works is worse than a
+  listing nobody reported (#2553).
+- Not `cancelled` for a rejected submission, because `cancelled` is a public, terminal fact that
+  the show was called off, and `cancel()` releases rooms, voids tickets and emails holders
+  (#2553).
+- Not cancelled shows dropped from the guide, because their pages would 404 and anyone with a
+  shared link would learn nothing (#2553).
+- Not a total listing cap per member, because a published listing costs staff nothing and a cap
+  would stop a promoter with fifteen real shows (#2553).
+- Not an account required for every lineup credit, because most acts on a bill have none
+  (#2553).
+- Not a credited band editing or cancelling the gig, because cancelling deletes the poster and
+  two bands editing `startsAt` is last writer wins (#2553).
+- Not an upheld report on an imported listing charged to the staffer who added the feed,
+  because that staffer chose a venue, not the show (#1459).
+- Not a visibility check per page, because remote functions bypass page loads. The check is in
+  the service read and the remote (#2662).
+- Not members listings on the public guide when signed in, because the guide is the public's.
+  A member's wider view is the member events page (#2662).
 
 ### The story
 
@@ -1326,7 +1438,9 @@ recaps and the month poster — applies `visibleTo` from `src/lib/server/event/v
 The member events page's guide passes the signed-in member, so it adds members listings and
 their own groups'. The event page, its ticket and RSVP actions, and `/e/<code>` 404 for a viewer
 who may not see the listing. The month poster also prints a club's meeting at `members`, which
-keeps club sessions on it (decision 0061). `scripts/event-visibility.spec.ts` fails a read of
+keeps club sessions on it (#2605). Not satori for every poster size, because each aspect ratio
+needs a hand-measured fit and a print-size PNG is heavy for a Worker. Not satori kept for the
+social PNG either, because two layouts of one poster drift (#2605). `scripts/event-visibility.spec.ts` fails a read of
 published listings that skips the predicate.
 
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
@@ -1420,9 +1534,18 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ## 10. Messaging: portal threads, direct messages and band enquiries
 
-Decisions: [Member conversations share the staff inbox](../decisions/0034-member-conversations-share-the-staff-inbox.md) ·
-[Direct message refusals look alike](../decisions/0035-direct-message-refusals-look-alike.md) ·
-[Band enquiries are threads the band owns](../decisions/0041-band-enquiries-are-threads-the-band-owns.md)
+- Not a separate member messaging feature, because staff would work two queues (#204).
+- Not `getThread()` for members, because it returns staff-only notes (#204).
+- Not live push, because the SSE registry is per isolate on Workers. The notification bell
+  covers a reply that arrives while the page is open (#204).
+- Not a helpful error per direct-message refusal, because a sender who can tell them apart can
+  tell a decline from an unopened request (#213).
+- Not the message quoted in email, because decline, block and report cannot reach an email
+  already sent (#213).
+- Not enquiry participant rows written at send time, because later band admins would never see
+  the thread and former members would keep it (#487).
+- Not snooze, assignment, notes and tags on band enquiries, because a four-person act is not a
+  work queue (#487).
 
 ### The story
 
@@ -1516,12 +1639,33 @@ admins answer it at `/band/[slug]/messages`. Neither side sees the other's addre
 
 ## 11. Moderation: reports, standing, and the suggestion board
 
-Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
-[member standing is one table keyed by scope](../decisions/0038-member-standing-is-one-table-keyed-by-scope.md) ·
-[one report takes a suggestion off the board](../decisions/0036-one-report-takes-a-suggestion-off-the-board.md) ·
-[suggestion edits lock at the first outside vote](../decisions/0037-suggestion-edits-lock-at-the-first-outside-vote.md) ·
-[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md) ·
-[a removal is a record of an upheld report](../decisions/0077-a-removal-is-a-record-of-an-upheld-report.md)
+- Not a single global standing per member, because one bad listing would cost a member the
+  suggestion board too (#224).
+- Not a status type per scope, because it cannot be one SQLite text column and every query
+  would turn scope-conditional (#224).
+- Not `requiresReview` beside `status`, because two columns would encode one ladder (#224).
+- Not the event rule for suggestions (a report moves nothing until staff act), because abuse
+  would stay up on a small board (#212).
+- Not a dismissal that leaves the post down, because every member would hold a permanent
+  takedown button (#212).
+- Not one field for status and visibility, because a member could not tell a decision from a
+  disappearance (#212).
+- Not every suggestion edit sent to staff, because it adds staff work for a typo fixed in the
+  first minutes. Not edits that reset the vote count, because fixing a typo would cost a
+  popular suggestion its votes (#212).
+- Not an appeal as an inbox thread, because a thread has no outcome, cannot be queried for
+  unanswered appeals, and cannot trigger the restore (#578).
+- Not the consequence lifted while an appeal waits, because anyone restricted could lift it by
+  filing (#578).
+- Not a soft warning the resolving staffer clicks through, because it leaves the self-review
+  rule to habit (#578).
+- Not a `/staff/appeals` page, because the appeal renders under the report it contests (#578).
+- Not a ban flag beside `deletedAt`, because every `deletedAt` reader would have to learn it
+  (#2552).
+- Not a removal kind for self-deletion, because it has no report to appeal (#2552).
+- Not an appeal through a session, because a removed member cannot sign in (#2552).
+- Not a lapsed subscription re-created on lift, because a lapsed membership needs the member's
+  own checkout (#2552).
 
 ### The story
 
@@ -1640,8 +1784,7 @@ appeal waited can still be granted.
   "contact staff" line instead. No staff form restricts directly since `setMemberStanding`
   was deleted (#1528); `fileStaffAction` files the `staff_action` report such a form would need.
 - **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
-  but not deny (`SelfReviewError`). A second staffer answers it. See
-  [Moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md).
+  but not deny (`SelfReviewError`). A second staffer answers it (#578).
 - **A suspended member still signed in** → the session cookie cache answers for up to 60
   seconds after the removal purges the session rows (`hooks.server.ts`).
 - **A removed member says the appeal link fails** → links expire after 60 days. Resend the
@@ -1655,8 +1798,19 @@ appeal waited can still be granted.
 
 ## 12. Volunteering
 
-Decisions: [Volunteer hours are a record](../decisions/0048-volunteer-hours-are-a-record.md),
-[Certifications are an append-only catalog](../decisions/0047-certifications-are-an-append-only-catalog.md)
+- Not hours that earn practice-room credits, because hours are a record, not a currency. A test
+  holds this (#171).
+- Not volunteer roles as an enum or a config string, because a role carries a markdown job
+  description and adding one would need a deploy (#235).
+- Not midnight as the `worked_on` anchor, because in a zone ahead of UTC every log on the 1st
+  would bucket into the prior month (#235).
+- Not logging gated on an auth role, because staff would have to grant it before anyone filed a
+  first log (#235).
+- Not a `requires_training` flag on each role, because it has nowhere to put First Aid, and
+  training that clears two roles would be recorded twice (#235).
+- Not overwriting a certification on renewal, because it erases whether a card was current on
+  a past date. Not deleting a pulled clearance, because it erases the window it covered (#235).
+- Not a stored certification status, because it is wrong once the clock passes midnight (#235).
 
 ### The story
 
@@ -1692,6 +1846,10 @@ and `requireActiveVolunteer` refuses a blocked member in `claimShift`, `submitHo
 
 A **task** (`work_order`) is the work; a **shift** (`volunteer_shift`) is a time volunteers
 sign up for it. A task has zero or more shifts. Deliverables and repairs usually have none.
+Not one row in two states, because a setting existed only to close reports on a time. Not a
+sign-up on a task, because a task with two shifts would need a second choice inside the sign-up.
+Not `work_order` renamed to `task`, because a table with children rebuilds on rename and every
+index and check name moves with it (#2518).
 
 - **Assigning and signing up are two acts.** Staff and committees assign a task to people
   (`work_order_assignee`, `assignee-service.ts`). Volunteers sign up for a shift
@@ -1912,8 +2070,8 @@ One template may carry `duty_list.project_kind = 'production'`, a checkbox on it
 marking another moves it. Picking that one starts a show in one action: `createShowProject` writes
 the project (`kind = 'production'`), the `production` row (`draft`) and the show's committees in one
 `db.batch`, then the checklist is applied. The listing attaches when it exists, and event-timed
-items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on the Projects
-view, since the Productions view lists listings. Turning an existing general project into a show
+items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on
+Productions with no event, and its row opens the project. Turning an existing general project into a show
 is not offered.
 
 The other ways of opening a show have nobody to ask, so they stamp that same template with
@@ -2067,9 +2225,16 @@ Who may run one is the ordinary clearance gate: `volunteer_role_certification` l
 Rehearsal Orientation role to the Space Orientation Trained certification, and `claimShift`
 already enforces it. Nothing new claims or assigns; the two notices are the reminders above.
 
+- Not a scheduled job per shift or booking, because reminders derive from rows that exist. A
+  stored future send would need moving whenever the booking moves (#2567).
+- Not parking and building rules in code, because staff change them without a deploy (#2567).
+- Not the requested start kept with wider conflict checks for the tour, because the door code,
+  the calendar and every conflict query would each need to know about the tour (#2568).
+
 ### Committee deliverables
 
-Decision: [A committee owns show work](../decisions/0053-committees-own-deliverables-not-permissions.md)
+- Not done-conditions stored as data, because they cannot be typed or validated, and nobody
+  reviews SQL kept in a table (#1701).
 
 A work order can name the committee that answers for it (`work_order.group_id`) and a fact that
 marks it done (`done_when`, one of `workDoneConditions`). Both are copied from the template item
@@ -2137,8 +2302,14 @@ publish and close-out gates (`event/show-readiness.ts`), and a deliverable never
 
 ## 13. Music and CMC Radio
 
-Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Record:
-[band music sells files](../decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md).
+Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). The money split
+is in the [Stripe Connect manual](../architecture/stripe-connect-manual.md).
+
+- Not public-bucket URLs for audio, because a download URL would be permanent and shareable
+  (#1572).
+- Not a transcoded stream copy, because Workers cannot run ffmpeg (#1572).
+- Not a seeded shuffle for the radio, because a band opting out would re-deal every listener's
+  evening (#1646).
 
 ### The story
 
@@ -2203,10 +2374,31 @@ tells the band's admins 30 and 7 days before it lapses.
 
 ## 14. Producing a show: the production record
 
-Decisions: [a production is a child of its listing](../decisions/0003-a-production-is-a-child-of-its-listing.md) ·
-[set times are derived and running order is fractional](../decisions/0004-set-times-are-derived-and-running-order-is-fractional.md) ·
-[productions are projects](../decisions/0011-productions-are-projects.md) ·
-[poster art is an artifact request](../decisions/0010-poster-art-is-an-artifact-request.md)
+- Not a production as the parent that creates its event, because it gave staff two front doors
+  for one show (#1133).
+- Not a fixed split percentage on the production, because ticket buyers set the acts' share, and
+  one percentage cannot express a donated set or a guarantee (#1133).
+- Not settlement snapshot columns, because they duplicate the ledger and need reconciling
+  against it (#1133).
+- Not `production.venueId`, because venue is a public fact and lives on the listing (#1133).
+- Not stored, editable set times, because the column would be sometimes derived and sometimes
+  not, and editing one set length would leave the lineup disagreeing with itself (#1133).
+- Not an integer `sortOrder` with a unique index, because SQLite checks it row by row during an
+  `UPDATE`, so swapping two slots trips it mid-statement (#1133).
+- Not one owner column on `project`, because a show has two committees doing different halves
+  of it (#1673).
+- Not shift times recomputed from the template offset, because `work_order` does not record
+  which template item made it, and a recompute would undo a coordinator's change (#1673).
+- Not a lead role on `project_committee`, because it names committees and a lead is a person.
+  Not a host shift as the lead, because booking appoints the lead before any shift exists
+  (#2726).
+- Not Cloudflare image transformations to read poster art, because `format=auto` can answer
+  AVIF, which resvg cannot decode (#852).
+- Not a cutoff job that swaps in the template poster at the due date, because running on the
+  template is the Communications committee's call (#852).
+- Not the print poster fitted inside a margin, because the art is the poster and runs full
+  bleed. Not the satori art-with-footer flyer retired, because it is the social-size poster and
+  the publish gate reads it (#2609).
 
 ### The story
 
@@ -2249,7 +2441,7 @@ restore crew shifts or retract a cancellation notice.
    `production.event_id`; `announcedBy(eventId)` finds a listing's production through
    `event_listing.project_id`.
 2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`, cut by
-   what an action commits CMC to ([0086](../decisions/0086-production-capabilities-by-consequence.md)).
+   what an action commits CMC to (#2959).
    `production.run` is the show's own work: times and notes (`updateProduction`), run of
    show, the advance, the door take, expenses, poster art, and the listing's description and
    times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
@@ -2283,9 +2475,9 @@ restore crew shifts or retract a cancellation notice.
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-8. The Productions view (`/staff/events?view=productions`) reads everything through the one `getStaffEvents` query:
-   `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
-   `getEventLineups()` — the batched helper — supplies the headliner and the count.
+8. Productions (`/staff/productions`) reads through `getStaffProductions`: `listProductions()`
+   reads `production` joined to its project, and left-joins the listing and its `venue` (both
+   1:1, so no fan-out).
 9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
    `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
    `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
@@ -2329,7 +2521,7 @@ restore crew shifts or retract a cancellation notice.
 13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
     revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
     and top-ups count as spend; the pool passes through and never does.
-14. **Festivals and runs** ([0079](../decisions/0079-a-festival-is-a-parent-project.md)). A
+14. **Festivals and runs** (#2543). A
     project, usually a show's, can name another project as its parent (`parent_project_id`),
     set from Edit project on `/staff/tasks/projects/[id]` with `project.manage`. Each night
     keeps its own production, run of show, door take and settlement. `getProjectBurn` on the
@@ -2385,7 +2577,17 @@ restore crew shifts or retract a cancellation notice.
 
 ## 15. The packing list: what goes in the van, and who is bringing it
 
-Record: [one durable packing list per band](../decisions/0029-one-durable-packing-list-per-band.md)
+- Not a list per show, because a list that has to be created per show is a list nobody creates
+  (#729).
+- Not one owner column, because the band's merch tub has no owner and still needs a carrier
+  (#729).
+- Not packing restricted to owners and admins, because the person walking the list at load-out
+  is not reliably an admin (#729).
+- Not delete-and-reinsert on save, as the rider does, because it would drop every claim on each
+  spelling fix (#729).
+- Not a `rider_element_id` foreign key, because the rider mints fresh ids on every save (#729).
+- Not a global `sort_order`, because two members saving their own rows would reorder each
+  other's (#729).
 
 ### The story
 
@@ -2442,7 +2644,14 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Decision record: [the audit log records intent](../decisions/0031-audit-log-records-intent.md)
+- Not change-data capture over every table, because it answers "what changed in this table",
+  not "what happened to this member" (#1131).
+- Not a foreign key on the actor with `set null`, because purging a staff account would leave
+  rows attributed to nobody (#1131).
+- Not failing the action when the audit write fails, because the log is for accountability, not
+  non-repudiation. Rolling back a change the staffer saw succeed costs more than a missing row
+  (#1131).
+- Not logging reads, because with a handful of staff a read log buries the writes (#1131).
 
 ### The story
 
@@ -2481,7 +2690,16 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 ### Projects and work orders
 
-Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
+- Not a stored assignment mode, because it could disagree with the sign-ups and engagements it
+  describes (#1806).
+- Not a section as a text column, because sections are renamed, reordered and left empty
+  (#1806).
+- Not `contractor_job` renamed, because a table with children rebuilds on rename (#1806).
+- Not a `blocked` status or column, because something would have to keep it right as blockers
+  close. Not refusing to close a blocked task, because work gets done out of order; only a cycle
+  is refused. Not due dates that move with their blockers, because the graph shows order, not
+  time. Not cross-project dependencies, because they would need both projects' guards and show
+  half a graph on each page (#2625).
 
 - **Write:** task changes are recorded in the shared services the task page and the
   Tasks table call (`editTask`, `editShift`, `openShift`, `cancelOneShift`, `cancelShift`
@@ -2494,7 +2712,7 @@ Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.
   entries, its work orders' entries, duty ticks (from `work_task`, never audited) and the
   origin chain (suggestion, ballots, project start, from their own rows). The project page's
   Activity sidebar and the task page render it, each loaded lazily.
-- **Dependencies** ([0068](../decisions/0068-a-task-can-wait-on-other-tasks.md)): a task waits
+- **Dependencies** (#2625): a task waits
   on others in its project through `work_order_dependency`, added and removed on the task page
   (`task-dependencies.ts`), and audited as `work_order.dependency_added` / `_removed`.
   `addDependency` refuses a loop with a recursive query. Blocked is the count of open blockers,
@@ -2515,7 +2733,12 @@ Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.
 
 ## 17. The local resources directory
 
-Record: [local resources are their own table](../decisions/0028-local-resources-are-their-own-table.md)
+- Not a shared supplier and resource table, because it would put public descriptions on a spend
+  rollup and invoice data near a public listing (#575).
+- Not unowned `directory_entry` rows, because that is a third meaning for one table and a leak
+  risk in every directory query (#575).
+- Not categories as a `config.ts` constant, because adding one would need a deploy (#575).
+- Not a terminal rejection, because staff hand a listing back with a note (#575).
 
 ### The story
 
@@ -2549,7 +2772,12 @@ the row.
 
 ## 18. Staff email change
 
-Decision record: [staff propose, the mailbox confirms](../decisions/0033-staff-propose-email-changes.md)
+- Not an editable email field, because it would turn the panel into an account-takeover tool
+  (#820).
+- Not approval from the old mailbox, because the old address is usually the one that does not
+  work (#820).
+- Not a GET link that applies the change, because a mail scanner or prefetch would apply it
+  (#820).
 
 ### The story
 
@@ -2608,8 +2836,13 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Decision: [a market vendor is an organization](../decisions/0073-a-market-vendor-is-an-organization.md)
-(#2622), superseding 0009 (#609). Open decision: #1504 (what the public sees).
+A market vendor is an organization (#2622). Open question: #1504 (what the public sees).
+
+- Not the public form prefilled from `vendor_detail`, because the form has no session, so anyone
+  who typed a vendor's email would see that vendor's details (#2622).
+- Not `vendor_detail` overwritten from each application, because a one-off request would replace
+  what staff recorded (#2622).
+- Not the thread's contact columns dropped, because the Inbox sends replies to them (#2622).
 
 ### The story
 
@@ -2774,8 +3007,15 @@ happened at, and links the involved member's contact record when one is kept and
 
 ## 21. Sponsors and grants: what comes due next
 
-Decisions: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-grants-are-two-modules.md),
-[A grant application or sponsorship is a project](../decisions/0067-a-grant-is-a-project.md)
+- Not a `project_id` on each task-like table instead of a project per grant, because a grant
+  would have no owner, budget link or template (#2622).
+- Not each stage template applied on a status change, because a status set by mistake would
+  stamp tasks nobody asked for. An offer costs one click (#2622).
+- Not a NOT NULL `project_id`, because adding one to a populated table is a rebuild on D1
+  (#2622).
+- Not a `kind` column on `organization`, because one business can be several things in the
+  same year. Not likely duplicates merged automatically, because a shared `info@` or front-desk
+  number belongs to an organization, not a person (#2622).
 
 ### The story
 
@@ -2870,8 +3110,11 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   `work_order_link` that were marked done, in-kind gifts from it, and the campaigns sent or delivered to its people (a `campaign_send` row matched through `contact.subscriber_id`; for an organization, every person kept there). Follow-ups are tasks: Related tasks on the same pages
   adds one linked to the record. A staff Inbox conversation is filed from its Details panel
   (`fileThreadForm`, `inbox.reply` and `contact.manage`) to an organization or person; one from an
-  address on file is offered for filing to that person. See
-  `docs/decisions/0069-a-party-has-one-timeline.md`.
+  address on file is offered for filing to that person (#2630). Not a type and id pair on the
+  task, because it has no foreign key and a deleted record leaves a dangling link. Not a JSON
+  array of targets on `work_order`, because SQLite cannot index membership and two edits can
+  overwrite each other. Not a stored timeline table, because every source already has its own
+  rows (#2630).
 - **In-kind gifts (#2727):** a gift of goods or services that is neither stock nor volunteer
   time (printing, food, a free night at a venue) is recorded from the giver's timeline under
   `finance.refund` (`recordGiftForm`, `finance/in-kind-gift.ts`). It writes one `in_kind`
@@ -2928,8 +3171,13 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
 
 ## 22. Renewals: CMC's own permits, licenses and insurance
 
-Decision: [Renewals are recurring work](../decisions/0063-renewals-are-recurring-work.md). Issue:
-#2611.
+Renewals are recurring work (#2611).
+
+- Not a separate renewals module, because recurring work already has a due date, an assignee
+  and a reminder (#2611).
+- Not a calendar-date mode on recurring work, because generate-on-close dates the next
+  occurrence from the close. Staff correct the open work order's due date by hand, at most once
+  a term (#2611).
 
 ### The story
 
@@ -2953,7 +3201,11 @@ The recurring-work path in full: `maintenance-schedules.remote.ts` and
 
 ## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
 
-Decision: [Secret ballots keep a counter](../decisions/0052-secret-ballots-count-without-a-vote-row.md)
+- Not a row per vote with no user id and no timestamp, because SQLite's implicit `rowid` grows
+  with each insert, so ordering both tables by `rowid` pairs voters with choices (#577).
+- Not cryptographic secrecy, because the design is secret from the app and its tables, not from
+  a Cloudflare account holder or whoever deploys the Worker. An election that needs that uses a
+  managed service (#1452).
 
 ### The story
 
@@ -3028,8 +3280,12 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 
 ## 24. Group applications: applying to a club or a committee
 
-Record: [one application mechanism](../decisions/0030-one-application-mechanism-for-clubs-and-committees.md) (#1700;
-decisions #1727–#1730)
+One application mechanism serves clubs and committees (#1700; #1727–#1730).
+
+- Not a `requested` roster status, because it carried no content and blocked re-applying
+  (#1700).
+- Not two paths for clubs and committees, because members saw contradictory answers about the
+  same committee (#1700).
 
 ### The story
 
@@ -3130,7 +3386,10 @@ decide.
 - **Matching posts:** `getMemberDashboard` adds up to six posts on the board that share a tag with
   the member's directory profile (`listPostsMatching`), shown by `ClassifiedMatchesCard` on
   `/member`. Genre and skill match the same kind; a post's instrument matches one the member plays
-  or, on an offered post, one their project is seeking. Empty while the surface is off.
+  or, on an offered post, one their project is seeking. Empty while the surface is off. Not a
+  stored reminder time per post, because every renewal would owe it a reschedule; the sweep
+  derives it from `expires_at`. Not matching by free text, because text matching would need
+  ranking (#2549).
 
 ### Data touched
 

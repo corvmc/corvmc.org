@@ -224,8 +224,16 @@ admin > staff > sustaining > member
   unless it is named admin-only. A named position is one job, grantable alone (outreach,
   content editing, teacher review, the audit log, and the older four); `config.spec.ts` fails
   on a capability outside the admin-only set that no job position or org-wide committee grant
-  carries, apart from a named list still waiting for a position. See
-  [the decision record](../decisions/0032-guards-name-capabilities.md).
+  carries, apart from a named list still waiting for a position (#1624).
+  - Not one role for everyone with panel access, because purge and money movement would be
+    open by default rather than by choice (#1624).
+  - Not roles as runtime data (an editable matrix, spatie, Keycloak), because a mapping kept
+    only in the database is not reviewed (#1624).
+  - Not better-auth's organization plugin for committees, because its permissions have no
+    per-team check, and every band would become an organization with tenant-switching session
+    state (#1624).
+  - Not an external authorization service (OpenFGA, SpiceDB, Cedar, Oso), because each check
+    would cost a network hop from the Worker for about eight positions (#1624).
 - A committee grant with `'owned'` reach counts only when the guard names the record: a guard
   on a task, shift, sign-up, schedule, project or event passes
   `requireCapability(cap, () => taskScope(id))` (the resolvers are in
@@ -377,6 +385,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
 | `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                  | `*/5 * * * *`  |
 | `/api/cron/send-outbox`                     | Send outbox messages that are due, retrying failed sends with backoff                  | `*/5 * * * *`  |
+| `/api/cron/lock-job-requested`              | Run the daily lock job when staff asked for it (Run now, Retry door codes)             | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
 | `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                   | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
@@ -508,7 +517,9 @@ as Payment Records (`stripe.paymentRecords.reportPayment`), so each purchasable 
 (`reservation`, `ticket`, …) stores a `stripePaymentRecordId` as its proof of payment. What the
 collective earned and spent, for accounting, is the separate `financial_entry` ledger
 ([domain model](domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money)).
-Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment-ledger.md).
+Not a port of the Laravel ledger, because its models and state machines duplicate Stripe and
+need reconciling against it (#2540). Not stored Stripe Price ids, because a price change would mean
+copying a new id into config; inline `price_data` keeps the amount in one place (#2540).
 
 - **Products and prices.** `product-config-service.ts` finds or creates each Stripe Product by
   `metadata.corvmc_key`; unit amounts come from site config and go to Stripe as inline
@@ -524,7 +535,10 @@ Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment
 - **The gateway seam.** `src/lib/server/stripe.ts` returns a `PaymentGateway`
   (`finance/gateway/types.ts`): the real Stripe client when `PAYMENTS_DRIVER` is `stripe`, and
   otherwise the in-memory `fake-gateway.ts`. Production opts in through `wrangler.toml`; dev, e2e
-  and specs get the fake, because a developer `.env` here has carried a live key.
+  and specs get the fake, because a developer `.env` here has carried a live key. Not
+  Stripe's hosted pages driven from tests, because Stripe's guidance is that they block
+  automated testing. Not `stripe-mock`, because it is stateless and every flow here needs a
+  session that persists between requests (#522).
   `gateway.contract.spec.ts` runs one suite against both drivers. Under the fake, the checkout
   page renders a card-number form and Stripe.js never loads, so the real browser half of a
   payment is checked by hand against a sandbox key.
@@ -548,8 +562,16 @@ money lines come from the `financial_entry` ledger.
 A CSV download is a `+server.ts` route (`/staff/reports/export`,
 `/staff/reports/volunteering/export`) whose first statement is `requireCapability`. `toCsv`
 forces `escape_formulas` on, so a member-written cell beginning `=`, `+`, `-` or `@` is not run
-as a formula. `csvResponse` adds a UTF-8 BOM and `cache-control: no-store`. Why reports are
-shaped this way: [the decision record](../decisions/0040-reports-are-module-owned.md).
+as a formula. `csvResponse` adds a UTF-8 BOM and `cache-control: no-store` (#825).
+
+- Not a central reporting system (a registry, a query builder, saved reports), because none
+  had a second consumer (#825).
+- Not a hand-written `toCsv`, because it would quote correctly and leave formula injection
+  open (#825).
+- Not a client-side table library for sorting, because it sorts the rows on screen, not the
+  result set (#825).
+- Not a date-range picker component, because native date inputs match every other filter bar
+  and work without JavaScript (#825).
 
 ## Observability
 

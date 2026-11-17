@@ -26,7 +26,7 @@ import { PACKING_NOTES_MAX } from '#lib/config.js';
  * **Three verbs, three guards, and the split is in the signatures rather than a
  * role check**: `savePackingItems` takes no owner, `claimPackingItem` no
  * assignee. Packing and resetting are guarded at `member` on purpose — not an
- * oversight to tighten later. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
+ * oversight to tighten later. Record: docs/development/business-workflows.md#15-the-packing-list-what-goes-in-the-van-and-who-is-bringing-it
  */
 
 const bandIdField = z.string().min(1);

@@ -17,7 +17,7 @@ import { ANNOUNCEMENTS_TOPIC } from '#lib/server/inbox/group-chat-service.js';
 
 /**
  * Announcements — a group talking to its own roster. See
- * `docs/decisions/0023-group-announcements-are-transactional-and-batched.md`
+ * `docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages`
  * and, for where a post lands, `0050-one-announcements-thread-per-group.md`.
  *
  * Group-scoped by argument: every function takes a `groupId` and every write

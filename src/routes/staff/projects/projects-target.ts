@@ -1,3 +1,5 @@
+import { productionsPath } from '../productions/path';
+
 /**
  * Projects became a view of Tasks (#2625). Every old address lands in one hop:
  * the list on the table grouped by project, a project's task on its own page,
@@ -7,7 +9,7 @@ export function projectsTarget(rest: string, search: string): string {
 	const parts = rest.split('/').filter(Boolean);
 	if (parts.length === 0) return '/staff/tasks?group=project';
 	const [head, ...tail] = parts;
-	if (head === 'productions') return `/staff/events?view=productions${search.replace(/^\?/, '&')}`;
+	if (head === 'productions') return productionsPath(search, '/staff/projects/productions');
 	if (head === 'templates') {
 		return `/staff/tasks/${parts.join('/')}${search}`;
 	}

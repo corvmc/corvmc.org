@@ -158,8 +158,7 @@ Notes:
 ### Break-glass: acting when no admin is reachable
 
 `admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
-(see [the decision record](../decisions/0032-guards-name-capabilities.md) and the matrix in
-`src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
+(see [Roles](overview.md#roles) and the matrix in `src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
 to change, this is the way in — **not** a second shared admin account.
 
 A standing shared credential is a permanent risk to defend; a documented procedure is an
@@ -460,7 +459,7 @@ them 1 = Sunday, while the Sentry monitor that receives the same string numbers 
 
 | Cron (UTC)     | Endpoints, in order                                                                                                                                                                                                                                                                                                    | Pacific                     |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `*/5 * * * *`  | `/api/cron/send-campaigns`, `/api/cron/send-outbox`                                                                                                                                                                                                                                                                    | every 5 min                 |
+| `*/5 * * * *`  | `/api/cron/send-campaigns`, `/api/cron/send-outbox`, `/api/cron/lock-job-requested`                                                                                                                                                                                                                                    | every 5 min                 |
 | `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lift-lapsed-removals`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio`, `/api/cron/sweep-door-sales`                                                              | every 15 min                |
 | `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-incidents`, `/api/cron/sweep-contacts`, `/api/cron/open-tasks`, `/api/cron/sweep-audit-log`, `/api/cron/import-partner-calendars`, `/api/cron/sweep-media` | daily, 8am PST / 9am PDT    |
 | `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                                                                                                                                           | Mondays, 9am PST / 10am PDT |
@@ -510,7 +509,9 @@ npx wrangler dev --test-scheduled --var CRON_SECRET:local-test --var SENTRY_ENVI
 
 Nothing removes a Sentry monitor, so a job that leaves `CRON_SCHEDULE` leaves a monitor that
 raises "missed check-in" every run. `CRON_MONITORS` in `src/lib/server/cron/schedule.ts` lists
-every slug that has ever had one, and `schedule.spec.ts` fails until the two agree.
+every slug that has ever had one, and `schedule.spec.ts` fails until the two agree. Not a
+deploy-time reconcile, because it needs a long-lived Sentry token with `alerts:write` as a build
+secret and an API call on the publish path (#1327).
 
 1. Mark the slug retired in `CRON_MONITORS` — `{ retired: 'YYYY-MM-DD', ref: '#<pr or issue>' }`.
    Never delete the entry, and never schedule a retired slug again: a disabled monitor records

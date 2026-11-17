@@ -17,7 +17,7 @@ import { STAFF_TRANSITIONS } from './instructor-transitions';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on
- * teaching terms. See `docs/decisions/0015-instructors-rent-the-room.md`.
+ * teaching terms. See `docs/development/business-workflows.md#teaching-bookings`.
  *
  * Two things this module is not, both load-bearing:
  *

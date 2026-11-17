@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
  * The reservation page's door-code retry (#1813). Codes fail together — the
- * lock offline, U-tec auth — so the button re-runs every outstanding code the
- * daily job handles, and still re-issues this booking's own code first, which
+ * lock offline, U-tec auth — so the button queues the daily job for every
+ * outstanding code, and still re-issues this booking's own code first, which
  * the job would skip once it has one or when it is outside the window.
  */
 
@@ -30,21 +30,19 @@ const reprovisionAccessFor = vi.fn(async (row: { code?: number }) => {
 	calls.push('booking');
 	return { ok: true, code: row.code ?? 1234 };
 });
-const runDailyLockJob = vi.fn(async (_by: string | null) => {
+// The job runs past 40 s, so the retry queues it for the cron rather than
+// holding the request open.
+const requestLockJobRun = vi.fn(async (by: string | null) => {
 	calls.push('job');
-	return {
-		provisioned: 2,
-		cleaned: 0,
-		confirmed: 3,
-		online: true,
-		fallbackActive: true,
-		errors: []
-	};
+	return { at: '2026-11-16T10:00:00.000Z', requestedBy: by };
 });
 vi.mock('#lib/server/lock/lock-service.js', () => ({
 	getLastLockJobRun: vi.fn(),
-	reprovisionAccessFor,
-	runDailyLockJob
+	reprovisionAccessFor
+}));
+vi.mock('#lib/server/lock/lock-job-request.js', () => ({
+	getLockJobRequest: vi.fn(),
+	requestLockJobRun
 }));
 
 // Kit refuses a `.remote.ts` export without the `__` marker, mock or not.
@@ -87,27 +85,27 @@ describe('retryDoorCodes', () => {
 		expect(requireCapability).toHaveBeenCalledWith('lock.manage');
 	});
 
-	it('re-issues this booking with the code it already has, then every outstanding code', async () => {
+	it('re-issues this booking with the code it already has, then queues the job', async () => {
 		selectResults.push([confirmed]);
 
 		const result = await retryDoorCodes('res-1');
 
 		expect(calls).toEqual(['booking', 'job']);
 		expect(reprovisionAccessFor).toHaveBeenCalledWith(expect.objectContaining({ code: 4321 }));
-		expect(runDailyLockJob).toHaveBeenCalledWith('Staff Person');
+		expect(requestLockJobRun).toHaveBeenCalledWith('Staff Person');
 		expect(result).toEqual({
 			booking: { ok: true, code: 4321 },
-			job: expect.objectContaining({ provisioned: 2, confirmed: 3, errors: [] })
+			job: expect.objectContaining({ requestedBy: 'Staff Person' })
 		});
 	});
 
-	it('still runs the job when this booking could not be re-issued', async () => {
+	it('still queues the job when this booking could not be re-issued', async () => {
 		selectResults.push([confirmed]);
 		reprovisionAccessFor.mockResolvedValueOnce({ ok: false, error: 'U-tec said no' } as never);
 
 		const result = await retryDoorCodes('res-1');
 
-		expect(runDailyLockJob).toHaveBeenCalled();
+		expect(requestLockJobRun).toHaveBeenCalled();
 		expect(result).toMatchObject({ booking: { ok: false, error: 'U-tec said no' } });
 	});
 

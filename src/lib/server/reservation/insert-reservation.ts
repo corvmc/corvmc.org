@@ -7,7 +7,7 @@ type NewReservation = typeof reservation.$inferInsert;
 
 /**
  * The one way a reservation row is written. A club or committee holds the room
- * free (decision 0024), so its booking is written settled, `cashDueCents = 0`;
+ * free (#247), so its booking is written settled, `cashDueCents = 0`;
  * a null there reads as owed in full. `scripts/reservation-insert.spec.ts`
  * keeps every other insert out.
  */

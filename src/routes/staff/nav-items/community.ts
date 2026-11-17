@@ -23,12 +23,13 @@ export const community: StaffNavSection = {
 			label: 'Bands',
 			href: resolve('staff/bands')
 		},
-		// Every listing, with Productions, Venues and vendor applications as views
-		// (#2766). A venue's own page stays under `/staff/venues` and lights this row.
+		// Every listing, mostly member-submitted, with Venues and vendor
+		// applications as views (#2766, #3112). A venue's own page stays under
+		// `/staff/venues` and lights this row. Productions is in Programs.
 		{
 			key: 'calendar',
 			capability: 'event.read',
-			label: 'Events',
+			label: 'Calendar',
 			href: resolve('staff/events'),
 			also: [resolve('staff/venues')]
 		},

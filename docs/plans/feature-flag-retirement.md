@@ -8,7 +8,7 @@ now, so the flags come out. This is the per-flag ledger; it outlives any one ses
 
 **Closed by #3117.** The last three runtime flags (`directMessages`, `bandAudio`, `cmcRadio`) moved
 into `surfaces` in `src/lib/config.ts`, off, and the KV flag mechanism and its staff page are gone.
-See [decision 0089](../decisions/0089-feature-switches-are-code-config.md).
+See [feature switches](../architecture/overview.md#feature-switches).
 
 **Removing a flag is not a cleanup for most of these.** Five were never switchable at all, so
 deleting their guards is the moment the feature goes live. Those are launch decisions, and they
@@ -165,7 +165,7 @@ feature branch, not a flag.
 | `announcements`  | Band and group announcements, incl. the band nav entry                                                 | `announcements.remote.ts`, `groups.remote.ts`                                |
 
 Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all had
-specs, since retired into `docs/decisions/` under #2525. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
+specs, since retired under #2525. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
 the groups module, all of whose phases had shipped except documents. `helpArticles` has no spec.
 
 ### If a feature is not ready to launch

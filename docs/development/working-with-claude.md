@@ -34,7 +34,7 @@ This is also why the Bits UI documentation index is a single link in
 | A multi-step procedure you keep re-explaining              | a `.claude/skills/<name>/SKILL.md`             |
 | Something that must happen every time, no exceptions       | a hook in `.claude/settings.json`              |
 | Reference material (an API surface, a component catalogue) | a link, or a doc under `docs/` — never a paste |
-| Deep background on how a feature behaves                   | the living docs, and `docs/decisions/` for why |
+| Deep background on how a feature behaves                   | the living docs, whose "Not X" lines say why   |
 
 Two failure modes to watch for:
 

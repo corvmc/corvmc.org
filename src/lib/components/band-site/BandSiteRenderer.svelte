@@ -62,7 +62,7 @@
 	interface MediaData {
 		id: string;
 		url: string | null;
-		/** `media_attachment.slot` — see docs/decisions/0026-uploads-are-detached-and-swept.md. */
+		/** `media_attachment.slot` — see docs/architecture/domain-model.md#already-unified-references. */
 		slot: string;
 		caption: string | null;
 	}

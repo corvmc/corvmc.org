@@ -114,6 +114,7 @@
 				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
 				<th>{m.staff_event_label()}</th>
 				<th class="col-support">{m.staff_posted_by_label()}</th>
+				<th class="col-support">{m.staff_production_label()}</th>
 				<th class="col-extra">{m.staff_tags_label()}</th>
 			{/snippet}
 
@@ -122,7 +123,7 @@
 				{@const prevLabel = idx > 0 ? dayLabel(events[idx - 1]) : null}
 				{#if label !== prevLabel}
 					<tr>
-						<td colspan="4" class="cell-group">
+						<td colspan="5" class="cell-group">
 							{label}
 						</td>
 					</tr>
@@ -157,6 +158,14 @@
 							<EntityChip ref={e.band} />
 						{:else}
 							<EntityChip ref={e.submitter} />
+						{/if}
+					</td>
+					<!-- A listing with a production links to it (#3112). -->
+					<td class="col-support whitespace-nowrap">
+						{#if e.productionStatus}
+							<a href={resolve(`staff/events/${e.id}/production`)} data-testid="production-link">
+								<StatusBadge status={e.productionStatus} label />
+							</a>
 						{/if}
 					</td>
 					<td class="col-extra">

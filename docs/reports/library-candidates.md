@@ -59,7 +59,7 @@ Existing npm packages that could accelerate building these features. Grouped by 
 **`puppeteer` and `pdfkit` were listed here and are wrong for this stack.** Puppeteer cannot run
 inside a Cloudflare Worker at all; the platform answer for HTML → PDF is **Cloudflare Browser
 Rendering** (a `/pdf` REST endpoint or the binding), which needs no npm dependency. A print
-stylesheet over the report page comes first either way — see `docs/decisions/0040-reports-are-module-owned.md`.
+stylesheet over the report page comes first either way — see `docs/architecture/overview.md#reports`.
 
 Two things to know before adding either of the above:
 
@@ -90,7 +90,7 @@ checkout, always beside the field it fills rather than in place of it — a USB
 wedge scanner types into those fields already, and a member scanning a tag uses
 their phone's own camera, which resolves the `/a/{tag}` URL with no app.
 
-`bwip-js` is **not** adopted, and may never need to be. `docs/decisions/0043-asset-tags-are-bound-not-generated.md`
+`bwip-js` is **not** adopted, and may never need to be. `docs/development/business-workflows.md#6-inventory-gear-and-consumables`
 settles that serialized tags are bought pre-printed rather than generated; the
 only printing left is consumable bin labels, and `qrcode-svg` is already a
 dependency for event tickets.
@@ -110,7 +110,7 @@ Areas where the npm ecosystem is thin — worth revisiting periodically.
 - **Shift Scheduling UI** — no standalone package; build on top of a calendar component
 - **Authorization** — nothing new is needed. `better-auth` already ships `createAccessControl`
   (statements of resource → actions, roles composed from them, assignment in the DB), which is
-  the shape `docs/decisions/0032-guards-name-capabilities.md` settles on. The heavyweight tier — OpenFGA and
+  the shape `docs/architecture/overview.md#roles` settles on. The heavyweight tier — OpenFGA and
   SpiceDB for Zanzibar-style ReBAC, Cedar/Casbin/Oso as embedded policy languages — pays off
   past roughly twenty roles or when resource sharing is a product feature. This is eight
   positions and one relationship type, inside a Worker where an external check is a network hop.

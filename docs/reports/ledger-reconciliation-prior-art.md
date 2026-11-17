@@ -1,7 +1,7 @@
 # Associating a pass-through in with a pass-through out — prior art
 
 > Written 2026-09-08 while specifying `financial_entry`
-> ([decision 0016](../decisions/0016-a-local-financial-record.md), #825).
+> ([the ledger](../architecture/domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money), #825).
 >
 > **The question.** Door money arrives as many inbound entries — one per ticket, spread over weeks
 > of presales — and leaves as one payout per act. Nothing links the two. Is `sum() == 0` the only
