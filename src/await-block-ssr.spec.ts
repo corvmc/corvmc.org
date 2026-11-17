@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 // The panels render on the server (#3158), but an `{#await}` block sends its pending
 // branch, and `Latest` resolves in an effect the server never runs. Either way the
-// server sends a placeholder that hydration replaces (#3183). Page content is awaited
-// instead: in the script, the template, or as `latest.current ?? (await first)`.
+// server sends a placeholder that hydration replaces (#3183), as does a boundary's
+// `pending` snippet. Page content is awaited instead: in the script, the template,
+// or as `latest.current ?? (await first)`.
 const sources = import.meta.glob<string>(
 	[
 		'./routes/member/**/*.svelte',
@@ -27,22 +28,31 @@ const CLIENT_ONLY = [
 	// The inbox filter drawer, and Daily's session and summary: each opens on a click.
 	'./routes/staff/inbox/FilterPanel.svelte',
 	'./routes/staff/inbox/daily/+page.svelte',
-	'./routes/staff/inbox/daily/SessionSummary.svelte'
+	'./routes/staff/inbox/daily/SessionSummary.svelte',
+	// A row's record panel, and the forms of a dialog or an edit mode.
+	'./routes/staff/members/[id]/MemberRecordPanel.svelte',
+	'./lib/components/groups/GroupRecordPanel.svelte',
+	'./routes/staff/reservations/CreateModal.svelte',
+	'./lib/components/events/CreateEventModal.svelte',
+	'./lib/components/events/ListingEditForm.svelte',
+	'./lib/components/reservations/ConflictWarnings.svelte',
+	'./lib/components/actions/CreateLoanAction.svelte',
+	'./lib/components/actions/CheckOutKitAction.svelte'
 ];
 
-// Not yet converted (#3183). The list only shrinks.
-const NOT_YET_CONVERTED = [
-	'./routes/member/volunteer/feedback/[signupId]/+page.svelte',
-	'./routes/member/volunteer/interests/+page.svelte',
-	'./routes/member/volunteer/profile/+page.svelte',
-	'./routes/member/volunteer/start/+page.svelte'
+// Below the fold on purpose: a `pending` snippet keeps each off the server render, so
+// the page does not wait for it. A record's history feed can be long, and the U-tec
+// reads are a third party's latency (#3144).
+const DEFERRED = [
+	'./lib/components/ui/ActivityFeed/ActivityFeedCard.svelte',
+	'./routes/staff/reservations/settings/building-access/LockSettings.svelte'
 ];
 
 /** Template only: scripts and HTML comments may name `{#await}` without using one. */
 const template = (source: string) =>
 	source.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '');
 const rendersPending = (file: string) =>
-	/\{#await\b/.test(template(sources[file])) ||
+	/\{#await\b|\{#snippet pending\b/.test(template(sources[file])) ||
 	(/new Latest\(/.test(sources[file]) && !/\.current \?\? \(await\b/.test(sources[file]));
 
 describe('await blocks under the server-rendered panels', () => {
@@ -51,12 +61,14 @@ describe('await blocks under the server-rendered panels', () => {
 	});
 
 	it.each(
-		Object.keys(sources).filter((file) => ![...CLIENT_ONLY, ...NOT_YET_CONVERTED].includes(file))
+		Object.keys(sources).filter(
+			(file) => !file.endsWith('Harness.svelte') && ![...CLIENT_ONLY, ...DEFERRED].includes(file)
+		)
 	)('%s renders its content on the server', (file) => {
 		expect(rendersPending(file)).toBe(false);
 	});
 
-	it.each([...CLIENT_ONLY, ...NOT_YET_CONVERTED])('%s still needs listing', (file) => {
+	it.each([...CLIENT_ONLY, ...DEFERRED])('%s still needs listing', (file) => {
 		expect(rendersPending(file)).toBe(true);
 	});
 });
