@@ -39,6 +39,15 @@
 		}))
 	];
 
+	// Takes a claimed shift off the board until the server answers; the board
+	// shows only shifts with no status of the member's.
+	const markClaimed = (shiftId: string) => () => [
+		getMemberVolunteerPage().withOverride((p) => ({
+			...p,
+			openShifts: p.openShifts.map((s) => (s.id === shiftId ? { ...s, myStatus: 'claimed' } : s))
+		}))
+	];
+
 	const pageData = $derived(await getMemberVolunteerPage());
 
 	function toDateInput(date: Date): string {
@@ -239,7 +248,11 @@
 			     the board is addressed to everybody. -->
 			<ShiftInvitations invitations={pageData.invitations} />
 
-			<OpenShifts shifts={pageData.openShifts} hasInterests={pageData.interests.length > 0} />
+			<OpenShifts
+				shifts={pageData.openShifts}
+				hasInterests={pageData.interests.length > 0}
+				claimUpdates={markClaimed}
+			/>
 		</div>
 	</div>
 </PageContent>

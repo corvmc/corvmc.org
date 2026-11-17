@@ -6,8 +6,8 @@ import '#lib/test/locators.js';
 import { fakeQuery, heldRemoteForm } from '#lib/test/fake-remote.svelte.js';
 
 /**
- * Marking a task done shows before the server answers, on the dashboard list
- * and on the task's own page, and a refusal puts it back.
+ * Marking a task done and claiming a shift show before the server answers,
+ * and a refusal puts them back.
  */
 
 const task = {
@@ -19,10 +19,27 @@ const task = {
 	closesItself: false,
 	checklist: { done: 0, total: 0 }
 };
+const shift = {
+	id: 'shift-1',
+	workOrderId: 'wo-2',
+	roleName: 'Fixture role',
+	title: 'Fixture shift',
+	startsAt: new Date('2031-05-10T19:00:00Z'),
+	endsAt: new Date('2031-05-10T22:00:00Z'),
+	capacity: 2,
+	claimed: 0,
+	notes: null,
+	eventTitle: null,
+	myStatus: null,
+	mySignupId: null,
+	isFull: false,
+	interested: false,
+	missingCertifications: []
+};
 const dashboard = fakeQuery({
 	access: {},
 	interests: [],
-	openShifts: [],
+	openShifts: [shift],
 	unloggedShifts: [],
 	unloggedTasks: [],
 	assignedTasks: [task],
@@ -41,6 +58,7 @@ const myTask = fakeQuery({
 	canHandBack: false
 });
 const markDone = heldRemoteForm();
+const claim = heldRemoteForm();
 
 vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 vi.mock('svelte-sonner', () => ({
@@ -59,6 +77,7 @@ vi.mock('#lib/remote/volunteer.remote.js', () => ({
 	getMemberVolunteerPage: dashboard,
 	getMyTask: myTask,
 	markMyTaskDone: markDone,
+	claimShift: claim,
 	takeTask: heldRemoteForm(),
 	handBackTask: heldRemoteForm(),
 	setMyTaskItemDone: heldRemoteForm(),
@@ -78,6 +97,7 @@ const submit = () => page.getByRole('dialog').getByCss('button[type="submit"]');
 
 beforeEach(async () => {
 	await markDone.settleAll();
+	await claim.settleAll();
 	vi.mocked(toast.error).mockClear();
 });
 
@@ -120,6 +140,31 @@ describe('marking a task done from its page', () => {
 		markDone.held[0].reject(refusal());
 
 		await expect.poll(status).toBe(before);
+		await vi.waitFor(() => expect(toast.error).toHaveBeenCalled());
+	});
+});
+
+describe('claiming a shift from the board', () => {
+	const board = () => page.getByCss('[data-shift-id="shift-1"]');
+
+	it('takes the shift off the board while the server is answering', async () => {
+		await render(Dashboard);
+		await board().getByRole('button').click();
+		await submit().click();
+
+		await expect.element(board()).not.toBeInTheDocument();
+		expect(claim.held).toHaveLength(1);
+	});
+
+	it('puts the shift back and says why when the server refuses', async () => {
+		await render(Dashboard);
+		await board().getByRole('button').click();
+		await submit().click();
+		await expect.element(board()).not.toBeInTheDocument();
+
+		claim.held[0].reject(refusal());
+
+		await expect.element(board()).toBeVisible();
 		await vi.waitFor(() => expect(toast.error).toHaveBeenCalled());
 	});
 });
