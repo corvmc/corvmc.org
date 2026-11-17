@@ -85,8 +85,11 @@
 </script>
 
 <PageHeader width="2xl" title={m.member_bands_my_bands_title()} subtitle={m.member_member_body()}>
-	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}
-		>{m.member_bands_create_band_label()}</Button
+	<Button
+		variant="default"
+		size="sm"
+		data-testid="create-band"
+		onclick={() => (showCreateModal = true)}>{m.member_bands_create_band_label()}</Button
 	>
 </PageHeader>
 <PageContent width="2xl">
