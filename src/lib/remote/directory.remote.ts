@@ -49,7 +49,8 @@ import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
-	toPublicMemberProfile
+	toPublicMemberProfile,
+	contactForView
 } from '#lib/utils/directory-display.js';
 import { db } from '#lib/server/db/index.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
@@ -58,7 +59,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '#lib/server/db/schema/authentication.js';
-import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { directorySorts } from '#lib/utils/directory-browse.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
@@ -368,10 +369,9 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			foundedYear: directoryEntry.foundedYear,
 			avatarKey: group.avatarKey,
 			lookingFor: directoryEntry.lookingFor,
-			// `directoryEntry.contact` is deliberately not selected. It is still
-			// written by the profile editor and still used to route an enquiry, but
-			// nothing on a public band page may render it, and the surest way to
-			// keep it off the page is for the page's query never to fetch it.
+			// Routes an enquiry either way; published only through `contactForView`
+			// below, when the band switched it public (#3234).
+			contact: directoryEntry.contact,
 			links: directoryEntry.links,
 			// Both soft-delete flags: `deactivate()` sets the pair, but a group
 			// deleted by any other path would otherwise keep a live listing.
@@ -478,14 +478,13 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			lookingForMembers: row.lookingFor === 'members',
 			releases,
 			links: (row.links as ProfileLink[] | null) ?? [],
+			// Null unless the band made it public: the same gate as a member's.
+			contact: contactForView('public', row.contact as DirectoryContact | null),
 			// `publicPressKit`, never the raw column. A band's booking, management
 			// and press contacts, its phone numbers, its rider, stage plot and
 			// backline all live in the same JSON and none of them may be published:
 			// a stranger reaches the act through the Turnstile form instead, so the
 			// page carries no address for a scraper to take.
-			//
-			// `directoryContact` used to be returned here and rendered as "Booking".
-			// Removing it is the point of this change, not a side effect of it.
 			pressKit: publicPressKit(site?.epk),
 			photos: photos.map((m) => ({
 				id: m.attachmentId,
@@ -761,6 +760,7 @@ const bandProfileSchema = z.object({
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
+	contactPublic: z.boolean().default(false),
 	links: linksField
 });
 
@@ -783,7 +783,11 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		seekingInstruments: data.seekingInstruments,
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
-		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
+		// Private unless the band switches it public, as a member's contact is.
+		directoryContact:
+			Object.keys(contact).length > 0
+				? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
+				: undefined,
 		links: data.links
 	});
 
