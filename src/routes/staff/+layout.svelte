@@ -58,6 +58,7 @@
 		inSystemPanel,
 		filterNavItems,
 		filterNavSections,
+		sectionBadge,
 		sectionHasKey,
 		staffNavBottom,
 		staffNavSections,
@@ -228,6 +229,7 @@
 			collapsible
 			persistKey={section.key}
 			containsActive={sectionHasKey(section, activeKey)}
+			badge={sectionBadge(section, badges)}
 		>
 			{#each section.items as item (item.key)}
 				{@render row(item)}

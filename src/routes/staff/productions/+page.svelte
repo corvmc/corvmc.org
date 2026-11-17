@@ -9,7 +9,9 @@
 	import Table from '#lib/components/ui/Table.svelte';
 	import StatusBadge, { statusLabel } from '#lib/components/ui/StatusBadge.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
-	import { urlState, oneOf, positiveInt } from '#lib/urlState.svelte.js';
+	import DateFilter from '#lib/components/ui/DateFilter.svelte';
+	import { urlState, oneOf, positiveInt, text } from '#lib/urlState.svelte.js';
+	import { listDateRanges } from '#lib/config.js';
 	import { formatDate } from '#lib/utils/format.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
@@ -33,6 +35,10 @@
 	const filters = urlState(resolve('staff/productions'), {
 		status: oneOf<ProductionStatus | ''>(productionStatuses, ''),
 		needs: oneOf(['', '1'] as const, ''),
+		// Any date by default, so an undated draft stays on the list.
+		date: oneOf(listDateRanges, 'any'),
+		from: text(),
+		to: text(),
 		page: positiveInt(1)
 	});
 
@@ -41,15 +47,23 @@
 		getStaffProductions({
 			status: filters.status || undefined,
 			needsActs: filters.needs === '1' || undefined,
+			range: filters.date,
+			from: filters.date === 'custom' && filters.from ? filters.from : undefined,
+			to: filters.date === 'custom' && filters.to ? filters.to : undefined,
 			page: filters.page
 		})
 	);
 
-	const activeCount = $derived((filters.status ? 1 : 0) + (filters.needs ? 1 : 0));
+	const activeCount = $derived(
+		(filters.status ? 1 : 0) + (filters.needs ? 1 : 0) + (filters.date !== 'any' ? 1 : 0)
+	);
 
 	function clearFilters() {
 		filters.status = '';
 		filters.needs = '';
+		filters.date = 'any';
+		filters.from = '';
+		filters.to = '';
 		filters.page = 1;
 	}
 </script>
@@ -60,6 +74,12 @@
 
 <PageContent>
 	<FilterBar {activeCount} onclear={clearFilters}>
+		<DateFilter
+			bind:range={filters.date}
+			bind:from={filters.from}
+			bind:to={filters.to}
+			onchange={() => (filters.page = 1)}
+		/>
 		<Select
 			size="sm"
 			aria-label={m.staff_events_production_status_label()}

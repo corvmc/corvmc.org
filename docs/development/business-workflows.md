@@ -734,7 +734,9 @@ events use RSVP instead.
   badge; the dashboard feed collects the ones waiting for review. A listing with a production
   links to it. **Productions** (`/staff/productions`, #3112) is a list of its own:
   `getStaffProductions` → `listProductions()`, every `production` row from draft to closed,
-  listed or not, filterable by production status and short-of-acts. Each row opens its listing,
+  listed or not, filterable by production status, short-of-acts and date (the Calendar's date
+  presets plus a custom range, over the listing's start else the project's; Any date is the
+  default, so undated drafts stay listed). Each row opens its listing,
   or its project when it has none. Venues and every market's vendor applications are the
   Calendar's other views (#2766).
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for

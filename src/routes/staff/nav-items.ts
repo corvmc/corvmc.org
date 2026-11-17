@@ -25,7 +25,12 @@ import {
 	childHrefsFor as resolveChildHrefs,
 	flattenNav
 } from '#lib/components/layout/Nav/active-nav.js';
-import type { StaffNavItem, StaffNavKey, StaffNavSection } from './nav-items/types';
+import type {
+	StaffNavBadgeKey,
+	StaffNavItem,
+	StaffNavKey,
+	StaffNavSection
+} from './nav-items/types';
 import { staffNavTop } from './nav-items/top';
 import { outreach } from './nav-items/outreach';
 import { community } from './nav-items/community';
@@ -93,6 +98,19 @@ export function childHrefsFor(item: StaffNavItem): string[] {
 export function sectionHasKey(section: StaffNavSection, key: StaffNavKey | null): boolean {
 	if (!key) return false;
 	return section.items.some((i) => i.key === key || i.children?.some((c) => c.key === key));
+}
+
+/**
+ * The sum of a section's row badges, children included, shown on its header
+ * while collapsed so Inbox's unread count stays visible under Outreach.
+ */
+export function sectionBadge(
+	section: StaffNavSection,
+	counts: Readonly<Record<StaffNavBadgeKey, number>>
+): number {
+	const sum = (items: StaffNavItem[]): number =>
+		items.reduce((n, i) => n + (i.badgeKey ? counts[i.badgeKey] : 0) + sum(i.children ?? []), 0);
+	return sum(section.items);
 }
 
 /** Which single row to light up for a pathname. See `active-nav.ts`. */
