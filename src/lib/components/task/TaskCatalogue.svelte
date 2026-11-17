@@ -77,12 +77,13 @@
 	});
 	// Not `{#await}`: a refresh would re-pend it and unmount an open row Action.
 	const tasks = new Latest(() => getTasksPage(args));
+	const taskPage = $derived(tasks.current ?? (await getTasksPage(args)));
 	$effect(() => {
 		if (tasks.error) throw tasks.error.e;
 	});
 	const refresh = () => void getTasksPage(args).refresh();
 	// Per task, the open tasks it waits on, by name: the row's "waits on" line.
-	const waitsOn = $derived(tasks.current?.waitsOn ?? {});
+	const waitsOn = $derived(taskPage.waitsOn ?? {});
 
 	type Row = Awaited<ReturnType<typeof getTasksPage>>['tasks'][number];
 
@@ -111,7 +112,7 @@
 	};
 
 	// One project's list neither groups nor filters by project; only it has sections.
-	const sections = $derived(tasks.current?.sections ?? []);
+	const sections = $derived(taskPage.sections ?? []);
 	const grouping = $derived(
 		effectiveGrouping(q.group, { project: !!projectId, sections: sections.length })
 	);
@@ -174,7 +175,7 @@
 		>
 			<option value="">{m.staff_tasks_all_projects_label()}</option>
 			<option value="none">{m.staff_tasks_no_project_label()}</option>
-			{#each tasks.current?.projects ?? [] as p (p.id)}
+			{#each taskPage.projects ?? [] as p (p.id)}
 				<option value={p.id}>{p.name}</option>
 			{/each}
 		</Select>
@@ -197,7 +198,7 @@
 	>
 		<option value="">{m.staff_tasks_all_kinds_label()}</option>
 		{#each Object.entries(KIND_LABELS) as [value, label] (value)}
-			{#if value !== 'contractor' || tasks.current?.contractorAccess}
+			{#if value !== 'contractor' || taskPage.contractorAccess}
 				<option {value}>{label()}</option>
 			{/if}
 		{/each}
@@ -213,14 +214,11 @@
 	</Select>
 
 	{#snippet actions()}
-		{#if tasks.current}
+		{#if taskPage}
 			{#if !projectId}
-				<NewProjectAction
-					committees={tasks.current.committees}
-					templates={tasks.current.templates}
-				/>
+				<NewProjectAction committees={taskPage.committees} templates={taskPage.templates} />
 			{/if}
-			<NewTaskAction projects={tasks.current.projects} {projectId} {sections} />
+			<NewTaskAction projects={taskPage.projects} {projectId} {sections} />
 			{#if projectId}
 				<Action
 					action={addSection}
@@ -240,8 +238,8 @@
 	{/snippet}
 </FilterBar>
 
-{#if tasks.current}
-	{@const data = tasks.current}
+{#if taskPage}
+	{@const data = taskPage}
 	{@const marksOf = (t: Row) => data.contractors[t.id] ?? []}
 	{@const filtered = data.tasks
 		.filter(

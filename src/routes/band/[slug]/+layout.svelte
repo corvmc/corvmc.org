@@ -147,7 +147,7 @@
 			{@render row(item)}
 		{/each}
 	{/snippet}
-	<ErrorToastBoundary>
+	<ErrorToastBoundary showPending={false}>
 		<EntityViewer
 			panel="band"
 			userId={layout.user.id}

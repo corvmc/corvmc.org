@@ -22,6 +22,7 @@
 	const { fields: addFields } = addToBlocklist;
 
 	const list = new Latest(() => getBlocklist());
+	const rows = $derived(list.current ?? (await getBlocklist()));
 	$effect(() => {
 		if (list.error) throw list.error.e;
 	});
@@ -60,8 +61,8 @@
 				</Action>
 			</div>
 		{/snippet}
-		{#if list.current}
-			{#if list.current.length === 0}
+		{#if rows}
+			{#if rows.length === 0}
 				<EmptyState
 					title={m.staff_blocklist_empty_title()}
 					description={m.staff_blocklist_empty_body()}
@@ -75,7 +76,7 @@
 						<th class="col-extra">{m.staff_added_label()}</th>
 						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
-					{#each list.current as row (row.id)}
+					{#each rows as row (row.id)}
 						<tr>
 							<td class="cell-primary">
 								<div class="font-medium break-all">{row.email}</div>

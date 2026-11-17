@@ -16,13 +16,15 @@
 </script>
 
 <div class="flex h-full flex-col items-center justify-center gap-8">
-	{#await result then { rows }}
+	<svelte:boundary>
+		{@const { rows } = await result}
 		{#if rows.length > 0}
 			<EmptyState title={m.staff_inbox_title()} description={m.staff_inbox_description_body()} />
 		{/if}
-	{:catch}
-		<!-- The list beside this pane reports its own failure. -->
-	{/await}
+		{#snippet failed()}
+			<!-- The list beside this pane reports its own failure. -->
+		{/snippet}
+	</svelte:boundary>
 
 	<svelte:boundary>
 		<FirstReplyTimes />

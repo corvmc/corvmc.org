@@ -5,7 +5,10 @@ import {
 	SEED_STAFF_PASSWORD,
 	SEED_STAFF_RESERVATION_ID
 } from './fixtures/seed-staff-user';
-import { SEED_PREMIUM_BAND_SLUG } from './fixtures/seed-band-onboarding';
+import {
+	SEED_PREMIUM_BAND_EVENT_ID,
+	SEED_PREMIUM_BAND_SLUG
+} from './fixtures/seed-band-onboarding';
 
 /**
  * The member and band sidebars, which had the same defect the staff one did:
@@ -167,8 +170,9 @@ test.describe('band sidebar', () => {
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', `${band}/events`);
 
-		// The regression: a band event record lit no row at all.
-		await page.goto(`${band}/events/some-event-id`);
+		// The regression: a band event record lit no row at all. A real one: the
+		// server renders the page, and a missing record is a 404 outside the panel.
+		await page.goto(`${band}/events/${SEED_PREMIUM_BAND_EVENT_ID}`);
 		await expect(nav(page).locator('a.active')).toHaveCount(1);
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', `${band}/events`);
 

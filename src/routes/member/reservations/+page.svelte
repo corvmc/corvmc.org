@@ -54,7 +54,6 @@
 
 	const activeReservations = $derived(pageData.then((d) => d.active));
 	const allReservations = $derived(pageData.then((d) => d.all));
-	const overdueReservations = $derived(pageData.then((d) => d.overdue));
 	// Payment confirmation via ?paid={id}
 	//
 	// A reservation is flipped to `confirmed` with a `paidAt` (the Paid track) by
@@ -69,12 +68,7 @@
 	// only this page's account of it that has to catch up. A reservation missing
 	// from the list is not "still waiting": there is nothing left to confirm.
 	//
-	// Resolved inside the effect rather than as `$derived(await allReservations…)`
-	// because the banner reads the result in the template. An awaited declaration
-	// is a blocker Svelte hangs on every node that reads it, and this page's
-	// `{#each await …}` supplies the async expression that turns a blocker into
-	// the crash `async-effect-shape.spec.ts` guards against — which it does
-	// catch, promptly, if this is rewritten the obvious way.
+	// Resolved inside the effect so each poll reads the refreshed list.
 	const paidId = $derived(page.url.searchParams.get('paid'));
 	const PAID_RETRY_LIMIT = 10;
 	const PAID_RETRY_MS = 2000;
@@ -95,6 +89,15 @@
 
 	// Null for a member who holds the Practice space clearance.
 	const firstBooking = $derived(await pageData.then((d) => d.firstBooking));
+
+	// Awaited here rather than in `{#await}` blocks, which the server renders in
+	// their pending state and hydration then replaces (#3183).
+	const active = $derived(await activeReservations);
+	const history = $derived(await allReservations);
+	const overdue = $derived(await pageData.then((d) => d.overdue));
+	const membership = $derived(await pageData.then((d) => d.membership));
+	const policy = $derived(await pageData.then((d) => d.policy));
+	const teachingPolicy = $derived(await pageData.then((d) => d.teachingPolicy));
 
 	// Remote queries aren't refreshed by refreshAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
@@ -182,16 +185,18 @@
 	{#if isInstructor}
 		<SectionLabel label={m.member_reservations_practice_terms_label()} />
 	{/if}
-	<BookingPolicy />
+	<BookingPolicy {policy} />
 	{#if firstBooking}
 		<FirstBookingRules {...firstBooking} />
 	{/if}
 	{#if isInstructor}
 		<!-- Teaching needs no Practice space clearance, so no first-booking block (#2808). -->
 		<SectionLabel label={m.member_reservations_teaching_terms_label()} class="mt-4" />
-		<BookingPolicy bookerType="instructor" />
+		{#if teachingPolicy}
+			<BookingPolicy policy={teachingPolicy} bookerType="instructor" />
+		{/if}
 	{/if}
-	<FreeHoursRemaining />
+	<FreeHoursRemaining {membership} />
 	<article class="@container">
 		<Tabs.Root bind:value={activeTab}>
 			<header class="mb-4 flex w-full items-center justify-between">
@@ -217,21 +222,17 @@
 				{#if activeTab === 'active'}
 					<!-- Past sessions still owed, above the upcoming list; they stay in
 					     All too (#2053). -->
-					{#await overdueReservations then overdue}
-						{#if overdue.length > 0}
-							<section class="mb-6">
-								<SectionLabel
-									label={m.member_reservations_overdue_payments_label()}
-									count={overdue.length}
-								/>
-								<OverdueTable reservations={overdue} />
-							</section>
-						{/if}
-					{:catch}
-						<!-- `contact` takes this rejection to the boundary. -->
-					{/await}
+					{#if overdue.length > 0}
+						<section class="mb-6">
+							<SectionLabel
+								label={m.member_reservations_overdue_payments_label()}
+								count={overdue.length}
+							/>
+							<OverdueTable reservations={overdue} />
+						</section>
+					{/if}
 					<div class="card-grid">
-						{#each await activeReservations as reservation (reservation.id)}
+						{#each active as reservation (reservation.id)}
 							<ReservationCard {reservation} onchange={refreshReservations} />
 						{:else}
 							<EmptyState
@@ -244,46 +245,42 @@
 			</Tabs.Content>
 			<Tabs.Content value="all">
 				{#if activeTab === 'all'}
-					{#await allReservations then history}
-						{@const shown = showAllHistory ? history : history.slice(0, HISTORY_PAGE_SIZE)}
-						{#if history.length > 0}
-							<p class="mb-3 text-subtle">
-								{#if shown.length < history.length}
-									{m.member_reservations_showing_most_recent_reservations_text({
-										length: shown.length,
-										length2: history.length
-									})}
-								{:else}
-									{m.member_reservations_reservations_newest_first_text({ length: history.length })}
-								{/if}
-							</p>
-						{/if}
-						{#if shown.length === 0}
-							<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve_body()} />
-						{/if}
-						<!-- A month header every dozen-or-so rows. Two years of fortnightly
+					{@const shown = showAllHistory ? history : history.slice(0, HISTORY_PAGE_SIZE)}
+					{#if history.length > 0}
+						<p class="mb-3 text-subtle">
+							{#if shown.length < history.length}
+								{m.member_reservations_showing_most_recent_reservations_text({
+									length: shown.length,
+									length2: history.length
+								})}
+							{:else}
+								{m.member_reservations_reservations_newest_first_text({ length: history.length })}
+							{/if}
+						</p>
+					{/if}
+					{#if shown.length === 0}
+						<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve_body()} />
+					{/if}
+					<!-- A month header every dozen-or-so rows. Two years of fortnightly
 						     bookings is 53 rows that look alike, and scrolling was the only
 						     way back to one of them (#904). -->
-						{#each groupReservationsByMonth(shown) as [month, rows] (month + rows[0].id)}
-							<section class="mb-6">
-								<SectionLabel label={month} count={rows.length} />
-								<div class="card-grid">
-									{#each rows as reservation (reservation.id)}
-										<ReservationCard {reservation} onchange={refreshReservations} />
-									{/each}
-								</div>
-							</section>
-						{/each}
-						{#if shown.length < history.length}
-							<div class="mt-3 flex justify-center">
-								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
-									{m.member_reservations_show_all_label({ length: history.length })}
-								</Button>
+					{#each groupReservationsByMonth(shown) as [month, rows] (month + rows[0].id)}
+						<section class="mb-6">
+							<SectionLabel label={month} count={rows.length} />
+							<div class="card-grid">
+								{#each rows as reservation (reservation.id)}
+									<ReservationCard {reservation} onchange={refreshReservations} />
+								{/each}
 							</div>
-						{/if}
-					{:catch}
-						<!-- `contact` takes this rejection to the boundary. -->
-					{/await}
+						</section>
+					{/each}
+					{#if shown.length < history.length}
+						<div class="mt-3 flex justify-center">
+							<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
+								{m.member_reservations_show_all_label({ length: history.length })}
+							</Button>
+						</div>
+					{/if}
 				{/if}
 			</Tabs.Content>
 		</Tabs.Root>

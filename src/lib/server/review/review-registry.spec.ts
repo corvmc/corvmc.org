@@ -211,6 +211,33 @@ describe('the feed', () => {
 		expect(refs['minor_volunteer:ana']).toMatchObject({ type: 'volunteer', id: 'ana' });
 	});
 
+	// The table each ref type's link reads its id from (`entity-href.ts`). A shift
+	// id under `shift` linked to a task page that does not exist (#3179).
+	const TABLE_OF: Record<string, string> = {
+		suggestion: 'suggestion',
+		event: 'event_listing',
+		classified: 'classified_post',
+		local_resource: 'local_resource',
+		flag: 'content_flag',
+		work_request: 'work_request',
+		hour_log: 'volunteer_hour_log',
+		shift: 'work_order',
+		volunteer: 'user',
+		group_application: 'group_application_choice',
+		market_vendor: 'market_vendor'
+	};
+
+	it('gives every ref an id from the table its type links to', async () => {
+		const page = await listReviewFeed(everything, { limit: 100 }, NOW);
+		const misses = page.items.flatMap((i) => {
+			const table = TABLE_OF[i.ref.type];
+			if (!table) return [`${i.id}: no table for ${i.ref.type}`];
+			const found = sqlite.prepare(`select 1 from "${table}" where id = ?`).get(i.ref.id);
+			return found ? [] : [`${i.id}: ${i.ref.id} is not a ${table}`];
+		});
+		expect(misses).toEqual([]);
+	});
+
 	it('names what a report is about, or its reason when the target is gone', async () => {
 		const page = await listReviewFeed(everything, { kind: 'flag', limit: 10 }, NOW);
 		expect(Object.fromEntries(page.items.map((i) => [i.id, i.summary]))).toEqual({

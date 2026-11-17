@@ -29,6 +29,13 @@
 	const { fields: checkoutFields } = checkout;
 
 	let id = $derived(params.id);
+	// Shows the loan returned until the server answers; `returnLoan` refreshes this query.
+	const markReturned = () => [
+		getStaffLoanDetail(id).withOverride((d) => ({
+			...d,
+			loan: { ...d.loan, status: 'returned' as const, returnedAt: new Date(), isOverdue: false }
+		}))
+	];
 	const data = $derived(await getStaffLoanDetail(id));
 	const loan = $derived(data.loan);
 	const availableItems = $derived(data.availableItems);
@@ -375,6 +382,7 @@
 
 					<MarkReturnedAction
 						loanId={id}
+						updates={markReturned}
 						chargeMessage={chargePreview
 							? m.staff_inventory_loans_id_charge_message_text({
 									days: chargePreview.days,

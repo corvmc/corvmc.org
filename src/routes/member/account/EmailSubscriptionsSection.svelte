@@ -13,12 +13,13 @@
 	const lists = $derived(getMyEmailSubscriptions());
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Unsubscribe.
 	const latest = new Latest(() => lists);
+	const loaded = $derived(latest.current ?? (await lists.catch(() => undefined)));
 </script>
 
 <svelte:boundary>
 	<InfoCard title={m.member_account_email_subscriptions_section_title()}>
-		{#if latest.current}
-			{@const { subscriptions: subs, available: avail } = latest.current}
+		{#if loaded}
+			{@const { subscriptions: subs, available: avail } = loaded}
 			{#if subs.length === 0 && avail.length === 0}
 				<p class="text-muted">
 					{m.member_account_email_subscriptions_section_no_mailing_lists_text()}

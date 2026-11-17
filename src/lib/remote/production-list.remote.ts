@@ -3,6 +3,7 @@ import { query } from '$app/server';
 import { requireCapability } from '#lib/server/authorization.js';
 import { productionStatuses } from '#lib/server/db/schema/production.js';
 import { listProductions } from '#lib/server/production/production-list.js';
+import { listDateRanges } from '#lib/config.js';
 
 /**
  * Staff: every production, at every status (#3112). `event.read`, the guard the
@@ -12,14 +13,14 @@ export const getStaffProductions = query(
 	z.object({
 		status: z.enum(productionStatuses).optional(),
 		needsActs: z.boolean().optional(),
+		range: z.enum(listDateRanges).optional(),
+		from: z.iso.date().optional(),
+		to: z.iso.date().optional(),
 		page: z.number().int().positive().optional()
 	}),
-	async (filters) => {
+	async ({ page, ...filters }) => {
 		await requireCapability('event.read');
-		const { rows, pagination } = await listProductions(
-			{ status: filters.status, needsActs: filters.needsActs },
-			{ page: filters.page ?? 1, pageSize: 50 }
-		);
+		const { rows, pagination } = await listProductions(filters, { page: page ?? 1, pageSize: 50 });
 		return {
 			rows: rows.map((r) => ({
 				id: r.id,

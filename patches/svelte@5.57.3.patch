@@ -18,3 +18,28 @@ index ffcf2d4fd14d50c8f0f056f3873888193fd424e5..677d67c5fc00c17951ffed9c2956101d
  		// any effects that were previously deferred should be transferred
  		// to the batch, which will flush in the next microtask
  		batch.transfer_reactions(this.#dirty_reactions);
+diff --git a/src/internal/client/dom/blocks/each.js b/src/internal/client/dom/blocks/each.js
+index 58d59a6825000d48bc6234b030d006e16014a6d4..152d73303c47057847f8905cb9cc15028579b1c0 100644
+--- a/src/internal/client/dom/blocks/each.js
++++ b/src/internal/client/dom/blocks/each.js
+@@ -194,6 +194,11 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
+ 			: parent_node.appendChild(create_text());
+ 	}
+ 
++	// The block's own `[` / `[!` comment, as `if` reads it. Under `$.async`,
++	// `node` is the async wrapper's comment, whose `[` read as "not else" and
++	// re-rendered every empty list's fallback the server had already sent.
++	var marker = hydrating ? hydrate_node : null;
++
+ 	if (hydrating) {
+ 		hydrate_next();
+ 	}
+@@ -273,7 +278,7 @@ export function each(node, flags, get_collection, get_key, render_fn, fallback_f
+ 		let mismatch = false;
+ 
+ 		if (hydrating) {
+-			var is_else = read_hydration_instruction(anchor) === HYDRATION_START_ELSE;
++			var is_else = read_hydration_instruction(/** @type {TemplateNode} */ (marker)) === HYDRATION_START_ELSE;
+ 
+ 			if (is_else !== (length === 0)) {
+ 				// hydration mismatch — remove the server-rendered DOM and start over

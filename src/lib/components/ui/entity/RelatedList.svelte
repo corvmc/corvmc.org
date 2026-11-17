@@ -11,8 +11,8 @@
 	 * Promoted from `staff/users/[id]/panels/AsyncCard.svelte`, which was already
 	 * exactly this component, privately, in one route folder.
 	 *
-	 * Each section loads independently: a slow subscription lookup must not blank
-	 * the reservations beside it. The `{:catch}` is load-bearing — without it a
+	 * Each section fails independently: a failed subscription lookup must not blank
+	 * the reservations beside it. The `failed` snippet is load-bearing — without it a
 	 * failed query renders an empty card, indistinguishable from "this record has
 	 * none of these", which is the bug the Payment Records card shipped with.
 	 *
@@ -35,13 +35,11 @@
 </script>
 
 <InfoCard {title} class={className} {header}>
-	{#await result}
-		<div class="flex justify-center py-8">
-			<span class="loading loading-sm loading-spinner"></span>
-		</div>
-	{:then value}
-		{@render children(value)}
-	{:catch}
-		<Alert type="warning">{m.ui_related_load_failed_body({ title: title.toLowerCase() })}</Alert>
-	{/await}
+	<!-- No pending snippet, so the server sends the records (#3183). -->
+	<svelte:boundary>
+		{@render children(await result)}
+		{#snippet failed()}
+			<Alert type="warning">{m.ui_related_load_failed_body({ title: title.toLowerCase() })}</Alert>
+		{/snippet}
+	</svelte:boundary>
 </InfoCard>

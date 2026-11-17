@@ -5,10 +5,26 @@ import { project } from '#lib/server/db/schema/project.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { venue } from '#lib/server/db/schema/venue.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { staffCalendarBounds } from '#lib/server/event/staff-calendar.js';
+import type { ListDateRange } from '#lib/config.js';
 
 /** A bill short of the act count its production asks for (#859). A null target never matches. */
 const shortOfActs = sql`${production.actsWanted} > (SELECT count(*) FROM "event_band" "eb"
 	WHERE "eb"."event_id" = ${eventListing.id})`;
+
+/** A production's date: its listing's start, else its project's. Unix seconds. */
+const when = sql`coalesce(${eventListing.startsAt}, ${project.startsAt})`;
+const seconds = (d: Date) => Math.floor(d.getTime() / 1000);
+
+export interface ProductionListFilters {
+	status?: ProductionStatus;
+	needsActs?: boolean;
+	/** Any date by default: an undated draft is still in the pipeline. */
+	range?: ListDateRange;
+	/** `YYYY-MM-DD`, club time; read only when `range` is `custom`. */
+	from?: string;
+	to?: string;
+}
 
 /**
  * The staff Productions list (#3112): every production, listed or not. A
@@ -17,14 +33,23 @@ const shortOfActs = sql`${production.actsWanted} > (SELECT count(*) FROM "event_
  * count can carry the same joins without fanning out.
  */
 export async function listProductions(
-	opts: { status?: ProductionStatus; needsActs?: boolean } = {},
-	pagination: PaginationInput = {}
+	opts: ProductionListFilters = {},
+	pagination: PaginationInput = {},
+	now = new Date()
 ) {
+	const range = opts.range ?? 'any';
+	const bounds = range === 'any' ? null : staffCalendarBounds({ ...opts, range }, now);
 	const where = and(
 		opts.status ? eq(production.status, opts.status) : undefined,
-		opts.needsActs ? shortOfActs : undefined
+		opts.needsActs ? shortOfActs : undefined,
+		bounds?.from ? sql`${when} >= ${seconds(bounds.from)}` : undefined,
+		bounds?.before ? sql`${when} < ${seconds(bounds.before)}` : undefined
 	);
-	const when = sql`coalesce(${eventListing.startsAt}, ${project.startsAt})`;
+	// A dated range lists in its own order; Any date lists newest first with
+	// undated last. `id` breaks a tie so a page keeps its order.
+	const order = bounds
+		? [bounds.order === 'asc' ? asc(when) : desc(when), asc(production.id)]
+		: [sql`${when} IS NULL`, desc(when), asc(production.id)];
 
 	const dataQ = db
 		.select({
@@ -47,8 +72,7 @@ export async function listProductions(
 		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.where(where)
-		// Undated last; `id` breaks a tie so a page keeps its order.
-		.orderBy(sql`${when} IS NULL`, desc(when), asc(production.id))
+		.orderBy(...order)
 		.$dynamic();
 	const countQ = db
 		.select({ count: count() })

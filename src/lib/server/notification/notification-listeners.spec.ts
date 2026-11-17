@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { INVITE_EXPIRY_DAYS } from '#lib/config.js';
 import { forEachTimeZone } from '#lib/test/clock-edges.js';
-import { clubInstant } from '#lib/utils/format.js';
+import { clubInstant, formatTime } from '#lib/utils/format.js';
+import { doorCodeWindow } from '#lib/utils/door-code-window.js';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -22,6 +23,11 @@ vi.mock('./dispatcher', () => ({
 }));
 
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+
+const mockRoomBookedBefore = vi.fn(async (_rows: unknown) => new Map<string, Date>());
+vi.mock('#lib/server/reservation/room-booked-before.js', () => ({
+	roomBookedBefore: (rows: unknown) => mockRoomBookedBefore(rows)
+}));
 
 const mockStaffUsers = vi.fn(async (_cap?: string) => [
 	{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
@@ -485,6 +491,65 @@ describe('door code ready', () => {
 		expect(params.userId).toBe('user-1');
 		expect(detailText(params.email)).toContain('Door code: 482913');
 		expect(params.href).toBe('/member/reservations');
+	});
+
+	it('states when the code starts working, from the window the lock is given', async () => {
+		await emit('reservation.door_code_ready', {
+			reservationId: 'res-1',
+			code: '482913',
+			userId: 'user-1',
+			userEmail: 'user@test.com',
+			userName: 'Bob',
+			date: '2026-05-21',
+			startTime: '19:00',
+			endTime: '21:00'
+		});
+
+		const { opensAt } = doorCodeWindow({
+			startsAt: clubInstant('2026-05-21', '19:00'),
+			endsAt: clubInstant('2026-05-21', '21:00')
+		});
+		const values = mockDispatch.mock.calls[0][0].email.details.map(
+			(d: { value: string }) => d.value
+		);
+		expect(values).toContain(formatTime(opensAt));
+	});
+
+	const ready = {
+		reservationId: 'res-1',
+		code: '482913',
+		userId: 'user-1',
+		userEmail: 'user@test.com',
+		userName: 'Bob',
+		date: '2026-05-21',
+		startTime: '19:00',
+		endTime: '21:00'
+	} as const;
+	const paragraphs = () =>
+		mockDispatch.mock.calls[0][0].email.paragraphs.map((p: { text: string }) => p.text).join('\n');
+
+	it('states when a booking before runs into the early-open minutes', async () => {
+		const bookedUntil = new Date(clubInstant('2026-05-21', '19:00').getTime() - 3 * 60_000);
+		mockRoomBookedBefore.mockResolvedValueOnce(new Map([['res-1', bookedUntil]]));
+
+		await emit('reservation.door_code_ready', ready);
+
+		expect(paragraphs()).toContain(formatTime(bookedUntil));
+	});
+
+	it('adds nothing when no booking overlaps', async () => {
+		const count = () => {
+			const { calls } = mockDispatch.mock;
+			return calls[calls.length - 1][0].email.paragraphs.length;
+		};
+		await emit('reservation.door_code_ready', ready);
+		const without = count();
+		mockRoomBookedBefore.mockResolvedValueOnce(
+			new Map([['res-1', clubInstant('2026-05-21', '18:55')]])
+		);
+		await emit('reservation.door_code_ready', ready);
+
+		expect(count()).toBe(without + 1);
 	});
 });
 

@@ -11,6 +11,7 @@ import {
 	filterNavSections,
 	inContentPanel,
 	inSystemPanel,
+	sectionBadge,
 	sectionHasKey,
 	staffNavBottom,
 	staffNavSections,
@@ -489,6 +490,36 @@ describe('filterNavSections', () => {
 		expect(rows.length).toBeLessThan(staffNavSections.flatMap((s) => s.items).length);
 		expect(filterNavItems(staffNavBottom, held).map((i) => i.key)).toContain('settings');
 		expect(filterNavItems(systemNavItems, held).map((i) => i.key)).toContain('payments');
+	});
+});
+
+describe('sectionBadge', () => {
+	const counts = { inboxUnread: 3, volunteerPending: 2, reviewWaiting: 5 };
+	const zero = { inboxUnread: 0, volunteerPending: 0, reviewWaiting: 0 };
+
+	it('sums every badged row in a section, children included', () => {
+		const leaf = (key: StaffNavKey, badgeKey?: keyof typeof counts): StaffNavItem => ({
+			key,
+			label: key,
+			href: staffNavTop[0].href,
+			badgeKey
+		});
+		const parent = {
+			...leaf('projects', 'reviewWaiting'),
+			children: [leaf('gear', 'volunteerPending')]
+		};
+		const section = {
+			key: 'outreach' as const,
+			title: 'S',
+			items: [leaf('inbox', 'inboxUnread'), leaf('contacts'), parent]
+		};
+		expect(sectionBadge(section, counts)).toBe(10);
+		expect(sectionBadge(section, zero)).toBe(0);
+	});
+
+	it("carries Inbox's unread count on Outreach", () => {
+		const outreach = staffNavSections.find((s) => s.key === 'outreach')!;
+		expect(sectionBadge(outreach, { ...zero, inboxUnread: 4 })).toBe(4);
 	});
 });
 

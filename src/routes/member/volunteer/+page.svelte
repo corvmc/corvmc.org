@@ -30,6 +30,24 @@
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { getMemberVolunteerPage, markMyTaskDone } from '#lib/remote/volunteer.remote.js';
 
+	// Takes the task off the list until the server answers. A task that asks for
+	// a reason keeps its dialog instead, so a refused reason shows under its field.
+	const dropTask = (workOrderId: string) => () => [
+		getMemberVolunteerPage().withOverride((p) => ({
+			...p,
+			assignedTasks: p.assignedTasks.filter((t) => t.workOrderId !== workOrderId)
+		}))
+	];
+
+	// Takes a claimed shift off the board until the server answers; the board
+	// shows only shifts with no status of the member's.
+	const markClaimed = (shiftId: string) => () => [
+		getMemberVolunteerPage().withOverride((p) => ({
+			...p,
+			openShifts: p.openShifts.map((s) => (s.id === shiftId ? { ...s, myStatus: 'claimed' } : s))
+		}))
+	];
+
 	const pageData = $derived(await getMemberVolunteerPage());
 
 	function toDateInput(date: Date): string {
@@ -176,6 +194,7 @@
 										modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
 										submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
 										successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
+										updates={task.closesItself ? undefined : dropTask(task.workOrderId)}
 									>
 										{#snippet form()}
 											<input
@@ -229,7 +248,11 @@
 			     the board is addressed to everybody. -->
 			<ShiftInvitations invitations={pageData.invitations} />
 
-			<OpenShifts shifts={pageData.openShifts} hasInterests={pageData.interests.length > 0} />
+			<OpenShifts
+				shifts={pageData.openShifts}
+				hasInterests={pageData.interests.length > 0}
+				claimUpdates={markClaimed}
+			/>
 		</div>
 	</div>
 </PageContent>

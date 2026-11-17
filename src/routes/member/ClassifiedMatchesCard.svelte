@@ -26,7 +26,7 @@
 			{#each posts as post (post.id)}
 				<li class="flex flex-wrap items-center justify-between gap-2 inset px-3 py-2">
 					<a href={resolve('/member/classifieds/[id]', { id: post.id })} class="min-w-0">
-						<EntityIdentity ref={post.ref}>
+						<EntityIdentity ref={post.ref} link={false}>
 							{#snippet subtitle()}
 								{classifiedKindLabel(post.kind, post.category)} · {classifiedCategoryLabels[
 									post.category

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { formatDateInTz, formatTimeInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { EARLY_OPEN_MINUTES, doorCodeWindow } from '#lib/utils/door-code-window.js';
 
 // ---------------------------------------------------------------------------
 // Mocks — credentials + a cached token so no token refresh fetch is needed.
@@ -172,11 +173,13 @@ describe('createTemporaryUser', () => {
 		expect(cmd.arguments.password).toBe(4242);
 		expect(cmd.arguments.name).toBe('Jordan');
 
-		// daterange end = reservation end + grace, formatted in the venue timezone.
-		const graceEnd = new Date(endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
-		const expectedEnd = `${formatDateInTz(graceEnd, DEFAULT_TIMEZONE)} ${formatTimeInTz(graceEnd, DEFAULT_TIMEZONE)}`;
-		const expectedStart = `${formatDateInTz(startTime, DEFAULT_TIMEZONE)} ${formatTimeInTz(startTime, DEFAULT_TIMEZONE)}`;
-		expect(cmd.arguments.daterange).toEqual([expectedStart, expectedEnd]);
+		// The lock gets the window every page states (#3173), in the venue timezone.
+		const { opensAt, closesAt } = doorCodeWindow({ startsAt: startTime, endsAt: endTime });
+		const venue = (d: Date) =>
+			`${formatDateInTz(d, DEFAULT_TIMEZONE)} ${formatTimeInTz(d, DEFAULT_TIMEZONE)}`;
+		expect(cmd.arguments.daterange).toEqual([venue(opensAt), venue(closesAt)]);
+		expect(closesAt.getTime() - endTime.getTime()).toBe(LOCK_GRACE_MINUTES * 60_000);
+		expect(startTime.getTime() - opensAt.getTime()).toBe(EARLY_OPEN_MINUTES * 60_000);
 
 		// Temporary users require the full schedule quartet or U-tec returns BAD-REQUEST.
 		expect(cmd.arguments.weeks).toEqual([0, 1, 2, 3, 4, 5, 6]);

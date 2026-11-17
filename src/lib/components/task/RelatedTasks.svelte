@@ -4,6 +4,8 @@
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -52,12 +54,15 @@
 				}))
 			: getRelatedTasks(args).then((staff) => staff && { ...staff, mine: null })
 	);
+	const refresh = () =>
+		void (
+			member
+				? getMemberRelatedTasks({ ...args, type: args.type as 'group' | 'event' })
+				: getRelatedTasks(args)
+		).refresh();
 	// Staff open every task; a member only one assigned to them.
 	const linkOf = (id: string, mine: string[] | null): 'staff' | 'member' | 'none' =>
 		mine === null ? 'staff' : mine.includes(id) ? 'member' : 'none';
-	$effect(() => {
-		if (related.error) throw related.error.e;
-	});
 
 	// The table's invoice chip is about money; this card counts the work.
 	const CARD_CHIPS = CHIPS.filter((c) => c !== 'invoice');
@@ -186,4 +191,8 @@
 			</Table>
 		{/if}
 	</InfoCard>
+{:else if related.error}
+	<Alert type="warning" reset={refresh}>
+		{m.ui_load_failed_body({ error: errorMessage(related.error.e) })}
+	</Alert>
 {/if}

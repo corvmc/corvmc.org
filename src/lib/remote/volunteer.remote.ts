@@ -230,6 +230,7 @@ import {
 import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 import { clubInstant } from '#lib/utils/format.js';
 import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
+import { isMarketDay } from '#lib/server/market/market-service.js';
 
 // Hours come off the form as a decimal (0.25 steps) and are stored as integer
 // minutes. One place does the conversion so the two can't drift.
@@ -2849,6 +2850,9 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 
 	const grants = (cap: Capability) =>
 		shift.eventId ? can(cap, { eventId: shift.eventId }) : Promise.resolve(false);
+	// Hosting needs a market to host: the market page refuses any other event.
+	const hostsMarket = async () =>
+		(await grants('market.host')) && !!shift.eventId && isMarketDay(shift.eventId);
 	const [tasks, event, crew, door, till, host, filedIncidents, briefing, crewMates] =
 		await Promise.all([
 			listWorkTasks(shift.workOrderId),
@@ -2856,7 +2860,7 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 			grants('incident.file'),
 			grants('event.checkIn'),
 			grants('finance.collect'),
-			grants('market.host'),
+			hostsMarket(),
 			shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
 			shift.briefingArticleId
 				? resolveHelpReader(currentUser.id).then((reader) =>
@@ -3043,9 +3047,10 @@ export const checkInAsVolunteer = form(
 		await ticketOnShow(data.ticketId, await doorShiftEvent(data.signupId));
 
 		try {
-			await checkInTicketService(data.ticketId, currentUser.id);
+			// A repeat is reported, not refused, and the row warns on it (#3204).
+			const result = await checkInTicketService(data.ticketId, currentUser.id);
 			await getMyShiftCheckIn(data.signupId).refresh();
-			return { success: true };
+			return { success: true, ...result };
 		} catch (err) {
 			mapDomainError(err);
 		}

@@ -86,9 +86,17 @@ When `<Form>` must wrap both the header (for SubmitButton) and the body fields, 
 
 ### Loading and error states
 
-The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in a `<svelte:boundary>` with default pending (spinner) and failed (Alert with Retry) snippets. Pages **do not** need to add their own boundary, pending, or failed snippets — the layout handles it.
+The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in `ErrorToastBoundary`, with a failed snippet (Alert with Retry) for client-side errors. Pages **do not** need to add their own boundary or failed snippet — the layout handles it.
+
+All three panel layouts pass `showPending={false}`, so the server awaits the page's queries and sends its content, and an error during the server render reaches `+error.svelte` with its status (#3158). `src/routes/layout-boundary-ssr.spec.ts` fails a layout that brings the spinner back.
+
+The server sends only what the page awaits. An `{#await}` block sends its pending branch, and `new Latest(() => promise)` resolves in an effect the server never runs, so both send a placeholder that hydration replaces (#3183). Await page content in the script or the template instead. Where `Latest` keeps rows mounted across a refresh, read `latest.current ?? (await promise)`, as `DataList` does. `src/await-block-ssr.spec.ts` lists the components that still send a placeholder; the list only shrinks.
+
+A page the server renders is parsed by the browser before it hydrates, so its HTML must be valid as written. A link inside a link is split apart by the parser and the page fails to hydrate. `EntityCard`, `EntityIdentity` and `EntityChip` draw their own link: do not wrap them in `<a>` or `<button>`. Inside one, give `EntityIdentity` `link={false}`. `src/no-nested-entity-links.spec.ts` enforces this. A form inside a form is dropped the same way: the page editor's canvas sits inside the editor's form, so the band site's contact form joins it only once mounted.
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
+
+A card with its own query beside the page's main one shows its failure in place, as an `Alert` with Retry, and does not rethrow it: a rethrow reaches the layout's boundary and replaces the whole page. The band billing card is the example (#3140). `src/routes/await-failure.svelte.spec.ts` lists the blocks that keep a failure in place; add a new card there. `scripts/secondary-query-rethrow.spec.ts` fails any component that rethrows, and any page that rethrows beside a query it awaits, unless it lists the component as rendering a page's main query (#3199).
 
 ## Page shapes
 
@@ -254,6 +262,14 @@ Props:
 - `onsuccess` / `onfailure` — callbacks
 - `flashDuration` — how long the success/error flash sticks before the button
   returns to its idle state (default 1500ms)
+- `updates` — `() => RemoteQueryUpdate[]`, read at submit: the queries this submit refreshes in
+  place of all of them. Pass `query(arg).withOverride(fn)` to show the change before the server
+  answers; kit drops the override when the submit settles, so a refusal restores the old state and
+  the error shows as usual. The server handler must refresh or set each query named, or kit fails
+  that query. Specs hold the submit with `heldRemoteForm()` and `fakeQuery()` from
+  `#lib/test/fake-remote.svelte.js`.
+  Not for an answer someone acts on at once: the door's check-in shows admitted only once the
+  server has said the ticket is valid and not already in.
 
 There is **no `errorToast` prop.** Passing one does nothing visible — it falls
 through the rest spread onto the `<form>` element. The default error handling is
@@ -584,6 +600,9 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
+- `updates` — form-modal mode only: passed to `Form` (see its `updates`). An override that
+  unmounts the `Action` itself also closes its dialog, so a form whose server issues render under
+  a field keeps the dialog until the server answers.
 - `variant` / `size` / `shape` / `outline` — forwarded to `Button`; `variant` defaults to `primary`
 - `class` — escape hatch, forwarded to `Button`
 - `disabled` — disables the trigger button
@@ -1062,7 +1081,9 @@ remembers the choice, namespaced by `persistScope` (default `staff`). Groups alw
 the server and on the first client paint — the stored state is read in `onMount` — because a
 collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
 _collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
-group opens it and keeps it open.
+group opens it and keeps it open. A collapsed group shows its `badge` on the header; the staff
+layout passes `sectionBadge(section, badges)`, the sum of its rows' counts, so Inbox's unread count
+stays visible under a collapsed Outreach.
 
 **Starred rows.** `Nav.Item` and `Nav.Collapsible` take `starred` and `onstar`; passing `onstar`
 adds a star toggle over the end of the row, shown on hover or focus. `nav-stars.ts` stores the keys

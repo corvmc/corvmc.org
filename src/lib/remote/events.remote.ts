@@ -1848,7 +1848,6 @@ export const checkInTicket = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		return { success: true };
 	}
 );
 

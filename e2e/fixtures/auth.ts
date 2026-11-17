@@ -7,7 +7,7 @@
  * out, changes the password or bans the user takes `freshSignIn`.
  */
 import { request, type Page } from '@playwright/test';
-import { test as base, expect, recordPageErrors } from './test';
+import { test as base, expect, gotoAwaitsHydration, recordPageErrors } from './test';
 
 export { expect };
 
@@ -99,6 +99,7 @@ export const test = base.extend<{
 				baseURL: baseURL(),
 				storageState: await cachedSession(persona)
 			});
+			gotoAwaitsHydration(context);
 			reports.push(recordPageErrors(context, testInfo));
 			opened.push(context);
 			return context.newPage();

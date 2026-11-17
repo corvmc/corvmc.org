@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Latest } from '#lib/latest.svelte.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '#lib/paraglide/messages.js';
 	/**
@@ -37,40 +38,42 @@
 />
 
 <PageContent width="md">
-	{#if step.current}
-		{@const me = step.current}
-		<InfoCard title={m.member_volunteer_start_about_title()}>
-			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once_text()}</p>
+	<ErrorToastBoundary showPending={false}>
+		{@const me = step.current ?? (await getVolunteerStartStep().catch(() => undefined))}
+		{#if me}
+			<InfoCard title={m.member_volunteer_start_about_title()}>
+				<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once_text()}</p>
 
-			<Form remote={startVolunteerOnboarding}>
-				<ProfileFields
-					fields={startVolunteerOnboarding.fields}
-					firstName={me.firstName}
-					lastName={me.lastName}
-					pronouns={me.pronouns}
-					phone={me.phone}
-					email={me.email}
-				/>
+				<Form remote={startVolunteerOnboarding}>
+					<ProfileFields
+						fields={startVolunteerOnboarding.fields}
+						firstName={me.firstName}
+						lastName={me.lastName}
+						pronouns={me.pronouns}
+						phone={me.phone}
+						email={me.email}
+					/>
 
-				<!--
-					A select, not a checkbox. An unticked checkbox submits nothing, so
-					"I'm under 18" and "I skipped this" would arrive identically — and
-					either default is wrong for somebody.
-				-->
-				<FormField
-					field={startVolunteerOnboarding.fields.isAdult}
-					type="select"
-					label={m.member_volunteer_start_18_older_label()}
-					placeholder={m.member_volunteer_start_placeholder()}
-					options={[
-						{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older_label() },
-						{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18_label() }
-					]}
-					description={m.member_volunteer_start_description_body()}
-				/>
+					<!--
+						A select, not a checkbox. An unticked checkbox submits nothing, so
+						"I'm under 18" and "I skipped this" would arrive identically — and
+						either default is wrong for somebody.
+					-->
+					<FormField
+						field={startVolunteerOnboarding.fields.isAdult}
+						type="select"
+						label={m.member_volunteer_start_18_older_label()}
+						placeholder={m.member_volunteer_start_placeholder()}
+						options={[
+							{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older_label() },
+							{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18_label() }
+						]}
+						description={m.member_volunteer_start_description_body()}
+					/>
 
-				<SubmitButton label={m.member_volunteer_start_continue_label()} variant="primary" />
-			</Form>
-		</InfoCard>
-	{/if}
+					<SubmitButton label={m.member_volunteer_start_continue_label()} variant="primary" />
+				</Form>
+			</InfoCard>
+		{/if}
+	</ErrorToastBoundary>
 </PageContent>

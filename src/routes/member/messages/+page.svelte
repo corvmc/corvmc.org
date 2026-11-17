@@ -14,8 +14,8 @@
 	const result = $derived(getMyMessages({ page: conversationList.page }));
 </script>
 
-{#await result then { rows }}
-	{#if rows.length > 0}
+<svelte:boundary>
+	{#if (await result).rows.length > 0}
 		<div class="flex h-full items-center justify-center">
 			<EmptyState
 				title={m.member_messages_title()}
@@ -23,6 +23,6 @@
 			/>
 		</div>
 	{/if}
-{:catch}
 	<!-- The list beside this pane reports its own failure. -->
-{/await}
+	{#snippet failed()}{/snippet}
+</svelte:boundary>

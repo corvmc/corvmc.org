@@ -70,7 +70,7 @@
 		"@inlang/plugin-message-format": "^4.6.0",
 		"@playwright/test": "^1.64.1",
 		"@sveltejs/adapter-cloudflare": "^8.0.2",
-		"@sveltejs/kit": "^3.1.1",
+		"@sveltejs/kit": "^3.2.0",
 		"@sveltejs/load-config": "^0.2.2",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/forms": "^0.5.11",
@@ -169,7 +169,7 @@
 		"patchedDependencies": {
 			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
 			"svelte@5.57.3": "patches/svelte@5.57.3.patch",
-			"@sveltejs/kit@3.1.1": "patches/@sveltejs__kit@3.1.1.patch"
+			"@sveltejs/kit@3.2.0": "patches/@sveltejs__kit@3.2.0.patch"
 		}
 	}
 }

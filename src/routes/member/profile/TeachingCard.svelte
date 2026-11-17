@@ -68,9 +68,13 @@
 <InfoCard title={m.member_profile_teaching_card_title()}>
 	{#if !instructor}
 		<p class="mb-4 text-subtle">
-			{#await getReservationPolicy('instructor') then teaching}{m.member_profile_teaching_card_teach_here_can_book_room_text(
-					{ rate: formatCents(teaching.hourlyRateCents) }
-				)}{:catch error}{m.ui_load_failed_text({ error: errorMessage(error) })}{/await}
+			<svelte:boundary>
+				{m.member_profile_teaching_card_teach_here_can_book_room_text({
+					rate: formatCents((await getReservationPolicy('instructor')).hourlyRateCents)
+				})}{#snippet failed(error)}{m.ui_load_failed_text({
+						error: errorMessage(error)
+					})}{/snippet}
+			</svelte:boundary>
 		</p>
 
 		<!-- A link to its own page, not an embedded form: new members submitted

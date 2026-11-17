@@ -660,6 +660,25 @@ Also keep current as you change things:
 - **Deploy history:** Workers & Pages → corvmc → Deployments (this is also where
   `wrangler rollback` targets show up).
 
+### Latency alerts
+
+Three Sentry metric monitors on the `javascript-sveltekit` project catch a slow regression
+within a day, as with the 12-second booking (#3141). Each uses a 1 h window and emails the
+owner through the Alert **Slow pages and calls email**. The owner approved the thresholds on
+#3194; change them in Sentry and here together.
+
+| Monitor                      | Query                                                                                   | Threshold     | Why                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------- |
+| Page load p75 over 4 s       | `span.op:pageload`                                                                      | p75 > 4000 ms | What a member waits for. All pages together: a monitor cannot group per page.         |
+| Remote calls p95 over 3 s    | `span.op:http.server` on `/_app/remote/*`, without `runLockJobNow` and `retryDoorCodes` | p95 > 3000 ms | Remote queries answer in about 200 ms; a button that waits 3 s invites a re-click.    |
+| Server render p75 over 1.5 s | `is_transaction:true span.op:http.server`, segment `GET /*`, without `GET /api/*`       | p75 > 1500 ms | Page renders sit near 200 ms at p75. `/api/notifications/stream` is a long-lived SSE. |
+
+The two lock actions are excluded because they call U-tec and took over 40 s in production; they now
+queue, but the exclusion stays in case a slow call remains. The server queries filter on
+`sdk.name:sentry.javascript.cloudflare`: the Cloudflare OTLP export (§4, Sentry) sends a
+second span for every request, with no `sdk.name` and a longer wall time, and would count
+each request twice.
+
 Failure signatures by symptom:
 
 | Symptom                                     | First place to look                                                                                                                                                |

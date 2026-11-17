@@ -9,9 +9,12 @@
 	let { id }: { id: string } = $props();
 	const fields = startImpersonation.fields;
 	const allowed = new Latest(() => canImpersonate(id));
+	const mayImpersonate = $derived(
+		allowed.current ?? (await canImpersonate(id).catch(() => undefined))
+	);
 </script>
 
-{#if allowed.current}
+{#if mayImpersonate}
 	<Form remote={startImpersonation} class="mb-4" data-testid="view-as-member">
 		<input {...fields.userId.as('hidden', id)} />
 		<SubmitButton label={m.staff_member_view_as_member_label()} variant="ghost" size="sm" />

@@ -18,6 +18,8 @@
 	import { formatDateShort, formatDateTimeShort } from '#lib/utils/format.js';
 	import { formatVolunteerHours } from '#lib/config.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import {
 		assignShiftToMember,
 		inviteMemberToShift,
@@ -63,17 +65,16 @@
 	// making the coordinator press All first and then type.
 	let search = $state('');
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Invite or Add.
-	const candidates = new Latest(() =>
-		getShiftCandidates({
-			workOrderId,
-			shiftId: shiftId ?? undefined,
-			scope: search ? 'all' : scope,
-			search: search || undefined
-		})
-	);
-	$effect(() => {
-		if (candidates.error) throw candidates.error.e;
+	const args = $derived({
+		workOrderId,
+		shiftId: shiftId ?? undefined,
+		scope: search ? ('all' as const) : scope,
+		search: search || undefined
 	});
+	const candidates = new Latest(() => getShiftCandidates(args));
+	const shown = $derived(
+		candidates.current ?? (await getShiftCandidates(args).catch(() => undefined))
+	);
 
 	type Row = Awaited<ReturnType<typeof getShiftCandidates>>['rows'][number];
 
@@ -146,8 +147,8 @@
 <InfoCard title={msg.volunteer_candidate_column_who_ask_title()}>
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
-			{#if candidates.current}
-				{@const g = grade(candidates.current.rows)}
+			{#if shown}
+				{@const g = grade(shown.rows)}
 				<CardTitle>
 					{msg.volunteer_candidate_column_who_ask_2_title({ askable: g.askable })}
 					{#if g.blocked > 0}
@@ -194,8 +195,8 @@
 		</div>
 	{/snippet}
 
-	{#if candidates.current}
-		{@const result = candidates.current}
+	{#if shown}
+		{@const result = shown}
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState
@@ -305,5 +306,9 @@
 				{/each}
 			</ul>
 		{/if}
+	{:else if candidates.error}
+		<Alert type="warning" reset={() => void getShiftCandidates(args).refresh()}>
+			{msg.ui_load_failed_body({ error: errorMessage(candidates.error.e) })}
+		</Alert>
 	{/if}
 </InfoCard>

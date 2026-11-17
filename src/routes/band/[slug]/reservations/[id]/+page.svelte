@@ -21,6 +21,7 @@
 	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
 	import ReservationCharges from '#lib/components/reservations/ReservationCharges.svelte';
 	import ReservationPaymentState from '#lib/components/reservations/ReservationPaymentState.svelte';
+	import DoorCode from '#lib/components/reservations/DoorCode.svelte';
 
 	const params = routeParams('slug', 'id');
 
@@ -95,20 +96,32 @@
 			<DoorCodeHeld dueOn={res.paymentDueOn} bookerName={res.bookedBy.title} />
 		{:else if res.lockCode && res.lockSyncedAt}
 			<InfoCard title={m.band_slug_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
-				<p class="text-muted">
-					{m.band_slug_reservations_id_enter_code_door_keypad_works_text()}
-				</p>
+				<DoorCode
+					code={res.lockCode}
+					startsAt={res.startsAt}
+					endsAt={res.endsAt}
+					bookedUntil={res.bookedUntil}
+				>
+					<p class="text-muted">
+						{m.band_slug_reservations_id_enter_code_door_keypad_works_text()}
+					</p>
+				</DoorCode>
 			</InfoCard>
 		{:else if res.fallbackCode}
 			<!-- The session's own code has not reached the lock. The break-glass
 			     code was synced long ago, so it opens the door even now, and it
 			     is shown rather than asked for — see #780. -->
 			<InfoCard title={m.band_slug_reservations_id_door_code_title()}>
-				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
-				<p class="text-muted">
-					{m.band_slug_reservations_id_we_couldn_t_confirm_session_text()}
-				</p>
+				<DoorCode
+					code={res.fallbackCode}
+					startsAt={res.startsAt}
+					endsAt={res.endsAt}
+					kind="fallback"
+				>
+					<p class="text-muted">
+						{m.band_slug_reservations_id_we_couldn_t_confirm_session_text()}
+					</p>
+				</DoorCode>
 			</InfoCard>
 		{:else if res.inAccessWindow}
 			<!-- The session is running and nothing here opens the door. Standing

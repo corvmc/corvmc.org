@@ -17,6 +17,11 @@
 		external = false
 	}: { eventId: string; eventTitle: string; external?: boolean } = $props();
 
+	// Shows "going" until the server answers; `confirmRsvp` refreshes this query.
+	const showGoing = () => [
+		getRsvpStatus(eventId).withOverride((s) => ({ ...s, state: 'going' as const }))
+	];
+
 	const status = $derived(await getRsvpStatus(eventId));
 	const name = $derived(status.attendee?.name);
 	const label = $derived(
@@ -34,7 +39,7 @@
 {#if status.state === 'signed-out'}
 	<Button requiresAuth="RSVP to {eventTitle}" {variant} size="lg">{label}</Button>
 {:else if status.state === 'open'}
-	<Form remote={confirmRsvp}>
+	<Form remote={confirmRsvp} updates={showGoing}>
 		<input {...confirmRsvp.fields.eventId.as('hidden', eventId)} />
 		<SubmitButton
 			{label}

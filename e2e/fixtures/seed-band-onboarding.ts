@@ -19,6 +19,7 @@ import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/dir
 import { bandSite } from '../../src/lib/server/db/schema/band-site';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { inboxThread, inboxMessage, inboxGroupRead } from '../../src/lib/server/db/schema/inbox';
+import { eventListing } from '../../src/lib/server/db/schema/event';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformEnv } from './platform-db';
 
@@ -56,6 +57,8 @@ export const SEED_PREMIUM_BAND_NAME = 'E2E Premium Band';
 /** Its one gallery image, attached through `media` + `media_attachment`. */
 export const SEED_PREMIUM_GALLERY_KEY = 'bands/e2e-premium-band/gallery-0.jpg';
 export const SEED_PREMIUM_GALLERY_CAPTION = 'E2E Premium Band on stage';
+/** A draft show of the premium band's own: its event page exists, and the public site lists only published shows. */
+export const SEED_PREMIUM_BAND_EVENT_ID = 'e2e-premium-band-event';
 
 /**
  * Exists to be renamed. The address-change test moves this band's slug, so it
@@ -131,6 +134,7 @@ export async function seedBandOnboarding(): Promise<void> {
 			await db.delete(directoryTag).where(eq(directoryTag.entryId, entryIdFor(bandId)));
 			await db.delete(directoryEntry).where(eq(directoryEntry.groupId, bandId));
 			await db.delete(bandSite).where(eq(bandSite.groupId, bandId));
+			await db.delete(eventListing).where(eq(eventListing.id, SEED_PREMIUM_BAND_EVENT_ID));
 			// `media_attachment` has no foreign key to its parent by design — the
 			// sweep reconciles it in production — so a fixture has to clear its own.
 			await db.delete(mediaAttachment).where(eq(mediaAttachment.attachableId, bandId));
@@ -300,6 +304,18 @@ export async function seedBandOnboarding(): Promise<void> {
 				updatedAt: now
 			}))
 		);
+
+		await db.insert(eventListing).values({
+			id: SEED_PREMIUM_BAND_EVENT_ID,
+			title: 'E2E Premium Band Show',
+			groupId: SEED_PREMIUM_BAND_ID,
+			startsAt: new Date('2031-05-01T03:00:00Z'),
+			source: 'band',
+			status: 'draft',
+			createdByUserId: SEED_OWNER_ID,
+			createdAt: now,
+			updatedAt: now
+		});
 
 		// One gallery image for the premium band, so the microsite has something to
 		// render through the media tables. The key names no real R2 object — the

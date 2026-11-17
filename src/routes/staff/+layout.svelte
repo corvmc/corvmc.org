@@ -58,6 +58,7 @@
 		inSystemPanel,
 		filterNavItems,
 		filterNavSections,
+		sectionBadge,
 		sectionHasKey,
 		staffNavBottom,
 		staffNavSections,
@@ -228,6 +229,7 @@
 			collapsible
 			persistKey={section.key}
 			containsActive={sectionHasKey(section, activeKey)}
+			badge={sectionBadge(section, badges)}
 		>
 			{#each section.items as item (item.key)}
 				{@render row(item)}
@@ -265,7 +267,7 @@
 			{@render staffNav()}
 		{/if}
 	{/snippet}
-	<ErrorToastBoundary>
+	<ErrorToastBoundary showPending={false}>
 		<!-- `getStaffLayout` redirects anyone without the role, so reaching this
 		     markup is itself the proof that the viewer is staff. -->
 		<EntityViewer

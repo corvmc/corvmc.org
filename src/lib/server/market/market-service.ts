@@ -132,6 +132,11 @@ async function loadMarket(eventId: string) {
 	return row ?? null;
 }
 
+/** Whether the listing is a market: the test every market page applies through `getMarketDay`. */
+export async function isMarketDay(eventId: string): Promise<boolean> {
+	return (await loadMarket(eventId)) !== null;
+}
+
 /** The listing a vendors page hangs off, market or not yet. */
 export async function getMarketEvent(eventId: string) {
 	const [row] = await db
