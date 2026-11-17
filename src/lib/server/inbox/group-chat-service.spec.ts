@@ -26,6 +26,7 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 
 const {
 	getOrCreateGroupChat,
+	getGroupChat,
 	listGroupChatReaders,
 	setRoomMute,
 	listGroupTopics,
@@ -226,6 +227,20 @@ describe('the per-room mute', () => {
 		const readers = await listGroupChatReaders('g1');
 
 		expect(readers.map((r) => r.id).sort()).toEqual(['u1', 'u2']);
+	});
+
+	it('lists every active member on a room, muted or not, and no former member', async () => {
+		// The thread's member list stands in for "everyone in the group reads it" (#3230).
+		topic('t1');
+		member('u2');
+		member('u1');
+		member('gone', 'left');
+		member('elsewhere', 'active', 'g2');
+		cursor('t1', 'u1', null, true);
+
+		const chat = await getGroupChat('g1', 't1', 'u2');
+
+		expect(chat.readers.map((r) => r.id)).toEqual(['u1', 'u2']);
 	});
 
 	it('upserts, so a room can be muted before it is ever opened', async () => {

@@ -14,6 +14,7 @@ const getGroupChat = vi.fn(async (groupId: string, threadId?: string, userId?: s
 	isGeneral: false,
 	readOnly: false,
 	muted: userId === 'member-1',
+	readers: [],
 	messages: []
 }));
 const groupOfThread = vi.fn(async (_id: string) => ({

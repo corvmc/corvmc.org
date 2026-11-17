@@ -245,6 +245,9 @@ export async function getGroupChat(groupId: string, threadId?: string, userId?: 
 				.limit(1)
 		: [];
 
+	// The roster, not the notify list: a member who muted the room still reads it.
+	const readers = await listGroupChatReaders(groupId);
+
 	return {
 		id,
 		groupName: g?.name ?? 'This group',
@@ -253,6 +256,7 @@ export async function getGroupChat(groupId: string, threadId?: string, userId?: 
 		/** The Announcements thread: no composer, since publishing is the way in. */
 		readOnly: topic?.postPolicy === 'leadership',
 		muted: read?.muted === true,
+		readers,
 		messages: messages as GroupChatMessage[]
 	};
 }
@@ -347,18 +351,20 @@ export async function groupOfChatThread(
 	return row ?? null;
 }
 
-/** Who is in the room, for the header. */
+/** Who is in the room: the thread's member list, or who to notify. */
 export async function listGroupChatReaders(groupId: string, threadId?: string) {
 	const { groupMember } = await import('#lib/server/db/schema/group.js');
 	const query = db
-		.select({ id: user.id, name: user.name })
+		.select({ id: user.id, name: user.name, image: user.image })
 		.from(groupMember)
 		.innerJoin(user, eq(user.id, groupMember.userId));
 
 	// Without a room there is nobody to have muted it — the header asks who is
 	// on the roster, the notify path asks who still wants to hear.
 	if (threadId === undefined) {
-		return query.where(and(eq(groupMember.groupId, groupId), eq(groupMember.status, 'active')));
+		return query
+			.where(and(eq(groupMember.groupId, groupId), eq(groupMember.status, 'active')))
+			.orderBy(asc(user.name), asc(user.id));
 	}
 
 	return query
