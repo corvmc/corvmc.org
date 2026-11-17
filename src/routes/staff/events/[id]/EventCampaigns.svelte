@@ -2,6 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -21,9 +23,6 @@
 
 	// Read in Latest's effect, so the page does not wait on it.
 	const data = new Latest(() => getEventCampaigns(eventId));
-	$effect(() => {
-		if (data.error) throw data.error.e;
-	});
 
 	const newHref = $derived(
 		withQuery(resolve('/staff/marketing/campaigns/new'), new URLSearchParams({ event: eventId }))
@@ -64,4 +63,8 @@
 			</Table>
 		{/if}
 	</InfoCard>
+{:else if data.error}
+	<Alert type="warning" reset={() => void getEventCampaigns(eventId).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(data.error.e) })}
+	</Alert>
 {/if}

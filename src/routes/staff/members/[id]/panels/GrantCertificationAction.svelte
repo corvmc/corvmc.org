@@ -5,6 +5,8 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { clubToday } from '#lib/config.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import TrainingShiftField from './TrainingShiftField.svelte';
 
 	/**
@@ -20,9 +22,6 @@
 
 	// Not `{#await}`: a refresh would re-pend it and unmount the open modal (#2356).
 	const catalog = new Latest(() => getActiveCertifications());
-	$effect(() => {
-		if (catalog.error) throw catalog.error.e;
-	});
 </script>
 
 {#if catalog.current?.length}
@@ -67,4 +66,8 @@
 			/>
 		{/snippet}
 	</Action>
+{:else if catalog.error}
+	<Alert type="warning" reset={() => void getActiveCertifications().refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(catalog.error.e) })}
+	</Alert>
 {/if}

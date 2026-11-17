@@ -4,6 +4,8 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	/**
 	 * The member's supervised shifts that count towards the chosen clearance
@@ -13,9 +15,6 @@
 	let { userId }: { userId: string } = $props();
 
 	const shifts = new Latest(() => getTrainingShifts(userId));
-	$effect(() => {
-		if (shifts.error) throw shifts.error.e;
-	});
 
 	const chosen = $derived(grantCertification.fields.certificationId.value() ?? '');
 	const matching = $derived(
@@ -36,4 +35,8 @@
 			}))
 		]}
 	/>
+{:else if shifts.error}
+	<Alert type="warning" reset={() => void getTrainingShifts(userId).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(shifts.error.e) })}
+	</Alert>
 {/if}

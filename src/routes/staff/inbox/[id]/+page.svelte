@@ -12,6 +12,7 @@
 	import { resolve } from '$app/paths';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
 	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
@@ -89,9 +90,6 @@
 	// Not `{#await}`: a refresh would re-pend it and remount the composer, draft
 	// and all (#2357). Started after the thread lands, so the two never overlap.
 	const channels = new Latest(() => getInboxEnabledChannels());
-	$effect(() => {
-		if (channels.error) throw channels.error.e;
-	});
 </script>
 
 {#snippet conversationBar()}
@@ -225,5 +223,9 @@
 				/>
 			</div>
 		</div>
+	{:else if channels.error}
+		<Alert type="warning" reset={() => void getInboxEnabledChannels().refresh()}>
+			{m.ui_load_failed_body({ error: errorMessage(channels.error.e) })}
+		</Alert>
 	{/if}
 </ThreadPane>
