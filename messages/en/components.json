@@ -1161,6 +1161,7 @@
 	"reservations_booking_booking_dialog_for_label": "For",
 	"reservations_booking_booking_dialog_me_label": "Me",
 	"reservations_booking_booking_dialog_teaching_label": "Teaching",
+	"reservations_booking_booking_dialog_group_option_label": "{name} ({kind})",
 	"reservations_booking_booking_dialog_waitlisted_toast": "The first instance is waitlisted because the slot is currently booked.",
 	"reservations_booking_booking_dialog_booked_toast": "Reservation booked",
 	"reservations_booking_booking_dialog_teaching_booked_toast": "Teaching time booked",
