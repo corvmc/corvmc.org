@@ -49,92 +49,95 @@
 />
 
 <PageContent width="md">
-	{#if context.current !== undefined}
-		{@const ctx = context.current}
-		{#if !ctx}
-			<EmptyState
-				title={m.member_volunteer_feedback_signup_id_nothing_review_here_title()}
-				description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn_body()}
-				actionLabel={m.member_volunteer_feedback_signup_id_action_label()}
-				actionHref="/member/volunteer"
-			/>
-		{:else if ctx.alreadySubmitted || submitted}
-			<InfoCard title={m.member_volunteer_feedback_signup_id_thank_title()}>
-				<!--
-					The confirmation answers what they actually said. Somebody who has
-					just told us they were not set up to succeed should not be thanked
-					in the same words as somebody who was — the first is a complaint,
-					and acknowledging it is the least the form owes them.
-				-->
-				<p class="text-sm">
-					{#if !submitted}
-						{m.member_volunteer_feedback_signup_id_already_answered_shift_text()}
-					{:else if setUp === false}
-						{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t_text()}
-					{:else}
-						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru_text()}
-					{/if}
-				</p>
-				<a href={resolve('member/volunteer')} class="link text-sm"
-					>{m.member_volunteer_feedback_signup_id_action_text()}</a
+	<svelte:boundary>
+		{@const ctx =
+			context.current ?? (await getShiftFeedbackContext(signupId).catch(() => undefined))}
+		{#if ctx !== undefined}
+			{#if !ctx}
+				<EmptyState
+					title={m.member_volunteer_feedback_signup_id_nothing_review_here_title()}
+					description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn_body()}
+					actionLabel={m.member_volunteer_feedback_signup_id_action_label()}
+					actionHref="/member/volunteer"
+				/>
+			{:else if ctx.alreadySubmitted || submitted}
+				<InfoCard title={m.member_volunteer_feedback_signup_id_thank_title()}>
+					<!--
+						The confirmation answers what they actually said. Somebody who has
+						just told us they were not set up to succeed should not be thanked
+						in the same words as somebody who was — the first is a complaint,
+						and acknowledging it is the least the form owes them.
+					-->
+					<p class="text-sm">
+						{#if !submitted}
+							{m.member_volunteer_feedback_signup_id_already_answered_shift_text()}
+						{:else if setUp === false}
+							{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t_text()}
+						{:else}
+							{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru_text()}
+						{/if}
+					</p>
+					<a href={resolve('member/volunteer')} class="link text-sm"
+						>{m.member_volunteer_feedback_signup_id_action_text()}</a
+					>
+				</InfoCard>
+			{:else}
+				<InfoCard
+					title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
 				>
-			</InfoCard>
-		{:else}
-			<InfoCard
-				title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
-			>
-				<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
-					<input {...submitShiftFeedback.fields.signupId.as('hidden', ctx.signupId)} />
+					<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
+						<input {...submitShiftFeedback.fields.signupId.as('hidden', ctx.signupId)} />
 
-					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
-				     hidden input, and naming the wrapper too double-registers the name. -->
-					<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go_label()}>
-						<!--
-							RatingGroup writes the value to a hidden input via `name`, so it
-							submits like any other field while the stars stay keyboard- and
-							screen-reader-accessible.
-						-->
-						<RatingGroup.Root
-							name={submitShiftFeedback.fields.rating.as('hidden', '').name}
-							min={1}
-							max={5}
-							class="flex gap-1"
-						>
-							{#snippet children({ items })}
-								{#each items as item (item.index)}
-									<RatingGroup.Item index={item.index} class="cursor-pointer text-warning">
-										{#if item.state === 'active'}
-											<IconStarFilled size={28} />
-										{:else}
-											<IconStar size={28} />
-										{/if}
-									</RatingGroup.Item>
-								{/each}
-							{/snippet}
-						</RatingGroup.Root>
-					</Field>
+						<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
+					     hidden input, and naming the wrapper too double-registers the name. -->
+						<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go_label()}>
+							<!--
+								RatingGroup writes the value to a hidden input via `name`, so it
+								submits like any other field while the stars stay keyboard- and
+								screen-reader-accessible.
+							-->
+							<RatingGroup.Root
+								name={submitShiftFeedback.fields.rating.as('hidden', '').name}
+								min={1}
+								max={5}
+								class="flex gap-1"
+							>
+								{#snippet children({ items })}
+									{#each items as item (item.index)}
+										<RatingGroup.Item index={item.index} class="cursor-pointer text-warning">
+											{#if item.state === 'active'}
+												<IconStarFilled size={28} />
+											{:else}
+												<IconStar size={28} />
+											{/if}
+										</RatingGroup.Item>
+									{/each}
+								{/snippet}
+							</RatingGroup.Root>
+						</Field>
 
-					<FormField
-						field={submitShiftFeedback.fields.wasSetUp}
-						type="checkbox"
-						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed_label()}
-						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label_checkbox()}
-						description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as_body()}
-					/>
+						<FormField
+							field={submitShiftFeedback.fields.wasSetUp}
+							type="checkbox"
+							label={m.member_volunteer_feedback_signup_id_were_set_up_succeed_label()}
+							checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label_checkbox()}
+							description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as_body()}
+						/>
 
-					<FormField
-						field={submitShiftFeedback.fields.comment}
-						type="textarea"
-						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix_label()}
-						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with_body()}
-					/>
+						<FormField
+							field={submitShiftFeedback.fields.comment}
+							type="textarea"
+							label={m.member_volunteer_feedback_signup_id_anything_we_should_fix_label()}
+							description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with_body()}
+						/>
 
-					<SubmitButton
-						label={m.member_volunteer_feedback_signup_id_send_label()}
-						variant="primary"
-					/>
-				</Form>
-			</InfoCard>
+						<SubmitButton
+							label={m.member_volunteer_feedback_signup_id_send_label()}
+							variant="primary"
+						/>
+					</Form>
+				</InfoCard>
+			{/if}
 		{/if}
-	{/if}
+	</svelte:boundary>
 </PageContent>
