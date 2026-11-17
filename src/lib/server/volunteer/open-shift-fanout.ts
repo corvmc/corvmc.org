@@ -22,18 +22,12 @@ import { shiftLabel } from '#lib/utils/shift-label.js';
 import { liveShift, notOnCancelledListing, openTask, shiftClaimedSql } from './work-order-service';
 
 /**
- * Emailing members when a shift opens in a role they picked (#3239).
- *
- * Derived, not raised: every path that inserts a shift (the schedule form, a
- * duty list, copy-forward, a production's host shift, orientations) is caught
- * by reading new rows, so none of them owes a hook. `reminder_sent` is the
- * latch, written in the same `db.batch` as the outbox rows, so a shift is
- * announced once or not at all; a second pass racing this one fails on its
- * unique index and sends nothing.
- *
- * One email per member per pass, listing every new shift in their roles, so a
- * duty list stamping eight shifts is one email, not eight. The whole send is a
- * handful of statements, inside the Worker's subrequest limit.
+ * Emailing members when a shift opens in a role they picked (#3239). It reads
+ * new rows rather than hooking each insert path, so every way a shift is made
+ * is covered. `reminder_sent` is the latch, written in the same `db.batch` as
+ * the outbox rows: a shift is announced once or not at all, and a racing pass
+ * fails on the unique index. One email per member per pass, listing all their
+ * new shifts, in a handful of statements under the Worker subrequest limit.
  */
 
 export const SHIFT_OPENED_KEY = 'shift_opened';
