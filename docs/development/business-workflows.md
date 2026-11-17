@@ -643,6 +643,8 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
   thread, not the author), inserts in-app rows in chunks, and writes one outbox `email` row per
   recipient, sent on the transactional stream (#2971).
+  A band has no Announcements page: its thread is listed in band Messages beside General from the
+  start, and owners and admins write, publish and pin there with the same composer (#3229).
   - Not one thread per group for everything, because it removes named topics and turns
     announcements into chat messages (#2618).
   - Not per-post state on `inbox_message`, because pin, soft delete and the email latch are not

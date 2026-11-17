@@ -18,7 +18,6 @@ export type BandNavKey =
 	| 'members'
 	| 'rider'
 	| 'packing'
-	| 'announcements'
 	| 'reservations'
 	| 'events'
 	| 'music'
@@ -86,16 +85,11 @@ export function bandNavSections(input: BandNavInput): BandNavSection[] {
 		{ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) }
 	];
 
-	// Every member reads announcements and the band chat; the pages gate who
-	// posts, and the Messages page draws enquiries only for an owner or admin.
-	// `requireGroupRole` behind each is the guard.
+	// Every member reads the band chat, Announcements included (#3229). The
+	// pages gate who posts, and Messages lists enquiries only for an owner or
+	// admin. `requireGroupRole` behind each is the guard.
 	const band: BandNavItem[] = [
 		{ key: 'members', label: 'Members', href: resolve('/band/[slug]/members', { slug }) },
-		{
-			key: 'announcements',
-			label: 'Announcements',
-			href: resolve('/band/[slug]/announcements', { slug })
-		},
 		// A row again (#3136): the topbar icon's badge counts every inbox the
 		// viewer reads, so it cannot say whether this band has an enquiry.
 		{
