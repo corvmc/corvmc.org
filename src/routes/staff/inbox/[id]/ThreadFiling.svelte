@@ -22,14 +22,17 @@
 	const unfile = $derived(fileThreadForm.for(`unfile-${threadId}`));
 	// Latest, not `{#await}`: a refresh after filing must not rebuild the forms.
 	const latest = new Latest(() => getThreadFiling(threadId));
+	const loaded = $derived(
+		latest.current ?? (await getThreadFiling(threadId).catch(() => undefined))
+	);
 </script>
 
 {#if latest.error}
 	<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(latest.error.e) })}</span>
-{:else if latest.current === undefined}
+{:else if loaded === undefined}
 	<span class="loading loading-xs loading-spinner"></span>
-{:else if latest.current}
-	{@const filing = latest.current}
+{:else if loaded}
+	{@const filing = loaded}
 	<div class="flex flex-col gap-1" data-testid="thread-filing">
 		<SectionLabel label={m.staff_inbox_filed_to_label()} />
 		{#if filing.filed}

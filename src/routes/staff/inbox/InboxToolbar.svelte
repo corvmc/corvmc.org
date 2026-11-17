@@ -33,7 +33,8 @@
 
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->
-		{#await getInboxThreadCounts() then counts}
+		<svelte:boundary>
+			{@const counts = await getInboxThreadCounts()}
 			{#if counts.open > 0}
 				<Button
 					href={resolve('staff/inbox/daily')}
@@ -47,9 +48,10 @@
 						: m.staff_inbox_inbox_toolbar_start_daily_label()} · {counts.open}
 				</Button>
 			{/if}
-		{:catch}
-			<!-- Only a shortcut into Daily. -->
-		{/await}
+			{#snippet failed()}
+				<!-- Only a shortcut into Daily. -->
+			{/snippet}
+		</svelte:boundary>
 	</div>
 
 	{#if slot.conversation}
