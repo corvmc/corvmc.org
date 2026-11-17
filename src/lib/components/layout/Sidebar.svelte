@@ -16,7 +16,12 @@
 	} = $props();
 </script>
 
-<aside class="flex h-full max-h-dvh w-64 flex-col overflow-hidden bg-base-200 text-base-content">
+<!-- Phones have no hover, so links preload their route code (not data) as they
+     come into view: when the drawer opens. #3192 -->
+<aside
+	data-sveltekit-preload-code="viewport"
+	class="flex h-full max-h-dvh w-64 flex-col overflow-hidden bg-base-200 text-base-content"
+>
 	<!-- Logo area (mobile only) -->
 	<div class="shrink-0">
 		{#if brand}

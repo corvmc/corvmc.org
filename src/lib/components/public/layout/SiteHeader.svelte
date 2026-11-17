@@ -28,7 +28,10 @@
 	}
 </script>
 
-<header>
+<!-- Route code preloads as links come into view (phones have no hover). SvelteKit
+     scans links only on navigation, so the menu below, mounted on open, is not
+     covered. #3192 -->
+<header data-sveltekit-preload-code="viewport">
 	<nav
 		class="px-4 py-3"
 		style="background: var(--bg-page); border-bottom: 1px solid var(--surface-border)"
