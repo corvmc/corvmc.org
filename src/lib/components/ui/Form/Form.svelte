@@ -1,6 +1,11 @@
 <script lang="ts" module>
 	import { getContext, hasContext, setContext } from 'svelte';
-	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '$app/server';
+	import type {
+		RemoteForm,
+		RemoteFormInput,
+		RemoteFormIssue,
+		RemoteQueryUpdate
+	} from '$app/server';
 
 	export type FormStatus = 'idle' | 'dirty' | 'pending' | 'success' | 'error';
 
@@ -67,6 +72,7 @@
 		onfailure,
 		ondirtychange,
 		refreshQueries = true,
+		updates,
 		children,
 		class: className,
 		...rest
@@ -102,6 +108,13 @@
 		 * navigation and override it.
 		 */
 		refreshQueries?: boolean;
+		/**
+		 * The queries this submit refreshes, in place of all of them, read at submit
+		 * time. A `query(arg).withOverride(fn)` shows its change until the server
+		 * answers; kit drops it on refusal. The server handler must refresh or set
+		 * every query named here, or kit fails that query.
+		 */
+		updates?: () => RemoteQueryUpdate[];
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
@@ -321,7 +334,12 @@
 			try {
 				// `.updates()` has to be called in the same tick as `submit()`.
 				const submission = submit();
-				if (await (refreshQueries ? submission : submission.updates())) {
+				const settled = updates
+					? submission.updates(...updates())
+					: refreshQueries
+						? submission
+						: submission.updates();
+				if (await settled) {
 					await delay(150 - (performance.now() - start));
 					await onsuccess?.(remote!.result);
 					if (successToast) toast.success(successToast);
