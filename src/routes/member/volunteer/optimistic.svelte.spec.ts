@@ -38,7 +38,6 @@ const shift = {
 };
 const dashboard = fakeQuery({
 	access: {},
-	interests: [],
 	openShifts: [shift],
 	unloggedShifts: [],
 	unloggedTasks: [],

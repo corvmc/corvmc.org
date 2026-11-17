@@ -4,16 +4,14 @@
 	 * The open shifts board. Each shift is its own row, so a task with two
 	 * shifts shows both, and signing up for one leaves the other on the board.
 	 *
-	 * Filtered to the roles the member said they'd take, because that is what
-	 * their interests are *for* — a list that ignores them makes picking roles a
-	 * form you fill in and never see again. `Show all` is one press away, and the
-	 * heading says which of the two you are looking at, since a short list and a
-	 * filtered list look identical.
+	 * Every open shift, whatever the member's roles: a shift in a role they
+	 * picked carries a badge, and their roles decide which shifts they are
+	 * emailed about rather than which they can see (#3239).
 	 *
 	 * A shift they can't take is shown with the reason rather than hidden: "you
 	 * need Sound Desk Cleared" is the useful half of a refusal, and hiding it
 	 * just makes the board look empty. Rendering order is the calendar, grouped
-	 * by day; interest is the badge and the filter, not the sort (#1044).
+	 * by day; interest is the badge, not the sort (#1044).
 	 */
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
@@ -47,11 +45,9 @@
 
 	let {
 		shifts,
-		hasInterests,
 		claimUpdates
 	}: {
 		shifts: Shift[];
-		hasInterests: boolean;
 		/** The optimistic override for claiming one shift, passed to its sign-up. */
 		claimUpdates?: (shiftId: string) => () => RemoteQueryUpdate[];
 	} = $props();
@@ -59,21 +55,15 @@
 	// Shifts they are already on live in the next-action stack beside this, so
 	// the board is only ever things they could take on.
 	const available = $derived(shifts.filter((s) => !s.myStatus));
-	const matches = $derived(available.filter((s) => s.interested));
-
-	let showAll = $state(false);
-	// Nothing to filter by is not the same as an empty filter: somebody who has
-	// picked no roles should see the whole board rather than an empty one.
-	const filtered = $derived(showAll || !hasInterests ? available : matches);
 
 	/**
 	 * Date order, and a header per day.
 	 *
 	 * The service orders by interest rank first, so the board used to jump
-	 * around in time with nothing to scan by. Interest is still visible — it is
-	 * the badge and the default filter — but the spine is the calendar (#1044).
+	 * around in time with nothing to scan by. Interest is still visible as the
+	 * badge, but the spine is the calendar (#1044).
 	 */
-	const byDate = $derived([...filtered].sort((a, b) => +a.startsAt - +b.startsAt));
+	const byDate = $derived([...available].sort((a, b) => +a.startsAt - +b.startsAt));
 
 	/** One screenful. The service caps at 50, which is ~5,500px in this column. */
 	const PREVIEW = 6;
@@ -107,32 +97,14 @@
 
 <InfoCard title={m.volunteer_open_shifts_open_shifts_title()}>
 	{#snippet header()}
-		<div class="flex flex-wrap items-center justify-between gap-2">
-			<CardTitle>
-				{showAll || !hasInterests
-					? m.volunteer_open_shifts_open_shifts_title()
-					: m.volunteer_open_shifts_open_shifts_2_title()}
-				<span class="text-muted font-normal">· {filtered.length}</span>
-			</CardTitle>
-			{#if hasInterests && matches.length !== available.length}
-				<Button size="xs" variant="ghost" onclick={() => (showAll = !showAll)}>
-					{showAll
-						? m.volunteer_open_shifts_show_matches_label({ length: matches.length })
-						: m.volunteer_open_shifts_show_all_label({ length: available.length })}
-				</Button>
-			{/if}
-		</div>
+		<CardTitle>
+			{m.volunteer_open_shifts_open_shifts_title()}
+			<span class="text-muted font-normal">· {available.length}</span>
+		</CardTitle>
 	{/snippet}
 
-	{#if filtered.length === 0}
-		<EmptyState
-			title={available.length === 0
-				? m.volunteer_open_shifts_nothing_open_right_now_title()
-				: m.volunteer_open_shifts_nothing_matches_roles_title()}
-			description={available.length === 0
-				? m.volunteer_open_shifts_when_staff_post_shifts_ones_body()
-				: m.volunteer_open_shifts_try_every_open_shift_add_body()}
-		/>
+	{#if available.length === 0}
+		<EmptyState title={m.volunteer_open_shifts_nothing_open_right_now_title()} />
 	{:else}
 		<ul class="divide-y divide-base-300">
 			{#each shown as shift, i (shift.id)}
@@ -151,7 +123,9 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
-							<Badge variant="info" size="xs">{m.volunteer_open_shifts_interested_label()}</Badge>
+							<Badge variant="info" size="xs" data-testid="your-role"
+								>{m.volunteer_open_shifts_your_role_label()}</Badge
+							>
 						{/if}
 					</div>
 

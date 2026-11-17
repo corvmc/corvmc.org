@@ -2420,8 +2420,7 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
 	const userId = requireUser().id;
-	const [interests, openShifts, unloggedShifts, myShifts, invitations, tasks] = await Promise.all([
-		getMyVolunteerInterests(),
+	const [openShifts, unloggedShifts, myShifts, invitations, tasks] = await Promise.all([
 		getOpenShifts(),
 		getUnloggedShifts(),
 		getMyShifts(),
@@ -2440,7 +2439,6 @@ export const getMemberVolunteerPage = query(z.void(), async () => {
 
 	return {
 		access,
-		interests,
 		openShifts,
 		unloggedShifts,
 		unloggedTasks,

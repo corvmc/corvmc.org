@@ -248,11 +248,7 @@
 			     the board is addressed to everybody. -->
 			<ShiftInvitations invitations={pageData.invitations} />
 
-			<OpenShifts
-				shifts={pageData.openShifts}
-				hasInterests={pageData.interests.length > 0}
-				claimUpdates={markClaimed}
-			/>
+			<OpenShifts shifts={pageData.openShifts} claimUpdates={markClaimed} />
 		</div>
 	</div>
 </PageContent>
