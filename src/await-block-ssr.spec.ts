@@ -23,7 +23,11 @@ const CLIENT_ONLY = [
 	'./routes/staff/members/[id]/panels/GrantCertificationAction.svelte',
 	'./routes/staff/members/[id]/panels/TrainingShiftField.svelte',
 	'./routes/staff/members/instructors/GrantInstructorAction.svelte',
-	'./routes/staff/members/instructors/TeachingTermsFields.svelte'
+	'./routes/staff/members/instructors/TeachingTermsFields.svelte',
+	// The inbox filter drawer, and Daily's session and summary: each opens on a click.
+	'./routes/staff/inbox/FilterPanel.svelte',
+	'./routes/staff/inbox/daily/+page.svelte',
+	'./routes/staff/inbox/daily/SessionSummary.svelte'
 ];
 
 // Not yet converted (#3183). The list only shrinks.
@@ -31,18 +35,7 @@ const NOT_YET_CONVERTED = [
 	'./routes/member/volunteer/feedback/[signupId]/+page.svelte',
 	'./routes/member/volunteer/interests/+page.svelte',
 	'./routes/member/volunteer/profile/+page.svelte',
-	'./routes/member/volunteer/start/+page.svelte',
-	'./routes/staff/inbox/+page.svelte',
-	'./routes/staff/inbox/FilterPanel.svelte',
-	'./routes/staff/inbox/InboxToolbar.svelte',
-	'./routes/staff/inbox/SavedViewTabs.svelte',
-	'./routes/staff/inbox/[id]/+page.svelte',
-	'./routes/staff/inbox/[id]/AssignControl.svelte',
-	'./routes/staff/inbox/[id]/DetailsPanel.svelte',
-	'./routes/staff/inbox/[id]/ThreadFiling.svelte',
-	'./routes/staff/inbox/[id]/ThreadTags.svelte',
-	'./routes/staff/inbox/daily/+page.svelte',
-	'./routes/staff/inbox/daily/SessionSummary.svelte'
+	'./routes/member/volunteer/start/+page.svelte'
 ];
 
 /** Template only: scripts and HTML comments may name `{#await}` without using one. */
