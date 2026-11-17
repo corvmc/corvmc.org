@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { holdEarlySubmits } from './hold-early-submit.js';
+import { holdEarlySubmits, holdIfNotEnhanced } from './hold-early-submit.js';
+
+type Attach = (form: HTMLFormElement) => (() => void) | void;
 
 // The shape kit's `form.enhance()` returns: plain attributes plus a symbol-keyed
-// attachment that adds the submit listener, and refuses a second live form.
+// attachment that adds the submit listener.
 function fakeEnhance() {
 	const seen: (Element | null)[] = [];
-	let element: HTMLFormElement | null = null;
 	const onsubmit = (e: SubmitEvent) => {
 		e.preventDefault();
 		seen.push(e.submitter);
@@ -15,13 +16,8 @@ function fakeEnhance() {
 		method: 'POST',
 		action: '?/remote=x',
 		[key]: (form: HTMLFormElement) => {
-			if (element) throw new Error('remote_form_multiple_elements');
-			element = form;
 			form.addEventListener('submit', onsubmit);
-			return () => {
-				form.removeEventListener('submit', onsubmit);
-				element = null;
-			};
+			return () => form.removeEventListener('submit', onsubmit);
 		}
 	};
 	return { attrs, key, seen };
@@ -29,91 +25,73 @@ function fakeEnhance() {
 
 /** Runs the symbol-keyed attachment, as Svelte's spread would. */
 function runAttachment(attrs: object, key: symbol, form: HTMLFormElement) {
-	return (attrs as Record<symbol, (form: HTMLFormElement) => (() => void) | void>)[key](form);
+	return (attrs as Record<symbol, Attach>)[key](form);
 }
 
 let nativeSubmits = 0;
 // On the document, so it runs after every listener on the form itself.
-const countNative = (e: Event) => {
+document.addEventListener('submit', (e) => {
 	if (!e.defaultPrevented) nativeSubmits++;
 	e.preventDefault();
-};
-document.addEventListener('submit', countNative);
+});
 afterEach(() => {
 	nativeSubmits = 0;
 	document.body.replaceChildren();
 });
 
-function mountForm(gated: ReturnType<typeof holdEarlySubmits>) {
+function mountForm() {
 	const form = document.createElement('form');
 	const button = document.createElement('button');
 	button.type = 'submit';
 	form.appendChild(button);
 	document.body.appendChild(form);
 	// Stands in for Form.svelte's `onsubmitcapture`.
-	form.addEventListener('submit', (e) => void gated.hold(e), { capture: true });
+	form.addEventListener('submit', (e) => void holdIfNotEnhanced(e), { capture: true });
 	return { form, button };
 }
 
-const flush = () => new Promise((r) => setTimeout(r));
-
 describe('holdEarlySubmits', () => {
-	it('sends a submit made before the attachment runs through kit', async () => {
-		const { attrs, seen } = fakeEnhance();
-		const gated = holdEarlySubmits(attrs);
-		const { button } = mountForm(gated);
+	it('holds a submit made before the attachment runs, then replays it', async () => {
+		const { attrs, key, seen } = fakeEnhance();
+		const { form, button } = mountForm();
 
 		button.click();
-		await flush();
+		expect(seen).toEqual([]);
+
+		runAttachment(holdEarlySubmits(attrs), key, form);
+		await Promise.resolve();
 
 		expect(seen).toEqual([button]);
 		expect(nativeSubmits).toBe(0);
 	});
 
-	it('does not attach twice when the late effect runs on the same form', async () => {
+	it('treats the form as enhanced whichever wrapper attached it', () => {
 		const { attrs, key, seen } = fakeEnhance();
-		const gated = holdEarlySubmits(attrs);
-		const { form, button } = mountForm(gated);
+		const { form, button } = mountForm();
+		runAttachment(holdEarlySubmits(attrs), key, form);
+		// A second wrapper of the same attributes, never attached.
+		holdEarlySubmits(attrs);
 
 		button.click();
-		await flush();
-		const teardown = runAttachment(gated.attrs, key, form);
-		button.click();
-		await flush();
 
-		expect(seen).toEqual([button, button]);
+		expect(seen).toEqual([button]);
 		expect(nativeSubmits).toBe(0);
+	});
+
+	it('holds again after the attachment is torn down', () => {
+		const { attrs, key, seen } = fakeEnhance();
+		const { form, button } = mountForm();
+		const teardown = runAttachment(holdEarlySubmits(attrs), key, form);
 		teardown?.();
-	});
-
-	it('frees the instance for the next form when the early form is gone', async () => {
-		const { attrs, key, seen } = fakeEnhance();
-		const first = holdEarlySubmits(attrs);
-		const a = mountForm(first);
-		a.button.click();
-		await flush();
-		a.form.remove();
-
-		const second = holdEarlySubmits(attrs);
-		const b = mountForm(second);
-		expect(() => runAttachment(second.attrs, key, b.form)).not.toThrow();
-		b.button.click();
-		await flush();
-
-		expect(seen).toEqual([a.button, b.button]);
-		expect(nativeSubmits).toBe(0);
-	});
-
-	it('passes submits straight through once attached', async () => {
-		const { attrs, key, seen } = fakeEnhance();
-		const gated = holdEarlySubmits(attrs);
-		expect(gated.attrs).toMatchObject({ method: 'POST', action: '?/remote=x' });
-		const { form, button } = mountForm(gated);
-		runAttachment(gated.attrs, key, form);
 
 		button.click();
 
-		expect(seen).toEqual([button]);
+		expect(seen).toEqual([]);
 		expect(nativeSubmits).toBe(0);
+	});
+
+	it('keeps the plain attributes', () => {
+		const { attrs } = fakeEnhance();
+		expect(holdEarlySubmits(attrs)).toMatchObject({ method: 'POST', action: '?/remote=x' });
 	});
 });

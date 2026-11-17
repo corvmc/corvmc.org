@@ -1,68 +1,50 @@
 type Attach = (form: HTMLFormElement) => (() => void) | void;
-type Entry = { form: HTMLFormElement; cleanup: (() => void) | void };
 
-// Keyed by kit's attachment, which is one per form instance.
-const live = new WeakMap<Attach, Entry>();
-
-function attachOnce(inner: Attach, form: HTMLFormElement): Entry {
-	const prev = live.get(inner);
-	if (prev?.form === form) return prev;
-	// An early attach whose effect never ran has no teardown of its own.
-	if (prev && !prev.form.isConnected) {
-		live.delete(inner);
-		prev.cleanup?.();
-	}
-	const entry = { form, cleanup: inner(form) };
-	live.set(inner, entry);
-	return entry;
-}
+// Per element, not per wrapper: a derived re-read from an event handler can
+// hand back a fresh wrapper that never ran, while the one in the DOM did.
+const enhanced = new WeakSet<HTMLFormElement>();
+const held = new WeakMap<HTMLFormElement, HTMLElement | null>();
 
 /**
  * Kit adds a remote form's submit listener from an attachment, and Svelte runs
- * attachments as effects. An effect can run late, or not at all, while the form
- * is already on screen, and a click then posts the whole document (#3218). A
- * submit that arrives first attaches kit itself and is replayed through it.
+ * attachments as effects. While a sibling `await` keeps the batch pending, the
+ * form can be on screen with no listener yet, so a click posts the document and
+ * reloads the page (#3218). A submit in that window is held, then replayed.
  */
-export function holdEarlySubmits<T extends object>(attrs: T) {
-	let attached = false;
-	const inners: Attach[] = [];
-
+export function holdEarlySubmits<T extends object>(attrs: T): T {
 	const descriptors = Object.getOwnPropertyDescriptors(attrs) as Record<
 		PropertyKey,
 		PropertyDescriptor
 	>;
 	for (const key of Object.getOwnPropertySymbols(descriptors)) {
-		const inner = descriptors[key].value;
+		const inner = descriptors[key].value as Attach;
 		if (typeof inner !== 'function') continue;
-		inners.push(inner);
 		descriptors[key].value = (form: HTMLFormElement) => {
-			const entry = attachOnce(inner, form);
-			attached = true;
+			const cleanup = inner(form);
+			enhanced.add(form);
+			if (held.has(form)) {
+				const submitter = held.get(form) ?? null;
+				held.delete(form);
+				queueMicrotask(() => {
+					if (!form.isConnected) return;
+					form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
+				});
+			}
 			return () => {
-				attached = false;
-				if (live.get(inner) !== entry) return;
-				live.delete(inner);
-				entry.cleanup?.();
+				enhanced.delete(form);
+				cleanup?.();
 			};
 		};
 	}
+	return Object.defineProperties({}, descriptors) as T;
+}
 
-	return {
-		attrs: Object.defineProperties({}, descriptors) as T,
-		/** Call from a capture-phase submit handler; true means it was taken over. */
-		hold(e: SubmitEvent): boolean {
-			if (attached || inners.length === 0) return false;
-			const form = e.currentTarget as HTMLFormElement;
-			e.preventDefault();
-			e.stopImmediatePropagation();
-			for (const inner of inners) attachOnce(inner, form);
-			attached = true;
-			const submitter = e.submitter as HTMLElement | null;
-			queueMicrotask(() => {
-				if (!form.isConnected) return;
-				form.requestSubmit(submitter && form.contains(submitter) ? submitter : undefined);
-			});
-			return true;
-		}
-	};
+/** Call from a capture-phase submit handler; true means the submit was held. */
+export function holdIfNotEnhanced(e: SubmitEvent): boolean {
+	const form = e.currentTarget as HTMLFormElement;
+	if (enhanced.has(form)) return false;
+	e.preventDefault();
+	e.stopImmediatePropagation();
+	held.set(form, e.submitter as HTMLElement | null);
+	return true;
 }
