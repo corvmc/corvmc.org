@@ -70,7 +70,9 @@ set (Phase 1 hour-log
 notifications plus `volunteer_shift_reminder`, `volunteer_shift_completed`,
 `volunteer_shift_feedback`, plus `volunteer_shift_claimed` / `volunteer_shift_confirmed` /
 `volunteer_shift_dropped` — the three moments a place on a shift changes hands, which
-produced no signal at all before).
+produced no signal at all before, and `volunteer_shift_opened`, one email per reminders pass
+listing new shifts in the roles a member picked, from `src/lib/server/volunteer/open-shift-fanout.ts`
+(#3239)).
 
 **Deliberately not sending**, with the reason:
 

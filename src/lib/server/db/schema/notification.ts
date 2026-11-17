@@ -525,6 +525,16 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'volunteer_shift_opened',
+		category: 'volunteering',
+		label: 'Open shifts in your roles',
+		// Email only by default: the board is the in-app view of the same thing.
+		// One email per reminders pass, listing every new shift in the member's
+		// roles (#3239).
+		description: 'When a shift opens in a volunteer role you picked',
+		defaults: { email: true, inApp: false, sms: false }
+	},
+	{
 		key: 'volunteer_shift_declined',
 		category: 'volunteering',
 		label: 'A shift invitation was declined',
