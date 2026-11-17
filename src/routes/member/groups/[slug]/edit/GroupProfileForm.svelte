@@ -6,6 +6,7 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import AvatarField from '#lib/components/ui/Form/AvatarField.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
 	import { getGroupEditor, updateGroupProfileForm } from '#lib/remote/groups.remote.js';
@@ -69,15 +70,7 @@
 				</FormField>
 			</div>
 
-			<FormField
-				label={m.member_groups_slug_edit_group_profile_form_photo_label()}
-				type="file"
-				upload={uploadAvatar}
-				accept="image/jpeg,image/png,image/webp"
-				src={group.avatarUrl ?? undefined}
-				orientation="col"
-				class="shrink-0"
-			/>
+			<AvatarField upload={uploadAvatar} src={group.avatarUrl} name={group.name} shape="square" />
 		</div>
 
 		<div class="mt-4">

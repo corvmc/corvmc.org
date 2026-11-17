@@ -30,6 +30,7 @@ const renders: Record<string, Case[]> = {
 };
 /** Inputs with no content of their own; each declares `children?: never` or has no index signature. */
 const refuses: Record<string, string> = {
+	AvatarField: 'AvatarField.svelte',
 	MoneyField: 'MoneyField.svelte',
 	SearchInput: 'SearchInput.svelte',
 	DateTimeField: 'DateTimeField.svelte'
