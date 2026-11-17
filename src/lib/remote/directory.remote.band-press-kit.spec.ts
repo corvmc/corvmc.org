@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  *
  * `press-kit.spec.ts` already proves `publicPressKit()` drops contacts. What it
  * cannot prove is that *this query calls it* — a `loadBandProfile` that returned
- * `site.epk` raw, or that put `directoryEntry.contact` back in its select, would
- * leave that spec green and publish a phone number. So this one drives the real
+ * `site.epk` raw, or that returned `directoryEntry.contact` without its public
+ * switch, would leave that spec green and publish a phone number. So this one drives the real
  * handler with the drizzle chain stubbed, and asserts on what actually comes
  * back.
  */
@@ -78,6 +78,12 @@ const BAND_ROW = {
 	avatarKey: 'avatar.jpg',
 	lookingFor: null,
 	links: [],
+	// The band's own contact, private unless switched public (#3234).
+	contact: { email: 'private-band@example.com', phone: '555-0199', visibility: 'members' } as {
+		email: string;
+		phone: string;
+		visibility: string;
+	},
 	entryDeletedAt: null,
 	directoryVisibility: 'public',
 	memberCount: 3
@@ -95,9 +101,14 @@ const EPK = {
 	achievements: ['Played the big room']
 };
 
-function seed(overrides: { epk?: unknown } = {}) {
+function seed(overrides: { epk?: unknown; contactVisibility?: string } = {}) {
 	queue.length = 0;
-	queue.push([BAND_ROW]);
+	queue.push([
+		{
+			...BAND_ROW,
+			contact: { ...BAND_ROW.contact, visibility: overrides.contactVisibility ?? 'members' }
+		}
+	]);
 	queue.push([{ value: 'rock' }]);
 	queue.push([{ epk: 'epk' in overrides ? overrides.epk : EPK }]);
 	queue.push([]);
@@ -138,19 +149,26 @@ describe('getPublicBandProfile', () => {
 		'pat@example.com',
 		'rider-secret',
 		'stageplot-secret',
-		'Ampeg 8x10'
+		'Ampeg 8x10',
+		'private-band@example.com',
+		'555-0199'
 	])('never publishes %s', async (marker) => {
 		seed();
 		const profile = await getPublicBandProfile('the-velvet-underground');
 		expect(JSON.stringify(profile)).not.toContain(marker);
 	});
 
-	it('publishes no contact field at all, under any name', async () => {
+	it('withholds a private contact', async () => {
 		seed();
 		const { band } = await getPublicBandProfile('the-velvet-underground');
-		// `directoryContact` was the field this page used to render as "Booking".
+		expect(band.contact).toBeNull();
 		expect('directoryContact' in band).toBe(false);
-		expect(Object.keys(band)).not.toContain('contact');
+	});
+
+	it('publishes the contact the band switched public', async () => {
+		seed({ contactVisibility: 'public' });
+		const { band } = await getPublicBandProfile('the-velvet-underground');
+		expect(band.contact).toMatchObject({ email: 'private-band@example.com', phone: '555-0199' });
 	});
 
 	it('survives a band that has written no press kit', async () => {

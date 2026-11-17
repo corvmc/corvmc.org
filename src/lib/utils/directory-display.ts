@@ -93,9 +93,7 @@ export function isBandProfileHidden(
  * members-only by default. They are only exposed in the public view when the
  * member has explicitly opted the contact block to `public` via
  * `directoryContact.visibility`. Returns the contact to render, or `null` to
- * withhold it entirely.
- *
- * Band booking contact is public by design and is not gated through here.
+ * withhold it entirely. A band's contact goes through the same gate (#3234).
  */
 export function contactForView(
 	viewVisibility: 'members' | 'public',
