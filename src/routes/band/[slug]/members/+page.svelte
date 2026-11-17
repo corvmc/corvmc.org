@@ -15,8 +15,6 @@
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import InviteMembersModal from './InviteMembersModal.svelte';
-	import TransferOwnershipModal from './TransferOwnershipModal.svelte';
-	import { toast } from 'svelte-sonner';
 	import {
 		getBandMembersPage,
 		removeMember,
@@ -69,23 +67,6 @@
 	}
 
 	let showInviteModal = $state(false);
-	let showTransferModal = $state(false);
-	let transferTarget = $state<string | null>(null);
-	const transferCandidates = $derived(
-		others
-			.filter((m) => m.role !== 'owner')
-			.map((m) => ({ userId: m.userId, name: m.member.title }))
-	);
-
-	/** An owner transferring away is how they become able to leave. */
-	function openTransferFromOwnMembership() {
-		if (transferCandidates.length === 0) {
-			toast.error(msg.band_slug_members_there_nobody_else_band_transfer_toast());
-			return;
-		}
-		transferTarget = null;
-		showTransferModal = true;
-	}
 </script>
 
 <PageHeader width="2xl" title={msg.band_members_title()} subtitle={layout.band.name}>
@@ -104,7 +85,6 @@
 		role={layout.userRole}
 		bandId={layout.band.id}
 		onchanged={refreshMembers}
-		ontransfer={openTransferFromOwnMembership}
 	/>
 
 	{#if isStaffOnly}
@@ -162,18 +142,6 @@
 											<input {...removeFields.memberId.as('hidden', member.id)} />
 										{/snippet}
 									</Action>
-								{/if}
-								{#if isOwner && member.role !== 'owner'}
-									<Button
-										variant="ghost"
-										size="xs"
-										onclick={() => {
-											transferTarget = member.userId;
-											showTransferModal = true;
-										}}
-									>
-										{msg.band_slug_members_transfer_label()}
-									</Button>
 								{/if}
 							</div>
 						</CardBody>
@@ -288,13 +256,4 @@
 		refreshMembers();
 		refreshInvites();
 	}}
-/>
-
-<TransferOwnershipModal
-	bind:open={showTransferModal}
-	bandId={layout.band.id}
-	bandName={layout.band.name}
-	candidates={transferCandidates}
-	selectedId={transferTarget}
-	onsuccess={refreshMembers}
 />
