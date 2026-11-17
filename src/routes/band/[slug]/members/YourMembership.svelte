@@ -79,7 +79,6 @@
 						value={me.alias ?? ''}
 						maxlength="100"
 						placeholder={me.member.title}
-						description={m.band_slug_members_your_membership_how_re_credited_band_s_body()}
 					/>
 					<FormField
 						field={fields.position}
@@ -88,7 +87,6 @@
 						value={me.position ?? ''}
 						maxlength="100"
 						placeholder={m.band_e_g_bass_placeholder()}
-						description={m.band_slug_members_your_membership_what_play_band_admins_can_body()}
 					/>
 				</div>
 				<div class="flex justify-end">

@@ -664,7 +664,6 @@
 	"member_profile_profile_form_off_by_default_contact_info_body": "Off by default, your contact info is only visible to logged-in members.",
 	"member_profile_profile_form_optional_placeholder": "Optional",
 	"member_profile_profile_form_optional_contact_details_shown_d_text": "Optional contact details shown on your directory profile. Leave blank to keep private.",
-	"member_profile_profile_form_short_one_liner_shown_directory_body": "A short one-liner shown on your directory card",
 	"member_profile_profile_form_show_my_contact_info_my_checkbox": "Show my contact info on my public profile",
 	"member_profile_profile_form_social_handle_label": "Social handle",
 	"member_profile_profile_form_tagline_label": "Tagline",
