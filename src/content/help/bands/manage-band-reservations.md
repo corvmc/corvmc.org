@@ -9,7 +9,7 @@ sortOrder: 9
 
 ## The band's reservations
 
-The band's **Reservations** page lists all of its reservations, split into **Upcoming**
+The band's **Practice space** page lists all of its reservations, split into **Upcoming**
 and **Past** tabs. Each entry shows the date, time, duration, who booked it, and
 its status.
 

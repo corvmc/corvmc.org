@@ -11,7 +11,7 @@ sortOrder: 8
 
 Any member of the band can book the practice space in the band's name.
 
-1. Open the band's **Reservations** page and choose **Reserve space**.
+1. Open the band's **Practice space** page and choose **Reserve space**.
 2. Pick a date, a **Start time**, and an **End time**.
 3. Add **Notes (optional)** if you need to, and choose **Continue**.
 4. Review the cost and choose **Book reservation**.
