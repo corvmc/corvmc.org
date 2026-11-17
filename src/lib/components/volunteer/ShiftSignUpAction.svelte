@@ -10,11 +10,13 @@
 	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { claimShift } from '#lib/remote/volunteer.remote.js';
+	import type { RemoteQueryUpdate } from '$app/server';
 
 	let {
 		shiftId,
 		shift,
-		onsuccess
+		onsuccess,
+		updates
 	}: {
 		shiftId: string;
 		shift: {
@@ -26,6 +28,8 @@
 			notes: string | null;
 		};
 		onsuccess?: () => void;
+		/** Optimistic override; every query named must be one `claimShift` refreshes. */
+		updates?: () => RemoteQueryUpdate[];
 	} = $props();
 
 	const claim = $derived(claimShift.for(shiftId));
@@ -45,6 +49,7 @@
 	submitLabel={m.volunteer_open_shifts_label()}
 	successToast={m.volunteer_open_shifts_success_toast()}
 	{onsuccess}
+	{updates}
 	data-testid="shift-sign-up"
 >
 	{#snippet form()}
