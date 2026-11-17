@@ -33,13 +33,15 @@
 
 	// Not `{#await}`: a refresh would re-pend it and unmount an open grant dialog.
 	// Tagged with its person so a switch never shows one member's access as another's.
-	const view = new Latest(() => {
+	const load = () => {
 		const id = person?.id;
 		return id ? getPersonAccessView(id).then((access) => ({ id, access })) : Promise.resolve(null);
-	});
+	};
+	const view = new Latest(load);
 	$effect(() => {
 		if (view.error) throw view.error.e;
 	});
+	const tagged = $derived(view.current ?? (await load()));
 </script>
 
 <FilterBar activeCount={person ? 1 : 0} onclear={() => (person = null)}>
@@ -59,8 +61,8 @@
 	/>
 {:else}
 	{@const userId = person.id}
-	{#if view.current?.id === userId}
-		{@const access = view.current.access}
+	{#if tagged?.id === userId}
+		{@const access = tagged.access}
 		{@const unheld = positionOrder.filter((p) => !access.positions.some((h) => h.position === p))}
 		{@const sources = [
 			...access.positions.map((p) => ({

@@ -41,6 +41,9 @@
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Grant or
 	// Revoke modal (#2356).
 	const certifications = new Latest(() => getMemberCertifications(id));
+	const loaded = $derived(
+		certifications.current ?? (await getMemberCertifications(id).catch(() => undefined))
+	);
 </script>
 
 <RelatedList
@@ -129,9 +132,9 @@
 	append-only. A renewal is a second Grant, not an edit. Keep these Actions
 	outside the profile <Form>: inside it their triggers submit the account.
 -->
-{#if certifications.current}
-	{@const held = certifications.current.records}
-	{@const through = certifications.current.clearedThrough}
+{#if loaded}
+	{@const held = loaded.records}
+	{@const through = loaded.clearedThrough}
 	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications_title()}>
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">

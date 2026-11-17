@@ -88,6 +88,7 @@
 	});
 	// Not `{#await}`: a refresh would re-pend it and unmount an open row Action.
 	const shifts = new Latest(() => getVolunteeringPage(args));
+	const loaded = $derived(shifts.current ?? (await getVolunteeringPage(args)));
 	$effect(() => {
 		if (shifts.error) throw shifts.error.e;
 	});
@@ -165,8 +166,8 @@
 		{/snippet}
 	</FilterBar>
 
-	{#if shifts.current}
-		{@const data = shifts.current}
+	{#if loaded}
+		{@const data = loaded}
 		{@const cancelled = data.shifts.filter((s) => s.cancelledAt)}
 		{@const live = data.shifts.filter((s) => !s.cancelledAt)}
 		{@const need = { claims: live.filter(hasClaimsToConfirm), short: live.filter(isShortStaffed) }}

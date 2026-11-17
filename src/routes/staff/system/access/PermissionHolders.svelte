@@ -50,10 +50,11 @@
 	const result = $derived(key ? getAccessHolders(selection) : null);
 	// Not `{#await}`: a refresh would re-pend it and unmount an open grant dialog.
 	// Tagged with its selection so a switch never shows one key's rows under another.
-	const holders = new Latest(() => {
+	const load = () => {
 		const tag = `${kind}:${key}`;
 		return result ? result.then((data) => ({ tag, data })) : Promise.resolve(null);
-	});
+	};
+	const holders = new Latest(load);
 	$effect(() => {
 		if (holders.error) throw holders.error.e;
 	});
@@ -66,6 +67,7 @@
 		if (key) void getAccessHolders(selection).refresh();
 		void getAccessPage().refresh();
 	}
+	const tagged = $derived(holders.current ?? (await load()));
 </script>
 
 {#snippet count(rows: RosterPerson[], label: string)}
@@ -142,8 +144,8 @@
 		title={m.staff_access_permission_holders_nothing_pick_title()}
 		description={m.staff_access_permission_holders_there_no_clearances_catalog_body()}
 	/>
-{:else if holders.current?.tag === `${kind}:${key}`}
-	{@const data = holders.current.data}
+{:else if tagged?.tag === `${kind}:${key}`}
+	{@const data = tagged.data}
 	{#if data.kind === 'position'}
 		{@const rows = data.members.filter(matches)}
 		{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}

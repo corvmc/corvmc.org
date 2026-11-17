@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { getBuildingAccess } from '#lib/remote/lock.remote.js';
 	import { errorMessage } from '#lib/error-message.js';
@@ -28,9 +29,8 @@
 	</li>
 {/snippet}
 
-{#await getBuildingAccess()}
-	<span class="loading loading-md loading-spinner"></span>
-{:then access}
+<svelte:boundary>
+	{@const access = await getBuildingAccess()}
 	{@const { status, codes } = access}
 	<section class="space-y-2" aria-labelledby="lock-status-title" data-testid="lock-status">
 		<h2 id="lock-status-title" class="font-semibold">
@@ -114,8 +114,9 @@
 			{/each}
 		</ul>
 	</section>
-{:catch error}
-	<Alert type="warning" reset={() => getBuildingAccess().refresh()}>
-		{errorMessage(error)}
-	</Alert>
-{/await}
+	{#snippet failed(error, reset)}
+		<Alert type="warning" reset={() => retryQuery(getBuildingAccess(), reset)}>
+			{errorMessage(error)}
+		</Alert>
+	{/snippet}
+</svelte:boundary>

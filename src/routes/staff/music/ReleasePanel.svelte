@@ -38,6 +38,9 @@
 	let open = $state(true);
 	// Latched rather than awaited, so a refund's refresh keeps its dialog mounted.
 	const sales = new Latest(() => getStaffReleaseSales(release.id));
+	const loaded = $derived(
+		sales.current ?? (await getStaffReleaseSales(release.id).catch(() => undefined))
+	);
 </script>
 
 <Modal bind:open title={release.title} placement="end" {onclose}>
@@ -165,10 +168,10 @@
 				<Alert type="warning" reset={() => getStaffReleaseSales(release.id).refresh()}>
 					{errorMessage(sales.error.e)}
 				</Alert>
-			{:else if !sales.current}
+			{:else if !loaded}
 				<span class="loading loading-md loading-spinner"></span>
 			{:else}
-				{@const { purchases, canRefund } = sales.current}
+				{@const { purchases, canRefund } = loaded}
 				{#if purchases.length === 0}
 					<EmptyState
 						title={m.staff_music_no_sales_yet_title()}

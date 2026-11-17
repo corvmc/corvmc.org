@@ -125,7 +125,8 @@
 		{/snippet}
 	</DateRangeFilter>
 
-	{#await report then r}
+	<svelte:boundary>
+		{@const r = await report}
 		<!-- Approved hours only. That is the whole point of the review step: this
 		     is the number that has to hold up to a funder. -->
 		<StatGrid cols={4}>
@@ -141,11 +142,13 @@
 				waiting to become a number — and "the total is low" and "the queue is
 				long" are different problems with different fixes.
 			-->
-			{#await stillInReview then pending}
+			<svelte:boundary>
+				{@const pending = await stillInReview}
 				<StatCard title={msg.staff_reports_volunteering_still_review_title()} value={pending} />
-			{:catch}
-				<!-- The `report` block around this says the page's query failed. -->
-			{/await}
+				{#snippet failed()}
+					<!-- The `report` boundary around this says the page's query failed. -->
+				{/snippet}
+			</svelte:boundary>
 		</StatGrid>
 
 		<!--
@@ -193,7 +196,8 @@
 			{/if}
 		</InfoCard>
 
-		{#await byGroup then groups}
+		<svelte:boundary>
+			{@const groups = await byGroup}
 			{#if groups.length > 0}
 				<!-- Only when something named a program. Hours given to CMC at large
 				     are the rest of this page, so a "no program" row would be a
@@ -215,9 +219,10 @@
 					</Table>
 				</InfoCard>
 			{/if}
-		{:catch}
-			<!-- The `report` block around this says the page's query failed. -->
-		{/await}
+			{#snippet failed()}
+				<!-- The `report` boundary around this says the page's query failed. -->
+			{/snippet}
+		</svelte:boundary>
 
 		<InfoCard title={msg.staff_reports_volunteering_hours_by_role_title()}>
 			{#if r.byRole.length === 0}
@@ -286,9 +291,10 @@
 				{/if}
 			</InfoCard>
 		</div>
-	{:catch error}
-		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-	{/await}
+		{#snippet failed(error)}
+			<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
+		{/snippet}
+	</svelte:boundary>
 
 	<InfoCard title={msg.staff_reports_volunteering_by_member_title()}>
 		<DataList
@@ -327,7 +333,8 @@
 		hours tables above — the sample is small enough that slicing it hides the
 		signal.
 	-->
-	{#await feedbackByRole then rollup}
+	<svelte:boundary>
+		{@const rollup = await feedbackByRole}
 		{#if rollup.length > 0}
 			<InfoCard title={msg.staff_reports_volunteering_how_shifts_going_title()}>
 				<Table>
@@ -362,7 +369,8 @@
 				</Table>
 			</InfoCard>
 		{/if}
-	{:catch error}
-		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-	{/await}
+		{#snippet failed(error)}
+			<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
+		{/snippet}
+	</svelte:boundary>
 </PageContent>

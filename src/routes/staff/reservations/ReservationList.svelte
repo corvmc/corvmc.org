@@ -104,7 +104,7 @@
 			return;
 		}
 		if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
-		const ids = (settled?.list.rows ?? []).flatMap((r) => (r.kind === 'reservation' ? [r.id] : []));
+		const ids = listedRows.flatMap((r) => (r.kind === 'reservation' ? [r.id] : []));
 		const next = adjacentId(ids, openId, event.key === 'ArrowDown' ? 1 : -1);
 		if (!next) return;
 		event.preventDefault();
@@ -124,17 +124,18 @@
 	// into the layout boundary's pending snippet on every keystroke.
 	const pageData = $derived(getStaffReservationsPage(filters.query));
 	const latestPage = new Latest(() => pageData);
+	// Above the await below: `onkeydown` is a window listener, live before it settles.
+	const listedRows = $derived(latestPage.current?.list.rows ?? []);
 
 	const result = $derived(pageData.then((d) => d.list));
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
 	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, and a
-	// re-pending `{#await}` unmounts an open dialog with it (#2350, #2352).
-	const settled = $derived(latestPage.current);
-	const canManageClosures = $derived(settled?.canManageClosures ?? false);
-	const statusCounts = $derived(settled?.statusCounts);
-	const owedDot = $derived(
-		(settled?.owedAfterSession ?? 0) > 0 && filters.status !== 'payment_due'
-	);
+	// re-pending `{#await}` unmounts an open dialog with it (#2350, #2352). Only the
+	// first page is awaited, so the server sends it (#3183).
+	const settled = $derived(latestPage.current ?? (await pageData));
+	const canManageClosures = $derived(settled.canManageClosures ?? false);
+	const statusCounts = $derived(settled.statusCounts);
+	const owedDot = $derived((settled.owedAfterSession ?? 0) > 0 && filters.status !== 'payment_due');
 
 	const statusLabel: Record<Status, (count: number) => string> = {
 		waitlisted: (count) => m.staff_reservations_status_waitlisted_label({ count }),
@@ -181,7 +182,7 @@
 >
 	<StaffViews views={spaceViews} active="reservations" />
 	<div class="flex flex-wrap justify-end gap-2">
-		{#if settled?.lock?.offline}
+		{#if settled.lock?.offline}
 			<Button
 				variant="ghost"
 				size="sm"
@@ -193,11 +194,11 @@
 			</Button>
 		{/if}
 		<!-- Building access is the one tab a `lock.manage` holder without `settings.read` sees. -->
-		{#if settled?.canSettings}
+		{#if settled.canSettings}
 			<Button variant="ghost" size="sm" href={resolve('staff/reservations/settings')}>
 				{m.staff_reservations_settings_label()}
 			</Button>
-		{:else if settled?.lock}
+		{:else if settled.lock}
 			<Button
 				variant="ghost"
 				size="sm"

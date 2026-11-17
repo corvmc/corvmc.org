@@ -33,6 +33,9 @@
 
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Restore (#2356).
 	const standingsQuery = new Latest(() => getMemberStandings(id));
+	const loaded = $derived(
+		standingsQuery.current ?? (await getMemberStandings(id).catch(() => undefined))
+	);
 </script>
 
 <!--
@@ -46,8 +49,8 @@
 	because they are separate decisions: an upheld report about an event must not
 	quietly cost someone their suggestion-posting rights, or the reverse.
 -->
-{#if standingsQuery.current}
-	{@const standings = standingsQuery.current}
+{#if loaded}
+	{@const standings = loaded}
 	{@const restricted = (['community_event', 'suggestion'] as const).filter(
 		(scope) => standings[scope].status !== 'none'
 	)}

@@ -45,8 +45,7 @@
 	import { Latest } from '#lib/latest.svelte.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { errorMessage } from '#lib/error-message.js';
-	import WhyCanAct from '#lib/components/access/WhyCanAct.svelte';
-	import { getPersonAccessWhy } from '#lib/remote/why-can-act.remote.js';
+	import AccessWhyCard from './AccessWhyCard.svelte';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -80,9 +79,9 @@
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-edit (#2356).
 	const roleCatalog = new Latest(() => getRoleCatalog());
-
-	// Why this person can act (#2994): positions, committee seats, shift roles.
-	const why = new Latest(() => getPersonAccessWhy(id));
+	const catalogLoaded = $derived(
+		roleCatalog.current ?? (await getRoleCatalog().catch(() => undefined))
+	);
 </script>
 
 <!--
@@ -94,8 +93,8 @@
 -->
 <ViewAsMember {id} />
 
-{#if roleCatalog.current}
-	{@const catalog = roleCatalog.current}
+{#if catalogLoaded}
+	{@const catalog = catalogLoaded}
 	{@const roleOptions = catalog.roles.map((r) => ({
 		id: String(r.id),
 		label: (positionLabels as Record<string, string>)[r.name] ?? r.name
@@ -110,13 +109,7 @@
 	</Alert>
 {/if}
 
-{#if why.current}
-	<WhyCanAct why={why.current} />
-{:else if why.error}
-	<Alert type="warning" reset={() => void getPersonAccessWhy(id).refresh()}>
-		{m.ui_load_failed_body({ error: errorMessage(why.error.e) })}
-	</Alert>
-{/if}
+<AccessWhyCard {id} />
 
 <EmailChangeCard {id} email={member.email} />
 

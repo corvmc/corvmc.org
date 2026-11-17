@@ -21,16 +21,19 @@
 	 */
 	let { eventId }: { eventId: string } = $props();
 
-	// Read in Latest's effect, so the page does not wait on it.
+	// Through `Latest`, so a refresh keeps the list mounted.
 	const data = new Latest(() => getEventCampaigns(eventId));
+	const loaded = $derived(
+		data.current ?? (await getEventCampaigns(eventId).catch(() => undefined))
+	);
 
 	const newHref = $derived(
 		withQuery(resolve('/staff/marketing/campaigns/new'), new URLSearchParams({ event: eventId }))
 	);
 </script>
 
-{#if data.current}
-	{@const { campaigns, canCreate } = data.current}
+{#if loaded}
+	{@const { campaigns, canCreate } = loaded}
 	<InfoCard title={m.staff_events_id_campaigns_title()} testid="event-campaigns">
 		{#snippet header(title)}
 			<div class="flex flex-wrap items-center justify-between gap-2">
