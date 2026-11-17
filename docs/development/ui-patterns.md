@@ -94,6 +94,8 @@ A page the server renders is parsed by the browser before it hydrates, so its HT
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 
+A card with its own query beside the page's main one shows its failure in place, as an `Alert` with Retry, and does not rethrow it: a rethrow reaches the layout's boundary and replaces the whole page. The band billing card is the example (#3140). `src/routes/await-failure.svelte.spec.ts` lists the blocks that keep a failure in place; add a new card there.
+
 ## Page shapes
 
 Every page is one of twelve shapes. Name the shape before building the page: it decides what the

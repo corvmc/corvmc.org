@@ -7,19 +7,19 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import AddCardModal from '#lib/components/member/membership/AddCardModal.svelte';
 	import { getBandBilling, startBandAddCard } from '#lib/remote/billing.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import { Latest } from '#lib/latest.svelte.js';
+	import { errorMessage } from '#lib/error-message.js';
 
 	/**
 	 * The band's card on file. Its own component so the billing query only runs
 	 * for someone who may manage it, and through `Latest` rather than `{#await}`
-	 * so the refresh after a save keeps the Add card modal mounted (#2359).
+	 * so the refresh after a save keeps the Add card modal mounted (#2359). A
+	 * failure stays in this card: the plan above it is the page (#3140).
 	 */
 	let { slug }: { slug: string } = $props();
 
 	const billingQuery = new Latest(() => getBandBilling(slug));
-	$effect(() => {
-		if (billingQuery.error) throw billingQuery.error.e;
-	});
 
 	let addCardOpen = $state(false);
 </script>
@@ -30,20 +30,24 @@
 		<CardBody>
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle size="base">{m.band_slug_subscription_card_file_title()}</CardTitle>
-				<Button
-					type="button"
-					variant="default"
-					size="sm"
-					outline
-					onclick={() => (addCardOpen = true)}
-				>
-					{billing.cards.length > 0
-						? m.band_slug_subscription_replace_card_label()
-						: m.band_slug_subscription_add_card_label()}
-				</Button>
+				{#if billing.hasAccount}
+					<Button
+						type="button"
+						variant="default"
+						size="sm"
+						outline
+						onclick={() => (addCardOpen = true)}
+					>
+						{billing.cards.length > 0
+							? m.band_slug_subscription_replace_card_label()
+							: m.band_slug_subscription_add_card_label()}
+					</Button>
+				{/if}
 			</div>
 
-			{#if !billing.available}
+			{#if !billing.hasAccount}
+				<p class="text-muted">{m.band_slug_subscription_no_billing_account_text()}</p>
+			{:else if !billing.available}
 				<p class="text-muted">
 					{m.band_slug_subscription_we_could_not_reach_our_text()}
 				</p>
@@ -84,4 +88,8 @@
 			/>
 		</CardBody>
 	</Card>
+{:else if billingQuery.error}
+	<Alert type="warning" reset={() => void getBandBilling(slug).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(billingQuery.error.e) })}
+	</Alert>
 {/if}
