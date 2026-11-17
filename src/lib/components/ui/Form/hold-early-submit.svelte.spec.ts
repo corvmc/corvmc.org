@@ -27,6 +27,11 @@ function fakeEnhance() {
 	return { attrs, key, seen };
 }
 
+/** Runs the symbol-keyed attachment, as Svelte's spread would. */
+function runAttachment(attrs: object, key: symbol, form: HTMLFormElement) {
+	return (attrs as Record<symbol, (form: HTMLFormElement) => (() => void) | void>)[key](form);
+}
+
 let nativeSubmits = 0;
 // On the document, so it runs after every listener on the form itself.
 const countNative = (e: Event) => {
@@ -43,8 +48,8 @@ function mountForm(gated: ReturnType<typeof holdEarlySubmits>) {
 	const form = document.createElement('form');
 	const button = document.createElement('button');
 	button.type = 'submit';
-	form.append(button);
-	document.body.append(form);
+	form.appendChild(button);
+	document.body.appendChild(form);
 	// Stands in for Form.svelte's `onsubmitcapture`.
 	form.addEventListener('submit', (e) => void gated.hold(e), { capture: true });
 	return { form, button };
@@ -72,7 +77,7 @@ describe('holdEarlySubmits', () => {
 
 		button.click();
 		await flush();
-		const teardown = gated.attrs[key](form);
+		const teardown = runAttachment(gated.attrs, key, form);
 		button.click();
 		await flush();
 
@@ -91,7 +96,7 @@ describe('holdEarlySubmits', () => {
 
 		const second = holdEarlySubmits(attrs);
 		const b = mountForm(second);
-		expect(() => second.attrs[key](b.form)).not.toThrow();
+		expect(() => runAttachment(second.attrs, key, b.form)).not.toThrow();
 		b.button.click();
 		await flush();
 
@@ -104,7 +109,7 @@ describe('holdEarlySubmits', () => {
 		const gated = holdEarlySubmits(attrs);
 		expect(gated.attrs).toMatchObject({ method: 'POST', action: '?/remote=x' });
 		const { form, button } = mountForm(gated);
-		gated.attrs[key](form);
+		runAttachment(gated.attrs, key, form);
 
 		button.click();
 
