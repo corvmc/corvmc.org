@@ -158,7 +158,7 @@ test.describe.serial('band booking enquiries', () => {
 		await row.click();
 
 		// The thread header is the enquirer's name; the list pane's own headings
-		// are "Chat" and "Enquiries", so this resolves to the thread pane alone.
+		// are "Band members" and "Public", so this resolves to the thread pane alone.
 		await expect(page.getByRole('heading', { name: enquirer })).toBeVisible({ timeout: 15000 });
 
 		// `.last()` because the message reads twice: once truncated into the row's

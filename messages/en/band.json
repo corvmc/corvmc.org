@@ -226,7 +226,7 @@
 	"band_slug_messages_enquiry_list_empty_body": "When someone uses the booking form on your profile, it lands here.",
 	"band_slug_messages_enquiry_list_empty_title": "No enquiries",
 	"band_slug_messages_enquiry_list_enquiries_from_public_bookin_text": "Enquiries from your public booking form. Replies go back by email; nobody sees your address.",
-	"band_slug_messages_enquiry_list_label": "Enquiries",
+	"band_slug_messages_enquiry_list_label": "Public",
 	"band_slug_messages_open_band_s_chat_from_body": "Open the band’s chat from the list on the left.",
 	"band_slug_messages_open_band_s_chat_pick_body": "Open the band’s chat, or pick an enquiry, from the list on the left.",
 	"band_slug_messages_title": "No conversation selected",
