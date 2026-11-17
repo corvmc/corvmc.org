@@ -1043,7 +1043,6 @@
 	],
 	"member_membership_free_hours_remaining_get_free_practice_hou_text": "Get practice credits each month with a sustaining membership.",
 	"member_membership_free_hours_remaining_learn_more_label": "Learn more",
-	"member_membership_free_hours_remaining_loading_free_hours_text": "Loading credits...",
 	"member_membership_free_hours_remaining_resets_text": "Resets to {creditsToHours} on {formatDate}",
 	"member_membership_invoice_history_card_amount_label": "Amount",
 	"member_membership_invoice_history_card_billing_history_title": "Billing history",
