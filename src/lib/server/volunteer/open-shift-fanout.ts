@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import {
 	volunteerRole,
@@ -17,28 +17,33 @@ import { standaloneEmail } from '#lib/server/notification/dispatcher.js';
 import { createNotifications } from '#lib/server/notification/in-app-service.js';
 import { listBatchRecipients } from '#lib/server/notification/recipient.js';
 import { captureException } from '#lib/server/sentry.js';
-import { formatDateLong, formatTime } from '#lib/utils/format.js';
+import { clubToday } from '#lib/config.js';
+import { clubInstant, formatDateLong, formatTime } from '#lib/utils/format.js';
 import { shiftLabel } from '#lib/utils/shift-label.js';
 import { liveShift, notOnCancelledListing, openTask, shiftClaimedSql } from './work-order-service';
 
 /**
- * Emailing members when a shift opens in a role they picked (#3239). It reads
- * new rows rather than hooking each insert path, so every way a shift is made
- * is covered. `reminder_sent` is the latch, written in the same `db.batch` as
- * the outbox rows: a shift is announced once or not at all, and a racing pass
- * fails on the unique index. One email per member per pass, listing all their
- * new shifts, in a handful of statements under the Worker subrequest limit.
+ * A daily email to members listing shifts opened in roles they picked (#3239,
+ * #3258). It reads new rows rather than hooking each insert path, so every way
+ * a shift is made is covered. `reminder_sent` holds two latches, written in the
+ * same `db.batch` as the outbox rows: one per shift, so a shift is in at most
+ * one digest, and one per club day, so a racing or repeated pass sends nothing.
  */
 
 export const SHIFT_OPENED_KEY = 'shift_opened';
 export const SHIFT_OPENED_TYPE = 'volunteer_shift_opened';
 
+/** The per-day latch: `subject_id` is the club date, `sent_at` the pass's `now`. */
+export const SHIFT_DIGEST_KEY = 'shift_opened_digest';
+
+/** Club wall-clock time the digest goes out. A later pass that day still sends. */
+export const DIGEST_TIME = '09:00';
+
 /**
- * How far back a pass looks. Shifts older than this were open before the
- * feature existed or were missed for a day, and an email about them is no
- * longer news.
+ * The first digest's lookback, when no earlier digest exists: the backlog from
+ * before the feature is not news.
  */
-const LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const FIRST_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
 /** D1 caps a statement at 100 bound parameters. */
 const IN_CHUNK = 90;
@@ -54,8 +59,32 @@ export interface NewOpenShift {
 	createdByUserId: string | null;
 }
 
-/** Shifts created in the lookback, still open to sign-ups, not yet announced. */
-export async function listNewOpenShifts(now: Date): Promise<NewOpenShift[]> {
+export interface DigestWindow {
+	/** The club date this digest is for. */
+	day: string;
+	/** Shifts created at or after this go in: the previous digest's pass. */
+	since: Date;
+}
+
+/**
+ * Whether today's digest is owed: it is 9am or later in club time and no
+ * digest has gone out for today's club date. Null when not owed.
+ */
+export async function digestWindow(now: Date): Promise<DigestWindow | null> {
+	const day = clubToday(now);
+	if (now < clubInstant(day, DIGEST_TIME)) return null;
+	const [last] = await db
+		.select({ day: reminderSent.subjectId, sentAt: reminderSent.sentAt })
+		.from(reminderSent)
+		.where(eq(reminderSent.reminderKey, SHIFT_DIGEST_KEY))
+		.orderBy(desc(reminderSent.sentAt))
+		.limit(1);
+	if (last?.day === day) return null;
+	return { day, since: last?.sentAt ?? new Date(now.getTime() - FIRST_LOOKBACK_MS) };
+}
+
+/** Shifts created since `since`, still open to sign-ups, not yet announced. */
+export async function listNewOpenShifts(now: Date, since: Date): Promise<NewOpenShift[]> {
 	return db
 		.select({
 			shiftId: volunteerShift.id,
@@ -78,7 +107,7 @@ export async function listNewOpenShifts(now: Date): Promise<NewOpenShift[]> {
 				notOnCancelledListing(),
 				eq(volunteerRole.isActive, true),
 				gt(volunteerShift.startsAt, now),
-				gte(volunteerShift.createdAt, new Date(now.getTime() - LOOKBACK_MS)),
+				gte(volunteerShift.createdAt, since),
 				lt(shiftClaimedSql(), volunteerShift.capacity),
 				sql`not exists (
 					select 1 from ${reminderSent} rs
@@ -153,18 +182,33 @@ export function openShiftsEmail(name: string, shifts: NewOpenShift[]) {
 }
 
 export interface AnnounceResult {
+	due: boolean;
 	shifts: number;
 	emailed: number;
 }
 
 /**
- * Announce every new open shift to the members whose roles it is in.
+ * Send today's digest if it is owed: every new open shift, to the members whose
+ * roles it is in. The day latch is written even when no shift is new, so a
+ * shift opened after 9am waits for tomorrow's.
  *
- * Throws on a failed write, leaving the shifts unstamped for the next pass.
+ * Throws on a failed write, leaving the day and the shifts open for the next pass.
  */
 export async function announceOpenShifts(now: Date = new Date()): Promise<AnnounceResult> {
-	const shifts = await listNewOpenShifts(now);
-	if (shifts.length === 0) return { shifts: 0, emailed: 0 };
+	const window = await digestWindow(now);
+	if (!window) return { due: false, shifts: 0, emailed: 0 };
+	const dayStamp = db.insert(reminderSent).values({
+		reminderKey: SHIFT_DIGEST_KEY,
+		subjectType: 'club_day',
+		subjectId: window.day,
+		sentAt: now
+	});
+
+	const shifts = await listNewOpenShifts(now, window.since);
+	if (shifts.length === 0) {
+		await dayStamp;
+		return { due: true, shifts: 0, emailed: 0 };
+	}
 
 	const byRole = await interestedByRole([...new Set(shifts.map((s) => s.volunteerRoleId))]);
 	const taken = await alreadyOn(shifts.map((s) => s.shiftId));
@@ -195,6 +239,7 @@ export async function announceOpenShifts(now: Date = new Date()): Promise<Announ
 		subjectId: s.shiftId
 	}));
 	await db.batch([
+		dayStamp,
 		...chunkInsert(stamps, (group) => db.insert(reminderSent).values(group)),
 		...chunkInsert(emails, (group) => db.insert(outboxMessage).values(group))
 	] as unknown as Parameters<typeof db.batch>[0]);
@@ -221,5 +266,5 @@ export async function announceOpenShifts(now: Date = new Date()): Promise<Announ
 		).catch((err) => captureException(err, { event: 'volunteer.shift_opened', channel: 'in-app' }));
 	}
 
-	return { shifts: shifts.length, emailed: emails.length };
+	return { due: true, shifts: shifts.length, emailed: emails.length };
 }

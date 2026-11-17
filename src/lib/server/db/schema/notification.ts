@@ -529,9 +529,9 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		category: 'volunteering',
 		label: 'Open shifts in your roles',
 		// Email only by default: the board is the in-app view of the same thing.
-		// One email per reminders pass, listing every new shift in the member's
-		// roles (#3239).
-		description: 'When a shift opens in a volunteer role you picked',
+		// One email a day at 9am club time, listing every new shift in the
+		// member's roles (#3239, #3258).
+		description: 'A daily email of new shifts in volunteer roles you picked',
 		defaults: { email: true, inApp: false, sms: false }
 	},
 	{

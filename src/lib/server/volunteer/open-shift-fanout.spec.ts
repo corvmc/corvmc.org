@@ -16,13 +16,17 @@ vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('#lib/server/outbox/outbox-service.js', () => ({ deliverSoon: vi.fn() }));
 vi.mock('#lib/server/notification/sse.js', () => ({ pushToUser: vi.fn() }));
 
-const { announceOpenShifts, SHIFT_OPENED_TYPE } = await import('./open-shift-fanout');
+const { announceOpenShifts, SHIFT_DIGEST_KEY, SHIFT_OPENED_TYPE } =
+	await import('./open-shift-fanout');
 
-const NOW = new Date('2031-05-01T12:00:00Z');
+// 9:30am PDT: a digest is owed on the first pass of the day.
+const NOW = new Date('2031-05-01T16:30:00Z');
 const sec = (d: Date) => Math.floor(d.getTime() / 1000);
 const HOUR = 3600;
 const now = sec(NOW);
 const exec = (q: string) => sqlite.exec(q);
+const at = (iso: string) => new Date(iso);
+const MIN = 60_000;
 
 type Mail = { to: string; model: { subject: string; details: { label: string }[] } };
 function outbox(): Mail[] {
@@ -99,11 +103,59 @@ describe('announceOpenShifts', () => {
 		expect(toCy[0].model.details).toHaveLength(2);
 	});
 
+	it('sends nothing before 9am club time, then sends at 9am', async () => {
+		shift('s-door', 'door', { createdAt: sec(at('2031-05-01T10:00:00Z')) });
+
+		// 8:59am PDT.
+		expect((await announceOpenShifts(at('2031-05-01T15:59:00Z'))).due).toBe(false);
+		expect(outbox()).toEqual([]);
+
+		await announceOpenShifts(at('2031-05-01T16:00:00Z'));
+		expect(recipients()).toEqual(['ana@example.test', 'cy@example.test']);
+	});
+
+	it('sends a day whose 9am passes all missed on the next pass that runs', async () => {
+		shift('s-door', 'door', { createdAt: sec(at('2031-05-01T10:00:00Z')) });
+
+		// 2:15pm PDT.
+		await announceOpenShifts(at('2031-05-01T21:15:00Z'));
+
+		expect(recipients()).toEqual(['ana@example.test', 'cy@example.test']);
+	});
+
+	it('holds a shift opened after the digest for the next day', async () => {
+		shift('s-door', 'door');
+		await announceOpenShifts(NOW);
+		exec(`delete from outbox_message`);
+
+		shift('s-bar', 'bar', { createdAt: now + 5 * 60 });
+		const later = await announceOpenShifts(new Date(NOW.getTime() + 15 * MIN));
+		expect(later.due).toBe(false);
+		expect(outbox()).toEqual([]);
+
+		await announceOpenShifts(new Date(NOW.getTime() + 24 * HOUR * 1000));
+		expect(recipients()).toEqual(['ben@example.test', 'cy@example.test']);
+		const toCy = outbox().find((m) => m.to === 'cy@example.test')!;
+		expect(toCy.model.details).toHaveLength(1);
+	});
+
+	it('looks back to the previous digest, however long ago it was', async () => {
+		exec(`insert into reminder_sent (id, reminder_key, subject_type, subject_id, sent_at)
+			values ('d0', '${SHIFT_DIGEST_KEY}', 'club_day', '2031-04-28', ${now - 72 * HOUR})`);
+		shift('s-door', 'door', { createdAt: now - 60 * HOUR });
+		shift('s-bar', 'bar', { createdAt: now - 80 * HOUR });
+
+		await announceOpenShifts(NOW);
+
+		expect(recipients()).toEqual(['ana@example.test', 'cy@example.test']);
+	});
+
 	it('announces a shift once, however many passes run', async () => {
 		shift('s-door', 'door');
 
 		await announceOpenShifts(NOW);
-		await announceOpenShifts(new Date(NOW.getTime() + 15 * 60_000));
+		await announceOpenShifts(new Date(NOW.getTime() + 15 * MIN));
+		await announceOpenShifts(new Date(NOW.getTime() + 24 * HOUR * 1000));
 
 		expect(recipients()).toEqual(['ana@example.test', 'cy@example.test']);
 	});
@@ -113,7 +165,7 @@ describe('announceOpenShifts', () => {
 		shift('s-stage', 'stage');
 
 		expect((await announceOpenShifts(NOW)).shifts).toBe(1);
-		expect((await announceOpenShifts(NOW)).shifts).toBe(0);
+		expect((await announceOpenShifts(new Date(NOW.getTime() + 24 * HOUR * 1000))).shifts).toBe(0);
 	});
 
 	it('respects a member who turned the email off', async () => {
@@ -138,7 +190,7 @@ describe('announceOpenShifts', () => {
 	});
 
 	it.each([
-		['created before the lookback', { createdAt: now - 25 * HOUR }],
+		['created before the first lookback', { createdAt: now - 25 * HOUR }],
 		['already started', { startsAt: now - HOUR }],
 		['called off', { cancelled: true }]
 	])('leaves out a shift %s', async (_name, over) => {
