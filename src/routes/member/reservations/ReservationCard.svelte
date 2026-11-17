@@ -70,7 +70,7 @@
 		{:else if reservation.status === 'confirmed' && reservation.lockCode}
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
-					{m.member_reservations_reservation_card_door_code_label()}
+					{m.member_reservations_reservation_card_door_code_text()}
 					<DoorCode
 						code={reservation.lockCode}
 						startsAt={reservation.startsAt}
