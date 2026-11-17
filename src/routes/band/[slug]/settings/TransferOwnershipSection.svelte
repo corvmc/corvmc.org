@@ -30,7 +30,7 @@
 		<CardBody>
 			<p class="text-sm">
 				<ParaglideMessage
-					message={m.band_slug_members_your_membership_as_owner_can_t_leave_body}
+					message={m.band_slug_members_your_membership_as_owner_can_t_leave_text}
 					inputs={{ bandName }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -48,7 +48,7 @@
 				</div>
 			{:else}
 				<p class="mt-2 text-subtle">
-					{m.band_slug_members_there_nobody_else_band_transfer_toast()}
+					{m.band_slug_members_there_nobody_else_band_transfer_text()}
 				</p>
 			{/if}
 		</CardBody>
