@@ -6,9 +6,8 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
-	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import AvatarField from '#lib/components/ui/Form/AvatarField.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
 	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
 	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
 	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';
@@ -109,18 +108,12 @@
 				/>
 			</div>
 
-			<div class="shrink-0">
-				<FileUpload
-					upload={uploadAvatar}
-					accept="image/jpeg,image/png,image/webp"
-					src={profile?.avatarUrl ?? undefined}
-					orientation="col"
-				>
-					{#snippet preview({ src })}
-						<EntityAvatar shape="round" name={profile?.name ?? ''} image={src} class="size-24" />
-					{/snippet}
-				</FileUpload>
-			</div>
+			<AvatarField
+				upload={uploadAvatar}
+				src={profile?.avatarUrl}
+				name={profile?.name ?? ''}
+				shape="round"
+			/>
 		</div>
 
 		<div class="mt-4">
