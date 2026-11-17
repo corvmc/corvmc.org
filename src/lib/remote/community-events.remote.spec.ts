@@ -283,13 +283,12 @@ describe('getMyListings, band events', () => {
 	});
 
 	it('lists the upcoming events of active bands once each, soonest first, with their band', async () => {
-		const { bandEvents } = await remote.getMyListings();
+		const { bandEvents } = (await remote.getMyListings()) as {
+			bandEvents: { id: string; band: { slug: string } }[];
+		};
 
-		expect(bandEvents.map((e: { id: string }) => e.id)).toEqual(['beta-only', 'shared']);
-		expect(bandEvents.map((e: { band: { slug: string } }) => e.band.slug)).toEqual([
-			'beta',
-			'alpha'
-		]);
+		expect(bandEvents.map((e) => e.id)).toEqual(['beta-only', 'shared']);
+		expect(bandEvents.map((e) => e.band.slug)).toEqual(['beta', 'alpha']);
 	});
 
 	it('reads the bands of the session user only', async () => {
