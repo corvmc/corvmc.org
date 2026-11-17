@@ -55,6 +55,30 @@ const rendersPending = (file: string) =>
 	/\{#await\b|\{#snippet pending\b/.test(template(sources[file])) ||
 	(/new Latest\(/.test(sources[file]) && !/\.current \?\? \(await\b/.test(sources[file]));
 
+// A snippet assigned from a component's script is handed to some other component to
+// draw. The server runs no effects, and a layout has already rendered by the time its
+// page's script runs, so whatever draws it adds it after hydration (#3217). Pass a
+// snippet as a prop, or have the drawing component read the data itself.
+const handsUpSnippet = (source: string) => {
+	const script = source.match(/<script[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? '';
+	return [...template(source).matchAll(/\{#snippet (\w+)/g)].some(([, name]) =>
+		new RegExp(`=\\s*${name}\\s*[;)]`).test(script)
+	);
+};
+
+describe('snippets handed up from a script', () => {
+	it('spots the shape', () => {
+		const handedUp =
+			'<script>$effect(() => { slot.bar = bar; });</script>{#snippet bar()}<b></b>{/snippet}';
+		expect(handsUpSnippet(handedUp)).toBe(true);
+		expect(handsUpSnippet('<script></script>{#snippet bar()}{/snippet}<X {bar} />')).toBe(false);
+	});
+
+	it.each(Object.keys(sources))('%s draws its own snippets', (file) => {
+		expect(handsUpSnippet(sources[file])).toBe(false);
+	});
+});
+
 describe('await blocks under the server-rendered panels', () => {
 	it('finds the panel components', () => {
 		expect(Object.keys(sources)).toContain('./routes/member/reservations/+page.svelte');

@@ -1,20 +1,19 @@
-import { getContext, setContext, type Snippet } from 'svelte';
+import { getContext, setContext } from 'svelte';
 
 /**
- * The inbox's one toolbar spans both panes, but its right half is the open
- * conversation's: the thread page hands its snippet up here, and the layout
- * draws it. Context rather than module state, which SSR would share.
+ * The toolbar's Assign opens the thread page's details strip, where the assignee
+ * select lives. Context rather than module state, which SSR would share.
  */
-class InboxToolbarSlot {
-	conversation = $state<Snippet | null>(null);
+class InboxToolbarState {
+	detailsOpen = $state(false);
 }
 
 const KEY = Symbol('inbox-toolbar');
 
-export function provideInboxToolbar(): InboxToolbarSlot {
-	return setContext(KEY, new InboxToolbarSlot());
+export function provideInboxToolbar(): InboxToolbarState {
+	return setContext(KEY, new InboxToolbarState());
 }
 
-export function useInboxToolbar(): InboxToolbarSlot {
-	return getContext<InboxToolbarSlot>(KEY);
+export function useInboxToolbar(): InboxToolbarState {
+	return getContext<InboxToolbarState>(KEY);
 }
