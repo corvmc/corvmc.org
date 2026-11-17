@@ -21,6 +21,9 @@
 	import { IconArrowLeft } from '@tabler/icons-svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import AvatarStack from '#lib/components/ui/AvatarStack.svelte';
+	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
 	import { markGroupChatSeen, postGroupChatMessage } from '#lib/remote/group-chat.remote.js';
 
 	// Handed in, never awaited here: on Messages the page's own query already
@@ -49,44 +52,61 @@
 	});
 </script>
 
-<div class="flex h-full min-h-0 flex-col gap-4">
-	<div class="flex items-center justify-end">
-		{#if backHref}
-			<Button
-				href={backHref}
-				variant="ghost"
-				size="sm"
-				shape="square"
-				class="mr-auto lg:hidden"
-				aria-label={m.ui_back_label()}
-			>
-				<IconArrowLeft size={18} />
-			</Button>
-		{/if}
-		<MuteRoomAction threadId={chat.id} roomName={chat.topicName} muted={chat.muted} />
-	</div>
+<!-- The member list says who reads the room: beside the thread on a wide
+     screen, a row of avatars below it otherwise (#3230). -->
+<div class="flex h-full min-h-0 flex-col gap-4 xl:flex-row">
+	<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+		<div class="flex items-center justify-end">
+			{#if backHref}
+				<Button
+					href={backHref}
+					variant="ghost"
+					size="sm"
+					shape="square"
+					class="mr-auto lg:hidden"
+					aria-label={m.ui_back_label()}
+				>
+					<IconArrowLeft size={18} />
+				</Button>
+			{/if}
+			<MuteRoomAction threadId={chat.id} roomName={chat.topicName} muted={chat.muted} />
+		</div>
 
-	<div class="min-h-0 flex-1 overflow-y-auto">
-		{#if chat.messages.length === 0}
-			<EmptyState
-				title={m.inbox_group_chat_title()}
-				description={chat.isGeneral
-					? m.inbox_group_chat_s_own_thread_everyone_group_body({ groupName: chat.groupName })
-					: m.inbox_group_chat_empty_everyone_reads_body({
-							topicName: chat.topicName,
-							groupName: chat.groupName
-						})}
+		<div class="min-h-0 flex-1 overflow-y-auto">
+			{#if chat.messages.length === 0}
+				<EmptyState title={m.inbox_group_chat_title()} />
+			{:else}
+				<ThreadTimeline messages={chat.messages} channel="group" {viewerUserId} />
+			{/if}
+		</div>
+
+		{#if !chat.readOnly}
+			<ThreadComposer
+				threadId={chat.id}
+				replyForm={postGroupChatMessage}
+				sendLabel={m.inbox_group_chat_send_label()}
 			/>
-		{:else}
-			<ThreadTimeline messages={chat.messages} channel="group" {viewerUserId} />
 		{/if}
 	</div>
 
-	{#if !chat.readOnly}
-		<ThreadComposer
-			threadId={chat.id}
-			replyForm={postGroupChatMessage}
-			sendLabel={m.inbox_group_chat_send_label()}
-		/>
-	{/if}
+	<aside class="flex shrink-0 flex-col gap-2 xl:w-56 xl:overflow-y-auto" data-testid="room-members">
+		<SectionLabel label={m.inbox_group_chat_members_title()} count={chat.readers.length} />
+		<div class="xl:hidden">
+			<AvatarStack items={chat.readers} max={8} shape="round" />
+		</div>
+		<ul class="hidden flex-col gap-1 xl:flex">
+			{#each chat.readers as reader (reader.id)}
+				<li class="flex min-w-0 items-center gap-2 px-1 py-1">
+					<EntityAvatar
+						name={reader.name}
+						image={reader.image}
+						shape="round"
+						size="avatar-sm"
+						class="size-7 shrink-0"
+					/>
+					<span class="min-w-0 truncate text-sm">{reader.name}</span>
+				</li>
+			{/each}
+		</ul>
+	</aside>
 </div>
