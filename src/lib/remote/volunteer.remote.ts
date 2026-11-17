@@ -3047,9 +3047,10 @@ export const checkInAsVolunteer = form(
 		await ticketOnShow(data.ticketId, await doorShiftEvent(data.signupId));
 
 		try {
-			await checkInTicketService(data.ticketId, currentUser.id);
+			// A repeat is reported, not refused, and the row warns on it (#3204).
+			const result = await checkInTicketService(data.ticketId, currentUser.id);
 			await getMyShiftCheckIn(data.signupId).refresh();
-			return { success: true };
+			return { success: true, ...result };
 		} catch (err) {
 			mapDomainError(err);
 		}
