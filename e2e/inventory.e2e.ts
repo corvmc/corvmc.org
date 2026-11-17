@@ -253,7 +253,7 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			// The old Restock page forwards to the Supplies reorder-point view (#2021, #2573).
 			await page.goto('/staff/inventory/restock');
-			await page.waitForURL(/\/staff\/inventory\/supplies\?show=restock$/);
+			await expect(page).toHaveURL(/\/staff\/inventory\/supplies\?show=restock$/);
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 			const row = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
 			await expect(row).toBeVisible();
