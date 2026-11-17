@@ -25,9 +25,6 @@
 	// The layout already holds the member's bands; a second query would race it.
 	const layout = getMemberLayoutContext();
 
-	// The layout already holds the member's bands; a second query would race it.
-	const layout = getMemberLayoutContext();
-
 	let data = $derived(await getMemberDashboard());
 
 	const isSustaining = $derived(data.subscription != null && !data.subscription.cancelAtPeriodEnd);
