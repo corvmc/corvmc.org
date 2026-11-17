@@ -106,7 +106,6 @@
 						type="text"
 						value={profile?.tagline ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
-						description={m.band_slug_edit_band_profile_form_short_one_liner_shown_direc_body()}
 					/>
 				</div>
 
@@ -129,7 +128,6 @@
 						type="text"
 						value={profile?.hometown ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_e_g_corvallis_placeholder()}
-						description={m.band_slug_edit_band_profile_form_shown_as_based_profile_body()}
 					/>
 
 					<FormField
@@ -138,7 +136,6 @@
 						type="text"
 						value={profile?.foundedYear ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_e_g_2019_placeholder()}
-						description={m.band_slug_edit_band_profile_form_shown_as_formed_profile_body()}
 					/>
 				</div>
 
