@@ -64,13 +64,17 @@ const remote = (await import('./volunteer.remote')) as unknown as {
 	checkInAsVolunteer: (data: { ticketId: string; signupId: string }) => Promise<unknown>;
 };
 
+const market = (await import('./market.remote')) as unknown as {
+	getCommitteeMarketVendors: (eventId: string) => PromiseLike<unknown>;
+};
+
 const { listConfirmedSignupsForEvents } =
 	await import('#lib/server/volunteer/volunteer-signup-service.js');
 
 const now = Math.floor(Date.now() / 1000);
 const HOUR = 3600;
 
-function setUp(opts: { status: string; startsIn: number; grants: string[] }) {
+function setUp(opts: { status: string; startsIn: number; grants: string[]; market?: boolean }) {
 	sqlite.exec(`
 		insert into "user" (id, name, email) values ('nia', 'Nia', 'nia@example.com');
 		insert into event_listing (id, title, starts_at, ends_at, status, created_by_user_id)
@@ -82,6 +86,7 @@ function setUp(opts: { status: string; startsIn: number; grants: string[] }) {
 			values ('sh', 'wo', ${now + opts.startsIn}, ${now + opts.startsIn + 3 * HOUR}, 2);
 		insert into volunteer_signup (id, shift_id, user_id, status) values ('s1', 'sh', 'nia', '${opts.status}');
 	`);
+	if (opts.market) sqlite.exec(`insert into market_day (event_id) values ('evt')`);
 	for (const cap of opts.grants) {
 		sqlite
 			.prepare(
@@ -93,6 +98,7 @@ function setUp(opts: { status: string; startsIn: number; grants: string[] }) {
 
 beforeEach(() => {
 	for (const t of [
+		'market_day',
 		'volunteer_signup',
 		'volunteer_shift',
 		'work_order',
@@ -154,12 +160,34 @@ describe('what a shift page offers', () => {
 	it.each(Object.entries(shiftPageOffers).filter(([, field]) => field !== null))(
 		'offers %s while the role grants it, and not otherwise',
 		async (cap, field) => {
-			setUp({ status: 'confirmed', startsIn: -HOUR, grants: [cap] });
+			setUp({ status: 'confirmed', startsIn: -HOUR, grants: [cap], market: true });
 			expect((await remote.getMyShift('s1'))[field!]).toBeTruthy();
 			sqlite.exec(`delete from volunteer_role_capability`);
 			expect((await remote.getMyShift('s1'))[field!]).toBeFalsy();
 		}
 	);
+});
+
+/**
+ * An offer links to a page that runs its own checks. The link is offered only
+ * where that page opens: hosting a show that is not a market 404'd (#3180).
+ */
+const offeredPages: Record<string, () => PromiseLike<unknown>> = {
+	checkIn: () => remote.getMyShiftCheckIn('s1'),
+	vendorHost: () => market.getCommitteeMarketVendors('evt')
+};
+
+describe('the pages a shift page links to', () => {
+	it.each([
+		['a show', false],
+		['a market', true]
+	])('open for every link it offers on %s', async (_name, isMarket) => {
+		setUp({ status: 'confirmed', startsIn: -HOUR, grants: grantableBy('role'), market: isMarket });
+		const shift = await remote.getMyShift('s1');
+		const offered = Object.keys(offeredPages).filter((field) => shift[field]);
+		for (const field of offered) await expect(offeredPages[field]()).resolves.toBeDefined();
+		expect(offered.includes('vendorHost')).toBe(isMarket);
+	});
 });
 
 describe('the signups the door screen links to', () => {

@@ -4,7 +4,7 @@
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import Form from '#lib/components/ui/Form/Form.svelte';
+	import DoorCheckInForm from '#lib/components/events/DoorCheckInForm.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { getBandDoorList, checkInBandTicket } from '#lib/remote/band-ticket-sale.remote.js';
 
@@ -38,8 +38,9 @@
 						{#if ticket.status === 'checked_in'}
 							<StatusBadge status="checked_in" />
 						{:else}
-							<Form
+							<DoorCheckInForm
 								remote={checkInBandTicket.for(ticket.id)}
+								name={ticket.attendeeName}
 								successToast={m.band_slug_events_event_id_door_list_card_success_toast()}
 								onsuccess={refresh}
 								class="inline"
@@ -52,7 +53,7 @@
 									variant="primary"
 									class="min-h-11"
 								/>
-							</Form>
+							</DoorCheckInForm>
 						{/if}
 					</li>
 				{/each}

@@ -31,7 +31,10 @@
 
 <DateRangeFilter bind:from={fromDate} bind:to={toDate} defaultFrom={yearStart} />
 
-{#await report then r}
+<!-- A boundary with no pending snippet, so the server sends the numbers rather
+     than a placeholder (#3183); a failure stays in this tab. -->
+<svelte:boundary>
+	{@const r = await report}
 	<StatGrid cols={4}>
 		<StatCard
 			title={m.member_groups_slug_committee_numbers_earned_title()}
@@ -108,6 +111,7 @@
 			</p>
 		{/if}
 	</InfoCard>
-{:catch error}
-	<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-{/await}
+	{#snippet failed(error)}
+		<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
+	{/snippet}
+</svelte:boundary>

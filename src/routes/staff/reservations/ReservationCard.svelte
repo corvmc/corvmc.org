@@ -74,7 +74,8 @@
 	{#if hasPayment || flags.length}
 		<DefinitionList layout="strip">
 			{#if hasPayment}
-				{#await rates then table}
+				<svelte:boundary>
+					{@const table = await rates}
 					<Fact label={m.staff_payment_label()}>
 						<span class="inline-flex flex-wrap items-center gap-1">
 							<span class="font-medium">{statusLabel(track)}</span>
@@ -83,9 +84,10 @@
 							</span>
 						</span>
 					</Fact>
-				{:catch}
-					<!-- DataList takes this rejection to the boundary. -->
-				{/await}
+					{#snippet failed()}
+						<!-- DataList takes this rejection to the boundary. -->
+					{/snippet}
+				</svelte:boundary>
 			{/if}
 			{#if flags.length}
 				<Fact label={m.staff_details_label()} value={flags.join(', ')} />

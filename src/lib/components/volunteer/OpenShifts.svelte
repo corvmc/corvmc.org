@@ -25,6 +25,7 @@
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import CardActions from '#lib/components/ui/Card/CardActions.svelte';
 	import ShiftSignUpAction from './ShiftSignUpAction.svelte';
+	import type { RemoteQueryUpdate } from '$app/server';
 
 	type Shift = {
 		id: string;
@@ -44,7 +45,16 @@
 		missingCertifications: { id: string; name: string }[];
 	};
 
-	let { shifts, hasInterests }: { shifts: Shift[]; hasInterests: boolean } = $props();
+	let {
+		shifts,
+		hasInterests,
+		claimUpdates
+	}: {
+		shifts: Shift[];
+		hasInterests: boolean;
+		/** The optimistic override for claiming one shift, passed to its sign-up. */
+		claimUpdates?: (shiftId: string) => () => RemoteQueryUpdate[];
+	} = $props();
 
 	// Shifts they are already on live in the next-action stack beside this, so
 	// the board is only ever things they could take on.
@@ -167,7 +177,7 @@
 						<p class="mt-2 text-subtle text-sm">{blocked}</p>
 					{:else}
 						<CardActions class="mt-2">
-							<ShiftSignUpAction shiftId={shift.id} {shift} />
+							<ShiftSignUpAction shiftId={shift.id} {shift} updates={claimUpdates?.(shift.id)} />
 						</CardActions>
 					{/if}
 				</li>

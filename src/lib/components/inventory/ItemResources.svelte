@@ -2,8 +2,9 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { FileUpload, Select } from '#lib/components/ui/Form/index.js';
 	import {
 		getItemResources,
@@ -64,6 +65,7 @@
 	{#if data.articles.length > 0}
 		<ul class="mt-3 space-y-2">
 			{#each data.articles as article (article.linkId)}
+				{@const unlink = unlinkItemArticle.for(article.linkId)}
 				<li class="flex items-center gap-2">
 					<IconBook size={18} class="shrink-0 opacity-60" />
 					<span class="grow">
@@ -76,22 +78,17 @@
 							>
 						{/if}
 					</span>
-					<form
-						{...unlinkItemArticle.enhance(async ({ submit }) => {
-							await submit();
-						})}
-					>
-						<input {...unlinkItemArticle.fields.itemId.as('hidden', itemId)} />
-						<input {...unlinkItemArticle.fields.linkId.as('hidden', article.linkId)} />
-						<Button
-							type="submit"
+					<Form remote={unlink}>
+						<input {...unlink.fields.itemId.as('hidden', itemId)} />
+						<input {...unlink.fields.linkId.as('hidden', article.linkId)} />
+						<SubmitButton
 							variant="ghost"
 							size="xs"
 							aria-label={m.inventory_item_resources_unlink_label({ title: article.title })}
 						>
 							<IconTrash size={16} />
-						</Button>
-					</form>
+						</SubmitButton>
+					</Form>
 				</li>
 			{/each}
 		</ul>
@@ -104,12 +101,10 @@
 		</FileUpload>
 
 		{#if data.linkable.length > 0}
-			<form
+			<Form
+				remote={linkItemArticle}
 				class="flex items-center gap-2"
-				{...linkItemArticle.enhance(async ({ submit }) => {
-					await submit();
-					linkItemArticle.fields.articleId.set('');
-				})}
+				onsuccess={() => linkItemArticle.fields.articleId.set('')}
 			>
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
 				<Select
@@ -126,10 +121,13 @@
 						>
 					{/each}
 				</Select>
-				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}
-					>{m.inventory_item_resources_link_label()}</Button
-				>
-			</form>
+				<SubmitButton
+					variant="ghost"
+					size="sm"
+					disabled={!chosenArticle}
+					label={m.inventory_item_resources_link_label()}
+				/>
+			</Form>
 		{/if}
 	</div>
 </InfoCard>

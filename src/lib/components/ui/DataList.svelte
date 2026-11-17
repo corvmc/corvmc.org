@@ -39,22 +39,16 @@
 	// Not `{#await result}`: that re-pends on every refresh and remounts each row,
 	// open dialogs included (#2352). The last page stays, dimmed, until the next lands.
 	const page = new Latest(() => result);
-	const settled = $derived(page.current);
 	// Thrown from an effect so a rejection still reaches the panel's boundary.
 	$effect(() => {
 		if (page.error) throw page.error.e;
 	});
+	// `Latest` resolves in an effect, which the server never runs. The first page
+	// is awaited, so the server sends the rows rather than a spinner (#3183).
+	const settled = $derived(page.current ?? (await result));
 </script>
 
-<!--
-	Not a top-level `await`: the panel layout's boundary `pending` snippet blanks
-	the whole page including PageHeader and the filter bar.
--->
-{#if !settled}
-	<div class="flex justify-center py-12">
-		<span class="loading loading-lg loading-spinner"></span>
-	</div>
-{:else if settled.rows.length === 0}
+{#if settled.rows.length === 0}
 	<EmptyState title={emptyTitle} description={empty} {actionLabel} {actionHref} />
 {:else}
 	<div aria-busy={page.loading} class={['transition-opacity', page.loading && 'opacity-60']}>

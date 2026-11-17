@@ -13,10 +13,10 @@ import {
 	UtecRateLimitedError,
 	generateLockCode,
 	lockDateTime,
-	LOCK_GRACE_MINUTES,
 	type LockDeviceHealth
 } from './ultraloc-client';
 import { maintainFallbackCode } from './fallback-code-service';
+import { doorCodeWindow } from '#lib/utils/door-code-window.js';
 import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '#lib/server/kv.js';
 import { dispatchEmailOnly } from '#lib/server/notification/index.js';
@@ -561,9 +561,9 @@ export async function syncAccessWindow(
 	// the same code and we never have a moment with no user on the lock.
 	if (row.lockAccessId) {
 		try {
-			const graceEnd = new Date(row.endsAt.getTime() + LOCK_GRACE_MINUTES * 60_000);
+			const { opensAt, closesAt } = doorCodeWindow(row);
 			await updateLockUser(Number(row.lockAccessId), {
-				daterange: [lockDateTime(row.startsAt), lockDateTime(graceEnd)]
+				daterange: [lockDateTime(opensAt), lockDateTime(closesAt)]
 			});
 			await db
 				.update(reservation)

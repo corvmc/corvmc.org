@@ -24,6 +24,11 @@
 		page.route.id === '/staff/inbox/daily' || page.route.id === '/staff/inbox/channels'
 	);
 
+	// The filter panel replaces the thread page, so it takes the bar with it.
+	const threadId = $derived(
+		page.route.id === '/staff/inbox/[id]' && !filterPanel.open ? page.params.id : undefined
+	);
+
 	let saving = $state(false);
 </script>
 
@@ -32,7 +37,7 @@
 {:else}
 	<ListDetailShell open={threadOpen}>
 		{#snippet toolbar()}
-			<InboxToolbar {threadOpen} />
+			<InboxToolbar {threadOpen} {threadId} />
 		{/snippet}
 		{#snippet list()}
 			<InboxList />

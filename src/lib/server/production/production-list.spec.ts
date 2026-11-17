@@ -76,4 +76,35 @@ describe('listProductions', () => {
 		expect(rows.map((r) => r.id)).toEqual(['prod-undated']);
 		expect(pagination.total).toBe(1);
 	});
+
+	// 2026-03-04T02:00Z is 3 March in club time; 2026-05-01T02:00Z is 30 April.
+	const now = new Date('2026-03-01T20:00:00Z');
+
+	it('lists a custom range by the listing date, else the project date, soonest first', async () => {
+		const { rows, pagination } = await listProductions(
+			{ range: 'custom', from: '2026-03-01', to: '2026-04-30' },
+			{},
+			now
+		);
+		expect(rows.map((r) => r.id)).toEqual(['prod-listed', 'prod-unlisted']);
+		expect(pagination.total).toBe(2);
+	});
+
+	it('leaves a production out once its date falls outside the range', async () => {
+		const april = await listProductions(
+			{ range: 'custom', from: '2026-04-01', to: '2026-04-29' },
+			{},
+			now
+		);
+		expect(april.rows).toEqual([]);
+		const week = await listProductions({ range: 'next_7' }, {}, now);
+		expect(week.rows.map((r) => r.id)).toEqual(['prod-listed']);
+	});
+
+	it('keeps undated productions under Any date only', async () => {
+		const fromToday = await listProductions({ range: 'from_today' }, {}, now);
+		expect(fromToday.rows.map((r) => r.id)).not.toContain('prod-undated');
+		const any = await listProductions({ range: 'any' }, {}, now);
+		expect(any.rows.map((r) => r.id)).toContain('prod-undated');
+	});
 });

@@ -12,11 +12,9 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
 	import { doneToday } from './daily/session.svelte';
-	import { useInboxToolbar } from './toolbar.svelte';
+	import ConversationBar from './ConversationBar.svelte';
 
-	let { threadOpen }: { threadOpen: boolean } = $props();
-
-	const slot = useInboxToolbar();
+	let { threadOpen, threadId }: { threadOpen: boolean; threadId?: string } = $props();
 </script>
 
 <div class="flex min-h-10 items-center gap-4 border-b border-base-300 pb-3">
@@ -33,7 +31,8 @@
 
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->
-		{#await getInboxThreadCounts() then counts}
+		<svelte:boundary>
+			{@const counts = await getInboxThreadCounts()}
 			{#if counts.open > 0}
 				<Button
 					href={resolve('staff/inbox/daily')}
@@ -47,14 +46,20 @@
 						: m.staff_inbox_inbox_toolbar_start_daily_label()} · {counts.open}
 				</Button>
 			{/if}
-		{:catch}
-			<!-- Only a shortcut into Daily. -->
-		{/await}
+			{#snippet failed()}
+				<!-- Only a shortcut into Daily. -->
+			{/snippet}
+		</svelte:boundary>
 	</div>
 
-	{#if slot.conversation}
+	{#if threadId}
 		<div class="min-w-0 flex-1 items-center gap-3 {threadOpen ? 'flex' : 'hidden lg:flex'}">
-			{@render slot.conversation()}
+			<svelte:boundary>
+				<ConversationBar {threadId} />
+				{#snippet failed()}
+					<!-- The thread page reports its own failure. -->
+				{/snippet}
+			</svelte:boundary>
 		</div>
 	{/if}
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
+	import DoorCode from '#lib/components/reservations/DoorCode.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import {
@@ -21,6 +21,8 @@
 		reservation: Reservation & {
 			payableWithCredits?: boolean;
 			codeWithheld?: boolean;
+			/** A booking before this one runs into its early-open minutes until then. */
+			bookedUntil?: Date | null;
 			/** The band a group booking is for. */
 			groupName?: string | null;
 		};
@@ -70,13 +72,14 @@
 		{:else if reservation.status === 'confirmed' && reservation.lockCode}
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
-					<ParaglideMessage
-						message={m.member_reservations_reservation_card_door_code_text}
-						inputs={{ lockCode: reservation.lockCode }}
-						>{#snippet span({ children })}<span class="font-mono font-bold tracking-wider"
-								>{@render children?.()}</span
-							>{/snippet}</ParaglideMessage
-					>
+					{m.member_reservations_reservation_card_door_code_text()}
+					<DoorCode
+						code={reservation.lockCode}
+						startsAt={reservation.startsAt}
+						endsAt={reservation.endsAt}
+						bookedUntil={reservation.bookedUntil}
+						size="sm"
+					/>
 				{:else}
 					<!-- Issued, but the lock has not confirmed it. Showing the digits
 					     here would be a promise we cannot keep; the detail page has

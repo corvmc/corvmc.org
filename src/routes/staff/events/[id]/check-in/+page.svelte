@@ -9,7 +9,7 @@
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import Form from '#lib/components/ui/Form/Form.svelte';
+	import DoorCheckInForm from '#lib/components/events/DoorCheckInForm.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { refreshAll } from '$app/navigation';
 	import { CancelTicketAction } from '#lib/components/actions/index.js';
@@ -102,15 +102,16 @@
 					{#if ticket.status !== 'checked_in' && ticket.status !== 'cancelled'}
 						<!-- Tapped a hundred times in a row at a door, one-handed (#971). -->
 						<CardActions>
-							<Form
+							<DoorCheckInForm
 								remote={checkInTicket.for(ticket.id)}
+								name={ticket.attendeeName}
 								successToast={m.staff_events_id_check_in_success_toast()}
 								onsuccess={() => refreshAll()}
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<input {...fields.eventId.as('hidden', params.id)} />
 								<SubmitButton label={m.staff_events_id_check_in_label()} variant="primary" />
-							</Form>
+							</DoorCheckInForm>
 							<CancelTicketAction
 								ticketId={ticket.id}
 								attendeeName={ticket.attendeeName}

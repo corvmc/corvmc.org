@@ -50,6 +50,7 @@
 	// Not `{#await}`: a refresh would re-pend it and unmount an open New role or
 	// New clearance dialog with what was typed in it.
 	const data = new Latest(() => getStaffVolunteerSetupPage());
+	const loaded = $derived(data.current ?? (await getStaffVolunteerSetupPage()));
 	$effect(() => {
 		if (data.error) throw data.error.e;
 	});
@@ -107,8 +108,8 @@
 <PageHeader title={m.staff_roles_title()} subtitle={m.staff_volunteering_body()} />
 
 <PageContent>
-	{#if data.current}
-		{@const { roles, certifications } = data.current}
+	{#if loaded}
+		{@const { roles, certifications } = loaded}
 		{@const groups = groupedRoles(roles)}
 		{@const live = roles.filter((r) => r.isActive).length}
 

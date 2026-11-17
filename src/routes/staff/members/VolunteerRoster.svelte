@@ -219,7 +219,8 @@
 		{total === 1
 			? m.staff_members_volunteers_volunteer_text()
 			: m.staff_members_volunteers_volunteers_text()}
-		{#await list then { minorsWaiting, lapsingPeople }}
+		<svelte:boundary>
+			{@const { minorsWaiting, lapsingPeople } = await list}
 			{#if minorsWaiting > 0 && f.status !== 'blocked'}
 				·
 				<button
@@ -247,10 +248,12 @@
 					{m.staff_members_volunteers_lapsing_label({ lapsingPeople })}
 				</button>
 			{/if}
-		{:catch}
-			<!-- Roster's DataList takes this rejection to the boundary. -->
-		{/await}
-		{#await getVolunteerStatusCounts() then { pending }}
+			{#snippet failed()}
+				<!-- Roster's DataList takes this rejection to the boundary. -->
+			{/snippet}
+		</svelte:boundary>
+		<svelte:boundary>
+			{@const { pending } = await getVolunteerStatusCounts()}
 			{#if pending > 0}
 				<ParaglideMessage
 					message={m.staff_members_volunteers_hour_logs_review_text}
@@ -260,9 +263,10 @@
 						>{/snippet}</ParaglideMessage
 				>
 			{/if}
-		{:catch}
-			<!-- Only a shortcut to the hours queue. -->
-		{/await}
+			{#snippet failed()}
+				<!-- Only a shortcut to the hours queue. -->
+			{/snippet}
+		</svelte:boundary>
 	{/snippet}
 
 	{#snippet aside(volunteer)}

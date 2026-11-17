@@ -11,13 +11,15 @@ import { grantStageTemplateStatements } from '../db/grant-stage-templates';
 
 /**
  * A grant application or sponsorship is a project (#2622). Each seeded one is
- * given its project here, before its own row, which names it.
+ * given its project here, before its own row, which names it. A project id is a
+ * uuid, as the column default makes it: the project remotes validate with
+ * `z.uuid()`, and a readable id made the project page fail with a 400.
  */
 export async function fundingProjects(
 	kind: 'grant' | 'sponsorship',
 	rows: { id?: string; title: string; projectId?: string | null }[]
 ) {
-	for (const row of rows) row.projectId = `${row.id}-project`;
+	for (const row of rows) row.projectId = crypto.randomUUID();
 	await batchInsert(
 		project,
 		rows.map((r) => ({ id: r.projectId!, name: r.title, kind }))

@@ -12,6 +12,8 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	let { id }: { id: string } = $props();
 
@@ -31,9 +33,9 @@
 
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Restore (#2356).
 	const standingsQuery = new Latest(() => getMemberStandings(id));
-	$effect(() => {
-		if (standingsQuery.error) throw standingsQuery.error.e;
-	});
+	const loaded = $derived(
+		standingsQuery.current ?? (await getMemberStandings(id).catch(() => undefined))
+	);
 </script>
 
 <!--
@@ -47,8 +49,8 @@
 	because they are separate decisions: an upheld report about an event must not
 	quietly cost someone their suggestion-posting rights, or the reverse.
 -->
-{#if standingsQuery.current}
-	{@const standings = standingsQuery.current}
+{#if loaded}
+	{@const standings = loaded}
 	{@const restricted = (['community_event', 'suggestion'] as const).filter(
 		(scope) => standings[scope].status !== 'none'
 	)}
@@ -92,6 +94,10 @@
 			</div>
 		</InfoCard>
 	{/each}
+{:else if standingsQuery.error}
+	<Alert type="warning" reset={() => void getMemberStandings(id).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(standingsQuery.error.e) })}
+	</Alert>
 {/if}
 
 <RelatedList

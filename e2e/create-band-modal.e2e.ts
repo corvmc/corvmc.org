@@ -60,8 +60,10 @@ test('create-band modal opens after an immediate client-side navigation', async 
 	await page.click('#e2e-spa-nav');
 	await page.waitForURL(/\/member\/bands/, { timeout: 15000 });
 
-	// The page header's one action opens the create-band modal.
-	await page.locator('[data-page-header] button').click();
+	// The URL is pushed before the page's awaited query resolves, so the old
+	// /member header can still be in the DOM here. Locate a button only the
+	// bands page renders; the click waits for that page to commit.
+	await page.locator('[data-page-header] [data-testid="create-band"]').click();
 	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
 	await expect(
 		page.getByRole('dialog').locator('input:is([name="name"], [name^="name/"])')

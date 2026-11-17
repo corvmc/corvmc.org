@@ -10,7 +10,8 @@
 		collapsible = false,
 		persistKey,
 		persistScope = 'staff',
-		containsActive = false
+		containsActive = false,
+		badge
 	}: {
 		title: string;
 		action?: Snippet;
@@ -23,6 +24,8 @@
 		persistScope?: string;
 		/** Does the current page live in this group? */
 		containsActive?: boolean;
+		/** The summed count of its rows, shown on the header only while collapsed. */
+		badge?: number;
 	} = $props();
 
 	const uid = $props.id();
@@ -77,6 +80,11 @@
 				onclick={toggle}
 			>
 				<span>{title}</span>
+				{#if collapsed && badge}
+					<span class="badge badge-sm badge-primary" data-testid="nav-group-badge"
+						>{badge > 99 ? '99+' : badge}</span
+					>
+				{/if}
 			</button>
 			{#if action}
 				{@render action()}

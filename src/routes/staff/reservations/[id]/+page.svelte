@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DoorCode from '#lib/components/reservations/DoorCode.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { isEventHold } from '#lib/config.js';
@@ -350,7 +351,7 @@
 	{#if !isEventHold(r.bookerType)}
 		<InfoCard title={m.staff_reservations_id_door_access_title()}>
 			{#if r.lockCode}
-				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
+				<DoorCode code={r.lockCode} startsAt={r.startsAt} endsAt={r.endsAt} size="md" />
 				{#if r.lockSyncedAt}
 					<p class="text-muted">
 						{m.staff_reservations_id_confirmed_lock_text({ fullDate: fullDate(r.lockSyncedAt) })}

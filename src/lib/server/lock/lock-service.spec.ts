@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EARLY_OPEN_MINUTES } from '#lib/utils/door-code-window.js';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
@@ -419,7 +420,10 @@ describe('syncAccessWindow', () => {
 		expect(result.synced).toBe(true);
 		// One update, no delete: the member's code never leaves the lock.
 		expect(mockUpdateLockUser).toHaveBeenCalledWith(777, {
-			daterange: [lockTime(TODAY + 20 * HOUR), lockTime(TODAY + 23 * HOUR + 30 * 60)]
+			daterange: [
+				lockTime(TODAY + 20 * HOUR - EARLY_OPEN_MINUTES * 60),
+				lockTime(TODAY + 23 * HOUR + 30 * 60)
+			]
 		});
 		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
 		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();

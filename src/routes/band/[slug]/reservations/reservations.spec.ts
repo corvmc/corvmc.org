@@ -137,6 +137,9 @@ const fallbackCodeServiceMock = {
 };
 
 vi.mock('#lib/server/lock/fallback-code-service.js', () => fallbackCodeServiceMock);
+vi.mock('#lib/server/reservation/room-booked-before.js', () => ({
+	roomBookedBefore: async () => new Map()
+}));
 
 // Mock DB for page load
 let selectResult: unknown[] = [];

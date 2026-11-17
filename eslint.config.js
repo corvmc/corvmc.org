@@ -203,6 +203,11 @@ export default defineConfig(
 					selector: "NewExpression[callee.name='FormData'][arguments.length>0]",
 					message:
 						'Read a remote form field with formValue() from ui/Form/form-value, not FormData.get() by bare key.'
+				},
+				{
+					// Only Form holds a submit made before kit's listener attaches (#3220).
+					selector: "CallExpression[callee.property.name='enhance']",
+					message: 'Wrap a remote form in <Form remote={…}> from ui/Form, not .enhance().'
 				}
 			]
 		}

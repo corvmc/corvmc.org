@@ -43,8 +43,9 @@
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Latest } from '#lib/latest.svelte.js';
-	import WhyCanAct from '#lib/components/access/WhyCanAct.svelte';
-	import { getPersonAccessWhy } from '#lib/remote/why-can-act.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import AccessWhyCard from './AccessWhyCard.svelte';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -78,15 +79,9 @@
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-edit (#2356).
 	const roleCatalog = new Latest(() => getRoleCatalog());
-	$effect(() => {
-		if (roleCatalog.error) throw roleCatalog.error.e;
-	});
-
-	// Why this person can act (#2994): positions, committee seats, shift roles.
-	const why = new Latest(() => getPersonAccessWhy(id));
-	$effect(() => {
-		if (why.error) throw why.error.e;
-	});
+	const catalogLoaded = $derived(
+		roleCatalog.current ?? (await getRoleCatalog().catch(() => undefined))
+	);
 </script>
 
 <!--
@@ -98,8 +93,8 @@
 -->
 <ViewAsMember {id} />
 
-{#if roleCatalog.current}
-	{@const catalog = roleCatalog.current}
+{#if catalogLoaded}
+	{@const catalog = catalogLoaded}
 	{@const roleOptions = catalog.roles.map((r) => ({
 		id: String(r.id),
 		label: (positionLabels as Record<string, string>)[r.name] ?? r.name
@@ -108,11 +103,13 @@
 		.filter((r) => member.roles.includes(r.name))
 		.map((r) => String(r.id))}
 	<StaffUserForm {member} {roleOptions} {initialRoles} {id} canSetRole={catalog.canSetRole} />
+{:else if roleCatalog.error}
+	<Alert type="warning" reset={() => void getRoleCatalog().refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(roleCatalog.error.e) })}
+	</Alert>
 {/if}
 
-{#if why.current}
-	<WhyCanAct why={why.current} />
-{/if}
+<AccessWhyCard {id} />
 
 <EmailChangeCard {id} email={member.email} />
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Latest } from '#lib/latest.svelte.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -37,7 +38,6 @@
 	// Latched from the first load: saving refreshes the query, and a recomputed
 	// `onboarding` reads false by the time `onsuccess` runs, so it never moved on.
 	let latched = $state<boolean>();
-	const onboarding = $derived(latched ?? pageData.current?.interests.length === 0);
 	$effect(() => {
 		if (pageData.current && latched === undefined)
 			latched = pageData.current.interests.length === 0;
@@ -51,54 +51,58 @@
 />
 
 <PageContent width="md">
-	{#if pageData.current}
-		{@const { step: me, roles: roleOptions, interests: myInterests } = pageData.current}
-		<Card>
-			<CardBody>
-				{#if roleOptions.length === 0}
-					<p class="text-muted">
-						{m.member_volunteer_interests_no_volunteer_roles_open_right_text()}
-					</p>
-					<a href={resolve('member/volunteer')} class="link text-sm"
-						>{m.member_volunteer_interests_go_volunteering_text()}</a
-					>
-				{:else}
-					<!--
-					Onboarding sends them on to the board, because that is the next step
-					of a flow. Editing stays put: somebody who came here to add a role
-					has not asked to leave.
-				-->
-					<Form
-						remote={saveVolunteerInterests}
-						onsuccess={onboarding ? () => goto(resolve('member/volunteer')) : undefined}
-						successToast={m.member_volunteer_interests_success_toast()}
-					>
-						<InterestFields
-							fields={saveVolunteerInterests.fields}
-							{roleOptions}
-							selected={myInterests}
-							availability={me.availability}
-						/>
-
-						<div class="flex items-center justify-between gap-3">
-							<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
-								{onboarding
-									? m.member_volunteer_interests_skip_label()
-									: m.member_volunteer_interests_back_label()}
-							</Button>
-							<!-- Disabled until something changes, and it says "Saved" after —
-						     which is what makes a page you can leave open feel settled. -->
-							<SubmitButton
-								label={onboarding
-									? m.member_volunteer_interests_finish_label()
-									: m.member_save_label()}
-								successLabel={m.member_saved_label()}
-								variant="primary"
+	<ErrorToastBoundary showPending={false}>
+		{@const loaded = pageData.current ?? (await getVolunteerInterestsPage().catch(() => undefined))}
+		{#if loaded}
+			{@const { step: me, roles: roleOptions, interests: myInterests } = loaded}
+			{@const onboarding = latched ?? myInterests.length === 0}
+			<Card>
+				<CardBody>
+					{#if roleOptions.length === 0}
+						<p class="text-muted">
+							{m.member_volunteer_interests_no_volunteer_roles_open_right_text()}
+						</p>
+						<a href={resolve('member/volunteer')} class="link text-sm"
+							>{m.member_volunteer_interests_go_volunteering_text()}</a
+						>
+					{:else}
+						<!--
+						Onboarding sends them on to the board, because that is the next step
+						of a flow. Editing stays put: somebody who came here to add a role
+						has not asked to leave.
+					-->
+						<Form
+							remote={saveVolunteerInterests}
+							onsuccess={onboarding ? () => goto(resolve('member/volunteer')) : undefined}
+							successToast={m.member_volunteer_interests_success_toast()}
+						>
+							<InterestFields
+								fields={saveVolunteerInterests.fields}
+								{roleOptions}
+								selected={myInterests}
+								availability={me.availability}
 							/>
-						</div>
-					</Form>
-				{/if}
-			</CardBody>
-		</Card>
-	{/if}
+
+							<div class="flex items-center justify-between gap-3">
+								<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
+									{onboarding
+										? m.member_volunteer_interests_skip_label()
+										: m.member_volunteer_interests_back_label()}
+								</Button>
+								<!-- Disabled until something changes, and it says "Saved" after —
+							     which is what makes a page you can leave open feel settled. -->
+								<SubmitButton
+									label={onboarding
+										? m.member_volunteer_interests_finish_label()
+										: m.member_save_label()}
+									successLabel={m.member_saved_label()}
+									variant="primary"
+								/>
+							</div>
+						</Form>
+					{/if}
+				</CardBody>
+			</Card>
+		{/if}
+	</ErrorToastBoundary>
 </PageContent>
