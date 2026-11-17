@@ -268,6 +268,8 @@ Props:
   the error shows as usual. The server handler must refresh or set each query named, or kit fails
   that query. Specs hold the submit with `heldRemoteForm()` and `fakeQuery()` from
   `#lib/test/fake-remote.svelte.js`.
+  Not for an answer someone acts on at once: the door's check-in shows admitted only once the
+  server has said the ticket is valid and not already in.
 
 There is **no `errorToast` prop.** Passing one does nothing visible — it falls
 through the rest spread onto the `<form>` element. The default error handling is
