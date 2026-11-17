@@ -32,8 +32,10 @@ test.describe('staff groups', () => {
 	test('lists clubs, and never a committee or a band', async ({ page }) => {
 		await loginAsStaff(page);
 		// The old address, which is also the proof that it still lands on Clubs.
+		// The 308 adds `via`; the hydrated list's URL state drops it again, so
+		// either form is the landing (#3186).
 		await page.goto('/staff/groups?kind=club');
-		await page.waitForURL(/\/staff\/clubs\?via=groups$/, { timeout: 15000 });
+		await expect(page).toHaveURL(/\/staff\/clubs(\?via=groups)?$/);
 
 		const table = page.locator('table');
 		// `goto` resolves before an awaited remote query commits, so wait for a row
@@ -81,9 +83,9 @@ test.describe('staff groups', () => {
 
 		// And a committee's old address lands on its record.
 		await page.goto(`/staff/groups/${SEED_COMMITTEE_ID}`);
-		await page.waitForURL(`**/staff/committees/${SEED_COMMITTEE_ID}?via=groups`, {
-			timeout: 15000
-		});
+		await expect(page).toHaveURL(
+			new RegExp(`/staff/committees/${SEED_COMMITTEE_ID}(\\?via=groups)?$`)
+		);
 		await expect(page.getByRole('heading', { name: SEED_COMMITTEE_NAME })).toBeVisible();
 	});
 
