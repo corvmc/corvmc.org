@@ -3131,7 +3131,7 @@
 	"staff_volunteer_roles_id_role_grants_card_lead_days_body": "Leave at 0 to start them with the shift.",
 	"staff_volunteer_roles_id_role_grants_card_volunteer_confirme_text": "A volunteer confirmed on a shift in this role can do these for that shift's event and no other. You can only grant what your own position allows.",
 	"staff_volunteer_roles_id_role_info_title": "Role info",
-	"staff_volunteer_roles_id_role_interested_card_cleared_today_title": "· {length} of {length2} cleared today",
+	"staff_volunteer_roles_id_role_interested_card_cleared_today_text": "· {length} of {length2} cleared today",
 	"staff_volunteer_roles_id_role_interested_card_copied_toast": "Copied {length} {value}",
 	"staff_volunteer_roles_id_role_interested_card_copy_emails_pa_label": "Copy emails",
 	"staff_volunteer_roles_id_role_interested_card_couldn_t_copy_toast": "Couldn't copy — your browser blocked clipboard access",

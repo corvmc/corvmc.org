@@ -66,7 +66,7 @@
 					{@const r = await interested}
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
-							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today_title({
+							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today_text({
 								length: r.rows.filter((m) => m.missing.length === 0).length,
 								length2: r.rows.length
 							})}
