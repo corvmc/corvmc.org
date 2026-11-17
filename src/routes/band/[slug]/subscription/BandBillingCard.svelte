@@ -20,12 +20,15 @@
 	let { slug }: { slug: string } = $props();
 
 	const billingQuery = new Latest(() => getBandBilling(slug));
+	const loaded = $derived(
+		billingQuery.current ?? (await getBandBilling(slug).catch(() => undefined))
+	);
 
 	let addCardOpen = $state(false);
 </script>
 
-{#if billingQuery.current}
-	{@const billing = billingQuery.current}
+{#if loaded}
+	{@const billing = loaded}
 	<Card>
 		<CardBody>
 			<div class="flex flex-wrap items-center justify-between gap-2">

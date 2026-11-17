@@ -65,7 +65,8 @@
 	);
 	// Latched so the status counts do not blank while the next page loads.
 	const latest = new Latest(() => result);
-	const statusCounts = $derived(latest.current?.statusCounts);
+	const calendar = $derived(latest.current ?? (await result));
+	const statusCounts = $derived(calendar.statusCounts);
 
 	type CalendarRow = Awaited<typeof result>['rows'][number];
 

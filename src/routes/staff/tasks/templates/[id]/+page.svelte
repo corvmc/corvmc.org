@@ -39,6 +39,7 @@
 	const id = $derived(params.id);
 	// Not `{#await}`: a refresh would re-pend it and unmount an open item dialog.
 	const data = new Latest(() => getDutyListPage(id));
+	const loaded = $derived(data.current ?? (await getDutyListPage(id)));
 	$effect(() => {
 		if (data.error) throw data.error.e;
 	});
@@ -70,8 +71,8 @@
 </script>
 
 <!-- Only this template's: on a switch the last one stays until the next lands. -->
-{#if data.current?.list.id === id}
-	{@const d = data.current}
+{#if loaded.list.id === id}
+	{@const d = loaded}
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
 	{@const ownerOptions = [

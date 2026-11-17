@@ -11,15 +11,18 @@
 	 * member's either way, and the next page load tries again.
 	 */
 	const viewing = new Latest(() => getImpersonation());
+	const impersonating = $derived(
+		viewing.current ?? (await getImpersonation().catch(() => undefined))
+	);
 </script>
 
-{#if viewing.current}
+{#if impersonating}
 	<div
 		class="sticky top-0 z-50 flex flex-wrap items-center justify-center gap-3 bg-warning px-4 py-2 text-sm text-warning-content"
 		role="status"
 		data-testid="impersonation-banner"
 	>
-		<span>{m.layout_impersonation_viewing_as_text({ name: viewing.current.memberName })}</span>
+		<span>{m.layout_impersonation_viewing_as_text({ name: impersonating.memberName })}</span>
 		<Form remote={stopImpersonation}>
 			<SubmitButton label={m.layout_impersonation_stop_label()} size="xs" />
 		</Form>

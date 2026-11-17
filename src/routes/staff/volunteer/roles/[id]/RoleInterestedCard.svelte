@@ -62,7 +62,8 @@
 					(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
 					of this list lives in AddVolunteerAction, which passes the date.
 				-->
-				{#await interested then r}
+				<svelte:boundary>
+					{@const r = await interested}
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
 							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today_title({
@@ -71,23 +72,27 @@
 							})}
 						</span>
 					{/if}
-				{:catch}
-					<!-- The card body says the query failed. -->
-				{/await}
+					{#snippet failed()}
+						<!-- The card body says the query failed. -->
+					{/snippet}
+				</svelte:boundary>
 			</CardTitle>
-			{#await interested then r}
+			<svelte:boundary>
+				{@const r = await interested}
 				{#if r.rows.length > 0}
 					<Button variant="ghost" size="sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
 						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa_label()}
 					</Button>
 				{/if}
-			{:catch}
-				<!-- The card body says the query failed. -->
-			{/await}
+				{#snippet failed()}
+					<!-- The card body says the query failed. -->
+				{/snippet}
+			</svelte:boundary>
 		</div>
 	{/snippet}
 
-	{#await interested then r}
+	<svelte:boundary>
+		{@const r = await interested}
 		{@const gated = r.gated}
 		<DataList
 			result={interested}
@@ -140,7 +145,8 @@
 				</Table>
 			{/snippet}
 		</DataList>
-	{:catch error}
-		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
-	{/await}
+		{#snippet failed(error)}
+			<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
+		{/snippet}
+	</svelte:boundary>
 </InfoCard>

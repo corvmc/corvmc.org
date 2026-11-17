@@ -72,6 +72,9 @@
 		search: search || undefined
 	});
 	const candidates = new Latest(() => getShiftCandidates(args));
+	const shown = $derived(
+		candidates.current ?? (await getShiftCandidates(args).catch(() => undefined))
+	);
 
 	type Row = Awaited<ReturnType<typeof getShiftCandidates>>['rows'][number];
 
@@ -144,8 +147,8 @@
 <InfoCard title={msg.volunteer_candidate_column_who_ask_title()}>
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
-			{#if candidates.current}
-				{@const g = grade(candidates.current.rows)}
+			{#if shown}
+				{@const g = grade(shown.rows)}
 				<CardTitle>
 					{msg.volunteer_candidate_column_who_ask_2_title({ askable: g.askable })}
 					{#if g.blocked > 0}
@@ -192,8 +195,8 @@
 		</div>
 	{/snippet}
 
-	{#if candidates.current}
-		{@const result = candidates.current}
+	{#if shown}
+		{@const result = shown}
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState

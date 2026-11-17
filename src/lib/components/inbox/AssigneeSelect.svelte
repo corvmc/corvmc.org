@@ -20,9 +20,10 @@
 	} = $props();
 
 	const staff = new Latest(() => assignees());
+	const staffList = $derived(staff.current ?? (await assignees().catch(() => undefined)));
 </script>
 
-{#if staff.current}
+{#if staffList}
 	<label class="flex items-center gap-2 text-sm">
 		<span class="text-subtle">{m.inbox_thread_composer_assign_label()}</span>
 		<Select
@@ -32,7 +33,7 @@
 			onchange={(e: Event) => (value = (e.currentTarget as HTMLSelectElement).value)}
 		>
 			<option value="">{m.inbox_thread_composer_nobody_label()}</option>
-			{#each staff.current as s (s.id)}
+			{#each staffList as s (s.id)}
 				<option value={s.id}>{s.name}</option>
 			{/each}
 		</Select>

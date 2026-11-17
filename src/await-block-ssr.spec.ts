@@ -14,29 +14,24 @@ const sources = import.meta.glob<string>(
 	{ query: '?raw', import: 'default', eager: true }
 );
 
-// Content that only exists after a click: a dialog's body is not in the server's HTML.
+// Content that only exists after a click: a dialog's body, and the fields inside one,
+// are not in the server's HTML.
 const CLIENT_ONLY = [
 	'./lib/components/actions/EditScheduleAction.svelte',
 	'./lib/components/events/RepeatEventAction.svelte',
 	'./lib/components/groups/SessionAttendanceAction.svelte',
 	'./routes/staff/members/[id]/panels/GrantCertificationAction.svelte',
-	'./routes/staff/members/instructors/GrantInstructorAction.svelte'
+	'./routes/staff/members/[id]/panels/TrainingShiftField.svelte',
+	'./routes/staff/members/instructors/GrantInstructorAction.svelte',
+	'./routes/staff/members/instructors/TeachingTermsFields.svelte'
 ];
 
 // Not yet converted (#3183). The list only shrinks.
 const NOT_YET_CONVERTED = [
-	'./lib/components/inbox/AssigneeSelect.svelte',
-	'./lib/components/layout/ImpersonationBanner.svelte',
-	'./lib/components/task/TaskCatalogue.svelte',
-	'./lib/components/volunteer/CandidateColumn.svelte',
-	'./routes/band/[slug]/subscription/BandBillingCard.svelte',
-	'./routes/member/account/EmailSubscriptionsSection.svelte',
 	'./routes/member/volunteer/feedback/[signupId]/+page.svelte',
 	'./routes/member/volunteer/interests/+page.svelte',
 	'./routes/member/volunteer/profile/+page.svelte',
 	'./routes/member/volunteer/start/+page.svelte',
-	'./routes/staff/events/EventList.svelte',
-	'./routes/staff/events/[id]/EventCampaigns.svelte',
 	'./routes/staff/inbox/+page.svelte',
 	'./routes/staff/inbox/FilterPanel.svelte',
 	'./routes/staff/inbox/InboxToolbar.svelte',
@@ -47,24 +42,7 @@ const NOT_YET_CONVERTED = [
 	'./routes/staff/inbox/[id]/ThreadFiling.svelte',
 	'./routes/staff/inbox/[id]/ThreadTags.svelte',
 	'./routes/staff/inbox/daily/+page.svelte',
-	'./routes/staff/inbox/daily/SessionSummary.svelte',
-	'./routes/staff/members/[id]/ViewAsMember.svelte',
-	'./routes/staff/members/[id]/panels/AccountPanel.svelte',
-	'./routes/staff/members/[id]/panels/ModerationPanel.svelte',
-	'./routes/staff/members/[id]/panels/TrainingShiftField.svelte',
-	'./routes/staff/members/[id]/panels/VolunteerPanel.svelte',
-	'./routes/staff/members/instructors/TeachingTermsFields.svelte',
-	'./routes/staff/moderation/blocklist/+page.svelte',
-	'./routes/staff/music/ReleasePanel.svelte',
-	'./routes/staff/reports/volunteering/+page.svelte',
-	'./routes/staff/reservations/ReservationList.svelte',
-	'./routes/staff/reservations/settings/building-access/LockCodes.svelte',
-	'./routes/staff/system/access/PermissionHolders.svelte',
-	'./routes/staff/system/access/PersonAccess.svelte',
-	'./routes/staff/tasks/templates/[id]/+page.svelte',
-	'./routes/staff/volunteer/roles/+page.svelte',
-	'./routes/staff/volunteer/roles/[id]/RoleInterestedCard.svelte',
-	'./routes/staff/volunteering/+page.svelte'
+	'./routes/staff/inbox/daily/SessionSummary.svelte'
 ];
 
 /** Template only: scripts and HTML comments may name `{#await}` without using one. */

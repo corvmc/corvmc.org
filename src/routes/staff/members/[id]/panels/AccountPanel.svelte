@@ -80,9 +80,13 @@
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-edit (#2356).
 	const roleCatalog = new Latest(() => getRoleCatalog());
+	const catalogLoaded = $derived(
+		roleCatalog.current ?? (await getRoleCatalog().catch(() => undefined))
+	);
 
 	// Why this person can act (#2994): positions, committee seats, shift roles.
 	const why = new Latest(() => getPersonAccessWhy(id));
+	const whyLoaded = $derived(why.current ?? (await getPersonAccessWhy(id).catch(() => undefined)));
 </script>
 
 <!--
@@ -94,8 +98,8 @@
 -->
 <ViewAsMember {id} />
 
-{#if roleCatalog.current}
-	{@const catalog = roleCatalog.current}
+{#if catalogLoaded}
+	{@const catalog = catalogLoaded}
 	{@const roleOptions = catalog.roles.map((r) => ({
 		id: String(r.id),
 		label: (positionLabels as Record<string, string>)[r.name] ?? r.name
@@ -110,8 +114,8 @@
 	</Alert>
 {/if}
 
-{#if why.current}
-	<WhyCanAct why={why.current} />
+{#if whyLoaded}
+	<WhyCanAct why={whyLoaded} />
 {:else if why.error}
 	<Alert type="warning" reset={() => void getPersonAccessWhy(id).refresh()}>
 		{m.ui_load_failed_body({ error: errorMessage(why.error.e) })}
