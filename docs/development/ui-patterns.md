@@ -596,6 +596,9 @@ For `.for()` instances (per-row actions in a list). The row id has to travel wit
 - `maxWidth` — modal width class (default `'max-w-lg'`)
 - `successToast` / `errorToast` — toast messages
 - `onsuccess` / `onfailure` — callbacks
+- `updates` — form-modal mode only: passed to `Form` (see its `updates`). An override that
+  unmounts the `Action` itself also closes its dialog, so a form whose server issues render under
+  a field keeps the dialog until the server answers.
 - `variant` / `size` / `shape` / `outline` — forwarded to `Button`; `variant` defaults to `primary`
 - `class` — escape hatch, forwarded to `Button`
 - `disabled` — disables the trigger button
