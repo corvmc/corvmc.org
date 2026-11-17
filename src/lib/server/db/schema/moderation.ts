@@ -65,7 +65,7 @@ export type UserBlock = typeof userBlock.$inferSelect;
  * the verdict a person reads is derived from the two outcomes (`appealVerdict`).
  * One row per flag, enforced here: staff reopen by clearing the decision, so a
  * member can never file twice. See
- * `docs/decisions/0039-moderation-appeals-hang-off-the-upheld-report.md`.
+ * `docs/development/business-workflows.md#11-moderation-reports-standing-and-the-suggestion-board`.
  */
 export const moderationAppeal = sqliteTable(
 	'moderation_appeal',

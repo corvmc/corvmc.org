@@ -25,7 +25,7 @@ import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { getStaffEventProduction } from './events.remote';
 
 /**
- * A committee's deliverables (docs/decisions/0053-committees-own-deliverables-not-permissions.md).
+ * A committee's deliverables (docs/development/business-workflows.md#committee-deliverables).
  *
  * Take, tick and done are duties: `requireActOnTask` reads the item's committee
  * off the row, never the request (#2989). Handing an item to another committee

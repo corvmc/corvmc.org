@@ -3,15 +3,14 @@
 This folder holds all project documentation, grouped by type. Developer docs describe how the
 system is designed and built; the user manual (`manual/`) describes how to use it.
 
-| Folder                              | What's in it                                                                  | Audience            |
-| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
-| [`decisions/`](decisions/README.md) | Dated decision records — why the app is built the way it is                   | Developers          |
-| [`plans/`](#plans)                  | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
-| [`architecture/`](#architecture)    | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
-| [`development/`](#development)      | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
-| [`reports/`](#reports)              | Living status reports                                                         | Team / Stakeholders |
-| [`checklists/`](#checklists)        | Cross-cutting rollouts tracked to completion                                  | Developers          |
-| [`manual/`](#manual)                | End-user manual manifest & public-site articles                               | End users           |
+| Folder                           | What's in it                                                                  | Audience            |
+| -------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
+| [`plans/`](#plans)               | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
+| [`architecture/`](#architecture) | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
+| [`development/`](#development)   | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
+| [`reports/`](#reports)           | Living status reports                                                         | Team / Stakeholders |
+| [`checklists/`](#checklists)     | Cross-cutting rollouts tracked to completion                                  | Developers          |
+| [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
 
 The backlog is **[GitHub Issues](https://github.com/corvmc/corvmc.org/issues)**, not a file in
 here. `CHORES.md` and `IDEAS.md` used to sit at the repo root and were retired into the tracker in
@@ -44,11 +43,10 @@ Library evaluations for unbuilt work moved to
 
 **Status legend:** ✅ Current · 🔧 In progress · 📋 Designed, not built · 📦 Historical (shipped) · ⚠️ Action needed
 
-**Proposals live on issues; the repo keeps living docs and decision records.** A feature's
-proposal is the issue body or a comment, and is never committed. Each build PR updates the docs that
-describe current behaviour, and a feature's last PR adds a record to
-[`decisions/`](decisions/README.md), which indexes its own records. See
-[conventions](development/conventions.md#living-docs-and-decision-records).
+**Proposals live on issues; the repo keeps living docs.** A feature's proposal is the issue body
+or a comment, and is never committed. Each build PR updates the docs that describe current
+behaviour, and a rejected alternative is a "Not X, because Y (#n)" line beside the rule. See
+[conventions](development/conventions.md#living-docs).
 
 **New maintainer? Read in this order:**
 [local-dev-quickstart](development/local-dev-quickstart.md) →

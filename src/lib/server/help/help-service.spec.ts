@@ -8,7 +8,7 @@ import { capabilities } from '#lib/config.js';
 // The implementation this replaced scored role names against a closed
 // ROLE_LEVEL table and fell back to `?? 4` — narrower than `member` — for any
 // name it had never heard of. So the instant a named position exists
-// (docs/decisions/0032-guards-name-capabilities.md), its holder resolves to `member` and the
+// (docs/architecture/overview.md#roles), its holder resolves to `member` and the
 // entire Staff Guide disappears for them. Latent today because only `admin`
 // and `staff` are assigned; certain on the day the first `treasurer` row is
 // inserted, which is why this ships before any position exists.

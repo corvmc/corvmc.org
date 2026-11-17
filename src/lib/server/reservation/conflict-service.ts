@@ -73,7 +73,7 @@ export interface BookingNotice {
 /**
  * The tour length a new member's booking waits for, or null while no
  * orientation role is set: nobody runs one, so neither the new-member notice
- * nor the tour applies (decision 0055, #2752).
+ * nor the tour applies (#2565, #2752).
  */
 async function orientationTour(): Promise<number | null> {
 	const [roleId, minutes] = await Promise.all([

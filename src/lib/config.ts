@@ -167,7 +167,7 @@ export const BOOKING_LEAD_DAYS = 3;
  * mid-upload. Rails' `purge_unattached` guards the same hazard.
  *
  * A day is far longer than any form takes and still bounds how long an abandoned
- * upload is billed for. See docs/decisions/0026-uploads-are-detached-and-swept.md.
+ * upload is billed for. See docs/architecture/domain-model.md#already-unified-references.
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 
@@ -181,7 +181,7 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/decisions/0026-uploads-are-detached-and-swept.md.
+ * docs/architecture/domain-model.md#already-unified-references.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -213,7 +213,7 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * This is the house suggestion, and it is not the deal. CMC's standing
  * arrangement is 70% of the door to the bands, but a bill with three acts on
  * three different deals has no single percentage — the deal itself lives on
- * `production_slot` (see `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`). Say "we
+ * `production_slot` (see `docs/architecture/domain-model.md#where-event_listing-sits`). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
  *
  * The acts' 70% is a guarantee against the **suggested price**, not against
@@ -303,7 +303,7 @@ export function estimateLoanCost(
 export const groupKinds = ['band', 'club', 'committee'] as const;
 export type GroupKind = (typeof groupKinds)[number];
 
-/** An announcement's title and markdown body — see docs/decisions/0023-group-announcements-are-transactional-and-batched.md. */
+/** An announcement's title and markdown body — see docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
@@ -326,7 +326,7 @@ export const ANNOUNCEMENT_BODY_MAX = 10000;
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/decisions/0024-groups-split-the-band-table-by-purpose.md`.
+ * spend their money. See `docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];
@@ -1445,7 +1445,7 @@ export const groupApplicationStatusLabels: Record<GroupApplicationStatus, string
 
 // `committee` retired 2026-09-14. A committee is a `group` and is applied to
 // through `group_application`, not signed up for — see decision 2 of
-// docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md. The six roles that shadowed them are archived
+// docs/architecture/domain-model.md#ownership-is-a-roster-row. The six roles that shadowed them are archived
 // in `away-from-shows` rather than deleted, because hour logs point at two.
 export const volunteerRoleGroups = ['at-shows', 'away-from-shows'] as const;
 
@@ -1541,7 +1541,7 @@ export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number
 
 /**
  * The fact about a show that says a committee's work order is done
- * (docs/decisions/0053-committees-own-deliverables-not-permissions.md). Closed, because each member is a
+ * (docs/development/business-workflows.md#committee-deliverables). Closed, because each member is a
  * typed function in `volunteer/done-conditions.ts`; a template picks one. Adding
  * a condition is one entry here and one in that registry.
  */
@@ -1787,7 +1787,7 @@ export function formatVolunteerHours(minutes: number): string {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Ballots — see docs/decisions/0052-secret-ballots-count-without-a-vote-row.md
+// Ballots — see docs/development/business-workflows.md#23-formal-ballots-a-frozen-roll-a-secret-or-recorded-vote-a-certified-result
 // ---------------------------------------------------------------------------
 
 /** `group`: a committee's roster, recorded. `member`: members of record, secret. */
@@ -1985,7 +1985,7 @@ export const classifiedCategoryOptions = classifiedCategories.map((value) => ({
 /**
  * A project's lifecycle: the suggestion's, less `in_ballot`. A project exists
  * only once something is decided, and its status is what the suggestion it
- * answers reports back (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md).
+ * answers reports back (docs/architecture/domain-model.md#where-event_listing-sits).
  */
 export const projectStatuses = [
 	'open',
@@ -2027,7 +2027,7 @@ export type ProjectView = (typeof projectViews)[number];
 /**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
- * See docs/decisions/0011-productions-are-projects.md. A `'grant'` or
+ * See docs/development/business-workflows.md#14-producing-a-show-the-production-record. A `'grant'` or
  * `'sponsorship'` project is the work of one grant application or sponsorship,
  * whose side table points back the same way (#2622).
  */
@@ -2355,7 +2355,7 @@ export const INSTRUCTOR_REVIEW_NOTES_MAX = 2000;
 // holds. The matrix below is the association between them; assignment — who
 // holds which position — is data: a seat in the Operations committee
 // (`group_position.job`), or a `model_has_roles` row for `admin`.
-// See docs/decisions/0032-guards-name-capabilities.md.
+// See docs/architecture/overview.md#roles.
 //
 // Guards name capabilities rather than roles so that re-answering "who may do
 // this" is an edit to one file instead of a hunt through several hundred call
@@ -3201,7 +3201,7 @@ export const RADIO_PRO_ATTESTATION = {
  * against each other, which meant the set of readable tiers was derived from
  * a closed table of roles — so a user holding a role that table had never
  * heard of scored below `member` and lost every article, including the ones
- * everybody can read. Positions (see docs/decisions/0032-guards-name-capabilities.md) are
+ * everybody can read. Positions (see docs/architecture/overview.md#roles) are
  * unranked and open-ended, so they can never be ranked here again.
  *
  * `resolveHelpAudience` maps a person onto exactly one of these; a reader sees

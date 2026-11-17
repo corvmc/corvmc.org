@@ -30,7 +30,7 @@ import {
 // The rule the whole module rests on: **stock is a ledger, not a number.**
 // On-hand is the sum of movements and is never stored as an authoritative
 // figure — a stocktake correction is itself a movement, with reason `adjust`.
-// See `docs/decisions/0045-inventory-stock-is-a-ledger.md`.
+// See `docs/development/business-workflows.md#6-inventory-gear-and-consumables`.
 // ---------------------------------------------------------------------------
 
 export type ItemKind = (typeof itemKinds)[number];
@@ -680,7 +680,7 @@ export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
 
 /**
  * A **work request**: something a person noticed about one unit, not yet
- * authorized — the CMMS term (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md). Triage
+ * authorized — the CMMS term (docs/architecture/domain-model.md#where-event_listing-sits). Triage
  * turns it into a `work_order`, and N requests may collapse onto one.
  *
  * Shaped after `content_flag` and sharing its `flagStatuses` verbatim — one

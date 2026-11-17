@@ -418,7 +418,7 @@ export const getMyMessagingStanding = query(async () => {
  * reason this needs no guard: the preference is theirs outright, and it lives
  * nowhere near `member_standing`. A restricted member may still set it, and
  * setting it cannot lift the restriction — see
- * `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
+ * `docs/development/business-workflows.md#11-moderation-reports-standing-and-the-suggestion-board`.
  */
 export const setMyMessaging = form(z.object({ enabled: z.enum(['on', 'off']) }), async (data) => {
 	const user = requireUser();

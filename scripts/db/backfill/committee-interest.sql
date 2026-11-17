@@ -1,6 +1,6 @@
 -- The volunteer-role interest rows, as committee applications.
 --
--- `docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md` decision 2
+-- Making a committee a group (#607)
 -- retires the `committee` bucket in `volunteerRoleGroups`, and these rows
 -- become the first applications rather than being dropped. This is that migration; the roles themselves go in a later pass, once
 -- these have landed.

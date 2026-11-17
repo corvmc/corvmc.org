@@ -1824,7 +1824,7 @@ export async function listEventsNear(
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
 // profile until they agree. See
-// `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
+// `docs/development/business-workflows.md#9-the-gig-guide-and-community-listings`.
 
 export interface LineupRow {
 	id: string;
@@ -1840,7 +1840,7 @@ export interface LineupRow {
 	 *
 	 * The third way a credit renders: `bandSlug` covers "confirmed, entry has an
 	 * owner"; this covers "confirmed, entry has no owner"; neither is set for the
-	 * rest. See docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md.
+	 * rest. See docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages.
 	 */
 	externalUrl: string | null;
 	/** The CMC band's avatar storage key; resolve it with `toBandRef`. */
@@ -2621,7 +2621,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			userId: createdByUserId,
 			// `'group'` since #855. The discriminator says which table `booker_id`
 			// points at; free-versus-paid is `group.kind`, and only a band pays —
-			// docs/decisions/0024-groups-split-the-band-table-by-purpose.md keeps those two apart on purpose.
+			// docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages keeps those two apart on purpose.
 			bookerType: 'group',
 			hardHold: true,
 			bookerId: groupId,
@@ -2876,7 +2876,7 @@ export async function cancelGroupSession(
  * (#808) and reads resolve through `eventPosterKeySql`. The previous poster is
  * *detached*, never deleted here, because a recurring series' occurrences may
  * share one object and only the sweep can see that.
- * See docs/decisions/0026-uploads-are-detached-and-swept.md.
+ * See docs/architecture/domain-model.md#already-unified-references.
  */
 async function writeEventPoster(
 	eventId: string,

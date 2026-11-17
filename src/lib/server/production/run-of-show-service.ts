@@ -42,7 +42,7 @@ export type { SetTimeSlot, WarnableSlot } from './run-of-show';
 
 // ---------------------------------------------------------------------------
 // Run of show — who plays when, derived from one downbeat and the set lengths.
-// See `docs/decisions/0004-set-times-are-derived-and-running-order-is-fractional.md`.
+// See `docs/development/business-workflows.md#14-producing-a-show-the-production-record`.
 //
 // Imports nothing from `production-service`: the arrow goes the other way,
 // since `updateProductionDetails` calls `recomputeSetTimes` when the downbeat

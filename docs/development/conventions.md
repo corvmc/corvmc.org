@@ -21,9 +21,9 @@ When building a new feature, work through these phases in order:
    sets one up.
 1. **Design** — understand the domain and map the workflows before proposing models. For
    anything that touches multiple files or introduces schema, write the proposal on the issue,
-   as its body or a comment, and settle it there. A proposal is never committed. Read
-   [`docs/decisions/`](../decisions/README.md) first to see whether the question has been
-   decided before. [Working out what to build](feature-analysis.md) covers the pass before it.
+   as its body or a comment, and settle it there. A proposal is never committed. Read the
+   living doc section for the area first: its "Not X" lines say what was already rejected.
+   [Working out what to build](feature-analysis.md) covers the pass before it.
 2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
    migration yourself with `pnpm db:generate` and **review the SQL** before committing.
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
@@ -65,19 +65,20 @@ When building a new feature, work through these phases in order:
 8. **Document** — add the feature's file under `docs/reports/features/<panel>/` (format in its
    [README](../reports/features/README.md)), written in the final phase; update/add help
    articles and run the docs checks (see
-   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). The last PR
-   adds the feature's decision record — see
-   [Living docs and decision records](#living-docs-and-decision-records).
+   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). Where the
+   feature rejected a plausible alternative, the living doc says so — see
+   [Living docs](#living-docs).
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
    `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
 
-### Living docs and decision records
+### Living docs
 
 The repo documents what the app does now and why it was built that way. What is planned lives on
-the issue.
+the issue. Not specs in the repo, because a shipped spec still reads as a description of the app
+and no check keeps it current (#2524).
 
 **Each build PR updates the docs that describe current behaviour**, in the same PR as the code:
 
@@ -90,10 +91,11 @@ the issue.
 
 The update rides with the code so a reviewer reads both together.
 
-**A feature's last PR adds a decision record** in [`docs/decisions/`](../decisions/README.md):
-the context, the decision, the alternatives rejected and the consequences, in a page or less.
-A record is never edited after it merges. A later record supersedes it by number. The format is in
-[the decisions README](../decisions/README.md).
+**Where a PR rejects a plausible alternative, the doc that states the rule gains one line**
+beside it: "Not X, because Y (#n)", citing the issue or PR where the choice was made. The line
+is there so a later reader does not undo the choice; the discussion stays on the issue. Keep only
+alternatives someone would plausibly reach for. There are no separate decision files, and
+`scripts/no-decision-records.spec.ts` fails on a reference to one (#3161).
 
 ## Long-lived feature branches
 

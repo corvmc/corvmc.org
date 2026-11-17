@@ -94,7 +94,7 @@ import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
  * Reads name `group.read` and writes `group.manage`, but committee oversight is
  * `committee.manage`'s. Bands are deliberately
  * absent from every export here: they are member self-service and have their own
- * staff surface at `/staff/bands`. See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
+ * staff surface at `/staff/bands`. See docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages.
  */
 
 const staffKind = z.enum(STAFF_GROUP_KINDS);
@@ -865,7 +865,7 @@ export const declineGroupInvite = form(z.object({ groupId: z.string().min(1) }),
  *
  * `joinPolicy` and `visibility` come back read-only. They decide who may walk
  * in and whether the program is advertised, and the argument for free room time
- * (docs/decisions/0021-a-club-gets-a-page-not-a-panel.md) is that staff alone settle both — so they render as facts with a
+ * (docs/development/business-workflows.md#4-bands-creation-invitations-premium-pages) is that staff alone settle both — so they render as facts with a
  * pointer at staff, not as fields. See `updateGroupProfile`.
  */
 // `requireProgramRole`, so a band slug 404s here: a band edits at

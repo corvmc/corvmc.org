@@ -36,7 +36,7 @@ import {
 } from './recurring-series-reschedule';
 
 // ---------------------------------------------------------------------------
-// Event series — decision 0072 applied to `event_listing` prototypes
+// Event series — the series replacement of #2719 applied to `event_listing` prototypes
 // ---------------------------------------------------------------------------
 
 const RESCHEDULE_REASON = 'Recurring schedule changed';

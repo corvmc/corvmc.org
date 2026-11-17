@@ -29,7 +29,7 @@
 	/**
 	 * What goes in the van, who is bringing it, and whether it is loaded yet.
 	 * Every member gets this page; a member's save touches only their own rows.
-	 * Record: docs/decisions/0029-one-durable-packing-list-per-band.md
+	 * Record: docs/development/business-workflows.md#15-the-packing-list-what-goes-in-the-van-and-who-is-bringing-it
 	 *
 	 * Read above the awaited query: a declaration after a top-level await is
 	 * async-gated, which compiles every `fields.X.as()` into an async derived.
