@@ -1,13 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { lockFallbackCode, reservation } from '#lib/server/db/schema/reservation.js';
 import { and, desc, eq, isNull, isNotNull } from 'drizzle-orm';
-import {
-	addLockUser,
-	getLockUser,
-	removeTemporaryUser,
-	generateLockCode,
-	LOCK_GRACE_MINUTES
-} from './ultraloc-client';
+import { addLockUser, getLockUser, removeTemporaryUser, generateLockCode } from './ultraloc-client';
+import { doorCodeWindow } from '#lib/utils/door-code-window.js';
 import type { LockFallbackCode } from '#lib/server/db/schema/reservation.js';
 import { clubToday } from '#lib/config.js';
 
@@ -187,9 +182,7 @@ export function isInAccessWindow(
 	row: { startsAt: Date; endsAt: Date },
 	at: Date = new Date()
 ): boolean {
-	const now = at.getTime();
-	const graceMs = LOCK_GRACE_MINUTES * 60_000;
-	return now >= row.startsAt.getTime() - graceMs && now <= row.endsAt.getTime() + graceMs;
+	return doorCodeWindow(row, 'fallback', at).phase === 'open';
 }
 
 type FallbackRow = { status: string; startsAt: Date; endsAt: Date; lockSyncedAt: Date | null };
@@ -213,7 +206,7 @@ export async function fallbackShownFor(
 		const active = await getActiveFallbackCode();
 		return { code: active?.code ?? null, showsFrom: null };
 	}
-	const showsFrom = new Date(row.startsAt.getTime() - LOCK_GRACE_MINUTES * 60_000);
+	const showsFrom = doorCodeWindow(row, 'fallback').opensAt;
 	return showsFrom.getTime() > Date.now() ? { code: null, showsFrom } : null;
 }
 

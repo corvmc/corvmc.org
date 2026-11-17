@@ -4,6 +4,7 @@ import { getJson, putJson } from '#lib/server/kv.js';
 import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { formatDateInTz, formatTimeInTz } from '#lib/server/reservation/timezone.js';
+import { LOCK_GRACE_MINUTES, doorCodeWindow } from '#lib/utils/door-code-window.js';
 
 // ---------------------------------------------------------------------------
 // Ultraloc API client
@@ -278,8 +279,7 @@ function deviceReadError(result: unknown): void {
 // (type 2) carrying a 4-digit keypad passcode and a daterange window. The
 // passcode IS the door code shown to the member.
 
-/** How long after a reservation ends the door code keeps working. */
-export const LOCK_GRACE_MINUTES = 30;
+export { LOCK_GRACE_MINUTES };
 
 const USER_TYPE_TEMPORARY = 2;
 
@@ -399,7 +399,10 @@ export async function createTemporaryUser(
 	params: TempUserParams,
 	settleMs = ADD_SETTLE_MS
 ): Promise<number | null> {
-	const graceEnd = new Date(params.endTime.getTime() + LOCK_GRACE_MINUTES * 60_000);
+	const { opensAt, closesAt } = doorCodeWindow({
+		startsAt: params.startTime,
+		endsAt: params.endTime
+	});
 
 	// A temporary user (type 2) requires the full schedule quartet: U-tec rejects
 	// the command with BAD-REQUEST if `weeks`/`timerange`/`limit` are omitted. The
@@ -410,7 +413,7 @@ export async function createTemporaryUser(
 			name: params.name,
 			type: USER_TYPE_TEMPORARY,
 			password: params.code,
-			daterange: [lockDateTime(params.startTime), lockDateTime(graceEnd)],
+			daterange: [lockDateTime(opensAt), lockDateTime(closesAt)],
 			weeks: [0, 1, 2, 3, 4, 5, 6],
 			timerange: ['00:00', '23:59'],
 			limit: 0
