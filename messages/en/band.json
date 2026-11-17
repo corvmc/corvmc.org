@@ -161,7 +161,7 @@
 	"band_slug_events_invitations_title": "Invitations",
 	"band_slug_events_load_text": "load-in {formatTime}",
 	"band_slug_events_min_text": "{setLengthMinutes} min",
-	"band_slug_events_no_events_yet_text": "No events yet",
+	"band_slug_events_no_events_yet_text": "No events",
 	"band_slug_events_no_past_title": "No past events",
 	"band_slug_events_no_upcoming_title": "No upcoming events",
 	"band_slug_events_past_label": "Past ({count})",
