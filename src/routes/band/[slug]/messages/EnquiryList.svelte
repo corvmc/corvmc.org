@@ -19,14 +19,13 @@
 	const params = routeParams('slug');
 
 	const slug = $derived(params.slug);
-	// `channel: 'band'` — enquiries only. The band's own chat is the Chat row
-	// next door, and this list showing both would double every group.
+	// `channel: 'band'` — enquiries only. The band's own chat is the Band members
+	// list next door, and this list showing both would double every group.
 	const result = $derived(getMyMessages({ inbox: slug, channel: 'band', page: enquiryList.page }));
 </script>
 
 <div class="flex min-h-0 flex-col gap-3" data-testid="enquiry-list">
-	<!-- "Enquiries", not "Messages": Messages is the page, and this is one of
-	     the two lists on it. -->
+	<!-- "Public", next to "Band members": the heading says who wrote in (#3228). -->
 	<SectionLabel label={m.band_slug_messages_enquiry_list_label()} />
 
 	<p class="text-muted text-sm">
