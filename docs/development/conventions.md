@@ -106,7 +106,10 @@ A feature that is built but not launched is switched off in code instead: `surfa
 `src/lib/config.ts` (#3117). Turning one on is a PR, and there is no staff toggle or KV key behind
 it; `src/lib/server/feature-flags.spec.ts` fails on any code that reads or writes a `feature.*`
 site-config key. See
-[feature switches in the overview](../architecture/overview.md#feature-switches).
+[feature switches in the overview](../architecture/overview.md#feature-switches). Not KV flags
+kept beside `surfaces`, because a runtime toggle can launch an unfinished feature without
+review. Not e2e specs skipped for a switched-off feature, because its journeys would lose their
+only end-to-end coverage until launch (#3117).
 
 The shape: `feature/<slug>` cut from `main`, phases are PRs **into** that branch squash-merged as
 they pass, and one PR merges the finished feature into `main` through the queue. `/feature-branch`
@@ -114,7 +117,7 @@ carries the sequences; what follows is why they are what they are.
 
 **Not everything needs a branch.** Instructors shipped six phases straight to `main` with no flag
 and no branch, ordering the work so nothing advertised a capability that did not exist yet
-([decision 0015](../decisions/0015-instructors-rent-the-room.md)). That is the better default
+(#2540). That is the better default
 when it is available:
 
 - Staff-only surfaces land on `main` directly.
@@ -989,8 +992,8 @@ if it's broadly useful.
 ### Analytics and reporting tools
 
 Which vendor owns which question, so this is not re-litigated per feature. The governing rule
-lives in [a decision record](../decisions/0040-reports-are-module-owned.md): **a report belongs in the app only when it joins data no
-single vendor holds.**
+(#825): **a report belongs in the app only when it joins data no single vendor holds.** How
+in-app reports are built is in the [overview](../architecture/overview.md).
 
 | Question                                                              | Where it is answered                                                                    | Notes                                                             |
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |

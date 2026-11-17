@@ -535,7 +535,10 @@ copying a new id into config; inline `price_data` keeps the amount in one place 
 - **The gateway seam.** `src/lib/server/stripe.ts` returns a `PaymentGateway`
   (`finance/gateway/types.ts`): the real Stripe client when `PAYMENTS_DRIVER` is `stripe`, and
   otherwise the in-memory `fake-gateway.ts`. Production opts in through `wrangler.toml`; dev, e2e
-  and specs get the fake, because a developer `.env` here has carried a live key.
+  and specs get the fake, because a developer `.env` here has carried a live key. Not
+  Stripe's hosted pages driven from tests, because Stripe's guidance is that they block
+  automated testing. Not `stripe-mock`, because it is stateless and every flow here needs a
+  session that persists between requests (#522).
   `gateway.contract.spec.ts` runs one suite against both drivers. Under the fake, the checkout
   page renders a card-number form and Stripe.js never loads, so the real browser half of a
   payment is checked by hand against a sandbox key.

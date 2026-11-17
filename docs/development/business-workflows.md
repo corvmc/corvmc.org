@@ -3386,7 +3386,10 @@ decide.
 - **Matching posts:** `getMemberDashboard` adds up to six posts on the board that share a tag with
   the member's directory profile (`listPostsMatching`), shown by `ClassifiedMatchesCard` on
   `/member`. Genre and skill match the same kind; a post's instrument matches one the member plays
-  or, on an offered post, one their project is seeking. Empty while the surface is off.
+  or, on an offered post, one their project is seeking. Empty while the surface is off. Not a
+  stored reminder time per post, because every renewal would owe it a reschedule; the sweep
+  derives it from `expires_at`. Not matching by free text, because text matching would need
+  ranking (#2549).
 
 ### Data touched
 
