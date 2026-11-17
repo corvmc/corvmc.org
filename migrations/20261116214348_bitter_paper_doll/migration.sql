@@ -1,0 +1,1 @@
+ALTER TABLE `group` ADD `invite_step_dismissed_at` integer;

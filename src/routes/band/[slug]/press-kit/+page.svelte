@@ -33,6 +33,11 @@
 		total={editor.progress.total}
 		next={editor.progress.next}
 	/>
-	<PressKitForm {band} epk={editor.epk} premium={editor.premium} />
-	<PressPhotos {band} media={editor.media} photoLimit={editor.photoLimit} />
+	<PressKitForm {band} epk={editor.epk} premium={editor.premium} canEdit={editor.canEdit} />
+	<PressPhotos
+		{band}
+		media={editor.media}
+		photoLimit={editor.photoLimit}
+		canEdit={editor.canEdit}
+	/>
 </PageContent>

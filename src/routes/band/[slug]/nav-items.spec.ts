@@ -6,8 +6,7 @@ import {
 	bandNavSections,
 	bandNavTop,
 	sectionHasKey,
-	type BandNavInput,
-	type BandNavKey
+	type BandNavInput
 } from './nav-items';
 
 /**
@@ -21,7 +20,6 @@ const base: BandNavInput = {
 	tier: 'free',
 	userRole: 'member',
 	isStaff: false,
-	memberCount: 3,
 	features: {}
 };
 
@@ -126,20 +124,19 @@ describe('bandNavItems', () => {
 		expect(keysFor({ userRole: 'admin' })).not.toContain('page-editor');
 	});
 
-	it('offers Edit Profile and Press Kit to owners and admins on every tier', () => {
+	// Every member reads the profile; the pages and write remotes gate editing.
+	it('offers the profile and press kit to every member on every tier', () => {
 		for (const tier of ['free', 'premium']) {
-			for (const userRole of ['owner', 'admin']) {
+			for (const userRole of ['owner', 'admin', 'member']) {
 				expect(keysFor({ tier, userRole })).toEqual(expect.arrayContaining(['edit', 'press-kit']));
 			}
 		}
 	});
 
-	it('withholds Edit Profile and Press Kit from members and non-member staff', () => {
-		for (const userRole of ['member', 'staff']) {
-			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
-			expect(keys).not.toContain('edit');
-			expect(keys).not.toContain('press-kit');
-		}
+	it('withholds the profile and press kit from non-member staff', () => {
+		const keys = bandNavItems(asRole('staff')).map((i) => i.key);
+		expect(keys).not.toContain('edit');
+		expect(keys).not.toContain('press-kit');
 	});
 
 	it('points Staff tools at the band id, not its slug', () => {
@@ -164,7 +161,7 @@ describe('bandNavSections', () => {
 	});
 
 	it('drops a section the viewer can see no row of', () => {
-		const keys = bandNavSections(asRole('member')).map((s) => s.key);
+		const keys = bandNavSections(asRole('staff')).map((s) => s.key);
 		expect(keys).toEqual(['schedule', 'band', 'stage']);
 	});
 
@@ -191,26 +188,6 @@ describe('bandNavSections', () => {
 		expect(sectionHasKey(schedule, 'events')).toBe(true);
 		expect(sectionHasKey(band, 'events')).toBe(false);
 		expect(sectionHasKey(band, null)).toBe(false);
-	});
-});
-
-// #3134: a band of one sees every row, with the ones that need a second member muted.
-describe('a new band', () => {
-	const quietKeys = (memberCount: number): BandNavKey[] =>
-		bandNavItems(asRole('owner', { memberCount }))
-			.filter((i) => i.quiet)
-			.map((i) => i.key);
-
-	it('mutes Announcements while the owner is the only member', () => {
-		expect(quietKeys(1)).toEqual(['announcements']);
-	});
-
-	it('mutes nothing once a second member joins', () => {
-		expect(quietKeys(2)).toEqual([]);
-	});
-
-	it('hides no row from a band of one', () => {
-		expect(keysFor({ userRole: 'owner', memberCount: 1 })).toEqual(keysFor({ userRole: 'owner' }));
 	});
 });
 

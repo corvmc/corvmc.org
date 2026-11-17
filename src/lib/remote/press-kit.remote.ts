@@ -113,7 +113,8 @@ export const getPressKitProgress = query(z.string(), async (slug) => {
  * remember.
  */
 export const getPressKitEditor = query(z.string(), async (slug) => {
-	const { group: band } = await requireGroupRole({ slug }, 'admin');
+	// Every member reads the kit; each write below stays owner/admin.
+	const { group: band, role } = await requireGroupRole({ slug }, 'member');
 
 	// The ladder rides along rather than being a second query the page fans out —
 	// `custom/no-concurrent-remote-queries` forbids that shape, and one guarded
@@ -142,6 +143,8 @@ export const getPressKitEditor = query(z.string(), async (slug) => {
 		progress,
 		tier,
 		premium,
+		/** Presentation only: a plain member gets the read view. */
+		canEdit: role === 'owner' || role === 'admin',
 		/** How many more photos this band may add, so the UI can say so before an upload 403s. */
 		photoLimit: photoLimitForTier(tier),
 		media: media.map((m) => ({
