@@ -105,7 +105,8 @@ describe('NavGroup', () => {
 
 		await expect.element(badge).not.toBeInTheDocument();
 		await header().click();
-		await expect.element(badge).toHaveTextContent('7');
+		await expect.element(badge).toBeVisible();
+		expect(Number(badge.element().textContent)).toBe(7);
 		await header().click();
 		await expect.element(badge).not.toBeInTheDocument();
 	});
