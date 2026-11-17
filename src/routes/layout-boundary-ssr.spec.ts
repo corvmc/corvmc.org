@@ -10,8 +10,11 @@ const layouts = import.meta.glob<string>('./**/+layout.svelte', {
 	eager: true
 });
 
-/** Sections not yet switched to server rendering. #3158 removes them one at a time. */
-const CLIENT_RENDERED = ['./band/[slug]/+layout.svelte'];
+const PANELS = [
+	'./staff/+layout.svelte',
+	'./member/+layout.svelte',
+	'./band/[slug]/+layout.svelte'
+];
 
 const boundaryTags = (source: string) => source.match(/<ErrorToastBoundary\b[^>]*>/g) ?? [];
 const rendersSpinner = (source: string) =>
@@ -21,25 +24,11 @@ const rendersSpinner = (source: string) =>
 
 describe('layout boundaries', () => {
 	it('finds the panel layouts', () => {
-		expect(Object.keys(layouts)).toEqual(
-			expect.arrayContaining([
-				'./staff/+layout.svelte',
-				'./member/+layout.svelte',
-				...CLIENT_RENDERED
-			])
-		);
-		expect(boundaryTags(layouts['./staff/+layout.svelte'])).not.toHaveLength(0);
+		expect(Object.keys(layouts)).toEqual(expect.arrayContaining(PANELS));
+		for (const panel of PANELS) expect(boundaryTags(layouts[panel])).not.toHaveLength(0);
 	});
 
-	it.each(Object.keys(layouts).filter((f) => !CLIENT_RENDERED.includes(f)))(
-		'%s server-renders what its boundary wraps',
-		(file) => {
-			expect(rendersSpinner(layouts[file])).toBe(false);
-		}
-	);
-
-	// The list only shrinks: a section that renders on the server leaves it.
-	it.each(CLIENT_RENDERED)('%s is still listed for a reason', (file) => {
-		expect(rendersSpinner(layouts[file])).toBe(true);
+	it.each(Object.keys(layouts))('%s server-renders what its boundary wraps', (file) => {
+		expect(rendersSpinner(layouts[file])).toBe(false);
 	});
 });
