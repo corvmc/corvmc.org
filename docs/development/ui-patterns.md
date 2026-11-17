@@ -260,6 +260,12 @@ Props:
 - `onsuccess` / `onfailure` — callbacks
 - `flashDuration` — how long the success/error flash sticks before the button
   returns to its idle state (default 1500ms)
+- `updates` — `() => RemoteQueryUpdate[]`, read at submit: the queries this submit refreshes in
+  place of all of them. Pass `query(arg).withOverride(fn)` to show the change before the server
+  answers; kit drops the override when the submit settles, so a refusal restores the old state and
+  the error shows as usual. The server handler must refresh or set each query named, or kit fails
+  that query. Specs hold the submit with `heldRemoteForm()` and `fakeQuery()` from
+  `#lib/test/fake-remote.svelte.js`.
 
 There is **no `errorToast` prop.** Passing one does nothing visible — it falls
 through the rest spread onto the `<form>` element. The default error handling is
