@@ -11,16 +11,11 @@ export const ENTRY_BUDGET_KB = 150;
 /** Gzipped KB any one route's preloaded JavaScript, entry included, may weigh. */
 export const ROUTE_BUDGET_KB = 520;
 /**
- * Routes already over ROUTE_BUDGET_KB, each capped where it stood (#3158). The
- * staff lists load the rich-text editor; lower or delete a line as it is split out.
+ * Routes allowed over ROUTE_BUDGET_KB, each with its own cap and the reason in a
+ * comment beside it. Empty since #3158 split out what put routes there.
  * @type {Record<string, number>}
  */
-export const KNOWN_HEAVY_KB = {
-	'/staff/clubs': 600,
-	'/staff/bands': 600,
-	'/staff/committees': 600,
-	'/staff/bands/[id]': 550
-};
+export const KNOWN_HEAVY_KB = {};
 
 const output = path.resolve(process.argv[2] ?? '.svelte-kit/output');
 
