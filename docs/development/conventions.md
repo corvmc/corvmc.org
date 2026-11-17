@@ -962,7 +962,7 @@ if it's broadly useful.
 `pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Three of them:
 
 - **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
-- **`@sveltejs/kit@3.1.1`** — `flushSync` around the first `apply_navigation_result` in
+- **`@sveltejs/kit@3.2.0`** — `flushSync` around the first `apply_navigation_result` in
   `initialize` (`src/runtime/client/client.js`). Kit writes the render tree into `$state` and mounts
   in the same tick, so under `experimental.async` the write's batch is still open when Root first
   renders. A boundary's contents rendered in a later batch then read the tree's `child` as
