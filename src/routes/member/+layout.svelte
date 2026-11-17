@@ -28,7 +28,6 @@
 	import { navTrail } from '#lib/components/layout/nav-trail.js';
 	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import { many } from '#lib/terms.js';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,
@@ -140,7 +139,7 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title={m.member_my_title({ many: many(m.term_band) })}
+			title={m.member_my_title({ bands: m.term_band({ count: 2 }) })}
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
@@ -152,8 +151,7 @@
 					variant="ghost"
 					size="xs"
 					class="latched"
-					aria-label={m.member_aria_label({ term_band: m.term_band({ count: 1 }) })}
-					data-sveltekit-reload>{m.member_new_label()}</Button
+					data-sveltekit-reload>{m.member_bands_create_band_label()}</Button
 				>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}

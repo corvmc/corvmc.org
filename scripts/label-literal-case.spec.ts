@@ -70,3 +70,24 @@ describe('label maps', () => {
 		expect(hits).toEqual([]);
 	});
 });
+
+/**
+ * `many()` and `one()` capitalise a term for the start of a label. Interpolated after other
+ * words, or passed into a message, they title-case the middle of it ("Browse Bands", "My Bands").
+ * Mid-label, pass the term itself: `m.term_band({ count: 2 })`.
+ */
+const MID_LABEL_TERM = /m\.\w+\(\{[^}]*\b(?:many|one)\(|[^`\s]\s*\$\{(?:many|one)\(/;
+
+describe('capitalised terms', () => {
+	it('start a label, never sit inside one', () => {
+		const hits: string[] = [];
+		for (const file of files) {
+			readFileSync(file, 'utf8')
+				.split('\n')
+				.forEach((line, i) => {
+					if (MID_LABEL_TERM.test(line)) hits.push(`${file}:${i + 1}  ${line.trim()}`);
+				});
+		}
+		expect(hits).toEqual([]);
+	});
+});
