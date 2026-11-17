@@ -20,7 +20,7 @@ const STORED_STATUS_BADGE = /<StatusBadge[^>]*(status=\{(r|res|reservation)\.sta
 
 const ALLOWED = new Set([
 	// Checkout arithmetic: whether credits were committed, and what remains to charge.
-	'src/routes/member/reservations/[id]/pay/+page.svelte'
+	'src/lib/components/reservations/ReservationPayment.svelte'
 ]);
 
 const RESERVATION_SURFACE =
