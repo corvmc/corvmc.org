@@ -61,6 +61,7 @@
 	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
+	import { holdEarlySubmits, holdIfNotEnhanced } from './hold-early-submit.js';
 
 	let {
 		remote,
@@ -314,6 +315,7 @@
 	}
 
 	function guardSubmit(e: SubmitEvent) {
+		if (remote && holdIfNotEnhanced(e)) return;
 		const submitter = e.submitter as HTMLElement | null;
 		if (submitter && !isVisible(submitter)) {
 			e.preventDefault();
@@ -322,7 +324,7 @@
 	}
 
 	let submitting = false;
-	let remoteAttrs = $derived(
+	let enhanced = $derived(
 		remote?.enhance(async (...args) => {
 			if (submitting) return;
 			submitting = true;
@@ -385,6 +387,8 @@
 			setTimeout(endFlash, flashDuration);
 		})
 	);
+	// A submit before kit's listener attaches would post the whole document.
+	let remoteAttrs = $derived(enhanced && holdEarlySubmits(enhanced));
 
 	async function handleActionSubmit(e: SubmitEvent) {
 		e.preventDefault();
