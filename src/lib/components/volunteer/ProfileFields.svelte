@@ -43,52 +43,54 @@
 	} = $props();
 </script>
 
-<div class="grid grid-cols-2 gap-4">
+<div class="space-y-4">
+	<div class="grid grid-cols-2 gap-4">
+		<FormField
+			field={fields.firstName}
+			type="text"
+			label={m.volunteer_profile_fields_first_name_label()}
+			value={firstName}
+			required
+		/>
+		<FormField
+			field={fields.lastName}
+			type="text"
+			label={m.volunteer_profile_fields_last_name_label()}
+			value={lastName}
+			required
+		/>
+	</div>
+
 	<FormField
-		field={fields.firstName}
+		field={fields.pronouns}
 		type="text"
-		label={m.volunteer_profile_fields_first_name_label()}
-		value={firstName}
-		required
+		label={m.volunteer_profile_fields_pronouns_label()}
+		value={pronouns}
+		placeholder={m.volunteer_profile_fields_placeholder()}
 	/>
+
 	<FormField
-		field={fields.lastName}
-		type="text"
-		label={m.volunteer_profile_fields_last_name_label()}
-		value={lastName}
-		required
+		field={fields.phone}
+		type="tel"
+		label={m.volunteer_profile_fields_phone_label()}
+		value={phone}
+		placeholder="(541) 555-0123"
+		description={m.volunteer_profile_fields_description_body()}
+	/>
+
+	<!--
+		Read-only, unlike phone and pronouns above: this is the address they log in
+		with, and changing it runs through its own verification flow. Shown so they
+		can check we have the right one.
+	-->
+	<FormField
+		type="email"
+		label={m.volunteer_profile_fields_email_label()}
+		value={email}
+		readonly
+		description={emailHint}
 	/>
 </div>
-
-<FormField
-	field={fields.pronouns}
-	type="text"
-	label={m.volunteer_profile_fields_pronouns_label()}
-	value={pronouns}
-	placeholder={m.volunteer_profile_fields_placeholder()}
-/>
-
-<FormField
-	field={fields.phone}
-	type="tel"
-	label={m.volunteer_profile_fields_phone_label()}
-	value={phone}
-	placeholder="(541) 555-0123"
-	description={m.volunteer_profile_fields_description_body()}
-/>
-
-<!--
-	Read-only, unlike phone and pronouns above: this is the address they log in
-	with, and changing it runs through its own verification flow. Shown so they
-	can check we have the right one.
--->
-<FormField
-	type="email"
-	label={m.volunteer_profile_fields_email_label()}
-	value={email}
-	readonly
-	description={emailHint}
-/>
 
 {#snippet emailHint()}
 	<ParaglideMessage message={m.volunteer_profile_fields_change_body} inputs={{}}
