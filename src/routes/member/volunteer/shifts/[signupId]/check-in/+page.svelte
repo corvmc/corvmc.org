@@ -15,10 +15,10 @@
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
-	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { resolve } from '$app/paths';
 	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import DoorCheckInForm from '#lib/components/events/DoorCheckInForm.svelte';
 	import {
 		checkInAsVolunteer,
 		getMyShiftCheckIn,
@@ -93,8 +93,9 @@
 					{:else}
 						<!-- 44px on purpose: tapped a hundred times in a row, standing
 						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->
-						<Form
+						<DoorCheckInForm
 							remote={checkInAsVolunteer.for(ticket.id)}
+							name={ticket.attendeeName}
 							successToast={m.member_volunteer_shifts_signup_id_check_in_checked_toast()}
 							class="inline"
 						>
@@ -109,7 +110,7 @@
 								variant="primary"
 								class="min-h-11"
 							/>
-						</Form>
+						</DoorCheckInForm>
 					{/if}
 				</CardBody>
 			</Card>

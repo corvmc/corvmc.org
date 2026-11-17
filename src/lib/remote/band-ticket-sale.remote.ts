@@ -140,6 +140,5 @@ export const checkInBandTicket = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		return { success: true };
 	}
 );

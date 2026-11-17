@@ -11,9 +11,8 @@
 	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { formatDateShort, formatTime } from '#lib/utils/format.js';
-
-	type CheckInResult = { alreadyIn: boolean; checkedInAt: Date };
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { checkInOutcome, type CheckInResult } from './check-in-outcome.js';
 
 	let {
 		tickets,
@@ -42,14 +41,7 @@
 	const byCode = $derived(new Map(tickets.map((t) => [t.code.toLowerCase(), t])));
 
 	async function send(ticketId: string, name: string, code: string) {
-		const result = await checkIn(ticketId);
-		last = result.alreadyIn
-			? {
-					tone: 'warning',
-					code,
-					text: `${name} was already in at ${formatTime(result.checkedInAt)}`
-				}
-			: { tone: 'success', code, text: `${name} is in` };
+		last = { code, ...checkInOutcome(name, await checkIn(ticketId)) };
 	}
 
 	async function miss(code: string) {
