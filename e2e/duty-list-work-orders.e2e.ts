@@ -73,7 +73,11 @@ test.describe('duty lists — the unscheduled half', () => {
 		const open = page.getByLabel(SEED_VOL_ADVANCE_TASK_OPEN);
 		await expect(open).not.toBeChecked();
 
+		// Reload only once the write has answered: a reload while the POST is still
+		// queued (behind the sidebar's idle code preload, #3192) cancels it.
+		const written = page.waitForResponse(/\/_app\/remote\/[^/]+\/setWorkTaskDone/);
 		await open.check();
+		await written;
 
 		// Survives the round trip rather than only the click: the tick goes through
 		// `setWorkTaskDone`, which refreshes the page query it was read from.
