@@ -21,7 +21,8 @@ async function holdEntryChunk(page: Page) {
 test('a search typed before hydration still reaches ?q=', async ({ page }) => {
 	const held = await holdEntryChunk(page);
 
-	await page.goto('/directory');
+	// `waitUntil` named, so the fixture's wait for hydration does not apply.
+	await page.goto('/directory', { waitUntil: 'load' });
 	await search(page).fill('sprockets');
 	await expect(page).toHaveURL(/[?&]q=sprockets/);
 
