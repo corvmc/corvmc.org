@@ -158,7 +158,7 @@ export default defineConfig({
 		// was importing at that moment dies with "Failed to fetch dynamically
 		// imported module" and zero failed tests. `scripts/optimize-deps.spec.ts`
 		// keeps this list honest; see #1295.
-		include: ['barcode-detector/pure']
+		include: ['barcode-detector/pure', '@tiptap/core', '@tiptap/starter-kit']
 	},
 	test: {
 		expect: {
