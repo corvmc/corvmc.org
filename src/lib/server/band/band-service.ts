@@ -74,6 +74,8 @@ import {
 export interface CreateBandData {
 	name: string;
 	bio?: string;
+	/** An address already checked by `claimableBandSlug`. Omitted, it is derived from the name. */
+	slug?: string;
 	/**
 	 * Staff's to set, and only at creation from `/staff/clubs`. Omitted — which
 	 * is every band, since a band is self-created — leaves the column defaults:
@@ -260,8 +262,9 @@ const ownerMember = alias(groupMember, 'owner_member');
  */
 export async function create(ownerId: string | null, data: CreateBandData) {
 	const kind = data.kind ?? 'band';
-	const baseSlug = generateSlug(data.name);
-	const slug = await ensureUniqueSlug(baseSlug, group, group.slug, undefined, isReservedSlug);
+	const slug =
+		data.slug ??
+		(await ensureUniqueSlug(generateSlug(data.name), group, group.slug, undefined, isReservedSlug));
 
 	const bandId = crypto.randomUUID();
 	const firstMemberId = crypto.randomUUID();
@@ -1319,4 +1322,22 @@ export async function getUserRole(bandId: string, userId: string): Promise<Group
 		return (await isCommitteeChair(userId, bandId)) ? 'admin' : 'member';
 	}
 	return row.role as GroupRole;
+}
+
+/** Whether the band said it has no one to invite (#3127): its setup step then counts as done. */
+export async function isInviteStepDismissed(bandId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ at: group.inviteStepDismissedAt })
+		.from(group)
+		.where(eq(group.id, bandId))
+		.limit(1);
+	return !!row?.at;
+}
+
+/** A one-person project dismisses the invite step. Idempotent: a second dismissal keeps the first time. */
+export async function dismissInviteStep(bandId: string): Promise<void> {
+	await db
+		.update(group)
+		.set({ inviteStepDismissedAt: new Date(), updatedAt: new Date() })
+		.where(and(eq(group.id, bandId), isNull(group.inviteStepDismissedAt)));
 }

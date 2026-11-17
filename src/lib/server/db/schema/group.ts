@@ -61,6 +61,8 @@ export const group = sqliteTable(
 		 * Organization merge and role removal account for it by name.
 		 */
 		fromOrganizationId: text('from_organization_id'),
+		/** A one-person project said it has no one to invite; the setup step counts as done (#3127). */
+		inviteStepDismissedAt: integer('invite_step_dismissed_at', { mode: 'timestamp' }),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()

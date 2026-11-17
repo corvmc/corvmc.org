@@ -22,12 +22,15 @@
 	let {
 		band,
 		media,
-		photoLimit
+		photoLimit,
+		canEdit = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
 		media: Item[];
 		/** `null` means uncapped. Comes from the server, which also enforces it. */
 		photoLimit: number | null;
+		/** Owner or admin; the upload, media and zip routes are owner/admin guarded. */
+		canEdit?: boolean;
 	} = $props();
 
 	const photos = $derived(media.filter((m) => m.slot === 'gallery'));
@@ -94,16 +97,18 @@
 	const IMAGE_TYPES = 'image/jpeg,image/png,image/webp';
 </script>
 
-<InfoCard title={msg.band_slug_press_kit_press_photos_download_kit_title()}>
-	<p class="text-muted">
-		{msg.band_slug_press_kit_press_photos_zip_holding_one_page_press_text()}
-	</p>
-	<div>
-		<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
-			{msg.band_slug_press_kit_press_photos_download_press_kit_zip_label()}
-		</Button>
-	</div>
-</InfoCard>
+{#if canEdit}
+	<InfoCard title={msg.band_slug_press_kit_press_photos_download_kit_title()}>
+		<p class="text-muted">
+			{msg.band_slug_press_kit_press_photos_zip_holding_one_page_press_text()}
+		</p>
+		<div>
+			<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
+				{msg.band_slug_press_kit_press_photos_download_press_kit_zip_label()}
+			</Button>
+		</div>
+	</InfoCard>
+{/if}
 
 <InfoCard title={msg.band_slug_press_kit_press_photos_press_photos_title()}>
 	<p class="text-muted">
@@ -124,35 +129,39 @@
 							class="aspect-square w-full rounded object-cover"
 						/>
 					{/if}
-					<Form
-						remote={details}
-						successToast={msg.band_slug_press_kit_press_photos_success_toast()}
-						class="space-y-2"
-					>
-						<input {...details.fields.slug.as('hidden', band.slug)} />
-						<input {...details.fields.attachmentId.as('hidden', photo.id)} />
-						<FormField
-							field={details.fields.altText}
-							label={msg.band_slug_press_kit_press_photos_alt_text_label()}
-							value={photo.altText ?? ''}
-							description={msg.band_slug_press_kit_press_photos_description_body()}
-						/>
-						<FormField
-							field={details.fields.caption}
-							label={msg.band_slug_press_kit_press_photos_caption_label()}
-							value={photo.caption ?? ''}
-						/>
-						<SubmitButton label={msg.band_save_label()} size="sm" />
-					</Form>
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						disabled={busy}
-						onclick={() => remove(photo.id)}
-					>
-						{msg.band_remove_label()}
-					</Button>
+					{#if canEdit}
+						<Form
+							remote={details}
+							successToast={msg.band_slug_press_kit_press_photos_success_toast()}
+							class="space-y-2"
+						>
+							<input {...details.fields.slug.as('hidden', band.slug)} />
+							<input {...details.fields.attachmentId.as('hidden', photo.id)} />
+							<FormField
+								field={details.fields.altText}
+								label={msg.band_slug_press_kit_press_photos_alt_text_label()}
+								value={photo.altText ?? ''}
+								description={msg.band_slug_press_kit_press_photos_description_body()}
+							/>
+							<FormField
+								field={details.fields.caption}
+								label={msg.band_slug_press_kit_press_photos_caption_label()}
+								value={photo.caption ?? ''}
+							/>
+							<SubmitButton label={msg.band_save_label()} size="sm" />
+						</Form>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							disabled={busy}
+							onclick={() => remove(photo.id)}
+						>
+							{msg.band_remove_label()}
+						</Button>
+					{:else if photo.caption}
+						<figcaption class="text-sm">{photo.caption}</figcaption>
+					{/if}
 				</figure>
 			{/each}
 		</div>
@@ -160,26 +169,28 @@
 		<p class="text-muted">{msg.band_slug_press_kit_press_photos_no_press_photo_yet_band_text()}</p>
 	{/if}
 
-	<div class="flex flex-wrap items-center gap-3">
-		<Button
-			type="button"
-			variant="default"
-			outline
-			size="sm"
-			disabled={busy || atLimit}
-			onclick={() => pick()}
-		>
-			{msg.band_add_photo_label()}
-		</Button>
-		{#if photoLimit !== null}
-			<span class="text-muted text-sm">
-				{msg.band_slug_press_kit_press_photos_text({ length: photos.length, photoLimit })}
-				{#if atLimit}{msg.band_slug_press_kit_press_photos_band_site_lifts_limit_text()}{/if}
-			</span>
-		{:else}
-			<span class="text-muted text-sm"
-				>{msg.band_slug_press_kit_press_photos_unlimited_plan_text()}</span
+	{#if canEdit}
+		<div class="flex flex-wrap items-center gap-3">
+			<Button
+				type="button"
+				variant="default"
+				outline
+				size="sm"
+				disabled={busy || atLimit}
+				onclick={() => pick()}
 			>
-		{/if}
-	</div>
+				{msg.band_add_photo_label()}
+			</Button>
+			{#if photoLimit !== null}
+				<span class="text-muted text-sm">
+					{msg.band_slug_press_kit_press_photos_text({ length: photos.length, photoLimit })}
+					{#if atLimit}{msg.band_slug_press_kit_press_photos_band_site_lifts_limit_text()}{/if}
+				</span>
+			{:else}
+				<span class="text-muted text-sm"
+					>{msg.band_slug_press_kit_press_photos_unlimited_plan_text()}</span
+				>
+			{/if}
+		</div>
+	{/if}
 </InfoCard>

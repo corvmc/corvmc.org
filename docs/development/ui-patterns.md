@@ -1036,6 +1036,27 @@ A page that resolves to the panel root lights Dashboard, which is the signal tha
 the nav. `member/nav-items.spec.ts` asserts against that with a commented exemption list — that is
 how you find a surface that shipped without a way in.
 
+**The band panel** (`band/[slug]/nav-items.ts`, #3127) groups its rows the way the staff nav does:
+Dashboard on top; Schedule (Reservations, Events), Band (Members, Announcements, Messages), Profile
+(Band profile, Press kit, Page editor), Stage (Tech rider, Packing list) and Music (Releases,
+Payouts, behind `bandAudio`); Subscription and Settings at the foot. A section the viewer can see no
+row of is dropped. `nav-items.spec.ts` places every row in exactly one zone for every role.
+
+- Messages is one row for the band chat and its enquiries, badged with this band's open, unread
+  chat threads plus, for owners and admins, its open, unread enquiries. Not a separate Enquiries
+  row, because both lists are one page and a second row would be a second link to it (#3136).
+- Every active member reads Band profile and Press kit; only owners and admins edit. The read
+  queries take `member` and return `canEdit`; every write remote and upload route keeps `admin`, and
+  the page disables the form for anyone else (`band-profile-access.spec.ts`). Not owner/admin-only
+  rows, because every member hands out the band's address and answers for its profile (#3127). The
+  address and QR card are on the profile page.
+- A new band sees every row at full weight. Not dimmed or collapsed for a band of one, because the
+  rows a new band needs should look like the rest (#3127).
+- The dashboard is one query, `getBandDashboard`, and a to-do list: pending actions, then upcoming
+  reservations and events together, then a four-step setup checklist, then the press kit progress
+  once setup is done (#3128). Setup's invite step is done once an invite is sent or once a
+  one-person project dismisses it (`group.invite_step_dismissed_at`).
+
 **Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
 remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on
 the server and on the first client paint — the stored state is read in `onMount` — because a

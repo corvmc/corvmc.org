@@ -1605,5 +1605,39 @@
 	"task_act_reason_not_assigned_text": "It is not assigned to you.",
 	"task_act_reason_no_position_text": "You do not hold {position}.",
 	"task_act_reason_no_seat_text": "You have no seat on {committee}.",
-	"task_act_reason_no_grant_text": "You do not hold {grant} for it."
+	"task_act_reason_no_grant_text": "You do not hold {grant} for it.",
+	"reservations_charges_rate_label": "Rate",
+	"reservations_charges_hour_text": "${formatDollars}/hour · {durationLabel}",
+	"reservations_charges_hours_label": [
+		{
+			"declarations": ["input durationHours", "local durationHoursPlural = durationHours: plural"],
+			"selectors": ["durationHoursPlural"],
+			"match": {
+				"durationHoursPlural=one": "{durationHours} hour",
+				"durationHoursPlural=*": "{durationHours} hours"
+			}
+		}
+	],
+	"reservations_charges_credits_applied_label": "Credits applied",
+	"reservations_charges_total_label": "Total",
+	"reservations_payment_state_refunded_text": "Refunded.",
+	"reservations_payment_state_paid_full_text": "Paid in full.",
+	"reservations_payment_state_settled_text": "Settled — nothing owed at the door.",
+	"reservations_payment_state_due_at_door_text": "${formatDollars} due at the door.",
+	"reservations_payment_state_not_yet_paid_text": "Not yet paid.",
+	"reservations_door_code_pending_text": "The door code will appear here before the reservation.",
+	"reservations_payment_state_due_text": "${formatDollars} due.",
+	"events_create_member_event_label": "Create event",
+	"events_create_member_event_title": "Create event",
+	"events_create_member_event_success_toast": "Draft saved",
+	"events_create_member_event_for_label": "For",
+	"events_create_member_event_me_label": "Me",
+	"events_create_member_event_title_label": "Title",
+	"events_create_member_event_title_placeholder": "e.g. Paper Wolves at The Whiteside",
+	"events_create_member_event_date_label": "Date",
+	"events_create_member_event_start_time_label": "Start time",
+	"events_create_member_event_venue_label": "Venue",
+	"events_create_member_event_venue_placeholder": "e.g. The Whiteside Theatre",
+	"events_create_member_event_own_draft_text": "Saved as a draft only you can see.",
+	"events_create_member_event_band_draft_text": "Saved as a draft your band can see."
 }

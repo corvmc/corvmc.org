@@ -24,7 +24,6 @@
 import { resolve } from '$app/paths';
 import { surfaces } from '#lib/config.js';
 import { m } from '#lib/paraglide/messages.js';
-import { many } from '#lib/terms.js';
 import { activeNavKey, type NavNode } from '#lib/components/layout/Nav/active-nav.js';
 import {
 	ACCOUNT_MENU,
@@ -153,7 +152,7 @@ export function memberNavGroupRows(): MemberNavItem[] {
 	return [
 		{
 			key: 'bands-browse',
-			label: `Browse ${many(m.term_band)}`,
+			label: m.member_browse_bands_label({ bands: m.term_band({ count: 2 }) }),
 			href: resolve('member/directory/bands')
 		}
 	];

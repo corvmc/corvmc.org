@@ -88,6 +88,10 @@
 		"panel": "band"
 	},
 	{
+		"route": "/band/[slug]/reservations/[id]/pay",
+		"panel": "band"
+	},
+	{
 		"route": "/band/[slug]/rider",
 		"panel": "band"
 	},

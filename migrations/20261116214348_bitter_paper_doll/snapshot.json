@@ -1,10 +1,10 @@
 {
-  "id": "ab57b7c4-47c1-44b1-91d2-29c92c6108cb",
-  "prevIds": [
-    "ed9a078c-171e-43c5-a05f-7ac00f0dc617"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "20cacfee-532a-4a9d-a1da-53299c8da179",
+  "prevIds": [
+    "ab57b7c4-47c1-44b1-91d2-29c92c6108cb"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -6227,6 +6227,16 @@
       "default": null,
       "generated": null,
       "name": "from_organization_id",
+      "entityType": "columns",
+      "table": "group"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "invite_step_dismissed_at",
       "entityType": "columns",
       "table": "group"
     },

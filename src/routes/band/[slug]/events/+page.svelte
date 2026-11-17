@@ -7,13 +7,16 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import BadgeList from '#lib/components/ui/BadgeList.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
-	import CreateEventModal from './CreateEventModal.svelte';
+	import CreateMemberEventAction, {
+		eventHosts
+	} from '#lib/components/events/CreateMemberEventAction.svelte';
 	import { formatDate, formatTime } from '#lib/utils/format.js';
 	import { describeTerms } from '#lib/production/terms.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
@@ -34,7 +37,9 @@
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	const { events, invites, bookings } = $derived(await getBandEventsPage(params.slug));
+	const { upcoming, past, invites, bookings } = $derived(await getBandEventsPage(params.slug));
+	let activeTab = $state<'upcoming' | 'past'>('upcoming');
+	const events = $derived(activeTab === 'upcoming' ? upcoming : past);
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 
@@ -54,7 +59,7 @@
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}
 			>{m.band_import_past_gigs_label()}</Button
 		>
-		<CreateEventModal bandSlug={band.slug} />
+		<CreateMemberEventAction hosts={eventHosts(layout.userBands)} initial={band.slug} />
 	{/if}
 </PageHeader>
 <PageContent>
@@ -182,69 +187,87 @@
 		</div>
 	{/if}
 
-	{#if events.length === 0}
+	{#if upcoming.length + past.length === 0}
 		<EmptyState>
 			<p>{m.band_slug_events_no_events_yet_text()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
-					<CreateEventModal bandSlug={band.slug} />
+					<CreateMemberEventAction hosts={eventHosts(layout.userBands)} initial={band.slug} />
 				</div>
 			{/if}
 		</EmptyState>
 	{:else}
-		<!--
+		<!-- The tabs Reservations uses, one row up in the nav (#3138). -->
+		<TabBar
+			tabs={[
+				{ key: 'upcoming', label: m.band_slug_events_upcoming_label({ count: upcoming.length }) },
+				{ key: 'past', label: m.band_slug_events_past_label({ count: past.length }) }
+			]}
+			active={activeTab}
+			onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
+		/>
+
+		{#if events.length === 0}
+			<EmptyState
+				title={activeTab === 'upcoming'
+					? m.band_slug_events_no_upcoming_title()
+					: m.band_slug_events_no_past_title()}
+			/>
+		{:else}
+			<!--
 			A table: zero always-visible actions and no prose, which is none of the
 			four tests a card has to pass. The two conditional facts — location and
 			the rest of the bill — set the card's height, so the stack went ragged
 			between events that had both, one or neither (#1048).
 		-->
-		<Table>
-			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.band_slug_events_status_label()}</span></th>
-				<th class="cell-primary">{m.band_slug_events_event_label()}</th>
-				<th class="col-support">{m.band_slug_events_where_label()}</th>
-				<th class="col-extra">{m.band_slug_events_bill_label()}</th>
-				<th class="w-px"><span class="sr-only">{m.band_slug_events_actions_label()}</span></th>
-			{/snippet}
+			<Table>
+				{#snippet head()}
+					<th class="w-px">{m.band_slug_events_status_label()}</th>
+					<th class="cell-primary">{m.band_slug_events_event_label()}</th>
+					<th class="col-support">{m.band_slug_events_where_label()}</th>
+					<th class="col-extra">{m.band_slug_events_bill_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.band_slug_events_actions_label()}</span></th>
+				{/snippet}
 
-			{#each events as evt (evt.id)}
-				<tr
-					class="hover cursor-pointer"
-					use:rowLink={resolve(`band/${band.slug}/events/${evt.id}`)}
-				>
-					<td class="w-px whitespace-nowrap">
-						<StatusBadge status={evt.status} />
-						{#if !evt.isOwner}
-							<Badge variant="ghost" size="xs">{m.band_slug_events_guest_label()}</Badge>
-						{/if}
-					</td>
-					<td class="cell-primary">
-						<div class="truncate font-medium">{evt.title}</div>
-						<div class="text-subtle">
-							{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
-						</div>
-					</td>
-					<td class="col-support cell-text truncate">{evt.location ?? '—'}</td>
-					<td class="col-extra">
-						{#if supportNames(evt.lineup).length}
-							<BadgeList items={supportNames(evt.lineup)} max={2} />
-						{:else}
-							<span class="text-subtle">—</span>
-						{/if}
-					</td>
-					<td class="w-px">
-						<!-- A guest act can now say "the date is wrong" instead of
+				{#each events as evt (evt.id)}
+					<tr
+						class="hover cursor-pointer"
+						use:rowLink={resolve(`band/${band.slug}/events/${evt.id}`)}
+					>
+						<td class="w-px whitespace-nowrap">
+							<StatusBadge status={evt.status} label />
+							{#if !evt.isOwner}
+								<Badge variant="ghost" size="xs">{m.band_slug_events_guest_label()}</Badge>
+							{/if}
+						</td>
+						<td class="cell-primary">
+							<div class="truncate font-medium">{evt.title}</div>
+							<div class="text-subtle">
+								{formatDate(evt.startsAt)} &middot; {formatEventTimeRange(evt.startsAt, evt.endsAt)}
+							</div>
+						</td>
+						<td class="col-support cell-text truncate">{evt.location ?? '—'}</td>
+						<td class="col-extra">
+							{#if supportNames(evt.lineup).length}
+								<BadgeList items={supportNames(evt.lineup)} max={2} />
+							{:else}
+								<span class="text-subtle">—</span>
+							{/if}
+						</td>
+						<td class="w-px">
+							<!-- A guest act can now say "the date is wrong" instead of
 						     choosing between a bad listing and vanishing from a bill it
 						     is playing (#564). Owners edit theirs directly. -->
-						{#if isAdmin && !evt.isOwner}
-							<div class="w-max">
-								<RequestCorrectionAction slug={band.slug} eventId={evt.id} />
-							</div>
-						{/if}
-					</td>
-				</tr>
-			{/each}
-		</Table>
+							{#if isAdmin && !evt.isOwner}
+								<div class="w-max">
+									<RequestCorrectionAction slug={band.slug} eventId={evt.id} />
+								</div>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
 	{/if}
 </PageContent>
 

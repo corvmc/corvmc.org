@@ -81,6 +81,7 @@ import {
 	SlugUnavailableError,
 	assertValidBandSlug,
 	changeBandSlug,
+	claimableBandSlug,
 	normalizeBandSlug,
 	resolveBandSlug
 } from './band-address-service';
@@ -187,6 +188,27 @@ describe('resolveBandSlug', () => {
 // ---------------------------------------------------------------------------
 // changeBandSlug
 // ---------------------------------------------------------------------------
+
+// #3134: a new band picks its address in the create form.
+describe('claimableBandSlug', () => {
+	it('returns the normalized address when no band holds it', async () => {
+		selectResults = [[]];
+
+		await expect(claimableBandSlug('Porch-Lights')).resolves.toBe('porch-lights');
+		expect(renderWhere(0)).toContain('"slug" = ?');
+	});
+
+	it('refuses an address another band holds', async () => {
+		selectResults = [[{ id: 'band-2' }]];
+
+		await expect(claimableBandSlug('the-neons')).rejects.toThrow(SlugUnavailableError);
+	});
+
+	it('refuses a reserved address without asking the database', async () => {
+		await expect(claimableBandSlug('www')).rejects.toThrow(SlugUnavailableError);
+		expect(db.select).not.toHaveBeenCalled();
+	});
+});
 
 describe('changeBandSlug', () => {
 	it('throws when the band is gone', async () => {

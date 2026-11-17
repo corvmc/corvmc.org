@@ -69,7 +69,7 @@
 
 <PageHeader title={bandsLabel} subtitle={m.member_community_body()}>
 	<Button href={resolve('member/bands?create=1')} variant="ghost" data-sveltekit-reload>
-		{m.member_new_label()}
+		{m.member_bands_create_band_label()}
 	</Button>
 </PageHeader>
 <PageContent>

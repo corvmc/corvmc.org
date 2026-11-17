@@ -45,6 +45,16 @@ const bandServiceMock = {
 
 vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
+const { SlugUnavailableError, claimableBandSlug } = vi.hoisted(() => {
+	class SlugUnavailableError extends Error {}
+	return { SlugUnavailableError, claimableBandSlug: vi.fn(async (s: string) => s.toLowerCase()) };
+});
+vi.mock('#lib/server/band/band-address-service.js', () => ({
+	MAX_BAND_SLUG_LENGTH: 63,
+	SlugUnavailableError,
+	claimableBandSlug
+}));
+
 // Mock getRequestEvent for remote functions
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 
@@ -93,6 +103,37 @@ describe('createBand', () => {
 			bio: 'A great band'
 		});
 		expect(result.slug).toBe('new-band');
+	});
+
+	it('derives the address from the name when none is given', async () => {
+		await createBand({ name: 'New Band', bio: '', slug: '' });
+
+		expect(claimableBandSlug).not.toHaveBeenCalled();
+		expect(bandServiceMock.create.mock.calls[0][1]).not.toHaveProperty('slug');
+	});
+
+	// #3134: the address is chosen in the create form, not silently derived.
+	it('creates the band at the address asked for', async () => {
+		await createBand({ name: 'Porch Lights', bio: '', slug: 'Porch-Lights' });
+
+		expect(claimableBandSlug).toHaveBeenCalledWith('Porch-Lights');
+		expect(bandServiceMock.create).toHaveBeenCalledWith('user-1', {
+			name: 'Porch Lights',
+			bio: undefined,
+			slug: 'porch-lights'
+		});
+	});
+
+	it('refuses an address that is taken, on the address field, without creating', async () => {
+		claimableBandSlug.mockRejectedValueOnce(new SlugUnavailableError('taken'));
+		const issue = { slug: vi.fn(() => ({ path: ['slug'] })) };
+
+		await expect(
+			createBand({ name: 'Porch Lights', bio: '', slug: 'taken' }, issue)
+		).rejects.toThrow();
+
+		expect(issue.slug).toHaveBeenCalled();
+		expect(bandServiceMock.create).not.toHaveBeenCalled();
 	});
 
 	it('omits bio when empty string', async () => {
