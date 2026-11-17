@@ -17,6 +17,11 @@
 		external = false
 	}: { eventId: string; eventTitle: string; external?: boolean } = $props();
 
+	// Shows "going" until the server answers; `confirmRsvp` refreshes this query.
+	const showGoing = () => [
+		getRsvpStatus(eventId).withOverride((s) => ({ ...s, state: 'going' as const }))
+	];
+
 	const status = $derived(await getRsvpStatus(eventId));
 	const name = $derived(status.attendee?.name);
 	const label = $derived(
@@ -29,11 +34,6 @@
 				: m.public_events_id_rsvp_control_rsvp_label()
 	);
 	const variant = $derived(external ? 'ghost' : 'primary');
-
-	// Shows "going" until the server answers; `confirmRsvp` refreshes this query.
-	const showGoing = () => [
-		getRsvpStatus(eventId).withOverride((s) => ({ ...s, state: 'going' as const }))
-	];
 </script>
 
 {#if status.state === 'signed-out'}
