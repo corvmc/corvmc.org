@@ -90,7 +90,7 @@
 	</div>
 
 	<aside class="flex shrink-0 flex-col gap-2 xl:w-56 xl:overflow-y-auto" data-testid="room-members">
-		<SectionLabel label={m.inbox_group_chat_members_title()} count={chat.readers.length} />
+		<SectionLabel label={m.inbox_group_chat_members_label()} count={chat.readers.length} />
 		<div class="xl:hidden">
 			<AvatarStack items={chat.readers} max={8} shape="round" />
 		</div>

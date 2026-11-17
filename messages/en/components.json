@@ -854,7 +854,7 @@
 	"inbox_enquiry_thread_subtitle_body": "Sent through your public booking form",
 	"inbox_enquiry_thread_them_text": "them",
 	"inbox_enquiry_thread_title": "Booking enquiry",
-	"inbox_group_chat_members_title": "Members",
+	"inbox_group_chat_members_label": "Members",
 	"inbox_group_chat_send_label": "Send",
 	"inbox_group_chat_title": "No messages",
 	"inbox_group_topic_list_aria_label": "Muted",
