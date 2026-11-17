@@ -16,7 +16,10 @@
 	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
 	import { getMemberGigGuide } from '#lib/remote/calendar.remote.js';
 	import MyListingsSection from './MyListingsSection.svelte';
-	import AddShowAction from './AddShowAction.svelte';
+	import CreateMemberEventAction, {
+		eventHosts
+	} from '#lib/components/events/CreateMemberEventAction.svelte';
+	import { getMemberLayoutContext } from '../layout-context';
 	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	interface EventItem {
@@ -35,6 +38,9 @@
 		source: string;
 		status: string;
 	}
+
+	// Above the await: the bands come from the layout, not a second query.
+	const memberLayout = getMemberLayoutContext();
 
 	const pageData = $derived(await getMemberEventsPage());
 	const { upcoming, past }: { upcoming: EventItem[]; past: EventItem[] } = $derived(
@@ -122,7 +128,10 @@
 </script>
 
 <PageHeader title={m.member_events_title()}>
-	<AddShowAction />
+	<CreateMemberEventAction
+		hosts={eventHosts(memberLayout.current.userBands)}
+		data-testid="add-show"
+	/>
 </PageHeader>
 <PageContent>
 	<MyListingsSection />

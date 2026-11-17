@@ -14,7 +14,9 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
-	import CreateEventModal from './CreateEventModal.svelte';
+	import CreateMemberEventAction, {
+		eventHosts
+	} from '#lib/components/events/CreateMemberEventAction.svelte';
 	import { formatDate, formatTime } from '#lib/utils/format.js';
 	import { describeTerms } from '#lib/production/terms.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
@@ -57,7 +59,7 @@
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}
 			>{m.band_import_past_gigs_label()}</Button
 		>
-		<CreateEventModal bandSlug={band.slug} />
+		<CreateMemberEventAction hosts={eventHosts(layout.userBands)} initial={band.slug} />
 	{/if}
 </PageHeader>
 <PageContent>
@@ -190,7 +192,7 @@
 			<p>{m.band_slug_events_no_events_yet_text()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
-					<CreateEventModal bandSlug={band.slug} />
+					<CreateMemberEventAction hosts={eventHosts(layout.userBands)} initial={band.slug} />
 				</div>
 			{/if}
 		</EmptyState>
