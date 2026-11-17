@@ -2,6 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
+	import { onMount } from 'svelte';
+	import { preloadLinksWhenIdle } from './idle-preload';
 
 	let {
 		title = m.layout_sidebar_title(),
@@ -14,12 +16,13 @@
 		navigation?: Snippet;
 		brand?: Snippet;
 	} = $props();
+
+	let aside: HTMLElement;
+	onMount(() => preloadLinksWhenIdle(aside));
 </script>
 
-<!-- Phones have no hover, so links preload their route code (not data) as they
-     come into view: when the drawer opens. #3192 -->
 <aside
-	data-sveltekit-preload-code="viewport"
+	bind:this={aside}
 	class="flex h-full max-h-dvh w-64 flex-col overflow-hidden bg-base-200 text-base-content"
 >
 	<!-- Logo area (mobile only) -->
