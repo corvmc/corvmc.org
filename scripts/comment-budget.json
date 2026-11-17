@@ -495,7 +495,6 @@
 	"src/lib/utils/band-site-url.ts",
 	"src/lib/utils/canonical-address.ts",
 	"src/lib/utils/directory-browse.ts",
-	"src/lib/utils/directory-display.ts",
 	"src/lib/utils/entity-href.spec.ts",
 	"src/lib/utils/entity-href.ts",
 	"src/lib/utils/entity-ref.ts",
