@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { formatDollars } from '#lib/utils/format.js';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -18,7 +17,9 @@
 	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
 	import DoorCodeHeld from '#lib/components/reservations/booking/DoorCodeHeld.svelte';
-	import { memberPayAction, trackDetail } from '#lib/utils/reservation-actions.js';
+	import ReservationCharges from '#lib/components/reservations/ReservationCharges.svelte';
+	import ReservationPaymentState from '#lib/components/reservations/ReservationPaymentState.svelte';
+	import { memberPayAction } from '#lib/utils/reservation-actions.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -60,7 +61,20 @@
 		{#if res.notes}
 			<Fact label={m.member_reservations_id_notes_label()} wrap>{res.notes}</Fact>
 		{/if}
+		<!-- The money facts the band panel shows for the same booking (#3131). -->
+		<ReservationCharges
+			hourlyRateCents={data.hourlyRateCents}
+			durationHours={data.durationHours}
+			totalCents={data.totalCents}
+			creditsUsed={res.creditsUsed}
+		/>
 	</DefinitionList>
+
+	<ReservationPaymentState
+		track={data.track}
+		trackDetail={data.trackDetail}
+		cashDueCents={res.cashDueCents}
+	/>
 
 	{#if paidAtReader && res.status === 'confirmed'}
 		<Alert type="success">{m.member_reservations_id_paid_booking_confirmed_body()}</Alert>
@@ -110,7 +124,7 @@
 				{m.member_reservations_id_door_code_issued_but_door_text()}
 			</p>
 		{:else}
-			<p class="text-muted">{m.member_reservations_id_door_code_will_appear_here_text()}</p>
+			<p class="text-muted">{m.reservations_door_code_pending_text()}</p>
 		{/if}
 	{/if}
 
@@ -137,15 +151,6 @@
 			{/if}
 			<!-- Not behind !isPast: a balance is still owed after the session (#1952). -->
 			{#if owesBalance}
-				{#if trackDetail(res) === 'cash_due'}
-					<span class="text-sm font-medium">
-						{(isPast
-							? m.member_reservations_id_due_text
-							: m.member_reservations_id_due_at_door_text)({
-							formatDollars: formatDollars(res.cashDueCents ?? 0)
-						})}
-					</span>
-				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
 					{m.member_pay_online_label()}
 				</Button>

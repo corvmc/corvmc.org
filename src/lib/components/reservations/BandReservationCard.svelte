@@ -4,6 +4,7 @@
 	import Form from '#lib/components/ui/Form/index.js';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ReservationCardShell from './ReservationCardShell.svelte';
+	import ReservationMoneyLine from './ReservationMoneyLine.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { cancelBandReservation } from '#lib/remote/reservations.remote.js';
@@ -32,6 +33,10 @@
 			notes: string | null;
 			ref: ReservationRef;
 			bookedBy: MemberRef;
+			/** What is owed, as the member's own card shows it (#3131); absent where a list does not price. */
+			price?: number;
+			paidAt?: Date | null;
+			refundedAt?: Date | null;
 			/** Absent on the dashboard list, which offers no controls at all. */
 			canCancel?: boolean;
 			/** Any band member may pay what is owed (#2095). */
@@ -66,7 +71,7 @@
 	{/if}
 	{#if reservation.canPay}
 		<Button
-			href={resolve('/member/reservations/[id]/pay', { id: reservation.id })}
+			href={resolve('/band/[slug]/reservations/[id]/pay', { slug, id: reservation.id })}
 			variant="primary"
 			outline
 		>
@@ -91,6 +96,15 @@
 				{/if}
 			{/snippet}
 		</EntityIdentity>
+		{#if reservation.price != null}
+			<ReservationMoneyLine
+				price={reservation.price}
+				track={reservation.track}
+				startsAt={reservation.startsAt}
+				paidAt={reservation.paidAt ?? null}
+				refundedAt={reservation.refundedAt ?? null}
+			/>
+		{/if}
 		<!-- Its own line, because the subline truncates at `size="md"` and notes
 		     were third in it — so the one fact the card adds over the date rail
 		     was the one that got clipped (#1051). -->
