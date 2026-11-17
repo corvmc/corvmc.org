@@ -1599,6 +1599,7 @@
 	"access_why_owned_text": "{label}, on its own records",
 	"access_why_on_projects_text": "On {projects}",
 	"access_why_project_by_task_text": "{name} (owns a task)",
+	"access_why_show_permissions_label": "Show permissions",
 	"task_act_reason_assignee_text": "You are assigned this task.",
 	"task_act_reason_position_text": "You hold {position}, the position this task waits on.",
 	"task_act_reason_department_text": "You have a seat on {committee}, which owns this task.",
