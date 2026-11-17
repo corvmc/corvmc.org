@@ -90,6 +90,8 @@ The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]
 
 All three panel layouts pass `showPending={false}`, so the server awaits the page's queries and sends its content, and an error during the server render reaches `+error.svelte` with its status (#3158). `src/routes/layout-boundary-ssr.spec.ts` fails a layout that brings the spinner back.
 
+The server sends only what the page awaits. An `{#await}` block sends its pending branch, and `new Latest(() => promise)` resolves in an effect the server never runs, so both send a placeholder that hydration replaces (#3183). Await page content in the script or the template instead. Where `Latest` keeps rows mounted across a refresh, read `latest.current ?? (await promise)`, as `DataList` does. `src/await-block-ssr.spec.ts` lists the components that still send a placeholder; the list only shrinks.
+
 A page the server renders is parsed by the browser before it hydrates, so its HTML must be valid as written. A link inside a link is split apart by the parser and the page fails to hydrate. `EntityCard`, `EntityIdentity` and `EntityChip` draw their own link: do not wrap them in `<a>` or `<button>`. Inside one, give `EntityIdentity` `link={false}`. `src/no-nested-entity-links.spec.ts` enforces this. A form inside a form is dropped the same way: the page editor's canvas sits inside the editor's form, so the band site's contact form joins it only once mounted.
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
