@@ -431,7 +431,7 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 				db
 					.select({
 						id: volunteerSignup.id,
-						refId: volunteerShift.id,
+						refId: workOrder.id,
 						at: since.mapWith(volunteerSignup.createdAt),
 						summary: volunteerRole.name,
 						...actor
