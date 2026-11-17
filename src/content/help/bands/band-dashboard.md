@@ -20,7 +20,7 @@ home base. What you can do here depends on your role in the band.
 - **Press kit** — Owners and admins see how far the press kit is filled in.
 - **Members** and **Your role** — Member count and your role in the band.
 - **Upcoming reservations** — The next ones on the calendar and their status;
-  **View all** opens the band's **Reservations** page.
+  **View all** opens the band's **Practice space** page.
 - **Manage members**, and for owners and admins **Edit band profile**, at the foot
   of the page.
 
