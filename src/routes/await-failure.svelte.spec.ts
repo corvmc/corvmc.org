@@ -9,6 +9,14 @@ import ProjectTemplates from './staff/tasks/templates/+page.svelte';
 import InboxIndex from './staff/inbox/+page.svelte';
 import Daily from './staff/inbox/daily/+page.svelte';
 import BandBillingCard from './band/[slug]/subscription/BandBillingCard.svelte';
+import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
+import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+import CandidateColumn from '#lib/components/volunteer/CandidateColumn.svelte';
+import AssigneeSelect from '#lib/components/inbox/AssigneeSelect.svelte';
+import ThreadTags from './staff/inbox/[id]/ThreadTags.svelte';
+import AssignControl from './staff/inbox/[id]/AssignControl.svelte';
+import EventCampaigns from './staff/events/[id]/EventCampaigns.svelte';
+import GrantCertificationAction from './staff/members/[id]/panels/GrantCertificationAction.svelte';
 import { session } from './staff/inbox/daily/session.svelte';
 
 // A query that refuses, shaped like a remote: thenable, with `refresh`.
@@ -19,8 +27,24 @@ const refused = vi.hoisted(() => () => {
 });
 
 vi.mock('#lib/remote/volunteer.remote.js', () => ({
-	getVolunteerBlockedNotice: refused
+	getVolunteerBlockedNotice: refused,
+	getShiftCandidates: refused,
+	getActiveCertifications: refused,
+	assignShiftToMember: {},
+	inviteMemberToShift: {},
+	grantCertification: {}
 }));
+vi.mock('#lib/remote/tasks.remote.js', () => ({
+	getRelatedShifts: refused,
+	getRelatedTasks: refused,
+	addRelatedShift: {},
+	createCatalogueTaskForm: {}
+}));
+vi.mock('#lib/remote/member-related.remote.js', () => ({
+	getMemberRelatedShifts: refused,
+	getMemberRelatedTasks: refused
+}));
+vi.mock('#lib/remote/marketing.remote.js', () => ({ getEventCampaigns: refused }));
 vi.mock('#lib/remote/reports.remote.js', () => ({ getCommitteeNumbers: refused }));
 vi.mock('#lib/remote/instructors.remote.js', () => ({ getPublicInstructors: refused }));
 vi.mock('#lib/remote/duty-lists.remote.js', () => ({ getDutyLists: refused, createDutyList: {} }));
@@ -33,6 +57,10 @@ vi.mock('#lib/remote/inbox.remote.js', () => ({
 	getInboxThreads: refused,
 	getInboxThread: refused,
 	getInboxThreadCounts: refused,
+	getInboxThreadContext: refused,
+	getAssignableStaff: refused,
+	addInboxThreadTag: vi.fn(),
+	removeInboxThreadTag: vi.fn(),
 	getInboxDailyScope: () => Promise.resolve({ threadIds: ['a', 'b'] })
 }));
 vi.mock('#lib/remote/layout.remote.js', () => ({
@@ -84,7 +112,15 @@ describe('a block whose query fails', () => {
 	it.each([
 		['committee numbers', CommitteeNumbers, { groupId: 'g' }],
 		['public teachers', PublicInstructors, {}],
-		['band billing card', BandBillingCard, { slug: 'b' }]
+		['band billing card', BandBillingCard, { slug: 'b' }],
+		['related shifts', RelatedShifts, { subject: { type: 'event', id: 'e' } }],
+		['related tasks', RelatedTasks, { subject: { type: 'event', id: 'e' } }],
+		['shift candidates', CandidateColumn, { workOrderId: 'w', shiftId: null, startsAt: null }],
+		['note assignee select', AssigneeSelect, { assignees: refused }],
+		['thread tags', ThreadTags, { threadId: 't' }],
+		['thread assignee', AssignControl, { action: {}, threadId: 't', assignedToUserId: null }],
+		['event campaigns', EventCampaigns, { eventId: 'e' }],
+		['grant clearance', GrantCertificationAction, { userId: 'u', onsuccess: () => {} }]
 	])('%s says so in place', async (_name, page, props) => {
 		const { container } = await mount(page, props);
 

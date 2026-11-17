@@ -12,6 +12,8 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	let { id }: { id: string } = $props();
 
@@ -31,9 +33,6 @@
 
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Restore (#2356).
 	const standingsQuery = new Latest(() => getMemberStandings(id));
-	$effect(() => {
-		if (standingsQuery.error) throw standingsQuery.error.e;
-	});
 </script>
 
 <!--
@@ -92,6 +91,10 @@
 			</div>
 		</InfoCard>
 	{/each}
+{:else if standingsQuery.error}
+	<Alert type="warning" reset={() => void getMemberStandings(id).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(standingsQuery.error.e) })}
+	</Alert>
 {/if}
 
 <RelatedList

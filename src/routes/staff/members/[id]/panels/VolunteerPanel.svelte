@@ -26,6 +26,7 @@
 	import { formatVolunteerHours } from '#lib/config.js';
 	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import { errorMessage } from '#lib/error-message.js';
 
 	let { id }: { id: string } = $props();
 
@@ -40,9 +41,6 @@
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Grant or
 	// Revoke modal (#2356).
 	const certifications = new Latest(() => getMemberCertifications(id));
-	$effect(() => {
-		if (certifications.error) throw certifications.error.e;
-	});
 </script>
 
 <RelatedList
@@ -224,6 +222,10 @@
 			</ul>
 		{/if}
 	</InfoCard>
+{:else if certifications.error}
+	<Alert type="warning" reset={() => void getMemberCertifications(id).refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(certifications.error.e) })}
+	</Alert>
 {/if}
 
 <RelatedList

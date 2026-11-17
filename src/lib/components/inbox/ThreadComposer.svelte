@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '$app/server';
+	import type { RemoteFormField, RemoteQuery } from '$app/server';
 	import { m } from '#lib/paraglide/messages.js';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	/**
@@ -58,7 +58,7 @@
 		 * The assignable staff, as a thunk so the composer decides when to fetch
 		 * them. Omitted on the member side, which has neither notes nor assignment.
 		 */
-		assignees?: () => Promise<{ id: string; name: string }[]>;
+		assignees?: () => RemoteQuery<{ id: string; name: string }[]>;
 		onsent?: () => void;
 	} = $props();
 

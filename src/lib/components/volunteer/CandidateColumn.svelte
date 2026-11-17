@@ -18,6 +18,8 @@
 	import { formatDateShort, formatDateTimeShort } from '#lib/utils/format.js';
 	import { formatVolunteerHours } from '#lib/config.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import {
 		assignShiftToMember,
 		inviteMemberToShift,
@@ -63,17 +65,13 @@
 	// making the coordinator press All first and then type.
 	let search = $state('');
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Invite or Add.
-	const candidates = new Latest(() =>
-		getShiftCandidates({
-			workOrderId,
-			shiftId: shiftId ?? undefined,
-			scope: search ? 'all' : scope,
-			search: search || undefined
-		})
-	);
-	$effect(() => {
-		if (candidates.error) throw candidates.error.e;
+	const args = $derived({
+		workOrderId,
+		shiftId: shiftId ?? undefined,
+		scope: search ? ('all' as const) : scope,
+		search: search || undefined
 	});
+	const candidates = new Latest(() => getShiftCandidates(args));
 
 	type Row = Awaited<ReturnType<typeof getShiftCandidates>>['rows'][number];
 
@@ -305,5 +303,9 @@
 				{/each}
 			</ul>
 		{/if}
+	{:else if candidates.error}
+		<Alert type="warning" reset={() => void getShiftCandidates(args).refresh()}>
+			{msg.ui_load_failed_body({ error: errorMessage(candidates.error.e) })}
+		</Alert>
 	{/if}
 </InfoCard>

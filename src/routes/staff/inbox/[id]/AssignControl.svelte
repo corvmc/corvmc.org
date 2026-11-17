@@ -6,6 +6,8 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { Latest } from '#lib/latest.svelte.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	/**
 	 * The "Assigned to" control, with its own data.
@@ -44,12 +46,13 @@
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form (#2357).
 	const staff = new Latest(() => getAssignableStaff());
-	$effect(() => {
-		if (staff.error) throw staff.error.e;
-	});
 </script>
 
-{#if !staff.current}
+{#if staff.error && !staff.current}
+	<Alert type="warning" reset={() => void getAssignableStaff().refresh()}>
+		{m.ui_load_failed_body({ error: errorMessage(staff.error.e) })}
+	</Alert>
+{:else if !staff.current}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>
 		<span class="text-subtle text-sm"
