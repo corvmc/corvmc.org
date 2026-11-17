@@ -325,6 +325,7 @@
 
 	let submitting = false;
 	let enhanced = $derived(
+		// eslint-disable-next-line no-restricted-syntax -- the one place a remote form is enhanced
 		remote?.enhance(async (...args) => {
 			if (submitting) return;
 			submitting = true;
