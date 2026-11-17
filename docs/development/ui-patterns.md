@@ -88,7 +88,9 @@ When `<Form>` must wrap both the header (for SubmitButton) and the body fields, 
 
 The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]/+layout.svelte`) wrap `{@render children()}` in `ErrorToastBoundary`, with a failed snippet (Alert with Retry) for client-side errors. Pages **do not** need to add their own boundary or failed snippet — the layout handles it.
 
-The staff layout passes `showPending={false}`, so the server awaits the page's queries and sends its content, and an error during the server render reaches `+error.svelte` with its status. The member and band layouts still render a spinner in place of the page until their pages are checked for server rendering (#3158). `src/routes/layout-boundary-ssr.spec.ts` fails a layout that brings the spinner back, and lists the layouts not yet switched.
+The staff and member layouts pass `showPending={false}`, so the server awaits the page's queries and sends its content, and an error during the server render reaches `+error.svelte` with its status. The band layout still renders a spinner in place of the page until its pages are checked for server rendering (#3158).
+
+A page the server renders is parsed by the browser before it hydrates, so its HTML must be valid as written. A link inside a link is split apart by the parser and the page fails to hydrate. `EntityCard`, `EntityIdentity` and `EntityChip` draw their own link: do not wrap them in `<a>` or `<button>`. Inside one, give `EntityIdentity` `link={false}`. `src/no-nested-entity-links.spec.ts` enforces this. `src/routes/layout-boundary-ssr.spec.ts` fails a layout that brings the spinner back, and lists the layouts not yet switched.
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 

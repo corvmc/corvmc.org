@@ -212,7 +212,7 @@
 			{@render row(item)}
 		{/each}
 	{/snippet}
-	<ErrorToastBoundary>
+	<ErrorToastBoundary showPending={false}>
 		<EntityViewer
 			panel="member"
 			userId={layout.user.id}
