@@ -12,7 +12,8 @@
 	import { applySaved } from './filters.svelte';
 </script>
 
-{#await getInboxSavedViews() then views}
+<svelte:boundary>
+	{@const views = await getInboxSavedViews()}
 	{#if views.length}
 		<div class="-mx-1 flex flex-wrap gap-1.5 px-1">
 			{#each views as v (v.id)}
@@ -36,6 +37,7 @@
 			{/each}
 		</div>
 	{/if}
-{:catch}
-	<!-- A shortcut over the filters, which still work. -->
-{/await}
+	{#snippet failed()}
+		<!-- A shortcut over the filters, which still work. -->
+	{/snippet}
+</svelte:boundary>

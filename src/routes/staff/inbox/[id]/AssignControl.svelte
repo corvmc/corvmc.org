@@ -12,11 +12,9 @@
 	/**
 	 * The "Assigned to" control, with its own data.
 	 *
-	 * The staff list is the page's only piece of non-first-paint data: nothing
-	 * above the fold needs it, and it is a whole extra round trip. Awaiting it
-	 * here rather than in the page means the conversation paints without it and
-	 * this select fills in behind — and keeps the page down to one load-bearing
-	 * query, per `custom/no-concurrent-remote-queries`.
+	 * Awaiting the staff list here rather than in the page keeps the page down to
+	 * one load-bearing query, per `custom/no-concurrent-remote-queries`: this
+	 * starts once the thread has landed.
 	 *
 	 * The whole form waits, rather than a placeholder select waiting inside it:
 	 * two fields named `userId` in one <Form> is a duplicate submit name, which
@@ -46,13 +44,14 @@
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form (#2357).
 	const staff = new Latest(() => getAssignableStaff());
+	const staffList = $derived(staff.current ?? (await getAssignableStaff().catch(() => undefined)));
 </script>
 
-{#if staff.error && !staff.current}
+{#if staff.error && !staffList}
 	<Alert type="warning" reset={() => void getAssignableStaff().refresh()}>
 		{m.ui_load_failed_body({ error: errorMessage(staff.error.e) })}
 	</Alert>
-{:else if !staff.current}
+{:else if !staffList}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>
 		<span class="text-subtle text-sm"
@@ -60,7 +59,7 @@
 		>
 	</div>
 {:else}
-	{@const staffUsers = staff.current}
+	{@const staffUsers = staffList}
 	<Form
 		remote={action}
 		successToast={m.staff_inbox_id_assign_control_success_toast()}

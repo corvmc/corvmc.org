@@ -120,9 +120,8 @@
 
 				<div class="flex flex-col gap-1">
 					<SectionLabel label={m.staff_history_label()} />
-					{#await getInboxThreadContext(thread.id)}
-						<span class="loading loading-xs loading-spinner"></span>
-					{:then context}
+					<svelte:boundary>
+						{@const context = await getInboxThreadContext(thread.id)}
 						<span>
 							{context.priorConversations === 0
 								? m.staff_inbox_id_details_panel_no_other_conversations_text()
@@ -140,9 +139,12 @@
 								channelLabel: channelLabel(thread.channel)
 							})}</span
 						>
-					{:catch error}
-						<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(error) })}</span>
-					{/await}
+						{#snippet failed(error)}
+							<span class="text-subtle"
+								>{m.ui_load_failed_text({ error: errorMessage(error) })}</span
+							>
+						{/snippet}
+					</svelte:boundary>
 				</div>
 
 				<div class="flex flex-col gap-1">

@@ -12,7 +12,6 @@
 	import { resolve } from '$app/paths';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { errorMessage } from '#lib/error-message.js';
 	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
 	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
@@ -29,11 +28,10 @@
 	import { threadDisplayStatus } from '#lib/components/inbox/thread-status.js';
 	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '#lib/config.js';
 	import { formatDate } from '#lib/utils/format.js';
-	import { Latest } from '#lib/latest.svelte.js';
+	import EnabledChannels from './EnabledChannels.svelte';
 	import { IconAlarmSnooze, IconArrowLeft, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
-		getInboxEnabledChannels,
 		replyToThread,
 		retryInboxReply,
 		addThreadNote,
@@ -86,10 +84,6 @@
 	$effect(() => {
 		toolbar.conversation = conversationBar;
 	});
-
-	// Not `{#await}`: a refresh would re-pend it and remount the composer, draft
-	// and all (#2357). Started after the thread lands, so the two never overlap.
-	const channels = new Latest(() => getInboxEnabledChannels());
 </script>
 
 {#snippet conversationBar()}
@@ -178,54 +172,51 @@
 		disabled: a web thread replies by email to the address the contact form
 		captured, and a portal thread's reply is the message row itself.
 	-->
-	{#if channels.current}
-		{@const enabledChannels = channels.current}
-		{@const channelDisabled =
-			!isAlwaysEnabledChannel(t.channel) &&
-			(!isStaffInboxChannel(t.channel) || !enabledChannels.includes(t.channel))}
-		{@const replyBlockedReason =
-			(t.channel === 'web' || t.channel === 'email') && !t.contactEmail
-				? 'This conversation has no contact email, so there is nowhere to send a reply. Leave an internal note instead.'
-				: channelDisabled
-					? `Replies are turned off for the ${channelLabel(t.channel)} channel.`
-					: metaWindowClosed
-						? `${channelLabel(t.channel)} only accepts a reply within 7 days of their last message, and that window has closed. Leave an internal note, or answer in the ${channelLabel(t.channel)} app.`
-						: undefined}
-		<div class="flex flex-col gap-2">
-			{#if channelDisabled}
-				<Alert type="warning" href={resolve('staff/inbox/channels')}>
-					{m.staff_inbox_id_channel_disabled_enable_settings_inbox_body({
-						channelLabel: channelLabel(t.channel)
-					})}
-				</Alert>
-			{/if}
+	<EnabledChannels>
+		{#snippet children(enabledChannels)}
+			{@const channelDisabled =
+				!isAlwaysEnabledChannel(t.channel) &&
+				(!isStaffInboxChannel(t.channel) || !enabledChannels.includes(t.channel))}
+			{@const replyBlockedReason =
+				(t.channel === 'web' || t.channel === 'email') && !t.contactEmail
+					? 'This conversation has no contact email, so there is nowhere to send a reply. Leave an internal note instead.'
+					: channelDisabled
+						? `Replies are turned off for the ${channelLabel(t.channel)} channel.`
+						: metaWindowClosed
+							? `${channelLabel(t.channel)} only accepts a reply within 7 days of their last message, and that window has closed. Leave an internal note, or answer in the ${channelLabel(t.channel)} app.`
+							: undefined}
+			<div class="flex flex-col gap-2">
+				{#if channelDisabled}
+					<Alert type="warning" href={resolve('staff/inbox/channels')}>
+						{m.staff_inbox_id_channel_disabled_enable_settings_inbox_body({
+							channelLabel: channelLabel(t.channel)
+						})}
+					</Alert>
+				{/if}
 
-			<ThreadComposer
-				threadId={t.id}
-				{replyForm}
-				{noteForm}
-				{replyBlockedReason}
-				assignees={getAssignableStaff}
-				onsent={() => getInboxThread(threadId).refresh()}
-			/>
-
-			<!-- The phone's disposition row: under the composer, above the home
-			     indicator, equal targets. -->
-			<div class="sm:hidden">
-				<DispositionBar
+				<ThreadComposer
 					threadId={t.id}
-					status={t.status}
-					awaiting={!!t.awaitingReplySince}
-					variant="stacked"
-					onassign={() => {
-						detailsOpen = true;
-					}}
+					{replyForm}
+					{noteForm}
+					{replyBlockedReason}
+					assignees={getAssignableStaff}
+					onsent={() => getInboxThread(threadId).refresh()}
 				/>
+
+				<!-- The phone's disposition row: under the composer, above the home
+			     indicator, equal targets. -->
+				<div class="sm:hidden">
+					<DispositionBar
+						threadId={t.id}
+						status={t.status}
+						awaiting={!!t.awaitingReplySince}
+						variant="stacked"
+						onassign={() => {
+							detailsOpen = true;
+						}}
+					/>
+				</div>
 			</div>
-		</div>
-	{:else if channels.error}
-		<Alert type="warning" reset={() => void getInboxEnabledChannels().refresh()}>
-			{m.ui_load_failed_body({ error: errorMessage(channels.error.e) })}
-		</Alert>
-	{/if}
+		{/snippet}
+	</EnabledChannels>
 </ThreadPane>

@@ -20,14 +20,17 @@
 	const context = new Latest(() => getInboxThreadContext(threadId));
 
 	let newTag = $state('');
+	const loaded = $derived(
+		context.current ?? (await getInboxThreadContext(threadId).catch(() => undefined))
+	);
 </script>
 
-{#if context.current}
+{#if loaded}
 	<div
 		aria-busy={context.loading}
 		class={['flex flex-wrap items-center gap-1', context.loading && 'opacity-60']}
 	>
-		{#each context.current.tags as tag (tag)}
+		{#each loaded.tags as tag (tag)}
 			<span class="badge gap-1 badge-ghost badge-sm">
 				{tag}
 				<button
