@@ -77,7 +77,8 @@
 	{#snippet summary(total)}
 		{total}
 		{m.term_instructor({ count: total })}
-		{#await list then { pending }}
+		<svelte:boundary>
+			{@const { pending } = await list}
 			{#if pending > 0 && f.status !== 'requested'}
 				·
 				<button
@@ -91,9 +92,10 @@
 					{m.staff_members_instructors_pending_label({ pending })}
 				</button>
 			{/if}
-		{:catch}
-			<!-- Roster's DataList takes this rejection to the boundary. -->
-		{/await}
+			{#snippet failed()}
+				<!-- Roster's DataList takes this rejection to the boundary. -->
+			{/snippet}
+		</svelte:boundary>
 	{/snippet}
 
 	{#snippet aside(row)}

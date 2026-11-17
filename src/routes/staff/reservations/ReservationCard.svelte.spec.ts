@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { settled } from 'svelte';
 
 // The folded row on /staff/reservations (#2694): which actions a card offers,
 // and that its status and facts follow the card grammar in ui-patterns.
@@ -62,6 +63,8 @@ const show = async (over: Record<string, unknown> = {}, current = false) => {
 		current,
 		rates: Promise.resolve({ user: 15, group: 15, production: 0, event_listing: 0 } as never)
 	});
+	// The payment fact awaits `rates`, and the card commits once it has.
+	await settled();
 	return container.querySelector('li')!;
 };
 
