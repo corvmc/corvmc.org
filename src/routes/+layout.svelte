@@ -26,6 +26,10 @@
 		}
 	});
 
+	// A server-rendered control does nothing until the page hydrates. The e2e suite
+	// waits for this attribute after each navigation before it acts (e2e/fixtures/test.ts).
+	onMount(() => document.documentElement.setAttribute('data-hydrated', ''));
+
 	// Capture phase, so it runs before kit's own click handler on the body.
 	onMount(() => {
 		const onClick = (e: MouseEvent) => ignoreRepeatTap(e, navigating.to?.url);
