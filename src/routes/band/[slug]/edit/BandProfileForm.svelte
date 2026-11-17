@@ -81,7 +81,10 @@
 		// page always stays where it is. Band settings is where an owner changes it.
 		refreshAll();
 	}}
+	class="flex flex-col gap-6"
 >
+	<!-- One stack sets every gap: the fieldset is `display: contents`, so its
+	     cards are this flex column's items, and a hidden input is not one. -->
 	<input {...profileFields.slug.as('hidden', band.slug)} />
 	<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />
 	<input {...profileFields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
@@ -189,7 +192,7 @@
 			</div>
 		</InfoCard>
 
-		<div class="mb-6 grid gap-6 lg:grid-cols-2">
+		<div class="grid gap-6 lg:grid-cols-2">
 			<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
 				<p class="mb-3 text-muted">
 					{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
@@ -231,15 +234,13 @@
 			</InfoCard>
 		</div>
 
-		<div class="mb-6">
-			<InfoCard title={m.band_slug_edit_band_profile_form_visibility_title()}>
-				<VisibilityField
-					field={profileFields.directoryVisibility}
-					bind:value={directoryVisibility}
-					publicDescription={m.band_slug_edit_band_profile_form_public_description_body()}
-				/>
-			</InfoCard>
-		</div>
+		<InfoCard title={m.band_slug_edit_band_profile_form_visibility_title()}>
+			<VisibilityField
+				field={profileFields.directoryVisibility}
+				bind:value={directoryVisibility}
+				publicDescription={m.band_slug_edit_band_profile_form_public_description_body()}
+			/>
+		</InfoCard>
 	</fieldset>
 
 	{#if canEdit}
