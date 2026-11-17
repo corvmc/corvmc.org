@@ -42,7 +42,11 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-const { default: BookingDialog, bookersFor } = await import('./BookingDialog.svelte');
+const {
+	default: BookingDialog,
+	bookersFor,
+	bookerOptions
+} = await import('./BookingDialog.svelte');
 
 const bookers = bookersFor({
 	isSustaining: false,
@@ -101,5 +105,19 @@ describe('BookingDialog', () => {
 		await open({ bookers, initial: 'someone-elses-band' });
 
 		await expect.element(forSelect()).toHaveValue('user');
+	});
+
+	it('names a group apart from its own bare name and from Me', () => {
+		const [me, band] = bookerOptions(
+			bookersFor({
+				isSustaining: false,
+				bands: [{ slug: 'solo', name: 'Ana Ruiz', hasSustainingMember: false }],
+				isInstructor: false
+			})
+		);
+
+		expect(band.label).toContain('Ana Ruiz');
+		expect(band.label).not.toBe('Ana Ruiz');
+		expect(band.label).not.toBe(me.label);
 	});
 });

@@ -1,8 +1,18 @@
 <script lang="ts" module>
+	import { m } from '#lib/paraglide/messages.js';
+	import { groupKindLabels } from '#lib/terms.js';
+	import type { GroupKind } from '#lib/config.js';
+
 	/** Who a booking is for, with what decides its terms and its recurring option. */
 	export type Booker =
 		| { kind: 'user'; isSustaining: boolean }
-		| { kind: 'group'; slug: string; name: string; hasSustainingMember: boolean }
+		| {
+				kind: 'group';
+				groupKind: GroupKind;
+				slug: string;
+				name: string;
+				hasSustainingMember: boolean;
+		  }
 		| { kind: 'instructor' };
 
 	/** A booker's key in the For select. */
@@ -21,14 +31,29 @@
 	}): Booker[] {
 		return [
 			{ kind: 'user', isSustaining: opts.isSustaining },
-			...opts.bands.map((b) => ({ kind: 'group' as const, ...b })),
+			...opts.bands.map((b) => ({ kind: 'group' as const, groupKind: 'band' as const, ...b })),
 			...(opts.isInstructor ? [{ kind: 'instructor' as const }] : [])
 		];
+	}
+
+	/** A group reads with its kind, so a solo act named like its member reads apart from Me. */
+	export function bookerOptions(bookers: Booker[]): { value: string; label: string }[] {
+		return bookers.map((b) => ({
+			value: bookerKey(b),
+			label:
+				b.kind === 'group'
+					? m.reservations_booking_booking_dialog_group_option_label({
+							name: b.name,
+							kind: groupKindLabels[b.groupKind]
+						})
+					: b.kind === 'instructor'
+						? m.reservations_booking_booking_dialog_teaching_label()
+						: m.reservations_booking_booking_dialog_me_label()
+		}));
 	}
 </script>
 
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import Action from '#lib/components/ui/Action.svelte';
@@ -82,17 +107,7 @@
 				: bookAndPayReservation
 	);
 
-	const options = $derived(
-		bookers.map((b) => ({
-			value: bookerKey(b),
-			label:
-				b.kind === 'group'
-					? b.name
-					: b.kind === 'instructor'
-						? m.reservations_booking_booking_dialog_teaching_label()
-						: m.reservations_booking_booking_dialog_me_label()
-		}))
-	);
+	const options = $derived(bookerOptions(bookers));
 
 	// Bumped when a slot conflict sends the wizard back to step 1, so the
 	// Date/Time step reloads availability without the slot just taken.
