@@ -128,15 +128,24 @@ the queue of work, and each item on it links to the page where the work is done.
 - **One list per type.** A view that narrows a type (status, role, kind) is a filter on its list,
   kept in the URL. A second page listing the same type folds in, and its URL redirects.
 - **One detail page per record**, whatever roles the record plays.
-- **Rows sit in four sections, each one question** (decision 0088): Outreach (outward, to the
+- **Rows sit in four sections, each one question** (#3112): Outreach (outward, to the
   public and outside parties), Community (members and what they post), Programs (what CMC
   offers) and Governance (how CMC runs itself), with Dashboard above and Reports and System
   below. Rows and sections are data, one file per section in `src/routes/staff/nav-items/`; a new
   module joins the section whose question it answers by adding its row and key to that file.
+  Not Equipment split in two, because items and supplies share the stock ledger, intake and
+  orders. Not Inbox above the sections, because Inbox is outward correspondence and its badge
+  shows when its section opens (#3112).
+- **Bands, clubs and committees are listed apart**, each in the section its work belongs to
+  (#3027). Not one Groups list, because it places clubs and committees outside those sections.
+  Not committees renamed to departments, because the name is in use with members and on the
+  public site (#3027).
 - **A module's settings live on its row**, behind a Settings button in its header, or a view such
   as Inbox's Channels. The System panel (`/staff/system`) has its own sidebar and holds only what
   spans modules: organization, features, access, transactions and the audit log. The Content
   panel (`/staff/help`, `/staff/local-resources`) works the same way, with one row per page.
+  Not a Settings tab bar, because it cannot hold Access and the audit log at the width they
+  need, and it kept module settings where the module's staff do not look (#2763).
 - **A moved page keeps its old URL as a redirect**, with a spec that names it.
 
 ### Consoles
@@ -710,7 +719,9 @@ Three things follow:
   View all opens `/staff/volunteering?about=`. A page adds its own controls through `actions`.
 - **On a member page, both cards take `member`** and read `member-related.remote.ts`: the
   viewer's own tasks, and the board's open shifts with Sign up. Each card is left off when empty.
-  Only the group and event pages use it (decision 0071).
+  Only the group and event pages use it (#2630). Not the staff remotes on member pages, because
+  their guards are capabilities a plain member does not hold. Not every task on the record listed
+  read-only, because members could read staff work they have no part in (#2630).
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
@@ -1221,6 +1232,12 @@ dashboard alert list for it is retired once it does (low stock, #2756).
 Everything waiting on a staff decision is one `ActivityFeed` on `/staff`, read oldest first from
 the registry in `src/lib/server/review/review-registry.ts` (#2623). A new kind of review is a
 registry entry, not a page section or a nav badge.
+
+- Not a badge per queue in the nav, because staff would have to add the counts up (#2623).
+- Not a review page apart from the dashboard, because the dashboard is the page staff open
+  first (#2623).
+- Not a decision endpoint of the feed's own, because a second guard and a second service call
+  could drift from the kind's page (#2623).
 
 - **One query.** The feed, its counts and the filter chips come from `getStaffDashboard`; the
   Dashboard nav badge is `countReviewFeed`, so the two cannot disagree. Chips appear only for kinds
@@ -1837,7 +1854,7 @@ Components in `src/lib/components/inbox/`:
 
 - `ListDetailShell` (in `ui/`) — the two-pane frame, in its default `panes` mode. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
 - `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
-- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md). Takes the thread's `channel`, which decides each body's format.
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise (#204). Takes the thread's `channel`, which decides each body's format.
 - `MessageBody` — the only place a message body becomes HTML. On the in-app channels (`direct`, `group`, `portal`) it renders markdown through `renderMessageMarkdown`: typed HTML shows as text, images as their alt text, external links open in a new tab. Email, SMS and form channels stay plain text. `src/message-body.spec.ts` fails a component that prints or `{@html}`s a body any other way.
 - `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
 - `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.

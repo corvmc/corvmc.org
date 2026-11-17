@@ -509,7 +509,9 @@ npx wrangler dev --test-scheduled --var CRON_SECRET:local-test --var SENTRY_ENVI
 
 Nothing removes a Sentry monitor, so a job that leaves `CRON_SCHEDULE` leaves a monitor that
 raises "missed check-in" every run. `CRON_MONITORS` in `src/lib/server/cron/schedule.ts` lists
-every slug that has ever had one, and `schedule.spec.ts` fails until the two agree.
+every slug that has ever had one, and `schedule.spec.ts` fails until the two agree. Not a
+deploy-time reconcile, because it needs a long-lived Sentry token with `alerts:write` as a build
+secret and an API call on the publish path (#1327).
 
 1. Mark the slug retired in `CRON_MONITORS` — `{ retired: 'YYYY-MM-DD', ref: '#<pr or issue>' }`.
    Never delete the entry, and never schedule a retired slug again: a disabled monitor records

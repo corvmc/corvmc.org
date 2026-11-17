@@ -6,9 +6,17 @@ the staffer sees is the web app, so a fix to the door screen is a deploy, not a 
 native binary changes only when Capacitor or the Stripe Terminal SDK does.
 
 How a door sale runs is in
-[business-workflows](business-workflows.md#door-sales). Why it is built this way is
-[decision 0018](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md). The one-time setup is
+[business-workflows](business-workflows.md#door-sales). The one-time setup is
 [Owner setup](#owner-setup) below.
+
+- Not an unattended kiosk, because the reader disconnects in the background. Unattended use
+  needs a smart reader (#1659).
+- Not iPhone, because entitlements, Apple's terms and App Review add schedule (#612).
+- Not a device registry or allowlist, because with one phone every answer is constant and
+  Stripe's connect-time check is the device gate. A second phone is the trigger to revisit
+  (#612).
+- Not refunds on the device, because taking money and giving it back are separate authorities
+  (#612).
 
 ## Owner setup
 
