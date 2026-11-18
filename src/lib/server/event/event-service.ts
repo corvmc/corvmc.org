@@ -42,8 +42,6 @@ import {
 } from '#lib/server/volunteer/show-cancellation.js';
 import { showBlockers } from './show-readiness';
 import { requireProgramGroup } from '#lib/server/group/group-kind.js';
-import { defaultVisibility, visibleTo, type ListingViewer } from './visibility';
-import type { EventVisibility } from '#lib/server/db/schema/event.js';
 import {
 	eq,
 	sql,
@@ -275,8 +273,6 @@ export interface EventRow {
 	source: string;
 	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
 	kind: EventKind;
-	/** Who may see it once published. See `eventVisibilities`. */
-	visibility?: EventVisibility;
 	location: string | null;
 	address: string | null;
 	/** The structured half of `location`. Null means the practice room. */
@@ -333,17 +329,6 @@ export interface CreateEventParams {
 		buffer: ArrayBuffer;
 		contentType: string;
 	};
-}
-
-/** The owner's kind, which a meeting's default visibility reads. */
-async function groupKindOf(groupId: string | null | undefined) {
-	if (!groupId) return null;
-	const [row] = await db
-		.select({ kind: group.kind })
-		.from(group)
-		.where(eq(group.id, groupId))
-		.limit(1);
-	return row?.kind ?? null;
 }
 
 export async function create(params: CreateEventParams): Promise<EventRow> {
@@ -444,8 +429,6 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				doorsAt: doorsAt ?? null,
 				tags: tags ?? null,
 				kind,
-				// Changed on the edit form; a new listing starts at its default.
-				visibility: defaultVisibility(kind, kind === 'meeting' ? await groupKindOf(groupId) : null),
 				venueId: venueId ?? null,
 				location: location ?? null,
 				address: address ?? null,
@@ -525,7 +508,6 @@ export interface UpdateEventParams {
 	doorsAt?: Date | null;
 	tags?: string | null;
 	kind?: EventKind;
-	visibility?: EventVisibility;
 	location?: string | null;
 	address?: string | null;
 	venueId?: string | null;
@@ -680,7 +662,6 @@ function changedFields(existing: EventRow, params: UpdateEventParams): EventEdit
 		'title',
 		'description',
 		'kind',
-		'visibility',
 		'tags',
 		'location',
 		'address',
@@ -752,7 +733,6 @@ export async function update(
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.kind !== undefined) updates.kind = params.kind;
-	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.location !== undefined) updates.location = params.location;
 	if (params.address !== undefined) updates.address = params.address;
 	if (params.venueId !== undefined) updates.venueId = params.venueId;
@@ -901,15 +881,6 @@ export async function update(
 				) as (typeof eventListing.$inferSelect)[])
 			: await write;
 
-	// The column defaults to public, so a row read without it was public.
-	const visibilityBefore = existing.visibility ?? 'public';
-	if (params.visibility !== undefined && params.visibility !== visibilityBefore) {
-		await recordAuditEntry({
-			action: 'event.visibility_changed',
-			subject: { type: 'event', id: eventId, label: updated.title },
-			details: { from: visibilityBefore, to: params.visibility }
-		});
-	}
 	if (isCancelled) {
 		await recordAuditEntry({
 			action: 'event.edited_while_cancelled',
@@ -1629,7 +1600,6 @@ export async function listUpcoming(limit?: number): Promise<EventRow[]> {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				gt(eventListing.startsAt, new Date())
@@ -1653,7 +1623,6 @@ export async function getShowTonight(now = new Date()): Promise<EventRow | null>
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				gte(eventListing.startsAt, dayStart),
@@ -1675,7 +1644,6 @@ export async function listPast(limit?: number): Promise<EventRow[]> {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				eq(eventListing.source, 'cmc'),
 				eq(eventListing.kind, 'show'),
 				lte(eventListing.startsAt, new Date())
@@ -2434,7 +2402,6 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			// column with a different meaning — a credit, not authority.
 			groupId: bandId,
 			source: 'band',
-			visibility: defaultVisibility('show'),
 			createdByUserId
 		})
 		.returning();
@@ -2602,8 +2569,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 	// and an "event" for its own rehearsal is how the free path would be reached.
 	// Checked before anything is written, reservation or not — the wrong `source`
 	// on a band's listing is a second, quieter bug.
-	const ownerKind = await requireProgramGroup(groupId);
-	const visibility = defaultVisibility(programSessionKind, ownerKind);
+	await requireProgramGroup(groupId);
 
 	const eventId = crypto.randomUUID();
 
@@ -2648,7 +2614,6 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				groupId,
 				source: 'group',
 				kind: programSessionKind,
-				visibility,
 				// Published, matching `processEventSeries` — a club's weekly series
 				// publishes itself, and the extra meeting the chair adds by hand used
 				// to land as a draft only staff could release. The room is held
@@ -2715,7 +2680,6 @@ export interface UpdateGroupSessionParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
-	visibility?: EventVisibility;
 	/** A replacement poster. Absent leaves the existing one alone. */
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
@@ -2812,7 +2776,6 @@ export async function updateGroupSession(
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
-	if (params.visibility !== undefined) updates.visibility = params.visibility;
 
 	// Written after the row, matching `createGroupEvent`: `writeEventPoster`
 	// needs the event to exist to key the object against it.
@@ -2907,7 +2870,6 @@ export interface UpdateBandEventParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
-	visibility?: EventVisibility;
 	posterFile?: {
 		buffer: ArrayBuffer;
 		contentType: string;
@@ -2935,7 +2897,6 @@ export async function updateBandEvent(
 	if (params.address !== undefined) updates.address = params.address;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
-	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	if (params.posterFile) {
@@ -3144,7 +3105,6 @@ export async function listBandEventsUpcoming(bandId: string, limit?: number): Pr
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				gt(eventListing.startsAt, new Date())
 			)
 		)
@@ -3178,7 +3138,6 @@ export async function countBandPastEvents(bandId: string): Promise<number> {
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		);
@@ -3200,7 +3159,6 @@ export async function listBandEventsPast(
 			and(
 				confirmedForBand(bandId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		)
@@ -3312,7 +3270,6 @@ export async function listMemberUpcomingShows(userId: string): Promise<MemberSho
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				gt(eventListing.startsAt, new Date())
 			)
 		)
@@ -3336,7 +3293,6 @@ export async function listMemberPastShows(
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		)
@@ -3356,7 +3312,6 @@ export async function countMemberPastShows(userId: string): Promise<number> {
 			and(
 				confirmedForMember(userId),
 				eq(eventListing.status, 'published'),
-				visibleTo(),
 				lte(eventListing.startsAt, new Date())
 			)
 		);
@@ -3387,8 +3342,7 @@ export interface CalendarEventRow extends EventRow {
  */
 export async function listPublicCalendarEvents(
 	start: Date,
-	end: Date,
-	viewer: ListingViewer = null
+	end: Date
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({
@@ -3403,7 +3357,6 @@ export async function listPublicCalendarEvents(
 		.where(
 			and(
 				inArray(eventListing.status, [...publicEventStatuses]),
-				visibleTo(viewer),
 				gte(eventListing.startsAt, start),
 				lt(eventListing.startsAt, end)
 			)
@@ -3429,8 +3382,7 @@ export async function listPublicCalendarEvents(
  */
 export async function listPublicUpcomingEvents(
 	from: Date,
-	opts: { limit: number; offset: number },
-	viewer: ListingViewer = null
+	opts: { limit: number; offset: number }
 ): Promise<CalendarEventRow[]> {
 	const rows = await db
 		.select({
@@ -3443,11 +3395,7 @@ export async function listPublicUpcomingEvents(
 		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.leftJoin(venue, eq(venue.id, eventListing.venueId))
 		.where(
-			and(
-				inArray(eventListing.status, [...publicEventStatuses]),
-				visibleTo(viewer),
-				gte(eventListing.startsAt, from)
-			)
+			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
 		)
 		.orderBy(asc(eventListing.startsAt))
 		.limit(opts.limit + 1)
@@ -3462,19 +3410,12 @@ export async function listPublicUpcomingEvents(
 }
 
 /** How many the guide has in total, so its pager can say what is left (#1059). */
-export async function countPublicUpcomingEvents(
-	from: Date,
-	viewer: ListingViewer = null
-): Promise<number> {
+export async function countPublicUpcomingEvents(from: Date): Promise<number> {
 	const [row] = await db
 		.select({ n: count() })
 		.from(eventListing)
 		.where(
-			and(
-				inArray(eventListing.status, [...publicEventStatuses]),
-				visibleTo(viewer),
-				gte(eventListing.startsAt, from)
-			)
+			and(inArray(eventListing.status, [...publicEventStatuses]), gte(eventListing.startsAt, from))
 		);
 	return Number(row?.n ?? 0);
 }

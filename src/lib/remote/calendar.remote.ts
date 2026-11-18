@@ -6,8 +6,6 @@ import {
 } from '#lib/server/event/event-service.js';
 import { toCalendarEntry } from '#lib/server/event/calendar-entry.js';
 import { requireUser } from '#lib/server/authorization.js';
-import { currentListingViewer } from '#lib/server/event/listing-viewer.js';
-import type { ListingViewer } from '#lib/server/event/visibility.js';
 import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '#lib/types/calendar.js';
@@ -31,24 +29,21 @@ function monthBounds(month: string): { start: string; end: string } {
  * Continuous upcoming list for the gig guide: events from `from` (default
  * today, venue time) forward, paged by offset.
  */
-export const getPublicGigGuide = query(gigGuideSchema, (args) => gigGuide(args, null));
+export const getPublicGigGuide = query(gigGuideSchema, gigGuide);
 
-/** The gig guide with what a member may see too: members' and their own groups' listings. */
-export const getMemberGigGuide = query(gigGuideSchema, async (args) => {
+/** The gig guide on the member side. */
+export const getMemberGigGuide = query(gigGuideSchema, (args) => {
 	requireUser();
-	return gigGuide(args, await currentListingViewer());
+	return gigGuide(args);
 });
 
-async function gigGuide(
-	{ from, offset }: { from?: string; offset: number },
-	viewer: ListingViewer
-) {
+async function gigGuide({ from, offset }: { from?: string; offset: number }) {
 	const anchor = from ?? formatDateInTz(new Date(), DEFAULT_TIMEZONE);
 	const windowStart = buildDateInTz(anchor, '00:00', DEFAULT_TIMEZONE);
 
 	const [rows, total] = await Promise.all([
-		listPublicUpcomingEvents(windowStart, { limit: GIG_GUIDE_PAGE_SIZE, offset }, viewer),
-		countPublicUpcomingEvents(windowStart, viewer)
+		listPublicUpcomingEvents(windowStart, { limit: GIG_GUIDE_PAGE_SIZE, offset }),
+		countPublicUpcomingEvents(windowStart)
 	]);
 
 	const hasMore = rows.length > GIG_GUIDE_PAGE_SIZE;

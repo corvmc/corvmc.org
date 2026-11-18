@@ -3,7 +3,6 @@ import { db } from '#lib/server/db/index.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
-import { visibleTo, type ListingViewer } from '#lib/server/event/visibility.js';
 import {
 	volunteerShift,
 	volunteerSignup,
@@ -35,17 +34,13 @@ import type { RelationKey } from '#lib/utils/related-tasks.js';
  * every member sees the same open shifts there and here.
  */
 
-/** The member event page's rule: published or cancelled, and one `viewer` may see. */
-export async function isPublicListing(eventId: string, viewer: ListingViewer): Promise<boolean> {
+/** The member event page's rule: published or cancelled. */
+export async function isPublicListing(eventId: string): Promise<boolean> {
 	const [row] = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
 		.where(
-			and(
-				eq(eventListing.id, eventId),
-				inArray(eventListing.status, [...publicEventStatuses]),
-				visibleTo(viewer)
-			)
+			and(eq(eventListing.id, eventId), inArray(eventListing.status, [...publicEventStatuses]))
 		)
 		.limit(1);
 	return row !== undefined;

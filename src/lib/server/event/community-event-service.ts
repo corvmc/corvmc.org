@@ -10,7 +10,6 @@ import { saveTicketSale } from '#lib/server/ticket/ticket-sale.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, ne } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
-import { visibleTo } from './visibility';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { uploadFile } from '#lib/server/storage.js';
 import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
@@ -198,7 +197,6 @@ export async function checkForDuplicate(params: {
 			and(
 				eq(eventListing.status, 'published'),
 				// The member is told the match's title, so only one anyone may see.
-				visibleTo(),
 				gte(eventListing.startsAt, dayStart),
 				containsLiteral(eventListing.title, stem)
 			)
@@ -292,8 +290,6 @@ export interface UpdateCommunityEventParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
-	/** No group owns a member's listing, so never `'group'`. */
-	visibility?: 'public' | 'members';
 	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
@@ -333,7 +329,6 @@ export async function updateCommunityEvent(
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
-	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	// A review-required member's edit to something already public sends it back

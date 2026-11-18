@@ -583,18 +583,15 @@ export const scheduleCampaign = command(
 
 export const deleteCampaign = command(
 	z.object({ campaignId: z.string().min(1) }),
-	unaudited(
-		'Campaign content; sending one past its visibility is audited as event.emailed_beyond_visibility.',
-		async ({ campaignId }) => {
-			await requireCapability('marketing.manageCampaigns');
-			try {
-				await deleteCampaignService(campaignId);
-			} catch (err) {
-				mapDomainError(err);
-			}
-			return { success: true };
+	unaudited('A draft campaign, never sent; nothing else reads it.', async ({ campaignId }) => {
+		await requireCapability('marketing.manageCampaigns');
+		try {
+			await deleteCampaignService(campaignId);
+		} catch (err) {
+			mapDomainError(err);
 		}
-	)
+		return { success: true };
+	})
 );
 
 /**

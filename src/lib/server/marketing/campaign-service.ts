@@ -23,8 +23,6 @@ import * as env from '$app/env/public';
 import { DomainError } from '#lib/server/domain-error.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
-import { audiencesBeyondVisibility } from '#lib/utils/audience-reach.js';
-import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { outboxMessage } from '#lib/server/db/schema/outbox.js';
 import { htmlEmailRow, outboxRow } from '#lib/server/outbox/outbox-row.js';
 import { deliverDueSoon, deliverNow, type Delivery } from '#lib/server/outbox/outbox-service.js';
@@ -228,8 +226,7 @@ export async function getCampaign(id: string) {
 				.select({
 					id: eventListing.id,
 					title: eventListing.title,
-					startsAt: eventListing.startsAt,
-					visibility: eventListing.visibility
+					startsAt: eventListing.startsAt
 				})
 				.from(eventListing)
 				.where(eq(eventListing.id, row.eventId))
@@ -244,8 +241,7 @@ export async function getCampaign(id: string) {
 			? {
 					id: scopedEvent.id,
 					title: scopedEvent.title,
-					when: formatDateShortYear(scopedEvent.startsAt),
-					visibility: scopedEvent.visibility
+					when: formatDateShortYear(scopedEvent.startsAt)
 				}
 			: null
 	};
@@ -317,7 +313,6 @@ export async function scheduleCampaign(id: string, scheduledFor: Date) {
 		throw new CampaignValidationError('Scheduled time must be in the future');
 
 	await db.update(campaign).set({ scheduledFor, updatedAt: new Date() }).where(eq(campaign.id, id));
-	await recordBeyondVisibility(id, true);
 }
 
 export async function unscheduleCampaign(id: string) {
@@ -349,48 +344,8 @@ export async function sendNow(id: string) {
 		.set({ scheduledFor: new Date(), updatedAt: new Date() })
 		.where(eq(campaign.id, id));
 
-	await recordBeyondVisibility(id, false);
 	// Execute inline rather than waiting for cron
 	await executeSend(id);
-}
-
-/**
- * Warn, record, allow (#2773): a blast about a members-only or group event may
- * go to audiences that reach past it, and the event's history says who sent it.
- */
-async function recordBeyondVisibility(campaignId: string, scheduled: boolean) {
-	const [row] = await db
-		.select({
-			subject: campaign.subject,
-			eventId: eventListing.id,
-			title: eventListing.title,
-			visibility: eventListing.visibility
-		})
-		.from(campaign)
-		.innerJoin(eventListing, eq(eventListing.id, campaign.eventId))
-		.where(eq(campaign.id, campaignId))
-		.limit(1);
-	if (!row || row.visibility === 'public') return;
-
-	const targeted = await db
-		.select({ name: audience.name, systemKey: audience.systemKey, allowOptIn: audience.allowOptIn })
-		.from(campaignAudience)
-		.innerJoin(audience, eq(audience.id, campaignAudience.audienceId))
-		.where(eq(campaignAudience.campaignId, campaignId));
-	const beyond = audiencesBeyondVisibility(row.visibility, targeted);
-	if (beyond.length === 0) return;
-
-	await recordAuditEntry({
-		action: 'event.emailed_beyond_visibility',
-		subject: { type: 'event', id: row.eventId, label: row.title },
-		details: {
-			campaignId,
-			subject: row.subject,
-			visibility: row.visibility,
-			audiences: beyond.map((a) => a.name),
-			scheduled
-		}
-	});
 }
 
 // ---------------------------------------------------------------------------

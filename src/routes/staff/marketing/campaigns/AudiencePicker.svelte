@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import Alert from '#lib/components/ui/Alert.svelte';
 	import { getCampaignAudienceOptions } from '#lib/remote/marketing.remote.js';
-	import { audiencesBeyondVisibility, type ReachVisibility } from '#lib/utils/audience-reach.js';
 
 	/**
 	 * The audience checkboxes and their recipient total, owning the query behind them.
@@ -18,8 +16,8 @@
 	}: {
 		selected?: string[];
 		total?: number;
-		/** The show the campaign is about: what "Event audience" counts, and who may see it. */
-		event?: { id: string; visibility: ReachVisibility } | null;
+		/** The show the campaign is about: what "Event audience" counts. */
+		event?: { id: string } | null;
 		/** Tick "Event audience" on open: a campaign started from a show's page (#2776). */
 		tickEventAudience?: boolean;
 	} = $props();
@@ -35,9 +33,6 @@
 
 	const ticked = $derived(audiences.filter((a) => selected.includes(a.id)));
 	const computed = $derived(ticked.reduce((sum, a) => sum + a.subscriberCount, 0));
-
-	// Warn, record, allow (#2773): the send goes ahead and the event's history records it.
-	const beyond = $derived(event ? audiencesBeyondVisibility(event.visibility, ticked) : []);
 
 	$effect(() => {
 		total = computed;
@@ -73,13 +68,4 @@
 	<p class="mt-1 text-subtle">
 		{m.staff_marketing_campaigns_audience_picker_recipients_before_text({ total: computed })}
 	</p>
-{/if}
-{#if event && beyond.length > 0}
-	<Alert type="warning" class="mt-2">
-		{(event.visibility === 'group'
-			? m.staff_marketing_campaigns_audience_picker_beyond_group_body
-			: m.staff_marketing_campaigns_audience_picker_beyond_members_body)({
-			names: beyond.map((a) => a.name).join(', ')
-		})}
-	</Alert>
 {/if}
