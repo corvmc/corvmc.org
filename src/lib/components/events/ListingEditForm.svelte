@@ -28,7 +28,6 @@
 			tags: string | null;
 			kind: string | null;
 			/** The owning group, which makes "group members" a choice. */
-			bandId: string | null;
 			source: string;
 			location: string | null;
 			address: string | null;
