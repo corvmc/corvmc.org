@@ -314,6 +314,14 @@ touch prod). Wire it into the deploy:
    only drops then runs after publish instead of before it; see
    [operations manual §1](operations-manual.md#1-how-deploys-work).
 
+4. **Workers Builds → Build environment variables:** `SENTRY_AUTH_TOKEN`, as a secret. It is
+   an organization token with the `org:ci` scope, the same kind `.env.sentry-build-plugin`
+   holds locally. Without it, `sentrySvelteKit()` warns and uploads no source maps, the build
+   still passes, and every Sentry stack trace stays minified (#3278). To check a deploy, look up
+   the `debugId` comment of a deployed `_app/immutable` chunk at
+   `/api/0/projects/corvallis-music-collective/javascript-sveltekit/artifact-lookup/?debug_id=<id>`.
+   An empty `[]` means nothing was uploaded.
+
 If the build-step migrate fails, the build fails and nothing is published. A failed
 `--after-publish` leaves the new Worker live over a table that still has the dropped column,
 which it does not read. Apply it by hand with `pnpm db:migrate`: until then, the next build
