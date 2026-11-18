@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { parseTagList } from '#lib/utils/unique-tags.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
@@ -56,15 +57,7 @@
 		endsAt: evt.endsAt
 	});
 
-	function parseTags(tags: string | null): string[] {
-		if (!tags) return [];
-		return tags
-			.split(',')
-			.map((t) => t.trim())
-			.filter(Boolean);
-	}
-
-	const tagList = $derived(parseTags(evt.tags));
+	const tagList = $derived(parseTagList(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
 	// The poster's tape already shows the primary tag.
 	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
@@ -343,7 +336,7 @@
 				<SectionLabel label={m.public_events_id_more_shows_label()} />
 				<div class="edet__more-grid">
 					{#each data.upcoming as e (e.id)}
-						{@const eTags = parseTags(e.tags)}
+						{@const eTags = parseTagList(e.tags)}
 						<PosterCard
 							href="/events/{e.id}"
 							title={e.title}

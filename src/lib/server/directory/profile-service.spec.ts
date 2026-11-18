@@ -157,6 +157,12 @@ describe('updateMemberProfile', () => {
 		]);
 	});
 
+	it('writes a tag repeated in another case once', async () => {
+		await updateMemberProfile('user-1', { genres: ['Jazz', 'jazz', ' JAZZ '] });
+
+		expect(tags('entry-1')).toEqual([{ kind: 'genre', value: 'jazz' }]);
+	});
+
 	it('truncates bio to 2000 chars and tagline to 150', async () => {
 		await updateMemberProfile('user-1', { bio: 'x'.repeat(3000), tagline: 'y'.repeat(200) });
 

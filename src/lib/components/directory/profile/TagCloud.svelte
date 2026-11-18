@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ProfileSection from './ProfileSection.svelte';
+	import type { UniqueTags } from '#lib/utils/unique-tags.js';
 
 	let {
 		label,
@@ -7,7 +8,7 @@
 		variant
 	}: {
 		label: string;
-		tags: string[];
+		tags: UniqueTags;
 		/** sticker-badge accent applied to all chips */
 		variant?: 'teal' | 'orange';
 	} = $props();
