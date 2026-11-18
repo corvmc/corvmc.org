@@ -1901,7 +1901,7 @@ describe('EventService', () => {
 	});
 
 	// -----------------------------------------------------------------------
-	// Public visibility
+	// Public statuses
 	// -----------------------------------------------------------------------
 	//
 	// This is the line between "announced" and "never public". A cancelled show
@@ -2133,28 +2133,6 @@ describe('EventService', () => {
 			await expect(update('evt-1', { ticketingEnabled: true, ticketPrice: 1000 })).rejects.toThrow(
 				EventStateError
 			);
-		});
-	});
-
-	// A listing that leaves the public calendar says who moved it (#2821).
-	describe('changing visibility', () => {
-		it('records the move from one visibility to another', async () => {
-			selectResult = [{ ...mockEventRow, visibility: 'public' }];
-			await update('evt-1', { visibility: 'members' });
-			expect(mockRecordAudit).toHaveBeenCalledWith(
-				expect.objectContaining({
-					action: 'event.visibility_changed',
-					details: { from: 'public', to: 'members' }
-				})
-			);
-		});
-
-		it('records nothing when the visibility stays', async () => {
-			selectResult = [{ ...mockEventRow, visibility: 'members' }];
-			await update('evt-1', { visibility: 'members' });
-			selectResult = [mockEventRow];
-			await update('evt-1', { visibility: 'public' });
-			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 	});
 

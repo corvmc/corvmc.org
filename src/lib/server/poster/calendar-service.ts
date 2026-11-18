@@ -5,7 +5,6 @@ import { and, asc, eq, gte, isNull, lt, ne, or } from 'drizzle-orm';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { creditsForEvents, type SponsorCredit } from '#lib/server/sponsor/credit-service.js';
-import { visibleTo } from '#lib/server/event/visibility.js';
 import { renderCalendar, type PosterFormat } from './calendar';
 import { withPosterPage } from './browser';
 import { sponsorLogos } from './sponsor-logos';
@@ -38,10 +37,9 @@ export function monthBounds(month: string): { from: Date; to: Date } {
 
 /**
  * A month's public listings in date order, and the sponsors their event pages
- * credit. Public means published, `visibleTo` the public, not a committee's,
- * and not a meeting unless a club holds it. A club's meeting prints at
- * members visibility too, its default: the month poster (#2605) keeps club sessions on
- * the poster. Partner-feed imports are left out: no member made them.
+ * credit. Public means published, not a committee's, and not a meeting
+ * unless a club holds it: the month poster (#2605) keeps club sessions on the
+ * poster. Partner-feed imports are left out: no member made them.
  */
 export async function monthCalendar(month: string): Promise<MonthCalendar> {
 	const { from, to } = monthBounds(month);
@@ -58,14 +56,6 @@ export async function monthCalendar(month: string): Promise<MonthCalendar> {
 			and(
 				eq(eventListing.status, 'published'),
 				or(ne(eventListing.kind, 'meeting'), eq(group.kind, 'club')),
-				or(
-					visibleTo(),
-					and(
-						eq(eventListing.kind, 'meeting'),
-						eq(group.kind, 'club'),
-						eq(eventListing.visibility, 'members')
-					)
-				),
 				or(isNull(group.kind), ne(group.kind, 'committee')),
 				gte(eventListing.startsAt, from),
 				lt(eventListing.startsAt, to),

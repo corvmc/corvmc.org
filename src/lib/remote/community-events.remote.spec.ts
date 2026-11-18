@@ -240,6 +240,20 @@ describe('ownership', () => {
 		expect(svc.publishCommunityEvent).toHaveBeenCalledWith('evt-1', 'member-1');
 	});
 
+	// A listing has no visibility to set (#3266).
+	it('updateListing never forwards a visibility', async () => {
+		await remote.updateListing(
+			{ ...LISTING_INPUT, eventId: 'evt-1', visibility: 'members' },
+			issue
+		);
+
+		expect(svc.updateCommunityEvent).toHaveBeenCalledWith(
+			'evt-1',
+			'member-1',
+			expect.not.objectContaining({ visibility: expect.anything() })
+		);
+	});
+
 	it('findDuplicateListing will not probe someone else’s listing', async () => {
 		getById.mockResolvedValue({
 			id: 'evt-1',

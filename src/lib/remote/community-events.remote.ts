@@ -34,11 +34,7 @@ import { getById, getEventLineup, listBandEvents } from '#lib/server/event/event
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { listForUser, searchBandsByName } from '#lib/server/band/band-service.js';
 import { splitUpcoming } from '#lib/utils/upcoming.js';
-import {
-	communityEventSchema,
-	eventVisibilities,
-	lineupSchema
-} from '#lib/server/db/schema/event.js';
+import { communityEventSchema, lineupSchema } from '#lib/server/db/schema/event.js';
 import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
 import { dollarsToCents } from '#lib/utils/event-ticketing.js';
 import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
@@ -142,7 +138,6 @@ export const getMyListing = query(z.string(), async (eventId) => {
 		externalTicketUrl: evt.externalTicketUrl,
 		ticketPrice: evt.ticketPrice,
 		posterUrl: resolveImageUrl(evt.posterKey),
-		visibility: evt.visibility ?? 'public',
 		reviewNotes: evt.reviewNotes,
 		lineup,
 		standing
@@ -237,7 +232,6 @@ export const createListing = form(
 export const updateListing = form(
 	communityEventSchema.extend({
 		eventId: z.string().min(1),
-		visibility: z.enum(eventVisibilities).exclude(['group']).optional(),
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
@@ -276,7 +270,6 @@ export const updateListing = form(
 				tags: data.tags || null,
 				externalTicketUrl: data.externalTicketUrl || null,
 				ticketPrice,
-				visibility: data.visibility,
 				lineup: parseLineupField(data.lineup),
 				posterFile: await toPosterParam(poster)
 			});
