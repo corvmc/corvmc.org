@@ -72,10 +72,10 @@ function excerpt(body: string): string {
 
 /**
  * Where a member reads this group's announcements, which differs by kind: a
- * band has a panel, a club has a page with tabs.
+ * band lists them in its Messages (#3229), a club has a page with tabs.
  */
 export function announcementsHref(kind: string, slug: string): string {
-	return kind === 'band' ? `/band/${slug}/announcements` : `/member/groups/${slug}`;
+	return kind === 'band' ? `/band/${slug}/messages` : `/member/groups/${slug}`;
 }
 
 /**

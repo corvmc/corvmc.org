@@ -345,7 +345,7 @@ describe('announcementsHref', () => {
 	 * the right one — a band has a panel, a club has a page with tabs.
 	 */
 	it('points a band at its panel and a club at its page', () => {
-		expect(announcementsHref('band', 'the-foos')).toBe('/band/the-foos/announcements');
+		expect(announcementsHref('band', 'the-foos')).toBe('/band/the-foos/messages');
 		expect(announcementsHref('club', 'real-book-club')).toBe('/member/groups/real-book-club');
 		expect(announcementsHref('committee', 'programming')).toBe('/member/groups/programming');
 	});

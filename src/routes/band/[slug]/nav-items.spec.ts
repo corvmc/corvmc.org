@@ -109,10 +109,10 @@ describe('bandNavItems', () => {
 		expect(keysFor({ userRole: 'member' })).not.toContain('subscription');
 	});
 
-	it('shows Reservations and Announcements to every role', () => {
+	it('shows Reservations and Messages to every role', () => {
 		for (const userRole of roles) {
 			const keys = bandNavItems(asRole(userRole)).map((i) => i.key);
-			expect(keys).toEqual(expect.arrayContaining(['reservations', 'announcements']));
+			expect(keys).toEqual(expect.arrayContaining(['reservations', 'messages']));
 		}
 	});
 
@@ -153,7 +153,7 @@ describe('bandNavSections', () => {
 		const shape = bandNavSections(full).map((s) => [s.key, s.items.map((i) => i.key)]);
 		expect(shape).toEqual([
 			['schedule', ['reservations', 'events']],
-			['band', ['members', 'announcements', 'messages']],
+			['band', ['members', 'messages']],
 			['profile', ['edit', 'press-kit', 'page-editor']],
 			['stage', ['rider', 'packing']],
 			['music', ['music', 'payouts']]
