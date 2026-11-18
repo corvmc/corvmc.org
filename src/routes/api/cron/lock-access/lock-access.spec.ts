@@ -56,7 +56,8 @@ describe('POST /api/cron/lock-access', () => {
 			cleaned: 1,
 			confirmed: 1,
 			online: true,
-			errors: []
+			errors: [],
+			warnings: []
 		});
 
 		const response = await POST(req());
@@ -68,7 +69,8 @@ describe('POST /api/cron/lock-access', () => {
 			cleaned: 1,
 			confirmed: 1,
 			online: true,
-			errors: []
+			errors: [],
+			warnings: []
 		});
 	});
 
@@ -80,7 +82,8 @@ describe('POST /api/cron/lock-access', () => {
 			cleaned: 2,
 			confirmed: 0,
 			online: false,
-			errors: ['lock-xyz failed']
+			errors: ['lock-xyz failed'],
+			warnings: []
 		});
 
 		const response = await POST(req());
@@ -91,7 +94,28 @@ describe('POST /api/cron/lock-access', () => {
 			cleaned: 2,
 			confirmed: 0,
 			online: false,
-			errors: ['lock-xyz failed']
+			errors: ['lock-xyz failed'],
+			warnings: []
+		});
+	});
+
+	// A failed delete of an expired user retries next run; it must not page (#3277).
+	it('returns warnings without failing the run', async () => {
+		mockRunDailyLockJob.mockResolvedValue({
+			provisioned: 1,
+			cleaned: 0,
+			confirmed: 1,
+			online: true,
+			errors: [],
+			warnings: ['Failed to remove expired lock user 753534: 500']
+		});
+
+		const response = await POST(req());
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			errors: [],
+			warnings: ['Failed to remove expired lock user 753534: 500']
 		});
 	});
 });

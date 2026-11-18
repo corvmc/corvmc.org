@@ -30,7 +30,8 @@ const summary = {
 	confirmed: 2,
 	online: true,
 	fallbackActive: true,
-	errors: [] as string[]
+	errors: [] as string[],
+	warnings: [] as string[]
 };
 
 describe('POST /api/cron/lock-job-requested', () => {
