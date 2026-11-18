@@ -3719,8 +3719,6 @@
 	"staff_projects_id_parent_project_body": "Its spend counts toward the parent's budget.",
 	"staff_projects_id_child_projects_label": "Child projects",
 	"staff_projects_id_budget_report_spend_by_project_title": "Spend by project",
-	"staff_marketing_campaigns_audience_picker_beyond_group_body": "{names} can include people outside the group this event is shown to. The send is recorded in the event’s history.",
-	"staff_marketing_campaigns_audience_picker_beyond_members_body": "{names} can include non-members, and this event is shown to members only. The send is recorded in the event’s history.",
 	"staff_marketing_campaigns_send_test_label": "Send test",
 	"staff_marketing_campaigns_test_sent_toast": "Test sent to {email}",
 	"staff_marketing_campaigns_test_not_sent_toast": "Test not sent: {error}",
