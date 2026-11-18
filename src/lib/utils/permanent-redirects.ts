@@ -6,6 +6,7 @@
  * fails on a current 308 source missing here and on a bare redirect into an entry.
  */
 export const permanentRedirectSources: readonly string[] = [
+	'/band/[slug]/announcements',
 	'/band/[slug]/chat',
 	'/band/[slug]/page-editor/epk',
 	'/band/[slug]/profile',
