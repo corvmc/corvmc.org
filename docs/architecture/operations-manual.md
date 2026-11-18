@@ -377,6 +377,12 @@ Pressing it twice is safe — every stage filters on work still outstanding, so 
 reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
 
+**Only `errors` fail the `lock-access` run.** Any entry there — an offline lock, a failed
+provisioning, a failed list — returns 500 and turns the Sentry check-in red. A failed delete of
+an already-expired temporary user goes in `warnings` instead: it is logged and returned, the run
+stays 200, and the next run retries it, since cleanup re-lists every type-2 user and the
+expired code no longer opens the door (#3277). Building access shows `errors` only.
+
 **The Building access view reads KV and D1 only.** Lock status is the daily job's last
 health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the
 Lock offline link in the Practice space header is the same reading. Active codes list
