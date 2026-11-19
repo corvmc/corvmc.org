@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { parseTagList } from '#lib/utils/unique-tags.js';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import DataList from '#lib/components/ui/DataList.svelte';
@@ -69,14 +70,6 @@
 	const statusCounts = $derived(calendar.statusCounts);
 
 	type CalendarRow = Awaited<typeof result>['rows'][number];
-
-	function parseTags(tags: string | null): string[] {
-		if (!tags) return [];
-		return tags
-			.split(',')
-			.map((t) => t.trim())
-			.filter(Boolean);
-	}
 
 	const dayLabel = (e: CalendarRow) => formatDate(e.startsAt);
 </script>
@@ -171,7 +164,7 @@
 					</td>
 					<td class="col-extra">
 						<div class="flex flex-wrap gap-1">
-							{#each parseTags(e.tags) as tag (tag)}
+							{#each parseTagList(e.tags) as tag (tag)}
 								<Badge size="sm" variant="outline">{tag}</Badge>
 							{/each}
 						</div>

@@ -46,10 +46,12 @@ function validateContact(contact: unknown): DirectoryContact | null {
 
 function validateTags(tags: unknown): string[] {
 	if (!Array.isArray(tags)) return [];
-	return tags
+	// Deduped after lowercasing: `Bass` and `bass` would break the
+	// (entry, kind, value) unique constraint on insert.
+	const normalised = tags
 		.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-		.map((t) => t.trim().toLowerCase().slice(0, 50))
-		.slice(0, MAX_TAGS);
+		.map((t) => t.trim().toLowerCase().slice(0, 50));
+	return [...new Set(normalised)].slice(0, MAX_TAGS);
 }
 
 // ---------------------------------------------------------------------------
