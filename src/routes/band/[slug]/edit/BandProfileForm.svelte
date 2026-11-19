@@ -75,6 +75,7 @@
 <Form
 	remote={saveBandProfile}
 	guard
+	class="flex flex-col gap-6"
 	onsuccess={() => {
 		toast.success(m.band_slug_edit_band_profile_form_toast());
 		// No slug branch: renaming the band no longer moves its address, so the
@@ -86,7 +87,8 @@
 	<input {...profileFields.genres.as('hidden', JSON.stringify(genres))} />
 	<input {...profileFields.seekingInstruments.as('hidden', JSON.stringify(seekingInstruments))} />
 
-	<!-- Disables every native control for a plain member; `display: contents` keeps the layout. -->
+	<!-- Disables every native control for a plain member. `display: contents` makes the cards
+	     the form's flex items, so its gap spaces them; a margin on this box would not apply. -->
 	<fieldset disabled={!canEdit} class="contents" data-testid="band-profile-fields">
 		<!-- Basics -->
 		<InfoCard title={m.band_slug_edit_band_profile_form_basics_title()}>
@@ -192,7 +194,7 @@
 			</div>
 		</InfoCard>
 
-		<div class="mb-6 grid gap-6 lg:grid-cols-2">
+		<div class="grid gap-6 lg:grid-cols-2">
 			<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
 				<p class="mb-3 text-muted">
 					{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
@@ -234,15 +236,13 @@
 			</InfoCard>
 		</div>
 
-		<div class="mb-6">
-			<InfoCard title={m.band_slug_edit_band_profile_form_visibility_title()}>
-				<VisibilityField
-					field={profileFields.directoryVisibility}
-					bind:value={directoryVisibility}
-					publicDescription={m.band_slug_edit_band_profile_form_public_description_body()}
-				/>
-			</InfoCard>
-		</div>
+		<InfoCard title={m.band_slug_edit_band_profile_form_visibility_title()}>
+			<VisibilityField
+				field={profileFields.directoryVisibility}
+				bind:value={directoryVisibility}
+				publicDescription={m.band_slug_edit_band_profile_form_public_description_body()}
+			/>
+		</InfoCard>
 	</fieldset>
 
 	{#if canEdit}
