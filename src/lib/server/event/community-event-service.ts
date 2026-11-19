@@ -1,5 +1,5 @@
 import { db } from '#lib/server/db/index.js';
-import { eventListing, type LineupEntry } from '#lib/server/db/schema/event.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
@@ -23,7 +23,6 @@ import {
 	getById,
 	publish as publishEvent,
 	unpublish as unpublishEvent,
-	setEventLineup,
 	type EventRow
 } from './event-service';
 
@@ -225,8 +224,6 @@ export interface CreateCommunityEventParams {
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. CMC never sells these. */
 	ticketPrice?: number | null;
-	/** Other acts on the bill. Credits naming a platform band land `pending`. */
-	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 
@@ -267,10 +264,6 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 		ticketPrice: params.ticketPrice ?? null
 	};
 
-	if (params.lineup?.length) {
-		await setEventLineup(row.id, params.lineup);
-	}
-
 	if (params.posterFile) {
 		row.posterKey = await storePoster(row.id, params.posterFile);
 	}
@@ -290,7 +283,6 @@ export interface UpdateCommunityEventParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
-	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 
@@ -358,10 +350,6 @@ export async function updateCommunityEvent(
 	// The row was read a moment ago, so this only happens if it vanished in
 	// between. Fail as not-found rather than dereferencing undefined.
 	if (!updated) throw new ListingNotFoundError();
-
-	if (params.lineup) {
-		await setEventLineup(eventId, params.lineup);
-	}
 
 	// `RETURNING` cannot carry the poster key or the sale terms — SQLite forbids
 	// a subquery there — so the row is completed from them (#808, #1203).
