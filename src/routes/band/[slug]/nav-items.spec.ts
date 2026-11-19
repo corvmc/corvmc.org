@@ -8,6 +8,7 @@ import {
 	sectionHasKey,
 	type BandNavInput
 } from './nav-items';
+import { memberNavItems } from '../../member/nav-items';
 
 /**
  * The band panel's nav gating has been wrong twice, both times because a role
@@ -248,5 +249,20 @@ describe('activeBandNavKey', () => {
 				expect(activeBandNavKey(forRole, item.href)).toBe(item.key);
 			}
 		}
+	});
+});
+
+describe('rows shared with the member panel', () => {
+	// A row both panels carry under one key names one place, so it takes one
+	// label (#3227). Comparing the two holds that without pinning either string.
+	it('labels a shared row as the member panel does', () => {
+		const memberLabels = new Map<string, string>(
+			memberNavItems({ hasLoanableEquipment: true }).map((i) => [i.key, i.label])
+		);
+		const shared = bandNavItems(asRole('owner', { tier: 'premium' })).filter((i) =>
+			memberLabels.has(i.key)
+		);
+		expect(shared.map((i) => i.key)).toContain('reservations');
+		for (const item of shared) expect(item.label, item.key).toBe(memberLabels.get(item.key));
 	});
 });

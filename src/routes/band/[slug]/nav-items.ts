@@ -80,7 +80,7 @@ export function bandNavSections(input: BandNavInput): BandNavSection[] {
 	const schedule: BandNavItem[] = [
 		{
 			key: 'reservations',
-			label: 'Reservations',
+			label: 'Practice space',
 			href: resolve('/band/[slug]/reservations', { slug })
 		},
 		{ key: 'events', label: 'Events', href: resolve('/band/[slug]/events', { slug }) }
