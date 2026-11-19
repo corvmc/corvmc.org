@@ -969,6 +969,16 @@ if it's broadly useful.
   undefined, and the page dies with "Cannot read properties of undefined (reading 'child')". A page
   that starts a non-awaited remote query on hydration hits it every time (`/staff/reservations`,
   `/staff/reports/volunteering`). Drop the patch once upstream commits the tree before mounting.
+
+  The same patch stops a redirected query from counting as loaded. When a remote `query` (or
+  `query.batch`) answers with `redirect()` — an access gate, `requireUser` — kit follows the
+  redirect and the fetch resolves with no value; unpatched, `Query#run` then marks the entry ready
+  with `undefined`. Entries are evicted only on garbage collection, so the next page to await the
+  same query read `undefined` without refetching: `/member/volunteer` after its onboarding redirect
+  (#3276). The fetch now returns `QUERY_REDIRECTED` and the entry fetches again on the next await.
+  `src/remote-query-redirect.svelte.spec.ts` runs kit's `Query` directly. Still unfixed upstream in
+  3.3.1.
+
 - **`svelte@5.57.3`** — a two-line fix in `Boundary#resolve`
   (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
   `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then
