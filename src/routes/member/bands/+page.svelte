@@ -51,7 +51,7 @@
 	// `data-sveltekit-reload` on the sidebar's ?create=1 link makes THAT arrival
 	// a full load, but it does not cover the plain client-side navigations into
 	// this page — `goto('/member/bands')` from band settings and from
-	// YourMembership, and the links on /member and in the member layout. Those
+	// Leave band on the Members page, and the links on /member and in the member layout. Those
 	// are how a real user hits the dead button.
 	//
 	// The effect only ever opens, never closes, so a user's own click cannot be

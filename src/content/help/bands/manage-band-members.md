@@ -9,14 +9,14 @@ sortOrder: 5
 
 ## The Members page
 
-The **Members** page opens with **Your membership** — your role in the band, the
-details you control, and the way out. Below that is **Other members**, then
-**Pending invitations** and, for owners and admins, invitations **Awaiting
-signup**.
+The **Members** page is one list of everyone in the band, you included, with your
+own row marked **You**. Invitations not yet accepted sit at the top, marked
+**Pending**; owners and admins also see invitations sent to an email address with
+no account yet.
 
 ## Your own membership
 
-Two things are yours to set, whatever your role:
+**Edit** on your own row sets two things, whatever your role:
 
 - **Stage name** — How you're credited on this band's roster, its site, and its
   directory profile. Leave it blank to use your account name. It's per band, so

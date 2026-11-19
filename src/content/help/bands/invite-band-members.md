@@ -25,8 +25,8 @@ why.
 
 ## What happens next
 
-- Invited members appear under **Pending invitations** until they accept.
-- People invited by email show under **Awaiting signup**.
+- Invited members appear at the top of the **Members** list, marked
+  **Pending**, until they accept. So do people invited by email.
 - Members [accept from their My bands page](/member/help/accept-band-invitation).
   People invited by email join when they sign up.
 
