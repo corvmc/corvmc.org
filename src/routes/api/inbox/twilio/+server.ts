@@ -19,7 +19,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	const signature = request.headers.get('x-twilio-signature') ?? '';
 	if (signature) {
-		const valid = validateTwilioSignature(url.toString(), params, signature);
+		const valid = await validateTwilioSignature(url.toString(), params, signature);
 		if (!valid) {
 			error(403, 'Invalid Twilio signature');
 		}
