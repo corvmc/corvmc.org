@@ -12,13 +12,10 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
-	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
 		getMyListingPage,
-		searchBandsForListing,
 		updateListing,
 		publishListing,
 		unpublishListing,
@@ -61,19 +58,6 @@
 	const publishLabel = $derived(
 		requiresReview ? m.member_events_id_manage_submit_review_label() : m.member_publish_label()
 	);
-
-	let lineup = $state<LineupChip[]>([]);
-	let lineupLoaded = $state(false);
-	$effect(() => {
-		if (!lineupLoaded && listing) {
-			lineup = listing.lineup.map((l) => ({
-				name: l.name,
-				bandId: l.bandId ?? undefined,
-				status: l.status
-			}));
-			lineupLoaded = true;
-		}
-	});
 
 	function toTimeValue(d: Date | null): string {
 		return d ? venueTimeInput(d) : '';
@@ -313,38 +297,31 @@
 								maxlength="5000"></textarea>
 						{/snippet}
 					</FormField>
-
-					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormField
-							field={fields.eventDate}
-							label={m.member_events_id_manage_date_start_time_label()}
-							required
-						>
-							{#snippet input(id)}
-								<DateTimeField
-									{id}
-									date={fields.eventDate}
-									time={fields.eventStartTime}
-									dateValue={venueDateInput(listing.startsAt)}
-									timeValue={toTimeValue(listing.startsAt)}
-									timeLabel={m.member_start_time_label()}
-								/>
-							{/snippet}
-						</FormField>
-						<FormField
-							field={fields.location}
-							type="text"
-							label={m.member_venue_label()}
-							value={listing.location ?? ''}
-							maxlength="500"
-							required
-						/>
-					</div>
 				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<fieldset>
+				<legend class="mb-3 font-medium">{m.member_events_id_manage_date_time_title()}</legend>
+				<div
+					class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]"
+				>
+					<FormField
+						field={fields.eventDate}
+						label={m.member_events_id_manage_date_start_time_label()}
+						class="sm:col-span-2 md:col-span-1"
+						required
+					>
+						{#snippet input(id)}
+							<DateTimeField
+								{id}
+								date={fields.eventDate}
+								time={fields.eventStartTime}
+								dateValue={venueDateInput(listing.startsAt)}
+								timeValue={toTimeValue(listing.startsAt)}
+								timeLabel={m.member_start_time_label()}
+							/>
+						{/snippet}
+					</FormField>
 					<FormField
 						field={fields.doorsTime}
 						type="time"
@@ -358,26 +335,28 @@
 						value={toTimeValue(listing.endsAt)}
 					/>
 				</div>
-				<FormField
-					field={fields.address}
-					type="text"
-					label={m.member_address_label()}
-					value={listing.address ?? ''}
-					maxlength="500"
-				/>
-			</div>
+			</fieldset>
 
-			<FormField
-				field={updateListing.fields.lineup}
-				label={m.member_events_id_manage_who_s_playing_label()}
-			>
-				<LineupEditor
-					field={updateListing.fields.lineup}
-					bind:value={lineup}
-					search={searchBandsForListing}
-					hint={false}
-				/>
-			</FormField>
+			<fieldset>
+				<legend class="mb-3 font-medium">{m.member_events_id_manage_location_title()}</legend>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormField
+						field={fields.location}
+						type="text"
+						label={m.member_venue_label()}
+						value={listing.location ?? ''}
+						maxlength="500"
+						required
+					/>
+					<FormField
+						field={fields.address}
+						type="text"
+						label={m.member_address_label()}
+						value={listing.address ?? ''}
+						maxlength="500"
+					/>
+				</div>
+			</fieldset>
 
 			<FormField
 				field={fields.tags}
@@ -386,8 +365,6 @@
 				value={listing.tags ?? ''}
 				maxlength="500"
 			/>
-
-			<VisibilityField field={fields.visibility} value={listing.visibility} hasGroup={false} />
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<FormField

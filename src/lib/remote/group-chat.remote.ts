@@ -33,13 +33,16 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
 	return getGroupChat(group.id, undefined, user.id);
 });
 
-/** The group's topics, with this reader's unread marks (#1301). */
+/**
+ * The group's topics, with this reader's unread marks (#1301). The kind names
+ * the list: "Band members" and "Club members" say who reads it (#3228).
+ */
 export const getGroupChatTopics = query(slugSchema, async (slug) => {
 	const { group, user } = await requireGroupRole({ slug }, 'member');
 	// A band lists its Announcements room before the first post, beside General,
 	// because leaders post there from Messages (#3229).
 	if (group.kind === 'band') await getOrCreateAnnouncementThread(group.id);
-	return listGroupTopics(group.id, user.id);
+	return { kind: group.kind, topics: await listGroupTopics(group.id, user.id) };
 });
 
 /**

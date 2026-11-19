@@ -19,6 +19,7 @@
 	import CrossRefList, {
 		type CrossRef
 	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
 	import PressBox from '#lib/components/directory/profile/PressBox.svelte';
@@ -133,7 +134,7 @@
 			/>
 			<TagCloud
 				label={msg.member_directory_bands_slug_genres_influences_label()}
-				tags={band.genres}
+				tags={uniqueTags(band.genres)}
 			/>
 			<LinksBox links={band.links} />
 			<!-- The band's own contact when it made that public, else the form (#3234). -->

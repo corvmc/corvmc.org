@@ -58,18 +58,14 @@ const standingSvc = {
 vi.mock('#lib/server/moderation/standing-service.js', () => standingSvc);
 
 const getById = vi.fn(async () => null as unknown);
-const getEventLineup = vi.fn(async () => []);
 const listBandEvents = vi.fn(async (_bandId: string) => [] as unknown[]);
 vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (...a: unknown[]) => getById(...(a as [])),
-	getEventLineup: (...a: unknown[]) => getEventLineup(...(a as [])),
 	listBandEvents: (...a: unknown[]) => listBandEvents(...(a as [string]))
 }));
 
-const searchBandsByName = vi.fn(async () => []);
 const listForUser = vi.fn(async () => [] as unknown[]);
 vi.mock('#lib/server/band/band-service.js', () => ({
-	searchBandsByName: (...a: unknown[]) => searchBandsByName(...(a as [])),
 	listForUser: (...a: unknown[]) => listForUser(...(a as []))
 }));
 
@@ -167,7 +163,6 @@ describe('anonymous callers', () => {
 		['getMyListings', () => remote.getMyListings()],
 		['getMyListing', () => remote.getMyListing('evt-1')],
 		['findDuplicateListing', () => remote.findDuplicateListing('evt-1')],
-		['searchBandsForListing', () => remote.searchBandsForListing('wolves')],
 		['createListing', () => remote.createListing(LISTING_INPUT, issue)],
 		['updateListing', () => remote.updateListing({ ...LISTING_INPUT, eventId: 'evt-1' }, issue)],
 		['publishListing', () => remote.publishListing({ eventId: 'evt-1' })],
@@ -219,7 +214,7 @@ describe('ownership', () => {
 		} as never);
 
 		await expect(remote.getMyListing('evt-1')).resolves.toBeNull();
-		expect(getEventLineup).not.toHaveBeenCalled();
+		expect(standingSvc.getStanding).not.toHaveBeenCalled();
 	});
 
 	it('getMyListing refuses to hand back a band event through the member path', async () => {
@@ -238,6 +233,40 @@ describe('ownership', () => {
 		// The service enforces ownership; what matters here is that the id it is
 		// given comes from the session and not from the request body.
 		expect(svc.publishCommunityEvent).toHaveBeenCalledWith('evt-1', 'member-1');
+	});
+
+	// A listing has no visibility to set (#3266).
+	it('updateListing never forwards a visibility', async () => {
+		await remote.updateListing(
+			{ ...LISTING_INPUT, eventId: 'evt-1', visibility: 'members' },
+			issue
+		);
+
+		expect(svc.updateCommunityEvent).toHaveBeenCalledWith(
+			'evt-1',
+			'member-1',
+			expect.not.objectContaining({ visibility: expect.anything() })
+		);
+	});
+
+	// The member form has no performers field; the staff bill editor owns the lineup (#3262).
+	it('updateListing ignores a posted lineup and still saves', async () => {
+		await expect(
+			remote.updateListing(
+				{
+					...LISTING_INPUT,
+					eventId: 'evt-1',
+					lineup: JSON.stringify([{ name: 'Paper Wolves', bandId: 'b-1', billingOrder: 0 }])
+				},
+				issue
+			)
+		).resolves.toEqual({ success: true });
+
+		expect(svc.updateCommunityEvent).toHaveBeenCalledWith(
+			'evt-1',
+			'member-1',
+			expect.not.objectContaining({ lineup: expect.anything() })
+		);
 	});
 
 	it('findDuplicateListing will not probe someone else’s listing', async () => {

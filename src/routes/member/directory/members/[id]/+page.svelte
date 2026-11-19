@@ -20,6 +20,7 @@
 	import CrossRefList, {
 		type CrossRef
 	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
 	import ProfileSection from '#lib/components/directory/profile/ProfileSection.svelte';
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
@@ -99,7 +100,7 @@
 		}))
 	);
 
-	let tags = $derived([...(member?.instruments ?? []), ...(member?.genres ?? [])]);
+	let tags = $derived(uniqueTags(member?.instruments ?? [], member?.genres ?? []));
 </script>
 
 <!-- Leads with ProfileHeader rather than PageHeader, so the title is set here. -->
@@ -172,7 +173,7 @@
 					</ProfileSection>
 				{/if}
 				<TagCloud label={m.member_directory_members_id_plays_genres_label()} {tags} />
-				<TagCloud label={m.member_skills_label()} tags={member.skills ?? []} />
+				<TagCloud label={m.member_skills_label()} tags={uniqueTags(member.skills ?? [])} />
 				<LinksBox {links} />
 				<ContactBox kind="contact" {contact} />
 			{/snippet}

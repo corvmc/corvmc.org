@@ -8,7 +8,8 @@
 
 	/**
 	 * Why this person can act (#2994): positions, committee seats, shift roles.
-	 * Its own component so the Account panel keeps one load-bearing query.
+	 * Its own component so the Account panel keeps one load-bearing query. The
+	 * only place the capability lists show (#3241).
 	 */
 	let { id }: { id: string } = $props();
 
@@ -17,7 +18,7 @@
 </script>
 
 {#if loaded}
-	<WhyCanAct why={loaded} />
+	<WhyCanAct why={loaded} showPermissions />
 {:else if why.error}
 	<Alert type="warning" reset={() => void getPersonAccessWhy(id).refresh()}>
 		{m.ui_load_failed_body({ error: errorMessage(why.error.e) })}

@@ -189,7 +189,7 @@
 
 	{#if upcoming.length + past.length === 0}
 		<EmptyState>
-			<p>{m.band_slug_events_no_events_yet_text()}</p>
+			<p class="opacity-60">{m.band_slug_events_no_events_yet_text()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
 					<CreateMemberEventAction hosts={eventHosts(layout.userBands)} initial={band.slug} />

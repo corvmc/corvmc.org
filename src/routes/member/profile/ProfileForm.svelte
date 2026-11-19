@@ -68,7 +68,7 @@
 
 	// Avatar uploads instantly through the member-avatar API route, which persists
 	// the new key and returns it (the value is also submitted with the form).
-	// FileUpload previews the picked file locally, so no query refresh is needed —
+	// The field previews the picked file locally, so no query refresh is needed —
 	// and refreshing getMemberProfile() here would re-resolve the query that seeds
 	// the live editors (part of the JAVASCRIPT-SVELTEKIT-W churn).
 	async function uploadAvatar(file: File): Promise<string> {

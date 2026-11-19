@@ -16,6 +16,14 @@ import { browserPort, devOrigin, devPort, previewPort } from './scripts/lib/chec
 import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers.ts';
 const dirname = import.meta.dirname;
 
+/** A module of kit's client runtime, by real path: pnpm links the package. */
+const kitClientModule = (file: string) =>
+	path.join(
+		fs.realpathSync(path.resolve(dirname, 'node_modules/@sveltejs/kit')),
+		'src/runtime/client',
+		file
+	);
+
 // The Sentry vite plugin names its release after the checked-out commit and
 // injects that string into the browser bundle, which is why browser events
 // carry a release and worker events do not: `initCloudflareSentryHandle` inits
@@ -175,6 +183,14 @@ export default defineConfig({
 			{
 				extends: './vite.config.ts',
 				plugins: [ssrExternalsForBrowserTests],
+				resolve: {
+					// Typed in src/kit-remote-query.d.ts; kit exports neither. Real paths, so
+					// the spec loads the same module instances as kit's own imports.
+					alias: {
+						'kit-remote-query': kitClientModule('remote-functions/query/instance.svelte.js'),
+						'kit-remote-shared': kitClientModule('remote-functions/shared.svelte.js')
+					}
+				},
 				test: {
 					name: 'client',
 					// Per-checkout, because vitest's default (63315) is a fixed

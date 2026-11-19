@@ -34,6 +34,18 @@ const audits = (db: DatabaseSync) =>
 		.prepare(`SELECT subject_id AS id, actor_name AS a, details AS d FROM audit_log`)
 		.all() as Array<{ id: string; a: string; d: string }>;
 
+// The migration builds `added` from a subquery inside json_object. Whether that
+// value arrives as an array or as a JSON string depends on the SQLite version
+// (node:sqlite on some Node 22 releases gives the string); production D1 stores
+// arrays. Each field is decoded from either shape before its contents are compared.
+const details = (d: string) =>
+	Object.fromEntries(
+		Object.entries(JSON.parse(d) as Record<string, unknown>).map(([k, v]) => [
+			k,
+			typeof v === 'string' ? JSON.parse(v) : v
+		])
+	);
+
 describe('development contact grants', () => {
 	it('gives Development both contact capabilities beside what it had, and nobody else', () => {
 		const db = migrated();
@@ -54,7 +66,7 @@ describe('development contact grants', () => {
 		const rows = audits(db);
 		expect(rows.map((r) => r.id)).toEqual(['dev']);
 		expect(rows[0].a).toBe('System');
-		expect(JSON.parse(rows[0].d)).toEqual({ added: ['contact.manage'], removed: [] });
+		expect(details(rows[0].d)).toEqual({ added: ['contact.manage'], removed: [] });
 
 		runGrant(db);
 		expect(grantsOf(db, 'dev')).toEqual(['contact.manage', 'contact.read', 'grant.manage']);

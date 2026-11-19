@@ -294,15 +294,30 @@ describe('runDailyLockJob', () => {
 		consoleSpy.mockRestore();
 	});
 
-	it('handles cleanup deletion errors gracefully', async () => {
+	// The next run re-lists every type-2 user and retries, and the code has
+	// already stopped working, so a failed delete must not fail the run (#3277).
+	it('reports a failed delete of an expired user as a warning, not an error', async () => {
 		mockListLockUsers.mockResolvedValue([expiredRow]);
-		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('not found'));
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		mockRemoveTemporaryUser.mockRejectedValueOnce(new Error('500 Internal Server Error'));
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 		const result = await runDailyLockJob();
 
 		expect(result.cleaned).toBe(0);
-		expect(result.errors).toEqual([expect.stringContaining('not found')]);
+		expect(result.errors).toEqual([]);
+		expect(result.warnings).toEqual([expect.stringContaining('500 Internal Server Error')]);
+		consoleSpy.mockRestore();
+	});
+
+	it('still fails the run when it cannot read a user to tell whether it expired', async () => {
+		mockListLockUsers.mockResolvedValue([expiredRow]);
+		mockGetLockUser.mockRejectedValueOnce(new Error('504 Gateway Timeout'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await runDailyLockJob();
+
+		expect(result.errors).toEqual([expect.stringContaining('504 Gateway Timeout')]);
+		expect(result.warnings).toEqual([]);
 		consoleSpy.mockRestore();
 	});
 });
@@ -828,7 +843,12 @@ describe('last run record', () => {
 		expect(lastRunWrites()).toEqual([
 			[
 				'ultraloc:lastJobRun',
-				expect.objectContaining({ triggeredBy: null, errors: [], at: at(T0).toISOString() })
+				expect.objectContaining({
+					triggeredBy: null,
+					errors: [],
+					warnings: [],
+					at: at(T0).toISOString()
+				})
 			]
 		]);
 	});

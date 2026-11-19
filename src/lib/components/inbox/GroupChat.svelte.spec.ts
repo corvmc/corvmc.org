@@ -45,6 +45,11 @@ const chat = {
 	isGeneral: false,
 	readOnly: false,
 	muted: false,
+	readers: [
+		{ id: 'member-1', name: 'Robin Vega', image: null },
+		{ id: 'member-2', name: 'Sam Ortiz', image: null },
+		{ id: 'member-3', name: 'Ada Kim', image: null }
+	],
 	messages: [
 		{
 			id: 'm1',
@@ -76,6 +81,13 @@ describe('GroupChat', () => {
 
 		await rerender({ chat, viewerUserId: 'member-1', backHref: '/inbox' });
 		await expect.poll(() => container.querySelector('a[href="/inbox"]')).not.toBeNull();
+	});
+
+	it('lists every member who reads the room', async () => {
+		const { container } = await render(GroupChat, { chat, viewerUserId: 'member-1' });
+
+		const list = container.querySelector('[data-testid="room-members"] ul');
+		await expect.poll(() => list?.querySelectorAll('li').length).toBe(3);
 	});
 
 	it('marks the topic it was given as seen, once', async () => {

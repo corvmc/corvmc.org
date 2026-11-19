@@ -30,15 +30,11 @@ import {
 	approveSubmission,
 	rejectSubmission
 } from '#lib/server/event/community-event-service.js';
-import { getById, getEventLineup, listBandEvents } from '#lib/server/event/event-service.js';
+import { getById, listBandEvents } from '#lib/server/event/event-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
-import { listForUser, searchBandsByName } from '#lib/server/band/band-service.js';
+import { listForUser } from '#lib/server/band/band-service.js';
 import { splitUpcoming } from '#lib/utils/upcoming.js';
-import {
-	communityEventSchema,
-	eventVisibilities,
-	lineupSchema
-} from '#lib/server/db/schema/event.js';
+import { communityEventSchema } from '#lib/server/db/schema/event.js';
 import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
 import { dollarsToCents } from '#lib/utils/event-ticketing.js';
 import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
@@ -123,10 +119,7 @@ export const getMyListing = query(z.string(), async (eventId) => {
 		return null;
 	}
 
-	const [lineup, standing] = await Promise.all([
-		getEventLineup(eventId),
-		getStanding(user.id, 'community_event')
-	]);
+	const standing = await getStanding(user.id, 'community_event');
 
 	return {
 		id: evt.id,
@@ -142,9 +135,7 @@ export const getMyListing = query(z.string(), async (eventId) => {
 		externalTicketUrl: evt.externalTicketUrl,
 		ticketPrice: evt.ticketPrice,
 		posterUrl: resolveImageUrl(evt.posterKey),
-		visibility: evt.visibility ?? 'public',
 		reviewNotes: evt.reviewNotes,
-		lineup,
 		standing
 	};
 });
@@ -163,33 +154,9 @@ export const getPendingSubmissionCount = query(async () => {
 	return countPendingSubmissions();
 });
 
-/**
- * Band lookup for the listing form's lineup editor.
- *
- * `requireUser` rather than the band panel's `requireBandMemberOrStaff`: the
- * person writing a community listing may not be in a band at all, and band
- * names are already public on the directory. Returns nothing a signed-out
- * visitor couldn't read from /directory/bands.
- */
-export const searchBandsForListing = query(z.string(), async (q) => {
-	requireUser();
-	if (!q || q.trim().length < 2) return [];
-	return searchBandsByName(q.trim());
-});
-
 // ---------------------------------------------------------------------------
 // Form helpers
 // ---------------------------------------------------------------------------
-
-function parseLineupField(raw: string | undefined) {
-	if (raw === undefined || raw === '') return undefined;
-	try {
-		const parsed = lineupSchema.safeParse(JSON.parse(raw));
-		return parsed.success ? parsed.data : undefined;
-	} catch {
-		return undefined;
-	}
-}
 
 /**
  * Build the show's time range. The end time is optional for the same reason it
@@ -237,7 +204,6 @@ export const createListing = form(
 export const updateListing = form(
 	communityEventSchema.extend({
 		eventId: z.string().min(1),
-		visibility: z.enum(eventVisibilities).exclude(['group']).optional(),
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
@@ -276,8 +242,6 @@ export const updateListing = form(
 				tags: data.tags || null,
 				externalTicketUrl: data.externalTicketUrl || null,
 				ticketPrice,
-				visibility: data.visibility,
-				lineup: parseLineupField(data.lineup),
 				posterFile: await toPosterParam(poster)
 			});
 		} catch (err) {

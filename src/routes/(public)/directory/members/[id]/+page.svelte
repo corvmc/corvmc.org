@@ -12,6 +12,7 @@
 	import CrossRefList, {
 		type CrossRef
 	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
 	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
@@ -58,7 +59,7 @@
 		}))
 	);
 
-	let tags = $derived([...(member.instruments ?? []), ...(member.genres ?? [])]);
+	let tags = $derived(uniqueTags(member.instruments ?? [], member.genres ?? []));
 	const contact = $derived(member.directoryContact ?? {});
 </script>
 
@@ -109,7 +110,10 @@
 				note={m.public_directory_members_id_note_body({ length: bandRefs.length })}
 			/>
 			<TagCloud label={m.public_directory_members_id_plays_genres_label()} {tags} />
-			<TagCloud label={m.public_directory_members_id_skills_label()} tags={member.skills ?? []} />
+			<TagCloud
+				label={m.public_directory_members_id_skills_label()}
+				tags={uniqueTags(member.skills ?? [])}
+			/>
 			<LinksBox links={member.links} />
 			<ContactBox kind="contact" {contact} />
 		{/snippet}

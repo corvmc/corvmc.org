@@ -13,7 +13,8 @@ const summary = {
 	confirmed: 0,
 	online: true,
 	fallbackActive: true,
-	errors: []
+	errors: [],
+	warnings: []
 };
 const runDailyLockJob = vi.fn(async (_by: string | null) => summary);
 vi.mock('./lock-service', () => ({ runDailyLockJob }));

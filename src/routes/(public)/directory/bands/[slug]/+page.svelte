@@ -19,6 +19,7 @@
 	import CrossRefList, {
 		type CrossRef
 	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
@@ -149,7 +150,7 @@
 			/>
 			<TagCloud
 				label={msg.public_directory_bands_slug_genres_influences_label()}
-				tags={band.genres}
+				tags={uniqueTags(band.genres)}
 			/>
 			<LinksBox links={band.links} />
 			<div id="booking">

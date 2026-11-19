@@ -28,14 +28,16 @@ export const POST: RequestHandler = async ({ request }) => {
 		cleaned: result.cleaned,
 		confirmed: result.confirmed,
 		online: result.online,
-		errors: result.errors
+		errors: result.errors,
+		warnings: result.warnings
 	};
 
 	// `runScheduledJobs` derives its Sentry Crons check-in from response.ok
 	// alone, so returning 200 with a populated `errors` array closed the check-in
 	// green through a total lock outage. Anything that went wrong is a failed
 	// run — including the lock being unreachable, which is exactly the state
-	// nobody was finding out about.
+	// nobody was finding out about. `warnings` never fail it: they retry
+	// themselves next run, and alerting on them buried the real failures.
 	if (result.errors.length > 0) {
 		return Response.json(body, { status: 500 });
 	}

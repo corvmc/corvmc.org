@@ -1,11 +1,8 @@
 <script lang="ts" module>
-	import type { ReachVisibility } from '#lib/utils/audience-reach.js';
-
 	export type EventOption = {
 		id: string;
 		title: string;
 		when: string;
-		visibility: ReachVisibility;
 	};
 </script>
 
@@ -34,20 +31,8 @@
 		onchange: (event: EventOption | null) => void;
 	} = $props();
 
-	const VISIBILITY: Record<ReachVisibility, (() => string) | null> = {
-		public: null,
-		members: m.events_visibility_members_label,
-		group: m.events_visibility_group_label
-	};
-
-	// The date, and who may see the show when it is not everyone (#2773).
-	function withDetail(e: EventOption) {
-		const label = VISIBILITY[e.visibility];
-		return { ...e, detail: label ? `${e.when} · ${label()}` : e.when };
-	}
-
 	// svelte-ignore state_referenced_locally
-	let chosen = $state<(EventOption & { detail: string }) | null>(initial && withDetail(initial));
+	let chosen = $state<EventOption | null>(initial);
 
 	function clear() {
 		chosen = null;
@@ -59,12 +44,11 @@
 	<div class="grow">
 		<SearchSelect
 			bind:value={chosen}
-			onselect={(v) =>
-				onchange(v ? { id: v.id, title: v.title, when: v.when, visibility: v.visibility } : null)}
+			onselect={(v) => onchange(v ? { id: v.id, title: v.title, when: v.when } : null)}
 			labelKey="title"
-			descriptionKey="detail"
+			descriptionKey="when"
 			placeholder={m.staff_search_shows_by_name_placeholder()}
-			search={async (q) => (await searchEventsForCampaign(q)).map(withDetail)}
+			search={async (q) => await searchEventsForCampaign(q)}
 		/>
 	</div>
 	{#if chosen}

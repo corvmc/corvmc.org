@@ -6,7 +6,7 @@ import { asc, eq } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { getObject, uploadFile } from '#lib/server/storage.js';
 import { mediaKey } from '#lib/server/storage-keys.js';
-import { replaceSlot } from '#lib/server/media/media-service.js';
+import { listFor, replaceSlot } from '#lib/server/media/media-service.js';
 import {
 	deliveredPosterArt,
 	PosterRequestNotFoundError
@@ -28,8 +28,25 @@ export class FlyerEventNotFoundError extends DomainError {
 	}
 }
 
+/** The template draws over an empty slot or its own flyer, never over uploaded art. */
+export class PosterUploadedError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('The poster template does not replace an uploaded poster');
+	}
+}
+
 // How a generated flyer is told from uploaded art in the poster slot.
 export const FLYER_ALT_PREFIX = 'Flyer for ';
+
+export type PosterSource = 'none' | 'generated' | 'uploaded';
+
+/** What the event's poster slot holds: nothing, a flyer drawn here, or uploaded art. */
+export async function posterSource(eventId: string): Promise<PosterSource> {
+	const [poster] = await listFor('event_listing', eventId, 'poster');
+	if (!poster) return 'none';
+	return poster.altText?.startsWith(FLYER_ALT_PREFIX) ? 'generated' : 'uploaded';
+}
 
 /** The flyer's facts, and the street address the print poster adds. */
 export async function flyerSource(
@@ -98,6 +115,7 @@ async function flyerSponsors(eventId: string) {
 
 /** The template flyer, from the event's own details, as its poster. */
 export async function useTemplateFlyer(eventId: string): Promise<void> {
+	if ((await posterSource(eventId)) === 'uploaded') throw new PosterUploadedError();
 	const source = await flyerSource(eventId);
 	const sponsors = await flyerSponsors(eventId);
 	await publishFlyer(eventId, source.title, await renderFlyer(flyerLines(source), { sponsors }));

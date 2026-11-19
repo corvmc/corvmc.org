@@ -16,6 +16,7 @@
 	// The cast `ConversationRows` already uses: this component serves two
 	// panels, so the caller is the one that can name a route.
 	import type { ResolvedPathname } from '$app/types';
+	import type { GroupKind } from '#lib/config.js';
 
 	let {
 		slug,
@@ -29,12 +30,20 @@
 		openThreadId?: string | null;
 	} = $props();
 
-	const topics = $derived(await getGroupChatTopics(slug));
+	const list = $derived(await getGroupChatTopics(slug));
+	const topics = $derived(list.topics);
+
+	// Every kind, so a new kind fails the type check rather than reading "Chat".
+	const headings: Record<GroupKind, () => string> = {
+		band: m.inbox_group_topic_list_band_label,
+		club: m.inbox_group_topic_list_club_label,
+		committee: m.inbox_group_topic_list_committee_label
+	};
 </script>
 
 <section>
 	<div class="flex items-center justify-between gap-2">
-		<SectionLabel label={m.inbox_group_topic_list_label()} count={topics.length} />
+		<SectionLabel label={headings[list.kind]()} count={topics.length} />
 		<NewTopicAction {slug} {hrefFor} />
 	</div>
 

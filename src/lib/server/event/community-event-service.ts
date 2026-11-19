@@ -1,5 +1,5 @@
 import { db } from '#lib/server/db/index.js';
-import { eventListing, type LineupEntry } from '#lib/server/db/schema/event.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
@@ -10,7 +10,6 @@ import { saveTicketSale } from '#lib/server/ticket/ticket-sale.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, ne } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
-import { visibleTo } from './visibility';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { uploadFile } from '#lib/server/storage.js';
 import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
@@ -24,7 +23,6 @@ import {
 	getById,
 	publish as publishEvent,
 	unpublish as unpublishEvent,
-	setEventLineup,
 	type EventRow
 } from './event-service';
 
@@ -198,7 +196,6 @@ export async function checkForDuplicate(params: {
 			and(
 				eq(eventListing.status, 'published'),
 				// The member is told the match's title, so only one anyone may see.
-				visibleTo(),
 				gte(eventListing.startsAt, dayStart),
 				containsLiteral(eventListing.title, stem)
 			)
@@ -227,8 +224,6 @@ export interface CreateCommunityEventParams {
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. CMC never sells these. */
 	ticketPrice?: number | null;
-	/** Other acts on the bill. Credits naming a platform band land `pending`. */
-	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 
@@ -269,10 +264,6 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 		ticketPrice: params.ticketPrice ?? null
 	};
 
-	if (params.lineup?.length) {
-		await setEventLineup(row.id, params.lineup);
-	}
-
 	if (params.posterFile) {
 		row.posterKey = await storePoster(row.id, params.posterFile);
 	}
@@ -292,9 +283,6 @@ export interface UpdateCommunityEventParams {
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
-	/** No group owns a member's listing, so never `'group'`. */
-	visibility?: 'public' | 'members';
-	lineup?: LineupEntry[];
 	posterFile?: { buffer: ArrayBuffer; contentType: string };
 }
 
@@ -333,7 +321,6 @@ export async function updateCommunityEvent(
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
 	}
-	if (params.visibility !== undefined) updates.visibility = params.visibility;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);
 
 	// A review-required member's edit to something already public sends it back
@@ -363,10 +350,6 @@ export async function updateCommunityEvent(
 	// The row was read a moment ago, so this only happens if it vanished in
 	// between. Fail as not-found rather than dereferencing undefined.
 	if (!updated) throw new ListingNotFoundError();
-
-	if (params.lineup) {
-		await setEventLineup(eventId, params.lineup);
-	}
 
 	// `RETURNING` cannot carry the poster key or the sale terms — SQLite forbids
 	// a subquery there — so the row is completed from them (#808, #1203).

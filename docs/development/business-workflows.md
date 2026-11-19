@@ -1410,6 +1410,8 @@ thread and the task keep their own status: resolving one leaves the other open.
   the service read and the remote (#2662).
 - Not members listings on the public guide when signed in, because the guide is the public's.
   A member's wider view is the member events page (#2662).
+- Not a performers field on the member event form. Staff credit acts on a community listing
+  from the staff bill editor, and existing credits stay (#3262).
 
 ### The story
 
@@ -1432,20 +1434,12 @@ generate twelve shows. A club's or committee's session (`source = 'group'`) is a
 `meeting`; `createGroupEvent` writes it, and `scripts/group-listing-kind.spec.ts` fails any
 other `source = 'group'` insert that leaves `kind` to the column default.
 
-`event.visibility` says who may see a published listing: `public` (everyone), `members` (any
-signed-in member) or `group` (the owning group's members). A new listing starts at
-`defaultVisibility`: a meeting owned by a committee or band is `group`, any other meeting is
-`members`, and everything else is `public`. Staff, band admins, the member who posted a listing
-and a session's group admins change it on the edit form. Every public read — the guide, the
-calendar feed, RSS, the sitemap, the homepage posters, profiles' upcoming and past shows, the
-recaps and the month poster — applies `visibleTo` from `src/lib/server/event/visibility.ts`.
-The member events page's guide passes the signed-in member, so it adds members listings and
-their own groups'. The event page, its ticket and RSVP actions, and `/e/<code>` 404 for a viewer
-who may not see the listing. The month poster also prints a club's meeting at `members`, which
-keeps club sessions on it (#2605). Not satori for every poster size, because each aspect ratio
-needs a hand-measured fit and a print-size PNG is heavy for a Worker. Not satori kept for the
-social PNG either, because two layouts of one poster drift (#2605). `scripts/event-visibility.spec.ts` fails a read of
-published listings that skips the predicate.
+A listing has no visibility setting: every listing is public, and only its status (draft, in
+review, published, cancelled) hides it. Not members-only or group-only listings, because no
+listing needed them (#3266). The month poster prints a club's meeting and leaves out a
+committee's, which keeps club sessions on it (#2605). Not satori for every poster size, because
+each aspect ratio needs a hand-measured fit and a print-size PNG is heavy for a Worker. Not
+satori kept for the social PNG either, because two layouts of one poster drift (#2605).
 
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
 staff work; band events are gated to band admins; community listings publish **directly**,

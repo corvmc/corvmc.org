@@ -2517,6 +2517,27 @@ export const positionLabels = {
 export type Position = keyof typeof positionLabels;
 export const positionOrder = Object.keys(positionLabels) as Position[];
 
+/**
+ * One sentence on what each position does, shown in place of its capability
+ * list everywhere but the staff person page (#3241). `positions` below stays
+ * what the guards ask; a change there that alters the job changes this too.
+ */
+export const positionDescriptions: Record<Position, string> = {
+	admin: 'Runs the whole site: members, money, settings and every panel.',
+	staff:
+		'Does everything an administrator does except change roles, delete accounts and adjust credit.',
+	operations_chair: 'Oversees the committees and their work.',
+	technology_coordinator: 'Manages site settings, door locks, inbox channels and help articles.',
+	volunteer_coordinator:
+		'Runs volunteer shifts, roles and hours, and reviews committee applications.',
+	site_moderator: 'Reviews flags, suggestions, listings and releases, and answers the inbox.',
+	treasurer: 'Handles refunds, contractor invoices, equipment purchases and comped reservations.',
+	outreach_coordinator: 'Sends the newsletter and show announcements.',
+	content_editor: 'Edits the local resources directory and the help articles.',
+	teacher_reviewer: 'Reviews teacher applications.',
+	auditor: 'Reads the audit log.'
+};
+
 /** A position held as a seat in Operations: every one but `admin` (#2992). */
 export type Job = Exclude<Position, 'admin'>;
 export const jobs = positionOrder.filter((p): p is Job => p !== 'admin') as [Job, ...Job[]];

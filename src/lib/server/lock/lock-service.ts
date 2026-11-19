@@ -65,7 +65,14 @@ export interface LockJobSummary {
 	online: boolean | null;
 	/** Whether a break-glass code is confirmed on the lock right now. */
 	fallbackActive: boolean;
+	/** Failures that fail the run: the cron returns 500 and Sentry alerts. */
 	errors: string[];
+	/**
+	 * Failures the next run retries by itself, logged without failing the run:
+	 * a delete of an already-expired temporary user, whose code no longer opens
+	 * the door. Absent on runs recorded before #3277.
+	 */
+	warnings: string[];
 }
 
 /** A run as stored. `at` is an ISO string because KV holds JSON, not Dates. */
@@ -91,6 +98,7 @@ export async function getLastLockJobRun(): Promise<LockJobRun | null> {
  */
 export async function runDailyLockJob(triggeredBy: string | null = null): Promise<LockJobSummary> {
 	const errors: string[] = [];
+	const warnings: string[] = [];
 
 	// Each step is guarded here, once, so a throw in any of them — however deep —
 	// is recorded and the next step still runs. Door codes must not depend on
@@ -107,7 +115,7 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 	}
 
 	const online = await step('Lock health check', null, () => checkDeviceHealth(errors));
-	let cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors));
+	let cleaned = await step('Cleanup', 0, () => cleanupPreviousDayAccess(errors, warnings));
 	const provisioned = await step('Provisioning', 0, () => provisionDailyAccess(errors));
 	const confirmed =
 		(await step('Sync reconciliation', 0, () => reconcileSyncState(errors))) +
@@ -123,7 +131,8 @@ export async function runDailyLockJob(triggeredBy: string | null = null): Promis
 		confirmed,
 		online,
 		fallbackActive: fallback.active !== null,
-		errors
+		errors,
+		warnings
 	};
 
 	// Recorded whatever happened: a run that failed is the one worth seeing, and
@@ -625,7 +634,7 @@ export async function syncAccessWindow(
  * Only type-2 users are touched. Type-0 users are members' persistent door
  * codes, granted by hand, and deleting one locks a real person out.
  */
-async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
+async function cleanupPreviousDayAccess(errors: string[], warnings: string[]): Promise<number> {
 	const tz = DEFAULT_TIMEZONE;
 	const now = new Date();
 
@@ -638,20 +647,29 @@ async function cleanupPreviousDayAccess(errors: string[]): Promise<number> {
 		for (const u of users) {
 			if (u.type !== 2) continue;
 
+			let end: Date;
 			try {
 				const detail = await getLockUser(u.id);
 				if (!detail?.daterange) continue;
-
 				const [datePart, timePart] = detail.daterange[1].split(' ');
-				const end = buildDateInTz(datePart, timePart, tz);
-				if (end >= now) continue;
+				end = buildDateInTz(datePart, timePart, tz);
+			} catch (err) {
+				const msg = `Failed to read lock user ${u.id}: ${(err as Error).message}`;
+				console.error(msg);
+				errors.push(msg);
+				continue;
+			}
+			if (end >= now) continue;
 
+			// A warning, not an error: the next run re-lists every type-2 user and
+			// retries, and the expired code no longer opens the door (#3277).
+			try {
 				await removeTemporaryUser(u.id);
 				count++;
 			} catch (err) {
 				const msg = `Failed to remove expired lock user ${u.id}: ${(err as Error).message}`;
-				console.error(msg);
-				errors.push(msg);
+				console.warn(msg);
+				warnings.push(msg);
 			}
 		}
 	} catch (err) {

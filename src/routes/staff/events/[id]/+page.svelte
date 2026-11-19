@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { parseTagList } from '#lib/utils/unique-tags.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto, refreshAll } from '$app/navigation';
@@ -107,14 +108,6 @@
 	const canRepeat = $derived(
 		(evt.source === 'cmc' || evt.source === 'group') && evt.status !== 'cancelled'
 	);
-
-	function parseTags(tags: string | null): string[] {
-		if (!tags) return [];
-		return tags
-			.split(',')
-			.map((t) => t.trim())
-			.filter(Boolean);
-	}
 </script>
 
 <PageHeader width="3xl" title={evt.title} subtitle={m.staff_event_body()}>
@@ -422,9 +415,9 @@
 			</div>
 		{/if}
 
-		{#if parseTags(evt.tags).length > 0}
+		{#if parseTagList(evt.tags).length > 0}
 			<div class="mt-4 flex flex-wrap gap-1 pt-4 rule-top">
-				{#each parseTags(evt.tags) as tag (tag)}
+				{#each parseTagList(evt.tags) as tag (tag)}
 					<Badge variant="outline">{tag}</Badge>
 				{/each}
 			</div>
@@ -434,6 +427,7 @@
 	<ListingPosterCard
 		eventId={evt.id}
 		posterUrl={detail.posterUrl}
+		posterSource={detail.posterSource}
 		cancelled={evt.status === 'cancelled'}
 		uploadWhileCancelled={data.canManage}
 		onchange={refresh}

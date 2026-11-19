@@ -72,11 +72,6 @@ Say in the PR that the full suite was deferred to CI.
   (`gh issue list --state open --search '<terms>'`), then
   `gh issue create --template finding.md --type Bug`, labelled `agent-filed` (`--template` drops
   the file's `type:`).
-- **A review with several findings is a parent issue plus one `finding.md` sub-issue each**, even
-  when the ask was for "an issue". The parent holds only scope, method, and an explicit "not in
-  this issue". Attach with
-  `gh api --method POST repos/corvmc/corvmc.org/issues/<parent>/sub_issues -F sub_issue_id=<id>`,
-  where `<id>` is the child's **database id** (`gh api repos/corvmc/corvmc.org/issues/<n> --jq .id`).
 - **Commit messages carry no co-author lines.**
 
 ## Workflow

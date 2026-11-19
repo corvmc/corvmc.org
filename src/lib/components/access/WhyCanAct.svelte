@@ -2,21 +2,39 @@
 	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Why a person can act (#2994): each position, committee seat and live shift
-	 * role, with what it lets them do. The lists come from the functions the
-	 * guards ask, so this shows nothing a guard refuses.
+	 * role. A position shows its one-line description; the capability lists come
+	 * from the functions the guards ask, and only `showPermissions` (the staff
+	 * person page) renders them, folded (#3241).
 	 */
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import { positionLabels } from '#lib/config.js';
+	import { positionDescriptions, positionLabels } from '#lib/config.js';
 	import { capabilityLabel } from '#lib/capability-label.js';
 	import type { getPersonAccessWhy } from '#lib/remote/why-can-act.remote.js';
 
-	let { why }: { why: Awaited<ReturnType<typeof getPersonAccessWhy>> } = $props();
+	let {
+		why,
+		showPermissions = false
+	}: {
+		why: Awaited<ReturnType<typeof getPersonAccessWhy>>;
+		showPermissions?: boolean;
+	} = $props();
 
 	const empty = $derived(
 		why.positions.length === 0 && why.departments.length === 0 && why.shiftRoles.length === 0
 	);
 </script>
+
+{#snippet permissions(labels: string[])}
+	<details class="text-sm" data-testid="why-permissions">
+		<summary class="cursor-pointer text-muted">{m.access_why_show_permissions_label()}</summary>
+		<ul class="mt-1 text-muted">
+			{#each labels as label, i (i)}
+				<li>{label}</li>
+			{/each}
+		</ul>
+	</details>
+{/snippet}
 
 {#if empty}
 	<EmptyState title={m.access_why_none_title()} description={m.access_why_none_body()} />
@@ -28,11 +46,10 @@
 			{#each why.positions as p (p.position)}
 				<li>
 					<div class="font-medium">{positionLabels[p.position]}</div>
-					<ul class="text-muted text-sm">
-						{#each p.capabilities as cap (cap)}
-							<li>{capabilityLabel(cap)}</li>
-						{/each}
-					</ul>
+					<p class="text-muted text-sm">{positionDescriptions[p.position]}</p>
+					{#if showPermissions}
+						{@render permissions(p.capabilities.map((cap) => capabilityLabel(cap)))}
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -49,7 +66,7 @@
 						{d.positions.length > 0 ? d.positions.join(', ') : m.access_why_member_text()}
 					</div>
 					<!-- Where its own-records grants reach: named on a project, or owning a task in it (#2959). -->
-					{#if d.projects.length > 0 && d.grants.some((g) => g.reach === 'owned')}
+					{#if showPermissions && d.projects.length > 0 && d.grants.some((g) => g.reach === 'owned')}
 						<div class="text-sm" data-testid="why-projects">
 							{m.access_why_on_projects_text({
 								projects: d.projects
@@ -62,16 +79,16 @@
 							})}
 						</div>
 					{/if}
-					<ul class="text-muted text-sm">
-						<li>{m.access_why_tasks_text()}</li>
-						{#each d.grants as g (g.capability)}
-							<li>
-								{g.reach === 'owned'
+					{#if showPermissions}
+						{@render permissions([
+							m.access_why_tasks_text(),
+							...d.grants.map((g) =>
+								g.reach === 'owned'
 									? m.access_why_owned_text({ label: capabilityLabel(g.capability) })
-									: capabilityLabel(g.capability)}
-							</li>
-						{/each}
-					</ul>
+									: capabilityLabel(g.capability)
+							)
+						])}
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -85,11 +102,9 @@
 				<li>
 					<div class="font-medium">{r.roleName}</div>
 					<div class="text-sm">{r.eventTitle}</div>
-					<ul class="text-muted text-sm">
-						{#each r.capabilities as cap (cap)}
-							<li>{capabilityLabel(cap)}</li>
-						{/each}
-					</ul>
+					{#if showPermissions}
+						{@render permissions(r.capabilities.map((cap) => capabilityLabel(cap)))}
+					{/if}
 				</li>
 			{/each}
 		</ul>

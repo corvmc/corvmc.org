@@ -12,20 +12,22 @@
 		src,
 		name,
 		shape,
-		disabled = false
+		disabled = false,
+		class: className = ''
 	}: {
-		/** Persists the file and returns its key; the avatar routes do both. */
-		upload: (file: File) => Promise<string>;
+		/** Persist the picked image and return its key. */
+		upload: (file: File) => Promise<string | void>;
 		src?: string | null;
-		/** Whose avatar, for the initials shown with no image. */
+		/** Seeds the initials and pattern shown before there is an image. */
 		name: string;
-		/** Round for a person, square for a band or group. */
+		/** A member is round, a band or group square: see `entity/registry.ts`. */
 		shape: 'round' | 'square';
 		disabled?: boolean;
+		class?: string;
 	} = $props();
 </script>
 
-<div class="shrink-0">
+<div class="shrink-0 {className}">
 	<FileUpload
 		{upload}
 		{disabled}
@@ -33,8 +35,8 @@
 		src={src ?? undefined}
 		orientation="col"
 	>
-		{#snippet preview({ src: previewSrc })}
-			<EntityAvatar {shape} {name} image={previewSrc} class="size-24" />
+		{#snippet preview({ src: picked })}
+			<EntityAvatar {shape} {name} image={picked} class="size-24" />
 		{/snippet}
 	</FileUpload>
 </div>

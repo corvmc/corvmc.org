@@ -304,9 +304,9 @@
 				<legend class="fieldset-legend"
 					>{m.reservations_booking_date_time_step_frequency_title()}</legend
 				>
-				<div class="flex gap-1">
+				<div class="grid grid-cols-2 gap-1">
 					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, ...frequencyOptions()] as opt (opt.value)}
-						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
+						<label class="btn whitespace-nowrap btn-sm" class:btn-primary={frequency === opt.value}>
 							<!-- One-time posts nothing: kit refuses a radio with an empty value. -->
 							<input
 								{...opt.value
