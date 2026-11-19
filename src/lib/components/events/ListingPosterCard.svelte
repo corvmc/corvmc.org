@@ -18,13 +18,24 @@
 	interface Props {
 		eventId: string;
 		posterUrl: string | null;
+		/** The template is offered over an empty slot or its own flyer, never over uploaded art. */
+		posterSource: 'none' | 'generated' | 'uploaded';
 		cancelled: boolean;
 		/** Staff may still replace a cancelled listing's poster; the flyer stays off. */
 		uploadWhileCancelled?: boolean;
 		onchange: () => void;
 	}
 
-	let { eventId, posterUrl, cancelled, uploadWhileCancelled = false, onchange }: Props = $props();
+	let {
+		eventId,
+		posterUrl,
+		posterSource,
+		cancelled,
+		uploadWhileCancelled = false,
+		onchange
+	}: Props = $props();
+
+	const redraw = $derived(posterSource === 'generated');
 
 	async function upload(file: File) {
 		const formData = new FormData();
@@ -81,31 +92,40 @@
 					: m.events_listing_poster_card_upload_poster_title()}
 				aria-label={m.events_listing_poster_card_upload_poster_label()}
 			/>
-			{#if !cancelled}
+			{#if !cancelled && posterSource !== 'uploaded'}
 				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
 				<Action
 					action={useTemplateFlyerAsPoster}
-					label={m.events_listing_poster_card_label()}
+					label={redraw
+						? m.events_listing_poster_card_redraw_label()
+						: m.events_listing_poster_card_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle={m.events_listing_poster_card_modal_title()}
-					submitLabel={m.events_listing_poster_card_submit_label()}
+					modalTitle={redraw
+						? m.events_listing_poster_card_redraw_modal_title()
+						: m.events_listing_poster_card_modal_title()}
+					submitLabel={redraw
+						? m.events_listing_poster_card_redraw_label()
+						: m.events_listing_poster_card_submit_label()}
 					successToast={m.events_listing_poster_card_toast()}
 					onsuccess={onchange}
 				>
 					{#snippet form()}
 						<input {...useTemplateFlyerAsPoster.fields.eventId.as('hidden', eventId)} />
 						<p class="text-sm">
-							{m.events_listing_poster_card_flyer_drawn_from_title_date_text()}
+							{redraw
+								? m.events_listing_poster_card_redraw_text()
+								: m.events_listing_poster_card_flyer_drawn_from_title_date_text()}
 						</p>
 					{/snippet}
 				</Action>
-				{#if posterUrl}
-					<!-- The uploaded image above a details footer, as a Letter PDF; nothing is stored. -->
-					<Button variant="ghost" size="sm" disabled={printing} onclick={downloadPrintPoster}>
-						{m.events_listing_poster_card_print_label()}
-					</Button>
-				{/if}
+			{/if}
+			{#if !cancelled && posterSource === 'uploaded'}
+				<!-- The uploaded image above a details footer, as a Letter PDF; nothing is stored.
+				     A drawn flyer already carries the details, so the server refuses it. -->
+				<Button variant="ghost" size="sm" disabled={printing} onclick={downloadPrintPoster}>
+					{m.events_listing_poster_card_print_label()}
+				</Button>
 			{/if}
 		</div>
 	{/if}

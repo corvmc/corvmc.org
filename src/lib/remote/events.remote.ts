@@ -134,6 +134,7 @@ import { buildLineItem } from '#lib/server/finance/product-config-service.js';
 import { validateTicketSplit } from '#lib/finance/ticket-split.js';
 import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '#lib/config.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
+import { posterSource } from '#lib/server/poster/flyer-service.js';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { venue } from '#lib/server/db/schema/venue.js';
@@ -865,6 +866,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	}
 
 	const posterUrl = resolveImageUrl(evt.posterKey);
+	const poster = posterUrl ? await posterSource(evt.id) : 'none';
 
 	let ticketStats: { sold: number; remaining: number | null } | null = null;
 	let ticketMoney: EventTicketMoney | null = null;
@@ -959,6 +961,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		/** The same band, ready to render. `band` stays for the fields the form reads. */
 		bandRef: bookingBand ? toBandRef(bookingBand) : null,
 		posterUrl,
+		posterSource: poster,
 		creator,
 		// Standing only matters for a community listing, and only staff see it.
 		// It's what tells a reviewer whether this member is here because of a
