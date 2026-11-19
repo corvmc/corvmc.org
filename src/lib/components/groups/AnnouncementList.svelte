@@ -52,9 +52,8 @@
 
 {#if announcements.length === 0}
 	<EmptyState
-		description={canManage
-			? m.groups_announcement_list_nothing_posted_yet_write_first_body()
-			: m.groups_announcement_list_nothing_posted_yet_body()}
+		title={m.groups_announcement_list_empty_title()}
+		description={canManage ? m.groups_announcement_list_empty_body() : undefined}
 	/>
 {:else}
 	<div class="grid grid-cols-1 gap-3">

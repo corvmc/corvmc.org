@@ -1056,15 +1056,15 @@ the nav. `member/nav-items.spec.ts` asserts against that with a commented exempt
 how you find a surface that shipped without a way in.
 
 **The band panel** (`band/[slug]/nav-items.ts`, #3127) groups its rows the way the staff nav does:
-Dashboard on top; Schedule (Reservations, Events), Band (Members, Announcements, Messages), Profile
-(Band profile, Press kit, Page editor), Stage (Tech rider, Packing list) and Music (Releases,
+Dashboard on top; Schedule (Reservations, Events), Band (Members, Messages), Profile (Profile,
+Press kit, Page editor), Stage (Tech rider, Packing list) and Music (Releases,
 Payouts, behind `bandAudio`); Subscription and Settings at the foot. A section the viewer can see no
 row of is dropped. `nav-items.spec.ts` places every row in exactly one zone for every role.
 
 - Messages is one row for the band chat and its enquiries, badged with this band's open, unread
   chat threads plus, for owners and admins, its open, unread enquiries. Not a separate Enquiries
   row, because both lists are one page and a second row would be a second link to it (#3136).
-- Every active member reads Band profile and Press kit; only owners and admins edit. The read
+- Every active member reads Profile and Press kit; only owners and admins edit. The read
   queries take `member` and return `canEdit`; every write remote and upload route keeps `admin`, and
   the page disables the form for anyone else (`band-profile-access.spec.ts`). Not owner/admin-only
   rows, because every member hands out the band's address and answers for its profile (#3127). The

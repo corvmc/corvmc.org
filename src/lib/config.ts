@@ -3295,5 +3295,7 @@ export const retiredTerms: { word: RegExp; use: string; keys?: RegExp }[] = [
 		keys: /^(?!(member_)?groups_|public_programs_|public_reset_password_|staff_members_id_panels_account_panel_|actions_edit_schedule_(kept|removed)_sessions_)/
 	},
 	// "Listing" stays for directory and local-resource entries.
-	{ word: /\blistings?\b/i, use: 'event', keys: /^(staff_)?events_/ }
+	{ word: /\blistings?\b/i, use: 'event', keys: /^(staff_)?events_/ },
+	// A band's own pages say "event" (#3139). The public "gig guide" is its own name.
+	{ word: /\bgigs?\b(?! guide)/i, use: 'event (band pages)', keys: /^band_/ }
 ];

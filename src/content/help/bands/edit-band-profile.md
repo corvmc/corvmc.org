@@ -9,7 +9,7 @@ sortOrder: 7
 
 ## Editing the profile
 
-Owners and admins edit the band's public listing from **Edit profile** in the
+Owners and admins edit the band's public listing from **Profile** in the
 band's sidebar. It works much like your personal profile.
 
 ## What you can set

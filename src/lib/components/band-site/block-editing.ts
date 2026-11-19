@@ -28,7 +28,7 @@ export const BLOCK_SOURCES: Record<Block['type'], BlockSource> = {
 	bio: { label: 'yours', owner: null, action: 'Tell people who you are' },
 	links: { label: 'from your band profile', owner: 'edit', action: 'Add your links' },
 	embed: { label: 'yours', owner: null, action: 'Paste a Bandcamp or Spotify link' },
-	events: { label: 'from your gig list', owner: 'events', action: 'Add a show' },
+	events: { label: 'from your events', owner: 'events', action: 'Add a show' },
 	members: { label: 'from your roster', owner: 'members', action: 'Invite your bandmates' },
 	gallery: { label: 'from your media', owner: null, action: 'Upload photos' },
 	press: { label: 'from your press kit', owner: 'press-kit', action: 'Add a press quote' },
