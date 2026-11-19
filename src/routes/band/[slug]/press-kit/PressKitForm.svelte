@@ -59,12 +59,14 @@
 
 <Form
 	remote={saveBandEpk}
+	class="flex flex-col gap-6"
 	onsuccess={() => toast.success(m.band_slug_press_kit_press_kit_form_toast())}
 >
 	<input {...saveBandEpk.fields.slug.as('hidden', band.slug)} />
 	<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 
-	<!-- Disables every native control for a plain member; `display: contents` keeps the layout. -->
+	<!-- Disables every native control for a plain member. `display: contents` makes the cards
+	     the form's flex items, so its gap spaces them; a margin on this box would not apply. -->
 	<fieldset disabled={!canEdit} class="contents" data-testid="press-kit-fields">
 		<Alert type="info">
 			<ParaglideMessage
