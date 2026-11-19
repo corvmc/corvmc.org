@@ -15,8 +15,7 @@
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import InviteMembersModal from './InviteMembersModal.svelte';
-	import TransferOwnershipModal from './TransferOwnershipModal.svelte';
-	import { toast } from 'svelte-sonner';
+	import TransferOwnershipModal from '#lib/components/band/TransferOwnershipModal.svelte';
 	import {
 		getBandMembersPage,
 		removeMember,
@@ -76,16 +75,6 @@
 			.filter((m) => m.role !== 'owner')
 			.map((m) => ({ userId: m.userId, name: m.member.title }))
 	);
-
-	/** An owner transferring away is how they become able to leave. */
-	function openTransferFromOwnMembership() {
-		if (transferCandidates.length === 0) {
-			toast.error(msg.band_slug_members_there_nobody_else_band_transfer_toast());
-			return;
-		}
-		transferTarget = null;
-		showTransferModal = true;
-	}
 </script>
 
 <PageHeader width="2xl" title={msg.band_members_title()} subtitle={layout.band.name}>
@@ -97,14 +86,13 @@
 </PageHeader>
 <PageContent width="2xl">
 	<!-- The viewer's own membership first: their role, the two things only they
-	     can set, and the way out. -->
+	     can set, and Leave band. -->
 	<YourMembership
 		{me}
 		bandName={layout.band.name}
 		role={layout.userRole}
 		bandId={layout.band.id}
 		onchanged={refreshMembers}
-		ontransfer={openTransferFromOwnMembership}
 	/>
 
 	{#if isStaffOnly}

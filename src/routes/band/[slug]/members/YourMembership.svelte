@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import type { MemberRef } from '#lib/types/entity.js';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import Alert from '#lib/components/ui/Alert.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
@@ -18,9 +15,8 @@
 	/**
 	 * The viewer's own membership, at the top of the members page.
 	 *
-	 * The page used to open with everyone else and bury Leave Band as a bare
-	 * button at the very bottom — and an owner, who cannot leave, simply saw
-	 * nothing there with no explanation of why.
+	 * An owner cannot leave, so their way out — Transfer ownership — is in band
+	 * Settings (#3226), and this card offers them no Leave band.
 	 *
 	 * Synchronous script: `fields` is read at module scope and the awaited
 	 * queries live in the parent, which passes resolved props.
@@ -33,8 +29,7 @@
 		bandId,
 		bandName,
 		role,
-		onchanged,
-		ontransfer
+		onchanged
 	}: {
 		me: {
 			/** The presentation ref `getMembers` builds — alias-aware. */
@@ -47,8 +42,6 @@
 		bandName: string;
 		role: string;
 		onchanged: () => void;
-		/** Opens the page's transfer-ownership modal — the owner's way out. */
-		ontransfer: () => void;
 	} = $props();
 
 	const isOwner = $derived(role === 'owner');
@@ -96,25 +89,8 @@
 				</div>
 			</Form>
 
-			<div class="border-t pt-4">
-				{#if isOwner}
-					<!-- An owner can't leave while they own the band. Saying so, with the
-					     way out, beats the old behaviour of hiding the button entirely
-					     and leaving them to guess. -->
-					<Alert type="info">
-						<ParaglideMessage
-							message={m.band_slug_members_your_membership_as_owner_can_t_leave_body}
-							inputs={{ bandName }}
-							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-								>{/snippet}</ParaglideMessage
-						>
-						{#snippet action()}
-							<Button variant="ghost" size="sm" onclick={ontransfer}
-								>{m.band_slug_members_your_membership_transfer_ownership_label()}</Button
-							>
-						{/snippet}
-					</Alert>
-				{:else}
+			{#if !isOwner}
+				<div class="border-t pt-4">
 					<!-- `confirm` and a `form` snippet together: Action renders the
 					     confirm copy as a lead-in above the fields, so the band this
 					     leaves can ride the submission without losing the prompt. -->
@@ -134,8 +110,8 @@
 							<input {...leaveFields.bandId.as('hidden', bandId)} />
 						{/snippet}
 					</Action>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 	</InfoCard>
 {/if}

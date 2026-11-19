@@ -24,7 +24,7 @@
 		bandName: string;
 		/** Active members who are not the owner. */
 		candidates: { userId: string; name: string }[];
-		/** The row the owner clicked Transfer on; null from the membership panel. */
+		/** The row the owner clicked Transfer on; null from band Settings. */
 		selectedId: string | null;
 		onsuccess: () => void;
 	} = $props();
