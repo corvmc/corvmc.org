@@ -105,6 +105,27 @@ export function contactForView(
 }
 
 /**
+ * The contact a member or band profile form submits. A blank field is an
+ * explicit `undefined`, so the service's merge over the stored contact clears
+ * it: a field the person emptied must not survive for the public switch beside
+ * it to publish (#3234).
+ */
+export function contactFromForm(data: {
+	contactEmail: string;
+	contactPhone: string;
+	contactSocial: string;
+	contactPublic: boolean;
+}): DirectoryContact | undefined {
+	if (!data.contactEmail && !data.contactPhone && !data.contactSocial) return undefined;
+	return {
+		email: data.contactEmail || undefined,
+		phone: data.contactPhone || undefined,
+		social: data.contactSocial || undefined,
+		visibility: data.contactPublic ? 'public' : 'members'
+	};
+}
+
+/**
  * Shape a directory member row into the public profile DTO. This is the single
  * gate for what a member exposes publicly: fields are whitelisted explicitly
  * (so a newly added column never leaks by default) and personal contact runs
