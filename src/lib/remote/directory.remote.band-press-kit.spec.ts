@@ -95,9 +95,14 @@ const EPK = {
 	achievements: ['Played the big room']
 };
 
-function seed(overrides: { epk?: unknown } = {}) {
+/** A contact as every existing band stores it: no `visibility`, so private. */
+const PRIVATE_CONTACT = { email: 'enquiry-secret@example.com', phone: '555-0199' };
+
+function seed(overrides: { epk?: unknown; contact?: unknown } = {}) {
 	queue.length = 0;
-	queue.push([BAND_ROW]);
+	queue.push([
+		{ ...BAND_ROW, contact: 'contact' in overrides ? overrides.contact : PRIVATE_CONTACT }
+	]);
 	queue.push([{ value: 'rock' }]);
 	queue.push([{ epk: 'epk' in overrides ? overrides.epk : EPK }]);
 	queue.push([]);
@@ -145,12 +150,28 @@ describe('getPublicBandProfile', () => {
 		expect(JSON.stringify(profile)).not.toContain(marker);
 	});
 
-	it('publishes no contact field at all, under any name', async () => {
-		seed();
+	it.each([
+		['no visibility set', PRIVATE_CONTACT],
+		['members-only', { ...PRIVATE_CONTACT, visibility: 'members' }]
+	])('publishes no contact when it is %s', async (_, contact) => {
+		seed({ contact });
+		const profile = await getPublicBandProfile('the-velvet-underground');
+		expect(profile.band.contact).toBeNull();
+		expect('directoryContact' in profile.band).toBe(false);
+		const serialized = JSON.stringify(profile);
+		expect(serialized).not.toContain('enquiry-secret@example.com');
+		expect(serialized).not.toContain('555-0199');
+	});
+
+	it('publishes the contact the band switched public', async () => {
+		seed({ contact: { ...PRIVATE_CONTACT, address: '1 Main St', visibility: 'public' } });
 		const { band } = await getPublicBandProfile('the-velvet-underground');
-		// `directoryContact` was the field this page used to render as "Booking".
-		expect('directoryContact' in band).toBe(false);
-		expect(Object.keys(band)).not.toContain('contact');
+		expect(band.contact).toMatchObject({
+			email: 'enquiry-secret@example.com',
+			phone: '555-0199',
+			visibility: 'public'
+		});
+		expect(JSON.stringify(band)).not.toContain('1 Main St');
 	});
 
 	it('survives a band that has written no press kit', async () => {

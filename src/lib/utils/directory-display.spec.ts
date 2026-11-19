@@ -6,6 +6,8 @@ import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	contactForView,
+	bandContactForView,
+	contactFromForm,
 	toPublicMemberProfile
 } from './directory-display';
 import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
@@ -124,6 +126,54 @@ describe('contactForView', () => {
 	it('returns null for missing contact', () => {
 		expect(contactForView('public', null)).toBeNull();
 		expect(contactForView('members', undefined)).toBeNull();
+	});
+});
+
+describe('bandContactForView', () => {
+	const stored = { email: 'band@example.com', phone: '555-0100', address: '1 Main St' };
+
+	it('withholds a contact the band has not switched public, in either view', () => {
+		expect(bandContactForView(stored)).toBeNull();
+		expect(bandContactForView({ ...stored, visibility: 'members' })).toBeNull();
+		expect(bandContactForView(null)).toBeNull();
+	});
+
+	it('returns only the edited fields of a public contact', () => {
+		expect(bandContactForView({ ...stored, visibility: 'public' })).toEqual({
+			email: 'band@example.com',
+			phone: '555-0100',
+			social: undefined,
+			visibility: 'public'
+		});
+	});
+
+	it('returns null for a public contact with nothing in it', () => {
+		expect(bandContactForView({ address: '1 Main St', visibility: 'public' })).toBeNull();
+	});
+});
+
+describe('contactFromForm', () => {
+	const blank = { contactEmail: '', contactPhone: '', contactSocial: '', contactPublic: false };
+
+	it('submits nothing when every field is blank', () => {
+		expect(contactFromForm(blank)).toBeUndefined();
+	});
+
+	// The service merges the submission over the stored contact. A field the
+	// person emptied has to override the stored value, or the public switch
+	// publishes something they removed.
+	it('clears an emptied field when merged over the stored contact', () => {
+		const stored: DirectoryContact = { email: 'old@example.com', phone: '555-0100' };
+		const merged = {
+			...stored,
+			...contactFromForm({ ...blank, contactEmail: 'new@example.com', contactPublic: true })
+		};
+		expect(merged.phone).toBeUndefined();
+		expect(merged).toMatchObject({ email: 'new@example.com', visibility: 'public' });
+	});
+
+	it('defaults to members-only', () => {
+		expect(contactFromForm({ ...blank, contactSocial: '@band' })?.visibility).toBe('members');
 	});
 });
 

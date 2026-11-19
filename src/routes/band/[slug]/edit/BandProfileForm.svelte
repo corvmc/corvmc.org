@@ -195,14 +195,11 @@
 				<LinkListEditor bind:value={links} field={profileFields.links} />
 			</InfoCard>
 
-			<!-- These used to be printed on the public page as the act's booking
-		     details. They are not any more: a stranger reaches the act through a
-		     form, so nothing is published for a scraper to take. The fields stay
-		     because they still route an enquiry — but the page has to say that,
-		     or a band reads "contact info" and assumes it is on display. -->
-			<InfoCard title={m.band_slug_edit_band_profile_form_where_enquiries_go_title()}>
+			<!-- Private by default: the public page shows the enquiry form, which
+			     routes to these details without printing them. -->
+			<InfoCard title={m.band_slug_edit_band_profile_form_contact_info_title()}>
 				<p class="mb-3 text-muted">
-					{m.band_slug_edit_band_profile_form_never_shown_publicly_page_o_text()}
+					{m.band_slug_edit_band_profile_form_contact_info_text()}
 				</p>
 				<div class="space-y-3">
 					<FormField
@@ -224,6 +221,12 @@
 						type="text"
 						value={contact.social ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_handle_url_placeholder()}
+					/>
+					<FormField
+						field={profileFields.contactPublic}
+						type="toggle"
+						value={contact.visibility === 'public'}
+						checkboxLabel={m.band_slug_edit_band_profile_form_show_contact_public_checkbox()}
 					/>
 				</div>
 			</InfoCard>

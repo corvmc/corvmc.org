@@ -158,7 +158,12 @@ export async function seedBands(users: SeedUser[]) {
 			foundedYear: String(randomInt(2015, 2024)),
 			lookingFor: lookingForMembers ? 'members' : null,
 			visibility: bandVisibility as DirectoryVisibility,
-			contact: { email: `booking+${slug}@example.com` },
+			// Every fourth band shows its contact; the rest offer the enquiry form.
+			// Indexed, not drawn: a `random()` here would shift every later draw.
+			contact: {
+				email: `booking+${slug}@example.com`,
+				...(i % 4 === 1 ? { visibility: 'public' } : {})
+			},
 			links: bandLinks
 		});
 

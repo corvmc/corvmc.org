@@ -1560,7 +1560,9 @@ visible decline is one people hesitate to make.
 
 A band's booking enquiries run on the same tables. The contact form on a band's public profile
 opens a `channel: 'band'` thread owned by `inbox_thread.group_id`, and the band's owner and
-admins answer it at `/band/[slug]/messages`. Neither side sees the other's address.
+admins answer it at `/band/[slug]/messages`. Neither side sees the other's address. A band
+that switches its contact info public on its profile editor shows that instead of the form, the
+same switch a member has; the default is private (#3234).
 
 ### Code path
 

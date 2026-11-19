@@ -270,9 +270,8 @@ under it, which reads as belonging to the section rather than the photo.
 The act's identity: name, bio, tagline, genres, links, visibility, and the address it is
 reached at. Visited when an act is created and whenever something about it changes.
 
-Note the **"Where enquiries go"** card. It was "Directory Contact Info" and those fields were
-printed on the public page. They no longer are — they route the contact form instead — and the
-card has to say so, or a band reads "contact info" and assumes it is on display.
+Note the **"Contact info"** card. Its fields are private by default, and the public page shows
+the contact form. A switch on the card publishes them in place of the form (#3234).
 
 **User stories**
 

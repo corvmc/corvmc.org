@@ -49,7 +49,9 @@ import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
-	toPublicMemberProfile
+	toPublicMemberProfile,
+	bandContactForView,
+	contactFromForm
 } from '#lib/utils/directory-display.js';
 import { db } from '#lib/server/db/index.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
@@ -58,7 +60,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '#lib/server/db/schema/authentication.js';
-import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { directorySorts } from '#lib/utils/directory-browse.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
@@ -368,10 +370,9 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			foundedYear: directoryEntry.foundedYear,
 			avatarKey: group.avatarKey,
 			lookingFor: directoryEntry.lookingFor,
-			// `directoryEntry.contact` is deliberately not selected. It is still
-			// written by the profile editor and still used to route an enquiry, but
-			// nothing on a public band page may render it, and the surest way to
-			// keep it off the page is for the page's query never to fetch it.
+			// Leaves this function only through `bandContactForView`, which
+			// withholds it unless the band switched it public.
+			contact: directoryEntry.contact,
 			links: directoryEntry.links,
 			// Both soft-delete flags: `deactivate()` sets the pair, but a group
 			// deleted by any other path would otherwise keep a live listing.
@@ -484,9 +485,9 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			// a stranger reaches the act through the Turnstile form instead, so the
 			// page carries no address for a scraper to take.
 			//
-			// `directoryContact` used to be returned here and rendered as "Booking".
-			// Removing it is the point of this change, not a side effect of it.
 			pressKit: publicPressKit(site?.epk),
+			// Null unless the band chose to show it; the page then offers the form.
+			contact: bandContactForView(row.contact as DirectoryContact | null),
 			photos: photos.map((m) => ({
 				id: m.attachmentId,
 				url: resolveImageUrl(m.key),
@@ -649,17 +650,9 @@ const memberProfileSchema = z.object({
 export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 	const user = requireUser();
 
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
 	// Personal contact defaults to members-only; the member opts it into the
 	// public profile explicitly. contactForView() reads this on the public side.
-	const directoryContact =
-		Object.keys(contact).length > 0
-			? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
-			: undefined;
+	const directoryContact = contactFromForm(data);
 
 	await updateMemberProfile(user.id, {
 		tagline: data.tagline || undefined,
@@ -761,17 +754,12 @@ const bandProfileSchema = z.object({
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
+	contactPublic: z.boolean().default(false),
 	links: linksField
 });
 
 export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	const { user, group: band } = await requireBandRole({ slug: data.slug }, 'admin');
-
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
 
 	await updateBandBasics(band.id, { name: data.name, bio: data.bio });
 
@@ -783,7 +771,7 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		seekingInstruments: data.seekingInstruments,
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
-		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
+		directoryContact: contactFromForm(data),
 		links: data.links
 	});
 
