@@ -6,9 +6,8 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
-	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import AvatarField from '#lib/components/ui/Form/AvatarField.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
 	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
 	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
 	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';
@@ -69,7 +68,7 @@
 
 	// Avatar uploads instantly through the member-avatar API route, which persists
 	// the new key and returns it (the value is also submitted with the form).
-	// FileUpload previews the picked file locally, so no query refresh is needed —
+	// The field previews the picked file locally, so no query refresh is needed —
 	// and refreshing getMemberProfile() here would re-resolve the query that seeds
 	// the live editors (part of the JAVASCRIPT-SVELTEKIT-W churn).
 	async function uploadAvatar(file: File): Promise<string> {
@@ -110,18 +109,12 @@
 				/>
 			</div>
 
-			<div class="shrink-0">
-				<FileUpload
-					upload={uploadAvatar}
-					accept="image/jpeg,image/png,image/webp"
-					src={profile?.avatarUrl ?? undefined}
-					orientation="col"
-				>
-					{#snippet preview({ src })}
-						<EntityAvatar shape="round" name={profile?.name ?? ''} image={src} class="size-24" />
-					{/snippet}
-				</FileUpload>
-			</div>
+			<AvatarField
+				upload={uploadAvatar}
+				src={profile?.avatarUrl}
+				name={profile?.name ?? ''}
+				shape="round"
+			/>
 		</div>
 
 		<div class="mt-4">

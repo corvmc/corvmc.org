@@ -418,7 +418,6 @@
 	"member_groups_slug_edit_group_profile_form_committee_label": "committee",
 	"member_groups_slug_edit_group_profile_form_description_body": "Shown beside the Join button and on the {kindLabel}'s Overview tab.",
 	"member_groups_slug_edit_group_profile_form_joining_title": "Joining",
-	"member_groups_slug_edit_group_profile_form_photo_label": "Photo",
 	"member_groups_slug_edit_group_profile_form_placeholder": "What is this {kindLabel} for?",
 	"member_groups_slug_edit_group_profile_form_renaming_doesn_t_body": "Renaming the {kindLabel} doesn't move its address.",
 	"member_groups_slug_edit_group_profile_form_staff_set_ask_the_body": "Staff set this. Ask them if it needs to change.",

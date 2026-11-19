@@ -7,6 +7,7 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import AvatarField from '#lib/components/ui/Form/AvatarField.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { sanitizeBio } from '#lib/utils/markdown.js';
 	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
@@ -110,15 +111,7 @@
 					/>
 				</div>
 
-				<FormField
-					label={m.band_slug_edit_band_profile_form_avatar_label()}
-					type="file"
-					upload={uploadAvatar}
-					accept="image/jpeg,image/png,image/webp"
-					src={band.avatarUrl ?? undefined}
-					orientation="col"
-					class="shrink-0"
-				/>
+				<AvatarField upload={uploadAvatar} src={band.avatarUrl} name={band.name} shape="square" />
 			</div>
 
 			<div class="mt-4 space-y-4">
