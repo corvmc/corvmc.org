@@ -405,6 +405,26 @@ export default defineConfig(
 		}
 	},
 	{
+		// A module-scope import of a single-purpose SDK is initialised on the first
+		// request of any page whose module graph reaches it, in every new isolate.
+		// The poster renderer cost the home page 174 ms that way without drawing a
+		// poster (#3158). Load these with `await import()` where they are used.
+		files: ['src/**/*.ts'],
+		ignores: ['**/*.spec.ts'],
+		rules: {
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					paths: ['@cf-wasm/og', '@cloudflare/puppeteer', 'twilio'].map((name) => ({
+						name,
+						allowTypeImports: true,
+						message: `Load ${name} with \`await import('${name}')\` where it is used (#3158).`
+					}))
+				}
+			]
+		}
+	},
+	{
 		// A component that reads the matrix works out access the guards may not
 		// grant, and misses committee seats and shift roles (#3023). What a person
 		// may do comes from the server's `explainAccess`.

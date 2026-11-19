@@ -1,4 +1,3 @@
-import { render } from '@cf-wasm/og';
 import lexendRegular from './assets/Lexend-Regular.ttf?inline';
 import lexendBold from './assets/Lexend-Bold.ttf?inline';
 import speaker from './assets/cmc-speaker.png?inline';
@@ -98,6 +97,7 @@ export function bytesDataUrl(bytes: Uint8Array, contentType: string): string {
 
 /** Rasterize a poster tree to PNG in Lexend. */
 export async function renderPng(tree: Node, width: number, height: number): Promise<Uint8Array> {
+	const { render } = await import('@cf-wasm/og');
 	const png = await render(tree as never, {
 		width,
 		height,
