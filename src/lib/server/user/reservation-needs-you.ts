@@ -33,7 +33,7 @@ export function reservationNeedsYouItems(rows: ReservationNeedingYou[], now: Dat
 		items.push({
 			id: `reservation-unpaid:${r.id}`,
 			kind: 'reservation-unconfirmed',
-			title: 'Pay for your practice room booking',
+			title: 'Unpaid reservation',
 			detail: detail(credits ? 'your credits cover it' : 'confirmed, with a balance still owing'),
 			href: credits
 				? resolve('/member/reservations')

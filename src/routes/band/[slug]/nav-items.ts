@@ -107,7 +107,7 @@ export function bandNavSections(input: BandNavInput): BandNavSection[] {
 	const isMember = isOwnerOrAdmin || input.userRole === 'member';
 	const profile: BandNavItem[] = isMember
 		? [
-				{ key: 'edit', label: 'Band profile', href: resolve('/band/[slug]/edit', { slug }) },
+				{ key: 'edit', label: 'Profile', href: resolve('/band/[slug]/edit', { slug }) },
 				{ key: 'press-kit', label: 'Press kit', href: resolve('/band/[slug]/press-kit', { slug }) }
 			]
 		: [];

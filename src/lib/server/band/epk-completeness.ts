@@ -156,7 +156,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			// list is the commonest failure, and this one reads the gig guide the
 			// act already maintains — so it is worth saying so rather than
 			// presenting it as one more chore.
-			hint: 'Listed automatically from your events — add a gig and it appears here.',
+			hint: 'Listed automatically from your events — add an event and it appears here.',
 			where: 'public',
 			route: '/band/[slug]/events',
 			tier: 'free'

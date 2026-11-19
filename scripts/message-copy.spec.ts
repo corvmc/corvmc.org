@@ -86,7 +86,8 @@ const helpScope: Record<string, HelpRule[]> = {
 	event: [
 		{ files: /\/(events-tickets\/|band-events|staff-events|staff-offsite-events)/ },
 		{ word: /\b(event|gig|show) listings?\b/i }
-	]
+	],
+	'event (band pages)': [{ files: /\/help\/bands\// }]
 };
 
 /**
