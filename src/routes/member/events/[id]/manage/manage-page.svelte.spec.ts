@@ -23,7 +23,6 @@ const remote = vi.hoisted(() => (value: () => unknown = () => undefined) => {
 
 vi.mock('#lib/remote/community-events.remote.js', () => ({
 	getMyListingPage: remote(() => ({ listing: fixture.listing, duplicate: null })),
-	searchBandsForListing: remote(() => []),
 	updateListing: remote(),
 	publishListing: remote(),
 	unpublishListing: remote(),
@@ -53,7 +52,6 @@ function listing(status: string) {
 		status,
 		reviewNotes: null,
 		standing: { status: 'none', reason: null },
-		lineup: [],
 		startsAt: new Date('2031-05-10T03:00:00Z'),
 		endsAt: null,
 		doorsAt: null,

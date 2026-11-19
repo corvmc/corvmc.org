@@ -12,12 +12,10 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
 		getMyListingPage,
-		searchBandsForListing,
 		updateListing,
 		publishListing,
 		unpublishListing,
@@ -60,19 +58,6 @@
 	const publishLabel = $derived(
 		requiresReview ? m.member_events_id_manage_submit_review_label() : m.member_publish_label()
 	);
-
-	let lineup = $state<LineupChip[]>([]);
-	let lineupLoaded = $state(false);
-	$effect(() => {
-		if (!lineupLoaded && listing) {
-			lineup = listing.lineup.map((l) => ({
-				name: l.name,
-				bandId: l.bandId ?? undefined,
-				status: l.status
-			}));
-			lineupLoaded = true;
-		}
-	});
 
 	function toTimeValue(d: Date | null): string {
 		return d ? venueTimeInput(d) : '';
@@ -372,18 +357,6 @@
 					/>
 				</div>
 			</fieldset>
-
-			<FormField
-				field={updateListing.fields.lineup}
-				label={m.member_events_id_manage_who_s_playing_label()}
-			>
-				<LineupEditor
-					field={updateListing.fields.lineup}
-					bind:value={lineup}
-					search={searchBandsForListing}
-					hint={false}
-				/>
-			</FormField>
 
 			<FormField
 				field={fields.tags}

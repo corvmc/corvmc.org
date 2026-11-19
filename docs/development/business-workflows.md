@@ -1408,6 +1408,8 @@ thread and the task keep their own status: resolving one leaves the other open.
   the service read and the remote (#2662).
 - Not members listings on the public guide when signed in, because the guide is the public's.
   A member's wider view is the member events page (#2662).
+- Not a performers field on the member event form. Staff credit acts on a community listing
+  from the staff bill editor, and existing credits stay (#3262).
 
 ### The story
 

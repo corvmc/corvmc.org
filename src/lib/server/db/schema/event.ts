@@ -402,9 +402,7 @@ export const communityEventSchema = z.object({
 	address: z.string().max(500).optional(),
 	tags: z.string().max(500).optional(),
 	externalTicketUrl: z.string().url('Enter a full URL').optional().or(z.literal('')),
-	ticketPriceDollars: z.string().max(12).optional(),
-	/** Hidden JSON field written by LineupEditor. */
-	lineup: z.string().optional()
+	ticketPriceDollars: z.string().max(12).optional()
 });
 
 export type CommunityEventInput = z.infer<typeof communityEventSchema>;
