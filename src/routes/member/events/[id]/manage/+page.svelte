@@ -312,38 +312,31 @@
 								maxlength="5000"></textarea>
 						{/snippet}
 					</FormField>
-
-					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormField
-							field={fields.eventDate}
-							label={m.member_events_id_manage_date_start_time_label()}
-							required
-						>
-							{#snippet input(id)}
-								<DateTimeField
-									{id}
-									date={fields.eventDate}
-									time={fields.eventStartTime}
-									dateValue={venueDateInput(listing.startsAt)}
-									timeValue={toTimeValue(listing.startsAt)}
-									timeLabel={m.member_start_time_label()}
-								/>
-							{/snippet}
-						</FormField>
-						<FormField
-							field={fields.location}
-							type="text"
-							label={m.member_venue_label()}
-							value={listing.location ?? ''}
-							maxlength="500"
-							required
-						/>
-					</div>
 				</div>
 			</div>
 
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+			<fieldset>
+				<legend class="mb-3 font-medium">{m.member_events_id_manage_date_time_title()}</legend>
+				<div
+					class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]"
+				>
+					<FormField
+						field={fields.eventDate}
+						label={m.member_events_id_manage_date_start_time_label()}
+						class="sm:col-span-2 md:col-span-1"
+						required
+					>
+						{#snippet input(id)}
+							<DateTimeField
+								{id}
+								date={fields.eventDate}
+								time={fields.eventStartTime}
+								dateValue={venueDateInput(listing.startsAt)}
+								timeValue={toTimeValue(listing.startsAt)}
+								timeLabel={m.member_start_time_label()}
+							/>
+						{/snippet}
+					</FormField>
 					<FormField
 						field={fields.doorsTime}
 						type="time"
@@ -357,14 +350,28 @@
 						value={toTimeValue(listing.endsAt)}
 					/>
 				</div>
-				<FormField
-					field={fields.address}
-					type="text"
-					label={m.member_address_label()}
-					value={listing.address ?? ''}
-					maxlength="500"
-				/>
-			</div>
+			</fieldset>
+
+			<fieldset>
+				<legend class="mb-3 font-medium">{m.member_events_id_manage_location_title()}</legend>
+				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<FormField
+						field={fields.location}
+						type="text"
+						label={m.member_venue_label()}
+						value={listing.location ?? ''}
+						maxlength="500"
+						required
+					/>
+					<FormField
+						field={fields.address}
+						type="text"
+						label={m.member_address_label()}
+						value={listing.address ?? ''}
+						maxlength="500"
+					/>
+				</div>
+			</fieldset>
 
 			<FormField
 				field={updateListing.fields.lineup}
