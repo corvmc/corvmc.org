@@ -24,7 +24,6 @@
 		"doorsAt": "elsewhere: updateListing writes it after creation",
 		"endsAt": "elsewhere: updateListing writes it after creation",
 		"externalTicketUrl": "elsewhere: updateListing writes it after creation",
-		"lineup": "elsewhere: updateListing writes it after creation",
 		"posterFile": "elsewhere: updateListing writes it after creation",
 		"tags": "elsewhere: updateListing writes it after creation",
 		"ticketPrice": "elsewhere: updateListing writes it after creation"
