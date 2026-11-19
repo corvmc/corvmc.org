@@ -12,6 +12,8 @@ import { parse } from 'svelte/compiler';
 const LINKING = new Set(['EntityCard', 'EntityIdentity', 'EntityChip']);
 const INTERACTIVE = new Set(['a', 'button']);
 const SRC = new URL('.', import.meta.url).pathname;
+/** A file that never names an entity component cannot nest one, so it is not parsed. */
+const NAMES_ONE = new RegExp(`<(${[...LINKING].join('|')})\\b`);
 
 function svelteFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -53,9 +55,16 @@ function offenders(source: string): string[] {
 }
 
 describe('entity links', () => {
-	it('are never drawn inside another link or a button', () => {
-		const found = svelteFiles(SRC).flatMap((file) =>
-			offenders(readFileSync(file, 'utf8')).map((o) => `${relative(SRC, file)}: ${o}`)
+	// A whole-tree scan overran vitest's 5s default on a loaded CI runner (#3285).
+	// The bound matches the other whole-tree specs: generous costs nothing when fast.
+	it('are never drawn inside another link or a button', { timeout: 600_000 }, () => {
+		const sources = svelteFiles(SRC)
+			.map((file) => ({ file, source: readFileSync(file, 'utf8') }))
+			.filter(({ source }) => NAMES_ONE.test(source));
+		// Canary: a filter that stops matching would pass vacuously.
+		expect(sources.length).toBeGreaterThan(0);
+		const found = sources.flatMap(({ file, source }) =>
+			offenders(source).map((o) => `${relative(SRC, file)}: ${o}`)
 		);
 		expect(found).toEqual([]);
 	});
