@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Badge from './Badge.svelte';
 	import type { ComponentProps } from 'svelte';
+	import { sliceTags, uniqueTags } from '#lib/utils/unique-tags.js';
 
 	/**
 	 * A row of short labels as badges, clamped so one crowded record cannot set
@@ -27,7 +28,8 @@
 		wrap = false,
 		class: className = ''
 	}: {
-		items: string[];
+		/** Repeats show once: a label twice says nothing more. */
+		items: readonly string[];
 		/** Show at most this many; the rest become a `+N` badge. Omit to show all. */
 		max?: number;
 		variant?: ComponentProps<typeof Badge>['variant'];
@@ -40,11 +42,12 @@
 		class?: string;
 	} = $props();
 
-	const shown = $derived(max === undefined ? items : items.slice(0, max));
-	const hidden = $derived(max === undefined ? [] : items.slice(max));
+	const unique = $derived(uniqueTags(items));
+	const shown = $derived(max === undefined ? unique : sliceTags(unique, 0, max));
+	const hidden = $derived(max === undefined ? [] : unique.slice(max));
 </script>
 
-{#if items.length > 0}
+{#if unique.length > 0}
 	<div class="flex items-center gap-1 {wrap ? 'flex-wrap' : 'whitespace-nowrap'} {className}">
 		{#each shown as label (label)}
 			<Badge {variant} {size}>{label}</Badge>
