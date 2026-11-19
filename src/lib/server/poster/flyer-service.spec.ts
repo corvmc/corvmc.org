@@ -45,8 +45,13 @@ vi.mock('./flyer', async (orig) => ({
 	}
 }));
 
-const { useTemplateFlyer, useArtWithFooter, FlyerEventNotFoundError } =
-	await import('./flyer-service');
+const {
+	useTemplateFlyer,
+	useArtWithFooter,
+	posterSource,
+	FlyerEventNotFoundError,
+	PosterUploadedError
+} = await import('./flyer-service');
 const { PosterRequestNotFoundError } =
 	await import('#lib/server/production/artifact-request-service.js');
 
@@ -99,10 +104,17 @@ describe('useTemplateFlyer', () => {
 		expect(posterAttachments()).toEqual([{ key: uploads[0].key, alt: 'Flyer for Harvest Show' }]);
 	});
 
-	it('replaces a poster that was already there', async () => {
+	it('redraws a poster it drew before', async () => {
 		await useTemplateFlyer(EVENT);
 		await useTemplateFlyer(EVENT);
-		expect(posterAttachments()).toHaveLength(1);
+		expect(posterAttachments()).toEqual([{ key: uploads[1].key, alt: 'Flyer for Harvest Show' }]);
+	});
+
+	it('leaves an uploaded poster in place', async () => {
+		uploadedPoster();
+		await expect(useTemplateFlyer(EVENT)).rejects.toBeInstanceOf(PosterUploadedError);
+		expect(uploads).toEqual([]);
+		expect(posterAttachments()).toEqual([{ key: 'events/posters/art.jpg', alt: null }]);
 	});
 
 	it('refuses an event that does not exist', async () => {
@@ -126,6 +138,27 @@ describe('useTemplateFlyer', () => {
 		]);
 	});
 });
+
+describe('posterSource', () => {
+	it('tells an empty slot, a drawn flyer and an upload apart', async () => {
+		expect(await posterSource(EVENT)).toBe('none');
+		await useTemplateFlyer(EVENT);
+		expect(await posterSource(EVENT)).toBe('generated');
+		sqlite.exec(`delete from media_attachment`);
+		uploadedPoster();
+		expect(await posterSource(EVENT)).toBe('uploaded');
+	});
+});
+
+function uploadedPoster() {
+	sqlite.exec(
+		`insert into media (id, key, content_type, byte_size) values ('art-m', 'events/posters/art.jpg', 'image/jpeg', 3)`
+	);
+	sqlite.exec(
+		`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+		 values ('art-a', 'art-m', 'event_listing', '${EVENT}', 'poster')`
+	);
+}
 
 function credit(
 	id: string,

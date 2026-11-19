@@ -427,6 +427,7 @@
 	<ListingPosterCard
 		eventId={evt.id}
 		posterUrl={detail.posterUrl}
+		posterSource={detail.posterSource}
 		cancelled={evt.status === 'cancelled'}
 		uploadWhileCancelled={data.canManage}
 		onchange={refresh}
