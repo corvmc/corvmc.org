@@ -23,6 +23,7 @@ import noRawFileInput from './eslint-rules/no-raw-file-input.js';
 import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
 import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 import clubTimeDates from './eslint-rules/club-time-dates.js';
+import eachKeyUnique from './eslint-rules/each-key-unique.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
 import noAssertedRouteParam from './eslint-rules/no-asserted-route-param.js';
@@ -76,6 +77,7 @@ const customPlugin = {
 		'no-raw-file-input': noRawFileInput,
 		'no-tracked-command-in-effect': noTrackedCommandInEffect,
 		'club-time-dates': clubTimeDates,
+		'each-key-unique': eachKeyUnique,
 		// Registered, not enabled: the tree has ~256 hits and every lint run is
 		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
 		// they are cleared (#2099). See docs/development/conventions.md#terminology.
@@ -322,6 +324,11 @@ export default defineConfig(
 		files: ['**/*.svelte', 'src/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/club-time-dates': 'error' }
+	},
+	{
+		// A list keyed by its own text throws on a repeat (#3275, #3284).
+		files: ['**/*.svelte'],
+		rules: { 'custom/each-key-unique': 'error' }
 	},
 	{
 		// `_remote.ts` is the wrapper, so it is the one file that may import the
