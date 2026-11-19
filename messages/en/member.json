@@ -261,6 +261,8 @@
 	"member_events_id_manage_empty_label_title": "Add a poster",
 	"member_events_id_manage_end_time_label": "End time",
 	"member_events_id_manage_date_start_time_label": "Date and start time",
+	"member_events_id_manage_date_time_title": "Date and time",
+	"member_events_id_manage_location_title": "Location",
 	"member_events_id_manage_free_placeholder": "Free",
 	"member_events_id_manage_fix_below_submit_again_everything_text": "Fix it below and submit it again — everything you entered is still here.",
 	"member_events_id_manage_fix_publish_again_when_re_text": "Fix it and publish again when you're ready.",
