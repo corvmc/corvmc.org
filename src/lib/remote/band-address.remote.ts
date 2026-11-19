@@ -57,7 +57,7 @@ export const changeBandAddress = form(
 		if (!(await allowRateLimited(`band-slug:${band.id}`, MAX_CHANGES, CHANGE_WINDOW_SECONDS))) {
 			invalid(
 				issue.newSlug(
-					"You've changed this band's address too many times recently. Get in touch if you need another change."
+					"You've changed this band's link too many times recently. Get in touch if you need another change."
 				)
 			);
 		}

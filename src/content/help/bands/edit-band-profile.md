@@ -12,6 +12,10 @@ sortOrder: 7
 Owners and admins edit the band's public listing from **Edit profile** in the
 band's sidebar. It works much like your personal profile.
 
+The **Profile link** card at the top shows the band's web link and a QR code, to
+put on a flyer or in a bio. **Copy link** copies it. The band's owner changes the
+link under **Settings**.
+
 ## What you can set
 
 - **Band name, Tagline & Avatar** — The band's identity on its directory card.

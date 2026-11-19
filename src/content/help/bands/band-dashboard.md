@@ -16,7 +16,6 @@ home base. What you can do here depends on your role in the band.
 
 - **Next steps** — While nobody else is in the band, owners and admins get
   **Invite member** and **Reserve practice space** here.
-- **Band address** — The band's web address, to put on a flyer or in a bio.
 - **Press kit** — Owners and admins see how far the press kit is filled in.
 - **Members** and **Your role** — Member count and your role in the band.
 - **Upcoming reservations** — The next ones on the calendar and their status;

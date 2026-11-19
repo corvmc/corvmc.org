@@ -34,7 +34,10 @@
 <PageHeader width="3xl" title={m.band_slug_edit_title()} subtitle={band.name} />
 <PageContent width="3xl">
 	{#if address}
-		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
+		<AddressCard
+			url={address}
+			title={m.band_slug_settings_band_address_section_band_address_title()}
+		>
 			{m.band_slug_address_card_text()}
 			{m.band_slug_edit_band_profile_form_renaming_band_doesn_t_move_text()}
 			{#if isOwner}

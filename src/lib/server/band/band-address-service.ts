@@ -56,9 +56,9 @@ export function normalizeBandSlug(input: string): string {
 export function assertValidBandSlug(slug: string): void {
 	if (!slug) throw new SlugUnavailableError('Use at least one letter or number.');
 	if (slug.length > MAX_BAND_SLUG_LENGTH) {
-		throw new SlugUnavailableError(`Addresses can be at most ${MAX_BAND_SLUG_LENGTH} characters.`);
+		throw new SlugUnavailableError(`Links can be at most ${MAX_BAND_SLUG_LENGTH} characters.`);
 	}
-	if (isReservedSlug(slug)) throw new SlugUnavailableError('That address is reserved.');
+	if (isReservedSlug(slug)) throw new SlugUnavailableError('That link is reserved.');
 }
 
 /**
@@ -74,7 +74,7 @@ export async function claimableBandSlug(requested: string): Promise<string> {
 		.from(group)
 		.where(eq(group.slug, slug))
 		.limit(1);
-	if (taken) throw new SlugUnavailableError('That address is already taken.');
+	if (taken) throw new SlugUnavailableError('That link is already taken.');
 	return slug;
 }
 
@@ -146,7 +146,7 @@ export async function changeBandSlug(
 		.where(and(eq(group.slug, next), ne(group.id, bandId)))
 		.limit(1);
 
-	if (taken) throw new SlugUnavailableError('That address is already taken.');
+	if (taken) throw new SlugUnavailableError('That link is already taken.');
 
 	try {
 		// One batch, one implicit transaction (the same tool `create()` uses).
@@ -167,7 +167,7 @@ export async function changeBandSlug(
 		// Two owners racing for the same free address: the loser trips the unique
 		// index on band.slug, which D1 would otherwise surface as a 500.
 		if (isUniqueConstraintError(err)) {
-			throw new SlugUnavailableError('That address was just taken — try another.');
+			throw new SlugUnavailableError('That link was just taken — try another.');
 		}
 		throw err;
 	}

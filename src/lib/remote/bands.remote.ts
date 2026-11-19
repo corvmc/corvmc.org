@@ -498,7 +498,7 @@ export const createBand = form(
 			if (err instanceof SlugUnavailableError) invalid(issue.slug(err.message));
 			// Another band took the address between the check and the insert.
 			if (slug && isUniqueConstraintError(err)) {
-				invalid(issue.slug('That address was just taken. Try another.'));
+				invalid(issue.slug('That link was just taken. Try another.'));
 			}
 			throw err;
 		}
