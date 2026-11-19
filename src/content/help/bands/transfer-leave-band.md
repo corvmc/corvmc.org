@@ -9,9 +9,9 @@ sortOrder: 6
 
 ## Leaving a band
 
-If you're a member or admin (not the owner), **Leave band** is in the **Your
-membership** panel at the top of the band's **Members** page. You'll come off the
-roster and lose access to the band's pages.
+If you're a member or admin (not the owner), **Leave band** is on your own row,
+marked **You**, on the band's **Members** page. You'll come off the roster and
+lose access to the band's pages.
 
 An owner has no **Leave band**: transfer ownership first, as below.
 
