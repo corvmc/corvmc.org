@@ -545,7 +545,6 @@
 	"src/routes/band/[slug]/events/[eventId]/+page.svelte",
 	"src/routes/band/[slug]/layout-context.ts",
 	"src/routes/band/[slug]/members/EditMemberAction.svelte",
-	"src/routes/band/[slug]/members/YourMembership.svelte",
 	"src/routes/band/[slug]/messages/+layout.svelte",
 	"src/routes/band/[slug]/messages/EnquiryList.svelte",
 	"src/routes/band/[slug]/messages/list-state.svelte.ts",
