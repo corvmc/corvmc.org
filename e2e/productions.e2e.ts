@@ -42,45 +42,35 @@ async function loginAsStaff(page: Page) {
 
 test.describe('productions', () => {
 	/**
-	 * One entry from the event page, and the console's empty state is what opens
-	 * the record — the page that explains a production is the page that makes one
-	 * (#976). Creating it has to show on the event page afterwards, which is the
-	 * whole of that finding.
+	 * The Production tab's empty state is what opens the record — the page that
+	 * explains a production is the page that makes one (#976) — and the record
+	 * shows on the event page afterwards: its lead joins the Crew box (#3270).
 	 */
-	test('a production is opened from the console and shows on the event page', async ({ page }) => {
+	test('a production is opened from the Production tab and shows on the event page', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
 
-		// Before: one entry into the console, not two.
-		const entry = page.locator(
-			`a[href="/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}/production"]`
-		);
-		await expect(entry).toHaveCount(1, { timeout: 15000 });
-		await entry.click();
-		await page.waitForURL(/\/production$/);
+		const tab = page
+			.getByTestId('event-tabs')
+			.locator(`a[href="/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}?tab=production"]`);
+		await expect(tab).toHaveCount(1, { timeout: 15000 });
+		await expect(page.getByTestId('crew-lead')).toHaveCount(0);
+		await tab.click();
+		await page.waitForURL(/\?tab=production$/);
 
-		const open = page.locator('form[action$="createProduction"] button[type=submit]');
+		const open = page.locator('form[action$="createProduction"] button[type=submit]').first();
 		await expect(open).toBeVisible({ timeout: 15000 });
 		await open.click();
 
-		// The button is the whole form, so its own disappearance is the receipt;
-		// the record that replaces it offers staff the event lead picker.
-		await expect(open).toHaveCount(0, { timeout: 15000 });
+		// The button is the whole form, so its own disappearance is the receipt.
 		const record = page.getByTestId('production-record');
-		await expect(record.locator('form[action$="setShowLead"]')).toHaveCount(1, {
-			timeout: 15000
-		});
+		await expect(record).toBeVisible({ timeout: 15000 });
 		await expect
 			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
 			.toBe('draft');
-
-		// #976: the record is visible from the page it belongs to, which before
-		// this changed in no way at all except a button vanishing: its card adds
-		// a second way into the console.
-		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
-		await expect(entry).toHaveCount(2, { timeout: 15000 });
-
-		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}/production`);
+		await expect(page.getByTestId('crew-lead')).toBeVisible({ timeout: 15000 });
 
 		// A draft's first move is the offer, rendered first in the record's header.
 		const badge = record.locator('.badge').first();
@@ -129,7 +119,7 @@ test.describe('productions', () => {
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
 		await expect(
-			row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}/production"]`)
+			row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}?tab=production"]`)
 		).toBeVisible();
 
 		const empty = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EMPTY_EVENT_TITLE });
@@ -138,19 +128,25 @@ test.describe('productions', () => {
 	});
 
 	/**
-	 * The tabs are shallow routing: `?tab=` has to be readable on load — a link
-	 * somebody pastes is the whole point — and clicking one must not navigate,
-	 * because `FormGuard` hooks `beforeNavigate` and the console's edit form is
-	 * dirtyable.
+	 * A tab is an address (#3270): the console's old URL, inner tab and all,
+	 * lands on the Production tab, and the Listing tab is the bare event URL.
 	 */
-	test('a tab is addressable and switching one does not navigate', async ({ page }) => {
+	test('the old console URL opens the Production tab, and Listing is the event URL', async ({
+		page
+	}) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_EVENT_ID}/production?tab=advance`);
 
+		await expect(page).toHaveURL(
+			new RegExp(`/staff/events/${SEED_PRODUCTION_EVENT_ID}\\?tab=production$`)
+		);
 		await expect(page.getByTestId('related-shifts')).toBeVisible({ timeout: 15000 });
 
-		await page.locator('#tab-overview').click();
-		await expect(page).toHaveURL(new RegExp(`/production$`));
-		await expect(page.locator('form[action$="setShowLead"]')).toBeVisible();
+		await page
+			.getByTestId('event-tabs')
+			.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}"]`)
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_PRODUCTION_EVENT_ID}$`));
+		await expect(page.getByTestId('edit-listing')).toBeVisible({ timeout: 15000 });
 	});
 });

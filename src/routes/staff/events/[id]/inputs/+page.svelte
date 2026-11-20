@@ -4,6 +4,7 @@
 	import { fullDate } from '#lib/utils/format.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { getEventInputList } from '#lib/remote/events.remote.js';
 	import { riderInputSourceLabels, riderStandTypeLabels } from '#lib/config.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
@@ -38,7 +39,9 @@
 	const silent = $derived(data.acts.filter((a) => a.empty));
 
 	const exportHref = $derived(resolve('/staff/events/[id]/inputs/export', { id: eventId }));
-	const backHref = $derived(resolve('/staff/events/[id]/production', { id: eventId }));
+	const backHref = $derived(
+		withQuery(resolve('/staff/events/[id]', { id: eventId }), 'tab=production')
+	);
 	const dateLabel = $derived(fullDate(data.startsAt));
 </script>
 

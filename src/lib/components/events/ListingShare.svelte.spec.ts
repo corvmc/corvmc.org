@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import ListingQrCard from './ListingQrCard.svelte';
+import ListingShare from './ListingShare.svelte';
 
 /**
  * The code goes on printed posters, so it must encode the public event page on
- * the site's own origin, and the downloads must be files a print shop can use.
+ * the site's own origin, and the download must be a file a print shop can use.
  */
 
 const origin = 'https://corvmc.org';
 
-describe('ListingQrCard', () => {
+describe('ListingShare', () => {
 	it('encodes the public event page and shows the link it encodes', async () => {
-		const screen = await render(ListingQrCard, {
+		const screen = await render(ListingShare, {
 			eventId: 'evt-1',
 			title: 'Spring Workshop',
 			published: true,
@@ -24,7 +24,7 @@ describe('ListingQrCard', () => {
 	});
 
 	it("encodes the event's short link when it has one", async () => {
-		const screen = await render(ListingQrCard, {
+		const screen = await render(ListingShare, {
 			eventId: 'evt-1',
 			shortCode: 'k7m2qx',
 			title: 'Spring Workshop',
@@ -35,23 +35,20 @@ describe('ListingQrCard', () => {
 		await expect.element(screen.getByText(`${origin}/e/k7m2qx`)).toBeVisible();
 	});
 
-	it('offers SVG and PNG downloads named after the listing', async () => {
-		const screen = await render(ListingQrCard, {
+	it('offers Copy link and Download QR', async () => {
+		const screen = await render(ListingShare, {
 			eventId: 'evt-1',
 			title: 'Spring Workshop',
 			published: true,
 			origin
 		});
 
-		const svg = screen.locator.getByRole('link');
-		await expect.element(svg).toHaveAttribute('download', 'spring-workshop-qr.svg');
-		expect(svg.element().getAttribute('href')).toMatch(/^data:image\/svg\+xml/);
-		// Copy link, and the PNG download (drawn on demand, so it is a button).
+		// Both are buttons: the PNG is drawn on demand.
 		expect(screen.locator.getByRole('button').elements()).toHaveLength(2);
 	});
 
 	it('warns that the link does not work until the listing is published', async () => {
-		const screen = await render(ListingQrCard, {
+		const screen = await render(ListingShare, {
 			eventId: 'evt-1',
 			title: 'Spring Workshop',
 			published: false,

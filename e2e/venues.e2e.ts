@@ -40,7 +40,7 @@ test.describe('venues', () => {
 		await page.getByRole('dialog').locator('button[type="submit"]').click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
-		// Create lands with `?edit=1`; reloaded bare so the test opens Edit itself.
+		// Create lands on the Listing tab; reloaded so the test opens Edit from a fresh page.
 		await page.goto(new URL(page.url()).pathname);
 		await page.getByTestId('edit-listing').click();
 

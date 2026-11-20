@@ -13,6 +13,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { formatDateTimeShort, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import {
@@ -338,7 +339,9 @@
 							<td class="cell-primary">
 								<!-- A show's console reads either half of it through the project. -->
 								{#if event.productionId && (may('production.book') || may('production.run'))}
-									<a class="link" href={resolve(`staff/events/${event.id}/production`)}
+									<a
+										class="link"
+										href={withQuery(resolve(`staff/events/${event.id}`), 'tab=production')}
 										>{event.title}</a
 									>
 								{:else}

@@ -40,6 +40,7 @@
 	import SendContactSheetAction from '#lib/components/actions/SendContactSheetAction.svelte';
 	import ClaimExternalActAction from '#lib/components/actions/ClaimExternalActAction.svelte';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import PartyTimeline from '../PartyTimeline.svelte';
@@ -463,7 +464,9 @@
 				<ul class="mt-3 space-y-1">
 					{#each org.records.markets as a (a.id)}
 						<li>
-							<a class="link" href={resolve(`staff/events/${a.eventId}/vendors`)}>{a.title}</a>
+							<a class="link" href={withQuery(resolve(`staff/events/${a.eventId}`), 'tab=vendors')}
+								>{a.title}</a
+							>
 							<span class="text-muted"
 								>· {formatDateShort(a.startsAt)} · {marketVendorStatusLabels[a.status]}</span
 							>

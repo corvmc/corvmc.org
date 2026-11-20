@@ -41,6 +41,8 @@ import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
 import { getSettlement } from '#lib/server/production/settlement-service.js';
 import { getHostShift } from '#lib/server/production/host-service.js';
+import { eventCrew } from '#lib/server/task/event-crew.js';
+import { relatedTasks } from '#lib/server/task/related-tasks.js';
 import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
 import {
 	listRequests as listArtifactRequests,
@@ -1182,6 +1184,31 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			can('event.publish')
 		]);
 
+	// The sidebar's Crew and Tasks boxes (#3270): a CMC show's own work, read
+	// here so the page keeps one query. Null to a reader without the board.
+	const isShow = detail.event.source === 'cmc';
+	const [crew, tasks, canSetLead] = isShow
+		? await Promise.all([
+				can('volunteer.read').then((ok) => (ok ? eventCrew(id) : null)),
+				can('project.read').then((ok) =>
+					ok
+						? relatedTasks({ type: 'event', id }).then((groups) =>
+								groups
+									.filter((g) => g.key === 'event')
+									.flatMap((g) => g.tasks)
+									.filter((t) => t.shifts === 0)
+									.toSorted(
+										(a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity)
+									)
+							)
+						: null
+				),
+				production?.projectId
+					? can('production.book', { projectId: production.projectId })
+					: Promise.resolve(false)
+			])
+		: [null, null, false];
+
 	return {
 		detail,
 		canManage,
@@ -1189,6 +1216,12 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 		venues,
 		production,
 		recurringSeries,
+		sidebar: {
+			crew,
+			tasks,
+			canSetLead,
+			projectId: production?.projectId ?? detail.event.projectId ?? null
+		},
 		recap: {
 			photos,
 			closedReason: recapClosedReason(detail.event),

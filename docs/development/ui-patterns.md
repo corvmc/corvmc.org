@@ -108,7 +108,7 @@ page opens with and how it folds on a phone. Eight shapes are in the signed-in a
 | A · List      | Filters, a true count, column tiers, a pager                 | `staff/reservations`                      |
 | B · Detail    | Header, meta row, fact grid, related sections                | `staff/events/[id]`                       |
 | C · Desk      | Sections by job, state answered first                        | `/staff`, `staff/instructors`             |
-| D · Console   | One record across many sections; reading never needs editing | `staff/events/[id]/production`            |
+| D · Console   | One record across many sections; reading never needs editing | `staff/events/[id]?tab=production`        |
 | E · Card list | Only where a clause earns it                                 | `staff/events/[id]/check-in`              |
 | F · Dashboard | `StatCard`s; exempt from the list rule, not from hierarchy   | `staff/reports/volunteering`              |
 | G · Form      | One question at a time, and what submit will do              | `member/volunteer/start`                  |
@@ -159,7 +159,7 @@ the queue of work, and each item on it links to the page where the work is done.
 ### Consoles
 
 **A console opens with what is done and what is not.** It is a staff page that edits one record
-across many sections: `staff/events/[id]/production` and the settings pages (System, a module's Settings) are the examples. Built as a
+across many sections: a show's Production tab (`staff/events/[id]?tab=production`) and the settings pages (System, a module's Settings) are the examples. Built as a
 long detail page, a console hides facts behind its forms; #1068 was the show time, visible only in
 edit mode.
 
@@ -1859,12 +1859,12 @@ Never front-load optional enrichment — description, tags, lineup, poster, pric
 into creation. Whether a minimally created record is visible straight away is the domain's call;
 a draft or a staff-only record makes the question moot.
 
-| Flow                 | Asks for                         | Lands on                        |
-| -------------------- | -------------------------------- | ------------------------------- |
-| Staff Create Listing | title, kind, run by, date, times | `/staff/events/[id]?edit=1`     |
-| Group New show       | name, date, starts, ends         | `/staff/events/[id]/production` |
-| Band Create Event    | title, date, start time          | `/band/[slug]/events/[id]`      |
-| Member Add a show    | title, date, start time, venue   | `/member/events/[id]/manage`    |
+| Flow                 | Asks for                         | Lands on                       |
+| -------------------- | -------------------------------- | ------------------------------ |
+| Staff Create Listing | title, kind, run by, date, times | `/staff/events/[id]` (Listing) |
+| Group New show       | name, date, starts, ends         | `/staff/events/[id]` (Listing) |
+| Band Create Event    | title, date, start time          | `/band/[slug]/events/[id]`     |
+| Member Add a show    | title, date, start time, venue   | `/member/events/[id]/manage`   |
 
 ## CSS conventions
 

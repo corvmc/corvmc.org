@@ -1,4 +1,5 @@
 import { resolve } from '$app/paths';
+import { withQuery } from '#lib/utils/with-query.js';
 import { sortNeedsYou, type NeedsYouItem } from '#lib/types/needs-you.js';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
@@ -61,7 +62,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `show-lead:${show.productionId}`,
 			kind: 'show-lead',
 			title: `You are the event lead for ${show.title}`,
-			href: resolve(`staff/events/${show.eventId}/production`),
+			href: withQuery(resolve(`staff/events/${show.eventId}`), 'tab=production'),
 			label: 'Open console',
 			dueAt: show.startsAt,
 			rank: 0

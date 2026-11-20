@@ -159,6 +159,8 @@ test.describe('deleting an event', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_DELETABLE_ID}`);
 
+		// Delete sits behind the header's More menu (#3270).
+		await page.locator('[data-page-header] summary[aria-label]').click();
 		await page.getByTestId('delete-event').click();
 		await page.getByRole('dialog').locator('button[type=submit]').click();
 

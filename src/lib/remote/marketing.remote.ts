@@ -35,7 +35,6 @@ import {
 	unscheduleCampaign as unscheduleCampaignService,
 	renderCampaignPreview,
 	sendTestCopy,
-	listCampaignsForEvent,
 	type CampaignStatus
 } from '#lib/server/marketing/campaign-service.js';
 import {
@@ -262,25 +261,6 @@ export const getCampaignAudienceOptions = query(
 		}));
 	}
 );
-
-/**
- * A show's campaigns for its event page (#2776). Null for a staffer who may not
- * read campaigns, so the page leaves the card off rather than failing.
- */
-export const getEventCampaigns = query(z.string(), async (eventId) => {
-	if (!(await can('marketing.read'))) return null;
-	const [campaigns, canCreate] = await Promise.all([
-		listCampaignsForEvent(eventId),
-		can('marketing.manageCampaigns')
-	]);
-	return {
-		canCreate,
-		campaigns: campaigns.map((c) => ({
-			...c,
-			ref: toGenericRef('campaign', { id: c.id, title: c.subject })
-		}))
-	};
-});
 
 /** Single campaign detail (staff). */
 export const getCampaignDetail = query(z.string(), async (id) => {

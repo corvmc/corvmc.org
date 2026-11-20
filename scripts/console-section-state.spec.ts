@@ -17,9 +17,9 @@ const CONSOLES = [
 
 /** `file › title expression` → why it passes no `state`. */
 const ALLOWED: Record<string, string> = {
-	'src/routes/staff/events/[id]/production/+page.svelte › m.staff_production_title()':
+	'src/routes/staff/events/[id]/production/ProductionTab.svelte › m.staff_production_title()':
 		'its own header carries the status badge',
-	'src/routes/staff/events/[id]/production/+page.svelte › m.staff_events_id_production_tech_riders_title()':
+	'src/routes/staff/events/[id]/production/ProductionTab.svelte › m.staff_events_id_production_tech_riders_title()':
 		'its own header carries the missing-rider badge',
 	'src/routes/staff/events/[id]/production/RunOfShowPanel.svelte › m.staff_events_id_production_run_of_show_panel_add_set_title()':
 		'a form for a new row, not a part of the record'
