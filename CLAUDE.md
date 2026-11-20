@@ -113,8 +113,9 @@ re-arming.
 ## Worktrees
 
 Work usually happens in a `git worktree` under `.claude/worktrees/`; edit paths inside it, even
-when a subagent reports main-checkout paths. A fresh worktree has no `node_modules`, `.env` or
-`.dev.vars` — `/worktree-dev` sets it up.
+when a subagent reports main-checkout paths. The `dev` agent always runs in its own worktree. A
+worktree Claude Code creates gets `.env` and `.dev.vars` from `.worktreeinclude`, but no
+`node_modules`; `/worktree-dev` covers that and worktrees made with plain `git worktree add`.
 
 A **cloud session** (claude.ai/code) is a fresh, secretless clone that
 `scripts/claude/cloud-session-start.sh` has already set up; mail, SMS and payments will not work.

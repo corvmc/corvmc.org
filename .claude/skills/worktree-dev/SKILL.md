@@ -44,7 +44,9 @@ boot.
    the hooks are already installed and shared. Check for the package you needed rather than
    trusting the exit code.
 
-2. **Secrets.** Copy `.env` and `.dev.vars` from the main checkout — **copy, don't symlink**.
+2. **Secrets.** A worktree Claude Code created (subagent isolation, `--worktree`) already has
+   them: `.worktreeinclude` copies them in. Otherwise copy `.env` and `.dev.vars` from the main
+   checkout — **copy, don't symlink**.
    Editing through a symlink writes into the main checkout and leaks into every other worktree.
    Restore the original if you replaced one.
 

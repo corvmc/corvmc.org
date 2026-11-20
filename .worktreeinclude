@@ -1,0 +1,4 @@
+# Gitignored files Claude Code copies into every worktree it creates (subagent isolation,
+# --worktree). Only files that are also gitignored are copied.
+.env
+.dev.vars
