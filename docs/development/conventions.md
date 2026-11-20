@@ -893,7 +893,7 @@ Every script in `package.json`:
 | `prepare`                   | (auto on install) svelte-kit sync + `messages:compile` + lefthook install                                                                                  |
 | `messages:compile`          | Compile `messages/en.json` into `src/lib/paraglide/` (see [Terminology](#terminology))                                                                     |
 | `messages:roles`            | Rename message keys to end with their role, from their call sites (see [Interface copy](#interface-copy))                                                  |
-| `check` / `check:watch`     | svelte-check type checking                                                                                                                                 |
+| `check` / `check:watch`     | svelte-check `--tsgo`: TS 7's native compiler (the `@typescript/native` alias); `typescript` stays on 6                                                    |
 | `test:unit`                 | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)                                                                        |
 | `test:components`           | One-shot client (browser) vitest project                                                                                                                   |
 | `test:e2e`                  | Migrate + seed a local D1, then run Playwright `e2e/**/*.e2e.ts`                                                                                           |

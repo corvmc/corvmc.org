@@ -75,7 +75,8 @@ jobs:
       # Two svelte-check passes: `src`, which the generated tsconfig includes, and
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
       # `eslint-rules/` and the root configs, none of which the
-      # generated one has ever covered. `pnpm check` chains both.
+      # generated one has ever covered. `pnpm check` chains both, each with
+      # `--tsgo`: TS diagnostics come from TypeScript 7's native compiler.
       # The `src` pass needs more than Node's ~4 GB default heap (#2848); the
       # runner has 16 GB.
       - run: pnpm check
