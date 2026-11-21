@@ -9,6 +9,7 @@
 	 */
 	import { IconX } from '@tabler/icons-svelte';
 	import Button from '#lib/components/ui/Button.svelte';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 
 	let {
 		value = $bindable<string[]>([]),
@@ -28,14 +29,21 @@
 	let input = $state('');
 	let showSuggestions = $state(false);
 
+	// Only addTag checks for a repeat; a list handed in can still hold one, so
+	// the row and the submitted list both read this.
+	const shown = $derived(uniqueTags(value));
+
 	let filteredSuggestions = $derived(
-		input.length >= 1
-			? suggestions
-					.filter(
-						(s) => s.toLowerCase().includes(input.toLowerCase()) && !value.includes(s.toLowerCase())
-					)
-					.slice(0, 8)
-			: []
+		uniqueTags(
+			input.length >= 1
+				? suggestions
+						.filter(
+							(s) =>
+								s.toLowerCase().includes(input.toLowerCase()) && !value.includes(s.toLowerCase())
+						)
+						.slice(0, 8)
+				: []
+		)
 	);
 
 	function addTag(tag: string) {
@@ -48,7 +56,7 @@
 	}
 
 	function removeTag(tag: string) {
-		value = value.filter((t) => t !== tag);
+		value = value.filter((t) => t.toLowerCase() !== tag.toLowerCase());
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -62,15 +70,15 @@
 </script>
 
 {#if field}
-	<input {...field.as('hidden', JSON.stringify(value))} />
+	<input {...field.as('hidden', JSON.stringify(shown))} />
 {:else if name}
-	<input type="hidden" {name} value={JSON.stringify(value)} />
+	<input type="hidden" {name} value={JSON.stringify(shown)} />
 {/if}
 
 <div class="space-y-2 rounded bg-base-200 p-2">
-	{#if value.length > 0}
+	{#if shown.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each value as tag (tag)}
+			{#each shown as tag (tag)}
 				<Button variant="default" size="xs" type="button" onclick={() => removeTag(tag)}>
 					{tag}
 					<IconX class="size-3" />

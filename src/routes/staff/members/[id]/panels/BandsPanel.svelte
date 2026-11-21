@@ -12,6 +12,7 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { uniqueTags } from '#lib/utils/unique-tags.js';
 
 	let { id }: { id: string } = $props();
 </script>
@@ -36,7 +37,7 @@
 						<EntityIdentity ref={b.ref} size="md">
 							{#snippet meta()}
 								<StatusBadge status={b.role} label />
-								{#each b.positions as name (name)}
+								{#each uniqueTags(b.positions) as name (name)}
 									<Badge variant="ghost" size="sm">{name}</Badge>
 								{/each}
 								{#if b.status !== 'active'}

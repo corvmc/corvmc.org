@@ -28,6 +28,7 @@ import type { SQL } from 'drizzle-orm';
 import type { InboxChannel, InboxThreadStatus } from '#lib/server/db/schema/inbox.js';
 import type { PaginationInput } from '#lib/server/db/paginate.js';
 import { paginate } from '#lib/server/db/paginate.js';
+import { uniqueTags } from '#lib/utils/unique-tags.js';
 import { withDelivery } from './reply-status';
 import { z } from 'zod';
 import { contactSubjects, inboxThreadStatuses } from '#lib/config.js';
@@ -566,7 +567,8 @@ export async function getThreadContext(id: string) {
 		// The whole correspondence, not this thread: "first contact" means the
 		// first time this person wrote to us at all.
 		firstContactAt: first ? new Date(first * 1000) : thread.createdAt,
-		tags: tags.map((t) => t.tag)
+		// The unique index is case-sensitive; the tag row shows a tag once.
+		tags: uniqueTags(tags.map((t) => t.tag))
 	};
 }
 
@@ -575,10 +577,13 @@ export async function addThreadTag(threadId: string, tag: string) {
 	await db.insert(inboxThreadTag).values({ threadId, tag }).onConflictDoNothing();
 }
 
+/** Removes every spelling of the tag, since the row shows them as one. */
 export async function removeThreadTag(threadId: string, tag: string) {
 	await db
 		.delete(inboxThreadTag)
-		.where(and(eq(inboxThreadTag.threadId, threadId), eq(inboxThreadTag.tag, tag)));
+		.where(
+			and(eq(inboxThreadTag.threadId, threadId), sql`lower(${inboxThreadTag.tag}) = lower(${tag})`)
+		);
 }
 
 export async function assignThread(threadId: string, userId: string | null) {
