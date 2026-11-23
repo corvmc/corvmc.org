@@ -507,7 +507,7 @@ money and the dates, and the project holds the tasks.
 
 ## Duplications to leave alone
 
-A list like the above invites merging everything. These three are deliberate:
+A list like the above invites merging everything. These four are deliberate:
 
 - **`content_flag` vs `work_request` as tables.** Argued in the schema, and the argument
   holds: gear must not queue beside a harassment report, `reason` there is
@@ -518,6 +518,9 @@ A list like the above invites merging everything. These three are deliberate:
   hours, contractor labour is commissioned and paid in cents.
 - **The four ledgers.** A shared table would put credits, gear and hours in one row type
   to save a `sum()`.
+- **`recurring_series` vs `maintenance_schedule`.** One holds bookings ahead on a calendar
+  rule, the other raises the next work when the last closes (Model 3). Not one `recurrence`
+  table with two modes, because both work and the merge would rework the booking generator.
 
 ## Already-unified references
 

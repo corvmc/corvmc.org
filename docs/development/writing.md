@@ -66,6 +66,20 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
   score each new or changed title and label against the table and fix every failure before
   shipping. A 4–6 word title needs a reason in the PR.
 
+## Settled terms
+
+Beyond `retiredTerms`, one word per concept (#2511, #2518, #3225):
+
+- **Program** is everything CMC runs; **group** is the clubs and committees.
+- **Invite** when the person must accept to join; **Add** when the leader alone puts them on.
+- **Mark done**, not "Tick". **Equipment** is the collective's tracked items, not "Gear";
+  "gear" stays for musicians' own.
+- Staff and committees **assign** tasks; when help is needed they **open a shift**.
+- A band's subdomain link is its **Profile link**. Its internal thread is "{Kind} members"
+  (Band, Club, Committee members), beside **Public** enquiries.
+- The booking page is "Practice space reservations".
+- Say the event, the run of show or the date, not "the night".
+
 ## One word per action
 
 One action is one status value or one remote form, and it has one word (#2970). Its button,

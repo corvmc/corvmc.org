@@ -403,7 +403,8 @@ deletion.
 Fixing one takes `pnpm exec drizzle-kit generate --custom`, which prepares an empty migration
 directory with a correctly-parented snapshot for hand-written SQL. That is the one supported way
 to author migration SQL yourself, and it does not break the "migrations come only from
-`db:generate`" rule.
+`db:generate`" rule. Keep every `--> statement-breakpoint` chunk non-empty: `drizzle-kit migrate`
+rejects a chunk that holds only a comment.
 
 ## Layering rules
 
