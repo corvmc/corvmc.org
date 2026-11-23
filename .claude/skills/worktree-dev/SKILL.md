@@ -71,6 +71,9 @@ boot.
    instead of the name — `preview_start` with `{url: "http://localhost:<dev port>"}`, taking the
    port from step 3. Never run a dev server through Bash.
 
+   `preview_start` serves the session's _launch_ worktree, not the one Bash is in. From any other
+   worktree, verify with a real-SQLite spec instead and say in the PR the page was not rendered.
+
 ## Live Stripe key
 
 The shared `.env` carries a live `rk_live` key. Do not exercise Stripe-touching flows in local QA:

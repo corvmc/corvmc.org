@@ -19,6 +19,15 @@ paths:
 - **Chunk bulk inserts.** D1 caps a single statement at 100 bound parameters, so a multi-row
   drizzle insert in a seed or fixture has to be split.
 
+- **`.unique()` on a nullable column emits nothing** (drizzle-kit rc.3). Use `uniqueIndex()` in the
+  table config, and grep the generated SQL for `UNIQUE`.
+- **`ADD COLUMN` cannot take a non-constant default** like `(unixepoch())`. A timestamp added to an
+  existing table is nullable.
+- **New "about any record" links** get a link table with one nullable FK per target and a CHECK
+  that exactly one is set, not a type+id pair (#2622).
+- **Gating an existing path on new rows** ships an idempotent data migration granting today's
+  holders what they had; seed data covers dev only (#1647).
+
 ## Generating a migration
 
 `pnpm db:generate` runs `drizzle-kit generate`, then `scripts/db/d1-safe-rebuild.mjs`, which
@@ -55,6 +64,14 @@ snapshots nothing will read again. Details and the reasoning are in
   `-- d1-safe-rebuild: intentional drop \`table\``or`pnpm db:check-migrations` fails.
 - Verify anything touching a table with children: `pnpm db:reset`, then check row
   counts in the child tables.
+- **A hand-written data migration** comes from `pnpm exec drizzle-kit generate --custom --name=<slug>`,
+  so it carries a snapshot.
+- **A rename's SQL holds only `RENAME` and `ADD`.** Any `DROP TABLE`, `CREATE TABLE` or `__new_`
+  means a prompt was answered wrong: regenerate. Answer prompts by matching text, not arrow counts.
+  A replacement that is not a rename takes two `db:generate` runs (drop, then create).
+- **After renaming a table or enum value**, `pnpm check` misses: raw `sql` strings, `e2e/`,
+  `scripts/`, string-keyed records, HTML `value=` attributes, `=== 'old'` on `string` params, and
+  the `*_type` columns that store table names (`booker_type`, `attachable_type`, `prototype_type`).
 
 CI's **Schema drift** job runs `drizzle-kit check`, regenerates, fails on a dirty tree, and then
 runs `pnpm db:check-migrations`.

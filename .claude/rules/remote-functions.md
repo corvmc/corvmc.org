@@ -36,3 +36,9 @@ nothing here.
   indistinguishable from untouched. Handle the missing key, don't expect `null`.
 - `.transform()` and `z.null()` inside a `form()` schema break the `fields` type inference the
   `<Form>` component relies on.
+- A required `z.boolean()`, any `z.coerce.*`, or an empty `z.object({})` fails `form()` with the
+  boolean error. Use `.default(false)`, a plain type, or `form('unchecked', fn)`.
+- One field arrives as a number through `fields.x` and as a string posted by `name=`. A shared
+  schema accepts both; a nullable number posts by `name=`.
+- Remote URLs carry a module hash (`/_app/remote/<hash>/<fn>`). A hand-built URL 404s at the
+  router, so it proves nothing about a guard; test guards in a spec or through the page.
