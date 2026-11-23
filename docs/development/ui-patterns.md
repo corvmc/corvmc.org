@@ -1826,6 +1826,15 @@ The marketing pages (`(public)/`) compose from `$lib/components/public/`:
 Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an inline
 `style="color: var(--cmc-navy)"`.
 
+## Counts, paired pages and shortcuts
+
+- **A count never stands alone.** A badge or "N waiting" shows its items or links to exactly
+  them, and derives from the same predicate as those rows (#1828).
+- **Overlapping pages can be an on-ramp.** The packing list leads to the rider and the profile
+  feeds the press kit. Show the step in both directions; do not merge the pages (#3133, #3130).
+- **Shortcuts leave common browser keys alone.** Never `mod+r`, and no `mod+a` on a screen with a
+  text field. A rarer collision, such as Firefox's `⌘J`, is acceptable.
+
 ## Create forms live in modals
 
 "Create" flows (new reservation, new event, etc.) should open in a modal on the list page, not navigate to a separate `/new` route. This keeps the user in context and avoids a full page transition for what's usually a short form. The modal is a sibling component to the list page (e.g. `CreateModal.svelte`) and is toggled by a button in the `PageHeader`.
