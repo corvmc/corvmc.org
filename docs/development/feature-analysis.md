@@ -103,8 +103,7 @@ fixed](conventions.md) — but the analysis matters as much as the discipline. A
 routinely finds four things wrong with its neighbours, and those findings are worth more than the
 feature if they are written down while the context is still in your head.
 
-Several findings each get [a parent issue and one sub-issue apiece](conventions.md), not one long
-body.
+File each finding as its own issue, not one long body; link related issues by number.
 
 ## What this looks like in practice
 

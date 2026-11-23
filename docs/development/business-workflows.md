@@ -1530,6 +1530,11 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ## 10. Messaging: portal threads, direct messages and band enquiries
 
+Features that reach a group of people (a roster, an event's attendees, a committee) use email.
+Chat gets fixes for crashes and data loss only; existing band and group chat stays.
+
+- Not new chat features, nor `directMessages` switched on, because chat is a large surface to
+  maintain (#2065).
 - Not a separate member messaging feature, because staff would work two queues (#204).
 - Not `getThread()` for members, because it returns staff-only notes (#204).
 - Not live push, because the SSE registry is per isolate on Workers. The notification bell
@@ -1692,6 +1697,11 @@ Every moderation action is an upheld report. A staffer acting on their own files
 `staff_action` report (`content_flag.origin`), resolved as they file it, so the member can
 appeal it like any other. An appeal makes two separate decisions, one about the content and
 one about the standing. Nothing changes while an appeal waits.
+
+Enforcement hides; it never destroys a member's work. A takedown that must kill a public URL
+moves the bytes rather than deleting them: unpublishing an event copies its poster to the
+private bucket, and a granted appeal copies it back (`event-service.ts`). Before writing a
+delete on an enforcement path, check whether making the thing unreachable is enough.
 
 Removing a member's access is a suspension, which has a term, or a ban, which lasts until staff
 lift it. `user.deletedAt` enforces both, and an `account_removal` row records each: who, why,
@@ -2452,6 +2462,9 @@ restore crew shifts or retract a cancellation notice.
 4. **Overview** tab → `updateProduction` (times and notes) and
    `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
    then holds `production.run` on that show and opens the staff panel while it is open).
+   The lead is a volunteer position with no shift: screens show the lead as crew beside the
+   show's shifts. Giving the lead hours or a volunteer role is a model change to propose on an
+   issue first.
 5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless

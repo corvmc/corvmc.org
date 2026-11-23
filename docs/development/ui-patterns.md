@@ -1033,6 +1033,10 @@ type error instead of a badge that quietly stops. Anything conditional — a fea
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
 gating expressed as nested `{#if}`s was silently wrong twice.
 
+**A staff row sits with what owns its work.** Volunteering pairs existing work with volunteers
+from the roster. A surface that defines or generates work (recurring work, project templates)
+sits with the module that owns that work, not under Volunteering (#1796).
+
 The panel switcher's tabs come from `#lib/components/layout/panel-tabs.js`, not hand-built per
 layout.
 

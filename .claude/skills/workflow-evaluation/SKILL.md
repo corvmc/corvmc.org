@@ -74,19 +74,17 @@ That last one still gets filed — see below — it just is not this walk's find
 
 ## What to do with the findings
 
-Findings that are real problems get **filed, not fixed** (`CLAUDE.md`), and a walk that
-produced several is a parent issue plus one sub-issue each — never one long body:
+Findings that are real problems get **filed, not fixed** (`CLAUDE.md`). File each finding
+as its own issue — never one long body, and no parent issue; link related issues by number:
 
 ```
 gh issue list --state open --search '<terms>'     # required first, a hook enforces it
 gh issue create --template finding.md --type Bug  # one per finding, labelled agent-filed
-gh api --method POST repos/corvmc/corvmc.org/issues/<parent>/sub_issues \
-  -F sub_issue_id=$(gh api repos/corvmc/corvmc.org/issues/<n> --jq .id)
 ```
 
-The parent carries only what the findings share: which workflow, which style, what you
-could not reach and why. Say in it which of the style's predictions **held** — that is what
-stops the next session from walking the same ground.
+Your report carries what the findings share: which workflow, which style, what you could not
+reach and why. Say in it which of the style's predictions **held** — that is what stops the
+next session from walking the same ground.
 
 If the walk found nothing, say so plainly and say what you covered. A clean walk is a
 result, and it is only worth anything if it is specific about what it exercised.
