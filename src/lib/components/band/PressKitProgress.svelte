@@ -31,7 +31,9 @@
 		compact?: boolean;
 	} = $props();
 
-	const href = (section: EpkSection) => resolve(section.route, { slug });
+	// Opens at the field the rung asks for, not the top of its page.
+	const href = (section: EpkSection) =>
+		resolve(section.route, { slug }) + (section.anchor ? `#${section.anchor}` : '');
 
 	const premiumSections = $derived(sections.filter((s) => s.tier === 'premium'));
 	const freeSections = $derived(sections.filter((s) => s.tier === 'free'));

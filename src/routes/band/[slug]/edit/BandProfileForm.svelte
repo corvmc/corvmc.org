@@ -3,6 +3,7 @@
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { refreshAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -30,6 +31,7 @@
 		profile,
 		genreSuggestions,
 		instrumentSuggestions,
+		enquiries,
 		canEdit = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
@@ -37,6 +39,8 @@
 		genreSuggestions: string[];
 		/** The same vocabulary members tag themselves with — see `getBandProfileEditor`. */
 		instrumentSuggestions: string[];
+		/** Where contact-form email goes. Changed on the press kit, so shown here read-only. */
+		enquiries: { email: string; source: 'booking' | 'profile' } | null;
 		/**
 		 * Owner or admin. Anyone else gets the same fields disabled, with no Save:
 		 * presentation only, since `saveBandProfile` is the guard.
@@ -56,6 +60,7 @@
 	let directoryVisibility = $state<string>(initial?.directoryVisibility ?? 'public');
 
 	const contact = (initial?.directoryContact as DirectoryContact | null) ?? {};
+	const bookingHref = $derived(`${resolve('/band/[slug]/press-kit', { slug: band.slug })}#booking`);
 
 	// Avatar uploads instantly through the band-avatar API route, which persists
 	// the new key and returns it (the value is also submitted with the form).
@@ -103,26 +108,30 @@
 						required
 					/>
 
-					<FormField
-						field={profileFields.tagline}
-						label={m.band_slug_edit_band_profile_form_tagline_label()}
-						type="text"
-						value={profile?.tagline ?? ''}
-						placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
-					/>
+					<div id="tagline" class="scroll-mt-24">
+						<FormField
+							field={profileFields.tagline}
+							label={m.band_slug_edit_band_profile_form_tagline_label()}
+							type="text"
+							value={profile?.tagline ?? ''}
+							placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
+						/>
+					</div>
 				</div>
 
-				<AvatarField
-					upload={uploadAvatar}
-					src={band.avatarUrl}
-					name={band.name}
-					shape="square"
-					disabled={!canEdit}
-				/>
+				<div id="logo" class="scroll-mt-24">
+					<AvatarField
+						upload={uploadAvatar}
+						src={band.avatarUrl}
+						name={band.name}
+						shape="square"
+						disabled={!canEdit}
+					/>
+				</div>
 			</div>
 
 			<div class="mt-4 space-y-4">
-				<div class="grid gap-4 sm:grid-cols-2">
+				<div id="hometown" class="grid scroll-mt-24 gap-4 sm:grid-cols-2">
 					<FormField
 						field={profileFields.hometown}
 						label={m.band_slug_edit_band_profile_form_hometown_label()}
@@ -140,29 +149,36 @@
 					/>
 				</div>
 
-				<FormField field={profileFields.bio} label={m.band_slug_edit_band_profile_form_bio_label()}>
-					<input {...profileFields.bio.as('hidden', bioHtml)} />
-					{#if canEdit}
-						<RichTextEditor
-							bind:value={bioHtml}
-							placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act_placeholder()}
-						/>
-					{:else}
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by sanitizeBio -->
-						<div class="prose prose-sm max-w-none">{@html sanitizeBio(bioHtml)}</div>
-					{/if}
-				</FormField>
+				<div id="bio" class="scroll-mt-24">
+					<FormField
+						field={profileFields.bio}
+						label={m.band_slug_edit_band_profile_form_bio_label()}
+					>
+						<input {...profileFields.bio.as('hidden', bioHtml)} />
+						{#if canEdit}
+							<RichTextEditor
+								bind:value={bioHtml}
+								placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act_placeholder()}
+							/>
+						{:else}
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by sanitizeBio -->
+							<div class="prose prose-sm max-w-none">{@html sanitizeBio(bioHtml)}</div>
+						{/if}
+					</FormField>
+				</div>
 
-				<FormField
-					field={profileFields.genres}
-					label={m.band_slug_edit_band_profile_form_genres_label()}
-				>
-					<FreeformTagInput
-						bind:value={genres}
-						suggestions={genreSuggestions}
-						placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock_placeholder()}
-					/>
-				</FormField>
+				<div id="genres" class="scroll-mt-24">
+					<FormField
+						field={profileFields.genres}
+						label={m.band_slug_edit_band_profile_form_genres_label()}
+					>
+						<FreeformTagInput
+							bind:value={genres}
+							suggestions={genreSuggestions}
+							placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock_placeholder()}
+						/>
+					</FormField>
+				</div>
 
 				<FormField
 					field={profileFields.lookingForMembers}
@@ -191,12 +207,14 @@
 		</InfoCard>
 
 		<div class="grid gap-6 lg:grid-cols-2">
-			<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
-				<p class="mb-3 text-muted">
-					{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
-				</p>
-				<LinkListEditor bind:value={links} field={profileFields.links} />
-			</InfoCard>
+			<div id="links" class="scroll-mt-24">
+				<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
+					<p class="mb-3 text-muted">
+						{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
+					</p>
+					<LinkListEditor bind:value={links} field={profileFields.links} />
+				</InfoCard>
+			</div>
 
 			<!-- Private by default: the page then offers a contact form, which still
 			     routes here. Public, the page shows these in its place (#3234). -->
@@ -232,6 +250,20 @@
 						checkboxLabel={m.band_slug_edit_band_profile_form_contact_public_checkbox()}
 					/>
 				</div>
+				<!-- Read-only. The press kit's booking contact is where enquiry email is changed;
+				     the email above is only the fallback when that is empty. -->
+				<p class="mt-3 text-muted text-sm" data-testid="enquiry-destination">
+					{#if enquiries}
+						{m.band_slug_edit_band_profile_form_enquiries_go_to_email_text({
+							email: enquiries.email
+						})}
+					{:else}
+						{m.band_slug_edit_band_profile_form_enquiries_go_to_roster_text()}
+					{/if}
+					<a href={bookingHref} class="link">
+						{m.band_slug_edit_band_profile_form_change_booking_contact_text()}
+					</a>
+				</p>
 			</InfoCard>
 		</div>
 

@@ -44,6 +44,7 @@ import { listPublishedReleasesForBand } from '#lib/server/audio/audio-service.js
 import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
 import { publicPressKit } from '#lib/server/band/press-kit.js';
+import { enquiryDestination } from '#lib/server/band/enquiry-destination.js';
 import { captureException } from '#lib/server/sentry.js';
 import { getMe } from './layout.remote';
 import {
@@ -803,19 +804,22 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 
 /** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
 export const getBandProfileEditor = query(z.string(), async (slug) => {
-	const { role } = await requireBandRole({ slug }, 'member');
+	const { group: band, role } = await requireBandRole({ slug }, 'member');
 	// The instrument suggestions ride along for the "what we're looking for"
 	// field. Deliberately the same vocabulary members tag themselves with — a
 	// free-text field here would let a band ask for something no member has ever
 	// written, and the match would silently never fire.
-	const [profile, genreSuggestions, instrumentSuggestions] = await Promise.all([
+	const [profile, genreSuggestions, instrumentSuggestions, [site]] = await Promise.all([
 		getBandProfile(slug),
 		getGenreSuggestions(),
-		getInstrumentSuggestions()
+		getInstrumentSuggestions(),
+		db.select({ epk: bandSite.epk }).from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1)
 	]);
 	// Presentation only: the page shows a plain member the read view.
 	const canEdit = role === 'owner' || role === 'admin';
-	return { profile, genreSuggestions, instrumentSuggestions, canEdit };
+	// Read-only here: the press kit's booking contact is where it is changed.
+	const enquiries = enquiryDestination(site?.epk, profile?.directoryContact);
+	return { profile, genreSuggestions, instrumentSuggestions, canEdit, enquiries };
 });
 
 // ---------------------------------------------------------------------------
