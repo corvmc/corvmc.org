@@ -1,3 +1,6 @@
+import type { ResolvedPathname } from '$app/types';
+import { withQuery } from '#lib/utils/with-query.js';
+
 /**
  * The staff event page's tabs (#3270). A CMC show has Listing, Production and
  * History; a market adds Vendors; every other event has Listing and History.
@@ -26,6 +29,6 @@ export function parseEventTab(raw: string | null, evt: TabbedEvent): EventTab {
 }
 
 /** The page's address with a tab open. */
-export function eventTabHref(id: string, tab: EventTab): string {
-	return tab === 'listing' ? `/staff/events/${id}` : `/staff/events/${id}?tab=${tab}`;
+export function eventTabHref(id: string, tab: EventTab): ResolvedPathname {
+	return withQuery(`/staff/events/${id}`, tab === 'listing' ? '' : `tab=${tab}`);
 }

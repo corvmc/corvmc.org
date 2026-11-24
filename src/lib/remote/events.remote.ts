@@ -1220,7 +1220,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			crew,
 			tasks,
 			canSetLead,
-			projectId: production?.projectId ?? detail.event.projectId ?? null
+			projectId: production?.projectId ?? null
 		},
 		recap: {
 			photos,
