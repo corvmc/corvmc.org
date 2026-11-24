@@ -6,7 +6,13 @@
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import { setShowLead, searchShowLeadCandidates } from '#lib/remote/productions.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import {
+		setShowLead,
+		searchShowLeadCandidates,
+		openHostShift
+	} from '#lib/remote/productions.remote.js';
 	import type { getStaffEventPage } from '#lib/remote/events.remote.js';
 	import CrewAssign from './CrewAssign.svelte';
 
@@ -14,6 +20,7 @@
 	 * A CMC show's crew (#3270): the event lead, then each shift, each row the
 	 * person or Assign. Shift times are not shown. Assign on a shift opens the
 	 * task's own staffing — its assignees and "Who to ask" — for that shift.
+	 * A show with no host task offers to open one; once open it is a shift row.
 	 */
 	type Page = Awaited<ReturnType<typeof getStaffEventPage>>;
 	let {
@@ -21,12 +28,14 @@
 		production,
 		crew,
 		canSetLead,
+		hostOpen,
 		onchange
 	}: {
 		eventId: string;
 		production: Page['production'];
 		crew: NonNullable<Page['sidebar']['crew']>;
 		canSetLead: boolean;
+		hostOpen: boolean;
 		onchange: () => void;
 	} = $props();
 
@@ -79,6 +88,23 @@
 				{:else}
 					<span class="text-muted">{m.staff_events_id_production_no_lead_text()}</span>
 				{/if}
+			</li>
+		{/if}
+		{#if production && !hostOpen}
+			<li class="flex items-center justify-between gap-2 py-2" data-testid="crew-host">
+				<span class="text-muted">{m.staff_events_id_production_host_text()}</span>
+				<Form
+					remote={openHostShift}
+					successToast={m.staff_events_id_production_host_shift_opened_toast()}
+					onsuccess={onchange}
+				>
+					<input {...openHostShift.fields.eventId.as('hidden', eventId)} />
+					<SubmitButton
+						label={m.staff_events_id_production_open_host_shift_label()}
+						variant="ghost"
+						size="sm"
+					/>
+				</Form>
 			</li>
 		{/if}
 		{#each crew as shift (shift.shiftId)}

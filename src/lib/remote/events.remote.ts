@@ -1187,7 +1187,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	// The sidebar's Crew and Tasks boxes (#3270): a CMC show's own work, read
 	// here so the page keeps one query. Null to a reader without the board.
 	const isShow = detail.event.source === 'cmc';
-	const [crew, tasks, canSetLead] = isShow
+	const [crew, tasks, canSetLead, hostOpen] = isShow
 		? await Promise.all([
 				can('volunteer.read').then((ok) => (ok ? eventCrew(id) : null)),
 				can('project.read').then((ok) =>
@@ -1205,9 +1205,10 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 				),
 				production?.projectId
 					? can('production.book', { projectId: production.projectId })
-					: Promise.resolve(false)
+					: Promise.resolve(false),
+				getHostShift(id).then((shift) => shift !== null)
 			])
-		: [null, null, false];
+		: [null, null, false, false];
 
 	return {
 		detail,
@@ -1220,6 +1221,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			crew,
 			tasks,
 			canSetLead,
+			hostOpen,
 			projectId: production?.projectId ?? null
 		},
 		recap: {

@@ -39,6 +39,7 @@
 			production={data.production}
 			crew={data.sidebar.crew}
 			canSetLead={data.sidebar.canSetLead}
+			hostOpen={data.sidebar.hostOpen}
 			{onchange}
 		/>
 	{/if}

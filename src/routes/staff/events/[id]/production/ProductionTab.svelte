@@ -233,16 +233,10 @@
 	/>
 
 	<!--
-			What the bill needs on stage. The advance checklist has always carried a
-			task reading "Collect tech riders and stage plots"; this is where the answer
-			shows up, and the number worth reading is how many acts have told us
-			nothing — a channel count is interesting, an unanswered act is work.
-
-			Always rendered once there is a bill, including when every act is empty:
-			hiding it would make "nobody has sent a rider" and "this page doesn't track
-			riders" look identical, which is the mistake the staffing card below
-			documents.
-		-->
+		Rendered whenever there is a bill, even when no act has sent a rider: hiding
+		it would make "nobody has sent a rider" look the same as "this page does not
+		track riders".
+	-->
 	{#if riders.length > 0}
 		<InfoCard title={m.staff_events_id_production_tech_riders_title()}>
 			{#snippet header(title)}
