@@ -21,6 +21,12 @@ Compose the existing shared primitives rather than inventing new ones.
 - **Bits UI** is the headless base layer. Docs: <https://bits-ui.com/docs/llms.txt> (per-component
   pages follow the same `.../llms.txt` pattern).
 - **No gradients**, anywhere.
+- **`Alert`'s `href` is a typed route.** A link with a query string goes in its `action` snippet
+  as a `Button`.
+- **Type a component's extra props** with `svelte/elements` attribute types, never
+  `[key: string]: unknown`, which hides misspelt props.
+- **A dialog opened from inside a bits-ui `Modal` cannot be clicked.** Render the second step
+  inside the same modal and hide the form with `hidden` (#876).
 
 ## SSR traps
 

@@ -1033,6 +1033,10 @@ type error instead of a badge that quietly stops. Anything conditional — a fea
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
 gating expressed as nested `{#if}`s was silently wrong twice.
 
+**A staff row sits with what owns its work.** Volunteering pairs existing work with volunteers
+from the roster. A surface that defines or generates work (recurring work, project templates)
+sits with the module that owns that work, not under Volunteering (#1796).
+
 The panel switcher's tabs come from `#lib/components/layout/panel-tabs.js`, not hand-built per
 layout.
 
@@ -1825,6 +1829,15 @@ The marketing pages (`(public)/`) compose from `$lib/components/public/`:
 
 Brand ink is `text-cmc-navy` / `text-cmc-teal` / `text-cmc-orange` — never an inline
 `style="color: var(--cmc-navy)"`.
+
+## Counts, paired pages and shortcuts
+
+- **A count never stands alone.** A badge or "N waiting" shows its items or links to exactly
+  them, and derives from the same predicate as those rows (#1828).
+- **Overlapping pages can be an on-ramp.** The packing list leads to the rider and the profile
+  feeds the press kit. Show the step in both directions; do not merge the pages (#3133, #3130).
+- **Shortcuts leave common browser keys alone.** Never `mod+r`, and no `mod+a` on a screen with a
+  text field. A rarer collision, such as Firefox's `⌘J`, is acceptable.
 
 ## Create forms live in modals
 

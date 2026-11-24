@@ -44,7 +44,9 @@ boot.
    the hooks are already installed and shared. Check for the package you needed rather than
    trusting the exit code.
 
-2. **Secrets.** Copy `.env` and `.dev.vars` from the main checkout — **copy, don't symlink**.
+2. **Secrets.** A worktree Claude Code created (subagent isolation, `--worktree`) already has
+   them: `.worktreeinclude` copies them in. Otherwise copy `.env` and `.dev.vars` from the main
+   checkout — **copy, don't symlink**.
    Editing through a symlink writes into the main checkout and leaks into every other worktree.
    Restore the original if you replaced one.
 
@@ -68,6 +70,9 @@ boot.
    entries name the _main_ checkout's ports. From a worktree, start the browser pane with the URL
    instead of the name — `preview_start` with `{url: "http://localhost:<dev port>"}`, taking the
    port from step 3. Never run a dev server through Bash.
+
+   `preview_start` serves the session's _launch_ worktree, not the one Bash is in. From any other
+   worktree, verify with a real-SQLite spec instead and say in the PR the page was not rendered.
 
 ## Live Stripe key
 

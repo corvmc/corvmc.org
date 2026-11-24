@@ -78,6 +78,10 @@ test that asserts nothing fails.
   the file total, not the test total** — this shape went unnoticed across several PRs, and it reads
   as flake rather than as a collision because the run is red with nothing red in it.
 
+- **Repeated `--project` flags intersect**: two of them match no tests and exit 0. Run each singly.
+- **Never pipe a gate into `tail`**: the exit status becomes `tail`'s.
+- **A CI red that starts near 00:00 UTC is a date bug**, not a flake. Vitest's unhandled errors
+  show only in the full job log, not in the annotations.
 - **`maxWorkers` is halved outside CI.** The `server` project's `vmForks` pool takes a fresh VM
   context per file and is memory-hungry by design; several worktrees running suites at once would
   each claim nearly every core until the OOM killer took one. That surfaces as `Worker exited
@@ -123,6 +127,11 @@ the accessible contract. Assert URL, value, count, visibility or a DB row.
   the preview server then holds alone. Seeds go through `withPlatformDb`/`withPlatformEnv`
   (miniflare, prepare only); a read-back from inside a test goes through `readLocalDb`, which
   reads the same SQLite file without starting a second workerd over it.
+- **After `goto`, wait for a rendered anchor (the `h1`) before a negative assertion.** An awaited
+  page renders nothing at first, so `toBeHidden` passes vacuously. A poll needing fresh data does
+  the `goto` inside the poll.
+- **An assertion inside `toPass` takes a short explicit timeout** (`{ timeout: 1000 }`). The global
+  15s spends the whole budget on one attempt.
 - **Assert against the database through `expect.poll`, never a bare read.** `readLocalDb` opens
   the file the preview server is still writing through workerd, so a row the page has already
   stopped rendering can still read stale to a fresh reader. The UI assertion passing does not

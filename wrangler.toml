@@ -12,11 +12,6 @@ main = "worker.js"
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
 
-# Run the Worker near D1 rather than near the visitor (#3143). Only
-# `wrangler deploy` reads this; wrangler.adapter.toml has no use for it.
-[placement]
-mode = "smart"
-
 # Native cron triggers, handled by the `scheduled` export in worker.js, which
 # dispatches in-process to the /api/cron/* endpoints (see
 # src/lib/server/cron/schedule.ts for the expression → endpoint map — keep the

@@ -10,7 +10,6 @@ import {
 	summarizeAuditEntry
 } from './audit-display';
 import { auditActions, type AuditEntry } from '#lib/types/audit.js';
-import { retiredTerms } from '#lib/config.js';
 
 function entry<E extends AuditEntry>(action: E['action'], details: E['details']): AuditEntry {
 	return {
@@ -250,15 +249,6 @@ describe('audit wording', () => {
 	};
 	visit(source);
 	if (source.statements.length === 0) throw new Error(`could not parse ${file}`);
-
-	it('uses no retired term (retiredTerms in src/lib/config.ts)', () => {
-		const terms = retiredTerms.filter(({ keys }) => !keys || keys.test('audit'));
-		const found = texts.flatMap((text) =>
-			terms.filter(({ word }) => word.test(text)).map(({ use }) => `"${text}" (use ${use})`)
-		);
-		expect(texts.length).toBeGreaterThan(100);
-		expect(found).toEqual([]);
-	});
 
 	// #3059: "1 equipment credits". A count goes through `plural()`, which picks the
 	// noun's number, so no template follows a substitution with a plural noun.

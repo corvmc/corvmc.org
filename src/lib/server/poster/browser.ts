@@ -1,4 +1,4 @@
-import puppeteer, { type Browser } from '@cloudflare/puppeteer';
+import type { Browser } from '@cloudflare/puppeteer';
 import { env } from 'cloudflare:workers';
 import type { PosterPage } from './calendar';
 
@@ -7,6 +7,7 @@ const KEEP_ALIVE_MS = 60_000;
 
 /** A Browser Rendering session no one is connected to, or a new one. */
 async function acquire(): Promise<Browser> {
+	const { default: puppeteer } = await import('@cloudflare/puppeteer');
 	try {
 		const idle = (await puppeteer.sessions(env.BROWSER)).find((s) => !s.connectionId);
 		if (idle) return await puppeteer.connect(env.BROWSER, idle.sessionId);

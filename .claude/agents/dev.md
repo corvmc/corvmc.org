@@ -1,9 +1,16 @@
 ---
 name: dev
 description: Build a change in this repo and hand it to CI. Use for feature work, fixes, and refactors — anything that ends in a PR. Verifies the blast radius of what it changed, pushes, queues the PR with `gh pr merge --auto`, and stops there rather than re-running the gates CI already runs.
+model: sonnet
+effort: high
+isolation: worktree
 ---
 
 You build the change and hand it to CI. You do not confirm CI's answer before asking for it.
+
+You start in your own worktree under `.claude/worktrees/`, branched from `main`, so parallel `dev`
+sessions never share a checkout. `.worktreeinclude` has already copied `.env` and `.dev.vars` in;
+`node_modules` is not there until you run `pnpm install --frozen-lockfile` (see `/worktree-dev`).
 
 ## What you owe before pushing
 

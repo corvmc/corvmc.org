@@ -15,31 +15,14 @@ Stripe, Postmark. Documentation index: `docs/README.md`.
 ## Commands
 
 Always through `pnpm`: a global prettier 2.8.8 shadows this project's prettier 3, so `npx prettier`
-is wrong.
+is wrong. `pnpm db:generate` is the only way to create a migration; `pnpm db:reset` rebuilds local
+D1; `pnpm docs:check` checks docs integrity and route drift.
 
-| Command                   | What it does                                            | CI job that already runs it |
-| ------------------------- | ------------------------------------------------------- | --------------------------- |
-| `pnpm check`              | svelte-check over `src`, then over everything else      | Svelte Check                |
-| `pnpm lint:changed`       | prettier + eslint vs `BASE_REF` (default `origin/main`) | Lint (changed)              |
-| `pnpm lint`               | the whole tree, including markdown                      | Lint (full)                 |
-| `pnpm test:unit -- --run` | vitest, one shot                                        | Unit tests                  |
-| `pnpm test:e2e`           | playwright — add `--workers=1` locally                  | E2E                         |
-| `pnpm docs:check`         | docs integrity + route drift                            | Docs integrity              |
-| `pnpm db:generate`        | the only way to create a migration                      | Schema drift                |
-| `pnpm db:reset`           | rebuild local D1 (wipe + migrate + seed)                | —                           |
-
-Leave whole-tree runs to the CI job in the third column. Concurrent worktrees share this machine,
-so a local whole-tree failure (a starved ESLint, an OOM-killed vitest printing `[killed]`) is not
-evidence of one. `scripts/claude/block-whole-tree-gate.sh` enforces this; scoped runs stay open.
-
-### Before you push
-
-1. **The blast radius, not the files you edited.** Under `src/lib/server/<domain>/` that is the
-   whole directory — `pnpm vitest --run --project=server src/lib/server/<domain>` — because specs
-   mock `drizzle-orm` export by export, so one new operator breaks a _sibling_ spec.
-2. **`pnpm lint:changed`** if more than a couple of files moved.
-
-Say in the PR that the full suite was deferred to CI.
+Whole-tree gates are CI jobs, and `scripts/claude/block-whole-tree-gate.sh` refuses them locally.
+Before pushing, follow `.claude/agents/dev.md` ("What you owe before pushing"). Run
+`pnpm lint:changed` **after** `git commit`: lefthook's prettier reflows comments and markup, and a
+comment's delimiter lines count toward its 8-line cap. On a `feature/*` branch pass
+`BASE_REF=origin/feature/<slug>`.
 
 ## Rules
 
@@ -113,8 +96,9 @@ re-arming.
 ## Worktrees
 
 Work usually happens in a `git worktree` under `.claude/worktrees/`; edit paths inside it, even
-when a subagent reports main-checkout paths. A fresh worktree has no `node_modules`, `.env` or
-`.dev.vars` — `/worktree-dev` sets it up.
+when a subagent reports main-checkout paths. The `dev` agent always runs in its own worktree. A
+worktree Claude Code creates gets `.env` and `.dev.vars` from `.worktreeinclude`, but no
+`node_modules`; `/worktree-dev` covers that and worktrees made with plain `git worktree add`.
 
 A **cloud session** (claude.ai/code) is a fresh, secretless clone that
 `scripts/claude/cloud-session-start.sh` has already set up; mail, SMS and payments will not work.
