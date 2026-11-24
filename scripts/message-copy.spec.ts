@@ -2,14 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { keyRole } from '../eslint-rules/message-key-role.js';
-import {
-	catalogs,
-	failures,
-	variants,
-	violations,
-	wordCount,
-	type Check
-} from './lib/message-copy.js';
+import { catalogs, failures, violations, wordCount, type Check } from './lib/message-copy.js';
 
 /**
  * The catalog holds every string to the rubric for the role its key names.
