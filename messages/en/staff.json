@@ -3714,7 +3714,7 @@
 	"staff_tasks_id_responsible_seat_label": "Seat on {committee}",
 	"staff_tasks_id_responsible_none_title": "No named people",
 	"staff_tasks_id_responsible_none_body": "Anyone holding {grant} for it may act on it.",
-	"staff_events_id_tab_listing_label": "Listing",
+	"staff_events_id_tab_listing_label": "Event",
 	"staff_events_id_more_label": "More event actions",
 	"staff_events_id_share_label": "Share",
 	"staff_events_id_possible_duplicate_text": "Possible duplicate. These events start within two hours of this one:",
