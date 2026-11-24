@@ -47,9 +47,9 @@ test.describe('duty lists — the unscheduled half', () => {
 		// addressable form, so this also pins that a pasted link lands there.
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		// The show's related tasks (#2630) list it beside the shifts card.
+		// The sidebar's Tasks box lists the show's open, shiftless tasks (#3270).
 		await expect(
-			page.locator(`[data-testid="related-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
+			page.locator(`[data-testid="event-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
 		).toBeVisible();
 	});
 
