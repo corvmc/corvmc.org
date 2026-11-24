@@ -7,7 +7,7 @@ import {
 	campaignSend,
 	subscriber
 } from '#lib/server/db/schema/marketing.js';
-import { eq, and, sql, isNull, lte, inArray, desc } from 'drizzle-orm';
+import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
 import {
 	isSystemAudienceKey,
 	resolveSystemAudienceRecipients,

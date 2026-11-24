@@ -724,8 +724,8 @@ test.describe('volunteering — shifts', () => {
  * unreachable. These cover the three ways in, and the one failure mode that
  * cannot be seen on screen.
  */
-// Staffing is production work, so the card is on the console at
-// `[id]/production` rather than the general event view every staffer lands on.
+// Staffing is production work, so the card is on the Production tab
+// (`?tab=production`) rather than on Listing, where every staffer lands.
 test.describe('volunteering — shifts and events', () => {
 	/** The production console's related shifts card (#2630). */
 	function shiftsCard(page: Page) {
@@ -734,8 +734,7 @@ test.describe('volunteering — shifts and events', () => {
 
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		// Staffing is the Advance tab's subject on the tabbed console.
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
 		const card = shiftsCard(page);
 		await expect(card).toBeVisible({ timeout: 15000 });
@@ -748,7 +747,7 @@ test.describe('volunteering — shifts and events', () => {
 
 	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
 		const card = shiftsCard(page);
 		await expect(card).toBeVisible({ timeout: 15000 });

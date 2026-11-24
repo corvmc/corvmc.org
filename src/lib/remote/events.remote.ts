@@ -1161,7 +1161,7 @@ function parseStaffLineupField(raw: string | undefined) {
  * landing point for an event from anywhere in the panel: a volunteer shift, a
  * reservation, a member's record, a notification. It carries the listing in
  * full (edit, poster, series, room hold) and the moderation actions; the
- * console at `[id]/production` is back-of-house, with its own query below.
+ * Production tab (`?tab=production`) is back-of-house, with its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
