@@ -1612,7 +1612,9 @@ admins answer it at `/band/[slug]/messages`. Neither side sees the other's addre
   staffer's emailed reply into an outbound message skips band threads.
 - **Enquiry notifications:** `band_enquiry_received` goes to the band's owner and admins.
   The old `band_site_contact` email goes only to a press-kit or profile booking address
-  that matches no owner or admin.
+  that matches no owner or admin. `band/enquiry-destination.ts:enquiryDestination()` picks
+  that address (the press kit's booking contact, else the profile email), and the profile
+  editor shows its answer read-only with a link to the booking contact.
 
 ### Data touched
 

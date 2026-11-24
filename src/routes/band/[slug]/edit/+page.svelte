@@ -26,7 +26,7 @@
 		canonicalAddress({ kind: 'group', slug: band.slug }, { siteUrl: env.PUBLIC_SITE_URL })
 	);
 
-	const { profile, genreSuggestions, instrumentSuggestions, canEdit } = $derived(
+	const { profile, genreSuggestions, instrumentSuggestions, canEdit, enquiries } = $derived(
 		await getBandProfileEditor(slug)
 	);
 </script>
@@ -45,5 +45,12 @@
 		</AddressCard>
 	{/if}
 
-	<BandProfileForm {band} {profile} {genreSuggestions} {instrumentSuggestions} {canEdit} />
+	<BandProfileForm
+		{band}
+		{profile}
+		{genreSuggestions}
+		{instrumentSuggestions}
+		{enquiries}
+		{canEdit}
+	/>
 </PageContent>

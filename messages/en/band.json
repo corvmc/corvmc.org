@@ -68,7 +68,7 @@
 	"band_slug_edit_band_profile_form_handle_url_placeholder": "@handle or URL",
 	"band_slug_edit_band_profile_form_hometown_label": "Hometown",
 	"band_slug_edit_band_profile_form_links_title": "Links",
-	"band_slug_edit_band_profile_form_never_shown_publicly_page_o_text": "Private, your page shows a contact form that sends messages here instead.",
+	"band_slug_edit_band_profile_form_never_shown_publicly_page_o_text": "Private, your page shows a contact form instead.",
 	"band_slug_edit_band_profile_form_public_description_body": "Anyone can see this band's profile, no login required",
 	"band_slug_edit_band_profile_form_renaming_band_doesn_t_move_text": "Renaming the band doesn't change its link.",
 	"band_slug_edit_band_profile_form_social_handle_label": "Social handle",
@@ -492,7 +492,6 @@
 	"band_slug_press_kit_press_photos_high_resolution_shot_venue_text": "A high-resolution shot a venue or a listings editor can print. Shown on your public page and included full-size in your downloadable kit.",
 	"band_slug_press_kit_press_photos_no_press_photo_yet_band_text": "No press photo yet. Your band's logo is set on the profile page.",
 	"band_slug_press_kit_press_photos_press_photos_title": "Press photos",
-	"band_slug_press_kit_press_photos_success_toast": "Photo details saved",
 	"band_slug_press_kit_press_photos_text": "{length} of {photoLimit}",
 	"band_slug_press_kit_press_photos_unlimited_plan_text": "Unlimited on your plan",
 	"band_slug_press_kit_press_photos_upload_failed_toast": "Upload failed",
@@ -670,5 +669,8 @@
 	"band_slug_members_send_invitations_label": "Send invitations",
 	"band_slug_members_invitations_sent_toast": "Invitations sent",
 	"band_slug_members_not_sent_text": "Not sent",
-	"band_slug_members_remove_recipient_label": "Remove {name}"
+	"band_slug_members_remove_recipient_label": "Remove {name}",
+	"band_slug_edit_band_profile_form_enquiries_go_to_email_text": "Contact form messages go to {email} and to the band's owners and admins.",
+	"band_slug_edit_band_profile_form_enquiries_go_to_roster_text": "Contact form messages go to the band's owners and admins.",
+	"band_slug_edit_band_profile_form_change_booking_contact_text": "Change booking contact"
 }

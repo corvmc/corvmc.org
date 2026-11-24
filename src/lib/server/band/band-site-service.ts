@@ -2,6 +2,8 @@ import { db } from '#lib/server/db/index.js';
 import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { eq } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
+import { listFor as listMediaFor, descriptionUpdate } from '#lib/server/media/media-service.js';
 
 /**
  * The `band_site` row a band owns — created with the band, and the row every
@@ -53,4 +55,40 @@ async function findBandSiteId(groupId: string): Promise<string | undefined> {
 		.where(eq(bandSite.groupId, groupId))
 		.limit(1);
 	return row?.id;
+}
+
+export interface PressPhotoDetails {
+	attachmentId: string;
+	altText: string;
+	caption: string;
+}
+
+/**
+ * The press kit and its photos' descriptions, in one batch, so the page's one
+ * Save writes both or neither. Photo ids are matched against the band's own
+ * gallery, so an attachment belonging to another parent is skipped.
+ */
+export async function savePressKit(
+	groupId: string,
+	epk: Record<string, unknown>,
+	photos: PressPhotoDetails[]
+): Promise<void> {
+	const siteId = await getOrCreateBandSiteId(groupId);
+	const gallery = photos.length > 0 ? await listMediaFor('group', groupId, 'gallery') : [];
+	const mediaIds = new Map(gallery.map((m) => [m.attachmentId, m.mediaId]));
+
+	const writes: BatchItem<'sqlite'>[] = [
+		db.update(bandSite).set({ epk, updatedAt: new Date() }).where(eq(bandSite.id, siteId))
+	];
+	for (const photo of photos) {
+		const mediaId = mediaIds.get(photo.attachmentId);
+		if (!mediaId) continue;
+		writes.push(
+			descriptionUpdate(mediaId, {
+				altText: photo.altText.trim() || null,
+				caption: photo.caption.trim() || null
+			})
+		);
+	}
+	await db.batch(writes as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]);
 }

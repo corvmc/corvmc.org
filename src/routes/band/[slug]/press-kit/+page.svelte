@@ -6,7 +6,8 @@
 	import PressKitProgress from '#lib/components/band/PressKitProgress.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import PressKitForm from './PressKitForm.svelte';
-	import PressPhotos from './PressPhotos.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	// Resolve here and hand the form plain props. The form must not live in a
 	// component whose script awaits: a top-level await marks every later
@@ -33,11 +34,25 @@
 		total={editor.progress.total}
 		next={editor.progress.next}
 	/>
-	<PressKitForm {band} epk={editor.epk} premium={editor.premium} canEdit={editor.canEdit} />
-	<PressPhotos
+	<PressKitForm
 		{band}
+		epk={editor.epk}
 		media={editor.media}
 		photoLimit={editor.photoLimit}
+		premium={editor.premium}
 		canEdit={editor.canEdit}
 	/>
+	<!-- After the Save: the zip is built from what is saved, not from the form. -->
+	{#if editor.canEdit}
+		<InfoCard title={m.band_slug_press_kit_press_photos_download_kit_title()}>
+			<p class="text-muted">
+				{m.band_slug_press_kit_press_photos_zip_holding_one_page_press_text()}
+			</p>
+			<div>
+				<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
+					{m.band_slug_press_kit_press_photos_download_press_kit_zip_label()}
+				</Button>
+			</div>
+		</InfoCard>
+	{/if}
 </PageContent>

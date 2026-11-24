@@ -47,6 +47,11 @@ export interface EpkSection {
 	 * and needs no `$app/paths` mock in its spec.
 	 */
 	route: EpkSectionRoute;
+	/**
+	 * The element id on that page holding the field, so the link opens at it.
+	 * Absent where the rung is a whole page (members, events, the plan).
+	 */
+	anchor?: string;
 	tier: 'free' | 'premium';
 }
 
@@ -86,6 +91,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'Add a logo or a photo — it is the first thing anyone sees.',
 			where: 'public',
 			route: edit,
+			anchor: 'logo',
 			tier: 'free'
 		},
 		{
@@ -95,6 +101,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'A short line a listings editor can paste verbatim.',
 			where: 'public',
 			route: edit,
+			anchor: 'tagline',
 			tier: 'free'
 		},
 		{
@@ -104,6 +111,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'Two or three paragraphs: who you are and what you sound like.',
 			where: 'public',
 			route: edit,
+			anchor: 'bio',
 			tier: 'free'
 		},
 		{
@@ -113,6 +121,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'Tag your genres so you turn up when someone browses for them.',
 			where: 'public',
 			route: edit,
+			anchor: 'genres',
 			tier: 'free'
 		},
 		{
@@ -122,6 +131,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'A hometown, and the year you started.',
 			where: 'public',
 			route: edit,
+			anchor: 'hometown',
 			tier: 'free'
 		},
 		{
@@ -137,6 +147,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'Add a Bandcamp, Spotify, SoundCloud or YouTube link so people can hear you.',
 			where: 'public',
 			route: edit,
+			anchor: 'links',
 			tier: 'free'
 		},
 		{
@@ -168,6 +179,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'A review, an award, a support slot — anything somebody else said.',
 			where: 'public',
 			route: kit,
+			anchor: 'press-quotes',
 			tier: 'free'
 		},
 		{
@@ -177,6 +189,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'A high-resolution shot a venue can print. An avatar is not a press photo.',
 			where: 'public',
 			route: kit,
+			anchor: 'press-photos',
 			tier: 'free'
 		},
 		{
@@ -186,6 +199,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'Name a booking contact — it is where your contact form delivers.',
 			where: 'package',
 			route: kit,
+			anchor: 'booking',
 			tier: 'free'
 		}
 	];
@@ -199,6 +213,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'A live clip, on your band site.',
 			where: 'public',
 			route: kit,
+			anchor: 'video',
 			tier: 'premium'
 		},
 		{
@@ -208,6 +223,7 @@ export function epkSections(input: EpkCompletenessInput): EpkSection[] {
 			hint: 'More than one photo, so a venue can pick.',
 			where: 'public',
 			route: kit,
+			anchor: 'press-photos',
 			tier: 'premium'
 		},
 		{

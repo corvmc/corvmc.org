@@ -6,7 +6,6 @@
  * press kit is free for every act and must keep working without a site.
  */
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { eq, and, count, isNotNull } from 'drizzle-orm';
@@ -18,11 +17,11 @@ import { listBandEventsUpcoming } from '#lib/server/event/event-service.js';
 import { epkProgress } from '#lib/server/band/epk-completeness.js';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
-import { getOrCreateBandSiteId } from '#lib/server/band/band-site-service.js';
+import { savePressKit } from '#lib/server/band/band-site-service.js';
 import { fullPressKit } from '#lib/server/band/press-kit.js';
-import { listFor as listMediaFor, setDescription } from '#lib/server/media/media-service.js';
+import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
-import { jsonObjectField } from '#lib/utils/zod-json.js';
+import { jsonArrayField, jsonObjectField } from '#lib/utils/zod-json.js';
 import { photoLimitForTier } from '#lib/server/band/press-kit-limits.js';
 
 // ---------------------------------------------------------------------------
@@ -167,7 +166,17 @@ export const saveBandEpk = form(
 		slug: z.string().min(1),
 		// JSON-encoded BandEpk. Decoded in the schema so malformed input is a field
 		// issue on `epk` rather than a whole-page 400.
-		epk: jsonObjectField('Invalid press kit data')
+		epk: jsonObjectField('Invalid press kit data'),
+		// Alt text and captions live on the `media` row, not in the kit's JSON —
+		// a description belongs to the photograph — but they save with the kit.
+		photos: jsonArrayField(
+			z.object({
+				attachmentId: z.string().min(1),
+				altText: z.string().max(300),
+				caption: z.string().max(300)
+			}),
+			'Invalid photo details'
+		).optional()
 	}),
 	async (data) => {
 		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
@@ -177,50 +186,7 @@ export const saveBandEpk = form(
 		// both, and `epk` is the free half of that row. What premium adds is
 		// presentation and volume (video, an unbounded gallery, a themed page on
 		// their own domain), never the information a venue needs to book them.
-		//
-		// `getOrCreateBandSiteId` rather than a bare `UPDATE … WHERE group_id`:
-		// against a band whose row is somehow missing, the update matches nothing,
-		// writes nothing, and still returns success — the band would be told its
-		// press kit was saved when it was not.
-		const siteId = await getOrCreateBandSiteId(band.id);
-
-		await db
-			.update(bandSite)
-			.set({ epk: data.epk, updatedAt: new Date() })
-			.where(eq(bandSite.id, siteId));
-
-		void getPressKitEditor(data.slug).refresh();
-
-		return { success: true };
-	}
-);
-
-/**
- * Alt text and captions belong to the `media` row, not to the press kit JSON,
- * so they save separately from the form above — a photo's description is a
- * property of the object, and the same object may be attached twice.
- */
-export const savePhotoDetails = form(
-	z.object({
-		slug: z.string().min(1),
-		attachmentId: z.string().min(1),
-		altText: z.string().max(300).optional().default(''),
-		caption: z.string().max(300).optional().default('')
-	}),
-	async (data) => {
-		const { group: band } = await requireGroupRole({ slug: data.slug }, 'admin');
-
-		const [row] = await listMediaFor('group', band.id, ['gallery', 'stage_plot', 'rider']).then(
-			(all) => all.filter((m) => m.attachmentId === data.attachmentId)
-		);
-		// Scoped through the band's own list, so an attachment id belonging to
-		// another group cannot be relabelled by passing it here.
-		if (!row) throw error(404, 'Photo not found');
-
-		await setDescription(row.mediaId, {
-			altText: data.altText || null,
-			caption: data.caption || null
-		});
+		await savePressKit(band.id, data.epk, data.photos ?? []);
 
 		void getPressKitEditor(data.slug).refresh();
 

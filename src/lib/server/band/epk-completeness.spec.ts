@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { epkProgress, epkSections, type EpkCompletenessInput } from './epk-completeness';
 
 /**
@@ -170,5 +172,33 @@ describe('epkProgress', () => {
 		const p = epkProgress(COMPLETE);
 		expect(p.done).toBe(p.total);
 		expect(p.next).toBeNull();
+	});
+});
+
+describe('checklist links', () => {
+	// Every rung opens at its field (#3130). An anchor with no element behind it
+	// lands at the top of the page and says nothing, so each is checked against
+	// the markup of the route it points at.
+	const markupOf = (route: string) => {
+		const dir = join('src/routes', route);
+		return readdirSync(dir)
+			.filter((f) => f.endsWith('.svelte'))
+			.map((f) => readFileSync(join(dir, f), 'utf8'))
+			.join('\n');
+	};
+
+	it.each(
+		epkSections({ ...EMPTY, tier: 'premium' })
+			.filter((s) => s.anchor)
+			.map((s) => [s.key, s.route, s.anchor!] as const)
+	)('the %s rung opens at an element on its page', (_key, route, anchor) => {
+		expect(markupOf(route)).toContain(`id="${anchor}"`);
+	});
+
+	it('gives every rung on the profile or press kit an anchor', () => {
+		const onAFormPage = epkSections({ ...EMPTY, tier: 'premium' }).filter(
+			(s) => s.route === '/band/[slug]/edit' || s.route === '/band/[slug]/press-kit'
+		);
+		expect(onAFormPage.filter((s) => !s.anchor).map((s) => s.key)).toEqual([]);
 	});
 });
