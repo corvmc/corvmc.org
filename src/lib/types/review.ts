@@ -30,7 +30,7 @@ export function isReviewKind(value: unknown): value is ReviewKind {
 
 /**
  * `return` is the kind's own word where the record goes back to be edited and
- * resubmitted (#2892, `retiredTerms` in config.ts); `decline` is final.
+ * resubmitted (#2892); `decline` is final.
  */
 export type ReviewDecision = 'approve' | 'decline' | 'return';
 

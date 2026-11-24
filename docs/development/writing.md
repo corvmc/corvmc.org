@@ -54,12 +54,7 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
   to sentence case too: a string with no sentence in it (six words or fewer, no end mark) like a
   title, and prose to no Title Case run ("Use Message a Member"), so one capitalised button name
   ("Use Edit") still passes. Outside the catalog, `scripts/label-literal-case.spec.ts` checks
-  `label` literals and every `*Labels` / `*_LABELS` map in source. T9's retired words are listed in `retiredTerms` in
-  `src/lib/config.ts`: instructor (teacher), work order (task), free hours (credits),
-  certification (clearance), turned down (decline), signing up for a task (shift), and, under
-  their own keys, session for a reservation, listing for an event, and reject or unpublish for a
-  returned tip or teaching application. The same spec fails a catalog string that uses one, and
-  `audit-display.spec.ts` holds the audit log to the list. A proper noun that keeps its capitals goes in
+  `label` literals and every `*Labels` / `*_LABELS` map in source. A proper noun that keeps its capitals goes in
   `PROPER_NOUNS` in `scripts/lib/message-copy.ts`. L1's
   "someone/something" half is lint: `custom/definite-action-labels`.
 - **Judgement checks** — T1, T2, T3, T8, T9 — are for review. When writing or reviewing a page,
@@ -68,7 +63,7 @@ Buttons, actions and form fields. T1, T4, T7 and T9 apply, plus:
 
 ## Settled terms
 
-Beyond `retiredTerms`, one word per concept (#2511, #2518, #3225):
+One word per concept (#2511, #2518, #3225):
 
 - **Program** is everything CMC runs; **group** is the clubs and committees.
 - **Invite** when the person must accept to join; **Add** when the leader alone puts them on.
