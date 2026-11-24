@@ -4,6 +4,7 @@
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withHash } from '#lib/utils/with-query.js';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -60,7 +61,6 @@
 	let directoryVisibility = $state<string>(initial?.directoryVisibility ?? 'public');
 
 	const contact = (initial?.directoryContact as DirectoryContact | null) ?? {};
-	const bookingHref = $derived(`${resolve('/band/[slug]/press-kit', { slug: band.slug })}#booking`);
 
 	// Avatar uploads instantly through the band-avatar API route, which persists
 	// the new key and returns it (the value is also submitted with the form).
@@ -260,7 +260,10 @@
 					{:else}
 						{m.band_slug_edit_band_profile_form_enquiries_go_to_roster_text()}
 					{/if}
-					<a href={bookingHref} class="link">
+					<a
+						href={withHash(resolve('/band/[slug]/press-kit', { slug: band.slug }), 'booking')}
+						class="link"
+					>
 						{m.band_slug_edit_band_profile_form_change_booking_contact_text()}
 					</a>
 				</p>
