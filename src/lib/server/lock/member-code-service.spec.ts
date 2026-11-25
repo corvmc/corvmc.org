@@ -261,9 +261,9 @@ describe('reconcileMemberCodeSync', () => {
 			id,
 			syncStatus: id === 2 ? 0 : 1
 		}));
-		const errors: string[] = [];
+		const warnings: string[] = [];
 
-		expect(await reconcileMemberCodeSync(errors)).toBe(1);
+		expect(await reconcileMemberCodeSync(warnings)).toBe(1);
 
 		expect(mockGetLockUser.mock.calls.map((c) => c[0]).sort()).toEqual([1, 2]);
 		expect(codes().map((c) => [c.id, c.synced_at])).toEqual([
@@ -272,22 +272,22 @@ describe('reconcileMemberCodeSync', () => {
 			['mc-already', T0 - 100],
 			['mc-revoked', null]
 		]);
-		expect(errors).toEqual([]);
+		expect(warnings).toEqual([]);
 	});
 
-	it('records a lock failure and carries on with the next code', async () => {
+	it('records a failed read and carries on with the next code', async () => {
 		memberCode('mc-1', { lockAccessId: '1' });
 		memberCode('mc-2', { lockAccessId: '2' });
 		mockGetLockUser.mockImplementation(async (id: number) => {
 			if (id === 1) throw new Error('lock offline');
 			return { id, syncStatus: 1 };
 		});
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		const errors: string[] = [];
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const warnings: string[] = [];
 
-		expect(await reconcileMemberCodeSync(errors)).toBe(1);
+		expect(await reconcileMemberCodeSync(warnings)).toBe(1);
 
-		expect(errors).toEqual([expect.stringContaining('mc-1')]);
+		expect(warnings).toEqual([expect.stringContaining('mc-1')]);
 		expect(codes().map((c) => [c.id, c.synced_at])).toEqual([
 			['mc-1', null],
 			['mc-2', T0]
