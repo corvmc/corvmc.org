@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { untrack } from 'svelte';
+	import { focusHashOnNavigation } from '#lib/utils/focus-hash.js';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -16,6 +17,8 @@
 	import type { getBandLayout } from '#lib/remote/layout.remote.js';
 	import type { FullPressKit } from '#lib/types/band-page.js';
 	import type { ComponentProps } from 'svelte';
+
+	focusHashOnNavigation();
 
 	let {
 		band,
