@@ -155,8 +155,9 @@ describe('Production tab', () => {
 		fixture.loaded = loaded(null);
 		await render(ProductionTab, props);
 
-		// The record's empty state opens it; settlement repeats the offer below.
+		// One offer only: a remote form object attaches to a single <form>.
 		await expect.element(page.getByCss('button[type="submit"]').first()).toBeVisible();
+		await expect.element(page.getByTestId('settlement')).not.toBeInTheDocument();
 	});
 
 	it('lists what the bill asks for against stock, flagging the unmatched and the short', async () => {
@@ -240,14 +241,6 @@ describe('Production tab', () => {
 			netCents: 0
 		});
 		const panel = () => page.getByTestId('settlement');
-
-		// It pointed at the event page; the button is here (#2802).
-		it('opens a production from its own empty state', async () => {
-			fixture.loaded = loaded(null);
-			await render(ProductionTab, props);
-
-			await expect.element(panel().getByCss('button[type="submit"]')).toBeVisible();
-		});
 
 		// Warn, never refuse: the typed count is read against the check-ins (#2801).
 		it('warns when the headcount differs from check-ins, and only then', async () => {

@@ -423,7 +423,12 @@
 	{#if budget}
 		<ShowBudgetCard projectId={budget.projectId} burn={budget.burn} />
 	{/if}
-	<section class="flex flex-col gap-6" data-testid="settlement">
-		<SettlementPanel {settlement} eventId={evt.id} />
-	</section>
+	<!-- Its empty state is a second createProduction form, and a form object
+	     attaches to one <form> (remote_form_multiple_elements); the record's
+	     own empty state above is the one offer. -->
+	{#if settlement}
+		<section class="flex flex-col gap-6" data-testid="settlement">
+			<SettlementPanel {settlement} eventId={evt.id} />
+		</section>
+	{/if}
 </div>
