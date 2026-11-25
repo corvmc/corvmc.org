@@ -3717,6 +3717,7 @@
 	"staff_events_id_tab_listing_label": "Event",
 	"staff_events_id_more_label": "More event actions",
 	"staff_events_id_share_label": "Share",
+	"staff_events_id_settle_event_label": "Settle event",
 	"staff_events_id_possible_duplicate_text": "Possible duplicate. These events start within two hours of this one:",
 	"staff_events_id_crew_title": "Crew",
 	"staff_events_id_crew_filled_label": "{filled} of {places}",

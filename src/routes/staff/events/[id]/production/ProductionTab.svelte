@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { page } from '$app/state';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -51,6 +52,13 @@
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
 	const evt = $derived(loaded.detail.event);
+
+	// The section renders after the query, past the browser's own hash scroll.
+	$effect(() => {
+		if (settlement && page.url.hash === '#settlement') {
+			document.getElementById('settlement')?.scrollIntoView();
+		}
+	});
 
 	// ── Production form state ─────────────────────────────────────────────
 	const productionFields = updateProduction.fields;
@@ -427,7 +435,7 @@
 	     attaches to one <form> (remote_form_multiple_elements); the record's
 	     own empty state above is the one offer. -->
 	{#if settlement}
-		<section class="flex flex-col gap-6" data-testid="settlement">
+		<section id="settlement" class="flex flex-col gap-6" data-testid="settlement">
 			<SettlementPanel {settlement} eventId={evt.id} />
 		</section>
 	{/if}

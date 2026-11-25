@@ -32,3 +32,16 @@ export function parseEventTab(raw: string | null, evt: TabbedEvent): EventTab {
 export function eventTabHref(id: string, tab: EventTab): ResolvedPathname {
 	return withQuery(`/staff/events/${id}`, tab === 'listing' ? '' : `tab=${tab}`);
 }
+
+/**
+ * From a CMC show's start time the header's main button is Settle event, in
+ * place of Publish, until the settle dialog exists (#3273).
+ */
+export function showsSettle(evt: { source: string; status: string; startsAt: Date }, now: Date) {
+	return evt.source === 'cmc' && evt.status !== 'cancelled' && evt.startsAt <= now;
+}
+
+/** The Production tab, scrolled to its settlement section. */
+export function settlementHref(id: string): ResolvedPathname {
+	return `${eventTabHref(id, 'production')}#settlement` as ResolvedPathname;
+}

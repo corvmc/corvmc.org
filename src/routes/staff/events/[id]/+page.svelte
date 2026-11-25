@@ -46,7 +46,14 @@
 	import EventSidebar from './EventSidebar.svelte';
 	import ProductionTab from './production/ProductionTab.svelte';
 	import VendorsTab from './VendorsTab.svelte';
-	import { eventTabHref, eventTabs, parseEventTab, type EventTab } from './tabs';
+	import {
+		eventTabHref,
+		eventTabs,
+		parseEventTab,
+		settlementHref,
+		showsSettle,
+		type EventTab
+	} from './tabs';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { formatDateShort, formatTime, fullDate } from '#lib/utils/format.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
@@ -158,7 +165,11 @@
 	{/if}
 
 	{#snippet primary()}
-		{#if evt.status === 'draft' && data.canPublish}
+		{#if showsSettle(evt, new Date())}
+			<Button variant="primary" href={settlementHref(evt.id)} data-testid="settle-event">
+				{m.staff_events_id_settle_event_label()}
+			</Button>
+		{:else if evt.status === 'draft' && data.canPublish}
 			<PublishEventAction eventId={evt.id} />
 		{:else if evt.status === 'pending_review'}
 			<!-- Approve, not Publish: approving also clears the last turn-down note
