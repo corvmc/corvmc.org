@@ -31,6 +31,8 @@ export const KIND_CATEGORY_HINTS: Record<RiderElementKind, readonly string[]> = 
 	bass_rig: ['bass', 'amp'],
 	guitar_amp: ['amp', 'guitar amp'],
 	keys: ['key', 'piano', 'synth'],
+	horns: ['mic', 'horn', 'clip'],
+	strings: ['di', 'mic', 'string'],
 	playback: ['playback', 'interface', 'di'],
 	vocals: ['mic', 'vocal'],
 	monitor: ['monitor', 'wedge', 'speaker'],

@@ -9,6 +9,7 @@ import {
 	RIDER_ITEM_NOTES_MAX,
 	RIDER_MAX_ELEMENTS,
 	RIDER_MAX_INPUTS_PER_ELEMENT,
+	RIDER_MAX_OUTLETS,
 	RIDER_MIC_PREF_MAX
 } from '#lib/config.js';
 
@@ -25,6 +26,7 @@ import {
 export const riderInputDraftSchema = z.object({
 	label: z.string().trim().min(1, 'Every input needs a name').max(RIDER_INPUT_LABEL_MAX),
 	source: z.enum(riderInputSources),
+	providedBy: z.enum(riderProvidedBy).optional(),
 	micPref: z.string().trim().max(RIDER_MIC_PREF_MAX).optional(),
 	phantom: z.boolean().optional(),
 	stand: z.enum(riderStandTypes).optional(),
@@ -36,6 +38,7 @@ export const riderElementDraftSchema = z.object({
 	kind: z.enum(riderElementKinds),
 	label: z.string().trim().min(1, 'Every item needs a name').max(RIDER_ELEMENT_LABEL_MAX),
 	providedBy: z.enum(riderProvidedBy).optional(),
+	outlets: z.number().int().min(0).max(RIDER_MAX_OUTLETS).optional(),
 	notes: z.string().trim().max(RIDER_ITEM_NOTES_MAX).optional(),
 	inputs: z
 		.array(riderInputDraftSchema)

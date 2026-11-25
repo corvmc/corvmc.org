@@ -152,6 +152,7 @@ export async function getBillInputList(
 					kind: riderElement.kind,
 					label: riderElement.label,
 					providedBy: riderElement.providedBy,
+					outlets: riderElement.outlets,
 					notes: riderElement.notes,
 					sortOrder: riderElement.sortOrder
 				})
@@ -187,6 +188,7 @@ export async function getBillInputList(
 			channel: 0,
 			label: row.label,
 			source: row.source,
+			providedBy: row.providedBy,
 			micPref: row.micPref,
 			phantom: row.phantom,
 			stand: row.stand,

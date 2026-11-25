@@ -95,14 +95,17 @@ const CORNERS = [
 	{
 		label: 'Bass rig',
 		kind: 'bass_rig' as const,
+		outlets: 1,
 		inputs: [
-			{ label: 'Bass DI', source: 'di' as const, phantom: true },
+			// The one channel the player brings, so "Bringing it" shows both answers.
+			{ label: 'Bass DI', source: 'di' as const, phantom: true, providedBy: 'band' as const },
 			{ label: 'Bass cab', source: 'mic' as const, stand: 'short_boom' as const }
 		]
 	},
 	{
 		label: 'Fender Twin',
 		kind: 'guitar_amp' as const,
+		outlets: 2,
 		inputs: [
 			{
 				label: 'Gtr 1',
@@ -120,6 +123,7 @@ const CORNERS = [
 	{
 		label: 'Rhodes',
 		kind: 'keys' as const,
+		outlets: 1,
 		inputs: [
 			{ label: 'Keys L', source: 'di' as const, phantom: true },
 			{ label: 'Keys R', source: 'di' as const, phantom: true }
@@ -299,6 +303,7 @@ export async function seedRiders(roles: SeedRole[]) {
 			kind: corner.kind,
 			label: corner.label,
 			providedBy: 'band',
+			outlets: 'outlets' in corner ? corner.outlets : 0,
 			sortOrder: 0,
 			x: spot.x,
 			y: spot.y
@@ -308,6 +313,7 @@ export async function seedRiders(roles: SeedRole[]) {
 				elementId,
 				label: input.label,
 				source: input.source,
+				providedBy: 'providedBy' in input ? input.providedBy : 'venue',
 				micPref: 'micPref' in input ? input.micPref : null,
 				phantom: 'phantom' in input ? !!input.phantom : false,
 				stand: 'stand' in input ? input.stand : 'none',
@@ -345,6 +351,7 @@ export async function seedRiders(roles: SeedRole[]) {
 		kind: 'playback',
 		label: 'Playback laptop',
 		providedBy: 'band',
+		outlets: 1,
 		notes: 'Runs the intro tape and two backing tracks.',
 		sortOrder: 0,
 		// Left unplaced on purpose: the plot's tray of "not on the stage yet" is a
@@ -403,6 +410,8 @@ export async function seedRiders(roles: SeedRole[]) {
 		{ kind: 'guitar_amp', label: 'Guitar SR', inputs: ['Gtr 1'] },
 		{ kind: 'guitar_amp', label: 'Guitar SL', inputs: ['Gtr 2'] },
 		{ kind: 'keys', label: 'Nord', inputs: ['Keys L', 'Keys R'] },
+		{ kind: 'horns', label: 'Horn section', inputs: ['Tenor sax', 'Trumpet'] },
+		{ kind: 'strings', label: 'Fiddle', inputs: ['Fiddle pickup'] },
 		{ kind: 'vocals', label: 'Lead vocal', inputs: ['Lead vox'] },
 		{ kind: 'vocals', label: 'Vocal SR', inputs: ['BV 1'] },
 		{ kind: 'vocals', label: 'Vocal SL', inputs: ['BV 2'] },
@@ -446,7 +455,15 @@ export async function seedRiders(roles: SeedRole[]) {
 			sortOrder: i
 		});
 		entry.inputs.forEach((label, j) => {
-			bigInputs.push({ elementId: id, label, source: 'mic', sortOrder: j });
+			// The fiddle's pickup is the player's own; every other channel is the house's.
+			const own = entry.kind === 'strings';
+			bigInputs.push({
+				elementId: id,
+				label,
+				source: own ? 'di' : 'mic',
+				providedBy: own ? 'band' : 'venue',
+				sortOrder: j
+			});
 		});
 	});
 
