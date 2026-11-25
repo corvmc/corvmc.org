@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventTabHref, eventTabs, parseEventTab } from './tabs';
+import { eventTabHref, eventTabs, parseEventTab, settlementHref, showsSettle } from './tabs';
 
 describe('eventTabs', () => {
 	it.each([
@@ -34,5 +34,25 @@ describe('parseEventTab', () => {
 				tab
 			);
 		}
+	});
+});
+
+describe('showsSettle', () => {
+	const now = new Date('2026-12-01T20:00:00Z');
+	const show = { source: 'cmc', status: 'published', startsAt: new Date('2026-12-01T19:00:00Z') };
+
+	it("is on from a CMC show's start time", () => {
+		expect(showsSettle(show, now)).toBe(true);
+		expect(showsSettle({ ...show, startsAt: now }, now)).toBe(true);
+	});
+
+	it('is off before the start, for a cancelled show, and for other sources', () => {
+		expect(showsSettle({ ...show, startsAt: new Date('2026-12-01T21:00:00Z') }, now)).toBe(false);
+		expect(showsSettle({ ...show, status: 'cancelled' }, now)).toBe(false);
+		expect(showsSettle({ ...show, source: 'band' }, now)).toBe(false);
+	});
+
+	it('links to the settlement section of the Production tab', () => {
+		expect(settlementHref('e1')).toBe('/staff/events/e1?tab=production#settlement');
 	});
 });
