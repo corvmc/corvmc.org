@@ -186,7 +186,8 @@
 									<span class="fieldset-legend">{m.staff_resolution_label()}</span>
 									<Select
 										class="w-full"
-										{...fields.resolution.as('select')}
+										name={fields.resolution.as('select').name}
+										aria-invalid={fields.resolution.as('select')['aria-invalid']}
 										bind:value={resolution}
 									>
 										<option value="" disabled>{m.staff_flags_id_choose_outcome_label()}</option>

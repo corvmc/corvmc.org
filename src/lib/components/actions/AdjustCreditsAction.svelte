@@ -57,7 +57,12 @@
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
 			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type_label()}>
-				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
+				<Select
+					class="w-full"
+					name={fields.creditType.as('select').name}
+					aria-invalid={fields.creditType.as('select')['aria-invalid']}
+					bind:value={creditType}
+				>
 					<option value="free_hours">{m.actions_adjust_credits_free_hours_label()}</option>
 					<option value="equipment_credits"
 						>{m.actions_adjust_credits_equipment_credits_label()}</option
