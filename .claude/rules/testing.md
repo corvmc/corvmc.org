@@ -32,7 +32,10 @@ at the class level; a point test is the fallback when no class guard fits.
 Pick the level by what the test proves, cheapest first: **types** → **lint rule** → **invariant
 spec** (walk a list the code already has: "every X has Y") → **real SQLite** (`migratedSqlite()`)
 → **remote spec** → **component spec** (what a user sees or decides) → **E2E** (journeys across
-systems). Worked examples and the rest of the policy:
+systems). A test also survives a layout change that keeps the behaviour: no assertion
+scoped to a card, tab or position
+([conventions.md#do-not-assert-on-layout](../../docs/development/conventions.md#do-not-assert-on-layout)).
+Worked examples and the rest of the policy:
 [conventions.md#tests-catch-classes](../../docs/development/conventions.md#tests-catch-classes).
 
 ## Suites
