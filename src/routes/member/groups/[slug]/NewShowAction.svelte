@@ -22,7 +22,8 @@
 	size="sm"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`staff/events/${eventId}/production`));
+		// A new show lands on its Listing tab, like every new event (#3270).
+		if (eventId) goto(resolve(`staff/events/${eventId}`));
 	}}
 >
 	{#snippet form()}

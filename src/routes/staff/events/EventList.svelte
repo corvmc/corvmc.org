@@ -8,6 +8,7 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { urlState, positiveInt, oneOf, text } from '#lib/urlState.svelte.js';
 	import { eventSources, listDateRanges, type EventSource } from '#lib/config.js';
 	import ListFilters from '#lib/components/ui/ListFilters.svelte';
@@ -157,7 +158,10 @@
 					<!-- A listing with a production links to it (#3112). -->
 					<td class="col-support whitespace-nowrap">
 						{#if e.productionStatus}
-							<a href={resolve(`staff/events/${e.id}/production`)} data-testid="production-link">
+							<a
+								href={withQuery(resolve(`staff/events/${e.id}`), 'tab=production')}
+								data-testid="production-link"
+							>
 								<StatusBadge status={e.productionStatus} label />
 							</a>
 						{/if}

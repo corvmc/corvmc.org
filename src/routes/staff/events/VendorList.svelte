@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import DataList from '#lib/components/ui/DataList.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import FilterBar from '#lib/components/ui/FilterBar.svelte';
@@ -63,7 +64,7 @@
 				<th class="col-extra">{m.staff_events_vendors_applied_label()}</th>
 			{/snippet}
 			{#each rows as v (v.id)}
-				{@const href = resolve('/staff/events/[id]/vendors', { id: v.eventId })}
+				{@const href = withQuery(resolve('/staff/events/[id]', { id: v.eventId }), 'tab=vendors')}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={v.status} /></td>
 					<td class="cell-primary">

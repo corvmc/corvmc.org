@@ -7,7 +7,7 @@ import {
 	campaignSend,
 	subscriber
 } from '#lib/server/db/schema/marketing.js';
-import { eq, and, sql, isNull, lte, inArray, desc } from 'drizzle-orm';
+import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
 import {
 	isSystemAudienceKey,
 	resolveSystemAudienceRecipients,
@@ -278,25 +278,6 @@ export async function listCampaigns(statusFilter?: CampaignStatus) {
 	}
 
 	return result;
-}
-
-/** The campaigns about one show, newest first, for its event page (#2776). */
-export async function listCampaignsForEvent(eventId: string) {
-	const rows = await db
-		.select({
-			id: campaign.id,
-			subject: campaign.subject,
-			scheduledFor: campaign.scheduledFor,
-			sentAt: campaign.sentAt,
-			recipientCount: campaign.recipientCount,
-			createdAt: campaign.createdAt
-		})
-		.from(campaign)
-		.where(eq(campaign.eventId, eventId))
-		.orderBy(
-			desc(sql`coalesce(${campaign.sentAt}, ${campaign.scheduledFor}, ${campaign.createdAt})`)
-		);
-	return rows.map((r) => ({ ...r, status: deriveCampaignStatus(r.scheduledFor, r.sentAt) }));
 }
 
 // ---------------------------------------------------------------------------

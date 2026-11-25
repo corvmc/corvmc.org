@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { load as events } from './+page';
 import { load as taskProductions } from '../tasks/productions/+page';
 import { load as venues } from '../venues/+page';
+import { load as production } from './[id]/production/+page';
+import { load as vendors } from './[id]/vendors/+page';
 import { eventView, eventViewPath } from './views';
 
 /**
@@ -10,8 +12,8 @@ import { eventView, eventViewPath } from './views';
  * redirect into it carries `via`.
  */
 // The build wraps each load for Sentry, which reads the URL and route.
-const at = (path: string) =>
-	({ url: new URL(`https://corvmc.test${path}`), params: {}, route: { id: path } }) as never;
+const at = (path: string, params: Record<string, string> = {}) =>
+	({ url: new URL(`https://corvmc.test${path}`), params, route: { id: path } }) as never;
 
 describe('old event URLs', () => {
 	it.each([
@@ -25,11 +27,14 @@ describe('old event URLs', () => {
 			taskProductions,
 			'/staff/productions?via=%2Fstaff%2Ftasks%2Fproductions'
 		],
-		['/staff/venues?archived=1', venues, '/staff/events?view=venues&archived=1']
+		['/staff/venues?archived=1', venues, '/staff/events?view=venues&archived=1'],
+		// The console and the vendors page are tabs of the event page (#3270).
+		['/staff/events/e1/production?tab=advance', production, '/staff/events/e1?tab=production'],
+		['/staff/events/e1/vendors', vendors, '/staff/events/e1?tab=vendors']
 	])('308s %s', async (path, load, location) => {
 		let thrown: unknown;
 		try {
-			await (load as (e: never) => unknown)(at(path));
+			await (load as (e: never) => unknown)(at(path, { id: 'e1' }));
 		} catch (err) {
 			thrown = err;
 		}

@@ -230,7 +230,10 @@ export const setShowLead = form(
 		);
 		try {
 			await setShowLeadService(data.id, data.leadUserId || null, user.id);
-			await getStaffEventProduction(data.eventId).refresh();
+			await Promise.all([
+				getStaffEventProduction(data.eventId).refresh(),
+				getStaffEventPage(data.eventId).refresh()
+			]);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

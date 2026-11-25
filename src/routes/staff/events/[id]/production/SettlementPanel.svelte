@@ -135,7 +135,8 @@
 					value={settlement.door?.cashCents ?? null}
 				/>
 				<FormField
-					{...recordDoorTake.fields.doorCount.as('number')}
+					field={recordDoorTake.fields.doorCount}
+					type="number"
 					label={m.staff_events_id_production_settlement_panel_through_door_label()}
 					description={m.staff_events_id_production_settlement_panel_through_door_body({
 						checkedIn: settlement.doorTakings.checkedIn,
@@ -147,7 +148,8 @@
 					min={0}
 				/>
 				<FormField
-					{...recordDoorTake.fields.splitActsPercent.as('number')}
+					field={recordDoorTake.fields.splitActsPercent}
+					type="number"
 					label={m.staff_events_id_production_settlement_panel_bands_share_label()}
 					description={m.staff_events_id_production_settlement_panel_blank_house_rule_body()}
 					value={settlement.door?.overridden ? settlement.door.actsPercent : undefined}

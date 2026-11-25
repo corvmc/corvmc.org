@@ -1,7 +1,6 @@
 import { m } from '#lib/paraglide/messages.js';
 import { formatCents } from '#lib/utils/format.js';
 import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
-import type { TabKey } from './tabs';
 
 /**
  * Each console section's state, and each tab's summary of its sections.
@@ -87,36 +86,4 @@ export function payoutsState(s: Settlement): string {
 			total: s.acts.length
 		});
 	return m.staff_production_state_settled_label();
-}
-
-function advanceBadge(loaded: Loaded): string | undefined {
-	const open = requestsOpen(loaded.artifactRequests);
-	if (open) return open;
-	const missing = loaded.riders.filter((r) => r.empty).length;
-	if (missing > 0) return m.staff_production_state_riders_missing_label({ count: missing });
-	if (loaded.artifactRequests.length > 0 || loaded.riders.length > 0)
-		return m.staff_production_state_all_in_label();
-	return undefined;
-}
-
-function settlementBadge(s: Settlement | null): string | undefined {
-	if (!s) return undefined;
-	if (s.unpaidActCount > 0)
-		return m.staff_production_state_bands_unpaid_label({ count: s.unpaidActCount });
-	if (!s.door) return m.staff_production_state_not_counted_label();
-	if (s.doorCounts?.check === 'mismatch') return m.staff_production_state_counts_differ_label();
-	if (s.doorCounts?.check === 'single') return m.staff_production_state_one_count_label();
-	return s.acts.length > 0 ? m.staff_production_state_settled_label() : undefined;
-}
-
-/** What a closed tab's headings say, worst first. Undefined when there is nothing to say. */
-export function tabBadges(loaded: Loaded): Record<TabKey, string | undefined> {
-	return {
-		overview: loaded.production
-			? deliverablesState(loaded.deliverables)
-			: m.staff_production_state_not_opened_label(),
-		advance: advanceBadge(loaded),
-		runOfShow: loaded.runOfShow ? runningOrderState(loaded.runOfShow) : undefined,
-		settlement: settlementBadge(loaded.settlement)
-	};
 }

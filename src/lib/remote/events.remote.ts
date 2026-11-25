@@ -41,6 +41,8 @@ import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
 import { getSettlement } from '#lib/server/production/settlement-service.js';
 import { getHostShift } from '#lib/server/production/host-service.js';
+import { eventCrew } from '#lib/server/task/event-crew.js';
+import { relatedTasks } from '#lib/server/task/related-tasks.js';
 import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
 import {
 	listRequests as listArtifactRequests,
@@ -1159,7 +1161,7 @@ function parseStaffLineupField(raw: string | undefined) {
  * landing point for an event from anywhere in the panel: a volunteer shift, a
  * reservation, a member's record, a notification. It carries the listing in
  * full (edit, poster, series, room hold) and the moderation actions; the
- * console at `[id]/production` is back-of-house, with its own query below.
+ * Production tab (`?tab=production`) is back-of-house, with its own query below.
  */
 export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
@@ -1182,6 +1184,32 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			can('event.publish')
 		]);
 
+	// The sidebar's Crew and Tasks boxes (#3270): a CMC show's own work, read
+	// here so the page keeps one query. Null to a reader without the board.
+	const isShow = detail.event.source === 'cmc';
+	const [crew, tasks, canSetLead, hostOpen] = isShow
+		? await Promise.all([
+				can('volunteer.read').then((ok) => (ok ? eventCrew(id) : null)),
+				can('project.read').then((ok) =>
+					ok
+						? relatedTasks({ type: 'event', id }).then((groups) =>
+								groups
+									.filter((g) => g.key === 'event')
+									.flatMap((g) => g.tasks)
+									.filter((t) => t.shifts === 0)
+									.toSorted(
+										(a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity)
+									)
+							)
+						: null
+				),
+				production?.projectId
+					? can('production.book', { projectId: production.projectId })
+					: Promise.resolve(false),
+				getHostShift(id).then((shift) => shift !== null)
+			])
+		: [null, null, false, false];
+
 	return {
 		detail,
 		canManage,
@@ -1189,6 +1217,13 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 		venues,
 		production,
 		recurringSeries,
+		sidebar: {
+			crew,
+			tasks,
+			canSetLead,
+			hostOpen,
+			projectId: production?.projectId ?? null
+		},
 		recap: {
 			photos,
 			closedReason: recapClosedReason(detail.event),

@@ -1,12 +1,11 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { TAB_KEYS, TAB_LABELS } from './tabs';
 import '#lib/test/locators.js';
 
 /**
- * The console is back-of-house only (#1950): every public-facing listing
- * feature lives on `/staff/events/[id]`, and this page links back to it.
+ * The Production tab (#3270): back-of-house only, stacked with no inner tabs.
+ * Every public-facing listing feature lives on the Listing tab.
  */
 
 const fixture = vi.hoisted(() => ({ loaded: null as unknown }));
@@ -98,7 +97,8 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-const Console = (await import('./+page.svelte')).default;
+const ProductionTab = (await import('./ProductionTab.svelte')).default;
+const props = { eventId: 'evt-1' };
 
 const startsAt = new Date('2031-05-10T03:00:00Z');
 
@@ -150,58 +150,14 @@ const record = {
 	actsWanted: null
 };
 
-describe('production console', () => {
-	it('links back to the listing and renders none of its sections', async () => {
-		fixture.loaded = loaded(record);
-		await render(Console);
-
-		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
-		// The header's one action is the way back to the listing; the listing's
-		// own Edit and Repeat actions are not carried over.
-		const header = page.getByCss('[data-page-header]');
-		await expect.element(header.getByCss('a.btn[href="/staff/events/evt-1"]')).toBeVisible();
-		expect(header.element().querySelectorAll('.btn')).toHaveLength(1);
-
-		for (const name of ['The night', 'Poster', 'Ticketing']) {
-			await expect
-				.element(page.getByRole('heading', { name, exact: true }))
-				.not.toBeInTheDocument();
-		}
-		expect(document.querySelector('[data-testid="space-hold"]')).toBeNull();
-		expect(document.querySelector('a[href="/staff/events/evt-1/check-in"]')).toBeNull();
-		// The console's tabs and nothing else: no listing tab such as Tickets.
-		expect(page.getByRole('tab').elements()).toHaveLength(TAB_KEYS.length);
-		await expect.element(page.getByRole('tab', { name: TAB_LABELS.settlement })).toBeVisible();
-	});
-
-	it('names the event lead beside the date, and offers the picker only to booking', async () => {
-		const lead = { type: 'member', id: 'u-9', name: 'Sam Lead' };
-		fixture.loaded = loaded({ ...record, producer: lead, producerUserId: 'u-9' });
-		await render(Console);
-
-		await expect.element(page.getByTestId('event-lead')).toBeVisible();
-		// Without production.book the lead is shown, not changeable.
-		const card = page.getByTestId('production-record');
-		await expect.element(card).toBeVisible();
-		expect(card.element().querySelector('input[name="leadUserId"]')).toBeNull();
-	});
-
-	it('lets booking name the event lead', async () => {
-		fixture.loaded = loaded(record, true);
-		await render(Console);
-
-		expect(page.getByTestId('event-lead').elements()).toHaveLength(0);
-		const card = page.getByTestId('production-record');
-		await expect.element(card).toBeVisible();
-		expect(card.element().querySelector('input[name="leadUserId"]')).not.toBeNull();
-	});
-
+describe('Production tab', () => {
 	it('opens a production from its empty state', async () => {
 		fixture.loaded = loaded(null);
-		await render(Console);
+		await render(ProductionTab, props);
 
-		// The empty state's one form is the one that opens the record.
-		await expect.element(page.getByCss('button[type="submit"]')).toBeVisible();
+		// One offer only: a remote form object attaches to a single <form>.
+		await expect.element(page.getByCss('button[type="submit"]').first()).toBeVisible();
+		await expect.element(page.getByTestId('settlement')).not.toBeInTheDocument();
 	});
 
 	it('lists what the bill asks for against stock, flagging the unmatched and the short', async () => {
@@ -239,8 +195,7 @@ describe('production console', () => {
 			riders: [act],
 			riderStock: { lines, unmatchedCount: 1, shortCount: 1, catalog: [] }
 		};
-		await render(Console);
-		await page.getByRole('tab', { name: TAB_LABELS.advance }).click();
+		await render(ProductionTab, props);
 
 		await expect.element(page.getByTestId('stock-line').first()).toBeVisible();
 		expect(page.getByTestId('stock-line').elements()).toHaveLength(3);
@@ -250,18 +205,7 @@ describe('production console', () => {
 		expect(linked.querySelector('.badge-warning, .badge-error')).toBeNull();
 	});
 
-	it('marks the tab and the section that need work, and no other', async () => {
-		fixture.loaded = loaded(null);
-		await render(Console);
-
-		// The unopened production states itself in its heading and on its tab.
-		await expect.element(page.getByCss('#tab-overview .badge')).toBeVisible();
-		await expect.element(page.getByCss('.card-title > span.text-muted')).toBeVisible();
-		for (const key of ['advance', 'runOfShow', 'settlement'])
-			expect(document.querySelector(`#tab-${key} .badge`)).toBeNull();
-	});
-
-	describe('settlement tab', () => {
+	describe('settlement', () => {
 		const night = (count: number | null, checkedIn: number, recordedCents = 100_00) => ({
 			productionId: 'prod-1',
 			eventId: 'evt-1',
@@ -296,28 +240,17 @@ describe('production console', () => {
 			unpaidActCount: 0,
 			netCents: 0
 		});
-		const panel = () => page.getByCss('[aria-labelledby="tab-settlement"]');
-
-		// It pointed at the event page; the button is here (#2802).
-		it('opens a production from its own empty state', async () => {
-			fixture.loaded = loaded(null);
-			await render(Console);
-			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
-
-			await expect.element(panel().getByCss('button[type="submit"]')).toBeVisible();
-		});
+		const panel = () => page.getByTestId('settlement');
 
 		// Warn, never refuse: the typed count is read against the check-ins (#2801).
 		it('warns when the headcount differs from check-ins, and only then', async () => {
 			fixture.loaded = { ...loaded(record), settlement: night(5, 3) };
-			const { unmount } = await render(Console);
-			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			const { unmount } = await render(ProductionTab, props);
 			await expect.element(panel().getByTestId('door-count-gap')).toBeVisible();
 			unmount();
 
 			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
-			await render(Console);
-			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await render(ProductionTab, props);
 			await expect.element(panel().getByCss('button[type="submit"]').first()).toBeVisible();
 			expect(document.querySelector('[data-testid="door-count-gap"]')).toBeNull();
 		});
@@ -325,14 +258,12 @@ describe('production console', () => {
 		// Counted cash is read against the cash sales the door recorded (#2800).
 		it('warns when the cash counted differs from cash sales recorded, and only then', async () => {
 			fixture.loaded = { ...loaded(record), settlement: night(3, 3, 90_00) };
-			const { unmount } = await render(Console);
-			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			const { unmount } = await render(ProductionTab, props);
 			await expect.element(panel().getByTestId('door-cash-gap')).toBeVisible();
 			unmount();
 
 			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
-			await render(Console);
-			await page.getByRole('tab', { name: TAB_LABELS.settlement }).click();
+			await render(ProductionTab, props);
 			await expect.element(panel().getByTestId('door-cash-recorded')).toBeVisible();
 			expect(document.querySelector('[data-testid="door-cash-gap"]')).toBeNull();
 		});

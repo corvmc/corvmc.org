@@ -15,7 +15,6 @@ import CandidateColumn from '#lib/components/volunteer/CandidateColumn.svelte';
 import AssigneeSelect from '#lib/components/inbox/AssigneeSelect.svelte';
 import ThreadTags from './staff/inbox/[id]/ThreadTags.svelte';
 import AssignControl from './staff/inbox/[id]/AssignControl.svelte';
-import EventCampaigns from './staff/events/[id]/EventCampaigns.svelte';
 import GrantCertificationAction from './staff/members/[id]/panels/GrantCertificationAction.svelte';
 import { session } from './staff/inbox/daily/session.svelte';
 
@@ -44,7 +43,6 @@ vi.mock('#lib/remote/member-related.remote.js', () => ({
 	getMemberRelatedShifts: refused,
 	getMemberRelatedTasks: refused
 }));
-vi.mock('#lib/remote/marketing.remote.js', () => ({ getEventCampaigns: refused }));
 vi.mock('#lib/remote/reports.remote.js', () => ({ getCommitteeNumbers: refused }));
 vi.mock('#lib/remote/instructors.remote.js', () => ({ getPublicInstructors: refused }));
 vi.mock('#lib/remote/duty-lists.remote.js', () => ({ getDutyLists: refused, createDutyList: {} }));
@@ -119,7 +117,6 @@ describe('a block whose query fails', () => {
 		['note assignee select', AssigneeSelect, { assignees: refused }],
 		['thread tags', ThreadTags, { threadId: 't' }],
 		['thread assignee', AssignControl, { action: {}, threadId: 't', assignedToUserId: null }],
-		['event campaigns', EventCampaigns, { eventId: 'e' }],
 		['grant clearance', GrantCertificationAction, { userId: 'u', onsuccess: () => {} }]
 	])('%s says so in place', async (_name, page, props) => {
 		const { container } = await mount(page, props);

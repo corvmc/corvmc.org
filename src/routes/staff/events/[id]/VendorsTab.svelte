@@ -2,8 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import VendorFee from '#lib/components/market/VendorFee.svelte';
-	import PageHeader from '#lib/components/ui/PageHeader.svelte';
-	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
@@ -36,13 +34,13 @@
 		withdrawVendorForm,
 		resendVendorDecisionForm
 	} from '#lib/remote/market.remote.js';
-	import { routeParams } from '#lib/route-params.svelte.js';
 	import { toastDelivery } from '#lib/utils/delivery-toast.js';
 
-	const params = routeParams('id');
+	let { eventId }: { eventId: string } = $props();
 
 	/**
-	 * A market day's vendor applications. docs/development/business-workflows.md §19.
+	 * A market day's vendor applications, the event page's Vendors tab (#3270).
+	 * docs/development/business-workflows.md §19.
 	 *
 	 * Accept and decline each send the vendor a message on their inbox thread,
 	 * which is why both modals ask for one: the decision and the telling are one
@@ -54,7 +52,6 @@
 	const withdrawFields = withdrawVendorForm.fields;
 	const resendFields = resendVendorDecisionForm.fields;
 
-	const eventId = $derived(params.id);
 	const data = $derived(await getStaffMarketVendors(eventId));
 
 	type Tab = 'all' | MarketVendorStatus;
@@ -117,51 +114,46 @@
 	/>
 {/snippet}
 
-<PageHeader
-	title={m.staff_events_id_vendors_vendors_title({ title: data.event.title })}
-	crumb="Vendors"
-	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
->
+<div class="flex flex-col gap-6">
 	{#if data.market}
-		<Button
-			href={resolve(`staff/events/${data.event.id}/vendors/check-in`)}
-			variant="ghost"
-			size="sm"
-		>
-			{m.staff_events_id_vendors_market_day_label()}
-		</Button>
-		<Action
-			action={openMarketDayForm}
-			label={m.staff_events_id_vendors_edit_setup_label()}
-			modalTitle={m.staff_events_id_vendors_market_setup_title()}
-			successToast={m.staff_saved_toast()}
-			variant="ghost"
-			size="sm"
-		>
-			{#snippet form()}
-				<input {...setupFields.eventId.as('hidden', data.event.id)} />
-				<FormField
-					field={setupFields.applicationsCloseAt}
-					type="datetime-local"
-					label={m.staff_events_id_vendors_applications_close_label()}
-					description={m.staff_events_id_vendors_leave_blank_take_applications_until_body()}
-					value={data.market?.applicationsCloseAt
-						? toLocalDateTime(data.market.applicationsCloseAt)
-						: undefined}
-				/>
-				<FormField
-					field={setupFields.tableCount}
-					type="number"
-					label={m.staff_events_id_vendors_tables_available_label()}
-					value={data.market?.tableCount ?? undefined}
-				/>
-				{@render feeFields(data.market)}
-			{/snippet}
-		</Action>
+		<div class="flex flex-wrap justify-end gap-2">
+			<Button
+				href={resolve(`staff/events/${data.event.id}/vendors/check-in`)}
+				variant="ghost"
+				size="sm"
+			>
+				{m.staff_events_id_vendors_market_day_label()}
+			</Button>
+			<Action
+				action={openMarketDayForm}
+				label={m.staff_events_id_vendors_edit_setup_label()}
+				modalTitle={m.staff_events_id_vendors_market_setup_title()}
+				successToast={m.staff_saved_toast()}
+				variant="ghost"
+				size="sm"
+			>
+				{#snippet form()}
+					<input {...setupFields.eventId.as('hidden', data.event.id)} />
+					<FormField
+						field={setupFields.applicationsCloseAt}
+						type="datetime-local"
+						label={m.staff_events_id_vendors_applications_close_label()}
+						description={m.staff_events_id_vendors_leave_blank_take_applications_until_body()}
+						value={data.market?.applicationsCloseAt
+							? toLocalDateTime(data.market.applicationsCloseAt)
+							: undefined}
+					/>
+					<FormField
+						field={setupFields.tableCount}
+						type="number"
+						label={m.staff_events_id_vendors_tables_available_label()}
+						value={data.market?.tableCount ?? undefined}
+					/>
+					{@render feeFields(data.market)}
+				{/snippet}
+			</Action>
+		</div>
 	{/if}
-</PageHeader>
-
-<PageContent>
 	{#if !data.market}
 		<Card>
 			<CardBody>
@@ -450,4 +442,4 @@
 			</Table>
 		{/if}
 	{/if}
-</PageContent>
+</div>

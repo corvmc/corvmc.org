@@ -29,6 +29,9 @@
 	} = $props();
 
 	const { fields } = adjustCredits;
+	// The select's own `bind:value` owns the value; spreading `.as()`'s `value`
+	// beside it throws on SSR (see field-as-spread.ssr.spec.ts).
+	const { value: _creditTypeValue, ...creditTypeAttrs } = $derived(fields.creditType.as('select'));
 
 	let creditType = $state<'free_hours' | 'equipment_credits'>('free_hours');
 	let amount = $state(0);
@@ -57,7 +60,7 @@
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
 			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type_label()}>
-				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
+				<Select class="w-full" {...creditTypeAttrs} bind:value={creditType}>
 					<option value="free_hours">{m.actions_adjust_credits_free_hours_label()}</option>
 					<option value="equipment_credits"
 						>{m.actions_adjust_credits_equipment_credits_label()}</option

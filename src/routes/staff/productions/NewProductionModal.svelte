@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
@@ -39,7 +40,7 @@
 	function handleSuccess() {
 		const id = eventId;
 		open = false;
-		if (id) goto(resolve(`staff/events/${id}/production`));
+		if (id) goto(withQuery(resolve(`staff/events/${id}`), 'tab=production'));
 	}
 </script>
 

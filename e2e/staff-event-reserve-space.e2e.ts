@@ -50,9 +50,8 @@ async function waitForEventPage(page: Page, title: string) {
 }
 
 /**
- * Creating a show lands on the listing with `?edit=1`, its edit form already
- * open. Reloaded without the query so every test opens Edit itself, from the
- * same closed state.
+ * Creating a show lands on its Listing tab (#3270). Reloaded so every test
+ * opens Edit itself, from the same closed state.
  */
 async function goToListing(page: Page, title: string) {
 	await waitForEventPage(page, title);

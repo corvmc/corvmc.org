@@ -9,7 +9,6 @@
 	 * cancels only itself.
 	 */
 	import type { Snippet } from 'svelte';
-	import { untrack } from 'svelte';
 	import { shiftLabel } from '#lib/utils/shift-label.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import type { Crumb } from '#lib/components/ui/breadcrumbs.js';
@@ -18,25 +17,23 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import ShiftRoleFields from './ShiftRoleFields.svelte';
 	import ShiftChecklist from './ShiftChecklist.svelte';
 	import ShiftCard from './ShiftCard.svelte';
 	import OpenShiftAction from './OpenShiftAction.svelte';
-	import CandidateColumn from './CandidateColumn.svelte';
+	import TaskStaffing from './TaskStaffing.svelte';
 	import WorkOrderHours from './WorkOrderHours.svelte';
 	import WorkOrderReports from './WorkOrderReports.svelte';
 	import TaskDependencies from './TaskDependencies.svelte';
 	import EngagementCard from '#lib/components/contractor/EngagementCard.svelte';
 	import { formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { IconPencil, IconUserMinus } from '@tabler/icons-svelte';
+	import { IconPencil } from '@tabler/icons-svelte';
 	import {
 		cancelTask,
 		resolveWorkOrder,
-		unassignFromTask,
 		updateTask,
 		type getTaskPage
 	} from '#lib/remote/volunteer.remote.js';
@@ -70,14 +67,6 @@
 	const open = $derived(!task.cancelledAt && !task.resolvedAt);
 	const openBlockers = $derived(view.dependencies.waitsOn.filter((t) => t.open).length);
 	const editForm = $derived(updateTask.for(task.id));
-	const liveShifts = $derived(
-		view.shifts.filter((s) => !s.cancelledAt && s.endsAt.getTime() > Date.now())
-	);
-
-	// Who "Who to ask" adds people to: a shift still to come, or the task itself.
-	// Seeded with the next shift and kept by id, so a refresh does not reset it.
-	let target = $state<string>(untrack(() => liveShifts[0]?.id ?? ''));
-	const targetShift = $derived(liveShifts.find((s) => s.id === target) ?? null);
 </script>
 
 <PageHeader title={label} {subtitle} {parent}>
@@ -185,43 +174,6 @@
 		<div class="flex flex-col gap-6">
 			{@render access?.()}
 
-			{#if view.assignees.length > 0}
-				<InfoCard
-					title={m.volunteer_work_order_view_assignees_title()}
-					state={view.assignees.length}
-					testid="assignees"
-				>
-					<ul class="flex flex-col gap-2">
-						{#each view.assignees as a (a.userId)}
-							{@const drop = unassignFromTask.for(`${task.id}:${a.userId}`)}
-							<li class="flex flex-wrap items-center justify-between gap-2">
-								<EntityIdentity ref={a.member} />
-								{#if open && !a.completedAt}
-									<Action
-										action={drop}
-										label={m.volunteer_work_order_view_unassign_label()}
-										iconOnly
-										icon={unassignIcon}
-										variant="ghost"
-										size="sm"
-										modalTitle={m.volunteer_work_order_view_unassign_title({
-											title: a.member.title
-										})}
-										submitLabel={m.volunteer_work_order_view_unassign_label()}
-										successToast={m.volunteer_work_order_view_unassigned_toast()}
-									>
-										{#snippet form()}
-											<input {...drop.fields.workOrderId.as('hidden', task.id)} />
-											<input {...drop.fields.userId.as('hidden', a.userId)} />
-										{/snippet}
-									</Action>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</InfoCard>
-			{/if}
-
 			<TaskDependencies
 				taskId={task.id}
 				waitsOn={view.dependencies.waitsOn}
@@ -318,16 +270,9 @@
 			</InfoCard>
 		</div>
 
-		<!-- Nobody can be put on work with no role, so there is nobody to suggest. -->
-		{#if open && task.roleName !== null}
-			<CandidateColumn
-				workOrderId={task.id}
-				shifts={liveShifts}
-				bind:target
-				shiftId={targetShift?.id ?? null}
-				startsAt={targetShift?.startsAt ?? null}
-			/>
-		{/if}
+		<div class="flex flex-col gap-6">
+			<TaskStaffing {task} assignees={view.assignees} shifts={view.shifts} />
+		</div>
 	</div>
 
 	{#if view.hours.length > 0}
@@ -367,7 +312,3 @@
 
 	{@render activity?.()}
 </PageContent>
-
-{#snippet unassignIcon()}
-	<IconUserMinus size={16} />
-{/snippet}

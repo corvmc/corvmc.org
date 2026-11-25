@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '#lib/utils/with-query.js';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
@@ -18,7 +17,7 @@
 	 * Only what the row cannot exist without (#1822's rule); the listing page
 	 * holds the rest, and no production is opened. `production` is "New
 	 * production" making its listing instead: it posts `createShow`, which fixes
-	 * the kind to a show, opens the production with it, and lands on the console.
+	 * the kind to a show, opens the production with it, and lands on Listing like any new event (#3270).
 	 */
 	let {
 		open = $bindable(false),
@@ -46,12 +45,8 @@
 		resetForm();
 		await refreshAll();
 		if (!result?.eventId) return;
-		if (production) {
-			goto(resolve(`staff/events/${result.eventId}/production`));
-		} else {
-			// `edit` opens the page's edit card, so the next field is one click closer.
-			goto(withQuery(resolve(`staff/events/${result.eventId}`), 'edit=1'));
-		}
+		// Every new event lands on its Listing tab (#3270), the page's default.
+		goto(resolve(`staff/events/${result.eventId}`));
 	}
 
 	function resetForm() {

@@ -673,7 +673,7 @@ through `contact-service.ts`. Staff can send a contact-sheet link (`issueContact
 `/act/[token]` for 30 days, with no session, and cannot change its name. The person it types is
 written by `writeActContactUnguarded()`: an email already on file updates that contact, and
 without an email the act's own earlier entry is updated. A show's contact is
-`production_slot.contact_id`, picked on the Run of show tab from that act's people
+`production_slot.contact_id`, picked in the Production tab's run of show from that act's people
 (`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
 The same page lists the act's own booked shows from `offered` on, upcoming and the last 90 days
 (`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
@@ -739,14 +739,15 @@ events use RSVP instead.
   default, so undated drafts stay listed). Each row opens its listing,
   or its project when it has none. Venues and every market's vendor applications are the
   Calendar's other views (#2766).
-- **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
-  every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
-  else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
-  to, so a staffer arriving from a shift, a reservation or a notification lands on the
-  least-privileged useful view. `/staff/events/[id]/production` is the console — the full edit
-  form, ticketing, the ticket ledger, poster upload, the room, volunteer shifts — and redirects
-  to the general view for a non-CMC row. Privilege is additive at the deeper address, which is
-  what makes it gateable later without re-pointing every inbound link.
+- **The detail view is one page with tabs (#3270).** `/staff/events/[id]` has a fixed header
+  (title, status, date line, "Posted by", the next step — Publish, or Approve / Turn down — plus
+  Share and a More menu), a sidebar on every tab (the poster; for a CMC show its Crew and open
+  Tasks) and tabs: **Listing**, **Production** (CMC shows), **Vendors** (markets) and
+  **History**. It opens on Listing, which is also where creating an event lands, and is the
+  address `entity-href` resolves every event ref to. `?tab=` addresses the others; a tab the
+  event does not have opens Listing. The old `/production` and `/vendors` addresses redirect to
+  their tabs. The two-hour window of what else is on (`listEventsNear`) is now a "Possible
+  duplicate" warning in a community listing's Approve dialog; approval is still allowed.
 - **Staff lineup edits carry a consent rule.** `setStaffEventLineup` passes
   `asStaff: source === 'cmc'`. Staff booked a production, so acts they name there are already
   agreed; on a member's listing a newly linked act stays `pending` and the band is invited,
@@ -2457,10 +2458,10 @@ restore crew shifts or retract a cancellation notice.
    (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
    `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
-3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+3. The event page's Production tab (`/staff/events/[id]?tab=production`) reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
-4. **Overview** tab → `updateProduction` (times and notes) and
-   `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
+4. The Production tab's record card → `updateProduction` (times and notes), and the
+   sidebar's **Crew** box → `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
    then holds `production.run` on that show and opens the staff panel while it is open).
    The lead is a volunteer position with no shift: screens show the lead as crew beside the
    show's shifts. Giving the lead hours or a volunteer role is a model change to propose on an
@@ -2476,7 +2477,7 @@ restore crew shifts or retract a cancellation notice.
    `done` from `completed` on, `declined` when cancelled, and `open` again if walked
    back. `reopenProduction` (guard `production.reopen`) is the only way out of a
    terminal state.
-6. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
+6. The Production tab's **Settlement** section → `recordActPayout` / `undoActPayout` (both `finance.refund`).
    A payout is never edited: undo writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
    recorded again. Both are audited.
@@ -2538,7 +2539,7 @@ restore crew shifts or retract a cancellation notice.
     lists each one's cash spend in `parts`, which the budget page shows. Parents are one
     level deep: `updateProject` refuses a project as its own parent, a parent that has a
     parent, and a parent as a child (`ProjectParentError`, 400).
-15. **Rider against stock** (#2724). The Advance tab's Requested gear card reads
+15. **Rider against stock** (#2724). The Production tab's Requested gear card reads
     `getEventRiderStock` in `production/rider-stock-service.ts`, inside
     `getStaffEventProduction`. It takes each `venue` rider element of the acts on the bill and
     matches it to the catalog. A staff link (`rider_element.inventory_item_id`, set by
@@ -2855,7 +2856,7 @@ A market vendor is an organization (#2622). Open question: #1504 (what the publi
 
 ### The story
 
-Staff make a listing a market day on `/staff/events/[id]/vendors`, setting when applications
+Staff make a listing a market day on its event page's Vendors tab (`/staff/events/[id]?tab=vendors`), setting when applications
 close and how many tables there are. The public event page then shows **Apply for a table**.
 A vendor with no account fills in `/events/[id]/vendors/apply`, and staff accept each vendor
 with a table label, waitlist or decline. Each way a message goes to the vendor by email.

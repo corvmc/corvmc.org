@@ -43,15 +43,13 @@ test.describe('duty lists — the unscheduled half', () => {
 
 	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
 		await loginAsStaff(page);
-		// The console is tabbed, and the advance work is the Advance tab's whole
-		// subject. `?tab=` is the addressable form, so this also pins that a link
-		// somebody pastes lands where it says it does.
-		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
+		// The advance work is on the show's Production tab (#3270). `?tab=` is the
+		// addressable form, so this also pins that a pasted link lands there.
+		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		await expect(page.locator('[role="tabpanel"][aria-labelledby="tab-advance"]')).toBeVisible();
-		// The show's related tasks (#2630) list it beside the shifts card.
+		// The sidebar's Tasks box lists the show's open, shiftless tasks (#3270).
 		await expect(
-			page.locator(`[data-testid="related-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
+			page.locator(`[data-testid="event-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
 		).toBeVisible();
 	});
 

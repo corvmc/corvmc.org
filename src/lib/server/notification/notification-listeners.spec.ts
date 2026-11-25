@@ -1731,7 +1731,7 @@ describe('named the event lead on a show (#2726)', () => {
 
 		const [sent] = calls();
 		expect(sent.userId).toBe('u-lead');
-		expect(sent.href).toBe('/staff/events/evt-1/production');
+		expect(sent.href).toBe('/staff/events/evt-1?tab=production');
 		expect(sent.title).toContain('Friday Night Fuzz');
 		expect(sent.body).toContain('Ada Booker');
 		expect(detailText(sent.email)).toContain('Ada Booker');
@@ -1814,7 +1814,7 @@ describe('committee show work due (#1709)', () => {
 	it("links the event lead's digest to the show", async () => {
 		mockDispatch.mockClear();
 		await emit('volunteer.deliverable_due', digest({ ...item, eventId: 'evt-1', forLead: true }));
-		expect(calls()[0].href).toBe('/staff/events/evt-1/production');
+		expect(calls()[0].href).toBe('/staff/events/evt-1?tab=production');
 	});
 
 	it('names a grant item by its project, two weeks ahead', async () => {
