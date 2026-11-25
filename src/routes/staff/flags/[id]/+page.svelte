@@ -42,6 +42,9 @@
 	);
 
 	const { fields } = resolveFlag;
+	// The select's own `bind:value` owns the value; spreading `.as()`'s `value`
+	// beside it throws on SSR (see field-as-spread.ssr.spec.ts).
+	const { value: _resolutionValue, ...resolutionAttrs } = $derived(fields.resolution.as('select'));
 	// No default. "Resolved — action taken" used to be pre-selected, so a
 	// moderator who pressed the primary button without reading recorded
 	// enforcement against a member rather than the no-op — and the consequence
@@ -184,12 +187,7 @@
 							<div class="space-y-3">
 								<label class="fieldset w-full">
 									<span class="fieldset-legend">{m.staff_resolution_label()}</span>
-									<Select
-										class="w-full"
-										name={fields.resolution.as('select').name}
-										aria-invalid={fields.resolution.as('select')['aria-invalid']}
-										bind:value={resolution}
-									>
+									<Select class="w-full" {...resolutionAttrs} bind:value={resolution}>
 										<option value="" disabled>{m.staff_flags_id_choose_outcome_label()}</option>
 										<option value="resolved"
 											>{m.staff_flags_id_resolved_action_taken_label()}</option
