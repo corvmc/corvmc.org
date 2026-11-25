@@ -15,8 +15,10 @@
 
 	// Its own page, not a card on the profile, so applying is a step a member
 	// takes on purpose (#1820). Nothing here awaits: a top-level await would
-	// async-gate every `fields` expression below.
-	const fields = applyToTeach.fields;
+	// async-gate every `fields` expression below. Keyed: the profile's
+	// TeachingCard attaches the bare instance as this page leaves (#3334).
+	const apply = applyToTeach.for('apply');
+	const fields = apply.fields;
 </script>
 
 <PageHeader
@@ -37,7 +39,7 @@
 		</p>
 
 		<Form
-			remote={applyToTeach}
+			remote={apply}
 			successToast={m.member_application_sent_toast()}
 			onsuccess={() => goto(resolve('member/profile'))}
 		>
