@@ -70,8 +70,6 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	add(past[0], 'closed', {
 		...schedule(past[0]?.startsAt ?? now),
 		producerUserId: producer,
-		billingNotes: '60/40 door split after the sound engineer.',
-		hospitalityNotes: 'Two vegetarian meals, case of water, parking passes for the van.',
 		internalNotes: 'Settled in cash the same night. Receipts in the folder.'
 	});
 	add(past[1], 'settled', {
@@ -91,8 +89,6 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 		// Met: the bill has as many acts as it asked for, so it is finished
 		// rather than short. The contrast with `upcoming[1]` is the point.
 		actsWanted: 3,
-		billingNotes: 'Guarantee against 70% of the door, whichever is greater.',
-		hospitalityNotes: 'Green room is the office. Coffee, and somebody has to move the desk.',
 		internalNotes: 'Backline is ours except the drum kit — headliner brings their own.'
 	});
 	// A bill that says out loud it is not finished. Six is comfortably above
