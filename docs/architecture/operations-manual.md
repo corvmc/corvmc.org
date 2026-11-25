@@ -378,10 +378,12 @@ reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
 
 **Only `errors` fail the `lock-access` run.** Any entry there — an offline lock, a failed
-provisioning, a failed list — returns 500 and turns the Sentry check-in red. A failed delete of
-an already-expired temporary user goes in `warnings` instead: it is logged and returned, the run
-stays 200, and the next run retries it, since cleanup re-lists every type-2 user and the
-expired code no longer opens the door (#3277). Building access shows `errors` only.
+provisioning, a failed list — returns 500 and turns the Sentry check-in red. A failed U-tec
+read or delete of one lock user goes in `warnings` instead: it is logged and returned, the run
+stays 200, and the next run retries it. That covers cleanup's read and delete of a temporary
+user, since cleanup re-lists every type-2 user and the lock enforces each window meanwhile
+(#3277), and confirming a standing code's sync, which stays unconfirmed until a later run reads
+it (#3333). Building access shows `errors` only.
 
 **The Building access view reads KV and D1 only.** Lock status is the daily job's last
 health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the

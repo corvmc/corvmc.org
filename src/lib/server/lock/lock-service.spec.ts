@@ -309,15 +309,24 @@ describe('runDailyLockJob', () => {
 		consoleSpy.mockRestore();
 	});
 
-	it('still fails the run when it cannot read a user to tell whether it expired', async () => {
+	// U-tec answers one read a day with a 500 that succeeds seconds later. The
+	// next run reads every user again, so a single failed read must not fail it (#3333).
+	it('reports a failed read of one lock user as a warning, not an error', async () => {
 		mockListLockUsers.mockResolvedValue([expiredRow]);
-		mockGetLockUser.mockRejectedValueOnce(new Error('504 Gateway Timeout'));
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		sqlite.exec(
+			`insert into lock_member_code (id, user_id, lock_access_id, label) values ('mc-queued', 'user-1', '60', 'Standing')`
+		);
+		mockGetLockUser.mockRejectedValue(new Error('500 Internal Server Error'));
+		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 		const result = await runDailyLockJob();
 
-		expect(result.errors).toEqual([expect.stringContaining('504 Gateway Timeout')]);
-		expect(result.warnings).toEqual([]);
+		expect(result.errors).toEqual([]);
+		expect(result.warnings).toEqual([
+			expect.stringContaining(`lock user ${expiredUser.id}`),
+			expect.stringContaining('mc-queued')
+		]);
+		expect(mockRemoveTemporaryUser).not.toHaveBeenCalled();
 		consoleSpy.mockRestore();
 	});
 });
