@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { form } from './_remote';
 import { getRequestEvent, query } from '$app/server';
-import { error, invalid } from '@sveltejs/kit';
-import { listActContacts } from '#lib/server/directory/contact-service.js';
+import { error } from '@sveltejs/kit';
+import { addShowActContact } from '#lib/server/directory/contact-service.js';
+import { createExternalAct } from '#lib/server/directory/entry-service.js';
+import { performerFor } from '#lib/server/party/organization-service.js';
 import { can, requireCapability } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
@@ -25,17 +27,18 @@ import {
 	createProduction as createService,
 	updateProductionDetails as updateService,
 	transitionProduction as transitionService,
-	reopenProduction as reopenService
+	reopenProduction as reopenService,
+	markShowTiming,
+	showStartsAt
 } from '#lib/server/production/production-service.js';
+import { addActToShow, removeActFromShow } from '#lib/server/production/lineup-service.js';
+import { showClockTime } from '#lib/server/production/show-clock.js';
 import {
-	addSlot,
 	updateSlot,
 	markSlotTiming as markTiming,
 	moveSlot,
-	removeSlot,
 	setSlotTerms,
-	buildSlotsFromLineup,
-	slotActOrganizationId
+	buildSlotsFromLineup
 } from '#lib/server/production/run-of-show-service.js';
 import { openHostShift as openHost } from '#lib/server/production/host-service.js';
 import {
@@ -57,6 +60,7 @@ import { listAttachableListings } from '#lib/server/production/attachable-listin
 import { setRiderElementStock } from '#lib/server/production/rider-stock-service.js';
 import {
 	DEFAULT_TIMEZONE,
+	SHORT_TEXT_MAX,
 	productionExpenseCategories,
 	requestableArtifacts
 } from '#lib/config.js';
@@ -80,25 +84,6 @@ const STATUS_OWNER: Record<ProductionStatus, 'production.book' | 'production.run
 	completed: 'production.run',
 	settled: 'production.run',
 	closed: 'production.run'
-};
-
-/** A cleared datetime-local field arrives as '' rather than null. */
-function optionalMoment(date?: string, time?: string): Date | null {
-	if (!date || !time) return null;
-	return buildDateInTz(date, time, DEFAULT_TIMEZONE);
-}
-
-const momentFields = {
-	loadInDate: z.string().optional(),
-	loadInTime: z.string().optional(),
-	soundcheckDate: z.string().optional(),
-	soundcheckTime: z.string().optional(),
-	firstSetDate: z.string().optional(),
-	firstSetTime: z.string().optional(),
-	curfewDate: z.string().optional(),
-	curfewTime: z.string().optional(),
-	loadOutDate: z.string().optional(),
-	loadOutTime: z.string().optional()
 };
 
 export const createProduction = form(
@@ -165,6 +150,11 @@ export const createShow = form(
 	}
 );
 
+/**
+ * The show's own settings on the Production tab (#3272): bands wanted, the
+ * changeover, internal notes. Each is its own small form, so a key left out
+ * is untouched rather than cleared.
+ */
 export const updateProduction = form(
 	z.object({
 		id: z.string().min(1),
@@ -172,39 +162,98 @@ export const updateProduction = form(
 		/**
 		 * A string, not a number: an emptied number field is *dropped* from a
 		 * remote `form()` payload, so a `z.number()` here could set a target and
-		 * never clear one. The `<select>` posts `''` for "not set", which is the
-		 * clear, and absent still means untouched.
+		 * never clear one. Empty clears; absent is untouched.
 		 */
 		actsWanted: z
 			.string()
 			.regex(/^$|^([1-9]|1\d|20)$/, 'Pick a number of bands')
 			.optional(),
-		billingNotes: z.string().max(2000).optional(),
-		hospitalityNotes: z.string().max(2000).optional(),
-		internalNotes: z.string().max(2000).optional(),
-		...momentFields
+		changeoverMinutes: z.number().int().min(0).max(240).optional(),
+		internalNotes: z.string().max(2000).optional()
 	}),
 	async (data) => {
-		// Every field is the show's own work, billing notes and acts wanted included (#2959).
 		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
-		const next = {
-			loadInAt: optionalMoment(data.loadInDate, data.loadInTime),
-			soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
-			firstSetAt: optionalMoment(data.firstSetDate, data.firstSetTime),
-			curfewAt: optionalMoment(data.curfewDate, data.curfewTime),
-			loadOutBy: optionalMoment(data.loadOutDate, data.loadOutTime),
-			actsWanted:
-				data.actsWanted === undefined
-					? undefined
-					: data.actsWanted
-						? Number(data.actsWanted)
-						: null,
-			billingNotes: data.billingNotes || null,
-			hospitalityNotes: data.hospitalityNotes || null,
-			internalNotes: data.internalNotes || null
-		};
 		try {
-			await updateService(data.id, next);
+			await updateService(data.id, {
+				actsWanted:
+					data.actsWanted === undefined
+						? undefined
+						: data.actsWanted
+							? Number(data.actsWanted)
+							: null,
+				changeoverMinutes: data.changeoverMinutes,
+				internalNotes: data.internalNotes === undefined ? undefined : data.internalNotes || null
+			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** The run of show's fixed rows, in the order the night runs them. */
+const showRows = ['loadIn', 'soundcheck', 'firstSet', 'curfew', 'loadOut'] as const;
+
+/**
+ * One time on the run of show. The date is the show's: a time is all a row
+ * takes, and `showClockTime` puts one before 06:00 after midnight. Empty clears.
+ */
+export const setRunOfShowTime = form(
+	z.object({
+		id: z.string().min(1),
+		eventId: z.string().min(1),
+		row: z.enum(showRows),
+		time: z.string().regex(/^$|^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a time')
+	}),
+	async (data) => {
+		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
+		const startsAt = await showStartsAt(data.id);
+		if (!startsAt) error(404, 'Production not found');
+		const at = data.time ? showClockTime(startsAt, data.time) : null;
+		const pick = (row: (typeof showRows)[number]) => (data.row === row ? at : undefined);
+		try {
+			await updateService(data.id, {
+				loadInAt: pick('loadIn'),
+				soundcheckAt: pick('soundcheck'),
+				firstSetAt: pick('firstSet'),
+				curfewAt: pick('curfew'),
+				loadOutBy: pick('loadOut')
+			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** The fixed rows a Done records against. A set's Done is `markSlotTiming`. */
+const doneRows = ['loadIn', 'soundcheck', 'doors', 'curfew', 'loadOut'] as const;
+
+/**
+ * Done on a fixed row of the run of show. `now` is taken server side, as for a
+ * set, so a stale tab cannot stamp a time from ten minutes ago; `clear` undoes.
+ */
+export const markRunOfShowDone = form(
+	z.object({
+		id: z.string().min(1),
+		eventId: z.string().min(1),
+		row: z.enum(doneRows),
+		action: z.enum(['now', 'clear'])
+	}),
+	async (data) => {
+		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
+		const at = data.action === 'now' ? new Date() : null;
+		const pick = (row: (typeof doneRows)[number]) => (data.row === row ? at : undefined);
+		try {
+			await markShowTiming(data.id, {
+				loadInDoneAt: pick('loadIn'),
+				soundcheckDoneAt: pick('soundcheck'),
+				doorsDoneAt: pick('doors'),
+				curfewDoneAt: pick('curfew'),
+				loadOutDoneAt: pick('loadOut')
+			});
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {
@@ -447,74 +496,14 @@ const slotRef = {
 
 /** A set that runs longer than a working day is a typo, not a set. */
 const setLength = z.number().int().min(1).max(600);
-const changeover = z.number().int().min(0).max(240);
 
-/** Turn '' into null once, so a handler never has to decide what blank means. */
-function optionalText(value?: string): string | null {
-	const trimmed = value?.trim();
-	return trimmed ? trimmed : null;
-}
-
-export const addRunOfShowSlot = form(
-	z.object({
-		eventId: z.string().min(1),
-		productionId: z.string().min(1),
-		/** Blank is a slot on no poster — a DJ between sets, a host. */
-		eventBandId: z.string().optional(),
-		setLengthMinutes: setLength,
-		changeoverMinutes: changeover.optional()
-	}),
-	async (data) => {
-		await requireProjectCommittee(await projectOfProduction(data.productionId), 'production.run');
-		try {
-			await addSlot(data.productionId, {
-				eventBandId: data.eventBandId || null,
-				setLengthMinutes: data.setLengthMinutes,
-				changeoverMinutes: data.changeoverMinutes
-			});
-		} catch (err) {
-			mapDomainError(err);
-		}
-		await getStaffEventProduction(data.eventId).refresh();
-		return { success: true };
-	}
-);
-
+/** A set's length, from its lineup row. Every set after it moves. */
 export const updateRunOfShowSlot = form(
-	z.object({
-		...slotRef,
-		setLengthMinutes: setLength,
-		changeoverMinutes: changeover,
-		soundcheckDate: z.string().optional(),
-		soundcheckTime: z.string().optional(),
-		techNotes: z.string().max(2000).optional(),
-		backlineNeeds: z.string().max(2000).optional(),
-		hospitalityNotes: z.string().max(2000).optional(),
-		/** One of the act's contacts; empty clears it. */
-		contactId: z.string().max(100).optional()
-	}),
-	async (data, issue) => {
-		const projectId = await projectOfSlot(data.slotId);
-		await requireProjectCommittee(projectId, 'production.run');
-		// Left out by a viewer who cannot see the act's people: keep what is set.
-		const contactId = data.contactId === undefined ? undefined : data.contactId || null;
-		if (contactId) {
-			const org = await slotActOrganizationId(data.slotId);
-			const people = org ? await listActContacts([org], projectId) : [];
-			if (!people.some((p) => p.id === contactId)) {
-				invalid(issue.contactId("Pick one of this act's contacts."));
-			}
-		}
+	z.object({ ...slotRef, setLengthMinutes: setLength }),
+	async (data) => {
+		await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
 		try {
-			await updateSlot(data.slotId, {
-				setLengthMinutes: data.setLengthMinutes,
-				changeoverMinutes: data.changeoverMinutes,
-				soundcheckAt: optionalMoment(data.soundcheckDate, data.soundcheckTime),
-				techNotes: optionalText(data.techNotes),
-				backlineNeeds: optionalText(data.backlineNeeds),
-				hospitalityNotes: optionalText(data.hospitalityNotes),
-				contactId
-			});
+			await updateSlot(data.slotId, { setLengthMinutes: data.setLengthMinutes });
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -537,18 +526,86 @@ export const moveRunOfShowSlot = form(
 	}
 );
 
-export const removeRunOfShowSlot = form(
-	z.object(slotRef),
+/** The production a listing announces, or a 404: the lineup needs one to hold sets. */
+async function showOf(eventId: string) {
+	const show = await projectOfEvent(eventId);
+	if (!show?.productionId) error(404, 'Open a production first');
+	return { projectId: show.projectId, productionId: show.productionId };
+}
+
+/**
+ * Add an act to a CMC show's lineup (#3272): a CMC band, an outside act on
+ * file, a new outside act, or a name only. Booking an act binds CMC to
+ * someone outside it, so this is `production.book`, as the bill is.
+ */
+export const addLineupAct = form(
+	z.object({
+		eventId: z.string().min(1),
+		name: z.string().trim().min(1, 'Name the act').max(200),
+		bandId: z.string().max(100).optional(),
+		actId: z.string().max(100).optional(),
+		/** Save the name as a new outside act, with its hometown and contact. */
+		newAct: z.boolean().optional().default(false),
+		hometown: z.string().max(SHORT_TEXT_MAX).optional(),
+		email: z.union([z.literal(''), z.email()]).optional(),
+		setLengthMinutes: setLength
+	}),
+	async (data) => {
+		await requireListingWriter(data.eventId, 'production.book');
+		const show = await showOf(data.eventId);
+		try {
+			let actId = data.bandId ? undefined : data.actId || undefined;
+			if (data.newAct && !data.bandId) {
+				actId = await createExternalAct({ name: data.name, hometown: data.hometown || null });
+				if (data.email) {
+					await addShowActContact(await performerFor(actId), show.projectId, data.email);
+				}
+			}
+			await addActToShow(
+				data.eventId,
+				show.productionId,
+				{ name: data.name, bandId: data.bandId || undefined, actId },
+				data.setLengthMinutes
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await Promise.all([
+			getStaffEventProduction(data.eventId).refresh(),
+			getStaffEventPage(data.eventId).refresh()
+		]);
+		return { success: true };
+	}
+);
+
+/**
+ * Take an act off the lineup: its credit, its claim on the show and its set.
+ * `slotId` alone is a set with no credit, such as a DJ between bands.
+ */
+export const removeLineupAct = form(
+	z.object({
+		eventId: z.string().min(1),
+		eventBandId: z.string().max(100).optional(),
+		slotId: z.string().max(100).optional()
+	}),
 	unaudited(
-		'A running-order slot on a show: planning content, not money or standing.',
+		'A credit and its set on a show: planning content, not money or standing.',
 		async (data) => {
-			await requireProjectCommittee(await projectOfSlot(data.slotId), 'production.run');
+			await requireListingWriter(data.eventId, 'production.book');
+			const show = await showOf(data.eventId);
+			if (!data.eventBandId && !data.slotId) error(400, 'Pick an act');
 			try {
-				await removeSlot(data.slotId);
+				await removeActFromShow(data.eventId, show.productionId, {
+					eventBandId: data.eventBandId || undefined,
+					slotId: data.slotId || undefined
+				});
 			} catch (err) {
 				mapDomainError(err);
 			}
-			await getStaffEventProduction(data.eventId).refresh();
+			await Promise.all([
+				getStaffEventProduction(data.eventId).refresh(),
+				getStaffEventPage(data.eventId).refresh()
+			]);
 			return { success: true };
 		}
 	)

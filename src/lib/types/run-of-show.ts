@@ -64,6 +64,8 @@ export interface RunOfShow {
 	productionId: string;
 	firstSetAt: Date | null;
 	curfewAt: Date | null;
+	/** The gap between sets, one per show. Each slot's `changeoverMinutes` is this. */
+	changeoverMinutes: number;
 	slots: RunOfShowSlot[];
 	/** Credits on the bill with no set yet — what the add picker offers. */
 	unslotted: { eventBandId: string; name: string; billingOrder: number }[];

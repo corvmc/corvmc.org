@@ -101,6 +101,23 @@ export const production = sqliteTable(
 		curfewAt: integer('curfew_at', { mode: 'timestamp' }),
 		loadOutBy: integer('load_out_by', { mode: 'timestamp' }),
 
+		/**
+		 * The gap between sets, one per show (#3272). The walk reads this, not
+		 * `production_slot.changeover_minutes`, which nothing writes any more.
+		 */
+		changeoverMinutes: integer('changeover_minutes').notNull().default(15),
+
+		/**
+		 * When each fixed row of the run of show actually happened: Done on the
+		 * night. A set's is `production_slot.actual_start_at`. Doors is the
+		 * listing's time, but its Done is the production's.
+		 */
+		loadInDoneAt: integer('load_in_done_at', { mode: 'timestamp' }),
+		soundcheckDoneAt: integer('soundcheck_done_at', { mode: 'timestamp' }),
+		doorsDoneAt: integer('doors_done_at', { mode: 'timestamp' }),
+		curfewDoneAt: integer('curfew_done_at', { mode: 'timestamp' }),
+		loadOutDoneAt: integer('load_out_done_at', { mode: 'timestamp' }),
+
 		/** What the acts were told about the money, in the acts' own words. */
 		/**
 		 * The drawer count at the end of the night, and how many came through the

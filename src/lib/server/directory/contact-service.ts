@@ -415,6 +415,28 @@ export async function createContact(
 	source: ContactSource = 'staff_entered'
 ): Promise<{ id: string; merged: boolean }> {
 	await requireCapability('contact.manage');
+	return insertContact(input, source);
+}
+
+/**
+ * Add the contact an act was booked with, from the show's lineup (#3272).
+ * Open to whoever books that show's project, as `listActContacts` is, and
+ * otherwise to `contact.manage`.
+ */
+export async function addShowActContact(
+	organizationId: string,
+	projectId: string | null,
+	email: string
+): Promise<void> {
+	const booker = !!projectId && (await can('production.book', { projectId }));
+	if (!booker) await requireCapability('contact.manage');
+	await insertContact({ organizationId, email }, 'staff_entered');
+}
+
+async function insertContact(
+	input: NewContactInput,
+	source: ContactSource
+): Promise<{ id: string; merged: boolean }> {
 	const email = normalizeEmail(input.email);
 	const same = email ? await contactByEmail(email) : null;
 	if (same) {
