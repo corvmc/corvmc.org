@@ -2617,6 +2617,10 @@ any row, because one person walks the list at load-out and it is not reliably an
 Rows that carry a `rider_kind` can be **promoted onto the tech rider**, which is the bridge
 between the two features: walking through the easy door furnishes the rider on the way.
 
+The bridge runs both ways (#3133). The rider page offers the viewer's waiting packing items in
+place, and says the packing list is where to start when their corner is empty. The packing page
+counts the stage items already on the rider.
+
 ### Code path
 
 - **Read:** `getBandPackingPage` in `packing.remote.ts` — one load-bearing query, guarded at

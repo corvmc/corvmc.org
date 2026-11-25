@@ -381,6 +381,7 @@
 	"band_slug_packing_promote_to_rider_some_belongs_rider_title": "Suggested rider items",
 	"band_slug_packing_promote_to_rider_success_toast": "Added to your rider",
 	"band_slug_packing_re_reading_as_staff_only_body": "You're reading this as staff. Only the band's own members can change it, or tick anything off.",
+	"band_slug_packing_stage_items_on_rider_title": "Stage items on rider",
 	"band_slug_packing_things_title": "Things",
 	"band_slug_packing_things_have_nobody_bringing_them_body": [
 		{
@@ -543,8 +544,10 @@
 	"band_slug_rider_re_reading_as_staff_only_body": "You're reading this as staff. Only the band's own members can change it.",
 	"band_slug_rider_rest_rider_title": "The rest of the rider",
 	"band_slug_rider_rider_asks_channels_room_s_body": "This rider asks for {#strong}{channelCount}{/strong} channels and the room's desk takes {#strong}{consoleChannels}{/strong}. That is not a problem to solve here — the house engineer will combine or drop inputs — but it is worth agreeing which ones before load-in.",
+	"band_slug_rider_open_packing_list_label": "Open packing list",
 	"band_slug_rider_save_plot_label": "Save plot",
 	"band_slug_rider_shared_kit_belongs_nobody_particular_body": "Shared kit that belongs to nobody in particular — playback rigs, spare stands. Admins only, because there is no member whose corner it is.",
+	"band_slug_rider_start_packing_list_body": "Your rider is empty. Start from your packing list, then add its stage items here.",
 	"band_slug_rider_stage_plot_saved_toast": "Stage plot saved",
 	"band_slug_rider_what_bring_what_needs_plugged_body": "What you bring and what it needs plugged in. Only you and the band's admins can change this.",
 	"band_slug_rider_what_needs_stage_body": "What {name} needs on stage",
