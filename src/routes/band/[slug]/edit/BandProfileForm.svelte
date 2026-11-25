@@ -5,6 +5,7 @@
 	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withHash } from '#lib/utils/with-query.js';
+	import { focusHashOnNavigation } from '#lib/utils/focus-hash.js';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -20,6 +21,8 @@
 	import type { getBandProfile } from '#lib/remote/directory.remote.js';
 	import type { getBandLayout } from '#lib/remote/layout.remote.js';
 	import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
+
+	focusHashOnNavigation();
 
 	// The band and profile arrive as plain resolved props, NOT awaited remote
 	// queries. Keeping this component's script fully synchronous matters: a
