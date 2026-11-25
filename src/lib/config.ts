@@ -2076,7 +2076,7 @@ export const showCommitteeSlugs = {
  *
  * **Declaration order is the conventional channel order**, and the rider editor
  * uses it to place a new element rather than dropping it at the end: drums,
- * then bass, then guitars and keys, then vocals. Every input-list guide
+ * then bass, then guitars and keys, then horns and strings, then vocals. Every input-list guide
  * converges on that sequence because a console is laid out in banks of eight
  * and an engineer reads down the rhythm section first. It is a default a band
  * can reorder, not a rule — `rider_element.sortOrder` is what the list actually
@@ -2093,6 +2093,8 @@ export const riderElementKinds = [
 	'bass_rig',
 	'guitar_amp',
 	'keys',
+	'horns',
+	'strings',
 	'playback',
 	'vocals',
 	'monitor',
@@ -2106,6 +2108,8 @@ export const riderElementKindLabels: Record<RiderElementKind, string> = {
 	bass_rig: 'Bass rig',
 	guitar_amp: 'Guitar amp',
 	keys: 'Keys',
+	horns: 'Horns',
+	strings: 'Strings',
 	playback: 'Playback / tracks',
 	vocals: 'Vocals',
 	monitor: 'Monitor',
@@ -2208,6 +2212,9 @@ export const RIDER_ITEM_NOTES_MAX = 500;
  */
 export const RIDER_MAX_ELEMENTS = 60;
 export const RIDER_MAX_INPUTS_PER_ELEMENT = 24;
+
+/** Power outlets one element asks for. More than a full pedalboard and rack needs. */
+export const RIDER_MAX_OUTLETS = 12;
 
 // ---------------------------------------------------------------------------
 // Packing lists

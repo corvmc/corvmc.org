@@ -152,6 +152,12 @@ export const riderElement = sqliteTable(
 			onDelete: 'set null'
 		}),
 
+		/**
+		 * Power outlets this element needs at its spot on the stage. No CHECK, for
+		 * the table-rebuild reason under `x`/`y`; the service clamps it.
+		 */
+		outlets: integer('outlets').notNull().default(0),
+
 		/** Tie-break within a kind. Dense, re-derived from array position on save. */
 		sortOrder: integer('sort_order').notNull().default(0),
 
@@ -222,6 +228,13 @@ export const riderInput = sqliteTable(
 		label: text('label').notNull(),
 
 		source: text('source', { enum: riderInputSources }).notNull().default('mic'),
+
+		/**
+		 * Who brings the mic, DI or cable: the input list's "Bringing it" column.
+		 * Separate from the element's, because a band bringing its own amp still
+		 * usually expects the house mic in front of it.
+		 */
+		providedBy: text('provided_by', { enum: riderProvidedBy }).notNull().default('venue'),
 
 		/** "SM57 or similar" — a preference the house engineer may improve on. */
 		micPref: text('mic_pref'),

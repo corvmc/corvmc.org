@@ -61,6 +61,7 @@ vi.mock('#lib/server/db/index.js', () => ({
 }));
 
 const { riderElement, riderInput } = await import('#lib/server/db/schema/rider.js');
+const { getTableColumns } = await import('drizzle-orm');
 const {
 	getEventRiderSummaries,
 	numberChannels,
@@ -73,7 +74,8 @@ const {
 	RiderTooLargeError,
 	RiderNotPlaceableError
 } = await import('./rider-service');
-const { RIDER_MAX_ELEMENTS, RIDER_MAX_INPUTS_PER_ELEMENT } = await import('#lib/config.js');
+const { RIDER_MAX_ELEMENTS, RIDER_MAX_INPUTS_PER_ELEMENT, RIDER_MAX_OUTLETS } =
+	await import('#lib/config.js');
 
 type Element = Parameters<typeof numberChannels>[0][number];
 
@@ -86,6 +88,7 @@ const el = (over: Partial<Element> = {}): Element => ({
 	kind: 'vocals',
 	label: 'Vocal',
 	providedBy: 'band',
+	outlets: 0,
 	notes: null,
 	sortOrder: 0,
 	inputs: [],
@@ -97,6 +100,7 @@ const input = (label: string) => ({
 	channel: 0,
 	label,
 	source: 'mic' as const,
+	providedBy: 'venue' as const,
 	micPref: null,
 	phantom: false,
 	stand: 'none' as const,
@@ -296,6 +300,72 @@ describe('saveOwnElements', () => {
 
 		expect(inputRows.find((r) => r.label === 'Kick')!.elementId).toBe(elementRows[0].id);
 		expect(inputRows.find((r) => r.label === 'Vox')!.elementId).toBe(elementRows[1].id);
+	});
+
+	it('keeps the outlets and input supplier a draft leaves out', async () => {
+		selectResults = [
+			[{ id: 'rider-1', groupId: 'band-1' }],
+			[{ id: 'old-1', label: 'Deluxe', x: null, y: null, inventoryItemId: null, outlets: 2 }],
+			[{ elementId: 'old-1', label: 'Amp mic', providedBy: 'band' }]
+		];
+
+		await saveOwnElements('band-1', 'u-1', [
+			{ kind: 'guitar_amp', label: 'Deluxe', inputs: [{ label: 'Amp mic', source: 'mic' }] },
+			{ kind: 'vocals', label: 'Vocal', inputs: [{ label: 'Vox', source: 'mic' }] }
+		]);
+
+		const elementRows = inserts.find((i) => i.table === riderElement)!.values as {
+			outlets: number;
+		}[];
+		const inputRows = inserts.find((i) => i.table === riderInput)!.values as {
+			providedBy: string;
+		}[];
+		expect(elementRows.map((r) => r.outlets)).toEqual([2, 0]);
+		expect(inputRows.map((r) => r.providedBy)).toEqual(['band', 'venue']);
+	});
+
+	it('takes the outlets and input supplier a draft does send, clamped', async () => {
+		selectResults = [
+			[{ id: 'rider-1', groupId: 'band-1' }],
+			[{ id: 'old-1', label: 'Deluxe', x: null, y: null, inventoryItemId: null, outlets: 2 }],
+			[{ elementId: 'old-1', label: 'Amp mic', providedBy: 'band' }]
+		];
+
+		await saveOwnElements('band-1', 'u-1', [
+			{
+				kind: 'guitar_amp',
+				label: 'Deluxe',
+				outlets: 500,
+				inputs: [{ label: 'Amp mic', source: 'mic', providedBy: 'venue' }]
+			}
+		]);
+
+		const [element] = inserts.find((i) => i.table === riderElement)!.values as {
+			outlets: number;
+		}[];
+		const [row] = inserts.find((i) => i.table === riderInput)!.values as { providedBy: string }[];
+		expect(element.outlets).toBe(RIDER_MAX_OUTLETS);
+		expect(row.providedBy).toBe('venue');
+	});
+
+	// The class: a column the rebuild does not write falls back to its default on
+	// every save. Each column must be written, or be one the database owns.
+	it('writes every column of both tables, so a save resets nothing', async () => {
+		selectResults = [[{ id: 'rider-1', groupId: 'band-1' }], []];
+
+		await saveOwnElements('band-1', 'u-1', [
+			{ kind: 'vocals', label: 'Vocal', inputs: [{ label: 'Vox', source: 'mic' }] }
+		]);
+
+		const written = (table: unknown) =>
+			Object.keys((inserts.find((i) => i.table === table)!.values as object[])[0]);
+		const columns = (table: typeof riderElement | typeof riderInput, dbOwned: string[]) =>
+			Object.keys(getTableColumns(table)).filter((c) => !dbOwned.includes(c));
+
+		expect(written(riderElement)).toEqual(
+			expect.arrayContaining(columns(riderElement, ['createdAt']))
+		);
+		expect(written(riderInput)).toEqual(expect.arrayContaining(columns(riderInput, ['id'])));
 	});
 
 	it('refuses a payload larger than a real band', async () => {

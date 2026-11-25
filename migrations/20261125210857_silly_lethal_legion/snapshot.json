@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ea45e833-cc02-42f9-bd96-bff790b3b7e0",
+  "id": "4a7b3c86-3175-466c-8603-05264c9f9cef",
   "prevIds": [
-    "20cacfee-532a-4a9d-a1da-53299c8da179"
+    "ea45e833-cc02-42f9-bd96-bff790b3b7e0"
   ],
   "ddl": [
     {
@@ -13876,6 +13876,16 @@
       "autoincrement": false,
       "default": "0",
       "generated": null,
+      "name": "outlets",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
       "name": "sort_order",
       "entityType": "columns",
       "table": "rider_element"
@@ -13947,6 +13957,16 @@
       "default": "'mic'",
       "generated": null,
       "name": "source",
+      "entityType": "columns",
+      "table": "rider_input"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'venue'",
+      "generated": null,
+      "name": "provided_by",
       "entityType": "columns",
       "table": "rider_input"
     },
