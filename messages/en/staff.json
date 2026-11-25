@@ -347,7 +347,7 @@
 	"staff_events_id_inputs_fits_at_if_every_repeated_text": "It fits at {#strong}{distinctCount}{/strong} if every repeated source below is patched once — which is a conversation to have at the advance, not at load-in.",
 	"staff_events_id_inputs_if_repeats_shared_label": "If repeats shared",
 	"staff_events_id_inputs_input_list_title": "Input list — {title}",
-	"staff_events_id_inputs_input_list_night_text": "{dateLabel} · input list for the night",
+	"staff_events_id_inputs_input_list_night_text": "{dateLabel} · input list",
 	"staff_events_id_inputs_mic_di_label": "Mic / DI",
 	"staff_events_id_inputs_need_48v_label": "Need +48V",
 	"staff_events_id_inputs_no_band_bill_has_listed_text": "No band on this bill has listed a channel yet. The Tech riders card on the production console is where they get asked.",
@@ -531,8 +531,8 @@
 			],
 			"selectors": ["unpaidActCountPlural"],
 			"match": {
-				"unpaidActCountPlural=one": "{unpaidActCount} band has no payout recorded. A donated set still records zero — otherwise the night reads as permanently outstanding.",
-				"unpaidActCountPlural=*": "{unpaidActCount} bands have no payout recorded. A donated set still records zero — otherwise the night reads as permanently outstanding."
+				"unpaidActCountPlural=one": "{unpaidActCount} band has no payout recorded. A donated set still records zero — otherwise the settlement reads as permanently outstanding.",
+				"unpaidActCountPlural=*": "{unpaidActCount} bands have no payout recorded. A donated set still records zero — otherwise the settlement reads as permanently outstanding."
 			}
 		}
 	],
@@ -596,7 +596,7 @@
 	"staff_events_id_production_settlement_panel_what_did_take_title": "Record {value}'s payout",
 	"staff_events_id_production_settlement_panel_what_each_band_o_title": "Band payouts",
 	"staff_events_id_production_settlement_panel_what_night_cost_title": "Event costs",
-	"staff_events_id_production_settlement_panel_what_night_took_body": "What the night took, what it cost, and what each band is owed under its own deal. Recording a payout writes it against the show's pool in the financial record — the app does not move the money, it keeps the account of it.",
+	"staff_events_id_production_settlement_panel_what_night_took_body": "What the event took, what it cost, and what each band is owed under its own deal. Recording a payout writes it against the show's pool in the financial record — the app does not move the money, it keeps the account of it.",
 	"staff_events_id_production_settlement_panel_who_was_handed_m_body": "Optional; who received the money.",
 	"staff_events_id_production_settlement_panel_writes_reversing_text": "Writes reversing entries for the {formatCents} in the financial record and marks the band unpaid, so it can be recorded again.",
 	"staff_events_id_production_show_budget_card_guarantee_top_up_text": "Guarantee top-ups",
@@ -623,7 +623,7 @@
 	"staff_events_id_recap_photos_no_photos_yet_title": "No photos",
 	"staff_events_id_recap_photos_photo_removed_toast": "Photo removed",
 	"staff_events_id_recap_photos_photos_added_toast": "Photos added",
-	"staff_events_id_recap_photos_photos_from_night_go_public_body": "Photos from the night go on the public event page.",
+	"staff_events_id_recap_photos_photos_from_night_go_public_body": "Photos from the event go on the public event page.",
 	"staff_events_id_recap_photos_recap_photos_title": "Recap photos",
 	"staff_events_id_recap_photos_remove_photo_title": "Remove photo",
 	"staff_events_id_recap_photos_take_photo_off_public_event_text": "Take this photo off the public event page?",
@@ -2145,7 +2145,7 @@
 	"staff_new_campaign_title": "New campaign",
 	"staff_new_production_label": "New production",
 	"staff_new_production_title": "New production",
-	"staff_night_title": "The night",
+	"staff_night_title": "Settlement",
 	"staff_no_categories_yet_title": "No categories",
 	"staff_no_deadline_text": "no deadline",
 	"staff_no_expiry_text": "No expiry",
@@ -3060,7 +3060,7 @@
 	"staff_volunteer_roles_clearances_2_title": "Clearances · {length}",
 	"staff_volunteer_roles_description_help_body": "Markdown, shown to members on their volunteering page.",
 	"staff_volunteer_roles_disappears_from_grant_form_everyone_text": "It disappears from the grant form. Everyone who holds it keeps it, and roles that require it still require it.",
-	"staff_volunteer_roles_grants_made_person_s_record_text": "Grants are made on a person's record. A renewal is a new row, never an edit — which is what keeps \"was their card current on the night?\" answerable.",
+	"staff_volunteer_roles_grants_made_person_s_record_text": "Grants are made on a person's record. A renewal is a new row, never an edit — which is what keeps \"was their card current on the event date?\" answerable.",
 	"staff_volunteer_roles_hold_required_by_roles_text": [
 		{
 			"declarations": [
