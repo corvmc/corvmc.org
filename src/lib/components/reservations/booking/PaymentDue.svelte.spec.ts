@@ -51,9 +51,10 @@ describe('PaymentDue', () => {
 	it('opens the staff compose with the owed reservation’s date in the subject', async () => {
 		await render(PaymentDue, { gate, label: 'Reserve space', 'data-testid': 'book-space' });
 		await page.getByTestId('book-space').click();
-		await expect.element(page.getByTestId('payment-due')).toBeVisible();
-		expect(page.getByTestId('payment-due').element().textContent).toContain(date);
-		await page.getByTestId('payment-due').getByRole('button').click();
+		const dialog = page.getByRole('dialog');
+		await expect.element(dialog).toBeVisible();
+		expect(dialog.element().textContent).toContain(date);
+		await dialog.getByCss('button:not([data-dialog-close])').click();
 		expect(subjectSet).toHaveBeenCalledWith(expect.stringContaining(date));
 	});
 });
