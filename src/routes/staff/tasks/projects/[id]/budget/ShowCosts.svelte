@@ -24,6 +24,7 @@
 		value: c,
 		label: productionExpenseCategoryLabels[c]
 	}));
+	const add = $derived(addProductionExpense.for(costs.productionId));
 	const editable = $derived(canEdit && !costs.locked);
 	const total = $derived(costs.lines.reduce((t, l) => t + l.amountCents, 0));
 	const deductible = $derived(
@@ -35,7 +36,7 @@
 	{#snippet action()}
 		{#if editable}
 			<Action
-				action={addProductionExpense}
+				action={add}
 				label={m.staff_events_id_production_settlement_panel_add_cost_label()}
 				variant="ghost"
 				size="xs"
@@ -44,30 +45,23 @@
 				successToast={m.staff_events_id_production_settlement_panel_cost_recorded_toast()}
 			>
 				{#snippet form()}
-					<input {...addProductionExpense.fields.productionId.as('hidden', costs.productionId)} />
+					<input {...add.fields.productionId.as('hidden', costs.productionId)} />
+					<FormField field={add.fields.label} label={m.staff_description_label()} required />
 					<FormField
-						field={addProductionExpense.fields.label}
-						label={m.staff_description_label()}
-						required
-					/>
-					<FormField
-						field={addProductionExpense.fields.category}
+						field={add.fields.category}
 						type="select"
 						label={m.staff_category_label()}
 						options={categoryOptions}
 						value="sound"
 					/>
-					<MoneyField
-						field={addProductionExpense.fields.amountCents}
-						label={m.staff_amount_label()}
-					/>
+					<MoneyField field={add.fields.amountCents} label={m.staff_amount_label()} />
 					<FormField
-						field={addProductionExpense.fields.paidTo}
+						field={add.fields.paidTo}
 						label={m.staff_events_id_production_settlement_panel_paid_label()}
 						description={m.staff_events_id_production_settlement_panel_who_was_handed_m_body()}
 					/>
 					<FormField
-						field={addProductionExpense.fields.deductible}
+						field={add.fields.deductible}
 						type="checkbox"
 						label={m.staff_events_id_production_settlement_panel_deductible_2_label()}
 						checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label_checkbox()}
