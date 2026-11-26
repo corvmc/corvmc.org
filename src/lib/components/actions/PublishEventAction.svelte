@@ -34,11 +34,11 @@
 
 	// Each gap is fixed in the Listing tab, which opens with no `tab` in the URL.
 	const GAPS = {
-		title: { anchor: 'listing-title', text: () => m.actions_publish_event_gap_title_text() },
+		title: { anchor: 'listing-title', text: () => m.actions_publish_event_gap_title_title() },
 		startsAt: { anchor: 'listing-date', text: () => m.actions_publish_event_gap_start_text() },
 		description: {
 			anchor: 'listing-description',
-			text: () => m.actions_publish_event_gap_description_text()
+			text: () => m.actions_publish_event_gap_description_body()
 		}
 	};
 	const gapHref = (gap: keyof typeof GAPS) =>

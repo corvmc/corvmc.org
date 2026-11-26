@@ -1671,7 +1671,8 @@ export const publishEvent = form(
 		try {
 			const outcome = await publish(data.id, {
 				acknowledged: !!data.reason,
-				reason: data.reason
+				reason: data.reason,
+				checkListing: true
 			});
 			if (!outcome.published) {
 				error(

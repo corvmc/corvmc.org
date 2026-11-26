@@ -1096,6 +1096,12 @@ export interface PublishOptions {
 	acknowledged?: boolean;
 	/** Required when there are warnings; written to the audit log. */
 	reason?: string | null;
+	/**
+	 * Check title, start and description. Only the staff Publish dialog sets it:
+	 * the member, band, group and committee callers have no way to acknowledge
+	 * a warning, and a refused publish would read to them as a success.
+	 */
+	checkListing?: boolean;
 }
 
 export type PublishOutcome = { published: boolean; warnings: ListingGap[] };
@@ -1106,7 +1112,9 @@ export type PublishOutcome = { published: boolean; warnings: ListingGap[] };
  * reason and is recorded as an override.
  */
 export async function publish(eventId: string, opts: PublishOptions = {}): Promise<PublishOutcome> {
-	const { title, warnings } = await readiness(eventId);
+	const found = await readiness(eventId);
+	const { title } = found;
+	const warnings = opts.checkListing ? found.warnings : [];
 	const reason = opts.reason?.trim() ?? '';
 	if (warnings.length > 0) {
 		if (!opts.acknowledged) return { published: false, warnings };

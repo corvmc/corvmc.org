@@ -611,7 +611,7 @@ describe('EventService', () => {
 		it('returns the gaps unmoved when they are not acknowledged', async () => {
 			selectResult = [{ ...mockEventRow, description: null }];
 
-			const outcome = await publish('evt-1');
+			const outcome = await publish('evt-1', { checkListing: true });
 
 			expect(outcome).toEqual({ published: false, warnings: ['description'] });
 			expect(lastUpdateSet).toBeNull();
@@ -621,7 +621,7 @@ describe('EventService', () => {
 		it('names every gap, in the order the Listing tab shows them', async () => {
 			selectResult = [{ ...mockEventRow, title: '  ', description: '   ' }];
 
-			const { warnings } = await publish('evt-1');
+			const { warnings } = await publish('evt-1', { checkListing: true });
 
 			expect(warnings).toEqual(['title', 'description']);
 		});
@@ -631,6 +631,7 @@ describe('EventService', () => {
 			selectResult = [{ ...mockEventRow, description: null }];
 
 			const outcome = await publish('evt-1', {
+				checkListing: true,
 				acknowledged: true,
 				reason: 'Copy is coming from the band'
 			});
@@ -649,9 +650,9 @@ describe('EventService', () => {
 		it('refuses an acknowledged publish with no reason, so the log says why', async () => {
 			selectResult = [{ ...mockEventRow, description: null }];
 
-			await expect(publish('evt-1', { acknowledged: true, reason: '  ' })).rejects.toThrow(
-				PublishReasonRequiredError
-			);
+			await expect(
+				publish('evt-1', { checkListing: true, acknowledged: true, reason: '  ' })
+			).rejects.toThrow(PublishReasonRequiredError);
 			expect(lastUpdateSet).toBeNull();
 		});
 
@@ -661,6 +662,17 @@ describe('EventService', () => {
 				{ ...mockEventRow, source: 'cmc', posterKey: null, productionStatus: 'draft' }
 			];
 
+			await expect(publish('evt-1', { checkListing: true })).resolves.toEqual({
+				published: true,
+				warnings: []
+			});
+			expect(mockRecordAudit).not.toHaveBeenCalled();
+		});
+
+		it('does not check the fields for a caller that cannot acknowledge a warning', async () => {
+			updateRowCount = 1;
+			selectResult = [{ ...mockEventRow, source: 'community', description: null }];
+
 			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
 			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
@@ -668,7 +680,7 @@ describe('EventService', () => {
 		it('holds a community listing to the same three fields', async () => {
 			selectResult = [{ ...mockEventRow, source: 'community', description: null }];
 
-			await expect(publish('evt-1')).resolves.toEqual({
+			await expect(publish('evt-1', { checkListing: true })).resolves.toEqual({
 				published: false,
 				warnings: ['description']
 			});

@@ -1155,7 +1155,8 @@ quiet `ReopenAction`. None reverses money: a reopened job keeps its ledger rows 
 books only the difference; a reopened asset's ledger is brought back with an `adjust` movement.
 
 Publishing an event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
-returns its missing fields (`title`, `startsAt`, `description`, every source) unpublished until
+returns its missing fields (`title`, `startsAt`, `description`, every source) when the staff dialog
+asks for them (`checkListing`), unpublished until
 acknowledged with a reason, and writes `event.published_over_warnings` when it goes ahead over
 them. Not poster or production status at publish, because the owner set the three missing fields
 (#3271).

@@ -757,8 +757,10 @@ events use RSVP instead.
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
   `src/lib/server/event/event-service.ts`. Events that reserve practice space create a
   linked `bookerType: 'event_listing'` reservation; `checkRebookNeeded()` handles time changes.
-  `publish()` checks three fields on every source (title, start date and time, description),
-  through `listingGaps()` in `event/show-readiness.ts`. A gap is a warning: the dialog links each
+  `publish()` with `checkListing` (the staff Publish dialog's `publishEvent`) checks three fields
+  on every source (title, start date and time, description), through `listingGaps()` in
+  `event/show-readiness.ts`; the member, band, group and committee callers cannot acknowledge a
+  warning and publish unchecked. A gap is a warning: the dialog links each
   one to its Listing tab field, and Publish anyway needs a reason and writes
   `event.published_over_warnings` with the gap keys. Not poster or production status at publish,
   because the owner set the three missing fields (#3271); `showBlockers` keeps those for the

@@ -146,7 +146,11 @@ describe('event mutations surface their domain errors', () => {
 		const { status, message } = await statusAndMessage(() => events.publishEvent({ id: 'evt-1' }));
 		expect(status).toBe(422);
 		expect(message).toMatch(/there is no title, there is no description/);
-		expect(publish).toHaveBeenLastCalledWith('evt-1', { acknowledged: false, reason: undefined });
+		expect(publish).toHaveBeenLastCalledWith('evt-1', {
+			acknowledged: false,
+			reason: undefined,
+			checkListing: true
+		});
 	});
 
 	it('publishEvent passes a reason through as an acknowledged override', async () => {
@@ -156,7 +160,8 @@ describe('event mutations surface their domain errors', () => {
 
 		expect(publish).toHaveBeenLastCalledWith('evt-1', {
 			acknowledged: true,
-			reason: 'Copy is coming from the band'
+			reason: 'Copy is coming from the band',
+			checkListing: true
 		});
 	});
 
