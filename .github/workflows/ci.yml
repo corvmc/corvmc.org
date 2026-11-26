@@ -131,7 +131,7 @@ jobs:
             vitest-fs-${{ runner.os }}-${{ matrix.shard }}-${{ hashFiles('pnpm-lock.yaml', 'vite.config.ts', 'svelte.config.js') }}-
             vitest-fs-${{ runner.os }}-${{ matrix.shard }}-
       - run: pnpm run test:unit -- --run --shard=${{ matrix.shard }}/2
-      - if: (github.ref == 'refs/heads/main' || github.head_ref == 'issue-3359-ci-caches-shards') && steps.vitest-cache.outputs.cache-hit != 'true'
+      - if: (github.ref == 'refs/heads/main' || github.head_ref == 'ci/speed-caches-shards') && steps.vitest-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: node_modules/.vitest-cache
