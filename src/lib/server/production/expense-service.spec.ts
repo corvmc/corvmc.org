@@ -24,6 +24,7 @@ const {
 	deductibleTotalCents,
 	expenseLines,
 	listExpenses,
+	listExpensesForProject,
 	removeExpense,
 	shareBaseCents
 } = await import('./expense-service');
@@ -75,6 +76,34 @@ describe('recording what a show cost', () => {
 				})
 			})
 		);
+	});
+});
+
+describe('the cost sheet on a project’s Budget page', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			delete from production; delete from project;
+			insert into project (id, name, kind) values ('festival', 'Fest', 'production'),
+				('night-1', 'Night one', 'production'), ('plain', 'Plain', 'general');
+			insert into production (id, project_id, status) values ('p-fest', 'festival', 'draft'),
+				('p-night', 'night-1', 'closed');
+		`);
+	});
+
+	it('lists a project’s own production and none of a sibling’s', async () => {
+		await addExpense(forShow({ productionId: 'p-fest', label: 'Fest PA' }));
+		sqlite.exec(`insert into production_expense (id, production_id, label, category, amount_cents)
+			values ('exp-night', 'p-night', 'Night one door', 'staffing', 100)`);
+
+		const festival = await listExpensesForProject('festival');
+		expect(festival?.productionId).toBe('p-fest');
+		expect(festival?.lines.map((l) => l.label)).toEqual(['Fest PA']);
+		expect(festival?.locked).toBe(false);
+		expect((await listExpensesForProject('night-1'))?.locked).toBe(true);
+	});
+
+	it('is null for a project with no production', async () => {
+		expect(await listExpensesForProject('plain')).toBeNull();
 	});
 });
 

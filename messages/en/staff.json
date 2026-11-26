@@ -2330,6 +2330,7 @@
 	"staff_projects_id_budget_report_takes_off_project_record_its_text": "Takes {#strong}{label}{/strong} off this project. The record itself is untouched.",
 	"staff_projects_id_budget_report_volunteer_time_impact_value_text": "Volunteer time — impact value {#span} {staff_projects_id_budget_report_every_approved_hour_at_hr} {/span}",
 	"staff_projects_id_budget_report_work_order_lands_task_list_label": "Task",
+	"staff_projects_id_budget_show_costs_nothing_recorded_text": "No costs recorded. An against-net deal divides the whole pool until a cost is entered.",
 	"staff_projects_id_edit_project_label": "Edit project",
 	"staff_projects_id_edit_project_title": "Edit project",
 	"staff_projects_id_events_label": "Events",

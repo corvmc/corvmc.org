@@ -3,7 +3,7 @@ import { form } from './_remote';
 import { getRequestEvent, query } from '$app/server';
 import { error, invalid } from '@sveltejs/kit';
 import { listActContacts } from '#lib/server/directory/contact-service.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
 import {
@@ -50,6 +50,7 @@ import {
 import { useArtWithFooter, useTemplateFlyer } from '#lib/server/poster/flyer-service.js';
 import { PERCENTAGE_BPS_MAX } from '#lib/production/terms.js';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
+import { getProjectDetail } from './projects.remote';
 import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
 import { create as createEventListing } from '#lib/server/event/event-service.js';
 import { listAttachableListings } from '#lib/server/production/attachable-listings.js';
@@ -637,6 +638,16 @@ export const recordActPayout = form(
 );
 
 /**
+ * A cost line shows on the console (`eventId`) and on the project's Budget page. The
+ * project comes off the production, never the form, and only a reader of the page gets
+ * its query refreshed: that query is guarded by `project.read`.
+ */
+async function refreshCosts(eventId: string | undefined, projectId: string | null) {
+	if (eventId) await getStaffEventProduction(eventId).refresh();
+	if (projectId && (await can('project.read'))) await getProjectDetail(projectId).refresh();
+}
+
+/**
  * What the night cost, line by line.
  *
  * `production.run`, not the payout's `finance.refund`: booking the engineer and
@@ -646,7 +657,7 @@ export const recordActPayout = form(
  */
 export const addProductionExpense = form(
 	z.object({
-		eventId: z.string().min(1),
+		eventId: z.string().min(1).optional(),
 		productionId: z.string().min(1),
 		label: z.string().min(1).max(120),
 		category: z.enum(productionExpenseCategories),
@@ -655,10 +666,8 @@ export const addProductionExpense = form(
 		paidTo: z.string().max(120).optional()
 	}),
 	async (data) => {
-		const { user: staff } = await requireProjectCommittee(
-			await projectOfProduction(data.productionId),
-			'production.run'
-		);
+		const projectId = await projectOfProduction(data.productionId);
+		const { user: staff } = await requireProjectCommittee(projectId, 'production.run');
 		try {
 			await addExpense({
 				productionId: data.productionId,
@@ -672,7 +681,7 @@ export const addProductionExpense = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		await getStaffEventProduction(data.eventId).refresh();
+		await refreshCosts(data.eventId, projectId);
 		return { success: true };
 	}
 );
@@ -696,15 +705,16 @@ export const undoActPayout = form(
 );
 
 export const removeProductionExpense = form(
-	z.object({ eventId: z.string().min(1), expenseId: z.string().min(1) }),
+	z.object({ eventId: z.string().min(1).optional(), expenseId: z.string().min(1) }),
 	writesAudit('production.expense_removed', async (data) => {
-		await requireProjectCommittee(await projectOfExpense(data.expenseId), 'production.run');
+		const projectId = await projectOfExpense(data.expenseId);
+		await requireProjectCommittee(projectId, 'production.run');
 		try {
 			await removeExpense(data.expenseId);
 		} catch (err) {
 			mapDomainError(err);
 		}
-		await getStaffEventProduction(data.eventId).refresh();
+		await refreshCosts(data.eventId, projectId);
 		return { success: true };
 	})
 );
