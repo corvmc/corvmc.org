@@ -5,6 +5,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { and, asc, eq, sum } from 'drizzle-orm';
 import type { ProductionExpenseCategory } from '#lib/config.js';
 import { reverseProductionExpense } from '#lib/server/finance/production-expense-entries.js';
+import { isTerminalProduction } from '#lib/production/status.js';
 import { assertNotTerminal } from './production-scope';
 
 /**
@@ -120,6 +121,32 @@ export async function expenseLines(productionId: string): Promise<ProductionExpe
 		.from(productionExpense)
 		.where(eq(productionExpense.productionId, productionId))
 		.orderBy(asc(productionExpense.createdAt), asc(productionExpense.id));
+}
+
+/**
+ * The cost sheet of the production this project is the show for, for its Budget page.
+ *
+ * Keyed on `production.project_id`, so a festival parent lists only its own production's
+ * lines and a child keeps its own. Null for a project with no production.
+ */
+export interface ProjectCosts {
+	productionId: string;
+	locked: boolean;
+	lines: ProductionExpenseLine[];
+}
+
+export async function listExpensesForProject(projectId: string): Promise<ProjectCosts | null> {
+	const [prod] = await db
+		.select({ id: production.id, status: production.status })
+		.from(production)
+		.where(eq(production.projectId, projectId))
+		.limit(1);
+	if (!prod) return null;
+	return {
+		productionId: prod.id,
+		locked: isTerminalProduction(prod.status),
+		lines: await expenseLines(prod.id)
+	};
 }
 
 /**

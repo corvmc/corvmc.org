@@ -5,6 +5,7 @@
 	import { getProjectDetail } from '#lib/remote/projects.remote.js';
 	import { resolve } from '$app/paths';
 	import BudgetReport from '../BudgetReport.svelte';
+	import ShowCosts from './ShowCosts.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -23,5 +24,10 @@
 />
 
 <PageContent>
-	<BudgetReport {data} />
+	<div class="space-y-4">
+		<BudgetReport {data} />
+		{#if data.costs}
+			<ShowCosts costs={data.costs} canEdit={data.canEditCosts} />
+		{/if}
+	</div>
 </PageContent>

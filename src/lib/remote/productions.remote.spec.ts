@@ -184,6 +184,8 @@ vi.mock('./events.remote', () => ({
 	getStaffEvents: () => ({ refresh })
 }));
 
+vi.mock('./projects.remote', () => ({ getProjectDetail: () => ({ refresh: vi.fn() }) }));
+
 // The house shape for a remote spec: `form()` applies its schema and calls the
 // handler, so a payload the schema rejects never reaches the service — which is
 // the half of the validation this file is asserting.
@@ -494,6 +496,32 @@ describe('the production matrix', () => {
 			});
 		}
 		expect(listings.create).not.toHaveBeenCalled();
+	});
+
+	// The Budget page posts no event, and may post a forged project beside the production.
+	it('guards a cost added from the Budget page on the production’s project', async () => {
+		persona = 'production';
+		const line = { productionId: 'prod-1', label: 'PA', category: 'sound', amountCents: 500 };
+		await submit(productions.addProductionExpense, { ...line, projectId: 'proj-other' });
+		expect(requireProjectCommittee).toHaveBeenCalledWith('proj-show', 'production.run');
+		expect(expenses.addExpense).toHaveBeenCalledOnce();
+		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it('refuses a cost added to another show’s production from the Budget page', async () => {
+		persona = 'production';
+		const line = { productionId: 'prod-other', label: 'PA', category: 'sound', amountCents: 500 };
+		await expect(submit(productions.addProductionExpense, line)).rejects.toMatchObject({
+			status: 403
+		});
+		expect(expenses.addExpense).not.toHaveBeenCalled();
+	});
+
+	it('removes a cost from the Budget page, guarded by the line’s project', async () => {
+		persona = 'production';
+		await submit(productions.removeProductionExpense, { expenseId: 'exp-1' });
+		expect(scope.projectOfExpense).toHaveBeenCalledWith('exp-1');
+		expect(expenses.removeExpense).toHaveBeenCalledWith('exp-1');
 	});
 
 	it('refuses show work on a slot of a show the committee is not on', async () => {

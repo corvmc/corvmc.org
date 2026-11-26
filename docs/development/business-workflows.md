@@ -2530,7 +2530,10 @@ restore crew shifts or retract a cancellation notice.
     live work order anchored to it by the same delta, in the same batch.
 13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
     revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
-    and top-ups count as spend; the pool passes through and never does.
+    and top-ups count as spend; the pool passes through and never does. The project's
+    Budget page lists that cost sheet with Add and Remove (`production.run`, locked once the
+    show is closed or cancelled); a festival parent lists only its own production's lines,
+    and each child keeps its own Budget page (#3273).
 14. **Festivals and runs** (#2543). A
     project, usually a show's, can name another project as its parent (`parent_project_id`),
     set from Edit project on `/staff/tasks/projects/[id]` with `project.manage`. Each night

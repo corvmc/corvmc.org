@@ -40,6 +40,7 @@ import {
 	listProjectProgress,
 	requireTaskInProject
 } from '#lib/server/project/project-task-service.js';
+import { listExpensesForProject } from '#lib/server/production/expense-service.js';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { getProjectOrigin, startProjectFromBallot } from '#lib/server/project/decision-chain.js';
 import { applyDutyList, listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
@@ -187,7 +188,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			taking,
 			progress,
 			showId,
-			family
+			family,
+			costs,
+			canEditCosts
 		] = await Promise.all([
 			getProjectById(id),
 			getProjectBurn(id),
@@ -200,7 +203,9 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			listProjectCommittees([id]),
 			getProjectProgress(id),
 			getProjectShowId(id),
-			getProjectFamily(id)
+			getProjectFamily(id),
+			listExpensesForProject(id),
+			can('production.run', { projectId: id })
 		]);
 		const dutyLists = lists.filter((l) => l.itemCount > 0).map((l) => ({ id: l.id, name: l.name }));
 		return {
@@ -220,7 +225,10 @@ export const getProjectDetail = query(z.string(), async (id) => {
 			/** A production's listing: the page links to its console. */
 			showId,
 			/** The festival or run this is part of, its parts, and what it could join. */
-			family
+			family,
+			/** The show's cost sheet; null for a project with no production. */
+			costs,
+			canEditCosts
 		};
 	} catch (err) {
 		mapDomainError(err);
