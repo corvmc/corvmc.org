@@ -57,3 +57,29 @@ export function showBlockers(row: {
 	if (!hasDescription(row.description)) warnings.push('there is no description');
 	return warnings;
 }
+
+/** The listing fields a publish checks, named by the Listing tab field that fixes each. */
+export type ListingGap = 'title' | 'startsAt' | 'description';
+
+/**
+ * What a listing still lacks before it is announced, whatever its source. Not
+ * poster or production status: those stay with `showBlockers` for the dashboard.
+ */
+export function listingGaps(row: {
+	title: string | null;
+	startsAt: Date | null;
+	description: string | null;
+}): ListingGap[] {
+	const gaps: ListingGap[] = [];
+	if (!row.title?.trim()) gaps.push('title');
+	if (!row.startsAt) gaps.push('startsAt');
+	if (!hasDescription(row.description)) gaps.push('description');
+	return gaps;
+}
+
+/** Plain words for a gap, as the 422 on an unacknowledged publish names it. */
+export const LISTING_GAP_WORDS: Record<ListingGap, string> = {
+	title: 'there is no title',
+	startsAt: 'there is no start date and time',
+	description: 'there is no description'
+};
