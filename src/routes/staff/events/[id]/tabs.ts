@@ -43,11 +43,6 @@ export function showsSettle(evt: { source: string; status: string; startsAt: Dat
 	return evt.source === 'cmc' && evt.status !== 'cancelled' && evt.startsAt <= now;
 }
 
-/** The Production tab, scrolled to its settlement section. */
-export function settlementHref(id: string): ResolvedPathname {
-	return `${eventTabHref(id, 'production')}#settlement` as ResolvedPathname;
-}
-
 /**
  * The dialog shows the figures without editing them once every act is paid, or
  * once the show is closed or cancelled. The header's button reads View

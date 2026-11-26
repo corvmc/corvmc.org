@@ -2523,13 +2523,15 @@ restore crew shifts or retract a cancellation notice.
    (`finance.refund`) writes every row through `recordSlotPayout`, skips an act already paid, and
    refuses a slot of another production before writing any; a retry finishes the rest, so it is
    not all-or-nothing. When every act is paid (`Settlement.settled`) the header shows a Settled
-   badge and the button reads **View settlement**: the same figures, read-only. The production
-   console's **Settlement** section still carries `recordActPayout` / `undoActPayout` until it is
-   removed. A payout is never edited: undo writes reversing ledger rows for that act alone
+   badge and the button reads **View settlement**: the same figures, read-only. A payout is
+   never edited: `undoActPayout` writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
-   recorded again. All are audited. Not a fully read-only View settlement, because removing the
-   console section would remove the only way to correct a payout: the dialog keeps a per-act
-   **Undo payout**, for `finance.refund` holders and on a show that is not closed (#3273).
+   recorded again. All are audited. The Production tab has no settlement section: the dialog is
+   the one place the night's figures are settled. Not a fully read-only View settlement, because
+   nothing else corrects a payout: the dialog keeps a per-act **Undo payout**, for
+   `finance.refund` holders and on a show that is not closed (#3273). Not a Settlement section
+   on the Production tab beside the dialog, because two homes for one set of figures drift
+   (#3273).
 7. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
@@ -2563,9 +2565,9 @@ restore crew shifts or retract a cancellation notice.
     staff count when there is one, else the handoffs' sum, else nobody counted.
     `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
     `doorSplitActsPercent` or the house `DOOR_SPLIT_ACTS_PERCENT`; a short drawer splits nothing.
-    A drawer that differs from the recorded cash sales warns on the console, and never blocks
-    (#2800). Only one kind of count, a staff count that differs from the handoffs' sum, or one
-    person behind the staff count and every handoff (`oneCounter`) warns on the console and on a
+    A drawer that differs from the recorded cash sales warns in the Settle dialog, and never
+    blocks (#2800). Only one kind of count, a staff count that differs from the handoffs' sum, or
+    one person behind the staff count and every handoff (`oneCounter`) warns in the dialog and on a
     move to `settled` or `closed`, and never blocks. Not a refusal when one person counts the
     till, because a small night has one door person; it warns as `oneCounter` and is recorded
     (#3273, reversing the #2722 refusal). `Settlement.settled` is derived from the recorded

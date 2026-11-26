@@ -52,7 +52,6 @@
 		eventTabs,
 		parseEventTab,
 		settleReadOnly,
-		settlementHref,
 		showsSettle,
 		type EventTab
 	} from './tabs';
@@ -180,8 +179,12 @@
 						: m.staff_events_id_settle_event_label()}
 				</Button>
 			{:else}
-				<!-- No production yet: the console's settlement section opens one. -->
-				<Button variant="primary" href={settlementHref(evt.id)} data-testid="settle-event">
+				<!-- No production yet: the Production tab opens one. -->
+				<Button
+					variant="primary"
+					href={eventTabHref(evt.id, 'production')}
+					data-testid="settle-event"
+				>
 					{m.staff_events_id_settle_event_label()}
 				</Button>
 			{/if}

@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	eventTabHref,
-	eventTabs,
-	parseEventTab,
-	settleReadOnly,
-	settlementHref,
-	showsSettle
-} from './tabs';
+import { eventTabHref, eventTabs, parseEventTab, settleReadOnly, showsSettle } from './tabs';
 
 describe('eventTabs', () => {
 	it.each([
@@ -57,10 +50,6 @@ describe('showsSettle', () => {
 		expect(showsSettle({ ...show, startsAt: new Date('2026-12-01T21:00:00Z') }, now)).toBe(false);
 		expect(showsSettle({ ...show, status: 'cancelled' }, now)).toBe(false);
 		expect(showsSettle({ ...show, source: 'band' }, now)).toBe(false);
-	});
-
-	it('links to the settlement section of the Production tab', () => {
-		expect(settlementHref('e1')).toBe('/staff/events/e1?tab=production#settlement');
 	});
 });
 

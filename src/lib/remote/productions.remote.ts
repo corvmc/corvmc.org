@@ -19,7 +19,6 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { recordStaffCount as recordStaffCountService } from '#lib/server/production/till-count-service.js';
 import {
 	recordPayouts as recordPayoutsService,
-	recordSlotPayout,
 	undoSlotPayout
 } from '#lib/server/production/settlement-service.js';
 import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
@@ -614,31 +613,6 @@ export const setRunOfShowTerms = form(
 	}
 );
 
-/**
- * What an act was actually handed.
- *
- * `finance.refund` rather than a `production.*` half, which every other control
- * on this console uses: the rest of the page arranges a night, and this one moves
- * money out of the till and writes the ledger. A producer runs the show; a
- * treasurer says what was paid.
- */
-export const recordActPayout = form(
-	z.object({
-		...slotRef,
-		amountCents: z.number().int().min(0).max(100_000_000)
-	}),
-	writesAudit('production.payout_recorded', async (data) => {
-		const staff = await requireCapability('finance.refund');
-		try {
-			await recordSlotPayout(data.slotId, data.amountCents, staff.id);
-		} catch (err) {
-			mapDomainError(err);
-		}
-		await getStaffEventProduction(data.eventId).refresh();
-		return { success: true };
-	})
-);
-
 /** One act's line in the Settle dialog. A donated set records zero whatever the box says. */
 const payoutLine = z
 	.object({
@@ -654,9 +628,10 @@ const payoutLine = z
 /**
  * Every unpaid act's payout in one go, from the Settle dialog.
  *
- * The same `finance.refund` as `recordActPayout`. The production comes from
- * the form only to say which one the slots must belong to; the service
- * refuses a slot of another production before writing any.
+ * `finance.refund` rather than a `production.*` half: the rest of the console
+ * arranges a night, and this moves money out of the till and writes the ledger.
+ * The production comes from the form only to say which one the slots must
+ * belong to; the service refuses a slot of another production before writing any.
  */
 export const recordPayouts = form(
 	z.object({

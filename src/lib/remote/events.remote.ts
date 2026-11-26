@@ -1377,7 +1377,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riders,
 		production,
 		runOfShow,
-		settlement,
 		artifactRequests,
 		requestableActs,
 		hostShift,
@@ -1398,11 +1397,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// Who plays when. Times are derived and written on every mutation, so this
 		// read never recomputes — it only re-checks the warnings.
 		getRunOfShow(id),
-		// What the night took, cost, and owes. Rides in the page's one query
-		// rather than beside it — `custom/no-concurrent-remote-queries` exists to
-		// stop a page fanning reads out, and this one is cheap when there is no
-		// production because it returns null on the first select.
-		getSettlement(id),
 		// What the bill still owes us, and who can be asked. Fulfilment is derived
 		// from the artifact itself, so a rider filled in unprompted already counts
 		// and nothing here has to be ticked off by hand.
@@ -1438,7 +1432,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riderStock,
 		production,
 		runOfShow,
-		settlement,
 		artifactRequests,
 		requestableActs,
 		hostShift,

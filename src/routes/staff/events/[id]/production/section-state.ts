@@ -1,5 +1,4 @@
 import { m } from '#lib/paraglide/messages.js';
-import { formatCents } from '#lib/utils/format.js';
 import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
 
 /**
@@ -8,7 +7,6 @@ import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
  */
 
 type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
-type Settlement = NonNullable<Loaded['settlement']>;
 type RunOfShow = NonNullable<Loaded['runOfShow']>;
 
 export function deliverablesState(items: Loaded['deliverables']): string | undefined {
@@ -53,37 +51,4 @@ export function runningOrderState(ros: RunOfShow): string {
 	if (ros.unslotted.length > 0)
 		return m.staff_production_state_bands_unplaced_label({ count: ros.unslotted.length });
 	return m.staff_production_state_sets_label({ count: ros.slots.length });
-}
-
-export const nightState = (s: Settlement) =>
-	m.staff_production_state_net_label({ amount: formatCents(s.netCents) });
-
-export function doorState(s: Settlement): string {
-	if (!s.door) return m.staff_production_state_not_counted_label();
-	const amount = formatCents(s.door.cashCents);
-	switch (s.doorCounts?.check) {
-		case 'mismatch':
-			return m.staff_production_state_counts_differ_label();
-		case 'agreed':
-			return m.staff_production_state_counted_twice_label({ amount });
-		case 'single':
-			return m.staff_production_state_counted_once_label({ amount });
-		default:
-			return m.staff_production_state_door_counted_label({ amount });
-	}
-}
-
-export const costsState = (s: Settlement) =>
-	s.expenses.length === 0
-		? m.staff_production_state_none_recorded_label()
-		: m.staff_production_state_costs_label({ count: s.expenses.length });
-
-export function payoutsState(s: Settlement): string {
-	if (s.acts.length === 0) return m.staff_production_state_no_bands_label();
-	if (s.unpaidActCount > 0)
-		return m.staff_production_state_paid_of_label({
-			paid: s.acts.length - s.unpaidActCount,
-			total: s.acts.length
-		});
-	return m.staff_production_state_settled_label();
 }

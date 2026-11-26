@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -24,7 +23,6 @@
 	import { isTerminalProduction } from '#lib/production/status.js';
 	import LineupPanel from './LineupPanel.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
-	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
 	import DeliverablesCard from './DeliverablesCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
@@ -47,19 +45,11 @@
 		productionRecord ? isTerminalProduction(productionRecord.status) : false
 	);
 	const runOfShow = $derived(loaded.runOfShow);
-	const settlement = $derived(loaded.settlement);
 	const budget = $derived(loaded.budget);
 	/** The advance question: who has told us nothing at all. */
 	const ridersMissing = $derived(riders.filter((r) => r.empty).length);
 
 	const evt = $derived(loaded.detail.event);
-
-	// The section renders after the query, past the browser's own hash scroll.
-	$effect(() => {
-		if (settlement && page.url.hash === '#settlement') {
-			document.getElementById('settlement')?.scrollIntoView();
-		}
-	});
 
 	const productionFields = updateProduction.fields;
 </script>
@@ -360,10 +350,5 @@
 
 	{#if budget}
 		<ShowBudgetCard projectId={budget.projectId} burn={budget.burn} />
-	{/if}
-	{#if settlement}
-		<section id="settlement" class="flex flex-col gap-6" data-testid="settlement">
-			<SettlementPanel {settlement} eventId={evt.id} />
-		</section>
 	{/if}
 </div>

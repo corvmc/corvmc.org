@@ -130,6 +130,53 @@ describe('SettleDialog', () => {
 		expect(document.querySelectorAll('button')).toHaveLength(1);
 	});
 
+	// Warn, never refuse: the typed count is read against the check-ins (#2801)
+	// and the counted cash against the cash sales the door recorded (#2800).
+	describe('door warnings', () => {
+		const night = (count: number | null, checkedIn: number, gapCents: number) =>
+			settlement({
+				door: {
+					cashCents: 100_000,
+					recordedCents: 100_000 - gapCents,
+					gapCents,
+					unrecordedCents: 0,
+					count,
+					actsPercent: 70,
+					actsCents: 70_000,
+					collectiveCents: 30_000
+				},
+				doorCounts: { check: 'single', oneCounter: false, handoffs: [], staff: null },
+				doorTakings: {
+					checkedIn,
+					card: { tickets: 0 },
+					cash: { tickets: 0 },
+					free: { tickets: 0 },
+					donations: { count: 0, grossCents: 0 }
+				}
+			});
+		const shown = (id: string) => document.querySelectorAll(`[data-testid=${id}]`).length;
+
+		it('warns when the headcount differs from check-ins, and only then', async () => {
+			const { unmount } = await render(SettleDialog, props(night(5, 3, 0)));
+			await expect.element(page.getByTestId('door-count-gap')).toBeVisible();
+			unmount();
+
+			await render(SettleDialog, props(night(3, 3, 0)));
+			await expect.element(page.getByTestId('settle-net')).toBeInTheDocument();
+			expect(shown('door-count-gap')).toBe(0);
+		});
+
+		it('warns when the cash counted differs from cash sales recorded, and only then', async () => {
+			const { unmount } = await render(SettleDialog, props(night(3, 3, 10_000)));
+			await expect.element(page.getByTestId('door-cash-gap')).toBeVisible();
+			unmount();
+
+			await render(SettleDialog, props(night(3, 3, 0)));
+			await expect.element(page.getByTestId('settle-net')).toBeInTheDocument();
+			expect(shown('door-cash-gap')).toBe(0);
+		});
+	});
+
 	it('is read-only for a closed show with an unpaid act', async () => {
 		render(SettleDialog, props(settlement({ status: 'closed' })));
 		await expect.element(page.getByTestId('settle-net')).toBeInTheDocument();
