@@ -1,5 +1,1 @@
-[
-	"src/lib/server/site-config/site-config-service.ts → clearSiteConfigMemo",
-	"src/lib/server/production/till-count-service.ts → recordHandoff",
-	"src/lib/server/production/till-count-service.ts → removeHandoff"
-]
+["src/lib/server/site-config/site-config-service.ts → clearSiteConfigMemo"]

@@ -18,6 +18,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { resolve } from '$app/paths';
 	import DoorScanner from '#lib/components/events/DoorScanner.svelte';
+	import TillCount from '#lib/components/events/TillCount.svelte';
 	import DoorCheckInForm from '#lib/components/events/DoorCheckInForm.svelte';
 	import {
 		checkInAsVolunteer,
@@ -74,6 +75,10 @@
 		checkIn={(ticketId) => scanTicketInAsVolunteer({ ticketId, signupId })}
 		identify={(code) => identifyTicketCodeAsVolunteer({ code, signupId })}
 	/>
+
+	{#if data.canCountTill}
+		<TillCount eventId={data.event.id} />
+	{/if}
 
 	<SearchInput
 		bind:value={search}

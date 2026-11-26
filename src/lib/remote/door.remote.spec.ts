@@ -7,7 +7,18 @@ vi.mock('$app/server', () => {
 		handler.__ = { type: 'command' };
 		return handler;
 	};
-	return { query: tag, form: tag, command: tag };
+	// A query is also called to refresh it from a form: `getTillCounts(id).refresh()`.
+	const queryTag = (...args: unknown[]) => {
+		const handler = args[args.length - 1] as (...a: unknown[]) => Promise<unknown>;
+		const fn = Object.assign(
+			(...a: unknown[]) => Object.assign(handler(...a), { refresh: async () => {} }),
+			{
+				__: { type: 'query' }
+			}
+		);
+		return fn;
+	};
+	return { query: queryTag, form: tag, command: tag };
 });
 
 const requireCapability = vi.fn();
@@ -47,6 +58,48 @@ const gift = {
 	fulfillDoorDonation: vi.fn()
 };
 vi.mock('#lib/server/finance/door-donation.js', () => gift);
+
+const requireProjectCommittee = vi.fn();
+vi.mock('#lib/server/group/group-context.js', () => ({
+	requireProjectCommittee: (...a: unknown[]) => requireProjectCommittee(...a)
+}));
+
+const scope = {
+	projectOfEvent: vi.fn(
+		async () =>
+			({ projectId: 'proj-1', productionId: 'prod-1' }) as {
+				projectId: string | null;
+				productionId: string | null;
+			} | null
+	),
+	projectOfProduction: vi.fn(async () => 'proj-1' as string | null),
+	eventOfProduction: vi.fn(async () => 'evt-1' as string | null)
+};
+vi.mock('#lib/server/production/production-scope.js', () => scope);
+
+const till = {
+	tillSummary: vi.fn(async () => ({
+		handoffs: [
+			{ id: 'c-1', cashCents: 5000, byUserId: 'staff-1', byName: 'Sam', at: new Date(0) },
+			{ id: 'c-2', cashCents: 2500, byUserId: 'vol-9', byName: 'Vi', at: new Date(0) }
+		],
+		handoffTotalCents: 7500
+	}))
+};
+vi.mock('#lib/server/production/till-summary.js', () => till);
+
+const counts = {
+	recordHandoff: vi.fn(async () => 'c-3'),
+	removeHandoff: vi.fn(async () => undefined),
+	handoffOwner: vi.fn(
+		async () =>
+			({ productionId: 'prod-1', countedByUserId: 'staff-1' }) as {
+				productionId: string;
+				countedByUserId: string | null;
+			} | null
+	)
+};
+vi.mock('#lib/server/production/till-count-service.js', () => counts);
 
 let driver = 'fake';
 vi.mock('#lib/server/stripe.js', () => ({ paymentDriver: () => driver }));
@@ -94,6 +147,11 @@ beforeEach(() => {
 	gift.doorDonationEventId.mockResolvedValue(null);
 	listBriefingsForEvents.mockResolvedValue([]);
 	listConfirmedSignupsForEvents.mockResolvedValue([]);
+	requireProjectCommittee.mockResolvedValue({ user: { id: 'staff-1' } });
+	scope.projectOfEvent.mockResolvedValue({ projectId: 'proj-1', productionId: 'prod-1' });
+	scope.projectOfProduction.mockResolvedValue('proj-1');
+	scope.eventOfProduction.mockResolvedValue('evt-1');
+	counts.handoffOwner.mockResolvedValue({ productionId: 'prod-1', countedByUserId: 'staff-1' });
 });
 
 describe('the door remotes', () => {
@@ -270,5 +328,87 @@ describe('the door remotes', () => {
 		door.listDoorEvents.mockResolvedValue([{ id: 'evt-1' }]);
 		const { doorLists } = (await remote.getDoorEvents()) as DoorLists;
 		expect(doorLists).toEqual([{ eventId: 'evt-1', signupId: null }]);
+	});
+
+	describe('the till count', () => {
+		it.each([
+			['getTillCounts', 'evt-1'],
+			['countTill', { eventId: 'evt-1', cashCents: 5000 }]
+		])('%s asks for finance.collect on the show, before touching anything', async (name, arg) => {
+			forbidden();
+			await expect(remote[name](arg)).rejects.toMatchObject({ status: 403 });
+			expect(requireCapability).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-1' });
+			expect(counts.recordHandoff).not.toHaveBeenCalled();
+			expect(till.tillSummary).not.toHaveBeenCalled();
+		});
+
+		it('records a count as the signed-in member, whatever the form names', async () => {
+			await remote.countTill({ eventId: 'evt-1', cashCents: 5000, countedByUserId: 'other' });
+			expect(counts.recordHandoff).toHaveBeenCalledWith('prod-1', 'staff-1', 5000);
+		});
+
+		it('records a count when the member already counted the till (one counter only warns)', async () => {
+			await remote.countTill({ eventId: 'evt-1', cashCents: 100 });
+			await remote.countTill({ eventId: 'evt-1', cashCents: 200 });
+			expect(counts.recordHandoff).toHaveBeenCalledTimes(2);
+		});
+
+		it('refuses a count on a show with no production', async () => {
+			scope.projectOfEvent.mockResolvedValue({ projectId: null, productionId: null });
+			await expect(remote.countTill({ eventId: 'evt-1', cashCents: 5000 })).rejects.toMatchObject({
+				status: 404
+			});
+			expect(counts.recordHandoff).not.toHaveBeenCalled();
+		});
+
+		it("marks only the caller's own counts as removable", async () => {
+			const result = (await remote.getTillCounts('evt-1')) as { handoffs: { own: boolean }[] };
+			expect(result.handoffs.map((h) => h.own)).toEqual([true, false]);
+		});
+
+		it('has no counts to show for a show with no production', async () => {
+			scope.projectOfEvent.mockResolvedValue({ projectId: null, productionId: null });
+			await expect(remote.getTillCounts('evt-1')).resolves.toBeNull();
+		});
+
+		it('lets a counter remove their own count while they hold the door grant', async () => {
+			await remote.removeTillCount({ countId: 'c-1' });
+			expect(can).toHaveBeenCalledWith('finance.collect', { eventId: 'evt-1' });
+			expect(requireProjectCommittee).not.toHaveBeenCalled();
+			expect(counts.removeHandoff).toHaveBeenCalledWith('c-1');
+		});
+
+		it("refuses another volunteer's count, and asks the project for production.run", async () => {
+			counts.handoffOwner.mockResolvedValue({ productionId: 'prod-1', countedByUserId: 'vol-9' });
+			requireProjectCommittee.mockRejectedValue(
+				Object.assign(new Error('Not on a committee'), { status: 403 })
+			);
+			await expect(remote.removeTillCount({ countId: 'c-2' })).rejects.toMatchObject({
+				status: 403
+			});
+			expect(requireProjectCommittee).toHaveBeenCalledWith('proj-1', 'production.run');
+			expect(counts.removeHandoff).not.toHaveBeenCalled();
+		});
+
+		it('lets production.run remove a count it did not make', async () => {
+			counts.handoffOwner.mockResolvedValue({ productionId: 'prod-1', countedByUserId: 'vol-9' });
+			await remote.removeTillCount({ countId: 'c-2' });
+			expect(counts.removeHandoff).toHaveBeenCalledWith('c-2');
+		});
+
+		it('takes the show from the count row, never from the form', async () => {
+			counts.handoffOwner.mockResolvedValue({ productionId: 'prod-1', countedByUserId: 'vol-9' });
+			await remote.removeTillCount({ countId: 'c-2', eventId: 'evt-other', projectId: 'proj-x' });
+			expect(scope.projectOfProduction).toHaveBeenCalledWith('prod-1');
+			expect(requireProjectCommittee).toHaveBeenCalledWith('proj-1', 'production.run');
+		});
+
+		it('does nothing for a count that is gone', async () => {
+			counts.handoffOwner.mockResolvedValue(null);
+			await expect(remote.removeTillCount({ countId: 'c-x' })).rejects.toMatchObject({
+				status: 404
+			});
+			expect(counts.removeHandoff).not.toHaveBeenCalled();
+		});
 	});
 });
