@@ -600,50 +600,39 @@ describe('EventService', () => {
 		});
 
 		// -------------------------------------------------------------------
-		// Readiness warns, records and allows (#1787)
+		// Readiness warns, records and allows (#1787, #3271)
 		// -------------------------------------------------------------------
 		//
-		// A CMC show with no poster, no description or an unconfirmed lineup is
-		// incomplete, not corrupt: under docs/development/conventions.md#workflow-gates
-		// that is a warning staff can publish over with a reason, which is
-		// audited. Community listings stay exempt.
+		// A listing with no title, start or description is incomplete, not
+		// corrupt: under docs/development/conventions.md#workflow-gates that is a
+		// warning staff can publish over with a reason, which is audited. It
+		// applies to every source, and poster or production status are not checked.
 
-		it('returns the warnings unmoved when they are not acknowledged', async () => {
-			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
+		it('returns the gaps unmoved when they are not acknowledged', async () => {
+			selectResult = [{ ...mockEventRow, description: null }];
 
 			const outcome = await publish('evt-1');
 
-			expect(outcome.published).toBe(false);
-			expect(outcome.warnings.join()).toMatch(/no poster/);
+			expect(outcome).toEqual({ published: false, warnings: ['description'] });
 			expect(lastUpdateSet).toBeNull();
 			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 
-		it('names every missing piece, the unconfirmed production included', async () => {
-			selectResult = [
-				{
-					...mockEventRow,
-					source: 'cmc',
-					posterKey: null,
-					description: '   ',
-					productionStatus: 'draft'
-				}
-			];
+		it('names every gap, in the order the Listing tab shows them', async () => {
+			selectResult = [{ ...mockEventRow, title: '  ', description: '   ' }];
 
 			const { warnings } = await publish('evt-1');
 
-			expect(warnings.join()).toMatch(/not confirmed/);
-			expect(warnings.join()).toMatch(/no poster/);
-			expect(warnings.join()).toMatch(/no description/);
+			expect(warnings).toEqual(['title', 'description']);
 		});
 
-		it('publishes over acknowledged warnings and records the override', async () => {
+		it('publishes over acknowledged gaps and records the override with their keys', async () => {
 			updateRowCount = 1;
-			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
+			selectResult = [{ ...mockEventRow, description: null }];
 
 			const outcome = await publish('evt-1', {
 				acknowledged: true,
-				reason: 'Poster is at the printer'
+				reason: 'Copy is coming from the band'
 			});
 
 			expect(outcome.published).toBe(true);
@@ -652,16 +641,13 @@ describe('EventService', () => {
 				expect.objectContaining({
 					action: 'event.published_over_warnings',
 					subject: expect.objectContaining({ type: 'event', id: 'evt-1' }),
-					details: {
-						warnings: outcome.warnings,
-						reason: 'Poster is at the printer'
-					}
+					details: { warnings: ['description'], reason: 'Copy is coming from the band' }
 				})
 			);
 		});
 
 		it('refuses an acknowledged publish with no reason, so the log says why', async () => {
-			selectResult = [{ ...mockEventRow, source: 'cmc', posterKey: null }];
+			selectResult = [{ ...mockEventRow, description: null }];
 
 			await expect(publish('evt-1', { acknowledged: true, reason: '  ' })).rejects.toThrow(
 				PublishReasonRequiredError
@@ -669,28 +655,23 @@ describe('EventService', () => {
 			expect(lastUpdateSet).toBeNull();
 		});
 
-		it('publishes a CMC listing once it is ready, with nothing to record', async () => {
+		it('publishes a poster-less CMC show with all three fields, with nothing to record', async () => {
 			updateRowCount = 1;
 			selectResult = [
-				{
-					...mockEventRow,
-					source: 'cmc',
-					posterKey: 'events/p.jpg',
-					productionStatus: 'confirmed'
-				}
+				{ ...mockEventRow, source: 'cmc', posterKey: null, productionStatus: 'draft' }
 			];
 
 			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
 			expect(mockRecordAudit).not.toHaveBeenCalled();
 		});
 
-		it('leaves a community listing alone', async () => {
-			// No poster, no production — and it publishes, because gating the
-			// community calendar would break it.
-			updateRowCount = 1;
-			selectResult = [{ ...mockEventRow, source: 'community', posterKey: null }];
+		it('holds a community listing to the same three fields', async () => {
+			selectResult = [{ ...mockEventRow, source: 'community', description: null }];
 
-			await expect(publish('evt-1')).resolves.toEqual({ published: true, warnings: [] });
+			await expect(publish('evt-1')).resolves.toEqual({
+				published: false,
+				warnings: ['description']
+			});
 		});
 
 		it('throws when event does not exist', async () => {

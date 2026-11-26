@@ -40,7 +40,7 @@ import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
 } from '#lib/server/volunteer/show-cancellation.js';
-import { showBlockers } from './show-readiness';
+import { listingGaps, type ListingGap } from './show-readiness';
 import { requireProgramGroup } from '#lib/server/group/group-kind.js';
 import {
 	eq,
@@ -527,6 +527,8 @@ export interface UpdateEventParams {
 		reservationEndsAt: Date;
 		overrideConflicts: boolean;
 	};
+	/** Give the room back: cancel the linked hold and keep the listing. */
+	releaseHold?: { userId: string };
 }
 
 /**
@@ -688,7 +690,9 @@ function changedFields(existing: EventRow, params: UpdateEventParams): EventEdit
  * unchanged (the edit form always posts them) are dropped, not refused.
  */
 function cancelledEditParams(existing: EventRow, params: UpdateEventParams): UpdateEventParams {
-	if (params.rebook) throw new EventStateError('A cancelled event holds no space');
+	if (params.rebook || params.releaseHold) {
+		throw new EventStateError('A cancelled event holds no space');
+	}
 	const sale = {
 		ticketingEnabled: existing.ticketingEnabled,
 		ticketPrice: existing.ticketPrice,
@@ -724,6 +728,9 @@ export async function update(
 	}
 	const params = isCancelled ? cancelledEditParams(existing, input) : input;
 	assertTimeOrder(existing, params);
+	if (params.rebook && params.releaseHold) {
+		throw new EventValidationError('Hold the room or release it, not both');
+	}
 
 	const updates: Record<string, unknown> = { updatedAt: new Date() };
 	if (params.title !== undefined) updates.title = params.title;
@@ -858,6 +865,17 @@ export async function update(
 
 			updates.reservationId = newRes.id;
 		}
+	}
+
+	if (params.releaseHold && existing.reservationId) {
+		// Cancelled, not deleted, and the listing stays up, as `updateGroupSession`
+		// gives a session's room back. Staff act on the hold, so `actor: 'staff'`.
+		await cancelReservation(existing.reservationId, params.releaseHold.userId, 'Hold released', {
+			staffOverride: true,
+			actor: 'staff',
+			actorUserId: params.releaseHold.userId
+		});
+		updates.reservationId = null;
 	}
 
 	// Handle poster replacement
@@ -1048,33 +1066,29 @@ async function restoreWithheldPoster(eventId: string): Promise<void> {
 }
 
 /**
- * What a CMC listing is still missing before the public sees it. Warnings, not
- * refusals (docs/development/conventions.md#workflow-gates): `publish` goes
- * ahead over them once acknowledged with a reason.
- *
- * Community listings are exempt: a member posting somebody else's gig is not
- * making a promise on the collective's behalf.
+ * The fields a listing is still missing before the public sees it, for every
+ * source. Warnings, not refusals (docs/development/conventions.md#workflow-gates):
+ * `publish` goes ahead over them once acknowledged with a reason.
  */
-export async function publishBlockers(eventId: string): Promise<string[]> {
+export async function publishBlockers(eventId: string): Promise<ListingGap[]> {
 	return (await readiness(eventId)).warnings;
 }
 
-async function readiness(eventId: string): Promise<{ title: string | null; warnings: string[] }> {
+async function readiness(
+	eventId: string
+): Promise<{ title: string | null; warnings: ListingGap[] }> {
 	const [row] = await db
 		.select({
 			title: eventListing.title,
-			source: eventListing.source,
-			description: eventListing.description,
-			posterKey: eventPosterKeySql,
-			productionStatus: production.status
+			startsAt: eventListing.startsAt,
+			description: eventListing.description
 		})
 		.from(eventListing)
-		.leftJoin(production, eq(production.projectId, eventListing.projectId))
 		.where(eq(eventListing.id, eventId))
 		.limit(1);
 
 	if (!row) return { title: null, warnings: [] };
-	return { title: row.title, warnings: showBlockers(row) };
+	return { title: row.title, warnings: listingGaps(row) };
 }
 
 export interface PublishOptions {
@@ -1084,7 +1098,7 @@ export interface PublishOptions {
 	reason?: string | null;
 }
 
-export type PublishOutcome = { published: boolean; warnings: string[] };
+export type PublishOutcome = { published: boolean; warnings: ListingGap[] };
 
 /**
  * Publish a draft or pending listing. Unacknowledged warnings come back

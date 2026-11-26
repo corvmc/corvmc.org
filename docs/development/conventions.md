@@ -1154,9 +1154,11 @@ inventory assets (`reopenAsset`, both behind `inventory.reopen`) have the same R
 quiet `ReopenAction`. None reverses money: a reopened job keeps its ledger rows and a re-completion
 books only the difference; a reopened asset's ledger is brought back with an `adjust` movement.
 
-Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
-returns its readiness warnings unpublished until acknowledged with a reason, and writes
-`event.published_over_warnings` when it goes ahead over them.
+Publishing an event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
+returns its missing fields (`title`, `startsAt`, `description`, every source) unpublished until
+acknowledged with a reason, and writes `event.published_over_warnings` when it goes ahead over
+them. Not poster or production status at publish, because the owner set the three missing fields
+(#3271).
 
 So do approving a returned volunteer hour log (`approveHourLog`, which writes
 `volunteer_hours.approved_over_return`) and checking out a requested equipment loan without

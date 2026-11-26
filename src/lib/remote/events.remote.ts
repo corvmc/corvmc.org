@@ -82,6 +82,7 @@ import {
 	type MemberShowRow,
 	countMemberPastShows
 } from '#lib/server/event/event-service.js';
+import { LISTING_GAP_WORDS } from '#lib/server/event/show-readiness.js';
 import {
 	getConflictDetails,
 	getValidationWarnings
@@ -1549,7 +1550,10 @@ export const updateEvent = form(
 		rebookReservation: z.boolean().default(false),
 		reservationStartTime: z.string().optional(),
 		reservationEndTime: z.string().optional(),
-		overrideConflicts: z.boolean().default(false)
+		overrideConflicts: z.boolean().default(false),
+		releaseHold: z.boolean().default(false),
+		// Applied for band and community listings only; a CMC bill belongs to the console.
+		lineup: z.string().optional()
 	}),
 	async (data) => {
 		const staff = await requireListingWriter(data.eventId);
@@ -1639,9 +1643,15 @@ export const updateEvent = form(
 			};
 		}
 
+		if (data.releaseHold) updateParams.releaseHold = { userId: staff.id };
+
 		try {
 			// A show's committee writes the listing too, but correcting a cancelled one is staff's.
 			await update(data.eventId, updateParams, { whileCancelled: await can('event.manage') });
+			const lineup = parseStaffLineupField(data.lineup);
+			if (lineup && (await getById(data.eventId))?.source !== 'cmc') {
+				await setEventLineup(data.eventId, lineup, { asStaff: false });
+			}
 		} catch (err) {
 			mapDomainError(err);
 		}
@@ -1666,7 +1676,7 @@ export const publishEvent = form(
 			if (!outcome.published) {
 				error(
 					422,
-					`Not ready to announce: ${outcome.warnings.join(', ')}. Give a reason to publish anyway.`
+					`Not ready to announce: ${outcome.warnings.map((w) => LISTING_GAP_WORDS[w]).join(', ')}. Give a reason to publish anyway.`
 				);
 			}
 		} catch (err) {
@@ -1713,8 +1723,8 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
 });
 
 /**
- * What a CMC listing still needs before it can go public. Empty for community
- * and band listings, which are exempt.
+ * The listing fields still missing before it can go public, whatever its
+ * source, as the keys the Listing tab anchors its fields by.
  *
  * Loaded by the publish dialog so the answer arrives before the click. It was
  * only ever thrown *by* `publish`, so the way to find out was to fail.

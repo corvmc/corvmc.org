@@ -208,6 +208,64 @@ describe('the hold follows the listing', () => {
 	});
 });
 
+describe('releasing the hold', () => {
+	beforeEach(() => listingHold('ev-show'));
+
+	const reservationStatus = () =>
+		(
+			sqlite.prepare(`select status from reservation where id = 'res-ev-show'`).get() as {
+				status: string;
+			}
+		).status;
+	const listingRow = () =>
+		sqlite
+			.prepare(`select status, reservation_id from event_listing where id = 'ev-show'`)
+			.get() as {
+			status: string;
+			reservation_id: string | null;
+		};
+
+	it('cancels the reservation, frees the room and keeps the listing', async () => {
+		await events.update('ev-show', { releaseHold: { userId: STAFF } });
+
+		expect(reservationStatus()).toBe('cancelled');
+		expect(listingRow()).toEqual({ status: 'draft', reservation_id: null });
+		expect(await hasConflict(at(1), at(2))).toBe(false);
+	});
+
+	it('does nothing to a listing that holds no room', async () => {
+		listing('ev-bare');
+
+		await events.update('ev-bare', { releaseHold: { userId: STAFF } });
+
+		expect(reservationOf('ev-bare')).toBeUndefined();
+		expect(reservationStatus()).toBe('confirmed');
+	});
+
+	it('is refused together with a new hold', async () => {
+		await expect(
+			events.update('ev-show', {
+				releaseHold: { userId: STAFF },
+				rebook: {
+					userId: STAFF,
+					reservationStartsAt: at(24),
+					reservationEndsAt: at(28),
+					overrideConflicts: false
+				}
+			})
+		).rejects.toThrow(events.EventValidationError);
+		expect(reservationStatus()).toBe('confirmed');
+	});
+
+	it('is refused on a cancelled listing', async () => {
+		await events.cancel('ev-show', STAFF);
+
+		await expect(
+			events.update('ev-show', { releaseHold: { userId: STAFF } }, { whileCancelled: true })
+		).rejects.toThrow(events.EventStateError);
+	});
+});
+
 describe('a production’s hold', () => {
 	it('is still booked to the production', async () => {
 		sqlite.exec(`insert into project (id, name, kind) values ('proj-1', 'Friday', 'production')`);
