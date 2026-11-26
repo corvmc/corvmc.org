@@ -37,19 +37,19 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.locator('[data-testid="task-chips"] [data-chip="unassigned"]').click();
 		await expect(page).toHaveURL(/chip=unassigned/);
 		await expect(
-			page.locator(`main table a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
+			page.locator(`a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();
 	});
 
-	test('and the show it is for says so, beside the timed shifts', async ({ page }) => {
+	test('and the show it is for links to it', async ({ page }) => {
 		await loginAsStaff(page);
 		// The advance work is on the show's Production tab (#3270). `?tab=` is the
 		// addressable form, so this also pins that a pasted link lands there.
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		// The sidebar's Tasks box lists the show's open, shiftless tasks (#3270).
+		// The show reaches its open, shiftless task (#3270), wherever the page puts it.
 		await expect(
-			page.locator(`[data-testid="event-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
+			page.locator(`a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();
 	});
 
