@@ -125,7 +125,12 @@
 			</div>
 			<div>
 				<p class="text-muted">{m.staff_events_id_settle_dialog_net_text()}</p>
-				<p class="text-lg font-medium" class:text-error={net < 0} data-testid="settle-net">
+				<p
+					class="text-lg font-medium"
+					class:text-error={net < 0}
+					data-testid="settle-net"
+					data-cents={net}
+				>
 					{formatCents(net)}
 				</p>
 			</div>
@@ -359,7 +364,7 @@
 						<div class="flex items-center justify-between gap-3">
 							<p class="font-medium">
 								{m.staff_events_id_settle_dialog_total_text()}:
-								<span data-testid="settle-total">{formatCents(total)}</span>
+								<span data-testid="settle-total" data-cents={total}>{formatCents(total)}</span>
 							</p>
 							<SubmitButton label={m.staff_events_id_settle_dialog_record_label()} />
 						</div>

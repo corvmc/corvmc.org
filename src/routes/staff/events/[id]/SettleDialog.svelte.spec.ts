@@ -98,13 +98,13 @@ const props = (s: unknown, over: Record<string, unknown> = {}) => ({
 describe('SettleDialog', () => {
 	it('totals the suggested payouts and drops a donated set to zero', async () => {
 		render(SettleDialog, props(settlement()));
-		await expect.element(page.getByTestId('settle-total')).toHaveTextContent('$400.00');
-		await expect.element(page.getByTestId('settle-net')).toHaveTextContent('$900.00');
+		await expect.element(page.getByTestId('settle-total')).toHaveAttribute('data-cents', '40000');
+		await expect.element(page.getByTestId('settle-net')).toHaveAttribute('data-cents', '90000');
 
 		await page.getByRole('checkbox').first().click();
-		await expect.element(page.getByTestId('settle-total')).toHaveTextContent('$200.00');
+		await expect.element(page.getByTestId('settle-total')).toHaveAttribute('data-cents', '20000');
 		// The net moves with what is actually paid out: 1000 - 100 - (200 - 400).
-		await expect.element(page.getByTestId('settle-net')).toHaveTextContent('$1100.00');
+		await expect.element(page.getByTestId('settle-net')).toHaveAttribute('data-cents', '110000');
 	});
 
 	const paidShow = () =>
