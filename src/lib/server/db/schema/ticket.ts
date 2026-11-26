@@ -1,7 +1,7 @@
 import { sqliteTable, text, index, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
-import { eventListing } from './event';
+import { eventBand, eventListing } from './event';
 import { group } from './group';
 
 /**
@@ -59,6 +59,11 @@ export const ticket = sqliteTable(
 			.notNull()
 			.references(() => eventListing.id, { onDelete: 'cascade' }),
 		purchaseId: text('purchase_id').notNull(),
+		// The act whose guest this is (#3274). Null for every other ticket. Set null
+		// rather than cascade: a credit that goes by cascade (its directory entry
+		// deleted) leaves the ticket valid; `setEventLineup` cancels first when a
+		// credit is dropped from the bill.
+		eventBandId: text('event_band_id').references(() => eventBand.id, { onDelete: 'set null' }),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
 		attendeeName: text('attendee_name').notNull(),
 		attendeeEmail: text('attendee_email').notNull(),
@@ -114,7 +119,8 @@ export const ticket = sqliteTable(
 		index('idx_ticket_event').on(t.eventId),
 		index('idx_ticket_purchase').on(t.purchaseId),
 		index('idx_ticket_user').on(t.userId),
-		index('idx_ticket_event_status').on(t.eventId, t.status)
+		index('idx_ticket_event_status').on(t.eventId, t.status),
+		index('idx_ticket_event_band').on(t.eventBandId)
 	]
 );
 

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "4ce77fb9-5c38-4190-8989-53a1ab4df02f",
+  "id": "5651bdd9-46fb-4574-9470-dc534bd3c15c",
   "prevIds": [
-    "e82e1de8-fc94-42ec-951f-7b5939f1aa4d"
+    "bc087360-76dd-44b7-8ce9-0b156dbcea84"
   ],
   "ddl": [
     {
@@ -3531,6 +3531,16 @@
       "default": null,
       "generated": null,
       "name": "purchase_id",
+      "entityType": "columns",
+      "table": "ticket"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_band_id",
       "entityType": "columns",
       "table": "ticket"
     },
@@ -17411,6 +17421,21 @@
     },
     {
       "columns": [
+        "event_band_id"
+      ],
+      "tableTo": "event_band",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_ticket_event_band_id_event_band_id_fk",
+      "entityType": "fks",
+      "table": "ticket"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -23988,6 +24013,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_ticket_event_status",
+      "entityType": "indexes",
+      "table": "ticket"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_band_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_ticket_event_band",
       "entityType": "indexes",
       "table": "ticket"
     },

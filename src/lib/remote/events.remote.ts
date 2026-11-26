@@ -164,7 +164,14 @@ import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js'
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
 import { getMemberGigGuide, getPublicGigGuide } from './calendar.remote';
-import { writesAudit } from '#lib/server/audit/declared.js';
+import { unaudited, writesAudit } from '#lib/server/audit/declared.js';
+import {
+	addGuest,
+	eventOfAct,
+	eventOfGuest,
+	listGuestsByAct,
+	removeGuest
+} from '#lib/server/ticket/guest-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -1358,7 +1365,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		hostShift,
 		deliverables,
 		committees,
-		riderStock
+		riderStock,
+		canGuests
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		listApplicableDutyLists(),
@@ -1389,8 +1397,11 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		listShowDeliverables(id),
 		listCommittees(),
 		// What the bill asks CMC for, against what the catalog holds (#2724).
-		getEventRiderStock(id)
+		getEventRiderStock(id),
+		// Guest lists name people, so they ride only for who may keep them (#3274).
+		eventScope(id).then((scope) => can('event.manageGuests', scope))
 	]);
+	const guests = canGuests ? await listGuestsByAct(id) : [];
 	// The show's budget and burn are its project's (#1673).
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
@@ -1416,7 +1427,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		deliverables,
 		deliverableCommittees: committees,
 		canSetLead: projectId ? canBook : false,
-		canBook
+		canBook,
+		canGuests,
+		guests
 	};
 });
 
@@ -1820,6 +1833,58 @@ export const compTickets = form(
 
 		return { success: true };
 	})
+);
+
+/**
+ * A guest for one act on the bill (#3274). The guard is scoped to the show the
+ * credit is on, read from the row: a client `eventId` would let a lead of one
+ * show issue seats at another.
+ */
+export const addActGuest = form(
+	z.object({
+		eventBandId: z.string().min(1),
+		attendeeName: z.string().trim().min(1, 'Name is required').max(SHORT_TEXT_MAX),
+		attendeeEmail: z.string().trim().email('Enter an email address').max(254)
+	}),
+	writesAudit('event.tickets_comped', async (data) => {
+		await requireCapability('event.manageGuests', async () => {
+			const eventId = await eventOfAct(data.eventBandId);
+			return eventId ? eventScope(eventId) : {};
+		});
+		try {
+			await addGuest({
+				eventBandId: data.eventBandId,
+				name: data.attendeeName,
+				email: data.attendeeEmail
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		const eventId = await eventOfAct(data.eventBandId);
+		if (eventId) await getStaffEventProduction(eventId).refresh();
+		return { success: true };
+	})
+);
+
+export const removeActGuest = form(
+	z.object({ ticketId: z.string().min(1) }),
+	unaudited(
+		'A guest is a comp; issuing it is the audited row (event.tickets_comped).',
+		async (data) => {
+			await requireCapability('event.manageGuests', async () => {
+				const eventId = await eventOfGuest(data.ticketId);
+				return eventId ? eventScope(eventId) : {};
+			});
+			const eventId = await eventOfGuest(data.ticketId);
+			try {
+				await removeGuest(data.ticketId);
+			} catch (err) {
+				mapDomainError(err);
+			}
+			if (eventId) await getStaffEventProduction(eventId).refresh();
+			return { success: true };
+		}
+	)
 );
 
 export const cancelTicket = form(

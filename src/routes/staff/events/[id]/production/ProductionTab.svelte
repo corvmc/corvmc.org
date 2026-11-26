@@ -159,6 +159,8 @@
 				{runOfShow}
 				{riders}
 				canBook={loaded.canBook}
+				canGuests={loaded.canGuests}
+				guests={loaded.guests}
 			/>
 			<RunOfShowPanel
 				{runOfShow}

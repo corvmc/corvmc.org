@@ -176,11 +176,12 @@ export const tableOrder = [
 	'payment_cache',
 	// References event_listing and group.
 	'ticket_sale',
+	// The bill: references event and band, so it wipes before either. It sits
+	// above `ticket` because a guest ticket points at the act it was issued for.
+	'event_band',
 	'ticket',
 	'event_rsvp',
 	'event_attendance',
-	// The bill: references event and band, so it wipes before either.
-	'event_band',
 	// The run of show: references production and event_band, so it lands after
 	// both. Note it sits well below `production` — its other parent is the bill.
 	'production_slot',
