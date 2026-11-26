@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/lexend/wght.css';
+@import '@fontsource-variable/caveat/wght.css';
+@import '@fontsource/permanent-marker/latin-400.css';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 @plugin 'daisyui' {
@@ -155,12 +158,12 @@
    --------------------------------------------------------------------------- */
 :root {
 	--default-font-family:
-		'Lexend', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-		'Noto Color Emoji';
+		'Lexend Variable', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+		'Segoe UI Symbol', 'Noto Color Emoji';
 
-	/* Handwriting / chalk fonts (loaded in app.html) */
-	--font-chalk: 'Permanent Marker', 'Lexend', system-ui, sans-serif;
-	--font-script: 'Caveat', 'Permanent Marker', cursive;
+	/* Handwriting / chalk fonts (self-hosted via @fontsource, imported above) */
+	--font-chalk: 'Permanent Marker', 'Lexend Variable', system-ui, sans-serif;
+	--font-script: 'Caveat Variable', 'Permanent Marker', cursive;
 
 	/* Deprecated — use --cmc-goldenrod directly */
 	--cmc-yellow: var(--cmc-goldenrod);

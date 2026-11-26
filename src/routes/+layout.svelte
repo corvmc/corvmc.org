@@ -4,6 +4,7 @@
 	// After layout.css: its `panel` sublayer only outranks daisyUI's when declared later.
 	import './panel-theme.css';
 	import favicon from '#lib/assets/favicon.svg';
+	import lexendLatin from '@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2?url';
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
@@ -79,8 +80,7 @@
 </script>
 
 <svelte:head>
-	<link rel="preconnect" href="https://fonts.bunny.net" />
-	<link href="https://fonts.bunny.net/css?family=lexend:300,400,500,600,700" rel="stylesheet" />
+	<link rel="preload" as="font" type="font/woff2" href={lexendLatin} crossorigin="anonymous" />
 	<link rel="icon" href={favicon} />
 </svelte:head>
 <Tooltip.Provider delayDuration={300}>
