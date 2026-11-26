@@ -2970,11 +2970,16 @@ export const getMyShiftCheckIn = query(z.string().min(1), async (signupId) => {
 	if (!event) throw error(404, 'Event not found');
 	if (!event.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
 
-	const [tickets, sold] = await Promise.all([getEventTickets(event.id), getTicketsSold(event.id)]);
+	const [tickets, sold, canCountTill] = await Promise.all([
+		getEventTickets(event.id),
+		getTicketsSold(event.id),
+		can('finance.collect', { eventId: event.id })
+	]);
 	const listed = doorListTickets(tickets);
 
 	return {
 		signupId,
+		canCountTill,
 		event: { id: event.id, title: event.title, startsAt: event.startsAt },
 		tickets: listed.map((t) => ({
 			id: t.id,

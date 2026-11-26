@@ -581,11 +581,16 @@ export const getStaffCheckIn = query(z.string(), async (id) => {
 	if (!evt) throw error(404, 'Event not found');
 	if (!evt.ticketingEnabled) throw error(400, 'Ticketing not enabled for this event');
 
-	const [tickets, sold] = await Promise.all([getEventTickets(id), getTicketsSold(id)]);
+	const [tickets, sold, canCountTill] = await Promise.all([
+		getEventTickets(id),
+		getTicketsSold(id),
+		can('finance.collect', { eventId: id })
+	]);
 
 	const checkedIn = tickets.filter((t) => t.status === 'checked_in').length;
 
 	return {
+		canCountTill,
 		event: {
 			id: evt.id,
 			title: evt.title,

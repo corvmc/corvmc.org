@@ -838,6 +838,14 @@ Cash is recorded from any browser.
 - **Door list:** the shift page's Check people in list and `checkInAsVolunteer` take
   `event.checkIn`, through the same role-grant resolver (`roleGrantAllows`): a confirmed signup
   on a role that carries it, for that show, during the shift (#2794). Door roles carry both.
+- **Till count (#3273):** the Till counts card on both check-in screens (`TillCount.svelte`, on
+  `/staff/events/[id]/check-in` and the volunteer shift's check-in page) records one count per
+  handoff through `countTill`, as `finance.collect` on that show and as the signed-in member.
+  `removeTillCount` takes the show from the count's row: its own counter may remove it while they
+  hold the door grant, and `production.run` on the project may remove any. A role that carries
+  `event.checkIn` without `finance.collect` sees no card. Not a refusal when the same person
+  counts twice or alone, because a small night has one door person; `oneCounter` warns at
+  settlement (#3273).
 - **Sale:** `startDoorSale` → `ticket/door-sale.ts`. It refuses a price below the show's floor. A
   $0 sale mints `checked_in` tickets under a `door-…` purchase id and charges nothing. A card
   sale opens a `card_present` PaymentIntent and mints `pending` tickets under the intent's `pi_…`
