@@ -49,6 +49,9 @@ test that asserts nothing fails.
   a targeted path is far cheaper than the suite. Compare warm runs to warm runs.
 - A `"timed out in 5000ms"` failure on a cold `.vite` cache is usually an in-test `await import`,
   not flakiness. Hoist the import.
+- **The `server` project's test timeout is 30s**, set once in `vite.config.ts`, because the
+  whole-tree invariant specs parse every source file in one `it` (#1606, #3378). Such a spec adds no
+  `{ timeout }` of its own. The `client` project keeps the 5s default.
 - **Don't merge sibling `.test.ts` and `.spec.ts` files** to share imports. Their preambles are
   fixtures: unioning the `vi.mock` calls silently stubs out the very thing the other file was
   testing for real.
