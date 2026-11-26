@@ -385,6 +385,32 @@ export async function recordSlotPayout(
 }
 
 /**
+ * Record what every unpaid act was handed, from the Settle dialog's one form.
+ *
+ * Every slot is checked against the production before any is written, so a
+ * forged slot id refuses the whole batch. Slots already paid are skipped, not
+ * edited. Each slot's claim is its own conditional write, so a retry after a
+ * failure finishes the rest rather than paying anyone twice.
+ */
+export async function recordPayouts(
+	productionId: string,
+	payouts: { slotId: string; amountCents: number }[],
+	recordedByUserId: string
+): Promise<number> {
+	const slots = await Promise.all(payouts.map((p) => readSlotForPayout(p.slotId)));
+	if (slots.some((slot) => !slot || slot.productionId !== productionId)) {
+		throw new PayoutError('A band in this list is not on this show.');
+	}
+	let recorded = 0;
+	for (const [i, payout] of payouts.entries()) {
+		if (slots[i]!.paidCents !== null) continue;
+		await recordSlotPayout(payout.slotId, payout.amountCents, recordedByUserId);
+		recorded += 1;
+	}
+	return recorded;
+}
+
+/**
  * Take back a recorded payout: reversing ledger rows for this act alone, and
  * the slot back to unpaid so it can be recorded again.
  *

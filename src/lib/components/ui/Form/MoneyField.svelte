@@ -26,6 +26,7 @@
 		label,
 		value = undefined,
 		description,
+		oncents,
 		...rest
 	}: {
 		// `RemoteFormFieldValue` is the constraint's own upper bound — the union of
@@ -35,6 +36,8 @@
 		/** Existing amount, in cents. */
 		value?: number | null;
 		description?: string;
+		/** Called with the typed amount in cents as it changes, `null` when the box is empty. */
+		oncents?: (cents: number | null) => void;
 		/** The input is this component's own content, so it takes none. */
 		children?: never;
 		/** `id` and anything else flow through to `FormField` via `...rest`. */
@@ -76,7 +79,10 @@
 				inputmode="decimal"
 				class="grow bg-transparent outline-none"
 				value={dollars}
-				oninput={(e) => (typed = e.currentTarget.value)}
+				oninput={(e) => {
+					typed = e.currentTarget.value;
+					oncents?.(cents === '' ? null : Number(cents));
+				}}
 			/>
 		</label>
 		<!-- `type` last: `.as('number')` sets the `n:` name prefix that makes

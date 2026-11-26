@@ -851,7 +851,9 @@ Cash is recorded from any browser.
   `/staff/events/[id]/check-in` and the volunteer shift's check-in page) records one count per
   handoff through `countTill`, as `finance.collect` on that show and as the signed-in member.
   `removeTillCount` takes the show from the count's row: its own counter may remove it while they
-  hold the door grant, and `production.run` on the project may remove any. A role that carries
+  hold the door grant, and `production.run` on the project may remove any. A removal is audited
+  (`production.till_count_removed`, with the amount and who counted it), because a count is a
+  cash record. A role that carries
   `event.checkIn` without `finance.collect` sees no card. Not a refusal when the same person
   counts twice or alone, because a small night has one door person; `oneCounter` warns at
   settlement (#3273).
@@ -2513,10 +2515,21 @@ restore crew shifts or retract a cancellation notice.
    `done` from `completed` on, `declined` when cancelled, and `open` again if walked
    back. `reopenProduction` (guard `production.reopen`) is the only way out of a
    terminal state.
-6. The Production tab's **Settlement** section → `recordActPayout` / `undoActPayout` (both `finance.refund`).
-   A payout is never edited: undo writes reversing ledger rows for that act alone
+6. The event header's **Settle event** button (from the show's start time) opens the Settle dialog
+   (`SettleDialog.svelte`, #3273), which reads `settle` from `getStaffEventPage`: the net after
+   costs, the staff count form (`recordStaffCount`, `production.run`, shown to those who hold
+   it) with the door warnings, and one row per unpaid act with an editable payout, prefilled from
+   the deal, and a **Donated set** box that records zero. **Record payouts** → `recordPayouts`
+   (`finance.refund`) writes every row through `recordSlotPayout`, skips an act already paid, and
+   refuses a slot of another production before writing any; a retry finishes the rest, so it is
+   not all-or-nothing. When every act is paid (`Settlement.settled`) the header shows a Settled
+   badge and the button reads **View settlement**: the same figures, read-only. The production
+   console's **Settlement** section still carries `recordActPayout` / `undoActPayout` until it is
+   removed. A payout is never edited: undo writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
-   recorded again. Both are audited.
+   recorded again. All are audited. Not a fully read-only View settlement, because removing the
+   console section would remove the only way to correct a payout: the dialog keeps a per-act
+   **Undo payout**, for `finance.refund` holders and on a show that is not closed (#3273).
 7. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not

@@ -29,7 +29,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { recordSlotPayout, undoSlotPayout, getSettlement, PayoutError } =
+const { recordSlotPayout, recordPayouts, undoSlotPayout, getSettlement, PayoutError } =
 	await import('./settlement-service');
 const { ProductionTerminalError } = await import('./production-scope');
 const { poolBalanceCents, totalsByKindAndCategory } =
@@ -287,5 +287,92 @@ describe('undoing a payout', () => {
 
 		await expect(undoSlotPayout(SLOT)).rejects.toBeInstanceOf(ProductionTerminalError);
 		expect(await poolBalanceCents(EVENT)).toBe(20_000);
+	});
+});
+
+describe('recording every payout at once', () => {
+	const SIBLING = 'slot-2';
+
+	async function withSibling() {
+		await seed({ poolCents: 70_000 });
+		sqlite.exec(`insert into production_slot (id, production_id, sort_order, set_length_minutes)
+			values ('${SIBLING}', '${PROD}', 2, 30)`);
+	}
+
+	it('records each act and settles the show', async () => {
+		await withSibling();
+		expect((await getSettlement(EVENT))?.settled).toBe(false);
+
+		const recorded = await recordPayouts(
+			PROD,
+			[
+				{ slotId: SLOT, amountCents: 30_000 },
+				{ slotId: SIBLING, amountCents: 0 }
+			],
+			STAFF
+		);
+
+		expect(recorded).toBe(2);
+		const settlement = await getSettlement(EVENT);
+		expect(settlement?.paidTotalCents).toBe(30_000);
+		expect(settlement?.settled).toBe(true);
+	});
+
+	it('is not settled while any act is unpaid, or with no acts', async () => {
+		await withSibling();
+		await recordSlotPayout(SLOT, 10_000, STAFF);
+		expect((await getSettlement(EVENT))?.settled).toBe(false);
+		sqlite.exec(`delete from production_slot`);
+		expect((await getSettlement(EVENT))?.settled).toBe(false);
+	});
+
+	it('skips an act already paid, and does not edit it', async () => {
+		await withSibling();
+		await recordSlotPayout(SLOT, 10_000, STAFF);
+
+		const recorded = await recordPayouts(
+			PROD,
+			[
+				{ slotId: SLOT, amountCents: 99_000 },
+				{ slotId: SIBLING, amountCents: 5_000 }
+			],
+			STAFF
+		);
+
+		expect(recorded).toBe(1);
+		const acts = (await getSettlement(EVENT))?.acts;
+		expect(acts?.find((a) => a.slotId === SLOT)?.paidCents).toBe(10_000);
+		expect(acts?.find((a) => a.slotId === SIBLING)?.paidCents).toBe(5_000);
+	});
+
+	it("refuses a slot of another show before paying any, even one that is this show's", async () => {
+		await withSibling();
+		sqlite.exec(`insert into project (id, name, kind) values ('proj-2', 'Other', 'production');
+			insert into production (id, project_id, status) values ('prod-2', 'proj-2', 'completed');
+			insert into production_slot (id, production_id, sort_order, set_length_minutes)
+			values ('slot-foreign', 'prod-2', 1, 30)`);
+
+		await expect(
+			recordPayouts(
+				PROD,
+				[
+					{ slotId: SLOT, amountCents: 1_000 },
+					{ slotId: 'slot-foreign', amountCents: 1_000 }
+				],
+				STAFF
+			)
+		).rejects.toBeInstanceOf(PayoutError);
+		expect((await getSettlement(EVENT))?.paidTotalCents).toBe(0);
+		expect(
+			sqlite.prepare(`select count(*) as n from financial_entry where subject_id = 'prod-2'`).get()
+		).toEqual({ n: 0 });
+	});
+
+	it('refuses once the show is closed', async () => {
+		await withSibling();
+		sqlite.exec(`update production set status = 'closed' where id = '${PROD}'`);
+		await expect(
+			recordPayouts(PROD, [{ slotId: SLOT, amountCents: 1_000 }], STAFF)
+		).rejects.toBeInstanceOf(ProductionTerminalError);
 	});
 });

@@ -73,9 +73,19 @@ describe('a handoff', () => {
 
 	it('is removed by id, and a missing one is not found', async () => {
 		const id = await recordHandoff('prod', 'ana', 200_00);
-		expect(await handoffOwner(id)).toEqual({ productionId: 'prod', countedByUserId: 'ana' });
+		expect(await handoffOwner(id)).toEqual({
+			productionId: 'prod',
+			countedByUserId: 'ana',
+			counterName: 'Ana',
+			cashCents: 200_00
+		});
 		await removeHandoff(id);
 		expect(kinds()).toEqual([]);
+		expect(audit.recordAuditEntry).toHaveBeenCalledWith({
+			action: 'production.till_count_removed',
+			subject: { type: 'production', id: 'prod' },
+			details: { cashCents: 200_00, counterName: 'Ana' }
+		});
 		await expect(removeHandoff(id)).rejects.toBeInstanceOf(TillCountNotFoundError);
 	});
 
