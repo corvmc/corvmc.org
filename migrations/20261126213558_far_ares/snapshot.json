@@ -1,10 +1,10 @@
 {
-  "id": "92fc55e2-515b-4e10-9777-016091852c54",
-  "prevIds": [
-    "0ad9ef0e-6a42-4c04-979d-6c4d6dc78b84"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "4ce77fb9-5c38-4190-8989-53a1ab4df02f",
+  "prevIds": [
+    "e82e1de8-fc94-42ec-951f-7b5939f1aa4d"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -88,6 +88,10 @@
     },
     {
       "name": "production_slot",
+      "entityType": "tables"
+    },
+    {
+      "name": "production_till_count",
       "entityType": "tables"
     },
     {
@@ -2906,7 +2910,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "door_cash_cents",
+      "name": "door_count",
       "entityType": "columns",
       "table": "production"
     },
@@ -2916,7 +2920,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "door_count",
+      "name": "door_cash_cents",
       "entityType": "columns",
       "table": "production"
     },
@@ -3429,6 +3433,76 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "production_slot"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "production_id",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cash_cents",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "counted_by_user_id",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "counted_at",
+      "entityType": "columns",
+      "table": "production_till_count"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "production_till_count"
     },
     {
       "type": "text",
@@ -17292,6 +17366,36 @@
     },
     {
       "columns": [
+        "production_id"
+      ],
+      "tableTo": "production",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_production_till_count_production_id_production_id_fk",
+      "entityType": "fks",
+      "table": "production_till_count"
+    },
+    {
+      "columns": [
+        "counted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_till_count_counted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "production_till_count"
+    },
+    {
+      "columns": [
         "event_id"
       ],
       "tableTo": "event_listing",
@@ -22065,6 +22169,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "production_till_count_pk",
+      "table": "production_till_count",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "ticket_pk",
       "table": "ticket",
       "entityType": "pks"
@@ -23785,6 +23898,38 @@
       "name": "uq_production_slot_event_band",
       "entityType": "indexes",
       "table": "production_slot"
+    },
+    {
+      "columns": [
+        {
+          "value": "production_id",
+          "isExpression": false
+        },
+        {
+          "value": "counted_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_production_till_count_production",
+      "entityType": "indexes",
+      "table": "production_till_count"
+    },
+    {
+      "columns": [
+        {
+          "value": "production_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "kind = 'staff'",
+      "origin": "manual",
+      "name": "uq_production_till_count_staff",
+      "entityType": "indexes",
+      "table": "production_till_count"
     },
     {
       "columns": [
@@ -28571,6 +28716,12 @@
       "name": "production_slot_changeover_nonneg",
       "entityType": "checks",
       "table": "production_slot"
+    },
+    {
+      "value": "cash_cents >= 0",
+      "name": "production_till_count_cash_nonneg",
+      "entityType": "checks",
+      "table": "production_till_count"
     },
     {
       "value": "quantity > 0",

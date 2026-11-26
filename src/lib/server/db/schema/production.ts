@@ -127,8 +127,12 @@ export const production = sqliteTable(
 		 *
 		 * Both nullable: a show with no door take is not a show with a zero.
 		 */
-		doorCashCents: integer('door_cash_cents'),
 		doorCount: integer('door_count'),
+		/**
+		 * The six `door_cash_*` columns below are unused since #3273: the counts
+		 * live in `production_till_count`. Dropping them rebuilds this table.
+		 */
+		doorCashCents: integer('door_cash_cents'),
 		/** Who entered `door_cash_cents`, restamped whenever the figure changes. */
 		doorCashCountedByUserId: text('door_cash_counted_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -433,3 +437,46 @@ export const productionExpense = sqliteTable(
 
 export type ProductionExpense = typeof productionExpense.$inferSelect;
 export type NewProductionExpense = typeof productionExpense.$inferInsert;
+
+export const tillCountKinds = ['handoff', 'staff'] as const;
+export type TillCountKind = (typeof tillCountKinds)[number];
+
+/**
+ * One count of the door cash (#3273): a handoff by whoever held the till, or
+ * the staff count at settlement.
+ *
+ * Cash is the only part of a settlement with no system of record, so each
+ * count keeps who made it and when. A show has any number of handoffs and at
+ * most one staff count; the settlement reads the staff count when there is one
+ * and the handoffs' sum otherwise.
+ */
+export const productionTillCount = sqliteTable(
+	'production_till_count',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		productionId: text('production_id')
+			.notNull()
+			.references(() => production.id, { onDelete: 'cascade' }),
+		kind: text('kind', { enum: tillCountKinds }).notNull(),
+		cashCents: integer('cash_cents').notNull(),
+		countedByUserId: text('counted_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		countedAt: integer('counted_at', { mode: 'timestamp' }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		index('idx_production_till_count_production').on(t.productionId, t.countedAt),
+		uniqueIndex('uq_production_till_count_staff')
+			.on(t.productionId)
+			.where(sql`kind = 'staff'`),
+		check('production_till_count_cash_nonneg', sql`cash_cents >= 0`)
+	]
+);
+
+export type ProductionTillCount = typeof productionTillCount.$inferSelect;
+export type NewProductionTillCount = typeof productionTillCount.$inferInsert;

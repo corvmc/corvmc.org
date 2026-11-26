@@ -51,6 +51,14 @@ describe('transitionWarnings', () => {
 		}
 		expect(transitionWarnings('confirmed', 'completed', { door: 'mismatch' })).toEqual([]);
 	});
+
+	// The reversed #2722 rule: one person behind every count warns and is allowed.
+	it('warns, and does not refuse, when one person made every count', () => {
+		expect(
+			transitionWarnings('completed', 'settled', { door: 'agreed', oneCounter: true })
+		).toEqual(['One person made every door cash count.']);
+		expect(transitionWarnings('confirmed', 'completed', { oneCounter: true })).toEqual([]);
+	});
 });
 
 describe('isTerminalProduction', () => {

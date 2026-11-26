@@ -5,7 +5,7 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
-	import { formatCents } from '#lib/utils/format.js';
+	import { formatCents, formatDateTimeShort } from '#lib/utils/format.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
@@ -15,8 +15,7 @@
 	import {
 		recordActPayout,
 		undoActPayout,
-		recordDoorTake,
-		recordDoorRecount,
+		recordStaffCount,
 		addProductionExpense,
 		createProduction,
 		removeProductionExpense
@@ -43,6 +42,7 @@
 	const acts = $derived(settlement?.acts ?? []);
 	const expenses = $derived(settlement?.expenses ?? []);
 	const counts = $derived(settlement?.doorCounts ?? null);
+	const handoffTotal = $derived(counts?.handoffs.reduce((t, h) => t + h.cashCents, 0) ?? 0);
 	const topUpTotal = $derived(acts.reduce((t, a) => t + a.topUpCents, 0));
 	const takings = $derived(settlement?.doorTakings ?? null);
 	// Warns, never refuses: a guest list or a re-entry can make the counts differ (#2801).
@@ -124,20 +124,20 @@
 		state={doorState(settlement)}
 	>
 		<Form
-			remote={recordDoorTake}
+			remote={recordStaffCount}
 			successToast={m.staff_events_id_production_settlement_panel_door_recorded_toast()}
 		>
-			<input {...recordDoorTake.fields.id.as('hidden', settlement.productionId)} />
-			<input {...recordDoorTake.fields.eventId.as('hidden', eventId)} />
+			<input {...recordStaffCount.fields.id.as('hidden', settlement.productionId)} />
+			<input {...recordStaffCount.fields.eventId.as('hidden', eventId)} />
 
 			<div class="grid gap-3 sm:grid-cols-4">
 				<MoneyField
-					field={recordDoorTake.fields.doorCashCents}
+					field={recordStaffCount.fields.doorCashCents}
 					label={m.staff_events_id_production_settlement_panel_cash_counted_label()}
-					value={settlement.door?.cashCents ?? null}
+					value={counts?.staff?.cashCents ?? null}
 				/>
 				<FormField
-					field={recordDoorTake.fields.doorCount}
+					field={recordStaffCount.fields.doorCount}
 					type="number"
 					label={m.staff_events_id_production_settlement_panel_through_door_label()}
 					description={m.staff_events_id_production_settlement_panel_through_door_body({
@@ -150,7 +150,7 @@
 					min={0}
 				/>
 				<FormField
-					field={recordDoorTake.fields.splitActsPercent}
+					field={recordStaffCount.fields.splitActsPercent}
 					type="number"
 					label={m.staff_events_id_production_settlement_panel_bands_share_label()}
 					description={m.staff_events_id_production_settlement_panel_blank_house_rule_body()}
@@ -165,6 +165,20 @@
 				{/if}
 			</div>
 		</Form>
+
+		{#if counts && counts.handoffs.length > 0}
+			<ul class="mt-3 text-sm" data-testid="till-handoffs">
+				{#each counts.handoffs as handoff (handoff.id)}
+					<li>
+						{m.staff_events_id_production_settlement_panel_handoff_text({
+							amount: formatCents(handoff.cashCents),
+							name: handoff.byName ?? '',
+							at: formatDateTimeShort(handoff.at)
+						})}
+					</li>
+				{/each}
+			</ul>
+		{/if}
 
 		{#if settlement.door}
 			<!-- Recorded cash sales are split in the ledger already (#2800); the
@@ -222,12 +236,13 @@
 				</div>
 			{/if}
 
-			<!-- A second count by somebody else (#2722). A difference warns here
-			     and at close; the server refuses only the first counter. -->
-			{#if counts?.check === 'mismatch' && counts.second}
+			<!-- Handoff counts and the staff count check each other. A difference or
+			     one person behind every count warns here and at close; nothing
+			     refuses (#3273). -->
+			{#if counts?.check === 'mismatch' && counts.staff}
 				<Alert type="warning" class="mt-3">
 					{m.staff_events_id_production_settlement_panel_counts_differ_body({
-						amount: formatCents(Math.abs(counts.second.cashCents - settlement.door.cashCents))
+						amount: formatCents(Math.abs(counts.staff.cashCents - handoffTotal))
 					})}
 				</Alert>
 			{:else if counts?.check === 'single'}
@@ -235,44 +250,13 @@
 					{m.staff_events_id_production_settlement_panel_counted_once_text()}
 				</p>
 			{/if}
-			{#if counts && (counts.first.byName || counts.second?.byName)}
-				<ul class="mt-2 text-xs text-fg-2">
-					{#if counts.first.byName}
-						<li>
-							{m.staff_events_id_production_settlement_panel_first_counter_text({
-								name: counts.first.byName
-							})}
-						</li>
-					{/if}
-					{#if counts.second?.byName}
-						<li>
-							{m.staff_events_id_production_settlement_panel_second_counter_text({
-								name: counts.second.byName
-							})}
-						</li>
-					{/if}
-				</ul>
-			{/if}
-			<Form
-				remote={recordDoorRecount}
-				successToast={m.staff_events_id_production_settlement_panel_second_count_toast()}
-			>
-				<input {...recordDoorRecount.fields.id.as('hidden', settlement.productionId)} />
-				<input {...recordDoorRecount.fields.eventId.as('hidden', eventId)} />
-				<div class="mt-3 grid gap-3 sm:grid-cols-4">
-					<MoneyField
-						field={recordDoorRecount.fields.recountCents}
-						label={m.staff_events_id_production_settlement_panel_second_count_label()}
-						description={m.staff_events_id_production_settlement_panel_second_count_body()}
-						value={counts?.second?.cashCents ?? null}
-					/>
-					{#if !locked}
-						<div class="flex items-end">
-							<SubmitButton label={m.staff_record_label()} size="sm" />
-						</div>
-					{/if}
+			{#if counts?.oneCounter}
+				<div class="mt-3" data-testid="door-one-counter">
+					<Alert type="warning">
+						{m.staff_events_id_production_settlement_panel_one_counter_body()}
+					</Alert>
 				</div>
-			</Form>
+			{/if}
 		{:else}
 			<!-- Absent, not zero. A night nobody counted is not a night that took
 			     nothing, and a settlement cannot be honest about the difference

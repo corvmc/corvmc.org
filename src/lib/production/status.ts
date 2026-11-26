@@ -33,6 +33,8 @@ export interface TransitionContext {
 	outstandingCloseOut?: readonly string[];
 	/** Where the drawer counts stand. Only read for a move to `settled` or `closed`. */
 	door?: DoorCheck;
+	/** One person made every count of the till. Warns; never refuses (#3273). */
+	oneCounter?: boolean;
 }
 
 export function transitionWarnings(
@@ -67,11 +69,13 @@ export function transitionWarnings(
 		const more = open.length > 5 ? ` and ${open.length - 5} more` : '';
 		warnings.push(`Load-out is not finished: ${named}${more}.`);
 	}
-	// Two counts by two people are the check on door cash (#2722). One count or
-	// two that disagree warn; the reason given goes to the audit log.
+	// Handoff counts and the staff count are the check on door cash. One kind of
+	// count, counts that disagree, or one person behind all of them warn; the
+	// reason given goes to the audit log (#3273).
 	if (to === 'settled' || to === 'closed') {
-		if (ctx.door === 'single') warnings.push('One person counted the door cash.');
-		if (ctx.door === 'mismatch') warnings.push('The two door cash counts differ.');
+		if (ctx.door === 'single') warnings.push('The door cash was counted once.');
+		if (ctx.door === 'mismatch') warnings.push('The staff count and the handoff counts differ.');
+		if (ctx.oneCounter) warnings.push('One person made every door cash count.');
 	}
 	return warnings;
 }
