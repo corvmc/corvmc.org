@@ -21,6 +21,10 @@ import {
 const COMPOSED_TITLE = 'E2E composed post';
 const SESSION_TITLE = 'E2E monthly jam';
 
+/** One post, found by the id the list stamps on it and the title it carries. */
+const post = (page: Page, title: string) =>
+	page.getByRole('main').locator('[data-announcement]').filter({ hasText: title });
+
 /** The member's own roster flag for one group, read straight from D1. */
 async function readNotifyAnnouncements(groupId: string, userId: string) {
 	return readLocalDb(async (db) => {
@@ -78,7 +82,7 @@ test.describe('reading announcements', () => {
 		await expect(page.getByText(SEED_DRAFT_TITLE)).toBeVisible();
 		// Marked, not merely present: an unpublished post that reads like a
 		// published one is how a leader concludes they already told everybody.
-		const draftCard = page.getByRole('main').locator('.card').filter({ hasText: SEED_DRAFT_TITLE });
+		const draftCard = post(page, SEED_DRAFT_TITLE);
 		await expect(draftCard.getByTestId('announcement-draft')).toBeVisible();
 	});
 });
@@ -97,8 +101,8 @@ test.describe('writing announcements', () => {
 			.fill('Written by the composer test.');
 		await dialog.locator('button[type="submit"]').click();
 
-		// Saved as a draft, and the card says so.
-		const composed = page.getByRole('main').locator('.card').filter({ hasText: COMPOSED_TITLE });
+		// Saved as a draft, and the post says so.
+		const composed = post(page, COMPOSED_TITLE);
 		await expect(composed).toBeVisible({ timeout: 15000 });
 		await expect(composed.getByTestId('announcement-draft')).toBeVisible();
 	});
@@ -108,22 +112,18 @@ test.describe('writing announcements', () => {
 		await page.goto(`/member/groups/${SEED_LED_SLUG}`);
 		await expect(page.getByText(SEED_DRAFT_TITLE)).toBeVisible({ timeout: 15000 });
 
-		// Scoped to the card holding the seeded draft: the page renders a Publish
+		// Scoped to the post holding the seeded draft: the page renders a Publish
 		// control per draft, and by this point the composer test may have left
 		// another one. Without the scope this is a strict-mode violation, and with
 		// a `.first()` instead it would silently publish whichever came first.
-		const draftCard = page.getByRole('main').locator('.card').filter({ hasText: SEED_DRAFT_TITLE });
+		const draftCard = post(page, SEED_DRAFT_TITLE);
 		await draftCard.getByTestId('publish-announcement').click();
 		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		// The badge is the assertion, not a toast: it is read back from the row.
-		await expect(
-			page
-				.getByRole('main')
-				.locator('.card')
-				.filter({ hasText: SEED_DRAFT_TITLE })
-				.getByTestId('announcement-draft')
-		).toHaveCount(0, { timeout: 15000 });
+		await expect(post(page, SEED_DRAFT_TITLE).getByTestId('announcement-draft')).toHaveCount(0, {
+			timeout: 15000
+		});
 	});
 });
 
