@@ -321,7 +321,7 @@
 			<!-- Hidden, not unmounted: the discard question is asked over the form so
 			     that "Keep editing" gives back exactly what was typed. -->
 			{#if askingDiscard}
-				<div class="space-y-4" data-testid="discard-prompt">
+				<div class="space-y-4">
 					<p class="py-4">{m.ui_unsaved_close_prompt_text()}</p>
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>

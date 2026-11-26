@@ -71,7 +71,7 @@
 	};
 </script>
 
-<InfoCard title={when} testid="task-shift">
+<InfoCard title={when}>
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>

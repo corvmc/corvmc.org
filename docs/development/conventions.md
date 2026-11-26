@@ -586,6 +586,9 @@ comment.
 A `data-testid` is a last-resort handle on one control. A testid on a container invites the
 coupling above, so name the control, not the box around it.
 
+Not an e2e test of the discard prompt, because `Action.svelte.spec.ts` owns it for every form
+(#3346).
+
 #### One full suite per machine
 
 `pnpm test:unit -- --run` takes a machine-wide lock (`scripts/lib/unit-lock.ts`) and **waits**

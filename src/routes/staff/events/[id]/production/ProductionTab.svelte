@@ -77,7 +77,7 @@
 			guide is not a production, and most of them never become one.
 		-->
 	{#if productionRecord}
-		<InfoCard title={m.staff_production_title()} testid="production-record">
+		<InfoCard title={m.staff_production_title()}>
 			{#snippet header(title)}
 				<div class="flex flex-wrap items-center justify-between gap-2">
 					<CardTitle>{title}</CardTitle>

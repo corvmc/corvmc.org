@@ -123,7 +123,7 @@
 {#if related.current && (!member || related.current.groups.length > 0)}
 	{@const data = related.current}
 	{@const all = data.groups.flatMap((g) => g.shifts)}
-	<InfoCard title={m.staff_related_shifts_title()} testid="related-shifts">
+	<InfoCard title={m.staff_related_shifts_title()}>
 		{#snippet header(title)}
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>

@@ -261,7 +261,7 @@
 
 	<div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
 		<div class="flex min-w-0 flex-col gap-6">
-			<div data-testid="event-tabs"><TabBar {tabs} active={tab} /></div>
+			<TabBar {tabs} active={tab} />
 
 			{#if tab === 'listing'}
 				<div class="flex flex-col gap-6" data-testid="tab-listing">

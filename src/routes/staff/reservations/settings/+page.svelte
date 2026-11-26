@@ -34,7 +34,7 @@
 
 <PageContent width="2xl">
 	<div class="space-y-4">
-		<section id="pricing" class="space-y-4" data-testid="pricing-settings">
+		<section id="pricing" class="space-y-4">
 			<p class="text-muted">
 				{m.staff_settings_configure_products_pricing_used_checkout_text()}
 			</p>
@@ -347,7 +347,7 @@
 				</Card>
 			</Form>
 		</section>
-		<section id="space" class="space-y-4" data-testid="space-settings">
+		<section id="space" class="space-y-4">
 			<Form
 				remote={updateVenueSettings}
 				guard
