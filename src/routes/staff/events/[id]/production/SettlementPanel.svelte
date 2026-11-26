@@ -31,6 +31,8 @@
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
 
 	const { fields } = recordActPayout;
+	// Its own instance: the Overview's bare createProduction form stays mounted beside this one.
+	const openProduction = createProduction.for('settlement');
 
 	const categoryOptions = productionExpenseCategories.map((c) => ({
 		value: c,
@@ -59,8 +61,8 @@
 		title={m.staff_no_production_title()}
 		description={m.staff_events_id_production_settlement_panel_open_one_body()}
 	/>
-	<Form remote={createProduction} class="-mt-8 flex justify-center">
-		<input {...createProduction.fields.eventId.as('hidden', eventId)} />
+	<Form remote={openProduction} class="-mt-8 flex justify-center">
+		<input {...openProduction.fields.eventId.as('hidden', eventId)} />
 		<SubmitButton
 			label={m.staff_events_id_production_open_production_label()}
 			variant="primary"
