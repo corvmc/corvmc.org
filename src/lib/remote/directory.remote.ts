@@ -51,7 +51,8 @@ import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	toPublicMemberProfile,
-	contactForView
+	contactForView,
+	contactFromForm
 } from '#lib/utils/directory-display.js';
 import { db } from '#lib/server/db/index.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
@@ -649,17 +650,9 @@ const memberProfileSchema = z.object({
 export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 	const user = requireUser();
 
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
 	// Personal contact defaults to members-only; the member opts it into the
 	// public profile explicitly. contactForView() reads this on the public side.
-	const directoryContact =
-		Object.keys(contact).length > 0
-			? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
-			: undefined;
+	const directoryContact = contactFromForm(data);
 
 	await updateMemberProfile(user.id, {
 		tagline: data.tagline || undefined,
@@ -768,12 +761,6 @@ const bandProfileSchema = z.object({
 export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	const { user, group: band } = await requireBandRole({ slug: data.slug }, 'admin');
 
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
-
 	await updateBandBasics(band.id, { name: data.name, bio: data.bio });
 
 	await updateBandProfile(band.id, user.id, {
@@ -785,10 +772,7 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
 		// Private unless the band switches it public, as a member's contact is.
-		directoryContact:
-			Object.keys(contact).length > 0
-				? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
-				: undefined,
+		directoryContact: contactFromForm(data),
 		links: data.links
 	});
 

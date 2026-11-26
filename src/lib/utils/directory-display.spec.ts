@@ -6,6 +6,7 @@ import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	contactForView,
+	contactFromForm,
 	toPublicMemberProfile
 } from './directory-display';
 import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
@@ -124,6 +125,31 @@ describe('contactForView', () => {
 	it('returns null for missing contact', () => {
 		expect(contactForView('public', null)).toBeNull();
 		expect(contactForView('members', undefined)).toBeNull();
+	});
+});
+
+describe('contactFromForm', () => {
+	const blank = { contactEmail: '', contactPhone: '', contactSocial: '', contactPublic: false };
+
+	it('submits nothing when every field is blank', () => {
+		expect(contactFromForm(blank)).toBeUndefined();
+	});
+
+	// The profile services merge the submission over the stored contact. A field
+	// the person emptied has to override the stored value, or the public switch
+	// publishes something they removed (#3234).
+	it('clears an emptied field when merged over the stored contact', () => {
+		const stored: DirectoryContact = { email: 'old@example.com', phone: '555-0100' };
+		const merged = {
+			...stored,
+			...contactFromForm({ ...blank, contactEmail: 'new@example.com', contactPublic: true })
+		};
+		expect(merged.phone).toBeUndefined();
+		expect(merged).toMatchObject({ email: 'new@example.com', visibility: 'public' });
+	});
+
+	it('defaults to members-only', () => {
+		expect(contactFromForm({ ...blank, contactSocial: '@band' })?.visibility).toBe('members');
 	});
 });
 
