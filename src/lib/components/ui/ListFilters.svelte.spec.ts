@@ -1,9 +1,11 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { m } from '#lib/paraglide/messages.js';
 import Harness from './ListFilters.test.svelte';
 import '../../../routes/layout.css';
 
+const clear = () => page.getByRole('button', { name: m.ui_clear_label(), exact: true });
 const state = () => JSON.parse(page.getByTestId('state').element().textContent ?? '{}');
 
 describe('ListFilters', () => {
@@ -19,9 +21,7 @@ describe('ListFilters', () => {
 		await page.getByTestId('status-filter').selectOptions('open');
 		await expect.poll(state).toMatchObject({ status: 'open' });
 
-		// Clear is the only button in the bar besides the date trigger.
-		const buttons = page.getByRole('button');
-		await buttons.last().click();
+		await clear().click();
 		await expect.poll(state).toEqual({
 			type: '',
 			search: '',
