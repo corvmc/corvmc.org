@@ -304,29 +304,47 @@
 							oncancel={() => (editing = false)}
 						/>
 
-						<InfoCard title={m.staff_events_id_bill_title()}>
-							<!--
+						<!-- A CMC show's acts are edited on the Production tab (#3272). -->
+						{#if evt.source === 'cmc'}
+							<InfoCard title={m.staff_events_id_bill_title()}>
+								<ul class="space-y-1 text-sm">
+									{#each detail.lineup as act (act.id)}
+										<li class="font-medium">{act.name}</li>
+									{/each}
+								</ul>
+								<div class="mt-3">
+									<Button href={eventTabHref(id, 'production')} variant="ghost" size="sm">
+										{m.staff_events_id_bill_edit_lineup_label()}
+									</Button>
+								</div>
+							</InfoCard>
+						{:else}
+							<InfoCard title={m.staff_events_id_bill_title()}>
+								<!--
 								The bill saves separately. `setStaffEventLineup` decides consent from
 								the event's source, and folding it into `updateEvent` would put that
 								rule behind a form the console also posts.
 							-->
-							<Form
-								remote={setStaffEventLineup}
-								successToast={m.staff_events_id_bill_updated_toast()}
-								onsuccess={() => {
-									editing = false;
-									refresh();
-								}}
-							>
-								<input {...setStaffEventLineup.fields.eventId.as('hidden', evt.id)} />
-								<LineupEditor
-									field={setStaffEventLineup.fields.lineup}
-									bind:value={lineup}
-									search={(q) => searchBillActs({ eventId: evt.id, q })}
-								/>
-								<div class="mt-3"><SubmitButton label={m.staff_events_id_save_bill_label()} /></div>
-							</Form>
-						</InfoCard>
+								<Form
+									remote={setStaffEventLineup}
+									successToast={m.staff_events_id_bill_updated_toast()}
+									onsuccess={() => {
+										editing = false;
+										refresh();
+									}}
+								>
+									<input {...setStaffEventLineup.fields.eventId.as('hidden', evt.id)} />
+									<LineupEditor
+										field={setStaffEventLineup.fields.lineup}
+										bind:value={lineup}
+										search={(q) => searchBillActs({ eventId: evt.id, q })}
+									/>
+									<div class="mt-3">
+										<SubmitButton label={m.staff_events_id_save_bill_label()} />
+									</div>
+								</Form>
+							</InfoCard>
+						{/if}
 					{:else}
 						<InfoCard title={m.staff_event_title()}>
 							{#snippet header(title)}
@@ -372,6 +390,13 @@
 											</li>
 										{/each}
 									</ul>
+									{#if evt.source === 'cmc'}
+										<div class="mt-2">
+											<Button href={eventTabHref(id, 'production')} variant="ghost" size="sm">
+												{m.staff_events_id_bill_edit_lineup_label()}
+											</Button>
+										</div>
+									{/if}
 								</div>
 							{/if}
 

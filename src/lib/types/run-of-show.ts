@@ -77,12 +77,3 @@ export interface PublicSetTime {
 	name: string;
 	scheduledStartAt: Date;
 }
-
-/** One of an act's people, for picking a show's contact. */
-export interface RunOfShowContact {
-	id: string;
-	organizationId: string;
-	name: string | null;
-	email: string | null;
-	phone: string | null;
-}
