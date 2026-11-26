@@ -20,7 +20,7 @@ Once the band exists, from its dashboard you can:
 - [Invite members](/member/help/invite-band-members) (existing members or by email).
 - [Flesh out the band profile](/member/help/edit-band-profile) — genres, links,
   and visibility.
-- [Book the practice space](/member/help/book-band-session) for the band.
+- [Reserve practice space](/member/help/book-band-session) for the band.
 
 ## Roles
 
