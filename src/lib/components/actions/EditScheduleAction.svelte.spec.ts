@@ -101,12 +101,12 @@ describe('EditScheduleAction', () => {
 		});
 		const dialog = await open();
 
-		await expect.element(dialog.getByTestId('schedule-preview')).toBeVisible();
+		// Three sessions and nothing else listed: no kept bookings to show.
+		await expect.poll(() => dialog.getByRole('listitem').elements().length).toBe(3);
 		const marks = [...document.querySelectorAll('[role="dialog"] li[data-conflict]')].map((li) =>
 			li.getAttribute('data-conflict')
 		);
 		expect(marks).toEqual(['booked', 'closed']);
-		expect(document.querySelector('[data-testid="kept-bookings"]')).toBeNull();
 	});
 
 	it('lists the old bookings that stay', async () => {
@@ -123,7 +123,7 @@ describe('EditScheduleAction', () => {
 		});
 		const dialog = await open();
 
-		await expect.element(dialog.getByTestId('kept-bookings')).toBeVisible();
-		expect(document.querySelectorAll('[data-testid="kept-bookings"] li')).toHaveLength(1);
+		// No sessions are previewed, so the one list item is the kept booking.
+		await expect.element(dialog.getByRole('listitem')).toBeVisible();
 	});
 });

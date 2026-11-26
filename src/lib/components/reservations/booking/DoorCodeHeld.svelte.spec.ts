@@ -41,7 +41,7 @@ beforeEach(() => subjectSet.mockClear());
 describe('DoorCodeHeld', () => {
 	it('names the booker’s owed date and carries it into the staff compose', async () => {
 		await render(DoorCodeHeld, { dueOn });
-		const notice = page.getByTestId('door-code-held');
+		const notice = page.getByRole('alert');
 		expect(notice.element().textContent).toContain(date);
 		await notice.getByRole('button').click();
 		expect(subjectSet).toHaveBeenCalledWith(expect.stringContaining(date));
@@ -49,7 +49,7 @@ describe('DoorCodeHeld', () => {
 
 	it('names the booker to a bandmate, without the date', async () => {
 		await render(DoorCodeHeld, { dueOn: null, bookerName: 'Iris Mendel' });
-		const notice = page.getByTestId('door-code-held');
+		const notice = page.getByRole('alert');
 		expect(notice.element().textContent).toContain('Iris Mendel');
 		expect(notice.element().textContent).not.toContain(date);
 		await notice.getByRole('button').click();

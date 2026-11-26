@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { m } from '#lib/paraglide/messages.js';
 import '#lib/test/locators.js';
 
 // One file for every inventory action: they mock the same two modules, and each
@@ -254,15 +255,18 @@ describe('BindTagAction', () => {
 	};
 
 	const TAG = 'CMC-000110';
-	/** The panel above the field: one line for a bind, two for a rebind. */
-	const context = () => page.getByRole('dialog').getByTestId('bind-tag-context');
+	const dialog = () => page.getByRole('dialog');
 
 	it('offers to bind when the unit wears no tag', async () => {
 		await expect.element(await open()).toBeVisible();
 
-		await expect.element(context()).toBeVisible();
-		expect(context().getByCss('p').elements()).toHaveLength(1);
-		expect(context().getByCss('strong').query()).toBeNull();
+		await expect
+			.element(dialog().getByText(m.actions_bind_tag_scan_type_tag_printed_sticker_text()))
+			.toBeVisible();
+		await expect.element(dialog().getByText(TAG)).not.toBeInTheDocument();
+		await expect
+			.element(dialog().getByText(m.actions_bind_tag_binding_new_one_keeps_every_text()))
+			.not.toBeInTheDocument();
 	});
 
 	// A staffer rebinding needs to know which sticker they are replacing —
@@ -270,7 +274,7 @@ describe('BindTagAction', () => {
 	it('names the tag being replaced when there is one', async () => {
 		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
-		await expect.element(context().getByCss('strong')).toMatchTextContent(TAG);
+		await expect.element(dialog().getByText(TAG)).toBeVisible();
 	});
 
 	// The reassurance is the whole reason a rebind is offered rather than a
@@ -278,8 +282,9 @@ describe('BindTagAction', () => {
 	it('says a rebind keeps the history attached to the unit', async () => {
 		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
-		// The second line is the reassurance; the first only names the tag.
-		await expect.element(context().getByCss('p').nth(1)).toBeVisible();
+		await expect
+			.element(dialog().getByText(m.actions_bind_tag_binding_new_one_keeps_every_text()))
+			.toBeVisible();
 	});
 
 	// Pre-filling the field would submit the tag already bound — a rebind onto
