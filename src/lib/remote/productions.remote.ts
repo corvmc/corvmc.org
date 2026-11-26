@@ -19,7 +19,6 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { recordStaffCount as recordStaffCountService } from '#lib/server/production/till-count-service.js';
 import {
 	recordPayouts as recordPayoutsService,
-	recordSlotPayout,
 	undoSlotPayout
 } from '#lib/server/production/settlement-service.js';
 import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
