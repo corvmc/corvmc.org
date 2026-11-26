@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { toast } from 'svelte-sonner';
+import { m } from '#lib/paraglide/messages.js';
 import ActionHarness from './Action.test.svelte';
 import '#lib/test/locators.js';
 
@@ -589,7 +590,9 @@ describe('Action, canSubmit', () => {
 describe('Action, unsaved changes', () => {
 	const closeButton = () => modal().getByCss('[data-dialog-close]');
 	const note = () => modal().getByCss('input:is([name="notes"], [name^="notes/"])');
-	const prompt = () => page.getByTestId('discard-prompt');
+	const keepEditing = () =>
+		modal().getByRole('button', { name: m.ui_keep_editing_label(), exact: true });
+	const discard = () => modal().getByRole('button', { name: m.ui_discard_label(), exact: true });
 
 	it('closes an untouched dialog without asking', async () => {
 		const { trigger } = await mount({
@@ -616,7 +619,7 @@ describe('Action, unsaved changes', () => {
 		await note().fill('bring the amp');
 		await closeButton().click();
 
-		await expect.element(prompt()).toBeVisible();
+		await expect.element(discard()).toBeVisible();
 		expect(dialog()).not.toBeNull();
 	});
 
@@ -630,7 +633,7 @@ describe('Action, unsaved changes', () => {
 		await trigger.click();
 		await note().fill('bring the amp');
 		await closeButton().click();
-		await prompt().getByRole('button').first().click();
+		await keepEditing().click();
 
 		await expect.element(note()).toHaveValue('bring the amp');
 	});
@@ -645,7 +648,7 @@ describe('Action, unsaved changes', () => {
 		await trigger.click();
 		await note().fill('bring the amp');
 		await closeButton().click();
-		await prompt().getByRole('button').last().click();
+		await discard().click();
 
 		await vi.waitFor(() => expect(dialog()).toBeNull());
 	});

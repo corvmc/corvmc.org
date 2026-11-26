@@ -1,14 +1,16 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { m } from '#lib/paraglide/messages.js';
 import FilterBarHarness from './FilterBar.test.svelte';
 import '../../../routes/layout.css';
 
 /**
  * The menu's trigger is the only control carrying `aria-expanded` (bits-ui
- * popover); Clear is the button after it. The count is the trigger's badge.
+ * popover). The count is the trigger's badge.
  */
 const filters = () => page.getByRole('button', { expanded: false });
+const clear = () => page.getByRole('button', { name: m.ui_clear_label(), exact: true });
 const badge = () => filters().element().querySelector('.badge')?.textContent?.trim() ?? null;
 
 describe('FilterBar menu', () => {
@@ -31,7 +33,7 @@ describe('FilterBar menu', () => {
 
 		await expect.element(filters()).toBeVisible();
 		await expect.poll(badge).toBe('1');
-		await page.getByRole('button').last().click();
+		await clear().click();
 		await expect.poll(() => page.getByTestId('cleared').element().textContent).toBe('1');
 		await expect.poll(badge).toBeNull();
 	});
@@ -53,7 +55,7 @@ describe('FilterBar without a menu', () => {
 		expect(page.getByRole('button').elements()).toHaveLength(0);
 
 		await page.getByLabelText('Category').selectOptions('amps');
-		await page.getByRole('button').click();
+		await clear().click();
 		await expect.poll(() => page.getByTestId('cleared').element().textContent).toBe('1');
 	});
 });
