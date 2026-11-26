@@ -380,12 +380,6 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
-		name: 'recordActPayout',
-		args: [{ ...SLOT, amountCents: 1000 }],
-		capability: 'finance.refund',
-		positionOnly: true
-	},
-	{
 		name: 'recordPayouts',
 		args: [{ productionId: 'prod-1', payouts: [{ slotId: 'slot-1', amountCents: 1000 }] }],
 		capability: 'finance.refund',

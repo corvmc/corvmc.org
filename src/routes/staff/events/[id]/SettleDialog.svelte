@@ -25,8 +25,7 @@
 	 * The event's settlement in one dialog (#3273): the night's net, the staff
 	 * count of the till and each act's payout. Editing is for a show with acts
 	 * still unpaid; once every act is paid it shows the same figures, and a
-	 * `finance.refund` holder can undo one payout. Each form is `.for('settle')`
-	 * because the production console's panel mounts the same remotes.
+	 * `finance.refund` holder can undo one payout.
 	 */
 	let {
 		open = $bindable(false),

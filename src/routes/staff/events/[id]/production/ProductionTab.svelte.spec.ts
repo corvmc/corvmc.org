@@ -48,12 +48,12 @@ vi.mock('#lib/remote/events.remote.js', () =>
 );
 vi.mock('#lib/remote/productions.remote.js', () =>
 	stubs(
-		'addLineupAct addProductionExpense advanceProduction askForArtifact ' +
+		'addLineupAct advanceProduction askForArtifact ' +
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markRunOfShowDone ' +
-			'markSlotTiming moveRunOfShowSlot openHostShift recordActPayout recordStaffCount ' +
-			'removeLineupAct removeProductionExpense reopenProduction ' +
+			'markSlotTiming moveRunOfShowSlot openHostShift ' +
+			'removeLineupAct reopenProduction ' +
 			'searchShowLeadCandidates setRunOfShowTerms setRunOfShowTime ' +
-			'setRiderStock undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
+			'setRiderStock updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
 );
@@ -128,7 +128,6 @@ function loaded(production: unknown, canSetLead = false) {
 		riderStock: { lines: [], unmatchedCount: 0, shortCount: 0, catalog: [] },
 		production,
 		runOfShow: null,
-		settlement: null,
 		artifactRequests: [],
 		requestableActs: [],
 		hostShift: null,
@@ -206,7 +205,6 @@ describe('Production tab', () => {
 
 		// One offer only: a remote form object attaches to a single <form>.
 		await expect.element(page.getByCss('button[type="submit"]').first()).toBeVisible();
-		await expect.element(page.getByTestId('settlement')).not.toBeInTheDocument();
 	});
 
 	it('lists what the bill asks for against stock, flagging the unmatched and the short', async () => {
@@ -288,70 +286,6 @@ describe('Production tab', () => {
 			const [first, second] = page.getByTestId('run-of-show-set').elements();
 			expect(first.querySelector('input[type="time"]')).not.toBeNull();
 			expect(second.querySelector('input[type="time"]')).toBeNull();
-		});
-	});
-
-	describe('settlement', () => {
-		const night = (count: number | null, checkedIn: number, recordedCents = 100_00) => ({
-			productionId: 'prod-1',
-			eventId: 'evt-1',
-			status: 'completed',
-			collectiveRevenueCents: 0,
-			actsPoolCents: 0,
-			door: {
-				cashCents: 100_00,
-				recordedCents,
-				gapCents: 100_00 - recordedCents,
-				unrecordedCents: Math.max(0, 100_00 - recordedCents),
-				count,
-				actsPercent: 70,
-				actsCents: 70_00,
-				collectiveCents: 30_00,
-				overridden: false
-			},
-			doorCounts: { check: 'single', oneCounter: false, handoffs: [], staff: null },
-			doorTakings: {
-				card: { tickets: 1, grossCents: 15_00 },
-				cash: { tickets: 0, grossCents: recordedCents },
-				free: { tickets: 0, grossCents: 0 },
-				donations: { count: 0, grossCents: 0 },
-				checkedIn
-			},
-			expensesCents: 0,
-			deductibleExpensesCents: 0,
-			expenses: [],
-			acts: [],
-			suggestedPayoutTotalCents: 0,
-			paidTotalCents: 0,
-			unpaidActCount: 0,
-			netCents: 0
-		});
-		const panel = () => page.getByTestId('settlement');
-
-		// Warn, never refuse: the typed count is read against the check-ins (#2801).
-		it('warns when the headcount differs from check-ins, and only then', async () => {
-			fixture.loaded = { ...loaded(record), settlement: night(5, 3) };
-			const { unmount } = await render(ProductionTab, props);
-			await expect.element(panel().getByTestId('door-count-gap')).toBeVisible();
-			unmount();
-
-			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
-			await render(ProductionTab, props);
-			await expect.element(panel().getByCss('button[type="submit"]').first()).toBeVisible();
-			expect(document.querySelector('[data-testid="door-count-gap"]')).toBeNull();
-		});
-
-		// Counted cash is read against the cash sales the door recorded (#2800).
-		it('warns when the cash counted differs from cash sales recorded, and only then', async () => {
-			fixture.loaded = { ...loaded(record), settlement: night(3, 3, 90_00) };
-			const { unmount } = await render(ProductionTab, props);
-			await expect.element(panel().getByTestId('door-cash-gap')).toBeVisible();
-			unmount();
-
-			fixture.loaded = { ...loaded(record), settlement: night(3, 3) };
-			await render(ProductionTab, props);
-			await expect.element(panel().getByTestId('door-cash-recorded')).toBeVisible();
-			expect(document.querySelector('[data-testid="door-cash-gap"]')).toBeNull();
 		});
 	});
 });

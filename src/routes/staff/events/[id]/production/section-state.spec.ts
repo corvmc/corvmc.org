@@ -1,32 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import {
-	deliverablesState,
-	doorState,
-	payoutsState,
-	requestsState,
-	runningOrderState,
-	stockState
-} from './section-state';
+import { deliverablesState, requestsState, runningOrderState, stockState } from './section-state';
 import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
 
 type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
-type Settlement = NonNullable<Loaded['settlement']>;
 type RunOfShow = NonNullable<Loaded['runOfShow']>;
 type Request = Loaded['artifactRequests'][number];
 
 const request = (over: Partial<Request>) =>
 	({ fulfilled: false, overdue: false, ...over }) as Request;
-
-const settlement = (over: Partial<Settlement>) =>
-	({
-		acts: [{}, {}],
-		unpaidActCount: 0,
-		door: null,
-		doorCounts: null,
-		expenses: [],
-		netCents: 0,
-		...over
-	}) as Settlement;
 
 const ros = (over: Partial<RunOfShow>) =>
 	({ firstSetAt: new Date(), slots: [{}], unslotted: [], warnings: [], ...over }) as RunOfShow;
@@ -66,28 +47,6 @@ describe('console section state', () => {
 			runningOrderState(ros({ slots: [] })),
 			runningOrderState(ros({ unslotted: [{}] as RunOfShow['unslotted'] })),
 			runningOrderState(ros({}))
-		]);
-		expect(states.size).toBe(4);
-	});
-
-	it('tells a part-paid bill from a settled one', () => {
-		expect(payoutsState(settlement({ unpaidActCount: 1 }))).not.toBe(payoutsState(settlement({})));
-	});
-});
-
-describe('door counts (#2722)', () => {
-	const counted = (check: 'single' | 'agreed' | 'mismatch') =>
-		settlement({
-			door: { cashCents: 500_00 } as Settlement['door'],
-			doorCounts: { check } as Settlement['doorCounts']
-		});
-
-	it('tells one count, two that agree and two that differ apart', () => {
-		const states = new Set([
-			doorState(settlement({})),
-			doorState(counted('single')),
-			doorState(counted('agreed')),
-			doorState(counted('mismatch'))
 		]);
 		expect(states.size).toBe(4);
 	});
