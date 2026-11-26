@@ -19,6 +19,9 @@
 	 */
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
+	// Its own instance: the Overview's bare form may be mounted on the same page.
+	const newProduction = createProduction.for('new-production');
+
 	let creating = $state(false);
 	let eventId = $state('');
 	let listings = $state<{ id: string; title: string; startsAt: Date }[] | null>(null);
@@ -63,13 +66,13 @@
 		</div>
 	{:else}
 		<Form
-			remote={createProduction}
+			remote={newProduction}
 			successToast={m.staff_projects_productions_new_production_modal_success_toas_toast()}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field
-				field={createProduction.fields.eventId}
+				field={newProduction.fields.eventId}
 				type="select"
 				label={m.staff_listing_label()}
 				bind:value={eventId}

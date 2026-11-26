@@ -11,7 +11,6 @@ import { readFileSync, globSync } from 'node:fs';
 
 /** Existing shared sites, each with the issue that keys them. */
 const KNOWN: Record<string, string> = {
-	'productions#createProduction': '#3339',
 	'projects#setProjectStatusForm': '#3340',
 	'marketing#updateAudience': '#3340',
 	'inventory#checkoutLoanForm': '#3340',

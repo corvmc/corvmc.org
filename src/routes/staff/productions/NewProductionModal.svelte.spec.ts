@@ -3,17 +3,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import '#lib/test/locators.js';
 
-const remoteForm = (action: string) => ({
-	enhance: () => ({ method: 'POST', action }),
-	fields: new Proxy({ allIssues: () => null } as Record<string, unknown>, {
-		get: (target, key: string) =>
-			target[key] ?? {
-				as: (type: string, value?: unknown) => ({ type, name: key, value }),
-				issues: () => null
-			}
-	}),
-	result: undefined
-});
+const remoteForm = (action: string) => {
+	const form = {
+		enhance: () => ({ method: 'POST', action }),
+		fields: new Proxy({ allIssues: () => null } as Record<string, unknown>, {
+			get: (target, key: string) =>
+				target[key] ?? {
+					as: (type: string, value?: unknown) => ({ type, name: key, value }),
+					issues: () => null
+				}
+		}),
+		result: undefined
+	};
+	return Object.assign(form, { for: () => form });
+};
 
 const attachable = vi.hoisted(() => ({
 	rows: [] as { id: string; title: string; startsAt: Date }[]
