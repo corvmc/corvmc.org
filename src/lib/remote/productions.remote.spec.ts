@@ -138,9 +138,8 @@ vi.mock('#lib/server/directory/contact-service.js', () => ({
 vi.mock('#lib/server/party/organization-service.js', () => ({
 	performerFor: async () => 'org-new'
 }));
-const showLead = { setShowLead: vi.fn(), searchLeadCandidates: vi.fn(async () => []) };
+const showLead = { searchLeadCandidates: vi.fn(async () => []) };
 vi.mock('#lib/server/production/show-lead-service.js', () => ({
-	setShowLead: (...a: unknown[]) => showLead.setShowLead(...a),
 	searchLeadCandidates: (...a: unknown[]) => showLead.searchLeadCandidates(...(a as []))
 }));
 vi.mock('#lib/server/production/host-service.js', () => ({
@@ -288,12 +287,6 @@ const WRITES: Write[] = [
 		name: 'updateProduction',
 		args: [{ id: 'prod-1', eventId: 'evt-1' }],
 		capability: RUN
-	},
-	// Booking appoints the lead; the lead then runs the show (#2726).
-	{
-		name: 'setShowLead',
-		args: [{ id: 'prod-1', eventId: 'evt-1', leadUserId: 'member-9' }],
-		capability: BOOK
 	},
 	{
 		name: 'searchShowLeadCandidates',

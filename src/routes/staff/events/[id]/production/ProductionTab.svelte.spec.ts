@@ -53,7 +53,7 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 			'markSlotTiming moveRunOfShowSlot openHostShift recordActPayout recordStaffCount ' +
 			'removeLineupAct removeProductionExpense reopenProduction ' +
 			'searchShowLeadCandidates setRunOfShowTerms setRunOfShowTime ' +
-			'setRiderStock setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
+			'setRiderStock undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
 );

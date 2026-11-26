@@ -2465,7 +2465,7 @@ restore crew shifts or retract a cancellation notice.
    event lead hold it too, the lead through the Event lead role (item 4). The committees granted it are Booking, Production, Art and
    Merchandise, and Communications. `production.book` is what binds CMC outside it: the deal terms
    (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
-   `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
+   `confirmed` or `cancelled`, and cancelling a series. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
 3. The event page's Production tab (`/staff/events/[id]?tab=production`) reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
@@ -2480,7 +2480,7 @@ restore crew shifts or retract a cancellation notice.
    (`can`, `requireProjectCommittee`) see it. It starts when the lead is named and ends
    `graceDays` (7) after the show, with no lead time and so no 90-day cap. It also opens the
    staff panel while the show is open (`holdsLeadOnOpenShow`). The old
-   `production.producer_user_id` grant (`leadsProject`, `setShowLead`) still works beside it
+   `production.producer_user_id` grant (`leadsProject`; the `setShowLead` form is gone, so nothing sets it) still works beside it
    until a later change retires it. Not `production.producer_user_id`, because a lead is a
    volunteer task with no shift, and hours, claiming and the task's page already exist for one
    (#3274). Naming the lead moved from `production.book` to `volunteer.manageRoster`, so bookers
