@@ -73,12 +73,10 @@ const task = (id: string, over: Record<string, unknown> = {}) => ({
 	...over
 });
 
-const card = () => document.querySelector('[data-testid="related-tasks"]')!;
-const cardOrNull = () => document.querySelector('[data-testid="related-tasks"]');
-const rows = () => card().querySelectorAll('tr[data-task]');
-const groupRows = () => card().querySelectorAll('[data-testid="related-task-group"]');
+const rows = () => document.body.querySelectorAll('tr[data-task]');
+const groupRows = () => document.body.querySelectorAll('[data-testid="related-task-group"]');
 const chips = () =>
-	[...card().querySelectorAll('[data-chip]')].map((c) => c.getAttribute('data-chip'));
+	[...document.body.querySelectorAll('[data-chip]')].map((c) => c.getAttribute('data-chip'));
 
 beforeEach(() => {
 	document.body.innerHTML = '';
@@ -126,7 +124,9 @@ describe('RelatedTasks', () => {
 			id: 'p1',
 			includeDone: false
 		});
-		(card().querySelector('[data-testid="related-tasks-done"]') as HTMLButtonElement).click();
+		(
+			document.body.querySelector('[data-testid="related-tasks-done"]') as HTMLButtonElement
+		).click();
 		await vi.waitFor(() =>
 			expect(getRelatedTasks).toHaveBeenLastCalledWith({
 				type: 'project',
@@ -144,7 +144,7 @@ describe('RelatedTasks', () => {
 		};
 		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(rows()).toHaveLength(1));
-		const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+		const hrefs = [...document.body.querySelectorAll('a')].map((a) => a.getAttribute('href'));
 		expect(hrefs).toContain('/staff/tasks?about=group%3Ag1');
 	});
 
@@ -152,11 +152,11 @@ describe('RelatedTasks', () => {
 		response = { groups: [], contractors: {}, prefill: { groupId: 'g1' } };
 		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() =>
-			expect(card().querySelector('[data-testid="related-new-task"]')).not.toBeNull()
+			expect(document.body.querySelector('[data-testid="related-new-task"]')).not.toBeNull()
 		);
-		expect(card().querySelector('table')).toBeNull();
-		expect(card().querySelector('[data-testid="related-tasks-done"]')).toBeNull();
-		expect(card().querySelectorAll('button')).toHaveLength(1);
+		expect(document.body.querySelector('table')).toBeNull();
+		expect(document.body.querySelector('[data-testid="related-tasks-done"]')).toBeNull();
+		expect(document.body.querySelectorAll('button')).toHaveLength(1);
 	});
 
 	it('offers no New task for a record that makes none by hand', async () => {
@@ -167,15 +167,15 @@ describe('RelatedTasks', () => {
 		};
 		await render(RelatedTasks, { subject: { type: 'recurring_work', id: 's1' } });
 		await vi.waitFor(() => expect(rows()).toHaveLength(1));
-		expect(card().querySelector('[data-testid="related-new-task"]')).toBeNull();
+		expect(document.body.querySelector('[data-testid="related-new-task"]')).toBeNull();
 	});
 
 	it('draws nothing for a viewer who may not read tasks', async () => {
 		response = null;
-		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' } });
+		const { container } = await render(RelatedTasks, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(getRelatedTasks).toHaveBeenCalled());
 		await Promise.resolve();
-		expect(cardOrNull()).toBeNull();
+		expect(container.childElementCount).toBe(0);
 	});
 
 	it("on a member's card, links only their own tasks and offers no staff controls", async () => {
@@ -186,16 +186,19 @@ describe('RelatedTasks', () => {
 		await render(RelatedTasks, { subject: { type: 'group', id: 'g1' }, member: true });
 		await vi.waitFor(() => expect(rows()).toHaveLength(2));
 		expect(getRelatedTasks).not.toHaveBeenCalled();
-		const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+		const hrefs = [...document.body.querySelectorAll('a')].map((a) => a.getAttribute('href'));
 		expect(hrefs).toEqual(['/member/volunteer/tasks/mine']);
-		expect(card().querySelector('[data-testid="related-new-task"]')).toBeNull();
+		expect(document.body.querySelector('[data-testid="related-new-task"]')).toBeNull();
 	});
 
 	it("leaves a member's card off when nothing is theirs", async () => {
 		memberResponse = { groups: [], mine: [] };
-		await render(RelatedTasks, { subject: { type: 'event', id: 'e1' }, member: true });
+		const { container } = await render(RelatedTasks, {
+			subject: { type: 'event', id: 'e1' },
+			member: true
+		});
 		await vi.waitFor(() => expect(getMemberRelatedTasks).toHaveBeenCalled());
 		await Promise.resolve();
-		expect(cardOrNull()).toBeNull();
+		expect(container.childElementCount).toBe(0);
 	});
 });

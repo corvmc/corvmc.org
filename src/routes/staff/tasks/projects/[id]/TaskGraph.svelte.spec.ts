@@ -34,9 +34,7 @@ const TaskGraph = (await import('./TaskGraph.svelte')).default;
 describe('TaskGraph', () => {
 	it('links each task on an edge, marks the done ones, and draws every edge', async () => {
 		const { container } = await render(TaskGraph, { projectId: 'p1' });
-		await vi.waitFor(() =>
-			expect(container.querySelector('[data-testid="task-graph"]')).not.toBeNull()
-		);
+		await vi.waitFor(() => expect(container.querySelector('svg[role="img"]')).not.toBeNull());
 
 		const nodes = [...container.querySelectorAll('[data-node]')];
 		expect(nodes.map((n) => n.getAttribute('data-node')).sort()).toEqual([
@@ -56,7 +54,8 @@ describe('TaskGraph', () => {
 	it('shows an empty state when no task waits on another', async () => {
 		graph.value = { nodes: graph.value.nodes, edges: [] };
 		const { container } = await render(TaskGraph, { projectId: 'p1' });
-		await vi.waitFor(() => expect(container.querySelector('[data-node]')).toBeNull());
-		expect(container.querySelector('[data-testid="task-graph"]')).toBeNull();
+		await vi.waitFor(() => expect(container.childElementCount).toBeGreaterThan(0));
+		expect(container.querySelector('[role="img"]')).toBeNull();
+		expect(container.querySelector('[data-node]')).toBeNull();
 	});
 });

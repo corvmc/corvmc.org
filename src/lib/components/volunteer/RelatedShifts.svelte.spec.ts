@@ -94,12 +94,11 @@ const shift = (id: string, over: Record<string, unknown> = {}) => ({
 	...over
 });
 
-const card = () => document.querySelector('[data-testid="related-shifts"]')!;
-const rows = () => card().querySelectorAll('tr[data-shift]');
-const groupRows = () => card().querySelectorAll('[data-testid="related-shift-group"]');
+const rows = () => document.body.querySelectorAll('tr[data-shift]');
+const groupRows = () => document.body.querySelectorAll('[data-testid="related-shift-group"]');
 const chips = () =>
-	[...card().querySelectorAll('[data-chip]')].map((c) => c.getAttribute('data-chip'));
-const addShift = () => card().querySelector('[data-testid="related-add-shift"]');
+	[...document.body.querySelectorAll('[data-chip]')].map((c) => c.getAttribute('data-chip'));
+const addShift = () => document.body.querySelector('[data-testid="related-add-shift"]');
 
 beforeEach(() => {
 	document.body.innerHTML = '';
@@ -148,7 +147,7 @@ describe('RelatedShifts', () => {
 		};
 		await render(RelatedShifts, { subject: { type: 'project', id: 'p1' } });
 		await vi.waitFor(() => expect(rows()).toHaveLength(2));
-		(card().querySelector('[data-chip="short"]') as HTMLButtonElement).click();
+		(document.body.querySelector('[data-chip="short"]') as HTMLButtonElement).click();
 		await vi.waitFor(() => expect(rows()).toHaveLength(1));
 		expect(rows()[0].getAttribute('data-shift')).toBe('a');
 	});
@@ -167,7 +166,7 @@ describe('RelatedShifts', () => {
 		};
 		await render(RelatedShifts, { subject: { type: 'event', id: 'e1' } });
 		await vi.waitFor(() => expect(rows()).toHaveLength(2));
-		expect(card().querySelector('[data-testid="related-shifts-summary"]')?.textContent).toBe(
+		expect(document.body.querySelector('[data-testid="related-shifts-summary"]')?.textContent).toBe(
 			m.staff_related_shifts_summary_text({ filled: 3, capacity: 5, shifts: 2 })
 		);
 	});
@@ -176,10 +175,10 @@ describe('RelatedShifts', () => {
 		response = { groups: [], ended: 2, addShift: null };
 		await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(chips()).toEqual(['ended']));
-		const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+		const hrefs = [...document.body.querySelectorAll('a')].map((a) => a.getAttribute('href'));
 		expect(hrefs).toContain('/staff/volunteering?about=group%3Ag1&days=all');
 		expect(hrefs).toContain('/staff/volunteering?about=group%3Ag1&days=all&needs=ended');
-		expect(card().querySelector('[data-testid="related-shifts-summary"]')).toBeNull();
+		expect(document.body.querySelector('[data-testid="related-shifts-summary"]')).toBeNull();
 	});
 
 	it('offers Add shift where the record has a task or can make one', async () => {
@@ -190,20 +189,20 @@ describe('RelatedShifts', () => {
 		};
 		await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(addShift()).not.toBeNull());
-		expect(card().querySelector('table')).toBeNull();
+		expect(document.body.querySelector('table')).toBeNull();
 	});
 
 	it('offers no Add shift with nothing to put a shift on, or without the capability', async () => {
 		response = { groups: [], ended: 0, addShift: { tasks: [], newTask: null, roles: [] } };
-		await render(RelatedShifts, { subject: { type: 'recurring_work', id: 's1' } });
+		const first = await render(RelatedShifts, { subject: { type: 'recurring_work', id: 's1' } });
 		await vi.waitFor(() => expect(getRelatedShifts).toHaveBeenCalled());
-		await vi.waitFor(() => expect(card()).not.toBeNull());
+		await vi.waitFor(() => expect(first.container.childElementCount).toBeGreaterThan(0));
 		expect(addShift()).toBeNull();
 
 		document.body.innerHTML = '';
 		response = { groups: [], ended: 0, addShift: null };
-		await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
-		await vi.waitFor(() => expect(card()).not.toBeNull());
+		const second = await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
+		await vi.waitFor(() => expect(second.container.childElementCount).toBeGreaterThan(0));
 		expect(addShift()).toBeNull();
 	});
 
@@ -268,10 +267,10 @@ describe('RelatedShifts', () => {
 
 	it('draws nothing for a viewer who may not read shifts', async () => {
 		response = null;
-		await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
+		const { container } = await render(RelatedShifts, { subject: { type: 'group', id: 'g1' } });
 		await vi.waitFor(() => expect(getRelatedShifts).toHaveBeenCalled());
 		await Promise.resolve();
-		expect(document.querySelector('[data-testid="related-shifts"]')).toBeNull();
+		expect(container.childElementCount).toBe(0);
 	});
 
 	describe('on a member page', () => {
@@ -281,7 +280,7 @@ describe('RelatedShifts', () => {
 			missing: [],
 			...over
 		});
-		const row = (id: string) => card().querySelector(`tr[data-shift="${id}"]`)!;
+		const row = (id: string) => document.body.querySelector(`tr[data-shift="${id}"]`)!;
 
 		it('offers Sign up where the member can take the shift, and their status where on it', async () => {
 			memberResponse = {
@@ -311,22 +310,25 @@ describe('RelatedShifts', () => {
 			expect(signUp('on')).toBeNull();
 			expect(signUp('needs')).toBeNull();
 			expect(signUp('full')).toBeNull();
-			expect(row('needs').querySelector('[data-testid="shift-needs"]')).not.toBeNull();
+			expect(row('needs').textContent).toContain('Sound');
 
 			// Only their own shift links, and to their sign-up; no staff page.
-			const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+			const hrefs = [...document.body.querySelectorAll('a')].map((a) => a.getAttribute('href'));
 			expect(new Set(hrefs)).toEqual(new Set(['/member/volunteer/shifts/su-1']));
-			expect(card().querySelector('[data-testid="related-shift-chips"]')).toBeNull();
-			expect(card().querySelector('[data-testid="find-volunteers"]')).toBeNull();
+			expect(chips()).toEqual([]);
+			expect(document.body.querySelector('[data-testid="find-volunteers"]')).toBeNull();
 			expect(addShift()).toBeNull();
 		});
 
 		it('leaves the card off when the record has no open shifts', async () => {
 			memberResponse = { groups: [] };
-			await render(RelatedShifts, { subject: { type: 'group', id: 'g1' }, member: true });
+			const { container } = await render(RelatedShifts, {
+				subject: { type: 'group', id: 'g1' },
+				member: true
+			});
 			await vi.waitFor(() => expect(getMemberRelatedShifts).toHaveBeenCalled());
 			await Promise.resolve();
-			expect(document.querySelector('[data-testid="related-shifts"]')).toBeNull();
+			expect(container.childElementCount).toBe(0);
 		});
 	});
 });
