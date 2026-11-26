@@ -65,7 +65,7 @@ beforeEach(() => {
 
 describe('dropping an act from the bill', () => {
 	it('cancels its unused guests and leaves every other ticket alone', async () => {
-		await setEventLineup('evt-1', [{ name: 'Bravo' }]);
+		await setEventLineup('evt-1', [{ name: 'Bravo', billingOrder: 0 }]);
 
 		const rows = statuses();
 		expect(rows['a-valid']).toMatch(/^cancelled:/);
@@ -87,7 +87,11 @@ describe('dropping an act from the bill', () => {
 	});
 
 	it('keeps the guests of an act that stays, whatever else is rewritten', async () => {
-		await setEventLineup('evt-1', [{ name: 'Alpha' }, { name: 'Bravo' }, { name: 'Delta' }]);
+		await setEventLineup('evt-1', [
+			{ name: 'Alpha', billingOrder: 0 },
+			{ name: 'Bravo', billingOrder: 1 },
+			{ name: 'Delta', billingOrder: 2 }
+		]);
 
 		const rows = statuses();
 		expect(rows['a-valid']).toBe('valid:act-a');
