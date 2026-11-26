@@ -1,5 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { production, productionTillCount } from '#lib/server/db/schema/production.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
@@ -54,15 +55,21 @@ export async function recordHandoff(
 }
 
 /** The show and the counter of a handoff, so a caller guards on the row and not on a form field. */
-export async function handoffOwner(
-	countId: string
-): Promise<{ productionId: string; countedByUserId: string | null } | null> {
+export async function handoffOwner(countId: string): Promise<{
+	productionId: string;
+	countedByUserId: string | null;
+	counterName: string | null;
+	cashCents: number;
+} | null> {
 	const [row] = await db
 		.select({
 			productionId: productionTillCount.productionId,
-			countedByUserId: productionTillCount.countedByUserId
+			countedByUserId: productionTillCount.countedByUserId,
+			counterName: user.name,
+			cashCents: productionTillCount.cashCents
 		})
 		.from(productionTillCount)
+		.leftJoin(user, eq(user.id, productionTillCount.countedByUserId))
 		.where(and(eq(productionTillCount.id, countId), eq(productionTillCount.kind, 'handoff')))
 		.limit(1);
 	return row ?? null;
@@ -73,6 +80,11 @@ export async function removeHandoff(countId: string): Promise<void> {
 	if (!handoff) throw new TillCountNotFoundError();
 	await assertNotTerminal({ productionId: handoff.productionId });
 	await db.delete(productionTillCount).where(eq(productionTillCount.id, countId));
+	await recordAuditEntry({
+		action: 'production.till_count_removed',
+		subject: { type: 'production', id: handoff.productionId },
+		details: { cashCents: handoff.cashCents, counterName: handoff.counterName }
+	});
 }
 
 /**

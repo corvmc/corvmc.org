@@ -27,7 +27,7 @@ import {
 	listConfirmedSignupsForEvents
 } from '#lib/server/volunteer/volunteer-signup-service.js';
 import { listReadableArticles, resolveHelpReader } from '#lib/server/help/help-service.js';
-import { unaudited } from '#lib/server/audit/declared.js';
+import { writesAudit } from '#lib/server/audit/declared.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import {
 	eventOfProduction,
@@ -247,26 +247,23 @@ export const countTill = form(
  */
 export const removeTillCount = form(
 	z.object({ countId: z.string().min(1) }),
-	unaudited(
-		'A handoff count is a working figure; the staff count is the audited one.',
-		async (data) => {
-			const user = requireUser();
-			const handoff = await handoffOwner(data.countId);
-			if (!handoff) error(404, 'That till count is no longer on the show');
-			const eventId = await eventOfProduction(handoff.productionId);
-			const own =
-				handoff.countedByUserId === user.id &&
-				eventId !== null &&
-				(await can('finance.collect', { eventId }));
-			if (!own) {
-				await requireProjectCommittee(
-					await projectOfProduction(handoff.productionId),
-					'production.run'
-				);
-			}
-			await removeHandoff(data.countId);
-			if (eventId) await getTillCounts(eventId).refresh();
-			return { success: true };
+	writesAudit('production.till_count_removed', async (data) => {
+		const user = requireUser();
+		const handoff = await handoffOwner(data.countId);
+		if (!handoff) error(404, 'That till count is no longer on the show');
+		const eventId = await eventOfProduction(handoff.productionId);
+		const own =
+			handoff.countedByUserId === user.id &&
+			eventId !== null &&
+			(await can('finance.collect', { eventId }));
+		if (!own) {
+			await requireProjectCommittee(
+				await projectOfProduction(handoff.productionId),
+				'production.run'
+			);
 		}
-	)
+		await removeHandoff(data.countId);
+		if (eventId) await getTillCounts(eventId).refresh();
+		return { success: true };
+	})
 );

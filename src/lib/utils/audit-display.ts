@@ -86,6 +86,7 @@ const ACTIONS: Record<AuditAction, [Area, string]> = {
 	'production.payout_recorded': ['Events and shows', 'Payout recorded'],
 	'production.payout_undone': ['Events and shows', 'Payout undone'],
 	'production.door_recounted': ['Events and shows', 'Door counted again'],
+	'production.till_count_removed': ['Events and shows', 'Till count removed'],
 	'work_order.created': ['Tasks', 'Task added'],
 	'work_order.assigned': ['Tasks', 'Task assignment changed'],
 	'work_order.member_assigned': ['Tasks', 'Member assigned'],
@@ -536,6 +537,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return d.firstCents === d.secondCents
 				? `Counted the door a second time: ${formatCents(d.secondCents)}, matching`
 				: `Counted the door a second time: ${formatCents(d.secondCents)} against ${formatCents(d.firstCents)}`;
+		}
+		case 'production.till_count_removed': {
+			const d = entry.details;
+			return `Removed a ${formatCents(d.cashCents)} till count${d.counterName ? ` made by ${d.counterName}` : ''}`;
 		}
 		case 'event.emailed_beyond_visibility': {
 			const d = entry.details;
