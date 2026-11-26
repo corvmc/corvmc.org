@@ -54,7 +54,7 @@ describe('TaskGraph', () => {
 	it('shows an empty state when no task waits on another', async () => {
 		graph.value = { nodes: graph.value.nodes, edges: [] };
 		const { container } = await render(TaskGraph, { projectId: 'p1' });
-		await vi.waitFor(() => expect(container.childElementCount).toBeGreaterThan(0));
+		await vi.waitFor(() => expect(container.querySelector('[data-empty-state]')).not.toBeNull());
 		expect(container.querySelector('[role="img"]')).toBeNull();
 		expect(container.querySelector('[data-node]')).toBeNull();
 	});
