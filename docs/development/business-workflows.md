@@ -673,7 +673,7 @@ through `contact-service.ts`. Staff can send a contact-sheet link (`issueContact
 `/act/[token]` for 30 days, with no session, and cannot change its name. The person it types is
 written by `writeActContactUnguarded()`: an email already on file updates that contact, and
 without an email the act's own earlier entry is updated. A show's contact is
-`production_slot.contact_id`, picked in the Production tab's run of show from that act's people
+`production_slot.contact_id`, picked from that act's people
 (`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
 The same page lists the act's own booked shows from `offered` on, upcoming and the last 90 days
 (`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
@@ -2488,7 +2488,10 @@ restore crew shifts or retract a cancellation notice.
 8. Productions (`/staff/productions`) reads through `getStaffProductions`: `listProductions()`
    reads `production` joined to its project, and left-joins the listing and its `venue` (both
    1:1, so no fan-out).
-9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
+9. **Lineup** and **Run of show** on the Production tab → the remotes in `productions.remote.ts`:
+   `addLineupAct` / `removeLineupAct` (`production.book`, through `lineup-service.ts`, which keeps the
+   credit and its set together), `setRunOfShowTime` / `markRunOfShowDone` / `updateRunOfShowSlot`
+   (`production.run`; the changeover is one per show, `production.changeover_minutes`) →
    `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
    `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
    never stored by hand: `computeSetTimes` in `production/run-of-show.ts` walks the slots

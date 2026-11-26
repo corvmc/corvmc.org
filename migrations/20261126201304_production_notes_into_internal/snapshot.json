@@ -1,10 +1,10 @@
 {
+  "id": "e82e1de8-fc94-42ec-951f-7b5939f1aa4d",
+  "prevIds": [
+    "92fc55e2-515b-4e10-9777-016091852c54"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "4a7b3c86-3175-466c-8603-05264c9f9cef",
-  "prevIds": [
-    "ea45e833-cc02-42f9-bd96-bff790b3b7e0"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -2837,6 +2837,66 @@
       "default": null,
       "generated": null,
       "name": "load_out_by",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "15",
+      "generated": null,
+      "name": "changeover_minutes",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "load_in_done_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "soundcheck_done_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doors_done_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "curfew_done_at",
+      "entityType": "columns",
+      "table": "production"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "load_out_done_at",
       "entityType": "columns",
       "table": "production"
     },

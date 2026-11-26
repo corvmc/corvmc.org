@@ -176,11 +176,11 @@
 							<input {...drop.fields.eventId.as('hidden', eventId)} />
 							<input {...drop.fields.slotId.as('hidden', slot.id)} />
 							<p class="text-sm">
-								{m.staff_events_id_production_lineup_remove_body({
+								{m.staff_events_id_production_lineup_remove_text({
 									name: slot.actName ?? m.staff_not_bill_text()
 								})}
 								{#if slot.actOrganizationId && slot.actSlug}
-									{m.staff_events_id_production_lineup_remove_claim_body()}
+									{m.staff_events_id_production_lineup_remove_claim_text()}
 								{/if}
 							</p>
 						{/snippet}
