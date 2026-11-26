@@ -70,6 +70,8 @@ export const tableOrder = [
 	'donation',
 	// Cascades from production, so it clears with it.
 	'production_expense',
+	// Cascades from production; counted_by_user_id is set null.
+	'production_till_count',
 	// References event_listing and directory_entry, so it clears before both.
 	'artifact_request',
 	// References sponsorship and event_listing, so it follows both.

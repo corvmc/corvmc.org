@@ -309,7 +309,7 @@ describe('Production tab', () => {
 				collectiveCents: 30_00,
 				overridden: false
 			},
-			doorCounts: { check: 'single', first: { byName: null, at: null }, second: null },
+			doorCounts: { check: 'single', oneCounter: false, handoffs: [], staff: null },
 			doorTakings: {
 				card: { tickets: 1, grossCents: 15_00 },
 				cash: { tickets: 0, grossCents: recordedCents },
