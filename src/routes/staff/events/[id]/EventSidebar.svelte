@@ -38,7 +38,8 @@
 			eventId={evt.id}
 			production={data.production}
 			crew={data.sidebar.crew}
-			canSetLead={data.sidebar.canSetLead}
+			lead={data.sidebar.lead}
+			canAssignLead={data.sidebar.canAssignLead}
 			hostOpen={data.sidebar.hostOpen}
 			{onchange}
 		/>

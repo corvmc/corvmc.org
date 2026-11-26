@@ -90,6 +90,7 @@ import { seedFundedProjects, seedFundingWork } from './seed/funding';
 import { seedOrientation } from './seed/orientation';
 import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
+	seedEventLeadTasks,
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
 	seedVolunteerInterests,
@@ -282,6 +283,7 @@ async function main() {
 		deskCert: certifications.deskCert
 	});
 	const workOrders = await seedWorkOrders(activeVolunteers, volunteerRoles, events);
+	await seedEventLeadTasks(volunteerRoles, productions.rows, activeVolunteers);
 	const equipmentReports = await seedEquipmentReports(
 		users.slice(1, 4),
 		adminUser.id,

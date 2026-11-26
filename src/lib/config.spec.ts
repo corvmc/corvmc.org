@@ -192,8 +192,7 @@ describe('the capability matrix', () => {
 			'inventory.manageStock',
 			'inventory.manageOrders',
 			'contractor.manage',
-			'incident.record',
-			'production.run'
+			'incident.record'
 		];
 		const adminOnly = new Set<string>(adminOnlyCapabilities);
 		const unheld = everyCapability.filter((cap) => {

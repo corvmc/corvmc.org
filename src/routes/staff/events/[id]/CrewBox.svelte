@@ -1,54 +1,59 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
-	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
-	import {
-		setShowLead,
-		searchShowLeadCandidates,
-		openHostShift
-	} from '#lib/remote/productions.remote.js';
-	import type { getStaffEventPage } from '#lib/remote/events.remote.js';
+	import { openHostShift } from '#lib/remote/productions.remote.js';
+	import { openEventLeadTask, type getStaffEventPage } from '#lib/remote/events.remote.js';
 	import CrewAssign from './CrewAssign.svelte';
 
 	/**
 	 * A CMC show's crew (#3270): the event lead, then each shift, each row the
-	 * person or Assign. Shift times are not shown. Assign on a shift opens the
-	 * task's own staffing — its assignees and "Who to ask" — for that shift.
-	 * A show with no host task offers to open one; once open it is a shift row.
+	 * person or Assign. Shift times are not shown. Assign opens the task's own
+	 * staffing — its assignees and "Who to ask" — and the event lead is a task
+	 * with no shift (#3274). A show with no host task offers to open one; once
+	 * open it is a shift row.
 	 */
 	type Page = Awaited<ReturnType<typeof getStaffEventPage>>;
 	let {
 		eventId,
 		production,
 		crew,
-		canSetLead,
+		lead,
+		canAssignLead,
 		hostOpen,
 		onchange
 	}: {
 		eventId: string;
 		production: Page['production'];
 		crew: NonNullable<Page['sidebar']['crew']>;
-		canSetLead: boolean;
+		lead: Page['sidebar']['lead'];
+		canAssignLead: boolean;
 		hostOpen: boolean;
 		onchange: () => void;
 	} = $props();
 
+	const leadHeld = $derived((lead?.people.length ?? 0) > 0 || !!production?.producer);
 	const filled = $derived(
-		(production?.producerUserId ? 1 : 0) +
-			crew.reduce((n, s) => n + Math.min(s.people.length, s.capacity), 0)
+		(leadHeld ? 1 : 0) + crew.reduce((n, s) => n + Math.min(s.people.length, s.capacity), 0)
 	);
 	const places = $derived((production ? 1 : 0) + crew.reduce((n, s) => n + s.capacity, 0));
 
-	let leadId = $state('');
-	let leadName = $state('');
-	let assigning = $state<{ workOrderId: string; shiftId: string } | null>(null);
+	let assigning = $state<{ workOrderId: string; shiftId?: string } | null>(null);
 	let assignOpen = $state(false);
+	let noLeadRole = $state(false);
+
+	/** The task may not exist yet on a show opened before the role did. */
+	async function assignLead() {
+		const workOrderId = lead?.workOrderId ?? (await openEventLeadTask({ eventId })).workOrderId;
+		noLeadRole = workOrderId === null;
+		if (!workOrderId) return;
+		assigning = { workOrderId };
+		assignOpen = true;
+	}
 </script>
 
 <InfoCard
@@ -58,36 +63,27 @@
 >
 	<ul class="flex flex-col divide-y divide-base-200 text-sm">
 		{#if production}
-			<li class="flex items-center justify-between gap-2 py-2" data-testid="crew-lead">
+			<li class="flex flex-wrap items-center justify-between gap-2 py-2" data-testid="crew-lead">
 				<span class="text-muted">{m.staff_events_id_production_lead_text()}</span>
-				{#if production.producer}
-					<EntityChip ref={production.producer} />
-				{:else if canSetLead}
-					<Action
-						action={setShowLead}
-						label={m.staff_events_id_crew_assign_label()}
-						modalTitle={m.staff_events_id_crew_assign_lead_title()}
-						successToast={m.staff_events_id_production_lead_saved_toast()}
-						variant="ghost"
-						size="sm"
-						onsuccess={onchange}
-					>
-						{#snippet form()}
-							<input {...setShowLead.fields.id.as('hidden', production.id)} />
-							<input {...setShowLead.fields.eventId.as('hidden', eventId)} />
-							<MemberPicker
-								field={setShowLead.fields.leadUserId}
-								label={m.staff_events_id_production_lead_label()}
-								placeholder={m.staff_events_id_production_lead_search_placeholder()}
-								search={(q) => searchShowLeadCandidates({ eventId, q })}
-								bind:value={leadId}
-								bind:name={leadName}
-							/>
-						{/snippet}
-					</Action>
-				{:else}
-					<span class="text-muted">{m.staff_events_id_production_no_lead_text()}</span>
-				{/if}
+				<span class="flex flex-wrap items-center justify-end gap-2">
+					{#each lead?.people ?? [] as person (person.userId)}
+						<span class="font-medium">{person.name}</span>
+					{/each}
+					{#if production.producer && !lead?.people.some((p) => p.userId === production.producerUserId)}
+						<EntityChip ref={production.producer} />
+					{/if}
+					{#if (lead?.people.length ?? 0) === 0}
+						{#if noLeadRole}
+							<span class="text-muted">{m.staff_events_id_crew_no_lead_role_text()}</span>
+						{:else if canAssignLead}
+							<Button variant="ghost" size="sm" onclick={assignLead}>
+								{m.staff_events_id_crew_assign_label()}
+							</Button>
+						{:else if !production.producer}
+							<span class="text-muted">{m.staff_events_id_production_no_lead_text()}</span>
+						{/if}
+					{/if}
+				</span>
 			</li>
 		{/if}
 		{#if production && !hostOpen}
@@ -134,7 +130,9 @@
 
 <Modal
 	bind:open={assignOpen}
-	title={m.staff_events_id_crew_assign_shift_title()}
+	title={assigning?.shiftId
+		? m.staff_events_id_crew_assign_shift_title()
+		: m.staff_events_id_crew_assign_lead_title()}
 	maxWidth="max-w-xl"
 	onclose={onchange}
 >

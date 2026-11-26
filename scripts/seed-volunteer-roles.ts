@@ -17,6 +17,7 @@ import 'dotenv/config';
 import { getPlatformProxy } from 'wrangler';
 import { drizzle } from 'drizzle-orm/d1';
 import { volunteerRole, volunteerRoleCapability } from '../src/lib/server/db/schema/volunteer';
+import { EVENT_LEAD_VOLUNTEER_ROLE } from '../src/lib/config';
 
 type Group = 'at-shows' | 'away-from-shows';
 
@@ -78,6 +79,16 @@ const ROLES: RoleSeed[] = [
 		name: 'Work Parties',
 		group: 'away-from-shows',
 		description: 'Cleaning, organizing, and building projects.'
+	},
+	{
+		// One person per show, named from the event page's Crew box (#3274). A task
+		// with no shift: its assignee holds the show's production work and guest
+		// lists from assignment on.
+		name: EVENT_LEAD_VOLUNTEER_ROLE,
+		group: 'away-from-shows',
+		description:
+			"Work with the acts before the show: answer their questions, keep their guest lists and run the advance.\n\nOne person per show, named by staff. There is no shift; the role carries the show's production tools from the day you are named.",
+		capabilityGrants: ['production.run', 'event.manageGuests']
 	},
 	{
 		name: 'Gear Repair',
