@@ -58,9 +58,7 @@ test.describe('venues', () => {
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
-		await page
-			.locator('select:is([name="venueId"], [name^="venueId/"])')
-			.selectOption({ label: 'The practice room' });
+		await page.locator('select:is([name="venueId"], [name^="venueId/"])').selectOption('');
 		await expect(page.getByTestId('reserve-space')).toBeVisible();
 	});
 });
