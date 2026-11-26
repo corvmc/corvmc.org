@@ -32,7 +32,7 @@
 <svelte:boundary>
 	{@const access = await getBuildingAccess()}
 	{@const { status, codes } = access}
-	<section class="space-y-2" aria-labelledby="lock-status-title" data-testid="lock-status">
+	<section class="space-y-2" aria-labelledby="lock-status-title">
 		<h2 id="lock-status-title" class="font-semibold">
 			{m.staff_reservations_lock_status_title()}
 		</h2>
@@ -57,7 +57,7 @@
 		{/if}
 	</section>
 
-	<section aria-labelledby="active-codes-title" data-testid="active-codes">
+	<section aria-labelledby="active-codes-title">
 		<h2 id="active-codes-title" class="font-semibold">
 			{m.staff_reservations_active_codes_title()}
 		</h2>
