@@ -7,8 +7,7 @@ import { productionStatuses } from '#lib/server/db/schema/production.js';
 import { historyArgs } from './_history';
 import { listEventHistory } from '#lib/server/event/event-history.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
-import { error, invalid, isHttpError } from '@sveltejs/kit';
-import { listActContacts } from '#lib/server/directory/contact-service.js';
+import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
@@ -1376,16 +1375,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		// (#2780); everyone else sees who it is.
 		projectId ? can('production.book', { projectId }) : can('event.manage')
 	]);
-	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
-	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
-	const actContacts =
-		actOrgs.length === 0
-			? []
-			: await listActContacts(actOrgs, projectId).catch((err) => {
-					if (isHttpError(err, 403)) return null;
-					throw err;
-				});
-
 	return {
 		budget,
 		detail,
@@ -1394,7 +1383,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riderStock,
 		production,
 		runOfShow,
-		actContacts,
 		settlement,
 		artifactRequests,
 		requestableActs,

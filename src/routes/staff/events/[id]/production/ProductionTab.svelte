@@ -9,7 +9,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { getStaffEventProduction } from '#lib/remote/events.remote.js';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import { formatDateTime, toLocalDate } from '#lib/utils/format.js';
+	import { formatDateTime } from '#lib/utils/format.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
@@ -22,6 +22,7 @@
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import { isTerminalProduction } from '#lib/production/status.js';
+	import LineupPanel from './LineupPanel.svelte';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
@@ -60,16 +61,7 @@
 		}
 	});
 
-	// ── Production form state ─────────────────────────────────────────────
 	const productionFields = updateProduction.fields;
-
-	// One date for all five times: the listing already refuses to span two dates,
-	// so five date fields would be five chances to disagree with each other.
-	let productionDate = $state('');
-	$effect(() => {
-		if (!productionRecord) return;
-		productionDate = toLocalDate(productionRecord.loadInAt ?? evt.startsAt);
-	});
 </script>
 
 <div class="flex flex-col gap-6">
@@ -123,88 +115,15 @@
 					remote={updateProduction}
 					guard
 					successToast={m.staff_events_id_production_production_updated_toast()}
-					onsuccess={() => void getStaffEventProduction(id).refresh()}
 				>
 					<input {...productionFields.id.as('hidden', productionRecord.id)} />
 					<input {...productionFields.eventId.as('hidden', evt.id)} />
-
-					<!--
-						One date, five times. A production runs inside one night — the
-						listing already refuses to span two dates — so repeating the date on
-						every field would be five chances to disagree with itself.
-					-->
-					<FormField
-						field={productionFields.loadInDate}
-						type="date"
-						label={m.staff_events_id_production_show_date_label()}
-						bind:value={productionDate}
-					/>
-					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						<FormField
-							field={productionFields.loadInTime}
-							type="time"
-							label={m.staff_events_id_production_load_label()}
-						/>
-						<FormField
-							field={productionFields.soundcheckTime}
-							type="time"
-							label={m.staff_soundcheck_label()}
-						/>
-						<FormField
-							field={productionFields.firstSetTime}
-							type="time"
-							label={m.staff_events_id_production_first_set_label()}
-						/>
-						<FormField
-							field={productionFields.curfewTime}
-							type="time"
-							label={m.staff_events_id_production_curfew_label()}
-						/>
-						<FormField
-							field={productionFields.loadOutTime}
-							type="time"
-							label={m.staff_events_id_production_load_out_by_label()}
-						/>
-					</div>
-					<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
-					<input {...productionFields.firstSetDate.as('hidden', productionDate)} />
-					<input {...productionFields.curfewDate.as('hidden', productionDate)} />
-					<input {...productionFields.loadOutDate.as('hidden', productionDate)} />
-
-					<!-- What makes "still needs an opener" answerable. Until a target
-						     exists, a two-act bill nobody has finished looks exactly like
-						     a two-act bill that is done (#859). -->
-					<FormField
-						field={productionFields.actsWanted}
-						type="select"
-						label={m.staff_events_id_production_bands_wanted_label()}
-						value={productionRecord.actsWanted?.toString() ?? ''}
-						options={[
-							{ value: '', label: m.staff_events_id_production_no_target_set_label() },
-							...Array.from({ length: 8 }, (_, i) => ({
-								value: String(i + 1),
-								label: `${i + 1} ${i === 0 ? 'band' : 'bands'}`
-							}))
-						]}
-						description={m.staff_events_id_production_how_many_bill_should_end_body()}
-					/>
-
-					<FormField
-						field={productionFields.billingNotes}
-						label={m.staff_events_id_production_billing_label()}
-						description={m.staff_events_id_production_what_bands_were_told_about_body()}
-					/>
-					<FormField
-						field={productionFields.hospitalityNotes}
-						label={m.staff_hospitality_label()}
-						description={m.staff_events_id_production_green_room_food_parking_what_body()}
-					/>
 					<FormField
 						field={productionFields.internalNotes}
 						label={m.staff_events_id_production_internal_notes_label()}
+						value={productionRecord.internalNotes ?? ''}
 						description={m.staff_events_id_production_staff_only_never_shown_band_body()}
 					/>
-
 					<SubmitButton label={m.staff_events_id_production_save_production_label()} />
 				</Form>
 			</fieldset>
@@ -230,6 +149,24 @@
 				/>
 			</Form>
 		</InfoCard>
+	{/if}
+
+	{#if productionRecord && runOfShow}
+		<fieldset disabled={productionLocked} class="contents">
+			<LineupPanel
+				eventId={id}
+				production={productionRecord}
+				{runOfShow}
+				{riders}
+				canBook={loaded.canBook}
+			/>
+			<RunOfShowPanel
+				{runOfShow}
+				production={productionRecord}
+				doorsAt={evt.doorsAt ?? null}
+				eventId={id}
+			/>
+		</fieldset>
 	{/if}
 
 	<ArtifactRequestsPanel
@@ -418,15 +355,6 @@
 			{/if}
 		{/snippet}
 	</RelatedShifts>
-
-	<fieldset disabled={productionLocked} class="contents">
-		<RunOfShowPanel
-			{runOfShow}
-			actContacts={loaded.actContacts}
-			eventId={id}
-			showDate={productionDate}
-		/>
-	</fieldset>
 
 	{#if budget}
 		<ShowBudgetCard projectId={budget.projectId} burn={budget.burn} />

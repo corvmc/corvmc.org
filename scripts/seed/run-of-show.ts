@@ -2,7 +2,7 @@ import { eventBand } from '../../src/lib/server/db/schema/event';
 import { production, productionSlot } from '../../src/lib/server/db/schema/production';
 import { computeSetTimes } from '../../src/lib/server/production/run-of-show';
 import { batchInsert, db } from './db';
-import { asc, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 
 /**
  * Who plays when. Four states, because each renders differently:
@@ -132,12 +132,17 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 				sortOrder: planned.length + 1,
 				createdAt: new Date(),
 				setLengthMinutes: 45,
-				changeoverMinutes: 0,
+				changeoverMinutes: plan.changeover,
 				soundcheckAt: null
 			});
 			uncredited += 1;
 		}
 
+		// The walk reads the show's changeover, so the seed stores it there too.
+		await db
+			.update(production)
+			.set({ changeoverMinutes: plan.changeover })
+			.where(eq(production.id, row.id));
 		const times = computeSetTimes(row.firstSetAt, planned);
 		if (!row.firstSetAt) withoutTimes += planned.length;
 

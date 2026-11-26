@@ -117,12 +117,12 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				productionId: production.id,
 				firstSetAt: production.firstSetAt,
 				curfewAt: production.curfewAt,
+				showChangeover: production.changeoverMinutes,
 				doorsAt: eventListing.doorsAt,
 				slotId: productionSlot.id,
 				eventBandId: productionSlot.eventBandId,
 				sortOrder: productionSlot.sortOrder,
 				setLengthMinutes: productionSlot.setLengthMinutes,
-				changeoverMinutes: productionSlot.changeoverMinutes,
 				scheduledStartAt: productionSlot.scheduledStartAt,
 				actualStartAt: productionSlot.actualStartAt,
 				actualEndAt: productionSlot.actualEndAt,
@@ -185,7 +185,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				sortOrder: r.sortOrder!,
 				createdAt: r.createdAt!,
 				setLengthMinutes: r.setLengthMinutes!,
-				changeoverMinutes: r.changeoverMinutes!,
+				// One changeover per show (#3272): every gap is the show's.
+				changeoverMinutes: r.showChangeover,
 				scheduledStartAt: r.scheduledStartAt,
 				actualStartAt: r.actualStartAt,
 				actualEndAt: r.actualEndAt,
@@ -235,6 +236,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		productionId: rows[0].productionId,
 		firstSetAt: rows[0].firstSetAt,
 		curfewAt: rows[0].curfewAt,
+		changeoverMinutes: rows[0].showChangeover,
 		slots,
 		unslotted: credits.filter((c) => !slotted.has(c.eventBandId)),
 		warnings: runOfShowWarnings({
@@ -304,11 +306,11 @@ export async function recomputeSetTimes(productionId: string): Promise<void> {
 	const rows = await db
 		.select({
 			firstSetAt: production.firstSetAt,
+			changeoverMinutes: production.changeoverMinutes,
 			slotId: productionSlot.id,
 			sortOrder: productionSlot.sortOrder,
 			createdAt: productionSlot.createdAt,
 			setLengthMinutes: productionSlot.setLengthMinutes,
-			changeoverMinutes: productionSlot.changeoverMinutes,
 			scheduledStartAt: productionSlot.scheduledStartAt
 		})
 		.from(production)
@@ -324,7 +326,7 @@ export async function recomputeSetTimes(productionId: string): Promise<void> {
 			sortOrder: r.sortOrder!,
 			createdAt: r.createdAt!,
 			setLengthMinutes: r.setLengthMinutes!,
-			changeoverMinutes: r.changeoverMinutes!,
+			changeoverMinutes: r.changeoverMinutes,
 			scheduledStartAt: r.scheduledStartAt
 		}));
 
@@ -391,7 +393,6 @@ function tooClose(slots: OrderedSlot[]): boolean {
 export interface AddSlotInput {
 	eventBandId?: string | null;
 	setLengthMinutes: number;
-	changeoverMinutes?: number;
 }
 
 /** Append a set to the running order. */
@@ -412,8 +413,7 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 				productionId,
 				eventBandId: input.eventBandId || null,
 				sortOrder,
-				setLengthMinutes: input.setLengthMinutes,
-				changeoverMinutes: input.changeoverMinutes ?? 10
+				setLengthMinutes: input.setLengthMinutes
 			})
 			.returning({ id: productionSlot.id });
 
@@ -425,49 +425,21 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 	}
 }
 
-/** The performer organization of a set's act, if the act has one. */
-export async function slotActOrganizationId(slotId: string): Promise<string | null> {
-	const [row] = await db
-		.select({ id: organization.id })
-		.from(productionSlot)
-		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
-		.innerJoin(organization, eq(organization.directoryEntryId, eventBand.directoryEntryId))
-		.where(eq(productionSlot.id, slotId))
-		.limit(1);
-	return row?.id ?? null;
-}
-
 export interface UpdateSlotInput {
-	setLengthMinutes?: number;
-	actualStartAt?: Date | null;
-	actualEndAt?: Date | null;
-	changeoverMinutes?: number;
-	soundcheckAt?: Date | null;
-	techNotes?: string | null;
-	backlineNeeds?: string | null;
-	hospitalityNotes?: string | null;
-	/** One of the act's contacts; the remote checks it is. */
-	contactId?: string | null;
+	setLengthMinutes: number;
 }
 
-/**
- * Edit one set.
- *
- * Recomputes only when the patch touched a length or a changeover — a tech note
- * cannot move a set time, and the guard keeps the common edit to one round trip.
- */
+/** Edit one set's length, which moves every set after it. */
 export async function updateSlot(slotId: string, patch: UpdateSlotInput): Promise<void> {
 	await assertNotTerminal({ slotId });
 	const [row] = await db
 		.update(productionSlot)
-		.set({ ...patch, updatedAt: new Date() })
+		.set({ setLengthMinutes: patch.setLengthMinutes, updatedAt: new Date() })
 		.where(eq(productionSlot.id, slotId))
 		.returning({ productionId: productionSlot.productionId });
 
 	if (!row) throw new SlotNotFoundError();
-
-	const movesTimes = patch.setLengthMinutes !== undefined || patch.changeoverMinutes !== undefined;
-	if (movesTimes) await recomputeSetTimes(row.productionId);
+	await recomputeSetTimes(row.productionId);
 }
 
 /**

@@ -48,11 +48,11 @@ vi.mock('#lib/remote/events.remote.js', () =>
 );
 vi.mock('#lib/remote/productions.remote.js', () =>
 	stubs(
-		'addProductionExpense addRunOfShowSlot advanceProduction askForArtifact ' +
-			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markSlotTiming ' +
-			'moveRunOfShowSlot openHostShift recordActPayout recordDoorRecount recordDoorTake ' +
-			'removeProductionExpense ' +
-			'removeRunOfShowSlot reopenProduction searchShowLeadCandidates setRunOfShowTerms ' +
+		'addLineupAct addProductionExpense advanceProduction askForArtifact ' +
+			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markRunOfShowDone ' +
+			'markSlotTiming moveRunOfShowSlot openHostShift recordActPayout recordDoorRecount ' +
+			'recordDoorTake removeLineupAct removeProductionExpense reopenProduction ' +
+			'searchShowLeadCandidates setRunOfShowTerms setRunOfShowTime ' +
 			'setRiderStock setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
@@ -72,7 +72,7 @@ vi.mock('#lib/remote/volunteer.remote.js', () =>
 );
 vi.mock('#lib/remote/duty-lists.remote.js', () => stubs('applyDutyList setWorkTaskDone'));
 vi.mock('#lib/remote/external-acts.remote.js', () =>
-	stubs('listActInDirectory searchAskableListings')
+	stubs('listActInDirectory searchAskableListings searchBillActs')
 );
 vi.mock('#lib/remote/deliverables.remote.js', () => stubs('reassignDeliverableForm'));
 vi.mock('#lib/remote/tasks.remote.js', () =>
@@ -97,7 +97,7 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-const ProductionTab = (await import('./ProductionTab.svelte')).default;
+const ProductionTab = (await import('./ProductionTab.test.svelte')).default;
 const props = { eventId: 'evt-1' };
 
 const startsAt = new Date('2031-05-10T03:00:00Z');
@@ -147,8 +147,57 @@ const record = {
 	closedAt: null,
 	closedByName: null,
 	loadInAt: null,
+	soundcheckAt: null,
+	firstSetAt: null,
+	curfewAt: null,
+	loadOutBy: null,
+	loadInDoneAt: null,
+	soundcheckDoneAt: null,
+	doorsDoneAt: null,
+	curfewDoneAt: null,
+	loadOutDoneAt: null,
+	internalNotes: null,
 	actsWanted: null
 };
+
+const slot = (n: number) => ({
+	id: `slot-${n}`,
+	eventBandId: `eb-${n}`,
+	actName: `Act ${n}`,
+	actStatus: 'unlinked',
+	actSlug: null,
+	actEntryId: null,
+	actOrganizationId: null,
+	sortOrder: n,
+	setLengthMinutes: 30,
+	changeoverMinutes: 15,
+	scheduledStartAt: new Date(startsAt.getTime() + n * 45 * 60_000),
+	actualStartAt: null,
+	actualEndAt: null,
+	scheduledEndAt: null,
+	soundcheckAt: null,
+	techNotes: null,
+	backlineNeeds: null,
+	hospitalityNotes: null,
+	contactId: null,
+	terms: {
+		guaranteeCents: null,
+		percentageBps: null,
+		versus: false,
+		againstNet: false,
+		contributed: false
+	}
+});
+
+const showOf = (count: number) => ({
+	productionId: 'prod-1',
+	firstSetAt: startsAt,
+	curfewAt: null,
+	changeoverMinutes: 15,
+	slots: Array.from({ length: count }, (_, i) => slot(i + 1)),
+	unslotted: [],
+	warnings: []
+});
 
 describe('Production tab', () => {
 	it('opens a production from its empty state', async () => {
@@ -203,6 +252,43 @@ describe('Production tab', () => {
 		expect(unmatched.querySelector('.badge-warning')).not.toBeNull();
 		expect(short.querySelector('.badge-error')).not.toBeNull();
 		expect(linked.querySelector('.badge-warning, .badge-error')).toBeNull();
+	});
+
+	describe('lineup and run of show (#3272)', () => {
+		it('lists each act once, and the same acts as the sets between the fixed rows', async () => {
+			fixture.loaded = { ...loaded(record), runOfShow: showOf(3), canBook: true };
+			await render(ProductionTab, props);
+
+			await expect.element(page.getByTestId('lineup-row').first()).toBeVisible();
+			expect(page.getByTestId('lineup-row').elements()).toHaveLength(3);
+			expect(page.getByTestId('run-of-show-set').elements()).toHaveLength(3);
+		});
+
+		// Doors is the listing's time: it is shown, never offered as a field.
+		it('edits the production times but not doors', async () => {
+			fixture.loaded = { ...loaded(record), runOfShow: showOf(1), canBook: true };
+			await render(ProductionTab, props);
+
+			await expect.element(page.getByTestId('run-of-show-doors')).toBeVisible();
+			expect(
+				document.querySelector('[data-testid="run-of-show-doors"] input[type="time"]')
+			).toBeNull();
+			for (const row of ['loadIn', 'soundcheck', 'curfew', 'loadOut']) {
+				expect(
+					document.querySelector(`[data-testid="run-of-show-${row}"] input[type="time"]`)
+				).not.toBeNull();
+			}
+		});
+
+		it('sets only the first set by hand; later sets follow from the order', async () => {
+			fixture.loaded = { ...loaded(record), runOfShow: showOf(2), canBook: true };
+			await render(ProductionTab, props);
+
+			await expect.element(page.getByTestId('run-of-show-set').first()).toBeVisible();
+			const [first, second] = page.getByTestId('run-of-show-set').elements();
+			expect(first.querySelector('input[type="time"]')).not.toBeNull();
+			expect(second.querySelector('input[type="time"]')).toBeNull();
+		});
 	});
 
 	describe('settlement', () => {

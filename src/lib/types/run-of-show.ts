@@ -64,6 +64,8 @@ export interface RunOfShow {
 	productionId: string;
 	firstSetAt: Date | null;
 	curfewAt: Date | null;
+	/** The gap between sets, one per show. Each slot's `changeoverMinutes` is this. */
+	changeoverMinutes: number;
 	slots: RunOfShowSlot[];
 	/** Credits on the bill with no set yet — what the add picker offers. */
 	unslotted: { eventBandId: string; name: string; billingOrder: number }[];
@@ -74,13 +76,4 @@ export interface RunOfShow {
 export interface PublicSetTime {
 	name: string;
 	scheduledStartAt: Date;
-}
-
-/** One of an act's people, for picking a show's contact. */
-export interface RunOfShowContact {
-	id: string;
-	organizationId: string;
-	name: string | null;
-	email: string | null;
-	phone: string | null;
 }
