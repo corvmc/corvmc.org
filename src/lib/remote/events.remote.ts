@@ -1840,7 +1840,9 @@ export const cancelTicket = form(
 export const openEventLeadTask = command(z.object({ eventId: z.string().min(1) }), async (data) => {
 	await requireCapability('volunteer.manageRoster');
 	if (!(await projectOfEvent(data.eventId))?.productionId) error(404, 'Show not found');
-	return { workOrderId: await ensureLeadTask(data.eventId) };
+	const workOrderId = await ensureLeadTask(data.eventId);
+	void getStaffEventPage(data.eventId).refresh();
+	return { workOrderId };
 });
 
 /**

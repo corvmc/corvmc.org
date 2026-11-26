@@ -3676,7 +3676,7 @@
 	"staff_events_id_crew_assign_label": "Assign",
 	"staff_events_id_crew_assign_lead_title": "Assign event lead",
 	"staff_events_id_crew_assign_shift_title": "Assign shift",
-	"staff_events_id_crew_no_lead_role_text": "No Event lead role yet",
+	"staff_events_id_crew_no_lead_role_text": "No event lead role yet",
 	"staff_events_id_production_host_text": "Host",
 	"staff_events_id_production_open_host_shift_label": "Open a host shift",
 	"staff_events_id_production_host_shift_opened_toast": "Host shift opened",
