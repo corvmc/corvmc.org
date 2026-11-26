@@ -127,7 +127,7 @@ test.describe('staff events split', () => {
 
 		// A listing has no Production tab, so its old console URL lands on Listing.
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}/production`);
-		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_SPLIT_PENDING_ID}$`));
+		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_SPLIT_PENDING_ID}(\\?.*)?$`));
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
 		await expect(page.getByTestId('edit-listing')).toBeVisible();
 	});

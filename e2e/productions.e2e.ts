@@ -98,7 +98,9 @@ test.describe('productions', () => {
 
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
-		await expect(row.locator('[data-status]')).toBeVisible();
+		// A badge for the production and one for its listing.
+		await expect(row.locator('[data-status]')).toHaveCount(2);
+		await expect(row.locator('[data-status="published"]')).toBeVisible();
 		await expect(row.getByText(SEED_VENUE_OFFSITE_NAME)).toBeVisible();
 		// The row opens its event.
 		await expect(row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}"]`)).toBeVisible();
