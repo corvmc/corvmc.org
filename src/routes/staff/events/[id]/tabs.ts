@@ -1,5 +1,7 @@
 import type { ResolvedPathname } from '$app/types';
 import { withQuery } from '#lib/utils/with-query.js';
+import { isTerminalProduction } from '#lib/production/status.js';
+import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 /**
  * The staff event page's tabs (#3270). A CMC show has Listing, Production and
@@ -35,7 +37,7 @@ export function eventTabHref(id: string, tab: EventTab): ResolvedPathname {
 
 /**
  * From a CMC show's start time the header's main button is Settle event, in
- * place of Publish, until the settle dialog exists (#3273).
+ * place of Publish (#3273); it opens the settle dialog.
  */
 export function showsSettle(evt: { source: string; status: string; startsAt: Date }, now: Date) {
 	return evt.source === 'cmc' && evt.status !== 'cancelled' && evt.startsAt <= now;
@@ -44,4 +46,13 @@ export function showsSettle(evt: { source: string; status: string; startsAt: Dat
 /** The Production tab, scrolled to its settlement section. */
 export function settlementHref(id: string): ResolvedPathname {
 	return `${eventTabHref(id, 'production')}#settlement` as ResolvedPathname;
+}
+
+/**
+ * The dialog shows the figures without editing them once every act is paid, or
+ * once the show is closed or cancelled. The header's button reads View
+ * settlement then.
+ */
+export function settleReadOnly(settlement: { settled: boolean; status: string }): boolean {
+	return settlement.settled || isTerminalProduction(settlement.status as ProductionStatus);
 }

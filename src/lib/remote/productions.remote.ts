@@ -17,7 +17,11 @@ import {
 } from '#lib/server/production/production-scope.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { recordStaffCount as recordStaffCountService } from '#lib/server/production/till-count-service.js';
-import { recordSlotPayout, undoSlotPayout } from '#lib/server/production/settlement-service.js';
+import {
+	recordPayouts as recordPayoutsService,
+	recordSlotPayout,
+	undoSlotPayout
+} from '#lib/server/production/settlement-service.js';
 import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
 import { productionStatuses, type ProductionStatus } from '#lib/server/db/schema/production.js';
 import {
@@ -631,6 +635,48 @@ export const recordActPayout = form(
 			mapDomainError(err);
 		}
 		await getStaffEventProduction(data.eventId).refresh();
+		return { success: true };
+	})
+);
+
+/** One act's line in the Settle dialog. A donated set records zero whatever the box says. */
+const payoutLine = z
+	.object({
+		slotId: z.string().min(1),
+		amountCents: z.number().int().min(0).max(100_000_000).optional(),
+		donated: z.boolean().optional().default(false)
+	})
+	.refine((line) => line.donated || line.amountCents !== undefined, {
+		message: 'Enter an amount',
+		path: ['amountCents']
+	});
+
+/**
+ * Every unpaid act's payout in one go, from the Settle dialog.
+ *
+ * The same `finance.refund` as `recordActPayout`. The production comes from
+ * the form only to say which one the slots must belong to; the service
+ * refuses a slot of another production before writing any.
+ */
+export const recordPayouts = form(
+	z.object({
+		productionId: z.string().min(1),
+		payouts: z.array(payoutLine).min(1).max(40)
+	}),
+	writesAudit('production.payout_recorded', async (data) => {
+		const staff = await requireCapability('finance.refund');
+		try {
+			await recordPayoutsService(
+				data.productionId,
+				data.payouts.map((p) => ({
+					slotId: p.slotId,
+					amountCents: p.donated ? 0 : (p.amountCents ?? 0)
+				})),
+				staff.id
+			);
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	})
 );

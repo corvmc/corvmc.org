@@ -45,11 +45,13 @@
 	import EventRsvps from './EventRsvps.svelte';
 	import EventSidebar from './EventSidebar.svelte';
 	import ProductionTab from './production/ProductionTab.svelte';
+	import SettleDialog from './SettleDialog.svelte';
 	import VendorsTab from './VendorsTab.svelte';
 	import {
 		eventTabHref,
 		eventTabs,
 		parseEventTab,
+		settleReadOnly,
 		settlementHref,
 		showsSettle,
 		type EventTab
@@ -111,6 +113,8 @@
 		editing = true;
 	}
 
+	let settleOpen = $state(false);
+
 	// Held, or a CMC show that ought to say whether it is. A band gig or a
 	// community listing with no hold has no question for this card to answer.
 	const showsHold = $derived(isProduction || !!detail.linkedReservation);
@@ -125,6 +129,9 @@
 <PageHeader title={evt.title} width="full" menuLabel={m.staff_events_id_more_label()}>
 	{#snippet badge()}
 		<StatusBadge status={evt.status} label />
+		{#if data.settle?.settlement?.settled}
+			<Badge variant="success">{m.staff_production_state_settled_label()}</Badge>
+		{/if}
 	{/snippet}
 
 	{#if evt.status === 'pending_review'}
@@ -166,9 +173,18 @@
 
 	{#snippet primary()}
 		{#if showsSettle(evt, new Date())}
-			<Button variant="primary" href={settlementHref(evt.id)} data-testid="settle-event">
-				{m.staff_events_id_settle_event_label()}
-			</Button>
+			{#if data.settle?.settlement}
+				<Button variant="primary" onclick={() => (settleOpen = true)} data-testid="settle-event">
+					{settleReadOnly(data.settle.settlement)
+						? m.staff_events_id_view_settlement_label()
+						: m.staff_events_id_settle_event_label()}
+				</Button>
+			{:else}
+				<!-- No production yet: the console's settlement section opens one. -->
+				<Button variant="primary" href={settlementHref(evt.id)} data-testid="settle-event">
+					{m.staff_events_id_settle_event_label()}
+				</Button>
+			{/if}
 		{:else if evt.status === 'draft' && data.canPublish}
 			<PublishEventAction eventId={evt.id} />
 		{:else if evt.status === 'pending_review'}
@@ -225,6 +241,16 @@
 		{/if}
 	{/snippet}
 </PageHeader>
+
+{#if data.settle?.settlement}
+	<SettleDialog
+		bind:open={settleOpen}
+		eventId={evt.id}
+		settlement={data.settle.settlement}
+		canCount={data.settle.canCount}
+		canPayout={data.settle.canPayout}
+	/>
+{/if}
 
 <PageContent>
 	<div class="flex flex-col gap-1">

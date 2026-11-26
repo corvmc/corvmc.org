@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { eventTabHref, eventTabs, parseEventTab, settlementHref, showsSettle } from './tabs';
+import {
+	eventTabHref,
+	eventTabs,
+	parseEventTab,
+	settleReadOnly,
+	settlementHref,
+	showsSettle
+} from './tabs';
 
 describe('eventTabs', () => {
 	it.each([
@@ -54,5 +61,14 @@ describe('showsSettle', () => {
 
 	it('links to the settlement section of the Production tab', () => {
 		expect(settlementHref('e1')).toBe('/staff/events/e1?tab=production#settlement');
+	});
+});
+
+describe('settleReadOnly', () => {
+	it('is read-only once every act is paid, or the show is closed or cancelled', () => {
+		expect(settleReadOnly({ settled: false, status: 'completed' })).toBe(false);
+		expect(settleReadOnly({ settled: true, status: 'completed' })).toBe(true);
+		expect(settleReadOnly({ settled: false, status: 'closed' })).toBe(true);
+		expect(settleReadOnly({ settled: false, status: 'cancelled' })).toBe(true);
 	});
 });

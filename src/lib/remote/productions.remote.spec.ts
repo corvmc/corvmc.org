@@ -155,8 +155,9 @@ vi.mock('#lib/server/production/run-of-show-service.js', () => ({
 	buildSlotsFromLineup: (...a: unknown[]) => runOfShow.buildSlotsFromLineup(...a)
 }));
 
-const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn() };
+const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn(), recordPayouts: vi.fn() };
 vi.mock('#lib/server/production/settlement-service.js', () => ({
+	recordPayouts: (...a: unknown[]) => settlement.recordPayouts(...(a as [])),
 	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as [])),
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
@@ -385,6 +386,12 @@ const WRITES: Write[] = [
 		positionOnly: true
 	},
 	{
+		name: 'recordPayouts',
+		args: [{ productionId: 'prod-1', payouts: [{ slotId: 'slot-1', amountCents: 1000 }] }],
+		capability: 'finance.refund',
+		positionOnly: true
+	},
+	{
 		name: 'undoActPayout',
 		args: [SLOT],
 		capability: 'finance.refund',
@@ -542,6 +549,45 @@ describe('the production matrix', () => {
 		await submit(productions.removeProductionExpense, { expenseId: 'exp-1' });
 		expect(scope.projectOfExpense).toHaveBeenCalledWith('exp-1');
 		expect(expenses.removeExpense).toHaveBeenCalledWith('exp-1');
+	});
+
+	describe('recordPayouts', () => {
+		const line = (extra: Record<string, unknown> = {}) => ({
+			productionId: 'prod-1',
+			payouts: [{ slotId: 'slot-1', amountCents: 1000, ...extra }]
+		});
+
+		it('records a donated set as zero whatever the amount says', async () => {
+			await submit(productions.recordPayouts, line({ donated: true, amountCents: 5000 }));
+			expect(settlement.recordPayouts).toHaveBeenCalledWith(
+				'prod-1',
+				[{ slotId: 'slot-1', amountCents: 0 }],
+				'staff-1'
+			);
+		});
+
+		it('records the typed amount, for the production it names', async () => {
+			await submit(productions.recordPayouts, line());
+			expect(settlement.recordPayouts).toHaveBeenCalledWith(
+				'prod-1',
+				[{ slotId: 'slot-1', amountCents: 1000 }],
+				'staff-1'
+			);
+		});
+
+		it('refuses an act with no amount that is not donated, before any service call', async () => {
+			await expect(
+				submit(productions.recordPayouts, line({ amountCents: undefined }))
+			).rejects.toBeDefined();
+			expect(settlement.recordPayouts).not.toHaveBeenCalled();
+		});
+
+		it('refuses a negative amount', async () => {
+			await expect(
+				submit(productions.recordPayouts, line({ amountCents: -1 }))
+			).rejects.toBeDefined();
+			expect(settlement.recordPayouts).not.toHaveBeenCalled();
+		});
 	});
 
 	it('refuses show work on a slot of a show the committee is not on', async () => {

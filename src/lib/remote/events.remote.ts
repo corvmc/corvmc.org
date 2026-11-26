@@ -1241,12 +1241,27 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			])
 		: [null, null, false, false, null];
 
+	// The Settle dialog's figures (#3273): money, so only a reader of the console
+	// gets them. Counting the till takes `production.run` on the show's project,
+	// and recording a payout the treasurer's `finance.refund`.
+	const settle =
+		isShow && production && (await canReadShow(id))
+			? {
+					settlement: await getSettlement(id),
+					canCount: production.projectId
+						? await can('production.run', { projectId: production.projectId })
+						: false,
+					canPayout: await can('finance.refund')
+				}
+			: null;
+
 	return {
 		detail,
 		canManage,
 		canPublish,
 		venues,
 		production,
+		settle,
 		recurringSeries,
 		sidebar: {
 			crew,
@@ -1326,13 +1341,16 @@ export const setStaffEventLineup = form(
  * The production console reads on `event.read`, or on either half of the show
  * held through the committees taking part in its project.
  */
+async function canReadShow(eventId: string): Promise<boolean> {
+	if (await can('event.read')) return true;
+	const projectId = (await projectOfEvent(eventId))?.projectId ?? null;
+	if (projectId && (await can('production.book', { projectId }))) return true;
+	return !!projectId && (await can('production.run', { projectId }));
+}
+
 async function requireShowReader(eventId: string) {
 	requireUser();
-	if (await can('event.read')) return;
-	const projectId = (await projectOfEvent(eventId))?.projectId ?? null;
-	if (projectId && (await can('production.book', { projectId }))) return;
-	if (projectId && (await can('production.run', { projectId }))) return;
-	error(403, 'Not permitted');
+	if (!(await canReadShow(eventId))) error(403, 'Not permitted');
 }
 
 /** Live venues, shaped for the venue picker on the listing's edit form. */
