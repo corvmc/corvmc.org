@@ -170,7 +170,8 @@
 	},
 	"src/lib/server/ticket/ticket-service.ts#createTickets(0)": {
 		"checkedInByUserId": "internal: door-sale checks in what it mints",
-		"discountWaived": "internal: documented as no longer written"
+		"discountWaived": "internal: documented as no longer written",
+		"eventBandId": "internal: guest-service#addGuest sets it from the act the form names"
 	},
 	"src/lib/server/ticket/ticket-service.ts#issueFreeTickets(0)": {
 		"actsCents": "internal: a paid order's split; a free ticket has none",
@@ -178,6 +179,7 @@
 		"collectiveCents": "internal: a paid order's split; a free ticket has none",
 		"contributionCents": "internal: a paid order's split; a free ticket has none",
 		"discountWaived": "internal: documented as no longer written",
+		"eventBandId": "internal: guest-service#addGuest sets it from the act the form names",
 		"feeCoveredCents": "internal: a paid order's split; a free ticket has none",
 		"unitPriceCents": "internal: a free ticket is 0, the default"
 	},
