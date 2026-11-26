@@ -50,8 +50,8 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 	stubs(
 		'addLineupAct addProductionExpense advanceProduction askForArtifact ' +
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markRunOfShowDone ' +
-			'markSlotTiming moveRunOfShowSlot openHostShift recordActPayout recordDoorRecount ' +
-			'recordDoorTake removeLineupAct removeProductionExpense reopenProduction ' +
+			'markSlotTiming moveRunOfShowSlot openHostShift recordActPayout recordStaffCount ' +
+			'removeLineupAct removeProductionExpense reopenProduction ' +
 			'searchShowLeadCandidates setRunOfShowTerms setRunOfShowTime ' +
 			'setRiderStock setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'

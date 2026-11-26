@@ -33,6 +33,15 @@ const { startDoorSale } = await import('#lib/server/ticket/door-sale.js');
 const { getSettlement } = await import('./settlement-service');
 
 const NOW = new Date('2026-09-24T19:00:00Z');
+
+/** The drawer, counted once by staff. */
+const countTill = (cashCents: number) =>
+	sqlite
+		.prepare(
+			`insert into production_till_count (id, production_id, kind, cash_cents, counted_at)
+			 values ('till', 'prod-tonight', 'staff', ?, ?)`
+		)
+		.run(cashCents, Math.floor(NOW.getTime() / 1000));
 const tonight = Math.floor(NOW.getTime() / 1000) + 3600;
 const SUGGESTED = 1000;
 
@@ -133,6 +142,7 @@ beforeEach(() => {
 		'ticket',
 		'ticket_sale',
 		'event_listing',
+		'production_till_count',
 		'production',
 		'project'
 	])
@@ -219,7 +229,7 @@ describe('door cash sales in the settlement', () => {
 	it('splits only the counted cash beyond the recorded sales, so nothing is paid twice', async () => {
 		await cashTicket('tonight', 1000, 3);
 		const recorded = await getSettlement('tonight');
-		sqlite.exec(`update production set door_cash_cents = 4000 where id = 'prod-tonight'`);
+		countTill(4000);
 		const counted = await getSettlement('tonight');
 
 		expect(counted?.door).toMatchObject({ recordedCents: 3000, gapCents: 1000, actsCents: 700 });
@@ -230,7 +240,7 @@ describe('door cash sales in the settlement', () => {
 	it('carries a short drawer as a gap, and keeps the recorded sales', async () => {
 		await cashTicket('tonight', 1000, 3);
 		const recorded = await getSettlement('tonight');
-		sqlite.exec(`update production set door_cash_cents = 2500 where id = 'prod-tonight'`);
+		countTill(2500);
 		const counted = await getSettlement('tonight');
 
 		expect(counted?.door).toMatchObject({ gapCents: -500, actsCents: 0, collectiveCents: 0 });

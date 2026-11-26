@@ -2516,15 +2516,20 @@ restore crew shifts or retract a cancellation notice.
     show's tickets' `ticket_sales`, `fee_coverage` and `card_fees` rows, found through
     `ticket.purchaseId` because no ticket row carries the group (#2733), plus its share of the
     door. Cash sales recorded at the door are ticket rows like any other, so they reach both
-    sides through the ledger. `recordDoorTake`
-    (`production.run`) records the drawer and count, and stamps whoever changed the figure as
-    the counter. `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
+    sides through the ledger. The door cash is counted in `production_till_count` (#3273): one
+    row per handoff, each with who counted it and when, and at most one staff count.
+    `recordStaffCount` (`production.run`) replaces the staff row and sets the headcount and
+    split in one batch; an empty cash field clears the count. The settlement's cash is the
+    staff count when there is one, else the handoffs' sum, else nobody counted.
+    `splitDoorTake` splits only the cash counted beyond the recorded cash sales, at
     `doorSplitActsPercent` or the house `DOOR_SPLIT_ACTS_PERCENT`; a short drawer splits nothing.
     A drawer that differs from the recorded cash sales warns on the console, and never blocks
-    (#2800).
-    `recordDoorRecount` records a second count by somebody else; the first counter is
-    refused. One count, or two that differ, warns on the console and on a move to `settled`
-    or `closed`, and never blocks (#2722). Expenses come from `production_expense`. Each act's
+    (#2800). Only one kind of count, a staff count that differs from the handoffs' sum, or one
+    person behind the staff count and every handoff (`oneCounter`) warns on the console and on a
+    move to `settled` or `closed`, and never blocks. Not a refusal when one person counts the
+    till, because a small night has one door person; it warns as `oneCounter` and is recorded
+    (#3273, reversing the #2722 refusal). `Settlement.settled` is derived from the recorded
+    payouts (every act paid), not from the production's status. Expenses come from `production_expense`. Each act's
     suggested payout comes from its deal, and a guarantee above what buyers sent the acts is
     a collective top-up. Door cash never goes to Stripe.
 11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
@@ -2576,10 +2581,12 @@ restore crew shifts or retract a cancellation notice.
   committees.
 - `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
   cost sheet.
+- `production_till_count` — the door cash counts, one row per handoff and at most one staff
+  count (#3273).
 - `financial_entry` — ticket rows read through the show's tickets, payout and expense rows by
-  settlement group. Door cash stays
-  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`, and the counter and
-  second count beside them).
+  settlement group. The headcount and
+  the door split stay on `production` (`doorCount`, `doorSplitActsPercent`). The six
+  `doorCash*` columns there are unused since #3273.
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never

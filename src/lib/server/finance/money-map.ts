@@ -68,11 +68,14 @@ export const moneyColumns = {
 	// write the ledger rows — the split is derived at read time, and who owes
 	// whom what once it is counted is #825's question.
 	'production.door_cash_cents': {
-		unaccounted: 'counted but never posted — the split is derived, not journalled',
-		issue: 825
+		notAccounting: 'unused since #3273: the counts are `production_till_count.cash_cents`'
 	},
 	'production.door_cash_recount_cents': {
-		notAccounting: 'a check on `door_cash_cents` by a second person, never the figure used'
+		notAccounting: 'unused since #3273: the staff count is a `production_till_count` row'
+	},
+	'production_till_count.cash_cents': {
+		unaccounted: 'counted but never posted — the split is derived, not journalled',
+		issue: 825
 	},
 	'production_slot.guarantee_cents': {
 		notAccounting: 'the deal. What was handed over is `paid_cents`'

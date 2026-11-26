@@ -16,10 +16,7 @@ import {
 	projectOfSlot
 } from '#lib/server/production/production-scope.js';
 import { mapDomainError } from '#lib/server/errors.js';
-import {
-	recordDoorTake as recordDoorTakeService,
-	recordDoorRecount as recordDoorRecountService
-} from '#lib/server/production/door-count-service.js';
+import { recordStaffCount as recordStaffCountService } from '#lib/server/production/till-count-service.js';
 import { recordSlotPayout, undoSlotPayout } from '#lib/server/production/settlement-service.js';
 import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
 import { productionStatuses, type ProductionStatus } from '#lib/server/db/schema/production.js';
@@ -334,16 +331,18 @@ export const markSlotTiming = form(
 );
 
 /**
- * The drawer count at the end of the night.
+ * The staff count of the door cash, with the headcount and the split.
  *
  * An empty field clears back to null rather than writing a zero — "nobody
  * counted" and "counted nothing" are different states and the worksheet shows
- * them differently. `splitActsPercent` left blank means the house rule.
+ * them differently. `splitActsPercent` left blank means the house rule. Who
+ * made the count is never refused: one person counting the whole till is a
+ * warning on the settlement (#3273).
  *
  * Numbers, not strings: `MoneyField` carries cents in a hidden `n:` field so
  * nobody types 45 for a $45 door and records 45¢ (#929).
  */
-export const recordDoorTake = form(
+export const recordStaffCount = form(
 	z.object({
 		id: z.string().min(1),
 		eventId: z.string().min(1),
@@ -361,37 +360,11 @@ export const recordDoorTake = form(
 			// every existing value into its field, so one that arrives missing is
 			// one somebody cleared. That is what lets a door count go back to
 			// "nobody counted" rather than being stuck at a number (#929).
-			await recordDoorTakeService(data.id, user.id, {
+			await recordStaffCountService(data.id, user.id, {
 				cashCents: data.doorCashCents ?? null,
 				count: data.doorCount ?? null,
 				splitActsPercent: data.splitActsPercent ?? null
 			});
-			await getStaffEventProduction(data.eventId).refresh();
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-/**
- * A second count of the same drawer, by somebody other than the first
- * counter (#2722). A figure that differs is recorded and shown, not refused.
- * An empty field takes the second count back.
- */
-export const recordDoorRecount = form(
-	z.object({
-		id: z.string().min(1),
-		eventId: z.string().min(1),
-		recountCents: z.number().int().min(0).optional()
-	}),
-	async (data) => {
-		const { user } = await requireProjectCommittee(
-			await projectOfProduction(data.id),
-			'production.run'
-		);
-		try {
-			await recordDoorRecountService(data.id, user.id, data.recountCents ?? null);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {

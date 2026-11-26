@@ -18,7 +18,7 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { workOrder, workTask } from '#lib/server/db/schema/volunteer.js';
-import { doorCheck } from '#lib/production/door-check.js';
+import { tillSummary } from './till-summary';
 import { DomainError } from '#lib/server/domain-error.js';
 import type { Production, ProductionStatus } from '#lib/server/db/schema/production.js';
 import { recomputeSetTimes } from './run-of-show-service';
@@ -125,8 +125,8 @@ export interface ProductionDetailsInput {
 	/** The gap between sets; moving it moves every set after the first. */
 	changeoverMinutes?: number;
 	internalNotes?: string | null;
-	// The door take is not here: `door-count-service.ts` writes it, so the
-	// counter is stamped with the figure (#2722).
+	// The door take is not here: `till-count-service.ts` writes it, so each
+	// count is stamped with who made it (#3273).
 }
 
 // ---------------------------------------------------------------------------
@@ -432,8 +432,12 @@ export async function transitionProduction(
 	const from = current.status;
 
 	const outstandingCloseOut = to === 'closed' ? await outstandingCloseOutTasks(id) : [];
-	const door = doorCheck(current.doorCashCents ?? null, current.doorRecountCents ?? null);
-	const warnings = transitionWarnings(from, to, { outstandingCloseOut, door });
+	const till = to === 'settled' || to === 'closed' ? await tillSummary(id) : null;
+	const warnings = transitionWarnings(from, to, {
+		outstandingCloseOut,
+		door: till?.check,
+		oneCounter: till?.oneCounter
+	});
 	const reason = opts.reason?.trim() ?? '';
 	if (warnings.length > 0) {
 		if (!opts.acknowledged) return { moved: false, warnings };
@@ -519,9 +523,7 @@ async function readForMove(id: string) {
 		.select({
 			status: production.status,
 			eventId: eventListing.id,
-			title: eventListing.title,
-			doorCashCents: production.doorCashCents,
-			doorRecountCents: production.doorCashRecountCents
+			title: eventListing.title
 		})
 		.from(production)
 		.leftJoin(eventListing, eq(eventListing.projectId, production.projectId))

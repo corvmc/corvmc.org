@@ -162,10 +162,9 @@ vi.mock('#lib/server/production/settlement-service.js', () => ({
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
-const doorCounts = { recordDoorTake: vi.fn(), recordDoorRecount: vi.fn() };
-vi.mock('#lib/server/production/door-count-service.js', () => ({
-	recordDoorTake: (...a: unknown[]) => doorCounts.recordDoorTake(...a),
-	recordDoorRecount: (...a: unknown[]) => doorCounts.recordDoorRecount(...a)
+const tillCounts = { recordStaffCount: vi.fn() };
+vi.mock('#lib/server/production/till-count-service.js', () => ({
+	recordStaffCount: (...a: unknown[]) => tillCounts.recordStaffCount(...a)
 }));
 
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
@@ -318,13 +317,8 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
-		name: 'recordDoorTake',
+		name: 'recordStaffCount',
 		args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }],
-		capability: RUN
-	},
-	{
-		name: 'recordDoorRecount',
-		args: [{ id: 'prod-1', eventId: 'evt-1', recountCents: 12_000 }],
 		capability: RUN
 	},
 	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
@@ -441,7 +435,7 @@ const allSpies = () =>
 		...flyers,
 		...settlement,
 		...expenses,
-		...doorCounts,
+		...tillCounts,
 		...showLead,
 		...lineup,
 		...outsideActs,
@@ -848,22 +842,26 @@ describe('run of show validation', () => {
 	});
 });
 
-describe('the door counts name the caller as the counter (#2722)', () => {
-	it('passes the signed-in user, never a field, as each counter', async () => {
+describe('the staff count names the caller as the counter (#3273)', () => {
+	it('passes the signed-in user, never a field, and an empty cash box clears the count', async () => {
 		persona = 'production';
-		await submit(productions.recordDoorTake, {
+		await submit(productions.recordStaffCount, {
 			id: 'prod-1',
 			eventId: 'evt-1',
 			doorCashCents: 500_00,
 			countedByUserId: 'someone-else'
 		});
-		expect(doorCounts.recordDoorTake).toHaveBeenCalledWith('prod-1', 'production-1', {
+		expect(tillCounts.recordStaffCount).toHaveBeenCalledWith('prod-1', 'production-1', {
 			cashCents: 500_00,
 			count: null,
 			splitActsPercent: null
 		});
 		persona = 'staff';
-		await submit(productions.recordDoorRecount, { id: 'prod-1', eventId: 'evt-1' });
-		expect(doorCounts.recordDoorRecount).toHaveBeenCalledWith('prod-1', 'staff-1', null);
+		await submit(productions.recordStaffCount, { id: 'prod-1', eventId: 'evt-1' });
+		expect(tillCounts.recordStaffCount).toHaveBeenLastCalledWith('prod-1', 'staff-1', {
+			cashCents: null,
+			count: null,
+			splitActsPercent: null
+		});
 	});
 });

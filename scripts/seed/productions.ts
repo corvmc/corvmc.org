@@ -1,4 +1,8 @@
-import { production, productionExpense } from '../../src/lib/server/db/schema/production';
+import {
+	production,
+	productionExpense,
+	productionTillCount
+} from '../../src/lib/server/db/schema/production';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { project } from '../../src/lib/server/db/schema/project';
 import { batchInsert, db } from './db';
@@ -189,6 +193,36 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 				category: 'other' as const,
 				amountCents: 12_000,
 				deductible: false
+			}
+		]);
+
+		// Two handoffs by two people and a staff count that matches their sum:
+		// the agreed case, with no warning to show.
+		const night =
+			events.find((e) => 'eventId' in settledShow && e.id === settledShow.eventId)?.startsAt ?? now;
+		const counter = users[1]?.id ?? producer;
+		const minutesAfter = (m: number) => new Date(night.getTime() + m * 60_000);
+		await batchInsert(productionTillCount, [
+			{
+				productionId: settledShow.id,
+				kind: 'handoff' as const,
+				cashCents: 21_000,
+				countedByUserId: producer,
+				countedAt: minutesAfter(90)
+			},
+			{
+				productionId: settledShow.id,
+				kind: 'handoff' as const,
+				cashCents: 18_500,
+				countedByUserId: counter,
+				countedAt: minutesAfter(180)
+			},
+			{
+				productionId: settledShow.id,
+				kind: 'staff' as const,
+				cashCents: 39_500,
+				countedByUserId: producer,
+				countedAt: minutesAfter(210)
 			}
 		]);
 	}
