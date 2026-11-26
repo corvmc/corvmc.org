@@ -71,6 +71,7 @@ test('band addresses route by tier and history', async ({ page, request }) => {
 
 	// The section, not the <img>: images need R2, which `vite preview` lacks, while the
 	// section renders only when the media tables returned a gallery row for this band.
+	// Presence of data, not placement.
 	await test.step('the premium press kit renders gallery media', async () => {
 		await page.goto(`${subdomain(SEED_PREMIUM_BAND_SLUG)}/epk`);
 		await expect(page.getByTestId('epk-gallery')).toBeVisible();

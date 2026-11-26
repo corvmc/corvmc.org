@@ -216,7 +216,8 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(chatRoom(page)).toBeVisible({ timeout: 15000 });
 		// ...and the enquiry list is not drawn at all. `requireGroupRole` in the
 		// remote function is still the guard; this is the page not offering them
-		// a list that would refuse them.
+		// a list that would refuse them. Absence for a role: there is no control
+		// to name when the list is empty.
 		await expect(page.getByTestId('enquiry-list')).toHaveCount(0);
 	});
 
