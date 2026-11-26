@@ -17,10 +17,23 @@ vi.mock('./run-of-show-service', () => ({ recomputeSetTimes: async () => undefin
 const emit = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 
-const { leadsProject, leadsOpenShow } = await import('#lib/server/capability/capability-grants.js');
+const {
+	leadsProject,
+	leadsOpenShow,
+	roleGrantAllowsOnProject,
+	roleGrantAllows,
+	holdsLeadOnOpenShow
+} = await import('#lib/server/capability/capability-grants.js');
+const { EVENT_LEAD_VOLUNTEER_ROLE } = await import('#lib/config.js');
 const { userHasCapability } = await import('#lib/server/authorization.js');
-const { setShowLead, listShowsLedBy, searchLeadCandidates, ShowLeadNotFoundError } =
-	await import('./show-lead-service');
+const {
+	setShowLead,
+	listShowsLedBy,
+	searchLeadCandidates,
+	ShowLeadNotFoundError,
+	ensureLeadTask,
+	getShowLead
+} = await import('./show-lead-service');
 
 const SHOW = 'proj-show';
 const OTHER = 'proj-other';
@@ -50,7 +63,18 @@ const lead = (prod: string) =>
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	for (const t of ['event_listing', 'production', 'project', 'user']) exec(`delete from ${t}`);
+	for (const t of [
+		'work_order_assignee',
+		'work_order',
+		'volunteer_role_capability',
+		'volunteer_role',
+		'event_listing',
+		'production',
+		'project',
+		'user'
+	]) {
+		exec(`delete from ${t}`);
+	}
 	for (const u of ['u-staff', 'u-lead', 'u-other']) {
 		exec(
 			`insert into user (id, name, email, email_verified) values ('${u}', 'Name ${u}', '${u}@x.test', 0)`
@@ -140,5 +164,108 @@ describe('the shows a member leads', () => {
 		const found = await searchLeadCandidates('Name');
 		expect(found.map((u) => u.id).sort()).toEqual(['u-lead', 'u-other', 'u-staff']);
 		expect(found[0]).not.toHaveProperty('email');
+	});
+});
+
+/**
+ * The event lead as a volunteer role (#3274): a task with no shift, whose
+ * assignee holds `production.run` on the show's project and `event.manageGuests`
+ * on its event, from assignment until `graceDays` after the show.
+ */
+describe('the Event lead role', () => {
+	const DAY = 24 * HOUR;
+	const showStart = new Date(NOW.getTime() + 48 * HOUR);
+
+	function leadRole(caps = ['production.run', 'event.manageGuests']) {
+		exec(
+			`insert into volunteer_role (id, name) values ('role-lead', '${EVENT_LEAD_VOLUNTEER_ROLE}')`
+		);
+		for (const c of caps) {
+			exec(
+				`insert into volunteer_role_capability (volunteer_role_id, capability) values ('role-lead', '${c}')`
+			);
+		}
+	}
+	const assign = (taskId: string, userId: string) =>
+		exec(
+			`insert into work_order_assignee (work_order_id, user_id) values ('${taskId}', '${userId}')`
+		);
+
+	it('gives the assignee production.run on that show only, never production.book', async () => {
+		leadRole();
+		const task = await ensureLeadTask('evt-1');
+		assign(task!, 'u-lead');
+
+		expect(await userHasCapability('u-lead', 'production.run', { projectId: SHOW })).toBe(true);
+		expect(await userHasCapability('u-lead', 'production.run', { projectId: OTHER })).toBe(false);
+		expect(await userHasCapability('u-lead', 'production.book', { projectId: SHOW })).toBe(false);
+		expect(await userHasCapability('u-other', 'production.run', { projectId: SHOW })).toBe(false);
+		expect(await userHasCapability('u-lead', 'event.manageGuests', { eventId: 'evt-1' })).toBe(
+			true
+		);
+		expect(await userHasCapability('u-lead', 'event.manageGuests', { eventId: 'evt-2' })).toBe(
+			false
+		);
+	});
+
+	it('holds from assignment, however far ahead the show is, and ends after graceDays', async () => {
+		leadRole();
+		assign((await ensureLeadTask('evt-1'))!, 'u-lead');
+		const ends = secs(showStart) + 10800;
+		const at = (days: number) => new Date((ends + days * 86_400) * 1000);
+
+		const farAhead = new Date(showStart.getTime() - 400 * DAY);
+		expect(await roleGrantAllowsOnProject('u-lead', 'production.run', SHOW, farAhead)).toBe(true);
+		expect(await roleGrantAllows('u-lead', 'event.manageGuests', 'evt-1', farAhead)).toBe(true);
+		expect(await roleGrantAllowsOnProject('u-lead', 'production.run', SHOW, at(6))).toBe(true);
+		expect(await roleGrantAllowsOnProject('u-lead', 'production.run', SHOW, at(8))).toBe(false);
+		expect(await roleGrantAllows('u-lead', 'event.manageGuests', 'evt-1', at(8))).toBe(false);
+	});
+
+	it('grants nothing once the task is called off', async () => {
+		leadRole();
+		assign((await ensureLeadTask('evt-1'))!, 'u-lead');
+		exec(`update work_order set cancelled_at = ${secs(NOW)}`);
+
+		expect(await userHasCapability('u-lead', 'production.run', { projectId: SHOW })).toBe(false);
+		expect(await holdsLeadOnOpenShow('u-lead')).toBe(false);
+	});
+
+	it('opens the staff panel while the show is open, and not once it is cancelled', async () => {
+		leadRole();
+		assign((await ensureLeadTask('evt-1'))!, 'u-lead');
+		expect(await holdsLeadOnOpenShow('u-lead')).toBe(true);
+		expect(await holdsLeadOnOpenShow('u-other')).toBe(false);
+		exec(`update production set status = 'cancelled' where id = 'prod-1'`);
+		expect(await holdsLeadOnOpenShow('u-lead')).toBe(false);
+	});
+
+	it('grants only what the role carries', async () => {
+		leadRole(['event.manageGuests']);
+		assign((await ensureLeadTask('evt-1'))!, 'u-lead');
+		expect(await userHasCapability('u-lead', 'production.run', { projectId: SHOW })).toBe(false);
+		expect(await userHasCapability('u-lead', 'event.manageGuests', { eventId: 'evt-1' })).toBe(
+			true
+		);
+	});
+
+	it('makes the lead task once, and names who holds it', async () => {
+		leadRole();
+		const [a, b] = await Promise.all([ensureLeadTask('evt-1'), ensureLeadTask('evt-1')]);
+		expect(a).not.toBeNull();
+		expect(b).toBe(a);
+		expect(await ensureLeadTask('evt-1')).toBe(a);
+		expect(await getShowLead('evt-1')).toEqual({ workOrderId: a, people: [] });
+
+		assign(a!, 'u-lead');
+		expect((await getShowLead('evt-1'))?.people).toEqual([
+			{ userId: 'u-lead', name: 'Name u-lead' }
+		]);
+	});
+
+	it('makes no task, and says so, when the role does not exist', async () => {
+		expect(await ensureLeadTask('evt-1')).toBeNull();
+		expect(await getShowLead('evt-1')).toBeNull();
+		expect(sqlite.prepare('select count(*) as n from work_order').get()).toEqual({ n: 0 });
 	});
 });

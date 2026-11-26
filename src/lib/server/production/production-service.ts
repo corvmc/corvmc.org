@@ -22,6 +22,7 @@ import { tillSummary } from './till-summary';
 import { DomainError } from '#lib/server/domain-error.js';
 import type { Production, ProductionStatus } from '#lib/server/db/schema/production.js';
 import { recomputeSetTimes } from './run-of-show-service';
+import { ensureLeadTask } from './show-lead-service';
 import {
 	createShowProject,
 	deleteShowProject,
@@ -267,6 +268,13 @@ export async function createProduction(
 
 	const [row] = await db.select().from(production).where(eq(production.id, productionId));
 	await stampProductionTemplate(projectId, eventId, opts?.createdByUserId ?? null);
+	// The lead's task is there to assign from the start. A missing role or a
+	// failed insert is no reason to refuse the show: the Crew box opens it later.
+	try {
+		await ensureLeadTask(eventId);
+	} catch (err) {
+		captureException(err, { event: 'production.ensure_lead_task', eventId });
+	}
 	return row;
 }
 

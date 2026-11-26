@@ -14,7 +14,12 @@ import {
 	workOrder,
 	workOrderAssignee
 } from '#lib/server/db/schema/volunteer.js';
-import { grantRuleFor, type Capability, type ProjectCommitteeRole } from '#lib/config.js';
+import {
+	EVENT_LEAD_VOLUNTEER_ROLE,
+	grantRuleFor,
+	type Capability,
+	type ProjectCommitteeRole
+} from '#lib/config.js';
 import { allowlisted, type CommitteeGrant } from '#lib/server/capability/grant-rules.js';
 
 export {
@@ -297,12 +302,16 @@ async function roleGrantRows(userId: string, where?: SQL): Promise<RoleGrantRow[
 	return [...signedUp, ...assigned];
 }
 
-/** Is `now` inside this row's grant window for `cap`, under the allowlist rule for it? */
-function roleRowLive(row: ShiftWindowRow, cap: string, now: Date): boolean {
+/**
+ * Is `now` inside this row's grant window for `cap`, under the allowlist rule
+ * for it? The event lead holds from assignment: no start, only an end (#3274).
+ */
+function roleRowLive(row: ShiftWindowRow & { roleName?: string }, cap: string, now: Date): boolean {
 	const rule = grantRuleFor(cap)?.role;
 	if (!rule) return false;
 	const { from, until } = grantWindow(row, rule.graceDays);
-	return now >= from && now <= until;
+	const opensAtAssignment = row.roleName === EVENT_LEAD_VOLUNTEER_ROLE;
+	return (opensAtAssignment || now >= from) && now <= until;
 }
 
 /**
@@ -322,6 +331,47 @@ export async function roleGrantAllows(
 		and(eq(volunteerRoleCapability.capability, cap), eq(workOrder.eventId, eventId))
 	);
 	return rows.some((r) => roleRowLive(r, cap, now));
+}
+
+/**
+ * `roleGrantAllows`, for a check that names a project, not an event: the
+ * grant is on any event of that project. How an event lead reaches the
+ * project-scoped `production.run` checks (#3274).
+ */
+export async function roleGrantAllowsOnProject(
+	userId: string,
+	cap: Capability,
+	projectId: string,
+	now: Date = new Date()
+): Promise<boolean> {
+	if (!grantRuleFor(cap)?.role) return false;
+	const rows = await roleGrantRows(
+		userId,
+		and(eq(volunteerRoleCapability.capability, cap), eq(eventListing.projectId, projectId))
+	);
+	return rows.some((r) => roleRowLive(r, cap, now));
+}
+
+/**
+ * Does `userId` hold `production.run` through a role on a show that is not
+ * closed or cancelled? Opens the staff panel to them (#3274).
+ */
+export async function holdsLeadOnOpenShow(
+	userId: string,
+	now: Date = new Date()
+): Promise<boolean> {
+	const open = db
+		.select({ projectId: production.projectId })
+		.from(production)
+		.where(notInArray(production.status, [...TERMINAL_PRODUCTION_STATUSES]));
+	const rows = await roleGrantRows(
+		userId,
+		and(
+			eq(volunteerRoleCapability.capability, SHOW_LEAD_CAPABILITY),
+			inArray(eventListing.projectId, open)
+		)
+	);
+	return rows.some((r) => roleRowLive(r, SHOW_LEAD_CAPABILITY, now));
 }
 
 export interface LiveRoleGrant {

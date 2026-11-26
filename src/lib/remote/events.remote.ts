@@ -40,6 +40,7 @@ import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
 import { getSettlement } from '#lib/server/production/settlement-service.js';
 import { getHostShift } from '#lib/server/production/host-service.js';
+import { ensureLeadTask, getShowLead } from '#lib/server/production/show-lead-service.js';
 import { eventCrew } from '#lib/server/task/event-crew.js';
 import { relatedTasks } from '#lib/server/task/related-tasks.js';
 import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
@@ -153,7 +154,12 @@ import { group } from '#lib/server/db/schema/group.js';
 import { eventSources, listDateRanges } from '#lib/config.js';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '#lib/utils/event-time.js';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
+import {
+	DEFAULT_TIMEZONE,
+	EVENT_LEAD_VOLUNTEER_ROLE,
+	SEARCH_LIMIT,
+	SHORT_TEXT_MAX
+} from '#lib/config.js';
 import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
 import { formatDateShortYear } from '#lib/utils/format.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
@@ -1206,7 +1212,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	// The sidebar's Crew and Tasks boxes (#3270): a CMC show's own work, read
 	// here so the page keeps one query. Null to a reader without the board.
 	const isShow = detail.event.source === 'cmc';
-	const [crew, tasks, canSetLead, hostOpen] = isShow
+	const [crew, tasks, canAssignLead, hostOpen, lead] = isShow
 		? await Promise.all([
 				can('volunteer.read').then((ok) => (ok ? eventCrew(id) : null)),
 				can('project.read').then((ok) =>
@@ -1215,19 +1221,18 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 								groups
 									.filter((g) => g.key === 'event')
 									.flatMap((g) => g.tasks)
-									.filter((t) => t.shifts === 0)
+									.filter((t) => t.shifts === 0 && t.roleName !== EVENT_LEAD_VOLUNTEER_ROLE)
 									.toSorted(
 										(a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity)
 									)
 							)
 						: null
 				),
-				production?.projectId
-					? can('production.book', { projectId: production.projectId })
-					: Promise.resolve(false),
-				getHostShift(id).then((shift) => shift !== null)
+				production ? can('volunteer.manageRoster') : Promise.resolve(false),
+				getHostShift(id).then((shift) => shift !== null),
+				production ? getShowLead(id) : Promise.resolve(null)
 			])
-		: [null, null, false, false];
+		: [null, null, false, false, null];
 
 	return {
 		detail,
@@ -1239,8 +1244,10 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 		sidebar: {
 			crew,
 			tasks,
-			canSetLead,
+			canAssignLead,
 			hostOpen,
+			// The "Event lead" task and who holds it (#3274); null with no production.
+			lead: production ? (lead ?? { workOrderId: null, people: [] }) : null,
 			projectId: production?.projectId ?? null
 		},
 		recap: {
@@ -1829,6 +1836,19 @@ export const cancelTicket = form(
 		return { success: true };
 	}
 );
+
+/**
+ * The show's "Event lead" task, made if it is not there yet, so the Crew box
+ * can open its staffing (#3274). A `command`: the box needs the task id in hand
+ * to open the dialog. Null when staff have not created the role.
+ */
+export const openEventLeadTask = command(z.object({ eventId: z.string().min(1) }), async (data) => {
+	await requireCapability('volunteer.manageRoster');
+	if (!(await projectOfEvent(data.eventId))?.productionId) error(404, 'Show not found');
+	const workOrderId = await ensureLeadTask(data.eventId);
+	void getStaffEventPage(data.eventId).refresh();
+	return { workOrderId };
+});
 
 /**
  * Let one ticket through from the scanner.

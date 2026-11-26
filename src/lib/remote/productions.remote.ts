@@ -38,10 +38,7 @@ import {
 	buildSlotsFromLineup
 } from '#lib/server/production/run-of-show-service.js';
 import { openHostShift as openHost } from '#lib/server/production/host-service.js';
-import {
-	searchLeadCandidates,
-	setShowLead as setShowLeadService
-} from '#lib/server/production/show-lead-service.js';
+import { searchLeadCandidates } from '#lib/server/production/show-lead-service.js';
 import {
 	requestArtifact,
 	cancelArtifactRequest,
@@ -252,35 +249,6 @@ export const markRunOfShowDone = form(
 				loadOutDoneAt: pick('loadOut')
 			});
 			await getStaffEventProduction(data.eventId).refresh();
-			return { success: true };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
-
-/**
- * Name the show's event lead, or clear it with an empty `leadUserId` (#2726).
- * Booking appoints the lead, so this is `production.book`; the lead then holds
- * `production.run` on the show through `leadsProject`.
- */
-export const setShowLead = form(
-	z.object({
-		id: z.string().min(1),
-		eventId: z.string().min(1),
-		leadUserId: z.string()
-	}),
-	async (data) => {
-		const { user } = await requireProjectCommittee(
-			await projectOfProduction(data.id),
-			'production.book'
-		);
-		try {
-			await setShowLeadService(data.id, data.leadUserId || null, user.id);
-			await Promise.all([
-				getStaffEventProduction(data.eventId).refresh(),
-				getStaffEventPage(data.eventId).refresh()
-			]);
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);

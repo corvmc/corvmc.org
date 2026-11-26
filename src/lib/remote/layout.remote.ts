@@ -10,7 +10,7 @@ import {
 	committeeCapabilitiesFor,
 	positionsFor
 } from '#lib/server/authorization.js';
-import { leadsOpenShow } from '#lib/server/capability/capability-grants.js';
+import { holdsLeadOnOpenShow, leadsOpenShow } from '#lib/server/capability/capability-grants.js';
 import { hasLoanableItems } from '#lib/server/inventory/item-service.js';
 import { getAllFeatureFlags } from '#lib/server/feature-flags.js';
 import { countGroupInboxUnread, countUnifiedUnread } from '#lib/server/inbox/unified-service.js';
@@ -199,7 +199,12 @@ export const getStaffLayout = query(async () => {
 		positionsFor(locals.user.id),
 		committeeCapabilitiesFor(locals.user.id).catch(() => [])
 	]);
-	if (positions.length === 0 && seat.length === 0 && !(await leadsOpenShow(locals.user.id))) {
+	if (
+		positions.length === 0 &&
+		seat.length === 0 &&
+		!(await leadsOpenShow(locals.user.id)) &&
+		!(await holdsLeadOnOpenShow(locals.user.id))
+	) {
 		throw redirect(302, '/');
 	}
 

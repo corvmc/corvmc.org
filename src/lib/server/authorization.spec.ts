@@ -71,11 +71,13 @@ vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals }) }));
 // The grant resolver has its own spec; here only the order and the scoping matter.
 const committeeGrantsFor = vi.fn(async (_userId: string) => [] as unknown[]);
 const roleGrantAllows = vi.fn(async (..._args: unknown[]) => false);
+const roleGrantAllowsOnProject = vi.fn(async (..._args: unknown[]) => false);
 const listCommitteeHolders = vi.fn(async (_cap: string) => [] as unknown[]);
 vi.mock('#lib/server/capability/capability-grants.js', async (orig) => ({
 	...(await orig<typeof import('#lib/server/capability/capability-grants.js')>()),
 	committeeGrantsFor,
 	roleGrantAllows,
+	roleGrantAllowsOnProject,
 	listCommitteeHolders
 }));
 
@@ -183,6 +185,7 @@ beforeEach(() => {
 	locals = {};
 	committeeGrantsFor.mockReset().mockResolvedValue([]);
 	roleGrantAllows.mockReset().mockResolvedValue(false);
+	roleGrantAllowsOnProject.mockReset().mockResolvedValue(false);
 	listCommitteeHolders.mockReset().mockResolvedValue([]);
 });
 
@@ -306,6 +309,17 @@ describe('grants beyond positions', () => {
 
 		expect(await can('event.uploadRecap', { eventId: 'ev-1' })).toBe(true);
 		expect(roleGrantAllows).toHaveBeenCalledWith('u-3', 'event.uploadRecap', 'ev-1');
+	});
+
+	it('asks the project resolver for a project-scoped check, so an event lead reaches it (#3274)', async () => {
+		asUser('u-3');
+		roleGrantAllowsOnProject.mockResolvedValue(true);
+		expect(await can('production.run')).toBe(false);
+		expect(roleGrantAllowsOnProject).not.toHaveBeenCalled();
+
+		expect(await can('production.run', { projectId: 'p-1' })).toBe(true);
+		expect(roleGrantAllowsOnProject).toHaveBeenCalledWith('u-3', 'production.run', 'p-1');
+		expect(roleGrantAllows).not.toHaveBeenCalled();
 	});
 
 	it('403s a role grant for the wrong event or an expired window', async () => {

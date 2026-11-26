@@ -252,6 +252,9 @@ a live task in it (#2959). On a show that reach covers
 lineup, cancelling) is `production.book`, which is org-wide. `explainAccess` lists each
 committee's projects and how it is on them.
 
+A volunteer role reaches it too: an assignee on a show's Event lead task holds `production.run` on that
+show's project (`roleGrantAllowsOnProject`), from assignment until `graceDays` after the show (#3274).
+
 - Not responsibility stored as permission, such as `volunteer.manageShifts` granted to every
   committee, because that reaches every task the committee touches, not the ones it owns
   (#2983).

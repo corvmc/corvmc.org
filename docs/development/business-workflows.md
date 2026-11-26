@@ -2470,19 +2470,29 @@ restore crew shifts or retract a cancellation notice.
    show, the advance, the door take, expenses, poster art, and the listing's description and
    times. It has `'owned'` reach, held by a seat on any committee on the show: one named in
    `project_committee`, or one owning a live deliverable on the show's project. Staff and the
-   event lead hold it too. The committees granted it are Booking, Production, Art and
+   event lead hold it too, the lead through the Event lead role (item 4). The committees granted it are Booking, Production, Art and
    Merchandise, and Communications. `production.book` is what binds CMC outside it: the deal terms
    (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
-   `confirmed` or `cancelled`, cancelling a series, and naming the lead. It is org-wide.
+   `confirmed` or `cancelled`, and cancelling a series. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
 3. The event page's Production tab (`/staff/events/[id]?tab=production`) reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
-4. The Production tab's record card → `updateProduction` (times and notes), and the
-   sidebar's **Crew** box → `setShowLead` (the event lead, #2726 — `production.book` names any member; the lead
-   then holds `production.run` on that show and opens the staff panel while it is open).
-   The lead is a volunteer position with no shift: screens show the lead as crew beside the
-   show's shifts. Giving the lead hours or a volunteer role is a model change to propose on an
-   issue first.
+4. The Production tab's record card → `updateProduction` (times and notes). The event lead is a
+   volunteer task with no shift (#3274): the **Event lead** role (`EVENT_LEAD_VOLUNTEER_ROLE`,
+   matched by name) carries `production.run` and `event.manageGuests` through
+   `volunteer_role_capability`. `createProduction` makes the show's task
+   (`ensureLeadTask`, idempotent; none when staff have not created the role), and the sidebar's
+   **Crew** box assigns it with the shared staffing component (`CrewAssign` → `TaskStaffing`),
+   guarded `volunteer.manageRoster`. The grant is per show, through `workOrderAssignee` and
+   `roleGrantAllows`: `roleGrantAllowsOnProject` lets project-scoped `production.run` checks
+   (`can`, `requireProjectCommittee`) see it. It starts when the lead is named and ends
+   `graceDays` (7) after the show, with no lead time and so no 90-day cap. It also opens the
+   staff panel while the show is open (`holdsLeadOnOpenShow`). The old
+   `production.producer_user_id` grant (`leadsProject`; the `setShowLead` form is gone, so nothing sets it) still works beside it
+   until a later change retires it. Not `production.producer_user_id`, because a lead is a
+   volunteer task with no shift, and hours, claiming and the task's page already exist for one
+   (#3274). Naming the lead moved from `production.book` to `volunteer.manageRoster`, so bookers
+   lose the Assign button.
 5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless

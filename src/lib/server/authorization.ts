@@ -26,6 +26,7 @@ import {
 	orgWideCapabilities,
 	projectCommitteeGrantsFor,
 	roleGrantAllows,
+	roleGrantAllowsOnProject,
 	SHOW_LEAD_CAPABILITY,
 	type CapabilityScope,
 	type CommitteeGrant
@@ -193,8 +194,8 @@ function currentCommitteeGrants(userId: string): Promise<CommitteeGrant[]> {
 }
 
 /**
- * Grants beyond the position matrix: a show's event lead on its project, an
- * event-scoped volunteer-role grant when `scope.eventId` is given, then
+ * Grants beyond the position matrix: a show's event lead on its project, a
+ * volunteer-role grant when `scope.eventId` or `scope.projectId` is given, then
  * committee seats. A capability off the allowlist returns before any read, so
  * only allowlisted checks pay for one.
  */
@@ -211,6 +212,10 @@ async function grantedBeyondPositions(
 	if (!rule) return false;
 	if (rule.role && scope?.eventId && (await roleGrantAllows(userId, cap, scope.eventId))) {
 		return true;
+	}
+	// A project-scoped check reaches the event lead's role grant (#3274).
+	if (rule.role && scope?.projectId && !scope.eventId) {
+		if (await roleGrantAllowsOnProject(userId, cap, scope.projectId)) return true;
 	}
 	if (!rule.committee) return false;
 	if (committeeAllows(await seats(), cap, scope)) return true;
