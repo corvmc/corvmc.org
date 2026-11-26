@@ -25,7 +25,7 @@
 
 <div class="flex flex-col gap-1 pl-16 text-sm" data-testid="act-guests">
 	<div class="flex items-center gap-2">
-		<span class="text-muted">{m.staff_events_id_production_guests_label()}</span>
+		<span class="text-muted">{m.staff_events_id_production_guests_text()}</span>
 		<Badge variant="outline">{guests.length}</Badge>
 		<Action
 			action={add}

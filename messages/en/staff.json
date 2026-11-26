@@ -3716,7 +3716,7 @@
 	"staff_events_id_production_lineup_contact_email_label": "Contact email",
 	"staff_events_id_production_lineup_unplaced_body": "{names} have no set yet.",
 	"staff_events_id_production_lineup_add_missing_label": "Add missing sets",
-	"staff_events_id_production_guests_label": "Guests",
+	"staff_events_id_production_guests_text": "Guests",
 	"staff_events_id_production_guests_add_label": "Add guest",
 	"staff_events_id_production_guests_add_title": "Add guest",
 	"staff_events_id_production_guests_add_text": "A free ticket for {name}'s guest. The ticket is emailed to them.",
