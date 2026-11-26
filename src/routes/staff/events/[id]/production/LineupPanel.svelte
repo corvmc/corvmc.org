@@ -61,6 +61,7 @@
 			: m.staff_events_id_production_lineup_state_booked_text({ booked })
 	);
 
+	const wanted = updateProduction.for('lineup');
 	const riderOf = (eventBandId: string | null) => riders.find((r) => r.id === eventBandId);
 	const hasDeal = (t: RunOfShow['slots'][number]['terms']) =>
 		(t.guaranteeCents ?? 0) > 0 || (t.percentageBps ?? 0) > 0 || t.contributed;
@@ -92,11 +93,11 @@
 		</Action>
 	{/snippet}
 
-	<Form remote={updateProduction} class="mb-3 flex items-end gap-3" guard={false}>
-		<input {...updateProduction.fields.id.as('hidden', production.id)} />
-		<input {...updateProduction.fields.eventId.as('hidden', eventId)} />
+	<Form remote={wanted} class="mb-3 flex items-end gap-3" guard={false}>
+		<input {...wanted.fields.id.as('hidden', production.id)} />
+		<input {...wanted.fields.eventId.as('hidden', eventId)} />
 		<FormField
-			field={updateProduction.fields.actsWanted}
+			field={wanted.fields.actsWanted}
 			type="select"
 			label={m.staff_events_id_production_lineup_bands_wanted_label()}
 			value={production.actsWanted?.toString() ?? ''}

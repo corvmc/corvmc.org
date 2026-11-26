@@ -70,7 +70,8 @@
 	}
 
 	const showWarnings = $derived(runOfShow.warnings.filter((w) => w.slotId === null));
-	const changeoverFields = updateProduction.fields;
+	const changeover = updateProduction.for('changeover');
+	const changeoverFields = changeover.fields;
 </script>
 
 {#snippet timeField(
@@ -166,7 +167,7 @@
 	</ol>
 
 	<Form
-		remote={updateProduction}
+		remote={changeover}
 		class="mt-4 flex flex-wrap items-end gap-3 border-t border-base-300 pt-4"
 		guard={false}
 		successToast={m.staff_saved_toast()}

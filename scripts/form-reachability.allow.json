@@ -145,10 +145,6 @@
 	"src/lib/server/production/production-service.ts#updateProductionDetails(1)": {
 		"producerUserId": "elsewhere: setShowLead writes it through show-lead-service#setShowLead"
 	},
-	"src/lib/server/production/run-of-show-service.ts#updateSlot(1)": {
-		"actualEndAt": "elsewhere: markSlotTiming writes it on the night",
-		"actualStartAt": "elsewhere: markSlotTiming writes it on the night"
-	},
 	"src/lib/server/project/decision-chain.ts#startProjectFromBallot(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
