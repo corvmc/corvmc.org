@@ -812,6 +812,15 @@ events use RSVP instead.
   emits `event.cancelled` so every holder is notified with the refund note.
 - **RSVP / comps:** `event/rsvp-service.ts`; staff `compTickets` form creates valid
   tickets with no charge.
+- **Guests per act (#3274):** `ticket.event_band_id` (nullable, set null) ties a free ticket to
+  one act's credit. `addActGuest` / `removeActGuest` (`event.manageGuests`, scoped to the show the
+  credit or ticket is on, read from the row) go through `ticket/guest-service.ts`: one seat per
+  guest, `issueFreeTickets` (so `ticket.purchased` sends the ticket) and `recordTicketComp`.
+  Guests count against `ticket_sale.quantity` like any issued ticket. `writeLineup` cancels the
+  `pending` and `valid` guests of every dropped credit in the same `db.batch` as the delete, so
+  every path that removes an act cancels them; `checked_in` stays and nobody is emailed. A
+  credit that goes by `directory_entry` cascade leaves its guests valid with a null act. Not
+  removing the comp button, because band-run events still use it (#3274).
 
 ### Door sales
 

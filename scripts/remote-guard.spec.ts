@@ -27,7 +27,9 @@ const SCOPE_LOOKUPS = new Set<string>([
 	'src/lib/server/volunteer/deliverables-service.ts#getTaskWorkOrderId',
 	'src/lib/server/volunteer/maintenance-schedule-service.ts#getScheduleGroupId',
 	'src/lib/server/market/market-service.ts#getMarketProjectId',
-	'src/lib/server/market/market-service.ts#getVendorEventId'
+	'src/lib/server/market/market-service.ts#getVendorEventId',
+	'src/lib/server/ticket/guest-service.ts#eventOfAct',
+	'src/lib/server/ticket/guest-service.ts#eventOfGuest'
 ]);
 
 /** `file#name` → why it may answer before, or without, a guard. */

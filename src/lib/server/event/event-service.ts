@@ -19,6 +19,7 @@ import {
 	noSaleTerms,
 	type ListingSaleTerms
 } from './event-columns';
+import { cancelGuestsOfActs } from '#lib/server/ticket/guest-service.js';
 import { saveTicketSale, type TicketSaleTerms } from '#lib/server/ticket/ticket-sale.js';
 import { bandSaleBlocker, refundBandTicketSale } from '#lib/server/ticket/ticket-seller.js';
 import type { EventSource } from '#lib/config.js';
@@ -2151,7 +2152,13 @@ async function writeLineup(
 	const kept = new Set(rows.map((r) => r.priorId).filter((id): id is string => id !== null));
 	const dropped = existing.filter((r) => !kept.has(r.id)).map((r) => r.id);
 
-	if (dropped.length) await db.delete(eventBand).where(inArray(eventBand.id, dropped));
+	// Cancel the dropped acts' guests in the same batch: the delete alone would
+	// only null `ticket.event_band_id`, leaving a valid ticket for an act that is gone.
+	if (dropped.length)
+		await db.batch([
+			cancelGuestsOfActs(dropped),
+			db.delete(eventBand).where(inArray(eventBand.id, dropped))
+		]);
 
 	// At most `LINEUP_MAX` + the owner's slot, so nothing here approaches D1's
 	// 100-parameter statement cap and the updates need no chunking.

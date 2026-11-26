@@ -21,20 +21,23 @@
 		updateRunOfShowSlot
 	} from '#lib/remote/productions.remote.js';
 	import { describeTerms } from '#lib/production/terms.js';
+	import ActGuests from './ActGuests.svelte';
 	import AddActFields from './AddActFields.svelte';
 	import type { RunOfShow } from '#lib/types/run-of-show.js';
 
 	/**
 	 * The only place a CMC show's acts are edited (#3272). Each act is a credit
 	 * on the bill and a set on the run of show; adding and removing do both.
-	 * Guests per act wait for #3274.
+	 * Guests per act (#3274) sit under each act for who may keep them.
 	 */
 	let {
 		eventId,
 		production,
 		runOfShow,
 		riders,
-		canBook
+		canBook,
+		canGuests = false,
+		guests = []
 	}: {
 		eventId: string;
 		production: { id: string; actsWanted: number | null };
@@ -47,6 +50,8 @@
 			slug: string | null;
 		}[];
 		canBook: boolean;
+		canGuests?: boolean;
+		guests?: { id: string; eventBandId: string; name: string; email: string; status: string }[];
 	} = $props();
 
 	let canAdd = $state(false);
@@ -187,6 +192,14 @@
 						{/snippet}
 					</Action>
 				</div>
+
+				{#if slot.eventBandId && canGuests}
+					<ActGuests
+						eventBandId={slot.eventBandId}
+						actName={slot.actName ?? m.staff_not_bill_text()}
+						guests={guests.filter((g) => g.eventBandId === slot.eventBandId)}
+					/>
+				{/if}
 
 				{#if slot.eventBandId}
 					<div class="flex flex-wrap items-center gap-x-4 gap-y-1 pl-16 text-sm">

@@ -82,6 +82,8 @@ production. Doors is the one time the public needs; load-in, soundcheck, first s
 and load-out are internal. Ticketing is neither announcement nor back-of-house, so it is
 its own row, `ticket_sale`, keyed to the listing: a band gig will sell tickets without a
 production (#1203). A null `group_id` means the collective is the seller.
+A guest of an act is an ordinary free `ticket` with `event_band_id` set to that act's credit,
+not a separate guest table, so it is counted, emailed and checked in like any other (#3274).
 
 A listing announces a production by sitting on that production's project
 (`event_listing.project_id` = `production.project_id`); there is no second edge (#2076).
