@@ -353,39 +353,54 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		throw error(404, 'Event not found');
 	}
 
-	let bandInfo: { name: string; slug: string } | null = null;
-	if (evt.groupId) {
-		const [row] = await db
-			.select({ name: group.name, slug: group.slug })
-			.from(group)
-			.where(eq(group.id, evt.groupId))
-			.limit(1);
-		bandInfo = row ?? null;
-	}
-
-	const lineup = await getEventLineup(id);
-	// Only a show CMC produces can have a running order, and nine listings in ten
-	// are not one — so the branch keeps a round trip off most detail views. The
-	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
-	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
-	const seller = await sellerFor(evt);
-	const access = await getVenueAccess(evt.venueId);
-	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
+	// Every read below needs only `evt`, so they start together; the recap
+	// uploader alone waits, for the photo count. Only a show CMC produces can
+	// have a running order, and nine listings in ten are not one, so the branch
+	// keeps a round trip off most views. The rest of the gate (a confirmed
+	// production, a downbeat, a credit) is in SQL.
+	const [
+		bandInfo,
+		lineup,
+		setTimes,
+		seller,
+		access,
+		remaining,
+		rsvpCount,
+		isSustainingMember,
+		photos,
+		sponsors,
+		recapAccess,
+		upcomingRows
+	] = await Promise.all([
+		evt.groupId
+			? db
+					.select({ name: group.name, slug: group.slug })
+					.from(group)
+					.where(eq(group.id, evt.groupId))
+					.limit(1)
+					.then(([row]) => row ?? null)
+			: Promise.resolve(null),
+		getEventLineup(id),
+		evt.source === 'cmc' ? getPublicSetTimes(id) : Promise.resolve([]),
+		sellerFor(evt),
+		getVenueAccess(evt.venueId),
+		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
+		// Non-ticketed events use the lightweight RSVP join table for headcount.
+		evt.ticketingEnabled ? Promise.resolve(0) : countRsvps(id),
+		// Sustaining members see the discounted price; anonymous visitors don't.
+		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false),
+		listEventPhotos(id),
+		creditsForEvent(id, 'eventPage'),
+		recapUploadAccess(locals.user?.id, id),
+		listUpcoming()
+	]);
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
 
-	// Non-ticketed events use the lightweight RSVP join table for headcount.
-	const rsvpCount = evt.ticketingEnabled ? 0 : await countRsvps(id);
-
-	// Sustaining members see the discounted price; anonymous visitors don't.
-	const isSustainingMember = locals.user ? await checkSustainingMember(locals.user.id) : false;
-
 	const isPast = hasEventEnded(evt.startsAt, evt.endsAt);
-	const photos = await listEventPhotos(id);
-	const sponsors = await creditsForEvent(id, 'eventPage');
 	// Only this show's photographer needs the uploader here; staff have the console's.
 	const recapUpload =
-		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
+		recapAccess === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
 					recapText: evt.recapText,
@@ -395,7 +410,6 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			: null;
 
 	// "More shows" tail: other upcoming events, excluding this one.
-	const upcomingRows = await listUpcoming();
 	const upcoming = upcomingRows
 		.filter((e) => e.id !== id)
 		.slice(0, 6)
