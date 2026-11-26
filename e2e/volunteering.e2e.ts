@@ -354,12 +354,16 @@ test.describe('volunteering — roles', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto('/staff/volunteering?needs=short');
 
+		// The candidate column is the only thing on this page with a search field.
 		const find = page.getByTestId('find-volunteers').first();
+		await expect(find).toBeVisible();
+		const ask = page.getByRole('main').getByRole('searchbox');
+		await expect(ask).toHaveCount(0);
 		await find.click();
 		await expect(find).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.getByTestId('roster-match')).toBeVisible();
+		await expect(ask).toHaveCount(1);
 		await find.click();
-		await expect(page.getByTestId('roster-match')).toHaveCount(0);
+		await expect(ask).toHaveCount(0);
 	});
 
 	test('the retired interest, recurring, sign-off and shift routes land on their successors', async ({
@@ -724,24 +728,18 @@ test.describe('volunteering — shifts', () => {
  * unreachable. These cover the three ways in, and the one failure mode that
  * cannot be seen on screen.
  */
-// Staffing is production work, so the card is on the Production tab
-// (`?tab=production`) rather than on Listing, where every staffer lands.
 test.describe('volunteering — shifts and events', () => {
-	/** The production console's related shifts card (#2630). */
-	function shiftsCard(page: Page) {
-		return page.getByTestId('related-shifts');
-	}
-
 	test('the event page lists the shifts staffing that show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		const card = shiftsCard(page);
-		await expect(card).toBeVisible({ timeout: 15000 });
-		await expect(card).toContainText(SEED_VOL_ROLE_NAME);
-
 		// Straight through to the shift, which is the point of the card.
-		await card.getByRole('link', { name: SEED_VOL_ROLE_NAME }).click();
+		const link = page
+			.getByRole('main')
+			.locator(`a[href="/staff/tasks/${SEED_VOL_SHIFT_EVENT_ID}"]`)
+			.first();
+		await expect(link).toBeVisible({ timeout: 15000 });
+		await link.click();
 		await expect(page).toHaveURL(new RegExp(`/staff/tasks/${SEED_VOL_SHIFT_EVENT_ID}$`));
 	});
 
@@ -749,9 +747,7 @@ test.describe('volunteering — shifts and events', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}?tab=production`);
 
-		const card = shiftsCard(page);
-		await expect(card).toBeVisible({ timeout: 15000 });
-		await card.getByTestId('related-add-shift').click();
+		await page.getByTestId('related-add-shift').click();
 
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
@@ -765,7 +761,9 @@ test.describe('volunteering — shifts and events', () => {
 		await modalSubmit(page).click();
 
 		// Two rows now: the fixture's and the one just made.
-		await expect(card.locator('tr[data-shift]')).toHaveCount(2, { timeout: 15000 });
+		await expect(page.getByRole('main').locator('tr[data-shift]')).toHaveCount(2, {
+			timeout: 15000
+		});
 	});
 
 	test('a shift can be attached to an event after the fact, and detached again', async ({
@@ -917,16 +915,17 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/tasks/${SEED_VOL_TWO_SHIFTS_ID}`);
 
-		const cards = page.getByTestId('task-shift');
-		await expect(cards).toHaveCount(2, { timeout: 15000 });
-		await cards.first().getByTestId('cancel-shift').click();
+		const first = shiftIdOf(SEED_VOL_TWO_SHIFTS_ID);
+		const cancel = (id: string) => page.locator(`[data-testid="cancel-shift"][data-shift="${id}"]`);
+		await expect(cancel(first)).toBeVisible({ timeout: 15000 });
+		await expect(cancel(`${first}-2`)).toBeVisible();
+		await cancel(first).click();
 		await modalSubmit(page).click();
 
-		const first = shiftIdOf(SEED_VOL_TWO_SHIFTS_ID);
 		await expect
 			.poll(() => readTaskShiftStates(SEED_VOL_TWO_SHIFTS_ID), DB_POLL)
 			.toEqual({ task: false, shifts: { [first]: true, [`${first}-2`]: false } });
-		await expect(cards.last().getByTestId('cancel-shift')).toBeVisible();
+		await expect(cancel(`${first}-2`)).toBeVisible();
 	});
 
 	// #2518: a volunteer signs up for a shift, never a task; the task's other shift stays open.

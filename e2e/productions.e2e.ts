@@ -53,9 +53,10 @@ test.describe('productions', () => {
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
 
 		const tab = page
-			.getByTestId('event-tabs')
-			.locator(`a[href="/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}?tab=production"]`);
-		await expect(tab).toHaveCount(1, { timeout: 15000 });
+			.getByRole('main')
+			.locator(`a[href="/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}?tab=production"]`)
+			.first();
+		await expect(tab).toBeVisible({ timeout: 15000 });
 		await expect(page.getByTestId('crew-lead')).toHaveCount(0);
 		await tab.click();
 		await page.waitForURL(/\?tab=production$/);
@@ -64,19 +65,15 @@ test.describe('productions', () => {
 		await expect(open).toBeVisible({ timeout: 15000 });
 		await open.click();
 
-		// The button is the whole form, so its own disappearance is the receipt.
-		const record = page.getByTestId('production-record');
-		await expect(record).toBeVisible({ timeout: 15000 });
 		await expect
 			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
 			.toBe('draft');
 		await expect(page.getByTestId('crew-lead')).toBeVisible({ timeout: 15000 });
 
-		// A draft's first move is the offer, rendered first in the record's header.
-		const badge = record.locator('.badge').first();
-		await expect(badge).toBeVisible({ timeout: 15000 });
-		const draftBadge = await badge.textContent();
-		await record.getByRole('button').first().click();
+		// A draft can be offered.
+		const offer = page.locator('[data-testid="production-move"][data-to="offered"]');
+		await expect(offer).toBeVisible({ timeout: 15000 });
+		await offer.click();
 		await page.getByRole('dialog').locator('button[type=submit]').click();
 
 		// It has to be written, and survive a reload: a control reflecting
@@ -85,8 +82,9 @@ test.describe('productions', () => {
 			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
 			.toBe('offered');
 		await page.reload();
-		await expect(badge).toBeVisible({ timeout: 15000 });
-		await expect(badge).not.toHaveText(draftBadge ?? '');
+		await expect(page.getByRole('main').locator('[data-status="offered"]').first()).toBeVisible({
+			timeout: 15000
+		});
 	});
 
 	/**
@@ -100,7 +98,9 @@ test.describe('productions', () => {
 
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
-		await expect(row.locator('td').first().locator('.badge')).toBeVisible();
+		// A badge for the production and one for its listing.
+		await expect(row.locator('[data-status]')).toHaveCount(2);
+		await expect(row.locator('[data-status="published"]')).toBeVisible();
 		await expect(row.getByText(SEED_VENUE_OFFSITE_NAME)).toBeVisible();
 		// The row opens its event.
 		await expect(row.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}"]`)).toBeVisible();
@@ -140,12 +140,9 @@ test.describe('productions', () => {
 		await expect(page).toHaveURL(
 			new RegExp(`/staff/events/${SEED_PRODUCTION_EVENT_ID}\\?tab=production$`)
 		);
-		await expect(page.getByTestId('related-shifts')).toBeVisible({ timeout: 15000 });
+		await expect(page.getByTestId('related-add-shift')).toBeVisible({ timeout: 15000 });
 
-		await page
-			.getByTestId('event-tabs')
-			.locator(`a[href="/staff/events/${SEED_PRODUCTION_EVENT_ID}"]`)
-			.click();
+		await page.goto(`/staff/events/${SEED_PRODUCTION_EVENT_ID}`);
 		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_PRODUCTION_EVENT_ID}$`));
 		await expect(page.getByTestId('edit-listing')).toBeVisible({ timeout: 15000 });
 	});

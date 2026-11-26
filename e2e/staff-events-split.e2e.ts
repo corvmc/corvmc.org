@@ -93,9 +93,7 @@ test.describe('staff events split', () => {
 
 		// Production controls belong to a CMC show's Production tab.
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
-		await expect(page.getByTestId('event-tabs').locator('a[href*="tab=production"]')).toHaveCount(
-			0
-		);
+		await expect(page.getByRole('main').locator('a[href*="tab=production"]')).toHaveCount(0);
 
 		// The window is two hours, not the day: the Approve dialog warns of a
 		// possible duplicate in the slot and not of the later show (#3270).
@@ -108,10 +106,13 @@ test.describe('staff events split', () => {
 	test('a production has a Production tab, and a listing is turned away', async ({ page }) => {
 		await page.goto(`/staff/events/${SEED_SPLIT_CMC_LIVE_ID}`);
 		const tab = page
-			.getByTestId('event-tabs')
-			.locator(`a[href="/staff/events/${SEED_SPLIT_CMC_LIVE_ID}?tab=production"]`);
+			.getByRole('main')
+			.locator(`a[href="/staff/events/${SEED_SPLIT_CMC_LIVE_ID}?tab=production"]`)
+			.first();
 		await expect(tab).toBeVisible();
-		// The room hold is the listing's (#1946), so it is on the Listing tab.
+		// The room hold is the listing's (#1946), so it is on the Listing tab. It is
+		// kept as a card test: no reservation is seeded for this show, so the card is
+		// the only handle, and which surfaces offer it is the behaviour.
 		await expect(page.getByTestId('space-hold')).toBeVisible();
 
 		await tab.click();
@@ -122,11 +123,11 @@ test.describe('staff events split', () => {
 		).toBeVisible();
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
 		// The staffing is on the same tab, with no inner tabs to find it behind.
-		await expect(page.getByTestId('related-shifts')).toBeVisible();
+		await expect(page.getByTestId('related-add-shift')).toBeVisible();
 
 		// A listing has no Production tab, so its old console URL lands on Listing.
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}/production`);
-		await expect(page.getByTestId('event-tabs')).toBeVisible();
+		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_SPLIT_PENDING_ID}(\\?.*)?$`));
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
 		await expect(page.getByTestId('edit-listing')).toBeVisible();
 	});
