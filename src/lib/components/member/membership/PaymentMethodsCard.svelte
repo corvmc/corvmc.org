@@ -136,7 +136,13 @@
 		{/if}
 
 		<div class="mt-4">
-			<Button variant="default" size="sm" outline onclick={() => (addOpen = true)}>
+			<Button
+				variant="default"
+				size="sm"
+				outline
+				data-testid="add-card"
+				onclick={() => (addOpen = true)}
+			>
 				{cards.length === 0
 					? m.member_membership_payment_methods_card_add_card_label()
 					: m.member_membership_payment_methods_card_add_another_card_label()}
