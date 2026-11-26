@@ -50,7 +50,7 @@ runs:
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
     # Saved straight after the install, before any job writes its own caches
     # (prettier, vitest) under node_modules/.
-    - if: (github.ref == 'refs/heads/main' || github.head_ref == 'ci/speed-caches-shards') && steps.modules.outputs.cache-hit != 'true'
+    - if: github.ref == 'refs/heads/main' && steps.modules.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: node_modules
