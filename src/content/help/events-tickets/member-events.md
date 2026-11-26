@@ -31,10 +31,10 @@ Not all events are ticketed; some are free to attend.
 
 ## Adding a show to the calendar
 
-Know about a gig around town? Put it on the community calendar so the rest of
-the scene finds out. Use **Create event** on the Events page.
+Know about an event around town? Put it on the community calendar so the rest of
+the scene finds out. Use **Add event** on the Events page.
 
-This is for shows at **other venues** — a gig, a house show, a festival. It is
+This is for shows at **other venues** — a concert, a house show, a festival. It is
 not for booking the CMC space; that's a
 [practice space reservation](/member/help/booking-a-session).
 

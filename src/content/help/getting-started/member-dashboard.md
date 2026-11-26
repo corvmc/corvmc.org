@@ -20,7 +20,7 @@ waiting on you and what is coming up this week.
 - **New bands** — Bands you joined through an emailed invitation when you
   signed up.
 - **Reservations this week** — Your reservations for the week, or
-  **Reserve space** when there are none.
+  **Reserve practice space** when there are none.
 - **Practice credits** — If you're a sustaining member, the hours you have left
   this month. Otherwise, **Learn more** about sustaining membership.
 - **Find your people** — Members and bands whose profiles match what you are

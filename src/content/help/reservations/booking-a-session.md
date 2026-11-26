@@ -9,12 +9,12 @@ sortOrder: 1
 
 ## Making a reservation
 
-1. Open **Practice space** from the sidebar and choose **Reserve space**.
+1. Open **Practice space** from the sidebar and choose **Reserve practice space**.
 2. Pick a date, then choose a **Start time** from the available slots.
 3. Choose an **End time**. Only lengths within the booking policy are offered.
 4. Add **Notes (optional)** if there's anything staff should know, and choose
    **Continue**.
-5. Review the price and choose **Reserve space**.
+5. Review the price and choose **Reserve practice space**.
 
 If a slot in a [recurring booking](/member/help/recurring-reservations) is already
 taken, that reservation is waitlisted and you can
