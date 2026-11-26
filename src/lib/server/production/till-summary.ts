@@ -42,7 +42,11 @@ export async function tillSummary(productionId: string): Promise<TillSummary> {
 		.from(productionTillCount)
 		.leftJoin(user, eq(user.id, productionTillCount.countedByUserId))
 		.where(eq(productionTillCount.productionId, productionId))
-		.orderBy(asc(productionTillCount.countedAt), asc(productionTillCount.createdAt));
+		.orderBy(
+			asc(productionTillCount.countedAt),
+			asc(productionTillCount.createdAt),
+			asc(productionTillCount.id)
+		);
 
 	const line = ({ kind: _kind, ...rest }: (typeof rows)[number]): TillCountLine => rest;
 	const handoffs = rows.filter((r) => r.kind === 'handoff').map(line);
