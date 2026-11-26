@@ -90,12 +90,15 @@ vi.mock('#lib/server/production/production-scope.js', () => scope);
 const service = {
 	createProduction: vi.fn(),
 	updateProductionDetails: vi.fn(),
+	markShowTiming: vi.fn(),
 	transitionProduction: vi.fn(async () => ({ moved: true, warnings: [] as string[] })),
 	reopenProduction: vi.fn()
 };
 vi.mock('#lib/server/production/production-service.js', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
+	markShowTiming: (...a: unknown[]) => service.markShowTiming(...a),
+	showStartsAt: async () => new Date('2026-11-06T03:00:00Z'),
 	transitionProduction: (...a: unknown[]) => service.transitionProduction(...(a as [])),
 	reopenProduction: (...a: unknown[]) => service.reopenProduction(...a)
 }));
@@ -119,6 +122,22 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
+const lineup = { addActToShow: vi.fn(), removeActFromShow: vi.fn() };
+vi.mock('#lib/server/production/lineup-service.js', () => ({
+	addActToShow: (...a: unknown[]) => lineup.addActToShow(...a),
+	removeActFromShow: (...a: unknown[]) => lineup.removeActFromShow(...a)
+}));
+const outsideActs = { createExternalAct: vi.fn(async () => 'act-new') };
+vi.mock('#lib/server/directory/entry-service.js', () => ({
+	createExternalAct: (...a: unknown[]) => outsideActs.createExternalAct(...(a as []))
+}));
+const contacts = { addShowActContact: vi.fn() };
+vi.mock('#lib/server/directory/contact-service.js', () => ({
+	addShowActContact: (...a: unknown[]) => contacts.addShowActContact(...a)
+}));
+vi.mock('#lib/server/party/organization-service.js', () => ({
+	performerFor: async () => 'org-new'
+}));
 const showLead = { setShowLead: vi.fn(), searchLeadCandidates: vi.fn(async () => []) };
 vi.mock('#lib/server/production/show-lead-service.js', () => ({
 	setShowLead: (...a: unknown[]) => showLead.setShowLead(...a),
@@ -309,14 +328,26 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
+	// The lineup is the bill: confirming who plays is booking's, not production's.
 	{
-		name: 'addRunOfShowSlot',
-		args: [{ eventId: 'evt-1', productionId: 'prod-1', setLengthMinutes: 30 }],
+		name: 'addLineupAct',
+		args: [{ eventId: 'evt-1', name: 'Moon Pie', setLengthMinutes: 30 }],
+		capability: BOOK
+	},
+	{ name: 'removeLineupAct', args: [{ eventId: 'evt-1', slotId: 'slot-1' }], capability: BOOK },
+	{
+		name: 'setRunOfShowTime',
+		args: [{ id: 'prod-1', eventId: 'evt-1', row: 'firstSet', time: '20:00' }],
+		capability: RUN
+	},
+	{
+		name: 'markRunOfShowDone',
+		args: [{ id: 'prod-1', eventId: 'evt-1', row: 'doors', action: 'now' }],
 		capability: RUN
 	},
 	{
 		name: 'updateRunOfShowSlot',
-		args: [{ ...SLOT, setLengthMinutes: 30, changeoverMinutes: 10 }],
+		args: [{ ...SLOT, setLengthMinutes: 30 }],
 		capability: RUN
 	},
 	{
@@ -324,7 +355,6 @@ const WRITES: Write[] = [
 		args: [{ ...SLOT, direction: 'up' }],
 		capability: RUN
 	},
-	{ name: 'removeRunOfShowSlot', args: [SLOT], capability: RUN },
 	{ name: 'setRunOfShowTerms', args: [SLOT], capability: BOOK },
 	{
 		name: 'buildRunOfShowFromLineup',
@@ -412,7 +442,10 @@ const allSpies = () =>
 		...settlement,
 		...expenses,
 		...doorCounts,
-		...showLead
+		...showLead,
+		...lineup,
+		...outsideActs,
+		...contacts
 	});
 
 beforeEach(() => {
@@ -527,10 +560,14 @@ describe('the production matrix', () => {
 	it('refuses show work on a slot of a show the committee is not on', async () => {
 		persona = 'production';
 		await expect(
-			submit(productions.removeRunOfShowSlot, { eventId: 'evt-1', slotId: 'slot-other' })
+			submit(productions.updateRunOfShowSlot, {
+				eventId: 'evt-1',
+				slotId: 'slot-other',
+				setLengthMinutes: 30
+			})
 		).rejects.toMatchObject({ status: 403 });
 		expect(scope.projectOfSlot).toHaveBeenCalledWith('slot-other');
-		expect(runOfShow.removeSlot).not.toHaveBeenCalled();
+		expect(runOfShow.updateSlot).not.toHaveBeenCalled();
 	});
 
 	// The deal is org-wide (#2959): no show widens or narrows who may make it.
@@ -549,7 +586,7 @@ describe('the production matrix', () => {
 
 	it('reads the project off the slot, not off the eventId the form carries', async () => {
 		persona = 'production';
-		await submit(productions.removeRunOfShowSlot, SLOT);
+		await submit(productions.updateRunOfShowSlot, { ...SLOT, setLengthMinutes: 30 });
 		expect(scope.projectOfSlot).toHaveBeenCalledWith('slot-1');
 		expect(scope.projectOfEvent).not.toHaveBeenCalled();
 	});
@@ -666,8 +703,8 @@ describe('the details form is show work (#2959)', () => {
 	const base = { id: 'prod-1', eventId: 'evt-1' };
 
 	it.each([
-		['production', { billingNotes: 'new' }],
-		['booking', { loadInDate: '2031-04-17', loadInTime: '18:00' }]
+		['production', { internalNotes: 'new' }],
+		['booking', { changeoverMinutes: 20 }]
 	] as const)('lets %s, on the show, change any field', async (who, fields) => {
 		persona = who;
 		await submit(productions.updateProduction, { ...base, ...fields });
@@ -677,7 +714,7 @@ describe('the details form is show work (#2959)', () => {
 	it('refuses a committee not on the show', async () => {
 		persona = 'otherShow';
 		await expect(
-			submit(productions.updateProduction, { ...base, billingNotes: 'new' })
+			submit(productions.updateProduction, { ...base, internalNotes: 'new' })
 		).rejects.toMatchObject({ status: 403 });
 		expect(service.updateProductionDetails).not.toHaveBeenCalled();
 	});
@@ -688,28 +725,60 @@ describe('run of show validation', () => {
 	// refuse it before the service ever sees one.
 	it('refuses a zero-length set before the service is called', async () => {
 		await expect(
-			submit(productions.addRunOfShowSlot, {
-				eventId: 'evt-1',
-				productionId: 'prod-1',
-				setLengthMinutes: 0
-			})
+			submit(productions.addLineupAct, { eventId: 'evt-1', name: 'Moon Pie', setLengthMinutes: 0 })
 		).rejects.toThrow();
 
-		expect(runOfShow.addSlot).not.toHaveBeenCalled();
+		expect(lineup.addActToShow).not.toHaveBeenCalled();
 	});
 
-	it("passes a blank act through as a slot on nobody's poster", async () => {
-		await submit(productions.addRunOfShowSlot, {
+	it('adds an act by name alone without saving it as an outside act', async () => {
+		await submit(productions.addLineupAct, {
 			eventId: 'evt-1',
-			productionId: 'prod-1',
-			eventBandId: '',
+			name: 'Moon Pie',
 			setLengthMinutes: 45
 		});
 
-		expect(runOfShow.addSlot).toHaveBeenCalledWith(
+		expect(outsideActs.createExternalAct).not.toHaveBeenCalled();
+		expect(lineup.addActToShow).toHaveBeenCalledWith(
+			'evt-1',
 			'prod-1',
-			expect.objectContaining({ eventBandId: null, setLengthMinutes: 45 })
+			{ name: 'Moon Pie', bandId: undefined, actId: undefined },
+			45
 		);
+	});
+
+	it('saves a new outside act with its contact, then adds it', async () => {
+		await submit(productions.addLineupAct, {
+			eventId: 'evt-1',
+			name: 'Moon Pie',
+			newAct: true,
+			hometown: 'Eugene',
+			email: 'moon@example.com',
+			setLengthMinutes: 30
+		});
+
+		expect(outsideActs.createExternalAct).toHaveBeenCalledWith({
+			name: 'Moon Pie',
+			hometown: 'Eugene'
+		});
+		expect(contacts.addShowActContact).toHaveBeenCalledWith(
+			'org-new',
+			'proj-show',
+			'moon@example.com'
+		);
+		expect(lineup.addActToShow).toHaveBeenCalledWith(
+			'evt-1',
+			'prod-1',
+			{ name: 'Moon Pie', bandId: undefined, actId: 'act-new' },
+			30
+		);
+	});
+
+	it('refuses to remove an act without saying which', async () => {
+		await expect(submit(productions.removeLineupAct, { eventId: 'evt-1' })).rejects.toMatchObject({
+			status: 400
+		});
+		expect(lineup.removeActFromShow).not.toHaveBeenCalled();
 	});
 
 	// A cleared number field is dropped from the payload rather than sent as null,
@@ -750,18 +819,32 @@ describe('run of show validation', () => {
 		);
 	});
 
-	it('turns a blank note into null rather than an empty string', async () => {
-		await submit(productions.updateRunOfShowSlot, {
-			...SLOT,
-			setLengthMinutes: 30,
-			changeoverMinutes: 10,
-			techNotes: '   '
+	it('clears one row of the run of show with a blank time, leaving the others', async () => {
+		await submit(productions.setRunOfShowTime, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			row: 'curfew',
+			time: ''
 		});
 
-		expect(runOfShow.updateSlot).toHaveBeenCalledWith(
-			'slot-1',
-			expect.objectContaining({ techNotes: null, soundcheckAt: null })
-		);
+		const [, patch] = service.updateProductionDetails.mock.calls[0] as [
+			string,
+			Record<string, unknown>
+		];
+		expect(patch.curfewAt).toBeNull();
+		expect(patch.firstSetAt).toBeUndefined();
+	});
+
+	it('puts a small-hours time after midnight, on the morning after the show date', async () => {
+		await submit(productions.setRunOfShowTime, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			row: 'curfew',
+			time: '00:30'
+		});
+
+		const [, patch] = service.updateProductionDetails.mock.calls[0] as [string, { curfewAt: Date }];
+		expect(patch.curfewAt.getTime()).toBeGreaterThan(new Date('2026-11-06T03:00:00Z').getTime());
 	});
 });
 
