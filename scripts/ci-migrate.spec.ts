@@ -1,13 +1,15 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, it, expect, vi } from 'vitest';
 import {
 	appliedMigrationNames,
 	classifyMigration,
+	contractPrProblems,
 	isProductionBranch,
 	pendingMigrations,
 	planMigrate,
 	rebuiltTables,
-	tableColumns
+	tableColumns,
+	unknownApplied
 } from './ci-migrate.mjs';
 
 // `build` no longer runs this script — it is `vite build`, and the migrate is invoked
@@ -238,5 +240,88 @@ describe('appliedMigrationNames', () => {
 			Response.json({ success: false, errors: [{ message: 'no such table' }] }, { status: 400 })
 		);
 		await expect(appliedMigrationNames(creds, fetch)).rejects.toThrow(/no such table/);
+	});
+});
+
+// #3411: #2629 shipped a drop with two expands, and its build ran the drop before publish. Two
+// queue builds were then in flight, and the older release published last, over a schema that no
+// longer had the tables it read.
+const DROP = '20261112204720_drop_funder_sponsor_contractor';
+const INCIDENT = [DROP, '20261112204736_parties', '20261112205424_development_contact_grants'];
+
+describe('planMigrate without the after-publish flag', () => {
+	const kindOf = (name: string) => ({ name, kind: classifyMigration(committed(name)) });
+
+	it("refuses #2629's batch instead of running the drop before publish", () => {
+		expect(planMigrate(INCIDENT.map(kindOf), { deferDrops: false }).when).toBe('refuse');
+	});
+
+	it('refuses a contract-only batch, naming the flag and the drop', () => {
+		const plan = planMigrate([{ name: '2_drop', kind: 'contract' }], { deferDrops: false });
+		expect(plan.when).toBe('refuse');
+		expect(plan.when === 'refuse' && plan.reason).toMatch(/2_drop[\s\S]*CMC_MIGRATE_AFTER_PUBLISH/);
+	});
+
+	it('still migrates an expand-only batch before publish', () => {
+		expect(planMigrate([{ name: '1_add', kind: 'expand' }], { deferDrops: false })).toEqual({
+			when: 'before'
+		});
+	});
+});
+
+describe('unknownApplied', () => {
+	const all = readdirSync(new URL('../migrations/', import.meta.url)).sort();
+	// #2634's tree: everything before the drop.
+	const before = all.filter((n) => n < DROP);
+
+	it("names what production has applied that an older build's migrations lack", () => {
+		expect(unknownApplied(before, [...before, ...INCIDENT])).toEqual(INCIDENT);
+	});
+
+	it('is empty when this build carries more than production has, the normal case', () => {
+		expect(unknownApplied([...before, ...INCIDENT], before)).toEqual([]);
+		expect(unknownApplied(before, before)).toEqual([]);
+	});
+});
+
+describe('contractPrProblems', () => {
+	const added = INCIDENT.map((name) => ({ name, sql: committed(name) }));
+	const only = (name: string) => [{ name, sql: committed(name) }];
+	const lone = [{ name: '1_drop', sql: 'DROP TABLE `sponsor`;' }];
+
+	it("flags #2629's shape twice: expands beside the drop, and app code changed with it", () => {
+		const problems = contractPrProblems({
+			added,
+			changed: [
+				...INCIDENT.map((n) => `migrations/${n}/migration.sql`),
+				'src/lib/server/sponsor/sponsor-service.ts'
+			]
+		});
+		expect(problems).toHaveLength(2);
+		expect(problems[0]).toMatch(/20261112204736_parties/);
+		expect(problems[1]).toMatch(/sponsor-service\.ts/);
+	});
+
+	it('passes a drop that changes only migrations, the schema, docs and specs', () => {
+		expect(
+			contractPrProblems({
+				added: lone,
+				changed: [
+					'migrations/1_drop/migration.sql',
+					'src/lib/server/db/schema/sponsor.ts',
+					'docs/reports/features/sponsors.md',
+					'src/lib/server/sponsor/sponsor-service.spec.ts'
+				]
+			})
+		).toEqual([]);
+	});
+
+	it('passes an expand-only PR that changes app code', () => {
+		expect(
+			contractPrProblems({
+				added: only('20261112204736_parties'),
+				changed: ['src/lib/server/party/party-service.ts']
+			})
+		).toEqual([]);
 	});
 });

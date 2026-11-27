@@ -51,9 +51,23 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
    build step reads each rebuilt table's columns from production to tell (#1747). A rebuild that
    keeps every column changes a constraint instead, and runs before publish.
 
-   Without that variable every migration runs before publish, exactly as before. So a drop is
-   safe unattended only while both dashboard fields below are set; if the deploy command loses
-   its `--after-publish` half, drops pile up unapplied until the next add fails the build.
+   Without that variable a batch holding a drop **fails the build** (exit 1), because nothing would
+   run it after publish and running it before breaks the Worker still serving. An expand-only
+   batch still runs before publish. So a drop needs both dashboard fields below set; if the deploy
+   command loses its `--after-publish` half, drops pile up unapplied until the next add fails the
+   build. The refusals are deliberate: a drop racing code that reads it is an integrity failure,
+   not a warning.
+
+   **Out-of-order publish.** Two queue entries can build at once, and the older build can finish
+   last. On 2026-11-12 the build of #2629 (a drop) published, then #2634's build, which had started
+   first, published over it. That code still read `sponsor` and `funder`, so event pages 500ed
+   until the next build published (#3411). The deploy command therefore starts with
+   `pnpm ci:migrate --before-publish`, which exits 1 if production has applied a migration this
+   build's `migrations/` lacks: the build is older than the schema, so it does not publish. That
+   shows as a failed Workers Builds check on the queue SHA, expected and not a required check.
+   A drop also ships alone (conventions.md, "Drops ship last"), so the release before it no longer
+   reads what it removes. A build two or more releases old and still in flight can still slip
+   between the check and `wrangler deploy`; only deploys serialised in GitHub Actions close that.
 
    The queue branch counts as production because Cloudflare builds and publishes it, then
    does **not** build again when the queue fast-forwards `main` onto that same SHA — the
@@ -74,11 +88,12 @@ pnpm build`: `build` is `vite build` and does **not** migrate, so the dashboard 
 
 The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 
-- the **deploy command**, `npx wrangler deploy && pnpm ci:migrate --after-publish`, together
-  with the build variable `CMC_MIGRATE_AFTER_PUBLISH=1`. Set both or neither. If the merge
-  queue's branch is built as a non-production branch, the same applies to the
-  **non-production branch deploy command**; `ci-migrate.mjs` does its own branch check, so the
-  suffix is harmless on a preview build;
+- the **deploy command**,
+  `pnpm ci:migrate --before-publish && npx wrangler deploy && pnpm ci:migrate --after-publish`,
+  together with the build variable `CMC_MIGRATE_AFTER_PUBLISH=1`. Set both: without the variable
+  a drop fails the build. If the merge queue's branch is built as a non-production branch, the
+  same applies to the **non-production branch deploy command**; `ci-migrate.mjs` does its own
+  branch check, so the extra steps are harmless on a preview build;
 - two **build environment variables** used by `drizzle.config.ts` for the remote migrate:
   `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_D1_TOKEN` (an API token scoped Account → D1 → Edit).
   `CLOUDFLARE_DATABASE_ID` is no longer among them — `drizzle.config.ts` reads the id from
@@ -635,7 +650,8 @@ the migrate uses, and after the migrations so any new help column exists (#1698)
 
 - with `CMC_MIGRATE_AFTER_PUBLISH=1`, in the deploy command's `ci:migrate --after-publish`,
   once the new Worker is live;
-- without it, in the build command's `ci:migrate`, right after the migrate and before publish.
+- without it, in the build command's `ci:migrate`, right after the migrate and before publish
+  (a batch holding a drop never gets that far: it fails the build).
 
 The sync is idempotent, so running it on every deploy is safe. It never publishes: a **new**
 article lands in production as a draft for staff to publish from Staff → Help, and an update
