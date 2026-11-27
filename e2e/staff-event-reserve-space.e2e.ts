@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
+import { expectSuccessToast } from './toast';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	bookingDate,
@@ -105,23 +106,41 @@ async function createEvent(
 }
 
 /**
- * Tick the hold and wait for its time fields. The form is on the page from the
- * first paint, so a tick can land before hydration and be reset by it: the box
- * unticks and no hold is saved. Ticking again until the fields mount survives it.
+ * The listing form is server-rendered, so it is on the page before it is
+ * interactive. `data-ready` is set once it has mounted.
+ */
+const readyForm = (page: Page) => page.locator('[data-testid="listing-form"][data-ready]');
+
+/**
+ * Tick the hold once the form is interactive, and wait for the form to carry it.
+ * The time fields mount before their values and the `rebookReservation` flag
+ * reach the DOM (the commit waits on the conflict query), and a submit reads the
+ * DOM, so a save in that gap posts no hold and still reports success.
  */
 async function tickReserveSpace(page: Page) {
-	await expect(async () => {
-		await page.getByTestId('reserve-space').check();
-		await expect(
-			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-		).toBeVisible({ timeout: 1000 });
-	}).toPass({ timeout: 15000 });
+	await expect(readyForm(page)).toBeVisible();
+	await page.getByTestId('reserve-space').check();
+	await expect(page.locator('input[type="hidden"][name*="rebookReservation"]')).toBeAttached();
+	await expect(
+		page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+	).not.toHaveValue('');
+}
+
+/**
+ * Submit the listing form and wait until it is saved and re-seeded. The success
+ * toast is raised after the page refresh and the form's re-key, so anything
+ * typed before it would be thrown away with the old form.
+ */
+async function saveListing(page: Page) {
+	await saveButton(page).click();
+	await expectSuccessToast(page);
+	await expect(readyForm(page)).toBeVisible();
 }
 
 /** From the listing: tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
 	await tickReserveSpace(page);
-	await saveButton(page).click();
+	await saveListing(page);
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 		timeout: 15000
 	});
@@ -273,7 +292,7 @@ test.describe('staff event edit — reserve space', () => {
 		).toHaveValue(EVENT_END);
 
 		// The listing form's submit, not the bill's, which renders beside it.
-		await saveButton(page).click();
+		await saveListing(page);
 
 		// Presence of the link proves the reservation was created AND linked. By
 		// href, not by wording: the card is an EntityIdentity now.

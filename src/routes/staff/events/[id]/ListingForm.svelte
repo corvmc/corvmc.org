@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -185,6 +186,15 @@
 		}
 	}
 
+	// Hydration adopts a box ticked before it ran without firing its change
+	// handler, so the hold would open with empty times and post nothing.
+	// `ready` marks the form as interactive.
+	let ready = $state(false);
+	onMount(() => {
+		if (reserveSpace && !holdStart) toggleReserveSpace();
+		ready = true;
+	});
+
 	function clearHold() {
 		holdStart = '';
 		holdEnd = '';
@@ -285,6 +295,7 @@
 		successToast={m.events_listing_edit_form_success_toast()}
 		onsuccess={onsaved}
 		data-testid="listing-form"
+		data-ready={ready || undefined}
 	>
 		<input {...fields.eventId.as('hidden', event.id)} />
 		{#if where !== 'venue'}
