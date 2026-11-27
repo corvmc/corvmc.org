@@ -248,3 +248,59 @@ describe('NotificationBell rows', () => {
 		expect(dot.getAttribute('aria-hidden')).toBe('true');
 	});
 });
+
+/**
+ * A daily summary is a row with no link of its own whose `data` lists the
+ * notices it holds (#3409). Each linked item is a way into the app, so they
+ * are located by href, and a summary's overflow is a count, not more links.
+ */
+describe('NotificationBell daily summary', () => {
+	const summary = (count: number, items: { title: string; href: string | null }[]) =>
+		({
+			id: 'digest-1',
+			userId: 'u',
+			type: 'notification_digest',
+			title: 'Daily summary',
+			body: `${count} notices`,
+			href: null,
+			data: { ids: items.map((_, i) => `n${i}`), items, count },
+			readAt: null,
+			createdAt: new Date()
+		}) as ChromeNotification;
+
+	it('links each noticed item and marks the summary read on click', async () => {
+		const { locator } = await render(NotificationBell, {
+			notifications: [
+				summary(2, [
+					{ title: 'One', href: '/member/tasks' },
+					{ title: 'Two', href: null }
+				])
+			],
+			unreadCount: 1
+		});
+		await locator.getByRole('button').first().click();
+
+		const links = Array.from(
+			document.querySelectorAll<HTMLAnchorElement>('.notification-bell-wrapper ul a')
+		);
+		expect(links.map((a) => a.getAttribute('href'))).toEqual(['/member/tasks']);
+		expect(document.querySelectorAll('.notification-bell-wrapper ul li')).toHaveLength(2);
+
+		links[0].addEventListener('click', (e) => e.preventDefault());
+		links[0].click();
+		const { markNotificationRead } = await import('#lib/remote/notifications.remote.js');
+		expect(markNotificationRead).toHaveBeenCalledWith({ id: 'digest-1' });
+	});
+
+	it('counts the notices beyond the ones listed', async () => {
+		const items = Array.from({ length: 8 }, (_, i) => ({ title: `Item ${i}`, href: null }));
+		const { locator } = await render(NotificationBell, {
+			notifications: [summary(11, items)],
+			unreadCount: 1
+		});
+		await locator.getByRole('button').first().click();
+
+		expect(document.querySelectorAll('.notification-bell-wrapper ul li')).toHaveLength(8);
+		expect(document.querySelector('.notification-bell-wrapper ul + p')?.textContent).toContain('3');
+	});
+});

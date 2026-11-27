@@ -23,6 +23,12 @@ export type InAppDelivery = 'immediate' | 'digest' | 'digestIfLater';
 
 export const DIGEST_HOLD_MS = 24 * 60 * 60 * 1000;
 
+/** The `data` key that marks an in-app row as held for the daily digest. */
+export const HELD_FOR_DIGEST = 'heldForDigest';
+
+/** The type of the summary row the daily digest writes. */
+export const DIGEST_TYPE = 'notification_digest';
+
 export interface NotificationTypeDef {
 	key: string;
 	label: string;
@@ -850,7 +856,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
-		key: 'notification_digest',
+		key: DIGEST_TYPE,
 		category: 'membership',
 		inAppDelivery: 'immediate',
 		label: 'Daily summary',
