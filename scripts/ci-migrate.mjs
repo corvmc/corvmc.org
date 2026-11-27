@@ -1,13 +1,15 @@
 // Apply pending D1 migrations to remote, but ONLY for a build that publishes to production.
-// Two invocations from the Cloudflare Workers Builds dashboard, which code review cannot see:
-// `pnpm ci:migrate` in the build command, ahead of `pnpm build`, and
-// `pnpm ci:migrate --after-publish` in the deploy command, after `wrangler deploy`.
-// docs/architecture/operations-manual.md §1 has both fields. When the dashboard lost the first
+// Three invocations from the Cloudflare Workers Builds dashboard, which code review cannot see:
+// `pnpm ci:migrate` in the build command; `pnpm ci:migrate --before-publish` ahead of
+// `wrangler deploy`, which refuses a build older than production's schema (#3411); and
+// `pnpm ci:migrate --after-publish` after it. `--check-pr` is CI's check that a drop ships alone.
+// docs/architecture/operations-manual.md §1 has the fields. When the dashboard lost the first
 // one (#267), a rename shipped without its migration and every band route 500ed.
 //
 // Requires CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_D1_TOKEN in the build environment.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readSnapshot } from './db/d1-ddl.mjs';
 
 const PROD_BRANCH = 'main';
 // GitHub's merge queue builds each entry on a temporary branch named
@@ -18,9 +20,8 @@ const PROD_BRANCH = 'main';
 // `main` specifically — a queue on another base is not production.
 const PROD_QUEUE_PREFIX = `gh-readonly-queue/${PROD_BRANCH}/`;
 
-// Set in the build environment only once the deploy command runs `--after-publish`. Unset,
-// every migration runs before publish, as it always did: a drop then breaks the live Worker for
-// the length of the build, but nothing is ever skipped.
+// Set in the build environment only once the deploy command runs `--after-publish`. Unset, a
+// batch holding a drop is refused: running it before publish breaks the live Worker (#3411).
 const AFTER_PUBLISH_FLAG = 'CMC_MIGRATE_AFTER_PUBLISH';
 
 const MIGRATIONS = new URL('../migrations/', import.meta.url);
@@ -156,16 +157,29 @@ export function pendingMigrations(local, applied) {
 
 /**
  * When the pending batch may run. `drizzle-kit migrate` applies all of it in one go, so a batch
- * that needs both sides of the publish cannot be split and is refused instead.
+ * that needs both sides of the publish cannot be split and is refused instead. Without
+ * `deferDrops` nothing runs after the publish, so a drop is refused rather than run early.
  *
  * @param {{ name: string, kind: 'contract' | 'expand' | 'mixed' }[]} pending
+ * @param {{ deferDrops?: boolean }} [options]
  * @returns {{ when: 'none' | 'before' | 'after' } | { when: 'refuse', reason: string }}
  */
-export function planMigrate(pending) {
+export function planMigrate(pending, { deferDrops = true } = {}) {
 	if (pending.length === 0) return { when: 'none' };
 	const mixed = pending.filter((m) => m.kind === 'mixed');
 	const contract = pending.filter((m) => m.kind === 'contract');
 	const expand = pending.filter((m) => m.kind === 'expand');
+	if (!deferDrops && contract.length > 0 && mixed.length === 0) {
+		return {
+			when: 'refuse',
+			reason:
+				`${contract.map((m) => m.name).join(', ')} drops something, and ${AFTER_PUBLISH_FLAG} ` +
+				`is unset, so nothing would run it after publish, and running it now breaks the ` +
+				`Worker still serving. Set ${AFTER_PUBLISH_FLAG}=1 as a build variable and make the ` +
+				`deploy command \`pnpm ci:migrate --before-publish && npx wrangler deploy && pnpm ` +
+				`ci:migrate --after-publish\`.`
+		};
+	}
 	if (mixed.length > 0) {
 		return {
 			when: 'refuse',
@@ -237,6 +251,31 @@ export async function tableColumns(creds, table, fetchImpl = fetch) {
 	return names.length ? names : undefined;
 }
 
+/**
+ * Applied names this build's `migrations/` lacks: production's schema is newer than this code.
+ *
+ * @param {string[]} local
+ * @param {string[]} applied
+ */
+export function unknownApplied(local, applied) {
+	const have = new Set(local);
+	return applied.filter((name) => !have.has(name));
+}
+
+function localMigrations() {
+	return readdirSync(MIGRATIONS, { withFileTypes: true })
+		.filter((d) => d.isDirectory() && existsSync(new URL(`${d.name}/migration.sql`, MIGRATIONS)))
+		.map((d) => d.name);
+}
+
+function remoteCreds() {
+	return {
+		accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? '',
+		databaseId: databaseId(),
+		token: process.env.CLOUDFLARE_D1_TOKEN ?? ''
+	};
+}
+
 function databaseId() {
 	if (process.env.CLOUDFLARE_DATABASE_ID) return process.env.CLOUDFLARE_DATABASE_ID;
 	const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
@@ -245,15 +284,10 @@ function databaseId() {
 	return id;
 }
 
-async function planFromRemote() {
-	const local = readdirSync(MIGRATIONS, { withFileTypes: true })
-		.filter((d) => d.isDirectory() && existsSync(new URL(`${d.name}/migration.sql`, MIGRATIONS)))
-		.map((d) => d.name);
-	const creds = {
-		accountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? '',
-		databaseId: databaseId(),
-		token: process.env.CLOUDFLARE_D1_TOKEN ?? ''
-	};
+/** @param {{ deferDrops: boolean }} options */
+async function planFromRemote({ deferDrops }) {
+	const local = localMigrations();
+	const creds = remoteCreds();
 	const applied = await appliedMigrationNames(creds);
 	// Columns as production has them now, before any of the batch. A table an earlier pending
 	// migration changes reads slightly off, but the batch is planned as one either way.
@@ -269,7 +303,102 @@ async function planFromRemote() {
 		pending.push({ name, kind: classifyMigration(sql, columns) });
 	}
 	for (const m of pending) console.log(`ci:migrate — pending ${m.name} (${m.kind})`);
-	return planMigrate(pending);
+	return planMigrate(pending, { deferDrops });
+}
+
+// A drop ships in a PR that changes nothing the app reads: the release already serving must have
+// stopped using what it removes (#3411). Specs, seeds and docs cannot break a live Worker.
+const SCHEMA_ONLY = [
+	/^migrations\//,
+	/^src\/lib\/server\/db\/schema\//,
+	/^docs\//,
+	/^scripts\/seed-dev\.ts$/,
+	/^scripts\/seed\//,
+	/^e2e\/fixtures\//,
+	/\.spec\.ts$/
+];
+
+/**
+ * What is wrong with a PR that adds a drop, one string each.
+ *
+ * @param {{
+ *   added: { name: string, sql: string, columns?: Map<string, string[]> }[],
+ *   changed: string[]
+ * }} pr
+ */
+export function contractPrProblems({ added, changed }) {
+	const kinds = added.map((m) => ({ name: m.name, kind: classifyMigration(m.sql, m.columns) }));
+	const drops = kinds.filter((m) => m.kind !== 'expand');
+	if (drops.length === 0) return [];
+	const list = (/** @type {typeof kinds} */ ms) => ms.map((m) => m.name).join(', ');
+	const problems = [];
+	const mixed = kinds.filter((m) => m.kind === 'mixed');
+	const expand = kinds.filter((m) => m.kind === 'expand');
+	if (mixed.length > 0 || expand.length > 0) {
+		const parts = [];
+		if (mixed.length > 0) parts.push(`${list(mixed)} both adds and drops`);
+		if (expand.length > 0) parts.push(`${list(drops)} drops beside ${list(expand)}, which adds`);
+		problems.push(
+			`${parts.join('; ')}. Ship the drop in a PR of its own, after the release that stops ` +
+				`reading it has deployed.`
+		);
+	}
+	const outside = changed.filter((f) => !SCHEMA_ONLY.some((re) => re.test(f)));
+	if (outside.length > 0) {
+		problems.push(
+			`${list(drops)} drops something, and this PR also changes ${outside.join(', ')}. A drop PR ` +
+				`may change only migrations, the schema, docs, seeds and specs: the release already ` +
+				`serving must have stopped reading it.`
+		);
+	}
+	return problems;
+}
+
+/** @param {string[]} args */
+function git(args) {
+	return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+}
+
+// Each rebuilt table's columns before the PR, from the one snapshot at the merge base
+// (prune-snapshots keeps the newest, and a PR's own migration replaces it).
+/** @param {string} base @param {string} sql */
+function baseColumns(base, sql) {
+	/** @type {Map<string, string[]>} */
+	const columns = new Map();
+	const tables = rebuiltTables(sql);
+	if (tables.length === 0) return columns;
+	const path = git(['ls-tree', '-r', '--name-only', base, '--', 'migrations'])
+		.split('\n')
+		.find((f) => f.endsWith('/snapshot.json'));
+	if (!path) return columns;
+	const snap = readSnapshot(JSON.parse(git(['show', `${base}:${path}`])));
+	for (const t of tables) {
+		const cols = snap.columns.get(t);
+		if (cols)
+			columns.set(
+				t,
+				cols.map((c) => c.name)
+			);
+	}
+	return columns;
+}
+
+function checkPr() {
+	const base = git(['merge-base', process.env.BASE_REF ?? 'origin/main', 'HEAD']).trim();
+	const diff = (/** @type {string[]} */ extra) =>
+		git(['diff', '--name-only', ...extra, `${base}...HEAD`])
+			.split('\n')
+			.filter(Boolean);
+	const added = diff(['--diff-filter=A', '--', 'migrations/*/migration.sql']).map((file) => {
+		const sql = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+		return { name: file.split('/')[1], sql, columns: baseColumns(base, sql) };
+	});
+	const problems = contractPrProblems({ added, changed: diff([]) });
+	for (const p of problems) console.error(`ci:migrate --check-pr — ${p}`);
+	if (problems.length > 0) process.exit(1);
+	console.log(
+		`ci:migrate --check-pr — ${added.length} added migration(s), no drop shipped with code.`
+	);
 }
 
 function migrate() {
@@ -289,6 +418,8 @@ async function main() {
 	const branch = process.env.WORKERS_CI_BRANCH ?? process.env.CF_PAGES_BRANCH ?? '';
 	const afterPublish = process.argv.includes('--after-publish');
 
+	if (process.argv.includes('--check-pr')) return checkPr();
+
 	if (!isProductionBranch(branch)) {
 		console.log(
 			`ci:migrate — branch "${branch || '(unknown)'}" is neither "${PROD_BRANCH}" nor a "${PROD_QUEUE_PREFIX}*" merge queue branch, skipping remote migrate.`
@@ -297,6 +428,15 @@ async function main() {
 	}
 
 	const kind = branch === PROD_BRANCH ? 'production branch' : 'production merge queue';
+	if (process.argv.includes('--before-publish')) {
+		const stale = unknownApplied(localMigrations(), await appliedMigrationNames(remoteCreds()));
+		if (stale.length === 0) return console.log('ci:migrate — build is not older than the schema.');
+		// Shows as a failed Workers Builds check on the queue SHA, which is not a required check.
+		console.error(
+			`ci:migrate — production already has ${stale.join(', ')}; a newer build owns production, not publishing.`
+		);
+		process.exit(1);
+	}
 	if (afterPublish) {
 		// Whatever the build step left pending is contract-only by construction.
 		console.log(`ci:migrate — applying deferred D1 migrations after publish (${kind})…`);
@@ -304,17 +444,20 @@ async function main() {
 		return syncHelp();
 	}
 
-	if (process.env[AFTER_PUBLISH_FLAG] !== '1') {
-		console.log(`ci:migrate — ${AFTER_PUBLISH_FLAG} unset, so every migration runs now.`);
-		console.log(`ci:migrate — applying D1 migrations to remote (${kind}, branch "${branch}")…`);
-		migrate();
-		// No --after-publish step follows, so this is the last chance.
-		return syncHelp();
-	}
-	const plan = await planFromRemote();
+	const deferDrops = process.env[AFTER_PUBLISH_FLAG] === '1';
+	if (!deferDrops) console.log(`ci:migrate — ${AFTER_PUBLISH_FLAG} unset, so a drop is refused.`);
+	const plan = await planFromRemote({ deferDrops });
 	if (plan.when === 'refuse') {
 		console.error(`ci:migrate — refusing to deploy. ${plan.reason}`);
 		process.exit(1);
+	}
+	if (!deferDrops) {
+		if (plan.when === 'before') {
+			console.log(`ci:migrate — applying D1 migrations to remote (${kind}, branch "${branch}")…`);
+			migrate();
+		}
+		// No --after-publish step follows, so this is the last chance.
+		return syncHelp();
 	}
 	if (plan.when === 'none') return console.log('ci:migrate — nothing pending.');
 	if (plan.when === 'after') {

@@ -30,6 +30,12 @@ When building a new feature, work through these phases in order:
    shapes, enums). If the migration rebuilds a table, read
    [table rebuilds on D1](#table-rebuilds-on-d1) below.
 
+   **Drops ship last (expand/contract).** Removing a table or column takes two PRs: the first
+   stops every read and write and deploys; the second removes it from the schema and generates
+   the drop, and changes nothing else under `src/`. `ci-migrate --check-pr` fails a PR that
+   does both. Not a grep for remaining references, because table names collide with ordinary
+   words and it cannot see the release already serving (#3411).
+
    **Extend the seed in the same change.** A feature owns one file in `scripts/seed/`,
    one call in `main()` (`scripts/seed-dev.ts`) placed where its inputs already exist, and
    one line in the summary block. Every surface built between the
@@ -957,7 +963,7 @@ Every script in `package.json`:
 | `volunteer:seed-roles`      | Seed the volunteer role catalogue (`scripts/seed-volunteer-roles.ts`)                                                                                      |
 | `db:reset`                  | Wipe local D1 + migrate + seed                                                                                                                             |
 | `db:studio`                 | drizzle-kit studio GUI (**remote** D1 — needs `CLOUDFLARE_*` vars)                                                                                         |
-| `ci:migrate`                | Remote migrate on `main` only; drop-only batches wait for `--after-publish` (ops manual §1)                                                                |
+| `ci:migrate`                | Remote migrate on `main` only; drop-only batches wait for `--after-publish`; `--before-publish`, `--check-pr` (ops manual §1)                              |
 | `stripe:sync-webhooks`      | Sync the Stripe webhook endpoint's event list to the code registry                                                                                         |
 | `help:sync`                 | Upsert `src/content/help/**` articles into local D1; `--remote` writes production (deploys run it)                                                         |
 | `docs:routes`               | Regenerate the route snapshot `docs/manual/route-inventory.json`                                                                                           |
