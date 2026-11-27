@@ -438,7 +438,7 @@ describe('fake gateway behaviour', () => {
 		const intent = await gateway.paymentIntents.create({
 			amount: 1500,
 			currency: 'usd',
-			payment_method_types: ['card_present'],
+			allowed_payment_method_types: ['card_present'],
 			capture_method: 'automatic',
 			metadata: { type: 'door_ticket' }
 		});
@@ -471,7 +471,7 @@ describe('fake gateway behaviour', () => {
 			gateway.paymentIntents.create({
 				amount: 1500,
 				currency: 'usd',
-				payment_method_types: ['card_present'],
+				allowed_payment_method_types: ['card_present'],
 				metadata: { type: 'reader_reservation' }
 			});
 
