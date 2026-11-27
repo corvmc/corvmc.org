@@ -43,4 +43,44 @@ describe('focusHashTarget', () => {
 		expect(focusHashTarget('#%E0%A4%A')).toBe(false);
 		expect(document.activeElement).toBe(document.body);
 	});
+
+	// Class: a field that mounts after the hash is handled (a lazily imported editor).
+	describe('a field that mounts after navigation', () => {
+		function lateEditable(target: Element) {
+			const editable = document.createElement('div');
+			editable.setAttribute('contenteditable', 'true');
+			editable.setAttribute('role', 'textbox');
+			target.appendChild(editable);
+		}
+
+		it('moves focus from the toolbar into the editing area', async () => {
+			mount('<div id="bio"><div><button type="button">Bold</button></div></div>');
+			focusHashTarget('#bio');
+			expect(document.activeElement?.tagName).toBe('BUTTON');
+
+			lateEditable(document.getElementById('bio')!);
+
+			await expect.poll(() => document.activeElement?.getAttribute('role')).toBe('textbox');
+		});
+
+		it('focuses the field when the target was empty', async () => {
+			mount('<div id="bio"><input type="hidden" /></div>');
+			expect(focusHashTarget('#bio')).toBe(false);
+
+			lateEditable(document.getElementById('bio')!);
+
+			await expect.poll(() => document.activeElement?.getAttribute('role')).toBe('textbox');
+		});
+
+		it('leaves focus alone once the user has moved it', async () => {
+			mount('<div id="bio"><button type="button">Bold</button></div><input id="elsewhere" />');
+			focusHashTarget('#bio');
+			document.getElementById('elsewhere')!.focus();
+
+			lateEditable(document.getElementById('bio')!);
+			await new Promise((r) => requestAnimationFrame(r));
+
+			expect(document.activeElement?.id).toBe('elsewhere');
+		});
+	});
 });
