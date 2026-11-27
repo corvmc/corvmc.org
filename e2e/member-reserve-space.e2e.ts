@@ -40,3 +40,24 @@ test('the member Reserve space modal prices the chosen slot', async ({ page }) =
 	await expect(confirm.getByTestId('confirm-pricing')).toBeVisible({ timeout: 15000 });
 	await expect(confirm.getByTestId('confirm-pricing-error')).toHaveCount(0);
 });
+
+/**
+ * The first-booking card's link opens the dialog on its slot (#3410). Arriving
+ * with the params must open the dialog, not leave a dead page (the bands page's
+ * ?create=1 class). It stops before booking.
+ */
+test('a first-booking link opens the dialog on its slot', async ({ page }) => {
+	await signInAs(page, { email: SEED_APPLICANT_EMAIL, password: SEED_APPLICANT_PASSWORD });
+	await page.goto('/member');
+
+	const link = page.getByTestId('first-booking').getByRole('link').first();
+	await expect(link).toBeVisible({ timeout: 15000 });
+	const slot = new URL((await link.getAttribute('href')) ?? '', 'http://x').searchParams;
+	expect(slot.get('start')).toMatch(/^\d{2}:\d{2}$/);
+	await link.click();
+
+	const dialog = page.getByRole('dialog');
+	await expect(dialog).toBeVisible({ timeout: 15000 });
+	const startTime = dialog.locator('select:is([name="startTime"], [name^="startTime/"])');
+	await expect(startTime).toHaveValue(slot.get('start') ?? '', { timeout: 15000 });
+});

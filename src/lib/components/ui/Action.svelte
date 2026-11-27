@@ -53,6 +53,7 @@
 		outline = false,
 		class: className = '',
 		disabled = false,
+		open = $bindable(false),
 		canSubmit = true,
 		requiresAuth,
 		addAnotherLabel,
@@ -111,6 +112,8 @@
 		outline?: boolean;
 		class?: string;
 		disabled?: boolean;
+		/** Whether the modal is open; bind it to open the dialog from outside. */
+		open?: boolean;
 		/**
 		 * Gates the modal's submit while the form is not yet fillable — an owner
 		 * not chosen, an amount still zero. It deliberately does not touch the
@@ -153,10 +156,9 @@
 	// ---------------------------------------------------------------------------
 
 	let status = $state<Status>('idle');
-	let dialogOpen = $state(false);
 
 	function close() {
-		dialogOpen = false;
+		open = false;
 	}
 
 	// ---------------------------------------------------------------------------
@@ -185,7 +187,7 @@
 		try {
 			const result = await (action as () => Promise<unknown>)();
 			await minDelay;
-			dialogOpen = false;
+			open = false;
 			onsuccess?.(result);
 			toast.success(successToast ?? m.ui_action_succeeded_toast({ label }));
 			status = 'success';
@@ -194,7 +196,7 @@
 			// A 401 is "sign in first" (#1999), as in `Form`: go, and come back here.
 			const signIn = signInInterruptFor(err, page.url);
 			if (signIn) {
-				dialogOpen = false;
+				open = false;
 				await goto(signIn);
 				return;
 			}
@@ -224,7 +226,7 @@
 			addAnother = false;
 			formDirty = false;
 			askingDiscard = false;
-			dialogOpen = true;
+			open = true;
 		} else run();
 	}
 
@@ -246,7 +248,7 @@
 	function discard() {
 		askingDiscard = false;
 		formDirty = false;
-		dialogOpen = false;
+		open = false;
 	}
 
 	function handleFormSuccess(result?: unknown) {
@@ -266,7 +268,7 @@
 			onaddanother?.(result);
 			return;
 		}
-		dialogOpen = false;
+		open = false;
 		// What was typed lives on the remote form instance, not in the dialog, so
 		// a field-bound input would reopen showing the last submission.
 		remoteAction.fields.set({});
@@ -314,7 +316,7 @@
 {/if}
 
 {#if hasModal}
-	<Modal bind:open={dialogOpen} title={modalTitle} {maxWidth} {confirmClose}>
+	<Modal bind:open title={modalTitle} {maxWidth} {confirmClose}>
 		{#if body}
 			{@render body({ close, run, status })}
 		{:else if isForm}
@@ -378,9 +380,9 @@
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" variant="default" outline onclick={close}
-					>{m.ui_dismiss_label()}</Button
-				>
+				<Button type="button" variant="default" outline onclick={close}>
+					{m.ui_dismiss_label()}
+				</Button>
 				<Button type="button" variant="primary" onclick={run}>
 					{@render icon?.()}
 					{label}
