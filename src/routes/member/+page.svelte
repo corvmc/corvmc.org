@@ -19,6 +19,7 @@
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import JoinedBandsCard from './JoinedBandsCard.svelte';
 	import NoBandsCard from './NoBandsCard.svelte';
+	import VerifyEmailNotice from '#lib/components/member/VerifyEmailNotice.svelte';
 	import { getMemberLayoutContext } from './layout-context';
 	import { creditsToHours } from '#lib/config.js';
 
@@ -47,6 +48,9 @@
 	<JoinedBandsCard bands={data.joinedBands} />
 	<NeedsYouCard items={data.needsYou} />
 	<NoBandsCard bandCount={layout.current.userBands.length} />
+	{#if !data.emailVerified}
+		<VerifyEmailNotice />
+	{/if}
 
 	<!-- Reservations + Credits grid -->
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -71,10 +75,10 @@
 										     else what it is. A bare date read as unlabelled (#1821). -->
 										<p class="line-clamp-1 text-sm font-medium">
 											{formatDate(res.startsAt)}
-											<span class="opacity-60"
-												>· {res.bandName ??
-													(res.notes?.trim() || m.member_practice_reservation_text())}</span
-											>
+											<span class="opacity-60">
+												· {res.bandName ??
+													(res.notes?.trim() || m.member_practice_reservation_text())}
+											</span>
 										</p>
 										<p class="text-subtle">
 											{formatTimeRange(res.startsAt, res.endsAt)} · {formatDuration(
@@ -113,9 +117,9 @@
 					<p class="text-muted">
 						{m.member_become_sustaining_member_get_free_text()}
 					</p>
-					<Button href="/member/membership" variant="default" size="sm"
-						>{m.member_learn_more_label()}</Button
-					>
+					<Button href="/member/membership" variant="default" size="sm">
+						{m.member_learn_more_label()}
+					</Button>
 				</div>
 			{/if}
 		</InfoCard>

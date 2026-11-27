@@ -160,9 +160,9 @@ export async function seedDirectoryPersonas(roles: SeedRole[]) {
 	pendingTags.push({ subjectId: LEADER.id, kind: 'instrument', value: 'guitar' });
 
 	// --- the undecided: a finished profile with nothing to match on ----------
-	// The only persona with an unconfirmed address, so the account page's
-	// verification notice, its resend button and the staff panel's "Not yet"
-	// are all reachable by signing in as this one. `seedMarketing` puts an
+	// The only persona with an unconfirmed address, so the verification notice
+	// (member dashboard and account page), its resend button and the staff
+	// panel's "Not yet" are all reachable by signing in as this one. `seedMarketing` puts an
 	// unclaimed subscriber row under the same address for the refusal (#757).
 	const UNDECIDED = {
 		id: 'seed-dir-undecided',
