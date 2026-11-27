@@ -104,8 +104,8 @@ type FieldSchema = { safeParse?: (v: unknown) => { success: boolean } };
 /** `form.field` for every field whose schema refuses a missing value. */
 const REQUIRED = new Set<string>();
 
-/** Every exported `form()`, by name, with its schema's keys. */
-async function remoteForms() {
+/** Every exported `form()`, by name, with its schema's keys. Scanned once per file. */
+const remoteForms = once(async () => {
 	const byName = new Map<string, string[]>();
 	for (const m of globSync('src/lib/remote/*.remote.ts')) {
 		const mod: Record<string, { __?: { type?: string; i?: number } }> = await import(
@@ -125,13 +125,25 @@ async function remoteForms() {
 		}
 	}
 	return byName;
+});
+
+/** The text of every component that might render a form, read once per file. */
+const componentFiles = once(
+	async () =>
+		new Map(
+			globSync('src/{routes,lib/components}/**/*.svelte').map((p) => [p, readFileSync(p, 'utf8')])
+		)
+);
+
+/** Memoises an async scan: four `it`s read the same tree, and each read costs seconds. */
+function once<T>(scan: () => Promise<T>): () => Promise<T> {
+	let hit: Promise<T> | undefined;
+	return () => (hit ??= scan());
 }
 
-async function uncoveredFields() {
+const uncoveredFields = once(async () => {
 	const byName = await remoteForms();
-	const files = new Map(
-		globSync('src/{routes,lib/components}/**/*.svelte').map((p) => [p, readFileSync(p, 'utf8')])
-	);
+	const files = await componentFiles();
 
 	const out: string[] = [];
 	for (const [name, keys] of byName) {
@@ -156,7 +168,7 @@ async function uncoveredFields() {
 		}
 	}
 	return out;
-}
+});
 
 describe('the field-set escape hatch', () => {
 	const files = new Map([
@@ -181,11 +193,7 @@ describe('the field-set escape hatch', () => {
 });
 
 describe('form field coverage', () => {
-	// It reads every `form()` in the tree and every component that might render
-	// one, so it runs near the 5s default on its own and tips over it whenever
-	// a sibling file is competing for the machine. The budget is generous
-	// rather than tuned: this is one assertion over a whole-tree scan.
-	it('renders a control for every field its schema accepts', { timeout: 30_000 }, async () => {
+	it('renders a control for every field its schema accepts', async () => {
 		const grandfathered = new Set(GRANDFATHERED);
 		const offenders = (await uncoveredFields()).filter((f) => !grandfathered.has(f));
 
@@ -201,7 +209,7 @@ describe('form field coverage', () => {
 	// A listed field may be one the scan cannot see, or a capability not built
 	// yet. Neither excuses a required one: if nothing renders it, every submit
 	// of the form fails validation, as the booking rules did (#2753).
-	it('lists no field its schema requires', { timeout: 30_000 }, async () => {
+	it('lists no field its schema requires', async () => {
 		const uncovered = new Set(await uncoveredFields());
 		const blocking = [...uncovered].filter((f) => REQUIRED.has(f));
 
@@ -215,10 +223,8 @@ describe('form field coverage', () => {
 
 	// The field check above skips a form nothing names, so a whole form with no
 	// page slipped past it (#1426, #1528).
-	it('names every form() from some component', { timeout: 30_000 }, async () => {
-		const svelte = globSync('src/{routes,lib/components}/**/*.svelte')
-			.map((p) => readFileSync(p, 'utf8'))
-			.join('\n');
+	it('names every form() from some component', async () => {
+		const svelte = [...(await componentFiles()).values()].join('\n');
 		const hostless = [...(await remoteForms()).keys()].filter(
 			(name) => !new RegExp(`\\b${name}\\b`).test(svelte)
 		);

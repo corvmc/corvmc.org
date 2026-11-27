@@ -239,10 +239,12 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					// The whole-tree invariant specs (`src/*.spec.ts`, `scripts/`) parse or read
-					// every source file inside one `it`, and the cost grows with the tree and
-					// with how loaded the runner is. The 5s default timed out on CI in #1606
-					// and #3378; a spec that walks a tree needs no timeout of its own.
+					// every source file inside one `it` or `beforeAll`, and the cost grows with
+					// the tree and with how loaded the runner is. The 5s default timed out on
+					// CI in #1606 and #3378, the 10s hook default in #3387; a spec that walks a
+					// tree needs no timeout of its own.
 					testTimeout: 30_000,
+					hookTimeout: 30_000,
 					// Each test file gets a fresh VM context (so module + mock state stays
 					// isolated), but node_modules load once per worker instead of once per
 					// file. `drizzle-orm/sqlite-core` alone costs ~400ms to evaluate in a
