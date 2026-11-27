@@ -77,11 +77,10 @@ test('band addresses route by tier and history', async ({ page, request }) => {
 		await expect(page.getByTestId('epk-gallery')).toBeVisible();
 	});
 
-	// The negative control: no history row, so no forward.
-	await test.step('an unknown subdomain ends at a real directory 404', async () => {
+	// The negative control: no history row, so no forward and nothing rendered.
+	await test.step('an unknown subdomain is a bare 404', async () => {
 		const response = await page.goto(`${subdomain('no-such-band-xyz')}/`);
-		expect(page.url()).toContain('/directory/bands/no-such-band-xyz');
+		expect(page.url()).toContain('no-such-band-xyz');
 		expect(response?.status()).toBe(404);
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`);
 	});
 });
