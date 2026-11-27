@@ -73,23 +73,19 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 	// machine, and the only way `settled` and `closed` appear on screen at all.
 	add(past[0], 'closed', {
 		...schedule(past[0]?.startsAt ?? now),
-		producerUserId: producer,
 		internalNotes: 'Settled in cash the same night. Receipts in the folder.'
 	});
 	add(past[1], 'settled', {
 		...schedule(past[1]?.startsAt ?? now),
-		producerUserId: producer,
 		internalNotes: 'Payouts sent; close-out still owed.'
 	});
 	add(past[2], 'completed', {
-		...schedule(past[2]?.startsAt ?? now),
-		producerUserId: producer
+		...schedule(past[2]?.startsAt ?? now)
 	});
 
 	// The live work: one show fully advanced, one still waiting on an answer.
 	add(upcoming[0], 'confirmed', {
 		...schedule(upcoming[0]?.startsAt ?? now),
-		producerUserId: producer,
 		// Met: the bill has as many acts as it asked for, so it is finished
 		// rather than short. The contrast with `upcoming[1]` is the point.
 		actsWanted: 3,

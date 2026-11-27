@@ -89,12 +89,6 @@ export const production = sqliteTable(
 		 */
 		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
 
-		/**
-		 * The show's event lead (#2726). Booking names them; naming them grants
-		 * `production.run` on this project (`leadsProject`), not a position.
-		 */
-		producerUserId: text('producer_user_id').references(() => user.id, { onDelete: 'set null' }),
-
 		loadInAt: integer('load_in_at', { mode: 'timestamp' }),
 		soundcheckAt: integer('soundcheck_at', { mode: 'timestamp' }),
 		firstSetAt: integer('first_set_at', { mode: 'timestamp' }),
@@ -128,26 +122,6 @@ export const production = sqliteTable(
 		 * Both nullable: a show with no door take is not a show with a zero.
 		 */
 		doorCount: integer('door_count'),
-		/**
-		 * The six `door_cash_*` columns below are unused since #3273: the counts
-		 * live in `production_till_count`. Dropping them rebuilds this table.
-		 */
-		doorCashCents: integer('door_cash_cents'),
-		/** Who entered `door_cash_cents`, restamped whenever the figure changes. */
-		doorCashCountedByUserId: text('door_cash_counted_by_user_id').references(() => user.id, {
-			onDelete: 'set null'
-		}),
-		doorCashCountedAt: integer('door_cash_counted_at', { mode: 'timestamp' }),
-		/**
-		 * A second, independent count of the same drawer by somebody else (#2722).
-		 * A difference from `door_cash_cents` warns; it never replaces the first.
-		 */
-		doorCashRecountCents: integer('door_cash_recount_cents'),
-		doorCashRecountedByUserId: text('door_cash_recounted_by_user_id').references(() => user.id, {
-			onDelete: 'set null'
-		}),
-		doorCashRecountedAt: integer('door_cash_recounted_at', { mode: 'timestamp' }),
-
 		/**
 		 * What share of undesignated door cash goes to the acts, when this night
 		 * is not the house rule. Null means `DOOR_SPLIT_ACTS_PERCENT`, so raising
@@ -211,7 +185,6 @@ export const production = sqliteTable(
 
 		uniqueIndex('uq_production_project').on(t.projectId),
 		index('idx_production_status').on(t.status),
-		index('idx_production_producer').on(t.producerUserId),
 		// Passes on NULL, like every other CHECK here — most productions carry
 		// neither time until the advance is under way.
 		check(

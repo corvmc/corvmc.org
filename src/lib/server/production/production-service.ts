@@ -11,7 +11,6 @@ import {
 } from './production-scope';
 import { isTerminalProduction, transitionWarnings } from '#lib/production/status.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
-import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import { production } from '#lib/server/db/schema/production.js';
 import { and, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
@@ -115,7 +114,6 @@ export class InvalidReopenError extends DomainError {
 const PRE_COMPLETED: readonly ProductionStatus[] = ['draft', 'offered', 'confirmed'];
 
 export interface ProductionDetailsInput {
-	producerUserId?: string | null;
 	loadInAt?: Date | null;
 	soundcheckAt?: Date | null;
 	firstSetAt?: Date | null;
@@ -153,42 +151,26 @@ export async function getProduction(id: string): Promise<Production> {
 	return row;
 }
 
-export interface ProductionWithProducer extends Production {
-	/** The producer as a record, so the console can link to them. */
-	producer: import('#lib/types/entity.js').MemberRef | null;
-	/** Null when nobody has taken it, or when the account behind it was purged. */
-	producerName: string | null;
+export interface ProductionWithCloser extends Production {
 	/** Null until close-out is signed off, or once that account is purged. */
 	closedByName: string | null;
 }
 
 /**
- * The console's read. The producer's name rides along on a left join rather
- * than being looked up beside it — the console already loads everything in one
- * `Promise.all`, and a name is not worth a second round trip.
+ * The console's read. Who signed close-out off rides along on a left join
+ * rather than being looked up beside it. The show's lead is a task assignee,
+ * read with the crew (`getShowLead`).
  */
-export async function getProductionByEvent(
-	eventId: string
-): Promise<ProductionWithProducer | null> {
+export async function getProductionByEvent(eventId: string): Promise<ProductionWithCloser | null> {
 	const closer = alias(user, 'closed_by_user');
 	const [row] = await db
-		.select({
-			...getTableColumns(production),
-			producerName: user.name,
-			closedByName: closer.name,
-			// The producer as a record rather than a name: the console showed the
-			// string and gave no way to reach the person running the night.
-			producer: memberRefColumns()
-		})
+		.select({ ...getTableColumns(production), closedByName: closer.name })
 		.from(production)
-		.leftJoin(user, eq(user.id, production.producerUserId))
 		.leftJoin(closer, eq(closer.id, production.closedByUserId))
 		.where(announcedBy(eventId))
 		.limit(1);
 
-	if (!row) return null;
-	const { producer, ...rest } = row;
-	return { ...rest, producer: rest.producerUserId ? toMemberRef(producer) : null };
+	return row ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -336,8 +318,7 @@ export async function updateProductionDetails(
 	// A moved downbeat moves every set after it. Keyed on the field being
 	// *present* rather than on it having changed — comparing against a value read
 	// before the write is a race, and the recompute is idempotent and costs one
-	// select when nothing moved. `setShowLead` posts only
-	// `producerUserId`, so the common non-timing edit skips this entirely.
+	// select when nothing moved.
 	if ('firstSetAt' in data || 'changeoverMinutes' in data) await recomputeSetTimes(row.id);
 
 	return row;

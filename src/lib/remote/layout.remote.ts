@@ -10,7 +10,7 @@ import {
 	committeeCapabilitiesFor,
 	positionsFor
 } from '#lib/server/authorization.js';
-import { holdsLeadOnOpenShow, leadsOpenShow } from '#lib/server/capability/capability-grants.js';
+import { holdsLeadOnOpenShow } from '#lib/server/capability/capability-grants.js';
 import { hasLoanableItems } from '#lib/server/inventory/item-service.js';
 import { getAllFeatureFlags } from '#lib/server/feature-flags.js';
 import { countGroupInboxUnread, countUnifiedUnread } from '#lib/server/inbox/unified-service.js';
@@ -192,19 +192,14 @@ export const getStaffLayout = query(async () => {
 	if (!locals.user) throw redirect(302, signInHref());
 
 	// "May you open the panel at all": holding a position, a committee seat that
-	// grants a staff module org-wide (#1578), or leading an open show, whose
-	// console is under it (#2726). The capability set below decides which rows
+	// grants a staff module org-wide (#1578), or holding the event lead's role on an open
+	// show, whose console is under it (#2726, #3274). The capability set below decides which rows
 	// you are offered once you are inside.
 	const [positions, seat] = await Promise.all([
 		positionsFor(locals.user.id),
 		committeeCapabilitiesFor(locals.user.id).catch(() => [])
 	]);
-	if (
-		positions.length === 0 &&
-		seat.length === 0 &&
-		!(await leadsOpenShow(locals.user.id)) &&
-		!(await holdsLeadOnOpenShow(locals.user.id))
-	) {
+	if (positions.length === 0 && seat.length === 0 && !(await holdsLeadOnOpenShow(locals.user.id))) {
 		throw redirect(302, '/');
 	}
 

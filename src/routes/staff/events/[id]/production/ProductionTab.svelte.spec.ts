@@ -52,7 +52,7 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markRunOfShowDone ' +
 			'markSlotTiming moveRunOfShowSlot openHostShift ' +
 			'removeLineupAct reopenProduction ' +
-			'searchShowLeadCandidates setRunOfShowTerms setRunOfShowTime ' +
+			'setRunOfShowTerms setRunOfShowTime ' +
 			'setRiderStock updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
@@ -102,7 +102,7 @@ const props = { eventId: 'evt-1' };
 
 const startsAt = new Date('2031-05-10T03:00:00Z');
 
-function loaded(production: unknown, canSetLead = false) {
+function loaded(production: unknown) {
 	return {
 		detail: {
 			event: {
@@ -133,16 +133,13 @@ function loaded(production: unknown, canSetLead = false) {
 		hostShift: null,
 		deliverables: [],
 		deliverableCommittees: [],
-		budget: null,
-		canSetLead
+		budget: null
 	};
 }
 
 const record = {
 	id: 'prod-1',
 	status: 'draft',
-	producer: null,
-	producerUserId: null,
 	closedAt: null,
 	closedByName: null,
 	loadInAt: null,

@@ -104,11 +104,6 @@ export const relations = defineRelations(schema, (t) => ({
 	production: {
 		event: t.one.eventListing({ from: t.production.projectId, to: t.eventListing.projectId }),
 		project: t.one.project({ from: t.production.projectId, to: t.project.id }),
-		producer: t.one.user({
-			from: t.production.producerUserId,
-			to: t.user.id,
-			alias: 'production_producer'
-		}),
 		createdBy: t.one.user({
 			from: t.production.createdByUserId,
 			to: t.user.id,

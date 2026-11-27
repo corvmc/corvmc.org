@@ -8,7 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const positionsFor = vi.fn(async (_id: string) => [] as string[]);
 const committeeCapabilitiesFor = vi.fn(async (_id: string) => [] as string[]);
-const leadsOpenShow = vi.fn(async (_id: string) => false);
 const holdsLeadOnOpenShow = vi.fn(async (_id: string) => false);
 
 vi.mock('#lib/server/band/band-service.js', () => ({
@@ -26,7 +25,6 @@ vi.mock('#lib/server/authorization.js', () => ({
 	committeeCapabilitiesFor: (id: string) => committeeCapabilitiesFor(id)
 }));
 vi.mock('#lib/server/capability/capability-grants.js', () => ({
-	leadsOpenShow: (id: string) => leadsOpenShow(id),
 	holdsLeadOnOpenShow: (id: string) => holdsLeadOnOpenShow(id)
 }));
 vi.mock('#lib/server/inventory/item-service.js', () => ({
@@ -89,7 +87,6 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	positionsFor.mockResolvedValue([]);
 	committeeCapabilitiesFor.mockResolvedValue([]);
-	leadsOpenShow.mockResolvedValue(false);
 	holdsLeadOnOpenShow.mockResolvedValue(false);
 });
 
@@ -102,13 +99,6 @@ describe('getStaffLayout', () => {
 
 	it('still turns away someone with neither a position nor a seat', async () => {
 		await expect(layout.getStaffLayout()).rejects.toMatchObject({ status: 302, location: '/' });
-	});
-
-	it('opens the panel to the event lead of an open show', async () => {
-		leadsOpenShow.mockResolvedValue(true);
-		const out = await layout.getStaffLayout();
-		expect(out.capabilities).toEqual([]);
-		expect(leadsOpenShow).toHaveBeenCalledWith('user-1');
 	});
 
 	it('opens the panel to an event lead holding the role grant', async () => {

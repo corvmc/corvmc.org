@@ -210,9 +210,12 @@ describe('listDeliverablesDueBetween', () => {
 
 	// #2983 case 6: the event lead hears about the show's items too.
 	it("names the show's event lead", async () => {
-		exec(`insert into project (id, name, kind) values ('show', 'Friday', 'production')`);
-		exec(`update event_listing set project_id = 'show'`);
-		exec(`insert into production (id, project_id, producer_user_id) values ('pn', 'show', 'u3')`);
+		exec(`insert or ignore into volunteer_role (id, name) values ('lead-role', 'Event lead')`);
+		exec(
+			`insert into work_order (id, volunteer_role_id, event_id)
+			 select 'lead-task', id, 'evt' from volunteer_role where name = 'Event lead'`
+		);
+		exec(`insert into work_order_assignee (work_order_id, user_id) values ('lead-task', 'u3')`);
 		wo('poster', { group_id: 'art', due_at: T0 });
 		wo('report', { group_id: 'art', event_id: null, due_at: T0 });
 

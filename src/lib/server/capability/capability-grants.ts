@@ -166,34 +166,6 @@ export function orgWideCapabilities(seats: readonly CommitteeGrant[]): Capabilit
 	return [...new Set(caps)].filter((c) => grantRuleFor(c)?.committee === 'org') as Capability[];
 }
 
-/** What naming a person a show's event lead gives them on that show's project (#2726). */
-export const SHOW_LEAD_CAPABILITY = 'production.run' satisfies Capability;
-
-/** Is `userId` the event lead on the production that specialises `projectId`? */
-export async function leadsProject(userId: string, projectId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: production.id })
-		.from(production)
-		.where(and(eq(production.projectId, projectId), eq(production.producerUserId, userId)))
-		.limit(1);
-	return row != null;
-}
-
-/** Does `userId` lead any show that is not closed or cancelled? Opens the staff panel to them. */
-export async function leadsOpenShow(userId: string): Promise<boolean> {
-	const [row] = await db
-		.select({ id: production.id })
-		.from(production)
-		.where(
-			and(
-				eq(production.producerUserId, userId),
-				notInArray(production.status, [...TERMINAL_PRODUCTION_STATUSES])
-			)
-		)
-		.limit(1);
-	return row != null;
-}
-
 /** Active members of every live committee that grants `cap` org-wide, for fan-out. */
 export async function listCommitteeHolders(
 	cap: Capability
@@ -367,11 +339,11 @@ export async function holdsLeadOnOpenShow(
 	const rows = await roleGrantRows(
 		userId,
 		and(
-			eq(volunteerRoleCapability.capability, SHOW_LEAD_CAPABILITY),
+			eq(volunteerRoleCapability.capability, 'production.run'),
 			inArray(eventListing.projectId, open)
 		)
 	);
-	return rows.some((r) => roleRowLive(r, SHOW_LEAD_CAPABILITY, now));
+	return rows.some((r) => roleRowLive(r, 'production.run', now));
 }
 
 export interface LiveRoleGrant {

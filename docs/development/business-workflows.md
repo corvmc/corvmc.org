@@ -2498,10 +2498,11 @@ restore crew shifts or retract a cancellation notice.
    `roleGrantAllows`: `roleGrantAllowsOnProject` lets project-scoped `production.run` checks
    (`can`, `requireProjectCommittee`) see it. It starts when the lead is named and ends
    `graceDays` (7) after the show, with no lead time and so no 90-day cap. It also opens the
-   staff panel while the show is open (`holdsLeadOnOpenShow`). The old
-   `production.producer_user_id` grant (`leadsProject`; the `setShowLead` form is gone, so nothing sets it) still works beside it
-   until a later change retires it. Not `production.producer_user_id`, because a lead is a
-   volunteer task with no shift, and hours, claiming and the task's page already exist for one
+   staff panel while the show is open (`holdsLeadOnOpenShow`). The `production.producer_user_id`
+   column and its project grant are gone: a migration made each production's producer
+   the assignee of its lead task (and created the role, with both capabilities, where staff had
+   not), skipping a producer with no live account and a show whose lead task already had an
+   assignee. Not `production.producer_user_id`, because a lead is a volunteer task with no shift, and hours, claiming and the task's page already exist for one
    (#3274). Naming the lead moved from `production.book` to `volunteer.manageRoster`, so bookers
    lose the Assign button.
 5. `ProductionStatusAction` → `advanceProduction` →
@@ -2617,7 +2618,7 @@ restore crew shifts or retract a cancellation notice.
 
 - `production` — the record. It specialises one `project` (`project_id`, restrict, required
   by the `production_project_required` triggers); the listing reaches it through
-  `event_listing.project_id`. `producerUserId` and `createdByUserId` are both set-null,
+  `event_listing.project_id`. `createdByUserId` is set-null,
   because purging a staff account must not delete the collective's production records.
 - `project` (`kind = 'production'`) and `project_committee` — the show's budget, dates and
   committees.
@@ -2628,7 +2629,8 @@ restore crew shifts or retract a cancellation notice.
 - `financial_entry` — ticket rows read through the show's tickets, payout and expense rows by
   settlement group. The headcount and
   the door split stay on `production` (`doorCount`, `doorSplitActsPercent`). The six
-  `doorCash*` columns there are unused since #3273.
+  `doorCash*` columns that held the old counts were dropped (#3372) after #3273 copied them
+  into the table.
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
