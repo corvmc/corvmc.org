@@ -326,7 +326,10 @@ since the last pass, latched in `reminder_sent` like the open-shift digest
 (`reminders/daily-latch.ts`). Reading the summary reads the rows it lists. Email is unchanged for
 every type. Not a registry entry, because the registry dispatches once per member and these rows
 are written directly. Not `readAt` set at write time, because that would count unseen notices as
-read. Announcement and ballot fan-outs insert rows directly and stay immediate.
+read. Announcement and ballot fan-outs insert rows directly and stay immediate, as do
+`band_invitation` and `band_enquiry_received`. Not digest for those two, because most band
+invitations sit unanswered for weeks and a delay would make that worse. Not an email digest,
+because the issue is the bell's read rate (#3409).
 
 Every `dispatch` of a `digestIfLater` type passes `happensAt`: a `Date`, or `null` for a subject
 with no time, and `notification/digest-happens-at.spec.ts` fails a call that says neither. Not a
