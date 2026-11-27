@@ -1420,8 +1420,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	const projectId = production?.projectId ?? null;
 	const [budget, canBook] = await Promise.all([
 		projectId ? getProjectBurn(projectId).then((burn) => ({ projectId, burn })) : null,
-		// Booking names the event lead (#2726) and lists an act in the directory
-		// (#2780); everyone else sees who it is.
+		// Booking lists an act in the directory (#2780).
 		projectId ? can('production.book', { projectId }) : can('event.manage')
 	]);
 	return {
@@ -1437,7 +1436,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		hostShift,
 		deliverables,
 		deliverableCommittees: committees,
-		canSetLead: projectId ? canBook : false,
 		canBook,
 		canGuests,
 		guests

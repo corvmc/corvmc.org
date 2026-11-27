@@ -24,7 +24,7 @@ const ids = (list: { userId: string }[] | undefined) => (list ?? []).map((r) => 
 beforeEach(() => {
 	holders.mockClear();
 	sqlite.exec(`
-		delete from work_order; delete from production; delete from event_listing; delete from project;
+		delete from work_order_assignee; delete from work_order; delete from volunteer_role; delete from production; delete from event_listing; delete from project;
 		delete from group_position_holder; delete from group_position;
 		delete from group_member; delete from "group"; delete from "user";
 		insert into "user" (id, name, email, deleted_at) values
@@ -86,16 +86,26 @@ describe('taskNoticeRecipients', () => {
 });
 
 describe('showLeads', () => {
-	it("names each show's event lead", async () => {
+	it("names each show's event lead from its lead task", async () => {
 		sqlite.exec(`
-			insert into project (id, name, kind) values ('pr', 'Show', 'production'), ('pr2', 'Other', 'production');
-			insert into production (id, project_id, producer_user_id) values ('pn', 'pr', 'lead'), ('pn2', 'pr2', null);
+			insert into volunteer_role (id, name) values ('lead-role', 'Event lead'), ('other-role', 'Door');
+			insert into project (id, name, kind) values ('pr', 'Show', 'production');
 			insert into event_listing (id, title, starts_at, ends_at, kind, source, status, project_id, created_by_user_id) values
 				('ev', 'Show', unixepoch(), unixepoch() + 3600, 'show', 'cmc', 'published', 'pr', 'ana'),
-				('ev2', 'Other', unixepoch(), unixepoch() + 3600, 'show', 'cmc', 'published', 'pr2', 'ana');
+				('ev2', 'Other', unixepoch(), unixepoch() + 3600, 'show', 'cmc', 'published', null, 'ana'),
+				('ev3', 'Called off', unixepoch(), unixepoch() + 3600, 'show', 'cmc', 'published', null, 'ana'),
+				('ev4', 'Door only', unixepoch(), unixepoch() + 3600, 'show', 'cmc', 'published', null, 'ana');
+			insert into work_order (id, volunteer_role_id, event_id, title, cancelled_at) values
+				('t1', 'lead-role', 'ev', 'Event lead', null),
+				('t2', 'lead-role', 'ev2', 'Event lead', null),
+				('t3', 'lead-role', 'ev3', 'Event lead', unixepoch()),
+				('t4', 'other-role', 'ev4', 'Door', null);
+			insert into work_order_assignee (work_order_id, user_id) values
+				('t1', 'lead'), ('t3', 'ana'), ('t4', 'ben');
 		`);
-		const leads = await showLeads(['ev', 'ev2']);
+		const leads = await showLeads(['ev', 'ev2', 'ev3', 'ev4']);
 		expect(leads.get('ev')?.userId).toBe('lead');
-		expect(leads.has('ev2')).toBe(false);
+		// No assignee, a called-off task and another role's task name nobody.
+		expect([...leads.keys()]).toEqual(['ev']);
 	});
 });

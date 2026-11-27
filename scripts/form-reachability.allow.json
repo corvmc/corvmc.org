@@ -142,9 +142,6 @@
 	"src/lib/server/production/production-service.ts#createProduction(1)": {
 		"id": "internal: a caller-supplied id for batching with the show it belongs to"
 	},
-	"src/lib/server/production/production-service.ts#updateProductionDetails(1)": {
-		"producerUserId": "elsewhere: show-lead-service#setShowLead writes it; no form calls it since #3274"
-	},
 	"src/lib/server/project/decision-chain.ts#startProjectFromBallot(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",

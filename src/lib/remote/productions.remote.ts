@@ -41,7 +41,6 @@ import {
 	buildSlotsFromLineup
 } from '#lib/server/production/run-of-show-service.js';
 import { openHostShift as openHost } from '#lib/server/production/host-service.js';
-import { searchLeadCandidates } from '#lib/server/production/show-lead-service.js';
 import {
 	requestArtifact,
 	cancelArtifactRequest,
@@ -256,18 +255,6 @@ export const markRunOfShowDone = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-	}
-);
-
-/** Who a show's booker may name as its lead: members, by name, on the same guard. */
-export const searchShowLeadCandidates = query(
-	z.object({ eventId: z.string().min(1), q: z.string().max(100) }),
-	async ({ eventId, q }) => {
-		await requireProjectCommittee(
-			(await projectOfEvent(eventId))?.projectId ?? null,
-			'production.book'
-		);
-		return searchLeadCandidates(q);
 	}
 );
 

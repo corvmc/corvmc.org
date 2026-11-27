@@ -688,20 +688,6 @@ export interface ProductionCancelledEvent {
 	}>;
 }
 
-/** Somebody else named this person a show's event lead (#2726). */
-export interface ShowLeadAssignedEvent {
-	productionId: string;
-	eventId: string;
-	eventTitle: string;
-	/** ISO string — payload dates cross the bus serialized. */
-	startsAt: string;
-	leadUserId: string;
-	leadName: string;
-	leadEmail: string;
-	/** Null when the account that did it is gone. */
-	assignedByName: string | null;
-}
-
 /** A committee deliverable is due soon, or late (#1709). */
 export interface DeliverableDueItem {
 	/** `due_14d` is sent only for grant and sponsorship work. */
@@ -1050,7 +1036,6 @@ export type DomainEvents = {
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'production.cancelled': ProductionCancelledEvent;
-	'production.lead_assigned': ShowLeadAssignedEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
 	'volunteer.task_ready': TaskReadyEvent;
 	'volunteer.task_assigned': TaskAssignedEvent;

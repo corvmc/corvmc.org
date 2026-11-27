@@ -3,10 +3,8 @@ import { requireUser, can } from '#lib/server/authorization.js';
 import type { GroupRole } from '#lib/server/db/schema/group.js';
 import { grantRuleFor, type Capability } from '#lib/config.js';
 import {
-	leadsProject,
 	projectCommitteeGrantsFor,
-	roleGrantAllowsOnProject,
-	SHOW_LEAD_CAPABILITY
+	roleGrantAllowsOnProject
 } from '#lib/server/capability/capability-grants.js';
 import { allowlisted, committeeAllows } from '#lib/server/capability/grant-rules.js';
 import { getBySlug, getByIdActive, getUserRole } from '#lib/server/band/band-service.js';
@@ -157,11 +155,8 @@ export async function requireProjectCommittee(
 		}
 	}
 	if (await can(cover)) return { user, groups: [], via: 'staff' };
-	if (projectId && cover === SHOW_LEAD_CAPABILITY) {
-		if (
-			(await leadsProject(user.id, projectId)) ||
-			(await roleGrantAllowsOnProject(user.id, cover, projectId))
-		) {
+	if (projectId && cover === 'production.run') {
+		if (await roleGrantAllowsOnProject(user.id, cover, projectId)) {
 			return { user, groups: [], via: 'lead' };
 		}
 	}

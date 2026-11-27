@@ -63,16 +63,6 @@ export const moneyColumns = {
 	},
 
 	// ------------------------------------------------------------ productions
-	// The drawer count at the end of the night. #929 added the column so a
-	// settlement including door cash is auditable; it deliberately does not
-	// write the ledger rows — the split is derived at read time, and who owes
-	// whom what once it is counted is #825's question.
-	'production.door_cash_cents': {
-		notAccounting: 'unused since #3273: the counts are `production_till_count.cash_cents`'
-	},
-	'production.door_cash_recount_cents': {
-		notAccounting: 'unused since #3273: the staff count is a `production_till_count` row'
-	},
 	'production_till_count.cash_cents': {
 		unaccounted: 'counted but never posted — the split is derived, not journalled',
 		issue: 825

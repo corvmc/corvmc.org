@@ -138,10 +138,6 @@ vi.mock('#lib/server/directory/contact-service.js', () => ({
 vi.mock('#lib/server/party/organization-service.js', () => ({
 	performerFor: async () => 'org-new'
 }));
-const showLead = { searchLeadCandidates: vi.fn(async () => []) };
-vi.mock('#lib/server/production/show-lead-service.js', () => ({
-	searchLeadCandidates: (...a: unknown[]) => showLead.searchLeadCandidates(...(a as []))
-}));
 vi.mock('#lib/server/production/host-service.js', () => ({
 	openHostShift: vi.fn()
 }));
@@ -290,11 +286,6 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
-		name: 'searchShowLeadCandidates',
-		args: [{ eventId: 'evt-1', q: 'sam' }],
-		capability: BOOK
-	},
-	{
 		name: 'advanceProduction',
 		args: [{ id: 'prod-1', eventId: 'evt-1', status: 'offered' }],
 		capability: BOOK
@@ -430,7 +421,6 @@ const allSpies = () =>
 		...settlement,
 		...expenses,
 		...tillCounts,
-		...showLead,
 		...lineup,
 		...outsideActs,
 		...contacts

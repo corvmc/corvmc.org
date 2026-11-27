@@ -3,7 +3,6 @@
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
-	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { openHostShift } from '#lib/remote/productions.remote.js';
@@ -36,7 +35,7 @@
 		onchange: () => void;
 	} = $props();
 
-	const leadHeld = $derived((lead?.people.length ?? 0) > 0 || !!production?.producer);
+	const leadHeld = $derived((lead?.people.length ?? 0) > 0);
 	const filled = $derived(
 		(leadHeld ? 1 : 0) + crew.reduce((n, s) => n + Math.min(s.people.length, s.capacity), 0)
 	);
@@ -69,9 +68,6 @@
 					{#each lead?.people ?? [] as person (person.userId)}
 						<span class="font-medium">{person.name}</span>
 					{/each}
-					{#if production.producer && !lead?.people.some((p) => p.userId === production.producerUserId)}
-						<EntityChip ref={production.producer} />
-					{/if}
 					{#if (lead?.people.length ?? 0) === 0}
 						{#if noLeadRole}
 							<span class="text-muted">{m.staff_events_id_crew_no_lead_role_text()}</span>
@@ -79,7 +75,7 @@
 							<Button variant="ghost" size="sm" onclick={assignLead}>
 								{m.staff_events_id_crew_assign_label()}
 							</Button>
-						{:else if !production.producer}
+						{:else}
 							<span class="text-muted">{m.staff_events_id_production_no_lead_text()}</span>
 						{/if}
 					{/if}

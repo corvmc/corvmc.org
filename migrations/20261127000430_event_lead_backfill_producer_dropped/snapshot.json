@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "5651bdd9-46fb-4574-9470-dc534bd3c15c",
+  "id": "f4a9a750-49f1-438b-b989-af2dfe6bd3e6",
   "prevIds": [
-    "bc087360-76dd-44b7-8ce9-0b156dbcea84"
+    "5651bdd9-46fb-4574-9470-dc534bd3c15c"
   ],
   "ddl": [
     {
@@ -2785,16 +2785,6 @@
       "table": "production"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "producer_user_id",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -2911,66 +2901,6 @@
       "default": null,
       "generated": null,
       "name": "door_count",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_cents",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_counted_by_user_id",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_counted_at",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_recount_cents",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_recounted_by_user_id",
-      "entityType": "columns",
-      "table": "production"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "door_cash_recounted_at",
       "entityType": "columns",
       "table": "production"
     },
@@ -17211,51 +17141,6 @@
     },
     {
       "columns": [
-        "producer_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_production_producer_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "production"
-    },
-    {
-      "columns": [
-        "door_cash_counted_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_production_door_cash_counted_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "production"
-    },
-    {
-      "columns": [
-        "door_cash_recounted_by_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_production_door_cash_recounted_by_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "production"
-    },
-    {
-      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -23857,20 +23742,6 @@
       "where": null,
       "origin": "manual",
       "name": "idx_production_status",
-      "entityType": "indexes",
-      "table": "production"
-    },
-    {
-      "columns": [
-        {
-          "value": "producer_user_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_production_producer",
       "entityType": "indexes",
       "table": "production"
     },
