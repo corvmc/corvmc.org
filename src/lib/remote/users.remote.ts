@@ -717,7 +717,8 @@ export const getMemberDashboard = query(async () => {
 		matches,
 		owing,
 		classifiedMatches,
-		joinedBands
+		joinedBands,
+		verifiedRow
 	] = await Promise.all([
 		db
 			.select()
@@ -782,7 +783,14 @@ export const getMemberDashboard = query(async () => {
 			.orderBy(reservation.startsAt)
 			.limit(5),
 		surfaces.classifieds ? listPostsMatching(currentUser.id) : Promise.resolve([]),
-		listBandsJoinedByInvite(currentUser.id, currentUser.email, nowDate)
+		listBandsJoinedByInvite(currentUser.id, currentUser.email, nowDate),
+		// From the row, not the session: the session cookie is trusted for 60s, so a
+		// member who just confirmed would still see the prompt.
+		db
+			.select({ emailVerified: user.emailVerified })
+			.from(user)
+			.where(eq(user.id, currentUser.id))
+			.limit(1)
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
@@ -835,6 +843,8 @@ export const getMemberDashboard = query(async () => {
 		 * with it; everything below is the calm half (#1245).
 		 */
 		needsYou,
+		/** False while the address is unconfirmed; the dashboard then shows the resend line. */
+		emailVerified: verifiedRow[0]?.emailVerified ?? true,
 		/** Bands joined at signup through an emailed invitation, which the member never answered (#3051). */
 		joinedBands: joinedBands.map((b) => ({
 			id: b.id,

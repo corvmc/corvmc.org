@@ -10,6 +10,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import VerifyEmailNotice from '#lib/components/member/VerifyEmailNotice.svelte';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import { getMyMessagingSettings } from '#lib/remote/direct-messages.remote.js';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
@@ -18,12 +19,7 @@
 	import { toast } from 'svelte-sonner';
 	import Action from '#lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
-	import {
-		updateProfile,
-		changePassword,
-		deleteAccount,
-		resendVerificationEmail
-	} from '#lib/remote/account.remote.js';
+	import { updateProfile, changePassword, deleteAccount } from '#lib/remote/account.remote.js';
 	import { ADULT_AGE_YEARS, toBirthDateInput } from '#lib/utils/age.js';
 	import {
 		getMemberAccountPage,
@@ -72,21 +68,8 @@
 					description={m.member_account_contact_staff_change_email_address_body()}
 				/>
 
-				<!-- Nothing on the site is gated on this. Confirming is what lets us
-				     attach a mailing list this address was already on (#757). -->
 				{#if !data.user.emailVerified}
-					<Alert type="info">
-						{m.member_account_address_not_confirmed_yet_account_body()}
-						{#snippet action()}
-							<Action
-								action={resendVerificationEmail}
-								label={m.member_account_resend_link_label()}
-								size="sm"
-								variant="default"
-								successToast={m.member_account_success_toast()}
-							/>
-						{/snippet}
-					</Alert>
+					<VerifyEmailNotice />
 				{/if}
 
 				<FormField
@@ -146,9 +129,9 @@
 						<span class="sr-only">{m.member_email_label()}</span>
 					</th>
 					<th class="w-20 text-center">
-						<span class="tooltip" data-tip={m.member_account_app_label()}
-							><IconBell size={16} /></span
-						>
+						<span class="tooltip" data-tip={m.member_account_app_label()}>
+							<IconBell size={16} />
+						</span>
 						<span class="sr-only">{m.member_account_app_label()}</span>
 					</th>
 				{/snippet}
@@ -249,9 +232,9 @@
 			<div class="flex items-center justify-between">
 				{#if data.isStaff}
 					<p class="text-muted">{m.member_account_contact_admin_delete_account_text()}</p>
-					<span class="btn btn-disabled btn-error btn-sm"
-						>{m.member_account_delete_account_text()}</span
-					>
+					<span class="btn btn-disabled btn-error btn-sm">
+						{m.member_account_delete_account_text()}
+					</span>
 				{:else}
 					<p class="text-muted">
 						{m.member_account_permanently_delete_account_all_associated_text()}
