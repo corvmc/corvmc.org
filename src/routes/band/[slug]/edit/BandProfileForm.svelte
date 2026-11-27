@@ -3,6 +3,9 @@
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { refreshAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { withHash } from '#lib/utils/with-query.js';
+	import { focusHashOnNavigation } from '#lib/utils/focus-hash.js';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -19,6 +22,8 @@
 	import type { getBandLayout } from '#lib/remote/layout.remote.js';
 	import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 
+	focusHashOnNavigation();
+
 	// The band and profile arrive as plain resolved props, NOT awaited remote
 	// queries. Keeping this component's script fully synchronous matters: a
 	// top-level `await` (as the pre-split page had) marks every later declaration
@@ -30,6 +35,7 @@
 		profile,
 		genreSuggestions,
 		instrumentSuggestions,
+		enquiries,
 		canEdit = false
 	}: {
 		band: Awaited<ReturnType<typeof getBandLayout>>['band'];
@@ -37,6 +43,8 @@
 		genreSuggestions: string[];
 		/** The same vocabulary members tag themselves with — see `getBandProfileEditor`. */
 		instrumentSuggestions: string[];
+		/** Where contact-form email goes. Changed on the press kit, so shown here read-only. */
+		enquiries: { email: string; source: 'booking' | 'profile' } | null;
 		/**
 		 * Owner or admin. Anyone else gets the same fields disabled, with no Save:
 		 * presentation only, since `saveBandProfile` is the guard.
@@ -103,28 +111,36 @@
 						required
 					/>
 
-					<FormField
-						field={profileFields.tagline}
-						label={m.band_slug_edit_band_profile_form_tagline_label()}
-						type="text"
-						value={profile?.tagline ?? ''}
-						placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
-						description={m.band_slug_edit_band_profile_form_short_one_liner_shown_direc_body()}
-					/>
+					<div id="tagline" class="scroll-mt-24">
+						<FormField
+							field={profileFields.tagline}
+							label={m.band_slug_edit_band_profile_form_tagline_label()}
+							type="text"
+							value={profile?.tagline ?? ''}
+							placeholder={m.band_slug_edit_band_profile_form_e_g_funk_trio_from_placeholder()}
+						/>
+					</div>
 				</div>
 
-				<AvatarField upload={uploadAvatar} src={band.avatarUrl} name={band.name} shape="square" />
+				<div id="logo" class="scroll-mt-24">
+					<AvatarField
+						upload={uploadAvatar}
+						src={band.avatarUrl}
+						name={band.name}
+						shape="square"
+						disabled={!canEdit}
+					/>
+				</div>
 			</div>
 
 			<div class="mt-4 space-y-4">
-				<div class="grid gap-4 sm:grid-cols-2">
+				<div id="hometown" class="grid scroll-mt-24 gap-4 sm:grid-cols-2">
 					<FormField
 						field={profileFields.hometown}
 						label={m.band_slug_edit_band_profile_form_hometown_label()}
 						type="text"
 						value={profile?.hometown ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_e_g_corvallis_placeholder()}
-						description={m.band_slug_edit_band_profile_form_shown_as_based_profile_body()}
 					/>
 
 					<FormField
@@ -133,33 +149,39 @@
 						type="text"
 						value={profile?.foundedYear ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_e_g_2019_placeholder()}
-						description={m.band_slug_edit_band_profile_form_shown_as_formed_profile_body()}
 					/>
 				</div>
 
-				<FormField field={profileFields.bio} label={m.band_slug_edit_band_profile_form_bio_label()}>
-					<input {...profileFields.bio.as('hidden', bioHtml)} />
-					{#if canEdit}
-						<RichTextEditor
-							bind:value={bioHtml}
-							placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act_placeholder()}
-						/>
-					{:else}
-						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by sanitizeBio -->
-						<div class="prose prose-sm max-w-none">{@html sanitizeBio(bioHtml)}</div>
-					{/if}
-				</FormField>
+				<div id="bio" class="scroll-mt-24">
+					<FormField
+						field={profileFields.bio}
+						label={m.band_slug_edit_band_profile_form_bio_label()}
+					>
+						<input {...profileFields.bio.as('hidden', bioHtml)} />
+						{#if canEdit}
+							<RichTextEditor
+								bind:value={bioHtml}
+								placeholder={m.band_slug_edit_band_profile_form_tell_people_about_act_placeholder()}
+							/>
+						{:else}
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by sanitizeBio -->
+							<div class="prose prose-sm max-w-none">{@html sanitizeBio(bioHtml)}</div>
+						{/if}
+					</FormField>
+				</div>
 
-				<FormField
-					field={profileFields.genres}
-					label={m.band_slug_edit_band_profile_form_genres_label()}
-				>
-					<FreeformTagInput
-						bind:value={genres}
-						suggestions={genreSuggestions}
-						placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock_placeholder()}
-					/>
-				</FormField>
+				<div id="genres" class="scroll-mt-24">
+					<FormField
+						field={profileFields.genres}
+						label={m.band_slug_edit_band_profile_form_genres_label()}
+					>
+						<FreeformTagInput
+							bind:value={genres}
+							suggestions={genreSuggestions}
+							placeholder={m.band_slug_edit_band_profile_form_e_g_jazz_funk_rock_placeholder()}
+						/>
+					</FormField>
+				</div>
 
 				<FormField
 					field={profileFields.lookingForMembers}
@@ -188,18 +210,17 @@
 		</InfoCard>
 
 		<div class="grid gap-6 lg:grid-cols-2">
-			<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
-				<p class="mb-3 text-muted">
-					{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
-				</p>
-				<LinkListEditor bind:value={links} field={profileFields.links} />
-			</InfoCard>
+			<div id="links" class="scroll-mt-24">
+				<InfoCard title={m.band_slug_edit_band_profile_form_links_title()}>
+					<p class="mb-3 text-muted">
+						{m.band_slug_edit_band_profile_form_soundcloud_youtube_spotify_text()}
+					</p>
+					<LinkListEditor bind:value={links} field={profileFields.links} />
+				</InfoCard>
+			</div>
 
-			<!-- These used to be printed on the public page as the act's booking
-		     details. They are not any more: a stranger reaches the act through a
-		     form, so nothing is published for a scraper to take. The fields stay
-		     because they still route an enquiry — but the page has to say that,
-		     or a band reads "contact info" and assumes it is on display. -->
+			<!-- Private by default: the page then offers a contact form, which still
+			     routes here. Public, the page shows these in its place (#3234). -->
 			<InfoCard title={m.band_slug_edit_band_profile_form_where_enquiries_go_title()}>
 				<p class="mb-3 text-muted">
 					{m.band_slug_edit_band_profile_form_never_shown_publicly_page_o_text()}
@@ -225,7 +246,30 @@
 						value={contact.social ?? ''}
 						placeholder={m.band_slug_edit_band_profile_form_handle_url_placeholder()}
 					/>
+					<FormField
+						field={profileFields.contactPublic}
+						type="toggle"
+						value={contact.visibility === 'public'}
+						checkboxLabel={m.band_slug_edit_band_profile_form_contact_public_checkbox()}
+					/>
 				</div>
+				<!-- Read-only. The press kit's booking contact is where enquiry email is changed;
+				     the email above is only the fallback when that is empty. -->
+				<p class="mt-3 text-muted text-sm" data-testid="enquiry-destination">
+					{#if enquiries}
+						{m.band_slug_edit_band_profile_form_enquiries_go_to_email_text({
+							email: enquiries.email
+						})}
+					{:else}
+						{m.band_slug_edit_band_profile_form_enquiries_go_to_roster_text()}
+					{/if}
+					<a
+						href={withHash(resolve('/band/[slug]/press-kit', { slug: band.slug }), 'booking')}
+						class="link"
+					>
+						{m.band_slug_edit_band_profile_form_change_booking_contact_text()}
+					</a>
+				</p>
 			</InfoCard>
 		</div>
 

@@ -44,12 +44,15 @@ import { listPublishedReleasesForBand } from '#lib/server/audio/audio-service.js
 import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
 import { publicPressKit } from '#lib/server/band/press-kit.js';
+import { enquiryDestination } from '#lib/server/band/enquiry-destination.js';
 import { captureException } from '#lib/server/sentry.js';
 import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
-	toPublicMemberProfile
+	toPublicMemberProfile,
+	contactForView,
+	contactFromForm
 } from '#lib/utils/directory-display.js';
 import { db } from '#lib/server/db/index.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
@@ -58,7 +61,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { profileLinkSchema } from '#lib/server/db/schema/authentication.js';
-import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { directorySorts } from '#lib/utils/directory-browse.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
@@ -368,10 +371,9 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			foundedYear: directoryEntry.foundedYear,
 			avatarKey: group.avatarKey,
 			lookingFor: directoryEntry.lookingFor,
-			// `directoryEntry.contact` is deliberately not selected. It is still
-			// written by the profile editor and still used to route an enquiry, but
-			// nothing on a public band page may render it, and the surest way to
-			// keep it off the page is for the page's query never to fetch it.
+			// Routes an enquiry either way; published only through `contactForView`
+			// below, when the band switched it public (#3234).
+			contact: directoryEntry.contact,
 			links: directoryEntry.links,
 			// Both soft-delete flags: `deactivate()` sets the pair, but a group
 			// deleted by any other path would otherwise keep a live listing.
@@ -478,14 +480,13 @@ async function loadBandProfile(slug: string, visibility: 'members' | 'public') {
 			lookingForMembers: row.lookingFor === 'members',
 			releases,
 			links: (row.links as ProfileLink[] | null) ?? [],
+			// Null unless the band made it public: the same gate as a member's.
+			contact: contactForView('public', row.contact as DirectoryContact | null),
 			// `publicPressKit`, never the raw column. A band's booking, management
 			// and press contacts, its phone numbers, its rider, stage plot and
 			// backline all live in the same JSON and none of them may be published:
 			// a stranger reaches the act through the Turnstile form instead, so the
 			// page carries no address for a scraper to take.
-			//
-			// `directoryContact` used to be returned here and rendered as "Booking".
-			// Removing it is the point of this change, not a side effect of it.
 			pressKit: publicPressKit(site?.epk),
 			photos: photos.map((m) => ({
 				id: m.attachmentId,
@@ -649,17 +650,9 @@ const memberProfileSchema = z.object({
 export const saveMemberProfile = form(memberProfileSchema, async (data) => {
 	const user = requireUser();
 
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
 	// Personal contact defaults to members-only; the member opts it into the
 	// public profile explicitly. contactForView() reads this on the public side.
-	const directoryContact =
-		Object.keys(contact).length > 0
-			? { ...contact, visibility: data.contactPublic ? 'public' : 'members' }
-			: undefined;
+	const directoryContact = contactFromForm(data);
 
 	await updateMemberProfile(user.id, {
 		tagline: data.tagline || undefined,
@@ -761,17 +754,12 @@ const bandProfileSchema = z.object({
 	contactEmail: z.string().max(255).optional().default(''),
 	contactPhone: z.string().max(30).optional().default(''),
 	contactSocial: z.string().max(255).optional().default(''),
+	contactPublic: z.boolean().default(false),
 	links: linksField
 });
 
 export const saveBandProfile = form(bandProfileSchema, async (data) => {
 	const { user, group: band } = await requireBandRole({ slug: data.slug }, 'admin');
-
-	const contact = {
-		...(data.contactEmail ? { email: data.contactEmail } : {}),
-		...(data.contactPhone ? { phone: data.contactPhone } : {}),
-		...(data.contactSocial ? { social: data.contactSocial } : {})
-	};
 
 	await updateBandBasics(band.id, { name: data.name, bio: data.bio });
 
@@ -783,7 +771,8 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 		seekingInstruments: data.seekingInstruments,
 		lookingForMembers: data.lookingForMembers,
 		directoryVisibility: data.directoryVisibility,
-		directoryContact: Object.keys(contact).length > 0 ? contact : undefined,
+		// Private unless the band switches it public, as a member's contact is.
+		directoryContact: contactFromForm(data),
 		links: data.links
 	});
 
@@ -799,19 +788,22 @@ export const saveBandProfile = form(bandProfileSchema, async (data) => {
 
 /** The band profile editor's one load-bearing query. See `getMemberProfileEditor`. */
 export const getBandProfileEditor = query(z.string(), async (slug) => {
-	const { role } = await requireBandRole({ slug }, 'member');
+	const { group: band, role } = await requireBandRole({ slug }, 'member');
 	// The instrument suggestions ride along for the "what we're looking for"
 	// field. Deliberately the same vocabulary members tag themselves with — a
 	// free-text field here would let a band ask for something no member has ever
 	// written, and the match would silently never fire.
-	const [profile, genreSuggestions, instrumentSuggestions] = await Promise.all([
+	const [profile, genreSuggestions, instrumentSuggestions, [site]] = await Promise.all([
 		getBandProfile(slug),
 		getGenreSuggestions(),
-		getInstrumentSuggestions()
+		getInstrumentSuggestions(),
+		db.select({ epk: bandSite.epk }).from(bandSite).where(eq(bandSite.groupId, band.id)).limit(1)
 	]);
 	// Presentation only: the page shows a plain member the read view.
 	const canEdit = role === 'owner' || role === 'admin';
-	return { profile, genreSuggestions, instrumentSuggestions, canEdit };
+	// Read-only here: the press kit's booking contact is where it is changed.
+	const enquiries = enquiryDestination(site?.epk, profile?.directoryContact);
+	return { profile, genreSuggestions, instrumentSuggestions, canEdit, enquiries };
 });
 
 // ---------------------------------------------------------------------------

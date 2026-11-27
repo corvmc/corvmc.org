@@ -9,20 +9,19 @@ sortOrder: 6
 
 ## Leaving a band
 
-If you're a member or admin (not the owner), **Leave band** is in the **Your
-membership** panel at the top of the band's **Members** page. You'll come off the
-roster and lose access to the band's pages.
+If you're a member or admin (not the owner), **Leave band** is on your own row,
+marked **You**, on the band's **Members** page. You'll come off the roster and
+lose access to the band's pages.
 
-Owners see an explanation there instead, with a **Transfer ownership** button —
-see below.
+An owner has no **Leave band**: transfer ownership first, as below.
 
 ## Transferring ownership
 
 Every band has exactly one **owner**. If you're the owner and want to step back —
 or hand the band to someone else — transfer ownership:
 
-1. Open the band's **Members** page.
-2. Choose **Transfer** on the row of the member to hand it to.
+1. Open the band's **Settings** page.
+2. Under **Ownership**, choose **Transfer ownership** and pick the new owner.
 3. Confirm with **Transfer ownership**. They become the owner; you stay on the
    roster as an admin.
 

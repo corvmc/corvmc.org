@@ -10,7 +10,7 @@ sortOrder: 0
 ## Practice space
 
 CorvMC's rehearsal rooms are bookable by the hour. Open **Practice space** from the
-sidebar to see your bookings and make new ones with **Reserve space**.
+sidebar to see your bookings and make new ones with **Reserve practice space**.
 
 ## The Practice space page
 

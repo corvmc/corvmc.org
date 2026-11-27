@@ -81,8 +81,8 @@ export interface GroupTopic {
  * Every topic in a group, with this reader's unread mark.
  *
  * General is pinned first however quiet it gets — a landing place that moves
- * is worse than a stale one — and the rest are newest-activity-first. The
- * General row is created on read, as it always was.
+ * is worse than a stale one — then Announcements, then the rest by newest
+ * activity. The General row is created on read, as it always was.
  */
 export async function listGroupTopics(groupId: string, userId: string): Promise<GroupTopic[]> {
 	await getOrCreateGroupChat(groupId);
@@ -107,6 +107,8 @@ export async function listGroupTopics(groupId: string, userId: string): Promise<
 		.orderBy(
 			// `subject IS NULL` sorts 1 before 0 ascending, so General leads.
 			desc(sql`${inboxThread.subject} is null`),
+			// Announcements next, where a band lists it beside General (#3229).
+			desc(sql`${inboxThread.postPolicy} = 'leadership'`),
 			desc(inboxThread.lastMessageAt),
 			asc(inboxThread.id)
 		);

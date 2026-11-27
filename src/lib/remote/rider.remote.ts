@@ -4,6 +4,7 @@ import { form } from './_remote';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { getMembers } from '#lib/server/band/band-service.js';
+import { getPackingList } from '#lib/server/band/packing-service.js';
 import { listFor } from '#lib/server/media/media-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
 import {
@@ -74,7 +75,7 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 	});
 	const canManage = role === 'owner' || role === 'admin';
 
-	const [rider, members, uploads, consoleChannels] = await Promise.all([
+	const [rider, members, uploads, consoleChannels, packing] = await Promise.all([
 		getRider(band.id),
 		getMembers(band.id),
 		// Both slots in one statement. These are the band's own uploaded rider and
@@ -84,7 +85,10 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 		// What the room can take. The band is told when it asks for more than
 		// that, which is the "flag what the room cannot do" half of the Production
 		// user story — and far better found out here than at load-in.
-		config<number>('venue.consoleChannels')
+		config<number>('venue.consoleChannels'),
+		// The step before the rider: the viewer's own stage gear on the packing
+		// list, which the page offers to promote or points back to.
+		getPackingList(band.id)
 	]);
 
 	return {
@@ -117,7 +121,8 @@ export const getBandRiderPage = query(bandIdField, async (bandId) => {
 		canManage,
 		viewerId: user.id,
 		isStaffViewer: role === 'staff',
-		consoleChannels: Number(consoleChannels) || 0
+		consoleChannels: Number(consoleChannels) || 0,
+		packingItems: packing.items.filter((i) => i.userId === user.id && i.riderKind)
 	};
 });
 

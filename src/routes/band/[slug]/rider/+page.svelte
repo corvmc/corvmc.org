@@ -12,6 +12,7 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import PromoteToRider from '#lib/components/band/PromoteToRider.svelte';
 	import RiderCorner from '#lib/components/rider/RiderCorner.svelte';
 	import RiderUploads from '#lib/components/rider/RiderUploads.svelte';
 	import StagePlot from '#lib/components/rider/StagePlot.svelte';
@@ -181,6 +182,28 @@
 				gear" card invited them to fill in gear for a band they are not in.
 			-->
 			{#if mine}
+				{#if toRows(data.viewerId).length === 0}
+					<Alert type="info">
+						{msg.band_slug_rider_start_packing_list_body()}
+						{#snippet action()}
+							<Button
+								href={resolve('/band/[slug]/packing', { slug: layout.band.slug })}
+								variant="ghost"
+								size="sm"
+							>
+								{msg.band_slug_rider_open_packing_list_label()}
+							</Button>
+						{/snippet}
+					</Alert>
+				{/if}
+
+				<PromoteToRider
+					bandId={data.bandId}
+					items={data.packingItems}
+					viewerId={data.viewerId}
+					onpromoted={refresh}
+				/>
+
 				<RiderCorner
 					bandId={data.bandId}
 					ownerUserId={data.viewerId}

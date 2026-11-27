@@ -53,6 +53,7 @@
 				<a
 					href={hrefFor(topic.id) as ResolvedPathname}
 					aria-current={topic.id === openThreadId ? 'page' : undefined}
+					data-testid={topic.readOnly ? 'announcements-topic' : undefined}
 					class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 hover:bg-base-200 aria-[current=page]:bg-base-200"
 				>
 					<span class="min-w-0 truncate" class:font-medium={topic.unread}>{topic.name}</span>

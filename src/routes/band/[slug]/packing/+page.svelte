@@ -14,7 +14,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PackingCrate from './PackingCrate.svelte';
 	import LoadInList from './LoadInList.svelte';
-	import PromoteToRider from './PromoteToRider.svelte';
+	import PromoteToRider from '#lib/components/band/PromoteToRider.svelte';
 	import {
 		getBandPackingPage,
 		savePackingNotes,
@@ -81,6 +81,10 @@
 		list.lastResetAt ? Math.floor((Date.now() - list.lastResetAt.getTime()) / 86_400_000) : null
 	);
 
+	/** How far the rider has got: stage items on the list that stand on it now. */
+	const stageItems = $derived(list.items.filter((i) => i.riderKind));
+	const stageItemsOnRider = $derived(stageItems.filter((i) => i.onRider).length);
+
 	function refresh() {
 		void getBandPackingPage(layout.band.id).refresh();
 	}
@@ -108,7 +112,7 @@
 		</Alert>
 	{/if}
 
-	<StatGrid cols={3} class="mb-6">
+	<StatGrid cols={stageItems.length > 0 ? 4 : 3} class="mb-6">
 		<!--
 			Unassigned first, deliberately. An unassigned row is what actually loses
 			gear and it is actionable days out; a packed count only means something
@@ -121,6 +125,13 @@
 		/>
 		<StatCard title={msg.band_van_title()} value="{list.packedCount}/{list.itemCount}" size="sm" />
 		<StatCard title={msg.band_slug_packing_things_title()} value={list.itemCount} size="sm" />
+		{#if stageItems.length > 0}
+			<StatCard
+				title={msg.band_slug_packing_stage_items_on_rider_title()}
+				value="{stageItemsOnRider}/{stageItems.length}"
+				size="sm"
+			/>
+		{/if}
 	</StatGrid>
 
 	{#if list.itemCount > 0}

@@ -33,14 +33,9 @@ import { allowRateLimited } from '#lib/server/rate-limit.js';
 import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import { handleBandEnquiry } from '#lib/server/inbox/band-service.js';
 import { listBandAdmins } from '#lib/server/band/band-service.js';
+import { enquiryDestination } from '#lib/server/band/enquiry-destination.js';
 import type { StandaloneEmailContent } from '#lib/types/notification-email.js';
 import type { BandEpk } from '#lib/types/band-page.js';
-
-/** The address a band put on its profile, back when that field was published. */
-function profileEmail(contact: unknown): string | undefined {
-	const email = (contact as { email?: unknown } | null)?.email;
-	return typeof email === 'string' && email ? email : undefined;
-}
 
 // ---------------------------------------------------------------------------
 // Band Site Contact Form — public, delivers to the band's booking contact
@@ -116,7 +111,7 @@ export const submitBandContactForm = form(contactFormSchema, async (data, issue)
 	// field used to be *published* as the band's booking address — a band that
 	// filled it in and never opened the press kit still gets its enquiries. The
 	// owner is no longer a fallback: they are on the roster, so they are notified.
-	const bookingEmail = epk?.bookingContact?.email || profileEmail(bandRow.contact);
+	const bookingEmail = enquiryDestination(epk, bandRow.contact)?.email;
 	if (!bookingEmail) return { success: true };
 
 	const admins = await listBandAdmins(bandRow.id);

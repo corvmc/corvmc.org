@@ -26,6 +26,7 @@
 	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
 	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
 	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
+	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -136,7 +137,12 @@
 				tags={uniqueTags(band.genres)}
 			/>
 			<LinksBox links={band.links} />
-			<ContactForm slug={band.slug} bandName={band.name} />
+			<!-- The band's own contact when it made that public, else the form (#3234). -->
+			{#if band.contact}
+				<ContactBox kind="contact" contact={band.contact} />
+			{:else}
+				<ContactForm slug={band.slug} bandName={band.name} />
+			{/if}
 		{/snippet}
 	</ProfileGrid>
 </PageContent>

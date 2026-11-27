@@ -161,20 +161,18 @@ test.describe('the band panel mount', () => {
 	 * "mount-agnostic" is a claim about a prop contract, and a component that
 	 * reached for a club-shaped context would fail here and nowhere else.
 	 */
-	test('puts Announcements in the band nav, and renders it as a band panel page', async ({
-		page
-	}) => {
+	test('lists Announcements in band Messages, read-only for a plain member', async ({ page }) => {
 		await loginAsMember(page);
-		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}`);
+		// The old page forwards to Messages, where the thread now lives (#3229).
+		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/announcements`);
+		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages$`));
 
-		const announcements = `/band/${SEED_MEMBERS_BAND_SLUG}/announcements`;
-		await expect(page.locator(`a[href="${announcements}"]`).first()).toBeVisible({
-			timeout: 15000
-		});
-
-		await page.goto(announcements);
-		// Render gate: the header mounts with the awaited page query.
-		await expect(page.locator('[data-page-header] h1')).toBeVisible({ timeout: 15000 });
+		const room = page.getByTestId('announcements-topic');
+		await expect(room).toBeVisible({ timeout: 15000 });
+		await room.click();
+		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages/chat/`));
+		// Render gate: the room mounts with its awaited posts.
+		await expect(page.getByTestId('announcements-room')).toBeVisible({ timeout: 15000 });
 		// A plain member of this band: they read, they do not write.
 		await expect(page.getByTestId('new-announcement')).toHaveCount(0);
 	});

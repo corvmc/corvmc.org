@@ -16,7 +16,6 @@
 		bandId,
 		bandName,
 		candidates,
-		selectedId,
 		onsuccess
 	}: {
 		open?: boolean;
@@ -24,15 +23,13 @@
 		bandName: string;
 		/** Active members who are not the owner. */
 		candidates: { userId: string; name: string }[];
-		/** The row the owner clicked Transfer on; null from the membership panel. */
-		selectedId: string | null;
 		onsuccess: () => void;
 	} = $props();
 
 	// The owner names the new owner; nothing is chosen for them (#3087).
 	let newOwnerId = $state('');
 	$effect.pre(() => {
-		if (open) newOwnerId = selectedId ?? '';
+		if (open) newOwnerId = '';
 	});
 	const chosen = $derived(candidates.find((c) => c.userId === newOwnerId) ?? null);
 	const options = $derived(candidates.map((c) => ({ value: c.userId, label: c.name })));

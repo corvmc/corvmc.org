@@ -643,6 +643,8 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
   thread, not the author), inserts in-app rows in chunks, and writes one outbox `email` row per
   recipient, sent on the transactional stream (#2971).
+  A band has no Announcements page: its thread is listed in band Messages beside General from the
+  start, and owners and admins write, publish and pin there with the same composer (#3229).
   - Not one thread per group for everything, because it removes named topics and turns
     announcements into chat messages (#2618).
   - Not per-post state on `inbox_message`, because pin, soft delete and the email latch are not
@@ -1644,7 +1646,9 @@ admins answer it at `/band/[slug]/messages`. Neither side sees the other's addre
   staffer's emailed reply into an outbound message skips band threads.
 - **Enquiry notifications:** `band_enquiry_received` goes to the band's owner and admins.
   The old `band_site_contact` email goes only to a press-kit or profile booking address
-  that matches no owner or admin.
+  that matches no owner or admin. `band/enquiry-destination.ts:enquiryDestination()` picks
+  that address (the press kit's booking contact, else the profile email), and the profile
+  editor shows its answer read-only with a link to the booking contact.
 
 ### Data touched
 
@@ -2677,6 +2681,10 @@ any row, because one person walks the list at load-out and it is not reliably an
 
 Rows that carry a `rider_kind` can be **promoted onto the tech rider**, which is the bridge
 between the two features: walking through the easy door furnishes the rider on the way.
+
+The bridge runs both ways (#3133). The rider page offers the viewer's waiting packing items in
+place, and says the packing list is where to start when their corner is empty. The packing page
+counts the stage items already on the rider.
 
 ### Code path
 

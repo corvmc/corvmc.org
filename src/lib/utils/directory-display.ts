@@ -93,9 +93,7 @@ export function isBandProfileHidden(
  * members-only by default. They are only exposed in the public view when the
  * member has explicitly opted the contact block to `public` via
  * `directoryContact.visibility`. Returns the contact to render, or `null` to
- * withhold it entirely.
- *
- * Band booking contact is public by design and is not gated through here.
+ * withhold it entirely. A band's contact goes through the same gate (#3234).
  */
 export function contactForView(
 	viewVisibility: 'members' | 'public',
@@ -104,6 +102,27 @@ export function contactForView(
 	if (!contact) return null;
 	if (viewVisibility === 'public' && contact.visibility !== 'public') return null;
 	return contact;
+}
+
+/**
+ * The contact a member or band profile form submits. A blank field is an
+ * explicit `undefined`, so the service's merge over the stored contact clears
+ * it: a field the person emptied must not survive for the public switch beside
+ * it to publish (#3234).
+ */
+export function contactFromForm(data: {
+	contactEmail: string;
+	contactPhone: string;
+	contactSocial: string;
+	contactPublic: boolean;
+}): DirectoryContact | undefined {
+	if (!data.contactEmail && !data.contactPhone && !data.contactSocial) return undefined;
+	return {
+		email: data.contactEmail || undefined,
+		phone: data.contactPhone || undefined,
+		social: data.contactSocial || undefined,
+		visibility: data.contactPublic ? 'public' : 'members'
+	};
 }
 
 /**

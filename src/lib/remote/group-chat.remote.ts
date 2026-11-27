@@ -15,6 +15,7 @@ import { error } from '@sveltejs/kit';
 import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { getMyMessageThread } from './direct-messages.remote';
+import { getOrCreateAnnouncementThread } from '#lib/server/group/announcement-service.js';
 
 /**
  * A group's shared thread — every active member reads and writes it.
@@ -38,6 +39,9 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
  */
 export const getGroupChatTopics = query(slugSchema, async (slug) => {
 	const { group, user } = await requireGroupRole({ slug }, 'member');
+	// A band lists its Announcements room before the first post, beside General,
+	// because leaders post there from Messages (#3229).
+	if (group.kind === 'band') await getOrCreateAnnouncementThread(group.id);
 	return { kind: group.kind, topics: await listGroupTopics(group.id, user.id) };
 });
 
@@ -69,7 +73,7 @@ export const createGroupChatTopic = form(
 	async (data) => {
 		const { group } = await requireGroupRole({ slug: data.slug }, 'member');
 		try {
-			// A chat topic, always: announcements are posted from their own page.
+			// A chat topic, always: announcements are posted with their composer.
 			const threadId = await createGroupTopic(group.id, data.subject);
 			await getGroupChatTopics(data.slug).refresh();
 			return { success: true, threadId };

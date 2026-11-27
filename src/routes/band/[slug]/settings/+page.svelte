@@ -16,6 +16,7 @@
 	import { getCustomDomain } from '#lib/remote/band-custom-domain.remote.js';
 	import BandAddressSection from './BandAddressSection.svelte';
 	import CustomDomainSection from './CustomDomainSection.svelte';
+	import TransferOwnershipSection from './TransferOwnershipSection.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
@@ -62,6 +63,9 @@
 	{/if}
 
 	{#if isOwner}
+		<TransferOwnershipSection bandId={band.id} bandName={band.name} />
+		<div class="h-8"></div>
+
 		<section class="space-y-4">
 			<h2 class="text-lg font-semibold text-error">{m.band_slug_settings_danger_zone_title()}</h2>
 			<div class="card border border-error/30 bg-base-100">

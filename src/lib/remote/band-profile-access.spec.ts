@@ -59,7 +59,7 @@ vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) =
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('#lib/server/media/media-service.js', () => ({
 	listFor: vi.fn(async () => []),
-	setDescription: vi.fn()
+	descriptionUpdate: vi.fn()
 }));
 vi.mock('#lib/server/event/event-service.js', async (importOriginal) => ({
 	...(await importOriginal<object>()),
@@ -76,10 +76,10 @@ vi.mock('#lib/server/directory/directory-service.js', async (importOriginal) => 
 	suggestInstruments: vi.fn(async () => []),
 	suggestGenres: vi.fn(async () => [])
 }));
-const getOrCreateBandSiteId = vi.fn();
+const savePressKit = vi.fn();
 vi.mock('#lib/server/band/band-site-service.js', async (importOriginal) => ({
 	...(await importOriginal<object>()),
-	getOrCreateBandSiteId
+	savePressKit
 }));
 
 const { getBandProfileEditor, saveBandProfile } = (await import('./directory.remote')) as any;
@@ -108,7 +108,7 @@ describe('a plain member', () => {
 
 	it('is refused on a press kit save, before anything is written', async () => {
 		await expect(saveBandEpk({ slug: 'saltmarsh', epk: {} })).rejects.toThrow('forbidden');
-		expect(getOrCreateBandSiteId).not.toHaveBeenCalled();
+		expect(savePressKit).not.toHaveBeenCalled();
 	});
 });
 

@@ -14,15 +14,15 @@ home base. What you can do here depends on your role in the band.
 
 ## On the page
 
-- **Next steps** — While nobody else is in the band, owners and admins get
-  **Invite member** and **Reserve practice space** here.
-- **Band address** — The band's web address, to put on a flyer or in a bio.
-- **Press kit** — Owners and admins see how far the press kit is filled in.
-- **Members** and **Your role** — Member count and your role in the band.
-- **Upcoming reservations** — The next ones on the calendar and their status;
-  **View all** opens the band's **Reservations** page.
-- **Manage members**, and for owners and admins **Edit band profile**, at the foot
-  of the page.
+- **Pending actions** — What the band has to do or answer: an unpaid
+  reservation, a draft event, unread enquiries, unanswered invites. Each row has
+  one button that does it. The card is gone when there is nothing to do.
+- **Upcoming dates** — The band's next reservations and events; **All
+  reservations** and **All events** open the full lists.
+- **Band setup** — A new band's first steps: **Invite members**, **Reserve
+  space**, **Add a photo and bio** and **Create an event**, each ticked once done.
+  A band with nobody else to invite can dismiss that step. Once every step is
+  done, the press kit's progress takes this card's place.
 
 ## What's in the band area
 

@@ -139,7 +139,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			title: 'Add your instruments or a short bio',
 			detail: "You're not listed in the directory until you do",
 			href: resolve('member/profile'),
-			label: 'Edit profile',
+			label: 'Profile',
 			dueAt: null,
 			rank: 12
 		});

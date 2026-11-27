@@ -5,6 +5,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { IconCheck, IconCircle, IconLock } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
+	import { withHash } from '#lib/utils/with-query.js';
 	import type { EpkSection } from '#lib/server/band/epk-completeness.js';
 
 	/**
@@ -31,7 +32,11 @@
 		compact?: boolean;
 	} = $props();
 
-	const href = (section: EpkSection) => resolve(section.route, { slug });
+	// Opens at the field the rung asks for, not the top of its page.
+	const href = (section: EpkSection) =>
+		section.anchor
+			? withHash(resolve(section.route, { slug }), section.anchor)
+			: resolve(section.route, { slug });
 
 	const premiumSections = $derived(sections.filter((s) => s.tier === 'premium'));
 	const freeSections = $derived(sections.filter((s) => s.tier === 'free'));
@@ -73,7 +78,12 @@
 						{:else}
 							<IconCircle size={16} class="mt-0.5 shrink-0 opacity-40" />
 							<span>
-								<a href={href(section)} class="link">{section.label}</a>
+								<a
+									href={section.anchor
+										? withHash(resolve(section.route, { slug }), section.anchor)
+										: resolve(section.route, { slug })}
+									class="link">{section.label}</a
+								>
 								<span class="block text-muted text-xs">{section.hint}</span>
 							</span>
 						{/if}

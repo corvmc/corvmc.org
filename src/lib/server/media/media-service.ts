@@ -294,7 +294,15 @@ export async function setDescription(
 	if (input.caption !== undefined) updates.caption = input.caption;
 	if (Object.keys(updates).length === 0) return;
 
-	await db.update(media).set(updates).where(eq(media.id, mediaId));
+	await descriptionUpdate(mediaId, updates);
+}
+
+/** {@link setDescription} as an unawaited statement, for a caller's `db.batch`. */
+export function descriptionUpdate(
+	mediaId: string,
+	input: { altText?: string | null; caption?: string | null }
+) {
+	return db.update(media).set(input).where(eq(media.id, mediaId));
 }
 
 export async function countAttachments(mediaId: string): Promise<number> {

@@ -105,7 +105,6 @@
 					type="text"
 					value={profile?.tagline ?? ''}
 					placeholder={m.member_profile_profile_form_e_g_drummer_jazz_funk_placeholder()}
-					description={m.member_profile_profile_form_short_one_liner_shown_directory_body()}
 				/>
 			</div>
 

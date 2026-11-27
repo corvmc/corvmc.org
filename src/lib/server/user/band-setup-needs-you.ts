@@ -24,7 +24,7 @@ export function bandSetupNeedsYouItems(bands: BandNeedingMembers[]): NeedsYouIte
 			kind: 'band-no-members' as const,
 			title: `Invite members to ${b.name}`,
 			href: resolve(`band/${b.slug}/members`),
-			label: 'Invite member',
+			label: 'Invite members',
 			dueAt: null,
 			rank: 13
 		}));
