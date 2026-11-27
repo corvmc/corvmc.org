@@ -60,6 +60,7 @@ import {
 	freeHoursResetAt
 } from '#lib/server/reservation/reservation-credit-service.js';
 import { getReservationConfig } from '#lib/server/reservation/config.js';
+import { firstBookingSlots, hasBooked } from '#lib/server/reservation/first-booking-slots.js';
 import { owesMoneySql } from '#lib/server/reservation/payment-due.js';
 import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
 import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
@@ -718,7 +719,8 @@ export const getMemberDashboard = query(async () => {
 		owing,
 		classifiedMatches,
 		joinedBands,
-		verifiedRow
+		verifiedRow,
+		booked
 	] = await Promise.all([
 		db
 			.select()
@@ -790,8 +792,14 @@ export const getMemberDashboard = query(async () => {
 			.select({ emailVerified: user.emailVerified })
 			.from(user)
 			.where(eq(user.id, currentUser.id))
-			.limit(1)
+			.limit(1),
+		hasBooked(currentUser.id)
 	]);
+
+	// After the fan-out, and only for a member with no booking: a booked member
+	// costs nothing extra. Same query as the rest of the page, so the card adds
+	// no second remote call.
+	const firstBooking = booked ? null : { slots: await firstBookingSlots(currentUser.id) };
 
 	const subscription = mapDbSubscription(dbSubscription);
 
@@ -845,6 +853,8 @@ export const getMemberDashboard = query(async () => {
 		needsYou,
 		/** False while the address is unconfirmed; the dashboard then shows the resend line. */
 		emailVerified: verifiedRow[0]?.emailVerified ?? true,
+		/** Open sessions offered until the first booking; null once the member has one (#3410). */
+		firstBooking,
 		/** Bands joined at signup through an emailed invitation, which the member never answered (#3051). */
 		joinedBands: joinedBands.map((b) => ({
 			id: b.id,

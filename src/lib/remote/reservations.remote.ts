@@ -62,6 +62,7 @@ import {
 } from '#lib/server/entity/refs.js';
 import {
 	getAvailableSlots,
+	bookableDateStrs,
 	getAvailableSlotsForDates,
 	getConflictDetails,
 	getValidationWarnings,
@@ -823,24 +824,8 @@ export const getAvailableDates = query(z.enum(bookerTypes).optional(), async (bo
 	const config = await getReservationConfig();
 	const notice = await viewerNotice(config, bookerType);
 	const minSlots = minSlotsFor(bookerType, config);
-	// Floor, not ceil: the validator (validateBooking) rejects any start *instant*
-	// more than `maxAdvanceDaysOneoff * 24h` past now. A whole calendar day is only
-	// fully bookable when its latest instant is still within that window, i.e. up to
-	// offset `floor(maxAdvanceDays) - 1`. Using ceil could offer a day whose later
-	// slots exceed a fractional limit (e.g. 14.5), recreating the "dead zone" where
-	// the picker shows a date that then 500s on Book & Pay.
-	const days = Math.floor(termsFor(bookerType ?? 'user', config).maxAdvanceDaysOneoff);
-	const tz = DEFAULT_TIMEZONE;
-	const todayStr = formatDateInTz(new Date(), tz);
-
-	// Offer today (i=0) through today + (days - 1). Stopping at `i < days` keeps the
-	// last offered day strictly inside the window, so every one of its slots validates.
-	// Each date is stepped from noon-LA of today in whole days and re-read in LA,
-	// so no runtime-local Date math is involved.
-	const anchor = buildDateInTz(todayStr, '12:00', tz);
-	const dateStrs = Array.from({ length: Math.max(days, 0) }, (_, i) =>
-		formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz)
-	);
+	// The same window the first-booking card draws from.
+	const dateStrs = bookableDateStrs(config, bookerType);
 	const slotsByDate = await getAvailableSlotsForDates(dateStrs, {
 		minAdvanceMinutes: notice.minutes
 	});
