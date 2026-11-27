@@ -1,7 +1,10 @@
 import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { getReservationEndTimes } from '#lib/remote/reservations.remote.js';
+import {
+	getReservationEndTimes,
+	getReservationStartTimes
+} from '#lib/remote/reservations.remote.js';
 import '#lib/test/locators.js';
 
 /**
@@ -80,5 +83,26 @@ describe('DateTimeStep', () => {
 
 	it('asks for member ends when no booker is given', async () => {
 		expect(await endsAfterPicking()).toEqual(['12:00']);
+	});
+
+	describe('with a slot to start on', () => {
+		const prefill = { date: '2031-05-12', startTime: '11:30', endTime: '12:00' };
+
+		it('starts on the slot when the server still offers it', async () => {
+			await render(Harness, { remote: remote as never, prefill });
+			await vi.waitFor(() => expect(select('endTime')?.value).toBe('12:00'));
+			expect(select('startTime')?.value).toBe('11:30');
+		});
+
+		it('leaves the start empty when the slot is taken', async () => {
+			vi.mocked(getReservationStartTimes).mockResolvedValueOnce([
+				{ value: '11:00', label: '11:00 AM' },
+				{ value: '11:30', label: '11:30 AM', disabled: true }
+			] as never);
+			await render(Harness, { remote: remote as never, prefill });
+			await vi.waitFor(() => expect(offered('startTime')).toEqual(['11:00', '11:30']));
+			expect(select('startTime')?.value).toBe('');
+			expect(select('endTime')?.value).toBe('');
+		});
 	});
 });

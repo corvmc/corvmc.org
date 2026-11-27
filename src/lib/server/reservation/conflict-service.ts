@@ -4,7 +4,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
 import { CLEARANCE_BOOKER, type BookerType } from '#lib/config.js';
 import { getReservationConfig, termsFor } from './config';
-import { buildDateInTz, formatTimeInTz } from './timezone';
+import { buildDateInTz, formatDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { practiceSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
@@ -166,6 +166,29 @@ export function isBookableStart(
 		if (!slots[j]?.available) return false;
 	}
 	return true;
+}
+
+/**
+ * The calendar days a booker may book, today first, as "YYYY-MM-DD" in club time.
+ * The picker and the first-booking card both read it, so they cannot disagree.
+ */
+export function bookableDateStrs(
+	config: SlotConfig,
+	bookerType: BookerType | undefined,
+	now: Date = new Date()
+): string[] {
+	const tz = DEFAULT_TIMEZONE;
+	// Floor, not ceil: validateBooking rejects any start instant more than
+	// `maxAdvanceDaysOneoff * 24h` past now, so a day is only fully bookable when
+	// its last instant is inside that window. Ceil would offer a day whose later
+	// slots 500 on submit.
+	const days = Math.floor(termsFor(bookerType ?? 'user', config).maxAdvanceDaysOneoff);
+	// Stepped from noon of today in whole days and re-read in club time, so no
+	// runtime-local Date math is involved.
+	const anchor = buildDateInTz(formatDateInTz(now, tz), '12:00', tz);
+	return Array.from({ length: Math.max(days, 0) }, (_, i) =>
+		formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz)
+	);
 }
 
 /** The slots a tour of this many minutes takes, rounded up to whole slots. */

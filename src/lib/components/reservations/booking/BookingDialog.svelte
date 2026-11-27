@@ -81,6 +81,8 @@
 		needsPhone = false,
 		feeGate,
 		onbooked,
+		open = $bindable(false),
+		prefill,
 		...rest
 	}: {
 		bookers: Booker[];
@@ -90,6 +92,10 @@
 		/** The booking member's own outstanding fees (#2859), whoever the booking is for. */
 		feeGate?: FeeGate;
 		onbooked?: () => void;
+		/** Bind to open the dialog from outside, as a link into the page does. */
+		open?: boolean;
+		/** A slot to start the member's own booking on; a hint the server re-checks. */
+		prefill?: { date: string; startTime: string; endTime: string };
 		[key: string]: unknown;
 	} = $props();
 
@@ -136,6 +142,7 @@
 		noFooter
 		variant="primary"
 		maxWidth="max-w-sm"
+		bind:open
 		onsuccess={booked}
 		{...rest}
 	>
@@ -170,7 +177,7 @@
 					submit={bookInstructorReservation.fields.payNow.as('submit', 'on')}
 				/>
 			{:else}
-				<DateTimeStep isSustaining={booker.isSustaining} {needsPhone} {reloadToken} />
+				<DateTimeStep isSustaining={booker.isSustaining} {needsPhone} {reloadToken} {prefill} />
 				<ConfirmStep submitLabel={m.reservations_booking_booking_dialog_submit_label()} />
 				<PaymentStep fields={{ coverFees: bookAndPayReservation.fields.coverFees }} />
 				<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />

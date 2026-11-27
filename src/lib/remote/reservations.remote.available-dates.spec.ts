@@ -46,9 +46,7 @@ const openDay = [
 	{ startTime: '10:30', available: true }
 ];
 vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
-	isBookableStart: (
-		await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()
-	).isBookableStart,
+	...(await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()),
 	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => openDay),
 	getAvailableSlotsForDates: vi.fn(
@@ -143,5 +141,18 @@ describe('getAvailableDates for a teaching booking', () => {
 
 	it('offers the teaching window of days', async () => {
 		expect((await getAvailableDates('instructor')).dates).toHaveLength(TEACHING_MAX_ADVANCE_DAYS);
+	});
+});
+
+// The first-booking card draws from the same window, so the two cannot drift.
+describe('getAvailableDates window source', () => {
+	it('offers exactly the dates bookableDateStrs gives for the same booker', async () => {
+		const { bookableDateStrs } = await import('#lib/server/reservation/conflict-service.js');
+		const { getReservationConfig } = await import('#lib/server/reservation/config.js');
+		const config = await getReservationConfig();
+		expect((await getAvailableDates('user')).dates).toEqual(bookableDateStrs(config, 'user'));
+		expect((await getAvailableDates('instructor')).dates).toEqual(
+			bookableDateStrs(config, 'instructor')
+		);
 	});
 });

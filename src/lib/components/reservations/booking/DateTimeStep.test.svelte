@@ -7,14 +7,16 @@
 
 	let {
 		remote,
-		bookerType
+		bookerType,
+		prefill
 	}: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a mocked remote form
 		remote: RemoteForm<any, any>;
 		bookerType?: BookerType;
+		prefill?: { date: string; startTime: string; endTime: string };
 	} = $props();
 </script>
 
 <Form.Root {remote}>
-	<DateTimeStep isSustaining {bookerType} />
+	<DateTimeStep isSustaining {bookerType} {prefill} />
 </Form.Root>
