@@ -19,6 +19,7 @@
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import JoinedBandsCard from './JoinedBandsCard.svelte';
 	import NoBandsCard from './NoBandsCard.svelte';
+	import FirstBookingCard from './FirstBookingCard.svelte';
 	import VerifyEmailNotice from '#lib/components/member/VerifyEmailNotice.svelte';
 	import { getMemberLayoutContext } from './layout-context';
 	import { creditsToHours } from '#lib/config.js';
@@ -47,6 +48,7 @@
 	<!-- Before the actions: a bandmate's booking can be one of them. -->
 	<JoinedBandsCard bands={data.joinedBands} />
 	<NeedsYouCard items={data.needsYou} />
+	<FirstBookingCard firstBooking={data.firstBooking} />
 	<NoBandsCard bandCount={layout.current.userBands.length} />
 	{#if !data.emailVerified}
 		<VerifyEmailNotice />

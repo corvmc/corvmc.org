@@ -39,6 +39,44 @@
 	const HISTORY_PAGE_SIZE = 12;
 	let showAllHistory = $state(false);
 
+	// The first-booking card links here with ?date=&start=&end= (#3410). Both
+	// pieces of state sit ABOVE the awaits below, and the effect only ever opens
+	// (the bands page's ?create=1 note explains the dead modal a writable derived
+	// on `page.url` brings back). The slot is a hint: the dialog offers it only if
+	// the server still does, and the submit re-validates.
+	let bookingOpen = $state(false);
+	let prefill = $state<{ date: string; startTime: string; endTime: string }>();
+	const SLOT_PARAMS = ['date', 'start', 'end'];
+
+	$effect(() => {
+		const q = page.url.searchParams;
+		const date = q.get('date') ?? '';
+		const start = q.get('start') ?? '';
+		const end = q.get('end') ?? '';
+		if (
+			/^\d{4}-\d{2}-\d{2}$/.test(date) &&
+			/^\d{2}:\d{2}$/.test(start) &&
+			/^\d{2}:\d{2}$/.test(end)
+		) {
+			prefill = { date, startTime: start, endTime: end };
+			bookingOpen = true;
+		}
+	});
+
+	// Drop the params on close so a reload does not reopen the dialog.
+	$effect(() => {
+		if (bookingOpen || !prefill) return;
+		prefill = undefined;
+		const rest = new URLSearchParams(page.url.searchParams);
+		if (!SLOT_PARAMS.some((k) => rest.has(k))) return;
+		SLOT_PARAMS.forEach((k) => rest.delete(k));
+		void goto(`${resolve('member/reservations')}${rest.size ? `?${rest}` : ''}`, {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+	});
+
 	// These two MUST stay above the `await`s below. A declaration that follows a
 	// top-level await is compiled as "blocked", and Svelte hangs that blocker on
 	// every template node that reads it — so `{#each await activeReservations}`
@@ -168,6 +206,8 @@
 		{bookers}
 		{feeGate}
 		needsPhone={contact.needsPhone}
+		bind:open={bookingOpen}
+		{prefill}
 		onbooked={refreshReservations}
 		data-testid="book-space"
 	/>
@@ -206,14 +246,18 @@
 						value="active"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'active'
-						})}>{m.member_reservations_upcoming_text()}</Tabs.Trigger
+						})}
 					>
+						{m.member_reservations_upcoming_text()}
+					</Tabs.Trigger>
 					<Tabs.Trigger
 						value="all"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'all'
-						})}>{m.member_all_text()}</Tabs.Trigger
+						})}
 					>
+						{m.member_all_text()}
+					</Tabs.Trigger>
 				</Tabs.List>
 			</header>
 			<!-- Both panels used to be in the DOM at once: 54 reservation links while
@@ -320,9 +364,9 @@
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
-					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
-						>{m.member_reservations_dismiss_label()}</Button
-					>
+					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}>
+						{m.member_reservations_dismiss_label()}
+					</Button>
 					<SubmitButton
 						label={m.member_reservations_confirm_reservation_label()}
 						variant="success"

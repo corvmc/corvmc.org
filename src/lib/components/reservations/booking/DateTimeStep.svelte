@@ -19,7 +19,8 @@
 		isSustaining = false,
 		needsPhone = false,
 		reloadToken = 0,
-		bookerType = undefined
+		bookerType = undefined,
+		prefill = undefined
 	}: {
 		isSustaining?: boolean;
 		/**
@@ -35,7 +36,18 @@
 		 * member floor it had.
 		 */
 		bookerType?: BookerType;
+		/**
+		 * A slot to start on, from a link (#3410). Each value is applied once, only
+		 * if the server still offers it; anything else falls back to the usual
+		 * first bookable day, and the submit re-validates whatever was chosen.
+		 */
+		prefill?: { date: string; startTime: string; endTime: string };
 	} = $props();
+
+	// Read once: a link's slot is a starting point, not a value to keep enforcing.
+	let pending: { date: string; startTime: string; endTime: string } | undefined = untrack(
+		() => prefill
+	);
 
 	const tz = getLocalTimeZone();
 	// Three booking forms share this step, so the names come from whichever one holds it.
@@ -123,7 +135,10 @@
 			// date the server no longer offers. untrack: reading `date` here must
 			// not make this effect depend on it.
 			const current = untrack(() => date);
-			if (!current || !dates.includes(current)) date = dates[0] ?? '';
+			if (pending && !current && dates.includes(pending.date)) date = pending.date;
+			else if (!current || !dates.includes(current)) date = dates[0] ?? '';
+			// Not offered any more: the rest of the link goes with it.
+			if (pending && date !== pending.date) pending = undefined;
 			initialLoading = false;
 		})();
 	});
@@ -163,7 +178,13 @@
 		(async () => {
 			if (forceReload) await q.refresh();
 			const opts = (forceReload ? q.current : await q) ?? [];
-			if (gen === startGen) startTimeOptions = opts;
+			if (gen !== startGen) return;
+			startTimeOptions = opts;
+			if (pending && d === pending.date) {
+				const wanted = opts.find((o) => o.value === pending!.startTime);
+				if (wanted && !wanted.disabled) startTime = wanted.value;
+				else pending = undefined;
+			}
 		})();
 	});
 
@@ -176,7 +197,12 @@
 			endTimeOptions = null;
 			const d = untrack(() => date);
 			getReservationEndTimes({ date: d, startTime: st, bookerType }).then((opts) => {
-				if (gen === endGen) endTimeOptions = opts;
+				if (gen !== endGen) return;
+				endTimeOptions = opts;
+				if (pending && st === pending.startTime) {
+					if (opts.some((o) => o.value === pending!.endTime)) endTime = pending.endTime;
+					pending = undefined;
+				}
 			});
 		} else {
 			endTimeOptions = [];
@@ -301,9 +327,9 @@
 
 		{#if isSustaining}
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend"
-					>{m.reservations_booking_date_time_step_frequency_title()}</legend
-				>
+				<legend class="fieldset-legend">
+					{m.reservations_booking_date_time_step_frequency_title()}
+				</legend>
 				<div class="grid grid-cols-2 gap-1">
 					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, ...frequencyOptions()] as opt (opt.value)}
 						<label class="btn whitespace-nowrap btn-sm" class:btn-primary={frequency === opt.value}>
@@ -323,9 +349,9 @@
 
 			{#if isMonthly}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend"
-						>{m.reservations_booking_date_time_step_monthly_pattern_title()}</legend
-					>
+					<legend class="fieldset-legend">
+						{m.reservations_booking_date_time_step_monthly_pattern_title()}
+					</legend>
 					<div class="flex flex-col gap-1">
 						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
 							<label class="btn justify-start btn-sm" class:btn-primary={monthlyMode === opt.value}>
