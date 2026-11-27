@@ -290,16 +290,6 @@
 	"public_events_id_tickets_success_confirmation_email_receipt_text": "A confirmation email and receipt will be sent to {value}.",
 	"public_events_id_tickets_success_confirming_payment_body": "Confirming your payment…",
 	"public_events_id_tickets_success_email_text": "your email",
-	"public_events_id_tickets_success_save_codes_below_s_confirma_text": [
-		{
-			"declarations": ["input count", "local countPlural = count: plural"],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "Save the code below — that's your confirmation. No email is sent for free tickets.",
-				"countPlural=*": "Save the codes below — that's your confirmation. No email is sent for free tickets."
-			}
-		}
-	],
 	"public_events_id_tickets_success_ticket_code_text": "Ticket code",
 	"public_events_id_tickets_success_tickets_title": "Tickets",
 	"public_events_id_tickets_success_title": "Tickets confirmed",
