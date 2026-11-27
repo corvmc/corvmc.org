@@ -27,3 +27,8 @@ export function uniqueTags(...lists: Iterable<string | null | undefined>[]): Uni
 export function parseTagList(raw: string | null | undefined): UniqueTags {
 	return uniqueTags(raw ? raw.split(',') : []);
 }
+
+/** A run of distinct tags is still distinct, so a slice keeps the type. */
+export function sliceTags(tags: UniqueTags, start?: number, end?: number): UniqueTags {
+	return tags.slice(start, end) as unknown as UniqueTags;
+}

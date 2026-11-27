@@ -14,7 +14,7 @@
 
 <Field {field} type="text" {label} list={listId} autocomplete="off" />
 <datalist id={listId}>
-	{#each await getSupplierNames() as name (name)}
+	{#each await getSupplierNames() as name, i (i)}
 		<option value={name}></option>
 	{/each}
 </datalist>

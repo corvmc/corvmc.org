@@ -237,7 +237,7 @@
 
 			{#if chips.length > 0}
 				<div class="flex flex-wrap justify-center gap-1">
-					{#each chips as value (value)}
+					{#each chips as value, i (i)}
 						<Button
 							variant="default"
 							size="xs"

@@ -128,10 +128,10 @@
 	>
 		<div class="space-y-4">
 			<input {...fields.bandId.as('hidden', bandId)} />
-			{#each memberIds as id, i (id)}
+			{#each memberIds as id, i (i)}
 				<input {...fields.userIds[i].as('hidden', id)} />
 			{/each}
-			{#each emails as email, i (email)}
+			{#each emails as email, i (i)}
 				<input {...fields.emails[i].as('hidden', email)} />
 			{/each}
 

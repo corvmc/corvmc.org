@@ -50,7 +50,7 @@
 							>{m.groups_roster_import_summary_show_addresses_label()}</summary
 						>
 						<ul class="mt-1 font-mono text-xs break-all">
-							{#each row.emails as email (email)}<li>{email}</li>{/each}
+							{#each row.emails as email, i (i)}<li>{email}</li>{/each}
 						</ul>
 					</details>
 				{/if}

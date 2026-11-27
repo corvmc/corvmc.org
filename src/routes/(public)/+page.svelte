@@ -56,7 +56,7 @@
 			>{m.public_learn_more_about_us_label()}</Button
 		>
 		<div class="mt-1 flex flex-wrap justify-center gap-2">
-			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag (tag)}
+			{#each ['All-ages', 'Substance-free', 'NOTAFLOF', 'Volunteer-run'] as tag, i (i)}
 				<span class="sticker-badge sticker-badge--sm">{tag}</span>
 			{/each}
 		</div>

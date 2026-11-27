@@ -277,7 +277,7 @@
 					size="xs"
 				>
 					{#snippet form()}
-						{#each selectedIds as id, i (id)}
+						{#each selectedIds as id, i (i)}
 							<input {...bulkFields.ids[i].as('hidden', id)} />
 						{/each}
 						<input {...bulkFields.published.as('hidden', true)} />
@@ -298,7 +298,7 @@
 					size="xs"
 				>
 					{#snippet form()}
-						{#each selectedIds as id, i (id)}
+						{#each selectedIds as id, i (i)}
 							<input {...unpublishSelected.fields.ids[i].as('hidden', id)} />
 						{/each}
 						<input {...unpublishSelected.fields.published.as('hidden', false)} />

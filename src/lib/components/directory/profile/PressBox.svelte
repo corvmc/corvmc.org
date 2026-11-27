@@ -22,7 +22,7 @@
 	<ProfileSection title={m.directory_profile_press_box_title()}>
 		{#if shownQuotes.length > 0}
 			<div class="press__quotes">
-				{#each shownQuotes as quote (quote.quote)}
+				{#each shownQuotes as quote, i (i)}
 					<figure class="press__quote">
 						<blockquote>{quote.quote}</blockquote>
 						<figcaption>
@@ -40,7 +40,7 @@
 
 		{#if shownAchievements.length > 0}
 			<ul class="press__list" class:press__list--spaced={shownQuotes.length > 0}>
-				{#each shownAchievements as achievement (achievement)}
+				{#each shownAchievements as achievement, i (i)}
 					<li>{achievement}</li>
 				{/each}
 			</ul>

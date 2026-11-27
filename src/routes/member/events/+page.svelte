@@ -180,7 +180,7 @@
 									>{/snippet}</ParaglideMessage
 							>
 						</Button>
-						{#each allTags as tag (tag)}
+						{#each allTags as tag, i (i)}
 							<Button
 								variant={activeFilter === tag ? 'primary' : 'default'}
 								size="sm"

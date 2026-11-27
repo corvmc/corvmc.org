@@ -121,7 +121,7 @@
 				{msg.public_band_site_slug_epk_press_title()}
 			</h2>
 			<div class="space-y-3">
-				{#each epk.pressQuotes as quote (quote.quote)}
+				{#each epk.pressQuotes as quote, i (i)}
 					<blockquote class="border-l-2 border-gray-300 pl-4">
 						<p class="text-gray-700 italic">"{quote.quote}"</p>
 						<p class="mt-1 text-sm text-gray-500">
@@ -141,7 +141,7 @@
 				{msg.public_band_site_slug_epk_highlights_title()}
 			</h2>
 			<ul class="space-y-1">
-				{#each epk.achievements as achievement (achievement)}
+				{#each epk.achievements as achievement, i (i)}
 					<li class="flex items-start gap-2 text-gray-700">
 						<span class="text-gray-400">•</span>
 						{achievement}
@@ -208,7 +208,7 @@
 				{msg.public_band_site_slug_epk_links_title()}
 			</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-				{#each band.links as link (link.url)}
+				{#each band.links as link, i (i)}
 					<a
 						href={link.url}
 						target="_blank"

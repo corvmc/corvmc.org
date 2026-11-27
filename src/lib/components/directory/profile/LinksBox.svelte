@@ -62,7 +62,7 @@
 			{#if streaming.length > 0}
 				<p class="links-box__group">{m.directory_profile_links_box_listen_text()}</p>
 				<div class="links-box__ribbon">
-					{#each streaming as item (item.link.url)}
+					{#each streaming as item, i (i)}
 						{@const Icon = item.icon}
 						<a
 							href={item.link.url}
@@ -81,7 +81,7 @@
 			{#if web.length > 0}
 				<p class="links-box__group">{m.directory_profile_links_box_web_text()}</p>
 				<div class="links-box__rows">
-					{#each web as item (item.link.url)}
+					{#each web as item, i (i)}
 						{@const Icon = item.icon}
 						<a
 							href={item.link.url}

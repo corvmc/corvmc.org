@@ -382,7 +382,7 @@
 					{msg.band_site_band_site_band_site_renderer_highlights_title()}
 				</h2>
 				<ul class="space-y-2">
-					{#each epk.achievements as achievement (achievement)}
+					{#each epk.achievements as achievement, i (i)}
 						<li class="flex items-start gap-2">
 							<span class="text-primary">&#9733;</span>
 							<span>{achievement}</span>

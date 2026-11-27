@@ -57,7 +57,7 @@
 				{#if !value}<IconCheck size={15} class="ml-auto" />{/if}
 			</DropdownMenu.Item>
 
-			{#each options as ch (ch)}
+			{#each options as ch, i (i)}
 				{@const Icon = channelIcon(ch)}
 				<DropdownMenu.Item class={itemClass} onSelect={() => onselect(ch)}>
 					<Icon size={15} />

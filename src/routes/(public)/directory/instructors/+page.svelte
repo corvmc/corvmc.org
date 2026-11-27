@@ -98,7 +98,7 @@
 					>
 						{m.public_all_label()}
 					</Button>
-					{#each page.instruments as inst (inst)}
+					{#each page.instruments as inst, i (i)}
 						<Button
 							size="sm"
 							variant={instrument === inst ? 'primary' : 'default'}

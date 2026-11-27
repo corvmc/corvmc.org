@@ -219,6 +219,7 @@
 					a refresh is pending that effect's write rebases the pending batch, which
 					derives `tabs` again, without end (#2433).
 				-->
+				<!-- eslint-disable-next-line custom/each-key-unique -- unique by construction: tab keys -->
 				{#each tabKeys as key (key)}
 					{@const tab = tabs.find((t) => t.key === key)!}
 					{@const iconOnly = iconOnlyProps(tab)}
