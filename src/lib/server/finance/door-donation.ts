@@ -42,7 +42,7 @@ export async function startDoorDonation(input: {
 	const intent = await stripe.paymentIntents.create({
 		amount: amountCents,
 		currency: 'usd',
-		payment_method_types: ['card_present'],
+		allowed_payment_method_types: ['card_present'],
 		capture_method: 'automatic',
 		description: 'Donation at the door',
 		metadata: {
