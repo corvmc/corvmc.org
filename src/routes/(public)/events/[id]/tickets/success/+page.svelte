@@ -19,8 +19,6 @@
 	let data = $derived(await getTicketPurchaseSuccess({ eventId: params.id, purchaseId }));
 
 	const evt = $derived(data.event);
-	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
-	const isFreeClaim = $derived(purchaseId.startsWith('rsvp-'));
 
 	// Tickets go `valid` on the webhook, not on payment. Paying on Stripe's page
 	// the redirect took long enough that it had always landed; paying on ours the
@@ -68,18 +66,10 @@
 				</p>
 			</div>
 
-			<!-- Only paid purchases trigger an email (ticket.purchased fires from the
-			     Stripe webhook). Free claims send nothing, so don't promise one. -->
 			<p class="text-muted">
-				{#if isFreeClaim}
-					{m.public_events_id_tickets_success_save_codes_below_s_confirma_text({
-						count: data.tickets.length
-					})}
-				{:else}
-					{m.public_events_id_tickets_success_confirmation_email_receipt_text({
-						value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email_text()
-					})}
-				{/if}
+				{m.public_events_id_tickets_success_confirmation_email_receipt_text({
+					value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email_text()
+				})}
 			</p>
 		</CardBody>
 	</Card>
@@ -116,8 +106,8 @@
 	</Card>
 
 	<div class="text-center">
-		<Button href="/events" variant="ghost"
-			>{m.public_events_id_tickets_success_back_events_label()}</Button
-		>
+		<Button href="/events" variant="ghost">
+			{m.public_events_id_tickets_success_back_events_label()}
+		</Button>
 	</div>
 </div>
