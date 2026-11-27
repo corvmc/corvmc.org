@@ -16,6 +16,12 @@ import {
 	type LockDeviceHealth
 } from './ultraloc-client';
 import { maintainFallbackCode } from './fallback-code-service';
+import { lockAuditEntry, lockAuditStatements, recordLockAudit } from './lock-audit';
+import {
+	currentActor,
+	auditEntryStatement,
+	type AuditActor
+} from '#lib/server/audit/audit-service.js';
 import { doorCodeWindow } from '#lib/utils/door-code-window.js';
 import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '#lib/server/kv.js';
@@ -425,7 +431,7 @@ export async function reprovisionAccessFor(row: {
 	code?: number;
 }): Promise<{ ok: boolean; code?: number; error?: string }> {
 	try {
-		const code = await provisionAccessFor(row);
+		const code = await provisionAccessFor(row, currentActor());
 		if (code === null) return { ok: false, error: 'Reservation is not confirmed' };
 		return { ok: true, code };
 	} catch (err) {
@@ -439,36 +445,53 @@ export async function reprovisionAccessFor(row: {
  * is read again before the add and after it is recorded. Null when the booking
  * stopped being confirmed: no add, or the add removed again.
  */
-async function provisionAccessFor(row: {
-	id: string;
-	startsAt: Date;
-	endsAt: Date;
-	memberName: string;
-	code?: number;
-}): Promise<number | null> {
+async function provisionAccessFor(
+	row: {
+		id: string;
+		startsAt: Date;
+		endsAt: Date;
+		memberName: string;
+		code?: number;
+	},
+	actor?: AuditActor
+): Promise<number | null> {
 	if (!(await isConfirmed(row.id))) return null;
 
 	const code = row.code ?? generateLockCode();
 
-	const lockAccessId = await createTemporaryUser({
-		name: row.memberName,
-		startTime: row.startsAt,
-		endTime: row.endsAt,
-		code
-	});
+	let lockAccessId: number | null;
+	try {
+		lockAccessId = await createTemporaryUser({
+			name: row.memberName,
+			startTime: row.startsAt,
+			endTime: row.endsAt,
+			code
+		});
+	} catch (err) {
+		await recordLockAudit(row.id, { kind: 'failed', stage: 'issue', lockAccessId: null }, actor);
+		throw err;
+	}
+	const accessId = lockAccessId === null ? null : String(lockAccessId);
 
 	// lockSyncedAt stays null: the add is queued in U-tec's cloud and only
 	// reaches the lock when the lock is next online. The reconciliation pass is
 	// what promotes it to "known good".
-	await db
+	// One batch with the audit row, so a code on the booking always has its record.
+	const write = db
 		.update(reservation)
 		.set({
 			lockCode: String(code),
-			lockAccessId: lockAccessId === null ? null : String(lockAccessId),
+			lockAccessId: accessId,
 			lockSyncedAt: null,
 			updatedAt: new Date()
 		})
 		.where(eq(reservation.id, row.id));
+	const audit = await lockAuditStatements(
+		row.id,
+		{ kind: 'assigned', lockAccessId: accessId, syncedAt: null },
+		actor
+	);
+	await db.batch([write, ...audit]);
 
 	// Recorded before this read, so a cancel landing after it has a code to revoke.
 	if (await isConfirmed(row.id)) return code;
@@ -477,7 +500,7 @@ async function provisionAccessFor(row: {
 		id: row.id,
 		startsAt: row.startsAt,
 		lockCode: String(code),
-		lockAccessId: lockAccessId === null ? null : String(lockAccessId)
+		lockAccessId: accessId
 	});
 	return null;
 }
@@ -617,6 +640,9 @@ export async function syncAccessWindow(
 	}
 }
 
+/** Stale codes cleared per `db.batch`: two statements each. */
+const CLEAR_CHUNK = 25;
+
 /**
  * Remove expired temporary lock users and clear stale door codes.
  *
@@ -688,15 +714,32 @@ async function cleanupPreviousDayAccess(errors: string[], warnings: string[]): P
 		const todayStr = now.toLocaleDateString('en-CA', { timeZone: tz });
 		const todayStart = buildDateInTz(todayStr, '00:00', tz);
 
-		await db
-			.update(reservation)
-			.set({
-				lockCode: null,
-				lockAccessId: null,
-				lockSyncedAt: null,
-				updatedAt: new Date()
+		// Each clear is batched with its audit row; chunked to keep a backlog's
+		// first run inside D1's statement limits.
+		const stale = await db
+			.select({
+				id: reservation.id,
+				startsAt: reservation.startsAt,
+				endsAt: reservation.endsAt,
+				createdByUserId: reservation.createdByUserId,
+				memberName: user.name,
+				lockAccessId: reservation.lockAccessId
 			})
+			.from(reservation)
+			.leftJoin(user, eq(user.id, reservation.createdByUserId))
 			.where(and(isNotNull(reservation.lockCode), lt(reservation.startsAt, todayStart)));
+		for (let i = 0; i < stale.length; i += CLEAR_CHUNK) {
+			const statements = stale.slice(i, i + CLEAR_CHUNK).flatMap((row) => [
+				db
+					.update(reservation)
+					.set({ lockCode: null, lockAccessId: null, lockSyncedAt: null, updatedAt: new Date() })
+					.where(and(eq(reservation.id, row.id), isNotNull(reservation.lockCode))),
+				auditEntryStatement(
+					lockAuditEntry(row, { kind: 'cleared', lockAccessId: row.lockAccessId, reason: 'ended' })
+				)
+			]);
+			await db.batch(statements as [(typeof statements)[0], ...typeof statements]);
+		}
 	} catch (err) {
 		const msg = `Failed to clear stale door codes: ${(err as Error).message}`;
 		console.error(msg);
@@ -726,6 +769,30 @@ type HeldAccess = {
  * provision can send two.
  */
 async function removeHeldAccess(row: HeldAccess): Promise<void> {
+	try {
+		await removeLockUsers(row);
+	} catch (err) {
+		await recordLockAudit(row.id, {
+			kind: 'failed',
+			stage: 'clear',
+			lockAccessId: row.lockAccessId
+		});
+		throw err;
+	}
+
+	const write = db
+		.update(reservation)
+		.set({ lockCode: null, lockAccessId: null, lockSyncedAt: null, updatedAt: new Date() })
+		.where(eq(reservation.id, row.id));
+	const audit = await lockAuditStatements(row.id, {
+		kind: 'cleared',
+		lockAccessId: row.lockAccessId,
+		reason: 'cancelled'
+	});
+	await db.batch([write, ...audit]);
+}
+
+async function removeLockUsers(row: HeldAccess): Promise<void> {
 	if (row.lockAccessId) {
 		const id = Number(row.lockAccessId);
 		try {
@@ -743,11 +810,6 @@ async function removeHeldAccess(row: HeldAccess): Promise<void> {
 			await removeTemporaryUser(u.id);
 		}
 	}
-
-	await db
-		.update(reservation)
-		.set({ lockCode: null, lockAccessId: null, lockSyncedAt: null, updatedAt: new Date() })
-		.where(eq(reservation.id, row.id));
 }
 
 /**
