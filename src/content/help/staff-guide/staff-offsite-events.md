@@ -32,12 +32,12 @@ and a Saturday-noon-to-Sunday-night one does not. Create one event per day.
 
 Make them from **Staff → Calendar → Create event**:
 
-- **Do not tick _Reserve practice space_** in the event's edit form for an off-site show. The
-  room hold is what keeps members from booking the practice space, and a show in a park has no
-  reason to take it. Picking an off-site venue hides the toggle.
+- **Leave _Hold from_ and _Hold until_ blank** in the event's listing form for an off-site show.
+  The room hold is what keeps members from booking the practice space, and a show in a park has
+  no reason to take it. Choosing **Saved venue** or **Somewhere else** under **Where** hides them.
 - **Set the venue afterwards.** The create form has no location field. Open the event at
-  **Staff → Calendar → _the event_** and put the venue in **Venue** on the edit form. Until you
-  do, the event page's **Room hold** card will keep asking you to hold a room you do not want.
+  **Staff → Calendar → _the event_** and choose **Saved venue** or **Somewhere else** under
+  **Where**. Until you do, the form treats the show as in the practice space.
 - **Ticketing off**, unless CMC is genuinely selling something. A free stage needs none of it, and
   leaving it off means no check-in tool and no ticket ledger to reconcile afterwards.
 

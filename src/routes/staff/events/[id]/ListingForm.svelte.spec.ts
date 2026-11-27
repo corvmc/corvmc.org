@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
+// What `checkConflicts` answers, so a case can double-book the hold's window.
+const check = vi.hoisted(() => ({ conflicts: [] as unknown[] }));
+
 vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
@@ -16,7 +19,7 @@ vi.mock('#lib/remote/events.remote.js', () => {
 			result: undefined
 		},
 		checkRebook: vi.fn(async () => ({ needed: false })),
-		checkConflicts: vi.fn(async () => ({ conflicts: [] }))
+		checkConflicts: vi.fn(async () => ({ conflicts: check.conflicts, validationWarnings: [] }))
 	};
 });
 
@@ -58,7 +61,12 @@ function listing(source: string, ticketingEnabled: boolean) {
 const props = (source: string, ticketingEnabled: boolean) => ({
 	event: listing(source, ticketingEnabled),
 	lineup: [{ id: 'act-1', name: 'The Openers', bandId: null, actId: null }],
-	linkedReservation: null,
+	linkedReservation: null as {
+		id: string;
+		startsAt: Date;
+		endsAt: Date;
+		ref: { type: 'reservation'; id: string; title: string };
+	} | null,
 	venues: [],
 	onsaved: () => {}
 });
@@ -113,7 +121,8 @@ describe('ListingForm on a cancelled listing', () => {
 		expect(posted(container, 'ticketQuantity')).toBeNull();
 		expect(posted(container, 'ticketingEnabled')).toBeNull();
 		expect(choice(container, 'cmc')).toBeNull();
-		expect(container.querySelector('[data-testid="reserve-space"]')).toBeNull();
+		expect(posted(container, 'reservationStartTime')).toBeNull();
+		expect(container.querySelector('[data-testid="release-hold"]')).toBeNull();
 	});
 
 	it('is read-only without the right to correct it', async () => {
@@ -172,5 +181,68 @@ describe('ListingForm performers', () => {
 		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		expect(posted(container, 'lineup')).not.toBeNull();
 		expect(container.querySelector('a[href*="tab=production"]')).toBeNull();
+	});
+});
+
+const hold = {
+	id: 'res-1',
+	startsAt: new Date('2026-11-14T02:00:00Z'),
+	endsAt: new Date('2026-11-14T07:00:00Z'),
+	ref: { type: 'reservation' as const, id: 'res-1', title: 'Hold' }
+};
+const holdProps = () => ({ ...props('cmc', false), linkedReservation: hold });
+const byTestId = (container: Element, id: string) =>
+	container.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+
+describe('ListingForm hold states', () => {
+	it('says a CMC show holds nothing, and offers the window blank', async () => {
+		check.conflicts = [];
+		const { container, locator } = await render(ListingForm, props('cmc', false));
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		expect(byTestId(container, 'space-hold')).not.toBeNull();
+		expect(byTestId(container, 'release-hold')).toBeNull();
+		expect(posted(container, 'reservationStartTime')?.value ?? '').toBe('');
+	});
+
+	it('says nothing of a hold on a community listing that has none', async () => {
+		const { container, locator } = await render(ListingForm, props('community', false));
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		expect(byTestId(container, 'space-hold')).toBeNull();
+	});
+
+	it('stages Release hold and takes the window away', async () => {
+		check.conflicts = [];
+		const { container, locator } = await render(ListingForm, holdProps());
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		expect(posted(container, 'reservationStartTime')).not.toBeNull();
+		byTestId(container, 'release-hold')!.click();
+
+		await vi.waitFor(() => expect(posted(container, 'reservationStartTime')).toBeNull());
+		expect(byTestId(container, 'release-hold')).toBeNull();
+	});
+
+	it('gates Save on a double-booking until Book anyway', async () => {
+		check.conflicts = [
+			{
+				type: 'reservation',
+				id: 'res-2',
+				startsAt: new Date('2026-11-14T03:00:00Z'),
+				endsAt: new Date('2026-11-14T05:00:00Z'),
+				label: 'Someone else'
+			}
+		];
+		const { container, locator } = await render(ListingForm, holdProps());
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		await vi.waitFor(() => expect(byTestId(container, 'override-conflicts')).not.toBeNull());
+		const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+		expect(submit.disabled).toBe(true);
+
+		byTestId(container, 'override-conflicts')!.click();
+		await vi.waitFor(() => expect(submit.disabled).toBe(false));
+		expect(byTestId(container, 'override-conflicts')).toBeNull();
 	});
 });

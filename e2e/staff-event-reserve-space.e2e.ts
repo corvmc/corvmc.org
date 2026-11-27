@@ -13,18 +13,18 @@ import {
 	SEED_EVENT_TITLE_PREFIX,
 	SEED_EDIT_EVENT_DATE,
 	SEED_SELF_CONFLICT_DATE,
-	SEED_LIST_LINK_DATE
+	SEED_LIST_LINK_DATE,
+	SEED_RELEASE_DATE
 } from './fixtures/seed-staff-event';
 
 /**
- * End-to-end pin for "Reserve practice space", which lives on the listing's
- * edit form at `/staff/events/[id]` (#1946). The create modal asks only for what the row needs
- * (#1822's rule), so every hold below is raised after the event exists.
+ * End-to-end pin for the room hold, which lives under Where in the listing form
+ * at `/staff/events/[id]` (#1946, #3271). The create modal asks only for what the
+ * row needs (#1822's rule), so every hold below is raised after the event exists.
  *
- * The toggle once passed its value one-way to FormField, so the reservation
- * times never mounted and the event saved with no hold and no error. Only an
- * e2e catches that class: the server specs post the fields the browser failed
- * to render.
+ * The hold's times once passed one-way to FormField, so they never followed the
+ * show and the event saved with no hold and no error. Only an e2e catches that
+ * class: the server specs post the fields the browser failed to render.
  */
 
 async function loginAsStaff(page: Page) {
@@ -52,7 +52,8 @@ async function waitForEventPage(page: Page, title: string) {
 
 /**
  * Creating a show lands on its Listing tab (#3270). Reloaded so every test
- * opens Edit itself, from the same closed state.
+ * starts from the form as loaded. `page.goto` resolves once `html[data-hydrated]`
+ * is attached (`e2e/fixtures/test.ts`), so the form takes input from here on.
  */
 async function goToListing(page: Page, title: string) {
 	await waitForEventPage(page, title);
@@ -105,6 +106,15 @@ async function createEvent(
 	await goToListing(page, title);
 }
 
+const holdStart = (page: Page) =>
+	page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])');
+const holdEnd = (page: Page) =>
+	page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])');
+const showStart = (page: Page) =>
+	page.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])');
+const whereChoice = (page: Page, value: 'room' | 'venue' | 'other') =>
+	page.locator(`input[type="radio"][value="${value}"]`);
+
 /**
  * The listing form is server-rendered, so it is on the page before it is
  * interactive. `data-ready` is set once it has mounted.
@@ -112,24 +122,23 @@ async function createEvent(
 const readyForm = (page: Page) => page.locator('[data-testid="listing-form"][data-ready]');
 
 /**
- * Tick the hold once the form is interactive, and wait for the form to carry it.
- * The time fields mount before their values and the `rebookReservation` flag
- * reach the DOM (the commit waits on the conflict query), and a submit reads the
- * DOM, so a save in that gap posts no hold and still reports success.
+ * Choosing Practice space holds nothing by itself: the room is held when both
+ * Hold from and Hold until are filled. The form posts a hold only once the
+ * `rebookReservation` flag has reached the DOM (the commit waits on the conflict
+ * query), and a submit reads the DOM, so a save in that gap posts no hold and
+ * still reports success. Wait for the form, fill, then wait for the flag.
  */
-async function tickReserveSpace(page: Page) {
+async function fillHold(page: Page, start = EVENT_START, end = EVENT_END) {
 	await expect(readyForm(page)).toBeVisible();
-	await page.getByTestId('reserve-space').check();
+	await holdStart(page).fill(start);
+	await holdEnd(page).fill(end);
 	await expect(page.locator('input[type="hidden"][name*="rebookReservation"]')).toBeAttached();
-	await expect(
-		page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-	).not.toHaveValue('');
 }
 
 /**
  * Submit the listing form and wait until it is saved and re-seeded. The success
  * toast is raised after the page refresh and the form's re-key, so anything
- * typed before it would be thrown away with the old form.
+ * typed or staged before it would be thrown away with the old form.
  */
 async function saveListing(page: Page) {
 	await saveButton(page).click();
@@ -137,9 +146,9 @@ async function saveListing(page: Page) {
 	await expect(readyForm(page)).toBeVisible();
 }
 
-/** From the listing: tick the hold, save, and wait for the link. */
+/** From the listing: fill the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
-	await tickReserveSpace(page);
+	await fillHold(page);
 	await saveListing(page);
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 		timeout: 15000
@@ -152,33 +161,18 @@ test.describe('staff event creation — minimal modal', () => {
 		// Never saved, so the date cannot collide with anything.
 		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await tickReserveSpace(page);
-		await expect(
-			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-		).toHaveValue(EVENT_START);
-		await expect(
-			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
-		).toHaveValue(EVENT_END);
+		// Nothing is held until staff ask: the window starts blank.
+		await expect(holdStart(page)).toHaveValue('');
+		await expect(holdEnd(page)).toHaveValue('');
 
 		// An hour either side of the 19:00–22:00 show for load-in and load-out.
-		await page
-			.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-			.fill('18:00');
-		await page
-			.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
-			.fill('23:00');
+		await fillHold(page, '18:00', '23:00');
 
 		// The show moves two hours earlier, and the padding moves with it.
-		await page
-			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
-			.fill('17:00');
+		await showStart(page).fill('17:00');
 		await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill('20:00');
-		await expect(
-			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-		).toHaveValue('16:00');
-		await expect(
-			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
-		).toHaveValue('21:00');
+		await expect(holdStart(page)).toHaveValue('16:00');
+		await expect(holdEnd(page)).toHaveValue('21:00');
 	});
 
 	test('the reservation list links an event hold to its event, not to the booker', async ({
@@ -227,7 +221,7 @@ test.describe('staff event creation — minimal modal', () => {
 		).toBeVisible();
 	});
 
-	test('a double-booking blocks the save until the override is ticked', async ({ page }) => {
+	test('a double-booking blocks the save until Book anyway', async ({ page }) => {
 		await loginAsStaff(page);
 		await createEvent(
 			page,
@@ -236,8 +230,7 @@ test.describe('staff event creation — minimal modal', () => {
 			SEED_CONFLICT_START,
 			SEED_CONFLICT_END
 		);
-		const reserve = page.getByTestId('reserve-space');
-		await tickReserveSpace(page);
+		await fillHold(page, SEED_CONFLICT_START, SEED_CONFLICT_END);
 
 		// The seeded booking holds this window, so the overlap has to fire — and it
 		// is an error, not a warning.
@@ -247,16 +240,20 @@ test.describe('staff event creation — minimal modal', () => {
 		const submit = saveButton(page);
 
 		// A second, deliberate action rather than a relabelled submit.
-		await expect(override).not.toBeChecked();
 		await expect(submit).toBeDisabled();
-		await override.check();
+		await override.click();
 		await expect(submit).toBeEnabled();
+		await expect(override).toHaveCount(0);
 
-		// Unticking the hold clears the flag, so a stale override cannot ride
-		// along on the next save and skip the server's double-booking check.
-		await reserve.uncheck();
+		// Leaving the room clears the override, so a stale one cannot ride along on
+		// the next save and skip the server's double-booking check. Coming back
+		// asks again.
+		await whereChoice(page, 'other').check();
 		await expect(submit).toBeEnabled();
-		await expect(page.getByTestId('override-conflicts')).toHaveCount(0);
+		await whereChoice(page, 'room').check();
+		await expect(blockers(page).first()).toBeVisible({ timeout: 15000 });
+		await expect(page.getByTestId('override-conflicts')).toBeVisible();
+		await expect(submit).toBeDisabled();
 	});
 });
 
@@ -278,18 +275,8 @@ test.describe('staff event edit — reserve space', () => {
 		// Not held yet: nothing on the listing links to a reservation.
 		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(0);
 
-		const reserve = page.getByTestId('reserve-space');
-		await expect(reserve).toBeVisible();
-		await tickReserveSpace(page);
-
-		// Pre-filled from the event's own window: the times are a setup/teardown
-		// override, not a precondition.
-		await expect(
-			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-		).toHaveValue(EVENT_START);
-		await expect(
-			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
-		).toHaveValue(EVENT_END);
+		await expect(holdStart(page)).toBeVisible();
+		await fillHold(page);
 
 		// The listing form's submit, not the bill's, which renders beside it.
 		await saveListing(page);
@@ -314,14 +301,10 @@ test.describe('staff event edit — reserve space', () => {
 		// window that overlaps the event's own reservation. Earlier rather than
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
-		await page
-			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
-			.fill('17:00');
-		await page.getByTestId('confirm-rebook').check();
+		await showStart(page).fill('17:00');
+		await page.getByTestId('confirm-rebook').click();
 
-		await expect(
-			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
-		).toHaveValue('17:00');
+		await expect(holdStart(page)).toHaveValue('17:00');
 
 		// The seeded dates are years out, so ConflictWarnings always reports the
 		// advance-booking advisory here. Asserting it first proves the component
@@ -339,5 +322,21 @@ test.describe('staff event edit — reserve space', () => {
 		// offer an override, which is how "this is further out than we normally
 		// take" ended up wearing the same control as "somebody else has the room".
 		await expect(page.getByTestId('override-conflicts')).toHaveCount(0);
+	});
+
+	test('Release hold takes the room back on save', async ({ page }, { retry }) => {
+		await loginAsStaff(page);
+		const title = `${SEED_EVENT_TITLE_PREFIX} release ${Date.now()}`;
+		await createEvent(page, title, bookingDate(SEED_RELEASE_DATE, retry));
+		await holdSpace(page);
+
+		// Staged: the hold is still there until Save. The form is the re-seeded one
+		// (holdSpace waited for it), so the staged release is not thrown away.
+		await page.getByTestId('release-hold').click();
+		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(1);
+		await saveButton(page).click();
+
+		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(0);
+		await expect(page.getByTestId('release-hold')).toHaveCount(0);
 	});
 });

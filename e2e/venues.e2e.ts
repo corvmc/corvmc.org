@@ -20,7 +20,7 @@ async function loginAsStaff(page: Page) {
 test.describe('venues', () => {
 	/**
 	 * The refusal that matters: a hold for a show somewhere else cannot happen,
-	 * and `updateEvent` says so. The console's edit form withdraws the toggle once
+	 * and `updateEvent` says so. The listing form withdraws the hold's window once
 	 * an off-site venue is chosen, which is the same rule one step earlier. The
 	 * create modal no longer asks about the room at all.
 	 */
@@ -43,22 +43,23 @@ test.describe('venues', () => {
 		// Create lands on the Listing tab; reloaded so the form seeds from a fresh page.
 		await page.goto(new URL(page.url()).pathname);
 
-		// The toggle is there while the show is in our room.
-		await expect(page.getByTestId('reserve-space')).toBeVisible({
-			timeout: 15000
-		});
+		// The hold's window is there while the show is in our room.
+		const holdWindow = page.locator(
+			'input:is([name="reservationStartTime"], [name^="reservationStartTime/"])'
+		);
+		await expect(holdWindow).toBeVisible({ timeout: 15000 });
 
 		await page.locator('input[type="radio"][value="venue"]').check();
 		await page
 			.locator('select:is([name="venueId"], [name^="venueId/"])')
 			.selectOption({ label: SEED_VENUE_OFFSITE_NAME });
 
-		await expect(page.getByTestId('reserve-space')).toHaveCount(0);
+		await expect(holdWindow).toHaveCount(0);
 		await expect(page.getByTestId('offsite-note')).toBeVisible();
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
 		await page.locator('input[type="radio"][value="room"]').check();
-		await expect(page.getByTestId('reserve-space')).toBeVisible();
+		await expect(holdWindow).toBeVisible();
 	});
 });

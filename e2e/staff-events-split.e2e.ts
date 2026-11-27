@@ -110,9 +110,9 @@ test.describe('staff events split', () => {
 			.locator(`a[href="/staff/events/${SEED_SPLIT_CMC_LIVE_ID}?tab=production"]`)
 			.first();
 		await expect(tab).toBeVisible();
-		// The room hold is the listing's (#1946), so it is on the Listing tab. It is
-		// kept as a card test: no reservation is seeded for this show, so the card is
-		// the only handle, and which surfaces offer it is the behaviour.
+		// The room hold is the listing's (#1946), so it is on the Listing tab, under
+		// Where. No reservation is seeded for this show and it names no place, so the
+		// room is chosen and the hold reads as not held (#3271).
 		await expect(page.getByTestId('space-hold')).toBeVisible();
 
 		await tab.click();

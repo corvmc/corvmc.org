@@ -23,15 +23,17 @@ event.
 
 ## On the event detail page
 
-- **Edit** — Title, description, date, start/end/doors times, venue and tags, plus
-  ticketing (**price** and **quantity**) and **Reserve practice space**.
+- **Listing form** — Title, description, date, start/end/doors times, where the show is, the
+  bill and tickets, saved together. Under **Where**, **Hold from** and **Hold until** hold the
+  practice space; leave both blank to hold nothing.
 - **Poster, ticket sales and repeats** — the poster card, the ticket list and comps, and
   **Repeat event** to make it a series, all on the same page.
 - **Publish / Unpublish** — Control whether the event is visible.
 - **Cancel event** — Call off an event.
-- **Confirm rebook** — If you change the time, the edit form rebooks the linked reservation;
-  conflicts are flagged so you can override deliberately. **Edit hold** on the **Room hold**
-  card moves the hold without changing the event's times.
+- **Rebook the hold** — If you change the time past the hold, press it to move the hold to the
+  new times. Change **Hold from** or **Hold until** to move the hold without changing the
+  event's times. Conflicts are flagged, and **Book anyway** overrides one deliberately.
+  **Release hold** gives the room back when you save.
 
 ## The production console
 

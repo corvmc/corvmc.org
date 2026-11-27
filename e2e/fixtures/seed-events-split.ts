@@ -176,7 +176,8 @@ export async function seedEventsSplit(): Promise<void> {
 		]) {
 			await db.insert(eventListing).values({
 				...row,
-				location: 'E2E Split Venue',
+				// A CMC show is in the room; a typed place would load it as held elsewhere.
+				location: row.source === 'cmc' ? null : 'E2E Split Venue',
 				createdByUserId: SEED_SPLIT_MEMBER_ID,
 				createdAt: now,
 				updatedAt: now

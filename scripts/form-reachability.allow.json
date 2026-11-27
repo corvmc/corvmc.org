@@ -34,7 +34,7 @@
 		"doorsAt": "elsewhere: updateEvent writes it after creation",
 		"location": "elsewhere: updateEvent writes it after creation",
 		"posterFile": "elsewhere: updateEvent writes it after creation",
-		"reservation": "elsewhere: updateEvent's reservation times and the reserve-space flow hold the room",
+		"reservation": "elsewhere: updateEvent's reservation times and the listing form's Where hold the room",
 		"tags": "elsewhere: updateEvent writes it after creation",
 		"ticketingEnabled": "elsewhere: updateEvent writes it after creation",
 		"ticketPrice": "elsewhere: updateEvent writes it after creation",

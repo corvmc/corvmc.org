@@ -56,7 +56,9 @@ export interface WhereState {
 	venueId: string;
 	hasHold: boolean;
 	cancelled: boolean;
-	/** A new hold is asked for, or a rebook is confirmed. */
+	/** Staff staged Release hold: the hold goes on Save and its window is not written. */
+	releasing: boolean;
+	/** The window is to be written: a new hold, a moved one, or a confirmed rebook. */
 	holdWanted: boolean;
 	holdStart: string;
 	holdEnd: string;
@@ -78,6 +80,9 @@ export interface WherePosts {
 export function wherePosts(choice: Where, s: WhereState): WherePosts {
 	const holds = !s.cancelled;
 	if (choice === 'room') {
+		if (s.releasing && s.hasHold) {
+			return { venueId: '', postsPlace: false, releaseHold: holds, rebookReservation: false };
+		}
 		return {
 			venueId: '',
 			postsPlace: false,
