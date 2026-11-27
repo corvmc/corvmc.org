@@ -4,6 +4,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { formatDate, formatTimeRange } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	type Slot = { date: string; startTime: string; endTime: string; startsAt: Date; endsAt: Date };
 
@@ -12,7 +13,10 @@
 
 	// The booking page re-checks the pair against the booking rules: a link is a hint.
 	const href = (s: Slot) =>
-		`${resolve('member/reservations')}?${new URLSearchParams({ date: s.date, start: s.startTime, end: s.endTime })}`;
+		withQuery(
+			resolve('member/reservations'),
+			new URLSearchParams({ date: s.date, start: s.startTime, end: s.endTime })
+		);
 </script>
 
 {#if firstBooking}

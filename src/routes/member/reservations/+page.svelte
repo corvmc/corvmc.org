@@ -7,6 +7,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { confirmWaitlisted, getMemberReservationsPage } from '#lib/remote/reservations.remote.js';
 
 	const { fields } = confirmWaitlisted;
@@ -67,11 +69,11 @@
 	$effect(() => {
 		if (bookingOpen || !prefill) return;
 		prefill = undefined;
-		const rest = new URLSearchParams(page.url.searchParams);
+		const rest = new SvelteURLSearchParams(page.url.searchParams);
 		if (!SLOT_PARAMS.some((k) => rest.has(k))) return;
 		SLOT_PARAMS.forEach((k) => rest.delete(k));
-		void goto(`${resolve('member/reservations')}${rest.size ? `?${rest}` : ''}`, {
-			replaceState: true,
+		void goto(withQuery(resolve('member/reservations'), rest), {
+			replace: true,
 			keepFocus: true,
 			noScroll: true
 		});
