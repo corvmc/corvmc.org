@@ -433,6 +433,18 @@ describe('hooks.server security headers', () => {
 		expect(response.headers.get('location')).toBe('https://the-neons.corvmc.org/epk');
 		expect(response.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
 	});
+
+	// Any single-label host reaches the gate, so one nobody holds or released
+	// must fail cheaply: the stubbed resolve answers 200, so a 404 proves the
+	// request never rendered.
+	it('answers a bare 404 for a subdomain nobody holds, without rendering', async () => {
+		const response = await respond('https://no-such-band-xyz.corvmc.org/events');
+
+		expect(response.status).toBe(404);
+		expect(response.headers.get('location')).toBeNull();
+		expect(await response.text()).toBe('');
+		expect(response.headers.get('x-frame-options')).toBe('SAMEORIGIN');
+	});
 });
 
 describe('Sentry init options', () => {
