@@ -129,6 +129,6 @@ test.describe('staff events split', () => {
 		await page.goto(`/staff/events/${SEED_SPLIT_PENDING_ID}/production`);
 		await expect(page).toHaveURL(new RegExp(`/staff/events/${SEED_SPLIT_PENDING_ID}(\\?.*)?$`));
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
-		await expect(page.getByTestId('edit-listing')).toBeVisible();
+		await expect(page.getByTestId('listing-form')).toBeVisible();
 	});
 });

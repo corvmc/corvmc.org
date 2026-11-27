@@ -1,25 +1,18 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { parseTagList } from '#lib/utils/unique-tags.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto, refreshAll } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
-	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
-	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
-	import ListingEditForm from '#lib/components/events/ListingEditForm.svelte';
 	import ListingShare from '#lib/components/events/ListingShare.svelte';
 	import RecurringSeriesBar from '#lib/components/events/RecurringSeriesBar.svelte';
 	import RepeatEventAction from '#lib/components/events/RepeatEventAction.svelte';
@@ -32,17 +25,13 @@
 		CancelEventAction,
 		DeleteEventAction
 	} from '#lib/components/actions/index.js';
-	import {
-		getEventHistory,
-		getStaffEventPage,
-		setStaffEventLineup
-	} from '#lib/remote/events.remote.js';
+	import { getEventHistory, getStaffEventPage } from '#lib/remote/events.remote.js';
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { approveListing, rejectListing } from '#lib/remote/community-events.remote.js';
-	import { searchBillActs } from '#lib/remote/external-acts.remote.js';
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from '#lib/components/events/RecapText.svelte';
 	import EventRsvps from './EventRsvps.svelte';
+	import ListingForm from './ListingForm.svelte';
 	import EventSidebar from './EventSidebar.svelte';
 	import ProductionTab from './production/ProductionTab.svelte';
 	import SettleDialog from './SettleDialog.svelte';
@@ -97,19 +86,12 @@
 		void getStaffEventPage(id).refresh();
 	}
 
-	// ── Edit ──────────────────────────────────────────────────────────────
-	// The whole listing: every `updateEvent` field, ticketing and the room hold
-	// included. The sale's stats, comps and tickets are `ListingTicketing`.
-	let editing = $state(false);
-	let lineup = $state<LineupChip[]>([]);
-
-	function startEditing() {
-		lineup = detail.lineup.map((l) => ({
-			name: l.name,
-			bandId: l.bandId ?? undefined,
-			actId: l.actId ?? undefined
-		}));
-		editing = true;
+	// The form seeds from the event once, so a save re-keys it after the page
+	// has the saved values.
+	let formKey = $state(0);
+	async function saved() {
+		await getStaffEventPage(id).refresh();
+		formKey += 1;
 	}
 
 	let settleOpen = $state(false);
@@ -311,6 +293,18 @@
 						</Alert>
 					{/if}
 
+					{#key formKey}
+						<ListingForm
+							event={evt}
+							lineup={detail.lineup}
+							linkedReservation={detail.linkedReservation}
+							venues={data.venues}
+							cancelled={evt.status === 'cancelled'}
+							readOnly={evt.status === 'cancelled' && !data.canManage}
+							onsaved={saved}
+						/>
+					{/key}
+
 					{#if data.recurringSeries}
 						<RecurringSeriesBar
 							eventId={evt.id}
@@ -318,131 +312,6 @@
 							onchange={refresh}
 							onrescheduled={(next) => goto(resolve(`staff/events/${next}`))}
 						/>
-					{/if}
-
-					{#if editing}
-						<ListingEditForm
-							event={evt}
-							linkedReservation={detail.linkedReservation}
-							venues={data.venues}
-							cancelled={evt.status === 'cancelled'}
-							onsaved={() => {
-								editing = false;
-								refresh();
-							}}
-							oncancel={() => (editing = false)}
-						/>
-
-						<!-- A CMC show's acts are edited on the Production tab (#3272). -->
-						{#if evt.source === 'cmc'}
-							<InfoCard title={m.staff_events_id_bill_title()}>
-								<ul class="space-y-1 text-sm">
-									{#each detail.lineup as act (act.id)}
-										<li class="font-medium">{act.name}</li>
-									{/each}
-								</ul>
-								<div class="mt-3">
-									<Button href={eventTabHref(id, 'production')} variant="ghost" size="sm">
-										{m.staff_events_id_bill_edit_lineup_label()}
-									</Button>
-								</div>
-							</InfoCard>
-						{:else}
-							<InfoCard title={m.staff_events_id_bill_title()}>
-								<!--
-								The bill saves separately. `setStaffEventLineup` decides consent from
-								the event's source, and folding it into `updateEvent` would put that
-								rule behind a form the console also posts.
-							-->
-								<Form
-									remote={setStaffEventLineup}
-									successToast={m.staff_events_id_bill_updated_toast()}
-									onsuccess={() => {
-										editing = false;
-										refresh();
-									}}
-								>
-									<input {...setStaffEventLineup.fields.eventId.as('hidden', evt.id)} />
-									<LineupEditor
-										field={setStaffEventLineup.fields.lineup}
-										bind:value={lineup}
-										search={(q) => searchBillActs({ eventId: evt.id, q })}
-									/>
-									<div class="mt-3">
-										<SubmitButton label={m.staff_events_id_save_bill_label()} />
-									</div>
-								</Form>
-							</InfoCard>
-						{/if}
-					{:else}
-						<InfoCard title={m.staff_event_title()}>
-							{#snippet header(title)}
-								<div class="flex flex-wrap items-center justify-between gap-2">
-									<CardTitle>{title}</CardTitle>
-									{#if evt.status !== 'cancelled' || data.canManage}
-										<Button
-											variant="ghost"
-											size="sm"
-											data-testid="edit-listing"
-											onclick={startEditing}
-										>
-											{m.staff_edit_label()}
-										</Button>
-									{/if}
-								</div>
-							{/snippet}
-
-							{#if evt.externalTicketUrl}
-								<a
-									href={evt.externalTicketUrl}
-									class="link text-sm"
-									target="_blank"
-									rel="noopener noreferrer external"
-								>
-									{m.staff_events_id_tickets_text()}
-								</a>
-							{/if}
-
-							{#if detail.lineup.length > 0}
-								<div class="mt-4 border-t border-base-200 pt-4">
-									<p class="mb-2 text-muted font-medium">{m.staff_events_id_bill_2_text()}</p>
-									<ul class="space-y-1">
-										{#each detail.lineup as act (act.id)}
-											<li class="flex flex-wrap items-center gap-2 text-sm">
-												<span class="font-medium">{act.name}</span>
-												<!-- `unlinked` is a plain credit; anything else is a claim on a
-												     band's profile, so the status is worth showing. -->
-												{#if act.status !== 'unlinked'}
-													<StatusBadge status={act.status} />
-												{/if}
-												{#if act.note}<span class="text-muted">{act.note}</span>{/if}
-											</li>
-										{/each}
-									</ul>
-									{#if evt.source === 'cmc'}
-										<div class="mt-2">
-											<Button href={eventTabHref(id, 'production')} variant="ghost" size="sm">
-												{m.staff_events_id_bill_edit_lineup_label()}
-											</Button>
-										</div>
-									{/if}
-								</div>
-							{/if}
-
-							{#if evt.description}
-								<div class="mt-4 border-t border-base-200 pt-4">
-									<p class="whitespace-pre-wrap">{evt.description}</p>
-								</div>
-							{/if}
-
-							{#if parseTagList(evt.tags).length > 0}
-								<div class="mt-4 flex flex-wrap gap-1 pt-4 rule-top">
-									{#each parseTagList(evt.tags) as tag (tag)}
-										<Badge variant="outline">{tag}</Badge>
-									{/each}
-								</div>
-							{/if}
-						</InfoCard>
 					{/if}
 
 					<ListingTicketing

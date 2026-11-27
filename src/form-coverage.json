@@ -5,6 +5,5 @@
 	"createVolunteerRole.marketRate",
 	"refundAndCancelReservation.reason",
 	"replyToThread.disposition",
-	"saveMemberProfile.hometown",
-	"updateEvent.releaseHold"
+	"saveMemberProfile.hometown"
 ]

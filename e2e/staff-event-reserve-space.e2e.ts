@@ -104,10 +104,23 @@ async function createEvent(
 	await goToListing(page, title);
 }
 
-/** From the listing: open Edit, tick the hold, save, and wait for the link. */
+/**
+ * Tick the hold and wait for its time fields. The form is on the page from the
+ * first paint, so a tick can land before hydration and be reset by it: the box
+ * unticks and no hold is saved. Ticking again until the fields mount survives it.
+ */
+async function tickReserveSpace(page: Page) {
+	await expect(async () => {
+		await page.getByTestId('reserve-space').check();
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 15000 });
+}
+
+/** From the listing: tick the hold, save, and wait for the link. */
 async function holdSpace(page: Page) {
-	await page.getByTestId('edit-listing').click();
-	await page.getByTestId('reserve-space').check();
+	await tickReserveSpace(page);
 	await saveButton(page).click();
 	await expect(page.locator('a[href^="/staff/reservations/"]').first()).toBeVisible({
 		timeout: 15000
@@ -120,8 +133,7 @@ test.describe('staff event creation — minimal modal', () => {
 		// Never saved, so the date cannot collide with anything.
 		await createEvent(page, `${SEED_EVENT_TITLE_PREFIX} pad ${Date.now()}`, EVENT_DATE);
 
-		await page.getByTestId('edit-listing').click();
-		await page.getByTestId('reserve-space').check();
+		await tickReserveSpace(page);
 		await expect(
 			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
 		).toHaveValue(EVENT_START);
@@ -205,9 +217,8 @@ test.describe('staff event creation — minimal modal', () => {
 			SEED_CONFLICT_START,
 			SEED_CONFLICT_END
 		);
-		await page.getByTestId('edit-listing').click();
 		const reserve = page.getByTestId('reserve-space');
-		await reserve.check();
+		await tickReserveSpace(page);
 
 		// The seeded booking holds this window, so the overlap has to fire — and it
 		// is an error, not a warning.
@@ -248,10 +259,9 @@ test.describe('staff event edit — reserve space', () => {
 		// Not held yet: nothing on the listing links to a reservation.
 		await expect(page.locator('a[href^="/staff/reservations/"]')).toHaveCount(0);
 
-		await page.getByTestId('edit-listing').click();
 		const reserve = page.getByTestId('reserve-space');
 		await expect(reserve).toBeVisible();
-		await reserve.check();
+		await tickReserveSpace(page);
 
 		// Pre-filled from the event's own window: the times are a setup/teardown
 		// override, not a precondition.
@@ -285,7 +295,6 @@ test.describe('staff event edit — reserve space', () => {
 		// window that overlaps the event's own reservation. Earlier rather than
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
-		await page.getByTestId('edit-listing').click();
 		await page
 			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
 			.fill('17:00');

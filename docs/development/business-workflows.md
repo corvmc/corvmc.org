@@ -750,10 +750,10 @@ events use RSVP instead.
   event does not have opens Listing. The old `/production` and `/vendors` addresses redirect to
   their tabs. The two-hour window of what else is on (`listEventsNear`) is now a "Possible
   duplicate" warning in a community listing's Approve dialog; approval is still allowed.
-- **Staff lineup edits carry a consent rule.** `setStaffEventLineup` passes
-  `asStaff: source === 'cmc'`. Staff booked a production, so acts they name there are already
-  agreed; on a member's listing a newly linked act stays `pending` and the band is invited,
-  because staff cannot agree on a band's behalf. Either way `setEventLineup`'s prior-row branch
+- **Staff lineup edits carry a consent rule.** Staff booked a production, so acts they name on
+  its Production tab are already agreed. On a member's listing the Listing form's Performers go
+  through `updateEvent` with `asStaff: false`: a newly linked act stays `pending` and the band is
+  invited, because staff cannot agree on a band's behalf (#3271). Either way `setEventLineup`'s prior-row branch
   runs first, so a `declined` credit stays declined.
 - **Create/publish:** `staff/events` UI → `createEvent` / `publishEvent` / `updateEvent`
   forms in `src/lib/remote/events.remote.ts` → `create()` / `publish()` / `update()` in
@@ -2487,7 +2487,7 @@ restore crew shifts or retract a cancellation notice.
    `project_committee`, or one owning a live deliverable on the show's project. Staff and the
    event lead hold it too, the lead through the Event lead role (item 4). The committees granted it are Booking, Production, Art and
    Merchandise, and Communications. `production.book` is what binds CMC outside it: the deal terms
-   (`setRunOfShowTerms`), the bill (`setStaffEventLineup`), moving to `draft`, `offered`,
+   (`setRunOfShowTerms`), the bill of a show (the Production tab), moving to `draft`, `offered`,
    `confirmed` or `cancelled`, and cancelling a series. It is org-wide.
    `advanceProduction` asks for `run` to move to `completed`, `settled` or `closed`.
 3. The event page's Production tab (`/staff/events/[id]?tab=production`) reads it through `getStaffEventProduction`, which

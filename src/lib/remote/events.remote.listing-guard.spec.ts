@@ -106,7 +106,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { updateEvent, cancelEventSeries, startEventSeries, setStaffEventLineup, adjustListingHold } =
+const { updateEvent, cancelEventSeries, startEventSeries, adjustListingHold } =
 	(await import('#lib/remote/events.remote.js')) as any;
 
 const EDIT = { title: 'Retitled', rebookReservation: false, overrideConflicts: false };
@@ -223,25 +223,6 @@ describe('startEventSeries', () => {
 		persona = 'outsider';
 		await expect(startEventSeries(REPEAT)).rejects.toMatchObject({ status: 403 });
 		expect(createEventSeries).not.toHaveBeenCalled();
-	});
-});
-
-describe('setStaffEventLineup', () => {
-	const BILL = JSON.stringify([{ name: 'Paper Wolves', billingOrder: 0 }]);
-
-	it("lets the show's committee set the bill", async () => {
-		persona = 'booker';
-		await setStaffEventLineup({ eventId: 'evt-show', lineup: BILL });
-		expect(setEventLineup).toHaveBeenCalledTimes(1);
-	});
-
-	// Confirming the lineup is `production.book`, not show work (#2959).
-	it.each(['outsider', 'worker'] as const)('refuses %s', async (who) => {
-		persona = who;
-		await expect(setStaffEventLineup({ eventId: 'evt-show', lineup: BILL })).rejects.toMatchObject({
-			status: 403
-		});
-		expect(setEventLineup).not.toHaveBeenCalled();
 	});
 });
 

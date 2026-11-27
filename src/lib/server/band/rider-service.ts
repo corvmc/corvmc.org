@@ -316,7 +316,7 @@ export async function getRider(groupId: string): Promise<RiderView> {
 /**
  * Replace one owner's elements wholesale.
  *
- * Delete-then-insert rather than a diff, following `setStaffEventLineup`: the
+ * Delete-then-insert rather than a diff, following `setEventLineup`: the
  * submitted payload is the whole truth for that owner, `sortOrder` is
  * re-derived from array position so no client can post an order, and the
  * inserts are chunked because D1 caps a statement at 100 bound parameters.
